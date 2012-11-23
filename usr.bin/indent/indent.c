@@ -48,7 +48,7 @@ static char sccsid[] = "@(#)indent.c	5.17 (Berkeley) 6/7/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/indent/indent.c,v 1.23 2004/06/27 10:58:37 schweikh Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <err.h>
@@ -69,8 +69,6 @@ const char *in_name = "Standard Input";	/* will always point to name of input
 const char *out_name = "Standard Output";	/* will always point to name
 						 * of output file */
 char        bakfile[MAXPATHLEN] = "";
-
-extern int  found_err;	/* flag set in diagN() on error */
 
 int
 main(int argc, char **argv)
@@ -154,6 +152,7 @@ main(int argc, char **argv)
     be_save = 0;
 
     output = 0;
+    tabs_to_var = 0;
 
     /*--------------------------------------------------*\
     |   		COMMAND LINE SCAN		 |
@@ -200,21 +199,21 @@ main(int argc, char **argv)
 	 * look thru args (if any) for changes to defaults
 	 */
 	if (argv[i][0] != '-') {/* no flag on parameter */
-	    if (input == 0) {	/* we must have the input file */
+	    if (input == NULL) {	/* we must have the input file */
 		in_name = argv[i];	/* remember name of input file */
 		input = fopen(in_name, "r");
-		if (input == 0)		/* check for open error */
+		if (input == NULL)	/* check for open error */
 			err(1, "%s", in_name);
 		continue;
 	    }
-	    else if (output == 0) {	/* we have the output file */
+	    else if (output == NULL) {	/* we have the output file */
 		out_name = argv[i];	/* remember name of output file */
 		if (strcmp(in_name, out_name) == 0) {	/* attempt to overwrite
 							 * the file */
 		    errx(1, "input and output files must be different");
 		}
 		output = fopen(out_name, "w");
-		if (output == 0)	/* check for create error */
+		if (output == NULL)	/* check for create error */
 			err(1, "%s", out_name);
 		continue;
 	    }
@@ -223,9 +222,9 @@ main(int argc, char **argv)
 	else
 	    set_option(argv[i]);
     }				/* end of for */
-    if (input == 0)
+    if (input == NULL)
 	input = stdin;
-    if (output == 0) {
+    if (output == NULL) {
 	if (troff || input == stdin)
 	    output = stdout;
 	else {
@@ -676,7 +675,7 @@ check_type:
 		ps.want_blank = true;
 		break;
 	    }
-	    if (ps.in_decl) {
+	    if (ps.in_or_st) {
 		*e_code++ = ':';
 		ps.want_blank = false;
 		break;
@@ -1224,11 +1223,11 @@ bakcopy(void)
 
     /* re-open backup file as the input file */
     input = fopen(bakfile, "r");
-    if (input == 0)
+    if (input == NULL)
 	err(1, "%s", bakfile);
     /* now the original input file will be the output */
     output = fopen(in_name, "w");
-    if (output == 0) {
+    if (output == NULL) {
 	unlink(bakfile);
 	err(1, "%s", in_name);
     }

@@ -1,5 +1,4 @@
-/*	$MidnightBSD: src/usr.bin/gzip/zuncompress.c,v 1.1 2007/03/14 23:33:01 laffer1 Exp $ */
-/*	$NetBSD: zuncompress.c,v 1.6 2005/11/22 09:05:30 mrg Exp $ */
+/*	$NetBSD: zuncompress.c,v 1.8 2010/11/06 21:42:32 mrg Exp $ */
 
 /*-
  * Copyright (c) 1985, 1986, 1992, 1993
@@ -34,7 +33,7 @@
  * SUCH DAMAGE.
  *
  * from: NetBSD: zopen.c,v 1.8 2003/08/07 11:13:29 agc Exp
- * $FreeBSD: src/usr.bin/gzip/zuncompress.c,v 1.1.2.1 2007/02/20 08:33:32 delphij Exp $
+ * $MidnightBSD$
  */
 
 /* This file is #included by gzip.c */
@@ -116,7 +115,7 @@ struct s_zstate {
 			code_int zs_ent;
 			code_int zs_hsize_reg;
 			int zs_hshift;
-		} w;			/* Write paramenters */
+		} w;			/* Write parameters */
 		struct {
 			char_type *zs_stackp;
 			int zs_finchar;
@@ -148,7 +147,7 @@ zuncompress(FILE *in, FILE *out, char *pre, size_t prelen,
 		compressed_pre = NULL;
 
 	while ((bin = fread(buf, 1, sizeof(buf), in)) != 0) {
-		if (tflag == 0 && fwrite(buf, 1, bin, out) != (size_t)bin) {
+		if (tflag == 0 && (off_t)fwrite(buf, 1, bin, out) != bin) {
 			free(buf);
 			return -1;
 		}

@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -41,8 +37,7 @@ static char sccsid[] = "@(#)option.c	8.2 (Berkeley) 4/16/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-/* $FreeBSD: src/usr.bin/find/option.c,v 1.25 2006/04/05 23:06:11 ceri Exp $ */
-__MBSDID("$MidnightBSD: src/usr.bin/find/option.c,v 1.2 2007/09/11 23:01:20 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -56,7 +51,7 @@ __MBSDID("$MidnightBSD: src/usr.bin/find/option.c,v 1.2 2007/09/11 23:01:20 laff
 
 #include "find.h"
 
-int typecompare(const void *, const void *);
+static int typecompare(const void *, const void *);
 
 /* NB: the following table must be sorted lexically. */
 /* Options listed with C++ comments are in gnu find, but not our find */
@@ -83,6 +78,7 @@ static OPTION const options[] = {
 	{ "-empty",	c_empty,	f_empty,	0 },
 	{ "-exec",	c_exec,		f_exec,		0 },
 	{ "-execdir",	c_exec,		f_exec,		F_EXECDIR },
+	{ "-false",	c_simple,	f_false,	0 },
 	{ "-flags",	c_flags,	f_flags,	0 },
 // -fls
 	{ "-follow",	c_follow,	f_always_true,	0 },
@@ -145,7 +141,9 @@ static OPTION const options[] = {
 	{ "-print0",	c_print,	f_print0,	0 },
 // -printf
 	{ "-prune",	c_simple,	f_prune,	0 },
+	{ "-quit",	c_simple,	f_quit,		0 },
 	{ "-regex",	c_regex,	f_regex,	0 },
+	{ "-samefile",	c_samefile,	f_inum,		0 },
 	{ "-size",	c_size,		f_size,		0 },
 	{ "-true",	c_simple,	f_always_true,	0 },
 	{ "-type",	c_type,		f_type,		0 },
@@ -174,7 +172,7 @@ find_create(char ***argvp)
 	argv = *argvp;
 
 	if ((p = lookup_option(*argv)) == NULL)
-		errx(1, "%s: unknown option", *argv);
+		errx(1, "%s: unknown primary or operator", *argv);
 	++argv;
 
 	new = (p->create)(p, &argv);
@@ -192,7 +190,7 @@ lookup_option(const char *name)
 	    sizeof(options)/sizeof(OPTION), sizeof(OPTION), typecompare));
 }
 
-int
+static int
 typecompare(const void *a, const void *b)
 {
 	return (strcmp(((const OPTION *)a)->name, ((const OPTION *)b)->name));

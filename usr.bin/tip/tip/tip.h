@@ -1,6 +1,6 @@
 /*	$OpenBSD: tip.h,v 1.27 2006/08/18 03:06:18 jason Exp $	*/
 /*	$NetBSD: tip.h,v 1.7 1997/04/20 00:02:46 mellon Exp $	*/
-/*	$FreeBSD: src/usr.bin/tip/tip/tip.h,v 1.11 2006/08/31 14:14:30 ru Exp $	*/
+/*	$MidnightBSD$	*/
 
 /*
  * Copyright (c) 1989, 1993
@@ -259,7 +259,7 @@ int	intflag;		/* recognized interrupt */
 int	stoprompt;		/* for interrupting a prompt session */
 int	timedout;		/* ~> transfer timedout */
 int	cumode;			/* simulating the "cu" program */
-int	bits8;			/* terminal is is 8-bit mode */
+int	bits8;			/* terminal is 8-bit mode */
 #define STRIP_PAR	(bits8 ? 0377 : 0177)
 
 char	fname[PATH_MAX];	/* file name buffer for ~< */
@@ -341,6 +341,7 @@ void	timeout(int);
 void	tipabort(char *);
 void	tipout(void);
 void	user_uid(void);
+void	unexcl(void);
 void	unraw(void);
 void	v3451_abort(void);
 void	v3451_disconnect(void);

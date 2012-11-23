@@ -1,5 +1,5 @@
+/*	$MidnightBSD$						*/
 /*      $OpenBSD: extern.h,v 1.6 2006/03/18 20:44:43 otto Exp $	*/
-/*	$MidnightBSD$
 
 /*
  * Copyright (c) 2003, Otto Moerbeek <otto@drijf.net>
@@ -20,21 +20,23 @@
 #include <stdio.h>
 
 struct lvalue {
-	ssize_t load;
-	ssize_t store;
+	ssize_t	 load;
+	ssize_t	 store;
 };
 
-int		yylex(void);
-void		yyerror(char *);
-void		fatal(const char *);
-void		abort_line(int);
+int			 yylex(void);
+void			 yyerror(const char *);
+void			 fatal(const char *);
+void			 abort_line(int);
 
-extern int	lineno;
-extern char	*yytext;
-extern FILE	*yyin;
-extern int	fileindex;
-extern int	sargc;
-extern char	**sargv;
-extern char	*filename;
-extern char	*cmdexpr;
-bool		interactive;
+extern int		 lineno;
+extern int		 fileindex;
+extern int		 sargc;
+extern const char	**sargv;
+extern const char	*filename;
+extern char		*cmdexpr;
+extern bool		 interactive;
+extern EditLine		*el;
+extern History		*hist;
+extern HistEvent	 he;
+

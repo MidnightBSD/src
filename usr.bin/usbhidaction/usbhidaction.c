@@ -1,5 +1,5 @@
 /*      $NetBSD: usbhidaction.c,v 1.8 2002/06/11 06:06:21 itojun Exp $ */
-/*	$FreeBSD: src/usr.bin/usbhidaction/usbhidaction.c,v 1.4 2004/03/09 11:35:43 dwmalone Exp $ */
+/*	$MidnightBSD$ */
 
 /*
  * Copyright (c) 2000, 2002 The NetBSD Foundation, Inc.
@@ -16,13 +16,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -46,8 +39,6 @@
 #include <limits.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/ioctl.h>
-#include <dev/usb/usb.h>
 #include <dev/usb/usbhid.h>
 #include <usbhid.h>
 #include <syslog.h>
@@ -93,6 +84,7 @@ main(int argc, char **argv)
 {
 	const char *conf = NULL;
 	const char *dev = NULL;
+	const char *table = NULL;
 	int fd, fp, ch, n, val, i;
 	size_t sz, sz1;
 	int demon, ignore, dieearly;
@@ -100,12 +92,12 @@ main(int argc, char **argv)
 	char buf[100];
 	char devnamebuf[PATH_MAX];
 	struct command *cmd;
-	int reportid;
+	int reportid = -1;
 
 	demon = 1;
 	ignore = 0;
 	dieearly = 0;
-	while ((ch = getopt(argc, argv, "c:def:ip:v")) != -1) {
+	while ((ch = getopt(argc, argv, "c:def:ip:r:t:v")) != -1) {
 		switch(ch) {
 		case 'c':
 			conf = optarg;
@@ -125,6 +117,12 @@ main(int argc, char **argv)
 		case 'p':
 			pidfile = optarg;
 			break;
+		case 'r':
+			reportid = atoi(optarg);
+			break;
+		case 't':
+			table = optarg;
+			break;
 		case 'v':
 			demon = 0;
 			verbose++;
@@ -140,7 +138,7 @@ main(int argc, char **argv)
 	if (conf == NULL || dev == NULL)
 		usage();
 
-	hid_init(NULL);
+	hid_init(table);
 
 	if (dev[0] != '/') {
 		snprintf(devnamebuf, sizeof(devnamebuf), "/dev/%s%s",
@@ -151,15 +149,13 @@ main(int argc, char **argv)
 	fd = open(dev, O_RDWR);
 	if (fd < 0)
 		err(1, "%s", dev);
-	if (ioctl(fd, USB_GET_REPORT_ID, &reportid) < 0)
-		reportid = -1;
 	repd = hid_get_report_desc(fd);
 	if (repd == NULL)
 		err(1, "hid_get_report_desc() failed");
 
 	commands = parse_conf(conf, repd, reportid, ignore);
 
-	sz = (size_t)hid_report_size(repd, hid_input, reportid);
+	sz = (size_t)hid_report_size(repd, hid_input, -1);
 
 	if (verbose)
 		printf("report size %zu\n", sz);
@@ -171,7 +167,8 @@ main(int argc, char **argv)
 	if (demon) {
 		fp = open(pidfile, O_WRONLY|O_CREAT, S_IRUSR|S_IRGRP|S_IROTH);
 		if (fp >= 0) {
-			sz1 = snprintf(buf, sizeof buf, "%d\n", getpid());
+			sz1 = snprintf(buf, sizeof buf, "%ld\n", 
+			    (long)getpid());
 			if (sz1 > sizeof buf)
 				sz1 = sizeof buf;
 			write(fp, buf, sz1);
@@ -203,7 +200,23 @@ main(int argc, char **argv)
 		}
 #endif
 		for (cmd = commands; cmd; cmd = cmd->next) {
-			val = hid_get_data(buf, &cmd->item);
+			if (cmd->item.report_ID != 0 &&
+			    buf[0] != cmd->item.report_ID)
+				continue;
+			if (cmd->item.flags & HIO_VARIABLE)
+				val = hid_get_data(buf, &cmd->item);
+			else {
+				uint32_t pos = cmd->item.pos;
+				for (i = 0; i < cmd->item.report_count; i++) {
+					val = hid_get_data(buf, &cmd->item);
+					if (val == cmd->value)
+						break;
+					cmd->item.pos += cmd->item.report_size;
+				}
+				cmd->item.pos = pos;
+				val = (i < cmd->item.report_count) ?
+				    cmd->value : -1;
+			}
 			if (cmd->value != val && cmd->anyvalue == 0)
 				goto next;
 			if ((cmd->debounce == 0) ||
@@ -245,7 +258,7 @@ usage(void)
 {
 
 	fprintf(stderr, "Usage: %s [-deiv] -c config_file -f hid_dev "
-		"[-p pidfile]\n", getprogname());
+		"[-p pidfile] [-t tablefile]\n", getprogname());
 	exit(1);
 }
 
@@ -267,12 +280,11 @@ parse_conf(const char *conf, report_desc_t repd, int reportid, int ignore)
 	char *p;
 	int line;
 	char buf[SIZE], name[SIZE], value[SIZE], debounce[SIZE], action[SIZE];
-	char usbuf[SIZE], coll[SIZE];
+	char usbuf[SIZE], coll[SIZE], *tmp;
 	struct command *cmd, *cmds;
 	struct hid_data *d;
 	struct hid_item h;
-	int u, lo, hi, range;
-	
+	int inst, cinst, u, lo, hi, range, t;
 
 	f = fopen(conf, "r");
 	if (f == NULL)
@@ -304,6 +316,12 @@ parse_conf(const char *conf, report_desc_t repd, int reportid, int ignore)
 				     ", syntax error: %s", conf, line, buf);
 			}
 		}
+		tmp = strchr(name, '#');
+		if (tmp != NULL) {
+			*tmp = 0;
+			inst = atoi(tmp + 1);
+		} else
+			inst = 0;
 
 		cmd = malloc(sizeof *cmd);
 		if (cmd == NULL)
@@ -348,6 +366,7 @@ parse_conf(const char *conf, report_desc_t repd, int reportid, int ignore)
 		}
 
 		coll[0] = 0;
+		cinst = 0;
 		for (d = hid_start_parse(repd, 1 << hid_input, reportid);
 		     hid_get_item(d, &h); ) {
 			if (verbose > 2)
@@ -367,24 +386,29 @@ parse_conf(const char *conf, report_desc_t repd, int reportid, int ignore)
 					range = 0;
 				}
 				for (u = lo; u <= hi; u++) {
-					snprintf(usbuf, sizeof usbuf,  "%s:%s",
-						 hid_usage_page(HID_PAGE(u)), 
-						 hid_usage_in_page(u));
-					if (verbose > 2)
-						printf("usage %s\n", usbuf);
-					if (!strcasecmp(usbuf, name))
-						goto foundhid;
 					if (coll[0]) {
 						snprintf(usbuf, sizeof usbuf,
 						  "%s.%s:%s", coll+1,
-						  hid_usage_page(HID_PAGE(u)), 
+						  hid_usage_page(HID_PAGE(u)),
 						  hid_usage_in_page(u));
-						if (verbose > 2)
-							printf("usage %s\n",
-							       usbuf);
-						if (!strcasecmp(usbuf, name))
-							goto foundhid;
+					} else {
+						snprintf(usbuf, sizeof usbuf,
+						  "%s:%s",
+						  hid_usage_page(HID_PAGE(u)),
+						  hid_usage_in_page(u));
 					}
+					if (verbose > 2)
+						printf("usage %s\n", usbuf);
+					t = strlen(usbuf) - strlen(name);
+					if (t > 0) {
+						if (strcmp(usbuf + t, name))
+							continue;
+						if (usbuf[t - 1] != '.')
+							continue;
+					} else if (strcmp(usbuf, name))
+						continue;
+					if (inst == cinst++)
+						goto foundhid;
 				}
 				break;
 			case hid_collection:

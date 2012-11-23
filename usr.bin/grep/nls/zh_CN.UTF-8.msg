@@ -1,4 +1,4 @@
-$ $FreeBSD: src/usr.bin/grep/nls/zh_CN.UTF-8.msg,v 1.1 2010/09/20 19:42:52 delphij Exp $
+$ $MidnightBSD$
 $
 $set 1
 $quote "

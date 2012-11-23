@@ -23,41 +23,66 @@
 .\" IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.bin/bsdiff/bsdiff/bsdiff.1,v 1.1.2.1 2005/08/15 18:34:21 cperciva Exp $
+.\" $MidnightBSD$
 .\"
 .Dd May 18, 2003
 .Dt BSDIFF 1
-.Os FreeBSD
+.Os
 .Sh NAME
 .Nm bsdiff
-.Nd generate a patch between two binary files
+.Nd "generate a patch between two binary files"
 .Sh SYNOPSIS
 .Nm
-.Ao Ar oldfile Ac Ao Ar newfile Ac Ao Ar patchfile Ac
+.Ar oldfile newfile patchfile
 .Sh DESCRIPTION
+The
 .Nm
+utility
 compares
-.Ao Ar oldfile Ac
+.Ar oldfile
 to
-.Ao Ar newfile Ac
+.Ar newfile
 and writes to
-.Ao Ar patchfile Ac
-a binary patch suitable for use by bspatch(1).
+.Ar patchfile
+a binary patch suitable for use by
+.Xr bspatch 1 .
 When
-.Ao Ar oldfile Ac
+.Ar oldfile
 and
-.Ao Ar newfile Ac
+.Ar newfile
 are two versions of an executable program, the
 patches produced are on average a factor of five smaller
 than those produced by any other binary patch tool known
 to the author.
 .Pp
+The
 .Nm
-uses memory equal to 17 times the size of 
-.Ao Ar oldfile Ac ,
+utility
+uses memory equal to 17 times the size of
+.Ar oldfile ,
 and requires
-an absolute minimum working set size of 8 times the size of oldfile.
+an absolute minimum working set size of 8 times the size of
+.Ar oldfile .
 .Sh SEE ALSO
 .Xr bspatch 1
 .Sh AUTHORS
-.An Colin Percival Aq cperciva@freebsd.org
+.An Colin Percival Aq cperciva@FreeBSD.org
+.Sh BUGS
+The
+.Nm
+utility does not store the hashes of
+.Ar oldfile
+or
+.Ar newfile
+in
+.Ar patchfile .
+As a result, it is possible to apply a patch to the wrong file; this
+will usually produce garbage.
+It is recommended that users of
+.Nm
+store the hashes of
+.Ar oldfile
+and
+.Ar newfile
+and compare against them before and after applying
+.Ar patchfile .

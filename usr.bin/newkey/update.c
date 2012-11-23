@@ -42,7 +42,7 @@ static	char sccsid[] = "@(#)update.c 1.2 91/03/11 Copyr 1986 Sun Micro";
  * Administrative tool to add a new user to the publickey database
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/newkey/update.c,v 1.10 2005/02/07 21:42:16 stefanf Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -70,11 +70,7 @@ __FBSDID("$FreeBSD: src/usr.bin/newkey/update.c,v 1.10 2005/02/07 21:42:16 stefa
 static char SHELL[] = "/bin/sh";
 static char YPDBPATH[]="/var/yp";	/* This is defined but not used! */
 static char UPDATEFILE[] = "updaters";
-#else
-static char PKFILE[] = "/etc/publickey";
-#endif	/* YP */
 
-#ifdef YP
 static int _openchild(char *, FILE **, FILE **);
 static char *basename(char *path);
 
@@ -238,8 +234,8 @@ static int match(char *, char *);
  * the local file and then shuts up.
  */
 int
-localupdate(char *name, char *filename, u_int op, u_int keylen,
-    char *key, u_int datalen, char *data)
+localupdate(char *name, char *filename, u_int op, u_int keylen __unused,
+    char *key, u_int datalen __unused, char *data)
 {
 	char line[256];
 	FILE *rf;

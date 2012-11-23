@@ -1,5 +1,5 @@
-/*
- * Copryight 1997 Sean Eric Fagan
+/*-
+ * Copyright 1997 Sean Eric Fagan
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,10 +30,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/truss/main.c,v 1.46 2007/07/28 23:00:42 marcel Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
- * The main module for truss.  Suprisingly simple, but, then, the other
+ * The main module for truss.  Surprisingly simple, but, then, the other
  * files handle the bulk of the work.  And, of course, the kernel has to
  * do a lot of the work :).
  */
@@ -43,8 +43,8 @@ __FBSDID("$FreeBSD: src/usr.bin/truss/main.c,v 1.46 2007/07/28 23:00:42 marcel E
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/sysctl.h>
+#include <sys/wait.h>
 
-#include <ctype.h>
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -57,6 +57,7 @@ __FBSDID("$FreeBSD: src/usr.bin/truss/main.c,v 1.46 2007/07/28 23:00:42 marcel E
 
 #include "truss.h"
 #include "extern.h"
+#include "syscall.h"
 
 #define MAXARGS 6
 
@@ -64,8 +65,8 @@ static void
 usage(void)
 {
 	fprintf(stderr, "%s\n%s\n",
-	    "usage: truss [-faedDS] [-o file] [-s strsize] -p pid",
-	    "       truss [-faedDS] [-o file] [-s strsize] command [args]");
+	    "usage: truss [-cfaedDS] [-o file] [-s strsize] -p pid",
+	    "       truss [-cfaedDS] [-o file] [-s strsize] command [args]");
 	exit(1);
 }
 
@@ -78,11 +79,10 @@ struct ex_types {
 	void (*enter_syscall)(struct trussinfo *, int);
 	long (*exit_syscall)(struct trussinfo *, int);
 } ex_types[] = {
-#ifdef __alpha__
-	{ "FreeBSD ELF", alpha_syscall_entry, alpha_syscall_exit },
-#endif
 #ifdef __amd64__
 	{ "FreeBSD ELF64", amd64_syscall_entry, amd64_syscall_exit },
+	{ "FreeBSD ELF32", amd64_fbsd32_syscall_entry, amd64_fbsd32_syscall_exit },
+	{ "Linux ELF32", amd64_linux32_syscall_entry, amd64_linux32_syscall_exit },
 #endif
 #ifdef __i386__
 	{ "FreeBSD a.out", i386_syscall_entry, i386_syscall_exit },
@@ -96,9 +96,17 @@ struct ex_types {
 #ifdef __powerpc__
 	{ "FreeBSD ELF", powerpc_syscall_entry, powerpc_syscall_exit },
 	{ "FreeBSD ELF32", powerpc_syscall_entry, powerpc_syscall_exit },
+#ifdef __powerpc64__
+	{ "FreeBSD ELF64", powerpc64_syscall_entry, powerpc64_syscall_exit },
+#endif
 #endif
 #ifdef __sparc64__
 	{ "FreeBSD ELF64", sparc64_syscall_entry, sparc64_syscall_exit },
+#endif
+#ifdef __mips__
+	{ "FreeBSD ELF", mips_syscall_entry, mips_syscall_exit },
+	{ "FreeBSD ELF32", mips_syscall_entry, mips_syscall_exit },
+	{ "FreeBSD ELF64", mips_syscall_entry, mips_syscall_exit }, // XXX
 #endif
 	{ 0, 0, 0 },
 };
@@ -145,12 +153,9 @@ strsig(int sig)
 
 	ret = NULL;
 	if (sig > 0 && sig < NSIG) {
-		int i;
-		asprintf(&ret, "sig%s", sys_signame[sig]);
+		asprintf(&ret, "SIG%s", sys_signame[sig]);
 		if (ret == NULL)
 			return (NULL);
-		for (i = 0; ret[i] != '\0'; ++i)
-			ret[i] = toupper(ret[i]);
 	}
 	return (ret);
 }
@@ -160,6 +165,8 @@ main(int ac, char **av)
 {
 	int c;
 	int i;
+	pid_t childpid;
+	int status;
 	char **command;
 	struct ex_types *funcs;
 	int initial_open;
@@ -171,17 +178,16 @@ main(int ac, char **av)
 	initial_open = 1;
 
 	/* Initialize the trussinfo struct */
-	trussinfo = (struct trussinfo *)malloc(sizeof(struct trussinfo));
+	trussinfo = (struct trussinfo *)calloc(1, sizeof(struct trussinfo));
 	if (trussinfo == NULL)
-		errx(1, "malloc() failed");
-	bzero(trussinfo, sizeof(struct trussinfo));
-	
+		errx(1, "calloc() failed");
+
 	trussinfo->outfile = stderr;
 	trussinfo->strsize = 32;
 	trussinfo->pr_why = S_NONE;
 	trussinfo->curthread = NULL;
 	SLIST_INIT(&trussinfo->threadlist);
-	while ((c = getopt(ac, av, "p:o:faedDs:S")) != -1) {
+	while ((c = getopt(ac, av, "p:o:facedDs:S")) != -1) {
 		switch (c) {
 		case 'p':	/* specified pid */
 			trussinfo->pid = atoi(optarg);
@@ -196,6 +202,9 @@ main(int ac, char **av)
 			break;
 		case 'a': /* Print execve() argument strings. */
 			trussinfo->flags |= EXECVEARGS;
+			break;
+		case 'c': /* Count number of system calls and time. */
+			trussinfo->flags |= COUNTONLY;
 			break;
 		case 'e': /* Print execve() environment strings. */
 			trussinfo->flags |= EXECVEENVS;
@@ -228,6 +237,13 @@ main(int ac, char **av)
 	if (fname != NULL) { /* Use output file */
 		if ((trussinfo->outfile = fopen(fname, "w")) == NULL)
 			errx(1, "cannot open %s", fname);
+		/*
+		 * Set FD_CLOEXEC, so that the output file is not shared with
+		 * the traced process.
+		 */
+		if (fcntl(fileno(trussinfo->outfile), F_SETFD, FD_CLOEXEC) ==
+		    -1)
+			warn("fcntl()");
 	}
 
 	/*
@@ -284,8 +300,6 @@ START_TRACE:
 
 			if (trussinfo->curthread->in_fork &&
 			    (trussinfo->flags & FOLLOWFORKS)) {
-				int childpid;
-
 				trussinfo->curthread->in_fork = 0;
 				childpid =
 				    funcs->exit_syscall(trussinfo,
@@ -332,6 +346,8 @@ START_TRACE:
 			free(signame);
 			break;
 		case S_EXIT:
+			if (trussinfo->flags & COUNTONLY)
+				break;
 			if (trussinfo->flags & FOLLOWFORKS)
 				fprintf(trussinfo->outfile, "%5d: ",
 				    trussinfo->pid);
@@ -355,7 +371,16 @@ START_TRACE:
 			break;
 		}
 	} while (trussinfo->pr_why != S_EXIT);
+
+	if (trussinfo->flags & FOLLOWFORKS)
+		do {
+			childpid = wait(&status);
+		} while (childpid != -1);
+
+ 	if (trussinfo->flags & COUNTONLY)
+ 		print_summary(trussinfo);
+
 	fflush(trussinfo->outfile);
-	
+
 	return (0);
 }

@@ -30,7 +30,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: /home/ncvs/src/usr.bin/sed/process.c,v 1.44 2007/04/02 08:14:45 yar Exp $ */
 
 #include <sys/cdefs.h>
 __MBSDID("$MidnightBSD$");
@@ -86,7 +85,7 @@ static regex_t *defpreg;
 size_t maxnsub;
 regmatch_t *match;
 
-#define OUT(s) { fwrite(s, sizeof(u_char), psl, outfile); fputc('\n', outfile); }
+#define OUT() do {fwrite(ps, 1, psl, outfile); fputc('\n', outfile);} while (0)
 
 void
 process(void)
@@ -151,15 +150,15 @@ redirect:
 				cspace(&PS, hs, hsl, REPLACE);
 				break;
 			case 'G':
-				cspace(&PS, "\n", 1, 0);
-				cspace(&PS, hs, hsl, 0);
+				cspace(&PS, "\n", 1, APPEND);
+				cspace(&PS, hs, hsl, APPEND);
 				break;
 			case 'h':
 				cspace(&HS, ps, psl, REPLACE);
 				break;
 			case 'H':
-				cspace(&HS, "\n", 1, 0);
-				cspace(&HS, ps, psl, 0);
+				cspace(&HS, "\n", 1, APPEND);
+				cspace(&HS, ps, psl, APPEND);
 				break;
 			case 'i':
 				(void)fprintf(outfile, "%s", cp->t);
@@ -169,7 +168,7 @@ redirect:
 				break;
 			case 'n':
 				if (!nflag && !pd)
-					OUT(ps)
+					OUT();
 				flush_appends();
 				if (!mf_fgets(&PS, REPLACE))
 					exit(0);
@@ -177,14 +176,14 @@ redirect:
 				break;
 			case 'N':
 				flush_appends();
-				cspace(&PS, "\n", 1, 0);
-				if (!mf_fgets(&PS, 0))
+				cspace(&PS, "\n", 1, APPEND);
+				if (!mf_fgets(&PS, APPEND))
 					exit(0);
 				break;
 			case 'p':
 				if (pd)
 					break;
-				OUT(ps)
+				OUT();
 				break;
 			case 'P':
 				if (pd)
@@ -193,13 +192,13 @@ redirect:
 					oldpsl = psl;
 					psl = p - ps;
 				}
-				OUT(ps)
+				OUT();
 				if (p != NULL)
 					psl = oldpsl;
 				break;
 			case 'q':
 				if (!nflag && !pd)
-					OUT(ps)
+					OUT();
 				flush_appends();
 				exit(0);
 			case 'r':
@@ -230,11 +229,17 @@ redirect:
 				    O_WRONLY|O_APPEND|O_CREAT|O_TRUNC,
 				    DEFFILEMODE)) == -1)
 					err(1, "%s", cp->t);
-				if (write(cp->u.fd, ps, psl) != psl ||
+				if (write(cp->u.fd, ps, psl) != (ssize_t)psl ||
 				    write(cp->u.fd, "\n", 1) != 1)
 					err(1, "%s", cp->t);
 				break;
 			case 'x':
+				/*
+				 * If the hold space is null, make it empty
+				 * but not null.  Otherwise the pattern space
+				 * will become null after the swap, which is
+				 * an abnormal condition.
+				 */
 				if (hs == NULL)
 					cspace(&HS, "", 0, REPLACE);
 				tspace = PS;
@@ -256,7 +261,7 @@ redirect:
 		} /* for all cp */
 
 new:		if (!nflag && !pd)
-			OUT(ps)
+			OUT();
 		flush_appends();
 	} /* for all lines */
 }
@@ -270,8 +275,8 @@ new:		if (!nflag && !pd)
 	    (a)->type == AT_LINE ? linenum == (a)->u.l : lastline())
 
 /*
- * Return TRUE if the command applies to the current line.  Sets the inrange
- * flag to process ranges.  Interprets the non-select (``!'') flag.
+ * Return TRUE if the command applies to the current line.  Sets the start
+ * line for process ranges.  Interprets the non-select (``!'') flag.
  */
 static __inline int
 applies(struct s_command *cp)
@@ -282,18 +287,22 @@ applies(struct s_command *cp)
 	if (cp->a1 == NULL && cp->a2 == NULL)
 		r = 1;
 	else if (cp->a2)
-		if (cp->inrange) {
+		if (cp->startline > 0) {
 			if (MATCH(cp->a2)) {
-				cp->inrange = 0;
+				cp->startline = 0;
 				lastaddr = 1;
 				r = 1;
-			} else if (cp->a2->type == AT_LINE &&
-				   linenum > cp->a2->u.l) {
+			} else if (linenum - cp->startline <= cp->a2->u.l)
+				r = 1;
+			else if ((cp->a2->type == AT_LINE &&
+				   linenum > cp->a2->u.l) ||
+				   (cp->a2->type == AT_RELLINE &&
+				   linenum - cp->startline > cp->a2->u.l)) {
 				/*
 				 * We missed the 2nd address due to a branch,
 				 * so just close the range and return false.
 				 */
-				cp->inrange = 0;
+				cp->startline = 0;
 				r = 0;
 			} else
 				r = 1;
@@ -303,18 +312,42 @@ applies(struct s_command *cp)
 			 * equal to the line number first selected, only
 			 * one line shall be selected.
 			 *	-- POSIX 1003.2
+			 * Likewise if the relative second line address is zero.
 			 */
-			if (cp->a2->type == AT_LINE &&
-			    linenum >= cp->a2->u.l)
+			if ((cp->a2->type == AT_LINE &&
+			    linenum >= cp->a2->u.l) ||
+			    (cp->a2->type == AT_RELLINE && cp->a2->u.l == 0))
 				lastaddr = 1;
-			else
-				cp->inrange = 1;
+			else {
+				cp->startline = linenum;
+			}
 			r = 1;
 		} else
 			r = 0;
 	else
 		r = MATCH(cp->a1);
 	return (cp->nonsel ? ! r : r);
+}
+
+/*
+ * Reset the sed processor to its initial state.
+ */
+void
+resetstate(void)
+{
+	struct s_command *cp;
+
+	/*
+	 * Reset all in-range markers.
+	 */
+	for (cp = prog; cp; cp = cp->code == '{' ? cp->u.c : cp->next)
+		if (cp->a2)
+			cp->startline = 0;
+
+	/*
+	 * Clear out the hold space.
+	 */
+	cspace(&HS, "", 0, REPLACE);
 }
 
 /*
@@ -337,7 +370,7 @@ substitute(struct s_command *cp)
 	if (re == NULL) {
 		if (defpreg != NULL && cp->u.s->maxbref > defpreg->re_nsub) {
 			linenum = cp->u.s->linenum;
-			errx(1, "%lu: %s: \\%d not defined in the RE",
+			errx(1, "%lu: %s: \\%u not defined in the RE",
 					linenum, fname, cp->u.s->maxbref);
 		}
 	}
@@ -416,14 +449,14 @@ substitute(struct s_command *cp)
 
 	/* Handle the 'p' flag. */
 	if (cp->u.s->p)
-		OUT(ps)
+		OUT();
 
 	/* Handle the 'w' flag. */
 	if (cp->u.s->wfile && !pd) {
 		if (cp->u.s->wfd == -1 && (cp->u.s->wfd = open(cp->u.s->wfile,
 		    O_WRONLY|O_APPEND|O_CREAT|O_TRUNC, DEFFILEMODE)) == -1)
 			err(1, "%s", cp->u.s->wfile);
-		if (write(cp->u.s->wfd, ps, psl) != psl ||
+		if (write(cp->u.s->wfd, ps, psl) != (ssize_t)psl ||
 		    write(cp->u.s->wfd, "\n", 1) != 1)
 			err(1, "%s", cp->u.s->wfile);
 	}
@@ -528,7 +561,7 @@ lputs(char *s, size_t len)
 {
 	static const char escapes[] = "\\\a\b\f\r\t\v";
 	int c, col, width;
-	char *p;
+	const char *p;
 	struct winsize win;
 	static int termwidth = -1;
 	size_t clen, i;
@@ -546,6 +579,8 @@ lputs(char *s, size_t len)
 		else
 			termwidth = 60;
 	}
+	if (termwidth <= 0)
+		termwidth = 1;
 
 	memset(&mbs, 0, sizeof(mbs));
 	col = 0;
@@ -581,7 +616,7 @@ lputs(char *s, size_t len)
 			fprintf(outfile, "\\%c", "\\abfrtv"[p - escapes]);
 			col += 2;
 		} else {
-			if (col + 4 * clen >= termwidth) {
+			if (col + 4 * clen >= (unsigned)termwidth) {
 				fprintf(outfile, "\\\n");
 				col = 0;
 			}

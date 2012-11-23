@@ -1,5 +1,4 @@
-# $FreeBSD: src/usr.bin/bzip2/Makefile,v 1.8 2005/01/28 16:08:07 ru Exp $
-# $MidnightBSD$
+# $FreeBSD$
 
 BZ2DIR=	${.CURDIR}/../../contrib/bzip2
 .PATH: ${BZ2DIR}
@@ -7,7 +6,7 @@ BZ2DIR=	${.CURDIR}/../../contrib/bzip2
 PROG=	bzip2
 CFLAGS+= -D_FILE_OFFSET_BITS=64
 
-SUBDIR+= doc
+WARNS?=	3
 
 DPADD=	${LIBBZ2}
 LDADD=	-lbz2

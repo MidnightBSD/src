@@ -1,6 +1,5 @@
 %{
-/*	$OpenBSD: bc.y,v 1.32 2006/05/18 05:49:53 otto Exp $	*/
-/*	$MidnightBSD$ */
+/*	$OpenBSD: bc.y,v 1.33 2009/10/27 23:59:36 deraadt Exp $	*/
 
 /*
  * Copyright (c) 2003, Otto Moerbeek <otto@drijf.net>
@@ -31,9 +30,8 @@
  * easy regression testing.
  */
 
-#ifndef lint
-static const char rcsid[] = "$MidnightBSD$";
-#endif /* not lint */
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -41,6 +39,8 @@ static const char rcsid[] = "$MidnightBSD$";
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
+#include <getopt.h>
+#include <histedit.h>
 #include <limits.h>
 #include <search.h>
 #include <signal.h>
@@ -48,68 +48,75 @@ static const char rcsid[] = "$MidnightBSD$";
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #include "extern.h"
 #include "pathnames.h"
 
+#define BC_VER		"1.0-FreeBSD"
 #define END_NODE	((ssize_t) -1)
 #define CONST_STRING	((ssize_t) -2)
 #define ALLOC_STRING	((ssize_t) -3)
 
+extern char	*yytext;
+extern FILE	*yyin;
+
 struct tree {
-	ssize_t			index;
 	union {
 		char		*astr;
 		const char	*cstr;
 	} u;
+	ssize_t			index;
 };
 
-int			yyparse(void);
-int			yywrap(void);
+int			 yyparse(void);
+int			 yywrap(void);
 
-int			fileindex;
-int			sargc;
-char			**sargv;
-char			*filename;
+int			 fileindex;
+int			 sargc;
+const char		**sargv;
+const char		*filename;
 char			*cmdexpr;
 
-static void		grow(void);
-static ssize_t		cs(const char *);
-static ssize_t		as(const char *);
-static ssize_t		node(ssize_t, ...);
-static void		emit(ssize_t);
-static void		emit_macro(int, ssize_t);
-static void		free_tree(void);
-static ssize_t		numnode(int);
-static ssize_t		lookup(char *, size_t, char);
-static ssize_t		letter_node(char *);
-static ssize_t		array_node(char *);
-static ssize_t		function_node(char *);
+static void		 grow(void);
+static ssize_t		 cs(const char *);
+static ssize_t		 as(const char *);
+static ssize_t		 node(ssize_t, ...);
+static void		 emit(ssize_t);
+static void		 emit_macro(int, ssize_t);
+static void		 free_tree(void);
+static ssize_t		 numnode(int);
+static ssize_t		 lookup(char *, size_t, char);
+static ssize_t		 letter_node(char *);
+static ssize_t		 array_node(char *);
+static ssize_t		 function_node(char *);
 
-static void		add_par(ssize_t);
-static void		add_local(ssize_t);
-static void		warning(const char *);
-static void		init(void);
-static __dead2 void	usage(void);
+static void		 add_par(ssize_t);
+static void		 add_local(ssize_t);
+static void		 warning(const char *);
+static void		 init(void);
+static void		 usage(void);
 static char		*escape(const char *);
 
-static ssize_t		instr_sz = 0;
+static ssize_t		 instr_sz = 0;
 static struct tree	*instructions = NULL;
-static ssize_t		current = 0;
-static int		macro_char = '0';
-static int		reset_macro_char = '0';
-static int		nesting = 0;
-static int		breakstack[16];
-static int		breaksp = 0;
-static ssize_t		prologue;
-static ssize_t		epilogue;
-static bool		st_has_continue;
-static char		str_table[UCHAR_MAX][2];
-static bool		do_fork = true;
-static u_short		var_count;
-static pid_t		dc;
+static ssize_t		 current = 0;
+static int		 macro_char = '0';
+static int		 reset_macro_char = '0';
+static int		 nesting = 0;
+static int		 breakstack[16];
+static int		 breaksp = 0;
+static ssize_t		 prologue;
+static ssize_t		 epilogue;
+static bool		 st_has_continue;
+static char		 str_table[UCHAR_MAX][2];
+static bool		 do_fork = true;
+static u_short		 var_count;
+static pid_t		 dc;
 
-extern char *__progname;
+static void		 sigchld(int);
+
+extern char		*__progname;
 
 #define BREAKSTACK_SZ	(sizeof(breakstack)/sizeof(breakstack[0]))
 
@@ -122,15 +129,26 @@ extern char *__progname;
 #define VAR_BASE	(256-4)
 #define MAX_VARIABLES	(VAR_BASE * VAR_BASE)
 
+const struct option long_options[] =
+{
+	{"expression",	required_argument,	NULL,	'e'},
+	{"help",	no_argument,		NULL,	'h'},
+	{"mathlib",	no_argument,		NULL,	'l'},
+	/* compatibility option */
+	{"quiet",	no_argument,		NULL,	'q'},
+	{"version",	no_argument,		NULL,	'v'},
+	{NULL,		no_argument,		NULL,	0}
+};
+
 %}
 
 %start program
 
 %union {
-	ssize_t		node;
-	struct lvalue	lvalue;
+	struct lvalue	 lvalue;
 	const char	*str;
 	char		*astr;
+	ssize_t		 node;
 }
 
 %token COMMA SEMICOLON LPAR RPAR LBRACE RBRACE LBRACKET RBRACKET DOT
@@ -750,8 +768,8 @@ print_expression
 static void
 grow(void)
 {
-	struct tree	*p;
-	size_t		newsize;
+	struct tree *p;
+	size_t newsize;
 
 	if (current == instr_sz) {
 		newsize = instr_sz * 2 + 1;
@@ -768,28 +786,30 @@ grow(void)
 static ssize_t
 cs(const char *str)
 {
+
 	grow();
 	instructions[current].index = CONST_STRING;
 	instructions[current].u.cstr = str;
-	return current++;
+	return (current++);
 }
 
 static ssize_t
 as(const char *str)
 {
+
 	grow();
 	instructions[current].index = ALLOC_STRING;
 	instructions[current].u.astr = strdup(str);
 	if (instructions[current].u.astr == NULL)
 		err(1, NULL);
-	return current++;
+	return (current++);
 }
 
 static ssize_t
 node(ssize_t arg, ...)
 {
-	va_list		ap;
-	ssize_t		ret;
+	va_list ap;
+	ssize_t ret;
 
 	va_start(ap, arg);
 
@@ -804,12 +824,13 @@ node(ssize_t arg, ...)
 	} while (arg != END_NODE);
 
 	va_end(ap);
-	return ret;
+	return (ret);
 }
 
 static void
 emit(ssize_t i)
 {
+
 	if (instructions[i].index >= 0)
 		while (instructions[i].index != END_NODE)
 			emit(instructions[i++].index);
@@ -818,18 +839,19 @@ emit(ssize_t i)
 }
 
 static void
-emit_macro(int node, ssize_t code)
+emit_macro(int nodeidx, ssize_t code)
 {
+
 	putchar('[');
 	emit(code);
-	printf("]s%s\n", instructions[node].u.cstr);
+	printf("]s%s\n", instructions[nodeidx].u.cstr);
 	nesting--;
 }
 
 static void
 free_tree(void)
 {
-	ssize_t i;
+	ssize_t	i;
 
 	for (i = 0; i < current; i++)
 		if (instructions[i].index == ALLOC_STRING)
@@ -848,16 +870,16 @@ numnode(int num)
 		p = str_table['A' - 10 + num];
 	else
 		errx(1, "internal error: break num > 15");
-	return node(cs(" "), cs(p), END_NODE);
+	return (node(cs(" "), cs(p), END_NODE));
 }
 
 
 static ssize_t
 lookup(char * str, size_t len, char type)
 {
-	ENTRY	entry, *found;
-	u_short	num;
-	u_char	*p;
+	ENTRY entry, *found;
+	u_char *p;
+	u_short num;
 
 	/* The scanner allocated an extra byte already */
 	if (str[len-1] != type) {
@@ -886,7 +908,7 @@ lookup(char * str, size_t len, char type)
 		if (found == NULL)
 			err(1, NULL);
 	}
-	return cs(found->data);
+	return (cs(found->data));
 }
 
 static ssize_t
@@ -896,9 +918,9 @@ letter_node(char *str)
 
 	len = strlen(str);
 	if (len == 1 && str[0] != '_')
-		return cs(str_table[(int)str[0]]);
+		return (cs(str_table[(int)str[0]]));
 	else
-		return lookup(str, len, 'L');
+		return (lookup(str, len, 'L'));
 }
 
 static ssize_t
@@ -908,9 +930,9 @@ array_node(char *str)
 
 	len = strlen(str);
 	if (len == 1 && str[0] != '_')
-		return cs(str_table[(int)str[0] - 'a' + ARRAY_CHAR]);
+		return (cs(str_table[(int)str[0] - 'a' + ARRAY_CHAR]));
 	else
-		return lookup(str, len, 'A');
+		return (lookup(str, len, 'A'));
 }
 
 static ssize_t
@@ -920,14 +942,15 @@ function_node(char *str)
 
 	len = strlen(str);
 	if (len == 1 && str[0] != '_')
-		return cs(str_table[(int)str[0] - 'a' + FUNC_CHAR]);
+		return (cs(str_table[(int)str[0] - 'a' + FUNC_CHAR]));
 	else
-		return lookup(str, len, 'F');
+		return (lookup(str, len, 'F'));
 }
 
 static void
 add_par(ssize_t n)
 {
+
 	prologue = node(cs("S"), n, prologue, END_NODE);
 	epilogue = node(epilogue, cs("L"), n, cs("s."), END_NODE);
 }
@@ -935,15 +958,16 @@ add_par(ssize_t n)
 static void
 add_local(ssize_t n)
 {
+
 	prologue = node(cs("0S"), n, prologue, END_NODE);
 	epilogue = node(epilogue, cs("L"), n, cs("s."), END_NODE);
 }
 
 void
-yyerror(char *s)
+yyerror(const char *s)
 {
-	char	*str, *p;
-	int	n;
+	char *p, *str;
+	int n;
 
 	if (yyin != NULL && feof(yyin))
 		n = asprintf(&str, "%s: %s:%d: %s: unexpected EOF",
@@ -971,19 +995,21 @@ yyerror(char *s)
 void
 fatal(const char *s)
 {
+
 	errx(1, "%s:%d: %s", filename, lineno, s);
 }
 
 static void
 warning(const char *s)
 {
+
 	warnx("%s:%d: %s", filename, lineno, s);
 }
 
 static void
 init(void)
 {
-	int i;
+	unsigned int i;
 
 	for (i = 0; i < UCHAR_MAX; i++) {
 		str_table[i][0] = i;
@@ -994,10 +1020,11 @@ init(void)
 }
 
 
-static __dead2 void
+static void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-cl] [-e expression] [file ...]\n",
+
+	fprintf(stderr, "usage: %s [-chlqv] [-e expression] [file ...]\n",
 	    __progname);
 	exit(1);
 }
@@ -1005,7 +1032,7 @@ usage(void)
 static char *
 escape(const char *str)
 {
-	char *ret, *p;
+	char *p, *ret;
 
 	ret = malloc(strlen(str) + 1);
 	if (ret == NULL)
@@ -1054,7 +1081,7 @@ escape(const char *str)
 			*p++ = *str++;
 	}
 	*p = '\0';
-	return ret;
+	return (ret);
 }
 
 /* ARGSUSED */
@@ -1064,26 +1091,36 @@ sigchld(int signo)
 	pid_t pid;
 	int status;
 
-	for (;;) {
-		pid = waitpid(dc, &status, WCONTINUED);
-		if (pid == -1) {
-			if (errno == EINTR)
-				continue;
-			_exit(0);
+	switch (signo) {
+	default:
+		for (;;) {
+			pid = waitpid(dc, &status, WUNTRACED);
+			if (pid == -1) {
+				if (errno == EINTR)
+					continue;
+				_exit(0);
+			}
+			if (WIFEXITED(status) || WIFSIGNALED(status))
+				_exit(0);
+			else
+				break;
 		}
-		if (WIFEXITED(status) || WIFSIGNALED(status))
-			_exit(0);
-		else
-			break;
 	}
+}
+
+static const char *
+dummy_prompt(void)
+{
+
+        return ("");
 }
 
 int
 main(int argc, char *argv[])
 {
-	int	i, ch;
-	int	p[2];
-	char	*q;
+	char *q;
+	int p[2];
+	int ch, i;
 
 	init();
 	setlinebuf(stdout);
@@ -1095,7 +1132,8 @@ main(int argc, char *argv[])
 	if ((cmdexpr = strdup("")) == NULL)
 		err(1, NULL);
 	/* The d debug option is 4.4 BSD bc(1) compatible */
-	while ((ch = getopt(argc, argv, "cde:l")) != -1) {
+	while ((ch = getopt_long(argc, argv, "cde:hlqv",
+	   long_options, NULL)) != -1) {
 		switch (ch) {
 		case 'c':
 		case 'd':
@@ -1107,8 +1145,18 @@ main(int argc, char *argv[])
 				err(1, NULL);
 			free(q);
 			break;
+		case 'h':
+			usage();
+			break;
 		case 'l':
 			sargv[sargc++] = _PATH_LIBB;
+			break;
+		case 'q':
+			/* compatibility option */
+			break;
+		case 'v':
+			fprintf(stderr, "%s (BSD bc) %s\n", __progname, BC_VER);
+			exit(0);
 			break;
 		default:
 			usage();
@@ -1143,6 +1191,16 @@ main(int argc, char *argv[])
 			err(1, "cannot find dc");
 		}
 	}
+	if (interactive) {
+		el = el_init("bc", stdin, stderr, stderr);
+		hist = history_init();
+		history(hist, &he, H_SETSIZE, 100);
+		el_set(el, EL_HIST, history, hist);
+		el_set(el, EL_EDITOR, "emacs");
+		el_set(el, EL_SIGNAL, 1);
+		el_set(el, EL_PROMPT, dummy_prompt);
+		el_source(el, NULL);
+	}
 	yywrap();
-	return yyparse();
+	return (yyparse());
 }

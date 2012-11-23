@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -33,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/talk/display.c,v 1.11 2003/07/04 20:44:25 luigi Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifndef lint
 static const char sccsid[] = "@(#)display.c	8.1 (Berkeley) 6/6/93";
@@ -44,6 +40,7 @@ static const char sccsid[] = "@(#)display.c	8.1 (Berkeley) 6/6/93";
  * displaying of text
  */
 #include <ctype.h>
+#include <unistd.h>
 
 #include "talk.h"
 
@@ -58,8 +55,7 @@ int	curses_initialized = 0;
  * an argument of the form --foo at least once.
  */
 int
-max(a,b)
-	int a, b;
+max(int a, int b)
 {
 
 	return (a > b ? a : b);
@@ -70,10 +66,7 @@ max(a,b)
  * characters while we are at it.
  */
 void
-display(win, text, size)
-	xwin_t *win;
-	char *text;
-	int size;
+display(xwin_t *win, char *text, int size)
 {
 	int i;
 	char cch;
@@ -180,10 +173,7 @@ display(win, text, size)
  * Read the character at the indicated position in win
  */
 int
-readwin(win, line, col)
-	WINDOW *win;
-	int line;
-	int col;
+readwin(WINDOW *win, int line, int col)
 {
 	int oldline, oldcol;
 	int c;

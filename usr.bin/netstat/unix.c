@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -38,7 +34,7 @@ static char sccsid[] = "@(#)unix.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/netstat/unix.c,v 1.20 2007/07/16 17:15:55 jhb Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * Display protocol blocks in the unix domain.
@@ -65,7 +61,7 @@ __FBSDID("$FreeBSD: src/usr.bin/netstat/unix.c,v 1.20 2007/07/16 17:15:55 jhb Ex
 #include <kvm.h>
 #include "netstat.h"
 
-static	void unixdomainpr (struct xunpcb *, struct xsocket *);
+static	void unixdomainpr(struct xunpcb *, struct xsocket *);
 
 static	const char *const socktype[] =
     { "#0", "stream", "dgram", "raw", "rdm", "seqpacket" };
@@ -124,7 +120,7 @@ pcblist_kvm(u_long count_off, u_long gencnt_off, u_long head_off, char **bufp)
 	}
 	p = buf;
 
-#define COPYOUT(obj, size) do {						\
+#define	COPYOUT(obj, size) do {						\
 	if (len < (size)) {						\
 		warnx("buffer size exceeded");				\
 		goto fail;						\
@@ -134,7 +130,7 @@ pcblist_kvm(u_long count_off, u_long gencnt_off, u_long head_off, char **bufp)
 	p += (size);							\
 } while (0)
 
-#define KREAD(off, buf, len) do {					\
+#define	KREAD(off, buf, len) do {					\
 	if (kread((uintptr_t)(off), (buf), (len)) != 0)			\
 		goto fail;						\
 } while (0)
@@ -193,21 +189,37 @@ fail:
 }
 
 void
-unixpr(u_long count_off, u_long gencnt_off, u_long dhead_off, u_long shead_off)
+unixpr(u_long count_off, u_long gencnt_off, u_long dhead_off, u_long shead_off,
+    u_long sphead_off)
 {
 	char 	*buf;
 	int	ret, type;
 	struct	xsocket *so;
 	struct	xunpgen *xug, *oxug;
 	struct	xunpcb *xunp;
+	u_long	head_off;
 
 	for (type = SOCK_STREAM; type <= SOCK_SEQPACKET; type++) {
 		if (live)
 			ret = pcblist_sysctl(type, &buf);
-		else
-			ret = pcblist_kvm(count_off, gencnt_off,
-			    type == SOCK_STREAM ? shead_off :
-			    (type == SOCK_DGRAM ? dhead_off : 0), &buf);
+		else {
+			head_off = 0;
+			switch (type) {
+			case SOCK_STREAM:
+				head_off = shead_off;
+				break;
+
+			case SOCK_DGRAM:
+				head_off = dhead_off;
+				break;
+
+			case SOCK_SEQPACKET:
+				head_off = sphead_off;
+				break;
+			}
+			ret = pcblist_kvm(count_off, gencnt_off, head_off,
+			    &buf);
+		}
 		if (ret == -1)
 			continue;
 		if (ret < 0)
@@ -247,6 +259,7 @@ unixdomainpr(struct xunpcb *xunp, struct xsocket *so)
 	struct unpcb *unp;
 	struct sockaddr_un *sa;
 	static int first = 1;
+	char buf1[15];
 
 	unp = &xunp->xu_unp;
 	if (unp->unp_addr)
@@ -254,7 +267,7 @@ unixdomainpr(struct xunpcb *xunp, struct xsocket *so)
 	else
 		sa = (struct sockaddr_un *)0;
 
-	if (first) {
+	if (first && !Lflag) {
 		printf("Active UNIX domain sockets\n");
 		printf(
 "%-8.8s %-6.6s %-6.6s %-6.6s %8.8s %8.8s %8.8s %8.8s Addr\n",
@@ -262,11 +275,21 @@ unixdomainpr(struct xunpcb *xunp, struct xsocket *so)
 		    "Inode", "Conn", "Refs", "Nextref");
 		first = 0;
 	}
-	printf("%8lx %-6.6s %6u %6u %8lx %8lx %8lx %8lx",
-	       (long)so->so_pcb, socktype[so->so_type], so->so_rcv.sb_cc,
-	       so->so_snd.sb_cc,
-	       (long)unp->unp_vnode, (long)unp->unp_conn,
-	       (long)LIST_FIRST(&unp->unp_refs), (long)LIST_NEXT(unp, unp_reflink));
+
+	if (Lflag && so->so_qlimit == 0)
+		return;
+
+	if (Lflag) {
+		snprintf(buf1, 15, "%d/%d/%d", so->so_qlen,
+		    so->so_incqlen, so->so_qlimit);
+		printf("unix  %-14.14s", buf1);
+	} else {
+		printf("%8lx %-6.6s %6u %6u %8lx %8lx %8lx %8lx",
+		    (long)so->so_pcb, socktype[so->so_type], so->so_rcv.sb_cc,
+		    so->so_snd.sb_cc, (long)unp->unp_vnode, (long)unp->unp_conn,
+		    (long)LIST_FIRST(&unp->unp_refs),
+		    (long)LIST_NEXT(unp, unp_reflink));
+	}
 	if (sa)
 		printf(" %.*s",
 		    (int)(sa->sun_len - offsetof(struct sockaddr_un, sun_path)),

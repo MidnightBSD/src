@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/tip/tip/tipout.c,v 1.12 2006/08/31 19:19:44 ru Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifndef lint
 #if 0
@@ -170,12 +170,18 @@ tipout(void)
 		if (boolean(value(SCRIPT)) && fscript != NULL) {
 			if (!boolean(value(BEAUTIFY))) {
 				fwrite(buf, 1, cnt, fscript);
-				continue;
+			} else {
+				for (cp = buf; cp < buf + cnt; cp++)
+					if ((*cp >= ' ' && *cp <= '~') ||
+					    any(*cp, value(EXCEPTIONS)))
+						putc(*cp, fscript);
 			}
-			for (cp = buf; cp < buf + cnt; cp++)
-				if ((*cp >= ' ' && *cp <= '~') ||
-				    any(*cp, value(EXCEPTIONS)))
-					putc(*cp, fscript);
+			for (cp = buf; cp < buf + cnt; cp++) {
+				if (!isgraph(*cp)) {
+					fflush(fscript);
+					break;
+				}
+			}
 		}
 	}
 }

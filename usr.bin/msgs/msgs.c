@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -44,7 +40,7 @@ static char sccsid[] = "@(#)msgs.c	8.2 (Berkeley) 4/28/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/msgs/msgs.c,v 1.27 2005/01/17 17:45:38 delphij Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * msgs - a user bulletin board program
@@ -171,6 +167,7 @@ main(int argc, char *argv[])
 	int blast = 0;
 	struct stat buf;		/* stat to check access of bounds */
 	FILE *bounds;
+	char *cp;
 
 #ifdef UNBUFFERED
 	setbuf(stdout, NULL);
@@ -286,7 +283,7 @@ main(int argc, char *argv[])
 		lastmsg = 0;
 
 		for (dp = readdir(dirp); dp != NULL; dp = readdir(dirp)){
-			char *cp = dp->d_name;
+			cp = dp->d_name;
 			int i = 0;
 
 			if (dp->d_ino == 0)
@@ -402,7 +399,11 @@ main(int argc, char *argv[])
 	totty = (isatty(fileno(stdout)) != 0);
 	use_pager = use_pager && totty;
 
-	snprintf(fname, sizeof(fname), "%s/%s", getenv("HOME"), MSGSRC);
+	if ((cp = getenv("HOME")) == NULL || *cp == '\0') {
+		fprintf(stderr, "Error, no home directory!\n");
+		exit(1);
+	}
+	snprintf(fname, sizeof(fname), "%s/%s", cp, MSGSRC);
 	msgsrc = fopen(fname, "r");
 	if (msgsrc) {
 		newrc = NO;

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/systat/convtbl.c,v 1.12 2007/01/18 09:24:08 ru Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/types.h>
@@ -126,7 +126,7 @@ get_scale(const char *name)
 }
 
 const char *
-get_helplist()
+get_helplist(void)
 {
 	int i;
 	size_t len;

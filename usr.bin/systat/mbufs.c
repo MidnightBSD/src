@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -33,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/systat/mbufs.c,v 1.20 2006/07/24 01:49:24 rwatson Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifdef lint
 static const char sccsid[] = "@(#)mbufs.c	8.1 (Berkeley) 6/6/93";
@@ -69,14 +65,13 @@ static struct mtnames {
 #define	NNAMES	(sizeof (mtnames) / sizeof (mtnames[0]))
 
 WINDOW *
-openmbufs()
+openmbufs(void)
 {
 	return (subwin(stdscr, LINES-3-1, 0, MAINWIN_ROW, 0));
 }
 
 void
-closembufs(w)
-	WINDOW *w;
+closembufs(WINDOW *w)
 {
 	if (w == NULL)
 		return;
@@ -86,7 +81,7 @@ closembufs(w)
 }
 
 void
-labelmbufs()
+labelmbufs(void)
 {
 	wmove(wnd, 0, 0); wclrtoeol(wnd);
 	mvwaddstr(wnd, 0, 10,
@@ -94,7 +89,7 @@ labelmbufs()
 }
 
 void
-showmbufs()
+showmbufs(void)
 {
 	int i, j, max, idx;
 	u_long totmbufs;
@@ -165,7 +160,7 @@ showmbufs()
 }
 
 int
-initmbufs()
+initmbufs(void)
 {
 	size_t len;
 
@@ -188,7 +183,7 @@ initmbufs()
 }
 
 void
-fetchmbufs()
+fetchmbufs(void)
 {
 	size_t len;
 

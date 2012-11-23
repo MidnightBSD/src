@@ -1,8 +1,10 @@
-# $FreeBSD: src/usr.bin/newkey/Makefile,v 1.13 2004/11/13 20:40:30 bz Exp $
+# $MidnightBSD$
+
+.include <bsd.own.mk>
 
 PROG=	newkey
 SRCS=	newkey.c generic.c update.c
-.if !defined(NO_NIS)
+.if ${MK_NIS} != "no"
 CFLAGS+= -DYP
 .endif
 MAN=	newkey.8

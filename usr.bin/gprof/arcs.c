@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -38,7 +34,7 @@ static char sccsid[] = "@(#)arcs.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/gprof/arcs.c,v 1.12 2004/06/20 11:05:25 stefanf Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <err.h>
 #include "gprof.h"
@@ -382,7 +378,7 @@ cyclelink()
 	 */
     cyclenl = (nltype *) calloc( ncycle + 1 , sizeof( nltype ) );
     if ( cyclenl == 0 )
-	errx( 1 , "no room for %d bytes of cycle headers" ,
+	errx( 1 , "no room for %zu bytes of cycle headers" ,
 		   ( ncycle + 1 ) * sizeof( nltype ) );
 	/*
 	 *	now link cycles to true cycleheads,
@@ -485,7 +481,7 @@ cycleanalyze()
 	done = FALSE;
         cyclestack = (arctype **) calloc( size + 1 , sizeof( arctype *) );
 	if ( cyclestack == 0 )
-	    errx( 1, "no room for %d bytes of cycle stack" ,
+	    errx( 1, "no room for %zu bytes of cycle stack" ,
 			   ( size + 1 ) * sizeof( arctype * ) );
 #	ifdef DEBUG
 	    if ( debug & BREAKCYCLE ) {
@@ -603,7 +599,7 @@ addcycle( stkstart , stkend )
     clp = (cltype *)
 	calloc( 1 , sizeof ( cltype ) + ( size - 1 ) * sizeof( arctype * ) );
     if ( clp == 0 ) {
-	warnx( "no room for %d bytes of subcycle storage" ,
+	warnx( "no room for %zu bytes of subcycle storage" ,
 	    sizeof ( cltype ) + ( size - 1 ) * sizeof( arctype * ) );
 	return( FALSE );
     }

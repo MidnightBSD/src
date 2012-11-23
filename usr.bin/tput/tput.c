@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/tput/tput.c,v 1.15 2002/09/04 23:29:07 dwmalone Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifndef lint
 static const char copyright[] =
@@ -76,6 +76,9 @@ main(int argc, char **argv)
 		}
 	argc -= optind;
 	argv += optind;
+
+	if (argc < 1)
+		usage();
 
 	if (!term && !(term = getenv("TERM")))
 errx(2, "no terminal type specified and no TERM environmental variable.");
@@ -186,11 +189,11 @@ process(const char *cap, char *str, char **argv)
 	case 2:
 		if (*++argv == NULL || *argv[0] == '\0')
 			errx(2, errfew, 2, cap);
-		arg_rows = atoi(*argv);
+		arg_cols = atoi(*argv);
 
 		if (*++argv == NULL || *argv[0] == '\0')
 			errx(2, errfew, 2, cap);
-		arg_cols = atoi(*argv);
+		arg_rows = atoi(*argv);
 
 		(void) tputs(tgoto(str, arg_cols, arg_rows), arg_rows, outc);
 		break;
@@ -204,7 +207,6 @@ process(const char *cap, char *str, char **argv)
 static void
 usage(void)
 {
-	(void)fprintf(stderr, "usage: %s [-T term] attribute ...\n",
-		getprogname());
+	(void)fprintf(stderr, "usage: tput [-T term] attribute ...\n");
 	exit(2);
 }

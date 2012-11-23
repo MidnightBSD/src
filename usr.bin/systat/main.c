@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -33,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/systat/main.c,v 1.20 2006/04/30 04:47:23 bde Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifdef lint
 static const char sccsid[] = "@(#)main.c	8.1 (Berkeley) 6/6/93";
@@ -87,7 +83,7 @@ main(int argc, char **argv)
 	char errbuf[_POSIX2_LINE_MAX], dummy;
 	size_t	size;
 
-	(void) setlocale(LC_TIME, "");
+	(void) setlocale(LC_ALL, "");
 
 	argc--, argv++;
 	while (argc > 0) {
@@ -133,6 +129,7 @@ main(int argc, char **argv)
 			exit(1);
 		}
 	}
+	signal(SIGHUP, die);
 	signal(SIGINT, die);
 	signal(SIGQUIT, die);
 	signal(SIGTERM, die);
@@ -180,7 +177,7 @@ main(int argc, char **argv)
 }
 
 void
-labels()
+labels(void)
 {
 	if (curcmd->c_flags & CF_LOADAV) {
 		mvaddstr(0, 20,
@@ -195,8 +192,7 @@ labels()
 }
 
 void
-display(signo)
-	int signo __unused;
+display(int signo __unused)
 {
 	int i, j;
 
@@ -231,7 +227,7 @@ display(signo)
 }
 
 void
-load()
+load(void)
 {
 
 	(void) getloadavg(avenrun, sizeof(avenrun)/sizeof(avenrun[0]));
@@ -241,8 +237,7 @@ load()
 }
 
 void
-die(signo)
-	int signo __unused;
+die(int signo __unused)
 {
 	move(CMDLINE, 0);
 	clrtoeol();
@@ -278,8 +273,7 @@ error(const char *fmt, ...)
 }
 
 void
-nlisterr(n_list)
-	struct nlist n_list[];
+nlisterr(struct nlist n_list[])
 {
 	int i, n;
 

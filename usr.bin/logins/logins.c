@@ -25,11 +25,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/logins/logins.c,v 1.1 2004/03/06 21:57:29 des Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/logins/logins.c,v 1.1 2004/03/06 21:57:29 des Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <err.h>
 #include <grp.h>

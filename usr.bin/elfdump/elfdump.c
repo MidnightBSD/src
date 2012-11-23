@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/elfdump/elfdump.c,v 1.14 2006/01/28 17:58:22 marcel Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/elf32.h>
@@ -322,6 +322,7 @@ sh_types(u_int64_t sht) {
 	case 18: return "SHT_SYMTAB_SHNDX";
 	/* 0x60000000 - 0x6fffffff operating system-specific semantics */
 	case 0x6ffffff0: return "XXX:VERSYM";
+	case 0x6ffffff4: return "SHT_SUNW_dof";
 	case 0x6ffffff7: return "SHT_GNU_LIBLIST";
 	case 0x6ffffffc: return "XXX:VERDEF";
 	case 0x6ffffffd: return "SHT_SUNW(GNU)_verdef";

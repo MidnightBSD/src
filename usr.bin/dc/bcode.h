@@ -1,5 +1,5 @@
+/*	$MidnightBSD$						*/
 /*	$OpenBSD: bcode.h,v 1.5 2006/01/16 08:09:25 otto Exp $	*/
-/*	$MidnightBSD$ */
 
 /*
  * Copyright (c) 2003, Otto Moerbeek <otto@drijf.net>
@@ -20,10 +20,9 @@
 #include <sys/types.h>
 #include <openssl/bn.h>
 
-
 struct number {
 	BIGNUM	*number;
-	u_int	scale;
+	u_int	 scale;
 };
 
 enum stacktype {
@@ -49,18 +48,18 @@ struct value {
 		char		*string;
 	} u;
 	struct array	*array;
-	enum stacktype	type;
+	enum stacktype	 type;
 };
 
 struct array {
 	struct value	*data;
-	size_t		size;
+	size_t		 size;
 };
 
 struct stack {
 	struct value	*stack;
-	ssize_t		sp;
-	size_t		size;
+	ssize_t		 size;
+	ssize_t		 sp;
 };
 
 struct source;
@@ -73,27 +72,27 @@ struct vtable {
 };
 
 struct source {
-	struct vtable	*vtable;
 	union {
-			FILE *stream;
 			struct {
-				u_char *buf;
-				size_t pos;
+				u_char	*buf;
+				size_t	 pos;
 			} string;
+			FILE	*stream;
 	} u;
-	int		lastchar;
+	struct vtable	*vtable;
+	int		 lastchar;
 };
 
-void			init_bmachine(bool);
-void			reset_bmachine(struct source *);
-void			scale_number(BIGNUM *, int);
-void			normalize(struct number *, u_int);
-void			eval(void);
-void			pn(const char *, const struct number *);
-void			pbn(const char *, const BIGNUM *);
-void			negate(struct number *);
-void			split_number(const struct number *, BIGNUM *, BIGNUM *);
-void			bmul_number(struct number *, struct number *,
+void			 init_bmachine(bool);
+void			 reset_bmachine(struct source *);
+void			 scale_number(BIGNUM *, int);
+void			 normalize(struct number *, u_int);
+void			 eval(void);
+void			 pn(const char *, const struct number *);
+void			 pbn(const char *, const BIGNUM *);
+void			 negate(struct number *);
+void			 split_number(const struct number *, BIGNUM *, BIGNUM *);
+void			 bmul_number(struct number *, struct number *,
 			    struct number *);
 
-extern BIGNUM		zero;
+extern BIGNUM		 zero;

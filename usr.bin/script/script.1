@@ -9,10 +9,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
 .\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
@@ -30,10 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)script.1	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: src/usr.bin/script/script.1,v 1.21.18.2 2011/10/04 11:10:11 trociny Exp $
 .\" $MidnightBSD$
 .\"
-.Dd October 4, 2011
+.Dd September 28, 2011
 .Dt SCRIPT 1
 .Os
 .Sh NAME
@@ -78,15 +73,16 @@ or
 .Pa typescript ,
 retaining the prior contents.
 .It Fl k
-Log keys sent to program as well as output.
+Log keys sent to the program as well as output.
 .It Fl q
 Run in quiet mode, omit the start and stop status messages.
 .It Fl t Ar time
-Specify time interval between flushing script output file.
+Specify the interval at which the script output file will be flushed
+to disk, in seconds.
 A value of 0
 causes
 .Nm
-to flush for every character I/O event.
+to flush after every character I/O event.
 The default interval is
 30 seconds.
 .El
@@ -141,13 +137,15 @@ If
 .Ev SHELL
 is not set, the Bourne shell
 is assumed.
-(Most shells set this variable automatically).
+.Pq Most shells set this variable automatically .
 .El
 .Sh SEE ALSO
 .Xr csh 1
-(for the
+.Po
+for the
 .Em history
-mechanism).
+mechanism
+.Pc .
 .Sh HISTORY
 The
 .Nm
@@ -170,13 +168,15 @@ mode, echo cancelling is far from ideal.
 The slave terminal mode is checked
 for ECHO mode to check when to avoid manual echo logging.
 This does not
-work when in a raw mode where the program being run is doing manual echo.
+work when the terminal is in a raw mode where
+the program being run is doing manual echo.
 .Pp
-If the
+If
 .Nm
-reads zero bytes from the terminal it switches to a mode when it probes read
-only once a second until it gets some data.
-This prevents the
+reads zero bytes from the terminal, it switches to a mode when it
+only attempts to read
+once a second until there is data to read.
+This prevents
 .Nm
-spinning on zero-byte reads, but might cause a 1-second delay in
-processing of the user input.
+from spinning on zero-byte reads, but might cause a 1-second delay in
+processing of user input.

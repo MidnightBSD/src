@@ -27,8 +27,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/colldef/parse.y,v 1.34 2005/05/21 09:55:05 ru Exp $");
+__MBSDID("$MidnightBSD$");
 
+#include <sys/types.h>
 #include <arpa/inet.h>
 #include <err.h>
 #include <stdarg.h>

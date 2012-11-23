@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -41,7 +37,7 @@ static char sccsid[] = "@(#)reverse.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/tail/reverse.c,v 1.19 2005/03/20 22:08:52 iedowse Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -58,8 +54,8 @@ __FBSDID("$FreeBSD: src/usr.bin/tail/reverse.c,v 1.19 2005/03/20 22:08:52 iedows
 
 #include "extern.h"
 
-static void r_buf(FILE *);
-static void r_reg(FILE *, enum STYLE, off_t, struct stat *);
+static void r_buf(FILE *, const char *);
+static void r_reg(FILE *, const char *, enum STYLE, off_t, struct stat *);
 
 /*
  * reverse -- display input in reverse order by line.
@@ -80,25 +76,25 @@ static void r_reg(FILE *, enum STYLE, off_t, struct stat *);
  *	NOREG	cyclically read input into a linked list of buffers
  */
 void
-reverse(FILE *fp, enum STYLE style, off_t off, struct stat *sbp)
+reverse(FILE *fp, const char *fn, enum STYLE style, off_t off, struct stat *sbp)
 {
 	if (style != REVERSE && off == 0)
 		return;
 
 	if (S_ISREG(sbp->st_mode))
-		r_reg(fp, style, off, sbp);
+		r_reg(fp, fn, style, off, sbp);
 	else
 		switch(style) {
 		case FBYTES:
 		case RBYTES:
-			bytes(fp, off);
+			bytes(fp, fn, off);
 			break;
 		case FLINES:
 		case RLINES:
-			lines(fp, off);
+			lines(fp, fn, off);
 			break;
 		case REVERSE:
-			r_buf(fp);
+			r_buf(fp, fn);
 			break;
 		default:
 			break;
@@ -109,7 +105,7 @@ reverse(FILE *fp, enum STYLE style, off_t off, struct stat *sbp)
  * r_reg -- display a regular file in reverse order by line.
  */
 static void
-r_reg(FILE *fp, enum STYLE style, off_t off, struct stat *sbp)
+r_reg(FILE *fp, const char *fn, enum STYLE style, off_t off, struct stat *sbp)
 {
 	struct mapinfo map;
 	off_t curoff, size, lineend;
@@ -132,7 +128,7 @@ r_reg(FILE *fp, enum STYLE style, off_t off, struct stat *sbp)
 		if (curoff < map.mapoff ||
 		    curoff >= map.mapoff + (off_t)map.maplen) {
 			if (maparound(&map, curoff) != 0) {
-				ierr();
+				ierr(fn);
 				return;
 			}
 		}
@@ -149,7 +145,7 @@ r_reg(FILE *fp, enum STYLE style, off_t off, struct stat *sbp)
 
 		/* Print the line and update offsets. */
 		if (mapprint(&map, curoff + 1, lineend - curoff - 1) != 0) {
-			ierr();
+			ierr(fn);
 			return;
 		}
 		lineend = curoff + 1;
@@ -165,11 +161,11 @@ r_reg(FILE *fp, enum STYLE style, off_t off, struct stat *sbp)
 		}
 	}
 	if (curoff < 0 && mapprint(&map, 0, lineend) != 0) {
-		ierr();
+		ierr(fn);
 		return;
 	}
 	if (map.start != NULL && munmap(map.start, map.maplen))
-		ierr();
+		ierr(fn);
 }
 
 typedef struct bf {
@@ -190,13 +186,14 @@ typedef struct bf {
  * user warned).
  */
 static void
-r_buf(FILE *fp)
+r_buf(FILE *fp, const char *fn)
 {
 	BF *mark, *tl, *tr;
 	int ch, len, llen;
 	char *p;
 	off_t enomem;
 
+	tl = NULL;
 #define	BSZ	(128 * 1024)
 	for (mark = NULL, enomem = 0;;) {
 		/*
@@ -226,7 +223,7 @@ r_buf(FILE *fp)
 			*p++ = ch;
 
 		if (ferror(fp)) {
-			ierr();
+			ierr(fn);
 			return;
 		}
 

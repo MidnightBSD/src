@@ -1,8 +1,8 @@
-/* $FreeBSD: src/usr.bin/compress/doc/revision.log,v 1.4 2001/08/13 14:06:30 ru Exp $ */
+/* $MidnightBSD$ */
 
 /*
- * $Header: /home/cvs/src/usr.bin/compress/doc/revision.log,v 1.1.1.2 2006-02-25 02:38:12 laffer1 Exp $
- * $Log: not supported by cvs2svn $
+ * $Header: /home/cvs/src/usr.bin/compress/doc/revision.log,v 1.2 2012-11-23 01:13:51 laffer1 Exp $
+ *
  * Revision 4.0  85/07/30  12:50:00  joe
  * Removed ferror() calls in output routine on every output except first.
  * Prepared for release to the world.
@@ -115,4 +115,4 @@
  */
 
 static char rcs_ident[] =
-	"$Header: /home/cvs/src/usr.bin/compress/doc/revision.log,v 1.1.1.2 2006-02-25 02:38:12 laffer1 Exp $";
+	"$Header: /home/cvs/src/usr.bin/compress/doc/revision.log,v 1.2 2012-11-23 01:13:51 laffer1 Exp $";

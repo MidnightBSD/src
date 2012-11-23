@@ -9,10 +9,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
 .\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
@@ -30,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)netstat.1	8.8 (Berkeley) 4/18/94
-.\" $FreeBSD: src/usr.bin/netstat/netstat.1,v 1.58 2007/06/10 06:11:03 ceri Exp $
+.\" $MidnightBSD$
 .\"
-.Dd June 10, 2007
+.Dd February 22, 2010
 .Dt NETSTAT 1
 .Os
 .Sh NAME
@@ -49,7 +45,7 @@ depending on the options for the information presented.
 .It Xo
 .Bk -words
 .Nm
-.Op Fl AaLnSW
+.Op Fl AaLnSTWx
 .Op Fl f Ar protocol_family | Fl p Ar protocol
 .Op Fl M Ar core
 .Op Fl N Ar system
@@ -85,11 +81,18 @@ is also present,
 show network addresses as numbers (as with
 .Fl n )
 but show ports symbolically.
+If
+.Fl x
+is present, display socket buffer and tcp timer statistics for each internet socket.
+When
+.Fl T
+is present, display information from the TCP control block, including
+retransmits, out-of-order packets received, and zero-sized windows advertised.
 .It Xo
 .Bk -words
 .Nm
 .Fl i | I Ar interface
-.Op Fl abdhntW
+.Op Fl abdhnW
 .Op Fl f Ar address_family
 .Op Fl M Ar core
 .Op Fl N Ar system
@@ -120,9 +123,6 @@ If
 .Fl h
 is also present, print all counters in human readable form.
 If
-.Fl t
-is also present, show the contents of watchdog timers.
-If
 .Fl W
 is also present, print interface names using a wider field size.
 .It Xo
@@ -133,6 +133,7 @@ is also present, print interface names using a wider field size.
 .Op Fl d
 .Op Fl M Ar core
 .Op Fl N Ar system
+.Op Fl q Ar howmany
 .Ek
 .Xc
 At intervals of
@@ -142,6 +143,11 @@ display the information regarding packet
 traffic on all configured network interfaces
 or a single
 .Ar interface .
+If
+.Fl q
+is also present, exit after
+.Ar howmany
+outputs.
 If
 .Fl d
 is also present, show the number of dropped packets.
@@ -195,6 +201,7 @@ The network manages a private pool of memory buffers.
 .Bk -words
 .Nm
 .Fl B
+.Op Fl z
 .Op Fl I Ar interface
 .Ek
 .Xc
@@ -262,9 +269,15 @@ is repeated, counters with a value of zero are suppressed.
 .Op Fl N Ar system
 .Ek
 .Xc
-Show information related to multicast (group address) routing.
-By default, show the IP Multicast virtual-interface and routing tables,
-and multicast group memberships.
+Display the contents of the multicast virtual interface tables,
+and multicast forwarding caches.
+Entries in these tables will appear only when the kernel is
+actively forwarding multicast sessions.
+This option is applicable only to the
+.Cm inet
+and
+.Cm inet6
+address families.
 .It Xo
 .Bk -words
 .Nm
@@ -279,6 +292,15 @@ Show multicast routing statistics.
 If
 .Fl s
 is repeated, counters with a value of zero are suppressed.
+.It Xo
+.Bk -words
+.Nm
+.Fl Q
+.Ek
+.Xc
+Show
+.Xr netisr 9
+statistics.
 .El
 .Pp
 Some options have the general meaning:
@@ -454,9 +476,33 @@ remotely on the interface.
 .Pp
 For more information about these flags, please refer to
 .Xr bpf 4 .
+.Pp
+The
+.Fl x
+flag causes
+.Nm
+to output all the information recorded about data
+stored in the socket buffers.
+The fields are:
+.Bl -column ".Li R-MBUF"
+.It Li R-MBUF Ta Number of mbufs in the receive queue.
+.It Li S-MBUF Ta Number of mbufs in the send queue.
+.It Li R-CLUS Ta Number of clusters, of any type, in the receive
+queue.
+.It Li S-CLUS Ta Number of clusters, of any type, in the send queue.
+.It Li R-HIWA Ta Receive buffer high water mark, in bytes.
+.It Li S-HIWA Ta Send buffer high water mark, in bytes.
+.It Li R-LOWA Ta Receive buffer low water mark, in bytes.
+.It Li S-LOWA Ta Send buffer low water mark, in bytes.
+.It Li R-BCNT Ta Receive buffer byte count.
+.It Li S-BCNT Ta Send buffer byte count.
+.It Li R-BMAX Ta Maximum bytes that can be used in the receive buffer.
+.It Li S-BMAX Ta Maximum bytes that can be used in the send buffer.
+.El
 .Sh SEE ALSO
 .Xr fstat 1 ,
 .Xr nfsstat 1 ,
+.Xr procstat 1 ,
 .Xr ps 1 ,
 .Xr sockstat 1 ,
 .Xr bpf 4 ,

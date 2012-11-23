@@ -21,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/systat/sensors.c,v 1.1 2007/10/14 10:45:31 netchild Exp $");
+__MBSDID("$FreeBSD: src/usr.bin/systat/sensors.c,v 1.1 2007/10/14 10:45:31 netchild Exp $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>

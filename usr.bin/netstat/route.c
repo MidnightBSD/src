@@ -1,4 +1,4 @@
-/*
+/*-
  * Copyright (c) 1983, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -38,7 +34,7 @@ static char sccsid[] = "From: @(#)route.c	8.6 (Berkeley) 4/28/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/netstat/route.c,v 1.82 2007/07/16 17:15:55 jhb Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/protosw.h>
@@ -73,7 +69,7 @@ __FBSDID("$FreeBSD: src/usr.bin/netstat/route.c,v 1.82 2007/07/16 17:15:55 jhb E
 #include <err.h>
 #include "netstat.h"
 
-#define kget(p, d) (kread((u_long)(p), (char *)&(d), sizeof (d)))
+#define	kget(p, d) (kread((u_long)(p), (char *)&(d), sizeof (d)))
 
 /*
  * Definitions for showing gateway flags.
@@ -89,17 +85,23 @@ struct bits {
 	{ RTF_DYNAMIC,	'D' },
 	{ RTF_MODIFIED,	'M' },
 	{ RTF_DONE,	'd' }, /* Completed -- for routing messages only */
-	{ RTF_CLONING,	'C' },
 	{ RTF_XRESOLVE,	'X' },
-	{ RTF_LLINFO,	'L' },
 	{ RTF_STATIC,	'S' },
 	{ RTF_PROTO1,	'1' },
 	{ RTF_PROTO2,	'2' },
-	{ RTF_WASCLONED,'W' },
 	{ RTF_PRCLONING,'c' },
 	{ RTF_PROTO3,	'3' },
 	{ RTF_BLACKHOLE,'B' },
 	{ RTF_BROADCAST,'b' },
+#ifdef RTF_LLINFO
+	{ RTF_LLINFO,	'L' },
+#endif
+#ifdef RTF_WASCLONED
+	{ RTF_WASCLONED,'W' },
+#endif
+#ifdef RTF_CLONING
+	{ RTF_CLONING,	'C' },
+#endif
 	{ 0 , 0 }
 };
 
@@ -115,27 +117,27 @@ int	do_rtent = 0;
 struct	rtentry rtentry;
 struct	radix_node rnode;
 struct	radix_mask rmask;
-struct	radix_node_head *rt_tables[AF_MAX+1];
+struct	radix_node_head **rt_tables;
 
 int	NewTree = 0;
 
 struct	timespec uptime;
 
-static struct sockaddr *kgetsa (struct sockaddr *);
-static void size_cols (int ef, struct radix_node *rn);
-static void size_cols_tree (struct radix_node *rn);
-static void size_cols_rtentry (struct rtentry *rt);
-static void p_tree (struct radix_node *);
-static void p_rtnode (void);
-static void ntreestuff (void);
-static void np_rtentry (struct rt_msghdr *);
-static void p_sockaddr (struct sockaddr *, struct sockaddr *, int, int);
-static const char *fmt_sockaddr (struct sockaddr *sa, struct sockaddr *mask,
-				 int flags);
-static void p_flags (int, const char *);
+static struct sockaddr *kgetsa(struct sockaddr *);
+static void size_cols(int ef, struct radix_node *rn);
+static void size_cols_tree(struct radix_node *rn);
+static void size_cols_rtentry(struct rtentry *rt);
+static void p_tree(struct radix_node *);
+static void p_rtnode(void);
+static void ntreestuff(void);
+static void np_rtentry(struct rt_msghdr *);
+static void p_sockaddr(struct sockaddr *, struct sockaddr *, int, int);
+static const char *fmt_sockaddr(struct sockaddr *sa, struct sockaddr *mask,
+    int flags);
+static void p_flags(int, const char *);
 static const char *fmt_flags(int f);
-static void p_rtentry (struct rtentry *);
-static void domask (char *, u_long, u_long);
+static void p_rtentry(struct rtentry *);
+static void domask(char *, in_addr_t, u_long);
 
 /*
  * Print routing tables.
@@ -143,9 +145,19 @@ static void domask (char *, u_long, u_long);
 void
 routepr(u_long rtree)
 {
-	struct radix_node_head *rnh, head;
-	int i;
+	struct radix_node_head **rnhp, *rnh, head;
+	size_t intsize;
+	int fam, fibnum, numfibs;
 
+	intsize = sizeof(int);
+	if (sysctlbyname("net.my_fibnum", &fibnum, &intsize, NULL, 0) == -1)
+		fibnum = 0;
+	if (sysctlbyname("net.fibs", &numfibs, &intsize, NULL, 0) == -1)
+		numfibs = 1;
+	rt_tables = calloc(numfibs * (AF_MAX+1),
+	    sizeof(struct radix_node_head *));
+	if (rt_tables == NULL)
+		err(EX_OSERR, "memory allocation failed");
 	/*
 	 * Since kernel & userland use different timebase
 	 * (time_uptime vs time_second) and we are reading kernel memory
@@ -164,21 +176,41 @@ routepr(u_long rtree)
 			return;
 		}
 
-		kget(rtree, rt_tables);
-		for (i = 0; i <= AF_MAX; i++) {
-			if ((rnh = rt_tables[i]) == 0)
+		if (kread((u_long)(rtree), (char *)(rt_tables), (numfibs *
+		    (AF_MAX+1) * sizeof(struct radix_node_head *))) != 0)
+			return;
+		for (fam = 0; fam <= AF_MAX; fam++) {
+			int tmpfib;
+
+			switch (fam) {
+			case AF_INET6:
+			case AF_INET:
+				tmpfib = fibnum;
+				break;
+			default:
+				tmpfib = 0;
+			}
+			rnhp = (struct radix_node_head **)*rt_tables;
+			/* Calculate the in-kernel address. */
+			rnhp += tmpfib * (AF_MAX+1) + fam;
+			/* Read the in kernel rhn pointer. */
+			if (kget(rnhp, rnh) != 0)
 				continue;
-			kget(rnh, head);
-			if (i == AF_UNSPEC) {
+			if (rnh == NULL)
+				continue;
+			/* Read the rnh data. */
+			if (kget(rnh, head) != 0)
+				continue;
+			if (fam == AF_UNSPEC) {
 				if (Aflag && af == 0) {
 					printf("Netmasks:\n");
 					p_tree(head.rnh_treetop);
 				}
-			} else if (af == AF_UNSPEC || af == i) {
-				size_cols(i, head.rnh_treetop);
-				pr_family(i);
+			} else if (af == AF_UNSPEC || af == fam) {
+				size_cols(fam, head.rnh_treetop);
+				pr_family(fam);
 				do_rtent = 1;
-				pr_rthdr(i);
+				pr_rthdr(fam);
 				p_tree(head.rnh_treetop);
 			}
 		}
@@ -250,7 +282,7 @@ static int wid_if;
 static int wid_expire;
 
 static void
-size_cols(int ef, struct radix_node *rn)
+size_cols(int ef __unused, struct radix_node *rn)
 {
 	wid_dst = WID_DST_DEFAULT(ef);
 	wid_gw = WID_GW_DEFAULT(ef);
@@ -269,10 +301,14 @@ static void
 size_cols_tree(struct radix_node *rn)
 {
 again:
-	kget(rn, rnode);
+	if (kget(rn, rnode) != 0)
+		return;
+	if (!(rnode.rn_flags & RNF_ACTIVE))
+		return;
 	if (rnode.rn_bit < 0) {
 		if ((rnode.rn_flags & RNF_ROOT) == 0) {
-			kget(rn, rtentry);
+			if (kget(rn, rtentry) != 0)
+				return;
 			size_cols_rtentry(&rtentry);
 		}
 		if ((rn = rnode.rn_dupedkey))
@@ -288,21 +324,11 @@ static void
 size_cols_rtentry(struct rtentry *rt)
 {
 	static struct ifnet ifnet, *lastif;
-	struct rtentry parent;
 	static char buffer[100];
 	const char *bp;
 	struct sockaddr *sa;
 	sa_u addr, mask;
 	int len;
-
-	/*
-	 * Don't print protocol-cloned routes unless -a.
-	 */
-	if (rt->rt_flags & RTF_WASCLONED && !aflag) {
-		kget(rt->rt_parent, parent);
-		if (parent.rt_flags & RTF_PRCLONING)
-			return;
-	}
 
 	bzero(&addr, sizeof(addr));
 	if ((sa = kgetsa(rt_key(rt))))
@@ -323,7 +349,7 @@ size_cols_rtentry(struct rtentry *rt)
 	wid_flags = MAX(len, wid_flags);
 
 	if (addr.u_sa.sa_family == AF_INET || Wflag) {
-		len = snprintf(buffer, sizeof(buffer), "%ld", rt->rt_refcnt);
+		len = snprintf(buffer, sizeof(buffer), "%d", rt->rt_refcnt);
 		wid_refs = MAX(len, wid_refs);
 		len = snprintf(buffer, sizeof(buffer), "%lu", rt->rt_use);
 		wid_use = MAX(len, wid_use);
@@ -335,9 +361,11 @@ size_cols_rtentry(struct rtentry *rt)
 	}
 	if (rt->rt_ifp) {
 		if (rt->rt_ifp != lastif) {
-			kget(rt->rt_ifp, ifnet);
+			if (kget(rt->rt_ifp, ifnet) == 0) 
+				len = strlen(ifnet.if_xname);
+			else
+				len = strlen("---");
 			lastif = rt->rt_ifp;
-			len = strlen(ifnet.if_xname);
 			wid_if = MAX(len, wid_if);
 		}
 		if (rt->rt_rmx.rmx_expire) {
@@ -398,7 +426,8 @@ static struct sockaddr *
 kgetsa(struct sockaddr *dst)
 {
 
-	kget(dst, pt_u.u_sa);
+	if (kget(dst, pt_u.u_sa) != 0)
+		return (NULL);
 	if (pt_u.u_sa.sa_len > sizeof (pt_u.u_sa))
 		kread((u_long)dst, (char *)pt_u.u_data, pt_u.u_sa.sa_len);
 	return (&pt_u.u_sa);
@@ -409,7 +438,10 @@ p_tree(struct radix_node *rn)
 {
 
 again:
-	kget(rn, rnode);
+	if (kget(rn, rnode) != 0)
+		return;
+	if (!(rnode.rn_flags & RNF_ACTIVE))
+		return;
 	if (rnode.rn_bit < 0) {
 		if (Aflag)
 			printf("%-8.8lx ", (u_long)rn);
@@ -418,10 +450,11 @@ again:
 				printf("(root node)%s",
 				    rnode.rn_dupedkey ? " =>\n" : "\n");
 		} else if (do_rtent) {
-			kget(rn, rtentry);
-			p_rtentry(&rtentry);
-			if (Aflag)
-				p_rtnode();
+			if (kget(rn, rtentry) == 0) {
+				p_rtentry(&rtentry);
+				if (Aflag)
+					p_rtnode();
+			}
 		} else {
 			p_sockaddr(kgetsa((struct sockaddr *)rnode.rn_key),
 				   NULL, 0, 44);
@@ -459,16 +492,19 @@ p_rtnode(void)
 		printf("%6.6s %8.8lx : %8.8lx", nbuf, (u_long)rnode.rn_left, (u_long)rnode.rn_right);
 	}
 	while (rm) {
-		kget(rm, rmask);
+		if (kget(rm, rmask) != 0)
+			break;
 		sprintf(nbuf, " %d refs, ", rmask.rm_refs);
 		printf(" mk = %8.8lx {(%d),%s",
 			(u_long)rm, -1 - rmask.rm_bit, rmask.rm_refs ? nbuf : " ");
 		if (rmask.rm_flags & RNF_NORMAL) {
 			struct radix_node rnode_aux;
 			printf(" <normal>, ");
-			kget(rmask.rm_leaf, rnode_aux);
-			p_sockaddr(kgetsa((struct sockaddr *)rnode_aux.rn_mask),
+			if (kget(rmask.rm_leaf, rnode_aux) == 0)
+				p_sockaddr(kgetsa((struct sockaddr *)rnode_aux.rn_mask),
 				    NULL, 0, -1);
+			else
+				p_sockaddr(NULL, NULL, 0, -1);
 		} else
 		    p_sockaddr(kgetsa((struct sockaddr *)rmask.rm_mask),
 				NULL, 0, -1);
@@ -572,6 +608,9 @@ fmt_sockaddr(struct sockaddr *sa, struct sockaddr *mask, int flags)
 	static char workbuf[128];
 	const char *cp;
 
+	if (sa == NULL)
+		return ("null");
+
 	switch(sa->sa_family) {
 	case AF_INET:
 	    {
@@ -597,18 +636,8 @@ fmt_sockaddr(struct sockaddr *sa, struct sockaddr *mask, int flags)
 	case AF_INET6:
 	    {
 		struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)sa;
-		struct in6_addr *in6 = &sa6->sin6_addr;
 
-		/*
-		 * XXX: This is a special workaround for KAME kernels.
-		 * sin6_scope_id field of SA should be set in the future.
-		 */
-		if (IN6_IS_ADDR_LINKLOCAL(in6) ||
-		    IN6_IS_ADDR_MC_LINKLOCAL(in6)) {
-		    /* XXX: override is ok? */
-		    sa6->sin6_scope_id = (u_int32_t)ntohs(*(u_short *)&in6->s6_addr[2]);
-		    *(u_short *)&in6->s6_addr[2] = 0;
-		}
+		in6_fillscopeid(sa6);
 
 		if (flags & RTF_HOST)
 		    cp = routename6(sa6);
@@ -660,6 +689,7 @@ fmt_sockaddr(struct sockaddr *sa, struct sockaddr *mask, int flags)
 
 			case IFT_ETHER:
 			case IFT_L2VLAN:
+			case IFT_BRIDGE:
 				if (sdl->sdl_alen == ETHER_ADDR_LEN) {
 					cp = ether_ntoa((struct ether_addr *)
 					    (sdl->sdl_data + sdl->sdl_nlen));
@@ -718,20 +748,10 @@ static void
 p_rtentry(struct rtentry *rt)
 {
 	static struct ifnet ifnet, *lastif;
-	struct rtentry parent;
 	static char buffer[128];
 	static char prettyname[128];
 	struct sockaddr *sa;
 	sa_u addr, mask;
-
-	/*
-	 * Don't print protocol-cloned routes unless -a.
-	 */
-	if (rt->rt_flags & RTF_WASCLONED && !aflag) {
-		kget(rt->rt_parent, parent);
-		if (parent.rt_flags & RTF_PRCLONING)
-			return;
-	}
 
 	bzero(&addr, sizeof(addr));
 	if ((sa = kgetsa(rt_key(rt))))
@@ -744,7 +764,7 @@ p_rtentry(struct rtentry *rt)
 	snprintf(buffer, sizeof(buffer), "%%-%d.%ds ", wid_flags, wid_flags);
 	p_flags(rt->rt_flags, buffer);
 	if (addr.u_sa.sa_family == AF_INET || Wflag) {
-		printf("%*ld %*lu ", wid_refs, rt->rt_refcnt,
+		printf("%*d %*lu ", wid_refs, rt->rt_refcnt,
 				     wid_use, rt->rt_use);
 		if (Wflag) {
 			if (rt->rt_rmx.rmx_mtu != 0)
@@ -755,9 +775,12 @@ p_rtentry(struct rtentry *rt)
 	}
 	if (rt->rt_ifp) {
 		if (rt->rt_ifp != lastif) {
-			kget(rt->rt_ifp, ifnet);
+			if (kget(rt->rt_ifp, ifnet) == 0)
+				strlcpy(prettyname, ifnet.if_xname,
+				    sizeof(prettyname));
+			else
+				strlcpy(prettyname, "---", sizeof(prettyname));
 			lastif = rt->rt_ifp;
-			strlcpy(prettyname, ifnet.if_xname, sizeof(prettyname));
 		}
 		printf("%*.*s", wid_if, wid_if, prettyname);
 		if (rt->rt_rmx.rmx_expire) {
@@ -774,7 +797,7 @@ p_rtentry(struct rtentry *rt)
 }
 
 char *
-routename(u_long in)
+routename(in_addr_t in)
 {
 	char *cp;
 	static char line[MAXHOSTNAMELEN];
@@ -782,20 +805,18 @@ routename(u_long in)
 
 	cp = 0;
 	if (!numeric_addr) {
-		hp = gethostbyaddr((char *)&in, sizeof (struct in_addr),
-			AF_INET);
+		hp = gethostbyaddr(&in, sizeof (struct in_addr), AF_INET);
 		if (hp) {
 			cp = hp->h_name;
 			trimdomain(cp, strlen(cp));
 		}
 	}
 	if (cp) {
-		strncpy(line, cp, sizeof(line) - 1);
-		line[sizeof(line) - 1] = '\0';
+		strlcpy(line, cp, sizeof(line));
 	} else {
-#define C(x)	((x) & 0xff)
+#define	C(x)	((x) & 0xff)
 		in = ntohl(in);
-		sprintf(line, "%lu.%lu.%lu.%lu",
+		sprintf(line, "%u.%u.%u.%u",
 		    C(in >> 24), C(in >> 16), C(in >> 8), C(in));
 	}
 	return (line);
@@ -808,7 +829,7 @@ routename(u_long in)
 	0)
 
 static void
-domask(char *dst, u_long addr, u_long mask)
+domask(char *dst, in_addr_t addr __unused, u_long mask)
 {
 	int b, i;
 
@@ -840,12 +861,12 @@ domask(char *dst, u_long addr, u_long mask)
  * The address is assumed to be that of a net or subnet, not a host.
  */
 char *
-netname(u_long in, u_long mask)
+netname(in_addr_t in, u_long mask)
 {
 	char *cp = 0;
 	static char line[MAXHOSTNAMELEN];
 	struct netent *np = 0;
-	u_long i;
+	in_addr_t i;
 
 	i = ntohl(in);
 	if (!numeric_addr && i) {
@@ -856,10 +877,9 @@ netname(u_long in, u_long mask)
 		}
 	}
 	if (cp != NULL) {
-		strncpy(line, cp, sizeof(line) - 1);
-		line[sizeof(line) - 1] = '\0';
+		strlcpy(line, cp, sizeof(line));
 	} else {
-		inet_ntop(AF_INET, (char *)&in, line, sizeof(line) - 1);
+		inet_ntop(AF_INET, &in, line, sizeof(line) - 1);
 	}
 	domask(line + strlen(line), i, mask);
 	return (line);
@@ -868,6 +888,25 @@ netname(u_long in, u_long mask)
 #undef NSHIFT
 
 #ifdef INET6
+void
+in6_fillscopeid(struct sockaddr_in6 *sa6)
+{
+#if defined(__KAME__)
+	/*
+	 * XXX: This is a special workaround for KAME kernels.
+	 * sin6_scope_id field of SA should be set in the future.
+	 */
+	if (IN6_IS_ADDR_LINKLOCAL(&sa6->sin6_addr) ||
+	    IN6_IS_ADDR_MC_NODELOCAL(&sa6->sin6_addr) ||
+	    IN6_IS_ADDR_MC_LINKLOCAL(&sa6->sin6_addr)) {
+		/* XXX: override is ok? */
+		sa6->sin6_scope_id =
+		    ntohs(*(u_int16_t *)&sa6->sin6_addr.s6_addr[2]);
+		sa6->sin6_addr.s6_addr[2] = sa6->sin6_addr.s6_addr[3] = 0;
+	}
+#endif
+}
+
 const char *
 netname6(struct sockaddr_in6 *sa6, struct in6_addr *mask)
 {
@@ -977,11 +1016,11 @@ rt_stats(u_long rtsaddr, u_long rttaddr)
 #define	p(f, m) if (rtstat.f || sflag <= 1) \
 	printf(m, rtstat.f, plural(rtstat.f))
 
-	p(rts_badredirect, "\t%u bad routing redirect%s\n");
-	p(rts_dynamic, "\t%u dynamically created route%s\n");
-	p(rts_newgateway, "\t%u new gateway%s due to redirects\n");
-	p(rts_unreach, "\t%u destination%s found unreachable\n");
-	p(rts_wildcard, "\t%u use%s of a wildcard route\n");
+	p(rts_badredirect, "\t%hu bad routing redirect%s\n");
+	p(rts_dynamic, "\t%hu dynamically created route%s\n");
+	p(rts_newgateway, "\t%hu new gateway%s due to redirects\n");
+	p(rts_unreach, "\t%hu destination%s found unreachable\n");
+	p(rts_wildcard, "\t%hu use%s of a wildcard route\n");
 #undef p
 
 	if (rttrash || sflag <= 1)
@@ -1045,10 +1084,10 @@ ipx_print(struct sockaddr *sa)
 	if (port) {
 		if (strcmp(host, "*") == 0)
 			host = "";
-		if (sp)	
+		if (sp)
 			snprintf(cport, sizeof(cport),
 				"%s%s", *host ? "." : "", sp->s_name);
-		else	
+		else
 			snprintf(cport, sizeof(cport),
 				"%s%x", *host ? "." : "", port);
 	} else

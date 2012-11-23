@@ -34,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/locate/locate/util.c,v 1.10 2002/06/24 12:40:11 naddy Exp $
+ * $MidnightBSD$
  */
 
 
@@ -237,7 +237,7 @@ getwm(p)
 	} u;
 	register int i;
 
-	for (i = 0; i < INTSIZE; i++)
+	for (i = 0; i < (int)INTSIZE; i++)
 		u.buf[i] = *p++;
 
 	i = u.i;
@@ -245,7 +245,7 @@ getwm(p)
 	if (i > MAXPATHLEN || i < -(MAXPATHLEN)) {
 		i = ntohl(i);
 		if (i > MAXPATHLEN || i < -(MAXPATHLEN))
-			errx(1, "integer out of +-MAXPATHLEN (%d): %d",
+			errx(1, "integer out of +-MAXPATHLEN (%d): %u",
 			    MAXPATHLEN, abs(i) < abs(htonl(i)) ? i : htonl(i));
 	}
 	return(i);
@@ -270,7 +270,7 @@ getwf(fp)
 	if (word > MAXPATHLEN || word < -(MAXPATHLEN)) {
 		word = ntohl(word);
 		if (word > MAXPATHLEN || word < -(MAXPATHLEN))
-			errx(1, "integer out of +-MAXPATHLEN (%d): %d",
+			errx(1, "integer out of +-MAXPATHLEN (%d): %u",
 			    MAXPATHLEN, abs(word) < abs(htonl(word)) ? word :
 				htonl(word));
 	}

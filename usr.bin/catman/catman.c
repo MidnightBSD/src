@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/catman/catman.c,v 1.14 2005/12/05 14:22:12 ru Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -111,8 +111,6 @@ struct hash_entry {
 
 static struct hash_entry *visited[HASHTABLE_ALLOC];
 static struct hash_entry *links[HASHTABLE_ALLOC];
-
-int select_sections(struct dirent *entry);
 
 /*
  * Inserts a string into a hashtable keyed by inode & device number.
@@ -590,8 +588,8 @@ process_section(char *mandir, char *section)
 	free(cat_section);
 }
 
-int
-select_sections(struct dirent *entry)
+static int
+select_sections(const struct dirent *entry)
 {
 	char *name;
 	int ret;

@@ -1,5 +1,7 @@
-# $FreeBSD: src/usr.bin/truncate/Makefile,v 1.3 2001/12/12 00:06:52 markm Exp $
+# $MidnightBSD$
 
 PROG=		truncate
+DPADD=		${LIBUTIL}
+LDADD=		-lutil
 
 .include <bsd.prog.mk>

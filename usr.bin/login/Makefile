@@ -1,5 +1,5 @@
 # 	@(#)Makefile	8.1 (Berkeley) 7/19/93
-# $FreeBSD: src/usr.bin/login/Makefile,v 1.53 2006/12/13 06:13:32 csjp Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
@@ -8,6 +8,8 @@ SRCS=	login.c login_fbtab.c
 CFLAGS+=-DLOGALL
 DPADD=	${LIBUTIL} ${LIBPAM}
 LDADD=	-lutil ${MINUSLPAM}
+
+WARNS?=	5
 
 .if ${MK_AUDIT} != "no"
 SRCS+=	login_audit.c

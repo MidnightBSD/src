@@ -27,9 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/makewhatis/makewhatis.c,v 1.10.2.1 2007/10/18 12:55:27 edwin Exp $");
-
-#define _XOPEN_SOURCE 700
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -695,7 +693,7 @@ enum { STATE_UNKNOWN, STATE_MANSTYLE, STATE_MDOCNAME, STATE_MDOCDESC };
 static void
 process_page(struct page_info *page, char *section_dir)
 {
-	gzFile *in;
+	gzFile in;
 	char buffer[4096];
 	char *line;
 	StringList *names;

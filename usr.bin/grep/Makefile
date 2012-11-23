@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $NetBSD: Makefile,v 1.4 2011/02/16 01:31:33 joerg Exp $
-# $FreeBSD: src/usr.bin/grep/Makefile,v 1.7 2011/10/23 16:04:07 gabor Exp $
-# $OpenBSD: Makefile,v 1.6 2003/06/25 15:00:04 millert Exp $
+#	$NetBSD: Makefile,v 1.4 2011/02/16 01:31:33 joerg Exp $
+#	$MidnightBSD$
+#	$OpenBSD: Makefile,v 1.6 2003/06/25 15:00:04 millert Exp $
 
 .include <bsd.own.mk>
 
@@ -26,13 +25,7 @@ LINKS=	${BINDIR}/grep ${BINDIR}/egrep \
 	${BINDIR}/grep ${BINDIR}/fgrep \
 	${BINDIR}/grep ${BINDIR}/zgrep \
 	${BINDIR}/grep ${BINDIR}/zegrep \
-	${BINDIR}/grep ${BINDIR}/zfgrep \
-	${BINDIR}/grep ${BINDIR}/xzgrep \
-	${BINDIR}/grep ${BINDIR}/xzegrep \
-	${BINDIR}/grep ${BINDIR}/xzfgrep \
-	${BINDIR}/grep ${BINDIR}/lzgrep \
-	${BINDIR}/grep ${BINDIR}/lzegrep \
-	${BINDIR}/grep ${BINDIR}/lzfgrep
+	${BINDIR}/grep ${BINDIR}/zfgrep
 
 MLINKS= grep.1 egrep.1 \
 	grep.1 fgrep.1 \
@@ -46,6 +39,13 @@ MLINKS= grep.1 egrep.1 \
 	grep.1 lzegrep.1 \
 	grep.1 lzfgrep.1
 .endif
+
+LINKS+=	${BINDIR}/${PROG} ${BINDIR}/xzgrep \
+	${BINDIR}/${PROG} ${BINDIR}/xzegrep \
+	${BINDIR}/${PROG} ${BINDIR}/xzfgrep \
+	${BINDIR}/${PROG} ${BINDIR}/lzgrep \
+	${BINDIR}/${PROG} ${BINDIR}/lzegrep \
+	${BINDIR}/${PROG} ${BINDIR}/lzfgrep
 
 LDADD=	-lz -llzma
 DPADD=	${LIBZ} ${LIBLZMA}

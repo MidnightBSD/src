@@ -1,14 +1,15 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
-# $MidnightBSD: src/usr.bin/Makefile,v 1.42 2012/11/17 19:14:34 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/Makefile,v 1.43 2012/11/17 19:32:55 laffer1 Exp $
 
 .include <bsd.own.mk>
 
-# XXX MISSING:		diction graph learn plot
+# XXX MISSING:		deroff diction graph learn plot
 #			spline struct xsend
-# XXX Use GNU versions: apropos diff ld man patch whatis
+# XXX Use GNU versions: diff ld patch whatis
 # Moved to secure: bdes
 #
 
+# xxx kdump
 SUBDIR=	alias \
 	apply \
 	asa \
@@ -26,24 +27,21 @@ SUBDIR=	alias \
 	cflow \
 	cgraph \
 	chat \
-	checknr \
 	chpass \
 	cksum \
 	${_clang} \
 	cmp \
 	col \
-	colcrt \
 	colldef \
 	colrm \
 	column \
 	comm \
 	compress \
-	cpio \
 	cpufreq \
 	cpuset \
 	csplit \
+	ctlstat \
 	cut \
-	deroff \
 	dirname \
 	du \
 	ee \
@@ -77,7 +75,6 @@ SUBDIR=	alias \
 	ipcs \
 	join \
 	jot \
-	kdump \
 	keylogin \
 	keylogout \
 	killall \
@@ -90,7 +87,6 @@ SUBDIR=	alias \
 	less \
 	lessecho \
 	lesskey \
-	${_lex} \
 	limits \
 	locale \
 	lock \
@@ -102,17 +98,20 @@ SUBDIR=	alias \
 	look \
 	lorder \
 	lsvfs \
+	lzmainfo \
 	m4 \
+	${_makewhatis} \
+	${_man} \
 	mesg \
 	minigzip \
  	ministat \
  	${_mkcsmapper} \
- 	${_mkesdb} \
 	mkdep \
+	${_mkesdb} \
 	mkfifo \
 	mklocale \
-	mkstr \
 	mktemp \
+	mkulzma \
 	mkuzip \
 	msearch \
 	mt \
@@ -131,14 +130,16 @@ SUBDIR=	alias \
 	paste \
 	pathchk \
 	perl \
+	perror \
 	pr \
 	printenv \
 	printf \
+	procstat \
 	progress \
-	quota \
+	rctl \
 	renice \
 	rev \
-	rpcgen \
+	revoke \
 	rpcinfo \
 	rs \
 	rup \
@@ -179,7 +180,6 @@ SUBDIR=	alias \
 	tset \
 	tsort \
 	tty \
-	ul \
 	uname \
 	unexpand \
 	uniq \
@@ -198,7 +198,6 @@ SUBDIR=	alias \
 	whereis \
 	which \
 	whois \
-	window \
 	write \
 	xargs \
 	xinstall \

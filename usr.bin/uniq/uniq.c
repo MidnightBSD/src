@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -45,13 +41,15 @@ static const char copyright[] =
 static char sccsid[] = "@(#)uniq.c	8.3 (Berkeley) 5/4/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.bin/uniq/uniq.c,v 1.26 2004/09/14 12:01:18 tjr Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 #include <ctype.h>
 #include <err.h>
 #include <limits.h>
 #include <locale.h>
+#include <stdint.h>
+#define _WITH_GETLINE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -59,29 +57,26 @@ static const char rcsid[] =
 #include <wchar.h>
 #include <wctype.h>
 
-#define	MAXLINELEN	(LINE_MAX + 1)
-
-int cflag, dflag, uflag;
+int cflag, dflag, uflag, iflag;
 int numchars, numfields, repeats;
 
 FILE	*file(const char *, const char *);
-wchar_t	*getline(wchar_t *, size_t, FILE *);
-void	 show(FILE *, wchar_t *);
+wchar_t	*convert(const char *);
+int	 inlcmp(const char *, const char *);
+void	 show(FILE *, const char *);
 wchar_t	*skip(wchar_t *);
 void	 obsolete(char *[]);
 static void	 usage(void);
-int      wcsicoll(wchar_t *, wchar_t *);
 
 int
 main (int argc, char *argv[])
 {
-	wchar_t *t1, *t2;
+	wchar_t *tprev, *tthis;
 	FILE *ifp, *ofp;
-	int ch;
-	wchar_t *prevline, *thisline;
-	char *p;
+	int ch, comp;
+	size_t prevbuflen, thisbuflen, b1;
+	char *prevline, *thisline, *p;
 	const char *ifn;
-	int iflag = 0, comp;
 
 	(void) setlocale(LC_ALL, "");
 
@@ -113,10 +108,10 @@ main (int argc, char *argv[])
 		case '?':
 		default:
 			usage();
-	}
+		}
 
 	argc -= optind;
-	argv +=optind;
+	argv += optind;
 
 	/* If no flags are set, default is -d -u. */
 	if (cflag) {
@@ -136,69 +131,109 @@ main (int argc, char *argv[])
 	if (argc > 1)
 		ofp = file(argv[1], "w");
 
-	prevline = malloc(MAXLINELEN * sizeof(*prevline));
-	thisline = malloc(MAXLINELEN * sizeof(*thisline));
-	if (prevline == NULL || thisline == NULL)
-		err(1, "malloc");
+	prevbuflen = thisbuflen = 0;
+	prevline = thisline = NULL;
 
-	if (getline(prevline, MAXLINELEN, ifp) == NULL) {
+	if (getline(&prevline, &prevbuflen, ifp) < 0) {
 		if (ferror(ifp))
-			err(1, "%s", ifp == stdin ? "stdin" : argv[0]);
+			err(1, "%s", ifn);
 		exit(0);
 	}
+	tprev = convert(prevline);
+
 	if (!cflag && uflag && dflag)
 		show(ofp, prevline);
 
-	while (getline(thisline, MAXLINELEN, ifp)) {
-		/* If requested get the chosen fields + character offsets. */
-		if (numfields || numchars) {
-			t1 = skip(thisline);
-			t2 = skip(prevline);
-		} else {
-			t1 = thisline;
-			t2 = prevline;
-		}
+	tthis = NULL;
+	while (getline(&thisline, &thisbuflen, ifp) >= 0) {
+		if (tthis != NULL)
+			free(tthis);
+		tthis = convert(thisline);
 
-		/* If different, print; set previous to new value. */
-		if (iflag)
-			comp = wcsicoll(t1, t2);
+		if (tthis == NULL && tprev == NULL)
+			comp = inlcmp(thisline, prevline);
+		else if (tthis == NULL || tprev == NULL)
+			comp = 1;
 		else
-			comp = wcscoll(t1, t2);
+			comp = wcscoll(tthis, tprev);
 
 		if (comp) {
+			/* If different, print; set previous to new value. */
 			if (cflag || !dflag || !uflag)
 				show(ofp, prevline);
-			t1 = prevline;
+			p = prevline;
+			b1 = prevbuflen;
 			prevline = thisline;
+			prevbuflen = thisbuflen;
+			if (tprev != NULL)
+				free(tprev);
+			tprev = tthis;
 			if (!cflag && uflag && dflag)
 				show(ofp, prevline);
-			thisline = t1;
+			thisline = p;
+			thisbuflen = b1;
+			tthis = NULL;
 			repeats = 0;
 		} else
 			++repeats;
 	}
 	if (ferror(ifp))
-		err(1, "%s", ifp == stdin ? "stdin" : argv[0]);
+		err(1, "%s", ifn);
 	if (cflag || !dflag || !uflag)
 		show(ofp, prevline);
 	exit(0);
 }
 
 wchar_t *
-getline(wchar_t *buf, size_t buflen, FILE *fp)
+convert(const char *str)
 {
-	size_t bufpos;
-	wint_t ch;
+	size_t n;
+	wchar_t *buf, *ret, *p;
 
-	bufpos = 0;
-	while (bufpos + 2 != buflen && (ch = getwc(fp)) != WEOF && ch != '\n')
-		buf[bufpos++] = ch;
-	if (bufpos + 1 != buflen)
-		buf[bufpos] = '\0';
-	while (ch != WEOF && ch != '\n')
-		ch = getwc(fp);
+	if ((n = mbstowcs(NULL, str, 0)) == (size_t)-1)
+		return (NULL);
+	if (SIZE_MAX / sizeof(*buf) < n + 1)
+		errx(1, "conversion buffer length overflow");
+	if ((buf = malloc((n + 1) * sizeof(*buf))) == NULL)
+		err(1, "malloc");
+	if (mbstowcs(buf, str, n + 1) != n)
+		errx(1, "internal mbstowcs() error");
+	/* The last line may not end with \n. */
+	if (n > 0 && buf[n - 1] == L'\n')
+		buf[n - 1] = L'\0';
 
-	return (bufpos != 0 || ch == '\n' ? buf : NULL);
+	/* If requested get the chosen fields + character offsets. */
+	if (numfields || numchars) {
+		if ((ret = wcsdup(skip(buf))) == NULL)
+			err(1, "wcsdup");
+		free(buf);
+	} else
+		ret = buf;
+
+	if (iflag) {
+		for (p = ret; *p != L'\0'; p++)
+			*p = towlower(*p);
+	}
+
+	return (ret);
+}
+
+int
+inlcmp(const char *s1, const char *s2)
+{
+	int c1, c2;
+
+	while (*s1 == *s2++)
+		if (*s1++ == '\0')
+			return (0);
+	c1 = (unsigned char)*s1;
+	c2 = (unsigned char)*(s2 - 1);
+	/* The last line may not end with \n. */
+	if (c1 == '\n')
+		c1 = '\0';
+	if (c2 == '\n')
+		c2 = '\0';
+	return (c1 - c2);
 }
 
 /*
@@ -207,13 +242,13 @@ getline(wchar_t *buf, size_t buflen, FILE *fp)
  *	of the line.
  */
 void
-show(FILE *ofp, wchar_t *str)
+show(FILE *ofp, const char *str)
 {
 
 	if (cflag)
-		(void)fprintf(ofp, "%4d %ls\n", repeats + 1, str);
+		(void)fprintf(ofp, "%4d %s", repeats + 1, str);
 	if ((dflag && repeats) || (uflag && !repeats))
-		(void)fprintf(ofp, "%ls\n", str);
+		(void)fprintf(ofp, "%s", str);
 }
 
 wchar_t *
@@ -221,13 +256,14 @@ skip(wchar_t *str)
 {
 	int nchars, nfields;
 
-	for (nfields = 0; *str != '\0' && nfields++ != numfields; ) {
+	for (nfields = 0; *str != L'\0' && nfields++ != numfields; ) {
 		while (iswblank(*str))
 			str++;
-		while (*str != '\0' && !iswblank(*str))
+		while (*str != L'\0' && !iswblank(*str))
 			str++;
 	}
-	for (nchars = numchars; nchars-- && *str; ++str);
+	for (nchars = numchars; nchars-- && *str != L'\0'; ++str)
+		;
 	return(str);
 }
 
@@ -276,18 +312,4 @@ usage(void)
 	(void)fprintf(stderr,
 "usage: uniq [-c | -d | -u] [-i] [-f fields] [-s chars] [input [output]]\n");
 	exit(1);
-}
-
-int
-wcsicoll(wchar_t *s1, wchar_t *s2)
-{
-	wchar_t *p, line1[MAXLINELEN], line2[MAXLINELEN];
-
-	for (p = line1; *s1; s1++)
-		*p++ = towlower(*s1);
-	*p = '\0';
-	for (p = line2; *s2; s2++)
-		*p++ = towlower(*s2);
-	*p = '\0';
-	return (wcscoll(line1, line2));
 }

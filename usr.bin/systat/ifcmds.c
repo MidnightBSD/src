@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/systat/ifcmds.c,v 1.6 2006/11/27 16:14:32 yar Exp $
+ * $MidnightBSD$
  */
 
 #include "systat.h"
@@ -47,7 +47,7 @@ ifcmd(const char *cmd, const char *args)
 			clrtoeol();
 			addstr("what scale? ");
 			addstr(get_helplist());
-		} 
+		}
 	}
 	return (1);
 }

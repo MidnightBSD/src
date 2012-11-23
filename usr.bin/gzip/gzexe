@@ -1,6 +1,5 @@
 #!/bin/sh -
 #
-# $MidnightBSD$
 # $NetBSD: gzexe,v 1.3 2004/05/01 08:22:41 wiz Exp $
 # $OpenBSD: gzexe,v 1.3 2003/08/05 18:22:17 deraadt Exp $
 #
@@ -19,7 +18,7 @@
 #  ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
-# $FreeBSD: src/usr.bin/gzip/gzexe,v 1.1.2.1 2007/02/20 08:33:31 delphij Exp $
+# $MidnightBSD$
 
 # The number of lines plus one in the on-the-fly decompression script
 lines=19

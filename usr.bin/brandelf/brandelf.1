@@ -25,7 +25,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.bin/brandelf/brandelf.1,v 1.16 2005/01/18 13:43:47 ru Exp $
+.\" $MidnightBSD$
 .\"
 .Dd February 6, 1997
 .Dt BRANDELF 1
@@ -40,30 +40,32 @@
 .Op Fl t Ar string
 .Ar
 .Sh DESCRIPTION
-This command marks an ELF binary to be run under a certain ABI for
+The
+.Nm
+utility marks an ELF binary to be run under a certain ABI for
 .Fx .
 .Pp
 The options are as follows:
-.Bl -tag -width Fl
+.Bl -tag -width indent
 .It Fl f Ar ELF_ABI_number
-forces branding with the supplied ELF ABI number.
+Forces branding with the supplied ELF ABI number.
 Incompatible with the
 .Fl t
 option.
 These values are assigned by SCO/USL.
 .It Fl l
-lists all known ELF types on the standard error channel.
+Writes the list of all known ELF types to the standard error.
 .It Fl v
-turns on verbose reporting.
+Turns on verbose output.
 .It Fl t Ar string
 Brands the given ELF binaries to be of the
 .Ar string
 ABI type.
 Currently supported ABIs are
-.Dq Fx ,
-.Dq Tn Linux ,
+.Dq Li FreeBSD ,
+.Dq Li Linux ,
 and
-.Dq Tn SVR4 .
+.Dq Li SVR4 .
 .It Ar file
 If
 .Fl t Ar string
@@ -85,15 +87,16 @@ The following is an example of a typical usage
 of the
 .Nm
 command:
-.Pp
-.Dl % brandelf file
-.Dl % brandelf -t Linux file
+.Bd -literal -offset indent
+brandelf file
+brandelf -t Linux file
+.Ed
 .Sh SEE ALSO
 .Rs
 .%A The Santa Cruz Operation, Inc.
 .%T System V Application Binary Interface
 .%D April 29, 1998 (DRAFT)
-.%O http://www.sco.com/developer/devspecs/
+.%U http://www.sco.com/developer/devspecs/
 .Re
 .Sh HISTORY
 The

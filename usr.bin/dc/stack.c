@@ -1,5 +1,4 @@
-/*	$OpenBSD: stack.c,v 1.9 2006/01/16 08:09:25 otto Exp $	*/
-/*	$MidnightBSD$ */
+/*	$OpenBSD: stack.c,v 1.11 2009/10/27 23:59:37 deraadt Exp $	*/
 
 /*
  * Copyright (c) 2003, Otto Moerbeek <otto@drijf.net>
@@ -17,9 +16,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef lint
-static const char rcsid[] = "$MidnightBSD$";
-#endif /* not lint */
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 #include <err.h>
 #include <stdlib.h>
@@ -27,18 +25,19 @@ static const char rcsid[] = "$MidnightBSD$";
 
 #include "extern.h"
 
-static __inline bool	stack_empty(const struct stack *);
-static void		stack_grow(struct stack *);
+static __inline bool	 stack_empty(const struct stack *);
+static void		 stack_grow(struct stack *);
 static struct array	*array_new(void);
-static __inline void	array_free(struct array *);
-static struct array *	array_dup(const struct array *);
-static __inline void	array_grow(struct array *, size_t);
-static __inline void	array_assign(struct array *, size_t, const struct value *);
+static __inline void	 array_free(struct array *);
+static struct array	*array_dup(const struct array *);
+static __inline void	 array_grow(struct array *, size_t);
+static __inline void	 array_assign(struct array *, size_t, const struct value *);
 static __inline struct value	*array_retrieve(const struct array *, size_t);
 
 void
 stack_init(struct stack *stack)
 {
+
 	stack->size = 0;
 	stack->sp = -1;
 	stack->stack = NULL;
@@ -48,6 +47,7 @@ static __inline bool
 stack_empty(const struct stack *stack)
 {
 	bool empty = stack->sp == -1;
+
 	if (empty)
 		warnx("stack empty");
 	return empty;
@@ -57,6 +57,7 @@ stack_empty(const struct stack *stack)
 void
 stack_free_value(struct value *v)
 {
+
 	switch (v->type) {
 	case BCODE_NONE:
 		break;
@@ -77,6 +78,7 @@ stack_free_value(struct value *v)
 struct value *
 stack_dup_value(const struct value *a, struct value *copy)
 {
+
 	copy->type = a->type;
 
 	switch (a->type) {
@@ -94,20 +96,21 @@ stack_dup_value(const struct value *a, struct value *copy)
 
 	copy->array = a->array == NULL ? NULL : array_dup(a->array);
 
-	return copy;
+	return (copy);
 }
 
 size_t
 stack_size(const struct stack *stack)
 {
-	return stack->sp + 1;
+
+	return (stack->sp + 1);
 }
 
 void
 stack_dup(struct stack *stack)
 {
-	struct value	*value;
-	struct value	copy;
+	struct value *value;
+	struct value copy;
 
 	value = stack_tos(stack);
 	if (value == NULL) {
@@ -120,7 +123,7 @@ stack_dup(struct stack *stack)
 void
 stack_swap(struct stack *stack)
 {
-	struct value	copy;
+	struct value copy;
 
 	if (stack->sp < 1) {
 		warnx("stack empty");
@@ -134,7 +137,7 @@ stack_swap(struct stack *stack)
 static void
 stack_grow(struct stack *stack)
 {
-	size_t new_size, i;
+	size_t i, new_size;
 
 	if (++stack->sp == stack->size) {
 		new_size = stack->size * 2 + 1;
@@ -149,6 +152,7 @@ stack_grow(struct stack *stack)
 void
 stack_pushnumber(struct stack *stack, struct number *b)
 {
+
 	stack_grow(stack);
 	stack->stack[stack->sp].type = BCODE_NUMBER;
 	stack->stack[stack->sp].u.num = b;
@@ -157,6 +161,7 @@ stack_pushnumber(struct stack *stack, struct number *b)
 void
 stack_pushstring(struct stack *stack, char *string)
 {
+
 	stack_grow(stack);
 	stack->stack[stack->sp].type = BCODE_STRING;
 	stack->stack[stack->sp].u.string = string;
@@ -165,6 +170,7 @@ stack_pushstring(struct stack *stack, char *string)
 void
 stack_push(struct stack *stack, struct value *v)
 {
+
 	switch (v->type) {
 	case BCODE_NONE:
 		stack_grow(stack);
@@ -184,14 +190,16 @@ stack_push(struct stack *stack, struct value *v)
 struct value *
 stack_tos(const struct stack *stack)
 {
+
 	if (stack->sp == -1)
-		return NULL;
+		return (NULL);
 	return &stack->stack[stack->sp];
 }
 
 void
 stack_set_tos(struct stack *stack, struct value *v)
 {
+
 	if (stack->sp == -1)
 		stack_push(stack, v);
 	else {
@@ -205,23 +213,25 @@ stack_set_tos(struct stack *stack, struct value *v)
 struct value *
 stack_pop(struct stack *stack)
 {
+
 	if (stack_empty(stack))
-		return NULL;
+		return (NULL);
 	return &stack->stack[stack->sp--];
 }
 
 struct number *
 stack_popnumber(struct stack *stack)
 {
+
 	if (stack_empty(stack))
-		return NULL;
+		return (NULL);
 	if (stack->stack[stack->sp].array != NULL) {
 		array_free(stack->stack[stack->sp].array);
 		stack->stack[stack->sp].array = NULL;
 	}
 	if (stack->stack[stack->sp].type != BCODE_NUMBER) {
 		warnx("not a number"); /* XXX remove */
-		return NULL;
+		return (NULL);
 	}
 	return stack->stack[stack->sp--].u.num;
 }
@@ -229,15 +239,16 @@ stack_popnumber(struct stack *stack)
 char *
 stack_popstring(struct stack *stack)
 {
+
 	if (stack_empty(stack))
-		return NULL;
+		return (NULL);
 	if (stack->stack[stack->sp].array != NULL) {
 		array_free(stack->stack[stack->sp].array);
 		stack->stack[stack->sp].array = NULL;
 	}
 	if (stack->stack[stack->sp].type != BCODE_STRING) {
 		warnx("not a string"); /* XXX remove */
-		return NULL;
+		return (NULL);
 	}
 	return stack->stack[stack->sp--].u.string;
 }
@@ -245,6 +256,7 @@ stack_popstring(struct stack *stack)
 void
 stack_clear(struct stack *stack)
 {
+
 	while (stack->sp >= 0) {
 		stack_free_value(&stack->stack[stack->sp--]);
 	}
@@ -259,7 +271,7 @@ stack_print(FILE *f, const struct stack *stack, const char *prefix, u_int base)
 
 	for (i = stack->sp; i >= 0; i--) {
 		print_value(f, &stack->stack[i], prefix, base);
-		(void)putc('\n', f);
+		putc('\n', f);
 	}
 }
 
@@ -291,16 +303,16 @@ array_free(struct array *a)
 static struct array *
 array_dup(const struct array *a)
 {
-	struct array	*n;
-	size_t		i;
+	struct array *n;
+	size_t i;
 
 	if (a == NULL)
-		return NULL;
+		return (NULL);
 	n = array_new();
 	array_grow(n, a->size);
 	for (i = 0; i < a->size; i++)
-		(void)stack_dup_value(&a->data[i], &n->data[i]);
-	return n;
+		stack_dup_value(&a->data[i], &n->data[i]);
+	return (n);
 }
 
 static __inline void
@@ -309,29 +321,34 @@ array_grow(struct array *array, size_t newsize)
 	size_t i;
 
 	array->data = brealloc(array->data, newsize * sizeof(*array->data));
-	for (i = array->size; i < newsize; i++)
+	for (i = array->size; i < newsize; i++) {
+		array->data[i].type = BCODE_NONE;
 		array->data[i].array = NULL;
+	}
 	array->size = newsize;
 }
 
 static __inline void
-array_assign(struct array *array, size_t index, const struct value *v)
+array_assign(struct array *array, size_t i, const struct value *v)
 {
-	if (index >= array->size)
-		array_grow(array, index+1);
-	array->data[index] = *v;
+
+	if (i >= array->size)
+		array_grow(array, i + 1);
+	stack_free_value(&array->data[i]);
+	array->data[i] = *v;
 }
 
 static __inline struct value *
-array_retrieve(const struct array *array, size_t index)
+array_retrieve(const struct array *array, size_t i)
 {
-	if (index >= array->size)
-		return NULL;
-	return &array->data[index];
+
+	if (i >= array->size)
+		return (NULL);
+	return &array->data[i];
 }
 
 void
-frame_assign(struct stack *stack, size_t index, const struct value *v)
+frame_assign(struct stack *stack, size_t i, const struct value *v)
 {
 	struct array *a;
 	struct value n;
@@ -345,18 +362,18 @@ frame_assign(struct stack *stack, size_t index, const struct value *v)
 	a = stack->stack[stack->sp].array;
 	if (a == NULL)
 		a = stack->stack[stack->sp].array = array_new();
-	array_assign(a, index, v);
+	array_assign(a, i, v);
 }
 
 struct value *
-frame_retrieve(const struct stack *stack, size_t index)
+frame_retrieve(const struct stack *stack, size_t i)
 {
 	struct array *a;
 
 	if (stack->sp == -1)
-		return NULL;
+		return (NULL);
 	a = stack->stack[stack->sp].array;
 	if (a == NULL)
 		a = stack->stack[stack->sp].array = array_new();
-	return array_retrieve(a, index);
+	return array_retrieve(a, i);
 }

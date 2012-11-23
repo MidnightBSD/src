@@ -9,10 +9,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
 .\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
@@ -30,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)uname.1	8.3 (Berkeley) 4/8/94
-.\" $FreeBSD: src/usr.bin/uname/uname.1,v 1.18 2005/01/18 13:43:54 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd April 2, 2003
+.Dd January 26, 2010
 .Dt UNAME 1
 .Os
 .Sh NAME
@@ -40,7 +36,7 @@
 .Nd display information about the system
 .Sh SYNOPSIS
 .Nm
-.Op Fl aimnprsv
+.Op Fl aimnoprsv
 .Sh DESCRIPTION
 The
 .Nm
@@ -63,6 +59,10 @@ Write the kernel ident to standard output.
 Write the type of the current hardware platform to standard output.
 .It Fl n
 Write the name of the system to standard output.
+.It Fl o
+This is a synonym for the
+.Fl s
+option, for compatibility with other systems.
 .It Fl p
 Write the type of the machine processor architecture to standard output.
 .It Fl r

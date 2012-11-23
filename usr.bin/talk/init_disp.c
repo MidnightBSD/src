@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -33,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/talk/init_disp.c,v 1.14 2004/04/19 21:37:28 cognet Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifndef lint
 static const char sccsid[] = "@(#)init_disp.c	8.2 (Berkeley) 2/16/94";
@@ -60,7 +56,7 @@ extern volatile sig_atomic_t gotwinch;
  * Make sure the callee can write to the screen
  */
 void
-check_writeable()
+check_writeable(void)
 {
 	char *tty;
 	struct stat sb;
@@ -78,7 +74,7 @@ check_writeable()
  * and build the various windows.
  */
 void
-init_display()
+init_display(void)
 {
 	struct sigaction sa;
 
@@ -128,7 +124,7 @@ init_display()
  * connection are the three edit characters.
  */
 void
-set_edit_chars()
+set_edit_chars(void)
 {
 	char buf[3];
 	int cc;
@@ -160,8 +156,7 @@ set_edit_chars()
 
 /* ARGSUSED */
 void
-sig_sent(signo)
-	int signo __unused;
+sig_sent(int signo __unused)
 {
 
 	message("Connection closing. Exiting");
@@ -169,7 +164,7 @@ sig_sent(signo)
 }
 
 void
-sig_winch(int dummy)
+sig_winch(int dummy __unused)
 {
  
 	gotwinch = 1;
@@ -179,7 +174,7 @@ sig_winch(int dummy)
  * All done talking...hang up the phone and reset terminal thingy's
  */
 void
-quit()
+quit(void)
 {
 
 	if (curses_initialized) {

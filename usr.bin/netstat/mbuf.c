@@ -1,4 +1,4 @@
-/*
+/*-
  * Copyright (c) 1983, 1988, 1993
  *	The Regents of the University of California.
  * Copyright (c) 2005 Robert N. M. Watson
@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)mbuf.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/netstat/mbuf.c,v 1.53 2007/07/16 17:15:55 jhb Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/mbuf.h>
@@ -300,7 +300,7 @@ mbpr(void *kvmd, u_long mbaddr)
 			goto out;
 		}
 	} else {
-		if (kread(mbaddr, (char *)&mbstat, sizeof mbstat))
+		if (kread(mbaddr, (char *)&mbstat, sizeof mbstat) != 0)
 			goto out;
 	}
 	printf("%lu requests for sfbufs denied\n", mbstat.sf_allocfail);

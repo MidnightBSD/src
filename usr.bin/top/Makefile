@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/top/Makefile,v 1.11.6.1 2008/11/25 02:59:29 kensmith Exp $
+# $MidnightBSD$
 
 TOPDIR=	${.CURDIR}/../../contrib/top
 .PATH: ${TOPDIR}
@@ -10,7 +10,7 @@ SRCS+=	sigdesc.h top.local.h
 CFLAGS+= -DHAVE_GETOPT -DHAVE_STRERROR -DORDER
 CFLAGS+= -I${.CURDIR} -I${TOPDIR} -I.
 
-CSTD=c90
+WARNS?=	0
 
 #
 # The table size should be a prime number approximately twice as

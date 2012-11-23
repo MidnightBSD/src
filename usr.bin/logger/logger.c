@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -44,7 +40,7 @@ static char sccsid[] = "@(#)logger.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/logger/logger.c,v 1.14 2005/05/29 16:04:46 charnier Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -63,7 +59,8 @@ __FBSDID("$FreeBSD: src/usr.bin/logger/logger.c,v 1.14 2005/05/29 16:04:46 charn
 
 int	decode(char *, CODE *);
 int	pencode(char *);
-static void	logmessage(int, char *, char *);
+static void	logmessage(int, const char *, const char *, const char *,
+			   const char *);
 static void	usage(void);
 
 struct socks {
@@ -90,13 +87,15 @@ main(int argc, char *argv[])
 {
 	int ch, logflags, pri;
 	char *tag, *host, buf[1024];
+	const char *svcname;
 
 	tag = NULL;
 	host = NULL;
+	svcname = "syslog";
 	pri = LOG_USER | LOG_NOTICE;
 	logflags = 0;
 	unsetenv("TZ");
-	while ((ch = getopt(argc, argv, "46Af:h:ip:st:")) != -1)
+	while ((ch = getopt(argc, argv, "46Af:h:iP:p:st:")) != -1)
 		switch((char)ch) {
 		case '4':
 			family = PF_INET;
@@ -112,12 +111,16 @@ main(int argc, char *argv[])
 		case 'f':		/* file to log */
 			if (freopen(optarg, "r", stdin) == NULL)
 				err(1, "%s", optarg);
+			setvbuf(stdin, 0, _IONBF, 0);
 			break;
 		case 'h':		/* hostname to deliver to */
 			host = optarg;
 			break;
 		case 'i':		/* log process id also */
 			logflags |= LOG_PID;
+			break;
+		case 'P':		/* service name or port number */
+			svcname = optarg;
 			break;
 		case 'p':		/* priority */
 			pri = pencode(optarg);
@@ -135,8 +138,11 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
+	if (tag == NULL)
+		tag = getlogin();
 	/* setup for logging */
-	openlog(tag ? tag : getlogin(), logflags, 0);
+	if (host == NULL)
+		openlog(tag, logflags, 0);
 	(void) fclose(stdout);
 
 	/* log input line if appropriate */
@@ -147,11 +153,11 @@ main(int argc, char *argv[])
 		for (p = buf, endp = buf + sizeof(buf) - 2; *argv;) {
 			len = strlen(*argv);
 			if (p + len > endp && p > buf) {
-				logmessage(pri, host, buf);
+				logmessage(pri, tag, host, svcname, buf);
 				p = buf;
 			}
 			if (len > sizeof(buf) - 1)
-				logmessage(pri, host, *argv++);
+				logmessage(pri, tag, host, svcname, *argv++);
 			else {
 				if (p != buf)
 					*p++ = ' ';
@@ -160,18 +166,19 @@ main(int argc, char *argv[])
 			}
 		}
 		if (p != buf)
-			logmessage(pri, host, buf);
+			logmessage(pri, tag, host, svcname, buf);
 	} else
 		while (fgets(buf, sizeof(buf), stdin) != NULL)
-			logmessage(pri, host, buf);
+			logmessage(pri, tag, host, svcname, buf);
 	exit(0);
 }
 
 /*
  *  Send the message to syslog, either on the local host, or on a remote host
  */
-void 
-logmessage(int pri, char *host, char *buf)
+void
+logmessage(int pri, const char *tag, const char *host, const char *svcname,
+	   const char *buf)
 {
 	static struct socks *socks;
 	static int nsock = 0;
@@ -189,9 +196,9 @@ logmessage(int pri, char *host, char *buf)
 		memset(&hints, 0, sizeof(hints));
 		hints.ai_family = family;
 		hints.ai_socktype = SOCK_DGRAM;
-		error = getaddrinfo(host, "syslog", &hints, &res);
+		error = getaddrinfo(host, svcname, &hints, &res);
 		if (error == EAI_SERVICE) {
-			warnx("syslog/udp: unknown service");	/* not fatal */
+			warnx("%s/udp: unknown service", svcname);
 			error = getaddrinfo(host, "514", &hints, &res);
 		}
 		if (error)
@@ -215,7 +222,7 @@ logmessage(int pri, char *host, char *buf)
 			errx(1, "socket");
 	}
 
-	if ((len = asprintf(&line, "<%d>%s", pri, buf)) == -1)
+	if ((len = asprintf(&line, "<%d>%s: %s", pri, tag, buf)) == -1)
 		errx(1, "asprintf");
 
 	lsent = -1;
@@ -282,7 +289,8 @@ static void
 usage(void)
 {
 	(void)fprintf(stderr, "usage: %s\n",
-	    "logger [-46Ais] [-f file] [-h host] [-p pri] [-t tag] [message ...]"
+	    "logger [-46Ais] [-f file] [-h host] [-P port] [-p pri] [-t tag]\n"
+	    "              [message ...]"
 	    );
 	exit(1);
 }

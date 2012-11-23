@@ -1,5 +1,5 @@
 #	$OpenBSD: Makefile,v 1.11 2006/05/25 08:41:52 jmc Exp $
-# $FreeBSD: src/usr.bin/tip/tip/Makefile,v 1.20 2006/09/01 17:09:09 ru Exp $
+# $MidnightBSD$
 #
 # Files are:
 #	/etc/remote		remote host description file
@@ -36,7 +36,7 @@ LINKS=	${BINDIR}/tip ${BINDIR}/cu
 MAN=	tip.1 cu.1
 CFLAGS+=-I${.CURDIR} -DDEFBR=9600 -DDEFFS=BUFSIZ -DACULOG -DPRISTINE \
 	-DCONNECT -DV831 -DVENTEL -DHAYES -DCOURIER -DT3000
-WARNS?=	0
+WARNS?=	2
 .PATH:	${.CURDIR}/../libacu
 SRCS=	acu.c acutab.c cmds.c cmdtab.c cu.c hunt.c log.c partab.c \
 	remote.c tip.c tipout.c uucplock.c value.c vars.c \

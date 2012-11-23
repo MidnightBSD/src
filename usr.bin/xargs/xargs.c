@@ -13,7 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the University nor the names of its contributors
+ * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -44,8 +44,7 @@ static char sccsid[] = "@(#)xargs.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/xargs/xargs.c,v 1.57.2.1 2005/12/21 12:15:52 des Exp $");
-__MBSDID("$MidnightBSD: src/usr.bin/xargs/xargs.c,v 1.5 2006/12/28 00:31:53 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/wait.h>
@@ -70,7 +69,16 @@ static int	prompt(void);
 static void	run(char **);
 static void	usage(void);
 void		strnsubst(char **, const char *, const char *, size_t);
+static pid_t	xwait(int block, int *status);
 static void	waitchildren(const char *, int);
+static void	pids_init(void);
+static int	pids_empty(void);
+static int	pids_full(void);
+static void	pids_add(pid_t pid);
+static int	pids_remove(pid_t pid);
+static int	findslot(pid_t pid);
+static int	findfreeslot(void);
+static void	clearslot(int slot);
 
 static char echo[] = _PATH_ECHO;
 static char **av, **bxp, **ep, **endxp, **xp;
@@ -79,6 +87,7 @@ static const char *eofstr;
 static int count, insingle, indouble, oflag, pflag, tflag, Rflag, rval, zflag;
 static int cnt, Iflag, jfound, Lflag, Sflag, wasquoted, xflag;
 static int curprocs, maxprocs;
+static pid_t *childpids;
 
 static volatile int childerr;
 
@@ -122,7 +131,7 @@ main(int argc, char *argv[])
 	}
 	maxprocs = 1;
 	while ((ch = getopt(argc, argv, "0E:I:J:L:n:oP:pR:S:s:rtx")) != -1)
-		switch(ch) {
+		switch (ch) {
 		case 'E':
 			eofstr = optarg;
 			break;
@@ -202,6 +211,8 @@ main(int argc, char *argv[])
 	if (replstr != NULL && *replstr == '\0')
 		errx(1, "replstr may not be empty");
 
+	pids_init();
+
 	/*
 	 * Allocate pointers for the utility name, the utility arguments,
 	 * the maximum arguments to be read from stdin and the trailing
@@ -266,7 +277,7 @@ parse_input(int argc, char *argv[])
 
 	foundeof = 0;
 
-	switch(ch = getchar()) {
+	switch (ch = getchar()) {
 	case EOF:
 		/* No arguments since last exec. */
 		if (p == bbp) {
@@ -534,7 +545,7 @@ run(char **argv)
 	}
 exec:
 	childerr = 0;
-	switch(pid = vfork()) {
+	switch (pid = vfork()) {
 	case -1:
 		err(1, "vfork");
 	case 0:
@@ -553,8 +564,32 @@ exec:
 		childerr = errno;
 		_exit(1);
 	}
-	curprocs++;
+	pids_add(pid);
 	waitchildren(*argv, 0);
+}
+
+/*
+ * Wait for a tracked child to exit and return its pid and exit status.
+ *
+ * Ignores (discards) all untracked child processes.
+ * Returns -1 and sets errno to ECHILD if no tracked children exist.
+ * If block is set, waits indefinitely for a child process to exit.
+ * If block is not set and no children have exited, returns 0 immediately.
+ */
+static pid_t
+xwait(int block, int *status) {
+	pid_t pid;
+
+	if (pids_empty()) {
+		errno = ECHILD;
+		return (-1);
+	}
+
+	while ((pid = waitpid(-1, status, block ? 0 : WNOHANG)) > 0)
+		if (pids_remove(pid))
+			break;
+
+	return (pid);
 }
 
 static void
@@ -563,9 +598,7 @@ waitchildren(const char *name, int waitall)
 	pid_t pid;
 	int status;
 
-	while ((pid = waitpid(-1, &status, !waitall && curprocs < maxprocs ?
-	    WNOHANG : 0)) > 0) {
-		curprocs--;
+	while ((pid = xwait(waitall || pids_full(), &status)) > 0) {
 		/* If we couldn't invoke the utility, exit. */
 		if (childerr != 0) {
 			errno = childerr;
@@ -580,8 +613,87 @@ waitchildren(const char *name, int waitall)
 		if (WEXITSTATUS(status))
 			rval = 1;
 	}
+
 	if (pid == -1 && errno != ECHILD)
-		err(1, "wait3");
+		err(1, "waitpid");
+}
+
+#define	NOPID	(0)
+
+static void
+pids_init(void)
+{
+	int i;
+
+	if ((childpids = malloc(maxprocs * sizeof(*childpids))) == NULL)
+		errx(1, "malloc failed");
+
+	for (i = 0; i < maxprocs; i++)
+		clearslot(i);
+}
+
+static int
+pids_empty(void)
+{
+	return (curprocs == 0);
+}
+
+static int
+pids_full(void)
+{
+	return (curprocs >= maxprocs);
+}
+
+static void
+pids_add(pid_t pid)
+{
+	int slot;
+
+	slot = findfreeslot();
+	childpids[slot] = pid;
+	curprocs++;
+}
+
+static int
+pids_remove(pid_t pid)
+{
+	int slot;
+
+	if ((slot = findslot(pid)) < 0)
+		return (0);
+
+	clearslot(slot);
+	curprocs--;
+	return (1);
+}
+
+static int
+findfreeslot(void)
+{
+	int slot;
+
+	if ((slot = findslot(NOPID)) < 0)
+		errx(1, "internal error: no free pid slot");
+
+	return (slot);
+}
+
+static int
+findslot(pid_t pid)
+{
+	int slot;
+
+	for (slot = 0; slot < maxprocs; slot++)
+		if (childpids[slot] == pid)
+			return (slot);
+
+	return (-1);
+}
+
+static void
+clearslot(int slot)
+{
+	childpids[slot] = NOPID;
 }
 
 /*
@@ -616,7 +728,7 @@ static void
 usage(void)
 {
 	fprintf(stderr,
-"usage: xargs [-0opt] [-E eofstr] [-I replstr [-R replacements]] [-S replsize]\n"
+"usage: xargs [-0opt] [-E eofstr] [-I replstr [-R replacements] [-S replsize]]\n"
 "             [-J replstr] [-L number] [-n number [-x]] [-P maxprocs]\n"
 "             [-s size] [utility [argument ...]]\n");
 	exit(1);

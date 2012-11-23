@@ -1,5 +1,4 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: src/usr.bin/grep/regex/fastmatch.h,v 1.1 2011/10/05 09:56:43 gabor Exp $ */
 
 #ifndef FASTMATCH_H
 #define FASTMATCH_H 1

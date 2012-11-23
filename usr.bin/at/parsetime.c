@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/at/parsetime.c,v 1.25 2001/12/10 21:13:01 dwmalone Exp $");
+__MBSDID("$MidnightBSD$");
 
 /* System Headers */
 
@@ -619,14 +619,10 @@ parsetime(int argc, char **argv)
     } /* ugly case statement */
     expect(EOF);
 
-    /* adjust for daylight savings time
+    /* convert back to time_t
      */
     runtime.tm_isdst = -1;
     runtimer = mktime(&runtime);
-    if (runtime.tm_isdst > 0) {
-	runtimer -= 3600;
-	runtimer = mktime(&runtime);
-    }
 
     if (runtimer < 0)
 	panic("garbled time");

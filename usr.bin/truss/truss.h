@@ -1,5 +1,5 @@
 /*
- * Copryight 2001 Jamey Wood
+ * Copyright 2001 Jamey Wood
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/truss/truss.h,v 1.8 2007/04/10 04:03:34 delphij Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/queue.h>
@@ -33,6 +33,7 @@
 #define NOSIGS             0x00000008
 #define EXECVEARGS         0x00000010
 #define EXECVEENVS         0x00000020
+#define COUNTONLY          0x00000040
 
 struct threadinfo
 {
@@ -67,6 +68,16 @@ struct trussinfo
 		if ((vvp)->tv_nsec < 0) {				\
 			(vvp)->tv_sec--;				\
 			(vvp)->tv_nsec += 1000000000;			\
+		}							\
+	} while (0)
+
+#define timespecadd(tvp, uvp, vvp)					\
+	do {								\
+		(vvp)->tv_sec = (tvp)->tv_sec + (uvp)->tv_sec;		\
+		(vvp)->tv_nsec = (tvp)->tv_nsec + (uvp)->tv_nsec;	\
+		if ((vvp)->tv_nsec > 1000000000) {				\
+			(vvp)->tv_sec++;				\
+			(vvp)->tv_nsec -= 1000000000;			\
 		}							\
 	} while (0)
 

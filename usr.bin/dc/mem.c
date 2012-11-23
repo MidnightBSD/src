@@ -1,5 +1,4 @@
-/*	$OpenBSD: mem.c,v 1.4 2004/07/11 06:41:48 otto Exp $	*/
-/*	$MidnightBSD$ */
+/*	$OpenBSD: mem.c,v 1.5 2009/10/27 23:59:37 deraadt Exp $	*/
 
 /*
  * Copyright (c) 2003, Otto Moerbeek <otto@drijf.net>
@@ -17,9 +16,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef lint
-static const char rcsid[] = "$MidnightBSD$";
-#endif /* not lint */
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 #include <openssl/err.h>
 
@@ -39,12 +37,13 @@ new_number(void)
 	n->number = BN_new();
 	if (n->number == NULL)
 		err(1, NULL);
-	return n;
+	return (n);
 }
 
 void
 free_number(struct number *n)
 {
+
 	BN_free(n->number);
 	free(n);
 }
@@ -58,7 +57,7 @@ dup_number(const struct number *a)
 	n->scale = a->scale;
 	n->number = BN_dup(a->number);
 	bn_checkp(n->number);
-	return n;
+	return (n);
 }
 
 void *
@@ -69,7 +68,7 @@ bmalloc(size_t sz)
 	p = malloc(sz);
 	if (p == NULL)
 		err(1, NULL);
-	return p;
+	return (p);
 }
 
 void *
@@ -80,7 +79,7 @@ brealloc(void *p, size_t sz)
 	q = realloc(p, sz);
 	if (q == NULL)
 		err(1, NULL);
-	return q;
+	return (q);
 }
 
 char *
@@ -91,12 +90,13 @@ bstrdup(const char *p)
 	q = strdup(p);
 	if (q == NULL)
 		err(1, NULL);
-	return q;
+	return (q);
 }
 
 void
 bn_check(int x)						\
 {
+
 	if (x == 0)
 		err(1, "big number failure %lx", ERR_get_error());
 }
@@ -104,6 +104,7 @@ bn_check(int x)						\
 void
 bn_checkp(const void *p)						\
 {
+
 	if (p == NULL)
 		err(1, "allocation failure %lx", ERR_get_error());
 }

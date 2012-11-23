@@ -32,7 +32,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/ncplist/ncplist.c,v 1.3 2007/02/05 07:35:23 kevlo Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -373,7 +373,7 @@ enum listop {
 int
 main(int argc, char *argv[])
 {
-	int opt, wdone = 0, nargs = 0, i;
+	int opt, nargs = 0, i;
 	enum listop what;
 	char *args[MAX_ARGS];
 
@@ -436,23 +436,18 @@ main(int argc, char *argv[])
 	switch(what) {
 	    case LO_SERVERS:
 		show_serverlist(args[0]);
-		wdone = 1;
 		break;
 	    case LO_USERS:
 		show_userlist(args[0]);
-		wdone = 1;
 		break;
 	    case LO_QUEUES:
 		show_queuelist(args[0], args[1]);
-		wdone = 1;
 		break;
 	    case LO_VOLUMES:
 		list_volumes(args[0]);
-		wdone = 1;
 		break;
 	    case LO_BINDERY:
 		list_bindery(args[0], args[1], args[2]);
-		wdone = 1;
 		break;
 	    default:
 		help();

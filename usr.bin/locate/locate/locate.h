@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)locate.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.bin/locate/locate/locate.h,v 1.7 1999/08/28 01:02:59 peter Exp $
+ * $MidnightBSD$
  */
 
 /* Symbolic constants shared by locate.c and code.c */
@@ -48,15 +48,15 @@
 #define LDC_MAX        28
 
 /*	128-255 bigram codes (128 most common, as determined by 'updatedb') */
-#define BIGRAM_MIN    (UCHAR_MAX - CHAR_MAX) 
+#define BIGRAM_MIN    (UCHAR_MAX - SCHAR_MAX) 
 #define BIGRAM_MAX    UCHAR_MAX
 
 /*	32-127  single character (printable) ascii residue (ie, literal) */
 #define ASCII_MIN      32
-#define ASCII_MAX     CHAR_MAX
+#define ASCII_MAX     SCHAR_MAX
 
-/* #define TO7BIT(x)     (x = ( ((u_char)x) & CHAR_MAX )) */
-#define TO7BIT(x)     (x = x & CHAR_MAX )
+/* #define TO7BIT(x)     (x = ( ((u_char)x) & SCHAR_MAX )) */
+#define TO7BIT(x)     (x = x & SCHAR_MAX )
 
 
 #if UCHAR_MAX >= 4096

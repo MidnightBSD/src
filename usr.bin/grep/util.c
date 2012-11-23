@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: util.c,v 1.9 2011/02/27 17:33:37 joerg Exp $	*/
-/*	$FreeBSD: src/usr.bin/grep/util.c,v 1.16 2011/10/12 01:09:57 gabor Exp $	*/
+/*	$MidnightBSD$	*/
 /*	$OpenBSD: util.c,v 1.39 2010/07/02 22:18:03 tedu Exp $	*/
 
 /*-
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/grep/util.c,v 1.16 2011/10/12 01:09:57 gabor Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -131,7 +130,9 @@ grep_tree(char **argv)
 		case FTS_DNR:
 			/* FALLTHROUGH */
 		case FTS_ERR:
-			errx(2, "%s: %s", p->fts_path, strerror(p->fts_errno));
+			file_err = true;
+			if(!sflag)
+				warnx("%s: %s", p->fts_path, strerror(p->fts_errno));
 			break;
 		case FTS_D:
 			/* FALLTHROUGH */
@@ -194,10 +195,9 @@ procfile(const char *fn)
 		f = grep_open(fn);
 	}
 	if (f == NULL) {
+		file_err = true;
 		if (!sflag)
 			warn("%s", fn);
-		if (errno == ENOENT)
-			notfound = true;
 		return (0);
 	}
 
@@ -247,9 +247,9 @@ procfile(const char *fn)
 		printf("%u\n", c);
 	}
 	if (lflag && !qflag && c != 0)
-		printf("%s\n", fn);
+		printf("%s%c", fn, nullflag ? 0 : '\n');
 	if (Lflag && !qflag && c == 0)
-		printf("%s\n", fn);
+		printf("%s%c", fn, nullflag ? 0 : '\n');
 	if (c && !cflag && !lflag && !Lflag &&
 	    binbehave == BINFILE_BIN && f->binary && !qflag)
 		printf(getstr(8), fn);
@@ -441,13 +441,13 @@ printline(struct str *line, int sep, regmatch_t *matches, int m)
 	int i, n = 0;
 
 	if (!hflag) {
-		if (nullflag == 0)
+		if (!nullflag) {
 			fputs(line->file, stdout);
-		else {
+			++n;
+		} else {
 			printf("%s", line->file);
 			putchar(0);
 		}
-		++n;
 	}
 	if (nflag) {
 		if (n > 0)

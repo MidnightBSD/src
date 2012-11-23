@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/lastcomm/readrec.c,v 1.1 2007/05/22 06:51:37 dds Exp $");
 __MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
@@ -34,13 +33,9 @@ __MBSDID("$MidnightBSD$");
 #include <sys/types.h>
 #include <sys/acct.h>
 
-#include <ctype.h>
-#include <err.h>
 #include <errno.h>
-#include <fcntl.h>
 #include <stddef.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 int	 readrec_forward(FILE *f, struct acctv2 *av2);

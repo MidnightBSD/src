@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.bin/sed/extern.h,v 1.13 2004/08/09 15:29:41 dds Exp $
+ * $MidnightBSD$
  */
 
 extern struct s_command *prog;
@@ -52,4 +52,5 @@ char	*cu_fgets(char *, int, int *);
 int	 mf_fgets(SPACE *, enum e_spflag);
 int	 lastline(void);
 void	 process(void);
+void	 resetstate(void);
 char	*strregerror(int, regex_t *);

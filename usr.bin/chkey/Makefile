@@ -1,11 +1,13 @@
-# $FreeBSD: src/usr.bin/chkey/Makefile,v 1.10 2004/11/13 20:40:30 bz Exp $
+# $MidnightBSD$
+
+.include <bsd.own.mk>
 
 .PATH: ${.CURDIR}/../newkey
 
 PROG=	chkey
 SRCS=	chkey.c generic.c update.c
 CFLAGS+= -I${.CURDIR}/../newkey
-.if !defined(NO_NIS)
+.if ${MK_NIS} != "no"
 CFLAGS+= -DYP
 .endif
 DPADD=	${LIBRPCSVC} ${LIBMP} ${LIBCRYPTO}

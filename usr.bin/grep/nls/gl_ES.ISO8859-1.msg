@@ -1,4 +1,4 @@
-$ $FreeBSD: src/usr.bin/grep/nls/gl_ES.ISO8859-1.msg,v 1.2 2010/07/29 18:02:57 gabor Exp $
+$ $MidnightBSD$
 $
 $set 1
 $quote "

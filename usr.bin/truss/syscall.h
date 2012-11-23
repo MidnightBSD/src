@@ -25,14 +25,14 @@
  * Sigset -- a pointer to a sigset_t.  Prints the signals that are set.
  * Sigprocmask -- the first argument to sigprocmask().  Prints the name.
  * Kevent -- a pointer to an array of struct kevents.  Prints all elements.
- * Pathconf -- the 2nd argument of patchconf().
+ * Pathconf -- the 2nd argument of pathconf().
  *
  * In addition, the pointer types (String, Ptr) may have OUT masked in --
  * this means that the data is set on *return* from the system call -- or
  * IN (meaning that the data is passed *into* the system call).
  */
 /*
- * $FreeBSD: src/usr.bin/truss/syscall.h,v 1.18 2007/04/10 04:03:34 delphij Exp $
+ * $MidnightBSD$
  */
 
 enum Argtype { None = 1, Hex, Octal, Int, Name, Ptr, Stat, Ioctl, Quad,
@@ -57,10 +57,14 @@ struct syscall {
 	int nargs;	/* actual number of meaningful arguments */
 			/* Hopefully, no syscalls with > 10 args */
 	struct syscall_args args[10];
+	struct timespec time; /* Time spent for this call */
+	int ncalls;	/* Number of calls */
+	int nerror;	/* Number of calls that returned with error */
 };
 
 struct syscall *get_syscall(const char*);
 char *print_arg(struct syscall_args *, unsigned long*, long, struct trussinfo *);
 void print_syscall(struct trussinfo *, const char *, int, char **);
 void print_syscall_ret(struct trussinfo *, const char *, int, char **, int,
-    long);
+    long, struct syscall *);
+void print_summary(struct trussinfo *trussinfo);

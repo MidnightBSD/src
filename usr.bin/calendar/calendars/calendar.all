@@ -1,19 +1,24 @@
 /*
  * International and national calendar files
  *
- * $FreeBSD: src/usr.bin/calendar/calendars/calendar.all,v 1.9 2004/08/16 09:31:09 dwmalone Exp $
+ * $FreeBSD$
  */
 
 #ifndef _calendar_all_
 #define _calendar_all_
 
 #include <calendar.world>
+#include <calendar.australia>
+#include <calendar.brazilian>
 #include <calendar.croatian>
+#include <calendar.dutch>
 #include <calendar.french>
 #include <calendar.german>
 #include <calendar.hungarian>
-#include <calendar.southafrica>
+#include <calendar.newzealand>
 #include <calendar.russian>
+#include <calendar.southafrica>
+#include <calendar.ukrainian>
 #include <calendar.usholiday>
 
 #endif /* !_calendar_all_ */

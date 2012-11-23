@@ -45,7 +45,7 @@ static char sccsid[] = "@(#)login.c	8.4 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/login/login.c,v 1.106 2007/07/04 00:00:40 scf Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * login [ name ]
@@ -53,7 +53,6 @@ __FBSDID("$FreeBSD: src/usr.bin/login/login.c,v 1.106 2007/07/04 00:00:40 scf Ex
  * login -f name	(for pre-authenticated login: datakit, xterm, etc.)
  */
 
-#include <sys/copyright.h>
 #include <sys/param.h>
 #include <sys/file.h>
 #include <sys/stat.h>
@@ -234,8 +233,7 @@ main(int argc, char *argv[])
 
 	setproctitle("-%s", getprogname());
 
-	for (cnt = getdtablesize(); cnt > 2; cnt--)
-		(void)close(cnt);
+	closefrom(3);
 
 	/*
 	 * Get current TTY
@@ -245,8 +243,8 @@ main(int argc, char *argv[])
 		(void)snprintf(tname, sizeof(tname), "%s??", _PATH_TTY);
 		ttyn = tname;
 	}
-	if ((tty = strrchr(ttyn, '/')) != NULL)
-		++tty;
+	if (strncmp(ttyn, _PATH_DEV, sizeof _PATH_DEV - 1) == 0)
+		tty = ttyn + sizeof _PATH_DEV - 1;
 	else
 		tty = ttyn;
 
@@ -382,6 +380,19 @@ main(int argc, char *argv[])
 		au_login_success();
 #endif
 
+        /*
+         * This needs to happen before login_getpwclass to support
+         * home directories on GSS-API authenticated NFS where the
+         * kerberos credentials need to be saved so that the kernel
+         * can authenticate to the NFS server.
+         */
+	pam_err = pam_setcred(pamh, pam_silent|PAM_ESTABLISH_CRED);
+	if (pam_err != PAM_SUCCESS) {
+		pam_syslog("pam_setcred()");
+		bail(NO_SLEEP_EXIT, 1);
+	}
+	pam_cred_established = 1;
+
 	/*
 	 * Establish the login class.
 	 */
@@ -515,12 +526,11 @@ main(int argc, char *argv[])
 		bail(NO_SLEEP_EXIT, 1);
 	}
 
-	pam_err = pam_setcred(pamh, pam_silent|PAM_ESTABLISH_CRED);
+	pam_err = pam_setcred(pamh, pam_silent|PAM_REINITIALIZE_CRED);
 	if (pam_err != PAM_SUCCESS) {
 		pam_syslog("pam_setcred()");
 		bail(NO_SLEEP_EXIT, 1);
 	}
-	pam_cred_established = 1;
 
 	pam_err = pam_open_session(pamh, pam_silent);
 	if (pam_err != PAM_SUCCESS) {
@@ -589,12 +599,6 @@ main(int argc, char *argv[])
 
 	if (!quietlog) {
 		const char *cw;
-
-		cw = login_getcapstr(lc, "copyright", NULL, NULL);
-		if (cw == NULL || motd(cw) == -1)
-			(void)printf("%s", copyright);
-
-		(void)printf("\n");
 
 		cw = login_getcapstr(lc, "welcome", NULL, NULL);
 		if (cw != NULL && access(cw, F_OK) == 0)
@@ -737,7 +741,7 @@ auth_pam(void)
  * Export any environment variables PAM modules may have set
  */
 static void
-export_pam_environment()
+export_pam_environment(void)
 {
 	char **pam_env;
 	char **pp;
@@ -786,7 +790,7 @@ export(const char *s)
 }
 
 static void
-usage()
+usage(void)
 {
 
 	(void)fprintf(stderr, "usage: login [-fp] [-h hostname] [username]\n");
@@ -797,7 +801,7 @@ usage()
  * Prompt user and read login name from stdin.
  */
 static char *
-getloginname()
+getloginname(void)
 {
 	char *nbuf, *p;
 	int ch;
@@ -941,7 +945,7 @@ pam_syslog(const char *msg)
  * Shut down PAM
  */
 static void
-pam_cleanup()
+pam_cleanup(void)
 {
 
 	if (pamh != NULL) {

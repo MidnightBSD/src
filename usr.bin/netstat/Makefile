@@ -1,12 +1,11 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/12/93
-# $FreeBSD: src/usr.bin/netstat/Makefile,v 1.39 2007/07/01 12:08:07 gnn Exp $
-# $MidnightBSD: src/usr.bin/netstat/Makefile,v 1.7 2008/11/14 14:47:41 laffer1 Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
 PROG=	netstat
-SRCS=	if.c inet.c main.c mbuf.c mcast.c mroute.c route.c \
-	unix.c atalk.c netgraph.c mroute6.c ipsec.c bpf.c pfkey.c sctp.c
+SRCS=	if.c inet.c main.c mbuf.c mroute.c netisr.c route.c \
+	unix.c atalk.c mroute6.c ipsec.c bpf.c pfkey.c sctp.c
 
 WARNS?=	3
 CFLAGS+=-fno-strict-aliasing
@@ -19,10 +18,21 @@ SRCS+=	inet6.c
 CFLAGS+=-DINET6
 .endif
 
+.if ${MK_OFED} != "no"
+CFLAGS+=-DSDP
+.endif
+
 BINGRP=	kmem
 BINMODE=2555
-DPADD=	${LIBKVM} ${LIBMEMSTAT} ${LIBNETGRAPH} ${LIBUTIL}
-LDADD=	-lkvm -lmemstat -lnetgraph -lutil
+DPADD=	${LIBKVM} ${LIBMEMSTAT} ${LIBUTIL}
+LDADD=	-lkvm -lmemstat -lutil
+
+.if ${MK_NETGRAPH_SUPPORT} != "no"
+SRCS+=	netgraph.c
+DPADD+=	${LIBNETGRAPH}
+LDADD+=	-lnetgraph
+CFLAGS+=-DNETGRAPH
+.endif
 
 .if ${MK_IPX_SUPPORT} != "no"
 SRCS+=	ipx.c

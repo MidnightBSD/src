@@ -1,7 +1,7 @@
-/*
+/*-
  * Copyright (c) 1996-1999 Whistle Communications, Inc.
  * All rights reserved.
- * 
+ *
  * Subject to the following obligations and disclaimer of warranty, use and
  * redistribution of this software, in source or object code forms, with or
  * without modifications are expressly permitted by Whistle Communications;
@@ -12,7 +12,7 @@
  *    Communications, Inc. trademarks, including the mark "WHISTLE
  *    COMMUNICATIONS" on advertising, endorsements, or otherwise except as
  *    such appears in the above copyright notice or in the software.
- * 
+ *
  * THIS SOFTWARE IS BEING PROVIDED BY WHISTLE COMMUNICATIONS "AS IS", AND
  * TO THE MAXIMUM EXTENT PERMITTED BY LAW, WHISTLE COMMUNICATIONS MAKES NO
  * REPRESENTATIONS OR WARRANTIES, EXPRESS OR IMPLIED, REGARDING THIS SOFTWARE,
@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/netstat/netgraph.c,v 1.13 2007/07/16 17:15:55 jhb Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -166,14 +166,14 @@ netgraphprotopr(u_long off, const char *name, int af1 __unused,
 		    name, sockb.so_rcv.sb_cc, sockb.so_snd.sb_cc);
 
 		/* Get ngsock structure */
-		if (ngpcb.sockdata == 0)	/* unconnected data socket */
+		if (ngpcb.sockdata == NULL)	/* unconnected data socket */
 			goto finish;
 		kread((u_long)ngpcb.sockdata, (char *)&info, sizeof(info));
 
 		/* Get info on associated node */
-		if (info.node == 0 || csock == -1)
+		if (info.node_id == 0 || csock == -1)
 			goto finish;
-		snprintf(path, sizeof(path), "[%lx]:", (u_long) info.node);
+		snprintf(path, sizeof(path), "[%x]:", info.node_id);
 		if (NgSendMsg(csock, path,
 		    NGM_GENERIC_COOKIE, NGM_NODEINFO, NULL, 0) < 0)
 			goto finish;

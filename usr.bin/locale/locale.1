@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.bin/locale/locale.1,v 1.7 2005/01/18 20:54:50 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd June 20, 2003
+.Dd November 1, 2005
 .Dt LOCALE 1
 .Os
 .Sh NAME
@@ -35,8 +35,12 @@
 .Nm
 .Op Fl a | m
 .Nm
+.Fl k
+.Ic list
+.Op Ar prefix
+.Nm
 .Op Fl ck
-.Op Ar keyword ...
+.Ar keyword ...
 .Sh DESCRIPTION
 The
 .Nm
@@ -79,8 +83,12 @@ The special
 specific) keyword
 .Cm list
 can be used to retrieve the human readable list of all available keywords.
+If so,
+a prefix string can be defined to limit the amount of keywords returned.
 .Sh EXIT STATUS
 .Ex -std
+.Sh SEE ALSO
+.Xr setlocale 3
 .Sh BUGS
 Since
 .Fx

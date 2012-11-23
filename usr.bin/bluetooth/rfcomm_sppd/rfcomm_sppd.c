@@ -1,6 +1,8 @@
 /*
  * rfcomm_sppd.c
- *
+ */
+
+/*-
  * Copyright (c) 2003 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -25,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: rfcomm_sppd.c,v 1.1.1.2 2006-02-25 02:38:11 laffer1 Exp $
- * $FreeBSD: src/usr.bin/bluetooth/rfcomm_sppd/rfcomm_sppd.c,v 1.6.2.2 2005/12/12 17:58:13 emax Exp $
+ * $Id: rfcomm_sppd.c,v 1.2 2012-11-23 01:13:49 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/stat.h>
@@ -72,16 +74,17 @@ main(int argc, char *argv[])
 	struct sockaddr_rfcomm	 ra;
 	bdaddr_t		 addr;
 	int			 n, background, channel, service,
-				 s, amaster, aslave, fd;
+				 s, amaster, aslave, fd, doserver;
 	fd_set			 rfd;
 	char			*tty = NULL, *ep = NULL, buf[SPPD_BUFFER_SIZE];
 
 	memcpy(&addr, NG_HCI_BDADDR_ANY, sizeof(addr));
 	background = channel = 0;
 	service = SDP_SERVICE_CLASS_SERIAL_PORT;
+	doserver = 0;
 
 	/* Parse command line options */
-	while ((n = getopt(argc, argv, "a:bc:t:h")) != -1) {
+	while ((n = getopt(argc, argv, "a:bc:t:hS")) != -1) {
 		switch (n) { 
 		case 'a': /* BDADDR */
 			if (!bt_aton(optarg, &addr)) {
@@ -134,6 +137,10 @@ main(int argc, char *argv[])
 				tty = optarg;
 			break;
 
+		case 'S':
+			doserver = 1;
+			break;
+
 		case 'h':
 		default:
 			usage();
@@ -142,7 +149,7 @@ main(int argc, char *argv[])
 	}
 
 	/* Check if we have everything we need */
-	if (memcmp(&addr, NG_HCI_BDADDR_ANY, sizeof(addr)) == 0)
+	if (!doserver && memcmp(&addr, NG_HCI_BDADDR_ANY, sizeof(addr)) == 0)
 		usage();
 		/* NOT REACHED */
 
@@ -165,14 +172,6 @@ main(int argc, char *argv[])
 	if (sigaction(SIGCHLD, &sa, NULL) < 0)
 		err(1, "Could not sigaction(SIGCHLD)");
 
-	/* Check channel, if was not set then obtain it via SDP */
-	if (channel == 0 && service != 0)
-		if (rfcomm_channel_lookup(NULL, &addr,
-			    service, &channel, &n) != 0)
-			errc(1, n, "Could not obtain RFCOMM channel");
-	if (channel <= 0 || channel > 30)
-		errx(1, "Invalid RFCOMM channel number %d", channel);
-
 	/* Open TTYs */
 	if (tty == NULL) {
 		if (background)
@@ -187,42 +186,103 @@ main(int argc, char *argv[])
 		fd = amaster;
 	}		
 
-
 	/* Open RFCOMM connection */
-	memset(&ra, 0, sizeof(ra));
-	ra.rfcomm_len = sizeof(ra);
-	ra.rfcomm_family = AF_BLUETOOTH;
 
-	s = socket(PF_BLUETOOTH, SOCK_STREAM, BLUETOOTH_PROTO_RFCOMM);
-	if (s < 0)
-		err(1, "Could not create socket");
+	if (doserver) {
+		struct sockaddr_rfcomm	 ma;
+		bdaddr_t		 bt_addr_any;
+		sdp_sp_profile_t	 sp;
+		void			*ss;
+		uint32_t		 sdp_handle;
+		int			 acceptsock, aaddrlen;
 
-	if (bind(s, (struct sockaddr *) &ra, sizeof(ra)) < 0)
-		err(1, "Could not bind socket");
+		acceptsock = socket(PF_BLUETOOTH, SOCK_STREAM,
+					BLUETOOTH_PROTO_RFCOMM);
+		if (acceptsock < 0)
+			err(1, "Could not create socket");
 
-	memcpy(&ra.rfcomm_bdaddr, &addr, sizeof(ra.rfcomm_bdaddr));
-	ra.rfcomm_channel = channel;
+		memcpy(&bt_addr_any, NG_HCI_BDADDR_ANY, sizeof(bt_addr_any));
 
-	if (connect(s, (struct sockaddr *) &ra, sizeof(ra)) < 0)
-		err(1, "Could not connect socket");
+		memset(&ma, 0, sizeof(ma));
+		ma.rfcomm_len = sizeof(ma);
+		ma.rfcomm_family = AF_BLUETOOTH;
+		memcpy(&ma.rfcomm_bdaddr, &bt_addr_any, sizeof(bt_addr_any));
+		ma.rfcomm_channel = channel;
+
+		if (bind(acceptsock, (struct sockaddr *)&ma, sizeof(ma)) < 0)
+			err(1, "Could not bind socket on channel %d", channel);
+		if (listen(acceptsock, 10) != 0)
+			err(1, "Could not listen on socket");
+
+		aaddrlen = sizeof(ma);
+		if (getsockname(acceptsock, (struct sockaddr *)&ma, &aaddrlen) < 0)
+			err(1, "Could not get socket name");
+		channel = ma.rfcomm_channel;
+
+		ss = sdp_open_local(NULL);
+		if (ss == NULL)
+			errx(1, "Unable to create local SDP session");
+		if (sdp_error(ss) != 0)
+			errx(1, "Unable to open local SDP session. %s (%d)",
+			    strerror(sdp_error(ss)), sdp_error(ss));
+		memset(&sp, 0, sizeof(sp));
+		sp.server_channel = channel;
+
+		if (sdp_register_service(ss, SDP_SERVICE_CLASS_SERIAL_PORT,
+				&bt_addr_any, (void *)&sp, sizeof(sp),
+				&sdp_handle) != 0) {
+			errx(1, "Unable to register LAN service with "
+			    "local SDP daemon. %s (%d)",
+			    strerror(sdp_error(ss)), sdp_error(ss));
+		}
+
+		s = -1;
+		while (s < 0) {
+			aaddrlen = sizeof(ra);
+			s = accept(acceptsock, (struct sockaddr *)&ra,
+			    &aaddrlen);
+			if (s < 0)
+				err(1, "Unable to accept()");
+			if (memcmp(&addr, NG_HCI_BDADDR_ANY, sizeof(addr)) &&
+			    memcmp(&addr, &ra.rfcomm_bdaddr, sizeof(addr))) {
+				warnx("Connect from wrong client");
+				close(s);
+				s = -1;
+			}
+		}
+		sdp_unregister_service(ss, sdp_handle);
+		sdp_close(ss);
+		close(acceptsock);
+	} else {
+		/* Check channel, if was not set then obtain it via SDP */
+		if (channel == 0 && service != 0)
+			if (rfcomm_channel_lookup(NULL, &addr,
+				    service, &channel, &n) != 0)
+				errc(1, n, "Could not obtain RFCOMM channel");
+		if (channel <= 0 || channel > 30)
+			errx(1, "Invalid RFCOMM channel number %d", channel);
+
+		s = socket(PF_BLUETOOTH, SOCK_STREAM, BLUETOOTH_PROTO_RFCOMM);
+		if (s < 0)
+			err(1, "Could not create socket");
+
+		memset(&ra, 0, sizeof(ra));
+		ra.rfcomm_len = sizeof(ra);
+		ra.rfcomm_family = AF_BLUETOOTH;
+
+		if (bind(s, (struct sockaddr *) &ra, sizeof(ra)) < 0)
+			err(1, "Could not bind socket");
+
+		memcpy(&ra.rfcomm_bdaddr, &addr, sizeof(ra.rfcomm_bdaddr));
+		ra.rfcomm_channel = channel;
+
+		if (connect(s, (struct sockaddr *) &ra, sizeof(ra)) < 0)
+			err(1, "Could not connect socket");
+	}
 
 	/* Became daemon if required */
-	if (background) {
-		switch (fork()) {
-		case -1:
-			err(1, "Could not fork()");
-			/* NOT REACHED */
-
-		case 0:
-			exit(0);
-			/* NOT REACHED */
-
-		default:
-			if (daemon(0, 0) < 0)
-				err(1, "Could not daemon()");
-			break;
-		}
-	}
+	if (background && daemon(0, 0) < 0)
+		err(1, "Could not daemon()");
 
 	openlog(SPPD_IDENT, LOG_NDELAY|LOG_PERROR|LOG_PID, LOG_DAEMON);
 	syslog(LOG_INFO, "Starting on %s...", (tty != NULL)? tty : "stdin/stdout");
@@ -346,7 +406,7 @@ sppd_ttys_open(char const *tty, int *amaster, int *aslave)
 		ttygid = -1;
 
 	(void) chown(tty, getuid(), ttygid);
-	(void) chmod(tty, S_IRUSR|S_IWUSR|S_IWGRP);
+	(void) chmod(tty, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
 	(void) revoke(tty);
 
 	if ((*aslave = open(tty, O_RDWR, 0)) < 0) {
@@ -433,12 +493,12 @@ usage(void)
 	fprintf(stdout,
 "Usage: %s options\n" \
 "Where options are:\n" \
-"\t-a address Address to connect to (required)\n" \
+"\t-a address Peer address (required in client mode)\n" \
 "\t-b         Run in background\n" \
-"\t-c channel RFCOMM channel to connect to\n" \
+"\t-c channel RFCOMM channel to connect to or listen on\n" \
 "\t-t tty     TTY name (required in background mode)\n" \
+"\t-S         Server mode\n" \
 "\t-h         Display this message\n", SPPD_IDENT);
-
 	exit(255);
 } /* usage */
 

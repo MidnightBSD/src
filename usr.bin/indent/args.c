@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)args.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/indent/args.c,v 1.15 2004/09/19 20:34:30 das Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * Argument scanning and profile reading code.  Default parameters are set
@@ -157,6 +157,7 @@ struct pro {
     {"sc", PRO_BOOL, true, ON, &star_comment_cont},
     {"sob", PRO_BOOL, false, ON, &swallow_optional_blanklines},
     {"st", PRO_SPECIAL, 0, STDIN, 0},
+    {"ta", PRO_BOOL, false, ON, &auto_typedefs},
     {"troff", PRO_BOOL, false, ON, &troff},
     {"ut", PRO_BOOL, true, ON, &use_tabs},
     {"v", PRO_BOOL, false, ON, &verbose},

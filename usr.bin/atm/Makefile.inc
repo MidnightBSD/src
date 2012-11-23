@@ -1,3 +1,3 @@
-# $FreeBSD: src/usr.bin/atm/Makefile.inc,v 1.1 2003/10/29 10:30:53 harti Exp $
+# $MidnightBSD$
 
 .include "../Makefile.inc"

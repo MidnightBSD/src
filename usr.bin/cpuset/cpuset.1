@@ -24,9 +24,8 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $MidnightBSD$
-.\" $FreeBSD: src/usr.bin/cpuset/cpuset.1,v 1.3.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
 .\"
-.Dd October 15, 2011
+.Dd January 14, 2011
 .Dt CPUSET 1
 .Os
 .Sh NAME
@@ -36,18 +35,23 @@
 .Nm
 .Op Fl l Ar cpu-list
 .Op Fl s Ar setid
-.Ar cmd
+.Ar cmd ...
 .Nm
 .Op Fl l Ar cpu-list
 .Op Fl s Ar setid
 .Fl p Ar pid
 .Nm
+.Op Fl c
+.Op Fl l Ar cpu-list
+.Fl C
+.Fl p Ar pid
+.Nm
 .Op Fl cr
 .Op Fl l Ar cpu-list
-.Op Fl p Ar pid | Fl r Ar tid | Fl s Ar setid
+.Op Fl j Ar jailid | Fl p Ar pid | Fl t Ar tid | Fl s Ar setid | Fl x Ar irq
 .Nm
 .Op Fl cgir
-.Op Fl p Ar pid | Fl r Ar tid | Fl s Ar setid
+.Op Fl j Ar jailid | Fl p Ar pid | Fl t Ar tid | Fl s Ar setid | Fl x Ar irq
 .Sh DESCRIPTION
 The
 .Nm
@@ -57,8 +61,8 @@ about processor binding, sets, and available processors in the system.
 .Pp
 .Nm
 requires a target to modify or query.
-The target may be specified as a command, process id, thread id, or a
-cpuset id.
+The target may be specified as a command, process id, thread id, a
+cpuset id, an irq or a jail id.
 Using
 .Fl g
 the target's set id or mask may be queried.
@@ -99,32 +103,41 @@ for the thread.
 .Pp
 The options are as follows:
 .Bl -tag -width ".Fl l Ar cpu-list"
+.It Fl C
+Create a new cpuset and assign the target process to that set.
 .It Fl c
 The requested operation should reference the cpuset available via the
 target specifier.
 .It Fl g
 Causes
 .Nm
-to print either a list of valid CPUs or, using 
+to print either a list of valid CPUs or, using
 .Fl i ,
 the id of the target.
 .It Fl i
 When used with the
 .Fl g
 option print the id rather than the valid mask of the target.
+.It Fl j Ar jailid
+Specifies a jail id as the target of the operation.
 .It Fl l Ar cpu-list
 Specifies a list of CPUs to apply to a target.
 Specification may include
-numbers seperated by '-' for ranges and commas separating individual numbers.
+numbers separated by '-' for ranges and commas separating individual numbers.
+A special list of
+.Dq all
+may be specified in which case the list includes all CPUs from the root set.
 .It Fl p Ar pid
 Specifies a pid as the target of the operation.
-.It Fl s Ar setid 
+.It Fl s Ar setid
 Specifies a set id as the target of the operation.
 .It Fl r
 The requested operation should reference the root set available via the
 target specifier.
 .It Fl t Ar tid
 Specifies a thread id as the target of the operation.
+.It Fl x Ar irq
+Specifies an irq as the target of the operation.
 .El
 .Sh EXIT STATUS
 .Ex -std
@@ -165,6 +178,11 @@ into the specified cpuset
 .Ar setid
 so it may be managed with other pids in that set:
 .Dl cpuset -s <setid> -p <pid>
+.Pp
+Create a new cpuset that is restricted to CPUs 0 and 2 and move
+.Ar pid
+into the new set:
+.Dl cpuset -C -c -l 0,2 -p <pid>
 .Sh SEE ALSO
 .Xr cpuset 2
 .Sh HISTORY
@@ -172,7 +190,5 @@ The
 .Nm
 command first appeared in
 .Fx 7.1 .
-It was later introduced in
-.Mx 0.4 .
 .Sh AUTHORS
 .An Jeffrey Roberson Aq jeff@FreeBSD.org

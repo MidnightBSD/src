@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -33,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/talk/io.c,v 1.16 2004/05/10 15:52:16 cognet Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifndef lint
 static const char sccsid[] = "@(#)io.c	8.1 (Berkeley) 6/6/93";
@@ -65,7 +61,7 @@ volatile sig_atomic_t gotwinch = 0;
  * The routine to do the actual talking
  */
 void
-talk()
+talk(void)
 {
 	struct hostent *hp, *hp2;
 	int nb;
@@ -138,7 +134,7 @@ talk()
 			 */
 			int i;
 			ioctl(0, FIONREAD, (void *) &nb);
-			if (nb > sizeof buf)
+			if (nb > (ssize_t)(sizeof buf))
 				nb = sizeof buf;
 			nb = read(STDIN_FILENO, buf, nb);
 			display(&my_win, buf, nb);
@@ -156,8 +152,7 @@ talk()
  * on the screen and then exits. (i.e. a curses version of perror)
  */
 void
-p_error(string)
-	const char *string;
+p_error(const char *string)
 {
 	wmove(my_win.x_win, current_line, 0);
 	wprintw(my_win.x_win, "[%s : %s (%d)]\n",
@@ -172,8 +167,7 @@ p_error(string)
  * Display string in the standard location
  */
 void
-message(string)
-	const char *string;
+message(const char *string)
 {
 	wmove(my_win.x_win, current_line, 0);
 	wprintw(my_win.x_win, "[%s]\n", string);

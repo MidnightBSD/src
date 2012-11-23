@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*      $FreeBSD: src/usr.bin/grep/regex/tre-compile.c,v 1.1 2011/10/05 09:56:43 gabor Exp $       */
+/*      $MidnightBSD$       */
 
 #include "glue.h"
 

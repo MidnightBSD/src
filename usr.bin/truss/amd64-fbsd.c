@@ -1,5 +1,5 @@
 /*
- * Copryight 1997 Sean Eric Fagan
+ * Copyright 1997 Sean Eric Fagan
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.bin/truss/amd64-fbsd.c,v 1.8 2007/06/26 22:42:37 delphij Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 /*
@@ -128,7 +128,7 @@ amd64_syscall_entry(struct trussinfo *trussinfo, int nargs) {
   /*
    * FreeBSD has two special kinds of system call redirctions --
    * SYS_syscall, and SYS___syscall.  The former is the old syscall()
-   * routine, basicly; the latter is for quad-aligned arguments.
+   * routine, basically; the latter is for quad-aligned arguments.
    */
   reg = 0;
   syscall_num = regs.r_rax;
@@ -142,7 +142,7 @@ amd64_syscall_entry(struct trussinfo *trussinfo, int nargs) {
 
   fsc.number = syscall_num;
   fsc.name =
-    (syscall_num < 0 || syscall_num > nsyscalls) ?  NULL : syscallnames[syscall_num];
+    (syscall_num < 0 || syscall_num >= nsyscalls) ?  NULL : syscallnames[syscall_num];
   if (!fsc.name) {
     fprintf(trussinfo->outfile, "-- UNKNOWN SYSCALL %d --\n", syscall_num);
   }
@@ -191,8 +191,7 @@ amd64_syscall_entry(struct trussinfo *trussinfo, int nargs) {
     fsc.nargs = nargs;
   }
 
-  fsc.s_args = malloc((1+fsc.nargs) * sizeof(char*));
-  memset(fsc.s_args, 0, fsc.nargs * sizeof(char*));
+  fsc.s_args = calloc(1, (1+fsc.nargs) * sizeof(char*));
   fsc.sc = sc;
 
   /*
@@ -258,7 +257,7 @@ amd64_syscall_entry(struct trussinfo *trussinfo, int nargs) {
  * And when the system call is done, we handle it here.
  * Currently, no attempt is made to ensure that the system calls
  * match -- this needs to be fixed (and is, in fact, why S_SCX includes
- * the sytem call number instead of, say, an error status).
+ * the system call number instead of, say, an error status).
  */
 
 long
@@ -323,7 +322,8 @@ amd64_syscall_exit(struct trussinfo *trussinfo, int syscall_num __unused)
    * but that complicates things considerably.
    */
 
-  print_syscall_ret(trussinfo, fsc.name, fsc.nargs, fsc.s_args, errorp, retval);
+  print_syscall_ret(trussinfo, fsc.name, fsc.nargs, fsc.s_args, errorp,
+		    retval, fsc.sc);
   clear_fsc();
 
   return (retval);

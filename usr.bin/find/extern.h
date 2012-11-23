@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -31,7 +27,6 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.3 (Berkeley) 4/16/94
- *	$FreeBSD: src/usr.bin/find/extern.h,v 1.23 2006/05/14 20:23:00 krion Exp $
  *	$MidnightBSD$
  */
 
@@ -44,8 +39,7 @@ PLAN	*find_formplan(char **);
 PLAN	*not_squish(PLAN *);
 PLAN	*or_squish(PLAN *);
 PLAN	*paren_squish(PLAN *);
-struct timeb;
-time_t	 get_date(char *, struct timeb *);
+time_t	 get_date(char *);
 struct stat;
 void	 printlong(char *, char *, struct stat *);
 int	 queryuser(char **);
@@ -75,6 +69,7 @@ creat_f	c_nouser;
 creat_f	c_perm;
 creat_f	c_print;
 creat_f	c_regex;
+creat_f	c_samefile;
 creat_f	c_simple;
 creat_f	c_size;
 creat_f	c_type;
@@ -91,6 +86,7 @@ exec_f	f_depth;
 exec_f	f_empty;
 exec_f	f_exec;
 exec_f	f_expr;
+exec_f	f_false;
 exec_f	f_flags;
 exec_f	f_fstype;
 exec_f	f_group;
@@ -109,6 +105,7 @@ exec_f	f_perm;
 exec_f	f_print;
 exec_f	f_print0;
 exec_f	f_prune;
+exec_f	f_quit;
 exec_f	f_regex;
 exec_f	f_size;
 exec_f	f_type;

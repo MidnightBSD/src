@@ -1,6 +1,6 @@
-.\" $FreeBSD: src/usr.bin/truss/truss.1,v 1.24 2007/05/21 20:33:51 keramida Exp $
+.\" $MidnightBSD$
 .\"
-.Dd January 2, 2004
+.Dd May 12, 2009
 .Dt TRUSS 1
 .Os
 .Sh NAME
@@ -8,12 +8,12 @@
 .Nd trace system calls
 .Sh SYNOPSIS
 .Nm
-.Op Fl faedDS
+.Op Fl facedDS
 .Op Fl o Ar file
 .Op Fl s Ar strsize
 .Fl p Ar pid
 .Nm
-.Op Fl faedDS
+.Op Fl facedDS
 .Op Fl o Ar file
 .Op Fl s Ar strsize
 .Ar command Op Ar args
@@ -36,6 +36,12 @@ etc.
 Show the argument strings that are passed in each
 .Xr execve 2
 system call.
+.It Fl c
+Do not display individual system calls.
+Instead, before exiting, print a summary containing for each system call:
+the total system time used,
+the number of times the call was invoked,
+and the number of times the call returned with an error.
 .It Fl e
 Show the environment strings that are passed in each
 .Xr execve 2
@@ -85,7 +91,7 @@ options are mutually exclusive.)
 # Do the same, but put the output into a file
 .Dl $ truss -o /tmp/truss.out /bin/echo hello
 # Follow an already-running process
-.Dl $ truss -p 1
+.Dl $ truss -p 34
 .Sh SEE ALSO
 .Xr kdump 1 ,
 .Xr ktrace 1 ,

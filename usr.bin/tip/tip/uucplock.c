@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/tip/tip/uucplock.c,v 1.8 2006/08/31 19:19:44 ru Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifndef lint
 #if 0
@@ -126,5 +126,6 @@ uu_unlock(char *ttyname)
 	char tbuf[sizeof(_PATH_LOCKDIRNAME) + MAXNAMLEN];
 
 	(void)snprintf(tbuf, sizeof tbuf, _PATH_LOCKDIRNAME, ttyname);
+	unexcl();
 	return(unlink(tbuf));
 }

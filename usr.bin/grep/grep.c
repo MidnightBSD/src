@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: grep.c,v 1.4 2011/02/16 01:31:33 joerg Exp $	*/
-/* 	$FreeBSD: src/usr.bin/grep/grep.c,v 1.13 2011/10/11 22:27:23 gabor Exp $	*/
+/* 	$MidnightBSD$	*/
 /*	$OpenBSD: grep.c,v 1.42 2010/07/02 22:18:03 tedu Exp $	*/
 
 /*-
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/grep/grep.c,v 1.13 2011/10/11 22:27:23 gabor Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -149,7 +148,7 @@ static inline const char	*init_color(const char *);
 bool	 first = true;	/* flag whether we are processing the first match */
 bool	 prev;		/* flag whether or not the previous line matched */
 int	 tail;		/* lines left to print */
-bool	 notfound;	/* file not found */
+bool	 file_err;	/* file reading error */
 
 /*
  * Prints usage information and returns 2.
@@ -158,7 +157,6 @@ static void
 usage(void)
 {
 	fprintf(stderr, getstr(4), getprogname());
-	fprintf(stderr, "%s", getstr(5));
 	fprintf(stderr, "%s", getstr(5));
 	fprintf(stderr, "%s", getstr(6));
 	fprintf(stderr, "%s", getstr(7));
@@ -729,5 +727,5 @@ main(int argc, char *argv[])
 
 	/* Find out the correct return value according to the
 	   results and the command line option. */
-	exit(c ? (notfound ? (qflag ? 0 : 2) : 0) : (notfound ? 2 : 1));
+	exit(c ? (file_err ? (qflag ? 0 : 2) : 0) : (file_err ? 2 : 1));
 }

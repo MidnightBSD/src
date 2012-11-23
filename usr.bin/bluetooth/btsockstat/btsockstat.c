@@ -25,13 +25,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: btsockstat.c,v 1.1.1.2 2006-02-25 02:38:11 laffer1 Exp $
- * $FreeBSD: src/usr.bin/bluetooth/btsockstat/btsockstat.c,v 1.5 2004/04/09 23:01:41 emax Exp $
+ * $Id: btsockstat.c,v 1.2 2012-11-23 01:13:49 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/types.h>
 #include <sys/callout.h>
 #include <sys/param.h>
+#include <sys/protosw.h>
 #include <sys/queue.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>

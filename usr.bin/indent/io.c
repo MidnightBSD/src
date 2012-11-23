@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)io.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/indent/io.c,v 1.14 2004/06/27 10:58:37 schweikh Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <ctype.h>
 #include <err.h>
@@ -540,8 +540,6 @@ count_spaces(int current, char *buffer)
     return (cur);
 }
 
-int	found_err;
-
 void
 diag4(int level, const char *msg, int a, int b)
 {
@@ -583,12 +581,12 @@ diag2(int level, const char *msg)
 	found_err = 1;
     if (output == stdout) {
 	fprintf(stdout, "/**INDENT** %s@%d: ", level == 0 ? "Warning" : "Error", line_no);
-	fprintf(stdout, msg);
+	fprintf(stdout, "%s", msg);
 	fprintf(stdout, " */\n");
     }
     else {
 	fprintf(stderr, "%s@%d: ", level == 0 ? "Warning" : "Error", line_no);
-	fprintf(stderr, msg);
+	fprintf(stderr, "%s", msg);
 	fprintf(stderr, "\n");
     }
 }

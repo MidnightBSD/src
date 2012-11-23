@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -43,7 +39,7 @@ static char sccsid[] = "@(#)main.c	8.2 (Berkeley) 4/20/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/mail/main.c,v 1.14.8.1 2006/01/22 12:40:06 yar Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "rcv.h"
 #include <fcntl.h>
@@ -55,14 +51,12 @@ __FBSDID("$FreeBSD: src/usr.bin/mail/main.c,v 1.14.8.1 2006/01/22 12:40:06 yar E
  * Startup -- interface with user.
  */
 
-jmp_buf	hdrjmp;
+static jmp_buf	hdrjmp;
 
 extern const char *version;
 
 int
-main(argc, argv)
-	int argc;
-	char *argv[];
+main(int argc, char *argv[])
 {
 	int i;
 	struct name *to, *cc, *bcc, *smopts;
@@ -212,7 +206,7 @@ Usage: %s [-dEiInv] [-s subject] [-c cc-addr] [-b bcc-addr] [-F] to-addr ...\n\
        %*s [-sendmail-option ...]\n\
        %s [-dEHiInNv] [-F] -f [name]\n\
        %s [-dEHiInNv] [-F] [-u user]\n\
-       %s [-d] -e [-f name]\n", __progname, strlen(__progname), "",
+       %s [-d] -e [-f name]\n", __progname, (int)strlen(__progname), "",
 				__progname, __progname, __progname);
 			exit(1);
 		}
@@ -309,8 +303,7 @@ Usage: %s [-dEiInv] [-s subject] [-c cc-addr] [-b bcc-addr] [-F] to-addr ...\n\
  */
 /*ARGSUSED*/
 void
-hdrstop(signo)
-	int signo;
+hdrstop(int signo __unused)
 {
 
 	(void)fflush(stdout);
@@ -327,7 +320,7 @@ hdrstop(signo)
  * Width is either 80 or ws_col;
  */
 void
-setscreensize()
+setscreensize(void)
 {
 	struct termios tbuf;
 	struct winsize ws;

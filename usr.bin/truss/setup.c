@@ -1,5 +1,5 @@
-/*
- * Copryight 1997 Sean Eric Fagan
+/*-
+ * Copyright 1997 Sean Eric Fagan
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/truss/setup.c,v 1.24 2007/06/26 22:42:37 delphij Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * Various setup functions for truss.  Not the cleanest-written code,
@@ -78,13 +78,12 @@ setup_and_wait(char *command[])
 	}
 	if (pid == 0) {	/* Child */
 		ptrace(PT_TRACE_ME, 0, 0, 0);
-		setpgid (0, 0); 
 		execvp(command[0], command);
 		err(1, "execvp %s", command[0]);
 	}
 	
 	/* Only in the parent here */
-	if (waitpid(pid, &waitval, 0) < -1) {
+	if (waitpid(pid, &waitval, 0) < 0) {
 		err(1, "unexpect stop in waitpid");
 		return 0;
 	}
@@ -115,7 +114,7 @@ start_tracing(int pid)
 		err(1, "can not attach to target process");
 
 	child_pid = pid;	
-	if (waitpid(pid, &waitval, 0) < -1) 
+	if (waitpid(pid, &waitval, 0) < 0) 
 		err(1, "Unexpect stop in waitpid");
 
 	return (0);
@@ -134,7 +133,7 @@ restore_proc(int signo __unused)
 
 	/* stop the child so that we can detach */	
 	kill(child_pid, SIGSTOP);
-	if (waitpid(child_pid, &waitval, 0) < -1)
+	if (waitpid(child_pid, &waitval, 0) < 0)
 		err(1, "Unexpected stop in waitpid");
 
 	if (ptrace(PT_DETACH, child_pid, (caddr_t)1, 0) < 0)
@@ -184,7 +183,7 @@ waitevent(struct trussinfo *info)
 	ptrace(PT_SYSCALL, info->pid, (caddr_t)1, pending_signal);
 	pending_signal = 0;
 
-	if (waitpid(info->pid, &waitval, 0) < -1) {
+	if (waitpid(info->pid, &waitval, 0) < 0) {
 		err(1, "Unexpected stop in waitpid");
 	}
 	
@@ -203,9 +202,19 @@ waitevent(struct trussinfo *info)
 		find_thread(info, lwpinfo.pl_lwpid);
 		switch(WSTOPSIG(waitval)) {
 		case SIGTRAP:
-			info->pr_why = info->curthread->in_syscall?S_SCX:S_SCE;
-			info->curthread->in_syscall = 1 - info->curthread->in_syscall;
-			break;
+			if (lwpinfo.pl_flags & PL_FLAG_SCE) {
+				info->pr_why = S_SCE;
+				info->curthread->in_syscall = 1;
+				break;
+			} else if (lwpinfo.pl_flags & PL_FLAG_SCX) {
+				info->pr_why = S_SCX;
+				info->curthread->in_syscall = 0;
+				break;
+			} else {
+				errx(1,
+		   "pl_flags %x contains neither PL_FLAG_SCE nor PL_FLAG_SCX",
+				    lwpinfo.pl_flags);
+			}
 		default:
 			info->pr_why = S_SIG;
 			info->pr_data = WSTOPSIG(waitval);
@@ -214,8 +223,8 @@ waitevent(struct trussinfo *info)
 		}
 	}
 	if (WIFSIGNALED(waitval)) {
-	        info->pr_why = S_EXIT;
-		info->pr_why = 0;
-                return;
+		info->pr_why = S_EXIT;
+		info->pr_data = 0;
+		return;
 	}
 }

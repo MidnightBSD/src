@@ -22,13 +22,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/limits/limits.c,v 1.17 2007/07/04 00:00:40 scf Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <err.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/sysctl.h>
 #include <sys/param.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -76,17 +77,19 @@ static struct {
 {
     { "", "infinity", "Resource limits%s%s:\n", "-max", "-cur", "",
       {
-	  { "  cputime%-4s      %8s", " secs\n",  1    },
-	  { "  filesize%-4s     %8s", " kB\n",    1024 },
-	  { "  datasize%-4s     %8s", " kB\n",    1024 },
-	  { "  stacksize%-4s    %8s", " kB\n",    1024 },
-	  { "  coredumpsize%-4s %8s", " kB\n",    1024 },
-	  { "  memoryuse%-4s    %8s", " kB\n",    1024 },
-	  { "  memorylocked%-4s %8s", " kB\n",    1024 },
-	  { "  maxprocesses%-4s %8s", "\n",       1    },
-	  { "  openfiles%-4s    %8s", "\n",       1    },
-	  { "  sbsize%-4s       %8s", " bytes\n", 1    },
-	  { "  vmemoryuse%-4s   %8s", " kB\n",    1024 }
+	  { "  cputime%-4s          %8s", " secs\n",  1    },
+	  { "  filesize%-4s         %8s", " kB\n",    1024 },
+	  { "  datasize%-4s         %8s", " kB\n",    1024 },
+	  { "  stacksize%-4s        %8s", " kB\n",    1024 },
+	  { "  coredumpsize%-4s     %8s", " kB\n",    1024 },
+	  { "  memoryuse%-4s        %8s", " kB\n",    1024 },
+	  { "  memorylocked%-4s     %8s", " kB\n",    1024 },
+	  { "  maxprocesses%-4s     %8s", "\n",       1    },
+	  { "  openfiles%-4s        %8s", "\n",       1    },
+	  { "  sbsize%-4s           %8s", " bytes\n", 1    },
+	  { "  vmemoryuse%-4s       %8s", " kB\n",    1024 },
+	  { "  pseudo-terminals%-4s %8s", "\n",       1    },
+	  { "  swapuse%-4s          %8s", " kB\n",    1024 }
       }
     },
     { "sh", "unlimited", "", " -H", " -S", "",
@@ -101,22 +104,26 @@ static struct {
 	  { "ulimit%s -u %s", ";\n",  1    },
 	  { "ulimit%s -n %s", ";\n",  1    },
 	  { "ulimit%s -b %s", ";\n",  1    },
-	  { "ulimit%s -v %s", ";\n",  1024 }
+	  { "ulimit%s -v %s", ";\n",  1024 },
+	  { "ulimit%s -p %s", ";\n",  1    },
+	  { "ulimit%s -w %s", ";\n",  1024 }
       }
     },
     { "csh", "unlimited", "", " -h", "", NULL,
       {
-	  { "limit%s cputime %s",      ";\n",  1    },
-	  { "limit%s filesize %s",     ";\n",  1024 },
-	  { "limit%s datasize %s",     ";\n",  1024 },
-	  { "limit%s stacksize %s",    ";\n",  1024 },
-	  { "limit%s coredumpsize %s", ";\n",  1024 },
-	  { "limit%s memoryuse %s",    ";\n",  1024 },
-	  { "limit%s memorylocked %s", ";\n",  1024 },
-	  { "limit%s maxproc %s",      ";\n",  1    },
-	  { "limit%s openfiles %s",    ";\n",  1    },
-	  { "limit%s sbsize %s",       ";\n",  1    },
-	  { "limit%s vmemoryuse %s",   ";\n",  1024 }
+	  { "limit%s cputime %s",         ";\n",  1    },
+	  { "limit%s filesize %s",        ";\n",  1024 },
+	  { "limit%s datasize %s",        ";\n",  1024 },
+	  { "limit%s stacksize %s",       ";\n",  1024 },
+	  { "limit%s coredumpsize %s",    ";\n",  1024 },
+	  { "limit%s memoryuse %s",       ";\n",  1024 },
+	  { "limit%s memorylocked %s",    ";\n",  1024 },
+	  { "limit%s maxproc %s",         ";\n",  1    },
+	  { "limit%s openfiles %s",       ";\n",  1    },
+	  { "limit%s sbsize %s",          ";\n",  1    },
+	  { "limit%s vmemoryuse %s",      ";\n",  1024 },
+	  { "limit%s pseudoterminals %s", ";\n",  1    },
+	  { "limit%s swapuse %s",         ";\n",  1024 }
       }
     },
     { "bash|bash2", "unlimited", "", " -H", " -S", "",
@@ -131,22 +138,26 @@ static struct {
 	  { "ulimit%s -u %s", ";\n",  1    },
 	  { "ulimit%s -n %s", ";\n",  1    },
 	  { "ulimit%s -b %s", ";\n",  1    },
-	  { "ulimit%s -v %s", ";\n",  1024 }
+	  { "ulimit%s -v %s", ";\n",  1024 },
+	  { "ulimit%s -p %s", ";\n",  1    },
+	  { "ulimit%s -w %s", ";\n",  1024 }
       }
     },
     { "tcsh", "unlimited", "", " -h", "", NULL,
       {
-	  { "limit%s cputime %s",      ";\n",  1    },
-	  { "limit%s filesize %s",     ";\n",  1024 },
-	  { "limit%s datasize %s",     ";\n",  1024 },
-	  { "limit%s stacksize %s",    ";\n",  1024 },
-	  { "limit%s coredumpsize %s", ";\n",  1024 },
-	  { "limit%s memoryuse %s",    ";\n",  1024 },
-	  { "limit%s memorylocked %s", ";\n",  1024 },
-	  { "limit%s maxproc %s",      ";\n",  1    },
-	  { "limit%s descriptors %s",  ";\n",  1    },
-	  { "limit%s sbsize %s",       ";\n",  1    },
-	  { "limit%s vmemoryuse %s",   ";\n",  1024 }
+	  { "limit%s cputime %s",         ";\n",  1    },
+	  { "limit%s filesize %s",        ";\n",  1024 },
+	  { "limit%s datasize %s",        ";\n",  1024 },
+	  { "limit%s stacksize %s",       ";\n",  1024 },
+	  { "limit%s coredumpsize %s",    ";\n",  1024 },
+	  { "limit%s memoryuse %s",       ";\n",  1024 },
+	  { "limit%s memorylocked %s",    ";\n",  1024 },
+	  { "limit%s maxproc %s",         ";\n",  1    },
+	  { "limit%s descriptors %s",     ";\n",  1    },
+	  { "limit%s sbsize %s",          ";\n",  1    },
+	  { "limit%s vmemoryuse %s",      ";\n",  1024 },
+	  { "limit%s pseudoterminals %s", ";\n",  1    },
+	  { "limit%s swapuse %s",         ";\n",  1024 }
       }
     },
     { "ksh|pdksh", "unlimited", "", " -H", " -S", "",
@@ -161,7 +172,9 @@ static struct {
 	  { "ulimit%s -p %s", ";\n",  1    },
 	  { "ulimit%s -n %s", ";\n",  1    },
 	  { "ulimit%s -b %s", ";\n",  1    },
-	  { "ulimit%s -v %s", ";\n",  1024 }
+	  { "ulimit%s -v %s", ";\n",  1024 },
+	  { "ulimit%s -p %s", ";\n",  1    },
+	  { "ulimit%s -w %s", ";\n",  1024 }
       }
     },
     { "zsh", "unlimited", "", " -H", " -S", "",
@@ -176,22 +189,26 @@ static struct {
 	  { "ulimit%s -u %s", ";\n",  1    },
 	  { "ulimit%s -n %s", ";\n",  1    },
 	  { "ulimit%s -b %s", ";\n",  1    },
-	  { "ulimit%s -v %s", ";\n",  1024 }
+	  { "ulimit%s -v %s", ";\n",  1024 },
+	  { "ulimit%s -p %s", ";\n",  1    },
+	  { "ulimit%s -w %s", ";\n",  1024 }
       }
     },
     { "rc|es", "unlimited", "", " -h", "", NULL,
       {
-	  { "limit%s cputime %s",      ";\n",  1    },
-	  { "limit%s filesize %s",     ";\n",  1024 },
-	  { "limit%s datasize %s",     ";\n",  1024 },
-	  { "limit%s stacksize %s",    ";\n",  1024 },
-	  { "limit%s coredumpsize %s", ";\n",  1024 },
-	  { "limit%s memoryuse %s",    ";\n",  1024 },
-	  { "limit%s lockedmemory %s", ";\n",  1024 },
-	  { "limit%s processes %s",    ";\n",  1    },
-	  { "limit%s descriptors %s",  ";\n",  1    },
-	  { "limit%s sbsize %s",       ";\n",  1    },
-	  { "limit%s vmemoryuse %s",   ";\n",  1024 }
+	  { "limit%s cputime %s",         ";\n",  1    },
+	  { "limit%s filesize %s",        ";\n",  1024 },
+	  { "limit%s datasize %s",        ";\n",  1024 },
+	  { "limit%s stacksize %s",       ";\n",  1024 },
+	  { "limit%s coredumpsize %s",    ";\n",  1024 },
+	  { "limit%s memoryuse %s",       ";\n",  1024 },
+	  { "limit%s lockedmemory %s",    ";\n",  1024 },
+	  { "limit%s processes %s",       ";\n",  1    },
+	  { "limit%s descriptors %s",     ";\n",  1    },
+	  { "limit%s sbsize %s",          ";\n",  1    },
+	  { "limit%s vmemoryuse %s",      ";\n",  1024 },
+	  { "limit%s pseudoterminals %s", ";\n",  1    },
+	  { "limit%s swapuse %s",         ";\n",  1024 }
       }
     },
     { NULL, NULL, NULL, NULL, NULL, NULL,
@@ -212,8 +229,10 @@ static struct {
     { "memorylocked",	login_getcapsize },
     { "maxproc",	login_getcapnum  },
     { "openfiles",	login_getcapnum  },
-    { "sbsize",		login_getcapsize  },
-    { "vmemoryuse",	login_getcapsize  }
+    { "sbsize",		login_getcapsize },
+    { "vmemoryuse",	login_getcapsize },
+    { "pseudoterminals",login_getcapnum  },
+    { "swapuse",	login_getcapsize }
 };
 
 /*
@@ -224,13 +243,15 @@ static struct {
  * to be modified accordingly!
  */
 
-#define RCS_STRING  "tfdscmlunbv"
+#define RCS_STRING  "tfdscmlunbvpw"
 
 static rlim_t resource_num(int which, int ch, const char *str);
 static void usage(void);
 static int getshelltype(void);
 static void print_limit(rlim_t limit, unsigned divisor, const char *inf,
 			const char *pfx, const char *sfx, const char *which);
+static void getrlimit_proc(pid_t pid, int resource, struct rlimit *rlp);
+static void setrlimit_proc(pid_t pid, int resource, const struct rlimit *rlp);
 extern char **environ;
 
 static const char rcs_string[] = RCS_STRING;
@@ -244,24 +265,24 @@ main(int argc, char *argv[])
     int rcswhich, shelltype;
     int i, num_limits = 0;
     int ch, doeval = 0, doall = 0;
-    int rtrn;
+    int rtrn, setproc;
     login_cap_t * lc = NULL;
     enum { ANY=0, SOFT=1, HARD=2, BOTH=3, DISPLAYONLY=4 } type = ANY;
     enum { RCSUNKNOWN=0, RCSSET=1, RCSSEL=2 } todo = RCSUNKNOWN;
     int which_limits[RLIM_NLIMITS];
     rlim_t set_limits[RLIM_NLIMITS];
     struct rlimit limits[RLIM_NLIMITS];
+    pid_t pid;
 
     /* init resource tables */
     for (i = 0; i < RLIM_NLIMITS; i++) {
 	which_limits[i] = 0; /* Don't set/display any */
 	set_limits[i] = RLIM_INFINITY;
-	/* Get current resource values */
-	getrlimit(i, &limits[i]);
     }
 
+    pid = -1;
     optarg = NULL;
-    while ((ch = getopt(argc, argv, ":EeC:U:BSHab:c:d:f:l:m:n:s:t:u:v:")) != -1) {
+    while ((ch = getopt(argc, argv, ":EeC:U:BSHP:ab:c:d:f:l:m:n:s:t:u:v:p:w:")) != -1) {
 	switch(ch) {
 	case 'a':
 	    doall = 1;
@@ -294,6 +315,12 @@ main(int argc, char *argv[])
 	case 'B':
 	    type = SOFT|HARD;
 	    break;
+	case 'P':
+	    if (!isdigit(*optarg) || (pid = atoi(optarg)) < 0) {
+		warnx("invalid pid `%s'", optarg);
+		usage();
+	    }
+	    break;
 	default:
 	case ':': /* Without arg */
 	    if ((p = strchr(rcs_string, optopt)) != NULL) {
@@ -315,6 +342,30 @@ main(int argc, char *argv[])
 	    usage();
 	}
 	optarg = NULL;
+    }
+
+    if (pid != -1) {
+	if (cls != NULL) {
+	    warnx("-C cannot be used with -P option");
+	    usage();
+	}
+	if (pwd != NULL) {
+	    warnx("-U cannot be used with -P option");
+	    usage();
+	}
+    }
+
+    /* Get current resource values */
+    setproc = 0;
+    for (i = 0; i < RLIM_NLIMITS; i++) {
+	if (pid == -1) {
+	    getrlimit(i, &limits[i]);
+	} else if (doall || num_limits == 0) {
+	    getrlimit_proc(pid, i, &limits[i]);
+	} else if (which_limits[i] != 0) {
+	    getrlimit_proc(pid, i, &limits[i]);
+	    setproc = 1;
+	}
     }
 
     /* If user was specified, get class from that */
@@ -396,6 +447,10 @@ main(int argc, char *argv[])
 	    warnx("-e cannot be used with `cmd' option");
 	    usage();
 	}
+	if (pid != -1) {
+	    warnx("-P cannot be used with `cmd' option");
+	    usage();
+	}
 
 	login_close(lc);
 
@@ -420,6 +475,14 @@ main(int argc, char *argv[])
 
 	execvp(*argv, argv);
 	err(1, "%s", *argv);
+    }
+
+    if (setproc) {
+	for (rcswhich = 0; rcswhich < RLIM_NLIMITS; rcswhich++) {
+	    if (which_limits[rcswhich] != 0)
+		setrlimit_proc(pid, rcswhich, &limits[rcswhich]);
+	}
+	exit(EXIT_SUCCESS);
     }
 
     shelltype = doeval ? getshelltype() : SH_NONE;
@@ -475,7 +538,8 @@ static void
 usage(void)
 {
     (void)fprintf(stderr,
-"usage: limits [-C class|-U user] [-eaSHBE] [-bcdflmnstuv [val]] [[name=val ...] cmd]\n");
+	"usage: limits [-C class|-P pid|-U user] [-eaSHBE] "
+	"[-bcdflmnstuvpw [val]] [[name=val ...] cmd]\n");
     exit(EXIT_FAILURE);
 }
 
@@ -547,6 +611,7 @@ resource_num(int which, int ch, const char *str)
 	case RLIMIT_MEMLOCK:
 	case RLIMIT_SBSIZE:
 	case RLIMIT_VMEM:
+	case RLIMIT_SWAP:
 	    errno = 0;
 	    res = 0;
 	    while (*s) {
@@ -581,6 +646,7 @@ resource_num(int which, int ch, const char *str)
 	    break;
 	case RLIMIT_NPROC:
 	case RLIMIT_NOFILE:
+	case RLIMIT_NPTS:
 	    res = strtoq(s, &e, 0);
 	    s = e;
 	    break;
@@ -657,3 +723,38 @@ getshelltype(void)
     return SH_SH;
 }
 
+static void
+getrlimit_proc(pid_t pid, int resource, struct rlimit *rlp)
+{
+    int error;
+    int name[5];
+    size_t len;
+
+    name[0] = CTL_KERN;
+    name[1] = KERN_PROC;
+    name[2] = KERN_PROC_RLIMIT;
+    name[3] = pid;
+    name[4] = resource;
+    len = sizeof(*rlp);
+    error = sysctl(name, 5, rlp, &len, NULL, 0);
+    if (error == -1)
+	err(EXIT_FAILURE, "sysctl: kern.proc.rlimit: %d", pid);
+    if (len != sizeof(*rlp))
+	errx(EXIT_FAILURE, "sysctl() returns wrong size");
+}
+
+static void
+setrlimit_proc(pid_t pid, int resource, const struct rlimit *rlp)
+{
+    int error;
+    int name[5];
+
+    name[0] = CTL_KERN;
+    name[1] = KERN_PROC;
+    name[2] = KERN_PROC_RLIMIT;
+    name[3] = pid;
+    name[4] = resource;
+    error = sysctl(name, 5, NULL, 0, rlp, sizeof(*rlp));
+    if (error == -1)
+	err(EXIT_FAILURE, "sysctl: kern.proc.rlimit: %d", pid);
+}

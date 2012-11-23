@@ -1,8 +1,10 @@
 #	@(#)Makefile	8.1 (Berkeley) 7/19/93
-# $FreeBSD: src/usr.bin/rsh/Makefile,v 1.24 2005/01/27 14:52:45 delphij Exp $
+# $MidnightBSD$
 
 PROG=	rsh
 CFLAGS+=-I${.CURDIR}/../../libexec/rlogind
+
+WARNS?=	2
 
 BINOWN=	root
 BINMODE=4555

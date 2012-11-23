@@ -1,4 +1,4 @@
-/*
+/*-
  * Copyright (c) 1992, 1993
  *	Regents of the University of California.  All rights reserved.
  *
@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -31,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)netstat.h	8.2 (Berkeley) 1/4/94
- * $FreeBSD: src/usr.bin/netstat/netstat.h,v 1.51 2007/07/16 17:15:55 jhb Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/cdefs.h>
@@ -45,12 +41,14 @@ extern int	hflag;	/* show counters in human readable format */
 extern int	iflag;	/* show interfaces */
 extern int	Lflag;	/* show size of listen queues */
 extern int	mflag;	/* show memory stats */
+extern int	noutputs;	/* how much outputs before we exit */
 extern int	numeric_addr;	/* show addresses numerically */
 extern int	numeric_port;	/* show ports numerically */
 extern int	rflag;	/* show routing tables (or routing stats) */
 extern int	sflag;	/* show protocol statistics */
-extern int	tflag;	/* show i/f watchdog timers */
+extern int	Tflag;  /* show TCP control block info */
 extern int	Wflag;	/* wide display */
+extern int	xflag;	/* extended display, includes all socket buffer info */
 extern int	zflag;	/* zero stats */
 
 extern int	interval; /* repeat interval for i/f stats */
@@ -66,6 +64,9 @@ const char *plural(uintmax_t);
 const char *plurales(uintmax_t);
 const char *pluralies(uintmax_t);
 
+struct sockaddr;
+struct socket;
+struct xsocket;
 int	sotoxsocket(struct socket *, struct xsocket *);
 void	protopr(u_long, const char *, int, int);
 void	tcp_stats(u_long, const char *, int, int);
@@ -74,17 +75,18 @@ void	udp_stats(u_long, const char *, int, int);
 void	sctp_protopr(u_long, const char *, int, int);
 void	sctp_stats(u_long, const char *, int, int);
 #endif
+void	arp_stats(u_long, const char *, int, int);
 void	ip_stats(u_long, const char *, int, int);
 void	icmp_stats(u_long, const char *, int, int);
 void	igmp_stats(u_long, const char *, int, int);
 void	pim_stats(u_long, const char *, int, int);
-void	carp_stats (u_long, const char *, int, int);
-void	pfsync_stats (u_long, const char *, int, int);
+void	carp_stats(u_long, const char *, int, int);
+void	pfsync_stats(u_long, const char *, int, int);
 #ifdef IPSEC
 void	ipsec_stats(u_long, const char *, int, int);
-void	esp_stats (u_long, const char *, int, int);
-void	ah_stats (u_long, const char *, int, int);
-void	ipcomp_stats (u_long, const char *, int, int);
+void	esp_stats(u_long, const char *, int, int);
+void	ah_stats(u_long, const char *, int, int);
+void	ipcomp_stats(u_long, const char *, int, int);
 #endif
 
 #ifdef INET6
@@ -99,6 +101,7 @@ void	mrt6_stats(u_long);
 
 struct sockaddr_in6;
 struct in6_addr;
+void in6_fillscopeid(struct sockaddr_in6 *);
 char *routename6(struct sockaddr_in6 *);
 const char *netname6(struct sockaddr_in6 *, struct in6_addr *);
 void	inet6print(struct in6_addr *, int, const char *, int);
@@ -109,6 +112,8 @@ void	pfkey_stats(u_long, const char *, int, int);
 #endif
 
 void	mbpr(void *, u_long);
+
+void	netisr_stats(void *);
 
 void	hostpr(u_long, u_long);
 void	impstats(u_long, u_long);
@@ -123,8 +128,8 @@ char	*ipx_phost(struct sockaddr *);
 char	*ns_phost(struct sockaddr *);
 void	upHex(char *);
 
-char	*routename(u_long);
-char	*netname(u_long, u_long);
+char	*routename(in_addr_t);
+char	*netname(in_addr_t, u_long);
 char	*atalk_print(struct sockaddr *, int);
 char	*atalk_print2(struct sockaddr *, struct sockaddr *, int);
 char	*ipx_print(struct sockaddr *);
@@ -144,9 +149,11 @@ void	nserr_stats(u_long, const char *, int, int);
 void	atalkprotopr(u_long, const char *, int, int);
 void	ddp_stats(u_long, const char *, int, int);
 
+#ifdef NETGRAPH
 void	netgraphprotopr(u_long, const char *, int, int);
+#endif
 
-void	unixpr(u_long, u_long, u_long, u_long);
+void	unixpr(u_long, u_long, u_long, u_long, u_long);
 
 void	esis_stats(u_long, const char *, int, int);
 void	clnp_stats(u_long, const char *, int, int);
@@ -157,7 +164,6 @@ void	tp_protopr(u_long, const char *, int, int);
 void	tp_inproto(u_long);
 void	tp_stats(caddr_t, caddr_t);
 
-void	ifmalist_dump(void);
-void	mroutepr(u_long, u_long);
+void	mroutepr(u_long, u_long, u_long);
 void	mrt_stats(u_long);
 void	bpf_stats(char *);

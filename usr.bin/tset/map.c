@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -33,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/tset/map.c,v 1.11 2005/05/29 15:44:55 charnier Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifndef lint
 static const char sccsid[] = "@(#)map.c	8.1 (Berkeley) 6/9/93";
@@ -75,9 +71,7 @@ MAP *cur, *maplist;
  * The baud rate tests are: >, <, @, =, !
  */
 void
-add_mapping(port, arg)
-	const char *port;
-	char *arg;
+add_mapping(const char *port, char *arg)
 {
 	MAP *mapp;
 	char *copy, *p, *termp;
@@ -190,8 +184,7 @@ badmopt:		errx(1, "illegal -m option format: %s", copy);
  * 'type'.
  */
 const char *
-mapped(type)
-	const char *type;
+mapped(const char *type)
 {
 	MAP *mapp;
 	int match;
@@ -240,8 +233,7 @@ SPEEDS speeds[] = {
 };
 
 speed_t
-tset_baudrate(rate)
-	char *rate;
+tset_baudrate(char *rate)
 {
 	SPEEDS *sp;
 	speed_t speed;

@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -33,91 +29,94 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/systat/keyboard.c,v 1.2 2001/12/12 00:13:37 markm Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifdef lint
 static const char sccsid[] = "@(#)keyboard.c	8.1 (Berkeley) 6/6/93";
 #endif
 
+#include <errno.h>
 #include <ctype.h>
 #include <signal.h>
+#include <stdlib.h>
 #include <termios.h>
 
 #include "systat.h"
 #include "extern.h"
 
 int
-keyboard()
+keyboard(void)
 {
-        char ch, line[80];
-	int oldmask;
+	char line[80];
+	int ch, oldmask;
 
-        for (;;) {
-                col = 0;
-                move(CMDLINE, 0);
-                do {
-                        refresh();
-                        ch = getch() & 0177;
-                        if (ch == 0177 && ferror(stdin)) {
-                                clearerr(stdin);
-                                continue;
-                        }
-                        if (ch >= 'A' && ch <= 'Z')
-                                ch += 'a' - 'A';
-                        if (col == 0) {
+	for (;;) {
+		col = 0;
+		move(CMDLINE, 0);
+		do {
+			refresh();
+			ch = getch();
+			if (ch == ERR) {
+				if (errno == EINTR)
+					continue;
+				exit(1);
+			}
+			if (ch >= 'A' && ch <= 'Z')
+				ch += 'a' - 'A';
+			if (col == 0) {
 #define	mask(s)	(1 << ((s) - 1))
-                                if (ch == CTRL('l')) {
+				if (ch == CTRL('l')) {
 					oldmask = sigblock(mask(SIGALRM));
 					wrefresh(curscr);
 					sigsetmask(oldmask);
-                                        continue;
-                                }
+					continue;
+				}
 				if (ch == CTRL('g')) {
 					oldmask = sigblock(mask(SIGALRM));
 					status();
 					sigsetmask(oldmask);
 					continue;
 				}
-                                if (ch != ':')
-                                        continue;
-                                move(CMDLINE, 0);
-                                clrtoeol();
-                        }
-                        if (ch == erasechar() && col > 0) {
-                                if (col == 1 && line[0] == ':')
-                                        continue;
-                                col--;
-                                goto doerase;
-                        }
-                        if (ch == CTRL('w') && col > 0) {
-                                while (--col >= 0 && isspace(line[col]))
-                                        ;
-                                col++;
-                                while (--col >= 0 && !isspace(line[col]))
-                                        if (col == 0 && line[0] == ':')
-                                                break;
-                                col++;
-                                goto doerase;
-                        }
-                        if (ch == killchar() && col > 0) {
-                                col = 0;
-                                if (line[0] == ':')
-                                        col++;
-                doerase:
-                                move(CMDLINE, col);
-                                clrtoeol();
-                                continue;
-                        }
-                        if (isprint(ch) || ch == ' ') {
-                                line[col] = ch;
-                                mvaddch(CMDLINE, col, ch);
-                                col++;
-                        }
-                } while (col == 0 || (ch != '\r' && ch != '\n'));
-                line[col] = '\0';
+				if (ch != ':')
+					continue;
+				move(CMDLINE, 0);
+				clrtoeol();
+			}
+			if (ch == erasechar() && col > 0) {
+				if (col == 1 && line[0] == ':')
+					continue;
+				col--;
+				goto doerase;
+			}
+			if (ch == CTRL('w') && col > 0) {
+				while (--col >= 0 && isspace(line[col]))
+					;
+				col++;
+				while (--col >= 0 && !isspace(line[col]))
+					if (col == 0 && line[0] == ':')
+						break;
+				col++;
+				goto doerase;
+			}
+			if (ch == killchar() && col > 0) {
+				col = 0;
+				if (line[0] == ':')
+					col++;
+		doerase:
+				move(CMDLINE, col);
+				clrtoeol();
+				continue;
+			}
+			if (isprint(ch) || ch == ' ') {
+				line[col] = ch;
+				mvaddch(CMDLINE, col, ch);
+				col++;
+			}
+		} while (col == 0 || (ch != '\r' && ch != '\n'));
+		line[col] = '\0';
 		oldmask = sigblock(mask(SIGALRM));
-                command(line + 1);
+		command(line + 1);
 		sigsetmask(oldmask);
-        }
+	}
 	/*NOTREACHED*/
 }

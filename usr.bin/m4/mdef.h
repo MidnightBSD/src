@@ -1,4 +1,4 @@
-/*	$OpenBSD: mdef.h,v 1.29 2006/03/20 20:27:45 espie Exp $	*/
+/*	$OpenBSD: mdef.h,v 1.21 2001/09/27 11:40:33 espie Exp $	*/
 /*	$NetBSD: mdef.h,v 1.7 1996/01/13 23:25:27 pk Exp $	*/
 
 /*
@@ -16,7 +16,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the University nor the names of its contributors
+ * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -33,13 +33,8 @@
  * SUCH DAMAGE.
  *
  *	@(#)mdef.h	8.1 (Berkeley) 6/6/93
+ * $MidnightBSD$
  */
-
-#ifdef __GNUC__
-# define UNUSED	__attribute__((__unused__))
-#else
-# define UNUSED
-#endif
 
 #define MACRTYPE        1
 #define DEFITYPE        2
@@ -84,10 +79,8 @@
 #define ESYSCMDTYPE	41
 #define TRACEONTYPE	42
 #define TRACEOFFTYPE	43
-#define FORMATTYPE	44
 
-#define BUILTIN_MARKER	"__builtin_"
- 
+
 #define TYPEMASK	63	/* Keep bits really corresponding to a type. */
 #define RECDEF		256	/* Pure recursive def, don't expand it */
 #define NOARGS		512	/* builtin needs no args */
@@ -96,7 +89,7 @@
 /*
  * m4 special characters
  */
- 
+
 #define ARGFLAG         '$'
 #define LPAREN          '('
 #define RPAREN          ')'
@@ -123,10 +116,10 @@
 #define MAXTOK          512          	/* maximum chars in a tokn 	    */
 #define HASHSIZE        199             /* maximum size of hashtab 	    */
 #define MAXCCHARS	5		/* max size of comment/quote delim  */
- 
+
 #define ALL             1
 #define TOP             0
- 
+
 #define TRUE            1
 #define FALSE           0
 #define cycle           for(;;)
@@ -134,23 +127,24 @@
 /*
  * m4 data structures
  */
- 
+
 typedef struct ndblock *ndptr;
- 
-struct macro_definition {
-	struct macro_definition *next;
+
+struct ndblock {		/* hastable structure         */
+	char		*name;	/* entry name..               */
 	char		*defn;	/* definition..               */
 	unsigned int	type;	/* type of the entry..        */
+	unsigned int 	hv;	/* hash function value..      */
+	ndptr		nxtptr;	/* link to next entry..       */
 };
 
+#define nil     ((ndptr) 0)
 
-struct ndblock {			/* hashtable structure         */
-	unsigned int 		builtin_type;
-	unsigned int		trace_flags;
-	struct macro_definition *d;
-	char		name[1];	/* entry name..               */
+struct keyblk {
+        const char    *knam;    /* keyword name */
+        int     ktyp;           /* keyword type */
 };
- 
+
 typedef union {			/* stack structure */
 	int	sfra;		/* frame entry  */
 	char 	*sstr;		/* string entry */
@@ -160,7 +154,6 @@ struct input_file {
 	FILE 		*file;
 	char 		*name;
 	unsigned long 	lineno;
-	unsigned long   synch_lineno;	/* used for -s */
 	int 		c;
 };
 
@@ -169,33 +162,31 @@ struct input_file {
 /*
  * macros for readibility and/or speed
  *
- *      gpbc()  - get a possibly pushed-back character
  *      pushf() - push a call frame entry onto stack
  *      pushs() - push a string pointer onto stack
  */
-#define gpbc() 	 (bp > bufbase) ? *--bp : obtain_char(infile+ilevel)
-#define pushf(x) 			\
-	do {				\
-		if (++sp == STACKMAX) 	\
-			enlarge_stack();\
-		mstack[sp].sfra = (x);	\
-		sstack[sp] = 0; \
+#define pushf(x) 					\
+	do {						\
+		if ((uintptr_t)++sp == STACKMAX) 	\
+			enlarge_stack();		\
+		mstack[sp].sfra = (x);			\
+		sstack[sp] = 0;				\
 	} while (0)
 
-#define pushs(x) 			\
-	do {				\
-		if (++sp == STACKMAX) 	\
-			enlarge_stack();\
-		mstack[sp].sstr = (x);	\
-		sstack[sp] = 1; \
+#define pushs(x) 					\
+	do {						\
+		if ((uintptr_t)++sp == STACKMAX) 	\
+			enlarge_stack();		\
+		mstack[sp].sstr = (x);			\
+		sstack[sp] = 1;				\
 	} while (0)
 
-#define pushs1(x) 			\
-	do {				\
-		if (++sp == STACKMAX) 	\
-			enlarge_stack();\
-		mstack[sp].sstr = (x);	\
-		sstack[sp] = 0; \
+#define pushs1(x) 					\
+	do {						\
+		if ((uintptr_t)++sp == STACKMAX) 	\
+			enlarge_stack();		\
+		mstack[sp].sstr = (x);			\
+		sstack[sp] = 0;				\
 	} while (0)
 
 /*
@@ -222,8 +213,7 @@ struct input_file {
  *
  */
 #define PARLEV  (mstack[fp].sfra)
-#define CALTYP  (mstack[fp-2].sfra)
-#define TRACESTATUS (mstack[fp-1].sfra)
+#define CALTYP  (mstack[fp-1].sfra)
 #define PREVEP	(mstack[fp+3].sstr)
-#define PREVSP	(fp-4)
-#define PREVFP	(mstack[fp-3].sfra)
+#define PREVSP	(fp-3)
+#define PREVFP	(mstack[fp-2].sfra)

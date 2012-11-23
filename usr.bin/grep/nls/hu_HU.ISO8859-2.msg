@@ -1,4 +1,4 @@
-$ $FreeBSD: src/usr.bin/grep/nls/hu_HU.ISO8859-2.msg,v 1.2 2010/07/29 18:02:57 gabor Exp $
+$ $MidnightBSD$
 $
 $set 1
 $quote "

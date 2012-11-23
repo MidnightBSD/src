@@ -1,5 +1,4 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: src/usr.bin/grep/regex/fastmatch.c,v 1.1 2011/10/05 09:56:43 gabor Exp $ */
 
 /*-
  * Copyright (C) 2011 Gabor Kovesdan <gabor@FreeBSD.org>

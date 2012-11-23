@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/tip/tip/cmds.c,v 1.18 2006/08/31 19:19:44 ru Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifndef lint
 #if 0
@@ -666,6 +666,7 @@ tipabort(char *msg)
 	daemon_uid();
 	(void)uu_unlock(uucplock);
 	unraw();
+	unexcl();
 	exit(0);
 }
 

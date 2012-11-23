@@ -12,10 +12,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
 .\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
@@ -33,10 +29,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)find.1	8.7 (Berkeley) 5/9/95
-.\" $FreeBSD: src/usr.bin/find/find.1,v 1.82 2007/02/28 10:19:25 ru Exp $
-.\" $MidnightBSD: src/usr.bin/find/find.1,v 1.3 2011/08/07 02:58:18 laffer1 Exp $
+.\" $MidnightBSD$
 .\"
-.Dd February 24, 2008
+.Dd June 13, 2012
 .Dt FIND 1
 .Os
 .Sh NAME
@@ -131,36 +126,15 @@ as an effective alternative.
 .It Fl d
 Cause
 .Nm
-to perform a depth-first traversal, i.e., directories
-are visited in post-order and all entries in a directory will be acted
-on before the directory itself.
-By default,
-.Nm
-visits directories in pre-order, i.e., before their contents.
-Note, the default is
-.Em not
-a breadth-first traversal.
+to perform a depth-first traversal.
 .Pp
-This option is equivalent to the
+This option is a BSD-specific equivalent of the
 .Ic -depth
-primary of
+primary specified by
 .St -p1003.1-2001 .
-The
-.Fl d
-option
-can be useful when
-.Nm
-is used with
-.Xr cpio 1
-to process files that are contained in directories with unusual permissions.
-It ensures that you have write permission while you are placing files in a
-directory, then sets the directory's permissions as the last thing.
-.It Fl f
-Specify a file hierarchy for
-.Nm
-to traverse.
-File hierarchies may also be specified as the operands immediately
-following the options.
+Refer to its description under
+.Sx PRIMARIES
+for more information.
 .It Fl s
 Cause
 .Nm
@@ -182,6 +156,18 @@ This option is equivalent to the deprecated
 primary.
 .El
 .Sh PRIMARIES
+.Pp
+All primaries which take a numeric argument allow the number to be
+preceded by a plus sign
+.Pq Dq Li +
+or a minus sign
+.Pq Dq Li - .
+A preceding plus sign means
+.Dq more than n ,
+a preceding minus sign means
+.Dq less than n
+and neither means
+.Dq exactly n .
 .Bl -tag -width indent
 .It Ic -Bmin Ar n
 True if the difference between the time of a file's inode creation
@@ -295,7 +281,7 @@ Please refer to the
 .Ic -atime
 primary description for information on supported time units.
 .It Ic -d
-Same as 
+Non-portable, BSD-specific version of
 .Ic depth .
 GNU find implements this as a primary in mistaken emulation of
 .Fx
@@ -316,9 +302,31 @@ Depth-first traversal processing is implied by this option.
 Following symlinks is incompatible with this option.
 .It Ic -depth
 Always true;
-same as the
+same as the non-portable
 .Fl d
 option.
+Cause
+.Nm
+to perform a depth-first traversal, i.e., directories
+are visited in post-order and all entries in a directory will be acted
+on before the directory itself.
+By default,
+.Nm
+visits directories in pre-order, i.e., before their contents.
+Note, the default is
+.Em not
+a breadth-first traversal.
+.Pp
+The
+.Ic -depth
+primary
+can be useful when
+.Nm
+is used with
+.Xr cpio 1
+to process files that are contained in directories with unusual permissions.
+It ensures that you have write permission while you are placing files in a
+directory, then sets the directory's permissions as the last thing.
 .It Ic -depth Ar n
 True if the depth of the file relative to the starting point of the traversal
 is
@@ -430,12 +438,9 @@ bits match those of
 True if the file is contained in a file system of type
 .Ar type .
 The
-.Xr sysctl 8
+.Xr lsvfs 1
 command can be used to find out the types of file systems
-that are available on the system:
-.Pp
-.Dl "sysctl vfs"
-.Pp
+that are available on the system.
 In addition, there are two pseudo-types,
 .Dq Li local
 and
@@ -447,12 +452,12 @@ is being executed and the latter matches any file system which is
 mounted read-only.
 .It Ic -gid Ar gname
 The same thing as
-.Ar -group Ar gname 
+.Ar -group Ar gname
 for compatibility with GNU find.
 GNU find imposes a restriction that
-.Ar gname 
+.Ar gname
 is numeric, while
-.Xr find 1 
+.Xr find 1
 does not.
 .It Ic -group Ar gname
 True if the file belongs to the group
@@ -485,7 +490,7 @@ Like
 .Ic -regex ,
 but the match is case insensitive.
 .It Ic -iwholename Ar pattern
-The same thing as 
+The same thing as
 .Ic -ipath ,
 for GNU find compatibility.
 .It Ic -links Ar n
@@ -541,7 +546,7 @@ minutes.
 Same as
 .Ic -newer .
 .It Ic -mount
-The same thing as 
+The same thing as
 .Ic -xdev ,
 for GNU find compatibility.
 .It Ic -mtime Ar n Ns Op Cm smhdw
@@ -614,7 +619,7 @@ True if the file belongs to an unknown group.
 This option is for GNU find compatibility and is ignored.
 .It Ic -noleaf
 This option is for GNU find compatibility.
-In GNU find it disables an optimization not relevant to 
+In GNU find it disables an optimization not relevant to
 .Xr find 1 ,
 so it is ignored.
 .It Ic -nouser
@@ -750,7 +755,7 @@ True if the file is a hard link to
 If the command option
 .Ic -L
 is specified, it is also true if the file is a symbolic link and
-points to 
+points to
 .Ar name .
 .It Ic -size Ar n Ns Op Cm ckMGTP
 True if the file's size, rounded up, in 512-byte blocks is
@@ -803,12 +808,12 @@ socket
 .El
 .It Ic -uid Ar uname
 The same thing as
-.Ar -user Ar uname 
+.Ar -user Ar uname
 for compatibility with GNU find.
 GNU find imposes a restriction that
-.Ar uname 
+.Ar uname
 is numeric, while
-.Xr find 1 
+.Xr find 1
 does not.
 .It Ic -user Ar uname
 True if the file belongs to the user
@@ -819,22 +824,10 @@ is numeric and there is no such user name, then
 .Ar uname
 is treated as a user ID.
 .It Ic -wholename Ar pattern
-The same thing as 
+The same thing as
 .Ic -path ,
 for GNU find compatibility.
 .El
-.Pp
-All primaries which take a numeric argument allow the number to be
-preceded by a plus sign
-.Pq Dq Li +
-or a minus sign
-.Pq Dq Li - .
-A preceding plus sign means
-.Dq more than n ,
-a preceding minus sign means
-.Dq less than n
-and neither means
-.Dq exactly n .
 .Sh OPERATORS
 The primaries may be combined using the following operators.
 The operators are listed in order of decreasing precedence.
@@ -948,7 +941,7 @@ section below for details.
 .Xr chmod 1 ,
 .Xr cvs 1 ,
 .Xr locate 1 ,
-.Xr msearch 1 ,
+.Xr lsvfs 1 ,
 .Xr whereis 1 ,
 .Xr which 1 ,
 .Xr xargs 1 ,

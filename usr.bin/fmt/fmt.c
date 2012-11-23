@@ -173,9 +173,10 @@ static const char copyright[] =
   "Copyright (c) 1997 Gareth McCaughan. All rights reserved.\n";
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/fmt/fmt.c,v 1.22 2004/08/02 11:10:20 tjr Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <err.h>
+#include <limits.h>
 #include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -351,6 +352,7 @@ main(int argc, char *argv[]) {
   }
   if (goal_length==0) goal_length = 65;
   if (max_length==0) max_length = goal_length+10;
+  if (max_length >= SIZE_T_MAX / sizeof (wchar_t)) errx(EX_USAGE, "max length too large");
   /* really needn't be longer */
   output_buffer = XMALLOC((max_length+1) * sizeof(wchar_t));
 

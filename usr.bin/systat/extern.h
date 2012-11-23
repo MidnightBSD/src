@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -31,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *      @(#)extern.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.bin/systat/extern.h,v 1.14 2004/03/09 11:57:27 dwmalone Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/cdefs.h>
@@ -82,7 +78,6 @@ void	 closekre(WINDOW *);
 void	 closembufs(WINDOW *);
 void	 closenetstat(WINDOW *);
 void	 closepigs(WINDOW *);
-void	 closesensors(WINDOW *);
 void	 closeswap(WINDOW *);
 void	 closetcp(WINDOW *);
 int	 cmdifstat(const char *, const char *);
@@ -106,7 +101,6 @@ void	 fetchkre(void);
 void	 fetchmbufs(void);
 void	 fetchnetstat(void);
 void	 fetchpigs(void);
-void	 fetchsensors(void);
 void	 fetchswap(void);
 void	 fetchtcp(void);
 void	 getsysctl(const char *, void *, size_t);
@@ -121,7 +115,6 @@ int	 initkre(void);
 int	 initmbufs(void);
 int	 initnetstat(void);
 int	 initpigs(void);
-int	 initsensors(void);
 int	 initswap(void);
 int	 inittcp(void);
 int	 keyboard(void);
@@ -137,7 +130,6 @@ void	 labelmbufs(void);
 void	 labelnetstat(void);
 void	 labelpigs(void);
 void	 labels(void);
-void	 labelsensors(void);
 void	 labelswap(void);
 void	 labeltcp(void);
 void	 load(void);
@@ -153,7 +145,6 @@ WINDOW	*openkre(void);
 WINDOW	*openmbufs(void);
 WINDOW	*opennetstat(void);
 WINDOW	*openpigs(void);
-WINDOW	*opensensors(void);
 WINDOW	*openswap(void);
 WINDOW	*opentcp(void);
 int	 prefix(const char *, const char *);
@@ -172,7 +163,6 @@ void	 showkre(void);
 void	 showmbufs(void);
 void	 shownetstat(void);
 void	 showpigs(void);
-void	 showsensors(void);
 void	 showswap(void);
 void	 showtcp(void);
 void	 status(void);

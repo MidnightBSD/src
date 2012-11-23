@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -31,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)talk.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.bin/talk/talk.h,v 1.5 2004/04/19 21:37:29 cognet Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/cdefs.h>
@@ -42,7 +38,6 @@
 #include <arpa/inet.h>
 #include <protocols/talkd.h>
 #include <curses.h>
-#include <unistd.h>
 
 extern	int sockt;
 extern	int curses_initialized;
@@ -73,7 +68,7 @@ extern	void	ctl_transact(struct in_addr,CTL_MSG,int,CTL_RESPONSE *);
 extern	void	disp_msg(int);
 extern	void	display(xwin_t *, char *, int);
 extern	void	end_msgs(void);
-extern	void	get_addrs(char *, char *);
+extern	void	get_addrs(const char *, const char *);
 extern	int	get_iface(struct in_addr *, struct in_addr *);
 extern	void	get_names(int, char **);
 extern	void	init_display(void);

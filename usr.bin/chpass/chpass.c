@@ -50,7 +50,7 @@ static char sccsid[] = "@(#)chpass.c	8.4 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/chpass/chpass.c,v 1.27 2004/01/18 21:46:39 charnier Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 
@@ -79,7 +79,7 @@ int
 main(int argc, char *argv[])
 {
 	enum { NEWSH, LOADENTRY, EDITENTRY, NEWPW, NEWEXP } op;
-	struct passwd lpw, *old_pw = NULL, *pw = NULL;
+	struct passwd lpw, *old_pw, *pw;
 	int ch, pfd, tfd;
 	const char *password;
 	char *arg = NULL;
@@ -217,7 +217,12 @@ main(int argc, char *argv[])
 		pw_fini();
 		if (pw == NULL)
 			err(1, "edit()");
-		if (pw_equal(old_pw, pw))
+		/* 
+		 * pw_equal does not check for crypted passwords, so we
+		 * should do it explicitly
+		 */
+		if (pw_equal(old_pw, pw) && 
+		    strcmp(old_pw->pw_passwd, pw->pw_passwd) == 0)
 			errx(0, "user information unchanged");
 	}
 

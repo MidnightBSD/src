@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -33,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/talk/invite.c,v 1.9 2003/01/01 18:49:00 schweikh Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifndef lint
 static const char sccsid[] = "@(#)invite.c	8.1 (Berkeley) 6/6/93";
@@ -47,6 +43,7 @@ static const char sccsid[] = "@(#)invite.c	8.1 (Berkeley) 6/6/93";
 #include <errno.h>
 #include <setjmp.h>
 #include <signal.h>
+#include <unistd.h>
 
 #include "talk_ctl.h"
 #include "talk.h"
@@ -67,7 +64,7 @@ int	local_id, remote_id;
 jmp_buf invitebuf;
 
 void
-invite_remote()
+invite_remote(void)
 {
 	int new_sockt;
 	struct itimerval itimer;
@@ -124,8 +121,7 @@ invite_remote()
  */
 /* ARGSUSED */
 void
-re_invite(signo)
-	int signo __unused;
+re_invite(int signo __unused)
 {
 
 	message("Ringing your party again");
@@ -155,7 +151,7 @@ static	const char *answers[] = {
  * Transmit the invitation and process the response
  */
 void
-announce_invite()
+announce_invite(void)
 {
 	CTL_RESPONSE response;
 
@@ -177,7 +173,7 @@ announce_invite()
  * Tell the daemon to remove your invitation
  */
 void
-send_delete()
+send_delete(void)
 {
 
 	msg.type = DELETE;

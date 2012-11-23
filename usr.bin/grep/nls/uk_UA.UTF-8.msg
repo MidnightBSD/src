@@ -1,4 +1,4 @@
-$ $FreeBSD: src/usr.bin/grep/nls/uk_UA.UTF-8.msg,v 1.2 2010/08/06 10:34:48 gabor Exp $
+$ $MidnightBSD$
 $set 1
 $quote "
 1 "(стандартний ввід)"

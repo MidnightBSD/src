@@ -34,9 +34,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/locate/bigram/locate.bigram.c,v 1.12 2005/02/09 09:13:36 stefanf Exp $
+ * $MidnightBSD$
  */
 
+#if 0
 #ifndef lint
 static char copyright[] =
 "@(#) Copyright (c) 1989, 1993\n\
@@ -46,6 +47,7 @@ static char copyright[] =
 #ifndef lint
 static char sccsid[] = "@(#)locate.bigram.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
+#endif
 
 /*
  *  bigram < sorted_file_names | sort -nr | 
@@ -67,9 +69,9 @@ u_int bigram[UCHAR_MAX + 1][UCHAR_MAX + 1];
 int
 main(void)
 {
-  	register u_char *cp;
-	register u_char *oldpath = buf1, *path = buf2;
-	register u_int i, j;
+	u_char *cp;
+	u_char *oldpath = buf1, *path = buf2;
+	u_int i, j;
 
      	while (fgets(path, sizeof(buf2), stdin) != NULL) {
 

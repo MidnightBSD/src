@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.       Maxim Sobolev
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: src/usr.bin/mkuzip/mkuzip.c,v 1.6 2007/03/06 17:04:15 fjoe Exp $
+ * $MidnightBSD$
  *
  */
 
@@ -31,7 +31,7 @@
 
 #define CLOOP_MAGIC_LEN 128
 static char CLOOP_MAGIC_START[] = "#!/bin/sh\n#V2.0 Format\n"
-    "m=geom_uzip\n(kldstat -m $m 2>&-||kldload $m)>&-&&"
+    "(kldstat -qm g_uzip||kldload geom_uzip)>&-&&"
     "mount_cd9660 /dev/`mdconfig -af $0`.uzip $1\nexit $?\n";
 
 static char *readblock(int, char *, u_int32_t);

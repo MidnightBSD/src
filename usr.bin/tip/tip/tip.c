@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/tip/tip/tip.c,v 1.18 2006/08/31 19:19:44 ru Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifndef lint
 static const char copyright[] =
@@ -323,6 +323,15 @@ unraw(void)
 {
 	if (gotdefterm)
 		tcsetattr(0, TCSADRAIN, &defterm);
+}
+
+/*
+ * give up exclusive tty access
+ */
+void
+unexcl()
+{
+	ioctl(FD, TIOCNXCL, 0);
 }
 
 static	jmp_buf promptbuf;

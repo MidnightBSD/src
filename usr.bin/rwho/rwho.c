@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -44,7 +40,7 @@ static char sccsid[] = "@(#)rwho.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/rwho/rwho.c,v 1.18 2002/07/01 16:40:33 markm Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/file.h>
@@ -61,7 +57,6 @@ __FBSDID("$FreeBSD: src/usr.bin/rwho/rwho.c,v 1.18 2002/07/01 16:40:33 markm Exp
 #include <time.h>
 #include <timeconv.h>
 #include <unistd.h>
-#include <utmp.h>
 
 DIR	*dirp;
 
@@ -170,9 +165,10 @@ main(int argc, char *argv[])
 			 d_first ? "%e %b %R" : "%b %e %R",
 			 localtime(&t));
 		(void)sprintf(buf, "%s:%-.*s", mp->myhost,
-		   sizeof(mp->myutmp.out_line), mp->myutmp.out_line);
+		   (int)sizeof(mp->myutmp.out_line), mp->myutmp.out_line);
 		printf("%-*.*s %-*s %s",
-		   UT_NAMESIZE, sizeof(mp->myutmp.out_name),
+		   (int)sizeof(mp->myutmp.out_name),
+		   (int)sizeof(mp->myutmp.out_name),
 		   mp->myutmp.out_name,
 		   width,
 		   buf,

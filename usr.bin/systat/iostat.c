@@ -37,10 +37,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -60,7 +56,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/systat/iostat.c,v 1.24 2006/11/27 20:19:05 yar Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifdef lint
 static const char sccsid[] = "@(#)iostat.c	8.1 (Berkeley) 6/6/93";
@@ -95,14 +91,13 @@ static int devstats(int, int, int);
 static void stat1(int, int);
 
 WINDOW *
-openiostat()
+openiostat(void)
 {
 	return (subwin(stdscr, LINES-3-1, 0, MAINWIN_ROW, 0));
 }
 
 void
-closeiostat(w)
-	WINDOW *w;
+closeiostat(WINDOW *w)
 {
 	if (w == NULL)
 		return;
@@ -112,7 +107,7 @@ closeiostat(w)
 }
 
 int
-initiostat()
+initiostat(void)
 {
 	if ((num_devices = devstat_getnumdevs(NULL)) < 0)
 		return(0);
@@ -133,7 +128,7 @@ initiostat()
 }
 
 void
-fetchiostat()
+fetchiostat(void)
 {
 	struct devinfo *tmp_dinfo;
 	size_t len;
@@ -175,7 +170,7 @@ fetchiostat()
 #define	INSET	10
 
 void
-labeliostat()
+labeliostat(void)
 {
 	int row;
 
@@ -195,8 +190,7 @@ labeliostat()
 }
 
 static int
-numlabels(row)
-	int row;
+numlabels(int row)
 {
 	int i, _col, regions, ndrives;
 	char tmpstr[10];
@@ -237,8 +231,7 @@ numlabels(row)
 }
 
 static int
-barlabels(row)
-	int row;
+barlabels(int row)
 {
 	int i;
 	char tmpstr[10];
@@ -263,7 +256,7 @@ barlabels(row)
 
 
 void
-showiostat()
+showiostat(void)
 {
 	long t;
 	int i, row, _col;
@@ -312,8 +305,7 @@ showiostat()
 }
 
 static int
-devstats(row, _col, dn)
-	int row, _col, dn;
+devstats(int row, int _col, int dn)
 {
 	long double transfers_per_second;
 	long double kb_per_transfer, mb_per_second;
@@ -351,8 +343,7 @@ devstats(row, _col, dn)
 }
 
 static void
-stat1(row, o)
-	int row, o;
+stat1(int row, int o)
 {
 	int i;
 	double dtime;
@@ -368,10 +359,7 @@ stat1(row, o)
 }
 
 static void
-histogram(val, colwidth, scale)
-	long double val;
-	int colwidth;
-	double scale;
+histogram(long double val, int colwidth, double scale)
 {
 	char buf[10];
 	int k;
@@ -392,8 +380,7 @@ histogram(val, colwidth, scale)
 }
 
 int
-cmdiostat(cmd, args)
-	const char *cmd, *args;
+cmdiostat(const char *cmd, const char *args)
 {
 
 	if (prefix(cmd, "kbpt"))

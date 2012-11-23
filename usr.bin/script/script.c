@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -33,7 +29,6 @@
 
 #include <sys/cdefs.h>
 
-/* $FreeBSD: src/usr.bin/script/script.c,v 1.24.18.2 2011/10/04 11:10:11 trociny Exp $ */
 __MBSDID("$MidnightBSD$");
 
 #ifndef lint
@@ -64,19 +59,18 @@ static const char sccsid[] = "@(#)script.c	8.1 (Berkeley) 6/6/93";
 #include <termios.h>
 #include <unistd.h>
 
-FILE	*fscript;
-int	master, slave;
-int	child;
-const char *fname;
-int	qflg, ttyflg;
+static FILE *fscript;
+static int master, slave;
+static int child;
+static const char *fname;
+static int qflg, ttyflg;
 
-struct	termios tt;
+static struct termios tt;
 
-void	done(int) __dead2;
-void	dooutput(void);
-void	doshell(char **);
-void	fail(void);
-void	finish(void);
+static void done(int) __dead2;
+static void doshell(char **);
+static void fail(void);
+static void finish(void);
 static void usage(void);
 
 int
@@ -128,7 +122,7 @@ main(int argc, char *argv[])
 	if ((fscript = fopen(fname, aflg ? "a" : "w")) == NULL)
 		err(1, "%s", fname);
 
-	if (ttyflg = isatty(STDIN_FILENO)) {
+	if ((ttyflg = isatty(STDIN_FILENO)) != 0) {
 		if (tcgetattr(STDIN_FILENO, &tt) == -1)
 			err(1, "tcgetattr");
 		if (ioctl(STDIN_FILENO, TIOCGWINSZ, &win) == -1)
@@ -160,6 +154,7 @@ main(int argc, char *argv[])
 	}
 	if (child == 0)
 		doshell(argv);
+	close(slave);
 
 	start = tvec = time(0);
 	readstdin = 1;
@@ -168,12 +163,15 @@ main(int argc, char *argv[])
 		FD_SET(master, &rfd);
 		if (readstdin)
 			FD_SET(STDIN_FILENO, &rfd);
-		if ((!readstdin && ttyflg) || flushtime > 0) {
-			tv.tv_sec = !readstdin && ttyflg ? 1 :
-			    flushtime - (tvec - start);
+		if (!readstdin && ttyflg) {
+			tv.tv_sec = 1;
 			tv.tv_usec = 0;
 			tvp = &tv;
 			readstdin = 1;
+		} else if (flushtime > 0) {
+			tv.tv_sec = flushtime - (tvec - start);
+			tv.tv_usec = 0;
+			tvp = &tv;
 		} else {
 			tvp = NULL;
 		}
@@ -224,29 +222,23 @@ usage(void)
 	exit(1);
 }
 
-void
+static void
 finish(void)
 {
-	pid_t pid;
-	int die, e, status;
+	int e, status;
 
-	die = e = 0;
-	while ((pid = wait3(&status, WNOHANG, 0)) > 0)
-	        if (pid == child) {
-			die = 1;
-			if (WIFEXITED(status))
-				e = WEXITSTATUS(status);
-			else if (WIFSIGNALED(status))
-				e = WTERMSIG(status);
-			else /* can't happen */
-				e = 1;
-		}
-
-	if (die)
+	if (waitpid(child, &status, 0) == child) {
+		if (WIFEXITED(status))
+			e = WEXITSTATUS(status);
+		else if (WIFSIGNALED(status))
+			e = WTERMSIG(status);
+		else /* can't happen */
+			e = 1;
 		done(e);
+	}
 }
 
-void
+static void
 doshell(char **av)
 {
 	const char *shell;
@@ -275,14 +267,14 @@ doshell(char **av)
 	fail();
 }
 
-void
+static void
 fail(void)
 {
 	(void)kill(0, SIGTERM);
 	done(1);
 }
 
-void
+static void
 done(int eno)
 {
 	time_t tvec;

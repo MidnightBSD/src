@@ -40,10 +40,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -74,7 +70,7 @@ static char sccsid[] = "@(#)su.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/su/su.c,v 1.86.2.1 2007/10/24 01:04:10 davidxu Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -153,7 +149,7 @@ int
 main(int argc, char *argv[])
 {
 	static char	*cleanenv;
-	struct passwd	*pwd;
+	struct passwd	*pwd = NULL;
 	struct pam_conv	conv = { openpam_ttyconv, NULL };
 	enum tristate	iscsh;
 	login_cap_t	*lc;
@@ -168,6 +164,7 @@ main(int argc, char *argv[])
 	u_int		setwhat;
 	char		*username, *class, shellbuf[MAXPATHLEN];
 	const char	*p, *user, *shell, *mytty, **nargv;
+	const void	*v;
 	struct sigaction sa, sa_int, sa_quit, sa_pipe;
 	int temp, fds[2];
 #ifdef USE_BSM_AUDIT
@@ -230,7 +227,7 @@ main(int argc, char *argv[])
 	if (strlen(user) > MAXLOGNAME - 1) {
 #ifdef USE_BSM_AUDIT
 		if (audit_submit(AUE_su, auid,
-		    1, EPERM, "username too long: '%s'", user))
+		    EPERM, 1, "username too long: '%s'", user))
 			errx(1, "Permission denied");
 #endif
 		errx(1, "username too long");
@@ -258,12 +255,13 @@ main(int argc, char *argv[])
 	/* get current login name, real uid and shell */
 	ruid = getuid();
 	username = getlogin();
-	pwd = getpwnam(username);
-	if (username == NULL || pwd == NULL || pwd->pw_uid != ruid)
+	if (username != NULL)
+		pwd = getpwnam(username);
+	if (pwd == NULL || pwd->pw_uid != ruid)
 		pwd = getpwuid(ruid);
 	if (pwd == NULL) {
 #ifdef USE_BSM_AUDIT
-		if (audit_submit(AUE_su, auid, 1, EPERM,
+		if (audit_submit(AUE_su, auid, EPERM, 1,
 		    "unable to determine invoking subject: '%s'", username))
 			errx(1, "Permission denied");
 #endif
@@ -304,7 +302,7 @@ main(int argc, char *argv[])
 	retcode = pam_authenticate(pamh, 0);
 	if (retcode != PAM_SUCCESS) {
 #ifdef USE_BSM_AUDIT
-		if (audit_submit(AUE_su, auid, 1, EPERM, "bad su %s to %s on %s",
+		if (audit_submit(AUE_su, auid, EPERM, 1, "bad su %s to %s on %s",
 		    username, user, mytty))
 			errx(1, "Permission denied");
 #endif
@@ -316,16 +314,16 @@ main(int argc, char *argv[])
 	if (audit_submit(AUE_su, auid, 0, 0, "successful authentication"))
 		errx(1, "Permission denied");
 #endif
-	retcode = pam_get_item(pamh, PAM_USER, (const void **)&p);
+	retcode = pam_get_item(pamh, PAM_USER, &v);
 	if (retcode == PAM_SUCCESS)
-		user = p;
+		user = v;
 	else
 		syslog(LOG_ERR, "pam_get_item(PAM_USER): %s",
 		    pam_strerror(pamh, retcode));
 	pwd = getpwnam(user);
 	if (pwd == NULL) {
 #ifdef USE_BSM_AUDIT
-		if (audit_submit(AUE_su, auid, 1, EPERM,
+		if (audit_submit(AUE_su, auid, EPERM, 1,
 		    "unknown subject: %s", user))
 			errx(1, "Permission denied");
 #endif
@@ -341,7 +339,7 @@ main(int argc, char *argv[])
 			aerr = pam_strerror(pamh, retcode);
 			if (aerr == NULL)
 				aerr = "Unknown PAM error";
-			if (audit_submit(AUE_su, auid, 1, EPERM,
+			if (audit_submit(AUE_su, auid, EPERM, 1,
 			    "pam_chauthtok: %s", aerr))
 				errx(1, "Permission denied");
 #endif
@@ -352,7 +350,7 @@ main(int argc, char *argv[])
 	}
 	if (retcode != PAM_SUCCESS) {
 #ifdef USE_BSM_AUDIT
-		if (audit_submit(AUE_su, auid, 1, EPERM, "pam_acct_mgmt: %s",
+		if (audit_submit(AUE_su, auid, EPERM, 1, "pam_acct_mgmt: %s",
 		    pam_strerror(pamh, retcode)))
 			errx(1, "Permission denied");
 #endif
@@ -367,7 +365,7 @@ main(int argc, char *argv[])
 	else {
 		if (ruid != 0) {
 #ifdef USE_BSM_AUDIT
-			if (audit_submit(AUE_su, auid, 1, EPERM,
+			if (audit_submit(AUE_su, auid, EPERM, 1,
 			    "only root may use -c"))
 				errx(1, "Permission denied");
 #endif

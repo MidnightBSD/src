@@ -1,7 +1,6 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: grep.h,v 1.5 2011/02/27 17:33:37 joerg Exp $	*/
 /*	$OpenBSD: grep.h,v 1.15 2010/04/05 03:03:55 tedu Exp $	*/
-/*	$FreeBSD: src/usr.bin/grep/grep.h,v 1.9 2011/10/05 09:56:43 gabor Exp $	*/
+/*	$MidnightBSD$	*/
 
 /*-
  * Copyright (c) 1999 James Howard and Dag-Erling Coïdan Smørgrav
@@ -120,7 +119,7 @@ extern char	*label;
 extern const char *color;
 extern int	 binbehave, devbehave, dirbehave, filebehave, grepbehave, linkbehave;
 
-extern bool	 first, matchall, notfound, prev;
+extern bool	 file_err, first, matchall, prev;
 extern int	 tail;
 extern unsigned int dpatterns, fpatterns, patterns;
 extern struct pat *pattern;

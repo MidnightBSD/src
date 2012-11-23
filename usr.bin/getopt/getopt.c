@@ -1,5 +1,10 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/getopt/getopt.c,v 1.10 2002/09/04 23:29:01 dwmalone Exp $");
+__MBSDID("$MidnightBSD$");
+
+/*
+ * This material, written by Henry Spencer, was released by him
+ * into the public domain and is thus not subject to any copyright.
+ */
 
 #include <stdio.h>
 #include <stdlib.h>

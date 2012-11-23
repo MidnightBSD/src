@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -45,7 +41,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)showmount.c	8.3 (Berkeley) 3/29/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.bin/showmount/showmount.c,v 1.16 2005/05/21 09:55:08 ru Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -59,7 +55,7 @@ static const char rcsid[] =
 #include <rpc/rpc.h>
 #include <rpc/pmap_clnt.h>
 #include <rpc/pmap_prot.h>
-#include <nfs/rpcv2.h>
+#include <rpcsvc/mount.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -76,29 +72,29 @@ static const char rcsid[] =
 struct mountlist {
 	struct mountlist *ml_left;
 	struct mountlist *ml_right;
-	char	ml_host[RPCMNT_NAMELEN+1];
-	char	ml_dirp[RPCMNT_PATHLEN+1];
+	char	ml_host[MNTNAMLEN+1];
+	char	ml_dirp[MNTPATHLEN+1];
 };
 
 struct grouplist {
 	struct grouplist *gr_next;
-	char	gr_name[RPCMNT_NAMELEN+1];
+	char	gr_name[MNTNAMLEN+1];
 };
 
 struct exportslist {
 	struct exportslist *ex_next;
 	struct grouplist *ex_groups;
-	char	ex_dirp[RPCMNT_PATHLEN+1];
+	char	ex_dirp[MNTPATHLEN+1];
 };
 
 static struct mountlist *mntdump;
-static struct exportslist *exports;
+static struct exportslist *exportslist;
 static int type = 0;
 
 void print_dump(struct mountlist *);
 static void usage(void);
 int xdr_mntdump(XDR *, struct mountlist **);
-int xdr_exports(XDR *, struct exportslist **);
+int xdr_exportslist(XDR *, struct exportslist **);
 int tcp_callrpc(const char *host, int prognum, int versnum, int procnum,
 		xdrproc_t inproc, char *in, xdrproc_t outproc, char *out);
 
@@ -110,9 +106,7 @@ int tcp_callrpc(const char *host, int prognum, int versnum, int procnum,
  * for detailed information on the protocol.
  */
 int
-main(argc, argv)
-	int argc;
-	char **argv;
+main(int argc, char **argv)
 {
 	register struct exportslist *exp;
 	register struct grouplist *grp;
@@ -158,16 +152,16 @@ main(argc, argv)
 		rpcs = DODUMP;
 
 	if (rpcs & DODUMP)
-		if ((estat = tcp_callrpc(host, RPCPROG_MNT, mntvers,
-			RPCMNT_DUMP, (xdrproc_t)xdr_void, (char *)0,
+		if ((estat = tcp_callrpc(host, MOUNTPROG, mntvers,
+			MOUNTPROC_DUMP, (xdrproc_t)xdr_void, (char *)0,
 			(xdrproc_t)xdr_mntdump, (char *)&mntdump)) != 0) {
 			clnt_perrno(estat);
 			errx(1, "can't do mountdump rpc");
 		}
 	if (rpcs & DOEXPORTS)
-		if ((estat = tcp_callrpc(host, RPCPROG_MNT, mntvers,
-			RPCMNT_EXPORT, (xdrproc_t)xdr_void, (char *)0,
-			(xdrproc_t)xdr_exports, (char *)&exports)) != 0) {
+		if ((estat = tcp_callrpc(host, MOUNTPROG, mntvers,
+			MOUNTPROC_EXPORT, (xdrproc_t)xdr_void, (char *)0,
+			(xdrproc_t)xdr_exportslist, (char *)&exportslist)) != 0) {
 			clnt_perrno(estat);
 			errx(1, "can't do exports rpc");
 		}
@@ -189,9 +183,9 @@ main(argc, argv)
 	}
 	if (rpcs & DOEXPORTS) {
 		printf("Exports list on %s:\n", host);
-		exp = exports;
+		exp = exportslist;
 		while (exp) {
-			printf("%-35s", exp->ex_dirp);
+			printf("%-34s ", exp->ex_dirp);
 			grp = exp->ex_groups;
 			if (grp == NULL) {
 				printf("Everyone\n");
@@ -213,15 +207,8 @@ main(argc, argv)
  * use tcp as transport method in order to handle large replies.
  */
 int 
-tcp_callrpc(host, prognum, versnum, procnum, inproc, in, outproc, out)
-	const char *host;
-	int prognum;
-	int versnum;
-	int procnum;
-	xdrproc_t inproc;
-	char *in;
-	xdrproc_t outproc;
-	char *out;
+tcp_callrpc(const char *host, int prognum, int versnum, int procnum,
+    xdrproc_t inproc, char *in, xdrproc_t outproc, char *out)
 {
 	CLIENT *client;
 	struct timeval timeout;
@@ -245,9 +232,7 @@ tcp_callrpc(host, prognum, versnum, procnum, inproc, in, outproc, out)
  * Xdr routine for retrieving the mount dump list
  */
 int
-xdr_mntdump(xdrsp, mlp)
-	XDR *xdrsp;
-	struct mountlist **mlp;
+xdr_mntdump(XDR *xdrsp, struct mountlist **mlp)
 {
 	register struct mountlist *mp;
 	register struct mountlist *tp;
@@ -265,10 +250,10 @@ xdr_mntdump(xdrsp, mlp)
 			return (0);
 		mp->ml_left = mp->ml_right = (struct mountlist *)0;
 		strp = mp->ml_host;
-		if (!xdr_string(xdrsp, &strp, RPCMNT_NAMELEN))
+		if (!xdr_string(xdrsp, &strp, MNTNAMLEN))
 			return (0);
 		strp = mp->ml_dirp;
-		if (!xdr_string(xdrsp, &strp, RPCMNT_PATHLEN))
+		if (!xdr_string(xdrsp, &strp, MNTPATHLEN))
 			return (0);
 
 		/*
@@ -327,9 +312,7 @@ next:
  * Xdr routine to retrieve exports list
  */
 int
-xdr_exports(xdrsp, exp)
-	XDR *xdrsp;
-	struct exportslist **exp;
+xdr_exportslist(XDR *xdrsp, struct exportslist **exp)
 {
 	register struct exportslist *ep;
 	register struct grouplist *gp;
@@ -345,7 +328,7 @@ xdr_exports(xdrsp, exp)
 			return (0);
 		ep->ex_groups = (struct grouplist *)0;
 		strp = ep->ex_dirp;
-		if (!xdr_string(xdrsp, &strp, RPCMNT_PATHLEN))
+		if (!xdr_string(xdrsp, &strp, MNTPATHLEN))
 			return (0);
 		if (!xdr_bool(xdrsp, &grpbool))
 			return (0);
@@ -354,7 +337,7 @@ xdr_exports(xdrsp, exp)
 			if (gp == NULL)
 				return (0);
 			strp = gp->gr_name;
-			if (!xdr_string(xdrsp, &strp, RPCMNT_NAMELEN))
+			if (!xdr_string(xdrsp, &strp, MNTNAMLEN))
 				return (0);
 			gp->gr_next = ep->ex_groups;
 			ep->ex_groups = gp;
@@ -370,7 +353,7 @@ xdr_exports(xdrsp, exp)
 }
 
 static void
-usage()
+usage(void)
 {
 	fprintf(stderr, "usage: showmount [-a | -d] [-e3] [host]\n");
 	exit(1);
@@ -380,8 +363,7 @@ usage()
  * Print the binary tree in inorder so that output is sorted.
  */
 void
-print_dump(mp)
-	struct mountlist *mp;
+print_dump(struct mountlist *mp)
 {
 
 	if (mp == NULL)

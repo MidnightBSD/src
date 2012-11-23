@@ -1,5 +1,4 @@
-/*	$OpenBSD: inout.c,v 1.14 2006/01/15 19:11:59 otto Exp $	*/
-/*	$MidnightBSD$ */
+/*	$OpenBSD: inout.c,v 1.15 2009/10/27 23:59:37 deraadt Exp $	*/
 
 /*
  * Copyright (c) 2003, Otto Moerbeek <otto@drijf.net>
@@ -17,9 +16,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef lint
-static const char rcsid[] = "$MidnightBSD$";
-#endif /* not lint */
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 #include <openssl/ssl.h>
 #include <ctype.h>
@@ -30,27 +28,26 @@ static const char rcsid[] = "$MidnightBSD$";
 
 #define MAX_CHARS_PER_LINE 68
 
-static int	lastchar;
-static int	charcount;
+static int	 lastchar;
+static int	 charcount;
 
-static int	src_getcharstream(struct source *);
-static void	src_ungetcharstream(struct source *);
+static int	 src_getcharstream(struct source *);
+static void	 src_ungetcharstream(struct source *);
 static char	*src_getlinestream(struct source *);
-static void	src_freestream(struct source *);
-static int	src_getcharstring(struct source *);
-static void	src_ungetcharstring(struct source *);
+static int	 src_getcharstring(struct source *);
+static void	 src_ungetcharstring(struct source *);
 static char	*src_getlinestring(struct source *);
-static void	src_freestring(struct source *);
-static void	flushwrap(FILE *);
-static void	putcharwrap(FILE *, int);
-static void	printwrap(FILE *, const char *);
+static void	 src_freestring(struct source *);
+static void	 flushwrap(FILE *);
+static void	 putcharwrap(FILE *, int);
+static void	 printwrap(FILE *, const char *);
 static char	*get_digit(u_long, int, u_int);
 
 static struct vtable stream_vtable = {
 	src_getcharstream,
 	src_ungetcharstream,
 	src_getlinestream,
-	src_freestream
+	NULL
 };
 
 static struct vtable string_vtable = {
@@ -63,6 +60,7 @@ static struct vtable string_vtable = {
 void
 src_setstream(struct source *src, FILE *stream)
 {
+
 	src->u.stream = stream;
 	src->vtable = &stream_vtable;
 }
@@ -70,6 +68,7 @@ src_setstream(struct source *src, FILE *stream)
 void
 src_setstring(struct source *src, char *p)
 {
+
 	src->u.string.buf = (u_char *)p;
 	src->u.string.pos = 0;
 	src->vtable = &string_vtable;
@@ -78,19 +77,15 @@ src_setstring(struct source *src, char *p)
 static int
 src_getcharstream(struct source *src)
 {
-	return src->lastchar = getc(src->u.stream);
+
+	return (src->lastchar = getc(src->u.stream));
 }
 
 static void
 src_ungetcharstream(struct source *src)
 {
-	(void)ungetc(src->lastchar, src->u.stream);
-}
 
-/* ARGSUSED */
-static void
-src_freestream(struct source *src)
-{
+	ungetc(src->lastchar, src->u.stream);
 }
 
 static char *
@@ -99,25 +94,27 @@ src_getlinestream(struct source *src)
 	char buf[BUFSIZ];
 
 	if (fgets(buf, BUFSIZ, src->u.stream) == NULL)
-		return bstrdup("");
+		return (bstrdup(""));
 	return bstrdup(buf);
 }
 
 static int
 src_getcharstring(struct source *src)
 {
+
 	src->lastchar = src->u.string.buf[src->u.string.pos];
 	if (src->lastchar == '\0')
-		return EOF;
+		return (EOF);
 	else {
 		src->u.string.pos++;
-		return src->lastchar;
+		return (src->lastchar);
 	}
 }
 
 static void
 src_ungetcharstring(struct source *src)
 {
+
 	if (src->u.string.pos > 0) {
 		if (src->lastchar != '\0')
 			--src->u.string.pos;
@@ -128,7 +125,7 @@ static char *
 src_getlinestring(struct source *src)
 {
 	char buf[BUFSIZ];
-	int ch, i;
+	int i, ch;
 
 	i = 0;
 	while (i < BUFSIZ-1) {
@@ -140,32 +137,35 @@ src_getlinestring(struct source *src)
 			break;
 	}
 	buf[i] = '\0';
-	return bstrdup(buf);
+	return (bstrdup(buf));
 }
 
 static void
 src_freestring(struct source *src)
 {
+
 	free(src->u.string.buf);
 }
 
 static void
 flushwrap(FILE *f)
 {
+
 	if (lastchar != -1)
-		(void)putc(lastchar, f);
+		putc(lastchar, f);
 }
 
 static void
 putcharwrap(FILE *f, int ch)
 {
+
 	if (charcount >= MAX_CHARS_PER_LINE) {
 		charcount = 0;
-		(void)fputs("\\\n", f);
+		fputs("\\\n", f);
 	}
 	if (lastchar != -1) {
 		charcount++;
-		(void)putc(lastchar, f);
+		putc(lastchar, f);
 	}
 	lastchar = ch;
 }
@@ -173,10 +173,11 @@ putcharwrap(FILE *f, int ch)
 static void
 printwrap(FILE *f, const char *p)
 {
-	char	buf[12];
-	char	*q = buf;
+	char *q;
+	char buf[12];
 
-	(void)strlcpy(buf, p, sizeof(buf));
+	q = buf;
+	strlcpy(buf, p, sizeof(buf));
 	while (*q)
 		putcharwrap(f, *q++);
 }
@@ -184,12 +185,11 @@ printwrap(FILE *f, const char *p)
 struct number *
 readnumber(struct source *src, u_int base)
 {
-	struct number	*n;
-	int		ch;
-	bool		sign = false;
-	bool		dot = false;
-	BN_ULONG	v;
-	u_int		i;
+	struct number *n;
+	BN_ULONG v;
+	u_int i;
+	int ch;
+	bool dot = false, sign = false;
 
 	n = new_number();
 	bn_check(BN_zero(n->number));
@@ -226,18 +226,18 @@ readnumber(struct source *src, u_int base)
 	if (base != 10) {
 		scale_number(n->number, n->scale);
 		for (i = 0; i < n->scale; i++)
-			(void)BN_div_word(n->number, base);
+			BN_div_word(n->number, base);
 	}
 	if (sign)
 		negate(n);
-	return n;
+	return (n);
 }
 
 char *
 read_string(struct source *src)
 {
-	int count, i, sz, new_sz, ch;
 	char *p;
+	int count, ch, i, new_sz, sz;
 	bool escape;
 
 	escape = false;
@@ -268,7 +268,7 @@ read_string(struct source *src)
 		}
 	}
 	p[i] = '\0';
-	return p;
+	return (p);
 }
 
 static char *
@@ -284,19 +284,19 @@ get_digit(u_long num, int digits, u_int base)
 		if (asprintf(&p, "%0*lu", digits, num) == -1)
 			err(1, NULL);
 	}
-	return p;
+	return (p);
 }
 
 void
 printnumber(FILE *f, const struct number *b, u_int base)
 {
-	struct number	*int_part, *fract_part;
-	int		digits;
-	char		buf[11];
-	size_t		sz;
-	int		i;
-	struct stack	stack;
-	char		*p;
+	struct number *fract_part, *int_part;
+	struct stack stack;
+	char *p;
+	char buf[11];
+	size_t sz;
+	unsigned int i;
+	int digits;
 
 	charcount = 0;
 	lastchar = -1;
@@ -333,8 +333,8 @@ printnumber(FILE *f, const struct number *b, u_int base)
 	}
 	stack_clear(&stack);
 	if (b->scale > 0) {
-		struct number	*num_base;
-		BIGNUM		mult, stop;
+		struct number *num_base;
+		BIGNUM mult, stop;
 
 		putcharwrap(f, '.');
 		num_base = new_number();
@@ -347,7 +347,7 @@ printnumber(FILE *f, const struct number *b, u_int base)
 
 		i = 0;
 		while (BN_cmp(&mult, &stop) < 0) {
-			u_long	rem;
+			u_long rem;
 
 			if (i && base > 16)
 				putcharwrap(f, ' ');
@@ -377,17 +377,18 @@ printnumber(FILE *f, const struct number *b, u_int base)
 void
 print_value(FILE *f, const struct value *value, const char *prefix, u_int base)
 {
-	(void)fputs(prefix, f);
+
+	fputs(prefix, f);
 	switch (value->type) {
 	case BCODE_NONE:
 		if (value->array != NULL)
-			(void)fputs("<array>", f);
+			fputs("<array>", f);
 		break;
 	case BCODE_NUMBER:
 		printnumber(f, value->u.num, base);
 		break;
 	case BCODE_STRING:
-		(void)fputs(value->u.string, f);
+		fputs(value->u.string, f);
 		break;
 	}
 }
@@ -396,7 +397,7 @@ void
 print_ascii(FILE *f, const struct number *n)
 {
 	BIGNUM *v;
-	int numbits, i, ch;
+	int ch, i, numbits;
 
 	v = BN_dup(n->number);
 	bn_checkp(v);
@@ -409,7 +410,7 @@ print_ascii(FILE *f, const struct number *n)
 		ch = 0;
 		for (i = 0; i < 8; i++)
 			ch |= BN_is_bit_set(v, numbits-i-1) << (7 - i);
-		(void)putc(ch, f);
+		putc(ch, f);
 		numbits -= 8;
 	}
 	BN_free(v);

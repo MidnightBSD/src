@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -33,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/tset/term.c,v 1.6 2002/03/22 01:42:37 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifndef lint
 static const char sccsid[] = "@(#)term.c	8.1 (Berkeley) 6/9/93";
@@ -45,6 +41,7 @@ static const char sccsid[] = "@(#)term.c	8.1 (Berkeley) 6/9/93";
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <termcap.h>
 #include <unistd.h>
 #include <ttyent.h>
 #include "extern.h"
@@ -59,8 +56,7 @@ char	*ttys(char *);
  * its termcap entry.
  */
 const char *
-get_termcap_entry(userarg, tcapbufp)
-	char *userarg, **tcapbufp;
+get_termcap_entry(char *userarg, char **tcapbufp)
 {
 	struct ttyent *t;
 	int rval;
@@ -125,8 +121,7 @@ found:	if ((p = getenv("TERMCAP")) != NULL && *p != '/')
 
 /* Prompt the user for a terminal type. */
 const char *
-askuser(dflt)
-	const char *dflt;
+askuser(const char *dflt)
 {
 	static char answer[256];
 	char *p;

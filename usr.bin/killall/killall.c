@@ -1,4 +1,3 @@
-/* $MidightBSD$ */
 /*-
  * Copyright (c) 2000 Peter Wemm <peter@FreeBSD.org>
  * Copyright (c) 2000 Paul Saab <ps@FreeBSD.org>
@@ -27,15 +26,17 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/killall/killall.c,v 1.31.18.1 2007/11/14 19:18:40 ru Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/jail.h>
 #include <sys/stat.h>
+#include <sys/uio.h>
 #include <sys/user.h>
 #include <sys/sysctl.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <jail.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,24 +53,11 @@ static void __dead2
 usage(void)
 {
 
-	fprintf(stderr, "usage: killall [-delmsvz] [-help] [-j jid]\n");
+	fprintf(stderr, "usage: killall [-delmsvz] [-help] [-j jail]\n");
 	fprintf(stderr,
 	    "               [-u user] [-t tty] [-c cmd] [-SIGNAL] [cmd]...\n");
 	fprintf(stderr, "At least one option or argument to specify processes must be given.\n");
 	exit(1);
-}
-
-static char *
-upper(const char *str)
-{
-	static char buf[80];
-	char *s;
-
-	strncpy(buf, str, sizeof(buf));
-	buf[sizeof(buf) - 1] = '\0';
-	for (s = buf; *s; s++)
-		*s = toupper((unsigned char)*s);
-	return buf;
 }
 
 
@@ -81,7 +69,7 @@ printsig(FILE *fp)
 	int		offset = 0;
 
 	for (cnt = NSIG, p = sys_signame + 1; --cnt; ++p) {
-		offset += fprintf(fp, "%s ", upper(*p));
+		offset += fprintf(fp, "%s ", *p);
 		if (offset >= 75 && cnt > 1) {
 			offset = 0;
 			fprintf(fp, "\n");
@@ -102,7 +90,7 @@ nosig(char *name)
 int
 main(int ac, char **av)
 {
-	struct kinfo_proc *procs = NULL, *newprocs;
+	struct kinfo_proc *procs, *newprocs;
 	struct stat	sb;
 	struct passwd	*pw;
 	regex_t		rgx;
@@ -161,12 +149,12 @@ main(int ac, char **av)
 				}
 				jflag++;
 				if (*av == NULL)
-				    	errx(1, "must specify jid");
-				jid = strtol(*av, &ep, 10);
-				if (!*av || *ep)
-					errx(1, "illegal jid: %s", *av);
+				    	errx(1, "must specify jail");
+				jid = jail_getid(*av);
+				if (jid < 0)
+					errx(1, "%s", jail_errmsg);
 				if (jail_attach(jid) == -1)
-					err(1, "jail_attach(): %d", jid);
+					err(1, "jail_attach(%d)", jid);
 				break;
 			case 'u':
 				++*av;
@@ -218,7 +206,7 @@ main(int ac, char **av)
 				break;
 			default:
 				if (isalpha((unsigned char)**av)) {
-					if (strncasecmp(*av, "sig", 3) == 0)
+					if (strncasecmp(*av, "SIG", 3) == 0)
 						*av += 3;
 					for (sig = NSIG, p = sys_signame + 1;
 					     --sig; ++p)
@@ -285,9 +273,6 @@ main(int ac, char **av)
 	size = 0;
 	mib[0] = CTL_KERN;
 	mib[1] = KERN_PROC;
-	mib[2] = KERN_PROC_PROC;
-	mib[3] = 0;
-	miblen = 3;
 
 	if (user) {
 		mib[2] = eflag ? KERN_PROC_UID : KERN_PROC_RUID;
@@ -297,16 +282,20 @@ main(int ac, char **av)
 		mib[2] = KERN_PROC_TTY;
 		mib[3] = tdev;
 		miblen = 4;
+	} else {
+		mib[2] = KERN_PROC_PROC;
+		mib[3] = 0;
+		miblen = 3;
 	}
 
+	procs = NULL;
 	st = sysctl(mib, miblen, NULL, &size, NULL, 0);
 	do {
 		size += size / 10;
 		newprocs = realloc(procs, size);
-		if (newprocs == 0) {
-			if (procs)
-				free(procs);
-			errx(1, "could not reallocate memory");
+		if (newprocs == NULL) {
+			free(procs);
+			err(1, "could not reallocate memory");
 		}
 		procs = newprocs;
 		st = sysctl(mib, miblen, procs, &size, NULL, 0);
@@ -316,7 +305,7 @@ main(int ac, char **av)
 	if (size % sizeof(struct kinfo_proc) != 0) {
 		fprintf(stderr, "proc size mismatch (%zu total, %zu chunks)\n",
 			size, sizeof(struct kinfo_proc));
-		fprintf(stderr, "userland out of sync with kernel, recompile libkvm etc\n");
+		fprintf(stderr, "userland out of sync with kernel\n");
 		exit(1);
 	}
 	nprocs = size / sizeof(struct kinfo_proc);
@@ -328,8 +317,7 @@ main(int ac, char **av)
 		if (procs[i].ki_stat == SZOMB && !zflag)
 			continue;
 		thispid = procs[i].ki_pid;
-		strncpy(thiscmd, procs[i].ki_comm, MAXCOMLEN);
-		thiscmd[MAXCOMLEN] = '\0';
+		strlcpy(thiscmd, procs[i].ki_comm, sizeof(thiscmd));
 		thistdev = procs[i].ki_tdev;
 		if (eflag)
 			thisuid = procs[i].ki_uid;	/* effective uid */
@@ -402,14 +390,13 @@ main(int ac, char **av)
 			    thiscmd, thispid, thistdev, thisuid);
 
 		if (vflag || sflag)
-			printf("kill -%s %d\n", upper(sys_signame[sig]),
-			    thispid);
+			printf("kill -%s %d\n", sys_signame[sig], thispid);
 
 		killed++;
 		if (!dflag && !sflag) {
 			if (kill(thispid, sig) < 0 /* && errno != ESRCH */ ) {
 				warn("warning: kill -%s %d",
-				    upper(sys_signame[sig]), thispid);
+				    sys_signame[sig], thispid);
 				errors = 1;
 			}
 		}

@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -38,7 +34,7 @@ static char sccsid[] = "@(#)pigs.c	8.2 (Berkeley) 9/23/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/systat/pigs.c,v 1.24 2007/09/17 05:27:19 jeff Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * Pigs display from Bill Reeves at Lucasfilm
@@ -70,14 +66,13 @@ static int    fscale;
 static double  lccpu;
 
 WINDOW *
-openpigs()
+openpigs(void)
 {
 	return (subwin(stdscr, LINES-3-1, 0, MAINWIN_ROW, 0));
 }
 
 void
-closepigs(w)
-	WINDOW *w;
+closepigs(WINDOW *w)
 {
 	if (w == NULL)
 		return;
@@ -88,9 +83,9 @@ closepigs(w)
 
 
 void
-showpigs()
+showpigs(void)
 {
-	register int i, j, y, k;
+	int i, j, y, k;
 	const char *uname, *pname;
 	char pidname[30];
 
@@ -118,7 +113,7 @@ showpigs()
 }
 
 int
-initpigs()
+initpigs(void)
 {
 	fixpt_t ccpu;
 	size_t len;
@@ -144,7 +139,7 @@ initpigs()
 }
 
 void
-fetchpigs()
+fetchpigs(void)
 {
 	int i;
 	float ftime;
@@ -183,7 +178,7 @@ fetchpigs()
 }
 
 void
-labelpigs()
+labelpigs(void)
 {
 	wmove(wnd, 0, 0);
 	wclrtoeol(wnd);
@@ -192,8 +187,7 @@ labelpigs()
 }
 
 int
-compar(a, b)
-	const void *a, *b;
+compar(const void *a, const void *b)
 {
 	return (((const struct p_times *) a)->pt_pctcpu >
 		((const struct p_times *) b)->pt_pctcpu)? -1: 1;

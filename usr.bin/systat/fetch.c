@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -33,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/systat/fetch.c,v 1.5 2001/12/12 00:13:37 markm Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifdef lint
 static const char sccsid[] = "@(#)fetch.c	8.1 (Berkeley) 6/6/93";
@@ -51,9 +47,7 @@ static const char sccsid[] = "@(#)fetch.c	8.1 (Berkeley) 6/6/93";
 #include "extern.h"
 
 int
-kvm_ckread(a, b, l)
-	void *a, *b;
-	int l;
+kvm_ckread(void *a, void *b, int l)
 {
 	if (kvm_read(kd, (u_long)a, b, l) != l) {
 		if (verbose)
@@ -64,24 +58,21 @@ kvm_ckread(a, b, l)
 		return (1);
 }
 
-void getsysctl(name, ptr, len)
-	const char *name;
-	void *ptr;
-	size_t len;
+void getsysctl(const char *name, void *ptr, size_t len)
 {
 	size_t nlen = len;
 	if (sysctlbyname(name, ptr, &nlen, NULL, 0) != 0) {
-		error("sysctl(%s...) failed: %s", name, 
+		error("sysctl(%s...) failed: %s", name,
 		    strerror(errno));
 	}
 	if (nlen != len) {
-		error("sysctl(%s...) expected %lu, got %lu", name, 
+		error("sysctl(%s...) expected %lu, got %lu", name,
 		    (unsigned long)len, (unsigned long)nlen);
     }
 }
 
 /*
- * Read sysctl data with variable size. Try some times (with increasing 
+ * Read sysctl data with variable size. Try some times (with increasing
  * buffers), fail if still too small.
  * This is needed sysctls with possibly raplidly increasing data sizes,
  * but imposes little overhead in the case of constant sizes.
@@ -93,8 +84,8 @@ void getsysctl(name, ptr, len)
 /* Some defines: Number of tries. */
 #define SD_NTRIES  10
 /* Percent of over-allocation (initial) */
-#define SD_MARGIN  10 
-/* 
+#define SD_MARGIN  10
+/*
  * Factor for over-allocation in percent (the margin is increased by this on
  * any failed try).
  */
@@ -103,9 +94,7 @@ void getsysctl(name, ptr, len)
 #define SD_MAXMIB  16
 
 char *
-sysctl_dynread(n, szp)
-	const char *n;
-	size_t *szp;
+sysctl_dynread(const char *n, size_t *szp)
 {
 	char   *rv = NULL;
 	int    mib[SD_MAXMIB];

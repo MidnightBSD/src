@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: queue.c,v 1.2 2011/02/16 01:31:33 joerg Exp $	*/
-/*	$FreeBSD: src/usr.bin/grep/queue.c,v 1.5 2011/04/07 13:03:35 gabor Exp $	*/
+/*	$MidnightBSD$	*/
 
 /*-
  * Copyright (c) 1999 James Howard and Dag-Erling Coïdan Smørgrav
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/grep/queue.c,v 1.5 2011/04/07 13:03:35 gabor Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>

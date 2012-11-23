@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -33,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/talk/ctl_transact.c,v 1.7 2002/02/18 20:35:26 mike Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifndef lint
 static const char sccsid[] = "@(#)ctl_transact.c	8.1 (Berkeley) 6/6/93";
@@ -42,7 +38,6 @@ static const char sccsid[] = "@(#)ctl_transact.c	8.1 (Berkeley) 6/6/93";
 #include <arpa/inet.h>
 
 #include <errno.h>
-#include <string.h>
 
 #include "talk.h"
 #include "talk_ctl.h"
@@ -55,11 +50,7 @@ static const char sccsid[] = "@(#)ctl_transact.c	8.1 (Berkeley) 6/6/93";
  * of time
  */
 void
-ctl_transact(target, lmsg, type, rp)
-	struct in_addr target;
-	CTL_MSG lmsg;
-	int type;
-	CTL_RESPONSE *rp;
+ctl_transact(struct in_addr target, CTL_MSG lmsg, int type, CTL_RESPONSE *rp)
 {
 	fd_set read_mask, ctl_mask;
 	int nready = 0, cc;

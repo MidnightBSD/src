@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: bthost.c,v 1.1.1.2 2006-02-25 02:38:11 laffer1 Exp $
- * $FreeBSD: src/usr.bin/bluetooth/bthost/bthost.c,v 1.1 2003/10/12 22:04:21 emax Exp $
+ * $Id: bthost.c,v 1.2 2012-11-23 01:13:49 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include <bluetooth.h>

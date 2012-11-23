@@ -1,6 +1,5 @@
 #!/bin/sh -
 #
-# $MidnightBSD$
 # $NetBSD: zforce,v 1.2 2003/12/28 12:43:43 wiz Exp $
 # $OpenBSD: zforce,v 1.2 2003/08/05 18:22:17 deraadt Exp $
 #
@@ -19,7 +18,7 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
-# $FreeBSD: src/usr.bin/gzip/zforce,v 1.1.2.1 2007/02/20 08:33:32 delphij Exp $
+# $MidnightBSD$
 prog=`basename $0`
 USAGE="usage: $prog file ..."
 if test $# -eq 0; then

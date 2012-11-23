@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -33,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/systat/vmstat.c,v 1.83 2006/11/28 12:46:02 ru Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifdef lint
 static const char sccsid[] = "@(#)vmstat.c	8.2 (Berkeley) 1/12/94";
@@ -66,7 +62,7 @@ static const char sccsid[] = "@(#)vmstat.c	8.2 (Berkeley) 1/12/94";
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <utmp.h>
+#include <utmpx.h>
 #include <devstat.h>
 #include "systat.h"
 #include "extern.h"
@@ -115,7 +111,7 @@ static struct Info {
 	struct	nchstats nchstats;
 	long	nchcount;
 	long	*intrcnt;
-	int	bufspace;
+	long	bufspace;
 	int	desiredvnodes;
 	long	numvnodes;
 	long	freevnodes;
@@ -141,7 +137,6 @@ static void putlongdouble(long double, int, int, int, int, int);
 static int ucount(void);
 
 static	int ncpu;
-static	int ut;
 static	char buf[26];
 static	time_t t;
 static	double etime;
@@ -150,25 +145,17 @@ static	long *intrloc;
 static	char **intrname;
 static	int nextintsrow;
 
-struct	utmp utmp;
-
-
 WINDOW *
-openkre()
+openkre(void)
 {
 
-	ut = open(_PATH_UTMP, O_RDONLY);
-	if (ut < 0)
-		error("No utmp");
 	return (stdscr);
 }
 
 void
-closekre(w)
-	WINDOW *w;
+closekre(WINDOW *w)
 {
 
-	(void) close(ut);
 	if (w == NULL)
 		return;
 	wclear(w);
@@ -206,7 +193,7 @@ closekre(w)
 #define	MAXDRIVES	DRIVESPACE	 /* max # to display */
 
 int
-initkre()
+initkre(void)
 {
 	char *cp, *cp1, *cp2, *intrnamebuf, *nextcp;
 	int i;
@@ -237,7 +224,7 @@ initkre()
 		intrloc = calloc(nintr, sizeof (long));
 		intrname = calloc(nintr, sizeof (char *));
 		intrnamebuf = sysctl_dynread("hw.intrnames", NULL);
-		if (intrnamebuf == NULL || intrname == NULL || 
+		if (intrnamebuf == NULL || intrname == NULL ||
 		    intrloc == NULL) {
 			error("Out of memory");
 			if (intrnamebuf)
@@ -263,12 +250,15 @@ initkre()
 					cp1++;
 				if (cp1 != cp && *cp1 == ':' &&
 				    *(cp1 + 1) == ' ') {
+					sz = strlen(cp);
 					*cp1 = '\0';
 					cp1 = cp1 + 2;
 					cp2 = strdup(cp);
-					bcopy(cp1, cp, strlen(cp1) + 1);
-					strcat(cp, " ");
-					strcat(cp, cp2);
+					bcopy(cp1, cp, sz - (cp1 - cp) + 1);
+					if (sz <= 10 + 4) {
+						strcat(cp, " ");
+						strcat(cp, cp2 + 3);
+					}
 					free(cp2);
 				}
 			}
@@ -296,7 +286,7 @@ initkre()
 }
 
 void
-fetchkre()
+fetchkre(void)
 {
 	time_t now;
 	struct tm *tp;
@@ -313,7 +303,7 @@ fetchkre()
 }
 
 void
-labelkre()
+labelkre(void)
 {
 	int i, j;
 
@@ -416,7 +406,7 @@ static	char cpuorder[CPUSTATES] = { CP_SYS, CP_INTR, CP_USER, CP_NICE,
 				     CP_IDLE };
 
 void
-showkre()
+showkre(void)
 {
 	float f1, f2;
 	int psiz, inttotal;
@@ -449,6 +439,9 @@ showkre()
 	for (i = 0; i < nintr; i++) {
 		if (s.intrcnt[i] == 0)
 			continue;
+		X(intrcnt);
+		l = (int)((float)s.intrcnt[i]/etime + 0.5);
+		inttotal += l;
 		if (intrloc[i] == 0) {
 			if (nextintsrow == LINES)
 				continue;
@@ -456,9 +449,6 @@ showkre()
 			mvprintw(intrloc[i], INTSCOL + 6, "%-10.10s",
 				intrname[i]);
 		}
-		X(intrcnt);
-		l = (int)((float)s.intrcnt[i]/etime + 0.5);
-		inttotal += l;
 		putint(l, intrloc[i], INTSCOL, 5);
 	}
 	putint(inttotal, INTSROW + 1, INTSCOL, 5);
@@ -568,8 +558,7 @@ showkre()
 }
 
 int
-cmdkre(cmd, args)
-	const char *cmd, *args;
+cmdkre(const char *cmd, const char *args)
 {
 	int retval;
 
@@ -633,23 +622,22 @@ cmdkre(cmd, args)
 
 /* calculate number of users on the system */
 static int
-ucount()
+ucount(void)
 {
 	int nusers = 0;
+	struct utmpx *ut;
 
-	if (ut < 0)
-		return (0);
-	while (read(ut, &utmp, sizeof(utmp)))
-		if (utmp.ut_name[0] != '\0')
+	setutxent();
+	while ((ut = getutxent()) != NULL)
+		if (ut->ut_type == USER_PROCESS)
 			nusers++;
+	endutxent();
 
-	lseek(ut, 0L, L_SET);
 	return (nusers);
 }
 
 static float
-cputime(indx)
-	int indx;
+cputime(int indx)
 {
 	double lt;
 	int i;
@@ -663,8 +651,7 @@ cputime(indx)
 }
 
 static void
-putint(n, l, lc, w)
-	int n, l, lc, w;
+putint(int n, int l, int lc, int w)
 {
 	int snr;
 	char b[128];
@@ -694,9 +681,7 @@ putint(n, l, lc, w)
 }
 
 static void
-putfloat(f, l, lc, w, d, nz)
-	double f;
-	int l, lc, w, d, nz;
+putfloat(double f, int l, int lc, int w, int d, int nz)
 {
 	int snr;
 	char b[128];
@@ -724,9 +709,7 @@ putfloat(f, l, lc, w, d, nz)
 }
 
 static void
-putlongdouble(f, l, lc, w, d, nz)
-	long double f;
-	int l, lc, w, d, nz;
+putlongdouble(long double f, int l, int lc, int w, int d, int nz)
 {
 	int snr;
 	char b[128];
@@ -754,8 +737,7 @@ putlongdouble(f, l, lc, w, d, nz)
 }
 
 static void
-getinfo(ls)
-	struct Info *ls;
+getinfo(struct Info *ls)
 {
 	struct devinfo *tmp_dinfo;
 	size_t size;
@@ -833,8 +815,7 @@ getinfo(ls)
 }
 
 static void
-allocinfo(ls)
-	struct Info *ls;
+allocinfo(struct Info *ls)
 {
 
 	ls->intrcnt = (long *) calloc(nintr, sizeof(long));
@@ -843,8 +824,7 @@ allocinfo(ls)
 }
 
 static void
-copyinfo(from, to)
-	struct Info *from, *to;
+copyinfo(struct Info *from, struct Info *to)
 {
 	long *intrcnt;
 
@@ -860,9 +840,7 @@ copyinfo(from, to)
 }
 
 static void
-dinfo(dn, lc, now, then)
-	int dn, lc;
-	struct statinfo *now, *then;
+dinfo(int dn, int lc, struct statinfo *now, struct statinfo *then)
 {
 	long double transfers_per_second;
 	long double kb_per_transfer, mb_per_second;
@@ -876,7 +854,7 @@ dinfo(dn, lc, now, then)
 		elapsed_time = now->snap_time - then->snap_time;
 	} else {
 		/* Calculate relative to device creation */
-	        elapsed_time = now->snap_time - devstat_compute_etime(
+		elapsed_time = now->snap_time - devstat_compute_etime(
 		    &now->dinfo->devices[di].creation_time, NULL);
 	}
 

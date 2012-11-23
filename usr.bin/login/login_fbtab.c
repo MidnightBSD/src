@@ -59,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/login/login_fbtab.c,v 1.18 2007/09/21 01:55:11 kevlo Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -81,10 +81,7 @@ static void	login_protect(const char *, char *, int, uid_t, gid_t);
 /* login_fbtab - apply protections specified in /etc/fbtab or logindevperm */
 
 void
-login_fbtab(tty, uid, gid)
-char   *tty;
-uid_t   uid;
-gid_t   gid;
+login_fbtab(char *tty, uid_t uid, gid_t gid)
 {
     FILE   *fp;
     char    buf[BUFSIZ];
@@ -124,12 +121,7 @@ gid_t   gid;
 /* login_protect - protect one device entry */
 
 void
-login_protect(table, pattern, mask, uid, gid)
-const char *table;
-char *pattern;
-int mask;
-uid_t uid;
-gid_t gid;
+login_protect(const char *table, char *pattern, int mask, uid_t uid, gid_t gid)
 {
     glob_t  gl;
     char   *path;

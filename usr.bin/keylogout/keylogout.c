@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/keylogout/keylogout.c,v 1.5 2002/06/30 05:25:01 obrien Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * unset the secret key on local machine
@@ -45,9 +45,7 @@ __FBSDID("$FreeBSD: src/usr.bin/keylogout/keylogout.c,v 1.5 2002/06/30 05:25:01 
 #include <rpc/key_prot.h>
 
 int
-main(argc,argv)
-	int argc;
-	char *argv[];
+main(int argc, char **argv)
 {
 	static char secret[HEXKEYBYTES + 1];
 

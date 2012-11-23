@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -47,7 +43,7 @@ static char sccsid[] = "@(#)col.c	8.5 (Berkeley) 5/4/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/col/col.c,v 1.19 2004/07/29 07:28:26 tjr Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <err.h>
 #include <locale.h>
@@ -397,14 +393,14 @@ void
 flush_line(LINE *l)
 {
 	CHAR *c, *endc;
-	int i, nchars, last_col, this_col;
+	int i, j, nchars, last_col, save, this_col, tot;
 
 	last_col = 0;
 	nchars = l->l_line_len;
 
 	if (l->l_needs_sort) {
 		static CHAR *sorted;
-		static int count_size, *count, i, save, sorted_size, tot;
+		static int count_size, *count, sorted_size;
 
 		/*
 		 * Do an O(n) sort on l->l_line by column being careful to
@@ -461,7 +457,7 @@ flush_line(LINE *l)
 
 			if (compress_spaces && nspace > 1) {
 				while (1) {
-					int tab_col, tab_size;;
+					int tab_col, tab_size;
 
 					tab_col = (last_col + 8) & ~7;
 					if (tab_col > this_col)
@@ -493,7 +489,7 @@ flush_line(LINE *l)
 			}
 			PUTC(c->c_char);
 			if ((c + 1) < endc)
-				for (i = 0; i < c->c_width; i++)
+				for (j = 0; j < c->c_width; j++)
 					PUTC('\b');
 			if (++c >= endc)
 				break;

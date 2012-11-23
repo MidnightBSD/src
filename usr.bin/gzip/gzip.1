@@ -1,5 +1,4 @@
-.\"	$MidnightBSD$
-.\"	$NetBSD: gzip.1,v 1.18 2005/09/30 13:46:56 wiz Exp $
+.\"	$NetBSD: gzip.1,v 1.20 2009/04/01 08:15:37 mrg Exp $
 .\"
 .\" Copyright (c) 1997, 2003, 2004 Matthew R. Green
 .\" All rights reserved.
@@ -12,8 +11,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. The name of the author may not be used to endorse or promote products
-.\"    derived from this software without specific prior written permission.
 .\"
 .\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
 .\" IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -27,8 +24,8 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.bin/gzip/gzip.1,v 1.1.2.1 2007/02/20 08:33:31 delphij Exp $
-.Dd January 26, 2007
+.\" $MidnightBSD$
+.Dd May 23, 2011
 .Dt GZIP 1
 .Os
 .Sh NAME
@@ -36,7 +33,7 @@
 .Nd compression/decompression tool using Lempel-Ziv coding (LZ77)
 .Sh SYNOPSIS
 .Nm
-.Op Fl cdfhLlNnqrtVv
+.Op Fl cdfhkLlNnqrtVv
 .Op Fl S Ar suffix
 .Ar file
 .Oo
@@ -44,7 +41,7 @@
 .Oc
 .Oc
 .Nm gunzip
-.Op Fl cfhLNqrtVv
+.Op Fl cfhkLNqrtVv
 .Op Fl S Ar suffix
 .Ar file
 .Oo
@@ -73,10 +70,22 @@ When in compression mode, each
 will be replaced with another file with the suffix, set by the
 .Fl S Ar suffix
 option, added, if possible.
+.Pp
 In decompression mode, each
 .Ar file
 will be checked for existence, as will the file with the suffix
 added.
+Each
+.Ar file
+argument must contain a separate complete archive;
+when multiple
+.Ar files
+are indicated, each is decompressed in turn.
+.Pp
+In the case of
+.Nm gzcat
+the resulting data is then concatenated in the manner of
+.Xr cat 1 .
 .Pp
 If invoked as
 .Nm gunzip
@@ -118,13 +127,16 @@ stream, leaving files intact.
 This option selects decompression rather than compression.
 .It Fl f , -force
 This option turns on force mode.
-This allows files with multiple links, overwriting of pre-existing
-files, reading from or writing to a terminal, and when combined
-with the
+This allows files with multiple links, symbolic links to regular files,
+overwriting of pre-existing files, reading from or writing to a terminal,
+and when combined with the
 .Fl c
 option, allowing non-compressed data to pass through unchanged.
 .It Fl h , -help
 This option prints a usage summary and exits.
+.It Fl k , -keep
+Keep (don't delete) input files during compression
+or decompression.
 .It Fl L , -license
 This option prints
 .Nm
@@ -140,8 +152,8 @@ embedded in the file.
 This option causes the stored filename in the input file to be used
 as the output file.
 .It Fl n , -no-name
-This option stops the filename from being stored in the output
-file.
+This option stops the filename and timestamp from being stored in
+the output file.
 .It Fl q , -quiet
 With this option, no warnings or errors are printed.
 .It Fl r , -recursive
@@ -193,11 +205,22 @@ This implementation of
 .Nm
 was ported based on the
 .Nx
-.Nm
-20060927, and first appeared in
+.Nm ,
+and first appeared in
 .Fx 7.0 .
 .Sh AUTHORS
+.An -nosplit
 This implementation of
 .Nm
 was written by
-.An Matthew R. Green Aq mrg@eterna.com.au .
+.An Matthew R. Green Aq mrg@eterna.com.au
+with unpack support written by
+.An Xin LI Aq delphij@FreeBSD.org .
+.Sh BUGS
+According to RFC 1952, the recorded file size is stored in a 32-bit
+integer, therefore, it can not represent files larger than 4GB.
+This limitation also applies to
+.Fl l
+option of
+.Nm
+utility.

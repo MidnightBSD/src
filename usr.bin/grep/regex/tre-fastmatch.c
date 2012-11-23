@@ -1,5 +1,4 @@
 /* $MidnightBSD$ */
-/* $FreeBSD: src/usr.bin/grep/regex/tre-fastmatch.c,v 1.3 2011/10/11 22:27:23 gabor Exp $ */
 
 /*-
  * Copyright (c) 1999 James Howard and Dag-Erling Coïdan Smørgrav

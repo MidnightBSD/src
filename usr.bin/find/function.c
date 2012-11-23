@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -41,8 +37,7 @@ static const char sccsid[] = "@(#)function.c	8.10 (Berkeley) 5/4/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-/* $FreeBSD: src/usr.bin/find/function.c,v 1.58 2006/05/27 18:27:41 krion Exp $ */
-__MBSDID("$MidnightBSD: src/usr.bin/find/function.c,v 1.2 2007/09/11 23:01:20 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/ucred.h>
@@ -51,7 +46,6 @@ __MBSDID("$MidnightBSD: src/usr.bin/find/function.c,v 1.2 2007/09/11 23:01:20 la
 #include <sys/acl.h>
 #include <sys/wait.h>
 #include <sys/mount.h>
-#include <sys/timeb.h>
 
 #include <dirent.h>
 #include <err.h>
@@ -372,38 +366,48 @@ c_mXXdepth(OPTION *option, char ***argvp)
 int
 f_acl(PLAN *plan __unused, FTSENT *entry)
 {
-	int match, entries;
-	acl_entry_t ae;
 	acl_t facl;
+	acl_type_t acl_type;
+	int acl_supported = 0, ret, trivial;
 
 	if (S_ISLNK(entry->fts_statp->st_mode))
 		return 0;
-	if ((match = pathconf(entry->fts_accpath, _PC_ACL_EXTENDED)) <= 0) {
-		if (match < 0 && errno != EINVAL)
-			warn("%s", entry->fts_accpath);
-	else
-		return 0;
-	}
-	match = 0;
-	if ((facl = acl_get_file(entry->fts_accpath,ACL_TYPE_ACCESS)) != NULL) {
-		if (acl_get_entry(facl, ACL_FIRST_ENTRY, &ae) == 1) {
-			/*
-			 * POSIX.1e requires that ACLs of type ACL_TYPE_ACCESS
-			 * must have at least three entries (owner, group,
-			 * other).
-			 */
-			entries = 1;
-			while (acl_get_entry(facl, ACL_NEXT_ENTRY, &ae) == 1) {
-				if (++entries > 3) {
-					match = 1;
-					break;
-				}
-			}
-		}
-		acl_free(facl);
-	} else
+	ret = pathconf(entry->fts_accpath, _PC_ACL_NFS4);
+	if (ret > 0) {
+		acl_supported = 1;
+		acl_type = ACL_TYPE_NFS4;
+	} else if (ret < 0 && errno != EINVAL) {
 		warn("%s", entry->fts_accpath);
-	return match;
+		return (0);
+	}
+	if (acl_supported == 0) {
+		ret = pathconf(entry->fts_accpath, _PC_ACL_EXTENDED);
+		if (ret > 0) {
+			acl_supported = 1;
+			acl_type = ACL_TYPE_ACCESS;
+		} else if (ret < 0 && errno != EINVAL) {
+			warn("%s", entry->fts_accpath);
+			return (0);
+		}
+	}
+	if (acl_supported == 0)
+		return (0);
+
+	facl = acl_get_file(entry->fts_accpath, acl_type);
+	if (facl == NULL) {
+		warn("%s", entry->fts_accpath);
+		return (0);
+	}
+	ret = acl_is_trivial_np(facl, &trivial);
+	acl_free(facl);
+	if (ret) {
+		warn("%s", entry->fts_accpath);
+		acl_free(facl);
+		return (0);
+	}
+	if (trivial)
+		return (0);
+	return (1);
 }
 
 PLAN *
@@ -428,10 +432,12 @@ f_delete(PLAN *plan __unused, FTSENT *entry)
 
 	/* sanity check */
 	if (isdepth == 0 ||			/* depth off */
-	    (ftsoptions & FTS_NOSTAT) ||	/* not stat()ing */
-	    !(ftsoptions & FTS_PHYSICAL) ||	/* physical off */
-	    (ftsoptions & FTS_LOGICAL))		/* or finally, logical on */
+	    (ftsoptions & FTS_NOSTAT))		/* not stat()ing */
 		errx(1, "-delete: insecure options got turned on");
+
+	if (!(ftsoptions & FTS_PHYSICAL) ||	/* physical off */
+	    (ftsoptions & FTS_LOGICAL))		/* or finally, logical on */
+		errx(1, "-delete: forbidden when symlinks are followed");
 
 	/* Potentially unsafe - do not accept relative paths whatsoever */
 	if (strchr(entry->fts_accpath, '/') != NULL)
@@ -442,7 +448,7 @@ f_delete(PLAN *plan __unused, FTSENT *entry)
 	if ((entry->fts_statp->st_flags & (UF_APPEND|UF_IMMUTABLE)) &&
 	    !(entry->fts_statp->st_flags & (SF_APPEND|SF_IMMUTABLE)) &&
 	    geteuid() == 0)
-		chflags(entry->fts_accpath,
+		lchflags(entry->fts_accpath,
 		       entry->fts_statp->st_flags &= ~(UF_APPEND|UF_IMMUTABLE));
 
 	/* rmdir directories, unlink everything else */
@@ -463,8 +469,6 @@ c_delete(OPTION *option, char ***argvp __unused)
 {
 
 	ftsoptions &= ~FTS_NOSTAT;	/* no optimise */
-	ftsoptions |= FTS_PHYSICAL;	/* disable -follow */
-	ftsoptions &= ~FTS_LOGICAL;	/* disable -follow */
 	isoutput = 1;			/* possible output */
 	isdepth = 1;			/* -depth implied */
 
@@ -475,7 +479,7 @@ c_delete(OPTION *option, char ***argvp __unused)
 /*
  * always_true --
  *
- *	Always true, used for -maxdepth, -mindepth, -xdev and -follow
+ *	Always true, used for -maxdepth, -mindepth, -xdev, -follow, and -true
  */
 int
 f_always_true(PLAN *plan __unused, FTSENT *entry __unused)
@@ -551,7 +555,7 @@ f_empty(PLAN *plan __unused, FTSENT *entry)
 		empty = 1;
 		dir = opendir(entry->fts_accpath);
 		if (dir == NULL)
-			err(1, "%s", entry->fts_accpath);
+			return 0;
 		for (dp = readdir(dir); dp; dp = readdir(dir))
 			if (dp->d_name[0] != '.' ||
 			    (dp->d_name[1] != '\0' &&
@@ -842,7 +846,8 @@ f_fstype(PLAN *plan, FTSENT *entry)
 	static dev_t curdev;	/* need a guaranteed illegal dev value */
 	static int first = 1;
 	struct statfs sb;
-	static int val_type, val_flags;
+	static int val_flags;
+	static char fstype[sizeof(sb.f_fstypename)];
 	char *p, save[2] = {0,0};
 
 	if ((plan->flags & F_MTMASK) == F_MTUNKNOWN)
@@ -884,13 +889,13 @@ f_fstype(PLAN *plan, FTSENT *entry)
 		 * always copy both of them.
 		 */
 		val_flags = sb.f_flags;
-		val_type = sb.f_type;
+		strlcpy(fstype, sb.f_fstypename, sizeof(fstype));
 	}
 	switch (plan->flags & F_MTMASK) {
 	case F_MTFLAG:
 		return val_flags & plan->mt_data;
 	case F_MTTYPE:
-		return val_type == plan->mt_data;
+		return (strncmp(fstype, plan->c_data, sizeof(fstype)) == 0);
 	default:
 		abort();
 	}
@@ -901,22 +906,11 @@ c_fstype(OPTION *option, char ***argvp)
 {
 	char *fsname;
 	PLAN *new;
-	struct xvfsconf vfc;
 
 	fsname = nextarg(option, argvp);
 	ftsoptions &= ~FTS_NOSTAT;
 
 	new = palloc(option);
-
-	/*
-	 * Check first for a filesystem name.
-	 */
-	if (getvfsbyname(fsname, &vfc) == 0) {
-		new->flags |= F_MTTYPE;
-		new->mt_data = vfc.vfc_typenum;
-		return new;
-	}
-
 	switch (*fsname) {
 	case 'l':
 		if (!strcmp(fsname, "local")) {
@@ -934,12 +928,8 @@ c_fstype(OPTION *option, char ***argvp)
 		break;
 	}
 
-	/*
-	 * We need to make filesystem checks for filesystems
-	 * that exists but aren't in the kernel work.
-	 */
-	fprintf(stderr, "Warning: Unknown filesystem type %s\n", fsname);
-	new->flags |= F_MTUNKNOWN;
+	new->flags |= F_MTTYPE;
+	new->c_data = fsname;
 	return new;
 }
 
@@ -971,7 +961,7 @@ c_group(OPTION *option, char ***argvp)
 	g = getgrnam(gname);
 	if (g == NULL) {
 		char* cp = gname;
-		if( gname[0] == '-' || gname[0] == '+' )
+		if (gname[0] == '-' || gname[0] == '+')
 			gname++;
 		gid = atoi(gname);
 		if (gid == 0 && gname[0] != '0')
@@ -1006,6 +996,30 @@ c_inum(OPTION *option, char ***argvp)
 
 	new = palloc(option);
 	new->i_data = find_parsenum(new, option->name, inum_str, NULL);
+	return new;
+}
+
+/*
+ * -samefile FN
+ *
+ *	True if the file has the same inode (eg hard link) FN
+ */
+
+/* f_samefile is just f_inum */
+PLAN *
+c_samefile(OPTION *option, char ***argvp)
+{
+	char *fn;
+	PLAN *new;
+	struct stat sb;
+
+	fn = nextarg(option, argvp);
+	ftsoptions &= ~FTS_NOSTAT;
+
+	new = palloc(option);
+	if (stat(fn, &sb))
+		err(1, "%s", fn);
+	new->i_data = sb.st_ino;
 	return new;
 }
 
@@ -1064,7 +1078,16 @@ c_ls(OPTION *option, char ***argvp __unused)
 int
 f_name(PLAN *plan, FTSENT *entry)
 {
-	return !fnmatch(plan->c_data, entry->fts_name,
+	char fn[PATH_MAX];
+	const char *name;
+
+	if (plan->flags & F_LINK) {
+		name = fn;
+		if (readlink(entry->fts_path, fn, sizeof(fn)) == -1)
+			return 0;
+	} else
+		name = entry->fts_name;
+	return !fnmatch(plan->c_data, name,
 	    plan->flags & F_IGNCASE ? FNM_CASEFOLD : 0);
 }
 
@@ -1113,7 +1136,7 @@ c_newer(OPTION *option, char ***argvp)
 	new = palloc(option);
 	/* compare against what */
 	if (option->flags & F_TIME2_T) {
-		new->t_data = get_date(fn_or_tspec, (struct timeb *) 0);
+		new->t_data = get_date(fn_or_tspec);
 		if (new->t_data == (time_t) -1)
 			errx(1, "Can't parse date/time: %s", fn_or_tspec);
 	} else {
@@ -1123,6 +1146,8 @@ c_newer(OPTION *option, char ***argvp)
 			new->t_data = sb.st_ctime;
 		else if (option->flags & F_TIME2_A)
 			new->t_data = sb.st_atime;
+		else if (option->flags & F_TIME2_B)
+			new->t_data = sb.st_birthtime;
 		else
 			new->t_data = sb.st_mtime;
 	}
@@ -1354,7 +1379,7 @@ c_regex(OPTION *option, char ***argvp)
 	return new;
 }
 
-/* c_simple covers c_prune, c_openparen, c_closeparen, c_not, c_or */
+/* c_simple covers c_prune, c_openparen, c_closeparen, c_not, c_or, c_true, c_false */
 
 PLAN *
 c_simple(OPTION *option, char ***argvp __unused)
@@ -1636,3 +1661,29 @@ f_or(PLAN *plan, FTSENT *entry)
 }
 
 /* c_or == c_simple */
+
+/*
+ * -false
+ *
+ *	Always false.
+ */
+int
+f_false(PLAN *plan __unused, FTSENT *entry __unused)
+{
+	return 0;
+}
+
+/* c_false == c_simple */
+
+/*
+ * -quit
+ *
+ *	Exits the program
+ */
+int
+f_quit(PLAN *plan __unused, FTSENT *entry __unused)
+{
+	exit(0);
+}
+
+/* c_quit == c_simple */

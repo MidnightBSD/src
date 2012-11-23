@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/elf2aout/elf2aout.c,v 1.11 2006/04/21 09:39:51 delphij Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/elf64.h>
@@ -35,6 +35,8 @@ __FBSDID("$FreeBSD: src/usr.bin/elf2aout/elf2aout.c,v 1.11 2006/04/21 09:39:51 d
 
 #include <err.h>
 #include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -155,5 +157,6 @@ static void
 usage(void)
 {
 
-	errx(1, "usage: elf2aout [-o outfile] infile");
+	fprintf(stderr, "usage: elf2aout [-o outfile] infile\n");
+	exit(1);
 }

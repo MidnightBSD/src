@@ -1,8 +1,10 @@
-# $FreeBSD: src/usr.bin/keylogin/Makefile,v 1.3 1999/08/28 01:02:27 peter Exp $
+# $MidnightBSD$
 
 PROG=	keylogin
 
 DPADD=	${LIBRPCSVC}
 LDADD=	-lrpcsvc
+
+WARNS?=	0
 
 .include <bsd.prog.mk>

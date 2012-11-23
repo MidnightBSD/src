@@ -1,3 +1,4 @@
+/*	$NetBSD: seq.c,v 1.5 2008/07/21 14:19:26 lukem Exp $	*/
 /*
  * Copyright (c) 2005 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -13,13 +14,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgment:
- *      This product includes software developed by the NetBSD
- *      Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -32,16 +26,10 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
- * $MidnightBSD$
  */
 
 #include <sys/cdefs.h>
-#ifndef lint
-__COPYRIGHT("@(#) Copyright (c) 2005\n\
-	The NetBSD Foundation, Inc.  All rights reserved.\n");
-__RCSID("$NetBSD: seq.c,v 1.2 2005/01/20 09:20:03 wiz Exp $");
-#endif /* not lint */
+__MBSDID("$MidnightBSD$");
 
 #include <ctype.h>
 #include <err.h>
@@ -219,7 +207,8 @@ numeric(const char *s)
 			}
 			if (ISEXP((unsigned char)*s)) {
 				s++;
-				if (ISSIGN((unsigned char)*s)) {
+				if (ISSIGN((unsigned char)*s) ||
+				    isdigit((unsigned char)*s)) {
 					s++;
 					continue;
 				}
@@ -262,7 +251,7 @@ valid_format(const char *fmt)
 					fmt++;
 					break;
 				}
-				/* flags, width and precsision */
+				/* flags, width and precision */
 				if (isdigit((unsigned char)*fmt) ||
 				    strchr("+- 0#.", *fmt))
 					continue;
@@ -338,8 +327,9 @@ unescape(char *orig)
 				c |= (*cp - '0');
 			}
 			*orig = c;
+			--cp;
 			continue;
-		case 'x':	/* hexidecimal number */
+		case 'x':	/* hexadecimal number */
 			cp++;	/* skip 'x' */
 			for (i = 0, c = 0;
 			     isxdigit((unsigned char)*cp) && i < 2;
@@ -352,6 +342,7 @@ unescape(char *orig)
 					    'A') + 10);
 			}
 			*orig = c;
+			--cp;
 			continue;
 		default:
 			--cp;
@@ -411,7 +402,7 @@ decimal_places(const char *number)
 /*
  * generate_format - create a format string
  *
- * XXX to be bug for bug compatable with Plan9 and GNU return "%g"
+ * XXX to be bug for bug compatible with Plan9 and GNU return "%g"
  * when "%g" prints as "%e" (this way no width adjustments are made)
  */
 char *
@@ -460,4 +451,3 @@ generate_format(double first, double incr, double last, int equalize, char pad)
 
 	return (buf);
 }
-

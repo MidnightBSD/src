@@ -27,7 +27,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	@(#)clear.sh	8.1 (Berkeley) 6/6/93
 # $MidnightBSD$
+#
+#	@(#)clear.sh	8.1 (Berkeley) 6/6/93
+#
 
 exec tput clear
