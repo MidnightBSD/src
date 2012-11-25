@@ -1,12 +1,12 @@
+#
 # $MidnightBSD$
-# $FreeBSD: src/lib/libbsm/Makefile,v 1.7.2.1 2007/10/27 16:35:46 rwatson Exp $
 #
 
 OPENBSMDIR=		${.CURDIR}/../../contrib/openbsm
 LIBBSMDIR=		${OPENBSMDIR}/libbsm
 
 LIB=		bsm
-SHLIB_MAJOR=	2
+SHLIB_MAJOR=	3
 
 .PATH:		${LIBBSMDIR}
 .PATH:		${OPENBSMDIR}/bsm
@@ -15,11 +15,15 @@ SHLIB_MAJOR=	2
 SRCS=	bsm_audit.c							\
 	bsm_class.c							\
 	bsm_control.c							\
+	bsm_domain.c							\
+	bsm_errno.c							\
 	bsm_event.c							\
+	bsm_fcntl.c							\
 	bsm_flags.c							\
 	bsm_io.c							\
 	bsm_mask.c							\
 	bsm_notify.c							\
+	bsm_socket_type.c						\
 	bsm_token.c							\
 	bsm_user.c							\
 	bsm_wrappers.c
@@ -29,17 +33,23 @@ SRCS=	bsm_audit.c							\
 #
 CFLAGS+=	-I${OPENBSMDIR} -I${LIBBSMDIR}
 
+WARNS?=		1
+
 INCS=		audit_uevents.h libbsm.h
 INCSDIR=	${INCLUDEDIR}/bsm
 
 MAN=	libbsm.3							\
 	au_class.3							\
 	au_control.3							\
+	au_domain.3							\
+	au_errno.3							\
 	au_event.3							\
+	au_fcntl_cmd.3							\
 	au_free_token.3							\
 	au_io.3								\
 	au_mask.3							\
 	au_open.3							\
+	au_socket_type.3						\
 	au_token.3							\
 	au_user.3							\
 	audit_submit.3
@@ -79,6 +89,11 @@ MLINKS=	libbsm.3 bsm.3							\
 	au_control.3 getacpol.3						\
 	au_control.3 au_poltostr.3					\
 	au_control.3 au_strtopol.3					\
+	au_domain.3 au_bsm_to_domain.3					\
+	au_domain.3 au_domain_to_bsm.3					\
+	au_errno.3 au_bsm_to_errno.3					\
+	au_errno.3 au_errno_to_bsm.3					\
+	au_errno.3 au_strerror.3					\
 	au_event.3 setauevent.3						\
 	au_event.3 endauevent.3						\
 	au_event.3 getauevent.3						\
@@ -89,6 +104,8 @@ MLINKS=	libbsm.3 bsm.3							\
 	au_event.3 getauevnum_r.3					\
 	au_event.3 getauevnonam.3					\
 	au_event.3 getauevnonam_r.3					\
+	au_fcntl_cmd.3 au_bsm_to_fcntl_cmd.3				\
+	au_fcntl_cmd.3 au_fcntl_cmd_t_bsm.3				\
 	au_io.3	au_fetch_tok.3						\
 	au_io.3	au_print_tok.3						\
 	au_io.3	au_read_rec.3						\
@@ -99,6 +116,8 @@ MLINKS=	libbsm.3 bsm.3							\
 	au_open.3 au_close_buffer.3					\
 	au_open.3 au_close_token.3					\
 	au_open.3 au_write.3						\
+	au_socket_type.3 au_bsm_to_socket_type.3			\
+	au_socket_type.3 au_socket_type_to_bsm.3			\
 	au_token.3 au_to_arg32.3					\
 	au_token.3 au_to_arg64.3					\
 	au_token.3 au_to_arg.3						\
