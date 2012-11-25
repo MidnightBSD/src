@@ -34651,6 +34651,8 @@ lib/libbluetooth/Makefile -text
 lib/libbluetooth/bluetooth.3 -text
 lib/libbluetooth/bluetooth.c -text
 lib/libbluetooth/bluetooth.h -text
+lib/libbluetooth/dev.c -text
+lib/libbluetooth/hci.c -text
 lib/libbsm/Makefile -text
 lib/libbsnmp/Makefile -text
 lib/libbsnmp/Makefile.inc -text

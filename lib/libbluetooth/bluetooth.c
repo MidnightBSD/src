@@ -1,8 +1,9 @@
-/* $MidnightBSD$ */
 /*
  * bluetooth.c
- *
- * Copyright (c) 2001-2003 Maksim Yevmenkin <m_evmenkin@yahoo.com>
+ */
+
+/*-
+ * Copyright (c) 2001-2009 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: bluetooth.c,v 1.2 2012-04-08 14:24:04 laffer1 Exp $
- * $FreeBSD: src/lib/libbluetooth/bluetooth.c,v 1.2.26.1 2008/11/25 02:59:29 kensmith Exp $
+ * $Id: bluetooth.c,v 1.3 2012-11-25 21:59:52 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include <bluetooth.h>
