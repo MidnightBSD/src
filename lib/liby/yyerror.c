@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/liby/yyerror.c,v 1.4 2007/01/09 01:02:05 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifndef lint
 static char sccsid[] = "@(#)yyerror.c	8.1 (Berkeley) 6/4/93";
