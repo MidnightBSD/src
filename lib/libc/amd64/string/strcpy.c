@@ -1,7 +1,8 @@
-/*-
- * Copyright (c) 2003 Peter Wemm
- * All rights reserved.
+/*
+ * Copyright 2011 George V. Neville-Neil. All rights reserved.
  *
+ * The compilation of software known as FreeBSD is distributed under the
+ * following terms:
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -27,11 +28,11 @@
 #include <sys/cdefs.h>
 __MBSDID("$MidnightBSD$");
 
-#include <machine/sysarch.h>
+char *__stpcpy(char * __restrict, const char * __restrict);
 
-int
-amd64_get_gsbase(void **addr)
+char *
+strcpy(char * __restrict to, const char * __restrict from)
 {
-
-	return (sysarch(AMD64_GET_GSBASE, addr));
+	__stpcpy(to, from);
+	return(to);
 }

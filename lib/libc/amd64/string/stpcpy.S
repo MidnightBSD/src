@@ -5,6 +5,7 @@
  */
 
 #include <machine/asm.h>
+__MBSDID("$MidnightBSD$");
 
 /*
  * This stpcpy implementation copies a byte at a time until the

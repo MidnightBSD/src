@@ -34701,7 +34701,7 @@ lib/libc/amd64/string/memset.S -text
 lib/libc/amd64/string/stpcpy.S -text
 lib/libc/amd64/string/strcat.S -text
 lib/libc/amd64/string/strcmp.S -text
-lib/libc/amd64/string/strcpy.S -text
+lib/libc/amd64/string/strcpy.c -text
 lib/libc/amd64/sys/Makefile.inc -text
 lib/libc/amd64/sys/amd64_get_fsbase.c -text
 lib/libc/amd64/sys/amd64_get_gsbase.c -text
