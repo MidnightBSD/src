@@ -29,7 +29,6 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$"); 
 	
 ENTRY(remquo)
 	movsd	%xmm0,-8(%rsp)
