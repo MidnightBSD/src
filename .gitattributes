@@ -37534,6 +37534,7 @@ lib/libusb/usb.h -text
 lib/libusbhid/Makefile -text
 lib/libusbhid/data.c -text
 lib/libusbhid/descr.c -text
+lib/libusbhid/descr_compat.c -text
 lib/libusbhid/parse.c -text
 lib/libusbhid/usage.c -text
 lib/libusbhid/usbhid.3 -text
