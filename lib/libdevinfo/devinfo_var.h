@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -25,9 +24,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/lib/libdevinfo/devinfo_var.h,v 1.3 2003/02/17 18:56:00 imp Exp $
+ *	$MidnightBSD$
  */
 
+#include <sys/types.h>
 #include <sys/rman.h>
 #include <sys/bus.h>
 

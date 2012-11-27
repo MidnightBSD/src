@@ -22,11 +22,15 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/lib/libpam/Makefile.inc,v 1.18 2007/06/18 18:47:54 rafan Exp $
+# $MidnightBSD$
 
 .ifdef PAM_DEBUG
 DEBUG_FLAGS+=	-DDEBUG
 .endif
 
-SHLIB_MAJOR=	4
+SHLIB_MAJOR=	5
 PAM_MOD_DIR=	${LIBDIR}
+
+STATIC_CFLAGS+=	-DOPENPAM_STATIC_MODULES
+
+.include "../Makefile.inc"

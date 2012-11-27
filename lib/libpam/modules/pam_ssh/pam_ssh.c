@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libpam/modules/pam_ssh/pam_ssh.c,v 1.44 2006/09/30 20:33:42 ru Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/wait.h>
@@ -60,6 +60,9 @@ __FBSDID("$FreeBSD: src/lib/libpam/modules/pam_ssh/pam_ssh.c,v 1.44 2006/09/30 2
 #include "buffer.h"
 #include "authfd.h"
 #include "authfile.h"
+
+#define ssh_add_identity(auth, key, comment) \
+	ssh_add_identity_constrained(auth, key, comment, 0, 0)
 
 extern char **environ;
 
@@ -115,11 +118,11 @@ pam_ssh_load_key(const char *dir, const char *kfn, const char *passphrase,
 	if (key == NULL)
 		key = key_load_private(fn, passphrase, &comment);
 	if (key == NULL) {
-		openpam_log(PAM_LOG_DEBUG, "failed to load key from %s\n", fn);
+		openpam_log(PAM_LOG_DEBUG, "failed to load key from %s", fn);
 		return (NULL);
 	}
 
-	openpam_log(PAM_LOG_DEBUG, "loaded '%s' from %s\n", comment, fn);
+	openpam_log(PAM_LOG_DEBUG, "loaded '%s' from %s", comment, fn);
 	if ((psk = malloc(sizeof(*psk))) == NULL) {
 		key_free(key);
 		free(comment);
@@ -317,9 +320,9 @@ static int
 pam_ssh_add_keys_to_agent(pam_handle_t *pamh)
 {
 	AuthenticationConnection *ac;
-	struct pam_ssh_key *psk;
+	const struct pam_ssh_key *psk;
 	const char **kfn;
-	void *item;
+	const void *item;
 	char **envlist, **env;
 	int pam_err;
 
@@ -372,7 +375,7 @@ pam_sm_open_session(pam_handle_t *pamh, int flags __unused,
 {
 	struct passwd *pwd;
 	const char *user;
-	void *data;
+	const void *data;
 	int pam_err;
 
 	/* no keys, no work */

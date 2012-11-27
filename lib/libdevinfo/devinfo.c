@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libdevinfo/devinfo.c,v 1.9 2006/07/17 09:33:24 stefanf Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * An interface to the FreeBSD kernel's bus/device information interface.

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Robert N. M. Watson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libmemstat/memstat.c,v 1.7 2005/08/01 19:07:39 rwatson Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/param.h>
@@ -50,8 +49,6 @@ memstat_strerror(int error)
 		return ("Version mismatch");
 	case MEMSTAT_ERROR_PERMISSION:
 		return ("Permission denied");
-	case MEMSTAT_ERROR_TOOMANYCPUS:
-		return ("Too many CPUs");
 	case MEMSTAT_ERROR_DATAERROR:
 		return ("Data format error");
 	case MEMSTAT_ERROR_KVM:
@@ -100,6 +97,8 @@ _memstat_mtl_empty(struct memory_type_list *list)
 	struct memory_type *mtp;
 
 	while ((mtp = LIST_FIRST(&list->mtl_list))) {
+		free(mtp->mt_percpu_alloc);
+		free(mtp->mt_percpu_cache);
 		LIST_REMOVE(mtp, mt_list);
 		free(mtp);
 	}
@@ -148,7 +147,7 @@ memstat_mtl_find(struct memory_type_list *list, int allocator,
  */
 struct memory_type *
 _memstat_mt_allocate(struct memory_type_list *list, int allocator,
-    const char *name)
+    const char *name, int maxcpus)
 {
 	struct memory_type *mtp;
 
@@ -159,6 +158,10 @@ _memstat_mt_allocate(struct memory_type_list *list, int allocator,
 	bzero(mtp, sizeof(*mtp));
 
 	mtp->mt_allocator = allocator;
+	mtp->mt_percpu_alloc = malloc(sizeof(struct mt_percpu_alloc_s) *
+	    maxcpus);
+	mtp->mt_percpu_cache = malloc(sizeof(struct mt_percpu_cache_s) *
+	    maxcpus);
 	strlcpy(mtp->mt_name, name, MEMTYPE_MAXNAME);
 	LIST_INSERT_HEAD(&list->mtl_list, mtp, mt_list);
 	return (mtp);
@@ -172,7 +175,7 @@ _memstat_mt_allocate(struct memory_type_list *list, int allocator,
  * libmemstat(3) internal function.
  */
 void
-_memstat_mt_reset_stats(struct memory_type *mtp)
+_memstat_mt_reset_stats(struct memory_type *mtp, int maxcpus)
 {
 	int i;
 
@@ -189,11 +192,12 @@ _memstat_mt_reset_stats(struct memory_type *mtp)
 	mtp->mt_count = 0;
 	mtp->mt_free = 0;
 	mtp->mt_failures = 0;
+	mtp->mt_sleeps = 0;
 
 	mtp->mt_zonefree = 0;
 	mtp->mt_kegfree = 0;
 
-	for (i = 0; i < MEMSTAT_MAXCPU; i++) {
+	for (i = 0; i < maxcpus; i++) {
 		mtp->mt_percpu_alloc[i].mtp_memalloced = 0;
 		mtp->mt_percpu_alloc[i].mtp_memfreed = 0;
 		mtp->mt_percpu_alloc[i].mtp_numallocs = 0;
@@ -303,6 +307,13 @@ memstat_get_failures(const struct memory_type *mtp)
 {
 
 	return (mtp->mt_failures);
+}
+
+uint64_t
+memstat_get_sleeps(const struct memory_type *mtp)
+{
+
+	return (mtp->mt_sleeps);
 }
 
 void *

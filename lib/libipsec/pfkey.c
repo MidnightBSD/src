@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$KAME: pfkey.c,v 1.46 2003/08/26 03:37:06 itojun Exp $	*/
 
 /*
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libipsec/pfkey.c,v 1.9 2007/07/01 12:08:05 gnn Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -663,7 +662,7 @@ pfkey_send_register(so, satype)
 {
 	int len, algno;
 
-	if (satype == PF_UNSPEC) {
+	if (satype == SADB_SATYPE_UNSPEC) {
 		for (algno = 0;
 		     algno < sizeof(supported_map)/sizeof(supported_map[0]);
 		     algno++) {
@@ -1779,6 +1778,18 @@ pfkey_align(msg, mhp)
 		case SADB_X_EXT_SA2:
 			mhp[ext->sadb_ext_type] = (caddr_t)ext;
 			break;
+		case SADB_X_EXT_NAT_T_TYPE:
+		case SADB_X_EXT_NAT_T_SPORT:
+		case SADB_X_EXT_NAT_T_DPORT:
+		/* case SADB_X_EXT_NAT_T_OA: is OAI */
+		case SADB_X_EXT_NAT_T_OAI:
+		case SADB_X_EXT_NAT_T_OAR:
+		case SADB_X_EXT_NAT_T_FRAG:
+			if (feature_present("ipsec_natt")) {
+				mhp[ext->sadb_ext_type] = (caddr_t)ext;
+				break;
+			}
+			/* FALLTHROUGH */
 		default:
 			__ipsec_errcode = EIPSEC_INVAL_EXTTYPE;
 			return -1;

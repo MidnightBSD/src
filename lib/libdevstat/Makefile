@@ -1,10 +1,9 @@
 # $MidnightBSD$
-# $FreeBSD: src/lib/libdevstat/Makefile,v 1.16 2007/05/21 02:49:03 deischen Exp $
 
 LIB=	devstat
 SHLIBDIR?= /lib
 # Bump DEVSTAT_USER_API_VER in devstat.h every time this is incremented.
-SHLIB_MAJOR= 6
+SHLIB_MAJOR= 7
 SRCS=	devstat.c
 INCS=	devstat.h
 
@@ -34,6 +33,6 @@ MLINKS+=devstat.3 compute_etime.3
 
 CFLAGS+=-I${.CURDIR}
 
-WARNS?=	2
+WARNS?=	3
 
 .include <bsd.lib.mk>

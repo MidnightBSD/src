@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/lib/libradius/radlib.h,v 1.7 2004/04/27 15:00:29 ru Exp $
+ *	$MidnightBSD$
  */
 
 #ifndef _RADLIB_H_
@@ -42,6 +42,12 @@
 #define RAD_ACCOUNTING_REQUEST		4
 #define RAD_ACCOUNTING_RESPONSE		5
 #define RAD_ACCESS_CHALLENGE		11
+#define RAD_DISCONNECT_REQUEST		40
+#define RAD_DISCONNECT_ACK		41
+#define RAD_DISCONNECT_NAK		42
+#define RAD_COA_REQUEST			43
+#define RAD_COA_ACK			44
+#define RAD_COA_NAK			45
 
 /* Attribute types and values */
 #define RAD_USER_NAME			1	/* String */
@@ -179,6 +185,8 @@
 #define	RAD_ACCT_MULTI_SESSION_ID	50	/* String */
 #define	RAD_ACCT_LINK_COUNT		51	/* Integer */
 
+#define	RAD_ERROR_CAUSE			101	/* Integer */
+
 struct rad_handle;
 struct timeval;
 
@@ -187,11 +195,13 @@ struct rad_handle	*rad_acct_open(void);
 int			 rad_add_server(struct rad_handle *,
 			    const char *, int, const char *, int, int);
 struct rad_handle	*rad_auth_open(void);
+void			 rad_bind_to(struct rad_handle *, in_addr_t);
 void			 rad_close(struct rad_handle *);
 int			 rad_config(struct rad_handle *, const char *);
 int			 rad_continue_send_request(struct rad_handle *, int,
 			    int *, struct timeval *);
 int			 rad_create_request(struct rad_handle *, int);
+int			 rad_create_response(struct rad_handle *, int);
 struct in_addr		 rad_cvt_addr(const void *);
 u_int32_t		 rad_cvt_int(const void *);
 char			*rad_cvt_string(const void *, size_t);
@@ -209,7 +219,10 @@ int			 rad_put_string(struct rad_handle *, int,
 int			 rad_put_message_authentic(struct rad_handle *);
 ssize_t			 rad_request_authenticator(struct rad_handle *, char *,
 			    size_t);
+int			 rad_receive_request(struct rad_handle *);
 int			 rad_send_request(struct rad_handle *);
+int			 rad_send_response(struct rad_handle *);
+struct rad_handle	*rad_server_open(int fd);
 const char		*rad_server_secret(struct rad_handle *);
 const char		*rad_strerror(struct rad_handle *);
 u_char			*rad_demangle(struct rad_handle *, const void *,

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -25,28 +24,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/lib/libdevinfo/devinfo.h,v 1.5 2005/08/31 14:57:39 rodrigc Exp $
+ *	$MidnightBSD$
  */
 
 #ifndef _DEVINFO_H_INCLUDED
 #define _DEVINFO_H_INCLUDED
 
 #include <sys/cdefs.h>
-#include <sys/_types.h>
+#include <sys/types.h>
+#include <sys/bus.h>
 
 typedef __uintptr_t	devinfo_handle_t;
 #define DEVINFO_ROOT_DEVICE	((devinfo_handle_t)0)
 
-/*
- * State of the device.
- */
-/* XXX not sure if I want a copy here, or expose sys/bus.h */
-typedef enum devinfo_state {
-	DIS_NOTPRESENT,			/* not probed or probe failed */
-	DIS_ALIVE,			/* probe succeeded */
-	DIS_ATTACHED,			/* attach method called */
-	DIS_BUSY			/* device is open */
-} devinfo_state_t;
+typedef enum device_state devinfo_state_t;
 
 struct devinfo_dev {
 	devinfo_handle_t	dd_handle;	/* device handle */

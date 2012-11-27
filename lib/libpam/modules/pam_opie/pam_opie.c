@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libpam/modules/pam_opie/pam_opie.c,v 1.26 2006/09/15 13:42:38 des Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <opie.h>

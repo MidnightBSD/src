@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 LIB=	rpcsec_gss
 SHLIB_MAJOR= 1

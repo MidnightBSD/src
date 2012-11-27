@@ -33,7 +33,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/lib/libpam/libpam/Makefile,v 1.54 2005/06/17 08:14:42 des Exp $
+# $MidnightBSD$
 
 OPENPAM=	${.CURDIR}/../../../contrib/openpam
 .PATH: ${OPENPAM}/include ${OPENPAM}/lib ${OPENPAM}/doc/man
@@ -139,6 +139,7 @@ CFLAGS+= -DLIB_MAJ=${SHLIB_MAJOR}
 CFLAGS+= -DOPENPAM_MODULES_DIR='"${PAM_MOD_DIR:C/\/*$//}/"'
 
 HEADERS=	security/openpam.h \
+		security/openpam_attr.h \
 		security/openpam_version.h \
 		security/pam_appl.h \
 		security/pam_constants.h \
@@ -147,7 +148,15 @@ HEADERS=	security/openpam.h \
 
 ADD_HEADERS=	security/pam_mod_misc.h
 
+#
 # Static modules
+#
+# We build static versions of all modules and of openpam_static.o,
+# then link them all together into openpam_static_modules.o.  None of
+# the modules export any symbols, but they store structures with
+# pointers to their service functions in a linker set which the code
+# in openpam_static.c traverses to locate the individual modules.
+#
 MODULE_DIR=	../modules
 .include "${.CURDIR}/${MODULE_DIR}/modules.inc"
 STATIC_MODULES=	${MODULES:C/.*/${MODULE_DIR}\/&\/lib&.a/}
@@ -158,7 +167,8 @@ CLEANFILES+=	openpam_static.o \
 openpam_static_modules.o: openpam_static.o ${STATIC_MODULES}
 	${LD} -o ${.TARGET} -r --whole-archive ${.ALLSRC}
 
-# Can't put openpam_static.c in SRCS but want .o in .depend.
+# We can't put openpam_static.c in SRCS, but we still want to scan it
+# for dependencies.
 DPSRCS=		openpam_static.c
 
 # Headers

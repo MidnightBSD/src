@@ -1,6 +1,6 @@
-# $Id: Makefile,v 1.2 2012-04-10 19:40:33 laffer1 Exp $
+# $Id: Makefile,v 1.3 2012-11-27 01:40:57 laffer1 Exp $
 # $FreeBSD: src/lib/libsdp/Makefile,v 1.5.6.1 2008/11/25 02:59:29 kensmith Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/lib/libsdp/Makefile,v 1.2 2012/04/10 19:40:33 laffer1 Exp $
 
 LIB=		sdp
 MAN=		sdp.3
@@ -8,7 +8,7 @@ MAN=		sdp.3
 WARNS?=		2
 CFLAGS+=	-I${.CURDIR}
 
-SHLIB_MAJOR=	3
+SHLIB_MAJOR=	4
 
 SRCS=		search.c service.c session.c util.c
 INCS=		sdp.h

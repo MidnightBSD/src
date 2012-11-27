@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/lib/libipsec/ipsec_strerror.h,v 1.4 2002/03/21 23:52:35 obrien Exp $	*/
+/*	$MidnightBSD$	*/
 /*	$KAME: ipsec_strerror.h,v 1.8 2000/07/30 00:45:12 itojun Exp $	*/
 
 /*

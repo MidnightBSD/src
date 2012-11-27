@@ -48,7 +48,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libpam/modules/pam_krb5/pam_krb5.c,v 1.23 2005/07/07 14:16:38 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -89,6 +89,7 @@ static void	compat_free_data_contents(krb5_context, krb5_data *);
 #define PAM_OPT_DEBUG		"debug"
 #define PAM_OPT_FORWARDABLE	"forwardable"
 #define PAM_OPT_NO_CCACHE	"no_ccache"
+#define PAM_OPT_NO_USER_CHECK	"no_user_check"
 #define PAM_OPT_REUSE_CCACHE	"reuse_ccache"
 
 /*
@@ -106,7 +107,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags __unused,
 	krb5_get_init_creds_opt opts;
 	struct passwd *pwd;
 	int retval;
-	void *ccache_data;
+	const void *ccache_data;
 	const char *user, *pass;
 	const void *sourceuser, *service;
 	char *principal, *princ_name, *ccache_name, luser[32], *srvdup;
@@ -194,33 +195,38 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags __unused,
 
 	PAM_LOG("Got password");
 
-	/* Verify the local user exists (AFTER getting the password) */
-	if (strchr(user, '@')) {
-		/* get a local account name for this principal */
-		krbret = krb5_aname_to_localname(pam_context, princ,
-		    sizeof(luser), luser);
-		if (krbret != 0) {
-			PAM_VERBOSE_ERROR("Kerberos 5 error");
-			PAM_LOG("Error krb5_aname_to_localname(): %s",
-			    krb5_get_err_text(pam_context, krbret));
+	if (openpam_get_option(pamh, PAM_OPT_NO_USER_CHECK))
+		PAM_LOG("Skipping local user check");
+	else {
+
+		/* Verify the local user exists (AFTER getting the password) */
+		if (strchr(user, '@')) {
+			/* get a local account name for this principal */
+			krbret = krb5_aname_to_localname(pam_context, princ,
+			    sizeof(luser), luser);
+			if (krbret != 0) {
+				PAM_VERBOSE_ERROR("Kerberos 5 error");
+				PAM_LOG("Error krb5_aname_to_localname(): %s",
+				    krb5_get_err_text(pam_context, krbret));
+				retval = PAM_USER_UNKNOWN;
+				goto cleanup2;
+			}
+
+			retval = pam_set_item(pamh, PAM_USER, luser);
+			if (retval != PAM_SUCCESS)
+				goto cleanup2;
+
+			PAM_LOG("PAM_USER Redone");
+		}
+
+		pwd = getpwnam(user);
+		if (pwd == NULL) {
 			retval = PAM_USER_UNKNOWN;
 			goto cleanup2;
 		}
 
-		retval = pam_set_item(pamh, PAM_USER, luser);
-		if (retval != PAM_SUCCESS)
-			goto cleanup2;
-
-		PAM_LOG("PAM_USER Redone");
+		PAM_LOG("Done getpwnam()");
 	}
-
-	pwd = getpwnam(user);
-	if (pwd == NULL) {
-		retval = PAM_USER_UNKNOWN;
-		goto cleanup2;
-	}
-
-	PAM_LOG("Done getpwnam()");
 
 	/* Get a TGT */
 	memset(&creds, 0, sizeof(krb5_creds));
@@ -347,7 +353,7 @@ pam_sm_setcred(pam_handle_t *pamh, int flags,
 	int retval;
 	const char *cache_name, *q;
 	const void *user;
-	void *cache_data;
+	const void *cache_data;
 	char *cache_name_buf = NULL, *p;
 
 	uid_t euid;
@@ -366,7 +372,8 @@ pam_sm_setcred(pam_handle_t *pamh, int flags,
 		return (PAM_SERVICE_ERR);
 
 	/* If a persistent cache isn't desired, stop now. */
-	if (openpam_get_option(pamh, PAM_OPT_NO_CCACHE))
+	if (openpam_get_option(pamh, PAM_OPT_NO_CCACHE) ||
+		openpam_get_option(pamh, PAM_OPT_NO_USER_CHECK))
 		return (PAM_SUCCESS);
 
 	PAM_LOG("Establishing credentials");
@@ -589,7 +596,7 @@ pam_sm_acct_mgmt(pam_handle_t *pamh, int flags __unused,
 	krb5_principal princ;
 	int retval;
 	const void *user;
-	void *ccache_name;
+	const void *ccache_name;
 
 	retval = pam_get_item(pamh, PAM_USER, &user);
 	if (retval != PAM_SUCCESS)

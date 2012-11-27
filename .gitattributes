@@ -37414,7 +37414,6 @@ lib/libthr/sys/Makefile.inc -text
 lib/libthr/sys/thr_error.c -text
 lib/libthr/thread/Makefile.inc -text
 lib/libthr/thread/thr_affinity.c -text
-lib/libthr/thread/thr_atfork.c -text
 lib/libthr/thread/thr_attr.c -text
 lib/libthr/thread/thr_autoinit.c -text
 lib/libthr/thread/thr_barrier.c -text

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$KAME: ipsec_dump_policy.c,v 1.13 2002/06/27 14:35:11 itojun Exp $	*/
 
 /*
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libipsec/ipsec_dump_policy.c,v 1.9 2007/07/01 12:08:05 gnn Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -163,7 +162,8 @@ ipsec_dump_policy(policy, delimiter)
 			return NULL;
 		}
 		buf = newbuf;
-		snprintf(buf, buflen, "%s%s%s", buf, delimiter, isrbuf);
+		snprintf(buf + strlen(buf), buflen - strlen(buf),
+		    "%s%s", delimiter, isrbuf);
 
 		off += xisr->sadb_x_ipsecrequest_len;
 	}

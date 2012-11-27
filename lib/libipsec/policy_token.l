@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: src/lib/libipsec/policy_token.l,v 1.9 2007/07/01 12:08:06 gnn Exp $	*/
+/*	$MidnightBSD$	*/
 /*	$KAME: policy_token.l,v 1.13 2003/05/09 05:19:55 sakane Exp $	*/
 
 /*
@@ -55,6 +54,7 @@ int yylex(void);
 
 %option noyywrap
 %option nounput
+%option noinput
 
 /* common section */
 nl		\n

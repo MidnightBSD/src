@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $MidnightBSD$
  */
 FBSD_1.1 {
 	rpc_gss_seccreate;

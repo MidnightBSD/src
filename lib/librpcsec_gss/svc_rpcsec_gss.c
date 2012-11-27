@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD$
+ *	$MidnightBSD$
  */
 /*
   svc_rpcsec_gss.c
@@ -59,7 +59,7 @@
   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-  $Id: svc_rpcsec_gss.c,v 1.1.1.1 2012-08-19 14:06:15 laffer1 Exp $
+  $Id: svc_rpcsec_gss.c,v 1.2 2012-11-27 01:40:57 laffer1 Exp $
  */
 
 #include <stdio.h>
