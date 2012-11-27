@@ -25,7 +25,6 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libcam/cam_cdbparse.3,v 1.21.18.1 2008/11/25 02:59:29 kensmith Exp $
 .\" $MidnightBSD$
 .\"
 .\" This man page borrows heavily from the old scsi(3) man page, which had
@@ -63,8 +62,8 @@
 .\"
 .\"
 .Dd October 13, 1998
-.Os
 .Dt CAM_CDBPARSE 3
+.Os
 .Sh NAME
 .Nm csio_build ,
 .Nm csio_build_visit ,
@@ -259,7 +258,6 @@ typedef enum {
 Multiple flags should be ORed together.
 Any of the CCB flags may be used,
 although it is worth noting several important ones here:
-.Pp
 .Bl -tag -width CAM_PASS_ERR_RECOVER
 .It Dv CAM_DIR_IN
 This indicates that the operation in question is a read operation.
