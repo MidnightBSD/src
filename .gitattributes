@@ -37007,6 +37007,9 @@ lib/libmd/sha1c.c -text
 lib/libmd/sha256.3 -text
 lib/libmd/sha256.h -text
 lib/libmd/sha256c.c -text
+lib/libmd/sha512.3 -text
+lib/libmd/sha512.h -text
+lib/libmd/sha512c.c -text
 lib/libmd/sha_locl.h -text
 lib/libmd/shadriver.c -text
 lib/libmemstat/Makefile -text
