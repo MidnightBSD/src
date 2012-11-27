@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1984, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/libexec/bootpd/rtmsg.c,v 1.12 2003/02/05 13:45:25 charnier Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 /*
@@ -127,7 +126,7 @@ int bsd_arp_set(ia, eaddr, len)
 	register struct sockaddr_dl *sdl;
 	register struct rt_msghdr *rtm = &(m_rtmsg.m_rtm);
 	u_char *ea;
-	struct timeval time;
+	struct timespec tp;
 	int op = RTM_ADD;
 
 	getsocket();
@@ -141,8 +140,8 @@ int bsd_arp_set(ia, eaddr, len)
 	doing_proxy = flags = export_only = expire_time = 0;
 
 	/* make arp entry temporary */
-	gettimeofday(&time, 0);
-	expire_time = time.tv_sec + 20 * 60;
+	clock_gettime(CLOCK_MONOTONIC, &tp);
+	expire_time = tp.tv_sec + 20 * 60;
 
 tryagain:
 	if (rtmsg(RTM_GET) < 0) {
@@ -153,7 +152,6 @@ tryagain:
 	sdl = (struct sockaddr_dl *)(sin->sin_len + (char *)sin);
 	if (sin->sin_addr.s_addr == sin_m.sin_addr.s_addr) {
 		if (sdl->sdl_family == AF_LINK &&
-		    (rtm->rtm_flags & RTF_LLINFO) &&
 		    !(rtm->rtm_flags & RTF_GATEWAY)) switch (sdl->sdl_type) {
 		case IFT_ETHER: case IFT_FDDI: case IFT_ISO88023:
 		case IFT_ISO88024: case IFT_ISO88025:
@@ -210,7 +208,7 @@ static int rtmsg(cmd)
 		rtm->rtm_addrs |= RTA_GATEWAY;
 		rtm->rtm_rmx.rmx_expire = expire_time;
 		rtm->rtm_inits = RTV_EXPIRE;
-		rtm->rtm_flags |= (RTF_HOST | RTF_STATIC);
+		rtm->rtm_flags |= (RTF_HOST | RTF_STATIC | RTF_LLDATA);
 		sin_m.sin_other = 0;
 		if (doing_proxy) {
 			if (export_only)

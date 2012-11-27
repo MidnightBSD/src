@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2001 Jake Burkholder.
+ * Copyright (c) 2009 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,11 +22,54 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/sparc64/include/mutex.h,v 1.5.32.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
-#ifndef	_MACHINE_MUTEX_H_
-#define	_MACHINE_MUTEX_H_
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
-#endif /* !_MACHINE_MUTEX_H_ */
+#include <pwd.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sysexits.h>
+#include <ulog.h>
+
+/*
+ * This setuid helper utility writes user login records to disk.
+ * Unprivileged processes are not capable of writing records to utmpx,
+ * but we do want to allow this for pseudo-terminals.  Because a file
+ * descriptor to a pseudo-terminal master device can only be obtained by
+ * processes using the pseudo-terminal, we expect such a descriptor on
+ * stdin.
+ *
+ * It uses the real user ID of the calling process to determine the
+ * username.  It does allow users to log arbitrary hostnames.
+ */
+
+int
+main(int argc, char *argv[])
+{
+	const char *line, *user, *host;
+
+	/* Device line name. */
+	if ((line = ptsname(STDIN_FILENO)) == NULL)
+		return (EX_USAGE);
+
+	if ((argc == 2 || argc == 3) && strcmp(argv[1], "login") == 0) {
+		/* Username. */
+		user = user_from_uid(getuid(), 1);
+		if (user == NULL)
+			return (EX_OSERR);
+
+		/* Hostname. */
+		host = argc == 3 ? argv[2] : NULL;
+
+		ulog_login(line, user, host);
+		return (EX_OK);
+	} else if (argc == 2 && strcmp(argv[1], "logout") == 0) {
+		ulog_logout(line);
+		return (EX_OK);
+	}
+
+	return (EX_USAGE);
+}

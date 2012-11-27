@@ -1,4 +1,4 @@
-.\" $FreeBSD$
+.\" $MidnightBSD$
 Set to not build user accounting tools such as
 .Xr last 1 ,
 .Xr users 1 ,

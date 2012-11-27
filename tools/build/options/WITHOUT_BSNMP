@@ -1,4 +1,4 @@
-.\" $FreeBSD$
+.\" $MidnightBSD$
 Set to not build or install
 .Xr bsnmpd 1
 and related libraries and data files.

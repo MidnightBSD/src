@@ -1,10 +1,13 @@
-# $MidnightBSD$
+# $MidnightBSD: src/kerberos5/lib/libgssapi_krb5/Makefile,v 1.2 2012/08/26 15:13:11 laffer1 Exp $
 
 LIB=	gssapi_krb5
 LDFLAGS= -Wl,-Bsymbolic -Wl,--no-undefined
 LDADD=	-lgssapi -lkrb5 -lhx509 -lcrypto -lroken -lasn1 -lcom_err -lcrypt
 DPADD=	${LIBGSSAPI} ${LIBKRB5} ${LIBHX509} ${LIBCRYPTO} ${LIBROKEN} ${LIBASN1} \
 	${LIBCOM_ERR} ${LIBCRYPT}
+
+WARNS?=	0
+NO_LINT=
 
 INCS=	${KRB5DIR}/lib/gssapi/gssapi/gssapi_krb5.h
 INCSDIR= ${INCLUDEDIR}/gssapi

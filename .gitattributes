@@ -38175,8 +38175,6 @@ libexec/msearch.index/msearch.index.c -text
 libexec/pppoed/Makefile -text
 libexec/pppoed/pppoed.8 -text
 libexec/pppoed/pppoed.c -text
-libexec/pt_chown/Makefile -text
-libexec/pt_chown/pt_chown.c -text
 libexec/rbootd/Makefile -text
 libexec/rbootd/bpf.c -text
 libexec/rbootd/conf.c -text
@@ -38281,6 +38279,8 @@ libexec/tftpd/tftp-utils.c -text
 libexec/tftpd/tftp-utils.h -text
 libexec/tftpd/tftpd.8 -text
 libexec/tftpd/tftpd.c -text
+libexec/ulog-helper/Makefile -text
+libexec/ulog-helper/ulog-helper.c -text
 libexec/ypxfr/Makefile -text
 libexec/ypxfr/yp_dbwrite.c -text
 libexec/ypxfr/ypxfr.8 -text
@@ -44815,10 +44815,6 @@ sys/dev/dcons/dcons_os.h -text
 sys/dev/de/dc21040reg.h -text
 sys/dev/de/if_de.c -text
 sys/dev/de/if_devar.h -text
-sys/dev/dec/mc146818reg.h -text
-sys/dev/dec/mcclock.c -text
-sys/dev/dec/mcclock_if.m -text
-sys/dev/dec/mcclockvar.h -text
 sys/dev/digi/CX.bios.h -text
 sys/dev/digi/CX.c -text
 sys/dev/digi/CX.fepos.h -text
@@ -45209,8 +45205,6 @@ sys/dev/gem/if_gem_pci.c -text
 sys/dev/gem/if_gem_sbus.c -text
 sys/dev/gem/if_gemreg.h -text
 sys/dev/gem/if_gemvar.h -text
-sys/dev/gfb/gfb_pci.c -text
-sys/dev/gfb/gfb_pci.h -text
 sys/dev/glxiic/glxiic.c -text
 sys/dev/glxsb/glxsb.c -text
 sys/dev/glxsb/glxsb.h -text
@@ -46085,11 +46079,6 @@ sys/dev/ofw/openfirmio.c -text
 sys/dev/ofw/openfirmio.h -text
 sys/dev/ofw/openpromio.c -text
 sys/dev/ofw/openpromio.h -text
-sys/dev/owi/if_ieee80211.h -text
-sys/dev/owi/if_owi.c -text
-sys/dev/owi/if_owi_pccard.c -text
-sys/dev/owi/if_wireg.h -text
-sys/dev/owi/if_wivar.h -text
 sys/dev/patm/genrtab/Makefile -text
 sys/dev/patm/genrtab/genrtab.c -text
 sys/dev/patm/idt77252reg.h -text
@@ -46557,13 +46546,6 @@ sys/dev/stg/tmc18c30var.h -text
 sys/dev/stge/if_stge.c -text
 sys/dev/stge/if_stgereg.h -text
 sys/dev/streams/streams.c -text
-sys/dev/sx/cd1865.h -text
-sys/dev/sx/sx.c -text
-sys/dev/sx/sx.h -text
-sys/dev/sx/sx_pci.c -text
-sys/dev/sx/sx_util.c -text
-sys/dev/sx/sx_util.h -text
-sys/dev/sx/sxvar.h -text
 sys/dev/sym/README.sym -text
 sys/dev/sym/sym_conf.h -text
 sys/dev/sym/sym_defs.h -text
@@ -46603,8 +46585,6 @@ sys/dev/tdfx/tdfx_linux.h -text
 sys/dev/tdfx/tdfx_pci.c -text
 sys/dev/tdfx/tdfx_pci.h -text
 sys/dev/tdfx/tdfx_vars.h -text
-sys/dev/tga/tga_pci.c -text
-sys/dev/tga/tga_pci.h -text
 sys/dev/ti/if_ti.c -text
 sys/dev/ti/if_tireg.h -text
 sys/dev/ti/ti_fw.h -text
@@ -47830,7 +47810,6 @@ sys/i386/include/sigframe.h -text
 sys/i386/include/signal.h -text
 sys/i386/include/smapi.h -text
 sys/i386/include/smp.h -text
-sys/i386/include/smptests.h -text
 sys/i386/include/speaker.h -text
 sys/i386/include/specialreg.h -text
 sys/i386/include/stack.h -text
@@ -50034,8 +50013,6 @@ sys/opencrypto/skipjack.c -text
 sys/opencrypto/skipjack.h -text
 sys/opencrypto/xform.c -text
 sys/opencrypto/xform.h -text
-sys/pccard/cardinfo.h -text
-sys/pccard/cis.h -text
 sys/pci/alpm.c -text
 sys/pci/amdpm.c -text
 sys/pci/amdsmb.c -text
@@ -50218,8 +50195,7 @@ sys/sparc64/include/mcntl.h -text
 sys/sparc64/include/md_var.h -text
 sys/sparc64/include/memdev.h -text
 sys/sparc64/include/metadata.h -text
-sys/sparc64/include/mutex.h -text
-sys/sparc64/include/ofw_bus.h -text
+sys/sparc64/include/nexusvar.h -text
 sys/sparc64/include/ofw_machdep.h -text
 sys/sparc64/include/ofw_mem.h -text
 sys/sparc64/include/ofw_nexus.h -text
@@ -50735,7 +50711,6 @@ sys/x86/cpufreq/hwpstate.c -text
 sys/x86/cpufreq/p4tcc.c -text
 sys/x86/cpufreq/powernow.c -text
 sys/x86/cpufreq/smist.c -text
-sys/x86/include/README -text
 sys/x86/include/_align.h -text
 sys/x86/include/_inttypes.h -text
 sys/x86/include/apicreg.h -text

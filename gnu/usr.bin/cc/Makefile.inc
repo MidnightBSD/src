@@ -1,4 +1,4 @@
-# $MidnightBSD: src/gnu/usr.bin/cc/Makefile.inc,v 1.4 2012/06/02 20:33:57 laffer1 Exp $
+# $MidnightBSD: src/gnu/usr.bin/cc/Makefile.inc,v 1.5 2012/08/25 21:09:39 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/cc/Makefile.inc,v 1.66 2007/05/19 04:25:56 kan Exp $
 
 .include "../Makefile.inc"
@@ -25,12 +25,6 @@ CSTD?=	gnu89
 
 .if ${TARGET_ARCH} != ${MACHINE_ARCH}
 CFLAGS+=	-DCROSS_COMPILE
-.endif
-
-# If building 64-bit longs for the i386, "_LARGE_LONG" should also be defined
-# to get the proper sizes in limits.h
-.if defined(LONG_TYPE_SIZE)
-CFLAGS+=	-DLONG_TYPE_SIZE=${LONG_TYPE_SIZE}
 .endif
 
 .if defined(WANT_FORCE_OPTIMIZATION_DOWNGRADE)

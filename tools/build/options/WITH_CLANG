@@ -1,2 +1,2 @@
-.\" $FreeBSD$
+.\" $MidnightBSD$
 Set to build the Clang C/C++ compiler.

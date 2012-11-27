@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/libexec/comsat/comsat.c,v 1.2 2012/04/11 00:46:54 laffer1 Exp $ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -67,7 +67,7 @@ static const char rcsid[] =
 #include <string.h>
 #include <syslog.h>
 #include <unistd.h>
-#include <utmp.h>
+#include <utmpx.h>
 
 int	debug = 0;
 #define	dsyslog	if (debug) syslog
@@ -75,18 +75,14 @@ int	debug = 0;
 #define MAXIDLE	120
 
 char	hostname[MAXHOSTNAMELEN];
-struct	utmp *utmp = NULL;
-time_t	lastmsgtime;
-int	nutmp, uf;
 
 void jkfprintf(FILE *, char[], char[], off_t);
 void mailfor(char *);
-void notify(struct utmp *, char[], off_t, int);
-void onalrm(int);
+void notify(struct utmpx *, char[], off_t, int);
 void reapchildren(int);
 
 int
-main(int argc, char *argv[])
+main(int argc __unused, char *argv[] __unused)
 {
 	struct sockaddr_in from;
 	socklen_t fromlen;
@@ -103,15 +99,7 @@ main(int argc, char *argv[])
 		(void) recv(0, msgbuf, sizeof(msgbuf) - 1, 0);
 		exit(1);
 	}
-	if ((uf = open(_PATH_UTMP, O_RDONLY, 0)) < 0) {
-		syslog(LOG_ERR, "open: %s: %m", _PATH_UTMP);
-		(void) recv(0, msgbuf, sizeof(msgbuf) - 1, 0);
-		exit(1);
-	}
-	(void)time(&lastmsgtime);
 	(void)gethostname(hostname, sizeof(hostname));
-	onalrm(0);
-	(void)signal(SIGALRM, onalrm);
 	(void)signal(SIGTTOU, SIG_IGN);
 	(void)signal(SIGCHLD, reapchildren);
 	for (;;) {
@@ -122,57 +110,28 @@ main(int argc, char *argv[])
 			errno = 0;
 			continue;
 		}
-		if (!nutmp)		/* no one has logged in yet */
-			continue;
-		sigblock(sigmask(SIGALRM));
 		msgbuf[cc] = '\0';
-		(void)time(&lastmsgtime);
 		mailfor(msgbuf);
 		sigsetmask(0L);
 	}
 }
 
 void
-reapchildren(int signo)
+reapchildren(int signo __unused)
 {
 	while (wait3(NULL, WNOHANG, NULL) > 0);
 }
 
 void
-onalrm(int signo)
-{
-	static u_int utmpsize;		/* last malloced size for utmp */
-	static u_int utmpmtime;		/* last modification time for utmp */
-	struct stat statbf;
-
-	if (time(NULL) - lastmsgtime >= MAXIDLE)
-		exit(0);
-	(void)alarm((u_int)15);
-	(void)fstat(uf, &statbf);
-	if (statbf.st_mtime > utmpmtime) {
-		utmpmtime = statbf.st_mtime;
-		if (statbf.st_size > utmpsize) {
-			utmpsize = statbf.st_size + 10 * sizeof(struct utmp);
-			if ((utmp = realloc(utmp, utmpsize)) == NULL) {
-				syslog(LOG_ERR, "%s", strerror(errno));
-				exit(1);
-			}
-		}
-		(void)lseek(uf, (off_t)0, SEEK_SET);
-		nutmp = read(uf, utmp, (size_t)statbf.st_size)/sizeof(struct utmp);
-	}
-}
-
-void
 mailfor(char *name)
 {
-	struct utmp *utp = &utmp[nutmp];
+	struct utmpx *utp;
 	char *cp;
 	char *file;
 	off_t offset;
 	int folder;
-	char buf[sizeof(_PATH_MAILDIR) + sizeof(utmp[0].ut_name) + 1];
-	char buf2[sizeof(_PATH_MAILDIR) + sizeof(utmp[0].ut_name) + 1];
+	char buf[sizeof(_PATH_MAILDIR) + sizeof(utp->ut_user) + 1];
+	char buf2[sizeof(_PATH_MAILDIR) + sizeof(utp->ut_user) + 1];
 
 	if (!(cp = strchr(name, '@')))
 		return;
@@ -182,62 +141,71 @@ mailfor(char *name)
 		file = name;
 	else
 		file = cp + 1;
-	sprintf(buf, "%s/%.*s", _PATH_MAILDIR, (int)sizeof(utmp[0].ut_name),
+	sprintf(buf, "%s/%.*s", _PATH_MAILDIR, (int)sizeof(utp->ut_user),
 	    name);
 	if (*file != '/') {
 		sprintf(buf2, "%s/%.*s", _PATH_MAILDIR,
-		    (int)sizeof(utmp[0].ut_name), file);
+		    (int)sizeof(utp->ut_user), file);
 		file = buf2;
 	}
 	folder = strcmp(buf, file);
-	while (--utp >= utmp)
-		if (!strncmp(utp->ut_name, name, sizeof(utmp[0].ut_name)))
+	setutxent();
+	while ((utp = getutxent()) != NULL)
+		if (utp->ut_type == USER_PROCESS && !strcmp(utp->ut_user, name))
 			notify(utp, file, offset, folder);
+	endutxent();
 }
 
-static char *cr;
+static const char *cr;
 
 void
-notify(struct utmp *utp, char file[], off_t offset, int folder)
+notify(struct utmpx *utp, char file[], off_t offset, int folder)
 {
 	FILE *tp;
 	struct stat stb;
 	struct termios tio;
-	char tty[20], name[sizeof(utmp[0].ut_name) + 1];
+	char tty[20];
+	const char *s = utp->ut_line;
 
+	if (strncmp(s, "pts/", 4) == 0)
+		s += 4;
+	if (strchr(s, '/')) {
+		/* A slash is an attempt to break security... */
+		syslog(LOG_AUTH | LOG_NOTICE, "Unexpected `/' in `%s'",
+		    utp->ut_line);
+		return;
+	}
 	(void)snprintf(tty, sizeof(tty), "%s%.*s",
 	    _PATH_DEV, (int)sizeof(utp->ut_line), utp->ut_line);
-	if (strchr(tty + sizeof(_PATH_DEV) - 1, '/')) {
-		/* A slash is an attempt to break security... */
-		syslog(LOG_AUTH | LOG_NOTICE, "'/' in \"%s\"", tty);
+	if (stat(tty, &stb) == -1 || !(stb.st_mode & (S_IXUSR | S_IXGRP))) {
+		dsyslog(LOG_DEBUG, "%s: wrong mode on %s", utp->ut_user, tty);
 		return;
 	}
-	if (stat(tty, &stb) || !(stb.st_mode & (S_IXUSR | S_IXGRP))) {
-		dsyslog(LOG_DEBUG, "%s: wrong mode on %s", utp->ut_name, tty);
+	dsyslog(LOG_DEBUG, "notify %s on %s", utp->ut_user, tty);
+	switch (fork()) {
+	case -1:
+		syslog(LOG_NOTICE, "fork failed (%m)");
+		return;
+	case 0:
+		break;
+	default:
 		return;
 	}
-	dsyslog(LOG_DEBUG, "notify %s on %s\n", utp->ut_name, tty);
-	if (fork())
-		return;
-	(void)signal(SIGALRM, SIG_DFL);
-	(void)alarm((u_int)30);
 	if ((tp = fopen(tty, "w")) == NULL) {
 		dsyslog(LOG_ERR, "%s: %s", tty, strerror(errno));
 		_exit(1);
 	}
 	(void)tcgetattr(fileno(tp), &tio);
 	cr = ((tio.c_oflag & (OPOST|ONLCR)) == (OPOST|ONLCR)) ?  "\n" : "\n\r";
-	(void)strncpy(name, utp->ut_name, sizeof(utp->ut_name));
-	name[sizeof(name) - 1] = '\0';
 	switch (stb.st_mode & (S_IXUSR | S_IXGRP)) {
 	case S_IXUSR:
 	case (S_IXUSR | S_IXGRP):
 		(void)fprintf(tp, 
 		    "%s\007New mail for %s@%.*s\007 has arrived%s%s%s:%s----%s",
-		    cr, name, (int)sizeof(hostname), hostname,
+		    cr, utp->ut_user, (int)sizeof(hostname), hostname,
 		    folder ? cr : "", folder ? "to " : "", folder ? file : "",
 		    cr, cr);
-		jkfprintf(tp, name, file, offset);
+		jkfprintf(tp, utp->ut_user, file, offset);
 		break;
 	case S_IXGRP:
 		(void)fprintf(tp, "\007");

@@ -1,12 +1,12 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 # $FreeBSD: src/libexec/Makefile,v 1.77 2007/07/03 12:46:04 mlaier Exp $
-# $MidnightBSD: src/libexec/Makefile,v 1.9 2011/03/06 16:17:36 laffer1 Exp $
+# $MidnightBSD: src/libexec/Makefile,v 1.10 2011/08/07 01:27:52 laffer1 Exp $
 
 .include <bsd.own.mk>
 
-SUBDIR=	atrun \
+SUBDIR=	${_atrun} \
 	bootpd \
-	comsat \
+	${_comsat} \
 	fingerd \
 	ftpd \
 	getty \
@@ -28,8 +28,7 @@ SUBDIR=	atrun \
 	mport.updepends \
 	mport.version_cmp \
 	msearch.index \
-	pppoed \
-	pt_chown \
+	${_pppoed} \
 	rbootd \
 	revnetgroup \
 	${_rlogind} \
@@ -44,21 +43,34 @@ SUBDIR=	atrun \
 	${_smrsh} \
 	talkd \
 	tcpd \
-	telnetd \
+	${_telnetd} \
 	tftpd \
 	${_tftp-proxy} \
+	ulog-helper \
 	${_ypxfr}
+
+.if ${MK_AT} != "no"
+_atrun=		atrun
+.endif
+
+.if ${MK_MAIL} != "no"
+_comsat=	comsat
+.endif
 
 .if ${MK_NIS} != "no"
 _mknetid=	mknetid
 _ypxfr=		ypxfr
 .endif
 
+.if ${MK_NETGRAPH} != "no"
+_pppoed=	pppoed
+.endif
+
 .if ${MK_PF} != "no"
 _tftp-proxy=	tftp-proxy
 .endif
 
-.if !defined(NO_PIC)
+.if !defined(NO_PIC) && !defined(NO_RTLD)
 _rtld-elf=	rtld-elf
 .endif
 
@@ -69,7 +81,11 @@ _rshd=		rshd
 
 .if ${MK_SENDMAIL} != "no"
 _mail.local=	mail.local
-_smrsh=	smrsh
+_smrsh=		smrsh
+.endif
+
+.if ${MK_TELNET} != "no"
+_telnetd=	telnetd
 .endif
 
 .include <bsd.subdir.mk>

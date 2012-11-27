@@ -1,4 +1,4 @@
-.\" $FreeBSD$
+.\" $MidnightBSD$
 Set to not build
 .Xr amd 8 ,
 and related programs.

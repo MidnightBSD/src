@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: ncvs/src/bin/csh/config_p.h,v 1.13 2007/03/11 22:41:19 mp Exp $ */
+/* $FreeBSD$ */
 /*
  * config.h -- configure various defines for tcsh
  *
@@ -83,11 +82,10 @@
 #if defined(__FreeBSD__)
 #define NLS_BUGS
 #define BSD_STYLE_COLORLS
-/* we want to use the system malloc when we install as /bin/csh */
-#define SYSMALLOC
 /* Use LC_MESSAGES locale category to open the message catalog */
 #define MCLoadBySet NL_CAT_LOCALE
 #define BUFSIZE 8192
+#define UTMPX_FILE "/var/run/utx.active"
 #endif
 
 #if defined(__bsdi__)
@@ -108,9 +106,6 @@
 
 #elif defined(__APPLE__)
 # define SYSMALLOC
-
-#else
-# define NLS_CATALOGS
 #endif
 
 #endif /* _h_config */

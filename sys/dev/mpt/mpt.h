@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/mpt/mpt.h,v 1.6 2012/11/15 22:35:21 laffer1 Exp $ */
 /*-
  * Generic defines for LSI '909 FC  adapters.
  * FreeBSD Version.
@@ -105,30 +105,18 @@
 #include <sys/systm.h>
 #include <sys/endian.h>
 #include <sys/eventhandler.h>
-#if __FreeBSD_version < 500000  
-#include <sys/kernel.h>
-#include <sys/queue.h>
-#include <sys/malloc.h>
-#include <sys/devicestat.h>
-#else
 #include <sys/lock.h>
 #include <sys/kernel.h>
 #include <sys/queue.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/condvar.h>
-#endif
 #include <sys/proc.h>
 #include <sys/bus.h>
 #include <sys/module.h>
 
 #include <machine/cpu.h>
 #include <machine/resource.h>
-
-#if __FreeBSD_version < 500000  
-#include <machine/bus.h>
-#include <machine/clock.h>
-#endif
 
 #ifdef __sparc64__
 #include <dev/ofw/openfirm.h>
@@ -137,13 +125,8 @@
 
 #include <sys/rman.h>
 
-#if __FreeBSD_version < 500000  
-#include <pci/pcireg.h>
-#include <pci/pcivar.h>
-#else
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
-#endif
 
 #include <machine/bus.h>
 #include "opt_ddb.h"
@@ -238,10 +221,6 @@ int mpt_modevent(module_t, int, void *);
 #define bus_dmamap_sync_range(dma_tag, dmamap, offset, len, op)	\
 	bus_dmamap_sync(dma_tag, dmamap, op)
 
-#if __FreeBSD_version < 600000
-#define	bus_get_dma_tag(x)	NULL
-#endif
-#if __FreeBSD_version >= 501102
 #define mpt_dma_tag_create(mpt, parent_tag, alignment, boundary,	\
 			   lowaddr, highaddr, filter, filterarg,	\
 			   maxsize, nsegments, maxsegsz, flags,		\
@@ -251,17 +230,6 @@ int mpt_modevent(module_t, int, void *);
 			   maxsize, nsegments, maxsegsz, flags,		\
 			   busdma_lock_mutex, &(mpt)->mpt_lock,		\
 			   dma_tagp)
-#else
-#define mpt_dma_tag_create(mpt, parent_tag, alignment, boundary,	\
-			   lowaddr, highaddr, filter, filterarg,	\
-			   maxsize, nsegments, maxsegsz, flags,		\
-			   dma_tagp)					\
-	bus_dma_tag_create(parent_tag, alignment, boundary,		\
-			   lowaddr, highaddr, filter, filterarg,	\
-			   maxsize, nsegments, maxsegsz, flags,		\
-			   dma_tagp)
-#endif
-
 struct mpt_map_info {
 	struct mpt_softc *mpt;
 	int		  error;
@@ -270,38 +238,17 @@ struct mpt_map_info {
 
 void mpt_map_rquest(void *, bus_dma_segment_t *, int, int);
 /* **************************** NewBUS interrupt Crock ************************/
-#if __FreeBSD_version < 700031
 #define	mpt_setup_intr(d, i, f, U, if, ifa, hp)	\
 	bus_setup_intr(d, i, f, if, ifa, hp)
-#else
-#define	mpt_setup_intr	bus_setup_intr
-#endif
 
 /* **************************** NewBUS CAM Support ****************************/
-#if __FreeBSD_version < 700049
-#define mpt_xpt_bus_register(sim, parent, bus)	\
-	xpt_bus_register(sim, bus)
-#else
 #define mpt_xpt_bus_register	xpt_bus_register
-#endif
 
 /**************************** Kernel Thread Support ***************************/
-#if __FreeBSD_version > 800001
 #define mpt_kthread_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg) \
 	kproc_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg)
 #define	mpt_kthread_exit(status)	\
 	kproc_exit(status)
-#elif __FreeBSD_version > 500005
-#define mpt_kthread_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg) \
-	kthread_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg)
-#define	mpt_kthread_exit(status)	\
-	kthread_exit(status)
-#else
-#define mpt_kthread_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg) \
-	kthread_create(func, farg, proc_ptr, fmtstr, arg)
-#define	mpt_kthread_exit(status)	\
-	kthread_exit(status)
-#endif
 
 /********************************** Endianess *********************************/
 #define	MPT_2_HOST64(ptr, tag)	ptr->tag = le64toh(ptr->tag)
@@ -599,13 +546,8 @@ struct mptsas_portinfo {
 
 struct mpt_softc {
 	device_t		dev;
-#if __FreeBSD_version < 500000  
-	uint32_t		mpt_islocked;	
-	int			mpt_splsaved;
-#else
 	struct mtx		mpt_lock;
 	int			mpt_locksetup;
-#endif
 	uint32_t		mpt_pers_mask;
 	uint32_t
 				: 7,
@@ -676,7 +618,6 @@ struct mpt_softc {
 #define	mpt_fcport_speed	cfg.fc._port_speed
 		} fc;
 	} cfg;
-#if __FreeBSD_version >= 500000  
 	/*
 	 * Device config information stored up for sysctl to access
 	 */
@@ -689,7 +630,6 @@ struct mpt_softc {
 			char wwpn[19];
 		} fc;
 	} scinfo;
-#endif
 
 	/* Controller Info for RAID information */
 	CONFIG_PAGE_IOC_2 *	ioc_page2;
@@ -1098,7 +1038,6 @@ enum {
 	MPT_PRT_NONE=100
 };
 
-#if __FreeBSD_version > 500000
 #define mpt_lprt(mpt, level, ...)		\
 do {						\
 	if (level <= (mpt)->verbose)		\
@@ -1111,14 +1050,6 @@ do {						\
 	if (level <= (mpt)->verbose)		\
 		mpt_prtc(mpt, __VA_ARGS__);	\
 } while (0)
-#endif
-#else
-void mpt_lprt(struct mpt_softc *, int, const char *, ...)
-	__printflike(3, 4);
-#if 0
-void mpt_lprtc(struct mpt_softc *, int, const char *, ...)
-	__printflike(3, 4);
-#endif
 #endif
 void mpt_prt(struct mpt_softc *, const char *, ...)
 	__printflike(2, 3);

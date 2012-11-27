@@ -1,7 +1,14 @@
-# $MidnightBSD: src/gnu/usr.bin/cc/Makefile.tgt,v 1.3 2009/05/22 00:51:15 laffer1 Exp $
+# $MidnightBSD: src/gnu/usr.bin/cc/Makefile.tgt,v 1.4 2012/07/08 03:52:17 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/cc/Makefile.tgt,v 1.11 2007/05/19 04:25:56 kan Exp $
 
+# These assignments duplicate much of the functionality of
+# MACHINE_CPUARCH, but there's no easy way to export make functions...
+
+.if defined(TARGET_ARCH)
+TARGET_CPUARCH=${TARGET_ARCH}
+.else
 TARGET_CPUARCH=${MACHINE_CPUARCH}
+.endif
 TARGET_ARCH?=	${MACHINE_ARCH}
 GCC_CPU=${TARGET_CPUARCH:C/amd64/i386/:C/sparc64/sparc/}
 

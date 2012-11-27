@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/geom/raid3/g_raid3_ctl.c,v 1.4 2008/12/03 00:25:50 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/raid3/g_raid3_ctl.c,v 1.21 2006/11/01 22:51:49 pjd Exp $");
+__MBSDID("$FreeBSD: src/sys/geom/raid3/g_raid3_ctl.c,v 1.21 2006/11/01 22:51:49 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

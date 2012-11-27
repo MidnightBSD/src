@@ -1,5 +1,4 @@
-# $MidnightBSD: src/sys/Makefile,v 1.9 2012/03/24 01:11:05 laffer1 Exp $
-# $FreeBSD: src/sys/Makefile,v 1.33 2005/03/08 00:09:41 grog Exp $
+# $MidnightBSD: src/sys/Makefile,v 1.10 2012/09/14 01:54:57 laffer1 Exp $
 
 .include <bsd.own.mk>
 
