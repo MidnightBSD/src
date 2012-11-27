@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
 * ----------------------------------------------------------------------------
 * "THE BEER-WARE LICENSE" (Revision 42):
@@ -7,9 +6,12 @@
 * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
 * ----------------------------------------------------------------------------
 *
-* $FreeBSD: src/lib/libdisk/libdisk.h,v 1.63 2006/01/25 11:24:37 cognet Exp $
+* $MidnightBSD$
 *
 */
+
+#ifndef _LIBDISK_H_
+#define _LIBDISK_H_
 
 /* #define DEBUG 1 */
 /* You can define a particular architecture here if you are debugging. */
@@ -30,7 +32,8 @@ enum platform {
 	p_ia64,
 	p_ppc,
 	p_amd64,
-	p_arm
+	p_arm,
+	p_mips
 };
 extern const enum platform platform;
 
@@ -363,3 +366,5 @@ __END_DECLS
  *
  *
  */
+
+#endif /* _LIBDISK_H_ */

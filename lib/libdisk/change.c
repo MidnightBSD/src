@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -9,7 +8,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libdisk/change.c,v 1.26 2005/03/30 13:03:33 nyan Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,27 +34,24 @@ Sanitize_Bios_Geom(struct disk *disk)
 
 	sane = 1;
 
-#ifdef PC98
 	if (disk->bios_cyl >= 65536)
-#else
-	if (disk->bios_cyl > 1024)
-#endif
 		sane = 0;
 #ifdef PC98
 	if (disk->bios_hd >= 256)
-#else
-	if (disk->bios_hd > 16)
-#endif
 		sane = 0;
-#ifdef PC98
 	if (disk->bios_sect >= 256)
-#else
-	if (disk->bios_sect > 63)
-#endif
 		sane = 0;
+#else
+	if (disk->bios_hd > 256)
+		sane = 0;
+	if (disk->bios_sect > 63)
+		sane = 0;
+#endif
+#if 0	/* Disable a check on a disk size.  It's too strict. */
 	if (disk->bios_cyl * disk->bios_hd * disk->bios_sect !=
 	    disk->chunks->size)
 		sane = 0;
+#endif
 	if (sane)
 		return;
 

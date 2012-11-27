@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -9,7 +8,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libdisk/open_disk.c,v 1.12.2.1 2008/07/26 22:52:12 marcel Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -127,6 +126,9 @@ Int_Open_Disk(const char *name, char *conftxt)
 			printf("libdisk: Int_Open_Disk(%s): unknown parameter '%s' with value '%s' in line %d, ignored\n",
 				name, a, b, line);
 	}
+
+	/* Sanitize the parameters. */
+	Sanitize_Bios_Geom(d);
 
 	/*
 	 * Calculate the number of cylinders this disk must have. If we have

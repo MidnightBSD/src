@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -9,7 +8,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libdisk/write_i386_disk.c,v 1.9 2004/06/04 11:49:11 brian Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <stdio.h>
 #include <stdlib.h>

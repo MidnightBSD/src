@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -9,7 +8,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libdisk/tst01.c,v 1.35 2003/11/02 08:01:18 marcel Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <stdio.h>
 #include <stdlib.h>

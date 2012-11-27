@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -9,7 +8,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libdisk/disk.c,v 1.127.2.1 2008/03/17 19:05:36 antoine Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,6 +52,8 @@ const enum platform platform =
 	p_amd64
 #elif defined(__arm__)
 	p_arm
+#elif defined(__mips__)
+	p_mips
 #else
 	IHAVENOIDEA
 #endif
