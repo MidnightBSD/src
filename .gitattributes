@@ -53852,6 +53852,7 @@ usr.sbin/amd/fixmount/Makefile -text
 usr.sbin/amd/fsinfo/Makefile -text
 usr.sbin/amd/hlfsd/Makefile -text
 usr.sbin/amd/include/Makefile -text
+usr.sbin/amd/include/amu_autofs_prot.h -text
 usr.sbin/amd/include/amu_nfs_prot.h -text
 usr.sbin/amd/include/aux_conf.h -text
 usr.sbin/amd/include/build_version.h -text
