@@ -1,5 +1,5 @@
 #	$NetBSD: mkconf,v 1.1.1.1 1997/07/24 21:20:12 christos Exp $
-# $FreeBSD: src/usr.sbin/amd/include/newvers.sh,v 1.9 2005/02/16 21:02:50 ru Exp $
+# $FreeBSD$
 # mkconf
 # Generate local configuration parameters for amd
 #
@@ -32,12 +32,12 @@ fi
 cat << __EOF
 
 /* Define name of host */
-#define HOST_NAME "`hostname`"
+#define BUILD_HOST "`hostname`"
 
 /* Define user name */
-#define USER_NAME "`whoami`"
+#define BUILD_USER "`whoami`"
 
 /* Define configuration date */
-#define CONFIG_DATE "`LC_ALL=C date`"
+#define BUILD_DATE "`LC_ALL=C date`"
 
 __EOF
