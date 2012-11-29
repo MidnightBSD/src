@@ -1,15 +1,19 @@
 #
-# $FreeBSD: src/usr.sbin/auditd/Makefile,v 1.1 2006/02/02 10:15:30 rwatson Exp $
+# $MidnightBSD$
 #
 
 OPENBSMDIR=${.CURDIR}/../../contrib/openbsm
 .PATH: ${OPENBSMDIR}/bin/auditd
 
+CFLAGS+=	-I${OPENBSMDIR}
+
 PROG=	auditd
-SRCS=	auditd.c audit_warn.c
+SRCS=	auditd.c audit_warn.c auditd_fbsd.c
 MAN=	auditd.8
 
-DPADD=	${LIBBSM}
-LDADD=	-lbsm
+DPADD=	${LIBAUDITD} ${LIBBSM}
+LDADD=	-lauditd -lbsm
+
+WARNS?=	3
 
 .include <bsd.prog.mk>
