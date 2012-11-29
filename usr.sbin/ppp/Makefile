@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/ppp/Makefile,v 1.110 2006/03/17 18:54:42 ru Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
@@ -24,6 +24,9 @@ PPP_NO_SUID=
 
 .if ${MK_ATM} == "no"
 PPP_NO_ATM=
+.endif
+.if ${MK_NETGRAPH} == "no"
+PPP_NO_NETGRAPH=
 .endif
 .if ${MK_PAM_SUPPORT} == "no"
 PPP_NO_PAM=

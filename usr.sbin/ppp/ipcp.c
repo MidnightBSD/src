@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/ipcp.c,v 1.123 2005/01/27 14:09:33 brian Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/param.h>
@@ -117,6 +117,8 @@ static void IpcpSentTerminateReq(struct fsm *);
 static void IpcpSendTerminateAck(struct fsm *, u_char);
 static void IpcpDecodeConfig(struct fsm *, u_char *, u_char *, int,
                              struct fsm_decode *);
+
+extern struct libalias *la;
 
 static struct fsm_callbacks ipcp_Callbacks = {
   IpcpLayerUp,
@@ -317,8 +319,11 @@ ipcp_WriteDNS(struct ipcp *ipcp)
                  strerror(errno));
       return 0;
     }
-  } else
+  } else {
     umask(mask);
+    log_Printf(LogERROR,"fopen(\"%s\", \"w\") failed: %s\n", _PATH_RESCONF,
+                 strerror(errno));
+  }
 
   return 1;
 }
@@ -690,7 +695,7 @@ ipcp_SetIPaddress(struct ipcp *ipcp, struct in_addr myaddr,
   if (bundle->ncp.cfg.sendpipe > 0 || bundle->ncp.cfg.recvpipe > 0) {
     ncprange_getsa(&myrange, &ssgw, &ssmask);
     ncpaddr_getsa(&hisncpaddr, &ssdst);
-    rt_Update(bundle, sadst, sagw, samask);
+    rt_Update(bundle, sadst, sagw, samask, NULL, NULL);
   }
 
   if (Enabled(bundle, OPT_SROUTES))
@@ -915,7 +920,7 @@ ipcp_InterfaceUp(struct ipcp *ipcp)
 
 #ifndef NONAT
   if (ipcp->fsm.bundle->NatEnabled)
-    PacketAliasSetAddress(ipcp->my_ip);
+    LibAliasSetAddress(la, ipcp->my_ip);
 #endif
 
   return 1;

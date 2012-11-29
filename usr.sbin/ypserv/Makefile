@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/ypserv/Makefile,v 1.24 2004/10/18 21:42:15 ru Exp $
+# $MidnightBSD$
 
 RPCDIR=	${.CURDIR}/../../include/rpcsvc
 .PATH: ${RPCDIR}
@@ -10,12 +10,14 @@ SRCS=	yp_svc.c yp_server.c yp_dblookup.c yp_dnslookup.c \
 
 CFLAGS+= -DDB_CACHE -DTCP_WRAPPER -I.
 
+WARNS?=	0
+
 DPADD=	${LIBWRAP}
 LDADD=	-lwrap
 
 CLEANFILES= yp_svc.c ypxfr_clnt.c yp.h
 
-RPCGEN= rpcgen -I -C
+RPCGEN= RPCGEN_CPP=${CPP:Q} rpcgen -I -C
 
 # We need to remove the 'static' keyword from _rpcsvcstate so that
 # yp_main.c can see it.

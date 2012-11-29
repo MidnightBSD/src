@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/exec.h,v 1.5 1999/11/06 22:50:53 brian Exp $
+ * $MidnightBSD$
  */
 
 struct physical;
@@ -32,4 +32,4 @@ struct device;
 extern struct device *exec_Create(struct physical *);
 extern struct device *exec_iov2device(int, struct physical *,
                                       struct iovec *, int *, int, int *, int *);
-#define exec_DeviceSize physical_DeviceSize
+extern unsigned exec_DeviceSize(void);

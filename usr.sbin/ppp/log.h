@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/log.h,v 1.34 2004/07/17 01:07:52 brian Exp $
+ * $MidnightBSD$
  */
 
 #define LogLOG		(0)
@@ -76,7 +76,7 @@ extern void log_DiscardAllLocal(u_long *);
 extern int log_IsKept(int);
 extern int log_IsKeptLocal(int, u_long);
 extern void log_Open(const char *);
-extern void log_SetTun(int);
+extern void log_SetTun(int, const char *);
 extern void log_Close(void);
 #ifdef __GNUC__
 extern void log_Printf(int, const char *,...)

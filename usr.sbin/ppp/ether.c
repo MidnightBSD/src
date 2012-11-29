@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/ether.c,v 1.30 2004/09/06 00:07:58 marcel Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/param.h>
@@ -193,17 +193,18 @@ static void
 ether_device2iov(struct device *d, struct iovec *iov, int *niov,
                  int maxiov __unused, int *auxfd, int *nauxfd)
 {
-  struct etherdevice *dev = device2ether(d);
+  struct etherdevice *dev;
   int sz = physical_MaxDeviceSize();
 
-  iov[*niov].iov_base = realloc(d, sz);
-  if (iov[*niov].iov_base == NULL) {
+  iov[*niov].iov_base = d = realloc(d, sz);
+  if (d == NULL) {
     log_Printf(LogALERT, "Failed to allocate memory: %d\n", sz);
     AbortProgram(EX_OSERR);
   }
   iov[*niov].iov_len = sz;
   (*niov)++;
 
+  dev = device2ether(d);
   if (dev->cs >= 0) {
     *auxfd = dev->cs;
     (*nauxfd)++;

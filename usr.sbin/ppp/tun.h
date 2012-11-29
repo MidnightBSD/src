@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/tun.h,v 1.10 2000/11/28 13:18:35 brian Exp $
+ * $MidnightBSD$
  */
 
 struct tun_data {

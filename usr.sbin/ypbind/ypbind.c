@@ -28,12 +28,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/ypbind/ypbind.c,v 1.40 2004/10/17 19:33:33 stefanf Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <sys/signal.h>
 #include <sys/socket.h>
 #include <sys/file.h>
@@ -115,6 +116,9 @@ static struct _dom_binding *broad_domain;
 int ypsetmode = YPSET_NO;
 int ypsecuremode = 0;
 int ppid;
+
+#define NOT_RESPONDING_HYSTERESIS 10
+static int not_responding_count = 0;
 
 /*
  * Special restricted mode variables: when in restricted mode, only the
@@ -462,6 +466,9 @@ main(int argc, char *argv[])
 
 	openlog(argv[0], LOG_PID, LOG_DAEMON);
 
+	if (madvise(NULL, 0, MADV_PROTECT) != 0)
+		syslog(LOG_WARNING, "madvise(): %m");
+
 	/* Kick off the default domain */
 	broadcast(ypbindlist);
 
@@ -654,9 +661,13 @@ broadcast(struct _dom_binding *ypdb)
 		return;
 	}
 
-	if (ypdb->dom_vers == -1 && (long)ypdb->dom_server_addr.sin_addr.s_addr)
-		syslog(LOG_WARNING, "NIS server [%s] for domain \"%s\" not responding",
-		inet_ntoa(ypdb->dom_server_addr.sin_addr), ypdb->dom_domain);
+	if (ypdb->dom_vers == -1 && (long)ypdb->dom_server_addr.sin_addr.s_addr) {
+		if (not_responding_count++ >= NOT_RESPONDING_HYSTERESIS) {
+			not_responding_count = NOT_RESPONDING_HYSTERESIS;
+			syslog(LOG_WARNING, "NIS server [%s] for domain \"%s\" not responding",
+			    inet_ntoa(ypdb->dom_server_addr.sin_addr), ypdb->dom_domain);
+		}
+	}
 
 	broad_domain = ypdb;
 	flock(ypdb->dom_lockfd, LOCK_UN);
@@ -886,9 +897,13 @@ rpc_received(char *dom, struct sockaddr_in *raddrp, int force)
 	}
 
 	/* We've recovered from a crash: inform the world. */
-	if (ypdb->dom_vers == -1 && ypdb->dom_server_addr.sin_addr.s_addr)
-		syslog(LOG_WARNING, "NIS server [%s] for domain \"%s\" OK",
-		inet_ntoa(raddrp->sin_addr), ypdb->dom_domain);
+	if (ypdb->dom_vers == -1 && ypdb->dom_server_addr.sin_addr.s_addr) {
+		if (not_responding_count >= NOT_RESPONDING_HYSTERESIS) {
+			not_responding_count = 0;
+			syslog(LOG_WARNING, "NIS server [%s] for domain \"%s\" OK",
+			    inet_ntoa(raddrp->sin_addr), ypdb->dom_domain);
+		}
+	}
 
 	bcopy(raddrp, &ypdb->dom_server_addr,
 		sizeof ypdb->dom_server_addr);

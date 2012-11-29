@@ -1,0 +1,33 @@
+# $MidnightBSD$
+
+.if ${MK_APM} != "no"
+SUBDIR+=	apm
+SUBDIR+=	apmd
+.endif
+SUBDIR+=	asf
+.if ${MK_TOOLCHAIN} != "no"
+SUBDIR+=	btxld
+.endif
+SUBDIR+=	cpucontrol
+SUBDIR+=	kgmon
+SUBDIR+=	kgzip
+SUBDIR+=	lptcontrol
+.if ${MK_NCP} != "no"
+SUBDIR+=	mount_nwfs
+.endif
+SUBDIR+=	mptable
+.if ${MK_NDIS} != "no"
+SUBDIR+=	ndiscvt
+.endif
+SUBDIR+=	pnpinfo
+SUBDIR+=	sicontrol
+SUBDIR+=	spkrtest
+SUBDIR+=	zzz
+
+.if ${MK_ACPI} != "no"
+SUBDIR+=	acpi
+.endif
+SUBDIR+=	boot0cfg
+.if ${MK_WIRELESS} != "no"
+SUBDIR+=	wlconfig
+.endif

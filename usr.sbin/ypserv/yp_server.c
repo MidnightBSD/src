@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/ypserv/yp_server.c,v 1.40 2006/06/09 14:01:07 maxim Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "yp.h"
 #include "yp_extern.h"
@@ -563,7 +563,10 @@ ypproc_all_2_svc(ypreq_nokey *argp, struct svc_req *rqstp)
 	 * Proper fix for PR #10970: exit here so that we don't risk
 	 * having a child spawned from this sub-process.
 	 */
-	_exit(0);
+	if (!debug)
+		_exit(0);
+
+	return &result;
 }
 
 ypresp_master *

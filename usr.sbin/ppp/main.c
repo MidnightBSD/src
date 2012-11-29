@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/main.c,v 1.193 2004/12/21 11:12:05 ru Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/param.h>
@@ -107,6 +107,7 @@ static void TerminalStop(int);
 
 static struct bundle *SignalBundle;
 static struct prompt *SignalPrompt;
+struct libalias *la;
 
 void
 Cleanup()
@@ -327,7 +328,7 @@ main(int argc, char **argv)
   log_Open(name ? name + 1 : argv[0]);
 
 #ifndef NONAT
-  PacketAliasInit();
+  la = LibAliasInit(NULL);
 #endif
   label = ProcessArgs(argc, argv, &sw);
 
@@ -385,11 +386,6 @@ main(int argc, char **argv)
 
   /* NOTE:  We may now have changed argv[1] via a ``set proctitle'' */
 
-  if (prompt) {
-    prompt->bundle = bundle;	/* couldn't do it earlier */
-    if (!sw.quiet)
-      prompt_Printf(prompt, "Using interface: %s\n", bundle->iface->name);
-  }
   SignalBundle = bundle;
   bundle->NatEnabled = sw.nat;
   if (sw.nat)
@@ -428,6 +424,12 @@ main(int argc, char **argv)
                   "in auto mode.\n");
     AbortProgram(EX_START);
   }
+
+  if (prompt) {
+    prompt->bundle = bundle;	/* couldn't do it earlier */
+    if (!sw.quiet)
+      prompt_Printf(prompt, "Using interface: %s\n", bundle->iface->name);
+  } 
 
   if (sw.mode != PHYS_INTERACTIVE) {
     if (sw.mode != PHYS_DIRECT) {
@@ -508,9 +510,11 @@ main(int argc, char **argv)
       if (!sw.fg)
         setsid();
     } else {
-      /* -direct - STDIN_FILENO gets used by physical_Open */
+      /*
+       * -direct - STDIN_FILENO gets used by physical_Open.  STDOUT_FILENO
+       * *may* get used in exec/pipe mode.
+       */
       prompt_TtyInit(NULL);
-      close(STDOUT_FILENO);
       close(STDERR_FILENO);
     }
   } else {

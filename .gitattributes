@@ -53813,7 +53813,10 @@ usr.sbin/IPXrouted/timer.c -text
 usr.sbin/IPXrouted/trace.c -text
 usr.sbin/IPXrouted/trace.h -text
 usr.sbin/Makefile -text
+usr.sbin/Makefile.amd64 -text
+usr.sbin/Makefile.i386 -text
 usr.sbin/Makefile.inc -text
+usr.sbin/Makefile.sparc64 -text
 usr.sbin/ac/Makefile -text
 usr.sbin/ac/ac.8 -text
 usr.sbin/ac/ac.c -text
@@ -54968,9 +54971,6 @@ usr.sbin/ppp/vjcomp.h -text
 usr.sbin/pppctl/Makefile -text
 usr.sbin/pppctl/pppctl.8 -text
 usr.sbin/pppctl/pppctl.c -text
-usr.sbin/pppstats/Makefile -text
-usr.sbin/pppstats/pppstats.8 -text
-usr.sbin/pppstats/pppstats.c -text
 usr.sbin/praliases/Makefile -text
 usr.sbin/praudit/Makefile -text
 usr.sbin/procctl/Makefile -text
@@ -55175,6 +55175,10 @@ usr.sbin/sensorsd/sensorsd.conf.5 -text
 usr.sbin/service/Makefile -text
 usr.sbin/service/service.8 -text
 usr.sbin/service/service.sh -text
+usr.sbin/services_mkdb/Makefile -text
+usr.sbin/services_mkdb/services_mkdb.8 -text
+usr.sbin/services_mkdb/services_mkdb.c -text
+usr.sbin/services_mkdb/uniq.c -text
 usr.sbin/setfib/Makefile -text
 usr.sbin/setfib/setfib.1 -text
 usr.sbin/setfib/setfib.c -text

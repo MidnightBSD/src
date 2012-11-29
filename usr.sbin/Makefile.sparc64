@@ -1,0 +1,4 @@
+# $MidnightBSD$
+
+SUBDIR+=	eeprom
+SUBDIR+=	ofwdump

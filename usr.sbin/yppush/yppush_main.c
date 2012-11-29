@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/yppush/yppush_main.c,v 1.22 2006/08/16 12:58:41 thomas Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <errno.h>
 #include <signal.h>
@@ -487,7 +487,6 @@ main(int argc, char *argv[])
 	};
 	struct hostlist *yppush_hostlist = NULL;
 	struct hostlist *tmp;
-	struct sigaction sa;
 
 	while ((ch = getopt(argc, argv, "d:j:p:h:t:v")) != -1) {
 		switch (ch) {

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/ip.c,v 1.104 2004/09/06 23:54:54 brian Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/param.h>

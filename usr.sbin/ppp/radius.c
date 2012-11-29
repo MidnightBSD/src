@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/radius.c,v 1.54 2007/05/25 13:45:49 novel Exp $
+ * $MidnightBSD$
  *
  */
 
@@ -833,6 +833,10 @@ radius_put_physical_details(struct radius *rad, struct physical *p)
   type = RAD_VIRTUAL;
   if (p->handler)
     switch (p->handler->type) {
+      case I4B_DEVICE:
+        type = RAD_ISDN_SYNC;
+        break;
+
       case TTY_DEVICE:
         type = RAD_ASYNC;
         break;

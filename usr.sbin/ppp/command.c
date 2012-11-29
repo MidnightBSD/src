@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/command.c,v 1.307 2007/05/25 13:45:48 novel Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/param.h>
@@ -184,6 +184,7 @@ static int DeleteCommand(struct cmdargs const *);
 static int NegotiateCommand(struct cmdargs const *);
 static int ClearCommand(struct cmdargs const *);
 static int RunListCommand(struct cmdargs const *);
+static int IfaceNameCommand(struct cmdargs const *arg);
 static int IfaceAddCommand(struct cmdargs const *);
 static int IfaceDeleteCommand(struct cmdargs const *);
 static int IfaceClearCommand(struct cmdargs const *);
@@ -192,6 +193,8 @@ static int SetProcTitle(struct cmdargs const *);
 static int NatEnable(struct cmdargs const *);
 static int NatOption(struct cmdargs const *);
 #endif
+
+extern struct libalias *la;
 
 static const char *
 showcx(struct cmdtab const *cmd)
@@ -821,6 +824,10 @@ static struct cmdtab const IfaceCommands[] =
    "Delete iface address", "iface delete addr", (void *)1},
   {NULL, "delete!", IfaceDeleteCommand, LOCAL_AUTH,
    "Delete iface address", "iface delete addr", (void *)1},
+  {"name", NULL, IfaceNameCommand, LOCAL_AUTH,
+    "Set iface name", "iface name name", NULL},
+  {"description", NULL, iface_Descr, LOCAL_AUTH,
+    "Set iface description", "iface description text", NULL},
   {"show", NULL, iface_Show, LOCAL_AUTH,
    "Show iface address(es)", "iface show", NULL},
   {"help", "?", HelpCommand, LOCAL_AUTH | LOCAL_NO_AUTH,
@@ -2632,7 +2639,7 @@ NatEnable(struct cmdargs const *arg)
     if (strcasecmp(arg->argv[arg->argn], "yes") == 0) {
       if (!arg->bundle->NatEnabled) {
         if (arg->bundle->ncp.ipcp.fsm.state == ST_OPENED)
-          PacketAliasSetAddress(arg->bundle->ncp.ipcp.my_ip);
+          LibAliasSetAddress(la, arg->bundle->ncp.ipcp.my_ip);
         arg->bundle->NatEnabled = 1;
       }
       return 0;
@@ -2656,13 +2663,13 @@ NatOption(struct cmdargs const *arg)
   if (arg->argc == arg->argn+1) {
     if (strcasecmp(arg->argv[arg->argn], "yes") == 0) {
       if (arg->bundle->NatEnabled) {
-	PacketAliasSetMode(param, param);
+	LibAliasSetMode(la, param, param);
 	return 0;
       }
       log_Printf(LogWARN, "nat not enabled\n");
     } else if (strcmp(arg->argv[arg->argn], "no") == 0) {
       if (arg->bundle->NatEnabled) {
-	PacketAliasSetMode(0, param);
+	LibAliasSetMode(la, 0, param);
 	return 0;
       }
       log_Printf(LogWARN, "nat not enabled\n");
@@ -3170,6 +3177,21 @@ RunListCommand(struct cmdargs const *arg)
   else
     log_Printf(LogWARN, "%s command must have arguments\n", cmd);
 
+  return 0;
+}
+
+static int
+IfaceNameCommand(struct cmdargs const *arg)
+{
+  int n = arg->argn;
+
+  if (arg->argc != n + 1)
+    return -1;
+
+  if (!iface_Name(arg->bundle->iface, arg->argv[n]))
+    return 1;
+
+  log_SetTun(arg->bundle->unit, arg->bundle->iface->name);
   return 0;
 }
 

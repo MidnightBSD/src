@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/route.h,v 1.19 2001/08/16 02:01:05 brian Exp $
+ * $MidnightBSD$
  */
 
 struct bundle;
@@ -70,4 +70,5 @@ extern void route_ParseHdr(struct rt_msghdr *, struct sockaddr *[RTAX_MAX]);
 extern int rt_Set(struct bundle *, int, const struct ncprange *,
                   const struct ncpaddr *, int, int);
 extern void rt_Update(struct bundle *, const struct sockaddr *,
+                      const struct sockaddr *, const struct sockaddr *,
                       const struct sockaddr *, const struct sockaddr *);

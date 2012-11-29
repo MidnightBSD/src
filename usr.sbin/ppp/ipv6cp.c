@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/ipv6cp.c,v 1.17 2005/01/27 14:09:33 brian Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/param.h>
@@ -148,6 +148,7 @@ SetInterfaceID(u_char *ifid, int userandom)
     switch(sdl->sdl_type) {
     case IFT_ETHER:
     case IFT_FDDI:
+    case IFT_L2VLAN:
       /* XXX need more cases? */
       break;
     default:
@@ -245,7 +246,7 @@ ipcp_SetIPv6address(struct ipv6cp *ipv6cp, u_char *myifid, u_char *hisifid)
       ncpaddr_getsa(&ipv6cp->hisaddr, &ssdst);
     else
       sadst = NULL;
-    rt_Update(bundle, sadst, sagw, samask);
+    rt_Update(bundle, sadst, sagw, samask, NULL, NULL);
   }
 
   if (Enabled(bundle, OPT_SROUTES))

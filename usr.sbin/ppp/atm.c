@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/atm.c,v 1.10 2004/09/05 01:46:51 brian Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/types.h>

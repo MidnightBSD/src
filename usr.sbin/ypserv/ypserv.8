@@ -28,9 +28,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/ypserv/ypserv.8,v 1.41 2005/02/13 23:45:54 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd February 4, 1995
+.Dd December 13, 2009
 .Dt YPSERV 8
 .Os
 .Sh NAME
@@ -40,6 +40,7 @@
 .Nm
 .Op Fl n
 .Op Fl d
+.Op Fl P Ar port
 .Op Fl p Ar path
 .Sh DESCRIPTION
 .Tn NIS
@@ -141,7 +142,11 @@ and
 .Pa master.passwd.byuid
 maps in a special way.
 When the server receives a request to access
-either of these two maps, it will check the TCP port from which the
+either of these two maps (or in fact either of the
+.Pa shadow.byname
+or
+.Pa shadow.byuid
+maps), it will check the TCP port from which the
 request originated and return an error if the port number is greater
 than 1023.
 Since only the superuser is allowed to bind to TCP ports
@@ -403,6 +408,18 @@ in subprocesses, allowing the parent server process to go on handling
 other requests.)
 This makes it easier to trace the server with
 a debugging tool.
+.It Fl h Ar addr
+Specify a specific address to bind to for requests.  This option may be
+specified multiple times.  If no
+.Fl h
+option is specified,
+.Nm
+will bind to default passive address
+.Pq e.g. INADDR_ANY for IPv4
+for each transport.
+.It Fl P Ar port
+Force ypserv to bind to a specific TCP/UDP port, rather than selecting
+its own.
 .It Fl p Ar path
 Normally,
 .Nm

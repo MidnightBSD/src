@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/ncpaddr.c,v 1.16 2005/05/13 16:31:11 ume Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/types.h>

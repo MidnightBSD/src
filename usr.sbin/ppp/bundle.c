@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/bundle.c,v 1.136 2004/11/29 17:11:14 brian Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/param.h>
@@ -758,7 +758,7 @@ bundle_Create(const char *prefix, int type, int unit)
     return NULL;
   }
 
-  log_SetTun(bundle.unit);
+  log_SetTun(bundle.unit, NULL);
 
   ifname = strrchr(bundle.dev.Name, '/');
   if (ifname == NULL)
@@ -849,7 +849,7 @@ bundle_Create(const char *prefix, int type, int unit)
   bundle.links = datalink_Create("deflink", &bundle, type);
   if (bundle.links == NULL) {
     log_Printf(LogALERT, "Cannot create data link: %s\n", strerror(errno));
-    iface_Destroy(bundle.iface);
+    iface_Free(bundle.iface);
     bundle.iface = NULL;
     close(bundle.dev.fd);
     return NULL;

@@ -25,9 +25,9 @@ changecom(,)dnl
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/ppp/ppp.8.m4,v 1.327 2007/05/25 16:05:17 brueffer Exp $
+.\" $MidnightBSD$
 .\"
-.Dd May 24, 2007
+.Dd August 25, 2009
 .Dt PPP 8
 .Os
 .Sh NAME
@@ -44,10 +44,10 @@ changecom(,)dnl
 This is a user process
 .Em PPP
 software package.
-Normally,
+Sometimes,
 .Em PPP
 is implemented as a part of the kernel (e.g., as managed by
-.Xr pppd 8 )
+.Nm pppd )
 and it is thus somewhat hard to debug and/or modify its behaviour.
 However, in this implementation
 .Em PPP
@@ -171,6 +171,17 @@ If callback is configured,
 will use the
 .Dq set device
 information when dialing back.
+.Pp
+When run in
+.Fl direct
+mode,
+.Nm
+will behave slightly differently if descriptor 0 was created by
+.Xr pipe 2 .
+As pipes are not bi-directional, ppp will redirect all writes to descriptor
+1 (standard output), leaving only reads acting on descriptor 0.
+No special action is taken if descriptor 0 was created by
+.Xr socketpair 2 .
 .It Fl dedicated
 This option is designed for machines connected with a dedicated
 wire.
@@ -2690,7 +2701,7 @@ program.
 Note: There is a problem negotiating
 .Ar deflate
 capabilities with
-.Xr pppd 8
+.Nm pppd
 - a
 .Em PPP
 implementation available under many operating systems.
@@ -2723,7 +2734,7 @@ Default: Disabled and Denied.
 This is a variance of the
 .Ar deflate
 option, allowing negotiation with the
-.Xr pppd 8
+.Nm pppd
 program.
 Refer to the
 .Ar deflate
@@ -2871,7 +2882,7 @@ acts as the authenticatee with both protocols
 the protocols are used alternately in response to challenges.
 .Pp
 Note: If only LANMan is enabled,
-.Xr pppd 8
+.Nm pppd
 (version 2.3.5) misbehaves when acting as authenticatee.
 It provides both
 the NT and the LANMan answers, but also suggests that only the NT answer
@@ -3913,6 +3924,13 @@ If the
 .Dq !\&
 is used, no error is given if the address is not currently assigned to
 the interface (and no deletion takes place).
+.It iface name Ar name
+Renames the interface to
+.Ar name .
+.It iface description Ar description
+Sets the interface description to
+.Ar description .
+Useful if you have many interfaces on your system.
 .It iface show
 Shows the current state and current addresses for the interface.
 It is much the same as running
@@ -4575,6 +4593,8 @@ This sets the device(s) to which
 will talk to the given
 .Dq value .
 .Pp
+All serial device names are expected to begin with
+.Pa /dev/ .
 Serial devices are usually called
 .Pa cuaXX .
 .Pp
@@ -5454,7 +5474,7 @@ keywords.
 .It RAD_FRAMED_IPV6_PREFIX
 If this attribute is supplied, the value is substituted for IPV6PREFIX
 in a command.
-You may pass it to such as DHCPv6 for delegating an
+You may pass it to an upper layer protocol such as DHCPv6 for delegating an
 IPv6 prefix to a peer.
 .It RAD_FRAMED_IPV6_ROUTE
 The received string is expected to be in the format
@@ -6053,6 +6073,8 @@ This socket is used to pass links between different instances of
 .Xr tcpdump 1 ,
 .Xr telnet 1 ,
 .Xr kldload 2 ,
+.Xr pipe 2 ,
+.Xr socketpair 2 ,
 ifdef({LOCALNAT},{},{.Xr libalias 3 ,
 })dnl
 ifdef({LOCALRAD},{},{.Xr libradius 3 ,
@@ -6076,7 +6098,6 @@ ifdef({LOCALRAD},{},{.Xr libradius 3 ,
 .Xr named 8 ,
 .Xr ping 8 ,
 .Xr pppctl 8 ,
-.Xr pppd 8 ,
 .Xr pppoed 8 ,
 .Xr route 8 ,
 .Xr sshd 8 ,

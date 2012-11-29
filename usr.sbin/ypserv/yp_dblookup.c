@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/ypserv/yp_dblookup.c,v 1.25 2003/05/03 21:06:42 obrien Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <db.h>
 #include <errno.h>

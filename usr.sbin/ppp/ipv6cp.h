@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/ipv6cp.h,v 1.2 2002/08/29 02:44:58 brian Exp $
+ * $MidnightBSD$
  */
 
 #ifndef NOINET6
