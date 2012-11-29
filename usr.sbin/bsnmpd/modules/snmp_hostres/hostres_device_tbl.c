@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_device_tbl.c,v 1.4 2007/03/09 16:29:15 xride Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -352,11 +352,11 @@ device_get_status(struct devinfo_dev *dev)
 	assert(dev != NULL);
 
 	switch (dev->dd_state) {
-	case DIS_ALIVE:			/* probe succeeded */
-	case DIS_NOTPRESENT:		/* not probed or probe failed */
+	case DS_ALIVE:			/* probe succeeded */
+	case DS_NOTPRESENT:		/* not probed or probe failed */
 		return (DS_DOWN);
-	case DIS_ATTACHED:		/* attach method called */
-	case DIS_BUSY:			/* device is open */
+	case DS_ATTACHED:		/* attach method called */
+	case DS_BUSY:			/* device is open */
 		return (DS_RUNNING);
 	default:
 		return (DS_UNKNOWN);
@@ -449,7 +449,8 @@ devd_socket_callback(int fd, void *arg __unused)
 
 	HRDBG("called");
 
-	read_len = read(fd, buf, sizeof(buf) - 1);
+again:
+	read_len = read(fd, buf, sizeof(buf));
 	if (read_len < 0) {
 		if (errno == EBADF) {
 			devd_sock = -1;
@@ -476,16 +477,9 @@ devd_socket_callback(int fd, void *arg __unused)
 		syslog(LOG_ERR, "Closing devd_fd, revert to devinfo polling");
 
 	} else {
-		switch (buf[0]) {
-		case '+':
-		case '-':
-		case '?':
-		case '!':
-			refresh_device_tbl(1);
-			return;
-		default:
-			syslog(LOG_ERR, "unknown message from devd socket");
-		}
+		if (read_len == sizeof(buf))
+			goto again;
+		refresh_device_tbl(1);
 	}
 }
 

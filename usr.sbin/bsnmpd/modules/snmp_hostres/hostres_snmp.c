@@ -37,7 +37,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_snmp.c,v 1.2 2006/01/09 13:01:26 harti Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -49,7 +49,6 @@
 #include <string.h>
 #include <syslog.h>
 #include <unistd.h>
-#include <utmp.h>
 
 #include "hostres_snmp.h"
 #include "hostres_oid.h"

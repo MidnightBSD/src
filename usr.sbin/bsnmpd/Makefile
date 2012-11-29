@@ -1,7 +1,8 @@
-# $FreeBSD: src/usr.sbin/bsnmpd/Makefile,v 1.2 2005/03/14 17:32:16 harti Exp $
+# $MidnightBSD$
 
 SUBDIR=	gensnmptree	\
 	bsnmpd		\
-	modules
+	modules		\
+	tools
 
 .include <bsd.subdir.mk>

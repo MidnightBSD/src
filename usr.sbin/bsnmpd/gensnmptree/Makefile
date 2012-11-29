@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/bsnmpd/gensnmptree/Makefile,v 1.4 2005/10/04 15:03:39 harti Exp $
+# $MidnightBSD$
 #
 # Author: Harti Brandt <harti@freebsd.org>
 
@@ -9,5 +9,7 @@ PROG=	gensnmptree
 CFLAGS+= -I${CONTRIB}/lib
 CFLAGS+= -DQUADFMT='"llu"' -DQUADXFMT='"llx"' -DHAVE_STDINT_H
 CFLAGS+= -DHAVE_INTTYPES_H
+
+WARNS?=	5
 
 .include <bsd.prog.mk>

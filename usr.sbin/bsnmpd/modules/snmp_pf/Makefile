@@ -1,10 +1,10 @@
-# $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_pf/Makefile,v 1.2 2005/11/10 10:14:57 harti Exp $
+# $MidnightBSD$
 # 
 # Author: Philip Paeps <philip@freebsd.org>
 
 MOD=	pf
 SRCS=	pf_snmp.c
-WARNS?=	6
+CFLAGS+= -DSNMPTREE_TYPES
 
 XSYM=	begemotPf
 DEFS=	${MOD}_tree.def
