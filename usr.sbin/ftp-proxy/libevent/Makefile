@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/ftp-proxy/libevent/Makefile,v 1.1 2007/07/03 12:46:08 mlaier Exp $
+# $MidnightBSD$
 
 .PATH:	${.CURDIR}/../../../contrib/pf/libevent
 
@@ -21,5 +21,7 @@ CFLAGS+= -I${.CURDIR} \
 	-DHAVE_VASPRINTF \
 	-DHAVE_WORKING_KQUEUE \
 	-DVERSION='"1.3b"'
+
+WARNS?=	2
 
 .include <bsd.lib.mk>
