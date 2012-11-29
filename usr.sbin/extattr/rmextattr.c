@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/extattr/rmextattr.c,v 1.6 2003/06/05 04:30:00 rwatson Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/types.h>
@@ -172,7 +172,7 @@ main(int argc, char *argv[])
 
 	error = extattr_string_to_namespace(argv[0], &attrnamespace);
 	if (error)
-		err(-1, argv[0]);
+		err(-1, "%s", argv[0]);
 	argc--; argv++;
 
 	if (what != EALS) {
@@ -231,9 +231,12 @@ main(int argc, char *argv[])
 				break;
 			if (!flag_quiet)
 				printf("%s\t", argv[arg_counter]);
-			for (i = 0; i < error; i += buf[i] + 1)
+			for (i = 0; i < error; i += ch + 1) {
+			    /* The attribute name length is unsigned. */
+			    ch = (unsigned char)buf[i];
 			    printf("%s%*.*s", i ? "\t" : "",
-				buf[i], buf[i], buf + i + 1);
+				ch, ch, buf + i + 1);
+			}
 			printf("\n");
 			continue;
 		case EAGET:
@@ -269,7 +272,7 @@ main(int argc, char *argv[])
 				printf("\n");
 				continue;
 			} else {
-				fwrite(buf, buflen, 1, stdout);
+				fwrite(buf, error, 1, stdout);
 				printf("\n");
 				continue;
 			}
