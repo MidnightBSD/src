@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $FreeBSD: src/usr.sbin/fwcontrol/fwmpegts.c,v 1.1 2006/10/26 22:33:38 imp Exp $
+ * $MidnightBSD$
  */
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -50,8 +50,16 @@
 #include <string.h>
 #include <sysexits.h>
 
+#if defined(__MidnightBSD__)
 #include <dev/firewire/firewire.h>
 #include <dev/firewire/iec68113.h>
+#elif defined(__NetBSD__)
+#include <dev/ieee1394/firewire.h>
+#include <dev/ieee1394/iec68113.h>
+#else
+#warning "You need to add support for your OS"
+#endif
+
 
 #include "fwmethods.h"
 
@@ -157,7 +165,7 @@ mpegtsrecv(int d, const char *filename, char ich, int count)
 	else {
 		fd = open(filename, O_CREAT | O_WRONLY | O_TRUNC, 0660);
 		if (fd == -1)
-			err(EX_NOINPUT, filename);
+			err(EX_NOINPUT, "%s", filename);
 	}
 	buf = malloc(RBUFSIZE);
 
@@ -185,10 +193,9 @@ mpegtsrecv(int d, const char *filename, char ich, int count)
 		if (len < 0) {
 			if (errno == EAGAIN) {
 				fprintf(stderr, "(EAGAIN) - push 'Play'?\n");
-				if (len <= 0)
-					continue;
-			} else
-				err(1, "read failed");
+				continue;
+			}
+			err(1, "read failed");
 		}
 		ptr = (uint32_t *) buf;
 

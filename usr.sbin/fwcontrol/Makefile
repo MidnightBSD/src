@@ -1,9 +1,9 @@
-# $FreeBSD: src/usr.sbin/fwcontrol/Makefile,v 1.5 2006/10/26 22:33:38 imp Exp $
+# $MidnightBSD$
 
 PROG=	fwcontrol
 SRCS=	fwcontrol.c fwcrom.c fwdv.c fwmpegts.c
 MAN=	fwcontrol.8
-WARNS=	3
+WARNS?=	3
 
 .PATH:	${.CURDIR}/../../sys/dev/firewire
 

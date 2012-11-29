@@ -1,12 +1,21 @@
 #
-# $FreeBSD: src/usr.sbin/flowctl/Makefile,v 1.2 2004/09/17 22:37:45 glebius Exp $
+# $MidnightBSD$
 #
 
+.include <bsd.own.mk>
+	
 PROG=	flowctl
 MAN=	flowctl.8
 
 WARNS?= 2
 DPADD=  ${LIBNETGRAPH}
 LDADD=  -lnetgraph
+
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+= -DINET6
+.endif
+.if ${MK_INET_SUPPORT} != "no"
+CFLAGS+= -DINET
+.endif
 
 .include <bsd.prog.mk>
