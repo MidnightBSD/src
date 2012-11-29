@@ -55014,9 +55014,6 @@ usr.sbin/quotaon/quotaon.c -text
 usr.sbin/rarpd/Makefile -text
 usr.sbin/rarpd/rarpd.8 -text
 usr.sbin/rarpd/rarpd.c -text
-usr.sbin/raycontrol/Makefile -text
-usr.sbin/raycontrol/raycontrol.8 -text
-usr.sbin/raycontrol/raycontrol.c -text
 usr.sbin/rdate/Makefile -text
 usr.sbin/rdate/ntp.c -text
 usr.sbin/rdate/ntpleaps.c -text

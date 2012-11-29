@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
-# $MidnightBSD: src/usr.sbin/Makefile,v 1.31 2012/11/23 05:56:02 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/Makefile,v 1.32 2012/11/29 12:58:15 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -80,7 +80,6 @@ SUBDIR=	adduser \
 	pwd_mkdb \
 	quot \
 	rarpd \
-	raycontrol \
 	rdate \
 	rmt \
 	rpcbind \
