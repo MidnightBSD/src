@@ -1,5 +1,5 @@
 /*	$KAME: prefix.c,v 1.13 2003/09/02 22:50:17 itojun Exp $	*/
-/*	$FreeBSD: src/usr.sbin/faithd/prefix.c,v 1.4 2003/11/14 17:34:08 ume Exp $	*/
+/*	$MidnightBSD$	*/
 
 /*
  * Copyright (C) 2000 WIDE Project.
@@ -47,11 +47,11 @@
 #include "faithd.h"
 #include "prefix.h"
 
-static int prefix_set __P((const char *, struct prefix *, int));
-static struct config *config_load1 __P((const char *));
+static int prefix_set(const char *, struct prefix *, int);
+static struct config *config_load1(const char *);
 #if 0
-static void config_show1 __P((const struct config *));
-static void config_show __P((void));
+static void config_show1(const struct config *);
+static void config_show(void);
 #endif
 
 struct config *config_list = NULL;

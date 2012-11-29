@@ -28,19 +28,19 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/faithd/faithd.h,v 1.5 2003/11/14 17:34:08 ume Exp $
+ * $MidnightBSD$
  */
 
 extern char logname[];
 extern int dflag;
 
-extern void tcp_relay __P((int, int, const char *));
-extern void ftp_relay __P((int, int));
-extern int ftp_active __P((int, int, int *, int *));
-extern int ftp_passive __P((int, int, int *, int *));
-extern void exit_success __P((const char *, ...))
+extern void tcp_relay(int, int, const char *);
+extern void ftp_relay(int, int);
+extern int ftp_active(int, int, int *, int *);
+extern int ftp_passive(int, int, int *, int *);
+extern void exit_success(const char *, ...)
 	__attribute__((__format__(__printf__, 1, 2)));
-extern void exit_failure __P((const char *, ...))
+extern void exit_failure(const char *, ...)
 	__attribute__((__format__(__printf__, 1, 2)));
 
 #define DEFAULT_PORT_NAME	"telnet"

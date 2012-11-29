@@ -12,12 +12,14 @@
 # LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
 # A PARTICULAR PURPOSE.
 #
-# $FreeBSD: src/usr.sbin/faithd/Makefile,v 1.10 2004/01/17 02:27:55 ru Exp $
+# $MidnightBSD$
 
 PROG=	faithd
 MAN=	faithd.8
 SRCS=	faithd.c tcp.c ftp.c prefix.c
 
 CFLAGS+= -DHAVE_POLL_H
+
+WARNS?=	2
 
 .include <bsd.prog.mk>
