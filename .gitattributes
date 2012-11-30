@@ -55104,6 +55104,12 @@ usr.sbin/rtadvd/advcap.c -text
 usr.sbin/rtadvd/advcap.h -text
 usr.sbin/rtadvd/config.c -text
 usr.sbin/rtadvd/config.h -text
+usr.sbin/rtadvd/control.c -text
+usr.sbin/rtadvd/control.h -text
+usr.sbin/rtadvd/control_client.c -text
+usr.sbin/rtadvd/control_client.h -text
+usr.sbin/rtadvd/control_server.c -text
+usr.sbin/rtadvd/control_server.h -text
 usr.sbin/rtadvd/dump.c -text
 usr.sbin/rtadvd/dump.h -text
 usr.sbin/rtadvd/if.c -text
