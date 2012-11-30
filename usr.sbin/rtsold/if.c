@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/rtsold/if.c,v 1.15 2006/03/24 23:59:51 suz Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/param.h>
@@ -48,6 +48,7 @@
 #include <netinet/icmp6.h>
 
 #include <netinet6/in6_var.h>
+#include <netinet6/nd6.h>
 
 #include <stdio.h>
 #include <unistd.h>
@@ -63,8 +64,8 @@
 extern int rssock;
 static int ifsock;
 
-static int get_llflag __P((const char *));
-static void get_rtaddrs __P((int, struct sockaddr *, struct sockaddr **));
+static int get_llflag(const char *);
+static void get_rtaddrs(int, struct sockaddr *, struct sockaddr **);
 
 int
 ifinit(void)
@@ -78,45 +79,97 @@ int
 interface_up(char *name)
 {
 	struct ifreq ifr;
+	struct in6_ndireq nd;
 	int llflag;
+	int s;
 
+	memset(&ifr, 0, sizeof(ifr));
 	strncpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
+	memset(&nd, 0, sizeof(nd));
+	strlcpy(nd.ifname, name, sizeof(nd.ifname));
 
 	if (ioctl(ifsock, SIOCGIFFLAGS, (caddr_t)&ifr) < 0) {
 		warnmsg(LOG_WARNING, __func__, "ioctl(SIOCGIFFLAGS): %s",
 		    strerror(errno));
-		return(-1);
+		return (-1);
 	}
 	if (!(ifr.ifr_flags & IFF_UP)) {
 		ifr.ifr_flags |= IFF_UP;
 		if (ioctl(ifsock, SIOCSIFFLAGS, (caddr_t)&ifr) < 0)
 			warnmsg(LOG_ERR, __func__,
 			    "ioctl(SIOCSIFFLAGS): %s", strerror(errno));
-		return(-1);
+		return (-1);
+	}
+	if ((s = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
+		warnmsg(LOG_WARNING, __func__, "socket(AF_INET6, SOCK_DGRAM): %s",
+		    strerror(errno));
+		return (-1);
+	}
+	if (ioctl(s, SIOCGIFINFO_IN6, (caddr_t)&nd) < 0) {
+		warnmsg(LOG_WARNING, __func__, "ioctl(SIOCGIFINFO_IN6): %s",
+		    strerror(errno));
+		close(s);
+		return (-1);
 	}
 
 	warnmsg(LOG_DEBUG, __func__, "checking if %s is ready...", name);
+
+	if (nd.ndi.flags & ND6_IFF_IFDISABLED) {
+		if (Fflag) {
+			nd.ndi.flags &= ~ND6_IFF_IFDISABLED;
+			if (ioctl(s, SIOCSIFINFO_IN6, (caddr_t)&nd)) {
+				warnmsg(LOG_WARNING, __func__,
+				    "ioctl(SIOCSIFINFO_IN6): %s",
+		    		    strerror(errno));
+				close(s);
+				return (-1);
+			}
+		} else {
+			warnmsg(LOG_WARNING, __func__,
+			    "%s is disabled.", name);
+			close(s);
+			return (-1);
+		}
+	}
+	if (!(nd.ndi.flags & ND6_IFF_ACCEPT_RTADV)) {
+		if (Fflag) {
+			nd.ndi.flags |= ND6_IFF_ACCEPT_RTADV;
+			if (ioctl(s, SIOCSIFINFO_IN6, (caddr_t)&nd)) {
+				warnmsg(LOG_WARNING, __func__,
+				    "ioctl(SIOCSIFINFO_IN6): %s",
+		    		    strerror(errno));
+				close(s);
+				return (-1);
+			}
+		} else {
+			warnmsg(LOG_WARNING, __func__,
+			    "%s does not accept Router Advertisement.", name);
+			close(s);
+			return (-1);
+		}
+	}
+	close(s);
 
 	llflag = get_llflag(name);
 	if (llflag < 0) {
 		warnmsg(LOG_WARNING, __func__,
 		    "get_llflag() failed, anyway I'll try");
-		return 0;
+		return (0);
 	}
 
 	if (!(llflag & IN6_IFF_NOTREADY)) {
 		warnmsg(LOG_DEBUG, __func__, "%s is ready", name);
-		return(0);
+		return (0);
 	} else {
 		if (llflag & IN6_IFF_TENTATIVE) {
 			warnmsg(LOG_DEBUG, __func__, "%s is tentative",
 			    name);
-			return IFS_TENTATIVE;
+			return (IFS_TENTATIVE);
 		}
 		if (llflag & IN6_IFF_DUPLICATED)
 			warnmsg(LOG_DEBUG, __func__, "%s is duplicated",
 			    name);
-		return -1;
+		return (-1);
 	}
 }
 
@@ -133,16 +186,14 @@ interface_status(struct ifinfo *ifinfo)
 	if (ioctl(ifsock, SIOCGIFFLAGS, &ifr) < 0) {
 		warnmsg(LOG_ERR, __func__, "ioctl(SIOCGIFFLAGS) on %s: %s",
 		    ifname, strerror(errno));
-		return(-1);
+		return (-1);
 	}
 	/*
 	 * if one of UP and RUNNING flags is dropped,
 	 * the interface is not active.
 	 */
-	if ((ifr.ifr_flags & (IFF_UP|IFF_RUNNING)) != (IFF_UP|IFF_RUNNING)) {
+	if ((ifr.ifr_flags & (IFF_UP|IFF_RUNNING)) != (IFF_UP|IFF_RUNNING))
 		goto inactive;
-	}
-
 	/* Next, check carrier on the interface, if possible */
 	if (!ifinfo->mediareqok)
 		goto active;
@@ -179,10 +230,10 @@ interface_status(struct ifinfo *ifinfo)
 	}
 
   inactive:
-	return(0);
+	return (0);
 
   active:
-	return(1);
+	return (1);
 }
 
 #define ROUNDUP(a, size) \
@@ -201,9 +252,9 @@ lladdropt_length(struct sockaddr_dl *sdl)
 #ifdef IFT_IEEE80211
 	case IFT_IEEE80211:
 #endif
-		return(ROUNDUP8(ETHER_ADDR_LEN + 2));
+		return (ROUNDUP8(ETHER_ADDR_LEN + 2));
 	default:
-		return(0);
+		return (0);
 	}
 }
 
@@ -248,7 +299,7 @@ if_nametosdl(char *name)
 		return(NULL);
 	if (sysctl(mib, 6, buf, &len, NULL, 0) < 0) {
 		free(buf);
-		return(NULL);
+		return (NULL);
 	}
 
 	lim = buf + len;
@@ -274,17 +325,17 @@ if_nametosdl(char *name)
 	if (next == lim) {
 		/* search failed */
 		free(buf);
-		return(NULL);
+		return (NULL);
 	}
 
 	if ((ret_sdl = malloc(sdl->sdl_len)) == NULL) {
 		free(buf);
-		return(NULL);
+		return (NULL);
 	}
 	memcpy((caddr_t)ret_sdl, (caddr_t)sdl, sdl->sdl_len);
 
 	free(buf);
-	return(ret_sdl);
+	return (ret_sdl);
 }
 
 int
@@ -297,9 +348,9 @@ getinet6sysctl(int code)
 	mib[3] = code;
 	size = sizeof(value);
 	if (sysctl(mib, sizeof(mib)/sizeof(mib[0]), &value, &size, NULL, 0) < 0)
-		return -1;
+		return (-1);
 	else
-		return value;
+		return (value);
 }
 
 int
@@ -313,9 +364,9 @@ setinet6sysctl(int code, int newval)
 	size = sizeof(value);
 	if (sysctl(mib, sizeof(mib)/sizeof(mib[0]), &value, &size,
 	    &newval, sizeof(newval)) < 0)
-		return -1;
+		return (-1);
 	else
-		return value;
+		return (value);
 }
 
 /*------------------------------------------------------------*/
@@ -361,12 +412,12 @@ get_llflag(const char *name)
 
 		freeifaddrs(ifap);
 		close(s);
-		return ifr6.ifr_ifru.ifru_flags6;
+		return (ifr6.ifr_ifru.ifru_flags6);
 	}
 
 	freeifaddrs(ifap);
 	close(s);
-	return -1;
+	return (-1);
 }
 
 

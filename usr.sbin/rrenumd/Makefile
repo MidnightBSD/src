@@ -12,7 +12,7 @@
 # LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
 # A PARTICULAR PURPOSE.
 #
-# $FreeBSD: src/usr.sbin/rrenumd/Makefile,v 1.11 2007/07/05 08:56:46 bz Exp $
+# $MidnightBSD$
 
 PROG=	rrenumd
 MAN=	rrenumd.conf.5 rrenumd.8
@@ -20,6 +20,8 @@ SRCS=	rrenumd.c  parser.y lexer.l
 
 CFLAGS+= -DIPSEC -I. -I${.CURDIR}
 YFLAGS=	-d
+
+WARNS?=	2
 
 LDADD=	-lipsec -ll -ly
 DPADD=	${LIBIPSEC} ${LIBL} ${LIBY}

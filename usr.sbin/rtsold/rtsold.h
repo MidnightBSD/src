@@ -28,14 +28,41 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/rtsold/rtsold.h,v 1.8 2004/01/14 17:42:03 ume Exp $
+ * $MidnightBSD$
  */
 
+struct script_msg {
+	TAILQ_ENTRY(script_msg)	sm_next;
+
+	char *sm_msg;
+};
+
+TAILQ_HEAD(script_msg_head_t, script_msg);
+
+struct ra_opt {
+	TAILQ_ENTRY(ra_opt)	rao_next;
+
+	u_int8_t	rao_type;
+	struct timeval	rao_expire;
+	size_t		rao_len;
+	void		*rao_msg;
+};
+
+TAILQ_HEAD(rainfo_head, ra_opt);
+
+struct rainfo {
+	TAILQ_ENTRY(rainfo)	rai_next;
+
+	struct ifinfo		*rai_ifinfo;
+	struct sockaddr_in6	rai_saddr;
+	TAILQ_HEAD(, ra_opt)	rai_ra_opt;
+};
+
 struct ifinfo {
-	struct ifinfo *next;	/* pointer to the next interface */
+	TAILQ_ENTRY(ifinfo)	ifi_next;	/* pointer to the next interface */
 
 	struct sockaddr_dl *sdl; /* link-layer address */
-	char ifname[IF_NAMESIZE]; /* interface name */
+	char ifname[IFNAMSIZ];	/* interface name */
 	u_int32_t linkid;	/* link ID of this interface */
 	int active;		/* interface status */
 	int probeinterval;	/* interval of probe timer (if necessary) */
@@ -49,8 +76,13 @@ struct ifinfo {
 	struct timeval timer;
 	struct timeval expire;
 	int errors;		/* # of errors we've got - detect wedge */
+#define IFI_DNSOPT_STATE_NOINFO		0
+#define IFI_DNSOPT_STATE_RECEIVED     	1
+	int ifi_rdnss;		/* RDNSS option state */
+	int ifi_dnssl;		/* DNSSL option state */
 
 	int racnt;		/* total # of valid RAs it have got */
+	TAILQ_HEAD(, rainfo)	ifi_rainfo;
 
 	size_t rs_datalen;
 	u_char *rs_data;
@@ -63,41 +95,76 @@ struct ifinfo {
 #define IFS_DOWN	3
 #define IFS_TENTATIVE	4
 
+/* Interface list */
+extern TAILQ_HEAD(ifinfo_head_t, ifinfo) ifinfo_head;
+
+#define	DNSINFO_ORIGIN_LABEL	"slaac"
+/*
+ * RFC 3542 API deprecates IPV6_PKTINFO in favor of
+ * IPV6_RECVPKTINFO
+ */
+#ifndef IPV6_RECVPKTINFO
+#ifdef IPV6_PKTINFO
+#define IPV6_RECVPKTINFO	IPV6_PKTINFO
+#endif
+#endif
+/*
+ * RFC 3542 API deprecates IPV6_HOPLIMIT in favor of
+ * IPV6_RECVHOPLIMIT
+ */
+#ifndef IPV6_RECVHOPLIMIT
+#ifdef IPV6_HOPLIMIT
+#define IPV6_RECVHOPLIMIT	IPV6_HOPLIMIT
+#endif
+#endif
+
+#ifndef IN6ADDR_LINKLOCAL_ALLROUTERS_INIT
+#define IN6ADDR_LINKLOCAL_ALLROUTERS_INIT			\
+	{{{ 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,	\
+	    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02 }}}
+#endif
+
 /* rtsold.c */
 extern struct timeval tm_max;
 extern int dflag;
 extern int aflag;
-extern char *otherconf_script;
-extern int ifconfig __P((char *));
-extern void iflist_init __P((void));
-struct ifinfo *find_ifinfo __P((int));
-void rtsol_timer_update __P((struct ifinfo *));
-extern void warnmsg __P((int, const char *, const char *, ...))
+extern int Fflag;
+extern int uflag;
+extern const char *otherconf_script;
+extern const char *resolvconf_script;
+extern int ifconfig(char *);
+extern void iflist_init(void);
+struct ifinfo *find_ifinfo(int);
+struct rainfo *find_rainfo(struct ifinfo *, struct sockaddr_in6 *);
+void rtsol_timer_update(struct ifinfo *);
+extern void warnmsg(int, const char *, const char *, ...)
      __attribute__((__format__(__printf__, 3, 4)));
-extern char **autoifprobe __P((void));
+extern char **autoifprobe(void);
+extern int ra_opt_handler(struct ifinfo *);
 
 /* if.c */
-extern int ifinit __P((void));
-extern int interface_up __P((char *));
-extern int interface_status __P((struct ifinfo *));
-extern int lladdropt_length __P((struct sockaddr_dl *));
-extern void lladdropt_fill __P((struct sockaddr_dl *, struct nd_opt_hdr *));
-extern struct sockaddr_dl *if_nametosdl __P((char *));
-extern int getinet6sysctl __P((int));
-extern int setinet6sysctl __P((int, int));
+extern int ifinit(void);
+extern int interface_up(char *);
+extern int interface_status(struct ifinfo *);
+extern int lladdropt_length(struct sockaddr_dl *);
+extern void lladdropt_fill(struct sockaddr_dl *, struct nd_opt_hdr *);
+extern struct sockaddr_dl *if_nametosdl(char *);
+extern int getinet6sysctl(int);
+extern int setinet6sysctl(int, int);
 
 /* rtsol.c */
-extern int sockopen __P((void));
-extern void sendpacket __P((struct ifinfo *));
-extern void rtsol_input __P((int));
+extern int sockopen(void);
+extern void sendpacket(struct ifinfo *);
+extern void rtsol_input(int);
 
 /* probe.c */
-extern int probe_init __P((void));
-extern void defrouter_probe __P((struct ifinfo *));
+extern int probe_init(void);
+extern void defrouter_probe(struct ifinfo *);
 
 /* dump.c */
-extern void rtsold_dump_file __P((char *));
+extern void rtsold_dump_file(const char *);
+extern const char *sec2str(const struct timeval *);
 
 /* rtsock.c */
-extern int rtsock_open __P((void));
-extern int rtsock_input __P((int));
+extern int rtsock_open(void);
+extern int rtsock_input(int);

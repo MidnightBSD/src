@@ -1,5 +1,5 @@
 /*	$KAME: rtsock.c,v 1.3 2000/10/10 08:46:45 itojun Exp $	*/
-/*	$FreeBSD: src/usr.sbin/rtsold/rtsock.c,v 1.4 2004/03/17 20:10:59 ru Exp $	*/
+/*	$MidnightBSD$	*/
 
 /*
  * Copyright (C) 2000 WIDE Project.
@@ -64,13 +64,13 @@
 		       : sizeof(u_long)))
 
 #ifdef RTM_IFANNOUNCE	/*NetBSD 1.5 or later*/
-static int rtsock_input_ifannounce __P((int, struct rt_msghdr *, char *));
+static int rtsock_input_ifannounce(int, struct rt_msghdr *, char *);
 #endif
 
 static struct {
 	u_char type;
 	size_t minlen;
-	int (*func) __P((int, struct rt_msghdr *, char *));
+	int (*func)(int, struct rt_msghdr *, char *);
 } rtsock_dispatch[] = {
 #ifdef RTM_IFANNOUNCE	/*NetBSD 1.5 or later*/
 	{ RTM_IFANNOUNCE, sizeof(struct if_announcemsghdr),
@@ -83,7 +83,7 @@ int
 rtsock_open(void)
 {
 
-	return socket(PF_ROUTE, SOCK_RAW, 0);
+	return (socket(PF_ROUTE, SOCK_RAW, 0));
 }
 
 int
@@ -94,9 +94,9 @@ rtsock_input(int s)
 	char *lim, *next;
 	struct rt_msghdr *rtm;
 	int idx;
-	size_t len;
+	ssize_t len;
 	int ret = 0;
-	const size_t lenlim =
+	const ssize_t lenlim =
 	    offsetof(struct rt_msghdr, rtm_msglen) + sizeof(rtm->rtm_msglen);
 
 	n = read(s, msg, sizeof(msg));
@@ -130,19 +130,19 @@ rtsock_input(int s)
 		}
 	}
 
-	return ret;
+	return (ret);
 }
 
 #ifdef RTM_IFANNOUNCE	/*NetBSD 1.5 or later*/
 static int
-rtsock_input_ifannounce(int s, struct rt_msghdr *rtm, char *lim)
+rtsock_input_ifannounce(int s __unused, struct rt_msghdr *rtm, char *lim)
 {
 	struct if_announcemsghdr *ifan;
 	struct ifinfo *ifinfo;
 
 	ifan = (struct if_announcemsghdr *)rtm;
 	if ((char *)(ifan + 1) > lim)
-		return -1;
+		return (-1);
 
 	switch (ifan->ifan_what) {
 	case IFAN_ARRIVAL:
@@ -170,6 +170,6 @@ rtsock_input_ifannounce(int s, struct rt_msghdr *rtm, char *lim)
 		break;
 	}
 
-	return 0;
+	return (0);
 }
 #endif

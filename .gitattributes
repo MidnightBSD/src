@@ -55118,6 +55118,8 @@ usr.sbin/rtadvd/rtadvd.conf.5 -text
 usr.sbin/rtadvd/rtadvd.h -text
 usr.sbin/rtadvd/timer.c -text
 usr.sbin/rtadvd/timer.h -text
+usr.sbin/rtadvd/timer_subr.c -text
+usr.sbin/rtadvd/timer_subr.h -text
 usr.sbin/rtprio/Makefile -text
 usr.sbin/rtprio/rtprio.1 -text
 usr.sbin/rtprio/rtprio.c -text

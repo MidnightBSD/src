@@ -1,10 +1,10 @@
-/*	$FreeBSD: src/usr.sbin/rtadvd/if.h,v 1.5 2003/08/11 15:51:54 ume Exp $	*/
+/*	$MidnightBSD$	*/
 /*	$KAME: if.h,v 1.10 2003/02/24 11:29:10 ono Exp $	*/
 
 /*
  * Copyright (C) 1995, 1996, 1997, 1998, and 1999 WIDE Project.
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -16,7 +16,7 @@
  * 3. Neither the name of the project nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -30,29 +30,32 @@
  * SUCH DAMAGE.
  */
 
-#define RTADV_TYPE2BITMASK(type) (0x1 << type)
+#define	UPDATE_IFINFO_ALL	0
 
-extern struct if_msghdr **iflist;
-extern size_t ifblock_size;
-extern char *ifblock;
+struct sockinfo {
+	int		si_fd;
+	const char	*si_name;
+};
 
-struct nd_opt_hdr;
-struct sockaddr_dl *if_nametosdl __P((char *));
-int if_getmtu __P((char *));
-int if_getflags __P((int, int));
-int lladdropt_length __P((struct sockaddr_dl *));
-void lladdropt_fill __P((struct sockaddr_dl *, struct nd_opt_hdr *));
-int rtbuf_len __P((void));
-char *get_next_msg __P((char *, char *, int, size_t *, int));
-struct in6_addr *get_addr __P((char *));
-int get_rtm_ifindex __P((char *));
-int get_ifm_ifindex __P((char *));
-int get_ifam_ifindex __P((char *));
-int get_ifm_flags __P((char *));
-int get_prefixlen __P((char *));
-int prefixlen __P((u_char *, u_char *));
-int rtmsg_type __P((char *));
-int ifmsg_type __P((char *));
-int rtmsg_len __P((char *));
-int ifmsg_len __P((char *));
-void init_iflist __P((void));
+extern struct sockinfo sock;
+extern struct sockinfo rtsock;
+extern struct sockinfo ctrlsock;
+
+int lladdropt_length(struct sockaddr_dl *);
+void lladdropt_fill(struct sockaddr_dl *, struct nd_opt_hdr *);
+int rtbuf_len(void);
+char *get_next_msg(char *, char *, int, size_t *, int);
+struct in6_addr *get_addr(char *);
+int get_rtm_ifindex(char *);
+int get_prefixlen(char *);
+int prefixlen(unsigned char *, unsigned char *);
+
+struct ifinfo	*update_ifinfo(struct ifilist_head_t *, int);
+int		update_ifinfo_nd_flags(struct ifinfo *);
+struct ifinfo	*update_persist_ifinfo(struct ifilist_head_t *,
+			const char *);
+
+int		sock_mc_join(struct sockinfo *, int);
+int		sock_mc_leave(struct sockinfo *, int);
+int		sock_mc_rr_update(struct sockinfo *, char *);
+int		getinet6sysctl(int);

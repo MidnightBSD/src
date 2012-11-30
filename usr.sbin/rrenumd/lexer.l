@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/rrenumd/lexer.l,v 1.3 2001/06/11 12:39:20 ume Exp $
+ * $MidnightBSD$
  */
 
 %{
@@ -59,9 +59,9 @@ int lineno = 1;
 #define LINEBUF_SIZE 1000
 char linebuf[LINEBUF_SIZE];
 
-int parse __P((FILE **));
-void yyerror __P((const char *));
-int yylex __P((void));
+int parse(FILE **);
+void yyerror(const char *);
+int yylex(void);
 %}
 
 /* common section */
@@ -255,7 +255,7 @@ off		{
 
 int parse(FILE **fp)
 {
-	extern int yyparse __P((void));
+	extern int yyparse(void);
 
 	yyin = *fp;
 

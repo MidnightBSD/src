@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/rtsold/probe.c,v 1.11 2004/01/14 17:16:19 ume Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/param.h>
@@ -60,7 +60,7 @@
 static struct msghdr sndmhdr;
 static struct iovec sndiov[2];
 static int probesock;
-static void sendprobe __P((struct in6_addr *, struct ifinfo *));
+static void sendprobe(struct in6_addr *, struct ifinfo *);
 
 int
 probe_init(void)
@@ -72,18 +72,18 @@ probe_init(void)
 	if (sndcmsgbuf == NULL &&
 	    (sndcmsgbuf = (u_char *)malloc(scmsglen)) == NULL) {
 		warnmsg(LOG_ERR, __func__, "malloc failed");
-		return(-1);
+		return (-1);
 	}
 
 	if ((probesock = socket(AF_INET6, SOCK_RAW, IPPROTO_NONE)) < 0) {
 		warnmsg(LOG_ERR, __func__, "socket: %s", strerror(errno));
-		return(-1);
+		return (-1);
 	}
 
 	/* make the socket send-only */
 	if (shutdown(probesock, 0)) {
 		warnmsg(LOG_ERR, __func__, "shutdown: %s", strerror(errno));
-		return(-1);
+		return (-1);
 	}
 
 	/* initialize msghdr for sending packets */
@@ -92,7 +92,8 @@ probe_init(void)
 	sndmhdr.msg_iovlen = 1;
 	sndmhdr.msg_control = (caddr_t)sndcmsgbuf;
 	sndmhdr.msg_controllen = scmsglen;
-	return(0);
+
+	return (0);
 }
 
 /*
@@ -118,7 +119,7 @@ defrouter_probe(struct ifinfo *ifinfo)
 		goto closeandend;
 	}
 
-	for (i = 0; dr.defrouter[i].if_index && i < PRLSTSIZ; i++) {
+	for (i = 0; i < DRLSTSIZ && dr.defrouter[i].if_index; i++) {
 		if (ifindex && dr.defrouter[i].if_index == ifindex) {
 			/* sanity check */
 			if (!IN6_IS_ADDR_LINKLOCAL(&dr.defrouter[i].rtaddr)) {
