@@ -29,6 +29,8 @@ THIS SOFTWARE.
 /* Please send bug reports to David M. Gay (dmg at acm dot org,
  * with " at " changed at "@" and " dot " changed to ".").	*/
 
+/* $MidnightBSD$ */
+
 #include "gdtoaimp.h"
 
 #undef _0
@@ -69,7 +71,6 @@ ULtox(UShort *L, ULong *bits, Long exp, int k)
 		goto normal_bits;
 
 	  case STRTOG_Normal:
-	  case STRTOG_NaNbits:
 		L[_0] = exp + 0x3fff + 63;
  normal_bits:
 		L[_4] = (UShort)bits[0];
@@ -78,9 +79,18 @@ ULtox(UShort *L, ULong *bits, Long exp, int k)
 		L[_1] = (UShort)(bits[1] >> 16);
 		break;
 
+	  case STRTOG_NaNbits:
+		L[_0] = exp + 0x3fff + 63;
+		L[_4] = (UShort)bits[0];
+		L[_3] = (UShort)(bits[0] >> 16);
+		L[_2] = (UShort)bits[1];
+		L[_1] = (UShort)((bits[1] >> 16) | (3 << 14));
+		break;
+
 	  case STRTOG_Infinite:
 		L[_0] = 0x7fff;
-		L[_1] = L[_2] = L[_3] = L[_4] = 0;
+		L[_1] = 0x8000;
+		L[_2] = L[_3] = L[_4] = 0;
 		break;
 
 	  case STRTOG_NaN:
@@ -96,9 +106,10 @@ ULtox(UShort *L, ULong *bits, Long exp, int k)
 
  int
 #ifdef KR_headers
-strtorx(s, sp, rounding, L) CONST char *s; char **sp; int rounding; void *L;
+strtorx_l(s, sp, rounding, L, locale) CONST char *s; char **sp; int rounding;
+void *L; locale_t locale;
 #else
-strtorx(CONST char *s, char **sp, int rounding, void *L)
+strtorx_l(CONST char *s, char **sp, int rounding, void *L, locale_t locale)
 #endif
 {
 	static FPI fpi0 = { 64, 1-16383-64+1, 32766 - 16383 - 64 + 1, 1, SI };
@@ -113,7 +124,7 @@ strtorx(CONST char *s, char **sp, int rounding, void *L)
 		fpi1.rounding = rounding;
 		fpi = &fpi1;
 		}
-	k = strtodg(s, sp, fpi, &exp, bits);
+	k = strtodg_l(s, sp, fpi, &exp, bits, locale);
 	ULtox((UShort*)L, bits, exp, k);
 	return k;
 	}

@@ -29,6 +29,8 @@ THIS SOFTWARE.
 /* Please send bug reports to David M. Gay (dmg at acm dot org,
  * with " at " changed at "@" and " dot " changed to ".").	*/
 
+/* $MidnightBSD$ */
+
 #include "gdtoaimp.h"
 
 #undef _0
@@ -63,11 +65,18 @@ ULtoQ(ULong *L, ULong *bits, Long exp, int k)
 		break;
 
 	  case STRTOG_Normal:
-	  case STRTOG_NaNbits:
 		L[_3] = bits[0];
 		L[_2] = bits[1];
 		L[_1] = bits[2];
 		L[_0] = (bits[3] & ~0x10000) | ((exp + 0x3fff + 112) << 16);
+		break;
+
+	  case STRTOG_NaNbits:
+		L[_3] = bits[0];
+		L[_2] = bits[1];
+		L[_1] = bits[2];
+		L[_0] = (bits[3] & ~0x10000)
+		    | (((exp + 0x3fff + 112) << 16) | (1 << 15));
 		break;
 
 	  case STRTOG_Denormal:
@@ -94,9 +103,10 @@ ULtoQ(ULong *L, ULong *bits, Long exp, int k)
 
  int
 #ifdef KR_headers
-strtorQ(s, sp, rounding, L) CONST char *s; char **sp; int rounding; void *L;
+strtorQ_l(s, sp, rounding, L, locale) CONST char *s; char **sp; int rounding;
+void *L; locale_t locale;
 #else
-strtorQ(CONST char *s, char **sp, int rounding, void *L)
+strtorQ_l(CONST char *s, char **sp, int rounding, void *L, locale_t locale)
 #endif
 {
 	static FPI fpi0 = { 113, 1-16383-113+1, 32766-16383-113+1, 1, SI };
@@ -111,7 +121,7 @@ strtorQ(CONST char *s, char **sp, int rounding, void *L)
 		fpi1.rounding = rounding;
 		fpi = &fpi1;
 		}
-	k = strtodg(s, sp, fpi, &exp, bits);
+	k = strtodg_l(s, sp, fpi, &exp, bits, locale);
 	ULtoQ((ULong*)L, bits, exp, k);
 	return k;
 	}
