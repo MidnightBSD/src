@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*
  * trygetif.c - test program for getif.c
  *
- * $FreeBSD: src/libexec/bootpd/trygetif.c,v 1.5 1999/08/28 00:09:20 peter Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/types.h>

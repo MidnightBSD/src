@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #ifndef	HASH_H
 #define HASH_H
 /* hash.h */
@@ -26,7 +25,7 @@ SOFTWARE.
 
 /*
  * Generalized hash table ADT
- * $FreeBSD: src/libexec/bootpd/hash.h,v 1.3 2002/05/28 18:36:43 alfred Exp $
+ * $MidnightBSD$
  *
  * Provides multiple, dynamically-allocated, variable-sized hash tables on
  * various data and keys.

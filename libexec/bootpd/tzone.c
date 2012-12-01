@@ -1,10 +1,9 @@
-/* $MidnightBSD$ */
 /*
  * tzone.c - get the timezone
  *
  * This is shared by bootpd and bootpef
  *
- * $FreeBSD: src/libexec/bootpd/tzone.c,v 1.2 2000/11/10 12:19:53 dirk Exp $
+ * $MidnightBSD$
  */
 
 #ifdef	SVR4

@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*
  * trygetea.c - test program for getether.c
  *
- * $FreeBSD: src/libexec/bootpd/trygetea.c,v 1.5 1999/08/28 00:09:19 peter Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/types.h>

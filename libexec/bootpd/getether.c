@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * getether.c : get the ethernet address of an interface
  *
@@ -8,7 +7,7 @@
  * If you figure out how to do this on another system,
  * please let me know.  <gwr@mc.com>
  *
- * $FreeBSD: src/libexec/bootpd/getether.c,v 1.14 2002/12/30 21:18:03 schweikh Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/types.h>

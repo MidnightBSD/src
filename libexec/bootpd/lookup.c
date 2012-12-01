@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*
  * lookup.c - Lookup IP address, HW address, netmask
  *
- * $FreeBSD: src/libexec/bootpd/lookup.c,v 1.7 1999/08/28 00:09:19 peter Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/types.h>

@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /* 
  * hwaddr.h
  *
- * $FreeBSD: src/libexec/bootpd/hwaddr.h,v 1.7 2002/05/28 18:36:43 alfred Exp $
+ * $MidnightBSD$
  */
 
 #ifndef	HWADDR_H

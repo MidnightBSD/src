@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*
  * getif.c : get an interface structure
  *
- * $FreeBSD: src/libexec/bootpd/getif.c,v 1.8 2004/07/29 18:05:20 kan Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/types.h>
