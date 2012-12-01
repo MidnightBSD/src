@@ -36232,6 +36232,8 @@ lib/libc/sys/aio_waitcomplete.2 -text
 lib/libc/sys/aio_write.2 -text
 lib/libc/sys/bind.2 -text
 lib/libc/sys/brk.2 -text
+lib/libc/sys/cap_enter.2 -text
+lib/libc/sys/cap_new.2 -text
 lib/libc/sys/chdir.2 -text
 lib/libc/sys/chflags.2 -text
 lib/libc/sys/chmod.2 -text
@@ -36239,6 +36241,7 @@ lib/libc/sys/chown.2 -text
 lib/libc/sys/chroot.2 -text
 lib/libc/sys/clock_gettime.2 -text
 lib/libc/sys/close.2 -text
+lib/libc/sys/closefrom.2 -text
 lib/libc/sys/connect.2 -text
 lib/libc/sys/cpuset.2 -text
 lib/libc/sys/cpuset_getaffinity.2 -text
@@ -36260,6 +36263,7 @@ lib/libc/sys/getgid.2 -text
 lib/libc/sys/getgroups.2 -text
 lib/libc/sys/getitimer.2 -text
 lib/libc/sys/getlogin.2 -text
+lib/libc/sys/getloginclass.2 -text
 lib/libc/sys/getpeername.2 -text
 lib/libc/sys/getpgrp.2 -text
 lib/libc/sys/getpid.2 -text
@@ -36314,6 +36318,10 @@ lib/libc/sys/mq_open.2 -text
 lib/libc/sys/mq_receive.2 -text
 lib/libc/sys/mq_send.2 -text
 lib/libc/sys/mq_setattr.2 -text
+lib/libc/sys/msgctl.2 -text
+lib/libc/sys/msgget.2 -text
+lib/libc/sys/msgrcv.2 -text
+lib/libc/sys/msgsnd.2 -text
 lib/libc/sys/msync.2 -text
 lib/libc/sys/munmap.2 -text
 lib/libc/sys/nanosleep.2 -text
@@ -36321,10 +36329,15 @@ lib/libc/sys/nfssvc.2 -text
 lib/libc/sys/ntp_adjtime.2 -text
 lib/libc/sys/open.2 -text
 lib/libc/sys/pathconf.2 -text
+lib/libc/sys/pdfork.2 -text
 lib/libc/sys/pipe.2 -text
 lib/libc/sys/poll.2 -text
+lib/libc/sys/posix_fadvise.2 -text
+lib/libc/sys/posix_fallocate.2 -text
+lib/libc/sys/posix_openpt.2 -text
 lib/libc/sys/pread.c -text
 lib/libc/sys/profil.2 -text
+lib/libc/sys/pselect.2 -text
 lib/libc/sys/ptrace.2 -text
 lib/libc/sys/pwrite.c -text
 lib/libc/sys/quotactl.2 -text
@@ -36358,6 +36371,7 @@ lib/libc/sys/setresuid.2 -text
 lib/libc/sys/setreuid.2 -text
 lib/libc/sys/setsid.2 -text
 lib/libc/sys/setuid.2 -text
+lib/libc/sys/shm_open.2 -text
 lib/libc/sys/shmat.2 -text
 lib/libc/sys/shmctl.2 -text
 lib/libc/sys/shmget.2 -text
