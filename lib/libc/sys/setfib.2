@@ -22,10 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libc/sys/setfib.2,v 1.2.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
 .\" $MidnightBSD$
 .\"
-.Dd May 9, 2008
+.Dd March 19, 2012
 .Dt SETFIB 2
 .Os
 .Sh NAME
@@ -34,6 +33,7 @@
 .Sh LIBRARY
 .Lb libc
 .Sh SYNOPSIS
+.In sys/socket.h
 .Ft int
 .Fn setfib "int fib"
 .Sh DESCRIPTION
@@ -45,14 +45,34 @@ subsequent to the call, to be that of the argument
 The
 .Fa fib
 argument
-may be between 0 and the current system maximum which 
+must be greater than or equal to 0
+and less than the current system maximum which
 may be retrieved by the 
-.Em net.fibs
+.Va net.fibs
 sysctl.
+The system maximum is set in the kernel configuration file with
+.Pp
+.Dl options	ROUTETABLES= Ns Em N
+.Pp
+or in
+.Pa /boot/loader.conf
+with
+.Pp
+.Dl net.fibs= Ns Qq Em N
+.Pp
+where
+.Em N
+is an integer.
+However, this maximum is capped at 16 due to the implementation storing
+the fib number in a 4-bit field in
+.Xr mbuf 9
+flags.
 The default fib of the process will be applied to all protocol families 
 that support multiple fibs, and ignored by those that do not.
-The default fib for a process may be overidden for a socket with the use
-of the SO_SETFIB socket option.
+The default fib for a process may be overridden for a socket with the use
+of the
+.Dv SO_SETFIB
+socket option.
 .Sh RETURN VALUES
 .Rv -std setfib
 .Sh ERRORS
@@ -64,18 +84,20 @@ will fail and no action will be taken and return
 if the
 .Fa fib
 argument is greater than the current system maximum.
-.El
 .Sh SEE ALSO
-.Xr setsockopt 2 ,
-.Xr setfib 8 
+.Xr setfib 1 ,
+.Xr setsockopt 2
 .Sh STANDARDS
 The
 .Fn setfib
-system call is a FreeBSD extension however similar extensions
-have been added to many other UNIX style kernels.
+system call is a
+.Fx
+extension however similar extensions
+have been added to many other
+.Ux
+style kernels.
 .Sh HISTORY
 The
 .Fn setfib
 function appeared in
-.Fx 8.0 and
-.Mx 0.4 .
+.Fx 7.1 .

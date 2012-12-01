@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)ktrace.2	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: src/lib/libc/sys/ktrace.2,v 1.25 2007/01/09 00:28:14 imp Exp $
+.\" $MidnightBSD$
 .\"
-.Dd June 4, 1993
+.Dd October 9, 2011
 .Dt KTRACE 2
 .Os
 .Sh NAME
@@ -80,7 +80,7 @@ The
 .Fa trpoints
 argument specifies the trace points of interest.
 The defined trace points are:
-.Bl -column KTRFAC_SYSCALLXXX -offset indent
+.Bl -column KTRFAC_PROCCTORXXX -offset indent
 .It "KTRFAC_SYSCALL	Trace system calls."
 .It "KTRFAC_SYSRET	Trace return values from system calls."
 .It "KTRFAC_NAMEI	Trace name lookup operations."
@@ -88,6 +88,11 @@ The defined trace points are:
 generate much output).
 .It "KTRFAC_PSIG	Trace posted signals."
 .It "KTRFAC_CSW	Trace context switch points."
+.It "KTRFAC_USER	Trace application-specific events."
+.It "KTRFAC_STRUCT	Trace certain data structures."
+.It "KTRFAC_SYSCTL	Trace sysctls."
+.It "KTRFAC_PROCCTOR	Trace process construction."
+.It "KTRFAC_PROCDTOR	Trace process destruction."
 .It "KTRFAC_INHERIT	Inherit tracing to future children."
 .El
 .Pp
@@ -101,7 +106,7 @@ struct ktr_header {
 	pid_t	ktr_pid;		/* process id */
 	char	ktr_comm[MAXCOMLEN+1];	/* command name */
 	struct	timeval ktr_time;	/* timestamp */
-	caddr_t	ktr_buf;
+	intptr_t	ktr_tid;	/* was ktr_buffer */
 };
 .Ed
 .Pp
@@ -120,8 +125,8 @@ The
 field gives the time (with microsecond resolution)
 that the record was generated.
 The
-.Va ktr_buf
-is an internal kernel pointer and is not useful.
+.Va ktr_tid
+field holds a thread id.
 .Pp
 The generic header is followed by
 .Va ktr_len

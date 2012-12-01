@@ -36371,10 +36371,12 @@ lib/libc/sys/sigreturn.2 -text
 lib/libc/sys/sigstack.2 -text
 lib/libc/sys/sigsuspend.2 -text
 lib/libc/sys/sigwait.2 -text
+lib/libc/sys/sigwait.c -text
 lib/libc/sys/sigwaitinfo.2 -text
 lib/libc/sys/socket.2 -text
 lib/libc/sys/socketpair.2 -text
 lib/libc/sys/stack_protector.c -text
+lib/libc/sys/stack_protector_compat.c -text
 lib/libc/sys/stat.2 -text
 lib/libc/sys/statfs.2 -text
 lib/libc/sys/swapon.2 -text

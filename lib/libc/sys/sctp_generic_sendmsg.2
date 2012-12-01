@@ -29,15 +29,15 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libc/sys/sctp_generic_sendmsg.2,v 1.2 2007/02/26 12:23:31 rrs Exp $
+.\" $MidnightBSD$
 .\"
-.Dd December 15, 2006
+.Dd October 30, 2007
 .Dt SCTP_GENERIC_SENDMSG 2
 .Os
 .Sh NAME
 .Nm sctp_generic_sendmsg
 .Nm sctp_generic_sendmsg_iov
-.Nd send data to a peer.
+.Nd send data to a peer
 .Sh LIBRARY
 .Lb libc
 .Sh SYNOPSIS
@@ -48,24 +48,27 @@
 .Fn sctp_generic_sendmsg "int s" "void *msg" "int msglen" "struct sockaddr *to" "socklen_t len" "struct sctp_sndrcvinfo *sinfo" "int flags"
 .Ft int
 .Fn sctp_generic_sendmsg_iov "int s" "struct iovec *iov" "int iovlen" "struct sockaddr *to" "struct sctp_sndrcvinfo *sinfo" "int flags"
-
 .Sh DESCRIPTION
-The
 .Fn sctp_generic_sendmsg
 and
 .Fn sctp_generic_sendmsg_iov
 are the true system calls used by the
-.Fn sctp_sendmsg
-and 
-.Fn sctp_send
-function calls. These are more efficient since they are
-true system calls but they are specific to FreeBSD and
-can be expected NOT to be present on any other Operating
-System. For detailed useage please see either the
-.Fn sctp_send
+.Xr sctp_sendmsg 3
+and
+.Xr sctp_send 3
+function calls.
+These are more efficient since they are
+true system calls but they are specific to
+.Fx
+and can be expected
+.Em not
+to be present on any other operating
+system.
+For detailed usage please see either the
+.Xr sctp_send 3
 or
-.Fn sctp_sendmsg
-function calls. 
+.Xr sctp_sendmsg 3
+function calls.
 .Sh RETURN VALUES
 The call returns the number of bytes written on success and -1 upon failure.
 .Sh ERRORS
@@ -80,9 +83,8 @@ The argument
 is not a socket.
 .El
 .Sh SEE ALSO
-.Xr sctp 4 ,
 .Xr sctp_send 3 ,
-.Xr sctp_sendx 3 ,
 .Xr sctp_sendmsg 3 ,
 .Xr sctp_sendmsgx 3 ,
-
+.Xr sctp_sendx 3 ,
+.Xr sctp 4

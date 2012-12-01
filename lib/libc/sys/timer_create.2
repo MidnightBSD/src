@@ -25,9 +25,9 @@
 .\" OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 .\" EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libc/sys/timer_create.2,v 1.9 2007/06/18 01:50:03 davidxu Exp $
+.\" $MidnightBSD$
 .\"
-.Dd September 11, 2000
+.Dd January 12, 2009
 .Dt TIMER_CREATE 2
 .Os
 .Sh NAME
@@ -37,6 +37,7 @@
 .Lb librt
 .Sh SYNOPSIS
 .In time.h
+.In signal.h
 .Ft int
 .Fo timer_create
 .Fa "clockid_t clockid" "struct sigevent *restrict evp"
@@ -100,7 +101,7 @@ or
 .Dv CLOCK_MONOTONIC .
 .Pp
 If
-.Fa evp->sigev_sigev_notify
+.Fa evp->sigev_notify
 is
 .Dv SIGEV_THREAD
 and
@@ -150,13 +151,13 @@ memory protection fault.
 .Sh SEE ALSO
 .Xr clock_getres 2 ,
 .Xr timer_delete 2 ,
-.Xr timer_getoverun 2 ,
+.Xr timer_getoverrun 2 ,
 .Xr siginfo 3
 .Sh STANDARDS
 The
 .Fn timer_create
 system call conforms to
-.St -p1003.1-2004
+.St -p1003.1-2004 .
 .Sh HISTORY
 Support for
 .Tn POSIX

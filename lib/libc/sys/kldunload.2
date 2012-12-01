@@ -23,13 +23,13 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libc/sys/kldunload.2,v 1.18 2005/02/13 22:25:13 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd March 3, 1999
+.Dd December 25, 2008
 .Dt KLDUNLOAD 2
 .Os
 .Sh NAME
-.Nm kldunload
+.Nm kldunload , kldunloadf
 .Nd unload kld files
 .Sh LIBRARY
 .Lb libc
@@ -38,12 +38,24 @@
 .In sys/linker.h
 .Ft int
 .Fn kldunload "int fileid"
+.Ft int
+.Fn kldunloadf "int fileid" "int flags"
 .Sh DESCRIPTION
 The
 .Fn kldunload
 system call
 unloads a kld file from the kernel that was previously linked via
 .Xr kldload 2 .
+.Pp
+The
+.Fn kldunloadf
+system call accepts an additional flags argument, which may be one of
+.Dv LINKER_UNLOAD_NORMAL ,
+giving the same behavior as
+.Fn kldunload ,
+or
+.Dv LINKER_UNLOAD_FORCE ,
+which causes the unload to ignore a failure to quiesce the module.
 .Sh RETURN VALUES
 .Rv -std
 .Sh ERRORS
@@ -57,6 +69,10 @@ You do not have access to unlink the file from the kernel.
 The file was not found.
 .It Bq Er EBUSY
 You attempted to unload a file linked by the kernel.
+.It Bq Er EINVAL
+The
+.Fn kldunloadf
+system call was passed invalid flags.
 .El
 .Sh SEE ALSO
 .Xr kldfind 2 ,

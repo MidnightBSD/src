@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)setgroups.2	8.2 (Berkeley) 4/16/94
-.\" $FreeBSD: src/lib/libc/sys/setgroups.2,v 1.14 2007/01/09 00:28:15 imp Exp $
+.\" $MidnightBSD$
 .\"
 .Dd April 16, 1994
 .Dt SETGROUPS 2
@@ -53,11 +53,9 @@ The
 argument
 indicates the number of entries in the array and must be no
 more than
-.Dv NGROUPS ,
-as defined in
-.In sys/param.h .
+.Dv {NGROUPS_MAX}+1 .
 .Pp
-Only the super-user may set new groups.
+Only the super-user may set a new group list.
 .Sh RETURN VALUES
 .Rv -std setgroups
 .Sh ERRORS
@@ -71,7 +69,7 @@ The caller is not the super-user.
 The number specified in the
 .Fa ngroups
 argument is larger than the
-.Dv NGROUPS
+.Dv {NGROUPS_MAX}+1
 limit.
 .It Bq Er EFAULT
 The address specified for

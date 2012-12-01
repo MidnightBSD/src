@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)socket.2	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: src/lib/libc/sys/socket.2,v 1.31 2007/01/09 00:28:15 imp Exp $
+.\" $MidnightBSD$
 .\"
-.Dd November 24, 1997
+.Dd January 5, 2009
 .Dt SOCKET 2
 .Os
 .Sh NAME
@@ -131,6 +131,11 @@ in which communication
 is to take place; see
 .Xr protocols 5 .
 .Pp
+The
+.Fa protocol
+argument may be set to zero (0) to request the default
+implementation of a socket type for the protocol, if any.
+.Pp
 Sockets of type
 .Dv SOCK_STREAM
 are full-duplex byte streams, similar
@@ -168,7 +173,7 @@ and received as described in
 .Pp
 The communications protocols used to implement a
 .Dv SOCK_STREAM
-insure that data
+ensure that data
 is not lost or duplicated.
 If a piece of data for which the
 peer protocol has buffer space cannot be successfully transmitted
@@ -187,11 +192,11 @@ roughly every minute in the absence of other activity.
 An error is then indicated if no response can be
 elicited on an otherwise
 idle connection for an extended period (e.g.\& 5 minutes).
-A
+By default, a
 .Dv SIGPIPE
 signal is raised if a process sends
-on a broken stream; this causes naive processes,
-which do not handle the signal, to exit.
+on a broken stream, but this behavior may be inhibited via
+.Xr setsockopt 2 .
 .Pp
 .Dv SOCK_SEQPACKET
 sockets employ the same system calls
@@ -256,6 +261,8 @@ is denied.
 .It Bq Er ENOBUFS
 Insufficient buffer space is available.
 The socket cannot be created until sufficient resources are freed.
+.It Bq Er EPERM
+User has insufficient privileges to carry out the requested operation.
 .El
 .Sh SEE ALSO
 .Xr accept 2 ,

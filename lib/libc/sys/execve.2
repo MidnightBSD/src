@@ -26,13 +26,14 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)execve.2	8.5 (Berkeley) 6/1/94
-.\" $FreeBSD: src/lib/libc/sys/execve.2,v 1.40 2007/01/09 00:28:14 imp Exp $
+.\" $MidnightBSD$
 .\"
-.Dd June 1, 1994
+.Dd September 21, 2010
 .Dt EXECVE 2
 .Os
 .Sh NAME
-.Nm execve
+.Nm execve ,
+.Nm fexecve
 .Nd execute a file
 .Sh LIBRARY
 .Lb libc
@@ -40,6 +41,8 @@
 .In unistd.h
 .Ft int
 .Fn execve "const char *path" "char *const argv[]" "char *const envp[]"
+.Ft int
+.Fn fexecve "int fd" "char *const argv[]" "char *const envp[]"
 .Sh DESCRIPTION
 The
 .Fn execve
@@ -50,6 +53,15 @@ whose name is pointed to by
 .Fa path ,
 called the
 .Em new process file .
+The
+.Fn fexecve
+system call is equivalent to
+.Fn execve
+except that the file to be executed is determined by the file
+descriptor
+.Fa fd
+instead of a
+.Fa path .
 This file is either an executable object file,
 or a file of data for an interpreter.
 An executable object file consists of an identifying header,
@@ -177,8 +189,8 @@ the calling process:
 .It interval timers Ta see Xr getitimer 2
 .It resource limits Ta see Xr getrlimit 2
 .It file mode mask Ta see Xr umask 2
-.It signal mask Ta see Xr sigvec 2 ,
-.Xr sigsetmask 2
+.It signal mask Ta see Xr sigaction 2 ,
+.Xr sigprocmask 2
 .El
 .Pp
 When a program is executed as a result of an
@@ -199,6 +211,28 @@ and
 .Fa argv
 points to the array of character pointers
 to the arguments themselves.
+.Pp
+The
+.Fn fexecve
+ignores the file offset of
+.Fa fd .
+Since execute permission is checked by
+.Fn fexecve ,
+the file descriptor
+.Fa fd
+need not have been opened with the
+.Dv O_EXEC
+flag.
+However, if the file to be executed denies read permission for the process
+preparing to do the exec, the only way to provide the
+.Fa fd
+to
+.Fn fexecve
+is to use the
+.Dv O_EXEC
+flag when opening
+.Fa fd .
+Note that the file to be executed can not be open for writing.
 .Sh RETURN VALUES
 As the
 .Fn execve
@@ -222,9 +256,11 @@ A component of the path prefix is not a directory.
 .It Bq Er ENAMETOOLONG
 A component of a pathname exceeded 255 characters,
 or an entire path name exceeded 1023 characters.
-.It Bq Er ENAMETOOLONG
-When invoking an interpreted script, the interpreter name
-exceeds
+.It Bq Er ENOEXEC
+When invoking an interpreted script, the length of the first line,
+inclusive of the
+.Sy \&#!
+prefix and terminating newline, exceeds
 .Dv MAXSHELLCMDLEN
 characters.
 .It Bq Er ENOENT
@@ -242,7 +278,7 @@ The new process file has the appropriate access
 permission, but has an invalid magic number in its header.
 .It Bq Er ETXTBSY
 The new process file is a pure procedure (shared text)
-file that is currently open for writing or reading by some process.
+file that is currently open for writing by some process.
 .It Bq Er ENOMEM
 The new process requires more virtual memory than
 is allowed by the imposed maximum
@@ -269,23 +305,27 @@ to an illegal address.
 .It Bq Er EIO
 An I/O error occurred while reading from the file system.
 .El
-.Sh CAVEAT
-If a program is
-.Em setuid
-to a non-super-user, but is executed when
-the real
-.Em uid
-is ``root'', then the program has some of the powers
-of a super-user as well.
+.Pp
+In addition, the
+.Fn fexecve
+will fail and return to the calling process if:
+.Bl -tag -width Er
+.It Bq Er EBADF
+The
+.Fa fd
+argument is not a valid file descriptor open for executing.
+.El
 .Sh SEE ALSO
 .Xr ktrace 1 ,
 .Xr _exit 2 ,
 .Xr fork 2 ,
+.Xr open 2 ,
 .Xr execl 3 ,
 .Xr exit 3 ,
 .Xr sysctl 3 ,
 .Xr a.out 5 ,
 .Xr elf 5 ,
+.Xr fdescfs 5 ,
 .Xr environ 7 ,
 .Xr mount 8
 .Sh STANDARDS
@@ -299,8 +339,39 @@ A future update of the Standard is expected to require this behavior,
 and it may become the default for non-privileged processes as well.
 .\" NB: update this caveat when TC1 is blessed.
 The support for executing interpreted programs is an extension.
+The
+.Fn fexecve
+system call conforms to The Open Group Extended API Set 2 specification.
 .Sh HISTORY
 The
 .Fn execve
 system call appeared in
 .Bx 4.2 .
+The
+.Fn fexecve
+system call appeared in
+.Fx 8.0 .
+.Sh CAVEATS
+If a program is
+.Em setuid
+to a non-super-user, but is executed when
+the real
+.Em uid
+is ``root'', then the program has some of the powers
+of a super-user as well.
+.Pp
+When executing an interpreted program through
+.Fn fexecve ,
+kernel supplies
+.Pa /dev/fd/n
+as a second argument to the interpreter,
+where
+.Ar n
+is the file descriptor passed in the
+.Fa fd
+argument to
+.Fn fexecve .
+For this construction to work correctly, the
+.Xr fdescfs 5
+filesystem shall be mounted on
+.Pa /dev/fd .

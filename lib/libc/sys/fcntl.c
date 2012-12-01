@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/sys/fcntl.c,v 1.1.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <fcntl.h>
 #include <stdarg.h>
@@ -50,7 +49,7 @@ __fcntl_compat(int fd, int cmd, ...)
 	arg = va_arg(args, long);
 	va_end(args);
 
-	if (__getosreldate() >= 700103) {
+	if (__getosreldate() >= 800028) {
 		return (__sys_fcntl(fd, cmd, arg));
 	} else {
 		if (cmd == F_GETLK || cmd == F_SETLK || cmd == F_SETLKW) {

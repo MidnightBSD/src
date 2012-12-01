@@ -26,25 +26,27 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)open.2	8.2 (Berkeley) 11/16/93
-.\" $FreeBSD: src/lib/libc/sys/open.2,v 1.38 2007/01/09 00:28:15 imp Exp $
+.\" $MidnightBSD$
 .\"
-.Dd January 7, 2007
+.Dd March 25, 2011
 .Dt OPEN 2
 .Os
 .Sh NAME
-.Nm open
-.Nd open or create a file for reading or writing
+.Nm open , openat
+.Nd open or create a file for reading, writing or executing
 .Sh LIBRARY
 .Lb libc
 .Sh SYNOPSIS
 .In fcntl.h
 .Ft int
 .Fn open "const char *path" "int flags" "..."
+.Ft int
+.Fn openat "int fd" "const char *path" "int flags" "..."
 .Sh DESCRIPTION
 The file name specified by
 .Fa path
 is opened
-for reading and/or writing as specified by the
+for either execution or reading and/or writing as specified by the
 argument
 .Fa flags
 and the file descriptor returned to the calling process.
@@ -56,7 +58,9 @@ created if it does not exist (by specifying the
 flag).
 In this case
 .Fn open
-requires a third argument
+and
+.Fn openat
+require an additional argument
 .Fa "mode_t mode" ,
 and the file is created with mode
 .Fa mode
@@ -64,6 +68,32 @@ as described in
 .Xr chmod 2
 and modified by the process' umask value (see
 .Xr umask 2 ) .
+.Pp
+The
+.Fn openat
+function is equivalent to the
+.Fn open
+function except in the case where the
+.Fa path
+specifies a relative path.
+In this case the file to be opened is determined relative to the directory
+associated with the file descriptor
+.Fa fd
+instead of the current working directory.
+The
+.Fa flag
+parameter and the optional fourth parameter correspond exactly to
+the parameters of
+.Fn open .
+If
+.Fn openat
+is passed the special value
+.Dv AT_FDCWD
+in the
+.Fa fd
+parameter, the current working directory is used
+and the behavior is identical to a call to
+.Fn open .
 .Pp
 The flags specified are formed by
 .Em or Ns 'ing
@@ -73,6 +103,7 @@ the following values
 O_RDONLY	open for reading only
 O_WRONLY	open for writing only
 O_RDWR		open for reading and writing
+O_EXEC		open for execute only
 O_NONBLOCK	do not block on open
 O_APPEND	append on each write
 O_CREAT		create file if it does not exist
@@ -85,6 +116,9 @@ O_FSYNC		synchronous writes
 O_SYNC		synchronous writes
 O_NOFOLLOW	do not follow symlinks
 O_NOCTTY	don't assign controlling terminal
+O_TTY_INIT	restore default terminal attributes
+O_DIRECTORY	error if file is not a directory
+O_CLOEXEC	set FD_CLOEXEC upon open
 .Ed
 .Pp
 Opening a file with
@@ -177,22 +211,53 @@ The
 system call will not assign controlling terminals on
 .Fx .
 .Pp
+.Dv O_TTY_INIT
+may be used to ensure the OS restores the terminal attributes when
+initially opening a TTY.
+This is the default on
+.Fx ,
+but is present for
+.Tn POSIX
+compatibility.
+The initial call to
+.Fn open
+on a TTY will always restore default terminal attributes on
+.Fx .
+.Pp
+.Dv O_DIRECTORY
+may be used to ensure the resulting file descriptor refers to a
+directory.
+This flag can be used to prevent applications with elevated privileges
+from opening files which are even unsafe to open with
+.Dv O_RDONLY ,
+such as device nodes.
+.Pp
+.Dv O_CLOEXEC
+may be used to set
+.Dv FD_CLOEXEC
+flag for the newly returned file descriptor.
+.Pp
 If successful,
 .Fn open
 returns a non-negative integer, termed a file descriptor.
-It returns -1 on failure.
+It returns \-1 on failure.
 The file pointer used to mark the current position within the
 file is set to the beginning of the file.
 .Pp
 When a new file is created it is given the group of the directory
 which contains it.
 .Pp
-The new descriptor is set to remain open across
+Unless
+.Dv O_CLOEXEC
+flag was specified,
+the new descriptor is set to remain open across
 .Xr execve 2
 system calls; see
-.Xr close 2
+.Xr close 2 ,
+.Xr fcntl 2
 and
-.Xr fcntl 2 .
+.Dv O_CLOEXEC
+description.
 .Pp
 The system imposes a limit on the number of file descriptors
 open simultaneously by one process.
@@ -202,8 +267,10 @@ system call returns the current system limit.
 .Sh RETURN VALUES
 If successful,
 .Fn open
-returns a non-negative integer, termed a file descriptor.
-It returns -1 on failure, and sets
+and
+.Fn openat
+return a non-negative integer, termed a file descriptor.
+They return \-1 on failure, and set
 .Va errno
 to indicate the error.
 .Sh ERRORS
@@ -240,9 +307,9 @@ created has its immutable flag set, see the
 .Xr chflags 2
 manual page for more information.
 .It Bq Er EPERM
-.Dv The named file has its immutable flag set and the file is to be modified.
+The named file has its immutable flag set and the file is to be modified.
 .It Bq Er EPERM
-.Dv The named file has its append-only flag set, the file is to be modified, and
+The named file has its append-only flag set, the file is to be modified, and
 .Dv O_TRUNC
 is specified or
 .Dv O_APPEND
@@ -346,13 +413,35 @@ An attempt was made to open a descriptor with an illegal combination
 of
 .Dv O_RDONLY ,
 .Dv O_WRONLY ,
+.Dv O_RDWR
 and
-.Dv O_RDWR .
+.Dv O_EXEC .
+.It Bq Eq EBADF
+The
+.Fa path
+argument does not specify an absolute path and the
+.Fa fd
+argument is
+neither
+.Dv AT_FDCWD
+nor a valid file descriptor open for searching.
+.It Bq Eq ENOTDIR
+The
+.Fa path
+argument is not an absolute path and
+.Fa fd
+is neither
+.Dv AT_FDCWD
+nor a file descriptor associated with a directory.
+.It Bq Eq ENOTDIR
+.Dv O_DIRECTORY
+is specified and the file is not a directory.
 .El
 .Sh SEE ALSO
 .Xr chmod 2 ,
 .Xr close 2 ,
 .Xr dup 2 ,
+.Xr fexecve 2 ,
 .Xr fhopen 2 ,
 .Xr getdtablesize 2 ,
 .Xr getfh 2 ,
@@ -367,3 +456,18 @@ The
 .Fn open
 function appeared in
 .At v6 .
+The
+.Fn openat
+function was introduced in
+.Fx 8.0 .
+.Sh BUGS
+The Open Group Extended API Set 2 specification requires that the test
+for whether
+.Fa fd
+is searchable is based on whether
+.Fa fd
+is open for searching, not whether the underlying directory currently
+permits searches.
+The present implementation of the
+.Fa openat
+checks the current permissions of directory instead.

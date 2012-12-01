@@ -29,7 +29,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)sleep.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: src/lib/libc/sys/nanosleep.2,v 1.18 2007/01/09 00:28:15 imp Exp $
+.\" $MidnightBSD$
 .\"
 .Dd April 17, 1997
 .Dt NANOSLEEP 2
@@ -47,7 +47,9 @@
 The
 .Fn nanosleep
 system call
-causes the process to sleep for the specified time.
+causes the calling thread to sleep until the time interval specified by
+.Fa rqtp
+has elapsed.
 An unmasked signal will
 cause it to terminate the sleep early, regardless of the
 .Dv SA_RESTART

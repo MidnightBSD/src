@@ -1,6 +1,5 @@
 /*
- * $MidnightBSD: src/lib/libc/sys/Symbol.map,v 1.8 2012/04/10 19:40:33 laffer1 Exp $
- * $FreeBSD: src/lib/libc/sys/Symbol.map,v 1.9.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -32,7 +31,6 @@ FBSD_1.0 {
 	__mac_set_file;
 	__mac_set_link;
 	__mac_set_proc;
-	__semctl;
 	__setugid;
 	__syscall;
 	__sysctl;
@@ -150,12 +148,6 @@ FBSD_1.0 {
 	kmq_timedreceive;
 	kmq_timedsend;
 	kmq_unlink;
-	kse_create;
-	kse_exit;
-	kse_release;
-	kse_switchin;
-	kse_thr_interrupt;
-	kse_wakeup;
 	ksem_close;
 	ksem_destroy;
 	ksem_getvalue;
@@ -191,7 +183,6 @@ FBSD_1.0 {
 	modstat;
 	mount;
 	mprotect;
-	msgctl;
 	msgget;
 	msgrcv;
 	msgsnd;
@@ -203,7 +194,6 @@ FBSD_1.0 {
 	nanosleep;
 	netbsd_lchown;
 	netbsd_msync;
-	nfsclnt;
 	nfssvc;
 	nfstat;
 	nlstat;
@@ -218,8 +208,10 @@ FBSD_1.0 {
 	pathconf;
 	pipe;
 	poll;
+	posix_openpt;
 	preadv;
 	profil;
+	pselect;
 	ptrace;
 	pwritev;
 	quotactl;
@@ -271,8 +263,9 @@ FBSD_1.0 {
 	setsockopt;
 	settimeofday;
 	setuid;
+	shm_open;
+	shm_unlink;
 	shmat;
-	shmctl;
 	shmdt;
 	shmget;
 	shmsys;
@@ -290,7 +283,6 @@ FBSD_1.0 {
 	socket;
 	socketpair;
 	__stack_chk_fail;
-	__stack_chk_fail_local;
 	__stack_chk_guard;
 	stat;
 	statfs;
@@ -337,12 +329,57 @@ FBSD_1.0 {
 };
 
 FBSD_1.1 {
+	__semctl;
+	closefrom;
 	cpuset;
 	cpuset_getid;
 	cpuset_setid;
 	cpuset_getaffinity;
 	cpuset_setaffinity;
+	faccessat;
+	fchmodat;
+	fchownat;
+	fexecve;
+	fstatat;
+	futimesat;
+	jail_get;
+	jail_set;
+	jail_remove;
+	linkat;
+	lpathconf;
+	mkdirat;
+	mkfifoat;
+	mknodat;
+	msgctl;
+	openat;
+	readlinkat;
+	renameat;
 	setfib;
+	shmctl;
+	symlinkat;
+	unlinkat;
+};
+
+FBSD_1.2 {
+	cap_enter;
+	cap_getmode;
+	cap_new;
+	cap_getrights;
+	getloginclass;
+	pdfork;
+	pdgetpid;
+	pdkill;
+	posix_fallocate;
+	rctl_get_racct;
+	rctl_get_rules;
+	rctl_get_limits;
+	rctl_add_rule;
+	rctl_remove_rule;
+	setloginclass;
+};
+
+FBSD_1.3 {
+	posix_fadvise;
 };
 
 FBSDprivate_1.0 {
@@ -458,6 +495,8 @@ FBSDprivate_1.0 {
 	__sys_clock_settime;
 	_close;
 	__sys_close;
+	_closefrom;
+	__sys_closefrom;
 	_connect;
 	__sys_connect;
 	_cpuset;
@@ -637,18 +676,6 @@ FBSDprivate_1.0 {
 	__sys_kmq_unlink;
 	_kqueue;
 	__sys_kqueue;
-	_kse_create;
-	__sys_kse_create;
-	_kse_exit;
-	__sys_kse_exit;
-	_kse_release;
-	__sys_kse_release;
-	_kse_switchin;
-	__sys_kse_switchin;
-	_kse_thr_interrupt;
-	__sys_kse_thr_interrupt;
-	_kse_wakeup;
-	__sys_kse_wakeup;
 	_ksem_close;
 	__sys_ksem_close;
 	_ksem_destroy;
@@ -743,8 +770,6 @@ FBSDprivate_1.0 {
 	__sys_netbsd_lchown;
 	_netbsd_msync;
 	__sys_netbsd_msync;
-	_nfsclnt;
-	__sys_nfsclnt;
 	_nfssvc;
 	__sys_nfssvc;
 	_nfstat;
@@ -767,6 +792,8 @@ FBSDprivate_1.0 {
 	__sys_olio_listio;
 	_open;
 	__sys_open;
+	_openat;
+	__sys_openat;
 	_pathconf;
 	__sys_pathconf;
 	_pipe;
@@ -777,6 +804,8 @@ FBSDprivate_1.0 {
 	__sys_preadv;
 	_profil;
 	__sys_profil;
+	_pselect;
+	__sys_pselect;
 	_ptrace;
 	__sys_ptrace;
 	_pwritev;
@@ -879,6 +908,10 @@ FBSDprivate_1.0 {
 	__sys_settimeofday;
 	_setuid;
 	__sys_setuid;
+	_shm_open;
+	__sys_shm_open;
+	_shm_unlink;
+	__sys_shm_unlink;
 	_shmat;
 	__sys_shmat;
 	_shmctl;
@@ -908,6 +941,7 @@ FBSDprivate_1.0 {
 	_sigtimedwait;
 	__sys_sigtimedwait;
 	_sigwait;
+	__sigwait;
 	__sys_sigwait;
 	_sigwaitinfo;
 	__sys_sigwaitinfo;
@@ -985,4 +1019,5 @@ FBSDprivate_1.0 {
 	__sys_writev;
 	__error_unthreaded;
 	nlm_syscall;
+	gssd_syscall;
 };

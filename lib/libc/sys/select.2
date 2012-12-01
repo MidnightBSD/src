@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)select.2	8.2 (Berkeley) 3/25/94
-.\" $FreeBSD: src/lib/libc/sys/select.2,v 1.33 2007/01/09 00:28:15 imp Exp $
+.\" $MidnightBSD$
 .\"
 .Dd November 17, 2002
 .Dt SELECT 2
@@ -222,3 +222,6 @@ Thus, it is unwise to assume that the timeout value will be unmodified
 by the
 .Fn select
 system call.
+.Fx
+does not modify the return value, which can cause problems for applications
+ported from other systems.

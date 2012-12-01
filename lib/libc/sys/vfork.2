@@ -26,14 +26,14 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)vfork.2	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: src/lib/libc/sys/vfork.2,v 1.27 2007/01/09 00:28:16 imp Exp $
+.\" $MidnightBSD$
 .\"
-.Dd June 4, 1993
+.Dd November 13, 2009
 .Dt VFORK 2
 .Os
 .Sh NAME
 .Nm vfork
-.Nd spawn new process in a virtual memory efficient way
+.Nd create a new process without copying the address space
 .Sh LIBRARY
 .Lb libc
 .Sh SYNOPSIS
@@ -104,7 +104,7 @@ Same as for
 .Xr _exit 2 ,
 .Xr fork 2 ,
 .Xr rfork 2 ,
-.Xr sigvec 2 ,
+.Xr sigaction 2 ,
 .Xr wait 2 ,
 .Xr exit 3
 .Sh HISTORY
@@ -113,14 +113,6 @@ The
 system call appeared in
 .Bx 2.9 .
 .Sh BUGS
-This system call will be eliminated when proper system sharing
-mechanisms are implemented.
-Users should not depend on the memory
-sharing semantics of
-.Fn vfork
-as it will, in that case, be made synonymous to
-.Xr fork 2 .
-.Pp
 To avoid a possible deadlock situation,
 processes that are children in the middle
 of a

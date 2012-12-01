@@ -29,14 +29,14 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libc/sys/sctp_generic_recvmsg.2,v 1.2 2007/02/26 12:23:31 rrs Exp $
+.\" $MidnightBSD$
 .\"
-.Dd December 15, 2006
+.Dd October 30, 2007
 .Dt SCTP_GENERIC_RECVMSG 2
 .Os
 .Sh NAME
 .Nm sctp_generic_recvmsg
-.Nd receive data from a peer.
+.Nd receive data from a peer
 .Sh LIBRARY
 .Lb libc
 .Sh SYNOPSIS
@@ -45,18 +45,21 @@
 .In netinet/sctp.h
 .Ft int
 .Fn sctp_generic_recvmsg "int s" "struct iovec *iov" "int iovlen" "struct sockaddr *from" "socklen_t *fromlen" "struct sctp_sndrcvinfo *sinfo" "int *msgflags"
-.Ft int
 .Sh DESCRIPTION
-The
 .Fn sctp_generic_recvmsg
-is the true system calls used by the
-.Fn sctp_recvmsg
-function call. This call is more efficient since it is a
-true system calls but it is specific to FreeBSD and
-can be expected NOT to be present on any other Operating
-System. For detailed useage please see either the
-.Fn sctp_recvmsg 
-function call. 
+is the true system call used by the
+.Xr sctp_recvmsg 3
+function call.
+This call is more efficient since it is a
+true system call but it is specific to
+.Fx
+and can be expected
+.Em not
+to be present on any other operating
+system.
+For detailed usage please see the
+.Xr sctp_recvmsg 3
+function call.
 .Sh RETURN VALUES
 The call returns the number of bytes read on success and -1 upon failure.
 .Sh ERRORS
@@ -71,6 +74,5 @@ The argument
 is not a socket.
 .El
 .Sh SEE ALSO
-.Xr sctp 4 ,
 .Xr sctp_recvmsg 3 ,
-
+.Xr sctp 4

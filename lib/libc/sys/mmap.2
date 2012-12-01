@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)mmap.2	8.4 (Berkeley) 5/11/95
-.\" $FreeBSD: src/lib/libc/sys/mmap.2,v 1.56 2007/01/09 00:28:15 imp Exp $
+.\" $MidnightBSD$
 .\"
-.Dd April 21, 2006
+.Dd March 18, 2012
 .Dt MMAP 2
 .Os
 .Sh NAME
@@ -105,9 +105,13 @@ The file descriptor used for creating
 must be \-1.
 The
 .Fa offset
-argument is ignored.
+argument must be 0.
 .\".It Dv MAP_FILE
 .\"Mapped from a regular file or character-special device memory.
+.It Dv MAP_ANONYMOUS
+This flag is identical to
+.Dv MAP_ANON
+and is provided for compatibility.
 .It Dv MAP_FIXED
 Do not permit the system to select a different address than the one
 specified.
@@ -201,12 +205,25 @@ command and
 system call generally do not flush dirty NOSYNC VM data.
 The
 .Xr msync 2
-system call is obsolete since
+system call is usually not needed since
 .Bx
 implements a coherent file system buffer cache.
 However, it may be
 used to associate dirty VM pages with file system buffers and thus cause
 them to be flushed to physical media sooner rather than later.
+.It Dv MAP_PREFAULT_READ
+Immediately update the calling process's lowest-level virtual address
+translation structures, such as its page table, so that every memory
+resident page within the region is mapped for read access.
+Ordinarily these structures are updated lazily.
+The effect of this option is to eliminate any soft faults that would
+otherwise occur on the initial read accesses to the region.
+Although this option does not preclude
+.Fa prot
+from including
+.Dv PROT_WRITE ,
+it does not eliminate soft faults on the initial write accesses to the
+region.
 .It Dv MAP_PRIVATE
 Modifications are private.
 .It Dv MAP_SHARED
@@ -252,6 +269,11 @@ In the future we may define an additional mapping type,
 in which
 the file descriptor argument specifies a file or device to which swapping
 should be done.
+.Sh NOTES
+Although this implementation does not impose any alignment restrictions on
+the
+.Fa offset
+argument, a portable program must only use page-aligned values.
 .Sh RETURN VALUES
 Upon successful completion,
 .Fn mmap
@@ -301,19 +323,17 @@ resides out of the valid address space for a user process.
 The
 .Fa len
 argument
-was negative.
+was equal to zero.
 .It Bq Er EINVAL
 .Dv MAP_ANON
 was specified and the
 .Fa fd
 argument was not -1.
-The
+.It Bq Er EINVAL
+.Dv MAP_ANON
+was specified and the
 .Fa offset
-argument
-was not page-aligned.
-(See
-.Sx BUGS
-below.)
+argument was not 0.
 .It Bq Er ENODEV
 .Dv MAP_ANON
 has not been specified and
@@ -326,9 +346,6 @@ was specified and the
 argument was not available.
 .Dv MAP_ANON
 was specified and insufficient memory was available.
-The system has reached the per-process mmap limit specified in the
-.Va vm.max_proc_mmap
-sysctl.
 .El
 .Sh SEE ALSO
 .Xr madvise 2 ,
@@ -339,8 +356,7 @@ sysctl.
 .Xr msync 2 ,
 .Xr munlock 2 ,
 .Xr munmap 2 ,
-.Xr getpagesize 3 ,
-.Xr make.conf 5
+.Xr getpagesize 3
 .Sh BUGS
 The
 .Fa len
@@ -355,10 +371,3 @@ Larger files may be possible on 64 bit systems.
 The previous documented limit of 2GB was a documentation bug.
 That limit has not existed since
 .Fx 2.2 .
-.Pp
-Note that an attempt to
-.Fn mmap
-zero bytes has no effect and succeeds, while an attempt to
-.Fn munmap
-zero bytes will return
-.Bq Er EINVAL .

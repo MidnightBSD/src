@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)bind.2	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: src/lib/libc/sys/bind.2,v 1.28 2007/01/09 00:28:14 imp Exp $
+.\" $MidnightBSD$
 .\"
 .Dd June 4, 1993
 .Dt BIND 2
@@ -82,6 +82,9 @@ The
 .Fa s
 argument
 is not a valid descriptor.
+.It Bq Er EINVAL
+The socket is already bound to an address, and the protocol does not support
+binding to a new address; or the socket has been shut down.
 .It Bq Er ENOTSOCK
 The
 .Fa s
