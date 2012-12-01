@@ -26,7 +26,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/btxld/btxld.c,v 1.10 2006/01/23 13:55:32 delphij Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -337,7 +337,7 @@ gethdr(int fd, struct hdr *hdr)
 	errx(1, "%s: Too big", fname);
     hdr->size = sb.st_size;
     if (!hdr->size)
-        return;
+	return;
     if ((p = mmap(NULL, hdr->size, PROT_READ, MAP_SHARED, fd,
 		  0)) == MAP_FAILED)
 	err(2, "%s", fname);

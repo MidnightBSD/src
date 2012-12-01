@@ -23,7 +23,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/btxld/btx.h,v 1.2 1999/08/28 01:15:41 peter Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _BTX_H_
