@@ -32,9 +32,9 @@
 
 #include <sys/cdefs.h>
 #if 0
-__FBSDID("FreeBSD: src/lib/libc/string/strxfrm.c,v 1.15 2002/09/06 11:24:06 tjr Exp ");
+__MBSDID("FreeBSD: src/lib/libc/string/strxfrm.c,v 1.15 2002/09/06 11:24:06 tjr Exp ");
 #endif
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include <stdlib.h>
 #include <string.h>
