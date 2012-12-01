@@ -26,10 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)syslogd.8	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: src/usr.sbin/syslogd/syslogd.8,v 1.61 2006/03/06 10:36:32 pjd Exp $
 .\" $MidnightBSD$
 .\"
-.Dd April 13, 2005
+.Dd May 13, 2008
 .Dt SYSLOGD 8
 .Os
 .Sh NAME
@@ -37,7 +36,7 @@
 .Nd log systems messages
 .Sh SYNOPSIS
 .Nm
-.Op Fl 46ACcdknosuv
+.Op Fl 468ACcdkNnosTuv
 .Op Fl a Ar allowed_peer
 .Op Fl b Ar bind_address
 .Op Fl f Ar config_file
@@ -61,6 +60,23 @@ to use IPv4 addresses only.
 Force
 .Nm
 to use IPv6 addresses only.
+.It Fl 8
+Tells
+.Nm
+not to interfere with 8-bit data.  Normally
+.Nm
+will replace C1 control characters
+.Pq ISO 8859 and Unicode characters
+with their
+.Dq M- Ns Em x
+equivalent.
+Note, this option does not change the way
+.Nm
+alters control characters
+.Pq see Xr iscntrl 3 .
+They will always be replaced with their
+.Dq ^ Ns Em x
+equivalent.
 .It Fl A
 Ordinarily,
 .Nm
@@ -79,8 +95,9 @@ Multiple
 .Fl a
 options may be specified.
 .Pp
-.Ar Allowed_peer
-can be any of the following:
+The
+.Ar allowed_peer
+option may be any of the following:
 .Bl -tag -width "ipaddr/masklen[:service]XX"
 .It Xo
 .Sm off
@@ -154,10 +171,29 @@ The
 options are ignored if the
 .Fl s
 option is also specified.
-.It Fl b Ar bind_address
-Specify one specific IP address or hostname to bind to.
-If a hostname is specified,
-the IPv4 or IPv6 address which corresponds to it is used.
+.It Xo
+.Fl b
+.Sm off
+.Ar bind_address Op : Ar service
+.Sm on
+.Xc
+.It Xo
+.Fl b
+.Sm off
+.Li : Ar service
+.Sm on
+.Xc
+Bind to a specific address and/or port.
+The address can be specified as a hostname,
+and the port as a service name.
+If an IPv6 address is specified, it should be enclosed with
+.Ql \&[
+and
+.Ql \&] .
+The default
+.Ar service
+is
+.Ql syslog .
 .It Fl C
 Create log files that do not exist (permission is set to
 .Li 0600 ) .
@@ -191,6 +227,13 @@ facility is reserved for messages read directly from
 Select the number of minutes between
 .Dq mark
 messages; the default is 20 minutes.
+.It Fl N
+Disable binding on UDP sockets.  RFC 3164 recommends that outgoing
+syslogd messages should originate from the privileged port, this
+option
+.Em disables
+the recommended behavior.  This option inherits
+.Fl s .
 .It Fl n
 Disable dns query for every request.
 .It Fl o
@@ -226,6 +269,11 @@ Do not log messages from remote machines.
 If
 specified twice, no network socket will be opened at all, which also
 disables logging to remote machines.
+.It Fl T
+Always use the local time and date for messages received from the network,
+instead of the timestamp field supplied in the message by the remote host.
+This is useful if some of the originating hosts can't keep time properly
+or are unable to generate a correct timestamp.
 .It Fl u
 Unique priority logging.
 Only log messages at the specified priority.
@@ -292,6 +340,13 @@ will not append to log files that do not exist (unless
 option is specified);
 therefore, they must be created manually before running
 .Nm .
+.Pp
+The date and time are taken from the received message.
+If the format of the timestamp field is incorrect,
+time obtained from the local host is used instead.
+This can be overriden by the
+.Fl T
+flag.
 .Sh FILES
 .Bl -tag -width /var/run/syslog.pid -compact
 .It Pa /etc/syslog.conf
