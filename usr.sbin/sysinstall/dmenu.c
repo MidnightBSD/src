@@ -3,9 +3,8 @@
  *
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated for what's essentially a complete rewrite.
- * 
- * $MidnightBSD: src/usr.sbin/sysinstall/dmenu.c,v 1.3 2009/05/20 23:33:31 laffer1 Exp $ 
- * $FreeBSD: src/usr.sbin/sysinstall/dmenu.c,v 1.45 2003/09/17 03:45:30 marcel Exp $
+ *
+ * $MidnightBSD$
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -177,10 +176,10 @@ dmenuISetVariable(dialogMenuItem *tmp)
 	return DITEM_FAILURE;
     }
     if ((p = index(var, '=')) != NULL)
-        *p = '\0';
+	*p = '\0';
     ans = msgGetInput(variable_get(var), tmp->title, 1);
     if (!ans) {
-        free(var);
+	free(var);
 	return DITEM_FAILURE;
     } else if (!*ans)
 	variable_unset(var);

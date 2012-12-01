@@ -1,6 +1,5 @@
 /*
- * $MidnightBSD: src/usr.sbin/sysinstall/dhcp.c,v 1.3.2.1 2008/07/03 23:42:36 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/sysinstall/dhcp.c,v 1.5 2004/03/11 11:58:15 bde Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/dhcp.c,v 1.5 2008/09/02 01:30:29 laffer1 Exp $
  *
  * Copyright (c) 1999
  *	C. Stone.  All rights reserved.

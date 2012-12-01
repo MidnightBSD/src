@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/usr.sbin/sysinstall/dist.h,v 1.5 2009/10/24 14:27:17 laffer1 Exp $ */
+/* $MidnightBSD: src/usr.sbin/sysinstall/dist.h,v 1.6 2011/01/29 23:36:46 laffer1 Exp $ */
 /* $FreeBSD: /usr/local/www/cvsroot/FreeBSD/src/usr.sbin/sysinstall/dist.h,v 1.67.2.4.2.1 2008/01/14 19:28:43 kensmith Exp $  */
 
 #ifndef _DIST_H_INCLUDE
@@ -13,11 +13,10 @@
 #define DIST_SRC		0x00020
 #define DIST_DOC		0x00040
 #define DIST_INFO		0x00080
-#define DIST_XORG		0x00100
 #define DIST_CATPAGES		0x00200
 #define DIST_PORTS		0x00400
 #define DIST_LOCAL		0x00800
-#ifdef __amd64__
+#if defined(__amd64__)
 #define DIST_LIB32		0x01000
 #endif
 #define	DIST_KERNEL		0x02000
@@ -45,7 +44,6 @@
 #define DIST_SRC_SKERBEROS5	0x40000
 #define DIST_SRC_RESCUE		0x80000
 #define DIST_SRC_CDDL		0x100000
-#define DIST_SRC_APACHE		0x200000
 #define DIST_SRC_ALL		0x3FFFFF
 
 /* Subtypes for X.Org packages */
@@ -55,6 +53,8 @@
 #define DIST_KERNEL_GENERIC	0x00001
 #define DIST_KERNEL_SMP		0x00002
 #define DIST_KERNEL_ALL		0xFFFFF
+
+#define GENERIC_KERNEL_NAME	"GENERIC"
 
 /* Canned distribution sets */
 

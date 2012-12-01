@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/dist.c,v 1.8 2009/10/24 14:27:17 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/dist.c,v 1.9 2011/01/29 23:36:46 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/dist.c,v 1.239.2.1 2005/08/30 20:01:32 murray Exp $
  *
  * Copyright (c) 1995
@@ -46,7 +46,6 @@
 
 unsigned int Dists;
 unsigned int SrcDists;
-unsigned int XOrgDists;
 unsigned int KernelDists;
 
 enum _disttype { DT_TARBALL, DT_SUBDIST, DT_PACKAGE };
@@ -64,7 +63,6 @@ typedef struct _dist {
 
 static Distribution KernelDistTable[];
 static Distribution SrcDistTable[];
-static Distribution XOrgDistTable[];
 
 #define	DTE_TARBALL(name, mask, flag, directory)			\
 	{ name, mask, DIST_ ## flag, DT_TARBALL, { directory } }
@@ -93,16 +91,12 @@ static Distribution DistTable[] = {
     DTE_SUBDIST("src",	    &Dists, SRC,      SrcDistTable),
     DTE_TARBALL("mports",   &Dists, PORTS,    "/usr"),
     DTE_TARBALL("local",    &Dists, LOCAL,    "/"),
-    DTE_PACKAGE("X.Org",    &Dists, XORG,     "xorg"),
     DTE_END,
 };
 
 /* The kernel distributions */
 static Distribution KernelDistTable[] = {
-    DTE_TARBALL("GENERIC",  &KernelDists, KERNEL_GENERIC, "/boot"),
-#ifdef WITH_SMP
-    DTE_TARBALL("SMP", 	    &KernelDists, KERNEL_SMP,	  "/boot"),
-#endif
+    DTE_TARBALL(GENERIC_KERNEL_NAME,  &KernelDists, KERNEL_GENERIC, "/boot"),
     DTE_END,
 };
 
@@ -140,23 +134,21 @@ distVerifyFlags(void)
 {
     if (SrcDists)
 	Dists |= DIST_SRC;
-    if (XOrgDists)
-	Dists |= DIST_XORG;
     if (KernelDists)
 	Dists |= DIST_KERNEL;
-    if (isDebug()) {
-	msgDebug("Dist Masks: Dists: %0x, Srcs: %0x Kernels: %0x\n", Dists,
-	    SrcDists, KernelDists);
-	msgDebug("XServer: %0x\n", XOrgDists);
-    }
+    if (DocDists)
+	Dists |= DIST_DOC;
+    if (isDebug())
+	msgDebug("Dist Masks: Dists: %0x, Srcs: %0x Kernels: %0x Docs: %0x\n", Dists,
+	    SrcDists, KernelDists, DocDists);
 }
 
 int
 distReset(dialogMenuItem *self)
 {
     Dists = 0;
+    DocDists = 0;
     SrcDists = 0;
-    XOrgDists = 0;
     KernelDists = 0;
     return DITEM_SUCCESS | DITEM_REDRAW;
 }
@@ -171,11 +163,11 @@ distConfig(dialogMenuItem *self)
     if ((cp = variable_get(VAR_DIST_MAIN)) != NULL)
 	Dists = atoi(cp);
 
+    if ((cp = variable_get(VAR_DIST_DOC)) != NULL)
+	DocDists = atoi(cp);
+
     if ((cp = variable_get(VAR_DIST_SRC)) != NULL)
 	SrcDists = atoi(cp);
-
-    if ((cp = variable_get(VAR_DIST_X11)) != NULL)
-	XOrgDists = atoi(cp);
 
     if ((cp = variable_get(VAR_DIST_KERNEL)) != NULL)
 	KernelDists = atoi(cp);
@@ -184,23 +176,10 @@ distConfig(dialogMenuItem *self)
     return DITEM_SUCCESS | DITEM_REDRAW;
 }
 
-static int
-distSetX(void)
-{
-    Dists |= DIST_XORG;
-    XOrgDists = DIST_XORG_ALL;
-    return DITEM_SUCCESS;
-}
-
 int
 selectKernel(void)
 {
-#ifdef WITH_SMP
-    /* select default kernel based on deduced cpu count */
-    return NCpus > 1 ? DIST_KERNEL_SMP : DIST_KERNEL_GENERIC;
-#else
     return DIST_KERNEL_GENERIC;
-#endif
 }
 
 int
@@ -212,18 +191,8 @@ distSetDeveloper(dialogMenuItem *self)
     Dists = _DIST_DEVELOPER;
     SrcDists = DIST_SRC_ALL;
     KernelDists = selectKernel();
-    i = distMaybeSetPorts(self);
-    distVerifyFlags();
-    return i;
-}
-
-int
-distSetXDeveloper(dialogMenuItem *self)
-{
-    int i;
-
-    i = distSetDeveloper(self);
-    i |= distSetX();
+    i = distSetDoc(self);
+    i |= distMaybeSetPorts(self);
     distVerifyFlags();
     return i;
 }
@@ -237,18 +206,8 @@ distSetKernDeveloper(dialogMenuItem *self)
     Dists = _DIST_DEVELOPER;
     SrcDists = DIST_SRC_SYS | DIST_SRC_BASE;
     KernelDists = selectKernel();
-    i = distMaybeSetPorts(self);
-    distVerifyFlags();
-    return i;
-}
-
-int
-distSetXKernDeveloper(dialogMenuItem *self)
-{
-    int i;
-
-    i = distSetKernDeveloper(self);
-    i |= distSetX();
+    i = distSetDoc(self);
+    i |= distMaybeSetPorts(self);
     distVerifyFlags();
     return i;
 }
@@ -261,18 +220,8 @@ distSetUser(dialogMenuItem *self)
     distReset(NULL);
     Dists = _DIST_USER;
     KernelDists = selectKernel();
-    i = distMaybeSetPorts(self);
-    distVerifyFlags();
-    return i;
-}
-
-int
-distSetXUser(dialogMenuItem *self)
-{
-    int i;
-
-    i = distSetUser(self);
-    i |= distSetX();
+    i = distSetDoc(self);
+    i |= distMaybeSetPorts(self);
     distVerifyFlags();
     return i;
 }
@@ -294,8 +243,8 @@ distSetEverything(dialogMenuItem *self)
 
     Dists = DIST_ALL;
     SrcDists = DIST_SRC_ALL;
-    XOrgDists = DIST_XORG_ALL;
     KernelDists = DIST_KERNEL_ALL;
+    DocDists = DIST_DOC_ALL;
     i = distMaybeSetPorts(self);
     distVerifyFlags();
     return i | DITEM_REDRAW;
@@ -403,18 +352,16 @@ int
 distUnsetCustom(dialogMenuItem *self)
 {
     char *cp, *cp2, *tmp;
-    size_t tmplen;
 
     if (!(tmp = variable_get(VAR_DISTS))) {
 	msgDebug("distUnsetCustom() called without %s variable set.\n", VAR_DISTS);
 	return DITEM_FAILURE;
     }
 
-    tmplen = strlen(tmp);
-    cp = alloca(tmplen + 1);
+    cp = alloca(strlen(tmp) + 1);
     if (!cp)
-	msgFatal("Couldn't alloca() %d bytes!\n", (int)(tmplen + 1));
-    strlcpy(cp, tmp, tmplen + 1);
+	msgFatal("Couldn't alloca() %d bytes!\n", (int)(strlen(tmp) + 1));
+    strcpy(cp, tmp);
     while (cp) {
 	if ((cp2 = index(cp, ' ')) != NULL)
 	    *(cp2++) = '\0';
@@ -633,7 +580,7 @@ getinfo:
 	    if (fp == NULL)
 		msgConfirm("Failed to find %s on this media.  Reinitializing media.", fname);
 	    else
-		msgConfirm("Failed to retreive piece file %s.\n"
+		msgConfirm("Failed to retrieve piece file %s.\n"
 			   "%s: Reinitializing media.",
 			   fname, !intr ? "I/O error" : "User interrupt");
 	    DEVICE_SHUTDOWN(mediaDevice);
@@ -729,6 +676,7 @@ distExtract(char *parent, Distribution *me)
     char *path, *dist;
     WINDOW *w = savescr();
     struct sigaction old, new;
+    int canceled = 0;
 
     status = TRUE;
     if (isDebug())
@@ -743,7 +691,7 @@ distExtract(char *parent, Distribution *me)
     sigaction(SIGINT, &new, &old);
 
     /* Loop through to see if we're in our parent's plans */
-    for (i = 0; me[i].my_name; i++) {
+    for (i = 0; me[i].my_name && canceled == 0; i++) {
 	dist = me[i].my_name;
 	path = parent ? parent : dist;
 
@@ -778,9 +726,15 @@ distExtract(char *parent, Distribution *me)
 		    status = msgYesNo("Unable to transfer the %s distribution from\n%s.\n\n"
 			              "Do you want to try to retrieve it again?",
 				      me[i].my_name, mediaDevice->name);
-		    if (!status)
+		    if (status == 0)
 			--i;
+		    else
+			canceled = 1;	
+
 		    status = FALSE;
+		} else {
+			// ignore any failures with DIST_LOCAL
+			status = TRUE;
 		}
 	    }
 	    break;
@@ -793,6 +747,7 @@ distExtract(char *parent, Distribution *me)
 	if (status)
 	    *(me[i].my_mask) &= ~(me[i].my_bit);
     }
+
     sigaction(SIGINT, &old, NULL);	/* Restore signal handler */
     restorescr(w);
     return status;
@@ -826,8 +781,9 @@ printSelected(char *buf, int selected, Distribution *me, int *col)
 int
 distExtractAll(dialogMenuItem *self)
 {
-    int old_dists, old_kernel, retries = 0, status = DITEM_SUCCESS;
+    int old_dists, old_kernel, status = DITEM_SUCCESS;
     char buf[512];
+    int extract_status = TRUE;
     WINDOW *w;
 
     /* paranoia */
@@ -847,9 +803,7 @@ distExtractAll(dialogMenuItem *self)
     w = savescr();
     msgNotify("Attempting to install all selected distributions..");
 
-    /* Try for 3 times around the loop, then give up. */
-    while (Dists && ++retries < 3)
-	distExtract(NULL, DistTable);
+    extract_status = distExtract(NULL, DistTable);
 
     dialog_clear_norefresh();
     /* Only do base fixup if base dist was successfully extracted */
@@ -857,7 +811,7 @@ distExtractAll(dialogMenuItem *self)
 	status |= installFixupBase(self);
     /* Only do kernel fixup if kernel dist was successfully extracted */
     if ((old_dists & DIST_KERNEL) && !(Dists & DIST_KERNEL))
-        status |= installFixupKernel(self, old_kernel);
+	status |= installFixupKernel(self, old_kernel);
 
     /* Clear any local dist flags now */
     Dists &= ~DIST_LOCAL;
@@ -876,5 +830,9 @@ distExtractAll(dialogMenuItem *self)
 	}
     }
     restorescr(w);
+
+    if (extract_status == FALSE)
+	status = FALSE;
+
     return status;
 }

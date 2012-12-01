@@ -4,8 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.14 2009/05/20 23:33:31 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/sysinstall/config.c,v 1.233.2.1 2005/07/28 01:18:19 grehan Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.15 2009/10/24 05:13:57 laffer1 Exp $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.

@@ -6,8 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/wizard.c,v 1.4 2008/09/02 01:30:29 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/sysinstall/wizard.c,v 1.23 2004/08/02 23:18:48 marcel Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/wizard.c,v 1.5 2009/10/24 15:17:09 laffer1 Exp $
  *
  */
 
@@ -73,7 +72,7 @@ slice_wizard(Disk *d)
     int ncmd,i;
 
     systemSuspendDialog();
-    sprintf(myprompt, "%s> ", d->name);
+    sprintf(myprompt,"%s> ", d->name);
     while(1) {
 	printf("--==##==--\n");
 	Debug_Disk(d);

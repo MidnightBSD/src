@@ -35,7 +35,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.18 2011/01/29 23:36:46 laffer1 Exp $";
+  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.19 2011/03/26 16:53:46 laffer1 Exp $";
 #endif
 
 #include "sysinstall.h"
@@ -88,33 +88,15 @@ checkDistDeveloper(dialogMenuItem *self)
 }
 
 static int
-checkDistXDeveloper(dialogMenuItem *self)
-{
-    return IS_DEVELOPER(Dists, DIST_XORG) && _IS_SET(SrcDists, DIST_SRC_ALL);
-}
-
-static int
 checkDistKernDeveloper(dialogMenuItem *self)
 {
     return IS_DEVELOPER(Dists, 0) && _IS_SET(SrcDists, DIST_SRC_SYS);
 }
 
 static int
-checkDistXKernDeveloper(dialogMenuItem *self)
-{
-    return IS_DEVELOPER(Dists, DIST_XORG) && _IS_SET(SrcDists, DIST_SRC_SYS);
-}
-
-static int
 checkDistUser(dialogMenuItem *self)
 {
     return IS_USER(Dists, 0);
-}
-
-static int
-checkDistXUser(dialogMenuItem *self)
-{
-    return IS_USER(Dists, DIST_XORG);
 }
 
 static int
@@ -127,8 +109,8 @@ static int
 checkDistEverything(dialogMenuItem *self)
 {
     return Dists == DIST_ALL &&
+	_IS_SET(DocDists, DIST_DOC_ALL) &&
 	_IS_SET(SrcDists, DIST_SRC_ALL) &&
-	_IS_SET(XOrgDists, DIST_XORG_ALL) &&
 	_IS_SET(KernelDists, DIST_KERNEL_ALL);
 }
 
@@ -139,20 +121,15 @@ srcFlagCheck(dialogMenuItem *item)
 }
 
 static int
-x11FlagCheck(dialogMenuItem *item)
-{
-    if (XOrgDists != 0)
-	Dists |= DIST_XORG;
-    else
-	Dists &= ~DIST_XORG;
-
-    return Dists & DIST_XORG;
-}
-
-static int
 kernelFlagCheck(dialogMenuItem *item)
 {
     return KernelDists;
+}
+
+static int
+docFlagCheck(dialogMenuItem *item)
+{
+    return DocDists;
 }
 
 static int
@@ -183,19 +160,19 @@ DMenu MenuIndex = {
       { " Console settings",	"Customize system console behavior.",	NULL, dmenuSubmenu, NULL, &MenuSyscons },
 #endif
       { " Configure",		"The system configuration menu.",	NULL, dmenuSubmenu, NULL, &MenuConfigure },
-      { " Defaults, Load",	"Load default settings.",		NULL, dispatch_load_floppy },
+      { " Defaults, Load (FDD)","Load default settings from floppy.",	NULL, dispatch_load_floppy },
+      { " Defaults, Load (CD)",	"Load default settings from CDROM.",	NULL, dispatch_load_cdrom },
+      { " Defaults, Load",	"Load default settings (all devices).",	NULL, dispatch_load_menu },
 #ifdef WITH_MICE
       { " Device, Mouse",	"The mouse configuration menu.",	NULL, dmenuSubmenu, NULL, &MenuMouse },
 #endif
-      { " Disklabel",		"The disk Label editor",		NULL, diskLabelEditor },
+      { " Disklabel",		"The disk label editor",		NULL, diskLabelEditor },
       { " Dists, All",		"Root of the distribution tree.",	NULL, dmenuSubmenu, NULL, &MenuDistributions },
       { " Dists, Basic",		"Basic MidnightBSD distribution menu.",	NULL, dmenuSubmenu, NULL, &MenuSubDistributions },
       { " Dists, Developer",	"Select developer's distribution.",	checkDistDeveloper, distSetDeveloper },
       { " Dists, Src",		"Src distribution menu.",		NULL, dmenuSubmenu, NULL, &MenuSrcDistributions },
-      { " Dists, X Developer",	"Select X developer's distribution.",	checkDistXDeveloper, distSetXDeveloper },
       { " Dists, Kern Developer", "Select kernel developer's distribution.", checkDistKernDeveloper, distSetKernDeveloper },
       { " Dists, User",		"Select average user distribution.",	checkDistUser, distSetUser },
-      { " Dists, X User",	"Select average X user distribution.",	checkDistXUser, distSetXUser },
       { " Distributions, Adding", "Installing additional distribution sets", NULL, distExtractAll },
       { " Documentation",	"Copyright, Shortcuts", NULL, dmenuSubmenu, NULL, &MenuDocumentation },
       { " Doc, Copyright",	"The distribution copyright notices.",	NULL, dmenuDisplayFile,	NULL, "COPYRIGHT" },
@@ -210,16 +187,19 @@ DMenu MenuIndex = {
       { " HTML Docs",		"The HTML documentation menu",		NULL, docBrowser },
       { " inetd Configuration",	"Configure inetd and simple internet services.",	dmenuVarCheck, configInetd, NULL, "inetd_enable=YES" },
       { " Install, Standard",	"A standard system installation.",	NULL, installStandard },
+      { " Install, Express",	"An express system installation.",	NULL, installExpress },
+      { " Install, Custom",	"The custom installation menu",		NULL, dmenuSubmenu, NULL, &MenuInstallCustom },
       { " Label",		"The disk Label editor",		NULL, diskLabelEditor },
       { " Media",		"Top level media selection menu.",	NULL, dmenuSubmenu, NULL, &MenuMedia },
       { " Media, NFS",		"Select NFS installation media.",	NULL, mediaSetNFS },
       { " Media, Floppy",	"Select floppy installation media.",	NULL, mediaSetFloppy },
       { " Media, CDROM/DVD",	"Select CDROM/DVD installation media.",	NULL, mediaSetCDROM },
+      { " Media, USB",		"Select USB installation media.",	NULL, mediaSetUSB },
       { " Media, DOS",		"Select DOS installation media.",	NULL, mediaSetDOS },
       { " Media, UFS",		"Select UFS installation media.",	NULL, mediaSetUFS },
       { " Media, FTP",		"Select FTP installation media.",	NULL, mediaSetFTP },
       { " Media, FTP Passive",	"Select passive FTP installation media.", NULL, mediaSetFTPPassive },
-      { " Media, HTTP",		"Select FTP via HTTP proxy installation media.", NULL, mediaSetHTTP },
+      { " Media, HTTP",		"Select FTP via HTTP proxy install media.", NULL, mediaSetHTTP },
       { " Network Interfaces",	"Configure network interfaces",		NULL, tcpMenuSelect },
       { " Networking Services",	"The network services menu.",		NULL, dmenuSubmenu, NULL, &MenuNetworking },
       { " NFS, client",		"Set NFS client flag.",			dmenuVarCheck, dmenuToggleVariable, NULL, "nfs_client_enable=YES" },
@@ -228,7 +208,7 @@ DMenu MenuIndex = {
       { " Options",		"The options editor.",			NULL, optionsEditor },
       { " Packages",		"The packages collection",		NULL, configPackages },
 #ifdef WITH_SLICES
-      { " Partition",		"The disk Slice (PC-style partition) Editor",	NULL, diskPartitionEditor },
+      { " Partition",		"The disk slice (PC-style partition) editor",	NULL, diskPartitionEditor },
 #endif
       { " PCNFSD",		"Run authentication server for PC-NFS.", dmenuVarCheck, configPCNFSD, NULL, "pcnfsd" },
       { " Root Password",	"Set the system manager's password.",   NULL, dmenuSystemCommand, NULL, "passwd root" },
@@ -266,8 +246,8 @@ DMenu MenuInitial = {
     "select one of the options below by using the arrow keys or typing the\n"
     "first character of the option name you're interested in.  Invoke an\n"
     "option with [SPACE] or [ENTER].  To exit, use [TAB] to move to Exit.", 
-    "Press F1 for Installation Guide",			/* help line */
-    "INSTALL",						/* help file */
+    NULL,
+    NULL,
     { { " Select " },
       { "X Exit Install",	NULL, NULL, dmenuExit },
       { " Usage",	"Quick start - How to use this menu system",	NULL, dmenuDisplayFile, NULL, "usage" },
@@ -368,10 +348,10 @@ DMenu MenuMousePort = {
     {
       { "1 BusMouse",	"PC-98x1 bus mouse (/dev/mse0)", 
 	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/mse0" },
-      { "2 COM1",	"Serial mouse on COM1 (/dev/cuad0)",
-	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuad0" },
-      { "3 COM2",	"Serial mouse on COM2 (/dev/cuad1)",
-	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuad1" },
+      { "2 COM1",	"Serial mouse on COM1 (/dev/cuau0)",
+	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuau0" },
+      { "3 COM2",	"Serial mouse on COM2 (/dev/cuau1)",
+	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuau1" },
       { NULL } },
 };
 #else
@@ -384,14 +364,14 @@ DMenu MenuMousePort = {
     NULL,
     { { "1 PS/2",	"PS/2 style mouse (/dev/psm0)", 
 	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/psm0" },
-      { "2 COM1",	"Serial mouse on COM1 (/dev/cuad0)",
-	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuad0" },
-      { "3 COM2",	"Serial mouse on COM2 (/dev/cuad1)",
-	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuad1" },
-      { "4 COM3",	"Serial mouse on COM3 (/dev/cuad2)",
-	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuad2" },
-      { "5 COM4",	"Serial mouse on COM4 (/dev/cuad3)", 
-	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuad3" },
+      { "2 COM1",	"Serial mouse on COM1 (/dev/cuau0)",
+	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuau0" },
+      { "3 COM2",	"Serial mouse on COM2 (/dev/cuau1)",
+	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuau1" },
+      { "4 COM3",	"Serial mouse on COM3 (/dev/cuau2)",
+	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuau2" },
+      { "5 COM4",	"Serial mouse on COM4 (/dev/cuau3)", 
+	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/cuau3" },
       { "6 BusMouse",	"Logitech, ATI or MS bus mouse (/dev/mse0)", 
 	dmenuVarCheck, dmenuSetVariable, NULL, VAR_MOUSED_PORT "=/dev/mse0" },
       { NULL } },
@@ -429,8 +409,8 @@ DMenu MenuMediaCDROM = {
     "MidnightBSD distribution.  If you are seeing this menu it is because\n"
     "more than one CD/DVD drive was found on your system.  Please select one\n"
     "of the following CD/DVD drives as your installation drive.",
-    "Press F1 to read the installation guide",
-    "INSTALL",
+    NULL,
+    NULL,
     { { NULL } },
 };
 
@@ -444,6 +424,16 @@ DMenu MenuMediaFloppy = {
     { { NULL } },
 };
 
+DMenu MenuMediaUSB = {
+	DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
+	"Choose a USB drive",
+	"You have more than one USB drive. Please choose which drive\n"
+	"you would like to use.",
+	NULL,
+	NULL,
+	{ { NULL } },
+};
+
 DMenu MenuMediaDOS = {
     DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
     "Choose a DOS partition",
@@ -455,8 +445,8 @@ DMenu MenuMediaDOS = {
     "into a \"FREEBSD\" subdirectory on one of your DOS partitions.\n"
     "Otherwise, please select the DOS partition containing the MidnightBSD\n"
     "distribution files.",
-    "Press F1 to read the installation guide",
-    "INSTALL",
+    NULL,
+    NULL,
     { { NULL } },
 };
 
@@ -485,13 +475,8 @@ DMenu MenuMediaFTP = {
 DMenu MenuNetworkDevice = {
     DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
     "Network interface information required",
-    "If you are using PPP over a serial device, as opposed to a direct\n"
-    "ethernet connection, then you may first need to dial your Internet\n"
-    "Service Provider using the ppp utility we provide for that purpose.\n"
-    "If you're using SLIP over a serial device then the expectation is\n"
-    "that you have a HARDWIRED connection.\n\n"
-    "You can also install over a parallel port using a special \"laplink\"\n"
-    "cable to another machine running MidnightBSD.",
+    "Please select the ethernet or PLIP device to configure.\n\n"
+    "",
     "Press F1 to read network configuration manual",
     "network_device",
     { { NULL } },
@@ -502,6 +487,17 @@ DMenu MenuKLD = {
     DMENU_NORMAL_TYPE,
     "KLD Menu",
     "Load a KLD from a floppy\n",
+    NULL,
+    NULL,
+    { { NULL } },
+};
+
+/* Prototype config file load menu */
+DMenu MenuConfig = {
+    DMENU_NORMAL_TYPE,
+    "Config Menu",
+    "Please select the device to load your configuration file from.\n"
+    "Note that a USB key will show up as daNs1.",
     NULL,
     NULL,
     { { NULL } },
@@ -526,6 +522,7 @@ DMenu MenuMedia = {
       { "6 NFS",		"Install over NFS",			NULL, mediaSetNFS },
       { "7 File System",	"Install from an existing filesystem",	NULL, mediaSetUFS },
       { "8 Floppy",		"Install from a floppy disk set",	NULL, mediaSetFloppy },
+      { "9 USB",		"Install from a USB drive",		NULL, mediaSetUSB },
       { "X Options",		"Go to the Options screen",		NULL, optionsEditor },
       { NULL } },
 };
@@ -545,25 +542,19 @@ DMenu MenuDistributions = {
     "distributions",
     { { "X Exit", "Exit this menu (returning to previous)",
 	checkTrue, dmenuExit, NULL, NULL, '<', '<', '<' },
-      { "All",			"All system sources, binaries and X Window System",
+      { "All",			"All system sources and binaries",
 	checkDistEverything,	distSetEverything, NULL, NULL, ' ', ' ', ' ' },
       { "Reset",		"Reset selected distribution list to nothing",
 	NULL,			distReset, NULL, NULL, ' ', ' ', ' ' },
       { "4 Developer",		"Full sources, binaries and doc but no games", 
 	checkDistDeveloper,	distSetDeveloper },
-      { "5 X-Developer",	"Same as above + X Window System",
-	checkDistXDeveloper,	distSetXDeveloper },
-      { "6 Kern-Developer",	"Full binaries and doc, kernel sources only",
+      { "5 Kern-Developer",	"Full binaries and doc, kernel sources only",
 	checkDistKernDeveloper, distSetKernDeveloper },
-      { "7 X-Kern-Developer",	"Same as above + X Window System",
-	checkDistXKernDeveloper, distSetXKernDeveloper },
-      { "8 User",		"Average user - binaries and doc only",
+      { "6 User",		"Average user - binaries and doc only",
 	checkDistUser,		distSetUser },
-      { "9 X-User",		"Same as above + X Window System",
-	checkDistXUser,		distSetXUser },
-      { "A Minimal",		"The smallest configuration possible",
+      { "7 Minimal",		"The smallest configuration possible",
 	checkDistMinimum,	distSetMinimum },
-      { "B Custom",		"Specify your own distribution set",
+      { "8 Custom",		"Specify your own distribution set",
 	NULL,			dmenuSubmenu, NULL, &MenuSubDistributions, '>', '>', '>' },
       { NULL } },
 };
@@ -577,7 +568,7 @@ DMenu MenuSubDistributions = {
     NULL,
     { { "X Exit", "Exit this menu (returning to previous)",
 	checkTrue, dmenuExit, NULL, NULL, '<', '<', '<' },
-      { "All",		"All system sources, binaries and X Window System",
+      { "All",		"All system sources and binaries",
 	NULL, distSetEverything, NULL, NULL, ' ', ' ', ' ' },
       { "Reset",	"Reset all of the below",
 	NULL, distReset, NULL, NULL, ' ', ' ', ' ' },
@@ -587,8 +578,10 @@ DMenu MenuSubDistributions = {
 	kernelFlagCheck,distSetKernel },
       { " dict",	"Spelling checker dictionary files",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_DICT },
-      { " doc",		"Miscellaneous MidnightBSD online docs",
-	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_DOC },
+      { " doc",		"Documentation set",
+	docFlagCheck,	distSetDoc },
+      { " docuser",		"Miscellaneous userland docs",
+	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_DOCUSERLAND },
       { " games",	"Games (non-commercial)",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_GAMES },
       { " info",	"GNU info files",
@@ -609,8 +602,6 @@ DMenu MenuSubDistributions = {
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_PORTS },
       { " local",	"Local additions collection",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_LOCAL},
-      { " X.Org",	"The X.Org distribution",
-	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_XORG },
       { NULL } },
 };
 
@@ -628,10 +619,6 @@ DMenu MenuKernelDistributions = {
 	NULL,		clearKernel, NULL, NULL, ' ', ' ', ' ' },
       { " GENERIC",	"GENERIC kernel configuration",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &KernelDists, '[', 'X', ']', DIST_KERNEL_GENERIC },
-#ifdef WITH_SMP
-      { " SMP",		"GENERIC symmetric multiprocessor kernel configuration",
-	dmenuFlagCheck,	dmenuSetFlag,	NULL, &KernelDists, '[', 'X', ']', DIST_KERNEL_SMP },
-#endif
       { NULL } },
 };
 
@@ -726,6 +713,32 @@ DMenu MenuHTMLDoc = {
       { NULL } },
 };
 
+/* The main installation menu */
+DMenu MenuInstallCustom = {
+    DMENU_NORMAL_TYPE,
+    "Choose Custom Installation Options",
+    "This is the custom installation menu. You may use this menu to specify\n"
+    "details on the type of distribution you wish to have, where you wish\n"
+    "to install it from and how you wish to allocate disk storage to FreeBSD.",
+    NULL,
+    NULL,
+    { { "X Exit",		"Exit this menu (returning to previous)", NULL,	dmenuExit },
+      { "2 Options",		"View/Set various installation options", NULL, optionsEditor },
+#ifndef WITH_SLICES
+      { "3 Label",		"Label disk partitions",		NULL, diskLabelEditor },
+      { "4 Distributions",	"Select distribution(s) to extract",	NULL, dmenuSubmenu, NULL, &MenuDistributions },
+      { "5 Media",		"Choose the installation media type",	NULL, dmenuSubmenu, NULL, &MenuMedia },
+      { "6 Commit",		"Perform any pending Partition/Label/Extract actions", NULL, installCustomCommit },
+#else
+      { "3 Partition",		"Allocate disk space for BSD",	NULL, diskPartitionEditor },
+      { "4 Label",		"Label allocated disk partitions",	NULL, diskLabelEditor },
+      { "5 Distributions",	"Select distribution(s) to extract",	NULL, dmenuSubmenu, NULL, &MenuDistributions },
+      { "6 Media",		"Choose the installation media type",	NULL, dmenuSubmenu, NULL, &MenuMedia },
+      { "7 Commit",		"Perform any pending Partition/Label/Extract actions", NULL, installCustomCommit },
+#endif
+      { NULL } },
+};
+
 #if defined(__i386__) || defined(__amd64__)
 /* MBR type menu */
 DMenu MenuMBRType = {
@@ -736,17 +749,16 @@ DMenu MenuMBRType = {
     "at boot time.  If you have more than one drive and want to boot\n"
     "from the second one, the boot selector will also make it possible\n"
     "to do so (limitations in the PC BIOS usually prevent this otherwise).\n"
-    "If you do not want a boot selector, or wish to replace an existing\n"
-    "one, select \"standard\".  If you would prefer your Master Boot\n"
-    "Record to remain untouched then select \"None\".\n\n"
-    "  NOTE:  Vista and PC-DOS users will almost certainly require \"None\"!",
-    "Press F1 to read about drive setup",
+    "If you have other operating systems installed and would like a choice when\n"
+    "booting, choose \"BootMgr\". If you would prefer to keep your existing\n"
+    "boot manager, select \"None\".\n\n",
+    "",    
     "drives",
-    { { "BootMgr",	"Install the MidnightBSD Boot Manager",
-	dmenuRadioCheck, dmenuSetValue, NULL, &BootMgr },
-      { "Standard",	"Install a standard MBR (no boot manager)",
+    { { "Standard",	"Install a standard MBR (non-interactive boot manager)",
 	dmenuRadioCheck, dmenuSetValue, NULL, &BootMgr, '(', '*', ')', 1 },
-      { "None",		"Leave the Master Boot Record untouched",
+      { "BootMgr",	"Install the MidnightBSD Boot Manager",
+	dmenuRadioCheck, dmenuSetValue, NULL, &BootMgr, '(', '*', ')', 0 },
+      { "None",		"Do not install a boot manager",
 	dmenuRadioCheck, dmenuSetValue, NULL, &BootMgr, '(', '*', ')', 2 },
       { NULL } },
 };
@@ -771,10 +783,10 @@ DMenu MenuConfigure = {
       { " Root Password", "Set the system manager's password",
 	NULL,	dmenuSystemCommand, NULL, "passwd root" },
 #ifdef WITH_SLICES
-      { " Fdisk",	"The disk Slice (PC-style partition) Editor",
+      { " Fdisk",	"The disk slice (PC-style partition) editor",
 	NULL, diskPartitionEditor },
 #endif
-      { " Label",	"The disk Label editor",
+      { " Label",	"The disk label editor",
 	NULL, diskLabelEditor },
       { " User Management",	"Add user and group information",
 	NULL, dmenuSubmenu, NULL, &MenuUsermgmt },
@@ -843,18 +855,12 @@ DMenu MenuStartup = {
 	dmenuVarCheck, dmenuToggleVariable, NULL, "accounting_enable=YES" },
       { " lpd",		"This host has a printer and wants to run lpd.",
 	dmenuVarCheck, dmenuToggleVariable, NULL, "lpd_enable=YES" },
-#ifdef WITH_LINUX
-      { " Linux",	"This host wants to be able to run Linux binaries.",
-	dmenuVarCheck, configLinux, NULL, VAR_LINUX_ENABLE "=YES" },
-#endif
 #ifdef __i386__
       { " SCO",		"This host wants to be able to run IBCS2 binaries.",
 	dmenuVarCheck, dmenuToggleVariable, NULL, "ibcs2_enable=YES" },
       { " SVR4",	"This host wants to be able to run SVR4 binaries.",
 	dmenuVarCheck, dmenuToggleVariable, NULL, "svr4_enable=YES" },
 #endif
-      { " quotas",	"This host wishes to check quotas on startup.",
-	dmenuVarCheck, dmenuToggleVariable, NULL, "check_quotas=YES" },
       { NULL } },
 };
 
@@ -1433,6 +1439,7 @@ DMenu MenuSysconsKeymap = {
       { " Finnish ISO",  "Finnish ISO keymap",	dmenuVarCheck, dmenuSetKmapVariable, NULL, "keymap=finnish.iso" },
       { " French ISO (accent)", "French ISO keymap (accent keys)",	dmenuVarCheck, dmenuSetKmapVariable, NULL, "keymap=fr.iso.acc" },
       { " French ISO",	"French ISO keymap",	dmenuVarCheck, dmenuSetKmapVariable, NULL, "keymap=fr.iso" },
+      { " French ISO/Macbook",	"French ISO keymap on macbook",	dmenuVarCheck, dmenuSetKmapVariable, NULL, "keymap=fr.macbook.acc" },
       { "German CP850",	"German Code Page 850 keymap",	dmenuVarCheck, dmenuSetKmapVariable, NULL, "keymap=german.cp850"	},
       { " German ISO",	"German ISO keymap",	dmenuVarCheck, dmenuSetKmapVariable, NULL, "keymap=german.iso" },
       { " Greek 101",	"Greek ISO keymap (101 keys)",	dmenuVarCheck, dmenuSetKmapVariable, NULL, "keymap=gr.us101.acc" },
@@ -1488,7 +1495,7 @@ DMenu MenuSysconsKeyrate = {
       { "Normal", "\"Normal\" keyboard repeat rate",	dmenuVarCheck,	dmenuSetVariable, NULL, "keyrate=normal" },
       { "Fast",	"Fast keyboard repeat rate",	dmenuVarCheck,	dmenuSetVariable, NULL, "keyrate=fast" },
       { "Default", "Use default keyboard repeat rate",	dmenuVarCheck,	dmenuSetVariable, NULL, "keyrate=NO" },
-      { NULL } },
+      { NULL } }
 };
 
 DMenu MenuSysconsSaver = {
@@ -1497,34 +1504,38 @@ DMenu MenuSysconsSaver = {
     "By default, the console driver will not attempt to do anything\n"
     "special with your screen when it's idle.  If you expect to leave your\n"
     "monitor switched on and idle for long periods of time then you should\n"
-    "probably enable one of these screen savers to prevent phosphor burn-in.",
+    "probably enable one of these screen savers to prevent burn-in.",
     "Choose a nifty-looking screen saver",
     NULL,
     { { "1 Blank",	"Simply blank the screen",
 	dmenuVarCheck, configSaver, NULL, "saver=blank" },
-      { "2 Daemon",	"\"BSD Daemon\" animated screen saver (text)",
+      { "2 Beastie",	"\"BSD Daemon\" animated screen saver (graphics)",
+	dmenuVarCheck, configSaver, NULL, "saver=beastie" },
+      { "3 Daemon",	"\"BSD Daemon\" animated screen saver (text)",
 	dmenuVarCheck, configSaver, NULL, "saver=daemon" },
-      { "3 Fade",	"Fade out effect screen saver",
-	dmenuVarCheck, configSaver, NULL, "saver=fade" },
-      { "4 Fire",	"Flames effect screen saver",
-	dmenuVarCheck, configSaver, NULL, "saver=fire" },
-      { "5 Green",	"\"Green\" power saving mode (if supported by monitor)",
-	dmenuVarCheck, configSaver, NULL, "saver=green" },
-      { "6 Logo",	"\"BSD Daemon\" animated screen saver (graphics)",
-	dmenuVarCheck, configSaver, NULL, "saver=logo" },
-      { "7 Rain",	"Rain drops screen saver",
-	dmenuVarCheck, configSaver, NULL, "saver=rain" },
-      { "8 Snake",	"Draw a MidnightBSD \"snake\" on your screen",
-	dmenuVarCheck, configSaver, NULL, "saver=snake" },
-      { "9 Star",	"A \"twinkling stars\" effect",
-	dmenuVarCheck, configSaver, NULL, "saver=star" },
-      { "Warp",	"A \"stars warping\" effect",
-	dmenuVarCheck, configSaver, NULL, "saver=warp" },
-      { "Dragon", "Dragon screensaver (graphics)",
+      { "4 Dragon",	"Dragon screensaver (graphics)",
 	dmenuVarCheck, configSaver, NULL, "saver=dragon" },
+      { "5 Fade",	"Fade out effect screen saver",
+	dmenuVarCheck, configSaver, NULL, "saver=fade" },
+      { "6 Fire",	"Flames effect screen saver",
+	dmenuVarCheck, configSaver, NULL, "saver=fire" },
+      { "7 Green",	"\"Green\" power saving mode (if supported by monitor)",
+	dmenuVarCheck, configSaver, NULL, "saver=green" },
+      { "8 Logo",	"FreeBSD \"logo\" animated screen saver (graphics)",
+	dmenuVarCheck, configSaver, NULL, "saver=logo" },
+      { "9 Rain",	"Rain drops screen saver",
+	dmenuVarCheck, configSaver, NULL, "saver=rain" },
+      { "a Snake",	"Draw a FreeBSD \"snake\" on your screen",
+	dmenuVarCheck, configSaver, NULL, "saver=snake" },
+      { "b Star",	"A \"twinkling stars\" effect",
+	dmenuVarCheck, configSaver, NULL, "saver=star" },
+      { "c Warp",	"A \"stars warping\" effect",
+	dmenuVarCheck, configSaver, NULL, "saver=warp" },
+      { "d None",	"Disable the screensaver",
+        dmenuVarCheck, configSaver, NULL, "saver=NO" },
       { "Timeout",	"Set the screen saver timeout interval",
 	NULL, configSaverTimeout, NULL, NULL, ' ', ' ', ' ' },
-      { NULL } },
+      { NULL } }
 };
 
 #ifndef PC98
@@ -1667,7 +1678,7 @@ DMenu MenuSecurelevel = {
     "access to direct kernel memory is limited, and kernel modules may not\n"
     "be changed.  In highly secure mode, mounted file systems may not be\n"
     "modified on-disk, tampering with the system clock is prohibited.  In\n"
-    "network secure mode configuration changes to firwalling are prohibited.\n",
+    "network secure mode configuration changes to firewalling are prohibited.\n",
     "Select a securelevel to operate at - F1 for help",
     "securelevel",
     { { "X Exit",      "Exit this menu (returning to previous)",
@@ -1691,8 +1702,9 @@ DMenu MenuFixit = {
     "Press F1 for more detailed repair instructions",
     "fixit",
 { { "X Exit",		"Exit this menu (returning to previous)",	NULL, dmenuExit },
-  { "2 CDROM/DVD",	"Use the \"live\" filesystem CDROM/DVD",	NULL, installFixitCDROM },
-  { "3 Floppy",		"Use a floppy generated from the fixit image",	NULL, installFixitFloppy },
-  { "4 Shell",		"Start an Emergency Holographic Shell",		NULL, installFixitHoloShell },
+  { "2 CDROM/DVD",	"Use the live filesystem CDROM/DVD",		NULL, installFixitCDROM },
+  { "3 USB",		"Use the live filesystem from a USB drive",	NULL, installFixitUSB },
+  { "4 Floppy",	"Use a floppy generated from the fixit image",	NULL, installFixitFloppy },
+  { "5 Shell",		"Start an Emergency Holographic Shell",		NULL, installFixitHoloShell },
   { NULL } },
 };

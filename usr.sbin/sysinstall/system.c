@@ -4,14 +4,13 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/system.c,v 1.4 2008/05/02 07:18:57 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/sysinstall/system.c,v 1.124.2.1 2005/08/17 13:32:29 kensmith Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/system.c,v 1.5 2009/10/24 15:14:40 laffer1 Exp $
  *
  * Jordan Hubbard
  *
  * My contributions are in the public domain.
  *
- * Parts of this file are also blatently stolen from Poul-Henning Kamp's
+ * Parts of this file are also blatantly stolen from Poul-Henning Kamp's
  * previous version of sysinstall, and as such fall under his "BEERWARE license"
  * so buy him a beer if you like it!  Buy him a beer for me, too!
  * Heck, get him completely drunk and send me pictures! :-)
@@ -60,13 +59,20 @@ static int
 intr_restart(dialogMenuItem *self)
 {
     int ret, fd, fdmax;
+    char *arg;
 
     mediaClose();
     free_variables();
     fdmax = getdtablesize();
     for (fd = 3; fd < fdmax; fd++)
 	close(fd);
-    ret = execl(StartName, StartName, "-restart", (char *)NULL);
+    
+    if (RunningAsInit)
+	    arg = "-restart -fakeInit";
+    else
+	    arg = "-restart";
+
+    ret = execl(StartName, StartName, arg, NULL);
     msgDebug("execl failed (%s)\n", strerror(errno));
     /* NOTREACHED */
     return -1;
@@ -96,11 +102,26 @@ handle_intr(int sig)
     restorescr(save);
 }
 
+#if 0
+/*
+ * Harvest children if we are init.
+ */
+static void
+reap_children(int sig)
+{
+    int errbak = errno;
+
+    while (waitpid(-1, NULL, WNOHANG) > 0)
+	;
+    errno = errbak;
+}
+#endif
+
 /* Expand a file into a convenient location, nuking it each time */
 static char *
 expand(char *fname)
 {
-    char *gunzip = RunningAsInit ? "/stand/gunzip" : "/usr/bin/gunzip";
+    char *unzipper = RunningAsInit ? "/stand/" UNZIPPER : "/usr/bin/" UNZIPPER;
 
     if (!directory_exists(DOC_TMP_DIR)) {
 	Mkdir(DOC_TMP_DIR);
@@ -111,7 +132,8 @@ expand(char *fname)
     }
     else
 	unlink(DOC_TMP_FILE);
-    if (!file_readable(fname) || vsystem("%s < %s > %s", gunzip, fname, DOC_TMP_FILE))
+    if (!file_readable(fname) || vsystem("%s < %s > %s", unzipper, fname,
+	DOC_TMP_FILE))
 	return NULL;
     return DOC_TMP_FILE;
 }
@@ -133,11 +155,10 @@ systemInitialize(int argc, char **argv)
 	variable_set2(VAR_DEBUG, "YES", 0);
 
     /* Are we running as init? */
-    if (getpid() == 1) {
+    if (RunningAsInit) {
 	struct ufs_args ufs_args;
 	int fd;
 
-	RunningAsInit = 1;
 	setsid();
 	close(0);
 	fd = open("/dev/ttyv0", O_RDWR);
@@ -172,9 +193,12 @@ systemInitialize(int argc, char **argv)
 	printf("%s running as init on %s\n", argv[0], OnVTY ? "vty0" : "serial console");
 	ioctl(0, TIOCSCTTY, (char *)NULL);
 	setlogin("root");
-	setenv("PATH", "/stand:/bin:/sbin:/usr/sbin:/usr/bin:/mnt/bin:/mnt/sbin:/mnt/usr/sbin:/mnt/usr/bin:/usr/X11R6/bin", 1);
+	setenv("PATH", "/stand:/bin:/sbin:/usr/sbin:/usr/bin:/mnt/bin:/mnt/sbin:/mnt/usr/sbin:/mnt/usr/bin", 1);
 	setbuf(stdin, 0);
 	setbuf(stderr, 0);
+#if 0
+	signal(SIGCHLD, reap_children);
+#endif
 	memset(&ufs_args, 0, sizeof(ufs_args));
 	mount("ufs", "/", MNT_UPDATE, &ufs_args);
     }
@@ -217,8 +241,13 @@ void
 systemShutdown(int status)
 {
     /* If some media is open, close it down */
-    if (status >=0)
-	mediaClose();
+    if (status >=0) {
+	if (mediaDevice != NULL && mediaDevice->type == DEVICE_TYPE_CDROM) {
+	    mediaClose();
+	    msgConfirm("Be sure to remove the media from the drive.");
+	} else
+	    mediaClose();
+    }
 
     /* write out any changes to rc.conf .. */
     configRC_conf();
@@ -343,10 +372,12 @@ systemHelpFile(char *file, char *buf)
     snprintf(buf, FILENAME_MAX, "/stand/help/%s.TXT", file);
     if (file_readable(buf)) 
 	return expand(buf);
-    snprintf(buf, FILENAME_MAX, "/usr/src/usr.sbin/sysinstall/help/%s.hlp", file);
+    snprintf(buf, FILENAME_MAX, "/usr/src/usr.sbin/%s/help/%s.hlp", ProgName,
+	file);
     if (file_readable(buf))
 	return buf;
-    snprintf(buf, FILENAME_MAX, "/usr/src/usr.sbin/sysinstall/help/%s.TXT", file);
+    snprintf(buf, FILENAME_MAX, "/usr/src/usr.sbin/%s/help/%s.TXT", ProgName,
+	file);
     if (file_readable(buf))
 	return buf;
     return NULL;
@@ -499,7 +530,7 @@ systemCreateHoloshell(void)
 	        printf("Type ``exit'' in this fixit shell to resume sysinstall.\n\n");
 		fflush(stdout);
 	    }
-	    execlp("sh", "-sh", 0);
+	    execlp("sh", "-sh", NULL);
 	    msgDebug("Was unable to execute sh for Holographic shell!\n");
 	    exit(1);
 	}

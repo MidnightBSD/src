@@ -10,8 +10,7 @@
  * software, nor does the author assume any responsibility for damages
  * incurred with its use.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/termcap.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/sysinstall/termcap.c,v 1.30 2001/09/22 18:07:47 murray Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/termcap.c,v 1.3 2007/07/17 13:14:24 laffer1 Exp $
  */
 
 #include "sysinstall.h"

@@ -4,8 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/variable.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/sysinstall/variable.c,v 1.37 2004/03/11 11:58:16 bde Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/variable.c,v 1.3 2009/10/24 15:15:57 laffer1 Exp $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -244,12 +243,12 @@ dump_variables(dialogMenuItem *unused)
     Variable *vp;
 
     if (isDebug())
-	msgDebug("Writing sysinstall variables to file..\n");
+	msgDebug("Writing %s variables to file..\n", ProgName);
 
     fp = fopen("/etc/sysinstall.vars", "w");
     if (!fp) {
-	msgConfirm("Unable to write to /etc/sysinstall.vars: %s",
-		   strerror(errno));
+	msgConfirm("Unable to write to /etc/%s.vars: %s",
+		   ProgName, strerror(errno));
 	return DITEM_FAILURE;
     }
 

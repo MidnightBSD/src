@@ -1,6 +1,5 @@
 /*
- * $MidnightBSD: src/usr.sbin/sysinstall/user.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/sysinstall/user.c,v 1.19 2004/03/11 11:58:16 bde Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/user.c,v 1.3 2009/10/24 15:14:40 laffer1 Exp $
  *
  * Copyright (c) 1996
  *      Jörg Wunsch. All rights reserved.
@@ -36,7 +35,6 @@
  */
 
 #include "sysinstall.h"
-#include <utmp.h>
 #include <ctype.h>
 #include <sys/param.h>
 #include <sysexits.h>
@@ -46,10 +44,10 @@
 
 /* XXX should they be moved out to sysinstall.h? */
 #define GNAME_FIELD_LEN 32
-#define GID_FIELD_LEN 10
+#define GID_FIELD_LEN 11
 #define GMEMB_FIELD_LEN 64
-
-#define UID_FIELD_LEN 10
+#define UNAME_FIELD_LEN MAXLOGNAME
+#define UID_FIELD_LEN 11
 #define UGROUP_FIELD_LEN GNAME_FIELD_LEN
 #define GECOS_FIELD_LEN 64
 #define UMEMB_FIELD_LEN GMEMB_FIELD_LEN
@@ -62,8 +60,9 @@
 static char gname[GNAME_FIELD_LEN],
 	gid[GID_FIELD_LEN],
 	gmemb[GMEMB_FIELD_LEN],
-	uname[UT_NAMESIZE + 1],
+	uname[UNAME_FIELD_LEN],
         passwd[PASSWD_FIELD_LEN],
+        confpasswd[PASSWD_FIELD_LEN],
 	uid[UID_FIELD_LEN],
 	ugroup[UGROUP_FIELD_LEN],
 	gecos[GECOS_FIELD_LEN],
@@ -79,7 +78,7 @@ static int	okbutton, cancelbutton;
 #define USER_DIALOG_Y		0
 #define USER_DIALOG_X		8
 #define USER_DIALOG_WIDTH	COLS - 16
-#define USER_DIALOG_HEIGHT	LINES - 2
+#define USER_DIALOG_HEIGHT	LINES - 1
 
 /* The group configuration menu. */
 static Layout groupLayout[] = {
@@ -109,42 +108,46 @@ static Layout groupLayout[] = {
 /* The user configuration menu. */
 static Layout userLayout[] = {
 #define LAYOUT_UNAME		0
-    { 3, 6, UT_NAMESIZE, UT_NAMESIZE + 1,
+    { 2, 6, 16, UNAME_FIELD_LEN - 1,
       "Login ID:", "The login name of the new user (mandatory)",
       uname, STRINGOBJ, NULL },
 #define LAYOUT_UID		1
-    { 3, 23, 8, UID_FIELD_LEN - 1,
+    { 2, 23, 8, UID_FIELD_LEN - 1,
       "UID:", "The numerical ID for this user (leave blank for automatic choice)",
       uid, STRINGOBJ, NULL },
 #define LAYOUT_UGROUP		2
-    { 3, 33, 8, UGROUP_FIELD_LEN - 1,
+    { 2, 33, 8, UGROUP_FIELD_LEN - 1,
       "Group:", "The login group name for this user (leave blank for automatic choice)",
       ugroup, STRINGOBJ, NULL },
 #define LAYOUT_PASSWD		3
-    { 3, 43, 15, PASSWD_FIELD_LEN - 1,
+    { 6, 6, 20, PASSWD_FIELD_LEN - 1,
       "Password:", "The password for this user (enter this field with care!)",
       passwd, NO_ECHO_OBJ(STRINGOBJ), NULL },
-#define LAYOUT_GECOS		4
-    { 8, 6, 33, GECOS_FIELD_LEN - 1,
+#define LAYOUT_CONFPASSWD	4
+    { 6, 28, 20, PASSWD_FIELD_LEN - 1,
+      "Confirm Password:", "Confirm what you typed for the password",
+      confpasswd, NO_ECHO_OBJ(STRINGOBJ), NULL },
+#define LAYOUT_GECOS		5
+    { 10, 6, 33, GECOS_FIELD_LEN - 1,
       "Full name:", "The user's full name (comment)",
       gecos, STRINGOBJ, NULL },
-#define LAYOUT_UMEMB		5
-    { 8, 43, 15, UMEMB_FIELD_LEN - 1,
+#define LAYOUT_UMEMB		6
+    { 10, 43, 15, UMEMB_FIELD_LEN - 1,
       "Member groups:", "The groups this user belongs to (i.e. gets access rights for)",
       umemb, STRINGOBJ, NULL },
-#define LAYOUT_HOMEDIR		6
-    { 13, 6, 20, HOMEDIR_FIELD_LEN - 1,
+#define LAYOUT_HOMEDIR		7
+    { 14, 6, 20, HOMEDIR_FIELD_LEN - 1,
       "Home directory:", "The user's home directory (leave blank for default)",
       homedir, STRINGOBJ, NULL },
-#define LAYOUT_SHELL		7
-    { 13, 29, 29, SHELL_FIELD_LEN - 1,
+#define LAYOUT_SHELL		8
+    { 14, 29, 29, SHELL_FIELD_LEN - 1,
       "Login shell:", "The user's login shell (leave blank for default)",
       shell, STRINGOBJ, NULL },
-#define LAYOUT_U_OKBUTTON	8
+#define LAYOUT_U_OKBUTTON	9
     { 18, 15, 0, 0,
       "OK", "Select this if you are happy with these settings",
 	&okbutton, BUTTONOBJ, NULL },
-#define LAYOUT_U_CANCELBUTTON	9
+#define LAYOUT_U_CANCELBUTTON	10
     { 18, 35, 0, 0,
       "CANCEL", "Select this if you wish to cancel this screen",
       &cancelbutton, BUTTONOBJ, NULL },
@@ -165,7 +168,7 @@ static int
 verifyGroupSettings(void)
 {
     char tmp[256], *cp;
-    long lgid;
+    unsigned long lgid;
 
     if (strlen(gname) == 0) {
 	feepout("The group name field must not be empty!");
@@ -177,9 +180,9 @@ verifyGroupSettings(void)
 	return 0;
     }
     if (strlen(gid) > 0) {
-	lgid = strtol(gid, &cp, 10);
-	if (lgid < 0 || lgid >= 65536 || (*cp != '\0' && !isspace(*cp))) {
-	    feepout("The GID must be a number between 1 and 65535.");
+	lgid = strtoul(gid, &cp, 10);
+	if (lgid == 0 || lgid > GID_MAX || (*cp != '\0' && !isspace(*cp))) {
+	    feepout("The GID must be a number between 1 and 4294967295.");
 	    return 0;
 	}
     }
@@ -402,7 +405,7 @@ static int
 verifyUserSettings(WINDOW *ds_win)
 {
     char tmp[256], *cp;
-    long luid;
+    unsigned long luid;
     WINDOW *save;
     int rv;
 
@@ -416,11 +419,15 @@ verifyUserSettings(WINDOW *ds_win)
 	return 0;
     }
     if (strlen(uid) > 0) {
-	luid = strtol(uid, &cp, 10);
-	if (luid < 0 || luid >= 65536 || (*cp != '\0' && !isspace(*cp))) {
-	    feepout("The UID must be a number between 1 and 65535.");
+	luid = strtoul(uid, &cp, 10);
+	if (luid == 0 || luid > UID_MAX || (*cp != '\0' && !isspace(*cp))) {
+	    feepout("The UID must be a number between 1 and 4294967295.");
 	    return 0;
 	}
+    }
+    if (strcmp(passwd, confpasswd)) {
+	feepout("Passwords don't match");
+	return 0;
     }
     if ((homedir[0]!=0) && (homedir[0]!='/')) {
 	feepout("The pathname for home directories must begin with a '/'.");
@@ -683,13 +690,14 @@ userAddUser(dialogMenuItem *self)
     draw_box(ds_win, USER_DIALOG_Y + 1, USER_DIALOG_X + 3, USER_DIALOG_HEIGHT - 6,
 	     USER_DIALOG_WIDTH - 6, dialog_attr, border_attr);
     wattrset(ds_win, dialog_attr);
-    mvwaddstr(ds_win, USER_DIALOG_Y + 1, USER_DIALOG_X + 22, " Add a new user ");
+    mvwaddstr(ds_win, USER_DIALOG_Y + 1, USER_DIALOG_X + 24, " Add a new user ");
 
     CLEAR(uname);
     CLEAR(uid);
     CLEAR(ugroup);
     CLEAR(gecos);
     CLEAR(passwd);
+    CLEAR(confpasswd);
     CLEAR(umemb);
     CLEAR(homedir);
     CLEAR(shell);

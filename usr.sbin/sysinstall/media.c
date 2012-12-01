@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/media.c,v 1.7 2008/09/02 01:30:29 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/media.c,v 1.8 2009/05/21 00:08:40 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/media.c,v 1.121.12.1 2006/01/31 22:03:18 jkim Exp $
  *
  * Copyright (c) 1995
@@ -220,6 +220,53 @@ mediaSetFloppy(dialogMenuItem *self)
 }
 
 static int
+USBHook(dialogMenuItem *self)
+{
+	return genericHook(self, DEVICE_TYPE_USB);
+}
+
+
+/*
+ * Attempt to use USB as the installation media type.
+ */
+int
+mediaSetUSB(dialogMenuItem *self)
+{
+	Device **devs;
+	int cnt;
+
+	mediaClose();
+	devs = deviceFind(NULL, DEVICE_TYPE_USB);
+	cnt = deviceCount(devs);
+
+	if (!cnt) {
+		msgConfirm("No USB devices found (try Options/Re-scan Devices)");
+		return DITEM_FAILURE | DITEM_CONTINUE;
+	}
+	else if (cnt > 1) {
+		DMenu *menu;
+		int status;
+
+		menu = deviceCreateMenu(&MenuMediaUSB, DEVICE_TYPE_USB, USBHook,
+		    NULL);
+		if (!menu)
+			msgFatal("Unable to create USB menu! Something is " \
+			    "seriously wrong.");
+		status = dmenuOpenSimple(menu, FALSE);
+		free(menu);
+		if (!status)
+			return DITEM_FAILURE;
+	}
+	else
+		mediaDevice = devs[0];
+	if (mediaDevice)
+		mediaDevice->private = NULL;
+	if (!variable_get(VAR_NONINTERACTIVE))
+		msgConfirm("Using USB device: %s", mediaDevice->name);
+	return (mediaDevice ? DITEM_LEAVE_MENU : DITEM_FAILURE);
+}
+
+static int
 DOSHook(dialogMenuItem *self)
 {
     return genericHook(self, DEVICE_TYPE_DOS);
@@ -270,7 +317,7 @@ mediaSetFTP(dialogMenuItem *self)
     char *cp, hbuf[MAXHOSTNAMELEN], *hostname, *dir;
     struct addrinfo hints, *res;
     int af;
-    size_t  urllen;
+    size_t urllen;
     extern int FtpPort;
     static Device *networkDev = NULL;
 
@@ -302,7 +349,7 @@ mediaSetFTP(dialogMenuItem *self)
 	}
 	urllen = strlen(cp);
 	if (urllen >= sizeof(ftpDevice.name)) {
-	    msgConfirm("Length of specified URL is %d characters. Allowable maximum is %d.",
+	    msgConfirm("Length of specified URL is %zu characters. Allowable maximum is %zu.",
 			urllen,sizeof(ftpDevice.name)-1);
 	    variable_unset(VAR_FTP_PATH);
 	    return DITEM_FAILURE;
@@ -515,7 +562,7 @@ mediaSetNFS(dialogMenuItem *self)
     }
     pathlen = strlen(hostname);
     if (pathlen >= sizeof(nfsDevice.name)) {
-	msgConfirm("Length of specified NFS path is %d characters. Allowable maximum is %d.",
+	msgConfirm("Length of specified NFS path is %zu characters. Allowable maximum is %zu.",
 		   pathlen,sizeof(nfsDevice.name)-1);
 	variable_unset(VAR_NFS_PATH);
 	return DITEM_FAILURE;
@@ -629,8 +676,7 @@ mediaExtractDistEnd(int zpid, int cpid)
     /* Don't check exit status - gunzip seems to return a bogus one! */
     if (i < 0) {
 	if (isDebug())
-	    msgDebug("wait for %s returned status of %d!\n",
-		USE_GZIP ? "gunzip" : "bunzip2", i);
+	    msgDebug("wait for %s returned status of %d!\n", UNZIPPER, i);
 	return FALSE;
     }
     i = waitpid(cpid, &j, 0);
@@ -697,7 +743,7 @@ mediaExtractDist(char *dir, char *dist, FILE *fp)
 	    dup2(1, 2);
 	}
 	if (strlen(cpioVerbosity()))
-	    i = execl(cpio, cpio, "-idum", cpioVerbosity(), (char *)0); 
+	    i = execl(cpio, cpio, "-idum", cpioVerbosity(), (char *)0);
 	else
 	    i = execl(cpio, cpio, "-idum", (char *)0);
 	if (isDebug())
@@ -746,8 +792,7 @@ mediaExtractDist(char *dir, char *dist, FILE *fp)
     /* Don't check exit status - gunzip seems to return a bogus one! */
     if (i < 0) {
 	if (isDebug())
-	    msgDebug("wait for %s returned status of %d!\n",
-		USE_GZIP ? "gunzip" : "bunzip2", i);
+	    msgDebug("wait for %s returned status of %d!\n", UNZIPPER, i);
 	return FALSE;
     }
     i = waitpid(cpid, &j, 0);
@@ -802,8 +847,6 @@ mediaSetCPIOVerbosity(dialogMenuItem *self)
     }
     else {
 	if (!strcmp(cp, "low"))
-	    variable_set2(VAR_CPIO_VERBOSITY, "medium", 0);
-	else if (!strcmp(cp, "medium"))
 	    variable_set2(VAR_CPIO_VERBOSITY, "high", 0);
 	else /* must be "high" - wrap around */
 	    variable_set2(VAR_CPIO_VERBOSITY, "low", 0);

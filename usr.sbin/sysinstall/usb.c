@@ -1,16 +1,4 @@
 /*
- * The new sysinstall program.
- *
- * This is probably the last attempt in the `sysinstall' line, the next
- * generation being slated to essentially a complete rewrite.
- * 
- * $MidnightBSD: src/usr.sbin/sysinstall/dos.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $ 
- *
- * Copyright (c) 1995
- *	Jordan Hubbard.  All rights reserved.
- * Copyright (c) 1995
- * 	Gary J Palmer. All rights reserved.
- *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -34,61 +22,67 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * used floppy.c and cdrom.c as templates, edited as necessary.
+ *
+ * $MidnightBSD$
  */
 
-#include "sysinstall.h"
-#include <sys/stat.h>
-#include <sys/errno.h>
+#include <sys/fcntl.h>
 #include <sys/param.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <grp.h>
-#define MSDOSFS
 #include <sys/mount.h>
-#include <fs/msdosfs/msdosfsmount.h>
-#undef MSDOSFS
 
-static Boolean DOSMounted;
+#include <ufs/ufs/ufsmount.h>
+
+#include "sysinstall.h"
+
+static Boolean USBMounted;
 static char mountpoint[] = "/dist";
 
 Boolean
-mediaInitDOS(Device *dev)
+mediaInitUSB(Device *dev)
 {
-    struct msdosfs_args args;
+	struct ufs_args ufsargs;
 
-    if (DOSMounted)
-	return TRUE;
-     
-    Mkdir(mountpoint);
-    memset(&args, 0, sizeof(args));
-    args.fspec = dev->devname;
-    args.uid = args.gid = 0;
-    args.mask = 0777;
+	if (USBMounted)
+		return TRUE;
 
-    if (mount("msdosfs", mountpoint, MNT_RDONLY, (caddr_t)&args) == -1) {
-	msgConfirm("Error mounting %s on %s: %s (%u)", args.fspec, mountpoint, strerror(errno), errno);
+	Mkdir(mountpoint);
+
+	memset(&ufsargs, 0, sizeof(ufsargs));
+	ufsargs.fspec = dev->devname;
+
+	if (mount("ufs", mountpoint, MNT_RDONLY, (caddr_t)&ufsargs) != -1) {
+		USBMounted = TRUE;
+		return TRUE;
+	}
+
+	msgConfirm("Error mounting USB drive %s (%s) on %s : %s",
+	    dev->name, dev->devname, mountpoint, strerror(errno));
 	return FALSE;
-    }
-    DOSMounted = TRUE;
-    return TRUE;
 }
+
 
 FILE *
-mediaGetDOS(Device *dev, char *file, Boolean probe)
+mediaGetUSB(Device *dev, char *file, Boolean probe)
 {
-    return mediaGenericGet(mountpoint, file);
+	return mediaGenericGet(mountpoint, file);
 }
 
+
+/* 
+ * When sysinstall terminates, all USB drives handled by deviceRegister will 
+ * be checked and unmounted if necessary.
+ */
 void
-mediaShutdownDOS(Device *dev)
+mediaShutdownUSB(Device *dev)
 {
-    if (!DOSMounted)
-	return;
-    if (unmount(mountpoint, MNT_FORCE) != 0)
-	msgConfirm("Could not unmount the DOS partition from %s: %s",
-		   mountpoint, strerror(errno));
-    else
-	DOSMounted = FALSE;
-    return;
+	if (!USBMounted) 
+		return;
+
+	if (unmount(mountpoint, MNT_FORCE) != 0)
+		msgConfirm("Could not unmount the USB drive from %s: %s", 
+				mountpoint, strerror(errno));
+	else
+		USBMounted = FALSE;
+
 }

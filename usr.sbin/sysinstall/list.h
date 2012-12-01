@@ -4,8 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated for what's essentially a complete rewrite.
  * 
- * $MidnightBSD$
- * $FreeBSD: src/usr.sbin/sysinstall/list.h,v 1.2 1999/08/28 01:34:15 peter Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/list.h,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  *
  * Copyright (c) 1997 FreeBSD, Inc.
  * All rights reserved.

@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/index.c,v 1.4 2008/09/02 01:30:29 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/index.c,v 1.5 2011/03/26 22:17:28 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/index.c,v 1.106 2005/07/02 22:34:22 dwhite Exp $
  */
 
@@ -61,7 +61,7 @@ static void	index_recorddeps(Boolean add, PkgNodePtr root, IndexEntryPtr ie);
 PkgNode Top, Plist;
 
 /* Smarter strdup */
-inline char *
+static inline char *
 _strdup(char *ptr)
 {
     return ptr ? strdup(ptr) : NULL;
@@ -234,7 +234,17 @@ new_index(char *name, char *pathto, char *prefix, char *comment, char *descr, ch
     tmp->deps =		_strdup(deps);
     tmp->depc =		0;
     tmp->installed =	package_installed(name);
+    tmp->vol_checked =	0;
     tmp->volume =	volume;
+    if (volume != 0) {
+	have_volumes = TRUE;
+	if (low_volume == 0)
+	    low_volume = volume;
+	else if (low_volume > volume)
+	    low_volume = volume;
+	if (high_volume < volume)
+	    high_volume = volume;
+    }
     return tmp;
 }
 
@@ -308,7 +318,7 @@ readline(FILE *fp, char *buf, int max)
  * lines without a set number of '|' delimited fields.
  */
 
-int
+static int
 index_parse(FILE *fp, char *name, char *pathto, char *prefix, char *comment, char *descr, char *maint, char *cats, char *rdeps, int *volume)
 {
     char line[10240 + 2048 * 7];
@@ -456,7 +466,7 @@ index_sort(PkgNodePtr top)
 }
 
 /* Delete an entry out of the list it's in (only the plist, at present) */
-void
+static void
 index_delete(PkgNodePtr n)
 {
     if (n->next) {
@@ -501,7 +511,7 @@ index_search(PkgNodePtr top, char *str, PkgNodePtr *tp)
     return p;
 }
 
-int
+static int
 pkg_checked(dialogMenuItem *self)
 {
     ListPtrsPtr lists = (ListPtrsPtr)self->aux;
@@ -521,7 +531,7 @@ pkg_checked(dialogMenuItem *self)
 	return FALSE;
 }
 
-int
+static int
 pkg_fire(dialogMenuItem *self)
 {
     int ret;
@@ -580,7 +590,7 @@ pkg_fire(dialogMenuItem *self)
     return ret;
 }
 
-void
+static void
 pkg_selected(dialogMenuItem *self, int is_selected)
 {
     PkgNodePtr kp = self->data;
@@ -594,7 +604,8 @@ int
 index_menu(PkgNodePtr root, PkgNodePtr top, PkgNodePtr plist, int *pos, int *scroll)
 {
     struct ListPtrs lists;
-    int n, rval, maxname;
+    size_t maxname;
+    int n, rval;
     int curr, max;
     PkgNodePtr kp;
     dialogMenuItem *nitems;
@@ -611,7 +622,7 @@ index_menu(PkgNodePtr root, PkgNodePtr top, PkgNodePtr plist, int *pos, int *scr
 
     /* Figure out if this menu is full of "leaves" or "branches" */
     for (kp = top->kids; kp && kp->name; kp = kp->next) {
-	int len;
+	size_t len;
 
 	++n;
 	if (kp->type == PACKAGE && plist) {
@@ -647,8 +658,8 @@ index_menu(PkgNodePtr root, PkgNodePtr top, PkgNodePtr plist, int *pos, int *scr
 		SAFE_STRCPY(buf, kp->desc);
 	    if (strlen(buf) > (_MAX_DESC - maxname))
 		buf[_MAX_DESC - maxname] = '\0';
-	    nitems = item_add(nitems, kp->name, (char *)buf, pkg_checked, 
-			      pkg_fire, pkg_selected, kp, (int *)(&lists), 
+	    nitems = item_add(nitems, kp->name, buf, pkg_checked, 
+			      pkg_fire, pkg_selected, kp, &lists, 
 			      &curr, &max);
 	    ++n;
 	    kp = kp->next;
@@ -690,12 +701,14 @@ recycle:
 }
 
 int
-index_extract(Device *dev, PkgNodePtr top, PkgNodePtr who, Boolean depended)
+index_extract(Device *dev, PkgNodePtr top, PkgNodePtr who, Boolean depended,
+    int current_volume)
 {
     int status = DITEM_SUCCESS;
+    Boolean notyet = FALSE;
     PkgNodePtr tmp2;
     IndexEntryPtr id = who->data;
-    WINDOW *w = savescr();
+    WINDOW *w;
 
     /* 
      * Short-circuit the package dependency checks.  We're already
@@ -707,28 +720,10 @@ index_extract(Device *dev, PkgNodePtr top, PkgNodePtr who, Boolean depended)
      * a certain faulty INDEX file. 
      */
 
-    if (id->installed == 1)
+    if (id->installed == 1 || (have_volumes && id->vol_checked == current_volume))
 	return DITEM_SUCCESS;
 
-    /*
-     * Prompt user if the package is not available on the current volume.
-     */
-
-    if(mediaDevice->type == DEVICE_TYPE_CDROM) {
-	while (id->volume != dev->volume) {
-	    if (!msgYesNo("This is disc #%d.  Package %s is on disc #%d\n"
-			  "Would you like to switch discs now?\n", dev->volume,
-			  id->name, id->volume)) {
-		DEVICE_SHUTDOWN(mediaDevice);
-		msgConfirm("Please remove disc #%d from your drive, and add disc #%d\n",
-		    dev->volume, id->volume);
-		DEVICE_INIT(mediaDevice);
-	    } else {
-		return DITEM_FAILURE;
-	    }
-	}
-    }
-
+    w = savescr();
     if (id && id->deps && strlen(id->deps)) {
 	char t[2048 * 8], *cp, *cp2;
 
@@ -738,9 +733,13 @@ index_extract(Device *dev, PkgNodePtr top, PkgNodePtr who, Boolean depended)
 	    if ((cp2 = index(cp, ' ')) != NULL)
 		*cp2 = '\0';
 	    if ((tmp2 = index_search(top, cp, NULL)) != NULL) {
-		status = index_extract(dev, top, tmp2, TRUE);
+		status = index_extract(dev, top, tmp2, TRUE, current_volume);
 		if (DITEM_STATUS(status) != DITEM_SUCCESS) {
-		    if (variable_get(VAR_NO_CONFIRM))
+		    /* package probably on a future disc volume */
+		    if (status & DITEM_CONTINUE) {
+			status = DITEM_SUCCESS;
+			notyet = TRUE;
+		    } else if (variable_get(VAR_NO_CONFIRM))
 			msgNotify("Loading of dependent package %s failed", cp);
 		    else
 			msgConfirm("Loading of dependent package %s failed", cp);
@@ -758,8 +757,52 @@ index_extract(Device *dev, PkgNodePtr top, PkgNodePtr who, Boolean depended)
 		cp = NULL;
 	}
     }
-    /* Done with the deps?  Load the real m'coy */
+
+    /*
+     * If iterating through disc volumes one at a time indicate failure if
+     * dependency install failed due to package being on a higher volume
+     * numbered disc, but that we should continue anyway.  Note that this
+     * package has already been processed for this disc volume so we don't
+     * need to do it again.
+     */
+
+    if (notyet) {
+    	restorescr(w);
+	id->vol_checked = current_volume;
+	return DITEM_FAILURE | DITEM_CONTINUE;
+    }
+
+    /*
+     * Done with the deps?  Try to load the real m'coy.  If iterating
+     * through a multi-volume disc set fail the install if the package
+     * is on a higher numbered volume to cut down on disc switches the
+     * user needs to do, but indicate caller should continue processing
+     * despite error return.  Note this package was processed for the
+     * current disc being checked.
+     */
+
     if (DITEM_STATUS(status) == DITEM_SUCCESS) {
+	/* Prompt user if the package is not available on the current volume. */
+	if(mediaDevice->type == DEVICE_TYPE_CDROM) {
+	    if (current_volume != 0 && id->volume > current_volume) {
+		restorescr(w);
+		id->vol_checked = current_volume;
+		return DITEM_FAILURE | DITEM_CONTINUE;
+	    }
+	    while (id->volume != dev->volume) {
+		if (!msgYesNo("This is disc #%d.  Package %s is on disc #%d\n"
+			  "Would you like to switch discs now?\n", dev->volume,
+			  id->name, id->volume)) {
+		    DEVICE_SHUTDOWN(mediaDevice);
+		    msgConfirm("Please remove disc #%d from your drive, and add disc #%d\n",
+			dev->volume, id->volume);
+		    DEVICE_INIT(mediaDevice);
+		} else {
+		    restorescr(w);
+		    return DITEM_FAILURE;
+		}
+	    }
+	}
 	status = package_extract(dev, who->name, depended);
 	if (DITEM_STATUS(status) == DITEM_SUCCESS)
 	    id->installed = 1;
@@ -811,6 +854,8 @@ index_initialize(char *path)
     if (!index_initted) {
 	w = savescr();
 	dialog_clear_norefresh();
+	have_volumes = FALSE;
+	low_volume = high_volume = 0;
 
 	/* Got any media? */
 	if (!mediaVerify()) {

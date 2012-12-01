@@ -4,8 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
- * $MidnightBSD$
- * $FreeBSD: src/usr.sbin/sysinstall/ufs.c,v 1.15 1999/08/28 01:34:21 peter Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/ufs.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -40,11 +39,47 @@
 #include "sysinstall.h"
 #include <sys/fcntl.h>
 #include <sys/param.h>
+#include <sys/mount.h>
+#include <ufs/ufs/ufsmount.h>
 
-/* No init or shutdown routines necessary - all done in mediaSetUFS() */
+static Boolean UFSMounted;
+static char mountpoint[] = "/dist";
+
+Boolean
+mediaInitUFS(Device *dev)
+{
+    struct ufs_args args;
+
+    if (UFSMounted)
+	return TRUE;
+     
+    Mkdir(mountpoint);
+    memset(&args, 0, sizeof(args));
+    args.fspec = dev->devname;
+
+    if (mount("ufs", mountpoint, MNT_RDONLY, (caddr_t)&args) == -1) {
+	msgConfirm("Error mounting %s on %s: %s (%u)", args.fspec, mountpoint, strerror(errno), errno);
+	return FALSE;
+    }
+    UFSMounted = TRUE;
+    return TRUE;
+}
 
 FILE *
 mediaGetUFS(Device *dev, char *file, Boolean probe)
 {
     return mediaGenericGet((char *)dev->private, file);
+}
+
+void
+mediaShutdownUFS(Device *dev)
+{
+    if (!UFSMounted)
+	return;
+    if (unmount(mountpoint, MNT_FORCE) != 0)
+	msgConfirm("Could not unmount the UFS partition from %s: %s",
+		   mountpoint, strerror(errno));
+    else
+	UFSMounted = FALSE;
+    return;
 }

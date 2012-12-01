@@ -1,6 +1,5 @@
 /*
- * $MidnightBSD: src/usr.sbin/sysinstall/tcpip.c,v 1.5 2008/09/02 01:30:29 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/sysinstall/tcpip.c,v 1.132.2.2 2006/02/12 15:23:50 delphij Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/tcpip.c,v 1.6 2009/10/24 15:14:40 laffer1 Exp $
  *
  * Copyright (c) 1995
  *      Gary J Palmer. All rights reserved.

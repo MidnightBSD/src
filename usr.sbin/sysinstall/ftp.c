@@ -4,8 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/ftp.c,v 1.5 2008/09/02 01:30:29 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/sysinstall/ftp.c,v 1.45 2002/10/14 13:06:13 nyan Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/ftp.c,v 1.6 2009/05/20 21:35:09 laffer1 Exp $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.

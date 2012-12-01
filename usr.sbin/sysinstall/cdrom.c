@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/cdrom.c,v 1.3 2007/03/09 14:43:11 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/cdrom.c,v 1.4 2007/07/27 21:32:46 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/cdrom.c,v 1.54 2005/03/02 22:27:21 jhb Exp $
  *
  * Copyright (c) 1995
@@ -44,6 +44,7 @@
 #include <sys/errno.h>
 #include <sys/param.h>
 #include <sys/wait.h>
+#include <sys/cdio.h>
 #include <unistd.h>
 #include <grp.h>
 #include <fcntl.h>
@@ -58,6 +59,8 @@ static Boolean cdromMounted;
 static Boolean previouslyMounted; /* Was the disc already mounted? */
 static char mountpoint[MAXPATHLEN] = "/dist";
 int CDROMInitQuiet;
+
+static void mediaEjectCDROM(Device *dev);
 
 static properties
 read_props(char *name)
@@ -143,7 +146,7 @@ mediaInitCDROM(Device *dev)
 	else {
 	    if (variable_cmp(VAR_RELNAME, cp) &&
 		variable_cmp(VAR_RELNAME, "any") &&
-		variable_cmp(cp, "any") &&
+		strcmp(cp, "any") &&
 		!bogusCDOK) {
 		msgConfirm("Warning: The version of the MidnightBSD disc currently in the drive\n"
 			   "(%s) does not match the version of the boot floppy\n"
@@ -217,4 +220,24 @@ mediaShutdownCDROM(Device *dev)
 	msgConfirm("Could not unmount the CDROM/DVD from %s: %s", mountpoint, strerror(errno));
     else
 	cdromMounted = FALSE;
+
+    mediaEjectCDROM(dev);
+}
+
+static void
+mediaEjectCDROM(Device *dev)
+{
+	int fd = -1;
+
+	msgDebug("Ejecting CDROM/DVD at %s", dev->devname);
+
+	fd = open(dev->devname, O_RDONLY);
+	
+	if (fd < 0)
+		msgDebug("Could not eject the CDROM/DVD from %s: %s", dev->devname, strerror(errno));
+	else {
+		ioctl(fd, CDIOCALLOW);
+		ioctl(fd, CDIOCEJECT);
+		close(fd);
+	}
 }

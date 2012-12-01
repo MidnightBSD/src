@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/package.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/package.c,v 1.3 2009/10/24 14:30:28 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/package.c,v 1.103 2004/01/02 09:52:14 obrien Exp $
  */
 
@@ -56,7 +56,7 @@ int
 package_add(char *name)
 {
     PkgNodePtr tmp;
-    int i;
+    int i, current, low, high;
 
     if (!mediaVerify())
 	return DITEM_FAILURE;
@@ -69,9 +69,16 @@ package_add(char *name)
 	return i;
 
     tmp = index_search(&Top, name, &tmp);
-    if (tmp)
-	return index_extract(mediaDevice, &Top, tmp, FALSE);
-    else {
+    if (tmp) {
+	if (have_volumes) {
+	    low = low_volume;
+	    high = high_volume;
+	} else
+	    low = high = 0;
+	for (current = low; current <= high; current++)
+	    i = index_extract(mediaDevice, &Top, tmp, FALSE, current);
+	return i;
+    } else {
 	msgConfirm("Sorry, package %s was not found in the INDEX.", name);
 	return DITEM_FAILURE;
     }
@@ -117,8 +124,8 @@ package_extract(Device *dev, char *name, Boolean depended)
     char path[MAXPATHLEN];
     const char *PkgExts[] = { "", ".tbz", ".tbz2", ".tgz" };
     int last_msg, pathend, ret;
-    FILE *fp;
     size_t ext;
+    FILE *fp;
 
     last_msg = 0;
 
@@ -133,7 +140,7 @@ package_extract(Device *dev, char *name, Boolean depended)
 
     /* If necessary, initialize the ldconfig hints */
     if (!file_readable("/var/run/ld-elf.so.hints"))
-	vsystem("ldconfig /usr/lib /usr/lib/compat /usr/local/lib /usr/X11R6/lib");
+	vsystem("ldconfig /usr/lib /usr/lib/compat /usr/local/lib");
 
     /* Be initially optimistic */
     ret = DITEM_SUCCESS;
@@ -179,7 +186,6 @@ package_extract(Device *dev, char *name, Boolean depended)
 	    close(pfd[1]);
 
 	    /* Prevent pkg_add from wanting to interact in bad ways */
-	    setenv("PACKAGE_BUILDING", "t", 1);
 	    setenv("BATCH", "t", 1);
 
 	    if (isDebug())

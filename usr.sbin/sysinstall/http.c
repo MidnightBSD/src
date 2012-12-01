@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/http.c,v 1.3.2.1 2008/08/30 16:15:42 laffer1 Exp $ 
+ * $MidnightBSD: src/usr.sbin/sysinstall/http.c,v 1.4 2008/09/02 01:30:29 laffer1 Exp $ 
  * $FreeBSD: src/usr.sbin/sysinstall/http.c,v 1.7 2002/11/01 02:05:05 kuriyama Exp $
  */
 
@@ -37,7 +37,7 @@
 
 extern const char *ftp_dirs[]; /* defined in ftp.c */
 
-Boolean
+static Boolean
 checkAccess(Boolean proxyCheckOnly)
 {
 /* 

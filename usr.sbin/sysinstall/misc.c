@@ -1,8 +1,7 @@
 /*
  * Miscellaneous support routines..
- * 
- * $MidnightBSD: src/usr.sbin/sysinstall/misc.c,v 1.5.2.1 2008/08/30 16:15:42 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/sysinstall/misc.c,v 1.43 2003/01/06 17:11:46 obrien Exp $
+ *
+ * $MidnightBSD$
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -39,7 +38,6 @@
 #include <sys/errno.h>
 #include <sys/file.h>
 #include <sys/types.h>
-#include <sys/sysctl.h>
 #include <dirent.h>
 #include <sys/wait.h>
 #include <sys/param.h>
@@ -48,6 +46,7 @@
 #include <sys/reboot.h>
 #include <sys/disklabel.h>
 #include <fs/msdosfs/msdosfsmount.h>
+#include <sys/sysctl.h>
 
 /* Quick check to see if a file is readable */
 Boolean
@@ -239,7 +238,7 @@ item_add(dialogMenuItem *list, char *prompt, char *title,
 	 int (*checked)(dialogMenuItem *self),
 	 int (*fire)(dialogMenuItem *self),
 	 void (*selected)(dialogMenuItem *self, int is_selected),
-	 void *data, int *aux, int *curr, int *max)
+	 void *data, void *aux, int *curr, int *max)
 {
     dialogMenuItem *d;
 
@@ -536,7 +535,7 @@ restorescr(WINDOW *w)
 char *
 getsysctlbyname(const char *sysctlname)
 {
-    char *buf; 
+    char *buf;
     size_t sz, buf_sz = 0;
     const char unk_str[] = "<unknown>";
 
@@ -546,10 +545,9 @@ getsysctlbyname(const char *sysctlname)
     buf = (char *)safe_malloc(buf_sz);
 
     if (sysctlbyname(sysctlname, buf, &sz, NULL, 0) != -1)
-        buf[sz] = '\0';
+	buf[sz] = '\0';
     else
-        strlcpy(buf, unk_str, buf_sz);
+	strlcpy(buf, unk_str, buf_sz);
 
     return buf;
 }
-

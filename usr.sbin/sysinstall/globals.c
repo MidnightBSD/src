@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/globals.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $ 
+ * $MidnightBSD: src/usr.sbin/sysinstall/globals.c,v 1.3 2011/03/26 16:53:46 laffer1 Exp $ 
  * $FreeBSD: src/usr.sbin/sysinstall/globals.c,v 1.27 2004/08/07 01:19:54 marcel Exp $
  *
  * Copyright (c) 1995
@@ -49,10 +49,13 @@ Boolean		DialogActive;	/* Is libdialog initialized? */
 Boolean		ColorDisplay;	/* Are we on a color display? */
 Boolean		OnVTY;		/* Are we on a VTY? */
 Boolean		Restarting;	/* Are we restarting sysinstall? */
+Boolean		have_volumes;	/* Media has more than one volume. */
 Variable	*VarHead;	/* The head of the variable chain */
 Device		*mediaDevice;	/* Where we're installing from */
 int		BootMgr;	/* Which boot manager we're using */
 int		StatusLine;	/* Where to stick our status messages */
+int		low_volume;	/* Lowest volume number */
+int		high_volume;	/* Highest volume number */
 jmp_buf		BailOut;	/* Beam me up, scotty! The natives are pissed! */
 
 Chunk		*HomeChunk;
@@ -71,13 +74,10 @@ globalsInit(void)
 {
     DebugFD = -1;
     ColorDisplay = FALSE;
-    Fake = FALSE;
-    Restarting = FALSE;
     OnVTY = FALSE;
     DialogActive = FALSE;
     VarHead = NULL;
     mediaDevice = NULL;
-    RunningAsInit = FALSE;
 
     HomeChunk = NULL;
     RootChunk = NULL;

@@ -4,8 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/ttys.c,v 1.3.2.1 2008/08/30 16:15:42 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/sysinstall/ttys.c,v 1.4 2001/09/22 23:17:37 murray Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/ttys.c,v 1.4 2008/09/02 01:30:29 laffer1 Exp $
  *
  * Copyright (c) 2001
  *      Andrey A. Chernov.  All rights reserved.

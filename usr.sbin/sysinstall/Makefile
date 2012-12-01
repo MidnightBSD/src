@@ -1,4 +1,4 @@
-# $MidnightBSD: src/usr.sbin/sysinstall/Makefile,v 1.9 2009/10/24 05:13:57 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/sysinstall/Makefile,v 1.10 2011/12/18 03:50:50 laffer1 Exp $
 # $FreeBSD: src/usr.sbin/sysinstall/Makefile,v 1.134.2.1 2005/10/07 15:56:30 nyan Exp $
 
 PROG=	sysinstall
@@ -8,45 +8,16 @@ SRCS=	anonFTP.c cdrom.c command.c config.c devices.c dhcp.c \
 	ftp.c globals.c http.c index.c install.c installUpgrade.c keymap.c \
 	label.c main.c makedevs.c media.c menus.c misc.c modules.c \
 	mouse.c msg.c network.c nfs.c options.c package.c \
-	system.c tcpip.c termcap.c ttys.c ufs.c user.c \
+	system.c tcpip.c termcap.c ttys.c ufs.c usb.c user.c \
 	variable.c wizard.c keymap.h countries.h
 
 CFLAGS+= -DUSE_GZIP=1
 CFLAGS+= -I${.CURDIR}/../../gnu/lib/libodialog -I.
 
+WARNS?=  2	
+
 DPADD=	${LIBODIALOG} ${LIBNCURSES} ${LIBUTIL} ${LIBDISK} ${LIBFTPIO}
 LDADD=	-lodialog -lncurses -lutil -ldisk -lftpio
-
-#
-# When distributions have both UP and SMP kernels sysinstall
-# will probe for the number of cpus on the target machine and
-# automatically select which is appropriate.  This can be overridden
-# through the menus or both kernels can be installed (with the
-# most "appropriate" one setup as /boot/kernel).  For now this
-# is done for i386 and amd64; for other systems support must be
-# added to identify the cpu count if acpi and MPTable probing
-# is insufficient.
-#
-# The unmber of cpus probed is passed through the environment in
-# VAR_NCPUS ("ncpus") to scripts.
-#
-# Note that WITH_SMP is a compile time option that enables the
-# builtin menus for the SMP kernel configuration.  If this kernel
-# is not built (see release/Makefile) then this should not be
-# enabled as sysinstall may try to select an SMP kernel config
-# where none is available.  This option should not be needed--we
-# should probe for an SMP kernel in the distribution but doing
-# that is painful because of media changes and the structure of
-# sysinstall so for now it's a priori.
-#
-.if ${MACHINE} == "i386" || ${MACHINE_ARCH} == "amd64"
-SRCS+=	acpi.c biosmptable.c
-.if exists(${.CURDIR}/../../sys/${MACHINE}/conf/SMP)
-CFLAGS+=-DWITH_SMP	
-.endif
-DPADD+=	${LIBDEVINFO}
-LDADD+=	-ldevinfo
-.endif
 
 CLEANFILES=	makedevs.c rtermcap
 CLEANFILES+=	keymap.tmp keymap.h countries.tmp countries.h
@@ -99,8 +70,9 @@ KEYMAPS= be.iso bg.bds.ctrlcaps bg.phonetic.ctrlcaps br275.iso \
 	ce.iso2 cs.latin2.qwertz danish.iso el.iso07 \
 	estonian.cp850 estonian.iso estonian.iso15 finnish.iso fr.iso \
 	german.iso gr.elot.acc gr.us101.acc  hr.iso hu.iso2.101keys \
-	it.iso icelandic.iso jp.106 norwegian.iso pl_PL.ISO8859-2 \
-	pt.iso ru.koi8-r si.iso sk.iso2 spanish.iso swedish.iso \
+	it.iso icelandic.iso jp.106 latinamerican latinamerican.iso.acc \
+	norwegian.iso pl_PL.ISO8859-2 \
+	pt.iso ru.koi8-r si.iso sk.iso2 spanish.iso spanish.iso.acc swedish.iso \
 	swissfrench.iso \
 	swissgerman.iso ua.koi8-u ua.koi8-u.shift.alt uk.iso us.dvorak \
 	us.iso us.pc-ctrl us.unix

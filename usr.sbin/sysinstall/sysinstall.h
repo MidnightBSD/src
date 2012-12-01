@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.264.2.2 2006/01/31 22:03:19 jkim Exp $
- * $MidnightBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.9 2009/10/24 05:13:57 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.10 2011/03/26 16:53:46 laffer1 Exp $
  */
 
 #ifndef _SYSINSTALL_H_INCLUDE
@@ -60,10 +60,6 @@
 
 #if defined(__i386__) || defined(__amd64__)
 #define	WITH_SLICES
-#endif
-
-#if defined(__i386__)
-#define	WITH_LINUX
 #endif
 
 /* device limits */
@@ -107,8 +103,8 @@
 #define VAR_DISTS			"dists"
 #define VAR_DIST_MAIN			"distMain"
 #define VAR_DIST_SRC			"distSRC"
-#define VAR_DIST_X11			"distX11"
 #define VAR_DIST_KERNEL			"distKernel"
+#define VAR_DIST_DOC			"distDoc"
 #define VAR_DEDICATE_DISK		"dedicateDisk"
 #define VAR_DOMAINNAME			"domainname"
 #define VAR_EDITOR			"editor"
@@ -135,7 +131,7 @@
 #define VAR_INSTALL_CFG			"installConfig"
 #define VAR_INSTALL_ROOT		"installRoot"
 #define VAR_IPADDR			"ipaddr"
-#define VAR_IPV6_ENABLE			"ipv6_enable"
+#define VAR_IPV6_ENABLE			"ipv6_activate_all_interfaces"
 #define VAR_IPV6ADDR			"ipv6addr"
 #define VAR_KERN_SECURELEVEL		"kern_securelevel"
 #define VAR_KEYMAP			"keymap"
@@ -170,7 +166,6 @@
 #define VAR_NO_HOME			"noHome"
 #define VAR_NONINTERACTIVE		"nonInteractive"
 #define VAR_NOVELL			"novell"
-#define	VAR_OSF1_ENABLE			"osf1_enable"
 #define	VAR_RPCBIND_ENABLE		"rpcbind_enable"
 #define VAR_RDATE_FLAGS		"rdate_flags"
 #define VAR_PACKAGE			"package"
@@ -189,25 +184,23 @@
 #define VAR_SERIAL_SPEED		"serialSpeed"
 #define VAR_SLOW_ETHER			"slowEthernetCard"
 #define VAR_SWAP_SIZE			"swapSize"
-#define VAR_TAPE_BLOCKSIZE		"tapeBlocksize"
+#define VAR_SYSLOG_SERVER		"syslogdServer"
 #define VAR_TRY_DHCP			"tryDHCP"
 #define VAR_TRY_RTSOL			"tryRTSOL"
-#define VAR_SKIP_PCCARD			"skipPCCARD"
 #define VAR_UFS_PATH			"ufs"
 #define VAR_USR_SIZE			"usrSize"
 #define VAR_VAR_SIZE			"varSize"
 #define VAR_TMP_SIZE			"tmpSize"
 #define VAR_HOME_SIZE			"homeSize"
-#define VAR_XORG_CONFIG			"_xorgconfig"
 #define VAR_TERM			"TERM"
 #define VAR_CONSTERM                    "_consterm"
+#define VAR_KEEPRCCONF			"keeprcconf"
 
 #ifdef PC98
 #define DEFAULT_COUNTRY		"jp"
 #else
 #define DEFAULT_COUNTRY		"us"
 #endif
-#define DEFAULT_TAPE_BLOCKSIZE	"20"
 
 /* One MB worth of blocks */
 #define ONE_MEG				2048
@@ -237,13 +230,7 @@ typedef struct _dmenu {
     char *prompt;			/* Our prompt			*/
     char *helpline;			/* Line of help at bottom	*/
     char *helpfile;			/* Help file for "F1"		*/
-#if (__STDC_VERSION__ >= 199901L) || (__GNUC__ >= 3) 
     dialogMenuItem items[];		/* Array of menu items		*/
-#elif __GNUC__
-    dialogMenuItem items[0];		/* Array of menu items		*/
-#else
-#error "Create hack for C89 and K&R compilers."
-#endif
 } DMenu;
 
 /* An rc.conf variable */
@@ -281,7 +268,7 @@ typedef enum {
     DEVICE_TYPE_FTP,
     DEVICE_TYPE_NETWORK,
     DEVICE_TYPE_CDROM,
-    DEVICE_TYPE_TAPE,
+    DEVICE_TYPE_USB,
     DEVICE_TYPE_DOS,
     DEVICE_TYPE_UFS,
     DEVICE_TYPE_NFS,
@@ -387,6 +374,7 @@ typedef struct _indexEntry {	/* A single entry in an INDEX file */
     char *deps;			/* packages this depends on	*/
     int  depc;			/* how many depend on me	*/
     int  installed;		/* indicates if it is installed */
+    int  vol_checked;		/* disc volume last checked for */
     char *maintainer;		/* maintainer			*/
     unsigned int volume;	/* Volume of package            */
 } IndexEntry;
@@ -419,11 +407,12 @@ extern Boolean		RunningAsInit;		/* Are we running stand-alone?			*/
 extern Boolean		DialogActive;		/* Is the dialog() stuff up?			*/
 extern Boolean		ColorDisplay;		/* Are we on a color display?			*/
 extern Boolean		OnVTY;			/* On a syscons VTY?				*/
+extern Boolean		have_volumes;		/* Media has multiple volumes                   */
 extern Variable		*VarHead;		/* The head of the variable chain		*/
 extern Device		*mediaDevice;		/* Where we're getting our distribution from	*/
 extern unsigned int	Dists;			/* Which distributions we want			*/
+extern unsigned int	DocDists;		/* Which Doc dists we want			*/
 extern unsigned int	SrcDists;		/* Which src distributions we want		*/
-extern unsigned int	XOrgDists;		/* Which X.Org dists we want			*/
 extern unsigned int	KernelDists;		/* Which kernel dists we want			*/
 extern int		BootMgr;		/* Which boot manager to use 			*/
 extern int		StatusLine;		/* Where to print our status messages		*/
@@ -438,21 +427,23 @@ extern DMenu		MenuMBRType;		/* Type of MBR to write on the disk		*/
 #endif
 #endif
 extern DMenu		MenuConfigure;		/* Final configuration menu			*/
+extern DMenu		MenuDocInstall;		/* Documentation Installation menu		*/
 extern DMenu		MenuDocumentation;	/* Documentation menu				*/
 extern DMenu		MenuFTPOptions;		/* FTP Installation options			*/
 extern DMenu		MenuIndex;		/* Index menu					*/
 extern DMenu		MenuOptions;		/* Installation options				*/
 extern DMenu		MenuOptionsLanguage;	/* Language options menu			*/
 extern DMenu		MenuKLD;		/* Prototype KLD menu				*/
+extern DMenu		MenuConfig;		/* Prototype config menu				*/
 extern DMenu		MenuMedia;		/* Media type menu				*/
 #ifdef WITH_MICE
 extern DMenu		MenuMouse;		/* Mouse type menu				*/
 #endif
 extern DMenu		MenuMediaCDROM;		/* CDROM media menu				*/
+extern DMenu		MenuMediaUSB;		/* USB media menu				*/
 extern DMenu		MenuMediaDOS;		/* DOS media menu				*/
 extern DMenu		MenuMediaFloppy;	/* Floppy media menu				*/
 extern DMenu		MenuMediaFTP;		/* FTP media menu				*/
-extern DMenu		MenuMediaTape;		/* Tape media menu				*/
 extern DMenu		MenuNetworkDevice;	/* Network device menu				*/
 extern DMenu		MenuNTP;		/* NTP time server menu				*/
 extern DMenu		MenuSecurity;		/* System security options menu			*/
@@ -469,6 +460,7 @@ extern DMenu            MenuSysconsTtys;        /* System console terminal type 
 #endif
 extern DMenu		MenuNetworking;		/* Network configuration menu			*/
 extern DMenu		MenuMTA;		/* MTA selection menu				*/
+extern DMenu		MenuInstallCustom;	/* Custom Installation menu			*/
 extern DMenu		MenuDistributions;	/* Distribution menu				*/
 extern DMenu		MenuDiskDevices;	/* Disk type devices				*/
 extern DMenu		MenuSubDistributions;	/* Custom distribution menu			*/
@@ -479,7 +471,10 @@ extern DMenu		MenuUsermgmt;		/* User management menu				*/
 extern DMenu		MenuFixit;		/* Fixit floppy/CDROM/shell menu		*/
 extern int              FixItMode;              /* FixItMode starts shell on current device (ie Serial port) */
 extern const char *	StartName;		/* Which name we were started as */
+extern const char *	ProgName;		/* Program's proper name */
 extern int		NCpus;			/* # cpus on machine */
+extern int		low_volume;		/* Lowest volume number */
+extern int		high_volume;		/* Highest volume number */
 
 /* Important chunks. */
 extern Chunk *HomeChunk;
@@ -580,8 +575,10 @@ extern int	diskGetSelectCount(Device ***devs);
 /* dispatch.c */
 extern int	dispatchCommand(char *command);
 extern int	dispatch_load_floppy(dialogMenuItem *self);
+extern int	dispatch_load_cdrom(dialogMenuItem *self);
 extern int	dispatch_load_file_int(int);
 extern int	dispatch_load_file(dialogMenuItem *self);
+extern int	dispatch_load_menu(dialogMenuItem *self);
 
 
 /* dist.c */
@@ -590,11 +587,8 @@ extern int	distConfig(dialogMenuItem *self);
 extern int	distSetCustom(dialogMenuItem *self);
 extern int	distUnsetCustom(dialogMenuItem *self);
 extern int	distSetDeveloper(dialogMenuItem *self);
-extern int	distSetXDeveloper(dialogMenuItem *self);
 extern int	distSetKernDeveloper(dialogMenuItem *self);
-extern int	distSetXKernDeveloper(dialogMenuItem *self);
 extern int	distSetUser(dialogMenuItem *self);
-extern int	distSetXUser(dialogMenuItem *self);
 extern int	distSetMinimum(dialogMenuItem *self);
 extern int	distSetEverything(dialogMenuItem *self);
 extern int	distSetSrc(dialogMenuItem *self);
@@ -663,7 +657,7 @@ void		index_init(PkgNodePtr top, PkgNodePtr plist);
 void		index_node_free(PkgNodePtr top, PkgNodePtr plist);
 void		index_sort(PkgNodePtr top);
 void		index_print(PkgNodePtr top, int level);
-int		index_extract(Device *dev, PkgNodePtr top, PkgNodePtr who, Boolean depended);
+int		index_extract(Device *dev, PkgNodePtr top, PkgNodePtr who, Boolean depended, int current_volume);
 int		index_initialize(char *path);
 PkgNodePtr	index_search(PkgNodePtr top, char *str, PkgNodePtr *tp);
 
@@ -671,9 +665,11 @@ PkgNodePtr	index_search(PkgNodePtr top, char *str, PkgNodePtr *tp);
 extern Boolean	checkLabels(Boolean whinge);
 extern int	installCommit(dialogMenuItem *self);
 extern int	installCustomCommit(dialogMenuItem *self);
+extern int	installExpress(dialogMenuItem *self);
 extern int	installStandard(dialogMenuItem *self);
 extern int	installFixitHoloShell(dialogMenuItem *self);
 extern int	installFixitCDROM(dialogMenuItem *self);
+extern int	installFixitUSB(dialogMenuItem *self);
 extern int	installFixitFloppy(dialogMenuItem *self);
 extern int	installFixupBase(dialogMenuItem *self);
 extern int	installFixupKernel(dialogMenuItem *self, int dists);
@@ -713,14 +709,13 @@ extern u_char		default_scrnmap[];
 
 /* media.c */
 extern char	*cpioVerbosity(void);
-extern char	*mediaBufferSize(char *size);
 extern int	mediaOpen(void);
 extern void	mediaClose(void);
 extern int	mediaTimeout(void);
 extern int	mediaSetCDROM(dialogMenuItem *self);
 extern int	mediaSetFloppy(dialogMenuItem *self);
+extern int	mediaSetUSB(dialogMenuItem *self);
 extern int	mediaSetDOS(dialogMenuItem *self);
-extern int	mediaSetTape(dialogMenuItem *self);
 extern int	mediaSetFTP(dialogMenuItem *self);
 extern int	mediaSetFTPActive(dialogMenuItem *self);
 extern int	mediaSetFTPPassive(dialogMenuItem *self);
@@ -755,7 +750,7 @@ extern dialogMenuItem *item_add(dialogMenuItem *list, char *prompt, char *title,
 				int (*checked)(dialogMenuItem *self),
 				int (*fire)(dialogMenuItem *self),
 				void (*selected)(dialogMenuItem *self, int is_selected),
-				void *data, int *aux, int *curr, int *max);
+				void *data, void *aux, int *curr, int *max);
 extern void	items_free(dialogMenuItem *list, int *curr, int *max);
 extern int	Mkdir(char *);
 extern int	Mkdir_command(char *key, void *data);
@@ -835,12 +830,6 @@ extern void	systemChangeScreenmap(const u_char newmap[]);
 extern void	systemCreateHoloshell(void);
 extern int	vsystem(char *fmt, ...) __printflike(1, 2);
 
-/* tape.c */
-extern char	*mediaTapeBlocksize(void);
-extern Boolean	mediaInitTape(Device *dev);
-extern FILE	*mediaGetTape(Device *dev, char *file, Boolean probe);
-extern void	mediaShutdownTape(Device *dev);
-
 /* tcpip.c */
 extern int	tcpOpenDialog(Device *dev);
 extern int	tcpMenuSelect(dialogMenuItem *self);
@@ -856,6 +845,11 @@ extern void     configTtys(void);
 extern void	mediaShutdownUFS(Device *dev);
 extern Boolean	mediaInitUFS(Device *dev);
 extern FILE	*mediaGetUFS(Device *dev, char *file, Boolean probe);
+
+/* usb.c */
+extern Boolean	mediaInitUSB(Device *dev);
+extern FILE	*mediaGetUSB(Device *dev, char *file, Boolean probe);
+extern void	mediaShutdownUSB(Device *dev);
 
 /* user.c */
 extern int	userAddGroup(dialogMenuItem *self);
