@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*- 
+/* 
  *  gloadavg.c - get load average for Linux
  *  Copyright (C) 1993  Thomas Koenig
  *
@@ -26,17 +25,17 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/libexec/atrun/gloadavg.c,v 1.5 1999/08/28 00:09:12 peter Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
-#include <stdlib.h>
-#else
+#ifndef __MidnightBSD__
 #define _POSIX_SOURCE 1
 
 /* System Headers */
 
 #include <stdio.h>
+#else
+#include <stdlib.h>
 #endif
 
 /* Local headers */
@@ -45,7 +44,7 @@ static const char rcsid[] =
 
 /* Global functions */
 
-void perr(const char *a);
+void perr(const char *fmt, ...);
 
 double
 gloadavg(void)
@@ -54,7 +53,7 @@ gloadavg(void)
  */
 {
     double result;
-#if !defined(__FreeBSD__) && !defined(__MidnightBSD__)
+#ifndef __MidnightBSD__
     FILE *fp;
     
     if((fp=fopen(PROC_DIR "loadavg","r")) == NULL)

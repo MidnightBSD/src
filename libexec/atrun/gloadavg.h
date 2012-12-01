@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*- 
+/* 
  *  gloadavg.h -  header for atrun(8)
  *  Copyright (C) 1993  Thomas Koenig
  *
@@ -26,5 +25,5 @@
 
 double gloadavg(void);
 #if 0
-static char atrun_h_rcsid[] = "$FreeBSD: src/libexec/atrun/gloadavg.h,v 1.4 1999/08/28 00:09:12 peter Exp $";
+static char atrun_h_rcsid[] = "$MidnightBSD$";
 #endif

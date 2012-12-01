@@ -49,7 +49,7 @@ static const char rcsid[] =
 #include <syslog.h>
 #include <time.h>
 #include <unistd.h>
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 #include <paths.h>
 #else
 #include <getopt.h>
@@ -375,7 +375,7 @@ run_file(const char *filename, uid_t uid, gid_t gid)
 	if (chdir(pentry->pw_dir))
 		chdir("/");
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
 	execl(_PATH_SENDMAIL, "sendmail", "-F", "Atrun Service",
 			"-odi", "-oem",
 			mailname, (char *) NULL);
