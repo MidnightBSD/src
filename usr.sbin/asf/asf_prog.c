@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/asf/asf_prog.c,v 1.1 2006/06/18 11:14:40 yar Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <err.h>

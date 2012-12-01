@@ -22,9 +22,9 @@
 .\" OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 .\" EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/boot0cfg/boot0cfg.8,v 1.32 2007/06/07 07:43:04 pav Exp $
+.\" $MidnightBSD$
 .\"
-.Dd June 7, 2007
+.Dd February 4, 2012
 .Dt BOOT0CFG 8
 .Os
 .Sh NAME
@@ -35,7 +35,9 @@
 .Op Fl Bv
 .Op Fl b Ar boot0
 .Op Fl d Ar drive
+.Op Fl e Ar bell character
 .Op Fl f Ar file
+.Op Fl i Ar volume-id
 .Op Fl m Ar mask
 .Op Fl o Ar options
 .Op Fl s Ar slice
@@ -43,7 +45,7 @@
 .Ar disk
 .Sh DESCRIPTION
 The
-.Mx
+.Fx
 .Sq boot0
 boot manager permits the operator to select from which disk and
 slice an i386 machine (PC) is booted.
@@ -96,15 +98,25 @@ which contains the specified
 Typically this will be 0x80 for the first hard drive, 0x81 for the
 second hard drive, and so on; however any integer between 0 and 0xff
 is acceptable here.
+.It Fl e Ar bell character
+Set the character to be printed in case of input error.
 .It Fl f Ar file
 Specify that a backup copy of the preexisting MBR should be written to
 .Ar file .
 This file is created if it does not exist, and replaced if it does.
+.It Fl i Ar volume-id
+Specifies a volume-id (in the form XXXX-XXXX) to be saved at location
+0x1b8 in the MBR. This information is sometimes used by NT, XP and Vista
+to identify the disk drive. The option is only compatible with version 2.00
+of the 512-byte boot block.
 .It Fl m Ar mask
 Specify slices to be enabled/disabled, where
 .Ar mask
 is an integer between 0 (no slices enabled) and 0xf (all four slices
 enabled).
+Each mask bit enables corresponding slice if set to 1.
+The least significant bit of the mask corresponds to slice 1,
+the most significant bit of the mask corresponds to slice 4.
 .It Fl o Ar options
 A comma-separated string of any of the following options may be
 specified (with
@@ -137,6 +149,9 @@ Set the default boot selection to
 .Ar slice .
 Values between 1 and 4 refer to slices; a value of 5 refers to the
 option of booting from a second disk.
+The special string
+.Dq PXE
+or a value of 6 can be used to boot via PXE.
 .It Fl t Ar ticks
 Set the timeout value to
 .Ar ticks .
@@ -160,9 +175,9 @@ To boot slice 2 on the next boot:
 .Pp
 .Dl "boot0cfg -s 2 ad0"
 .Pp
-To enable just slices 1 and 2 in the menu:
+To enable just slices 1 and 3 in the menu:
 .Pp
-.Dl "boot0cfg -m 0x3 ad0"
+.Dl "boot0cfg -m 0x5 ad0"
 .Pp
 To go back to non-interactive booting, use
 .Xr fdisk 8
@@ -173,20 +188,11 @@ to install the default MBR:
 .Sh SEE ALSO
 .Xr geom 4 ,
 .Xr boot 8 ,
-.Xr fdisk 8
+.Xr fdisk 8 ,
+.Xr gpart 8
 .Sh AUTHORS
 .An Robert Nordier Aq rnordier@FreeBSD.org .
 .Sh BUGS
-Protection mechanisms in the
-.Xr geom 4
-subsystem might prevent
-.Nm
-from being able to update the MBR on a mounted disk.
-Instructions for temporarily disabling these protection mechanisms
-can be found in the
-.Xr geom 4
-manpage.
-.Pp
 Use of the
 .Sq packet
 option may cause
@@ -195,6 +201,6 @@ to fail, depending on the nature of BIOS support.
 .Pp
 Use of the
 .Sq setdrv
-option with an incorrect -d operand may cause the MBR to be written
-to the wrong disk.
-Be careful!
+option with an incorrect -d operand may cause the boot0 code
+to write the MBR to the wrong disk, thus trashing its previous
+content.  Be careful.

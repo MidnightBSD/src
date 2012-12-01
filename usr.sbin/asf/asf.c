@@ -23,10 +23,10 @@
  * negligence or otherwise) arising in any way out of the use of this
  * software, even if advised of the possibility of such damage.
  */
-/* $Id: asf.c,v 1.2 2009-10-04 20:00:08 laffer1 Exp $ */
+/* $Id: asf.c,v 1.3 2012-12-01 14:51:31 laffer1 Exp $ */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/asf/asf.c,v 1.12 2006/12/20 06:20:04 yar Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/queue.h>

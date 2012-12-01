@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*
- * apm / zzz	APM BIOS utility for FreeBSD
+ * APM BIOS utility for FreeBSD
  *
  * Copyright (C) 1994-1996 by Tatsumi Hosokawa <hosokawa@jp.FreeBSD.org>
  *
@@ -15,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/apm/apm.c,v 1.38 2005/05/30 18:44:43 will Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/file.h>
 #include <sys/ioctl.h>
@@ -44,10 +43,9 @@ int cmos_wall = 0;	/* True when wall time is in cmos clock, else UTC */
 static void
 usage(void)
 {
-	fprintf(stderr, "%s\n%s\n",
+	fprintf(stderr,
 		"usage: apm [-ablstzZ] [-d enable ] [ -e enable ] "
-		"[ -h enable ] [-r delta]",
-		"       zzz");
+		"[ -h enable ] [-r delta]\n");
 	exit(1);
 }
 
@@ -386,23 +384,13 @@ main(int argc, char *argv[])
 	int     dosleep = 0, all_info = 1, apm_status = 0, batt_status = 0;
 	int     display = -1, batt_life = 0, ac_status = 0, standby = 0;
 	int	batt_time = 0, delta = 0, enable = -1, haltcpu = -1;
-	char	*cmdname;
 	int	bioscall_available = 0;
 	size_t	cmos_wall_len = sizeof(cmos_wall);
 
 	if (sysctlbyname("machdep.wall_cmos_clock", &cmos_wall, &cmos_wall_len,
 	    NULL, 0) == -1)
 		err(1, "sysctlbyname(machdep.wall_cmos_clock)");
-	if ((cmdname = strrchr(argv[0], '/')) != NULL)
-		cmdname++;
-	else
-		cmdname = argv[0];
 
-	if (strcmp(cmdname, "zzz") == 0) {
-		dosleep = 1;
-		all_info = 0;
-		goto finish_option;
-	}
 	while ((c = getopt(argc, argv, "abe:h:lRr:stzd:Z")) != -1) {
 		switch (c) {
 		case 'a':
@@ -458,7 +446,6 @@ main(int argc, char *argv[])
 		argc -= optind;
 		argv += optind;
 	}
-finish_option:
 	if (haltcpu != -1 || enable != -1 || display != -1 || delta || dosleep
 	    || standby) {
 		fd = open(APMDEV, O_RDWR);

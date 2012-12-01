@@ -37,13 +37,11 @@ static const char copyright[] = "@(#) Copyright (c) 1997, 1998, 1999\
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/ancontrol/ancontrol.c,v 1.25 2004/11/03 20:45:52 ceri Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
-#include <sys/cdefs.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
-#include <sys/socket.h>
 
 #include <arpa/inet.h>
 
@@ -1328,8 +1326,8 @@ an_setkeys(const char *iface, const char *key, int keytype)
 	}
 }
 
-static void an_readkeyinfo(iface)
-	const char		*iface;
+static void
+an_readkeyinfo(const char *iface)
 {
 	struct an_req		areq;
 	struct an_ltv_genconfig	*cfg;

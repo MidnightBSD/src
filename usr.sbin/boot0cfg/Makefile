@@ -1,11 +1,11 @@
-# $FreeBSD: src/usr.sbin/boot0cfg/Makefile,v 1.9 2005/07/15 08:04:32 phk Exp $
+# $MidnightBSD$
 
 PROG=	boot0cfg
 MAN=	boot0cfg.8
 
-WARNS?=	2
+DPADD=	${LIBGEOM} ${LIBBSDXML} ${LIBSBUF}
+LDADD=	-lgeom -lbsdxml -lsbuf
 
-DPADD=	${LIBGEOM}
-LDADD=	-lgeom
+NO_WCAST_ALIGN=
 
 .include <bsd.prog.mk>

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/asf/asf_kld.c,v 1.1 2006/06/18 11:14:40 yar Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/linker.h>
@@ -39,7 +39,7 @@ __FBSDID("$FreeBSD: src/usr.sbin/asf/asf_kld.c,v 1.1 2006/06/18 11:14:40 yar Exp
  * Works with a live kernel only.
  */
 void
-asf_kld()
+asf_kld(void)
 {
 	struct kld_file_stat kfs;
 	int fid = 0;	/* indicates the beginning of the linker file list */
