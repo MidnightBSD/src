@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/etc/profile,v 1.2 2006/08/28 02:13:43 laffer1 Exp $
 # $FreeBSD: src/etc/profile,v 1.14 2004/06/06 11:46:27 schweikh Exp $
 #
 # System-wide .profile file for sh(1).
@@ -13,7 +13,7 @@
 # You should also read the setlocale(3) man page for information
 # on how to achieve more precise control of locale settings.
 #
-# Read system messages
-# msgs -f
+# Check system messages
+# msgs -q
 # Allow terminal messages
 # mesg y
