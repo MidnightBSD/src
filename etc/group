@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/group,v 1.3 2006/08/28 01:35:53 laffer1 Exp $
+# $MidnightBSD: src/etc/group,v 1.4 2007/01/08 00:25:17 laffer1 Exp $
 # $FreeBSD: src/etc/group,v 1.32 2005/06/06 20:19:56 brooks Exp $
 #
 wheel:*:0:root
@@ -12,6 +12,7 @@ bin:*:7:
 news:*:8:
 man:*:9:
 games:*:13:
+ftp:*:14:
 staff:*:20:
 sshd:*:22:
 smmsp:*:25:
@@ -28,5 +29,6 @@ network:*:69:
 audit:*:77:
 www:*:80:
 _ntp:*:123:
+hast:*:845:
 nogroup:*:65533:
 nobody:*:65534:
