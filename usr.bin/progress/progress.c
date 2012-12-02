@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/usr.bin/progress/progress.c,v 1.1 2008/09/02 05:29:39 laffer1 Exp $ */
+/* $MidnightBSD: src/usr.bin/progress/progress.c,v 1.2 2012/12/02 06:26:32 laffer1 Exp $ */
 /*	$NetBSD: progress.c,v 1.17 2008/05/26 04:53:11 dholland Exp $ */
 
 /*-
@@ -34,31 +34,22 @@
 #ifndef lint
 __RCSID("$NetBSD: progress.c,v 1.17 2008/05/26 04:53:11 dholland Exp $");
 #endif				/* not lint */
-__MBSDID("$MidnightBSD: src/usr.bin/progress/progress.c,v 1.1 2008/09/02 05:29:39 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.bin/progress/progress.c,v 1.2 2012/12/02 06:26:32 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/param.h>
-#include <sys/socket.h>
 #include <sys/ioctl.h>
-#include <sys/time.h>
 #include <sys/wait.h>
-#include <netinet/in.h>
-#include <arpa/ftp.h>
 
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <glob.h>
 #include <signal.h>
 #include <inttypes.h>
 #include <limits.h>
-#include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <termios.h>
-#include <time.h>
 #include <unistd.h>
 
 #define GLOBAL			/* force GLOBAL decls in progressbar.h to be
@@ -73,7 +64,7 @@ strsuftoll(const char *desc, const char *val,
     long long min, long long max);
 
 static void
-broken_pipe(int unused)
+broken_pipe(int __unused unused)
 {
 	signal(SIGPIPE, SIG_DFL);
 	progressmeter(1);
