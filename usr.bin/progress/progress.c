@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/usr.bin/progress/progress.c,v 1.1 2008/09/02 05:29:39 laffer1 Exp $ */
 /*	$NetBSD: progress.c,v 1.17 2008/05/26 04:53:11 dholland Exp $ */
 
 /*-
@@ -34,7 +34,7 @@
 #ifndef lint
 __RCSID("$NetBSD: progress.c,v 1.17 2008/05/26 04:53:11 dholland Exp $");
 #endif				/* not lint */
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.bin/progress/progress.c,v 1.1 2008/09/02 05:29:39 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -59,7 +59,6 @@ __MBSDID("$MidnightBSD$");
 #include <string.h>
 #include <termios.h>
 #include <time.h>
-#include "/usr/src/lib/libc/stdtime/tzfile.h"
 #include <unistd.h>
 
 #define GLOBAL			/* force GLOBAL decls in progressbar.h to be
@@ -68,7 +67,10 @@ __MBSDID("$MidnightBSD$");
 
 static void broken_pipe(int unused);
 static void usage(void);
-int main(int, char *[]);
+
+long long
+strsuftoll(const char *desc, const char *val,
+    long long min, long long max);
 
 static void
 broken_pipe(int unused)
@@ -115,7 +117,7 @@ main(int argc, char *argv[])
 		switch (ch) {
 		case 'b':
 			buffersize = (size_t) strsuftoll("buffer size", optarg,
-			    0, SIZE_T_MAX);
+			    0, SSIZE_MAX);
 			break;
 		case 'e':
 			eflag++;
