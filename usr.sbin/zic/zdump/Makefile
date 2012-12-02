@@ -1,6 +1,6 @@
-# $FreeBSD: src/usr.sbin/zic/zdump/Makefile,v 1.11 2006/10/18 12:35:23 ru Exp $
+# $MidnightBSD$
 
-.PATH: ${.CURDIR}/..
+.PATH: ${.CURDIR}/../../../contrib/tzcode
 
 PROG=	zdump
 MAN=	zdump.8
@@ -8,6 +8,8 @@ SRCS=	zdump.c ialloc.c scheck.c
 
 CFLAGS+= -DTM_GMTOFF=tm_gmtoff -DTM_ZONE=tm_zone -DSTD_INSPIRED -DPCTS
 CFLAGS+= -DHAVE_LONG_DOUBLE -DTZDIR=\"/usr/share/zoneinfo\" -Demkdir=mkdir
-CFLAGS+= -I${.CURDIR}/.. -I${.CURDIR}/../../../lib/libc/stdtime
+CFLAGS+= -I${.CURDIR}/.. -I${.CURDIR}/../../../contrib/tzcode
+
+WARNS?=	2
 
 .include <bsd.prog.mk>
