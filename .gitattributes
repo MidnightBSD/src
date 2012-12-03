@@ -28062,6 +28062,7 @@ contrib/tzcode/README -text
 contrib/tzcode/Theory -text
 contrib/tzcode/asctime.c -text
 contrib/tzcode/checktab.awk -text
+contrib/tzcode/ctime.3 -text
 contrib/tzcode/date.1 -text
 contrib/tzcode/date.1.txt -text
 contrib/tzcode/date.c -text

@@ -3,7 +3,11 @@
 ** 2009-05-17 by Arthur David Olson.
 */
 
-#include "version.h"
+#ifndef lint
+static const char rcsid[] =
+  "$FreeBSD$";
+static char	elsieid[] = "@(#)zdump.c	8.10";
+#endif /* not lint */
 
 /*
 ** This code has been made independent of the rest of the time
@@ -11,14 +15,15 @@
 ** You can use this code to help in verifying other implementations.
 */
 
-#include "stdio.h"	/* for stdout, stderr, perror */
-#include "string.h"	/* for strcpy */
-#include "sys/types.h"	/* for time_t */
-#include "time.h"	/* for struct tm */
-#include "stdlib.h"	/* for exit, malloc, atoi */
-#include "float.h"	/* for FLT_MAX and DBL_MAX */
-#include "limits.h"	/* for CHAR_BIT, LLONG_MAX */
-#include "ctype.h"	/* for isalpha et al. */
+#include <err.h>
+#include <stdio.h>	/* for stdout, stderr */
+#include <stdlib.h>	/* for exit, malloc, atoi */
+#include <string.h>	/* for strcpy */
+#include <sys/types.h>	/* for time_t */
+#include <time.h>	/* for struct tm */
+#include <unistd.h>
+#include <float.h>	/* for FLT_MAX and DBL_MAX */
+#include <ctype.h>	/* for isalpha et al. */
 #ifndef isascii
 #define isascii(x) 1
 #endif /* !defined isascii */
@@ -120,12 +125,6 @@
 #endif /* !defined GNUC_or_lint */
 #endif /* !defined INITIALIZE */
 
-#if 2 < __GNUC__ || (__GNUC__ == 2 && 96 <= __GNUC_MINOR__)
-# define ATTRIBUTE_PURE __attribute__ ((__pure__))
-#else
-# define ATTRIBUTE_PURE /* empty */
-#endif
-
 /*
 ** For the benefit of GNU folk...
 ** `_(MSGID)' uses the current locale's message library string for MSGID.
@@ -135,9 +134,9 @@
 #ifndef _
 #if HAVE_GETTEXT
 #define _(msgid) gettext(msgid)
-#else /* !HAVE_GETTEXT */
+#else /* !(HAVE_GETTEXT) */
 #define _(msgid) msgid
-#endif /* !HAVE_GETTEXT */
+#endif /* !(HAVE_GETTEXT) */
 #endif /* !defined _ */
 
 #ifndef TZ_DOMAIN
@@ -145,60 +144,31 @@
 #endif /* !defined TZ_DOMAIN */
 
 extern char **	environ;
-extern int	getopt(int argc, char * const argv[],
-			const char * options);
-extern char *	optarg;
-extern int	optind;
 extern char *	tzname[2];
 
-/* The minimum and maximum finite time values.  Shift 'long long' or
-   'long' instead of 'time_t'; this avoids compile-time errors when
-   time_t is floating-point.  In practice, 'long long' is wide enough.  */
-static time_t const absolute_min_time =
-  ((time_t) 0.5 == 0.5
-   ? (sizeof (time_t) == sizeof (float) ? (time_t) -FLT_MAX
-      : sizeof (time_t) == sizeof (double) ? (time_t) -DBL_MAX
-      : sizeof (time_t) == sizeof (long double) ? (time_t) -LDBL_MAX
-      : 0)
-   : (time_t) -1 < 0
-#ifdef LLONG_MAX
-   ? (time_t) ((long long) -1 << (CHAR_BIT * sizeof (time_t) - 1))
-#else
-   ? (time_t) ((long) -1 << (CHAR_BIT * sizeof (time_t) - 1))
-#endif
-   : 0);
-static time_t const absolute_max_time =
-  ((time_t) 0.5 == 0.5
-   ? (sizeof (time_t) == sizeof (float) ? (time_t) FLT_MAX
-      : sizeof (time_t) == sizeof (double) ? (time_t) DBL_MAX
-      : sizeof (time_t) == sizeof (long double) ? (time_t) LDBL_MAX
-      : -1)
-   : (time_t) -1 < 0
-#ifdef LLONG_MAX
-   ? (time_t) (- (~ 0 < 0) - ((long long) -1 << (CHAR_BIT * sizeof (time_t) - 1)))
-#else
-   ? (time_t) (- (~ 0 < 0) - ((long) -1 << (CHAR_BIT * sizeof (time_t) - 1)))
-#endif
-   : (time_t) -1);
+static time_t	absolute_min_time;
+static time_t	absolute_max_time;
 static size_t	longest;
 static char *	progname;
 static int	warned;
 
+static void	usage(FILE *stream, int status);
 static char *	abbr(struct tm * tmp);
 static void	abbrok(const char * abbrp, const char * zone);
-static long	delta(struct tm * newp, struct tm * oldp) ATTRIBUTE_PURE;
+static long	delta(struct tm * newp, struct tm * oldp);
 static void	dumptime(const struct tm * tmp);
 static time_t	hunt(char * name, time_t lot, time_t	hit);
-static void	checkabsolutes(void);
+static void	setabsolutes(void);
 static void	show(char * zone, time_t t, int v);
 static const char *	tformat(void);
-static time_t	yeartot(long y) ATTRIBUTE_PURE;
+static time_t	yeartot(long y);
 
 #ifndef TYPECHECK
 #define my_localtime	localtime
 #else /* !defined TYPECHECK */
 static struct tm *
-my_localtime(time_t *tp)
+my_localtime(tp)
+time_t *	tp;
 {
 	register struct tm *	tmp;
 
@@ -231,10 +201,12 @@ my_localtime(time_t *tp)
 #endif /* !defined TYPECHECK */
 
 static void
-abbrok(const char *const abbrp, const char *const zone)
+abbrok(abbrp, zone)
+const char * const	abbrp;
+const char * const	zone;
 {
 	register const char *	cp;
-	register const char *	wp;
+	register char *		wp;
 
 	if (warned)
 		return;
@@ -266,19 +238,10 @@ abbrok(const char *const abbrp, const char *const zone)
 	warned = TRUE;
 }
 
-static void
-usage(FILE * const stream, const int status)
-{
-	(void) fprintf(stream,
-_("%s: usage is %s [ --version ] [ --help ] [ -v ] [ -c [loyear,]hiyear ] zonename ...\n\
-\n\
-Report bugs to tz@iana.org.\n"),
-		       progname, progname);
-	exit(status);
-}
-
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int	argc;
+char *	argv[];
 {
 	register int		i;
 	register int		c;
@@ -300,17 +263,15 @@ main(int argc, char *argv[])
 	INITIALIZE(cutlotime);
 	INITIALIZE(cuthitime);
 #if HAVE_GETTEXT
-	(void) setlocale(LC_ALL, "");
+	(void) setlocale(LC_MESSAGES, "");
 #ifdef TZ_DOMAINDIR
 	(void) bindtextdomain(TZ_DOMAIN, TZ_DOMAINDIR);
-#endif /* defined TEXTDOMAINDIR */
+#endif /* TEXTDOMAINDIR */
 	(void) textdomain(TZ_DOMAIN);
 #endif /* HAVE_GETTEXT */
-	progname = argv[0];
 	for (i = 1; i < argc; ++i)
 		if (strcmp(argv[i], "--version") == 0) {
-			(void) printf("zdump %s%s\n", PKGVERSION, TZVERSION);
-			exit(EXIT_SUCCESS);
+			errx(EXIT_SUCCESS, "%s", elsieid);
 		} else if (strcmp(argv[i], "--help") == 0) {
 			usage(stdout, EXIT_SUCCESS);
 		}
@@ -320,7 +281,7 @@ main(int argc, char *argv[])
 		if (c == 'v')
 			vflag = 1;
 		else	cutarg = optarg;
-	if ((c != EOF && c != -1) ||
+	if ((c != -1) ||
 		(optind == argc - 1 && strcmp(argv[optind], "=") == 0)) {
 			usage(stderr, EXIT_FAILURE);
 	}
@@ -342,7 +303,7 @@ main(int argc, char *argv[])
 				exit(EXIT_FAILURE);
 			}
 		}
-		checkabsolutes();
+		setabsolutes();
 		cutlotime = yeartot(cutloyear);
 		cuthitime = yeartot(cuthiyear);
 	}
@@ -355,14 +316,15 @@ main(int argc, char *argv[])
 		register int	from;
 		register int	to;
 
-		for (i = 0; environ[i] != NULL; ++i)
+		for (i = 0;  environ[i] != NULL; ++i)
 			continue;
-		fakeenv = malloc((i + 2) * sizeof *fakeenv);
-		if (fakeenv == NULL
-		    || (fakeenv[0] = malloc(longest + 4)) == NULL) {
-					(void) perror(progname);
-					exit(EXIT_FAILURE);
-		}
+		fakeenv = (char **) malloc((size_t) ((i + 2) *
+			sizeof *fakeenv));
+		if (fakeenv == NULL ||
+			(fakeenv[0] = (char *) malloc((size_t) (longest +
+				4))) == NULL)
+					errx(EXIT_FAILURE,
+					     _("malloc() failed"));
 		to = 0;
 		(void) strcpy(fakeenv[to++], "TZ=");
 		for (from = 0; environ[from] != NULL; ++from)
@@ -421,29 +383,61 @@ main(int argc, char *argv[])
 		t += SECSPERHOUR * HOURSPERDAY;
 		show(argv[i], t, TRUE);
 	}
-	if (fflush(stdout) || ferror(stdout)) {
-		(void) fprintf(stderr, "%s: ", progname);
-		(void) perror(_("Error writing to standard output"));
-		exit(EXIT_FAILURE);
-	}
+	if (fflush(stdout) || ferror(stdout))
+		errx(EXIT_FAILURE, _("error writing standard output"));
 	exit(EXIT_SUCCESS);
 	/* If exit fails to exit... */
-	return EXIT_FAILURE;
+	return(EXIT_FAILURE);
 }
 
 static void
-checkabsolutes(void)
+setabsolutes(void)
 {
-	if (absolute_max_time < absolute_min_time) {
-		(void) fprintf(stderr,
+	if (0.5 == (time_t) 0.5) {
+		/*
+		** time_t is floating.
+		*/
+		if (sizeof (time_t) == sizeof (float)) {
+			absolute_min_time = (time_t) -FLT_MAX;
+			absolute_max_time = (time_t) FLT_MAX;
+		} else if (sizeof (time_t) == sizeof (double)) {
+			absolute_min_time = (time_t) -DBL_MAX;
+			absolute_max_time = (time_t) DBL_MAX;
+		} else {
+			(void) fprintf(stderr,
 _("%s: use of -v on system with floating time_t other than float or double\n"),
-			       progname);
-		exit(EXIT_FAILURE);
+				progname);
+			exit(EXIT_FAILURE);
+		}
+	} else if (0 > (time_t) -1) {
+		/*
+		** time_t is signed.  Assume overflow wraps around.
+		*/
+		time_t t = 0;
+		time_t t1 = 1;
+
+		while (t < t1) {
+			t = t1;
+			t1 = 2 * t1 + 1;
+		}
+
+		absolute_max_time = t;
+		t = -t;
+		absolute_min_time = t - 1;
+		if (t < absolute_min_time)
+			absolute_min_time = t;
+	} else {
+		/*
+		** time_t is unsigned.
+		*/
+		absolute_min_time = 0;
+		absolute_max_time = absolute_min_time - 1;
 	}
 }
 
 static time_t
-yeartot(const long y)
+yeartot(y)
+const long	y;
 {
 	register long	myy;
 	register long	seconds;
@@ -471,6 +465,16 @@ yeartot(const long y)
 		}
 	}
 	return t;
+}
+
+static void
+usage(FILE *stream, int status)
+{
+	fprintf(stream,
+_("usage: %s [--version] [-v] [--help] [-c [loyear,]hiyear] zonename ...\n\
+\n\
+Report bugs to tz@elsie.nci.nih.gov.\n"), progname);
+	exit(status);
 }
 
 static time_t
@@ -521,7 +525,9 @@ hunt(char *name, time_t lot, time_t hit)
 */
 
 static long
-delta(struct tm * newp, struct tm *oldp)
+delta(newp, oldp)
+struct tm *	newp;
+struct tm *	oldp;
 {
 	register long	result;
 	register int	tmy;
@@ -575,7 +581,8 @@ show(char *zone, time_t t, int v)
 }
 
 static char *
-abbr(struct tm *tmp)
+abbr(tmp)
+struct tm *	tmp;
 {
 	register char *	result;
 	static char	nada;
@@ -614,7 +621,8 @@ tformat(void)
 }
 
 static void
-dumptime(register const struct tm *timeptr)
+dumptime(timeptr)
+register const struct tm *	timeptr;
 {
 	static const char	wday_name[][3] = {
 		"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
