@@ -28058,6 +28058,7 @@ contrib/traceroute/traceroute.c -text
 contrib/traceroute/traceroute.h -text
 contrib/traceroute/usleep.c -text
 contrib/tzcode/Makefile -text
+contrib/tzcode/MidnightBSD-upgrade -text
 contrib/tzcode/README -text
 contrib/tzcode/Theory -text
 contrib/tzcode/asctime.c -text
