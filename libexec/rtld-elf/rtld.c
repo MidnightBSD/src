@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/libexec/rtld-elf/rtld.c,v 1.9 2012/10/25 23:21:06 laffer1 Exp $
  */
 
 /*
@@ -1278,15 +1278,15 @@ digest_notes(Obj_Entry *obj, Elf_Addr note_start, Elf_Addr note_end)
 	    note = (const Elf_Note *)((const char *)(note + 1) +
 	      roundup2(note->n_namesz, sizeof(Elf32_Addr)) +
 	      roundup2(note->n_descsz, sizeof(Elf32_Addr)))) {
-		if (note->n_namesz != sizeof(NOTE_FREEBSD_VENDOR) ||
+		if (note->n_namesz != sizeof(NOTE_MIDNIGHTBSD_VENDOR) ||
 		    note->n_descsz != sizeof(int32_t))
 			continue;
 		if (note->n_type != ABI_NOTETYPE &&
 		    note->n_type != CRT_NOINIT_NOTETYPE)
 			continue;
 		note_name = (const char *)(note + 1);
-		if (strncmp(NOTE_FREEBSD_VENDOR, note_name,
-		    sizeof(NOTE_FREEBSD_VENDOR)) != 0)
+		if (strncmp(NOTE_MIDNIGHTBSD_VENDOR, note_name,
+		    sizeof(NOTE_MIDNIGHTBSD_VENDOR)) != 0)
 			continue;
 		switch (note->n_type) {
 		case ABI_NOTETYPE:
