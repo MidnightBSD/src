@@ -9482,6 +9482,7 @@ contrib/gcc4/cp/error.c -text
 contrib/gcc4/cp/except.c -text
 contrib/gcc4/cp/expr.c -text
 contrib/gcc4/cp/friend.c -text
+contrib/gcc4/cp/g++.1 -text
 contrib/gcc4/cp/g++spec.c -text
 contrib/gcc4/cp/init.c -text
 contrib/gcc4/cp/lang-specs.h -text
