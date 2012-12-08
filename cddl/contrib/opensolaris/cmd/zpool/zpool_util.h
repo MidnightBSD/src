@@ -19,14 +19,11 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef	ZPOOL_UTIL_H
 #define	ZPOOL_UTIL_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #include <libnvpair.h>
 #include <libzfs.h>
@@ -39,24 +36,27 @@ extern "C" {
  * Basic utility functions
  */
 void *safe_malloc(size_t);
-char *safe_strdup(const char *);
 void zpool_no_memory(void);
+uint_t num_logs(nvlist_t *nv);
 
 /*
  * Virtual device functions
  */
-nvlist_t *make_root_vdev(nvlist_t *poolconfig, int force, int check_rep,
-    boolean_t isreplace, int argc, char **argv);
+
+nvlist_t *make_root_vdev(zpool_handle_t *zhp, int force, int check_rep,
+    boolean_t replacing, boolean_t dryrun, int argc, char **argv);
+nvlist_t *split_mirror_vdev(zpool_handle_t *zhp, char *newname,
+    nvlist_t *props, splitflags_t flags, int argc, char **argv);
 
 /*
  * Pool list functions
  */
-int for_each_pool(int, char **, boolean_t unavail, zpool_proplist_t **,
+int for_each_pool(int, char **, boolean_t unavail, zprop_list_t **,
     zpool_iter_f, void *);
 
 typedef struct zpool_list zpool_list_t;
 
-zpool_list_t *pool_list_get(int, char **, zpool_proplist_t **, int *);
+zpool_list_t *pool_list_get(int, char **, zprop_list_t **, int *);
 void pool_list_update(zpool_list_t *);
 int pool_list_iter(zpool_list_t *, int unavail, zpool_iter_f, void *);
 void pool_list_free(zpool_list_t *);

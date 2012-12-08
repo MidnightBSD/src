@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -21,11 +20,9 @@
  */
 
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #include <sys/stat.h>
 #include <stdio.h>
@@ -163,7 +160,7 @@ main(int argc, char **argv)
 	FILE *fp;
 	unsigned char *dof, *copy;
 
-	if (argc < 1)
+	if (argc < 2)
 		fatal("expected D script as argument\n");
 
 	if ((fp = fopen(filename, "r")) == NULL)
