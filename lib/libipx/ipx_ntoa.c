@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libipx/ipx_ntoa.c,v 1.7 2007/01/09 01:02:03 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)ipx_ntoa.c";
