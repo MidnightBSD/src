@@ -8290,16 +8290,21 @@ contrib/expat/Makefile.in -text
 contrib/expat/README -text
 contrib/expat/configure -text
 contrib/expat/configure.in -text
+contrib/expat/doc/expat.png -text svneol=unset#unset
 contrib/expat/doc/reference.html -text
 contrib/expat/doc/style.css -text
+contrib/expat/doc/valid-xhtml10.png -text svneol=unset#unset
 contrib/expat/doc/xmlwf.1 -text
 contrib/expat/doc/xmlwf.sgml -text
 contrib/expat/examples/elements.c -text
+contrib/expat/examples/elements.dsp -text
 contrib/expat/examples/outline.c -text
+contrib/expat/examples/outline.dsp -text
 contrib/expat/expat_config.h.in -text
 contrib/expat/lib/ascii.h -text
 contrib/expat/lib/asciitab.h -text
 contrib/expat/lib/expat.h -text
+contrib/expat/lib/expat_external.h -text
 contrib/expat/lib/iasciitab.h -text
 contrib/expat/lib/internal.h -text
 contrib/expat/lib/latin1tab.h -text
@@ -8315,9 +8320,16 @@ contrib/expat/lib/xmltok_impl.c -text
 contrib/expat/lib/xmltok_impl.h -text
 contrib/expat/lib/xmltok_ns.c -text
 contrib/expat/tests/README.txt -text
+contrib/expat/tests/benchmark/README.txt -text
+contrib/expat/tests/benchmark/benchmark.c -text
+contrib/expat/tests/benchmark/benchmark.dsp -text
+contrib/expat/tests/benchmark/benchmark.dsw -text
 contrib/expat/tests/chardata.c -text
 contrib/expat/tests/chardata.h -text
+contrib/expat/tests/minicheck.c -text
+contrib/expat/tests/minicheck.h -text
 contrib/expat/tests/runtests.c -text
+contrib/expat/tests/runtestspp.cpp -text
 contrib/expat/tests/xmltest.sh -text
 contrib/expat/xmlwf/codepage.c -text
 contrib/expat/xmlwf/codepage.h -text
