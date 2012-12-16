@@ -8284,8 +8284,8 @@ contrib/diff/tests/stdin -text
 contrib/diff/tests/t-local.sh -text
 contrib/expat/COPYING -text
 contrib/expat/Changes -text
-contrib/expat/FREEBSD-upgrade -text
 contrib/expat/MANIFEST -text
+contrib/expat/MIDNIGHTBSD-upgrade -text
 contrib/expat/Makefile.in -text
 contrib/expat/README -text
 contrib/expat/configure -text
