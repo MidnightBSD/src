@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/lib/libmilter/Makefile,v 1.2 2012/04/08 14:22:24 laffer1 Exp $
 # $FreeBSD: src/lib/libmilter/Makefile,v 1.7 2007/04/09 01:45:30 gshapiro Exp $
 
 .include <bsd.own.mk>
@@ -27,7 +27,7 @@ SRCS+=	sm_os.h
 SRCS+=	main.c engine.c listener.c handler.c comm.c monitor.c smfi.c \
 	signal.c sm_gethost.c errstring.c strl.c worker.c
 CLEANFILES+=sm_os.h
-
+WARNS?=	0
 sm_os.h:
 	ln -sf ${SENDMAIL_DIR}/include/sm/os/sm_os_freebsd.h sm_os.h
 
