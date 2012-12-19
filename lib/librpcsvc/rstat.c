@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/librpcsvc/rstat.c,v 1.4 2003/10/26 03:43:35 peter Exp $");
+__MBSDID("$MidnightBSD$");
 
 #if !defined(lint) && defined(SCCSIDS)
 static char sccsid[] = "@(#)rstat.c	1.2 91/03/11 TIRPC 1.0; from 1.6 89/03/24 SMI";
@@ -46,9 +46,7 @@ static char sccsid[] = "@(#)rstat.c	1.2 91/03/11 TIRPC 1.0; from 1.6 89/03/24 SM
 #include <rpcsvc/rstat.h>
 
 enum clnt_stat
-rstat(host, statp)
-	char *host;
-	struct statstime *statp;
+rstat(char *host, struct statstime *statp)
 {
 	return (callrpc(host, RSTATPROG, RSTATVERS_TIME, RSTATPROC_STATS,
 			(xdrproc_t)xdr_void, (char *) NULL,
@@ -56,8 +54,7 @@ rstat(host, statp)
 }
 
 int
-havedisk(host)
-	char *host;
+havedisk(char *host)
 {
 	long have;
 	

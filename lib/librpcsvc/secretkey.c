@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/librpcsvc/secretkey.c,v 1.3 2002/03/21 23:53:40 obrien Exp $");
+__MBSDID("$MidnightBSD$");
 
 #if !defined(lint) && defined(SCCSIDS)
 static char sccsid[] = "@(#)secretkey.c 1.8 91/03/11 Copyr 1986 Sun Micro";
@@ -58,10 +58,7 @@ extern int xdecrypt( char *, char * );
  * passwd to decrypt it.
  */
 int
-getsecretkey(netname, secretkey, passwd)
-	char *netname;
-	char *secretkey;
-	char *passwd;
+getsecretkey(char *netname, char *secretkey, char *passwd)
 {
 	char lookup[3 * HEXKEYBYTES];
 	char *p;

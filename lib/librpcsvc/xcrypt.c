@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/librpcsvc/xcrypt.c,v 1.5 2005/05/31 21:19:14 stefanf Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,9 +56,7 @@ void passwd2des( char *, char * );
  * Its length must be a multiple of 16 hex digits (64 bits).
  */
 int
-xencrypt(secret, passwd)
-	char *secret;
-	char *passwd;
+xencrypt(char *secret, char *passwd)
 {
 	char key[8];
 	char ivec[8];
@@ -67,7 +65,9 @@ xencrypt(secret, passwd)
 	int len;
 
 	len = strlen(secret) / 2;
-	buf = malloc((unsigned)len);
+	if ((buf = malloc((unsigned)len)) == NULL) {
+		return(0);
+	}
 
 	hex2bin(len, secret, buf);
 	passwd2des(passwd, key);
@@ -89,9 +89,7 @@ xencrypt(secret, passwd)
  * Once again, the length is a multiple of 16 hex digits
  */
 int
-xdecrypt(secret, passwd)
-	char *secret;
-	char *passwd;
+xdecrypt(char *secret, char *passwd)
 {
 	char key[8];
 	char ivec[8];
@@ -100,7 +98,9 @@ xdecrypt(secret, passwd)
 	int len;
 
 	len = strlen(secret) / 2;
-	buf = malloc((unsigned)len);
+	if ((buf = malloc((unsigned)len)) == NULL) {
+		return(0);
+	}
 
 	hex2bin(len, secret, buf);
 	passwd2des(passwd, key);	
@@ -121,9 +121,7 @@ xdecrypt(secret, passwd)
  * Turn password into DES key
  */
 void
-passwd2des(pw, key)
-	char *pw;
-	char *key;
+passwd2des(char *pw, char *key)
 {
 	int i;
 
@@ -140,10 +138,7 @@ passwd2des(pw, key)
  * Hex to binary conversion
  */
 static void
-hex2bin(len, hexnum, binnum)
-	int len;
-	char *hexnum;
-	char *binnum;
+hex2bin(int len, char *hexnum, char *binnum)
 {
 	int i;
 
@@ -156,10 +151,7 @@ hex2bin(len, hexnum, binnum)
  * Binary to hex conversion
  */
 static void
-bin2hex(len, binnum, hexnum)
-	int len;
-	unsigned char *binnum;
-	char *hexnum;
+bin2hex(int len, unsigned char *binnum, char *hexnum)
 {
 	int i;
 	unsigned val;
@@ -173,8 +165,7 @@ bin2hex(len, binnum, hexnum)
 }
 
 static char
-hexval(c)
-	char c;
+hexval(char c)
 {
 	if (c >= '0' && c <= '9') {
 		return (c - '0');

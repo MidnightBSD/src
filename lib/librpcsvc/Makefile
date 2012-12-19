@@ -1,5 +1,5 @@
 #	from: @(#)Makefile    5.10 (Berkeley) 6/24/90
-# $FreeBSD: src/lib/librpcsvc/Makefile,v 1.22 2006/03/17 18:54:27 ru Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
@@ -18,7 +18,7 @@ SECRPCSRCS= secretkey.c xcrypt.c
 OTHERSRCS+= yp_passwd.c yp_update.c
 .endif
 
-RPCCOM = rpcgen -C
+RPCCOM=	RPCGEN_CPP=${CPP:Q} rpcgen -C
 
 INCDIRS= -I${DESTDIR}/usr/include/rpcsvc
 
@@ -28,6 +28,8 @@ GENSRCS= ${RPCSRCS:R:S/$/_xdr.c/g}
 SRCS+= ${GENSRCS} ${OTHERSRCS} ${SECRPCSRCS}
 
 CLEANFILES+= ${GENSRCS}
+
+WARNS?=	1
 
 .include <bsd.lib.mk>
 
