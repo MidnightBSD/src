@@ -1,5 +1,5 @@
 # $FreeBSD: src/lib/libsm/Makefile,v 1.12 2007/04/09 01:45:30 gshapiro Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/lib/libsm/Makefile,v 1.4 2008/10/30 21:47:52 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -8,6 +8,7 @@ SENDMAIL_DIR=${.CURDIR}/../../contrib/sendmail
 
 CFLAGS+=-I${SENDMAIL_DIR}/src -I${SENDMAIL_DIR}/include -I.
 CFLAGS+=-DNEWDB -DNIS -DMAP_REGEX -DNOT_SENDMAIL
+CFLAGS+=-DHAVE_NANOSLEEP
 
 .if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+=-DNETINET6
@@ -15,6 +16,13 @@ CFLAGS+=-DNETINET6
 
 # User customizations to the sendmail build environment
 CFLAGS+=${SENDMAIL_CFLAGS}
+
+WARNS?=	2
+
+# Unfortunately, clang gives warnings about sendmail code that cannot
+# be turned off yet.  Since this is contrib code, and we don't really
+# care about the warnings, just make them non-fatal for now.
+NO_WERROR.clang=
 
 LIB=	sm
 
