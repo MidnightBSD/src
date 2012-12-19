@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* 
  *  Routines in this file based on the work of Volker Lendecke,
  *  Adapted for ncplib by Boris Popov
@@ -6,7 +5,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libncp/ncpl_crypt.c,v 1.2 2001/09/30 22:01:18 dillon Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/errno.h>
