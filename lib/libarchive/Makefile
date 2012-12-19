@@ -1,4 +1,4 @@
-# $MidnightBSD: src/lib/libarchive/Makefile,v 1.10 2012/01/18 01:12:34 laffer1 Exp $
+# $MidnightBSD: src/lib/libarchive/Makefile,v 1.11 2012/11/25 21:59:39 laffer1 Exp $
 .include <bsd.own.mk>
 
 LIBARCHIVEDIR=	${.CURDIR}/../../contrib/libarchive
@@ -20,6 +20,8 @@ LDADD+= -lbsdxml
 
 # It has no real relation to the libarchive version number.
 SHLIB_MAJOR= 5
+
+WARNS?=	0
 
 CFLAGS+=	-DPLATFORM_CONFIG_H=\"${.CURDIR}/config.h\"
 CFLAGS+=	-I${.OBJDIR}
