@@ -23,17 +23,17 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/rpc.umntall/mounttab.h,v 1.2 2001/07/22 12:17:51 iedowse Exp $
+ * $MidnightBSD$
  */
 
-#define STRSIZ  (RPCMNT_NAMELEN+RPCMNT_PATHLEN+100)
+#define STRSIZ  (MNTNAMLEN+MNTPATHLEN+100)
 #define PATH_MOUNTTAB	"/var/db/mounttab"
 
 /* Structure for /var/db/mounttab */
 struct mtablist {
 	time_t	mtab_time;
-	char	mtab_host[RPCMNT_NAMELEN];
-	char	mtab_dirp[RPCMNT_PATHLEN];
+	char	mtab_host[MNTNAMLEN];
+	char	mtab_dirp[MNTPATHLEN];
 	struct mtablist *mtab_next;
 };
 

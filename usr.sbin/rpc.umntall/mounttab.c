@@ -26,12 +26,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/rpc.umntall/mounttab.c,v 1.6 2003/05/03 21:06:39 obrien Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/syslog.h>
 
 #include <rpc/rpc.h>
-#include <nfs/rpcv2.h>
+#include <rpcsvc/mount.h>
 
 #include <err.h>
 #include <errno.h>
@@ -45,14 +45,15 @@ __FBSDID("$FreeBSD: src/usr.sbin/rpc.umntall/mounttab.c,v 1.6 2003/05/03 21:06:3
 
 struct mtablist *mtabhead;
 
-static void badline(char *field, char *bad);
+static void badline(const char *field, const char *bad);
 
 /*
  * Add an entry to PATH_MOUNTTAB for each mounted NFS filesystem,
  * so the client can notify the NFS server even after reboot.
  */
 int
-add_mtab(char *hostp, char *dirp) {
+add_mtab(char *hostp, char *dirp)
+{
 	FILE *mtabfile;
 
 	if ((mtabfile = fopen(PATH_MOUNTTAB, "a")) == NULL)
@@ -69,12 +70,13 @@ add_mtab(char *hostp, char *dirp) {
  * Read mounttab line for line and return struct mtablist.
  */
 int
-read_mtab() {
+read_mtab(void)
+{
 	struct mtablist **mtabpp, *mtabp;
 	char *hostp, *dirp, *cp;
 	char str[STRSIZ];
 	char *timep, *endp;
-	time_t time;
+	time_t actiontime;
 	u_long ultmp;
 	FILE *mtabfile;
 
@@ -86,7 +88,7 @@ read_mtab() {
 			return (0);
 		}
 	}
-	time = 0;
+	actiontime = 0;
 	mtabpp = &mtabhead;
 	while (fgets(str, STRSIZ, mtabfile) != NULL) {
 		cp = str;
@@ -113,17 +115,17 @@ read_mtab() {
 			badline("time", timep);
 			continue;
 		}
-		time = ultmp;
+		actiontime = ultmp;
 		if ((mtabp = malloc(sizeof (struct mtablist))) == NULL) {
 			syslog(LOG_ERR, "malloc");
 			fclose(mtabfile);
 			return (0);
 		}
-		mtabp->mtab_time = time;
-		memmove(mtabp->mtab_host, hostp, RPCMNT_NAMELEN);
-		mtabp->mtab_host[RPCMNT_NAMELEN - 1] = '\0';
-		memmove(mtabp->mtab_dirp, dirp, RPCMNT_PATHLEN);
-		mtabp->mtab_dirp[RPCMNT_PATHLEN - 1] = '\0';
+		mtabp->mtab_time = actiontime;
+		memmove(mtabp->mtab_host, hostp, MNTNAMLEN);
+		mtabp->mtab_host[MNTNAMLEN - 1] = '\0';
+		memmove(mtabp->mtab_dirp, dirp, MNTPATHLEN);
+		mtabp->mtab_dirp[MNTPATHLEN - 1] = '\0';
 		mtabp->mtab_next = (struct mtablist *)NULL;
 		*mtabpp = mtabp;
 		mtabpp = &mtabp->mtab_next;
@@ -137,7 +139,8 @@ read_mtab() {
  * Unlink PATH_MOUNTAB if no entry is left.
  */
 int
-write_mtab(int verbose) {
+write_mtab(int verbose)
+{
 	struct mtablist *mtabp, *mp;
 	FILE *mtabfile;
 	int line;
@@ -180,7 +183,8 @@ write_mtab(int verbose) {
  * Mark the entries as clean where RPC calls have been done successfully.
  */
 void
-clean_mtab(char *hostp, char *dirp, int verbose) {
+clean_mtab(char *hostp, char *dirp, int verbose)
+{
 	struct mtablist *mtabp;
 	char *host;
 
@@ -196,7 +200,7 @@ clean_mtab(char *hostp, char *dirp, int verbose) {
 			warnx("delete mounttab entry%s %s:%s",
 			    (dirp == NULL) ? " by host" : "",
 			    mtabp->mtab_host, mtabp->mtab_dirp);
-		bzero(mtabp->mtab_host, RPCMNT_NAMELEN);
+		bzero(mtabp->mtab_host, MNTNAMLEN);
 	}
 	free(host);
 }
@@ -205,7 +209,8 @@ clean_mtab(char *hostp, char *dirp, int verbose) {
  * Free struct mtablist mtab.
  */
 void
-free_mtab() {
+free_mtab(void)
+{
 	struct mtablist *mtabp;
 
 	while ((mtabp = mtabhead) != NULL) {
@@ -218,7 +223,8 @@ free_mtab() {
  * Print bad lines to syslog.
  */
 static void
-badline(char *field, char *bad) {
+badline(const char *field, const char *bad)
+{
 	syslog(LOG_ERR, "bad mounttab %s field '%s'", field,
 	    (bad == NULL) ? "<null>" : bad);
 }
