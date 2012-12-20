@@ -24,10 +24,8 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libvgl/vgl.3,v 1.31 2006/10/21 15:12:36 maxim Exp $
 .\" $MidnightBSD$
-.\"
-.Dd November 7, 1999
+.Dd February 25, 2012
 .Dt VGL 3
 .Os
 .Sh NAME
@@ -387,7 +385,7 @@ Passing an in-memory bitmap to this function results in error.
 The desired virtual screen width may not be achievable because
 of the video card hardware.
 In such case the video driver (and
-underlaying video BIOS) may choose the next largest values.
+underlying video BIOS) may choose the next largest values.
 Always examine
 .Va object->VXsize
 and

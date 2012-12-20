@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991-1997 Søren Schmidt
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libvgl/bitmap.c,v 1.9 2002/06/02 20:05:39 schweikh Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <signal.h>

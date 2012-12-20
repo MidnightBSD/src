@@ -1,12 +1,11 @@
 # $MidnightBSD$
-# $FreeBSD: src/lib/libvgl/Makefile,v 1.12 2007/05/21 02:49:08 deischen Exp $
-
 LIB=	vgl
-SHLIB_MAJOR= 5
+SHLIB_MAJOR= 6
 CFLAGS+=-Wall -I${.CURDIR}
 SRCS=	main.c simple.c bitmap.c text.c mouse.c keyboard.c
 INCS=	vgl.h
 MAN=	vgl.3
+WARNS?=	2
 MLINKS+=	vgl.3 VGLBitmapAllocateBits.3 \
 		vgl.3 VGLBitmapCopy.3 \
 		vgl.3 VGLBitmapCreate.3 \
