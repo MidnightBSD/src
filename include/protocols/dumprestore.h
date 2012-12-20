@@ -15,11 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -37,7 +33,7 @@
  *
  *	@(#)dumprestore.h	8.2 (Berkeley) 1/21/94
  *
- * $FreeBSD: src/include/protocols/dumprestore.h,v 1.11 2007/02/26 08:15:56 mckusick Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _PROTOCOLS_DUMPRESTORE_H_
@@ -133,14 +129,5 @@ union u_spcl {
 #define TS_BITS 	3	/* map of inodes on tape */
 #define TS_CLRI 	6	/* map of inodes deleted since last dump */
 #define TS_END  	5	/* end of volume marker */
-
-/*
- * flag values
- */
-/* None at the moment */
-
-#define	DUMPOUTFMT	"%-32s %c %s"		/* for printf */
-						/* name, level, ctime(date) */
-#define	DUMPINFMT	"%32s %c %[^\n]\n"	/* inverse for scanf */
 
 #endif /* !_DUMPRESTORE_H_ */
