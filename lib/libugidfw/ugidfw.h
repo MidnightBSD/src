@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libugidfw/ugidfw.h,v 1.5 2006/04/23 17:06:17 dwmalone Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _UGIDFW_H

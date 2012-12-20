@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libugidfw/ugidfw.c,v 1.11 2006/04/23 17:06:17 dwmalone Exp $
+ * $MidnightBSD$
  */
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -770,7 +770,6 @@ bsde_parse_fsid(char *spec, struct fsid *fsid, size_t buflen, char *errstr)
 {
 	size_t len;
 	struct statfs buf;
-	int i;
 
 	if (statfs(spec, &buf) < 0) {
 		len = snprintf(errstr, buflen, "Unable to get id for %s: %s",
@@ -1135,7 +1134,7 @@ bsde_get_rule_count(size_t buflen, char *errstr)
 	len = sizeof(rule_count);
 	error = sysctlbyname(MIB ".rule_count", &rule_count, &len, NULL, 0);
 	if (error) {
-		len = snprintf(errstr, buflen, strerror(errno));
+		len = snprintf(errstr, buflen, "%s", strerror(errno));
 		return (-1);
 	}
 	if (len != sizeof(rule_count)) {
@@ -1157,7 +1156,7 @@ bsde_get_rule_slots(size_t buflen, char *errstr)
 	len = sizeof(rule_slots);
 	error = sysctlbyname(MIB ".rule_slots", &rule_slots, &len, NULL, 0);
 	if (error) {
-		len = snprintf(errstr, buflen, strerror(errno));
+		len = snprintf(errstr, buflen, "%s", strerror(errno));
 		return (-1);
 	}
 	if (len != sizeof(rule_slots)) {

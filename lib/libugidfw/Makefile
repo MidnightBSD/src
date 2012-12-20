@@ -1,9 +1,11 @@
-# $FreeBSD: src/lib/libugidfw/Makefile,v 1.8 2007/05/21 02:49:07 deischen Exp $
+# $MidnightBSD$
 
 LIB=		ugidfw
-SHLIB_MAJOR=	3
+SHLIB_MAJOR=	4
 SRCS=		ugidfw.c
 INCS=		ugidfw.h
+
+WARNS?=		2
 
 MAN+=		bsde_get_rule.3 bsde_get_rule_count.3 bsde_parse_rule.3 \
 		bsde_rule_to_string.3 libugidfw.3
