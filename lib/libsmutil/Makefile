@@ -1,4 +1,4 @@
-# $FreeBSD: src/lib/libsmutil/Makefile,v 1.7 2004/10/24 15:32:33 ru Exp $
+# $MidnightBSD$
 
 SENDMAIL_DIR=${.CURDIR}/../../contrib/sendmail
 .PATH:	${SENDMAIL_DIR}/libsmutil
@@ -8,6 +8,8 @@ CFLAGS+=-DNEWDB -DNIS -DMAP_REGEX -DNOT_SENDMAIL
 
 # User customizations to the sendmail build environment
 CFLAGS+=${SENDMAIL_CFLAGS}
+
+WARNS?=	2
 
 LIB=	smutil
 
