@@ -1,10 +1,11 @@
+#
 # $MidnightBSD$
-# $FreeBSD: src/lib/libwrap/Makefile,v 1.22 2007/05/21 02:49:08 deischen Exp $
+#
 
 .include <bsd.own.mk>
 
 LIB=	wrap
-SHLIB_MAJOR= 5
+SHLIB_MAJOR= 6
 INCS=	tcpd.h
 MAN=	hosts_access.3
 MAN+=	hosts_access.5 hosts_options.5
@@ -26,6 +27,8 @@ CFLAGS+= -DUSE_GETDOMAIN
 .if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+=-DINET6
 .endif
+
+WARNS?=	0
 
 SRCS=	clean_exit.c diag.c eval.c fix_options.c fromhost.c \
 	hosts_access.c hosts_ctl.c misc.c myvsyslog.c options.c \
