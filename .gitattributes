@@ -12996,6 +12996,7 @@ contrib/ipfilter/mlf_rule.c -text
 contrib/ipfilter/mlfk_rule.c -text
 contrib/ipfilter/mlh_rule.c -text
 contrib/ipfilter/net/.cvsignore -text
+contrib/ipfilter/opt_inet6.h -text
 contrib/ipfilter/opts.h -text
 contrib/ipfilter/pcap-bpf.h -text
 contrib/ipfilter/pcap-ipf.h -text

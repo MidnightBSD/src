@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$MidnightBSD$	*/
 
 /*
  * Copyright (C) 1993-2001, 2003 by Darren Reed.
@@ -6,7 +6,7 @@
  * See the IPFILTER.LICENCE file for details on licencing.
  *
  * @(#)ipf.h	1.12 6/5/96
- * $Id: ipf.h,v 1.3 2012-12-21 03:48:04 laffer1 Exp $
+ * $Id: ipf.h,v 1.4 2012-12-21 04:00:01 laffer1 Exp $
  */
 
 #ifndef	__IPF_H__

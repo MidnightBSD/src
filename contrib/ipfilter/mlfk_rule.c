@@ -1,11 +1,11 @@
-/*	$FreeBSD$	*/
+/*	$MidnightBSD$	*/
 
 /*
  * Copyright (C) 2000 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: mlfk_rule.c,v 1.1.1.3 2012-07-21 15:01:08 laffer1 Exp $
+ * $Id: mlfk_rule.c,v 1.2 2012-12-21 04:00:01 laffer1 Exp $
  */
 
 
