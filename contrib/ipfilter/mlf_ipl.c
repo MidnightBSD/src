@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/mlf_ipl.c,v 1.2 2005/04/25 18:20:08 darrenr Exp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 1993-2001 by Darren Reed.

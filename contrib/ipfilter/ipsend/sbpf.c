@@ -1,4 +1,4 @@
-/* $FreeBSD: src/contrib/ipfilter/ipsend/sbpf.c,v 1.8 2006/08/16 12:23:01 guido Exp $ */
+/* $FreeBSD$ */
 /*
  * (C)opyright 1995-1998 Darren Reed. (from tcplog)
  *
@@ -9,7 +9,6 @@
 #include <sys/types.h>
 #include <sys/mbuf.h>
 #include <sys/time.h>
-#include <sys/timeb.h>
 #include <sys/socket.h>
 #include <sys/file.h>
 #include <sys/ioctl.h>
@@ -28,9 +27,6 @@
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
 #include <netinet/ip_var.h>
-#include <netinet/udp.h>
-#include <netinet/udp_var.h>
-#include <netinet/tcp.h>
 
 #include <stdio.h>
 #include <netdb.h>
@@ -48,7 +44,7 @@
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)sbpf.c	1.3 8/25/95 (C)1995 Darren Reed";
-static const char rcsid[] = "@(#)$Id: sbpf.c,v 1.2 2008-12-06 20:34:26 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: sbpf.c,v 1.3 2012-12-21 03:48:04 laffer1 Exp $";
 #endif
 
 /*

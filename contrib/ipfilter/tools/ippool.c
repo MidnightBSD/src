@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/tools/ippool.c,v 1.4 2007/06/04 02:54:34 darrenr Exp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2002-2006 by Darren Reed.

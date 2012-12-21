@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/pcap-bpf.h,v 1.1 2005/05/16 16:22:55 darrenr Exp $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * Copyright (c) 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997
@@ -39,7 +39,7 @@
  *
  *      @(#)bpf.h       7.1 (Berkeley) 5/7/91
  *
- * @(#) $Header: /home/cvs/src/contrib/ipfilter/pcap-bpf.h,v 1.2 2008-12-06 20:34:25 laffer1 Exp $ (LBL)
+ * @(#) $Header: /home/cvs/src/contrib/ipfilter/pcap-bpf.h,v 1.3 2012-12-21 03:48:04 laffer1 Exp $ (LBL)
  */
 
 /*

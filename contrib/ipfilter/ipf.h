@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/ipf.h,v 1.5 2007/06/04 02:54:31 darrenr Exp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 1993-2001, 2003 by Darren Reed.
@@ -6,7 +6,7 @@
  * See the IPFILTER.LICENCE file for details on licencing.
  *
  * @(#)ipf.h	1.12 6/5/96
- * $Id: ipf.h,v 1.2 2008-12-06 20:34:25 laffer1 Exp $
+ * $Id: ipf.h,v 1.3 2012-12-21 03:48:04 laffer1 Exp $
  */
 
 #ifndef	__IPF_H__

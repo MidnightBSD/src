@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/ip_fil.c,v 1.5.2.1 2007/10/31 05:00:34 darrenr Exp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 1993-2001 by Darren Reed.
@@ -7,7 +7,7 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)ip_fil.c	2.41 6/5/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)$Id: ip_fil.c,v 1.3 2012-11-14 23:58:26 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ip_fil.c,v 1.4 2012-12-21 03:48:04 laffer1 Exp $";
 #endif
 
 #ifndef	SOLARIS

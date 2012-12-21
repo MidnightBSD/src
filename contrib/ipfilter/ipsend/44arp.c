@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/ipsend/44arp.c,v 1.3 2007/06/04 02:54:31 darrenr Exp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Based upon 4.4BSD's /usr/sbin/arp
@@ -88,7 +88,12 @@ char	*addr, *eaddr;
 	mib[2] = 0;
 	mib[3] = AF_INET;
 	mib[4] = NET_RT_FLAGS;
+#ifdef RTF_LLINFO
 	mib[5] = RTF_LLINFO;
+#else
+	mib[5] = 0;
+#endif	
+
 	if (sysctl(mib, 6, NULL, &needed, NULL, 0) == -1)
 	    {
 		perror("route-sysctl-estimate");

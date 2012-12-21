@@ -1,11 +1,11 @@
-/*	$FreeBSD: src/contrib/ipfilter/lib/getifname.c,v 1.3 2007/06/04 02:54:32 darrenr Exp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2002-2004 by Darren Reed.
  * 
  * See the IPFILTER.LICENCE file for details on licencing.  
  *   
- * $Id: getifname.c,v 1.2 2008-12-06 20:34:26 laffer1 Exp $ 
+ * $Id: getifname.c,v 1.3 2012-12-21 03:48:04 laffer1 Exp $ 
  */     
 
 #include "ipf.h"

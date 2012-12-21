@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/lib/kmem.c,v 1.4 2007/06/04 02:54:32 darrenr Exp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2000-2005 by Darren Reed.
@@ -44,7 +44,7 @@
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)kmem.c	1.4 1/12/96 (C) 1992 Darren Reed";
-static const char rcsid[] = "@(#)$Id: kmem.c,v 1.2 2008-12-06 20:34:26 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: kmem.c,v 1.3 2012-12-21 03:48:04 laffer1 Exp $";
 #endif
 
 

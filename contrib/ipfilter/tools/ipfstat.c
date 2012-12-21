@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/tools/ipfstat.c,v 1.6.2.1 2007/10/31 05:00:37 darrenr Exp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2002-2006 by Darren Reed.
@@ -71,7 +71,7 @@
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)fils.c	1.21 4/20/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)$Id: ipfstat.c,v 1.2 2008-12-06 20:34:27 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ipfstat.c,v 1.3 2012-12-21 03:48:04 laffer1 Exp $";
 #endif
 
 #ifdef __hpux
