@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/ipfilter/netinet/ip_state.c,v 1.39.2.1 2007/10/31 05:00:38 darrenr Exp $	*/
+/*	$MidnightBSD$	*/
 
 /*
  * Copyright (C) 1995-2003 by Darren Reed.
@@ -23,9 +23,7 @@
 #  include "opt_ipfilter.h"
 # endif
 #endif
-#if defined(_KERNEL) && (defined(__FreeBSD_version) && \
-    (__FreeBSD_version >= 400000) || defined(__MidnightBSD__)) && \
-    !defined(KLD_MODULE)
+#if defined(_KERNEL) && defined(__MidnightBSD_version) && !defined(KLD_MODULE)
 #include "opt_inet6.h"
 #endif
 #if !defined(_KERNEL) && !defined(__KERNEL__)
@@ -39,12 +37,10 @@ struct file;
 # include <sys/uio.h>
 # undef _KERNEL
 #endif
-#if defined(_KERNEL) && \
-    ((__FreeBSD_version >= 220000) || defined(__MidnightBSD__))
+#if defined(_KERNEL) && (__MidnightBSD_version >= 1000)
 # include <sys/filio.h>
 # include <sys/fcntl.h>
-# if ((__FreeBSD_version >= 300000) || defined(__MidnightBSD__)) && \
-    !defined(IPFILTER_LKM)
+# if (__MidnightBSD_version >= 1000) && !defined(IPFILTER_LKM)
 #  include "opt_ipfilter.h"
 # endif
 #else
@@ -104,7 +100,7 @@ struct file;
 #ifdef	USE_INET6
 #include <netinet/icmp6.h>
 #endif
-#if (__FreeBSD_version >= 300000) || defined(__MidnightBSD__)
+#if (__MidnightBSD_version >= 1000)
 # include <sys/malloc.h>
 # if defined(_KERNEL) && !defined(IPFILTER_LKM)
 #  include <sys/libkern.h>
@@ -116,7 +112,7 @@ struct file;
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)ip_state.c	1.8 6/5/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)$Id: ip_state.c,v 1.3 2008-12-07 00:54:02 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ip_state.c,v 1.4 2012-12-22 15:41:36 laffer1 Exp $";
 #endif
 
 static	ipstate_t **ips_table = NULL;
@@ -198,6 +194,9 @@ ipstate_t *ips_list = NULL;
 /* ------------------------------------------------------------------------ */
 int fr_stateinit()
 {
+#if defined(NEED_LOCAL_RAND) || !defined(_KERNEL)
+	struct timeval tv;
+#endif
 	int i;
 
 	KMALLOCS(ips_table, ipstate_t **, fr_statesize * sizeof(ipstate_t *));
@@ -208,20 +207,27 @@ int fr_stateinit()
 	KMALLOCS(ips_seed, u_long *, fr_statesize * sizeof(*ips_seed));
 	if (ips_seed == NULL)
 		return -2;
+#if defined(NEED_LOCAL_RAND) || !defined(_KERNEL)
+	tv.tv_sec = 0;
+	GETKTIME(&tv);
+#endif
 	for (i = 0; i < fr_statesize; i++) {
 		/*
 		 * XXX - ips_seed[X] should be a random number of sorts.
 		 */
-#if  (__FreeBSD_version >= 400000) || defined(__MidnightBSD__)
+#if !defined(NEED_LOCAL_RAND) && defined(_KERNEL)
 		ips_seed[i] = arc4random();
 #else
 		ips_seed[i] = ((u_long)ips_seed + i) * fr_statesize;
-		ips_seed[i] ^= 0xa5a55a5a;
+		ips_seed[i] += tv.tv_sec;
 		ips_seed[i] *= (u_long)ips_seed;
 		ips_seed[i] ^= 0x5a5aa5a5;
 		ips_seed[i] *= fr_statemax;
 #endif
 	}
+#if defined(NEED_LOCAL_RAND) && defined(_KERNEL)
+	ipf_rand_push(ips_seed, fr_statesize * sizeof(*ips_seed));
+#endif
 
 	/* fill icmp reply type table */
 	for (i = 0; i <= ICMP_MAXTYPE; i++)
@@ -658,10 +664,12 @@ caddr_t data;
 	if (error != 0)
 		return error;
 
+	READ_ENTER(&ipf_state);
 	isn = ips.ips_next;
 	if (isn == NULL) {
 		isn = ips_list;
 		if (isn == NULL) {
+			RWLOCK_EXIT(&ipf_state);
 			if (ips.ips_next == NULL)
 				return ENOENT;
 			return 0;
@@ -675,8 +683,10 @@ caddr_t data;
 		for (is = ips_list; is; is = is->is_next)
 			if (is == isn)
 				break;
-		if (!is)
+		if (is == NULL) {
+			RWLOCK_EXIT(&ipf_state);
 			return ESRCH;
+		}
 	}
 	ips.ips_next = isn->is_next;
 	bcopy((char *)isn, (char *)&ips.ips_is, sizeof(ips.ips_is));
@@ -684,6 +694,7 @@ caddr_t data;
 	if (isn->is_rule != NULL)
 		bcopy((char *)isn->is_rule, (char *)&ips.ips_fr,
 		      sizeof(ips.ips_fr));
+	RWLOCK_EXIT(&ipf_state);
 	error = fr_outobj(data, &ips, IPFOBJ_STATESAVE);
 	return error;
 }
@@ -3025,6 +3036,10 @@ int why;
 		is->is_rule->fr_statecnt--;
 		(void) fr_derefrule(&is->is_rule);
 	}
+
+#if defined(NEED_LOCAL_RAND) && defined(_KERNEL)
+	ipf_rand_push(is, sizeof(*is));
+#endif
 
 	MUTEX_DESTROY(&is->is_lock);
 	KFREE(is);
