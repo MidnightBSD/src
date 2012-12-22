@@ -4,7 +4,7 @@
  * See the IPFILTER.LICENCE file for details on licencing.
  *
  * @(#)ip_fil.h	1.35 6/5/96
- * $FreeBSD: src/sys/contrib/ipfilter/netinet/ip_fil.h,v 1.35.2.1 2007/10/31 05:00:37 darrenr Exp $
+ * $MidnightBSD$
  * Id: ip_fil.h,v 2.170.2.51 2007/10/10 09:48:03 darrenr Exp $
  */
 
@@ -1234,8 +1234,7 @@ typedef struct ipftoken {
 # define	IPF_SMAJ	0	/* temp assignment XXX, not critical */
 #endif
 
-#if !defined(CDEV_MAJOR) && (defined(__MidnightBSD__) || defined (__FreeBSD_version) && \
-    (__FreeBSD_version >= 220000))
+#if !defined(CDEV_MAJOR) && defined (__MidnightBSD_version) 
 # define	CDEV_MAJOR	79
 #endif
 
@@ -1245,8 +1244,8 @@ typedef struct ipftoken {
  * with this!
  */
 #if (defined(NetBSD) && (NetBSD > 199609) && (NetBSD <= 1991011)) || \
-    (defined(NetBSD1_2) && NetBSD1_2 > 1) || defined(__MidnightBSD__) || \
-    (defined(__FreeBSD__) && (__FreeBSD_version >= 500043))
+    (defined(NetBSD1_2) && NetBSD1_2 > 1) || \
+    (__MidnightBSD_version >= 1000)
 # if defined(NetBSD) && (NetBSD >= 199905)
 #  define PFIL_HOOKS
 # endif
@@ -1285,7 +1284,7 @@ extern	int	bcopywrap __P((void *, void *, size_t));
 #else /* #ifndef _KERNEL */
 # ifdef BSD
 #  if (defined(__NetBSD__) && (__NetBSD_Version__ < 399000000)) || \
-      defined(__osf__) || \
+      defined(__osf__) || defined(__MidnightBSD__) || \
       (defined(__FreeBSD_version) && (__FreeBSD_version < 500043))
 #   include <sys/select.h>
 #  else
@@ -1345,14 +1344,9 @@ extern	int	iplidentify __P((char *));
       (NetBSD >= 199511) || defined(__OpenBSD__)
 #    if defined(__NetBSD__) || \
        (defined(_BSDI_VERSION) && _BSDI_VERSION >= 199701) || \
-       defined(__OpenBSD__) || defined(__MidnightBSD__) || \
-       (__FreeBSD_version >= 300000)
-#     if (__FreeBSD_version >= 500024) || defined(__MidnightBSD__)
-#      if (__FreeBSD_version >= 502116) || defined(__MidnightBSD__)
+       defined(__OpenBSD__) || defined(__MidnightBSD__) || (__FreeBSD_version >= 300000)
+#     if (__MidnightBSD_version >= 1000)
 extern	int	iplioctl __P((struct cdev*, u_long, caddr_t, int, struct thread *));
-#      else
-extern	int	iplioctl __P((dev_t, u_long, caddr_t, int, struct thread *));
-#      endif /* __FreeBSD_version >= 502116 */
 #     else
 #      if  (__NetBSD_Version__ >= 499001000)
 extern	int	iplioctl __P((dev_t, u_long, void *, int, struct lwp *));
@@ -1367,14 +1361,9 @@ extern	int	iplioctl __P((dev_t, u_long, caddr_t, int, struct proc *));
 #    else
 extern	int	iplioctl __P((dev_t, int, caddr_t, int, struct thread *));
 #    endif
-#    if (__FreeBSD_version >= 500024) || defined(__MidnightBSD__)
-#      if (__FreeBSD_version >= 502116) || defined(__MidnightBSD__)
+#    if (__MidnightBSD_version >= 1000)
 extern	int	iplopen __P((struct cdev*, int, int, struct thread *));
 extern	int	iplclose __P((struct cdev*, int, int, struct thread *));
-#      else
-extern	int	iplopen __P((dev_t, int, int, struct thread *));
-extern	int	iplclose __P((dev_t, int, int, struct thread *));
-#      endif /* __FreeBSD_version >= 502116 */
 #    else
 #     if  (__NetBSD_Version__ >= 399001400)
 extern	int	iplopen __P((dev_t, int, int, struct lwp *));
@@ -1394,13 +1383,10 @@ extern	int	iplioctl __P((dev_t, int, caddr_t, int));
 #    endif
 #   endif /* (_BSDI_VERSION >= 199510) */
 #   if	BSD >= 199306
-#      if (__FreeBSD_version >= 502116) || defined(__MidnightBSD__)
+#      if (__MidnightBSD_version >= 1000)
 extern	int	iplread __P((struct cdev*, struct uio *, int));
 extern	int	iplwrite __P((struct cdev*, struct uio *, int));
-#      else
-extern	int	iplread __P((dev_t, struct uio *, int));
-extern	int	iplwrite __P((dev_t, struct uio *, int));
-#      endif /* __FreeBSD_version >= 502116 */
+#      endif 
 #   else
 #    ifndef linux
 extern	int	iplread __P((dev_t, struct uio *));
@@ -1410,7 +1396,7 @@ extern	int	iplwrite __P((dev_t, struct uio *));
 #  endif /* __ sgi */
 # endif /* MENTAT */
 
-# if defined(__FreeBSD_version) || defined(__MidnightBSD__)
+# if defined(__MidnightBSD_version)
 extern	int	ipf_pfil_hook __P((void));
 extern	int	ipf_pfil_unhook __P((void));
 extern	void	ipf_event_reg __P((void));
@@ -1448,7 +1434,7 @@ extern	int	fr_resolvefunc __P((void *));
 extern	void	*fr_resolvenic __P((char *, int));
 extern	int	fr_send_icmp_err __P((int, fr_info_t *, int));
 extern	int	fr_send_reset __P((fr_info_t *));
-#if  (__FreeBSD_version < 501000) || !defined(_KERNEL) || !defined(__MidnightBSD__)
+#if  (__FreeBSD_version < 501000) || !defined(_KERNEL)
 extern	int	ppsratecheck __P((struct timeval *, int *, int));
 #endif
 extern	ipftq_t	*fr_addtimeoutqueue __P((ipftq_t **, u_int));
@@ -1524,6 +1510,12 @@ extern	void		ipf_freetoken __P((ipftoken_t *));
 extern	int		ipf_deltoken __P((int,int, void *));
 extern	int		ipfsync __P((void));
 extern	int		ipf_genericiter __P((void *, int, void *));
+#ifndef ipf_random
+extern	u_32_t		ipf_random __P((void));
+#endif
+#ifdef NEED_LOCAL_RAND
+extern	void		ipf_rand_push __P((void *, int));
+#endif
 
 extern	int	fr_running;
 extern	u_long	fr_frouteok[2];
