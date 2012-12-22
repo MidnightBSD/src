@@ -1,12 +1,12 @@
-/*	$FreeBSD: src/sys/contrib/ipfilter/netinet/ip_raudio_pxy.c,v 1.13 2007/06/04 02:54:36 darrenr Exp $	*/
+/*	$MidnightBSD$	*/
 
 /*
- * $FreeBSD: src/sys/contrib/ipfilter/netinet/ip_raudio_pxy.c,v 1.13 2007/06/04 02:54:36 darrenr Exp $
+ * $MidnightBSD$
  * Copyright (C) 1998-2003 by Darren Reed
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: ip_raudio_pxy.c,v 1.2 2008-09-19 02:15:13 laffer1 Exp $
+ * $Id: ip_raudio_pxy.c,v 1.3 2012-12-22 16:20:51 laffer1 Exp $
  */
 
 #define	IPF_RAUDIO_PROXY

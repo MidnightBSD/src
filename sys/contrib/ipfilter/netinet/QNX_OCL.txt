@@ -1,4 +1,4 @@
-$FreeBSD$
+$MidnightBSD$
 
    End User License Certificate (EULA) End User License Certificate
    (EULA) 
