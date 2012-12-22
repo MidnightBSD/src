@@ -4,7 +4,7 @@
  * See the IPFILTER.LICENCE file for details on licencing.
  *
  * @(#)ip_compat.h	1.8 1/14/96
- * $FreeBSD: src/sys/contrib/ipfilter/netinet/ip_compat.h,v 1.33.2.1 2007/10/31 05:00:37 darrenr Exp $
+ * $MidnightBSD$
  * Id: ip_compat.h,v 2.142.2.57 2007/10/10 09:51:42 darrenr Exp $
  */
 
@@ -35,12 +35,12 @@
 #ifndef	SOLARIS
 #define	SOLARIS	(defined(sun) && (defined(__svr4__) || defined(__SVR4)))
 #endif
-#if defined(SOLARIS2) && SOLARIS2 >= 8
+#if (defined(SOLARIS2) && (SOLARIS2 >= 8))
 # ifndef	USE_INET6
 #  define	USE_INET6
 # endif
 #endif
-#if (defined(__MidnightBSD__) || defined(__FreeBSD_version) && (__FreeBSD_version >= 400000)) && \
+#if defined(__MidnightBSD_version) && \
     !defined(_KERNEL) && !defined(USE_INET6) && !defined(NOINET6)
 # define	USE_INET6
 #endif
@@ -204,6 +204,8 @@ typedef unsigned int	u_32_t;
 # define	U_32_T	1
 
 # ifdef _KERNEL
+#  define	NEED_LOCAL_RAND	1
+#  define	ipf_random		arc4random
 #  define	KRWLOCK_T		krwlock_t
 #  define	KMUTEX_T		kmutex_t
 
@@ -334,6 +336,7 @@ typedef mblk_t mb_t;
 typedef	struct uio	uio_t;
 # endif
 typedef	int		ioctlcmd_t;
+typedef	uint8_t		u_int8_t;
 
 # define OS_RECOGNISED 1
 
@@ -564,6 +567,8 @@ typedef struct {
 # endif
 
 # ifdef _KERNEL
+#  define	NEED_LOCAL_RAND	1
+#  define	ipf_random		arc4random
 #  define	ATOMIC_INC(x)		{ MUTEX_ENTER(&ipf_rw); \
 					  (x)++; MUTEX_EXIT(&ipf_rw); }
 #  define	ATOMIC_DEC(x)		{ MUTEX_ENTER(&ipf_rw); \
@@ -660,6 +665,8 @@ typedef struct mbuf mb_t;
 # include <sys/sysmacros.h>
 
 # ifdef _KERNEL
+#  define	NEED_LOCAL_RAND		1
+#  define	ipf_random		arc4random
 #  define	KMUTEX_T		simple_lock_data_t
 #  define	KRWLOCK_T		lock_data_t
 #  include <net/net_globals.h>
@@ -781,6 +788,8 @@ typedef unsigned int    u_32_t;
 typedef	char *	caddr_t;
 # endif
 
+# define	ipf_random	arc4random
+
 # ifdef _KERNEL
 #  if (__NetBSD_Version__ >= 399001400)
 #   define	KMALLOCS(a, b, c)	(a) = (b)malloc((c), _M_IPF, M_NOWAIT)
@@ -819,14 +828,19 @@ typedef	u_int32_t	u_32_t;
 /* ----------------------------------------------------------------------- */
 /*                                F R E E B S D                            */
 /* ----------------------------------------------------------------------- */
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __MidnightBSD__
+# if  (__FreeBSD_version < 400000)
+#  define	NEED_LOCAL_RAND	1
+# else
+#  define	ipf_random	arc4random
+# endif
 # if defined(_KERNEL)
-#  if (__FreeBSD_version >= 500000) || defined(__MidnightBSD__)
+#  if (__MidnightBSD_version >= 1000)                          
 #   include "opt_bpf.h"
 #  else
 #   include "bpf.h"    
 #  endif
-#  if defined(__MidnightBSD__) || defined(__FreeBSD_version) && (__FreeBSD_version >= 400000)
+#  if defined(__MidnightBSD_version)
 #   include "opt_inet6.h"
 #  endif
 #  if defined(INET6) && !defined(USE_INET6)
@@ -835,28 +849,27 @@ typedef	u_int32_t	u_32_t;
 # endif
 
 # if defined(_KERNEL)
-#  if defined(__MidnightBSD__) || (__FreeBSD_version >= 400000)
+#  if (__MidnightBSD_version >= 1000)
 /*
  * When #define'd, the 5.2.1 kernel panics when used with the ftp proxy.
  * There may be other, safe, kernels but this is not extensively tested yet.
  */
 #   define HAVE_M_PULLDOWN
 #  endif
-#  if !defined(IPFILTER_LKM) && \
-    (defined(__MidnightBSD__) || (__FreeBSD_version >= 300000))
+#  if !defined(IPFILTER_LKM) && (__MidnightBSD_version >= 1000)
 #   include "opt_ipfilter.h"
 #  endif
 #  define	COPYIN(a,b,c)	copyin((caddr_t)(a), (caddr_t)(b), (c))
 #  define	COPYOUT(a,b,c)	copyout((caddr_t)(a), (caddr_t)(b), (c))
 
-#  if (__FreeBSD_version >= 500043) || defined(__MidnightBSD__)
+#  if (__MidnightBSD_version >= 1000)
 #   define NETBSD_PF
 #  endif
 # endif /* _KERNEL */
 
-# if (__FreeBSD_version >= 500043) || defined(__MidnightBSD__)
+# if (__MidnightBSD_version >= 1000)
 #  include <sys/mutex.h>
-#  if (__FreeBSD_version > 700014) || defined(__MidnightBSD__)
+#  if (__MidnightBSD_version > 4016)
 #   include <sys/rwlock.h>
 #    define	KRWLOCK_T		struct rwlock
 #    ifdef _KERNEL
@@ -880,7 +893,7 @@ typedef	u_int32_t	u_32_t;
  * with a WITNESS kernel, it generates LOR messages.
  */
 #   ifdef _KERNEL
-#    if (__FreeBSD_version < 700000)
+#    if (__MidnightBSD_version < 3000)
 #     define	KRWLOCK_T		struct mtx
 #     define	READ_ENTER(x)		mtx_lock(&(x)->ipf_lk)
 #     define	WRITE_ENTER(x)		mtx_lock(&(x)->ipf_lk)
@@ -912,7 +925,7 @@ typedef	u_int32_t	u_32_t;
 #  define	KMUTEX_T		struct mtx
 # endif
 
-# if (__FreeBSD_version >= 501113) || defined(__MidnightBSD__)
+# if (__MidnightBSD_version >= 1000)
 #  include <net/if_var.h>
 #  define	IFNAME(x)	((struct ifnet *)x)->if_xname
 #  define	COPYIFNAME(v, x, b) \
@@ -920,7 +933,7 @@ typedef	u_int32_t	u_32_t;
 					       ((struct ifnet *)x)->if_xname, \
 					       LIFNAMSIZ)
 # endif
-# if (__FreeBSD_version >= 500043) || defined(__MidnightBSD__)
+# if (__MidnightBSD_version >= 1000)
 #  define	CACHE_HASH(x)	((((struct ifnet *)fin->fin_ifp)->if_index) & 7)
 # else
 #  define	IFNAME(x)	((struct ifnet *)x)->if_name
@@ -931,13 +944,11 @@ typedef	u_int32_t	u_32_t;
 # ifdef _KERNEL
 #  define	GETKTIME(x)	microtime((struct timeval *)x)
 
-#  if (__FreeBSD_version >= 500002) || defined(__MidnightBSD__)
 #   include <netinet/in_systm.h>
 #   include <netinet/ip.h>
 #   include <machine/in_cksum.h>
-#  endif
 
-#  if (__FreeBSD_version >= 500043) || defined(__MidnightBSD__)
+#  if (__MidnightBSD_version >= 1000)
 #   define	USE_MUTEXES
 #   define	MUTEX_ENTER(x)		mtx_lock(&(x)->ipf_lk)
 #   define	MUTEX_EXIT(x)		mtx_unlock(&(x)->ipf_lk)
@@ -962,10 +973,9 @@ typedef	u_int32_t	u_32_t;
 #   define	SPL_NET(x)	;
 #   define	SPL_IMP(x)	;
 #   define	SPL_SCHED(x)	;
-extern	int	in_cksum __P((struct mbuf *, int));
 #  else
 #   define	SPL_SCHED(x)	x = splhigh()
-#  endif /* __FreeBSD_version >= 500043 */
+#  endif /* __MidnightBSD_version >= 1000 */
 #  define	MSGDSIZE(x)	mbufchainlen(x)
 #  define	M_LEN(x)	(x)->m_len
 #  define	M_DUPLICATE(x)	m_copy((x), 0, M_COPYALL)
@@ -983,11 +993,7 @@ typedef struct mbuf mb_t;
 #  endif
 # endif
 
-# if (__FreeBSD_version >= 300000) || defined(__MidnightBSD__)
 typedef	u_long		ioctlcmd_t;
-# else
-typedef	int		ioctlcmd_t;
-# endif
 typedef	struct uio	uio_t;
 typedef	int		minor_t;
 typedef	u_int32_t	u_32_t;
@@ -1468,8 +1474,7 @@ typedef union {
 #define	ipf_magic	ipf_lkun_s.ipf_magic
 
 #if !defined(__GNUC__) || \
-    (defined(__FreeBSD_version) && (__FreeBSD_version >= 503000)) || \
-    defined(__MidnightBSD__)
+    (defined(__MidnightBSD_version))
 # ifndef	INLINE
 #  define	INLINE
 # endif
@@ -1607,7 +1612,7 @@ typedef	struct ip6_hdr	ip6_t;
 # define	MAX(a,b)	(((a) > (b)) ? (a) : (b))
 #endif
 
-#if defined(_KERNEL)
+#if defined(_KERNEL) 
 # ifdef MENTAT
 #  define	COPYDATA	mb_copydata
 #  define	COPYBACK	mb_copyback
@@ -1621,8 +1626,8 @@ typedef	struct ip6_hdr	ip6_t;
        defined(_BSDI_VERSION) || defined(__MidnightBSD__)
 #   include <vm/vm.h>
 #  endif
-#  if !defined(__FreeBSD__) || (defined (__FreeBSD_version) && \
-      (__FreeBSD_version >= 300000)) || defined(__MidnightBSD__)
+#  if defined(__MidnightBSD__) || (defined (__FreeBSD_version) && \
+      (__FreeBSD_version >= 300000))
 #   if (defined(__NetBSD_Version__) && (__NetBSD_Version__ >= 105180000)) || \
        (defined(OpenBSD) && (OpenBSD >= 200111))
 #    include <uvm/uvm_extern.h>
@@ -1650,12 +1655,23 @@ MALLOC_DECLARE(M_IPFILTER);
 #    endif /* M_IPFILTER */
 #   endif /* M_PFIL */
 #  endif /* IPFILTER_M_IPFILTER */
-#  define	KMALLOC(a, b)	MALLOC((a), b, sizeof(*(a)), _M_IPF, M_NOWAIT)
-#  if !defined(KMALLOCS)
-#   define	KMALLOCS(a, b, c)	MALLOC((a), b, (c), _M_IPF, M_NOWAIT)
+#  if defined(__FreeBSD__) && __FreeBSD_version >= 800051
+#   define	KMALLOC(a, b)	do {			\
+	a = (b)malloc(sizeof(*(a)), _M_IPF, M_NOWAIT); \
+    } while (0)
+#   define	KMALLOCS(a, b, c)	do { \
+	a = (b)malloc((c), _M_IPF, ((c) > 4096) ? M_WAITOK : M_NOWAIT); \
+    } while (0)
+#   define	KFREE(x)	free((x), _M_IPF)
+#   define	KFREES(x,s)	free((x), _M_IPF)
+#  else
+#   define	KMALLOC(a, b)	MALLOC((a), b, sizeof(*(a)), _M_IPF, M_NOWAIT)
+#   if !defined(KMALLOCS)
+#    define	KMALLOCS(a, b, c)	MALLOC((a), b, (c), _M_IPF, M_NOWAIT)
+#   endif
+#   define	KFREE(x)	FREE((x), _M_IPF)
+#   define	KFREES(x,s)	FREE((x), _M_IPF)
 #  endif
-#  define	KFREE(x)	FREE((x), _M_IPF)
-#  define	KFREES(x,s)	FREE((x), _M_IPF)
 #  define	UIOMOVE(a,b,c,d)	uiomove((caddr_t)a,b,d)
 #  define	SLEEP(id, n)	tsleep((id), PPAUSE|PCATCH, n, 0)
 #  define	WAKEUP(id,x)	wakeup(id+x)
@@ -1697,7 +1713,7 @@ MALLOC_DECLARE(M_IPFILTER);
 # endif
 
 # ifndef	GET_MINOR
-#  define	GET_MINOR(x)	minor(x)
+#  define	GET_MINOR(x)	dev2unit(x)
 # endif
 # define	PANIC(x,y)	if (x) panic y
 #endif /* _KERNEL */
