@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/ipfilter/netinet/ip_sync.c,v 1.5.2.1 2007/10/31 05:00:38 darrenr Exp $	*/
+/*	$MidnightBSD$	*/
 
 /*
  * Copyright (C) 1995-1998 by Darren Reed.
@@ -100,7 +100,7 @@ struct file;
 /* END OF INCLUDES */
 
 #if !defined(lint)
-static const char rcsid[] = "@(#)$Id: ip_sync.c,v 1.3 2008-12-07 00:59:17 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ip_sync.c,v 1.4 2012-12-22 15:40:50 laffer1 Exp $";
 #endif
 
 #define	SYNC_STATETABSZ	256
