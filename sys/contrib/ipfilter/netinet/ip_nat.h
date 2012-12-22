@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/ipfilter/netinet/ip_nat.h,v 1.26.2.1 2007/10/31 05:00:38 darrenr Exp $	*/
+/*	$MidnightBSD$	*/
 
 /*
  * Copyright (C) 1995-2001, 2003 by Darren Reed.
@@ -6,7 +6,7 @@
  * See the IPFILTER.LICENCE file for details on licencing.
  *
  * @(#)ip_nat.h	1.5 2/4/96
- * $FreeBSD: src/sys/contrib/ipfilter/netinet/ip_nat.h,v 1.26.2.1 2007/10/31 05:00:38 darrenr Exp $
+ * $MidnightBSD$
  * Id: ip_nat.h,v 2.90.2.20 2007/09/25 08:27:32 darrenr Exp $
  */
 
@@ -256,9 +256,11 @@ typedef	struct	ipnat	{
 #define	IPN_FIXEDDPORT	0x200000
 #define	IPN_FINDFORWARD	0x400000
 #define	IPN_IN		0x800000
+#define	IPN_SEQUENTIAL	0x1000000
 #define	IPN_USERFLAGS	(IPN_TCPUDP|IPN_AUTOPORTMAP|IPN_IPRANGE|IPN_SPLIT|\
 			 IPN_ROUNDR|IPN_FILTER|IPN_NOTSRC|IPN_NOTDST|\
-			 IPN_FRAG|IPN_STICKY|IPN_FIXEDDPORT|IPN_ICMPQUERY)
+			 IPN_FRAG|IPN_STICKY|IPN_FIXEDDPORT|IPN_ICMPQUERY|\
+			 IPN_SEQUENTIAL)
 
 /*
  * Values for in_redir
