@@ -231,12 +231,12 @@ socks_connect(const char *host, const char *port,
 		case SOCKS_IPV4:
 			cnt = atomicio(read, proxyfd, buf + 4, 6);
 			if (cnt != 6)
-				err(1, "read failed (%d/6)", cnt);
+				err(1, "read failed (%zd/6)", cnt);
 			break;
 		case SOCKS_IPV6:
 			cnt = atomicio(read, proxyfd, buf + 4, 18);
 			if (cnt != 18)
-				err(1, "read failed (%d/18)", cnt);
+				err(1, "read failed (%zd/18)", cnt);
 			break;
 		default:
 			errx(1, "connection failed, unsupported address type");
