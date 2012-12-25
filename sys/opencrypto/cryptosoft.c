@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: cryptosoft.c,v 1.35 2002/04/26 08:43:50 deraadt Exp $	*/
 
 /*-
@@ -24,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/opencrypto/cryptosoft.c,v 1.19 2007/05/09 19:37:02 gnn Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -115,7 +114,15 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 		if (error)
 			return (error);
 	}
+
 	ivp = iv;
+
+	/*
+	 * xforms that provide a reinit method perform all IV
+	 * handling themselves.
+	 */
+	if (exf->reinit)
+		exf->reinit(sw->sw_kschedule, iv);
 
 	if (flags & CRYPTO_F_IMBUF) {
 		struct mbuf *m = (struct mbuf *) buf;
@@ -136,7 +143,15 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 				m_copydata(m, k, blks, blk);
 
 				/* Actual encryption/decryption */
-				if (crd->crd_flags & CRD_F_ENCRYPT) {
+				if (exf->reinit) {
+					if (crd->crd_flags & CRD_F_ENCRYPT) {
+						exf->encrypt(sw->sw_kschedule,
+						    blk);
+					} else {
+						exf->decrypt(sw->sw_kschedule,
+						    blk);
+					}
+				} else if (crd->crd_flags & CRD_F_ENCRYPT) {
 					/* XOR with previous block */
 					for (j = 0; j < blks; j++)
 						blk[j] ^= ivp[j];
@@ -206,7 +221,15 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 			idat = mtod(m, unsigned char *) + k;
 
 	   		while (m->m_len >= k + blks && i > 0) {
-				if (crd->crd_flags & CRD_F_ENCRYPT) {
+				if (exf->reinit) {
+					if (crd->crd_flags & CRD_F_ENCRYPT) {
+						exf->encrypt(sw->sw_kschedule,
+						    idat);
+					} else {
+						exf->decrypt(sw->sw_kschedule,
+						    idat);
+					}
+				} else if (crd->crd_flags & CRD_F_ENCRYPT) {
 					/* XOR with previous block/IV */
 					for (j = 0; j < blks; j++)
 						idat[j] ^= ivp[j];
@@ -262,7 +285,15 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 				cuio_copydata(uio, k, blks, blk);
 
 				/* Actual encryption/decryption */
-				if (crd->crd_flags & CRD_F_ENCRYPT) {
+				if (exf->reinit) {
+					if (crd->crd_flags & CRD_F_ENCRYPT) {
+						exf->encrypt(sw->sw_kschedule,
+						    blk);
+					} else {
+						exf->decrypt(sw->sw_kschedule,
+						    blk);
+					}
+				} else if (crd->crd_flags & CRD_F_ENCRYPT) {
 					/* XOR with previous block */
 					for (j = 0; j < blks; j++)
 						blk[j] ^= ivp[j];
@@ -320,7 +351,15 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 			idat = (char *)iov->iov_base + k;
 
 	   		while (iov->iov_len >= k + blks && i > 0) {
-				if (crd->crd_flags & CRD_F_ENCRYPT) {
+				if (exf->reinit) {
+					if (crd->crd_flags & CRD_F_ENCRYPT) {
+						exf->encrypt(sw->sw_kschedule,
+						    idat);
+					} else {
+						exf->decrypt(sw->sw_kschedule,
+						    idat);
+					}
+				} else if (crd->crd_flags & CRD_F_ENCRYPT) {
 					/* XOR with previous block/IV */
 					for (j = 0; j < blks; j++)
 						idat[j] ^= ivp[j];
@@ -353,11 +392,23 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 				k += blks;
 				i -= blks;
 			}
+			if (k == iov->iov_len) {
+				iov++;
+				k = 0;
+			}
 		}
 
 		return 0; /* Done with iovec encryption/decryption */
 	} else {	/* contiguous buffer */
-		if (crd->crd_flags & CRD_F_ENCRYPT) {
+		if (exf->reinit) {
+			for (i = crd->crd_skip;
+			    i < crd->crd_skip + crd->crd_len; i += blks) {
+				if (crd->crd_flags & CRD_F_ENCRYPT)
+					exf->encrypt(sw->sw_kschedule, buf + i);
+				else
+					exf->decrypt(sw->sw_kschedule, buf + i);
+			}
+		} else if (crd->crd_flags & CRD_F_ENCRYPT) {
 			for (i = crd->crd_skip;
 			    i < crd->crd_skip + crd->crd_len; i += blks) {
 				/* XOR with the IV/previous block, as appropriate. */
@@ -430,12 +481,26 @@ swcr_authprepare(struct auth_hash *axf, struct swcr_data *sw, u_char *key,
 		break;
 	case CRYPTO_MD5_KPDK:
 	case CRYPTO_SHA1_KPDK:
+	{
+		/* 
+		 * We need a buffer that can hold an md5 and a sha1 result
+		 * just to throw it away.
+		 * What we do here is the initial part of:
+		 *   ALGO( key, keyfill, .. )
+		 * adding the key to sw_ictx and abusing Final() to get the
+		 * "keyfill" padding.
+		 * In addition we abuse the sw_octx to save the key to have
+		 * it to be able to append it at the end in swcr_authcompute().
+		 */
+		u_char buf[SHA1_RESULTLEN];
+
 		sw->sw_klen = klen;
 		bcopy(key, sw->sw_octx, klen);
 		axf->Init(sw->sw_ictx);
 		axf->Update(sw->sw_ictx, key, klen);
-		axf->Final(NULL, sw->sw_ictx);
+		axf->Final(buf, sw->sw_ictx);
 		break;
+	}
 	default:
 		printf("%s: CRD_F_KEY_EXPLICIT flag given, but algorithm %d "
 		    "doesn't use keys.\n", __func__, axf->type);
@@ -487,9 +552,17 @@ swcr_authcompute(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 
 	case CRYPTO_MD5_KPDK:
 	case CRYPTO_SHA1_KPDK:
+		/* If we have no key saved, return error. */
 		if (sw->sw_octx == NULL)
 			return EINVAL;
 
+		/*
+		 * Add the trailing copy of the key (see comment in
+		 * swcr_authprepare()) after the data:
+		 *   ALGO( .., key, algofill )
+		 * and let Final() do the proper, natural "algofill"
+		 * padding.
+		 */
 		axf->Update(&ctx, sw->sw_octx, sw->sw_klen);
 		axf->Final(aalg, &ctx);
 		break;
@@ -524,7 +597,7 @@ swcr_compdec(struct cryptodesc *crd, struct swcr_data *sw,
 	 * copy in a buffer.
 	 */
 
-	MALLOC(data, u_int8_t *, crd->crd_len, M_CRYPTO_DATA,  M_NOWAIT);
+	data = malloc(crd->crd_len, M_CRYPTO_DATA,  M_NOWAIT);
 	if (data == NULL)
 		return (EINVAL);
 	crypto_copydata(flags, buf, crd->crd_skip, crd->crd_len, data);
@@ -534,7 +607,7 @@ swcr_compdec(struct cryptodesc *crd, struct swcr_data *sw,
 	else
 		result = cxf->decompress(data, crd->crd_len, &out);
 
-	FREE(data, M_CRYPTO_DATA);
+	free(data, M_CRYPTO_DATA);
 	if (result == 0)
 		return EINVAL;
 
@@ -544,9 +617,9 @@ swcr_compdec(struct cryptodesc *crd, struct swcr_data *sw,
 	sw->sw_size = result;
 	/* Check the compressed size when doing compression */
 	if (crd->crd_flags & CRD_F_COMP) {
-		if (result > crd->crd_len) {
+		if (result >= crd->crd_len) {
 			/* Compression was useless, we lost time */
-			FREE(out, M_CRYPTO_DATA);
+			free(out, M_CRYPTO_DATA);
 			return 0;
 		}
 	}
@@ -577,7 +650,7 @@ swcr_compdec(struct cryptodesc *crd, struct swcr_data *sw,
 			}
 		}
 	}
-	FREE(out, M_CRYPTO_DATA);
+	free(out, M_CRYPTO_DATA);
 	return 0;
 }
 
@@ -636,7 +709,7 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
 	*sid = i;
 
 	while (cri) {
-		MALLOC(*swd, struct swcr_data *, sizeof(struct swcr_data),
+		*swd = malloc(sizeof(struct swcr_data),
 		    M_CRYPTO_DATA, M_NOWAIT|M_ZERO);
 		if (*swd == NULL) {
 			swcr_freesession(dev, i);
@@ -661,6 +734,9 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
 			goto enccommon;
 		case CRYPTO_RIJNDAEL128_CBC:
 			txf = &enc_xform_rijndael128;
+			goto enccommon;
+		case CRYPTO_AES_XTS:
+			txf = &enc_xform_aes_xts;
 			goto enccommon;
 		case CRYPTO_CAMELLIA_CBC:
 			txf = &enc_xform_camellia;
@@ -820,6 +896,7 @@ swcr_freesession(device_t dev, u_int64_t tid)
 		case CRYPTO_CAST_CBC:
 		case CRYPTO_SKIPJACK_CBC:
 		case CRYPTO_RIJNDAEL128_CBC:
+		case CRYPTO_AES_XTS:
 		case CRYPTO_CAMELLIA_CBC:
 		case CRYPTO_NULL_CBC:
 			txf = swd->sw_exf;
@@ -874,7 +951,7 @@ swcr_freesession(device_t dev, u_int64_t tid)
 			break;
 		}
 
-		FREE(swd, M_CRYPTO_DATA);
+		free(swd, M_CRYPTO_DATA);
 	}
 	return 0;
 }
@@ -933,6 +1010,7 @@ swcr_process(device_t dev, struct cryptop *crp, int hint)
 		case CRYPTO_CAST_CBC:
 		case CRYPTO_SKIPJACK_CBC:
 		case CRYPTO_RIJNDAEL128_CBC:
+		case CRYPTO_AES_XTS:
 		case CRYPTO_CAMELLIA_CBC:
 			if ((crp->crp_etype = swcr_encdec(crd, sw,
 			    crp->crp_buf, crp->crp_flags)) != 0)
@@ -978,11 +1056,11 @@ done:
 }
 
 static void
-swcr_identify(device_t *dev, device_t parent)
+swcr_identify(driver_t *drv, device_t parent)
 {
 	/* NB: order 10 is so we get attached after h/w devices */
 	if (device_find_child(parent, "cryptosoft", -1) == NULL &&
-	    BUS_ADD_CHILD(parent, 10, "cryptosoft", -1) == 0)
+	    BUS_ADD_CHILD(parent, 10, "cryptosoft", 0) == 0)
 		panic("cryptosoft: could not attach");
 }
 
@@ -990,7 +1068,7 @@ static int
 swcr_probe(device_t dev)
 {
 	device_set_desc(dev, "software crypto");
-	return (0);
+	return (BUS_PROBE_NOWILDCARD);
 }
 
 static int
@@ -1025,6 +1103,7 @@ swcr_attach(device_t dev)
 	REGISTER(CRYPTO_MD5);
 	REGISTER(CRYPTO_SHA1);
 	REGISTER(CRYPTO_RIJNDAEL128_CBC);
+	REGISTER(CRYPTO_AES_XTS);
  	REGISTER(CRYPTO_CAMELLIA_CBC);
 	REGISTER(CRYPTO_DEFLATE_COMP);
 #undef REGISTER
@@ -1032,12 +1111,13 @@ swcr_attach(device_t dev)
 	return 0;
 }
 
-static void
+static int
 swcr_detach(device_t dev)
 {
 	crypto_unregister_all(swcr_id);
 	if (swcr_sessions != NULL)
-		FREE(swcr_sessions, M_CRYPTO_DATA);
+		free(swcr_sessions, M_CRYPTO_DATA);
+	return 0;
 }
 
 static device_method_t swcr_methods[] = {

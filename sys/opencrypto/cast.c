@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*      $OpenBSD: cast.c,v 1.2 2000/06/06 06:49:47 deraadt Exp $       */
 /*-
  *	CAST-128 in C
@@ -8,7 +7,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/opencrypto/cast.c,v 1.4 2007/07/05 06:59:14 peter Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <opencrypto/cast.h>

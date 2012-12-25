@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: cryptodev.c,v 1.52 2002/06/19 07:22:46 deraadt Exp $	*/
 
 /*-
@@ -34,7 +33,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/opencrypto/cryptodev.c,v 1.35 2007/10/08 20:08:34 kib Exp $");
+__FBSDID("$FreeBSD$");
+
+#include "opt_compat.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -56,6 +57,201 @@ __FBSDID("$FreeBSD: src/sys/opencrypto/cryptodev.c,v 1.35 2007/10/08 20:08:34 ki
 
 #include <opencrypto/cryptodev.h>
 #include <opencrypto/xform.h>
+
+#ifdef COMPAT_FREEBSD32
+#include <sys/mount.h>
+#include <compat/freebsd32/freebsd32.h>
+
+struct session_op32 {
+	u_int32_t	cipher;
+	u_int32_t	mac;
+	u_int32_t	keylen;
+	u_int32_t	key;
+	int		mackeylen;
+	u_int32_t	mackey;
+	u_int32_t	ses;
+};
+
+struct session2_op32 {
+	u_int32_t	cipher;
+	u_int32_t	mac;
+	u_int32_t	keylen;
+	u_int32_t	key;
+	int		mackeylen;
+	u_int32_t	mackey;
+	u_int32_t	ses;
+	int		crid;
+	int		pad[4];
+};
+
+struct crypt_op32 {
+	u_int32_t	ses;
+	u_int16_t	op;
+	u_int16_t	flags;
+	u_int		len;
+	u_int32_t	src, dst;
+	u_int32_t	mac;
+	u_int32_t	iv;
+};
+
+struct crparam32 {
+	u_int32_t	crp_p;
+	u_int		crp_nbits;
+};
+
+struct crypt_kop32 {
+	u_int		crk_op;
+	u_int		crk_status;
+	u_short		crk_iparams;
+	u_short		crk_oparams;
+	u_int		crk_crid;
+	struct crparam32	crk_param[CRK_MAXPARAM];
+};
+
+struct cryptotstat32 {
+	struct timespec32	acc;
+	struct timespec32	min;
+	struct timespec32	max;
+	u_int32_t	count;
+};
+
+struct cryptostats32 {
+	u_int32_t	cs_ops;
+	u_int32_t	cs_errs;
+	u_int32_t	cs_kops;
+	u_int32_t	cs_kerrs;
+	u_int32_t	cs_intrs;
+	u_int32_t	cs_rets;
+	u_int32_t	cs_blocks;
+	u_int32_t	cs_kblocks;
+	struct cryptotstat32 cs_invoke;
+	struct cryptotstat32 cs_done;
+	struct cryptotstat32 cs_cb;
+	struct cryptotstat32 cs_finis;
+};
+
+#define	CIOCGSESSION32	_IOWR('c', 101, struct session_op32)
+#define	CIOCCRYPT32	_IOWR('c', 103, struct crypt_op32)
+#define	CIOCKEY32	_IOWR('c', 104, struct crypt_kop32)
+#define	CIOCGSESSION232	_IOWR('c', 106, struct session2_op32)
+#define	CIOCKEY232	_IOWR('c', 107, struct crypt_kop32)
+
+static void
+session_op_from_32(const struct session_op32 *from, struct session_op *to)
+{
+
+	CP(*from, *to, cipher);
+	CP(*from, *to, mac);
+	CP(*from, *to, keylen);
+	PTRIN_CP(*from, *to, key);
+	CP(*from, *to, mackeylen);
+	PTRIN_CP(*from, *to, mackey);
+	CP(*from, *to, ses);
+}
+
+static void
+session2_op_from_32(const struct session2_op32 *from, struct session2_op *to)
+{
+
+	session_op_from_32((const struct session_op32 *)from,
+	    (struct session_op *)to);
+	CP(*from, *to, crid);
+}
+
+static void
+session_op_to_32(const struct session_op *from, struct session_op32 *to)
+{
+
+	CP(*from, *to, cipher);
+	CP(*from, *to, mac);
+	CP(*from, *to, keylen);
+	PTROUT_CP(*from, *to, key);
+	CP(*from, *to, mackeylen);
+	PTROUT_CP(*from, *to, mackey);
+	CP(*from, *to, ses);
+}
+
+static void
+session2_op_to_32(const struct session2_op *from, struct session2_op32 *to)
+{
+
+	session_op_to_32((const struct session_op *)from,
+	    (struct session_op32 *)to);
+	CP(*from, *to, crid);
+}
+
+static void
+crypt_op_from_32(const struct crypt_op32 *from, struct crypt_op *to)
+{
+
+	CP(*from, *to, ses);
+	CP(*from, *to, op);
+	CP(*from, *to, flags);
+	CP(*from, *to, len);
+	PTRIN_CP(*from, *to, src);
+	PTRIN_CP(*from, *to, dst);
+	PTRIN_CP(*from, *to, mac);
+	PTRIN_CP(*from, *to, iv);
+}
+
+static void
+crypt_op_to_32(const struct crypt_op *from, struct crypt_op32 *to)
+{
+
+	CP(*from, *to, ses);
+	CP(*from, *to, op);
+	CP(*from, *to, flags);
+	CP(*from, *to, len);
+	PTROUT_CP(*from, *to, src);
+	PTROUT_CP(*from, *to, dst);
+	PTROUT_CP(*from, *to, mac);
+	PTROUT_CP(*from, *to, iv);
+}
+
+static void
+crparam_from_32(const struct crparam32 *from, struct crparam *to)
+{
+
+	PTRIN_CP(*from, *to, crp_p);
+	CP(*from, *to, crp_nbits);
+}
+
+static void
+crparam_to_32(const struct crparam *from, struct crparam32 *to)
+{
+
+	PTROUT_CP(*from, *to, crp_p);
+	CP(*from, *to, crp_nbits);
+}
+
+static void
+crypt_kop_from_32(const struct crypt_kop32 *from, struct crypt_kop *to)
+{
+	int i;
+
+	CP(*from, *to, crk_op);
+	CP(*from, *to, crk_status);
+	CP(*from, *to, crk_iparams);
+	CP(*from, *to, crk_oparams);
+	CP(*from, *to, crk_crid);
+	for (i = 0; i < CRK_MAXPARAM; i++)
+		crparam_from_32(&from->crk_param[i], &to->crk_param[i]);
+}
+
+static void
+crypt_kop_to_32(const struct crypt_kop *from, struct crypt_kop32 *to)
+{
+	int i;
+
+	CP(*from, *to, crk_op);
+	CP(*from, *to, crk_status);
+	CP(*from, *to, crk_iparams);
+	CP(*from, *to, crk_oparams);
+	CP(*from, *to, crk_crid);
+	for (i = 0; i < CRK_MAXPARAM; i++)
+		crparam_to_32(&from->crk_param[i], &to->crk_param[i]);
+}
+#endif
 
 struct csession {
 	TAILQ_ENTRY(csession) next;
@@ -87,6 +283,8 @@ struct fcrypt {
 
 static	int cryptof_rw(struct file *fp, struct uio *uio,
 		    struct ucred *cred, int flags, struct thread *);
+static	int cryptof_truncate(struct file *, off_t, struct ucred *,
+		    struct thread *);
 static	int cryptof_ioctl(struct file *, u_long, void *,
 		    struct ucred *, struct thread *);
 static	int cryptof_poll(struct file *, int, struct ucred *, struct thread *);
@@ -98,11 +296,14 @@ static	int cryptof_close(struct file *, struct thread *);
 static struct fileops cryptofops = {
     .fo_read = cryptof_rw,
     .fo_write = cryptof_rw,
+    .fo_truncate = cryptof_truncate,
     .fo_ioctl = cryptof_ioctl,
     .fo_poll = cryptof_poll,
     .fo_kqfilter = cryptof_kqfilter,
     .fo_stat = cryptof_stat,
-    .fo_close = cryptof_close
+    .fo_close = cryptof_close,
+    .fo_chmod = invfo_chmod,
+    .fo_chown = invfo_chown,
 };
 
 static struct csession *csefind(struct fcrypt *, u_int);
@@ -128,6 +329,17 @@ cryptof_rw(
 {
 
 	return (EIO);
+}
+
+static int
+cryptof_truncate(
+	struct file *fp,
+	off_t length,
+	struct ucred *active_cred,
+	struct thread *td)
+{
+
+	return (EINVAL);
 }
 
 /*
@@ -167,11 +379,27 @@ cryptof_ioctl(
 	u_int64_t sid;
 	u_int32_t ses;
 	int error = 0, crid;
+#ifdef COMPAT_FREEBSD32
+	struct session2_op sopc;
+	struct crypt_op copc;
+	struct crypt_kop kopc;
+#endif
 
 	switch (cmd) {
 	case CIOCGSESSION:
 	case CIOCGSESSION2:
-		sop = (struct session_op *)data;
+#ifdef COMPAT_FREEBSD32
+	case CIOCGSESSION32:
+	case CIOCGSESSION232:
+		if (cmd == CIOCGSESSION32) {
+			session_op_from_32(data, (struct session_op *)&sopc);
+			sop = (struct session_op *)&sopc;
+		} else if (cmd == CIOCGSESSION232) {
+			session2_op_from_32(data, &sopc);
+			sop = (struct session_op *)&sopc;
+		} else
+#endif
+			sop = (struct session_op *)data;
 		switch (sop->cipher) {
 		case 0:
 			break;
@@ -192,6 +420,9 @@ cryptof_ioctl(
 			break;
 		case CRYPTO_AES_CBC:
 			txform = &enc_xform_rijndael128;
+			break;
+		case CRYPTO_AES_XTS:
+			txform = &enc_xform_aes_xts;
 			break;
 		case CRYPTO_NULL_CBC:
 			txform = &enc_xform_null;
@@ -254,8 +485,8 @@ cryptof_ioctl(
 				goto bail;
 			}
 
-			MALLOC(crie.cri_key, u_int8_t *,
-			    crie.cri_klen / 8, M_XDATA, M_WAITOK);
+			crie.cri_key = malloc(crie.cri_klen / 8,
+			    M_XDATA, M_WAITOK);
 			if ((error = copyin(sop->key, crie.cri_key,
 			    crie.cri_klen / 8)))
 				goto bail;
@@ -272,16 +503,20 @@ cryptof_ioctl(
 			}
 
 			if (cria.cri_klen) {
-				MALLOC(cria.cri_key, u_int8_t *,
-				    cria.cri_klen / 8, M_XDATA, M_WAITOK);
+				cria.cri_key = malloc(cria.cri_klen / 8,
+				    M_XDATA, M_WAITOK);
 				if ((error = copyin(sop->mackey, cria.cri_key,
 				    cria.cri_klen / 8)))
 					goto bail;
 			}
 		}
 
-		/* NB: CIOGSESSION2 has the crid */
-		if (cmd == CIOCGSESSION2) {
+		/* NB: CIOCGSESSION2 has the crid */
+		if (cmd == CIOCGSESSION2
+#ifdef COMPAT_FREEBSD32
+		    || cmd == CIOCGSESSION232
+#endif
+			) {
 			crid = SES2(sop)->crid;
 			error = checkforsoftware(crid);
 			if (error)
@@ -302,17 +537,30 @@ cryptof_ioctl(
 			goto bail;
 		}
 		sop->ses = cse->ses;
-		if (cmd == CIOCGSESSION2) {
+		if (cmd == CIOCGSESSION2
+#ifdef COMPAT_FREEBSD32
+		    || cmd == CIOCGSESSION232
+#endif
+		    ) {
 			/* return hardware/driver id */
 			SES2(sop)->crid = CRYPTO_SESID2HID(cse->sid);
 		}
 bail:
 		if (error) {
 			if (crie.cri_key)
-				FREE(crie.cri_key, M_XDATA);
+				free(crie.cri_key, M_XDATA);
 			if (cria.cri_key)
-				FREE(cria.cri_key, M_XDATA);
+				free(cria.cri_key, M_XDATA);
 		}
+#ifdef COMPAT_FREEBSD32
+		else {
+			if (cmd == CIOCGSESSION32)
+				session_op_to_32(sop, data);
+			else if (cmd == CIOCGSESSION232)
+				session2_op_to_32((struct session2_op *)sop,
+				    data);
+		}
+#endif
 		break;
 	case CIOCFSESSION:
 		ses = *(u_int32_t *)data;
@@ -323,25 +571,54 @@ bail:
 		error = csefree(cse);
 		break;
 	case CIOCCRYPT:
-		cop = (struct crypt_op *)data;
+#ifdef COMPAT_FREEBSD32
+	case CIOCCRYPT32:
+		if (cmd == CIOCCRYPT32) {
+			cop = &copc;
+			crypt_op_from_32(data, cop);
+		} else
+#endif
+			cop = (struct crypt_op *)data;
 		cse = csefind(fcr, cop->ses);
 		if (cse == NULL)
 			return (EINVAL);
 		error = cryptodev_op(cse, cop, active_cred, td);
+#ifdef COMPAT_FREEBSD32
+		if (error == 0 && cmd == CIOCCRYPT32)
+			crypt_op_to_32(cop, data);
+#endif
 		break;
 	case CIOCKEY:
 	case CIOCKEY2:
+#ifdef COMPAT_FREEBSD32
+	case CIOCKEY32:
+	case CIOCKEY232:
+#endif
 		if (!crypto_userasymcrypto)
 			return (EPERM);		/* XXX compat? */
-		mtx_lock(&Giant);
-		kop = (struct crypt_kop *)data;
-		if (cmd == CIOCKEY) {
+#ifdef COMPAT_FREEBSD32
+		if (cmd == CIOCKEY32 || cmd == CIOCKEY232) {
+			kop = &kopc;
+			crypt_kop_from_32(data, kop);
+		} else
+#endif
+			kop = (struct crypt_kop *)data;
+		if (cmd == CIOCKEY
+#ifdef COMPAT_FREEBSD32
+		    || cmd == CIOCKEY32
+#endif
+		    ) {
 			/* NB: crypto core enforces s/w driver use */
 			kop->crk_crid =
 			    CRYPTOCAP_F_HARDWARE | CRYPTOCAP_F_SOFTWARE;
 		}
+		mtx_lock(&Giant);
 		error = cryptodev_key(kop);
 		mtx_unlock(&Giant);
+#ifdef COMPAT_FREEBSD32
+		if (cmd == CIOCKEY32 || cmd == CIOCKEY232)
+			crypt_kop_to_32(kop, data);
+#endif
 		break;
 	case CIOCASYMFEAT:
 		if (!crypto_userasymcrypto) {
@@ -396,8 +673,10 @@ cryptodev_op(
 	cse->uio.uio_rw = UIO_WRITE;
 	cse->uio.uio_td = td;
 	cse->uio.uio_iov[0].iov_len = cop->len;
-	if (cse->thash)
+	if (cse->thash) {
 		cse->uio.uio_iov[0].iov_len += cse->thash->hashsize;
+		cse->uio.uio_resid += cse->thash->hashsize;
+	}
 	cse->uio.uio_iov[0].iov_base = malloc(cse->uio.uio_iov[0].iov_len,
 	    M_XDATA, M_WAITOK);
 
@@ -481,6 +760,7 @@ cryptodev_op(
 		goto bail;
 	}
 
+again:
 	/*
 	 * Let the dispatch run unlocked, then, interlock against the
 	 * callback before checking if the operation completed and going
@@ -496,6 +776,12 @@ cryptodev_op(
 
 	if (error != 0)
 		goto bail;
+
+	if (crp->crp_etype == EAGAIN) {
+		crp->crp_etype = 0;
+		crp->crp_flags &= ~CRYPTO_F_DONE;
+		goto again;
+	}
 
 	if (crp->crp_etype != 0) {
 		error = crp->crp_etype;
@@ -530,16 +816,10 @@ cryptodev_cb(void *op)
 {
 	struct cryptop *crp = (struct cryptop *) op;
 	struct csession *cse = (struct csession *)crp->crp_opaque;
-	int error;
 
-	error = crp->crp_etype;
-	if (error == EAGAIN)
-		error = crypto_dispatch(crp);
 	mtx_lock(&cse->lock);
-	if (error != 0 || (crp->crp_flags & CRYPTO_F_DONE)) {
-		cse->error = error;
-		wakeup_one(crp);
-	}
+	cse->error = crp->crp_etype;
+	wakeup_one(crp);
 	mtx_unlock(&cse->lock);
 	return (0);
 }
@@ -612,7 +892,7 @@ cryptodev_key(struct crypt_kop *kop)
 		size = (krp->krp_param[i].crp_nbits + 7) / 8;
 		if (size == 0)
 			continue;
-		MALLOC(krp->krp_param[i].crp_p, caddr_t, size, M_XDATA, M_WAITOK);
+		krp->krp_param[i].crp_p = malloc(size, M_XDATA, M_WAITOK);
 		if (i >= krp->krp_iparams)
 			continue;
 		error = copyin(kop->crk_param[i].crp_p, krp->krp_param[i].crp_p, size);
@@ -649,7 +929,7 @@ fail:
 		kop->crk_status = krp->krp_status;
 		for (i = 0; i < CRK_MAXPARAM; i++) {
 			if (krp->krp_param[i].crp_p)
-				FREE(krp->krp_param[i].crp_p, M_XDATA);
+				free(krp->krp_param[i].crp_p, M_XDATA);
 		}
 		free(krp, M_XDATA);
 	}
@@ -718,7 +998,7 @@ cryptof_close(struct file *fp, struct thread *td)
 		TAILQ_REMOVE(&fcr->csessions, cse, next);
 		(void)csefree(cse);
 	}
-	FREE(fcr, M_XDATA);
+	free(fcr, M_XDATA);
 	fp->f_data = NULL;
 	return 0;
 }
@@ -765,11 +1045,9 @@ csecreate(struct fcrypt *fcr, u_int64_t sid, caddr_t key, u_int64_t keylen,
 
 #ifdef INVARIANTS
 	/* NB: required when mtx_init is built with INVARIANTS */
-	MALLOC(cse, struct csession *, sizeof(struct csession),
-	    M_XDATA, M_NOWAIT | M_ZERO);
+	cse = malloc(sizeof(struct csession), M_XDATA, M_NOWAIT | M_ZERO);
 #else
-	MALLOC(cse, struct csession *, sizeof(struct csession),
-	    M_XDATA, M_NOWAIT);
+	cse = malloc(sizeof(struct csession), M_XDATA, M_NOWAIT);
 #endif
 	if (cse == NULL)
 		return NULL;
@@ -795,10 +1073,10 @@ csefree(struct csession *cse)
 	error = crypto_freesession(cse->sid);
 	mtx_destroy(&cse->lock);
 	if (cse->key)
-		FREE(cse->key, M_XDATA);
+		free(cse->key, M_XDATA);
 	if (cse->mackey)
-		FREE(cse->mackey, M_XDATA);
-	FREE(cse, M_XDATA);
+		free(cse->mackey, M_XDATA);
+	free(cse, M_XDATA);
 	return (error);
 }
 
@@ -829,24 +1107,18 @@ cryptoioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread 
 
 	switch (cmd) {
 	case CRIOGET:
-		MALLOC(fcr, struct fcrypt *,
-		    sizeof(struct fcrypt), M_XDATA, M_WAITOK);
+		fcr = malloc(sizeof(struct fcrypt), M_XDATA, M_WAITOK);
 		TAILQ_INIT(&fcr->csessions);
 		fcr->sesn = 0;
 
-		error = falloc(td, &f, &fd);
+		error = falloc(td, &f, &fd, 0);
 
 		if (error) {
-			FREE(fcr, M_XDATA);
+			free(fcr, M_XDATA);
 			return (error);
 		}
 		/* falloc automatically provides an extra reference to 'f'. */
-		FILE_LOCK(f);
-		f->f_flag = FREAD | FWRITE;
-		f->f_type = DTYPE_CRYPTO;
-		f->f_data = fcr;
-		f->f_ops = &cryptofops;
-		FILE_UNLOCK(f);
+		finit(f, FREAD | FWRITE, DTYPE_CRYPTO, fcr, &cryptofops);
 		*(u_int32_t *)data = fd;
 		fdrop(f, td);
 		break;

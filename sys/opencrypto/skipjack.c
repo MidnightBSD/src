@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: skipjack.c,v 1.3 2001/05/05 00:31:34 angelos Exp $	*/
 /*-
  * Further optimized test implementation of SKIPJACK algorithm 
@@ -14,7 +13,7 @@
 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/opencrypto/skipjack.c,v 1.3 2005/01/07 02:29:16 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
