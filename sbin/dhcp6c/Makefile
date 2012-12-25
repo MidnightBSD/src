@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/sbin/dhcp6c/Makefile,v 1.1 2012/01/14 15:18:41 laffer1 Exp $
 
 PROG=	dhcp6c
 
@@ -23,6 +23,8 @@ SRCS=	cfparse.y cftoken.l dhcp6c.c common.c config.c prefixconf.c dhcp6c_ia.c ti
         dhcp6c_script.c if.c base64.c auth.c dhcp6_ctl.c addrconf.c lease.c
 
 MAN=	dhcp6c.8 dhcp6c.conf.5
+
+WARNS?=	0
 
 LDADD=  -ll 
 DPADD=  ${LIBL} 
