@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2005-2007 Daniel Braniss <danny@cs.huji.ac.il>
+ * Copyright (c) 2005-2010 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,10 +23,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/iscsi/initiator/iscsi.h,v 1.1 2007/07/24 15:35:02 scottl Exp $
+ * $MidnightBSD$
  */
 /*
- | $Id: iscsi.h,v 1.1 2008-11-11 21:31:57 laffer1 Exp $
+ | $Id: iscsi.h,v 1.2 2012-12-26 01:04:58 laffer1 Exp $
  */
 #define	TRUE	1
 #define FALSE	0
@@ -37,11 +37,7 @@ typedef int boolean_t;
 #include <cam/cam.h>
 
 #define ISCSIDEV	"iscsi"
-
-#define ISCSI_MAX_TARGETS	4 //64
-
-#define ISCSI_MAX_LUNS		4
-
+#define ISCSI_MAX_TARGETS	64
 /*
  | iSCSI commands
  */
@@ -294,6 +290,103 @@ typedef struct async {
      
 } async_t;  
 
+typedef struct login_req {
+     char	cmd;	// 0x03
+
+     u_char	NSG:2;
+     u_char	CSG:2;
+     u_char	_:2;
+     u_char	C:1;
+     u_char	T:1;
+
+     char	v_max;
+     char	v_min;
+
+     int	len;	// remapped via standard bhs
+     char	isid[6];
+     short	tsih;
+     int	itt;	// Initiator Task Tag;
+
+     int	CID:16;
+     int	rsv:16;
+
+     int	cmdSN;
+     int	expStatSN;
+     int	unused[4];
+} login_req_t;
+
+typedef struct login_rsp {
+     char	cmd;	// 0x23
+     u_char	NSG:2;
+     u_char	CSG:2;
+     u_char	_1:2;
+     u_char	C:1;
+     u_char	T:1;
+
+     char	v_max;
+     char	v_act;
+
+     int	len;	// remapped via standard bhs
+     char	isid[6];
+     short	tsih;
+     int	itt;	// Initiator Task Tag;
+     int	_2;
+     rsp_sn_t	sn;
+     int	status:16;
+     int	_3:16;
+     int	_4[2];
+} login_rsp_t;
+
+typedef struct text_req {
+     char	cmd;	// 0x04
+
+     u_char	_1:6;
+     u_char	C:1;	// Continuation 
+     u_char	F:1;	// Final
+     char	_2[2];
+
+     int	len;
+     int	itt;		// Initiator Task Tag
+     int	LUN[2];
+     int	ttt;		// Target Transfer Tag
+     int	cmdSN;
+     int	expStatSN;
+     int	unused[4];
+} text_req_t;
+
+typedef struct logout_req {
+     char	cmd;	// 0x06
+     char	reason;	// 0 - close session
+     			// 1 - close connection
+     			// 2 - remove the connection for recovery
+     char	_2[2];
+
+     int	len;
+     int	_r[2];
+     int	itt;	// Initiator Task Tag;
+
+     u_int	CID:16;
+     u_int	rsv:16;
+
+     int	cmdSN;
+     int	expStatSN;
+     int	unused[4];
+} logout_req_t;
+
+typedef struct logout_rsp {
+     char	cmd;	// 0x26
+     char	cbits;
+     char	_1[2];
+     int	len;
+     int	_2[2];
+     int	itt;
+     int	_3;
+     rsp_sn_t	sn;
+     short	time2wait;
+     short	time2retain;
+     int	_4;
+} logout_rsp_t;
+
 union ipdu_u {
      bhs_t	bhs;
      scsi_req_t	scsi_req;
@@ -325,13 +418,13 @@ typedef struct {
  */
 typedef struct {
      union ipdu_u	ipdu;
-
-     ahs_t		*ahs;
-     u_int		ahs_len;
-     u_int		ahs_size;	// the allocated size
      u_int		hdr_dig;	// header digest
 
-     u_char		*ds;
+     ahs_t		*ahs_addr;
+     u_int		ahs_len;
+     u_int		ahs_size;	// the allocated size
+
+     u_char		*ds_addr;
      u_int		ds_len;
      u_int		ds_size;	// the allocated size
      u_int		ds_dig;		// data digest
@@ -377,6 +470,7 @@ typedef struct opvals {
      u_char	tgtChapID;
      char	*tgtChapDigest;
      char	*iqn;
+     char	*pidfile;
 } isc_opt_t;
 
 /*
@@ -401,7 +495,6 @@ typedef struct iscsi_cam {
      path_id_t		path_id;
      target_id_t	target_id;
      int		target_nluns;
-     lun_id_t		target_lun[ISCSI_MAX_LUNS];
 } iscsi_cam_t;
 
 #define ISCSIGETCAM	_IOR('i', 33, iscsi_cam_t)

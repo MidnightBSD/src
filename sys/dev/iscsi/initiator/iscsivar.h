@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2005-2007 Daniel Braniss <danny@cs.huji.ac.il>
+ * Copyright (c) 2005-2010 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,11 +23,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/iscsi/initiator/iscsivar.h,v 1.1 2007/07/24 15:35:02 scottl Exp $
+ * $MidnightBSD$
  */
+
 /*
- | $Id: iscsivar.h,v 1.1 2008-11-11 21:31:57 laffer1 Exp $
+ | $Id: iscsivar.h,v 1.2 2012-12-26 01:04:58 laffer1 Exp $
  */
+#define ISCSI_MAX_LUNS		128	// don't touch this
+#if ISCSI_MAX_LUNS > 8
+/*
+ | for this to work 
+ | sysctl kern.cam.cam_srch_hi=1
+ */
+#endif
+
 #ifndef ISCSI_INITIATOR_DEBUG
 #define ISCSI_INITIATOR_DEBUG 1
 #endif
@@ -46,14 +55,18 @@ extern int iscsi_debug;
 #define sdebug(level, fmt, args...)
 #endif /* ISCSI_INITIATOR_DEBUG */
 
-#define xdebug(fmt, args...)	printf("%s: " fmt "\n", __func__ , ##args)
+#define xdebug(fmt, args...)	printf(">>> %s: " fmt "\n", __func__ , ##args)
 
-#define MAX_SESSIONS		ISCSI_MAX_TARGETS
+#define MAX_SESSIONS	ISCSI_MAX_TARGETS
+#define MAX_PDUS	(MAX_SESSIONS*256) // XXX: at the moment this is arbitrary
 
 typedef uint32_t digest_t(const void *, int len, uint32_t ocrc);
 
 MALLOC_DECLARE(M_ISCSI);
+MALLOC_DECLARE(M_ISCSIBUF);
 MALLOC_DECLARE(M_PDU);
+
+#define ISOK2DIG(dig, pp)	((dig != NULL) && ((pp->ipdu.bhs.opcode & 0x1f) != ISCSI_LOGIN_CMD))
 
 #ifndef BIT
 #define BIT(n)	(1 <<(n))
@@ -61,20 +74,23 @@ MALLOC_DECLARE(M_PDU);
 
 #define ISC_SM_RUN	BIT(0)
 #define ISC_SM_RUNNING	BIT(1)
-#define ISC_SM_HOLD	BIT(2)
 
+#define ISC_LINK_UP	BIT(2)
 #define ISC_CON_RUN	BIT(3)
 #define ISC_CON_RUNNING	BIT(4)
 #define ISC_KILL	BIT(5)
-#define ISC_IWAITING	BIT(6)
-//#define ISC_OWAITING	BIT(7)
+#define ISC_OQNOTEMPTY	BIT(6)
+#define ISC_OWAITING	BIT(7)
 #define ISC_FFPHASE	BIT(8)
-#define ISC_FFPWAIT	BIT(9)
 
-#define ISC_MEMWAIT	BIT(10)
-#define ISC_SIGNALED	BIT(11)
-#define ISC_FROZEN	BIT(12)
-#define ISC_STALLED	BIT(13)
+#define ISC_CAMDEVS	BIT(9)
+#define ISC_SCANWAIT	BIT(10)
+
+#define ISC_MEMWAIT	BIT(11)
+#define ISC_SIGNALED	BIT(12)
+
+#define ISC_HOLD	BIT(15)
+#define ISC_HOLDED	BIT(16)
 
 #define ISC_SHUTDOWN	BIT(31)
 
@@ -100,6 +116,9 @@ struct i_stats {
 /*
  | one per 'session'
  */
+
+typedef TAILQ_HEAD(, pduq) queue_t;
+
 typedef struct isc_session {
      TAILQ_ENTRY(isc_session)	sp_link;
      int		flags;
@@ -110,9 +129,7 @@ typedef struct isc_session {
 
      struct proc 	*proc; // the userland process
      int		signal;
-
      struct proc 	*soc_proc;
-
      struct proc	*stp;	// the sm thread
 
      struct isc_softc	*isc;
@@ -121,44 +138,44 @@ typedef struct isc_session {
      digest_t   	*dataDigest;    // the digest alg. if any
 
      int		sid;		// Session ID
-     int		targetid;
-//     int		cid;		// Connection ID
-//     int		tsih;		// target session identifier handle
      sn_t       	sn;             // sequence number stuff;
      int		cws;		// current window size
 
      int		target_nluns; // this and target_lun are
 				      // hopefully temporal till I
 				      // figure out a better way.
-     lun_id_t		target_lun[ISCSI_MAX_LUNS];
+     int		target_lun[ISCSI_MAX_LUNS/(sizeof(int)*8) + 1];
 
      struct mtx		rsp_mtx;
      struct mtx		rsv_mtx;
      struct mtx		snd_mtx;
      struct mtx		hld_mtx;
      struct mtx		io_mtx;
+     queue_t		rsp;
+     queue_t		rsv;
+     queue_t		csnd;
+     queue_t		isnd;
+     queue_t		wsnd;
+     queue_t		hld;				
 
-     TAILQ_HEAD(,pduq)	rsp;
-     TAILQ_HEAD(,pduq)	rsv;
-     TAILQ_HEAD(,pduq)	csnd;
-     TAILQ_HEAD(,pduq)	isnd;
-     TAILQ_HEAD(,pduq)	wsnd;
-     TAILQ_HEAD(,pduq)	hld;
-     /*
-      | negotiable values
-      */
-     isc_opt_t		opt;
+     isc_opt_t		opt;	// negotiable values
 
      struct i_stats	stats;
-     struct cam_path	*cam_path;
      bhs_t		bhs;
      struct uio		uio;
      struct iovec	iov;
+     /*
+      | cam stuff
+      */
+     struct cam_sim	*cam_sim;
+     struct cam_path	*cam_path;
+     struct mtx		cam_mtx;
      /*
       | sysctl stuff
       */
      struct sysctl_ctx_list	clist;
      struct sysctl_oid	*oid;
+     int	douio;	//XXX: turn on/off uio on read
 } isc_session_t;
 
 typedef struct pduq {
@@ -173,31 +190,26 @@ typedef struct pduq {
      struct iovec	iov[5];	// XXX: careful ...
      struct mbuf	*mp;
      struct bintime	ts;
+     queue_t		*pduq;		
 } pduq_t;
-
+/*
+ */
 struct isc_softc {
-     //int		state;
-     struct cdev	*dev;
-     eventhandler_tag	eh;
-     char		isid[6];	// Initiator Session ID (48 bits)
-     struct mtx		mtx;
-
-     int			nsess;
+     struct mtx		isc_mtx;
      TAILQ_HEAD(,isc_session)	isc_sess;
-     isc_session_t		*sessions[MAX_SESSIONS];
+     int		nsess;
+     struct cdev	*dev;
+     char		isid[6];	// Initiator Session ID (48 bits)
+     struct unrhdr	*unit;
+     struct sx 		unit_sx;
 
-     struct mtx			pdu_mtx;
+     uma_zone_t		pdu_zone;	// pool of free pdu's
 #ifdef  ISCSI_INITIATOR_DEBUG
-     int			 npdu_alloc, npdu_max; // for instrumentation
+     int		 npdu_alloc, npdu_max; // for instrumentation
 #endif
-#define MAX_PDUS	256 // XXX: at the moment this is arbitrary
-     uma_zone_t			pdu_zone; // pool of free pdu's
-     /*
-      | cam stuff
-      */
-     struct cam_sim		*cam_sim;
-     struct cam_path		*cam_path;
-     struct mtx			cam_mtx;
+#ifdef DO_EVENTHANDLER
+     eventhandler_tag	eh;
+#endif
      /*
       | sysctl stuff
       */
@@ -222,14 +234,14 @@ int	i_pdu_flush(isc_session_t *sc);
 int	i_setopt(isc_session_t *sp, isc_opt_t *opt);
 void	i_freeopt(isc_opt_t *opt);
 
-int	ic_init(struct isc_softc *sc);
-void	ic_destroy(struct isc_softc *sc);
-int	ic_fullfeature(struct cdev *dev);
+int	ic_init(isc_session_t *sp);
+void	ic_destroy(isc_session_t *sp);
 void	ic_lost_target(isc_session_t *sp, int target);
 int	ic_getCamVals(isc_session_t *sp, iscsi_cam_t *cp);
 
 void	ism_recv(isc_session_t *sp, pduq_t *pq);
 int	ism_start(isc_session_t *sp);
+void	ism_restart(isc_session_t *sp);
 void	ism_stop(isc_session_t *sp);
 
 int	scsi_encap(struct cam_sim *sim, union ccb *ccb);
@@ -240,9 +252,6 @@ void	iscsi_reject(isc_session_t *sp, pduq_t *opq, pduq_t *pq);
 void	iscsi_async(isc_session_t *sp,  pduq_t *pq);
 void	iscsi_cleanup(isc_session_t *sp);
 int	iscsi_requeue(isc_session_t *sp);
-
-void	ic_freeze(isc_session_t *sp);
-void	ic_release(isc_session_t *sp);
 
 // Serial Number Arithmetic
 #define _MAXINCR	0x7FFFFFFF	// 2 ^ 31 - 1
@@ -260,7 +269,7 @@ void	ic_release(isc_session_t *sp);
 #define CAM_ULOCK(arg)
 
 static __inline void
-XPT_DONE(struct isc_softc *isp, union ccb *ccb)
+XPT_DONE(isc_session_t *sp, union ccb *ccb)
 {
      mtx_lock(&Giant);
      xpt_done(ccb);
@@ -271,11 +280,11 @@ XPT_DONE(struct isc_softc *isp, union ccb *ccb)
 #define CAM_UNLOCK(arg)	mtx_unlock(&arg->cam_mtx)
 
 static __inline void
-XPT_DONE(struct isc_softc *isp, union ccb *ccb)
+XPT_DONE(isc_session_t *sp, union ccb *ccb)
 {
-     CAM_LOCK(isp);
+     CAM_LOCK(sp);
      xpt_done(ccb);
-     CAM_UNLOCK(isp);
+     CAM_UNLOCK(sp);
 }
 #else
 //__FreeBSD_version >= 600000
@@ -291,19 +300,15 @@ pdu_alloc(struct isc_softc *isc, int wait)
 {
      pduq_t	*pq;
 
-     pq = (pduq_t *)uma_zalloc(isc->pdu_zone, wait? M_WAITOK: M_NOWAIT);
+     pq = (pduq_t *)uma_zalloc(isc->pdu_zone, wait /* M_WAITOK or M_NOWAIT*/);
      if(pq == NULL) {
-	  // will not happend if M_WAITOK ...
-	  mtx_unlock(&isc->pdu_mtx);
-	  debug(1, "out of mem");
+	  debug(7, "out of mem");
 	  return NULL;
      }
 #ifdef ISCSI_INITIATOR_DEBUG
-     mtx_lock(&isc->pdu_mtx);
      isc->npdu_alloc++;
      if(isc->npdu_alloc > isc->npdu_max)
 	  isc->npdu_max = isc->npdu_alloc;
-     mtx_unlock(&isc->pdu_mtx);
 #endif
      memset(pq, 0, sizeof(pduq_t));
 
@@ -315,14 +320,14 @@ pdu_free(struct isc_softc *isc, pduq_t *pq)
 {
      if(pq->mp)
 	  m_freem(pq->mp);
+#ifdef NO_USE_MBUF
      if(pq->buf != NULL)
-	  free(pq->buf, M_ISCSI);
-     mtx_lock(&isc->pdu_mtx);
-     uma_zfree(isc->pdu_zone, pq);
+	  free(pq->buf, M_ISCSIBUF);
+#endif
 #ifdef ISCSI_INITIATOR_DEBUG
      isc->npdu_alloc--;
 #endif
-     mtx_unlock(&isc->pdu_mtx);
+     uma_zfree(isc->pdu_zone, pq);
 }
 
 static __inline void
@@ -460,18 +465,30 @@ i_dqueue_snd(isc_session_t *sp, int which)
      if((which & BIT(0)) && (pq = TAILQ_FIRST(&sp->isnd)) != NULL) {
 	  sp->stats.nisnd--;
 	  TAILQ_REMOVE(&sp->isnd, pq, pq_link);
+	  pq->pduq = &sp->isnd;	// remember where you came from
      } else
      if((which & BIT(1)) && (pq = TAILQ_FIRST(&sp->wsnd)) != NULL) {
 	  sp->stats.nwsnd--;
 	  TAILQ_REMOVE(&sp->wsnd, pq, pq_link);
+	  pq->pduq = &sp->wsnd;	// remember where you came from
      } else
      if((which & BIT(2)) && (pq = TAILQ_FIRST(&sp->csnd)) != NULL) {
 	  sp->stats.ncsnd--;
 	  TAILQ_REMOVE(&sp->csnd, pq, pq_link);
+	  pq->pduq = &sp->csnd;	// remember where you came from
      }
      mtx_unlock(&sp->snd_mtx);
 
      return pq;
+}
+
+static __inline void
+i_rqueue_pdu(isc_session_t *sp, pduq_t *pq)
+{
+     mtx_lock(&sp->snd_mtx);
+     KASSERT(pq->pduq != NULL, ("pq->pduq is NULL"));
+     TAILQ_INSERT_TAIL(pq->pduq, pq, pq_link);
+     mtx_unlock(&sp->snd_mtx);     
 }
 
 /*
@@ -533,6 +550,27 @@ i_search_hld(isc_session_t *sp, int itt, int keep)
      mtx_unlock(&sp->hld_mtx);
 
      return pq;
+}
+
+static __inline void
+i_acked_hld(isc_session_t *sp, pdu_t *op)
+{
+     pduq_t	*pq, *tmp;
+     u_int exp = sp->sn.expCmd;
+     
+     pq = NULL;
+     mtx_lock(&sp->hld_mtx);
+     TAILQ_FOREACH_SAFE(pq, &sp->hld, pq_link, tmp) {
+	  if((op && op->ipdu.bhs.itt == pq->pdu.ipdu.bhs.itt)
+	     || (pq->ccb == NULL
+		 && (pq->pdu.ipdu.bhs.opcode != ISCSI_WRITE_DATA)
+		 && SNA_GT(exp, ntohl(pq->pdu.ipdu.bhs.ExpStSN)))) {
+	       sp->stats.nhld--;
+	       TAILQ_REMOVE(&sp->hld, pq, pq_link);
+	       pdu_free(sp->isc, pq);
+	  }
+     }
+     mtx_unlock(&sp->hld_mtx);
 }
 
 static __inline void
