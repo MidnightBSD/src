@@ -1,3 +1,3 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 int pidfile(const char *);

@@ -26062,9 +26062,6 @@ contrib/pf/ftp-proxy/filter.c -text
 contrib/pf/ftp-proxy/filter.h -text
 contrib/pf/ftp-proxy/ftp-proxy.8 -text
 contrib/pf/ftp-proxy/ftp-proxy.c -text
-contrib/pf/ftp-proxy/getline.c -text
-contrib/pf/ftp-proxy/util.c -text
-contrib/pf/ftp-proxy/util.h -text
 contrib/pf/libevent/buffer.c -text
 contrib/pf/libevent/evbuffer.c -text
 contrib/pf/libevent/event-internal.h -text
