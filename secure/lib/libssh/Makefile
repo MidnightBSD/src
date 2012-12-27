@@ -1,4 +1,4 @@
-# $MidnightBSD: src/secure/lib/libssh/Makefile,v 1.15 2011/02/06 18:17:31 laffer1 Exp $
+# $MidnightBSD: src/secure/lib/libssh/Makefile,v 1.16 2012/08/26 23:44:11 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -11,19 +11,18 @@ SRCS=	acss.c authfd.c authfile.c bufaux.c bufbn.c buffer.c \
 	log.c match.c md-sha256.c moduli.c nchan.c packet.c \
 	readpass.c rsa.c ttymodes.c xmalloc.c addrmatch.c \
 	atomicio.c key.c dispatch.c kex.c mac.c uidswap.c uuencode.c misc.c \
-	monitor_fdpass.c rijndael.c ssh-dss.c ssh-rsa.c dh.c kexdh.c \
-	kexgex.c kexdhc.c kexgexc.c msg.c progressmeter.c dns.c \
-	entropy.c umac.c jpake.c schnorr.c \
-	ssh-pkcs11.c kexecdhc.c
+	monitor_fdpass.c rijndael.c ssh-dss.c ssh-ecdsa.c ssh-rsa.c dh.c \
+	kexdh.c kexgex.c kexdhc.c kexgexc.c bufec.c kexecdh.c kexecdhc.c \
+	msg.c progressmeter.c dns.c entropy.c umac.c jpake.c \
+	schnorr.c ssh-pkcs11.c
 
 # gss-genr.c should be in $SRCS but causes linking problems, so it is
 # compiled directly into sshd instead.
 
 # Portability layer
-SRCS+=	bsd-arc4random.c bsd-closefrom.c bsd-misc.c fmt_scaled.c \
-	getrrsetbyname.c glob.c openssl-compat.c port-tun.c \
-	timingsafe_bcmp.c vis.c xcrypt.c xmmap.c
-
+SRCS+=	bsd-misc.c fmt_scaled.c getrrsetbyname.c glob.c \
+	openssl-compat.c port-tun.c strtonum.c timingsafe_bcmp.c \
+	vis.c xcrypt.c xmmap.c
 # MidnightBSD additions
 SRCS+=	version.c
 
