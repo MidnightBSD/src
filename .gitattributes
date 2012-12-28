@@ -39802,6 +39802,7 @@ share/examples/ipfilter/ipf.conf.sample -text
 share/examples/ipfilter/ipnat.conf.sample -text
 share/examples/ipfilter/rules.txt -text
 share/examples/ipfw/change_rules.sh -text
+share/examples/jails/README -text
 share/examples/kld/Makefile -text
 share/examples/kld/cdev/Makefile -text
 share/examples/kld/cdev/README -text

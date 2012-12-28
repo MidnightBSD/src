@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/examples/Makefile,v 1.14 2012/12/28 17:45:15 laffer1 Exp $
+# $MidnightBSD: src/share/examples/Makefile,v 1.15 2012/12/28 17:49:19 laffer1 Exp $
 #
 # Doing a make install builds /usr/share/examples
 
@@ -17,6 +17,7 @@ LDIRS=	IPv6 \
 	ibcs2 \
 	indent \
 	ipfw \
+	jails \
 	kld \
 	libdispatch \
 	libvgl \
@@ -69,7 +70,9 @@ XFILES=	IPv6/USAGE \
 	hast/vip-up.sh \
 	ibcs2/README \
 	ibcs2/hello.uu \
+	indent/indent.pro \
 	ipfw/change_rules.sh \
+	jails/README \
 	kld/Makefile \
 	kld/cdev/Makefile \
 	kld/cdev/README \
@@ -82,6 +85,15 @@ XFILES=	IPv6/USAGE \
 	kld/dyn_sysctl/Makefile \
 	kld/dyn_sysctl/README \
 	kld/dyn_sysctl/dyn_sysctl.c \
+	kld/firmware/Makefile \
+	kld/firmware/README \
+	kld/firmware/fwconsumer/Makefile \
+	kld/firmware/fwconsumer/fw_consumer.c \
+	kld/firmware/fwimage/Makefile \
+	kld/firmware/fwimage/firmware.img.uu \
+	kld/khelp/Makefile \
+	kld/khelp/README \
+	kld/khelp/h_example.c \
 	kld/syscall/Makefile \
 	kld/syscall/module/Makefile \
 	kld/syscall/module/syscall.c \
