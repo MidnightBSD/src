@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/examples/Makefile,v 1.10 2012/12/28 03:18:51 laffer1 Exp $
+# $MidnightBSD: src/share/examples/Makefile,v 1.11 2012/12/28 03:20:26 laffer1 Exp $
 #
 # Doing a make install builds /usr/share/examples
 
@@ -7,6 +7,7 @@
 LDIRS=	IPv6 \
 	MidnightBSD_version \
 	bootforth \
+	csh \
 	cvsup \
 	diskless \
 	drivers \
@@ -40,6 +41,7 @@ XFILES=	IPv6/USAGE \
 	bootforth/menu.4th \
 	bootforth/menuconf.4th \
 	bootforth/screen.4th \
+	csh/dot.cshrc \
 	cvsup/README \
 	cvsup/mports-supfile \
 	cvsup/refuse \

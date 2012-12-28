@@ -39761,6 +39761,7 @@ share/examples/bootforth/loader.rc -text
 share/examples/bootforth/menu.4th -text
 share/examples/bootforth/menuconf.4th -text
 share/examples/bootforth/screen.4th -text
+share/examples/csh/dot.cshrc -text
 share/examples/cvsup/README -text
 share/examples/cvsup/mports-supfile -text
 share/examples/cvsup/refuse -text
