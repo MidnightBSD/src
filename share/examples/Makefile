@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/examples/Makefile,v 1.9 2010/08/14 22:27:02 laffer1 Exp $
+# $MidnightBSD: src/share/examples/Makefile,v 1.10 2012/12/28 03:18:51 laffer1 Exp $
 #
 # Doing a make install builds /usr/share/examples
 
@@ -211,10 +211,10 @@ etc-examples:
 
 .if ${SHARED} != "symlinks"
 SUBDIR=	smbfs
-.if !defined(NO_IPFILTER)
+.if ${MK_IPFILTER} != "no"
 SUBDIR+=ipfilter
 .endif
-.if !defined(NO_PF)
+.if ${MK_PF} != "no"
 SUBDIR+=pf
 .endif
 .endif
