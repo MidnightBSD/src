@@ -39788,6 +39788,7 @@ share/examples/hast/vip-up.sh -text
 share/examples/hwpmc/README -text
 share/examples/ibcs2/README -text
 share/examples/ibcs2/hello.uu -text
+share/examples/indent/indent.pro -text
 share/examples/ipfilter/Makefile -text
 share/examples/ipfilter/README -text
 share/examples/ipfilter/example.14 -text

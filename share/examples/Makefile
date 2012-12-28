@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/examples/Makefile,v 1.13 2012/12/28 17:39:05 laffer1 Exp $
+# $MidnightBSD: src/share/examples/Makefile,v 1.14 2012/12/28 17:45:15 laffer1 Exp $
 #
 # Doing a make install builds /usr/share/examples
 
@@ -15,6 +15,7 @@ LDIRS=	IPv6 \
 	find_interface \
 	hast \
 	ibcs2 \
+	indent \
 	ipfw \
 	kld \
 	libdispatch \
