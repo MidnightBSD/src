@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.16 (Berkeley) 8/15/94
-# $FreeBSD: src/share/doc/usd/13.viref/Makefile,v 1.15 2004/10/24 15:32:45 ru Exp $
+# $MidnightBSD$
 
 VOLUME=		usd/13.viref
 SRCS=		vi.ref-patched
