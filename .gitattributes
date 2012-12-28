@@ -39687,6 +39687,17 @@ share/doc/usd/05.dc/dc -text
 share/doc/usd/06.bc/Makefile -text
 share/doc/usd/06.bc/bc -text
 share/doc/usd/07.mail/Makefile -text
+share/doc/usd/07.mail/mail0.nr -text
+share/doc/usd/07.mail/mail1.nr -text
+share/doc/usd/07.mail/mail2.nr -text
+share/doc/usd/07.mail/mail3.nr -text
+share/doc/usd/07.mail/mail4.nr -text
+share/doc/usd/07.mail/mail5.nr -text
+share/doc/usd/07.mail/mail6.nr -text
+share/doc/usd/07.mail/mail7.nr -text
+share/doc/usd/07.mail/mail8.nr -text
+share/doc/usd/07.mail/mail9.nr -text
+share/doc/usd/07.mail/maila.nr -text
 share/doc/usd/10.exref/Makefile -text
 share/doc/usd/10.exref/Makefile.inc -text
 share/doc/usd/10.exref/exref/Makefile -text
