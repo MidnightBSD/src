@@ -20034,7 +20034,9 @@ contrib/nvi/docs/USD.doc/vi.man/spell.ok -text
 contrib/nvi/docs/USD.doc/vi.man/vi.1 -text
 contrib/nvi/docs/USD.doc/vi.ref/Makefile -text
 contrib/nvi/docs/USD.doc/vi.ref/ex.cmd.roff -text
+contrib/nvi/docs/USD.doc/vi.ref/index.so -text
 contrib/nvi/docs/USD.doc/vi.ref/merge.awk -text
+contrib/nvi/docs/USD.doc/vi.ref/ref.so -text
 contrib/nvi/docs/USD.doc/vi.ref/set.opt.roff -text
 contrib/nvi/docs/USD.doc/vi.ref/spell.ok -text
 contrib/nvi/docs/USD.doc/vi.ref/vi.cmd.roff -text
