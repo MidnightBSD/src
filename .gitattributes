@@ -39636,6 +39636,16 @@ share/doc/smm/06.nfs/1.t -text
 share/doc/smm/06.nfs/2.t -text
 share/doc/smm/06.nfs/Makefile -text
 share/doc/smm/06.nfs/ref.t -text
+share/doc/smm/07.lpd/0.t -text
+share/doc/smm/07.lpd/1.t -text
+share/doc/smm/07.lpd/2.t -text
+share/doc/smm/07.lpd/3.t -text
+share/doc/smm/07.lpd/4.t -text
+share/doc/smm/07.lpd/5.t -text
+share/doc/smm/07.lpd/6.t -text
+share/doc/smm/07.lpd/7.t -text
+share/doc/smm/07.lpd/Makefile -text
+share/doc/smm/07.lpd/spell.ok -text
 share/doc/smm/08.sendmailop/Makefile -text
 share/doc/smm/11.timedop/Makefile -text
 share/doc/smm/12.timed/Makefile -text
