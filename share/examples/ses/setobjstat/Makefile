@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/examples/ses/setobjstat/Makefile,v 1.2 2002/07/29 04:43:10 mjacob Exp $
+# $MidnightBSD$
 #
 # Copyright (c) 2000 by Matthew Jacob
 # All rights reserved.
@@ -32,9 +32,10 @@
 # mjacob@feral.com
 #
 
-MAN8	=	setobjstat.0
-SRCS	=	setobjstat.c eltsub.c
-PROG	=	setobjstat
-VPATH	=	${.CURDIR}/../srcs
+.PATH: ${.CURDIR}/../srcs
+
+PROG=	setobjstat
+SRCS=	setobjstat.c eltsub.c
+MAN=	setobjstat.8
 
 .include <bsd.prog.mk>

@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/examples/ses/getencstat/Makefile,v 1.2 2002/07/29 04:43:09 mjacob Exp $
+# $MidnightBSD$
 #
 # Copyright (c) 2000 by Matthew Jacob
 # All rights reserved.
@@ -32,9 +32,10 @@
 # mjacob@feral.com
 #
 
-MAN8	=	getencstat.0
-SRCS	=	getencstat.c eltsub.c
-PROG	=	getencstat
-VPATH	=	${.CURDIR}/../srcs
+.PATH: ${.CURDIR}/../srcs
+
+PROG=	getencstat
+SRCS=	getencstat.c eltsub.c
+MAN=	getencstat.8
 
 .include <bsd.prog.mk>

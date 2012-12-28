@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/examples/ses/sesd/Makefile,v 1.2 2002/07/29 04:43:09 mjacob Exp $
+# $MidnightBSD$
 #
 # Copyright (c) 2000 by Matthew Jacob
 # All rights reserved.
@@ -32,9 +32,10 @@
 # mjacob@feral.com
 #
 
-MAN8	=	sesd.0
-SRCS	=	sesd.c eltsub.c
-PROG	=	sesd
-VPATH	=	${.CURDIR}/../srcs
+.PATH: ${.CURDIR}/../srcs
+
+PROG=	sesd
+SRCS=	sesd.c eltsub.c
+MAN=	sesd.8
 
 .include <bsd.prog.mk>
