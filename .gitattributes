@@ -39780,6 +39780,11 @@ share/examples/etc/make.conf -text
 share/examples/find_interface/Makefile -text
 share/examples/find_interface/README -text
 share/examples/find_interface/find_interface.c -text
+share/examples/hast/ucarp.sh -text
+share/examples/hast/ucarp_down.sh -text
+share/examples/hast/ucarp_up.sh -text
+share/examples/hast/vip-down.sh -text
+share/examples/hast/vip-up.sh -text
 share/examples/hwpmc/README -text
 share/examples/ibcs2/README -text
 share/examples/ibcs2/hello.uu -text
@@ -39833,12 +39838,13 @@ share/examples/mdoc/example.1 -text
 share/examples/mdoc/example.3 -text
 share/examples/mdoc/example.4 -text
 share/examples/mdoc/example.9 -text
-share/examples/netgraph/bluetooth/rc.bluetooth -text
 share/examples/netgraph/ether.bridge -text
 share/examples/netgraph/frame_relay -text
 share/examples/netgraph/ngctl -text
 share/examples/netgraph/raw -text
 share/examples/netgraph/udp.tunnel -text
+share/examples/netgraph/virtual.chain -text
+share/examples/netgraph/virtual.lan -text
 share/examples/nwclient/dot.nwfsrc -text
 share/examples/nwclient/nwfs.sh.sample -text
 share/examples/perfmon/Makefile -text

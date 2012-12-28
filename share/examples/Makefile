@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/examples/Makefile,v 1.11 2012/12/28 03:20:26 laffer1 Exp $
+# $MidnightBSD: src/share/examples/Makefile,v 1.12 2012/12/28 17:34:52 laffer1 Exp $
 #
 # Doing a make install builds /usr/share/examples
 
@@ -13,6 +13,7 @@ LDIRS=	IPv6 \
 	drivers \
 	etc \
 	find_interface \
+	hast \
 	ibcs2 \
 	ipfw \
 	kld \
@@ -60,6 +61,11 @@ XFILES=	IPv6/USAGE \
 	find_interface/Makefile \
 	find_interface/README \
 	find_interface/find_interface.c \
+	hast/ucarp.sh \
+	hast/ucarp_down.sh \
+	hast/ucarp_up.sh \
+	hast/vip-down.sh \
+	hast/vip-up.sh \
 	ibcs2/README \
 	ibcs2/hello.uu \
 	ipfw/change_rules.sh \
@@ -89,12 +95,13 @@ XFILES=	IPv6/USAGE \
 	mdoc/example.3 \
 	mdoc/example.4 \
 	mdoc/example.9 \
-	netgraph/bluetooth/rc.bluetooth \
 	netgraph/ether.bridge \
 	netgraph/frame_relay \
 	netgraph/ngctl \
 	netgraph/raw \
 	netgraph/udp.tunnel \
+	netgraph/virtual.chain \
+	netgraph/virtual.lan \
 	nwclient/dot.nwfsrc \
 	nwclient/nwfs.sh.sample \
 	perfmon/Makefile \
