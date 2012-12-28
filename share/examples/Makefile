@@ -1,7 +1,8 @@
-# $FreeBSD: src/share/examples/Makefile,v 1.48 2005/01/12 20:55:01 keramida Exp $
-# $MidnightBSD: src/share/examples/Makefile,v 1.8 2009/05/30 19:05:44 laffer1 Exp $
+# $MidnightBSD: src/share/examples/Makefile,v 1.9 2010/08/14 22:27:02 laffer1 Exp $
 #
 # Doing a make install builds /usr/share/examples
+
+.include <bsd.own.mk>
 
 LDIRS=	IPv6 \
 	MidnightBSD_version \
@@ -23,13 +24,9 @@ LDIRS=	IPv6 \
 	portal \
 	ppi \
 	ppp \
-	pppd \
 	printing \
 	ses \
 	scsi_target \
-	slattach \
-	sliplogin \
-	startslip \
 	sunrpc
 
 XFILES=	IPv6/USAGE \
@@ -119,16 +116,6 @@ XFILES=	IPv6/USAGE \
 	ppp/ppp.secret.sample \
 	ppp/ppp.secret.span-isp \
 	ppp/ppp.secret.span-isp.working \
-	pppd/auth-down.sample \
-	pppd/auth-up.sample \
-	pppd/chap-secrets.sample \
-	pppd/chat.sh.sample \
-	pppd/ip-down.sample \
-	pppd/ip-up.sample \
-	pppd/options.sample \
-	pppd/pap-secrets.sample \
-	pppd/ppp.deny.sample \
-	pppd/ppp.shells.sample \
 	printing/README \
 	printing/diablo-if-net \
 	printing/hpdf \
@@ -171,14 +158,6 @@ XFILES=	IPv6/USAGE \
 	scsi_target/scsi_target.h \
 	scsi_target/scsi_target.8 \
 	scsi_target/scsi_cmds.c \
-	slattach/unit-command.sh \
-	sliplogin/slip.hosts \
-	sliplogin/slip.login \
-	sliplogin/slip.logout \
-	sliplogin/slip.slparms \
-	startslip/sldown.sh \
-	startslip/slip.sh \
-	startslip/slup.sh \
 	sunrpc/Makefile \
 	sunrpc/dir/Makefile \
 	sunrpc/dir/dir.x \
