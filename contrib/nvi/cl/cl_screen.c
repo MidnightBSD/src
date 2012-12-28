@@ -6,7 +6,7 @@
  *
  * See the LICENSE file for redistribution information.
  *
- * $FreeBSD: src/contrib/nvi/cl/cl_screen.c,v 1.2 2001/11/09 02:23:05 rwatson Exp $
+ * $MidnightBSD$
  */
 
 #include "config.h"
@@ -25,6 +25,7 @@ static const char sccsid[] = "@(#)cl_screen.c	10.49 (Berkeley) 9/24/96";
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <term.h>
 #include <termios.h>
 #include <unistd.h>
 

@@ -7,7 +7,7 @@
  * See the LICENSE file for redistribution information.
  */
 
-/* $FreeBSD: src/contrib/nvi/ex/ex.c,v 1.2 1999/09/14 14:34:58 ru Exp $ */
+/* $MidnightBSD$ */
 
 #include "config.h"
 
