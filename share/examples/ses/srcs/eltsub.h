@@ -32,28 +32,5 @@
  * mjacob@feral.com
  */
 
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include SESINC
-
-int
-main(int a, char **v)
-{
-	int fd;
-
-	while (*++v) {
-		fd = open(*v, O_RDWR);
-		if (fd < 0) {
-			perror(*v);
-			continue;
-		}
-		if (ioctl(fd, SESIOC_INIT, NULL) < 0) {
-			perror("SESIOC_GETNOBJ");
-		}
-		(void) close(fd);
-	}
-	return (0);
-}
+char * geteltnm(int);
+char * stat2ascii(int, u_char *);

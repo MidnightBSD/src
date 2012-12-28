@@ -1,4 +1,4 @@
-/* $FreeBSD: src/share/examples/ses/srcs/chpmon.c,v 1.1 2000/02/29 05:44:16 mjacob Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000 by Matthew Jacob
  * All rights reserved.
@@ -47,9 +47,7 @@
 #define	BADSTAT	\
 	(SES_ENCSTAT_UNRECOV|SES_ENCSTAT_CRITICAL|SES_ENCSTAT_NONCRITICAL)
 int
-main(a, v)
-	int a;
-	char **v;
+main(int a, char **v)
 {
 	int fd, delay, dev;
 	ses_encstat stat, *carray;

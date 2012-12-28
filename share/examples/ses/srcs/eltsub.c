@@ -1,4 +1,4 @@
-/* $FreeBSD: src/share/examples/ses/srcs/eltsub.c,v 1.1 2000/02/29 05:44:17 mjacob Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000 by Matthew Jacob
  * All rights reserved.
@@ -38,9 +38,10 @@
 #include <sys/ioctl.h>
 #include SESINC
 
+#include "eltsub.h"
+
 char *
-geteltnm(type)
-	int type;
+geteltnm(int type)
 {
 	static char rbuf[132];
 
@@ -84,6 +85,9 @@ geteltnm(type)
 	case SESTYP_KEYPAD:
 		sprintf(rbuf, "Key pad entry device");
 		break;
+	case SESTYP_ENCLOSURE:
+		sprintf(rbuf, "Enclosure");
+		break;
 	case SESTYP_SCSIXVR:
 		sprintf(rbuf, "SCSI port/transceiver");
 		break;
@@ -108,6 +112,15 @@ geteltnm(type)
 	case SESTYP_SUBENC:
 		sprintf(rbuf, "Simple sub-enclosure");
 		break;
+	case SESTYP_ARRAY:
+		sprintf(rbuf, "Array device");
+		break;
+	case SESTYP_SASEXPANDER:
+		sprintf(rbuf, "SAS Expander");
+		break;
+	case SESTYP_SASCONNECTOR:
+		sprintf(rbuf, "SAS Connector");
+		break;
 	default:
 		(void) sprintf(rbuf, "<Type 0x%x>", type);
 		break;
@@ -116,8 +129,7 @@ geteltnm(type)
 }
 
 static char *
-scode2ascii(code)
-	u_char code;
+scode2ascii(u_char code)
 {
 	static char rbuf[32];
 	switch (code & 0xf) {
@@ -154,9 +166,7 @@ scode2ascii(code)
 
 
 char *
-stat2ascii(eletype, cstat)
-	int eletype;
-	u_char *cstat;
+stat2ascii(int eletype __unused, u_char *cstat)
 {
 	static char ebuf[256], *scode;
 

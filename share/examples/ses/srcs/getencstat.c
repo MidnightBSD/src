@@ -1,4 +1,4 @@
-/* $FreeBSD: src/share/examples/ses/srcs/getencstat.c,v 1.1 2000/02/29 05:44:17 mjacob Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000 by Matthew Jacob
  * All rights reserved.
@@ -35,17 +35,15 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include SESINC
 
-extern char *geteltnm __P((int));
-extern char *stat2ascii __P((int, u_char *));
+#include "eltsub.h"
 
 int
-main(a, v)
-	int a;
-	char **v;
+main(int a, char **v)
 {
 	ses_object *objp;
 	ses_objstat ob;

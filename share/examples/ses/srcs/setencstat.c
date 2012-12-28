@@ -1,4 +1,4 @@
-/* $FreeBSD: src/share/examples/ses/srcs/setencstat.c,v 1.1 2000/02/29 05:44:19 mjacob Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000 by Matthew Jacob
  * All rights reserved.
@@ -40,9 +40,7 @@
 #include SESINC
 
 int
-main(a, v)
-	int a;
-	char **v;
+main(int a, char **v)
 {
 	int fd;
 	long val;

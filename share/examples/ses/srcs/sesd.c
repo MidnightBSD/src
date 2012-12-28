@@ -1,4 +1,4 @@
-/* $FreeBSD: src/share/examples/ses/srcs/sesd.c,v 1.1 2000/02/29 05:44:18 mjacob Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000 by Matthew Jacob
  * All rights reserved.
@@ -49,13 +49,11 @@
  */
 
 int
-main(a, v)
-	int a;
-	char **v;
+main(int a, char **v)
 {
-	static char *usage =
+	static const char *usage =
 	    "usage: %s [ -d ] [ -t pollinterval ] device [ device ]\n";
-	int fd, polltime, dev, devbase, nodaemon, bpri;
+	int fd, polltime, dev, devbase, nodaemon;
 	ses_encstat stat, *carray;
 
 	if (a < 2) {
@@ -115,7 +113,6 @@ main(a, v)
 
 	for (;;) {
 		for (dev = devbase; dev < a; dev++) {
-			char buf[128];
 			fd = open(v[dev], O_RDWR);
 			if (fd < 0) {
 				syslog(LOG_ERR, "%s: %m", v[dev]);

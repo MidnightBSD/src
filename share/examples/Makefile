@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/examples/Makefile,v 1.12 2012/12/28 17:34:52 laffer1 Exp $
+# $MidnightBSD: src/share/examples/Makefile,v 1.13 2012/12/28 17:39:05 laffer1 Exp $
 #
 # Doing a make install builds /usr/share/examples
 
@@ -154,6 +154,7 @@ XFILES=	IPv6/USAGE \
 	ses/setobjstat/setobjstat.0 \
 	ses/srcs/chpmon.c \
 	ses/srcs/eltsub.c \
+	ses/srcs/eltsub.h \
 	ses/srcs/getencstat.c \
 	ses/srcs/getnobj.c \
 	ses/srcs/getobjmap.c \

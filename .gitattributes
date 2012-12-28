@@ -39914,6 +39914,7 @@ share/examples/ses/setobjstat/Makefile -text
 share/examples/ses/setobjstat/setobjstat.0 -text
 share/examples/ses/srcs/chpmon.c -text
 share/examples/ses/srcs/eltsub.c -text
+share/examples/ses/srcs/eltsub.h -text
 share/examples/ses/srcs/getencstat.c -text
 share/examples/ses/srcs/getnobj.c -text
 share/examples/ses/srcs/getobjmap.c -text
