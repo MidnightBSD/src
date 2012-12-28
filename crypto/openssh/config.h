@@ -178,10 +178,10 @@
 #define HAVE_ARC4RANDOM 1
 
 /* Define to 1 if you have the `arc4random_buf' function. */
-#define HAVE_ARC4RANDOM_BUF 1
+/* #define HAVE_ARC4RANDOM_BUF 1 */
 
 /* Define to 1 if you have the `arc4random_uniform' function. */
-#define HAVE_ARC4RANDOM_UNIFORM 1
+/* #define HAVE_ARC4RANDOM_UNIFORM 1 */
 
 /* Define to 1 if you have the `asprintf' function. */
 #define HAVE_ASPRINTF 1
