@@ -39663,6 +39663,10 @@ share/doc/smm/contents/contents.ms -text
 share/doc/smm/title/Makefile -text
 share/doc/smm/title/Title -text
 share/doc/usd/04.csh/Makefile -text
+share/doc/usd/05.dc/Makefile -text
+share/doc/usd/05.dc/dc -text
+share/doc/usd/06.bc/Makefile -text
+share/doc/usd/06.bc/bc -text
 share/doc/usd/07.mail/Makefile -text
 share/doc/usd/10.exref/Makefile -text
 share/doc/usd/10.exref/Makefile.inc -text

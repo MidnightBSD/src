@@ -1,16 +1,19 @@
 #	From: @(#)Makefile	8.2 (Berkeley) 4/20/94
-# $FreeBSD: src/share/doc/usd/Makefile,v 1.16 2004/01/20 13:08:33 ru Exp $
+# $MidnightBSD$
 
 # The following modules are not provided:
-# 14.jove 13.viref
+# 14.jove
 
 SUBDIR=	title \
 	contents \
 	04.csh \
+	05.dc \
+	06.bc \
 	07.mail \
 	10.exref \
 	11.vitut \
 	12.vi \
+	13.viref \
 	18.msdiffs \
 	19.memacros \
 	20.meref \
