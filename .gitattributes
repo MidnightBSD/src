@@ -39675,6 +39675,13 @@ share/doc/smm/contents/contents.ms -text
 share/doc/smm/title/Makefile -text
 share/doc/smm/title/Title -text
 share/doc/usd/04.csh/Makefile -text
+share/doc/usd/04.csh/csh.1 -text
+share/doc/usd/04.csh/csh.2 -text
+share/doc/usd/04.csh/csh.3 -text
+share/doc/usd/04.csh/csh.4 -text
+share/doc/usd/04.csh/csh.a -text
+share/doc/usd/04.csh/csh.g -text
+share/doc/usd/04.csh/tabs -text
 share/doc/usd/05.dc/Makefile -text
 share/doc/usd/05.dc/dc -text
 share/doc/usd/06.bc/Makefile -text
