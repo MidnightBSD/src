@@ -39542,6 +39542,8 @@ share/doc/psd/05.sysman/spell.ok -text
 share/doc/psd/06.Clang/Clang.ms -text
 share/doc/psd/06.Clang/Makefile -text
 share/doc/psd/12.make/Makefile -text
+share/doc/psd/12.make/stubs -text
+share/doc/psd/12.make/tutorial.ms -text
 share/doc/psd/13.rcs/Makefile -text
 share/doc/psd/13.rcs/Makefile.inc -text
 share/doc/psd/13.rcs/rcs/Makefile -text
