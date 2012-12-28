@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/boot/i386/libi386/biosdisk.c,v 1.4 2011/12/18 19:09:49 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/sys/boot/i386/libi386/biosdisk.c,v 1.5 2012/07/21 16:42:00 laffer1 Exp $");
 /* $FreeBSD: src/sys/boot/i386/libi386/biosdisk.c,v 1.48.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 /*
@@ -313,7 +313,7 @@ bd_print(int verbose)
 	    } else
 #endif
 	    /* Do we have a partition table? */
-	    } else if (od->od_flags & BD_PARTTABOK) {
+	    if (od->od_flags & BD_PARTTABOK) {
 		dptr = &od->od_slicetab[0];
 
 		/* Check for a "dedicated" disk */
