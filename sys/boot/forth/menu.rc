@@ -1,5 +1,5 @@
 \ Menu.rc
-\ $FreeBSD$
+\ $MidnightBSD$
 \
 \ Load required Forth modules
 include /boot/version.4th
