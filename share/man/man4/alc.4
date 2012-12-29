@@ -51,6 +51,13 @@ The
 device driver provides support for Atheros AR813x and AR815x PCI
 Express Gigabit/Fast Ethernet controllers.
 .Pp
+All LOMs supported by the
+.Nm
+driver have TCP/UDP/IP checksum offload for transmit, TCP
+segmentation offload (TSO), hardware VLAN tag stripping/insertion
+features, Wake On Lan (WOL) and an interrupt moderation mechanism
+as well as a 64-bit multicast hash filter.
+.Pp
 The AR813x and AR815x supports Jumbo Frames (up to 9216 and 6144
 bytes, respectively), which can be configured via the interface
 MTU setting.
@@ -158,6 +165,4 @@ driver was written by
 .An Pyun YongHyeon
 .Aq yongari@FreeBSD.org .
 It first appeared in
-.Fx 8.0 
-and
-.Mx 0.4 .
+.Fx 8.0 .

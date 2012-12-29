@@ -25,9 +25,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/fdc.4,v 1.34 2004/07/15 16:47:31 njl Exp $
+.\" $MidnightBSD$
 .\"
-.Dd July 15, 2004
+.Dd May 11, 2006
 .Dt FDC 4
 .Os
 .Sh NAME
@@ -35,7 +35,6 @@
 .Nd "PC architecture floppy disk controller driver"
 .Sh SYNOPSIS
 .Cd device fdc
-.Cd device fd
 .Pp
 In
 .Pa /boot/device.hints :
@@ -158,7 +157,7 @@ drives.
 In that case, the CMOS configuration memory will be
 consulted to obtain the value for that drive.
 The ACPI probe automatically determines these values via the _FDE and
-_FDI methods, but this can be overriden by specifying a drive type hint.
+_FDI methods, but this can be overridden by specifying a drive type hint.
 .Pp
 Normally, each configured drive will be probed at initialization
 time, using a short seek sequence.

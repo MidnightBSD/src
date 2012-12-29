@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/smb.4,v 1.12 2005/01/21 20:50:39 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd October 25, 1998
+.Dd February 6, 2009
 .Dt SMB 4
 .Os
 .Sh NAME
@@ -45,7 +45,6 @@ with the ioctls described below.
 Any of these ioctl commands takes a pointer to
 .Vt struct smbcmd
 as its argument.
-.Pp
 .Bd -literal
 #include <sys/types.h>
 
@@ -72,6 +71,9 @@ The
 .Fa slave
 field is always used, and provides the address of the
 SMBus slave device to talk to.
+The slave address is specified in the seven most significant bits
+.Pq i.e. Dq "left-justified" .
+The least significant bit of the slave address must be zero.
 .Pp
 .Bl -column ".Dv SMB_QUICK_WRITE" -compact
 .It Em Ioctl Ta Em Description
@@ -190,8 +192,7 @@ SMBus transaction timed out.
 .El
 .Sh SEE ALSO
 .Xr ioctl 2 ,
-.Xr smbus 4 ,
-.Xr amdsmb 4
+.Xr smbus 4
 .Sh HISTORY
 The
 .Nm

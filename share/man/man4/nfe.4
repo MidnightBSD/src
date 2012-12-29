@@ -14,9 +14,9 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.\" $FreeBSD: src/share/man/man4/nfe.4,v 1.8.2.1 2007/12/02 08:45:57 remko Exp $
+.\" $MidnightBSD$
 .\"
-.Dd Nov 27, 2007
+.Dd January 15, 2011
 .Dt NFE 4
 .Os
 .Sh NAME
@@ -43,7 +43,8 @@ The
 driver supports PCI Ethernet adapters based on the NVIDIA
 nForce Media and Communications Processors (MCP), such as
 the nForce, nForce 2, nForce 3, CK804, MCP04, MCP51, MCP55,
-MCP61, MCP65 and MCP67 Ethernet controller chips.
+MCP61, MCP65, MCP67, MCP73, MCP77 and MCP79 Ethernet
+controller chips.
 .Pp
 Supported features include (hardware support provided):
 .Pp
@@ -116,6 +117,12 @@ NVIDIA nForce MCP65 Networking Adapter
 .It
 NVIDIA nForce MCP67 Networking Adapter
 .It
+NVIDIA nForce MCP73 Networking Adapter
+.It
+NVIDIA nForce MCP77 Networking Adapter
+.It
+NVIDIA nForce MCP79 Networking Adapter
+.It
 NVIDIA nForce2 MCP2 Networking Adapter
 .It
 NVIDIA nForce2 400 MCP4 Networking Adapter
@@ -167,6 +174,7 @@ before a change takes effect.
 .Xr netintro 4 ,
 .Xr pci 4 ,
 .Xr polling 4 ,
+.Xr rgephy 4 ,
 .Xr sysctl 8 ,
 .Xr ifconfig 8
 .Sh HISTORY

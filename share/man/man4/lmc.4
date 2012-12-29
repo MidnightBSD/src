@@ -1,5 +1,5 @@
 .\"
-.\" $FreeBSD: src/share/man/man4/lmc.4,v 1.11 2006/12/14 16:40:57 mpp Exp $
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2002-2005 David Boggs. (boggs@boggs.palo-alto.ca.us)
 .\" All rights reserved.
@@ -43,7 +43,7 @@
 .\" this program; if not, write to the Free Software Foundation, Inc., 59
 .\" Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 .\"
-.Dd May 20, 2006
+.Dd February 8, 2012
 .Dt LMC 4
 .Os
 .\"
@@ -179,7 +179,7 @@ higher-level issues like protocol multiplexing and security.
 This driver is compatible with several line protocol packages:
 .Bl -tag -width "Generic HDLC"
 .It Sy "Netgraph"
-.Xr Netgraph 4
+.Xr netgraph 4
 implements many basic packet-handling functions as kernel loadable modules.
 They can be interconnected in a graph to implement many protocols.
 Configuration is done from userland without rebuilding the kernel.
@@ -517,7 +517,7 @@ packets occasionally.
 .Ss Device Polling
 .\"
 A T3 receiver can generate over 100K interrupts per second,
-This can cause a system to
+this can cause a system to
 .Dq live-lock :
 spend all of its
 time servicing interrupts.
@@ -723,8 +723,6 @@ Thus, cable length does not affect data/clock timing.
 .Xr ngctl 8 ,
 .Xr ping 8 ,
 .Xr ifnet 9
-.Pp
-.Pa http://www.sbei.com/
 .\"
 .Sh HISTORY
 .\"

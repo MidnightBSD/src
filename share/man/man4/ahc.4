@@ -24,31 +24,44 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/ahc.4,v 1.38 2005/01/21 08:36:36 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd July 4, 2004
+.Dd July 13, 2008
 .Dt AHC 4
 .Os
 .Sh NAME
 .Nm ahc
 .Nd Adaptec VL/EISA/PCI SCSI host adapter driver
 .Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
+.Cd "device scbus"
+.Cd "device ahc"
+.Pp
 For one or more VL/EISA cards:
-.Cd device eisa
-.Cd device ahc
+.Cd "device eisa"
 .Pp
 For one or more PCI cards:
-.Cd device pci
-.Cd device ahc
+.Cd "device pci"
 .Pp
 To allow PCI adapters to use memory mapped I/O if enabled:
 .Cd options AHC_ALLOW_MEMIO
 .Pp
 To configure one or more controllers to assume the target role:
 .Cd options AHC_TMODE_ENABLE <bitmask of units>
+.Ed
 .Pp
-For one or more SCSI busses:
-.Cd device scbus
+Alternatively, to load the driver as a
+module at boot time, place the following lines in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+ahc_load="YES"
+ahc_eisa_load="YES"
+ahc_isa_load="YES"
+ahc_pci_load="YES"
+.Ed
 .Sh DESCRIPTION
 This driver provides access to the
 .Tn SCSI
@@ -251,7 +264,7 @@ Adaptec
 .Tn 2915
 .It
 Adaptec
-.Tn 2920
+.Tn 2920C
 .It
 Adaptec
 .Tn 2930C

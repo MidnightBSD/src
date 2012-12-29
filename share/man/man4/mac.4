@@ -28,11 +28,11 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/mac.4,v 1.12 2004/07/03 18:29:20 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd January 8, 2003
-.Os
+.Dd October 30, 2007
 .Dt MAC 4
+.Os
 .Sh NAME
 .Nm mac
 .Nd Mandatory Access Control
@@ -109,10 +109,6 @@ or the special file
 .Pa /dev )
 corresponding to the file system on which to enable multilabel support.
 .Ss Policy Enforcement
-MAC can be configured to enforce only specific portions of
-policies
-(see
-.Sx "Runtime Configuration" ) .
 Policy enforcement is divided into the following areas of the system:
 .Bl -ohang
 .It Sy "File System"
@@ -187,40 +183,6 @@ The interface for retrieving, handling, and setting policy labels
 is documented in the
 .Xr mac 3
 man page.
-.Ss Runtime Configuration
-The following
-.Xr sysctl 8
-MIBs are available for fine-tuning the enforcement of MAC policies.
-Unless specifically noted, all MIBs default to 1
-(that is, all areas are enforced by default):
-.Bl -tag -width ".Va security.mac.enforce_network"
-.It Va security.mac.enforce_fs
-Enforce MAC policies for file system accesses.
-.It Va security.mac.enforce_kld
-Enforce MAC policies on
-.Xr kld 4 .
-.It Va security.mac.enforce_network
-Enforce MAC policies on network interfaces.
-.It Va security.mac.enforce_pipe
-Enforce MAC policies on pipes.
-.It Va security.mac.enforce_process
-Enforce MAC policies between system processes
-(e.g.\&
-.Xr ps 1 ,
-.Xr ktrace 2 ) .
-.It Va security.mac.enforce_socket
-Enforce MAC policies on sockets.
-.It Va security.mac.enforce_system
-Enforce MAC policies on system-related items
-(e.g.\&
-.Xr kenv 1 ,
-.Xr acct 2 ,
-.Xr reboot 2 ) .
-.It Va security.mac.enforce_vm
-Enforce MAC policies on
-.Xr mmap 2
-and
-.Xr mprotect 2 .
 .\" *** XXX ***
 .\" Support for this feature is poor and should not be encouraged.
 .\"
@@ -235,7 +197,6 @@ and
 .\" mapped regions will still appear writable, but will no longer
 .\" effect a change on the underlying vnode.
 .\" (Default: 0).
-.El
 .Sh SEE ALSO
 .Xr mac 3 ,
 .Xr mac_biba 4 ,
@@ -258,7 +219,7 @@ and
 .Rs
 .%B "The FreeBSD Handbook"
 .%T "Mandatory Access Control"
-.%O http://www.FreeBSD.org/doc/en_US.ISO8859-1/books/handbook/mac.html
+.%U http://www.FreeBSD.org/doc/en_US.ISO8859-1/books/handbook/mac.html
 .Re
 .Sh HISTORY
 The

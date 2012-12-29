@@ -14,13 +14,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"     This product includes software developed by the NetBSD
-.\"	Foundation, Inc. and its contributors.
-.\" 4. Neither the name of the The NetBSD Foundation nor the names of its
-.\"    contributors may be used to endorse or promote products derived
-.\"    from this software without specific prior written permission.
 .\"
 .\" THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
 .\" ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -34,16 +27,30 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/gre.4,v 1.5 2004/07/03 18:29:20 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd June 9, 2002
+.Dd June 20, 2008
 .Dt GRE 4
 .Os
 .Sh NAME
 .Nm gre
 .Nd encapsulating network device
 .Sh SYNOPSIS
+To compile the
+.Ns Nm
+device into the kernel, place the following line in the kernel
+configuration file:
+.Bd -ragged -offset indent
 .Cd "device gre"
+.Ed
+.Pp
+Alternatively, to load the
+.Ns Nm
+device as a module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+if_gre_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
@@ -153,6 +160,12 @@ internal route search for the remote tunnel endpoint, see the
 section below.
 .It Dv GREGPROTO
 Query operation mode.
+.It Dv GRESKEY
+Set the GRE key used for outgoing packets.
+A value of 0 disables the key option.
+.It Dv GREGKEY
+Get the GRE key currently used for outgoing packets.
+0 means no outgoing key.
 .El
 .Pp
 Note that the IP addresses of the tunnel endpoints may be the same as the
@@ -198,7 +211,7 @@ On Host D
 route add default C
 ifconfig greN create
 ifconfig greN D A
-ifconfig tunnel greN D A
+ifconfig greN tunnel D A
 .Ed
 .Pp
 If all goes well, you should see packets flowing ;-)
@@ -250,6 +263,7 @@ section below) may (and probably should) be set.
 The MTU of
 .Nm
 interfaces is set to 1476 by default, to match the value used by Cisco routers.
+If grekey is set this is lowered to 1472.
 This may not be an optimal value, depending on the link between the two tunnel
 endpoints.
 It can be adjusted via
@@ -278,7 +292,7 @@ the keyword
 must be given last on its command line.
 .Pp
 The kernel must be set to forward datagrams by setting the
-.Va ip.forwarding
+.Va net.inet.ip.forwarding
 .Xr sysctl 8
 variable to non-zero.
 .Sh SEE ALSO
@@ -318,4 +332,9 @@ over the
 .Nm
 interface itself.
 .Pp
-The GRE RFCs are not yet fully implemented (no GRE options).
+The current implementation uses the key only for outgoing packets.
+Incoming packets with a different key or without a key will be treated as if they
+would belong to this interface.
+.Pp
+RFC1701 is not fully supported, however all unsupported features have been
+deprecated in RFC2784. 

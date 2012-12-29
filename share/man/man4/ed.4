@@ -28,9 +28,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/ed.4,v 1.45.2.2 2006/02/02 07:50:00 trhodes Exp $
+.\" $MidnightBSD$
 .\"
-.Dd October 5, 2005
+.Dd February 25, 2012
 .Dt ED 4
 .Os
 .Sh NAME
@@ -57,12 +57,14 @@ The
 driver provides support for 8 and 16bit Ethernet cards that are based on
 the National Semiconductor DS8390 and similar NICs manufactured by
 other companies.
-.Pp
 The
 .Nm
-driver uses a unique multi-buffering mechanism to achieve high transmit performance.
-When using 16bit ISA cards, as high as 97% of the theoretical maximum performance of
-the IEEE 802.3 CSMA Ethernet is possible.
+driver also supports many PC Card chips which interface via MII to a PHY.
+Axiom's AX88790, AX88190 and AX88190A;
+DLink's DL10019 and DL10022; and
+Tamarack's TC5299J chips all support internal or external MII/PHY combinations.
+Realtek's PCI and ISA RTL80x9-based cards are also supported.
+For these chipsets, autonegotiation and status reporting are supported.
 .Pp
 In addition to the standard port and IRQ specifications, the
 .Nm
@@ -155,13 +157,17 @@ CNet BC40 adapter
 .It
 Compex Net-A adapter
 .It
+Compex RL2000
+.It
 Contec C-NET(98), RT-1007(98), C-NET(9N) (110pin) (flags 0xa00000) (PC-98)
 .It
 Contec C-NET(98)E-A, C-NET(98)L-A, C-NET(98)P (flags 0x300000) (PC-98)
 .It
 Corega Ether98-T (flags 0x000000) (PC-98)
 .It
-Corega Ether PCC-T/EtherII PCC-T/FEther PCC-TXF/PCC-TXD
+Corega Ether PCC-T/EtherII PCC-T/FEther PCC-TXF/PCC-TXD PCC-T/Fether II TXD
+.It
+Corega LAPCCTXD (TC5299J)
 .It
 CyQ've ELA-010
 .It
@@ -171,7 +177,7 @@ Danpex EN-6200P2
 .It
 D-Link DE-298, DE-298P (flags 0x500000) (PC-98)
 .It
-D-Link DE-650/660
+D-Link DE-660, DE-660+
 .It
 D-Link IC-CARD/IC-CARD+ Ethernet
 .It
@@ -180,6 +186,8 @@ ELECOM LD-98P (flags 0x500000) (PC-98)
 ELECOM LD-BDN, LD-NW801G (flags 0x200000) (PC-98)
 .It
 ELECOM Laneed LD-CDL/TX, LD-CDF, LD-CDS, LD-10/100CD, LD-CDWA (DP83902A)
+.It
+Hawking PN652TX PC Card (AX88790)
 .It
 HP PC Lan+ 27247B and 27252A
 .Pq Cd "options ED_HPP"
@@ -198,6 +206,8 @@ I-O DATA PCLATE
 Kansai KLA-98C/T (flags 0x900000) (PC-98)
 .It
 Kingston KNE-PC2, CIO10T, KNE-PCM/x Ethernet
+.It
+KTI ET32P2 PCI
 .It
 Linksys EC2T/PCMPC100/PCM100, PCMLM56
 .It
@@ -229,7 +239,7 @@ National Semiconductor InfoMover NE4100
 .It
 NetGear FA-410TX
 .It
-NetVin 5000
+NetVin NV5000SC
 .It
 Network Everywhere Ethernet 10BaseT PC Card
 .It
@@ -253,6 +263,8 @@ PLANEX FNW-3600-T
 .It
 Psion 10/100 LANGLOBAL Combine iT
 .It
+RealTek 8019
+.It
 RealTek 8029
 .It
 Relia Combo-L/M-56k PC Card
@@ -265,7 +277,7 @@ SMC EtherEZ98 (flags 0x000000) (PC-98)
 .It
 SMC WD8003E/WD8003EBT/WD8003S/WD8003SBT/WD8003W/WD8013EBT/WD8013W and clones
 .It
-SMC EZCard PC Card, 8040-TX, 8041-TX
+SMC EZCard PC Card, 8040-TX, 8041-TX (AX88x90), 8041-TX V.2 (TC5299J)
 .It
 Socket LP-E, ES-1000 Ethernet/Serial, LP-E CF, LP-FE CF
 .It
@@ -273,7 +285,7 @@ Surecom EtherPerfect EP-427
 .It
 Surecom NE-34
 .It
-TDK 3000/3400/5670 Fast Etherenet/Modem
+TDK 3000/3400/5670 Fast Ethernet/Modem
 .It
 TDK LAK-CD031, Grey Cell GCS2000 Ethernet Card
 .It
@@ -281,17 +293,27 @@ TDK DFL5610WS Ethernet/Modem PC Card
 .It
 Telecom Device SuperSocket RE450T
 .It
+Toshiba LANCT00A PC Card
+.It
 VIA VT86C926
 .It
 Winbond W89C940
+.It
+Winbond W89C940F
 .El
 .Pp
 C-Bus, ISA, PCI and PC Card devices are supported.
+.Pp
+The
+.Nm
+driver does not support the following Ethernet NICs:
+.Pp
+.Bl -bullet -compact
+.It
+Mitsubishi LAN Adapter B8895
+.El
 .Sh DIAGNOSTICS
 .Bl -diag
-.It "ed%d: kernel configured irq %d doesn't match board configured irq %d."
-The IRQ number that was specified in the kernel config file (and then compiled
-into the kernel) differs from the IRQ that has been set on the interface card.
 .It "ed%d: failed to clear shared memory at %x - check configuration."
 When the card was probed at system boot time, the
 .Nm
@@ -301,12 +323,14 @@ caused by a BIOS extension ROM being configured in the same address space as the
 Ethernet card's shared memory.
 Either find the offending card and change its BIOS
 ROM to be at an address that does not conflict, or change the
-.Cd iomem
-option in the kernel config file so that the card's shared memory is mapped at a
+settings in
+.Xr device.hints 5
+that the card's shared memory is mapped at a
 non-conflicting address.
 .It "ed%d: Invalid irq configuration (%d) must be 2-5 for 3c503."
-The IRQ number that was specified in the kernel config file is not valid for
-the 3Com 3c503 card.
+The IRQ number that was specified in the
+.Xr device.hints 5
+file is not valid for the 3Com 3c503 card.
 The 3c503 can only be assigned to IRQs 2 through 5.
 .It "ed%d: Cannot find start of RAM."
 .It "ed%d: Cannot find any RAM, start : %d, x = %d."
@@ -335,7 +359,35 @@ This indicates that a programmed I/O transfer to an NE1000 or NE2000 style card
 has failed to properly complete.
 Usually caused by the ISA bus speed being set
 too fast.
+.It "ed%d: Invalid irq configuration (%ld) must be %s for %s"
+Indicates the device has a different IRQ than supported or expected.
+.It "ed%d: Cannot locate my ports!"
+The device is using a different I/O port than the driver knows about.
+.It "ed%d: Cannot extract MAC address"
+Attempts to get the MAC address failed.
+.It "ed%d: Missing mii!"
+Probing for an MII bus has failed.
+This indicates a coding error in the PC Card attachment, because a PHY
+is required for the chips that generate this error message.
 .El
+.Sh SEE ALSO
+.Xr altq 4 ,
+.Xr arp 4 ,
+.Xr miibus 4 ,
+.Xr netintro 4 ,
+.Xr ng_ether 4 ,
+.Xr device.hints 5 ,
+.Xr ifconfig 8
+.Sh HISTORY
+The
+.Nm
+device driver first appeared in
+.Fx 1.0 .
+.Sh AUTHORS
+The
+.Nm
+device driver and this manual page were written by
+.An David Greenman .
 .Sh CAVEATS
 Early revision DS8390 chips have problems.
 They lock up whenever the receive
@@ -355,30 +407,10 @@ on the 16bit cards.
 This can lead to ring-buffer overruns resulting in
 dropped packets during heavy network traffic.
 .Pp
-16bit Compex cards identify themselves as being 8bit.
-While these cards will
-work in 8bit mode, much higher performance can be achieved by specifying
-.Cd "flags 0x04"
-(force 16bit mode) in your kernel config file.
-In addition, you should also specify
-.Cd "iosiz 16384"
-to take advantage of the extra 8K of shared memory that 16bit mode provides.
-.Sh SEE ALSO
-.Xr arp 4 ,
-.Xr miibus 4 ,
-.Xr netintro 4 ,
-.Xr ng_ether 4 ,
-.Xr ifconfig 8
-.Sh HISTORY
-The
-.Nm
-device driver first appeared in
-.Fx 1.0 .
-.Sh AUTHORS
-The
-.Nm
-device driver and this manual page were written by
-.An David Greenman .
+The Mitsubishi B8895 PC Card uses a DP83902, but its ASIC part is
+undocumented.
+Neither the NE2000 nor the WD83x0 drivers work with this card.
+.Pp
 .Sh BUGS
 The
 .Nm
@@ -388,6 +420,26 @@ As a result, it may throw out some good packets which
 have been received but not yet transferred from the card to main memory.
 .Pp
 The
-.Nm 
-PC Card attachment supports the D-Link DMF650TX Lan/Modem card's ethernet
+.Nm
+driver is slow by today's standards.
+.Pp
+PC Card attachment supports the D-Link DMF650TX LAN/Modem card's Ethernet
 port only at this time.
+.Pp
+Some devices supported by
+.Nm
+do not generate the link state change events used by
+.Xr devd 8
+to start
+.Xr dhclient 8 .
+If you have problems with
+.Xr dhclient 8
+not starting and the device is always attached to the network it may
+be possible to work around this by changing
+.Dq Li DHCP
+to
+.Dq Li SYNCDHCP
+in the
+.Va ifconfig_ed0
+entry in
+.Pa /etc/rc.conf .

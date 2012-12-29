@@ -1,5 +1,5 @@
 .\"
-.\" $FreeBSD: src/share/man/man4/tdfx.4,v 1.7 2005/01/21 08:36:37 ru Exp $
+.\" $MidnightBSD$
 .\"
 .Dd February 19, 2001
 .Dt TDFX 4
@@ -9,8 +9,7 @@
 .Nd Voodoo Graphics and VoodooII Memory Access GLIDE device driver
 .Sh SYNOPSIS
 .Cd device tdfx
-.Pp
-.Cd options TDFX_LINUX
+.Cd device tdfx_linux
 .Sh DESCRIPTION
 This driver creates an entry in
 .Pa /dev
@@ -51,11 +50,9 @@ It also does not currently support the Voodoo Rush.
 It also does not yet handle the SLI feature of the Voodoo II boards.
 You can only use each of them separately.
 .Pp
-The following kernel configuration options are available:
-.Pp
-.Cd options LINUX_TDFX
-.Pp
-Enable the linux ioctl code for this driver, where the only supported
+By including
+.Nm tdfx_linux ,
+you can enable the linux ioctl code for this driver, where the only supported
 applications currently reside.
 .Sh FILES
 .Bl -tag -width /dev/voodoo* -compact

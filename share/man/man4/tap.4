@@ -1,9 +1,9 @@
-.\" $FreeBSD: src/share/man/man4/tap.4,v 1.17 2005/04/13 00:30:19 mdodd Exp $
+.\" $MidnightBSD$
 .\" Based on PR#2411
 .\"
-.Dd July 9, 2000
-.Os
+.Dd September 8, 2008
 .Dt TAP 4
+.Os
 .Sh NAME
 .Nm tap
 .Nd Ethernet tunnel software network interface
@@ -41,11 +41,26 @@ The network interfaces are named
 etc., one for each control device that has been opened.
 These Ethernet network interfaces persist until
 .Pa if_tap.ko
-module is unloaded (if
-.Nm
-is built into your kernel, the network interfaces cannot be removed).
+module is unloaded, or until removed with "ifconfig destroy" (see below).
 .Pp
-The
+.Nm
+devices are created using interface cloning.
+This is done using the
+.Dq ifconfig tap Ns Sy N No create
+command.
+This is the preferred method of creating
+.Nm
+devices.
+The same method allows removal of interfaces.
+For this, use the
+.Dq ifconfig tap Ns Sy N No destroy
+command.
+.Pp
+If the
+.Xr sysctl 8
+variable
+.Va net.link.tap.devfs_cloning
+is non-zero, the
 .Nm
 interface
 permits opens on the special control device
@@ -57,9 +72,21 @@ will return a handle for the lowest unused
 device (use
 .Xr devname 3
 to determine which).
+.Pp
+.Bf Em
+Disabling the legacy devfs cloning functionality may break existing
+applications which use
+.Nm ,
+such as
+.Tn VMware
+and
+.Xr ssh 1 .
+It therefore defaults to being enabled until further notice.
+.Ef
+.Pp
 Control devices (once successfully opened) persist until
 .Pa if_tap.ko
-is unloaded in the same way that network interfaces persist (see above).
+is unloaded or the interface is destroyed.
 .Pp
 Each interface supports the usual Ethernet network interface
 .Xr ioctl 2 Ns s ,
@@ -90,6 +117,13 @@ and is restricted to the super-user, unless the
 variable
 .Va net.link.tap.user_open
 is non-zero.
+If the
+.Xr sysctl 8
+variable
+.Va net.link.tap.up_on_open
+is non-zero, the tunnel device will be marked
+.Dq up
+when the control device is opened.
 A
 .Fn read
 call will return an error
@@ -129,6 +163,14 @@ calls are supported
 (defined in
 .In net/if_tap.h ) :
 .Bl -tag -width VMIO_SIOCSETMACADDR
+.It Dv TAPSIFINFO
+Set network interface information (line speed, MTU and type).
+The argument should be a pointer to a
+.Va struct tapinfo .
+.It Dv TAPGIFINFO
+Retrieve network interface information (line speed, MTU and type).
+The argument should be a pointer to a
+.Va struct tapinfo .
 .It Dv TAPSDEBUG
 The argument should be a pointer to an
 .Va int ;
@@ -140,6 +182,13 @@ code.
 The argument should be a pointer to an
 .Va int ;
 this stores the internal debugging variable's value into it.
+.It Dv TAPGIFNAME
+Retrieve network interface name.
+The argument should be a pointer to a
+.Va struct ifreq .
+The interface name will be returned in the
+.Va ifr_name
+field.
 .It Dv FIONBIO
 Turn non-blocking I/O for reads off or on, according as the argument
 .Va int Ns 's

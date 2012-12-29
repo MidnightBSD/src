@@ -11,8 +11,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. The name of the author may not be used to endorse or promote products
-.\"    derived from this software without specific prior written permission.
 .\"
 .\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
 .\" IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -26,16 +24,30 @@
 .\" ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/hifn.4,v 1.6 2005/01/21 08:36:37 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd September 12, 2004
+.Dd October 19, 2009
 .Dt HIFN 4
 .Os
 .Sh NAME
 .Nm hifn
 .Nd Hifn 7751/7951/7811/7955/7956 crypto accelerator
 .Sh SYNOPSIS
-.Cd device hifn
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
+.Cd "device crypto"
+.Cd "device cryptodev"
+.Cd "device hifn"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+hifn_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
@@ -73,17 +85,11 @@ Came as 128KB SRAM model, or 2MB DRAM model.
 .It Hifn 7751
 Reference board with 512KB SRAM.
 .It PowerCrypt
-See
-.Pa http://www.powercrypt.com/ .
 Comes with 512KB SRAM.
 .It XL-Crypt
-See
-.Pa http://www.powercrypt.com/ .
 Only board based on 7811 (which is faster than 7751 and has
 a random number generator).
 .It NetSec 7751
-See
-.Pa http://www.netsec.net/ .
 Supports the most IPsec sessions, with 1MB SRAM.
 .It Soekris Engineering vpn1201 and vpn1211
 See
@@ -101,15 +107,6 @@ Contains a 7955 and supports symmetric and random number operations.
 .Xr ipsec 4 ,
 .Xr random 4 ,
 .Xr crypto 9
-.Sh CAVEATS
-The Hifn 9751 shares the same PCI ID.
-This chip is basically a 7751, but with the cryptographic functions missing.
-Instead, the 9751 is only capable of doing compression.
-Since we do not currently attempt to use any of these chips to do
-compression, the 9751-based cards are not useful.
-.Pp
-Support for the 7955 and 7956 is incomplete; the asymmetric crypto
-facilities are to be added and the performance is suboptimal.
 .Sh HISTORY
 The
 .Nm
@@ -119,6 +116,15 @@ The
 .Nm
 device driver was imported to
 .Fx 5.0 .
+.Sh CAVEATS
+The Hifn 9751 shares the same PCI ID.
+This chip is basically a 7751, but with the cryptographic functions missing.
+Instead, the 9751 is only capable of doing compression.
+Since we do not currently attempt to use any of these chips to do
+compression, the 9751-based cards are not useful.
+.Pp
+Support for the 7955 and 7956 is incomplete; the asymmetric crypto
+facilities are to be added and the performance is suboptimal.
 .Sh BUGS
 The 7751 chip starts out at initialization by only supporting compression.
 A proprietary algorithm, which has been reverse engineered, is required to

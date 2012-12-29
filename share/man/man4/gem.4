@@ -11,13 +11,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"        This product includes software developed by the NetBSD
-.\"        Foundation, Inc. and its contributors.
-.\" 4. Neither the name of The NetBSD Foundation nor the names of its
-.\"    contributors may be used to endorse or promote products derived
-.\"    from this software without specific prior written permission.
 .\"
 .\" THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
 .\" ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -31,36 +24,69 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/gem.4,v 1.4 2004/08/15 18:13:08 simon Exp $
+.\" $MidnightBSD$
 .\"
-.Dd August 15, 2004
+.Dd December 25, 2009
 .Dt GEM 4
 .Os
 .Sh NAME
 .Nm gem
 .Nd ERI/GEM/GMAC Ethernet device driver
 .Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device miibus"
 .Cd "device gem"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+if_gem_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
-driver provides support for the GMac Ethernet hardware found mostly in
+driver provides support for the GMAC Ethernet hardware found mostly in
 the last Apple PowerBooks G3s and most G4-based Apple hardware, as
-well as many Sun UltraSPARCs.
+well as Sun UltraSPARC machines.
+.Pp                                                                            
+All controllers supported by the                                               
+.Nm                                                                            
+driver have TCP checksum offload capability for both receive and transmit,     
+support for the reception and transmission of extended frames for              
+.Xr vlan 4                                                                     
+and a 512-bit multicast hash filter.                                           
 .Sh HARDWARE
 .Pp
-Cards supported by
+Chips supported by the
 .Nm
 driver include:
 .Pp
 .Bl -bullet -compact
 .It
-Sun GEM gigabit Ethernet
+Apple GMAC
 .It
 Sun ERI 10/100 Mbps Ethernet
 .It
-Apple GMAC
+Sun GEM Gigabit Ethernet
+.El
+.Pp
+The
+following add-on cards are known to work with the
+.Nm
+driver at this time:
+.Pp
+.Bl -bullet -compact
+.It
+Sun Gigabit Ethernet PCI 2.0/3.0 (GBE/P)
+(part no.\& 501-4373)
+.It
+Sun Gigabit Ethernet SBus 2.0/3.0 (GBE/S)
+(part no.\& 501-4375)
 .El
 .Sh NOTES
 On sparc64 the
@@ -83,13 +109,13 @@ the unique MAC address of each interface is used if present rather than
 the system's default MAC address.
 .Pp
 Supported interfaces having their own MAC address include the on-board
-Sun ERI 10/100 Mbps and GEM gigabit Ethernet Interfaces on boards equipped
-with more than one Ethernet interface and the Sun GEM gigabit Ethernet
-add-on cards.
+Sun ERI 10/100 Mbps on boards equipped with more than one Ethernet interface
+and the Sun Gigabit Ethernet 2.0/3.0 GBE add-on cards.
 .Sh SEE ALSO
-.Xr hme 4 ,
+.Xr altq 4 ,
 .Xr miibus 4 ,
 .Xr netintro 4 ,
+.Xr vlan 4 ,
 .Xr eeprom 8 ,
 .Xr ifconfig 8
 .Sh HISTORY
@@ -105,9 +131,19 @@ version to include it was
 .An -nosplit
 The
 .Nm
-driver was written by
+driver was written for
+.Nx
+by
 .An Eduardo Horvath
 .Aq eeh@NetBSD.org .
+It was ported to
+.Fx
+by
+.An Thomas Moestl
+.Aq tmm@FreeBSD.org
+and later on improved by
+.An Marius Strobl
+.Aq marius@FreeBSD.org .
 The man page was written by
 .An Thomas Klausner
 .Aq wiz@NetBSD.org .

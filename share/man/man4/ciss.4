@@ -1,16 +1,28 @@
-.\" $FreeBSD: src/share/man/man4/ciss.4,v 1.11.2.1 2005/11/10 07:28:54 rse Exp $
+.\" $MidnightBSD$
 .\" Written by Tom Rhodes
 .\" This file is in the public domain.
 .\"
-.Dd November 3, 2005
+.Dd January 26, 2012
 .Dt CISS 4
 .Os
 .Sh NAME
 .Nm ciss
 .Nd Common Interface for SCSI-3 Support driver
 .Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device scbus"
 .Cd "device ciss"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+ciss_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
@@ -72,6 +84,12 @@ drives) are only exposed as
 devices.
 Hot-insertion and removal of devices is supported but a bus
 rescan might be necessary.
+.Pp
+The problem which adapter freezes with the message
+.Dq ADAPTER HEARTBEAT FAILED
+might be solved by updating the firmware and/or setting the
+.Va hw.ciss.nop_message_heartbeat
+tunable to non-zero at boot time.
 .Sh HARDWARE
 Controllers supported by the
 .Nm
@@ -97,11 +115,39 @@ HP Smart Array 6400
 .It
 HP Smart Array 6400 EM
 .It
-HP Smart Array E400
+HP Smart Array E200
+.It
+HP Smart Array E200i
+.It
+HP Smart Array P212
+.It
+HP Smart Array P220i
+.It
+HP Smart Array P222
+.It
+HP Smart Array P400
+.It
+HP Smart Array P400i
+.It
+HP Smart Array P410
+.It
+HP Smart Array P410i
+.It
+HP Smart Array P411
+.It
+HP Smart Array P420
+.It
+HP Smart Array P420i
+.It
+HP Smart Array P421
 .It
 HP Smart Array P600
 .It
+HP Smart Array P721m
+.It
 HP Smart Array P800
+.It
+HP Smart Array P812
 .It
 HP Modular Smart Array 20 (MSA20)
 .It

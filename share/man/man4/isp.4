@@ -27,7 +27,7 @@
 .\"
 .\" Additional Copyright (c) 2006 by Marcus Alves Grando
 .\"
-.\" $FreeBSD: src/share/man/man4/isp.4,v 1.26 2007/03/01 09:07:04 brueffer Exp $
+.\" $MidnightBSD$
 .\"
 .Dd February 28, 2007
 .Dt ISP 4
@@ -64,7 +64,7 @@ Ultra2 LVD (for the ISP1080 and ISP1280), and Ultra3 LVD (for the
 ISP12160).
 .Pp
 Fibre Channel support uses FCP SCSI profile for
-.Tn FibreChannel .
+.Tn FibreChannel ,
 and utilizes Class 3 and Class 2 connections (Qlogic 2100 is Class
 3 only, minor patches to the Qlogic 2200 to force Class 2 mode).
 Support is available for Public and Private loops, and for
@@ -94,7 +94,6 @@ as it is the most likely to have been tested with this driver.
 Cards supported by the
 .Nm
 driver include:
-.Pp
 .Bl -tag -width xxxxxx -offset indent
 .It ISP1000
 SBus Fast Wide, Ultra Fast Wide cards, Single Ended or Differential
@@ -201,13 +200,12 @@ A hint value for a driver debug level (see the file
 for the values.
 .El
 .Sh SYSCTL OPTIONS
-.Pp
 .Bl -tag -width indent
 .It Va dev.isp.N.loop_down_limit
 This value says how long to wait in seconds after loop has gone down before
 giving up and expiring all of the devices that were visible.
 The default is 300 seconds (5 minutes).
-A seperate (nonadjustable) timeout is used when
+A separate (nonadjustable) timeout is used when
 booting to not stop booting on lack of FC connectivity.
 .It Va dev.isp.N.gone_device_time
 This value says how long to wait for devices to reappear if they (temporarily)
@@ -224,7 +222,8 @@ This is the readonly World Wide Port Name value for this port.
 .Xr intro 4 ,
 .Xr ispfw 4 ,
 .Xr sa 4 ,
-.Xr scsi 4
+.Xr scsi 4 ,
+.Xr gmultipath 8
 .Sh AUTHORS
 The
 .Nm

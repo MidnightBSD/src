@@ -28,9 +28,9 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/sk.4,v 1.26.2.2 2006/02/02 07:50:01 trhodes Exp $
+.\" $MidnightBSD$
 .\"
-.Dd July 16, 2005
+.Dd November 23, 2010
 .Dt SK 4
 .Os
 .Sh NAME
@@ -82,7 +82,7 @@ second port on dual port adapters for failover purposes: if the link
 on the primary port fails, the SysKonnect driver will automatically
 switch traffic onto the second port.
 .Pp
-Also supported is the Marvell Semiconductor 88E1000* gigabit PHY.
+Also supported is the Marvell Semiconductor 88E100* gigabit PHY.
 .Pp
 The XaQti XMAC II supports full and half duplex operation with
 autonegotiation.
@@ -97,7 +97,6 @@ such as file transfers and data streaming.
 The
 .Nm
 driver supports the following media types:
-.Pp
 .Bl -tag -width xxxxxxxxxxxxxxxxxxxx
 .It autoselect
 Enable autoselection of the media type and options.
@@ -126,34 +125,11 @@ modes are supported.
 The
 .Nm
 driver supports the following media options:
-.Pp
 .Bl -tag -width xxxxxxxxxxxxxxxxxxxx
 .It full-duplex
-Force full duplex operation
+Force full duplex operation.
 .It half-duplex
 Force half duplex operation.
-.El
-.Pp
-The
-.Nm
-driver also supports one special link option for 1000baseTX cards:
-.Pp
-.Bl -tag -width xxxxxxxxxxxxxxxxxxxx
-.It link0
-With 1000baseTX cards, establishing a link between two ports requires
-that one port is configured as master and the other one as slave.
-With autonegotiation,
-the master/slave settings will be chosen automatically.
-However when manually selecting the link state, it is necessary to
-force one side of the link to be a master and the other a slave.
-The
-.Nm
-driver configures the ports as slaves by default.
-Setting the
-.Ar link0
-flag with
-.Xr ifconfig 8
-will set a port as a master instead.
 .El
 .Pp
 For more information on configuring this device, see
@@ -173,7 +149,7 @@ Belkin F5D5005 single port, 1000baseT adapter
 .It
 D-Link DGE-530T single port, 1000baseT adapter
 .It
-Linksys EG1032 single port, 1000baseT adapter
+Linksys (revision 2) single port, 1000baseT adapter
 .It
 SK-9521 SK-NET GE-T single port, 1000baseT adapter
 .It
@@ -191,17 +167,28 @@ SK-9844 SK-NET GE-SX dual port, multimode fiber adapter
 .It
 SMC 9452TX single port, 1000baseT adapter
 .El
+.Sh LOADER TUNABLES
+Tunables can be set at the
+.Xr loader 8
+prompt before booting the kernel or stored in
+.Xr loader.conf 5 .
+.Bl -tag -width xxxxxx
+.It Va hw.skc.jumbo_disable
+Disable jumbo frame support.
+Systems with less memory can set it to a non-zero value to save memory.
+The default value is 0.
+.El
 .Sh SYSCTL VARIABLES
 The following variable is available as both
 .Xr sysctl 8
 variable and
 .Xr loader 8
 tunable:
-.Bl -tag -width indent
+.Bl -tag -width xxxxxx
 .It Va dev.skc.%d.int_mod
-.Pp
 This variable controls interrupt moderation.
-The accepted range is 10 to 10000, default value is 100 microseconds.
+The accepted range is 10 to 10000.
+The default value is 100 microseconds.
 The interface has to be brought down and up again before a change takes effect.
 .El
 .Sh DIAGNOSTICS
@@ -227,6 +214,7 @@ The device has stopped responding to the network, or there is a problem with
 the network connection (cable).
 .El
 .Sh SEE ALSO
+.Xr altq 4 ,
 .Xr arp 4 ,
 .Xr miibus 4 ,
 .Xr netintro 4 ,
@@ -235,11 +223,11 @@ the network connection (cable).
 .Xr ifconfig 8
 .Rs
 .%T XaQti XMAC II datasheet
-.%O http://www.xaqti.com
+.%U http://www.xaqti.com
 .Re
 .Rs
 .%T SysKonnect GEnesis programming manual
-.%O http://www.syskonnect.com
+.%U http://www.syskonnect.com
 .Re
 .Sh HISTORY
 The

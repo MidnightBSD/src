@@ -25,7 +25,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/ufoma.4,v 1.6 2006/11/22 21:30:02 brueffer Exp $
+.\" $MidnightBSD$
 .\"
 .Dd November 22, 2006
 .Dt UFOMA 4
@@ -39,7 +39,6 @@ place the following lines in your
 kernel configuration file:
 .Bd -ragged -offset indent
 .Cd "device ufoma"
-.Cd "device ucom"
 .Ed
 .Pp
 Alternatively, to load the driver as a
@@ -98,7 +97,7 @@ When an interface is recognized by the system but not used, the interface
 will be set to this mode.
 .It Li unlinked
 When an interface is not yet negotiated, the interface is in this mode.
-.El 
+.El
 .Sh HARDWARE
 Devices supported by the
 .Nm

@@ -22,27 +22,39 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/arcmsr.4,v 1.3 2005/04/01 10:36:09 brueffer Exp $
+.\" $MidnightBSD$
 .\"
-.Dd March 31, 2005
+.Dd November 25, 2010
 .Dt ARCMSR 4
 .Os
 .Sh NAME
 .Nm arcmsr
-.Nd Areca SATA II RAID Controller driver
+.Nd Areca RAID Controller driver
 .Sh SYNOPSIS
-.Cd "device arcmsr"
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device pci"
 .Cd "device scbus"
 .Cd "device da"
+.Cd "device arcmsr"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+arcmsr_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
-driver provides support for the Areca ARC-11xx and ARC-12xx series of SATA II
-RAID controllers.
+driver provides support for the Areca ARC-11xx, ARC-12xx, ARC-13xx,
+ARC-16xx and ARC-18xx series of SAS and SATA RAID controllers.
 These controllers feature RAID-0, 1, 3, 5, 6, and 10 and
 JBOD acceleration for up to 16 SATA drives.
-Raid level and stripe level
+RAID level and stripe level
 migration, online capacity expansion, hot insertion/removal, automatic failover
 and rebuild, and SMART are also supported.
 Access to the arrays is provided
@@ -68,30 +80,66 @@ ARC-1130
 .It
 ARC-1160
 .It
-ARC-1130-ML
+ARC-1170
 .It
-ARC-1160-ML
+ARC-1110ML
+.It
+ARC-1120ML
+.It
+ARC-1130ML
+.It
+ARC-1160ML
+.It
+ARC-1200
+.It
+ARC-1201
 .It
 ARC-1210
 .It
+ARC-1212
+.It
 ARC-1220
+.It
+ARC-1222
 .It
 ARC-1230
 .It
+ARC-1231
+.It
 ARC-1260
 .It
-ARC-1230-ML
+ARC-1261
 .It
-ARC-1260-ML
+ARC-1270
+.It
+ARC-1280
+.It
+ARC-1210ML
+.It
+ARC-1220ML
+.It
+ARC-1231ML
+.It
+ARC-1261ML
+.It
+ARC-1280ML
+.It
+ARC-1380
+.It
+ARC-1381
+.It
+ARC-1680
+.It
+ARC-1681
+.It
+ARC-1880
 .El
 .Sh FILES
-.Bl -tag -width ".Pa /boot/kernel/arcmsr.ko" -compact
+.Bl -tag -width ".Pa /dev/arcmsr?" -compact
 .It Pa /dev/da?
 Array block device
 .It Pa /dev/arcmsr?
 Management interface
-.It Pa /boot/kernel/arcmsr.ko
-Loadable module
 .El
 .Sh SEE ALSO
 .Xr da 4 ,

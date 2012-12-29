@@ -24,35 +24,40 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/bt.4,v 1.24 2005/01/21 08:36:37 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd August 8, 2004
+.Dd June 18, 2006
 .Dt BT 4
 .Os
 .Sh NAME
 .Nm bt
 .Nd Buslogic/Mylex MultiMaster SCSI host adapter driver
 .Sh SYNOPSIS
-.Cd device bt
-.Cd device scbus
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
+.Cd "device isa"
+.Cd "device scbus"
+.Cd "device bt"
 .Pp
 In
 .Pa /boot/device.hints :
 .Cd hint.bt.0.at="isa"
 .Cd hint.bt.0.port="0x330"
+.Ed
 .Sh DESCRIPTION
 This driver provides access to the
 .Tn SCSI
 bus connected to a Buslogic/Mylex MultiMaster or compatible controller:
-.Pp
 .Bd -ragged -offset indent
 .Bl -column "BT-956CD " "ISA " "Commands " Description
 MultiMaster "W" Series Host Adapters:
 .Pp
 .Em "Adapter   Bus   Commands  Description"
-BT-948    PCI     192     ULtra SCSI-3
-BT-958    PCI     192     Wide ULtra SCSI-3
-BT-958D   PCI     192     Wide Differential ULtra SCSI-3
+BT-948    PCI     192     Ultra SCSI-3
+BT-958    PCI     192     Wide Ultra SCSI-3
+BT-958D   PCI     192     Wide Differential Ultra SCSI-3
 .El
 .Bl -column "BT-956CD " "ISA " "Commands " Description
 MultiMaster "C" Series Host Adapters:
@@ -168,19 +173,6 @@ AMI FastDisk Host Adapters that are true BusLogic MultiMaster clones
 are also supported by the
 .Nm
 driver.
-.Sh FILES
-.Bl -tag -width /usr/share/man0/template.doc -compact
-.It Pa sys/dev/buslogic/bt.c
-Core Driver Implementation
-.It Pa sys/dev/buslogic/btreg.h
-MultiMaster Register Set and Core Driver Data Structures
-.It Pa sys/pci/bt_pci.c
-PCI Bus Driver Attachment
-.It Pa sys/i386/eisa/bt_eisa.c
-EISA Bus Driver Attachment
-.It Pa sys/i386/isa/bt_isa.c
-ISA/VL Bus Driver Attachment
-.El
 .Sh SEE ALSO
 .Xr cd 4 ,
 .Xr da 4 ,

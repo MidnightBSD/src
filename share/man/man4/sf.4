@@ -28,9 +28,9 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/sf.4,v 1.20.2.2 2006/02/02 07:50:01 trhodes Exp $
+.\" $MidnightBSD$
 .\"
-.Dd July 16, 2005
+.Dd January 21, 2008
 .Dt SF 4
 .Os
 .Sh NAME
@@ -81,7 +81,6 @@ driver.
 The
 .Nm
 driver supports the following media types:
-.Pp
 .Bl -tag -width xxxxxxxxxxxxxxxxxxxx
 .It autoselect
 Enable autoselection of the media type and options.
@@ -112,7 +111,6 @@ modes.
 The
 .Nm
 driver supports the following media options:
-.Pp
 .Bl -tag -width xxxxxxxxxxxxxxxxxxxx
 .It full-duplex
 Force full duplex operation
@@ -138,6 +136,23 @@ ANA-62044 64-bit quad port 10/100baseTX adapter
 ANA-69011 32-bit single port 10/100baseTX adapter
 .It
 ANA-62020 64-bit single port 100baseFX adapter
+.El
+.Sh SYSCTL VARIABLES
+The following variables are available as both
+.Xr sysctl 8
+variables and
+.Xr loader 8
+tunables:
+.Bl -tag -width indent
+.It Va dev.sf.%d.int_mod
+Maximum amount of time to delay interrupt processing in units of
+102.4us.
+The accepted range is 0 to 31, the default value is 1 (102.4us).
+Value 0 completely disables the interrupt moderation.
+The interface does not need to be brought down and up again before
+a change takes effect.
+.It Va dev.sf.%d.stats
+Display lots of useful MAC counters maintained in the driver.
 .El
 .Sh DIAGNOSTICS
 .Bl -diag
@@ -170,15 +185,17 @@ The device has stopped responding to the network, or there is a problem with
 the network connection (cable).
 .El
 .Sh SEE ALSO
+.Xr altq 4 ,
 .Xr arp 4 ,
 .Xr miibus 4 ,
 .Xr netintro 4 ,
 .Xr ng_ether 4 ,
 .Xr polling 4 ,
+.Xr vlan 4 ,
 .Xr ifconfig 8
 .Rs
 .%T The Adaptec AIC-6915 Programmer's Manual
-.%O http://download.adaptec.com/pdfs/user_guides/aic6915_pg.pdf
+.%U http://download.adaptec.com/pdfs/user_guides/aic6915_pg.pdf
 .Re
 .Sh HISTORY
 The

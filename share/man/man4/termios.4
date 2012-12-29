@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)termios.4	8.4 (Berkeley) 4/19/94
-.\" $FreeBSD: src/share/man/man4/termios.4,v 1.30 2005/02/13 22:25:17 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd April 19, 1994
+.Dd December 26, 2009
 .Dt TERMIOS 4
 .Os
 .Sh NAME
@@ -197,7 +197,8 @@ signal, or if the process group of the reading
 process is orphaned, the
 .Xr read 2
 returns -1 with
-.Va errno set to
+.Va errno
+set to
 .Er EIO
 and no
 signal is sent.
@@ -353,8 +354,8 @@ the
 and
 .Dv KILL
 characters (see the
-.Sx "Special Characters section" ) ,
-is received.
+.Sx "Special Characters"
+section), is received.
 This processing affects data in the input queue that has not yet been
 delimited by a newline
 .Dv NL ,
@@ -508,7 +509,7 @@ When a process writes one or more bytes to a terminal device file, they
 are processed according to the
 .Fa c_oflag
 field (see the
-.Sx "Output Modes
+.Sx "Output Modes"
 section).
 The
 implementation may provide a buffering mechanism; as such, when a call to
@@ -1053,7 +1054,7 @@ overflowing the input queue.
 The precise conditions under which
 .Dv STOP
 and
-START
+.Dv START
 characters are transmitted are implementation defined.
 .Pp
 If
@@ -1073,7 +1074,7 @@ Values of the
 field describe the basic terminal output control,
 and are composed of the following masks:
 .Pp
-.Bl -tag -width OXTABS -offset indent -compact
+.Bl -tag -width ONOEOT -offset indent -compact
 .It Dv OPOST
 /* enable following output processing */
 .It Dv ONLCR
@@ -1082,7 +1083,11 @@ and are composed of the following masks:
 */
 .It Dv OCRNL
 /* map CR to NL */
-.It Dv OXTABS
+.It Dv TABDLY
+/* tab delay mask */
+.It Dv TAB0
+/* no tab delay and expansion */
+.It Dv TAB3
 /* expand tabs to spaces */
 .It Dv ONOEOT
 /* discard
@@ -1108,8 +1113,20 @@ If
 .Dv OCRNL
 is set, carriage returns are translated to newlines.
 .Pp
+The
+.Dv TABDLY
+bits specify the tab delay.
+The
+.Fa c_oflag
+is masked with
+.Dv TABDLY
+and compared with the
+values
+.Dv TAB0
+or
+.Dv TAB3 .
 If
-.Dv OXTABS
+.Dv TAB3
 is set, tabs are expanded to the appropriate number of
 spaces (assuming 8 column tab stops).
 .Pp
@@ -1511,7 +1528,7 @@ This table lists the array index, the corresponding special character,
 and the system default value.
 For an accurate list of
 the system defaults, consult the header file
-.In ttydefaults.h .
+.In sys/ttydefaults.h .
 .Pp
 .Bl -column "Index Name" "Special Character" -offset indent -compact
 .It Em "Index Name	Special Character	Default Value"
@@ -1561,3 +1578,10 @@ after
 is set according to
 the values in the header
 .In sys/ttydefaults.h .
+.Sh SEE ALSO
+.Xr stty 1 ,
+.Xr tcgetsid 3 ,
+.Xr tcsendbreak 3 ,
+.Xr tcsetattr 3 ,
+.Xr tcsetsid 3 ,
+.Xr tty 4

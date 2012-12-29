@@ -21,30 +21,55 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/amr.4,v 1.32 2005/05/30 12:26:12 brueffer Exp $
+.\" $MidnightBSD$
 .\"
-.Dd May 30, 2005
+.Dd March 29, 2006
 .Dt AMR 4
 .Os
 .Sh NAME
 .Nm amr
 .Nd MegaRAID SCSI/ATA/SATA RAID driver
 .Sh SYNOPSIS
-.Cd device pci
-.Cd device amr
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
+.Cd "device pci"
+.Cd "device scbus"
+.Cd "device amr"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+amr_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
-driver provides support for LSI Logic MegaRAID SCSI
+driver provides support for LSI Logic MegaRAID SCSI, ATA and SATA
 RAID controllers and legacy American Megatrends MegaRAID
 SCSI RAID controllers, including models relabeled
 and sold by Dell and Hewlett-Packard.
+.Pp
+LSI MegaRAID SAS controllers are supported by
+.Xr mfi 4
+and will not work with this driver.
 .Sh HARDWARE
 Controllers supported by the
 .Nm
 driver include:
 .Pp
 .Bl -bullet -compact
+.It
+MegaRAID SATA 150-4
+.It
+MegaRAID SATA 150-6
+.It
+MegaRAID SATA 300-4X
+.It
+MegaRAID SATA 300-8X
 .It
 MegaRAID SCSI 320-1E
 .It
@@ -58,16 +83,6 @@ MegaRAID SCSI 320-2X
 .It
 MegaRAID SCSI 320-4X
 .It
-MegaRAID SATA 300-4X
-.It
-MegaRAID SATA 300-8X
-.It
-MegaRAID SATA 150-4
-.It
-MegaRAID SATA 150-6
-.It
-MegaRAID i4 133 RAID
-.It
 MegaRAID SCSI 320-0
 .It
 MegaRAID SCSI 320-1
@@ -78,6 +93,14 @@ MegaRAID SCSI 320-4
 .It
 MegaRAID Series 418
 .It
+MegaRAID i4 133 RAID
+.It
+MegaRAID Elite 1500 (Series 467)
+.It
+MegaRAID Elite 1600 (Series 493)
+.It
+MegaRAID Elite 1650 (Series 4xx)
+.It
 MegaRAID Enterprise 1200 (Series 428)
 .It
 MegaRAID Enterprise 1300 (Series 434)
@@ -87,12 +110,6 @@ MegaRAID Enterprise 1400 (Series 438)
 MegaRAID Enterprise 1500 (Series 467)
 .It
 MegaRAID Enterprise 1600 (Series 471)
-.It
-MegaRAID Elite 1500 (Series 467)
-.It
-MegaRAID Elite 1600 (Series 493)
-.It
-MegaRAID Elite 1650 (Series 4xx)
 .It
 MegaRAID Express 100 (Series 466WS)
 .It
@@ -208,6 +225,7 @@ An I/O error has occurred.
 .Sh SEE ALSO
 .Xr cd 4 ,
 .Xr da 4 ,
+.Xr mfi 4 ,
 .Xr sa 4 ,
 .Xr scsi 4
 .Sh AUTHORS
@@ -215,12 +233,9 @@ An I/O error has occurred.
 The
 .Nm
 driver was written by
-.An Mike Smith
-.Aq msmith@FreeBSD.org .
+.An Mike Smith Aq msmith@FreeBSD.org .
 .Pp
 This manual page was written by
-.An Mike Smith
-.Aq msmith@FreeBSD.org
+.An Mike Smith Aq msmith@FreeBSD.org
 and
-.An Jeroen Ruigrok van der Werven
-.Aq asmodai@FreeBSD.org .
+.An Jeroen Ruigrok van der Werven Aq asmodai@FreeBSD.org .

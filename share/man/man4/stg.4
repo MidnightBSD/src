@@ -21,7 +21,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/stg.4,v 1.7 2004/08/08 22:27:02 simon Exp $
+.\" $MidnightBSD$
 .\"
 .Dd August 8, 2004
 .Dt STG 4
@@ -30,12 +30,30 @@
 .Nm stg
 .Nd driver for Future Domain based SCSI controllers
 .Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
+.Cd "device scbus"
 .Cd "device stg"
 .Pp
+For one or more ISA cards:
+.Cd "device isa"
+.Pp
 In
-.Pa /boot/device.hints
-(for ISA controllers):
+.Pa /boot/device.hints :
 .Cd hint.stg.0.at="isa"
+.Pp
+For one or more PCI cards:
+.Cd "device pci"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+stg_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm

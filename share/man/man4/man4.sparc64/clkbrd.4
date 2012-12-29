@@ -24,7 +24,7 @@
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
 .\"	from: OpenBSD: clkbrd.4,v 1.2 2005/02/21 11:29:36 jmc Exp
-.\" $FreeBSD: src/share/man/man4/man4.sparc64/clkbrd.4,v 1.1 2005/06/22 15:35:14 ru Exp $
+.\" $MidnightBSD$
 .\"
 .Dd June 18, 2005
 .Dt CLKBRD 4 sparc64
@@ -62,8 +62,6 @@ driver also prints out the number of board slots the chassis provides.
 .It Pa /dev/led/clockboard
 clock board LED device node
 .El
-.Sh CAVEATS
-Hardware management functionality is not implemented.
 .Sh SEE ALSO
 .Xr fhc 4 ,
 .Xr led 4
@@ -86,3 +84,5 @@ and ported to
 .Fx
 by
 .An "Marius Strobl" Aq marius@FreeBSD.org .
+.Sh CAVEATS
+Hardware management functionality is not implemented.

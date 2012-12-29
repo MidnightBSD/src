@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/ae.4,v 1.2.2.1.6.1 2010/02/10 00:26:20 kensmith Exp $
+.\" $MidnightBSD$
 .\"
 .Dd October 4, 2008
 .Dt AE 4
@@ -41,7 +41,7 @@ kernel configuration file:
 Alternatively, to load the driver as a
 module at boot time, place the following line in
 .Xr loader.conf 5 :
-.Bd -literal -offset -indent
+.Bd -literal -offset indent
 if_ae_load="YES"
 .Ed
 .Sh DESCRIPTION
@@ -121,8 +121,7 @@ the network connection (cable).
 .It "ae%d: reset timeout."
 The card reset operation has been timed out.
 .It "ae%d: Generating random ethernet address."
-No valid ethernet address was found neither in the controller registers not in
-NVRAM.
+No valid Ethernet address was found in the controller NVRAM and registers.
 Random locally administered address with ASUS OUI identifier will be used
 instead.
 .El
@@ -134,15 +133,6 @@ instead.
 .Xr ng_ether 4 ,
 .Xr vlan 4 ,
 .Xr ifconfig 8
-.Sh BUGS
-The Attansic L2 FastEthernet contoller supports DMA but do not use a descriptor
-based transfer mechanism via scatter-gather DMA.
-Thus the data should be copied to/from the controller memory on each
-transmit/receive.
-Furthermore, a lot of data alignment restrictions apply.
-This may introduce a high CPU load on systems with heavy network activity.
-Luckily enough this should not be a problem on modern hardware as L2 does
-not support speeds faster than 100Mbps.
 .Sh HISTORY
 The
 .Nm
@@ -151,3 +141,12 @@ driver and this manual page was written by
 .Aq stas@FreeBSD.org .
 It first appeared in
 .Fx 7.1 .
+.Sh BUGS
+The Attansic L2 FastEthernet controller supports DMA but does not use a
+descriptor based transfer mechanism via scatter-gather DMA.
+Thus the data should be copied to/from the controller memory on each
+transmit/receive.
+Furthermore, a lot of data alignment restrictions apply.
+This may introduce a high CPU load on systems with heavy network activity.
+Luckily enough this should not be a problem on modern hardware as L2 does
+not support speeds faster than 100Mbps.

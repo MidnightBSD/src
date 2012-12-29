@@ -1,5 +1,5 @@
 .\"
-.\" $FreeBSD: src/share/man/man4/meteor.4,v 1.7 2005/01/21 08:36:37 ru Exp $
+.\" $MidnightBSD$
 .\"
 .Dd August 15, 1995
 .Dt METEOR 4
@@ -468,7 +468,6 @@ routines use the
 .Va meteor_geomet
 structure that has the
 following entries:
-.Pp
 .Bl -tag -width columns
 .It Va rows
 number of rows (lines high) in output image
@@ -525,7 +524,7 @@ The
 .Dv METEORSETGEO
 will also attempt to reallocate a new contiguous
 kernel buffer if the new geometry exceeds the old geometry.
-On
+On the
 other hand, if the new geometry will fit in the existing buffer,
 the existing buffer is used.
 .Pp
@@ -652,7 +651,7 @@ continuous capture.
 The single frame capture
 .Xr ioctl 2
 request will return only after a
-frame has been captured and transfered to the frame buffer.
+frame has been captured and transferred to the frame buffer.
 .Pp
 The unsynchronized continuous capture will return immediately and
 data is directly deposited into the buffer when it is available.

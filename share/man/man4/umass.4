@@ -9,25 +9,22 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. Neither the name of the author nor the names of any co-contributors
-.\"    may be used to endorse or promote products derived from this software
-.\"   without specific prior written permission.
 .\"
-.\" THIS SOFTWARE IS PROVIDED BY NICK HIBMA AND CONTRIBUTORS ``AS IS'' AND
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
 .\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 .\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-.\" ARE DISCLAIMED.  IN NO EVENT SHALL NICK HIBMA OR THE VOICES IN HIS HEAD
-.\" BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-.\" CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-.\" SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-.\" INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-.\" CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-.\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
-.\" THE POSSIBILITY OF SUCH DAMAGE.
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/umass.4,v 1.44 2006/11/22 21:30:02 brueffer Exp $
+.\" $MidnightBSD$
 .\"
-.Dd November 22, 2006
+.Dd October 22, 2009
 .Dt UMASS 4
 .Os
 .Sh NAME
@@ -38,6 +35,8 @@ To compile this driver into the kernel,
 place the following line in your
 kernel configuration file:
 .Bd -ragged -offset indent
+.Cd "device scbus"
+.Cd "device usb"
 .Cd "device umass"
 .Ed
 .Pp
@@ -84,6 +83,8 @@ Denno FireWire/USB2 Removable 2.5-inch HDD Case MIFU-25CB20
 FujiFilm Zip USB Drive ZDR100 USB A
 .It
 GREEN HOUSE USB Flash Memory "PicoDrive" GH-UFD32M, 64M, 128M
+.It
+Huawei Mobile (SD slot)
 .It
 IBM 32MB USB Memory Key (P/N 22P5296)
 .It
@@ -230,7 +231,7 @@ based file systems when storing information such as images and
 videos.
 These file systems can be accessed by specifying the file system
 type as
-.Cm msdos
+.Cm msdosfs
 when using
 .Xr mount 8 .
 .Sh SEE ALSO

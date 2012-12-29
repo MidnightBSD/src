@@ -1,5 +1,9 @@
-.\" Copyright (c) 2003-2005 Joseph Koshy
+.\" Copyright (c) 2003-2008 Joseph Koshy
+.\" Copyright (c) 2007 The FreeBSD Foundation
 .\" All rights reserved.
+.\"
+.\" Portions of this software were developed by A. Joseph Koshy under
+.\" sponsorship from the FreeBSD Foundation and Google, Inc.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -22,9 +26,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/hwpmc.4,v 1.6.2.3 2005/10/01 15:52:13 jkoshy Exp $
+.\" $MidnightBSD$
 .\"
-.Dd September 28, 2005
+.Dd September 22, 2008
 .Dt HWPMC 4
 .Os
 .Sh NAME
@@ -35,7 +39,7 @@
 .Cd "device hwpmc"
 .Pp
 Additionally, for i386 systems:
-.Cd device apic
+.Cd "device apic"
 .Sh DESCRIPTION
 The
 .Nm
@@ -50,47 +54,43 @@ PMCs are allocated using the
 request.
 A successful
 .Dv PMC_OP_PMCALLOCATE
-request will return an integer handle (typically a small integer) to
-the requesting process.
+request will return a handle to the requesting process.
 Subsequent operations on the allocated PMC use this handle to denote
 the specific PMC.
 A process that has successfully allocated a PMC is termed an
 .Dq "owner process" .
 .Pp
-PMCs may be allocated to operate in process-private or in system-wide
-modes.
-.Bl -tag -width ".Em Process-private"
-.It Em Process-private
-In process-private mode, a PMC is active only when a thread belonging
+PMCs may be allocated with process or system scope.
+.Bl -tag -width ".Em Process-scope"
+.It Em "Process-scope"
+The PMC is active only when a thread belonging
 to a process it is attached to is scheduled on a CPU.
-.It Em System-wide
-In system-wide mode, a PMC operates independently of processes and
+.It Em "System-scope"
+The PMC operates independently of processes and
 measures hardware events for the system as a whole.
 .El
 .Pp
-The
-.Nm
-driver supports the use of hardware PMCs for counting or for
-sampling:
+PMCs may be allocated for counting or for sampling:
 .Bl -tag -width ".Em Counting"
 .It Em Counting
 In counting modes, the PMCs count hardware events.
 These counts are retrievable using the
 .Dv PMC_OP_PMCREAD
-system call on all architectures, though some architectures like the
-i386 and amd64 offer faster methods of reading these counts.
+system call on all architectures.
+Some architectures offer faster methods of reading these counts.
 .It Em Sampling
-In sampling modes, where PMCs are configured to sample the CPU
-instruction pointer after a configurable number of hardware events
-have been observed.
-These instruction pointer samples are directed to a log file for
-subsequent analysis.
+In sampling modes, the PMCs are configured to sample the CPU
+instruction pointer (and optionally to capture the call chain leading
+up to the sampled instruction pointer) after a configurable number of
+hardware events have been observed.
+Instruction pointer samples and call chain records are usually
+directed to a log file for subsequent analysis.
 .El
 .Pp
-These modes of operation are orthogonal; a PMC may be configured to
-operate in one of four modes:
+Scope and operational mode are orthogonal; a PMC may thus be
+configured to operate in one of the following four modes:
 .Bl -tag -width indent
-.It Process-private, counting
+.It Process-scope, counting
 These PMCs count hardware events whenever a thread in their attached process is
 scheduled on a CPU.
 These PMCs normally count from zero, but the initial count may be
@@ -100,7 +100,7 @@ operation.
 Applications can read the value of the PMC anytime using the
 .Dv PMC_OP_PMCRW
 operation.
-.It Process-private, sampling
+.It Process-scope, sampling
 These PMCs sample the target processes instruction pointer after they
 have seen the configured number of hardware events.
 The PMCs only count events when a thread belonging to their attached
@@ -111,7 +111,7 @@ operation prior to starting the PMC.
 Log files are configured using the
 .Dv PMC_OP_CONFIGURELOG
 operation.
-.It System-wide, counting
+.It System-scope, counting
 These PMCs count hardware events seen by them independent of the
 processes that are executing.
 The current count on these PMCs can be read using the
@@ -121,7 +121,7 @@ These PMCs normally count from zero, but the initial count may be
 set using the
 .Dv PMC_OP_SETCOUNT
 operation.
-.It System-wide, sampling
+.It System-scope, sampling
 These PMCs will periodically sample the instruction pointer of the CPU
 they are allocated on, and will write the sample to a log for further
 processing.
@@ -136,14 +136,11 @@ System-wide statistical sampling can only be enabled by a process with
 super-user privileges.
 .El
 .Pp
-Processes are allowed to allocate as many PMCs are the hardware and
+Processes are allowed to allocate as many PMCs as the hardware and
 current operating conditions permit.
 Processes may mix allocations of system-wide and process-private
 PMCs.
-Multiple processes are allowed to be concurrently using the facilities
-of the
-.Nm
-driver.
+Multiple processes may be using PMCs simultaneously.
 .Pp
 Allocated PMCs are started using the
 .Dv PMC_OP_PMCSTART
@@ -189,6 +186,13 @@ The
 operation supports the following flags that modify the behavior
 of an allocated PMC:
 .Bl -tag -width indent
+.It Dv PMC_F_CALLCHAIN
+This modifier informs sampling PMCs to record a callchain when
+capturing a sample.
+The maximum depth to which call chains are recorded is specified
+by the
+.Va "kern.hwpmc.callchaindepth"
+kernel tunable.
 .It Dv PMC_F_DESCENDANTS
 This modifier is valid only for a PMC being allocated in process-private
 mode.
@@ -200,6 +204,7 @@ sampling mode.
 It signifies that the PMC's sampling interrupt is to be used to drive
 kernel profiling via
 .Xr kgmon 8 .
+This functionality is currently unimplemented.
 .It Dv PMC_F_LOG_PROCCSW
 This modifier is valid only for a PMC being allocated in process-private
 mode.
@@ -225,7 +230,7 @@ and
 .Dv PMC_F_LOG_PROCCSW
 may be used in combination with modifier
 .Dv PMC_F_DESCENDANTS
-to track the behaviour of complex pipelines of processes.
+to track the behavior of complex pipelines of processes.
 PMCs with modifiers
 .Dv PMC_F_LOG_PROCEXIT
 and
@@ -246,6 +251,27 @@ The
 .Nm
 driver is being unloaded from the kernel.
 .El
+.Ss PMC ROW DISPOSITIONS
+A PMC row is defined as the set of PMC resources at the same hardware
+address in the CPUs in a system.
+Since process scope PMCs need to move between CPUs following their
+target threads, allocation of a process scope PMC reserves all PMCs in
+a PMC row for use only with process scope PMCs.
+Accordingly a PMC row will be in one of the following dispositions:
+.Bl -tag -width ".Dv PMC_DISP_STANDALONE" -compact
+.It Dv PMC_DISP_FREE
+Hardware counters in this row are free and may be use to satisfy
+either of system scope or process scope allocation requests.
+.It Dv PMC_DISP_THREAD
+Hardware counters in this row are in use by process scope PMCs
+and are only available for process scope allocation requests.
+.It Dv PMC_DISP_STANDALONE
+Some hardware counters in this row have been administratively
+disabled or are in use by system scope PMCs.
+Non-disabled hardware counters in such a row may be used
+for satisfying system scope allocation requests.
+No process scope PMCs will use hardware counters in this row.
+.El
 .Sh PROGRAMMING API
 The recommended way for application programs to use the facilities of
 the
@@ -264,16 +290,25 @@ The
 driver supports the following operations:
 .Bl -tag -width indent
 .It Dv PMC_OP_CONFIGURELOG
-Configure a log file for sampling mode PMCs.
+Configure a log file for PMCs that require a log file.
+The
+.Nm
+driver will write log data to this file asynchronously.
+If it encounters an error, logging will be stopped and the error code
+encountered will be saved for subsequent retrieval by a
+.Dv PMC_OP_FLUSHLOG
+request.
 .It Dv PMC_OP_FLUSHLOG
 Transfer buffered log data inside
 .Nm
 to a configured output file.
 This operation returns to the caller after the write operation
 has returned.
+The returned error code reflects any pending error state inside
+.Nm .
 .It Dv PMC_OP_GETCPUINFO
-Retrieve information about the number of CPUs on the system and
-the number of hardware performance monitoring counters available per-CPU.
+Retrieve information about the highest possible CPU number for the system,
+and the number of hardware performance monitoring counters available per CPU.
 .It Dv PMC_OP_GETDRIVERSTATS
 Retrieve module statistics (for analyzing the behavior of
 .Nm
@@ -288,9 +323,12 @@ Set the administrative state (i.e., whether enabled or disabled) for
 the hardware PMCs managed by the
 .Nm
 driver.
+The invoking process needs to possess the
+.Dv PRIV_PMC_MANAGE
+privilege.
 .It Dv PMC_OP_PMCALLOCATE
 Allocate and configure a PMC.
-On successful allocation, a handle to the PMC (a small integer)
+On successful allocation, a handle to the PMC (a 32 bit value)
 is returned.
 .It Dv PMC_OP_PMCATTACH
 Attach a process mode PMC to a target process.
@@ -365,6 +403,9 @@ and
 .Xr loader 8
 tunables:
 .Bl -tag -width indent
+.It Va kern.hwpmc.callchaindepth Pq integer, read-only
+The maximum number of call chain records to capture per sample.
+The default is 8.
 .It Va kern.hwpmc.debugflags Pq string, read-write
 (Only available if the
 .Nm
@@ -409,46 +450,16 @@ These variables may be set in the kernel environment using
 before
 .Nm
 is loaded.
-.Sh SECURITY CONSIDERATIONS
-PMCs may be used to monitor the actual behaviour of the system on hardware.
-In situations where this constitutes an undesirable information leak,
-the following options are available:
-.Bl -enum
-.It
-Set the
-.Xr sysctl 8
-tunable
-.Va security.bsd.unprivileged_syspmcs
-to 0.
-This ensures that unprivileged processes cannot allocate system-wide
-PMCs and thus cannot observe the hardware behavior of the system
-as a whole.
-This tunable may also be set at boot time using
-.Xr loader 8 ,
-or with
-.Xr kenv 1
-prior to loading the
-.Nm
-driver into the kernel.
-.It
-Set the
-.Xr sysctl 8
-tunable
-.Va security.bsd.unprivileged_proc_debug
-to 0.
-This will ensure that an unprivileged process cannot attach a PMC
-to any process other than itself and thus cannot observe the hardware
-behavior of other processes with the same credentials.
-.El
-.Pp
-System administrators should note that on IA-32 platforms
-.Fx
-makes the content of the IA-32 TSC counter available to all processes
-via the RDTSC instruction.
 .Sh IMPLEMENTATION NOTES
 .Ss SMP Symmetry
 The kernel driver requires all physical CPUs in an SMP system to have
 identical performance monitoring counter hardware.
+.Ss Sparse CPU Numbering
+On platforms that sparsely number CPUs and which support hot-plugging
+of CPUs, requests that specify non-existent or disabled CPUs will fail
+with an error.
+Applications allocating system-scope PMCs need to be aware of
+the possibility of such transient failures.
 .Ss x86 TSC Handling
 Historically, on the x86 architecture,
 .Fx
@@ -456,7 +467,7 @@ has permitted user processes running at a processor CPL of 3 to
 read the TSC using the RDTSC instruction.
 The
 .Nm
-driver preserves this semantics.
+driver preserves this behavior.
 .Ss Intel P4/HTT Handling
 On CPUs with HTT support, Intel P4 PMCs are capable of qualifying
 only a subset of hardware events on a per-logical CPU basis.
@@ -467,7 +478,7 @@ driver will reject allocation requests for process-private PMCs that
 request counting of hardware events that cannot be counted separately
 for each logical CPU.
 .Ss Intel Pentium-Pro Handling
-Writing a value to the PMC MSRs found ing Intel Pentium-Pro style PMCs
+Writing a value to the PMC MSRs found in Intel Pentium-Pro style PMCs
 (found in
 .Tn "Intel Pentium Pro" ,
 .Tn "Pentium II" ,
@@ -503,7 +514,7 @@ between the currently executing kernel and the module being loaded.
 .It "hwpmc: this kernel has not been compiled with 'options HWPMC_HOOKS'."
 The module loading process failed because the currently executing kernel
 was not configured with the required configuration option
-.Cd HWPMC_HOOKS .
+.Dv HWPMC_HOOKS .
 .It "hwpmc: tunable hashsize=%d must be greater than zero."
 A negative value was supplied for tunable
 .Va kern.hwpmc.hashsize .
@@ -533,6 +544,10 @@ A command issued to the
 .Nm
 driver may fail with the following errors:
 .Bl -tag -width Er
+.It Bq Er EAGAIN
+Helper process creation failed for a
+.Dv PMC_OP_CONFIGURELOG
+request due to a temporary resource shortage in the kernel.
 .It Bq Er EBUSY
 A
 .Dv PMC_OP_CONFIGURELOG
@@ -568,6 +583,11 @@ PMC allocated with
 and
 .Dv PMC_F_LOG_PROCEXIT
 modifiers.
+.It Bq Er EDOOFUS
+A
+.Dv PMC_OP_PMCSTART
+operation was requested on a system-wide sampling PMC without a log
+file being configured.
 .It Bq Er EEXIST
 A
 .Dv PMC_OP_PMCATTACH
@@ -576,11 +596,20 @@ of this PMC.
 .It Bq Er EFAULT
 A bad address was passed in to the driver.
 .It Bq Er EINVAL
-A process specified an invalid PMC handle.
+An invalid PMC handle was specified.
 .It Bq Er EINVAL
 An invalid CPU number was passed in for a
 .Dv PMC_OP_GETPMCINFO
 operation.
+.It Bq Er EINVAL
+A
+.Dv PMC_OP_CONFIGURELOG
+request to de-configure a log file was issued without a log file
+being configured.
+.It Bq Er EINVAL
+A
+.Dv PMC_OP_FLUSHLOG
+request was issued without a log file being configured.
 .It Bq Er EINVAL
 An invalid CPU number was passed in for a
 .Dv PMC_OP_PMCADMIN
@@ -609,13 +638,13 @@ request.
 A CPU other than
 .Dv PMC_CPU_ANY
 was specified in a
-.Dv PMC_OP_ALLOCATE
+.Dv PMC_OP_PMCALLOCATE
 request for a process-private PMC.
 .It Bq Er EINVAL
 A CPU number of
 .Dv PMC_CPU_ANY
 was specified in a
-.Dv PMC_OP_ALLOCATE
+.Dv PMC_OP_PMCALLOCATE
 request for a system-wide PMC.
 .It Bq Er EINVAL
 The
@@ -624,14 +653,24 @@ argument to an
 .Dv PMC_OP_PMCALLOCATE
 request contained unknown flags.
 .It Bq Er EINVAL
+(On Intel Pentium 4 CPUs with HTT support)
+A
+.Dv PMC_OP_PMCALLOCATE
+request for a process-private PMC was issued for an event that does
+not support counting on a per-logical CPU basis.
+.It Bq Er EINVAL
 A PMC allocated for system-wide operation was specified with a
 .Dv PMC_OP_PMCATTACH
+or
+.Dv PMC_OP_PMCDETACH
 request.
 .It Bq Er EINVAL
 The
 .Ar pm_pid
 argument to a
 .Dv PMC_OP_PMCATTACH
+or
+.Dv PMC_OP_PMCDETACH
 request specified an illegal process ID.
 .It Bq Er EINVAL
 A
@@ -651,14 +690,14 @@ for a PMC that is not solely attached to its owner process, or for
 a PMC that was allocated with flag
 .Dv PMC_F_DESCENDANTS .
 .It Bq Er EINVAL
-(On Intel Pentium 4 CPUs with HTT support)
-An allocation request for
-a process-private PMC was issued for an event that does not support
-counting on a per-logical CPU basis.
+A
+.Dv PMC_OP_WRITELOG
+request was issued for an owner process without a log file
+configured.
 .It Bq Er ENOMEM
 The system was not able to allocate kernel memory.
 .It Bq Er ENOSYS
-(i386 architectures)
+(On i386 and amd64 architectures)
 A
 .Dv PMC_OP_PMCX86GETMSR
 operation was requested for hardware that does not support reading
@@ -666,22 +705,27 @@ PMCs directly with the RDPMC instruction.
 .It Bq Er ENXIO
 A
 .Dv PMC_OP_GETPMCINFO
-operation was requested for a disabled CPU.
+operation was requested for an absent or disabled CPU.
 .It Bq Er ENXIO
-A system-wide PMC on a disabled CPU was requested to be allocated with
-.Dv PMC_OP_PMCALLOCATE .
+A
+.Dv PMC_OP_PMCALLOCATE
+operation specified allocation of a system-wide PMC on an absent or
+disabled CPU.
 .It Bq Er ENXIO
 A
 .Dv PMC_OP_PMCSTART
 or
 .Dv PMC_OP_PMCSTOP
-request was issued for a system-wide PMC that was allocated on a
-currently disabled CPU.
+request was issued for a system-wide PMC that was allocated on a CPU
+that is currently absent or disabled.
 .It Bq Er EOPNOTSUPP
 A
 .Dv PMC_OP_PMCALLOCATE
 request was issued for PMC capabilities not supported
 by the specified PMC class.
+.It Bq Er EOPNOTSUPP
+(i386 architectures)
+A sampling mode PMC was requested on a CPU lacking an APIC.
 .It Bq Er EPERM
 A
 .Dv PMC_OP_PMCADMIN
@@ -707,13 +751,14 @@ from all of its target processes.
 .It Bq Er ESRCH
 A
 .Dv PMC_OP_PMCATTACH
+or
+.Dv PMC_OP_PMCDETACH
 request specified a non-existent process ID.
 .It Bq Er ESRCH
 The target process for a
 .Dv PMC_OP_PMCDETACH
-operation is not being monitored by the
-.Nm
-driver.
+operation is not being monitored by
+.Nm .
 .El
 .Sh SEE ALSO
 .Xr kenv 1 ,
@@ -724,12 +769,19 @@ driver.
 .Xr pmccontrol 8 ,
 .Xr pmcstat 8 ,
 .Xr sysctl 8 ,
+.Xr kproc_create 9 ,
 .Xr p_candebug 9
 .Sh HISTORY
 The
 .Nm
 driver first appeared in
 .Fx 6.0 .
+.Sh AUTHORS
+The
+.Nm
+driver was written by
+.An "Joseph Koshy"
+.Aq jkoshy@FreeBSD.org .
 .Sh BUGS
 The driver samples the state of the kernel's logical processor support
 at the time of initialization (i.e., at module load time).
@@ -743,3 +795,39 @@ Many single-processor motherboards keep the APIC disabled in BIOS; on
 such systems
 .Nm
 will not support sampling PMCs.
+.Sh SECURITY CONSIDERATIONS
+PMCs may be used to monitor the actual behavior of the system on hardware.
+In situations where this constitutes an undesirable information leak,
+the following options are available:
+.Bl -enum
+.It
+Set the
+.Xr sysctl 8
+tunable
+.Va security.bsd.unprivileged_syspmcs
+to 0.
+This ensures that unprivileged processes cannot allocate system-wide
+PMCs and thus cannot observe the hardware behavior of the system
+as a whole.
+This tunable may also be set at boot time using
+.Xr loader 8 ,
+or with
+.Xr kenv 1
+prior to loading the
+.Nm
+driver into the kernel.
+.It
+Set the
+.Xr sysctl 8
+tunable
+.Va security.bsd.unprivileged_proc_debug
+to 0.
+This will ensure that an unprivileged process cannot attach a PMC
+to any process other than itself and thus cannot observe the hardware
+behavior of other processes with the same credentials.
+.El
+.Pp
+System administrators should note that on IA-32 platforms
+.Fx
+makes the content of the IA-32 TSC counter available to all processes
+via the RDTSC instruction.

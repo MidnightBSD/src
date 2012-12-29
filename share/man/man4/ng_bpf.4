@@ -32,10 +32,10 @@
 .\"
 .\" Author: Archie Cobbs <archie@FreeBSD.org>
 .\"
-.\" $FreeBSD: src/share/man/man4/ng_bpf.4,v 1.21 2005/02/05 11:31:31 ru Exp $
+.\" $MidnightBSD$
 .\" $Whistle: ng_bpf.8,v 1.2 1999/12/03 01:57:12 archie Exp $
 .\"
-.Dd December 2, 1999
+.Dd May 30, 2007
 .Dt NG_BPF 4
 .Os
 .Sh NAME
@@ -91,7 +91,7 @@ struct ng_bpf_hookprog {
   char            ifMatch[NG_HOOKSIZ];      /* match dest hook */
   char            ifNotMatch[NG_HOOKSIZ];   /* !match dest hook */
   int32_t         bpf_prog_len;             /* #isns in program */
-  struct bpf_insn bpf_prog[0];              /* bpf program */
+  struct bpf_insn bpf_prog[];               /* bpf program */
 };
 .Ed
 .Pp
@@ -156,26 +156,19 @@ INHOOK="hook1"
 MATCHHOOK="hook2"
 NOTMATCHHOOK="hook3"
 
-cat > /tmp/bpf.awk << xxENDxx
-{
-  if (!init) {
-    printf "bpf_prog_len=%d bpf_prog=[", \\$1;
-    init=1;
-  } else {
-    printf " { code=%d jt=%d jf=%d k=%d }", \\$1, \\$2, \\$3, \\$4;
-  }
-}
-END {
-  print " ]"
-}
-xxENDxx
-
-BPFPROG=`tcpdump -s 8192 -ddd ${PATTERN} | awk -f /tmp/bpf.awk`
+BPFPROG=$( tcpdump -s 8192 -ddd ${PATTERN} | \\
+           ( read len ; \\
+             echo -n "bpf_prog_len=$len" ; \\
+             echo -n "bpf_prog=[" ; \\
+             while read code jt jf k ; do \\
+                 echo -n " { code=$code jt=$jt jf=$jf k=$k }" ; \\
+             done ; \\
+             echo " ]" ) )
 
 ngctl msg ${NODEPATH} setprogram { thisHook=\\"${INHOOK}\\" \\
   ifMatch=\\"${MATCHHOOK}\\" \\
   ifNotMatch=\\"${NOTMATCHHOOK}\\" \\
-  ${BPFPROG} } }
+  ${BPFPROG} }
 .Ed
 .Sh SEE ALSO
 .Xr bpf 4 ,

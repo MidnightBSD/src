@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/pci.4,v 1.17 2005/02/13 22:25:17 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd October 24, 1999
+.Dd January 3, 2008
 .Dt PCI 4
 .Os
 .Sh NAME
@@ -54,13 +54,33 @@ granting access to the
 device.
 If used improperly, this driver can allow userland applications to
 crash a machine or cause data loss.
-.Sh KERNEL CONFIGURATION
-It is only necessary to specify one
+.Pp
+The
 .Nm
-controller in the kernel.
-Additional
+driver implements the
 .Tn PCI
-busses are handled automatically as they are encountered.
+bus in the kernel.
+It enumerates any devices on the
+.Tn PCI
+bus and gives
+.Tn PCI
+client drivers the chance to attach to them.
+It assigns resources to children, when the BIOS does not.
+It takes care of routing interrupts when necessary.
+It reprobes the unattached
+.Tn PCI
+children when
+.Tn PCI
+client drivers are dynamically
+loaded at runtime.
+.Sh KERNEL CONFIGURATION
+The
+.Nm
+device is included in the kernel as described in the SYNOPSIS section.
+The
+.Nm
+driver cannot be built as a
+.Xr kld 4 .
 .Sh IOCTLS
 The following
 .Xr ioctl 2
@@ -70,7 +90,6 @@ driver.
 They are defined in the header file
 .In sys/pciio.h .
 .Bl -tag -width 012345678901234
-.Pp
 .It PCIOCGETCONF
 This
 .Xr ioctl 2
@@ -109,7 +128,7 @@ structure consists of the following elements:
 .Bl -tag -width pd_vendor
 .It pc_sel
 .Tn PCI
-bus, slot and function.
+domain, bus, slot and function.
 .It pd_name
 .Tn PCI
 device driver name.
@@ -150,7 +169,7 @@ which consists of the following items:
 .Bl -tag -width pc_subvendor
 .It pc_sel
 .Tn PCI
-bus, slot and function.
+domain, bus, slot and function.
 .It pc_hdr
 .Tn PCI
 header type.
@@ -257,9 +276,10 @@ structure consists of the following fields:
 .It pi_sel
 A
 .Va pcisel
-structure which specifies the bus, slot and function the user would like to
-query.
-If the specific bus is not found, errno will be set to ENODEV and -1 returned from the ioctl.
+structure which specifies the domain, bus, slot and function the user would
+like to query.
+If the specific bus is not found, errno will be set to ENODEV and -1 returned
+from the ioctl.
 .It pi_reg
 The
 .Tn PCI
@@ -297,8 +317,6 @@ Character device for the
 .Nm
 driver.
 .El
-.Sh DIAGNOSTICS
-None.
 .Sh SEE ALSO
 .Xr pciconf 8
 .Sh HISTORY

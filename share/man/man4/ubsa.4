@@ -13,13 +13,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgment:
-.\"        This product includes software developed by the NetBSD
-.\"        Foundation, Inc. and its contributors.
-.\" 4. Neither the name of The NetBSD Foundation nor the names of its
-.\"    contributors may be used to endorse or promote products derived
-.\"    from this software without specific prior written permission.
 .\"
 .\" THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
 .\" ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -33,17 +26,28 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/ubsa.4,v 1.5 2004/10/16 21:36:19 le Exp $
+.\" $MidnightBSD$
 .\"
-.Dd October 16, 2004
+.Dd March 28, 2008
 .Dt UBSA 4
 .Os
 .Sh NAME
 .Nm ubsa
 .Nd USB support for Belkin serial adapters
 .Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device ubsa"
-.Cd "device ucom"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+ubsa_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
@@ -61,6 +65,10 @@ driver supports the following adapters:
 .Pp
 .Bl -bullet -compact
 .It
+AnyData ADU-500A EV-DO modem
+.It
+AnyData ADU-E100A (no EV-DO mode support)
+.It
 Belkin F5U103
 .It
 Belkin F5U120
@@ -70,10 +78,6 @@ e-Tek Labs Kwik232
 GoHubs GoCOM232
 .It
 Peracom single port serial adapter
-.It
-Huawei Technologies Mobile and E220 G3 Modem
-.It
-Vodafone Mobile Connect 3G datacard
 .El
 .Sh SEE ALSO
 .Xr tty 4 ,

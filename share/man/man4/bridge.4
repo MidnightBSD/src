@@ -1,260 +1,450 @@
+.\"	$NetBSD: bridge.4,v 1.5 2004/01/31 20:14:11 jdc Exp $
 .\"
-.\" $FreeBSD: src/share/man/man4/bridge.4,v 1.24.2.1 2005/09/27 18:51:02 mlaier Exp $
+.\" Copyright 2001 Wasabi Systems, Inc.
+.\" All rights reserved.
 .\"
-.Dd September 27, 2005
-.Dt BRIDGE 4
+.\" Written by Jason R. Thorpe for Wasabi Systems, Inc.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 3. All advertising materials mentioning features or use of this software
+.\"    must display the following acknowledgement:
+.\"	This product includes software developed for the NetBSD Project by
+.\"	Wasabi Systems, Inc.
+.\" 4. The name of Wasabi Systems, Inc. may not be used to endorse
+.\"    or promote products derived from this software without specific prior
+.\"    written permission.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY WASABI SYSTEMS, INC. ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+.\" TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+.\" PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL WASABI SYSTEMS, INC
+.\" BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+.\" CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+.\" SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+.\" INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+.\" CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+.\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+.\" POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\" $MidnightBSD$
+.\"
+.Dd January 9, 2010
+.Dt IF_BRIDGE 4
 .Os
 .Sh NAME
-.Nm bridge
-.Nd bridging support
+.Nm if_bridge
+.Nd network bridge device
 .Sh SYNOPSIS
-.Cd "options BRIDGE"
-.Sh DESCRIPTION
-.Bf -symbolic
-This bridge implementation is made obsolete by:
-.Ef
-.Xr if_bridge 4
-.Bf -symbolic
-and will be removed from future releases.
-.Ef
-.Pp
-.Fx
-supports bridging on Ethernet-type interfaces, including VLANs.
-Bridging support can be either compiled into the kernel, or loaded
-at runtime as a kernel module.
-.Pp
-A single
-.Fx
-host can do bridging on independent sets of interfaces,
-which are called
-.Dq clusters .
-Each cluster connects a set of interfaces, and is
-identified by a
-.Dq cluster-ID
-which is a number in the range 1..65535.
-A cluster in fact is very similar to what commercial switches call
-a
-.Dq VLAN .
-Note however that there is no relation whatsoever
-between the cluster-ID and the IEEE 802.1q VLAN-ID which appears
-in the header of packets transmitted on the wire.
-In fact, in most cases there is no relation between the
-so-called
-.Dq "VLAN identifier"
-used in most commercial switches, and
-the IEEE 802.1q VLAN-ID.
-.Pp
-By putting both physical and logical
-.Pq Xr vlan 4
-interfaces in the same cluster, a
-.Fx
-box can also implement what in commercial terms is called a
-.Dq trunk
-interface.
-This means that packets
-coming from one of the interfaces in a cluster
-will appear on the wire of the
-.Dq parent
-interface of any VLAN interface in a cluster,
-with the proper VLAN tag.
-Similarly, packets
-coming from a parent interface of any VLAN interface in a cluster
-will have the VLAN tag stripped,
-and will be forwarded to other interfaces in a cluster.
-See the
-.Sx EXAMPLES
-section for more details.
-.Pp
-Runtime operation of the
-.Nm
-is controlled by several
-.Xr sysctl 8
-variables, as follows.
-.Bl -tag -width indent
-.It Va net.link.ether.bridge.enable
-Set to
-.Li 1
-to enable bridging, set to
-.Li 0
-to disable it.
-.It Va net.link.ether.bridge.ipfw
-Set to
-.Li 1
-to enable
-.Xr ipfw 8
-processing of bridged packets.
-Note that
-.Xr ipfw 8
-rules only apply
-to IP packets.
-Non-IP packets are accepted by default.
-See the
-.Sx BUGS
-section and the
-.Xr ipfw 8
-manpage for more details on the interaction of bridging
-and the firewall.
-.It Va net.link.ether.bridge.ipf
-Set to
-.Li 1
-to enable
-.Xr ipf 8
-processing of bridged packets.
-Note that
-.Xr ipf 8
-rules only apply
-to IP packets.
-Non-IP packets are accepted by default.
-.It Va net.link.ether.bridge.config
-Set to the list of interfaces to bridge.
-Interfaces are separated by spaces, commas or tabs.
-Each interface
-can be optionally followed by a colon and an integer indicating the
-cluster it belongs to (defaults to 1 if the cluster-ID is missing), e.g.\&
-.Dq Li "dc0:1,dc1,vlan0:3 dc2:3"
-will put
-.Li dc0
-and
-.Li dc1
-in cluster number 1, and
-.Li vlan0
-and
-.Li dc2
-in cluster
-number 3.
-See the
-.Sx EXAMPLES
-section for more examples.
-.Pp
-The list of interfaces is rescanned every time the list is
-modified, bridging is enabled, or new interfaces are created or
-destroyed.
-An explicit request to refresh the
-.Nm
-configuration can also
-be done by writing any value to
-.Va net.link.ether.bridge.refresh .
-Interfaces that are in the list but cannot be used
-for bridging (because they are non-existing, or not Ethernet or VLAN)
-are not used and a warning message is generated.
-.El
-.Pp
-Bridging requires interfaces to be put in promiscuous mode,
-and transmit packets with Ethernet source addresses different
-than their own.
-Some interfaces (e.g.\&
-.Xr wi 4 )
-do not support this functionality.
-Also, bridging is not compatible with interfaces which
-use hardware loopback, because there is no way to tell locally
-generated packets from externally generated ones.
-.Sh FILES
-.Bl -tag -width ".Pa /boot/kernel/bridge.ko" -compact
-.It Pa /boot/kernel/bridge.ko
-.Nm
-loadable module.
-.El
-.Sh EXAMPLES
-A simple
-.Nm
-configuration with three interfaces in the same
-cluster can be set as follows.
-No cluster-ID is specified here, which
-will cause the interfaces to appear as part of cluster #1.
-.Pp
-.Dl "sysctl net.link.ether.bridge.config=dc0,dc1,fxp1"
-.Pp
-If you do not know what actual interfaces will be present on
-your system, you can just put all existing interfaces in the
-configuration, as follows:
-.Pp
-.Dl sysctl net.link.ether.bridge.config="`ifconfig -l`"
-.Pp
-This will result in a space-separated list of interfaces.
-Out of the list, only Ethernet and VLAN interfaces will be
-used for bridging, whereas for others the kernel will produce
-a warning message.
-.Pp
-More complex configurations can be used to create multiple
-clusters, e.g.\&
-.Pp
-.Dl "sysctl net.link.ether.bridge.config=dc0:3,dc1:3,fxp0:4,fxp1:4"
-.Pp
-will create two completely independent clusters.
-.Pp
-Finally, interesting configurations involve VLANs and parent interfaces.
-As an example, the following configuration will use interface
-.Li dc0
-as a
-.Dq trunk
-interface, and pass packets
-for 802.1q VLANs 10 and 20 to physical interfaces
-.Li dc1
-and
-.Li dc2 ,
-respectively:
-.Bd -literal -offset indent
-sysctl net.link.ether.bridge.config=vlan0:34,dc1:34,vlan1:56,dc2:56
-ifconfig vlan0 vlan 10 vlandev dc0
-ifconfig vlan1 vlan 20 vlandev dc0
+To compile this driver into the kernel,
+place the following line in your
+kernel configuration file:
+.Bd -ragged -offset indent
+.Cd "device if_bridge"
 .Ed
 .Pp
-Note how there is no relation between the 802.1q VLAN identifiers
-(10 and 20) and the cluster-ID's (34 and 56) used in
-the
-.Va bridge.config
-variable.
-.Pp
-Note also that the trunk interface
-does not even appear in the
-.Va bridge.config ,
-as VLAN tag insertion/removal
-is performed by the
-.Xr vlan 4
-devices.
-When using VLAN devices, care must be taken by not creating loops
-between these devices and their parent interfaces.
-.Sh SEE ALSO
-.Xr ip 4 ,
-.Xr ng_bridge 4 ,
-.Xr vlan 4 ,
-.Xr ipf 8 ,
-.Xr ipfw 8 ,
-.Xr sysctl 8
-.Sh HISTORY
-Bridging was introduced in
-.Fx 2.2.8
-by
-.An Luigi Rizzo Aq luigi@iet.unipi.it .
-.Sh BUGS
-Care must be taken not to construct loops in the
+Alternatively, to load the driver as a
+module at boot time, place the following lines in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+if_bridge_load="YES"
+bridgestp_load="YES"
+.Ed
+.Sh DESCRIPTION
+The
 .Nm
-topology.
-The kernel supports only a primitive form of loop detection, by disabling
-some interfaces when a loop is detected.
-No support for a daemon running the
-spanning tree algorithm is currently provided.
+driver creates a logical link between two or more IEEE 802 networks
+that use the same (or
+.Dq "similar enough" )
+framing format.
+For example, it is possible to bridge Ethernet and 802.11 networks together,
+but it is not possible to bridge Ethernet and Token Ring together.
 .Pp
-With bridging active, interfaces are in promiscuous mode,
-thus causing some load on the system to receive and filter
-out undesired traffic.
+Each
+.Nm
+interface is created at runtime using interface cloning.
+This is
+most easily done with the
+.Xr ifconfig 8
+.Cm create
+command or using the
+.Va cloned_interfaces
+variable in
+.Xr rc.conf 5 .
 .Pp
-When passing bridged packets to
-.Xr ipfw 8 ,
-remember that only IP packets are passed to the firewall, while
-other packets are silently accepted.
-Also remember that bridged packets are accepted after the
-first pass through the firewall irrespective of the setting
-of the sysctl variable
-.Va net.inet.ip.fw.one_pass ,
-and that some
-.Xr ipfw 8
-actions such as
-.Cm divert
-do not apply to bridged packets.
-It might be useful to have a rule of the form
+The
+.Nm
+interface randomly chooses a link (MAC) address in the range reserved for
+locally administered addresses when it is created.
+This address is guaranteed to be unique
+.Em only
+across all
+.Nm
+interfaces on the local machine.
+Thus you can theoretically have two bridges on the different machines with
+the same link addresses.
+The address can be changed by assigning the desired link address using
+.Xr ifconfig 8 .
 .Pp
-.Dl "skipto 20000 ip from any to any bridged"
+If
+.Xr sysctl 8
+node
+.Va net.link.bridge.inherit_mac
+has non-zero value, newly created bridge will inherit MAC address
+from its first member instead of choosing random link-level address.
+This will provide more predictable bridge MAC without any
+additional configuration, but currently this feature is known
+to break some L2 protocols, for example PPPoE that is provided
+by
+.Xr ng_pppoe 4
+and
+.Xr ppp 8 .
+Now this feature is considered as experimental and is turned off
+by-default.
 .Pp
-near the beginning of your ruleset to implement specific rulesets
-for bridged packets.
+A bridge can be used to provide several services, such as a simple
+802.11-to-Ethernet bridge for wireless hosts, and traffic isolation.
+.Pp
+A bridge works like a switch, forwarding traffic from one interface
+to another.
+Multicast and broadcast packets are always forwarded to all
+interfaces that are part of the bridge.
+For unicast traffic, the bridge learns which MAC addresses are associated
+with which interfaces and will forward the traffic selectively.
+.Pp
+All the bridged member interfaces need to be up in order to pass network traffic.
+These can be enabled using
+.Xr ifconfig 8
+or
+.Va ifconfig_ Ns Ao Ar interface Ac Ns Li ="up"
+in
+.Xr rc.conf 5 .
+.Pp
+The MTU of the first member interface to be added is used as the bridge MTU.
+All additional members are required to have exactly the same value.
+.Pp
+The TXCSUM capability is disabled for any interface added to the bridge, and it
+is restored when the interface is removed again.
+.Pp
+The bridge supports
+.Dq monitor mode ,
+where the packets are discarded after
+.Xr bpf 4
+processing, and are not processed or forwarded further.
+This can be used to multiplex the input of two or more interfaces into a single
+.Xr bpf 4
+stream.
+This is useful for reconstructing the traffic for network taps
+that transmit the RX/TX signals out through two separate interfaces.
+.Sh SPANNING TREE
+The
+.Nm
+driver implements the Rapid Spanning Tree Protocol (RSTP or 802.1w) with
+backwards compatibility with the legacy Spanning Tree Protocol (STP).
+Spanning Tree is used to detect and remove loops in a network topology.
+.Pp
+RSTP provides faster spanning tree convergence than legacy STP, the protocol
+will exchange information with neighbouring switches to quickly transition to
+forwarding without creating loops.
+.Pp
+The code will default to RSTP mode but will downgrade any port connected to a
+legacy STP network so is fully backward compatible.
+A bridge can be forced to operate in STP mode without rapid state transitions
+via the
+.Va proto
+command in
+.Xr ifconfig 8 .
+.Pp
+The bridge can log STP port changes to
+.Xr syslog 3
+by enabling the
+.Va net.link.bridge.log_stp
+variable using
+.Xr sysctl 8 .
+.Pp
+.Sh PACKET FILTERING
+Packet filtering can be used with any firewall package that hooks in via the
+.Xr pfil 9
+framework.
+When filtering is enabled, bridged packets will pass through the filter
+inbound on the originating interface, on the bridge interface and outbound on
+the appropriate interfaces.
+Either stage can be disabled.
+The filtering behaviour can be controlled using
+.Xr sysctl 8 :
+.Bl -tag -width ".Va net.link.bridge.pfil_onlyip"
+.It Va net.link.bridge.pfil_onlyip
+Controls the handling of non-IP packets which are not passed to
+.Xr pfil 9 .
+Set to
+.Li 1
+to only allow IP packets to pass (subject to firewall rules), set to
+.Li 0
+to unconditionally pass all non-IP Ethernet frames.
+.It Va net.link.bridge.pfil_member
+Set to
+.Li 1
+to enable filtering on the incoming and outgoing member interfaces, set
+to
+.Li 0
+to disable it.
+.It Va net.link.bridge.pfil_bridge
+Set to
+.Li 1
+to enable filtering on the bridge interface, set
+to
+.Li 0
+to disable it.
+.It Va net.link.bridge.pfil_local_phys
+Set to
+.Li 1
+to additionally filter on the physical interface for locally destined packets.
+Set to
+.Li 0
+to disable this feature.
+.It Va net.link.bridge.ipfw
+Set to
+.Li 1
+to enable layer2 filtering with
+.Xr ipfirewall 4 ,
+set to
+.Li 0
+to disable it.
+This needs to be enabled for
+.Xr dummynet 4
+support.
+When
+.Va ipfw
+is enabled,
+.Va pfil_bridge
+and
+.Va pfil_member
+will be disabled so that IPFW
+is not run twice; these can be re-enabled if desired.
+.It Va net.link.bridge.ipfw_arp
+Set to
+.Li 1
+to enable layer2 ARP filtering with
+.Xr ipfirewall 4 ,
+set to
+.Li 0
+to disable it.
+Requires
+.Va ipfw
+to be enabled.
+.El
+.Pp
+ARP and REVARP packets are forwarded without being filtered and others
+that are not IP nor IPv6 packets are not forwarded when
+.Va pfil_onlyip
+is enabled.
+IPFW can filter Ethernet types using
+.Cm mac-type
+so all packets are passed to
+the filter for processing.
+.Pp
+The packets originating from the bridging host will be seen by
+the filter on the interface that is looked up in the routing
+table.
+.Pp
+The packets destined to the bridging host will be seen by the filter
+on the interface with the MAC address equal to the packet's destination
+MAC.
+There are situations when some of the bridge members are sharing
+the same MAC address (for example the
+.Xr vlan 4
+interfaces: they are currently sharing the
+MAC address of the parent physical interface).
+It is not possible to distinguish between these interfaces using
+their MAC address, excluding the case when the packet's destination
+MAC address is equal to the MAC address of the interface on which
+the packet was entered to the system.
+In this case the filter will see the incoming packet on this
+interface.
+In all other cases the interface seen by the packet filter is chosen
+from the list of bridge members with the same MAC address and the
+result strongly depends on the member addition sequence and the
+actual implementation of
+.Nm .
+It is not recommended to rely on the order chosen by the current
+.Nm
+implementation: it can be changed in the future.
+.Pp
+The previous paragraph is best illustrated with the following
+pictures.
+Let
+.Bl -bullet
+.It
+the MAC address of the incoming packet's destination is
+.Nm nn:nn:nn:nn:nn:nn ,
+.It
+the interface on which packet entered the system is
+.Nm ifX ,
+.It
+.Nm ifX
+MAC address is
+.Nm xx:xx:xx:xx:xx:xx ,
+.It
+there are possibly other bridge members with the same MAC address
+.Nm xx:xx:xx:xx:xx:xx ,
+.It
+the bridge has more than one interface that are sharing the
+same MAC address
+.Nm yy:yy:yy:yy:yy:yy ;
+we will call them
+.Nm vlanY1 ,
+.Nm vlanY2 ,
+etc.
+.El
+.Pp
+Then if the MAC address
+.Nm nn:nn:nn:nn:nn:nn
+is equal to the
+.Nm xx:xx:xx:xx:xx:xx
+then the filter will see the packet on the interface
+.Nm ifX
+no matter if there are any other bridge members carrying the same
+MAC address.
+But if the MAC address
+.Nm nn:nn:nn:nn:nn:nn
+is equal to the
+.Nm yy:yy:yy:yy:yy:yy
+then the interface that will be seen by the filter is one of the
+.Nm vlanYn .
+It is not possible to predict the name of the actual interface
+without the knowledge of the system state and the
+.Nm
+implementation details.
+.Pp
+This problem arises for any bridge members that are sharing the same
+MAC address, not only to the
+.Xr vlan 4
+ones: they we taken just as the example of such situation.
+So if one wants the filter the locally destined packets based on
+their interface name, one should be aware of this implication.
+The described situation will appear at least on the filtering bridges
+that are doing IP-forwarding; in some of such cases it is better
+to assign the IP address only to the
+.Nm
+interface and not to the bridge members.
+Enabling
+.Va net.link.bridge.pfil_local_phys
+will let you do the additional filtering on the physical interface.
+.Sh EXAMPLES
+The following when placed in the file
+.Pa /etc/rc.conf
+will cause a bridge called
+.Dq Li bridge0
+to be created, and will add the interfaces
+.Dq Li wlan0
+and
+.Dq Li fxp0
+to the bridge, and then enable packet forwarding.
+Such a configuration could be used to implement a simple
+802.11-to-Ethernet bridge (assuming the 802.11 interface is
+in ad-hoc mode).
+.Bd -literal -offset indent
+cloned_interfaces="bridge0"
+ifconfig_bridge0="addm wlan0 addm fxp0 up"
+.Ed
+.Pp
+For the bridge to forward packets all member interfaces and the bridge need
+to be up.
+The above example would also require:
+.Bd -literal -offset indent
+create_args_wlan0="wlanmode hostap"
+ifconfig_wlan0="up ssid my_ap mode 11g"
+ifconfig_fxp0="up"
+.Ed
+.Pp
+Consider a system with two 4-port Ethernet boards.
+The following will cause a bridge consisting of all 8 ports with Rapid Spanning
+Tree enabled to be created:
+.Bd -literal -offset indent
+ifconfig bridge0 create
+ifconfig bridge0 \e
+    addm fxp0 stp fxp0 \e
+    addm fxp1 stp fxp1 \e
+    addm fxp2 stp fxp2 \e
+    addm fxp3 stp fxp3 \e
+    addm fxp4 stp fxp4 \e
+    addm fxp5 stp fxp5 \e
+    addm fxp6 stp fxp6 \e
+    addm fxp7 stp fxp7 \e
+    up
+.Ed
+.Pp
+The bridge can be used as a regular host interface at the same time as bridging
+between its member ports.
+In this example, the bridge connects em0 and em1, and will receive its IP
+address through DHCP:
+.Bd -literal -offset indent
+cloned_interfaces="bridge0"
+ifconfig_bridge0="addm em0 addm em1 DHCP"
+ifconfig_em0="up"
+ifconfig_em1="up"
+.Ed
+.Pp
+The bridge can tunnel Ethernet across an IP internet using the EtherIP
+protocol.
+This can be combined with
+.Xr ipsec 4
+to provide an encrypted connection.
+Create a
+.Xr gif 4
+interface and set the local and remote IP addresses for the
+tunnel, these are reversed on the remote bridge.
+.Bd -literal -offset indent
+ifconfig gif0 create
+ifconfig gif0 tunnel 1.2.3.4 5.6.7.8 up
+ifconfig bridge0 create
+ifconfig bridge0 addm fxp0 addm gif0 up
+.Ed
+.Pp
+Note that
+.Fx
+6.1, 6.2, 6.3, 7.0, 7.1, and 7.2 have a bug in the EtherIP protocol.
+For more details and workaround, see
+.Xr gif 4
+manual page.
+.Sh SEE ALSO
+.Xr gif 4 ,
+.Xr ipf 4 ,
+.Xr ipfw 4 ,
+.Xr pf 4 ,
+.Xr ifconfig 8
+.Sh HISTORY
+The
+.Nm
+driver first appeared in
+.Fx 6.0 .
+.Sh AUTHORS
+.An -nosplit
+The
+.Nm bridge
+driver was originally written by
+.An Jason L. Wright
+.Aq jason@thought.net
+as part of an undergraduate independent study at the University of
+North Carolina at Greensboro.
+.Pp
+This version of the
+.Nm
+driver has been heavily modified from the original version by
+.An Jason R. Thorpe
+.Aq thorpej@wasabisystems.com .
+.Pp
+Rapid Spanning Tree Protocol (RSTP) support was added by
+.An Andrew Thompson
+.Aq thompsa@FreeBSD.org .
+.Sh BUGS
+The
+.Nm
+driver currently supports only Ethernet and Ethernet-like (e.g., 802.11)
+network devices, with exactly the same interface MTU size as the bridge device.

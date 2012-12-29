@@ -28,14 +28,14 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/sis.4,v 1.18.2.2 2006/02/02 07:50:01 trhodes Exp $
+.\" $MidnightBSD$
 .\"
-.Dd July 16, 2005
+.Dd September 2, 2010
 .Dt SIS 4
 .Os
 .Sh NAME
 .Nm sis
-.Nd "SiS 900, SiS 7016 and NS DP83815 Fast Ethernet device driver"
+.Nd "SiS 900, SiS 7016 and NS DP83815/DP83816 Fast Ethernet device driver"
 .Sh SYNOPSIS
 To compile this driver into the kernel,
 place the following lines in your
@@ -59,7 +59,7 @@ controllers based on the Silicon Integrated Systems SiS 900
 and SiS 7016 Fast Ethernet controller chips.
 .Pp
 This driver also supports
-adapters based on the National Semiconductor DP83815 (MacPhyter)
+adapters based on the National Semiconductor DP83815 (MacPhyter) and DP83816
 PCI Ethernet controller chip.
 .Pp
 The SiS 900 is a 100Mbps Ethernet MAC and MII-compliant transceiver
@@ -80,7 +80,6 @@ by the same driver.
 The
 .Nm
 driver supports the following media types:
-.Pp
 .Bl -tag -width 10baseTXUTP
 .It autoselect
 Enable autoselection of the media type and options.
@@ -112,10 +111,9 @@ modes.
 The
 .Nm
 driver supports the following media options:
-.Pp
 .Bl -tag -width full-duplex
 .It full-duplex
-Force full duplex operation
+Force full duplex operation.
 .It half-duplex
 Force half duplex operation.
 .El
@@ -127,7 +125,8 @@ The
 .Nm
 driver supports Silicon Integrated Systems SiS 900 and SiS 7016 based
 Fast Ethernet adapters and embedded controllers, as well as Fast Ethernet
-adapters based on the National Semiconductor DP83815 (MacPhyter) chip.
+adapters based on the National Semiconductor DP83815 (MacPhyter) and DP83816
+chips.
 Supported adapters include:
 .Pp
 .Bl -bullet -compact
@@ -141,6 +140,24 @@ Netgear FA311-TX (DP83815)
 Netgear FA312-TX (DP83815)
 .It
 SiS 630, 635, and 735 motherboard chipsets
+.It
+Soekris Engineering net45xx, net48xx, lan1621, and lan1641
+.El
+.Sh SYSCTL VARIABLES
+The following variable is available as both
+.Xr sysctl 8
+variable and
+.Xr loader 8
+tunable:
+.Bl -tag -width indent
+.It Va dev.sis.%unit.manual_pad
+This variable controls how to pad short frames for DP83815/DP83816
+controllers on the specified device.
+DP83815/DP83816 controllers are known to pad 0xFF for short frames
+which is violation of RFC 1042.
+Set this variable to a non-zero value to let driver manually pad
+each short frame with zeros at the cost of extra CPU cycles.
+The default value is 0 to let hardware perform automatic padding.
 .El
 .Sh DIAGNOSTICS
 .Bl -diag
@@ -181,19 +198,21 @@ If you power down your system prior to booting
 the card should be configured correctly.
 .El
 .Sh SEE ALSO
+.Xr altq 4 ,
 .Xr arp 4 ,
 .Xr miibus 4 ,
 .Xr netintro 4 ,
 .Xr ng_ether 4 ,
 .Xr polling 4 ,
+.Xr vlan 4 ,
 .Xr ifconfig 8
 .Rs
 .%T SiS 900 and SiS 7016 datasheets
-.%O http://www.sis.com.tw
+.%U http://www.sis.com.tw
 .Re
 .Rs
 .%T NatSemi DP83815 datasheet
-.%O http://www.national.com
+.%U http://www.national.com
 .Re
 .Sh HISTORY
 The

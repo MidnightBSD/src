@@ -32,10 +32,10 @@
 .\"
 .\" Author: Archie Cobbs <archie@FreeBSD.org>
 .\"
-.\" $FreeBSD: src/share/man/man4/ng_pppoe.4,v 1.31.2.1 2006/01/31 15:36:11 glebius Exp $
+.\" $MidnightBSD$
 .\" $Whistle: ng_pppoe.8,v 1.1 1999/01/25 23:46:27 archie Exp $
 .\"
-.Dd January 27, 2006
+.Dd December 27, 2007
 .Dt NG_PPPOE 4
 .Os
 .Sh NAME
@@ -67,10 +67,16 @@ the
 control message.
 .Sh HOOKS
 This node type supports the following hooks:
-.Pp
 .Bl -tag -width [unspecified]
 .It Dv ethernet
-The hook that should normally be connected to an Ethernet node.
+The hook that should normally be connected to an
+.Xr ng_ether 4
+node.
+Once connected,
+.Nm
+will send a message down this hook to determine Ethernet address of
+the underlying node.
+Obtained address will be stored and then used for outgoing datagrams.
 .It Dv debug
 Presently no use.
 .It Dv [unspecified]
@@ -90,25 +96,26 @@ struct ngpppoestat {
 };
 .Ed
 .It Dv NGM_TEXT_STATUS
-This generic message returns is a human-readable version of the node status.
+This generic message returns a human-readable version of the node status.
 (not yet)
 .It Dv NGM_PPPOE_CONNECT
 Tell a nominated newly created hook that its session should enter
-the state machine in a manner to become a client.
-It must be newly created and
-a service name can be given as an argument.
-It is legal to specify a zero length service name.
-This is common on some DSL setups.
-A session request packet will be broadcast on the Ethernet.
+the state machine as a client.
+It must be newly created and a service name can be given as an argument.
+It is legal to specify a zero-length service name, this is common
+on some DSL setups.
+It is possible to request a connection to a specific
+access concentrator by its name using the "AC-Name\\Service-Name" syntax.
+A session request packet will be broadcasted on the Ethernet.
 This command uses the
 .Dv ngpppoe_init_data
 structure shown below.
 .It Dv NGM_PPPOE_LISTEN
 Tell a nominated newly created hook that its session should enter
-the state machine in a manner to become a server listener.
+the state machine as a server listener.
 The argument
-given is the name of the service to listen on behalf of
-a zero length service length will match all requests for service.
+given is the name of the service to listen for.
+A zero-length service name will match all requests for service.
 A matching service request
 packet will be passed unmodified back to the process responsible
 for starting the service.
@@ -119,13 +126,13 @@ This command uses the
 structure shown below.
 .It Dv NGM_PPPOE_OFFER
 Tell a nominated newly created hook that its session should enter
-the state machine in a manner to become a server.
+the state machine as a server.
 The argument given is the name of the service to offer.
-A zero length service
+A zero-length service
 is legal.
 The State machine will progress to a state where it will await
 a request packet to be forwarded to it from the startup server,
-which in turn probably received it from a LISTEN mode hook ( see above).
+which in turn probably received it from a LISTEN mode hook (see above).
 This is so
 that information that is required for the session that is embedded in
 the original session request packet, is made available to the state machine
@@ -152,14 +159,15 @@ above messages, and reports a state change.
 This message reports successful Session negotiation.
 It uses the structure shown below, and
 reports back the hook name corresponding to the successful session.
-.It Dv NGM_NGM_PPPOE_FAIL
+.It Dv NGM_PPPOE_FAIL
 This command is sent to the node that started this session with one of the
 above messages, and reports a state change.
 This message reports failed Session negotiation.
 It uses the structure shown below, and
 reports back the hook name corresponding to the failed session.
-The hook will probably have been removed immediately after sending this message
-.It Dv NGM_NGM_PPPOE_CLOSE
+The hook will probably have been removed immediately after sending this
+message.
+.It Dv NGM_PPPOE_CLOSE
 This command is sent to the node that started this session with one of the
 above messages, and reports a state change.
 This message reports a request to close a session.
@@ -167,7 +175,9 @@ It uses the structure shown below, and
 reports back the hook name corresponding to the closed session.
 The hook will probably have been removed immediately after sending this
 message.
-At present this message is not yet used and a 'failed' message
+At present this message is not yet used and a
+.Dv NGM_PPPOE_FAIL
+message
 will be received at closure instead.
 .It Dv NGM_PPPOE_ACNAME
 This command is sent to the node that started this session with one of the
@@ -187,7 +197,7 @@ as a string.
 .Tn ASCII
 form of this message is
 .Qq Li pppoe_getmode .
-The following keywords are can be returned:
+The following keywords can be returned:
 .Bl -tag -width 3n
 .It Qq standard
 The node operates according to RFC 2516.
@@ -196,7 +206,7 @@ When
 .Nm
 is a PPPoE client, it initiates a session encapsulating packets into
 incorrect 3Com ethertypes.
-This compatibility option doesn't affect server mode.
+This compatibility option does not affect server mode.
 In server mode
 .Nm
 supports both modes simultaneously, depending on the ethertype, the
@@ -209,13 +219,12 @@ to a PADI requests with empty Service-Name tag, returning all available
 Service-Name(s) on node.
 This option is necessary for compatibility with D-Link DI-614+ and DI-624+
 SOHO routers as clients, when serving only specific Service-Name.
-This compatibility option doesn't affect client mode.
+This compatibility option does not affect client mode.
 .El
-.Pp
 .It Dv NGM_PPPOE_SETMODE
 Configure node to the specified mode.
 The string argument is required.
-This command understands same keywords, that are returned by
+This command understands the same keywords that are returned by the
 .Dv NGM_PPPOE_GETMODE
 command.
 .Tn ASCII
@@ -223,10 +232,18 @@ form of this message is
 .Qq Li pppoe_setmode .
 For example, the following command will configure the node to initiate
 the next session in the proprietary 3Com mode:
-.Pp
 .Bd -literal -offset indent
 ngctl msg fxp0:orphans pppoe_setmode '"3Com"'
 .Ed
+.It Dv NGM_PPPOE_SETENADDR
+Set the node Ethernet address for outgoing datagrams.
+This message is important when a node has failed to obtain an Ethernet
+address from its peer on the
+.Dv ethernet
+hook, or when user wants to override this address with another one.
+.Tn ASCII
+form of this message is
+.Qq Li setenaddr .
 .El
 .Sh SHUTDOWN
 This node shuts down upon receipt of a
@@ -466,6 +483,7 @@ setup(char *ethername, char *service, char *sessname,
 .Sh SEE ALSO
 .Xr netgraph 3 ,
 .Xr netgraph 4 ,
+.Xr ng_ether 4 ,
 .Xr ng_ppp 4 ,
 .Xr ng_socket 4 ,
 .Xr ngctl 8 ,

@@ -34,9 +34,9 @@
 .\"          Archie Cobbs <archie@FreeBSD.org>
 .\"
 .\" $Whistle: netgraph.4,v 1.7 1999/01/28 23:54:52 julian Exp $
-.\" $FreeBSD: src/share/man/man4/netgraph.4,v 1.50 2005/01/12 10:22:58 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd July 1, 2004
+.Dd May 25, 2008
 .Dt NETGRAPH 4
 .Os
 .Sh NAME
@@ -153,7 +153,7 @@ by the input queueing system, rather than being delivered directly.
 This can be used when the data is sent from an interrupt handler,
 and processing must be quick so as not to block other interrupts.
 .It
-A hook may supply overriding receive data and receive message functions
+A hook may supply overriding receive data and receive message functions,
 which should be used for data and messages received through that hook
 in preference to the general node-wide methods.
 .El
@@ -175,15 +175,15 @@ The first
 in a chain must have the
 .Dv M_PKTHDR
 flag set.
-Each node decides how to handle data coming in on its hooks.
+Each node decides how to handle data received through one of its hooks.
 .Pp
 Along with data, nodes can also receive control messages.
 There are generic and type-specific control messages.
 Control messages have a common
-header format, followed by a type-specific data, and are binary structures
+header format, followed by type-specific data, and are binary structures
 for efficiency.
 However, node types may also support conversion of the
-type specific data between binary and
+type-specific data between binary and
 .Tn ASCII
 formats,
 for debugging and human interface purposes (see the
@@ -205,10 +205,10 @@ addressing).
 If the destination is adjacent to the source, then the source
 node may simply specify (as a pointer in the code) the hook across which the
 message should be sent.
-Otherwise, the recipient node global
+Otherwise, the recipient node's global
 .Tn ASCII
 name
-(or equivalent ID based name) is used as the destination address
+(or equivalent ID-based name) is used as the destination address
 for the message (absolute addressing).
 The two types of
 .Tn ASCII
@@ -217,8 +217,8 @@ may be combined, by specifying an absolute start node and a sequence
 of hooks.
 Only the
 .Tn ASCII
-addressing modes are available to control programs outside the kernel,
-as use of direct pointers is limited of course to kernel modules.
+addressing modes are available to control programs outside the kernel;
+use of direct pointers is limited to kernel modules.
 .Pp
 Messages often represent commands that are followed by a reply message
 in the reverse direction.
@@ -227,9 +227,9 @@ control message is supplied with a
 .Dq return address
 that is suitable for addressing a reply.
 .Pp
-Each control message contains a 32 bit value called a
-.Em typecookie
-indicating the type of the message, i.e., how to interpret it.
+Each control message contains a 32-bit value, called a
+.Dq typecookie ,
+indicating the type of the message, i.e.\& how to interpret it.
 Typically each type defines a unique typecookie for the messages
 that it understands.
 However, a node may choose to recognize and
@@ -531,7 +531,7 @@ The message can be examined using the
 macro, or completely extracted from the item using the
 .Fn NGI_GET_MSG
 which also removes the reference within the item.
-If the Item still holds a reference to the message when it is freed
+If the item still holds a reference to the message when it is freed
 (using the
 .Fn NG_FREE_ITEM
 macro), then the message will also be freed appropriately.
@@ -689,19 +689,6 @@ The message may have travelled from
 .Dq Li Frame1:
 to B
 as a synchronous reply, saving time and cycles.
-.Pp
-A similar graph might be used to represent multi-link PPP running
-over an ISDN line:
-.Bd -literal
-[ type BRI ](B1)<--->(link1)[ type MPP  ]
-[  "ISDN1" ](B2)<--->(link2)[ (no name) ]
-[          ](D) <-+
-                  |
- +----------------+
- |
- +->(switch)[ type Q.921 ](term1)<---->(datalink)[ type Q.931 ]
-            [ (no name)  ]                       [ (no name)  ]
-.Ed
 .Ss Netgraph Structures
 Structures are defined in
 .In netgraph/netgraph.h
@@ -905,7 +892,7 @@ by returning
 Each type should have an include file that defines the commands,
 argument format, and cookie for its own messages.
 The typecookie
-insures that the same header file was included by both sender and
+ensures that the same header file was included by both sender and
 receiver; when an incompatible change in the header file is made,
 the typecookie
 .Em must
@@ -1431,7 +1418,6 @@ common networking problems, solved using
 .Xr ng_async 4 ,
 .Xr ng_atm 4 ,
 .Xr ng_atmllc 4 ,
-.Xr ng_atmpif 4 ,
 .Xr ng_bluetooth 4 ,
 .Xr ng_bpf 4 ,
 .Xr ng_bridge 4 ,

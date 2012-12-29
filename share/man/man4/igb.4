@@ -29,9 +29,9 @@
 .\"
 .\" * Other names and brands may be claimed as the property of others.
 .\"
-.\" $FreeBSD: src/share/man/man4/igb.4,v 1.1.2.1.6.1 2010/02/10 00:26:20 kensmith Exp $
+.\" $MidnightBSD$
 .\"
-.Dd October 6, 2008
+.Dd May 12, 2012
 .Dt IGB 4
 .Os
 .Sh NAME
@@ -60,6 +60,11 @@ The driver supports Transmit/Receive checksum offload and Jumbo
 Frames.
 Furthermore it supports TCP segmentation offload (TSO) on all
 adapters.
+The identification LEDs of the adapters supported by the
+.Nm
+driver can be controlled via the
+.Xr led 4
+API for localization purposes.
 .Pp
 For questions related to hardware requirements, refer to the
 documentation supplied with your Intel PRO/1000 adapter.
@@ -155,7 +160,29 @@ The minimum is 80, and the maximum is 4096.
 .It Va hw.igb.enable_aim
 If set to 1, enable Adaptive Interrupt Moderation.
 The default is to enable Adaptive Interrupt Moderation.
+.It Va kern.ipc.nmbclusters
+The maximum number of mbuf clusters allowed.
+If the system has more than one igb card or jumbo frames are
+enabled, this value will need to be increased.
+.It Va kern.ipc.nmbjumbo9k
+The maximum number of mbuf 9k jumbo clusters allowed.
+Increasing this to allow for at least 8192 extra clusters
+per interface can allow for an mtu of 8192.
 .El
+.Sh FILES
+.Bl -tag -width /dev/led/igb*
+.It Pa /dev/led/igb*
+identification LED device nodes
+.El
+.Sh EXAMPLES
+Make the identification LED of igb0 blink:
+.Pp
+.Dl "echo f2 > /dev/led/igb0"
+.Pp
+Turn the identification LED of igb0 off again:
+.Pp
+.Dl "echo 0 > /dev/led/igb0"
+.Pp
 .Sh DIAGNOSTICS
 .Bl -diag
 .It "igb%d: Unable to allocate bus resource: memory"
@@ -179,6 +206,7 @@ issue to
 .Xr altq 4 ,
 .Xr arp 4 ,
 .Xr em 4 ,
+.Xr led 4 ,
 .Xr netintro 4 ,
 .Xr ng_ether 4 ,
 .Xr polling 4 ,

@@ -23,17 +23,30 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/ips.4,v 1.5 2004/08/08 22:27:02 simon Exp $
+.\" $MidnightBSD$
 .\"
-.Dd August 8, 2004
+.Dd August 7, 2009
 .Dt IPS 4
 .Os
 .Sh NAME
 .Nm ips
 .Nd IBM/Adaptec ServeRAID controller driver
 .Sh SYNOPSIS
-.Cd device scbus
-.Cd device ips
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
+.Cd "device pci"
+.Cd "device scbus"
+.Cd "device ips"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+ips_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
@@ -76,7 +89,15 @@ ServeRAID 4L/4M/4H
 ServeRAID Series 5
 .It
 ServeRAID 6i/6M
+.It
+ServeRAID 7t/7k/7M
 .El
+.Pp
+Newer ServeRAID controllers are supported by the
+.Xr aac 4
+or
+.Xr mfi 4
+driver.
 .Sh DIAGNOSTICS
 Several error codes may be shown when the card initializes the
 .Tn IBM
@@ -165,6 +186,8 @@ driver does not use the
 .Tn SCSI
 subsystem.
 .Sh SEE ALSO
+.Xr aac 4 ,
+.Xr mfi 4 ,
 .Xr ch 4 ,
 .Xr da 4 ,
 .Xr sysctl 8

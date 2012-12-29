@@ -24,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/ng_etf.4,v 1.7 2005/02/05 11:31:31 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd February 28, 2001
+.Dd May 16, 2006
 .Dt NG_ETF 4
 .Os
 .Sh NAME
@@ -113,7 +113,7 @@ it is possible to set a filter in place from the command line
 as follows:
 .Bd -literal -offset 4n
 #!/bin/sh
-ETHER_IF=lnc0
+ETHER_IF=fxp0
 MATCH1=0x834
 MATCH2=0x835
 cat <<DONE >/tmp/xwert
@@ -135,7 +135,6 @@ nghook -a etf: newproto &
 # Filter two random ethertypes to that hook.
 ngctl 'msg etf: setfilter { matchhook="newproto" ethertype=${MATCH1} }
 ngctl 'msg etf: setfilter { matchhook="newproto" ethertype=${MATCH2} }
-DONE
 .Ed
 .Sh SHUTDOWN
 This node shuts down upon receipt of a

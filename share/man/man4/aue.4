@@ -28,9 +28,9 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/aue.4,v 1.21.2.2 2006/02/02 07:50:00 trhodes Exp $
+.\" $MidnightBSD$
 .\"
-.Dd July 16, 2005
+.Dd October 7, 2006
 .Dt AUE 4
 .Os
 .Sh NAME
@@ -80,7 +80,6 @@ received and transmitted over separate USB bulk transfer endpoints.
 The
 .Nm
 driver supports the following media types:
-.Pp
 .Bl -tag -width xxxxxxxxxxxxxxxxxxxx
 .It autoselect
 Enable autoselection of the media type and options.
@@ -117,7 +116,6 @@ mode.
 The
 .Nm
 driver supports the following media options:
-.Pp
 .Bl -tag -width xxxxxxxxxxxxxxxxxxxx
 .It full-duplex
 Force full duplex operation.
@@ -161,6 +159,8 @@ USB10TA, USB10TX, USB100TX, USB100H1
 .It
 MELCO LUA-TX, LUA2-TX
 .It
+Netgear FA101
+.It
 Planex UE-200TX
 .It
 Sandberg USB to Network Link (model number 133-06)
@@ -183,6 +183,7 @@ before a timeout expired.
 The driver failed to allocate an mbuf for the receiver ring.
 .El
 .Sh SEE ALSO
+.Xr altq 4 ,
 .Xr arp 4 ,
 .Xr miibus 4 ,
 .Xr netintro 4 ,
@@ -190,7 +191,7 @@ The driver failed to allocate an mbuf for the receiver ring.
 .Xr ifconfig 8
 .Rs
 .%T ADMtek AN986 data sheet
-.%O http://www.admtek.com.tw
+.%U http://www.admtek.com.tw
 .Re
 .Sh HISTORY
 The

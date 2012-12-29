@@ -24,7 +24,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/aha.4,v 1.26 2005/01/21 08:36:36 ru Exp $
+.\" $MidnightBSD$
 .\"
 .Dd July 4, 2004
 .Dt AHA 4
@@ -33,8 +33,20 @@
 .Nm aha
 .Nd Adaptec SCSI host adapter driver
 .Sh SYNOPSIS
-.Cd device aha
-.Cd device scbus
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
+.Cd "device scbus"
+.Cd "device aha"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+aha_load="YES"
+.Ed
 .Pp
 In
 .Pa /boot/device.hints :

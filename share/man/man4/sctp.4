@@ -28,7 +28,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/sctp.4,v 1.3 2007/09/25 16:03:10 brueffer Exp $
+.\" $MidnightBSD$
 .\"
 .Dd December 15, 2006
 .Dt SCTP 4
@@ -154,8 +154,8 @@ also supports the following extensions:
 This extension allows one to have message be skipped and
 not delivered based on some user specified parameters.
 .It "sctp dynamic addressing"
- This extension allows addresses to be added and deleted
-dynammically from an existing association.
+This extension allows addresses to be added and deleted
+dynamically from an existing association.
 .It "sctp authentication"
 This extension allows the user to authenticate specific
 peer chunks (including data) to validate that the peer
@@ -164,7 +164,7 @@ association.
 A shared key option is also provided for
 so that two stacks can pre-share keys.
 .It "packet drop"
- Some routers support a special satellite protocol that
+Some routers support a special satellite protocol that
 will report losses due to corruption.
 This allows retransmissions without subsequent loss in bandwidth
 utilization.
@@ -179,7 +179,7 @@ supports a number of socket options which can be set with
 and tested with
 .Xr getsockopt 2
 or
-.Xr sctp_opt_info 2 :
+.Xr sctp_opt_info 3 :
 .Bl -tag -width ".Dv SCTP_SET_PEER_PRIMARY_ADDR"
 .It Dv SCTP_NODELAY
 Under most circumstances,
@@ -203,7 +203,7 @@ association.
 .It Dv SCTP_INITMSG
 This option allows you to get or set the default sending
 parameters when an association is implicitly setup.
-It allows you to change such things as the maxium number of
+It allows you to change such things as the maximum number of
 streams allowed inbound and the number of streams requested
 of the peer.
 .It Dv SCTP_AUTOCLOSE
@@ -278,7 +278,7 @@ By default, when opening an IPV6 socket, when
 data arrives on the socket from a peer's
 V4 address the V4 address  will be presented with an address family
 of AF_INET.
-If this is undesireable, then this option
+If this is undesirable, then this option
 can be enabled which will then convert all V4 addresses
 into mapped V6 representations.
 .It Dv SCTP_MAXSEG
@@ -338,8 +338,8 @@ a peer.
 This option will let you get or set the list of
 HMAC algorithms used to authenticate peers.
 Note that the HMAC values are in priority order where
-the first HMAC identifier is the most prefered
-and the last is the least prefered.
+the first HMAC identifier is the most preferred
+and the last is the least preferred.
 .It Dv SCTP_AUTH_ACTIVE_KEY
 This option allows you to make a key active for
 the generation of authentication information.
@@ -386,7 +386,7 @@ special flag
 .Dv SCTP_EOR
 passed in the sctp_sndrcvinfo flags field.
 This effectively makes all sends part of the same message
-until the user specifices differently.
+until the user specifies differently.
 This means that a caller must NOT change the stream number until
 after the
 .Dv SCTP_EOR

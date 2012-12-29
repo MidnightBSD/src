@@ -1,135 +1,149 @@
+.\" Copyright (c) 2009 Christian Brueffer
+.\" All rights reserved.
 .\"
-.\" Copyright (c) 2007 The DragonFly Project.  All rights reserved.
-.\" 
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
 .\" are met:
-.\" 
 .\" 1. Redistributions of source code must retain the above copyright
 .\"    notice, this list of conditions and the following disclaimer.
 .\" 2. Redistributions in binary form must reproduce the above copyright
-.\"    notice, this list of conditions and the following disclaimer in
-.\"    the documentation and/or other materials provided with the
-.\"    distribution.
-.\" 3. Neither the name of The DragonFly Project nor the names of its
-.\"    contributors may be used to endorse or promote products derived
-.\"    from this software without specific, prior written permission.
-.\" 
-.\" THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-.\" ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-.\" LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-.\" FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE
-.\" COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-.\" INCIDENTAL, SPECIAL, EXEMPLARY OR CONSEQUENTIAL DAMAGES (INCLUDING,
-.\" BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-.\" LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
-.\" AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-.\" OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
-.\" OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD: src/share/man/man4/bwi.4,v 1.1 2009/01/19 22:28:38 laffer1 Exp $
-.\" $DragonFly: src/share/man/man4/bwi.4,v 1.8 2008/05/01 12:34:06 sephe Exp $
+.\" $MidnightBSD$
 .\"
-.Dd January 19, 2009
+.Dd February 6, 2011
 .Dt BWI 4
 .Os
 .Sh NAME
 .Nm bwi
-.Nd Broadcom BCM430x/4318 IEEE 802.11b/g wireless network driver
+.Nd Broadcom BCM43xx IEEE 802.11b/g wireless network driver
 .Sh SYNOPSIS
-To load the driver as a module at boot time, place the
-following line in
-.Pa /boot/loader.conf :
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
+.Cd "device bwi"
+.Cd "device wlan"
+.Cd "device wlan_amrr"
+.Cd "device firmware"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
 .Bd -literal -offset indent
 if_bwi_load="YES"
 .Ed
 .Sh DESCRIPTION
 The
 .Nm
-driver provides support for Broadcom BCM430x/4318 wireless network adapters.
+driver provides support for Broadcom BCM43xx based
+PCI/CardBus network adapters.
+.Pp
+It supports
+.Cm station
+and
+.Cm monitor
+mode operation.
+Only one virtual interface may be configured at any time.
 For more information on configuring this device, see
 .Xr ifconfig 8 .
-.Ss MIB Variables
-The following per-interface variables are implemented in the
-.Va hw.bwi Ns Em X
-branch of the
-.Xr sysctl 3
-MIB.
-.Bl -tag -width ".Va txpwr_calib"
-.It Va debug
-Debug flags.
-.It Va dwell_time
-Channel dwell time during scan (msec).
-.It Va fw_version
-Firmware version.
-.It Va led_idle
-Number of ticks before LED enters idle state.
-.It Va led_blink
-Allow LED to blink.
-.It Va txpwr_calib
-Enable software TX power calibration.
-.El
-.Sh HARDWARE
-The following cards are among those supported by the
-.Nm
-driver:
 .Pp
-.Bl -column -compact "Buffalo WLI-PCI-G54S" "BCM4318" "CardBus" "b/g" -offset 6n
-.Em "Card	Chip	Bus	Standard"
-Linksys WPC54Gv3	BCM4318	CardBus	b/g
-Linksys WPC54GSv2	BCM4318	CardBus	b/g
-Buffalo WLI-CB-G54S	BCM4318	CardBus	b/g
-Buffalo WLI-PCI-G54S	BCM4306	PCI	b/g
-Dell Wireless 1470	BCM4318	Mini PCI	b/g
-Dell Truemobile 1400	BCM4309	Mini PCI	b/g
+This driver requires firmware to be loaded before it will work.
+The
+.Pa ports/net/bwi-firmware-kmod
+port needs to be installed before
+.Xr ifconfig 8
+will work.
+.Sh HARDWARE
+The
+.Nm
+driver supports Broadcom BCM43xx based wireless devices, including:
+.Pp
+.Bl -column -compact "Apple Airport Extreme" "BCM4306" "Mini PCI" "a/b/g" -offset 6n
+.It Em "Card	Chip	Bus	Standard"
+.It "Apple Airport Extreme	BCM4306	PCI	b/g"
+.It "Apple Airport Extreme	BCM4318	PCI	b/g"
+.It "ASUS WL-138g	BCM4318	PCI	b/g"
+.It "Buffalo WLI-CB-G54S	BCM4318	CardBus	b/g"
+.It "Buffalo WLI-PCI-G54S	BCM4306	PCI	b/g"
+.It "Compaq R4035 onboard	BCM4306	PCI	b/g"
+.It "Dell Wireless 1390 BCM4311 Mini PCI	b/g"
+.It "Dell Wireless 1470	BCM4318	Mini PCI	b/g"
+.It "Dell Truemobile 1300 r2	BCM4306	Mini PCI	b/g"
+.It "Dell Truemobile 1400	BCM4309	Mini PCI	b/g"
+.It "HP nx6125	BCM4319	PCI	b/g"
+.It "Linksys WPC54G Ver 3	BCM4318	CardBus	b/g"
+.It "Linksys WPC54GS Ver 2	BCM4318	CardBus	b/g"
+.It "TRENDnet TEW-401PCplus	BCM4306	CardBus	b/g"
+.It "US Robotics 5411	BCM4318	CardBus	b/g"
 .El
-.Sh FILES
-The firmware for the adapter is not shipped with
-.Mx
-and must be obtained separately.
-An archive with firmware files that are known to work can be found at:
+.Pp
+The
+.Nm
+driver uses the older v3 version of Broadcom's firmware.
+While this older firmware does support most BCM43xx parts, the
+.Xr bwn 4
+driver works better for the newer chips it supports.
+You must use the
+.Nm
+driver if you are using older Broadcom chipsets (BCM4301, BCM4303 and
+BCM4306 rev 2).
+The v4 version of the firmware that
+.Xr bwn 4
+uses does not support these chips.
+.Sh EXAMPLES
+Join an existing BSS network (i.e., connect to an access point):
 .Bd -literal -offset indent
-http://leaf.dragonflybsd.org/~sephe/bwi/v3.tbz
+ifconfig wlan create wlandev bwi0 inet 192.168.0.20 \e
+    netmask 0xffffff00
 .Ed
 .Pp
-The firmware files are built as part of the bwifw module and
-must be loaded for
-.Nm
-to work. Place the files in 
-.Pa /usr/src/sys/contrib/dev/bwi
-and build bwifw in
-.Pa /usr/src/sys/modules/bwifw
+Join a specific BSS network with network name
+.Dq Li my_net :
+.Pp
+.Dl "ifconfig wlan create wlandev bwi0 ssid my_net up"
+.Pp
+Join a specific BSS network with 64-bit WEP encryption:
+.Bd -literal -offset indent
+ifconfig wlan create wlandev bwi0 ssid my_net \e
+        wepmode on wepkey 0x1234567890 weptxkey 1 up
+.Ed
 .Sh SEE ALSO
 .Xr arp 4 ,
 .Xr cardbus 4 ,
-.Xr ifmedia 4 ,
+.Xr intro 4 ,
 .Xr pci 4 ,
-.Xr wlan_ratectl 4 ,
+.Xr wlan 4 ,
+.Xr wlan_amrr 4 ,
 .Xr ifconfig 8 ,
 .Xr wpa_supplicant 8
 .Sh HISTORY
 The
 .Nm
 driver first appeared in
-.Dx 1.11
-and
-.Mx 0.3
+.Fx 8.0 .
 .Sh AUTHORS
 .An -nosplit
 The
 .Nm
-driver was written by
-.An Sepherosa Ziehau .
-It was later ported to
-.Fx 7.0 ,
-then brought into 
-.Mx 0.3
-by 
-.An Lucas Holt .
-.Pp
-The hardware specification was reverse engineered by the people at
-.Pa http://bcm-specs.sipsolutions.net .
-Thanks go also to johill and mb on the #bcm-specs channel.
+driver was written for DragonFly BSD by
+.An Sepherosa Ziehau
+and subsequently ported to
+.Fx .
 .Sh BUGS
-BCM4306 and BCM4309 chips do not work properly on channel 1, 2 and 3.
+Some card based on the BCM4306 and BCM4309 chips do not work properly
+on channel 1, 2 and 3.

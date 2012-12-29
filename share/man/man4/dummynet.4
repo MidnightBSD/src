@@ -1,5 +1,5 @@
 .\"
-.\" $FreeBSD: src/share/man/man4/dummynet.4,v 1.21 2005/06/10 01:25:22 thompsa Exp $
+.\" $MidnightBSD$
 .\"
 .Dd October 28, 2002
 .Dt DUMMYNET 4
@@ -41,8 +41,6 @@ limit firewall output
 enable
 .Nm
 operation
-.It Dv NMBCLUSTERS
-set the amount of network packet buffers
 .It Dv HZ
 set the timer granularity
 .El
@@ -60,7 +58,6 @@ sum of the bandwidth-delay products and queue sizes of all configured
 pipes.
 .Sh SEE ALSO
 .Xr setsockopt 2 ,
-.Xr bridge 4 ,
 .Xr if_bridge 4 ,
 .Xr ip 4 ,
 .Xr ipfw 8 ,

@@ -23,7 +23,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/de.4,v 1.19.2.4 2006/02/02 07:50:00 trhodes Exp $
+.\" $MidnightBSD$
 .\"
 .Dd July 16, 2005
 .Dt DE 4
@@ -55,7 +55,6 @@ chips.
 The
 .Nm
 driver supports the following media types:
-.Pp
 .Bl -tag -width xxxxxxxxxxxxxxx
 .It autoselect
 Enable autoselection of the media type and options
@@ -76,7 +75,6 @@ Set 100Mbps operation (4-pair cat-3 cable)
 The
 .Nm
 driver supports the following media options:
-.Pp
 .Bl -tag -width xxxxxxxxxxxxxxx
 .It full-duplex
 Set full duplex operation
@@ -88,7 +86,7 @@ setup utility and are not changeable.
 .Pp
 Use the
 .Xr ifconfig 8
-command an in particular the
+command and in particular the
 .Fl m
 flag to list the supported media types for your particular card.
 .Pp
@@ -136,6 +134,7 @@ devices allowed in a single machine.
 Certain revisions of the chipset are not supported by this driver.
 .El
 .Sh SEE ALSO
+.Xr altq 4 ,
 .Xr arp 4 ,
 .Xr netintro 4 ,
 .Xr ng_ether 4 ,

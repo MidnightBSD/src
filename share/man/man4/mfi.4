@@ -23,9 +23,8 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $MidnightBSD$
-.\" $FreeBSD: src/share/man/man4/mfi.4,v 1.4.2.1 2006/04/04 04:14:09 scottl Exp $
 .\"
-.Dd April 1, 2006
+.Dd May 12, 2010
 .Dt MFI 4
 .Os
 .Sh NAME
@@ -65,6 +64,14 @@ Older SCSI and SATA MegaRAID cards are supported by
 .Xr amr 4
 and will not work with this driver.
 .Pp
+Two sysctls are provided to tune the
+.Nm
+driver's behavior when a request is made to remove a mounted volume.
+By default the driver will disallow any requests to remove a mounted volume.
+If the sysctl
+.Va dev.mfi.%d.delete_busy_volumes
+is set to 1,
+then the driver will allow mounted volumes to be removed.
 .Sh HARDWARE
 The
 .Nm
@@ -72,11 +79,23 @@ driver supports the following hardware:
 .Pp
 .Bl -bullet -compact
 .It
+LSI MegaRAID SAS 1078
+.It
 LSI MegaRAID SAS 8408E
 .It
 LSI MegaRAID SAS 8480E
 .It
-Dell PERC5/i
+LSI MegaRAID SAS 9260
+.It
+Dell PERC5
+.It
+Dell PERC6
+.It
+IBM ServeRAID M5015 SAS/SATA
+.It
+IBM ServeRAID-MR10i
+.It
+Intel RAID Controller SROMBSAS18E
 .El
 .Sh FILES
 .Bl -tag -width ".Pa /dev/mfid?" -compact
@@ -85,16 +104,20 @@ array/logical disk interface
 .It Pa /dev/mfi?
 management interface
 .El
+.Sh DIAGNOSTICS
+.Bl -diag
+.It "mfid%d: Unable to delete busy device"
+An attempt was made to remove a mounted volume.
+.El
 .Sh SEE ALSO
 .Xr amr 4 ,
-.Xr pci 4
+.Xr pci 4 ,
+.Xr mfiutil 8
 .Sh HISTORY
 The
 .Nm
 driver first appeared in
-.Fx 7.0 .
-.Pp
-.El
+.Fx 6.1 .
 .Sh AUTHORS
 The
 .Nm

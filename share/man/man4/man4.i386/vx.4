@@ -28,7 +28,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/man4.i386/vx.4,v 1.24 2005/11/18 10:52:23 ru Exp $
+.\" $MidnightBSD$
 .\"
 .Dd July 16, 2005
 .Dt VX 4 i386
@@ -96,16 +96,6 @@ rebuild the kernel, and reboot.
 .Pp
 All other diagnostics indicate either a hardware problem or a bug in the
 driver.
-.Sh CAVEATS
-Some early-revision 3c590 cards are defective and suffer from many receive
-overruns, which cause lost packets.
-The author has attempted to implement
-a test for it based on the information supplied by 3Com, but the test resulted
-mostly in spurious warnings.
-.Pp
-The performance of this driver is somewhat limited by the fact that it uses
-only polled-mode I/O and does not make use of the bus-mastering capability
-of the cards.
 .Sh SEE ALSO
 .Xr arp 4 ,
 .Xr netintro 4 ,
@@ -128,6 +118,16 @@ device driver and this manual page were written by
 based on the work of
 .An Herb Peyerl
 and with the assistance of numerous others.
+.Sh CAVEATS
+Some early-revision 3c590 cards are defective and suffer from many receive
+overruns, which cause lost packets.
+The author has attempted to implement
+a test for it based on the information supplied by 3Com, but the test resulted
+mostly in spurious warnings.
+.Pp
+The performance of this driver is somewhat limited by the fact that it uses
+only polled-mode I/O and does not make use of the bus-mastering capability
+of the cards.
 .Sh BUGS
 The
 .Nm
