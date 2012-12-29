@@ -22,8 +22,7 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \
-\ $FreeBSD: src/sys/boot/forth/loader.4th,v 1.24 2002/05/24 02:28:58 gordon Exp $
-\ $MidnightBSD: src/sys/boot/forth/loader.4th,v 1.2 2006/07/26 00:22:13 laffer1 Exp $ 
+\ $MidnightBSD$
 
 s" arch-i386" environment? [if] [if]
 	s" loader_version" environment?  [if]
@@ -42,11 +41,25 @@ s" arch-i386" environment? [if] [if]
 
 include /boot/support.4th
 
-\ ***** boot-conf
-\
-\	Prepares to boot as specified by loaded configuration files.
-
 only forth also support-functions also builtins definitions
+
+: try-menu-unset
+  \ menu-unset may not be present
+  s" beastie_disable" getenv
+  dup -1 <> if
+    s" YES" compare-insensitive 0= if
+      exit
+    then
+  else
+    drop
+  then
+  s" menu-unset"
+  sfind if
+    execute
+  else
+    drop
+  then
+;
 
 : boot
   0= if ( interpreted ) get_arguments then
@@ -58,23 +71,31 @@ only forth also support-functions also builtins definitions
       0 1 unload drop
     else
       s" kernelname" getenv? if ( a kernel has been loaded )
+        try-menu-unset
         1 boot exit
       then
       load_kernel_and_modules
       ?dup if exit then
+      try-menu-unset
       0 1 boot exit
     then
   else
     s" kernelname" getenv? if ( a kernel has been loaded )
+      try-menu-unset
       1 boot exit
     then
     load_kernel_and_modules
     ?dup if exit then
+    try-menu-unset
     0 1 boot exit
   then
   load_kernel_and_modules
   ?dup 0= if 0 1 boot then
 ;
+
+\ ***** boot-conf
+\
+\	Prepares to boot as specified by loaded configuration files.
 
 : boot-conf
   0= if ( interpreted ) get_arguments then
@@ -90,29 +111,7 @@ builtin: boot-conf
 
 only forth definitions also support-functions
 
-\ ***** check-password
-\
-\	If a password was defined, execute autoboot and ask for
-\	password if autoboot returns.
-
-: check-password
-  password .addr @ if
-    0 autoboot
-    false >r
-    begin
-      bell emit bell emit
-      ." Password: "
-      password .len @ read-password
-      dup password .len @ = if
-        2dup password .addr @ password .len @
-        compare 0= if r> drop true >r then
-      then
-      drop free drop
-      r@
-    until
-    r> drop
-  then
-;
+include /boot/check-password.4th
 
 \ ***** start
 \
@@ -151,8 +150,7 @@ only forth definitions also support-functions
 \	line, if interpreted, or given on the stack, if compiled in.
 
 : (read-conf)  ( addr len -- )
-  conf_files .addr @ ?dup if free abort" Fatal error freeing memory" then
-  strdup conf_files .len ! conf_files .addr !
+  conf_files string=
   include_conf_files \ Will recurse on new loader_conf_files definitions
 ;
 
@@ -166,110 +164,26 @@ only forth definitions also support-functions
   then
 ; immediate
 
-\ ***** enable-module
-\
-\       Turn a module loading on.
+\ show, enable, disable, toggle module loading. They all take module from
+\ the next word
 
-: enable-module ( <module> -- )
-  bl parse module_options @ >r
-  begin
-    r@
-  while
-    2dup
-    r@ module.name dup .addr @ swap .len @
-    compare 0= if
-      2drop
-      r@ module.name dup .addr @ swap .len @ type
-      true r> module.flag !
-      ."  will be loaded." cr
-      exit
-    then
-    r> module.next @ >r
-  repeat
-  r> drop
-  type ."  wasn't found." cr
+: set-module-flag ( module_addr val -- ) \ set and print flag
+  over module.flag !
+  dup module.name strtype
+  module.flag @ if ."  will be loaded" else ."  will not be loaded" then cr
 ;
 
-\ ***** disable-module
-\
-\       Turn a module loading off.
+: enable-module find-module ?dup if true set-module-flag then ;
 
-: disable-module ( <module> -- )
-  bl parse module_options @ >r
-  begin
-    r@
-  while
-    2dup
-    r@ module.name dup .addr @ swap .len @
-    compare 0= if
-      2drop
-      r@ module.name dup .addr @ swap .len @ type
-      false r> module.flag !
-      ."  will not be loaded." cr
-      exit
-    then
-    r> module.next @ >r
-  repeat
-  r> drop
-  type ."  wasn't found." cr
-;
+: disable-module find-module ?dup if false set-module-flag then ;
 
-\ ***** toggle-module
-\
-\       Turn a module loading on/off.
-
-: toggle-module ( <module> -- )
-  bl parse module_options @ >r
-  begin
-    r@
-  while
-    2dup
-    r@ module.name dup .addr @ swap .len @
-    compare 0= if
-      2drop
-      r@ module.name dup .addr @ swap .len @ type
-      r@ module.flag @ 0= dup r> module.flag !
-      if
-        ."  will be loaded." cr
-      else
-        ."  will not be loaded." cr
-      then
-      exit
-    then
-    r> module.next @ >r
-  repeat
-  r> drop
-  type ."  wasn't found." cr
-;
+: toggle-module find-module ?dup if dup module.flag @ 0= set-module-flag then ;
 
 \ ***** show-module
 \
 \	Show loading information about a module.
 
-: show-module ( <module> -- )
-  bl parse module_options @ >r
-  begin
-    r@
-  while
-    2dup
-    r@ module.name dup .addr @ swap .len @
-    compare 0= if
-      2drop
-      ." Name: " r@ module.name dup .addr @ swap .len @ type cr
-      ." Path: " r@ module.loadname dup .addr @ swap .len @ type cr
-      ." Type: " r@ module.type dup .addr @ swap .len @ type cr
-      ." Flags: " r@ module.args dup .addr @ swap .len @ type cr
-      ." Before load: " r@ module.beforeload dup .addr @ swap .len @ type cr
-      ." After load: " r@ module.afterload dup .addr @ swap .len @ type cr
-      ." Error: " r@ module.loaderror dup .addr @ swap .len @ type cr
-      ." Status: " r> module.flag @ if ." Load" else ." Don't load" then cr
-      exit
-    then
-    r> module.next @ >r
-  repeat
-  r> drop
-  type ."  wasn't found." cr
-;
+: show-module ( <module> -- ) find-module ?dup if show-one-module then ;
 
 \ Words to be used inside configuration files
 
