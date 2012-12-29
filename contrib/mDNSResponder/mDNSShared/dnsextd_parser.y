@@ -23,6 +23,7 @@
 #include "DebugServices.h"
 #include "dnsextd.h"
 
+int yyparse(void *);
 void yyerror( const char* error );
 int  yylex(void);
 
