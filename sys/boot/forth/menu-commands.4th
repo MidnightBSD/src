@@ -22,7 +22,7 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \ 
-\ $MidnightBSD$
+\ $MidnightBSD: src/sys/boot/forth/menu-commands.4th,v 1.2 2012/12/29 05:01:01 laffer1 Exp $
 
 marker task-menu-commands.4th
 
@@ -135,7 +135,7 @@ marker task-menu-commands.4th
 
 	cr
 	." To get back to the menu, type `menu' and press ENTER" cr
-	." or type `boot' and press ENTER to start FreeBSD." cr
+	." or type `boot' and press ENTER to start MidnightBSD." cr
 	cr
 
 	FALSE \ exit the menu
