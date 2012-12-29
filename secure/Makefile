@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/secure/Makefile,v 1.3 2012/08/30 00:09:23 laffer1 Exp $
 # $FreeBSD: src/secure/Makefile,v 1.27 2006/03/17 18:54:31 ru Exp $
 
 .include <bsd.own.mk>
@@ -8,7 +8,7 @@ SUBDIR= lib libexec usr.bin usr.sbin
 # These are the programs which depend on crypto, but not Kerberos.
 SPROGS=	lib/libfetch lib/libpam lib/libradius lib/libtelnet	\
 	bin/ed libexec/telnetd usr.bin/fetch usr.bin/telnet	\
-	usr.sbin/ppp usr.sbin/pppd usr.sbin/tcpdump/tcpdump
+	usr.sbin/ppp usr.sbin/tcpdump/tcpdump
 .if ${MK_SENDMAIL} != "no"
 SPROGS+=usr.sbin/sendmail
 .endif
