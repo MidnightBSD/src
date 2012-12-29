@@ -23,9 +23,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man5/device.hints.5,v 1.10 2003/09/19 22:27:54 jb Exp $
+.\" $MidnightBSD$
 .\"
-.Dd October 7, 2001
+.Dd September 11, 2009
 .Dt DEVICE.HINTS 5
 .Os
 .Sh NAME
@@ -76,7 +76,7 @@ resources it will attempt to use.
 A device hint line looks like:
 .Pp
 .Sm off
-.D1 Li hint. Ar driver Li . Ar unit Li . Ar keyword Li = Qq Ar value
+.D1 Li hint. Ar driver . Ar unit . Ar keyword Li = Qq Ar value
 .Sm on
 .Pp
 where
@@ -112,7 +112,8 @@ to disable the device.
 .El
 .Pp
 A device driver may require one or more hint lines with these keywords,
-and may accept other keywords not listed here.
+and may accept other keywords not listed here, through
+.Xr resource_int_value 9 .
 Consult individual device drivers' manual pages for available
 keywords and their possible values.
 .\" .Sh CONTROL VARIABLES
@@ -160,7 +161,8 @@ hint.acpi.0.disabled="1"
 .Sh SEE ALSO
 .Xr kenv 1 ,
 .Xr loader.conf 5 ,
-.Xr loader 8
+.Xr loader 8 ,
+.Xr resource_int_value 9
 .Sh HISTORY
 The
 .Nm

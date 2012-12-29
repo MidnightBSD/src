@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man5/devfs.rules.5,v 1.5 2006/09/18 15:24:19 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd January 30, 2006
+.Dd February 21, 2010
 .Dt DEVFS.RULES 5
 .Os
 .Sh NAME
@@ -82,9 +82,17 @@ file:
 devfs_system_ruleset="localrules"
 .Ed
 .Sh FILES
-.Bl -tag -compact
-.It Pa /etc/devfs.rules
+.Bl -tag -compact -width Pa
 .It Pa /etc/defaults/devfs.rules
+Default
+.Nm
+configuration file.
+.It Pa /etc/devfs.rules
+Local
+.Nm
+configuration file. Rulesets in here override those in
+.Pa /etc/defaults/devfs.rules
+with the same ruleset number, otherwise the two files are effectively merged.
 .El
 .Sh EXAMPLES
 To make all the partitions of
@@ -100,13 +108,15 @@ The first line declares and starts a new ruleset, with the name
 .Va localrules
 and the number 10.
 .Pp
-To make all the
-.Xr uscanner 4
-devices accessible to their owner and the
+To give
+.Xr usbconfig 8
+and
+.Xr libusb 3
+enabled applications permission to all usb devices for their owner and the
 .Dq Li usb
 group, a similar rule may be used:
 .Pp
-.Dl "add path 'uscanner*' mode 0660 group usb"
+.Dl "add path 'usb/*' mode 0660 group usb"
 .Sh SEE ALSO
 .Xr glob 3 ,
 .Xr devfs 5 ,

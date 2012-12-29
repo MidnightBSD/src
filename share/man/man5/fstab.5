@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)fstab.5	8.1 (Berkeley) 6/5/93
-.\" $FreeBSD: src/share/man/man5/fstab.5,v 1.26 2004/07/03 18:29:22 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd June 5, 1993
+.Dd June 7, 2011
 .Dt FSTAB 5
 .Os
 .Sh NAME
@@ -64,20 +64,14 @@ doing their thing.
 .Pp
 The first field,
 .Pq Fa fs_spec ,
-describes the block special device or
+describes the special device or
 remote file system to be mounted.
-For file systems of type
-.Em ufs ,
-the special file name is the block special file name,
-and not the character special file name.
-If a program needs the character special file name,
-the program must create it by appending a ``r'' after the
-last ``/'' in the special file name.
 .Pp
 The second field,
 .Pq Fa fs_file ,
 describes the mount point for the file system.
-For swap partitions, this field should be specified as ``none''.
+For swap partitions, this field should be specified as
+.Dq none .
 .Pp
 The third field,
 .Pq Fa fs_vfstype ,
@@ -87,8 +81,7 @@ Only the root, /usr, and /tmp file systems need be statically
 compiled into the kernel;
 everything else will be automatically loaded at mount
 time.
-(Exception: the UFS family - FFS and LFS cannot
-currently be demand-loaded.)
+(Exception: the FFS cannot currently be demand-loaded.)
 Some people still prefer to statically
 compile other file systems as well.
 .Pp
@@ -98,8 +91,7 @@ describes the mount options associated with the file system.
 It is formatted as a comma separated list of options.
 It contains at least the type of mount (see
 .Fa fs_type
-below) plus any additional options
-appropriate to the file system type.
+below) plus any additional options appropriate to the file system type.
 See the options flag
 .Pq Fl o
 in the
@@ -107,8 +99,38 @@ in the
 page and the file system specific page, such as
 .Xr mount_nfs 8 ,
 for additional options that may be specified.
+All options that can be given to the file system specific mount commands
+can be used in
+.Nm
+as well.
+They just need to be formatted a bit differently.
+The arguments of the
+.Fl o
+option can be used without the preceding
+.Fl o
+flag.
+Other options need both the file system specific flag and its argument,
+separated by an equal sign.
+For example, mounting an
+.Xr msdosfs 5
+filesystem, the options
+.Bd -literal -offset indent
+-o sync -o noatime -m 644 -M 755 -u foo -g bar
+.Ed
 .Pp
-If the options ``userquota'' and/or ``groupquota'' are specified,
+should be written as
+.Bd -literal -offset indent
+sync,noatime,-m=644,-M=755,-u=foo,-g=bar
+.Ed
+.Pp
+in the option field of
+.Nm .
+.Pp
+If the options
+.Dq userquota
+and/or
+.Dq groupquota
+are specified,
 the file system is automatically processed by the
 .Xr quotacheck 8
 command, and user and/or group disk quotas are enabled with
@@ -130,7 +152,18 @@ this location can be specified as:
 userquota=/var/quotas/tmp.user
 .Ed
 .Pp
-If the option ``noauto'' is specified, the file system will not be automatically
+If the option
+.Dq failok
+is specified,
+the system will ignore any error which happens during the mount of that filesystem,
+which would otherwise cause the system to drop into single user mode.
+This option is implemented by the
+.Xr mount 8
+command and will not be passed to the kernel.
+.Pp
+If the option
+.Dq noauto
+is specified, the file system will not be automatically
 mounted at system startup.
 Note that, for network file systems
 of third party types
@@ -153,13 +186,19 @@ field (it is not deleted from the
 field).
 If
 .Fa fs_type
-is ``rw'' or ``ro'' then the file system whose name is given in the
+is
+.Dq rw
+or
+.Dq ro
+then the file system whose name is given in the
 .Fa fs_file
 field is normally mounted read-write or read-only on the
 specified special file.
 If
 .Fa fs_type
-is ``sw'' then the special file is made available as a piece of swap
+is
+.Dq sw
+then the special file is made available as a piece of swap
 space by the
 .Xr swapon 8
 command at the end of the system reboot procedure.
@@ -170,7 +209,9 @@ and
 are unused.
 If
 .Fa fs_type
-is specified as ``xx'' the entry is ignored.
+is specified as
+.Dq xx
+the entry is ignored.
 This is useful to show disk partitions which are currently unused.
 .Pp
 The fifth field,
@@ -181,25 +222,79 @@ command to determine which file systems need to be dumped.
 If the fifth field is not present, a value of zero is returned and
 .Nm dump
 will assume that the file system does not need to be dumped.
+If the fifth field is greater than 0, then it specifies the number of days
+between dumps for this file system.
 .Pp
 The sixth field,
 .Pq Fa fs_passno ,
 is used by the
 .Xr fsck 8
-program to determine the order in which file system checks are done
-at reboot time.
+and
+.Xr quotacheck 8
+programs to determine the order in which file system and quota
+checks are done at reboot time.
+The
+.Fa fs_passno
+field can be any value between 0 and
+.Ql INT_MAX Ns -1 .
+.Pp
 The root file system should be specified with a
 .Fa fs_passno
 of 1, and other file systems should have a
 .Fa fs_passno
-of 2.
-File systems within a drive will be checked sequentially,
+of 2 or greater.
+A file system with a
+.Fa fs_passno
+value of 1 is always checked sequentially and be completed before
+another file system is processed, and it will be processed before
+all file systems with a larger
+.Fa fs_passno .
+.Pp
+For any given value of
+.Fa fs_passno ,
+file systems within a drive will be checked sequentially,
 but file systems on different drives will be checked at the
 same time to utilize parallelism available in the hardware.
+Once all file system checks are complete for the current
+.Fa fs_passno ,
+the same process will start over for the next
+.Fa fs_passno .
+.Pp
 If the sixth field is not present or is zero,
 a value of zero is returned and
 .Xr fsck 8
+and
+.Xr quotacheck 8
 will assume that the file system does not need to be checked.
+.Pp
+The
+.Fa fs_passno
+field can be used to implement finer control when
+the system utilities may determine that the file system resides
+on a different physical device, when it actually does not, as with a
+.Xr ccd 4
+device.
+All file systems with a lower
+.Fa fs_passno
+value will be completed before starting on file systems with a
+higher
+.Fa fs_passno
+value.
+E.g. all file systems with a
+.Fa fs_passno
+of 2 will be completed before any file systems with a
+.Fa fs_passno
+of 3 or greater are started.
+Gaps are allowed between the different
+.Fa fs_passno
+values.
+E.g. file systems listed in
+.Pa /etc/fstab
+may have
+.Fa fs_passno
+values such as 0, 1, 2, 15, 100, 200, 300, and may appear in any order
+within
+.Pa /etc/fstab .
 .Bd -literal
 #define	FSTAB_RW	"rw"	/* read/write device */
 #define	FSTAB_RQ	"rq"	/* read/write with quotas */
@@ -237,6 +332,7 @@ resides in
 .Sh SEE ALSO
 .Xr getfsent 3 ,
 .Xr getvfsbyname 3 ,
+.Xr ccd 4 ,
 .Xr dump 8 ,
 .Xr fsck 8 ,
 .Xr mount 8 ,

@@ -1,4 +1,5 @@
-.\" Copyright (c) 2004 Alfred Perlstein <alfred@FreeBSD.org>
+.\" Copyright (c) 2011 Edward Tomasz Napierala
+.\" Copyright (c) 1999 Chris Costello <chris@FreeBSD.org>
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -22,37 +23,52 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $Id: autofs.5,v 1.1.1.2 2006-02-25 02:35:46 laffer1 Exp $
-.\" $FreeBSD: src/share/man/man5/autofs.5,v 1.3 2005/06/15 13:31:22 ru Exp $
-.Dd August 30, 2004
-.Dt AUTOFS 5
+.\" $MidnightBSD$
+.\"
+.Dd April 14, 2011
+.Dt RCTL.CONF 5
 .Os
 .Sh NAME
-.Nm autofs
-.Nd auto file system
-.Sh SYNOPSIS
-.Bd -literal
-autofs	/auto	autofs rw 0 0
-.Ed
+.Nm rctl.conf
+.Nd resource limits database defaults
 .Sh DESCRIPTION
-The auto file system, or
-.Nm ,
-provides a method to dynamically graft mountpoints into the file system
-namespace.
+The
+.Pa /etc/rctl.conf
+file is read in when the system goes into multi-user mode to set default
+contents of the RCTL database.
+The
+.Pa /etc/rctl.conf
+is in the format of the
+.Xr rctl 8
+command, i.e.\&
+.Bd -literal -offset indent
+subject:subject-id:resource:action=amount/per
+.Ed
+.Pp
+Comments are denoted by a
+.Dq #
+at the beginning of a line.
+Comments can also exist at the end of a line,
+as seen in the
+.Sx EXAMPLES
+section, below.
+.Sh FILES
+.Bl -tag -width /etc/rctl.conf -compact
+.It Pa /etc/rctl.conf
+Initial settings for
+.Xr rctl 8 .
+.El
+.Sh EXAMPLES
+To limit the number of processes for users in login class "testing",
+use a rule like
+.Bd -literal -offset indent
+# Resource limits for the "testing" class.
+loginclass:testing:nproc:deny=100/user # At most 100 processes per user
+.Ed
 .Sh SEE ALSO
-.Xr libautofs 3 ,
-.Xr mount_autofs 8
+.Xr rctl 8
 .Sh HISTORY
 The
 .Nm
-file system first appeared in
-.Fx 6.0 .
-The
-.Nm
-manual page first appeared in
-.Fx 6.0 .
-.Sh AUTHORS
-The
-.Nm
-manual page was written by
-.An Alfred Perlstein Aq alfred@FreeBSD.org .
+file appeared in
+.Fx 9.0 .

@@ -41270,13 +41270,11 @@ share/man/man5/Makefile -text
 share/man/man5/a.out.5 -text
 share/man/man5/acct.5 -text
 share/man/man5/ar.5 -text
-share/man/man5/autofs.5 -text
 share/man/man5/bluetooth.device.conf.5 -text
 share/man/man5/bluetooth.hosts.5 -text
 share/man/man5/bluetooth.protocols.5 -text
 share/man/man5/boot.config.5 -text
 share/man/man5/bsd.mport.mk.5 -text
-share/man/man5/config.5 -text
 share/man/man5/core.5 -text
 share/man/man5/devfs.5 -text
 share/man/man5/devfs.conf.5 -text
@@ -41312,6 +41310,7 @@ share/man/man5/msdosfs.5 -text
 share/man/man5/networks.5 -text
 share/man/man5/nsmb.conf.5 -text
 share/man/man5/nsswitch.conf.5 -text
+share/man/man5/nullfs.5 -text
 share/man/man5/passwd.5 -text
 share/man/man5/pbm.5 -text
 share/man/man5/periodic.conf.5 -text
@@ -41320,6 +41319,8 @@ share/man/man5/procfs.5 -text
 share/man/man5/protocols.5 -text
 share/man/man5/quota.user.5 -text
 share/man/man5/rc.conf.5 -text
+share/man/man5/rctl.conf.5 -text
+share/man/man5/regdomain.5 -text
 share/man/man5/reiserfs.5 -text
 share/man/man5/remote.5 -text
 share/man/man5/resolver.5 -text
@@ -41330,7 +41331,6 @@ share/man/man5/stab.5 -text
 share/man/man5/style.Makefile.5 -text
 share/man/man5/sysctl.conf.5 -text
 share/man/man5/tmpfs.5 -text
-share/man/man5/utmp.5 -text
 share/man/man5/xfs.5 -text
 share/man/man6/Makefile -text
 share/man/man6/intro.6 -text

@@ -1,4 +1,4 @@
-.\" Copyright (c) 2003 Maksim Yevmenkin <m_evmenkin@yahoo.com>
+.\" Copyright (c) 2008 Sam Leffler, Errno Consulting
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -13,7 +13,7 @@
 .\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
 .\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 .\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-.\" ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
 .\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
 .\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
 .\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -22,42 +22,27 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $Id: bluetooth.hosts.5,v 1.2 2012-12-29 17:01:15 laffer1 Exp $
 .\" $MidnightBSD$
-.\"
-.Dd May 8, 2003
-.Dt BLUETOOTH.HOSTS 5
+.Dd April 13, 2008
+.Dt REGDOMAIN 5
 .Os
 .Sh NAME
-.Nm bluetooth.hosts
-.Nd Bluetooth host name database
+.Nm regdomain.xml
+.Nd "802.11 wireless regulatory definitions"
 .Sh DESCRIPTION
 The
-.Pa /etc/bluetooth/hosts
-file contains information regarding the known Bluetooth hosts.
-For each Bluetooth host a single line should be present with the
-following information:
-.Bd -unfilled -offset indent
-Bluetooth address
-official host name
-aliases
-.Ed
+.Nm
+file describes regulations for the operation of IEEE 802.11 wireless radios.
 .Pp
-Items are separated by any number of blanks and/or tab characters.
-A
-.Ql #
-indicates the beginning of a comment; characters up to the end of the line are
-not interpreted by routines which search the file.
-.Pp
-Bluetooth addresses are specified as six hex bytes separated by columns
-(BD_ADDR).
-Host names may contain any printable character other than a field
-delimiter, newline, or comment character.
+This information is used by the
+.Xr ifconfig 8
+program to construct regulatory state for download to the system.
+This file should be changed only to reflect changes in regulations.
 .Sh FILES
-.Bl -tag -width ".Pa /etc/bluetooth/hosts" -compact
-.It Pa /etc/bluetooth/hosts
+.Bl -tag -width /etc/regdomain.xml -compact
+.It Pa /etc/regdomain.xml
+XML database of 802.11 regulatory constraints
 .El
 .Sh SEE ALSO
-.Xr bluetooth 3
-.Sh AUTHORS
-.An Maksim Yevmenkin Aq m_evmenkin@yahoo.com
+.Xr wlan 4 ,
+.Xr ifconfig 8

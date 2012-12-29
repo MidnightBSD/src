@@ -31,9 +31,9 @@
 .\" TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 .\" USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man5/nsswitch.conf.5,v 1.17.2.1 2007/10/19 00:18:19 bushman Exp $
+.\" $MidnightBSD$
 .\"
-.Dd January 22, 2007
+.Dd April 4, 2010
 .Dt NSSWITCH.CONF 5
 .Os
 .Sh NAME
@@ -72,6 +72,8 @@ Local files, such as
 .Pa /etc/hosts ,
 and
 .Pa /etc/passwd .
+.It db
+Local database.
 .It dns
 Internet Domain Name System.
 .Dq hosts
@@ -141,9 +143,13 @@ The following databases are used by the following C library functions:
 .Xr getrpcbynumber 3 ,
 .Xr getrpcent 3
 .It proto
-.Xr getprotobyname 3
+.Xr getprotobyname 3 ,
 .Xr getprotobynumber 3 ,
 .Xr getprotoent 3
+.It netgroup
+.Xr getnetgrent 3 ,
+.Xr setnetgrent 3 ,
+.Xr innetgr 3
 .El
 .Ss Status codes
 The following status codes are available:

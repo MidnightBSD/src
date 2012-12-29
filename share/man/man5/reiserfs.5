@@ -1,5 +1,5 @@
 .\"
-.\" Copyright (c) 2005 Jean-Sébastien Pédron
+.\" Copyright (c) 2005 Jean-SÃ©bastien PÃ©dron
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -24,9 +24,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man5/reiserfs.5,v 1.2 2006/09/30 16:01:33 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd May 16, 2006
+.Dd July 23, 2011
 .Dt REISERFS 5
 .Os
 .Sh NAME
@@ -61,9 +61,6 @@ volume located on
 .Xr unmount 2 ,
 .Xr fstab 5 ,
 .Xr mount 8
-.Sh CAVEATS
-Currently, only read-only access is supported for ReiserFS volumes,
-writing to a volume is not supported.
 .Sh HISTORY
 The
 .Nm
@@ -74,7 +71,6 @@ first appeared in
 .An -nosplit
 The ReiserFS kernel implementation was written by
 .An Hans Reiser
-.Pq Pa http://www.namesys.com/ ,
 and ported to
 .Fx
 by
@@ -82,3 +78,6 @@ by
 .Pp
 This manual page was written by
 .An Craig Rodrigues Aq rodrigc@FreeBSD.org .
+.Sh CAVEATS
+Currently, only read-only access is supported for ReiserFS volumes,
+writing to a volume is not supported.

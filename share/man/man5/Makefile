@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
 #	$FreeBSD: src/share/man/man5/Makefile,v 1.58.2.2 2005/12/05 18:54:45 emax Exp $
-# $MidnightBSD: src/share/man/man5/Makefile,v 1.3 2009/05/02 21:12:44 laffer1 Exp $
+# $MidnightBSD: src/share/man/man5/Makefile,v 1.4 2010/12/25 13:10:49 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -47,6 +47,7 @@ MAN=	acct.5 \
 	networks.5 \
 	nsmb.conf.5 \
 	nsswitch.conf.5 \
+	nullfs.5 \
 	passwd.5 \
 	pbm.5 \
 	periodic.conf.5 \
@@ -55,6 +56,8 @@ MAN=	acct.5 \
 	protocols.5 \
 	quota.user.5 \
 	rc.conf.5 \
+	rctl.conf.5 \
+	regdomain.5 \
 	reiserfs.5 \
 	remote.5 \
 	resolver.5 \
@@ -65,7 +68,6 @@ MAN=	acct.5 \
 	style.Makefile.5 \
 	sysctl.conf.5 \
 	tmpfs.5 \
-	utmp.5 \
 	xfs.5
 
 MLINKS=	dir.5 dirent.5
@@ -76,13 +78,12 @@ MLINKS+=passwd.5 master.passwd.5
 MLINKS+=quota.user.5 quota.group.5
 MLINKS+=rc.conf.5 rc.conf.local.5
 MLINKS+=resolver.5 resolv.conf.5
-MLINKS+=utmp.5 lastlog.5 utmp.5 wtmp.5
 
 .if ${MK_HESIOD} != "no"
 MAN+=	hesiod.conf.5 
 .endif
 
-.if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386"
+.if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
 _boot.config.5=	boot.config.5
 .endif
 
