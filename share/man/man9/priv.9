@@ -26,7 +26,7 @@
 .\" NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 .\" SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/priv.9,v 1.6 2007/06/26 23:12:05 rwatson Exp $
+.\" $MidnightBSD$
 .\"
 .Dd August 30, 2006
 .Dt PRIV 9
@@ -48,7 +48,7 @@ passed thread,
 .Fa td ,
 or credential,
 .Fa cred .
-This interface replaces the
+This interface replaces the now removed
 .Xr suser 9
 privilege checking interface.
 Privileges typically represent rights in one of two categories: the right to
@@ -112,7 +112,6 @@ failure occurred.
 .Sh SEE ALSO
 .Xr jail 2 ,
 .Xr mac 9 ,
-.Xr suser 9 ,
 .Xr ucred 9
 .Sh AUTHORS
 The

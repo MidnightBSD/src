@@ -26,11 +26,11 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/VFS_UNMOUNT.9,v 1.11 2005/01/07 11:45:11 keramida Exp $
+.\" $MidnightBSD$
 .\"
-.Dd January 7, 2005
-.Os
+.Dd May 23, 2009
 .Dt VFS_UNMOUNT 9
+.Os
 .Sh NAME
 .Nm VFS_UNMOUNT
 .Nd unmount a file system
@@ -39,7 +39,7 @@
 .In sys/mount.h
 .In sys/vnode.h
 .Ft int
-.Fn VFS_UNMOUNT "struct mount *mp" "int mntflags" "struct thread *td"
+.Fn VFS_UNMOUNT "struct mount *mp" "int mntflags"
 .Sh DESCRIPTION
 The
 .Fn VFS_UNMOUNT
@@ -58,8 +58,6 @@ are:
 .It Dv MNT_FORCE
 Open files are forcibly closed before the file system is unmounted.
 .El
-.It Fa td
-Thread which is unmounting the file system.
 .El
 .Sh SEE ALSO
 .Xr vflush 9 ,

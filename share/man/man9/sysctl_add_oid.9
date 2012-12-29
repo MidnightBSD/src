@@ -25,7 +25,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/sysctl_add_oid.9,v 1.21 2006/04/28 10:45:27 rwatson Exp $
+.\" $MidnightBSD$
 .\"
 .Dd July 15, 2000
 .Dt SYSCTL_ADD_OID 9
@@ -144,6 +144,16 @@
 .Fa "const char *name"
 .Fa "int access"
 .Fa "unsigned long *arg"
+.Fa "const char *descr"
+.Fc
+.Ft struct sysctl_oid *
+.Fo SYSCTL_ADD_QUAD
+.Fa "struct sysctl_ctx_list *ctx"
+.Fa "struct sysctl_oid_list *parent"
+.Fa "int number"
+.Fa "const char *name"
+.Fa "int access"
+.Fa "int64_t *arg"
 .Fa "const char *descr"
 .Fc
 .Ft struct sysctl_oid *
@@ -401,8 +411,8 @@ and to delete them later in orderly fashion.
 .Pp
 There is a set of macros defined
 that helps to create oids of given type.
-.Bl -tag -width SYSCTL_ADD_STRINGXX
 They are as follows:
+.Bl -tag -width SYSCTL_ADD_STRINGXX
 .It Fn SYSCTL_ADD_OID
 creates a raw oid.
 This macro is functionally equivalent to the
@@ -429,6 +439,10 @@ variable.
 .It Fn SYSCTL_ADD_ULONG
 creates an oid that handles an
 .Li unsigned long
+variable.
+.It Fn SYSCTL_ADD_QUAD
+creates an oid that handles an
+.Li int64_t
 variable.
 .It Fn SYSCTL_ADD_OPAQUE
 creates an oid that handles any chunk of opaque data

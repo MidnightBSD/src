@@ -1,5 +1,5 @@
 .\"
-.\" Copyright (c) 2007 Robert N. M. Watson
+.\" Copyright (c) 2007-2009 Robert N. M. Watson
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -25,20 +25,20 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/stack.9,v 1.5.2.1 2007/12/04 15:22:31 rwatson Exp $
+.\" $MidnightBSD$
 .\"
-.Dd February 27, 2007
+.Dd June 24, 2009
 .Dt STACK 9
 .Os
 .Sh NAME
 .Nm stack
 .Nd kernel thread stack tracing routines
 .Sh SYNOPSIS
-.In sys/param.h>
+.In sys/param.h
 .In sys/stack.h
-.Pp
-In kernel configuration files:
+In the kernel configuration file:
 .Cd "options DDB"
+.Cd "options STACK"
 .Ft struct stack *
 .Fn stack_create "void"
 .Ft void
@@ -52,7 +52,15 @@ In kernel configuration files:
 .Ft void
 .Fn stack_print "struct stack *st"
 .Ft void
+.Fn stack_print_ddb "struct stack *st"
+.Ft void
+.Fn stack_print_short "struct stack *st"
+.Ft void
+.Fn stack_print_short_ddb "struct stack *st"
+.Ft void
 .Fn stack_sbuf_print "struct sbuf sb*" "struct stack *st"
+.Ft void
+.Fn stack_sbuf_print_ddb "struct sbuf sb*" "struct stack *st"
 .Ft void
 .Fn stack_save "struct stack *st"
 .Sh DESCRIPTION
@@ -61,12 +69,11 @@ The
 KPI allows querying of kernel stack trace information and the automated
 generation of kernel stack trace strings for the purposes of debugging and
 tracing.
-.Nm
-relies on the presence of
-.Xr DDB 4 ,
-and all use of these functions must be made conditional on
-.Nm DDB
-being compiled in the kernel.
+To use the KPI, at least one of
+.Cd "options DDB"
+and
+.Cd "options STACK"
+must be compiled into the kernel.
 .Pp
 Each stack trace is described by a
 .Vt "struct stack" .
@@ -74,15 +81,28 @@ Before a trace may be created or otherwise manipulated, storage for the trace
 must be allocated with
 .Fn stack_create ,
 which may sleep.
-Memory associated with a trace may be freed by calling
+Memory associated with a trace is freed by calling
 .Fn stack_destroy .
 .Pp
 A trace of the current kernel thread's call stack may be captured using
 .Fn stack_save .
 .Pp
 .Fn stack_print
+and
+.Fn stack_print_short
 may be used to print a stack trace using the kernel
-.Xr printf 9 .
+.Xr printf 9 ,
+and may sleep as a result of acquiring
+.Xr sx 9
+locks in the kernel linker while looking up symbol names.
+In locking-sensitive environments, the unsynchronized
+.Fn stack_print_ddb
+and
+.Fn stack_print_short_ddb
+variants may be invoked.
+This function bypasses kernel linker locking, making it usable in
+.Xr ddb 4 ,
+but not in a live system where linker data structures may change.
 .Pp
 .Fn stack_sbuf_print
 may be used to construct a human-readable string, including conversion (where
@@ -96,7 +116,13 @@ as described in
 .Xr sbuf 9 .
 This function may sleep if an auto-extending
 .Dv struct sbuf
-is used.
+is used, or due to kernel linker locking.
+In locking-sensitive environments, such as
+.Xr ddb 4 ,
+the unsynchronized
+.Fn stack_sbuf_print_ddb
+variant may be invoked to avoid kernel linker locking; it should be used with
+a fixed-length sbuf.
 .Pp
 The utility functions
 .Nm stack_zero ,
@@ -105,15 +131,18 @@ and
 .Nm stack_put
 may be used to manipulate stack data structures directly.
 .Sh SEE ALSO
-.Xr DDB 4 ,
+.Xr ddb 4 ,
 .Xr printf 9 ,
-.Xr sbuf 9
+.Xr sbuf 9 ,
+.Xr sx 9
 .Sh AUTHORS
 .An -nosplit
 The
 .Xr stack 9
 function suite was created by
 .An Antoine Brodin .
-.Pp
-This manual page was written by
-.An Robert Watson .
+.Xr stack 9
+was extended by
+.An Robert Watson
+for general-purpose use outside of
+.Xr ddb 4 .

@@ -22,15 +22,17 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/redzone.9,v 1.1 2006/01/31 11:09:20 pjd Exp $
+.\" $MidnightBSD$
 .\"
-.Dd January 31, 2006
+.Dd January 9, 2009
 .Dt REDZONE 9
 .Os
 .Sh NAME
 .Nm RedZone
 .Nd "buffer corruptions detector"
 .Sh SYNOPSIS
+.Cd "options KDB"
+.Cd "options DDB"
 .Cd "options DEBUG_REDZONE"
 .Sh DESCRIPTION
 .Nm

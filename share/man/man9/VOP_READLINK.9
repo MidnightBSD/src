@@ -26,11 +26,11 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/VOP_READLINK.9,v 1.13 2005/06/28 20:15:18 hmp Exp $
+.\" $MidnightBSD$
 .\"
 .Dd July 24, 1996
-.Os
 .Dt VOP_READLINK 9
+.Os
 .Sh NAME
 .Nm VOP_READLINK
 .Nd read the target of a symbolic link
@@ -54,21 +54,6 @@ The credentials of the caller.
 The vnode should be locked on entry and will still be locked on exit.
 .Sh RETURN VALUES
 Zero is returned on success, otherwise an error code is returned.
-.Sh PSEUDOCODE
-.Bd -literal
-int
-vop_readlink(struct vnode *vp, struct uio *uio, struct ucred *cred)
-{
-    int error = 0;
-
-    /*
-     * Read the target of the symlink.
-     */
-    ...;
-
-    return error;
-}
-.Ed
 .Sh ERRORS
 .Bl -tag -width Er
 .It Bq Er EIO

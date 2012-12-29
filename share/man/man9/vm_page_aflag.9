@@ -24,45 +24,77 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/vm_page_sleep_busy.9,v 1.2 2005/06/28 20:15:18 hmp Exp $
+.\" $MidnightBSD$
 .\"
-.Dd July 13, 2001
-.Dt VM_PAGE_SLEEP_BUSY 9
+.Dd August 31, 2011
+.Dt VM_PAGE_AFLAG 9
 .Os
 .Sh NAME
-.Nm vm_page_sleep_busy
-.Nd "wait for a busy page to become unbusy"
+.Nm vm_page_aflag_clear , vm_page_aflag_set , vm_page_reference
+.Nd "change page atomic flags"
 .Sh SYNOPSIS
 .In sys/param.h
 .In vm/vm.h
 .In vm/vm_page.h
-.Ft int
-.Fn vm_page_sleep_busy "vm_page_t m" "int also_m_busy" "const char *wmesg"
+.Ft void
+.Fn vm_page_aflag_clear "vm_page_t m" "uint8_t bits"
+.Ft void
+.Fn vm_page_aflag_set "vm_page_t m" "uint8_t bits"
+.Ft void
+.Fn vm_page_reference "vm_page_t m"
 .Sh DESCRIPTION
 The
-.Fn vm_page_sleep_busy
-function waits until the
-.Dv PG_BUSY
-flag is cleared.
-If
-.Fa also_m_busy
-is non-zero, it also waits for
-.Fa m->busy
-to become zero.
-.Sh RETURN VALUES
-If
-.Fn vm_page_sleep_busy
-finds the page busy it returns
-.Dv TRUE .
-If not, it returns
-.Dv FALSE .
-Returning
-.Dv TRUE
-does not necessary mean that
-.Fn vm_page_sleep_busy
-slept, but only that
-.Fn splvm
-was called.
+.Fn vm_page_aflag_clear
+atomically clears the specified bits on the page's
+.Va aflags .
+.Pp
+The
+.Fn vm_page_aflag_set
+atomically sets the specified bits on the page's
+.Va aflags .
+.Pp
+The
+.Fn vm_page_reference m
+call is the same as
+.Bd -literal -offset indent
+vm_page_aflag_set(m, PGA_REFERENCED);
+.Ed
+.Lp
+and is the recommended way to mark the page as referenced from
+third-party kernel modules.
+.Pp
+These functions neither block nor require any locks to be held
+around the calls for correctness.
+.Pp
+The functions arguments are:
+.Bl -tag -width ".Fa bits"
+.It Fa m
+The page whose
+.Va aflags
+are updated.
+.It Fa bits
+The bits that are set or cleared on the page's flags.
+.El
+.Pp
+The following
+.Va aflags
+can be set or cleared:
+.Bl -tag -width ".Fa PGA_REFERENCED"
+.It Fa PGA_REFERENCED
+The bit may be set to indicate that the page has been recently accessed.
+For instance,
+.Xr pmap 9
+sets this bit to reflect the accessed attribute of the page mapping
+typically updated by processor's memory management unit on the page access.
+.It Fa PGA_WRITEABLE
+A writeable mapping for the page may exist.
+.El
+.Pp
+Both
+.Dv PGA_REFERENCED
+and
+.Dv PGA_WRITEABLE
+bits are only valid for the managed pages.
 .Sh AUTHORS
 This manual page was written by
 .An Chad David Aq davidc@acns.ab.ca .

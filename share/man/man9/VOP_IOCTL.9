@@ -26,11 +26,11 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/VOP_IOCTL.9,v 1.15 2005/06/28 20:15:18 hmp Exp $
+.\" $MidnightBSD$
 .\"
 .Dd July 24, 1996
-.Os
 .Dt VOP_IOCTL 9
+.Os
 .Sh NAME
 .Nm VOP_IOCTL
 .Nd device specific control
@@ -67,16 +67,6 @@ If successful, zero is returned, otherwise an appropriate error code.
 If the ioctl is not recognized or not handled,
 .Er ENOTTY
 should be returned.
-.Sh PSEUDOCODE
-.Bd -literal
-int
-vop_ioctl(struct vnode *vp, int command, caddr_t data, int fflag,
-	  struct ucred *cred, struct thread *td)
-{
-
-    return ENOTTY;
-}
-.Ed
 .Sh SEE ALSO
 .Xr vnode 9
 .Sh AUTHORS

@@ -23,11 +23,11 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/vaccess.9,v 1.9 2005/06/28 20:15:18 hmp Exp $
+.\" $MidnightBSD$
 .\"
-.Dd August 22, 2001
-.Os
+.Dd September 18, 2009
 .Dt VACCESS 9
+.Os
 .Sh NAME
 .Nm vaccess
 .Nd generate an access control decision using vnode parameters
@@ -40,7 +40,7 @@
 .Fa "mode_t file_mode"
 .Fa "uid_t file_uid"
 .Fa "gid_t file_gid"
-.Fa "mode_t acc_mode"
+.Fa "accmode_t accmode"
 .Fa "struct ucred *cred"
 .Fa "int *privused"
 .Fc
@@ -59,7 +59,7 @@ owning UID
 owning GID
 .Fa file_gid ,
 desired access mode
-.Fa acc_mode ,
+.Fa accmode ,
 requesting credential
 .Fa cred ,
 and an optional call-by-reference
@@ -117,6 +117,7 @@ An attempt was made to perform an operation limited to processes with
 appropriate privileges or to the owner of a file or other resource.
 .El
 .Sh SEE ALSO
+.Xr vaccess_acl_nfs4 9 ,
 .Xr vaccess_acl_posix1e 9 ,
 .Xr vnode 9 ,
 .Xr VOP_ACCESS 9

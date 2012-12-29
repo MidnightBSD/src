@@ -57,10 +57,10 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/bus_dma.9,v 1.40 2007/03/06 17:32:49 jhb Exp $
+.\" $MidnightBSD$
 .\" $NetBSD: bus_dma.9,v 1.25 2002/10/14 13:43:16 wiz Exp $
 .\"
-.Dd March 6, 2007
+.Dd May 12, 2009
 .Dt BUS_DMA 9
 .Os
 .Sh NAME
@@ -283,7 +283,7 @@ Client specified lock/mutex manipulation method.
 This will be called from
 within busdma whenever a client lock needs to be manipulated.
 In its current form, the function will be called immediately before
-the callback for a dma load operation that has been deferred with
+the callback for a DMA load operation that has been deferred with
 .Dv BUS_DMA_LOCK
 and immediately after with
 .Dv BUS_DMA_UNLOCK .
@@ -364,17 +364,26 @@ indicates that there are no boundary restrictions.
 Bounds of the window of bus address space that
 .Em cannot
 be directly accessed by the device.
-The window contains all addresses greater than lowaddr and
-less than or equal to highaddr.
-For example, a device incapable of DMA above 4GB, would specify
-a highaddr of
+The window contains all addresses greater than
+.Fa lowaddr
+and less than or equal to
+.Fa highaddr .
+For example, a device incapable of DMA above 4GB, would specify a
+.Fa highaddr
+of
 .Dv BUS_SPACE_MAXADDR
-and a lowaddr of
+and a
+.Fa lowaddr
+of
 .Dv BUS_SPACE_MAXADDR_32BIT .
-Similarly a device that can only dma to addresses bellow 16MB would
-specify a highaddr of
+Similarly a device that can only perform DMA to addresses below
+16MB would specify a
+.Fa highaddr
+of
 .Dv BUS_SPACE_MAXADDR
-and a lowaddr of
+and a
+.Fa lowaddr
+of
 .Dv BUS_SPACE_MAXADDR_24BIT .
 Some implementations requires that some region of device visible
 address space, overlapping available host memory, be outside the
@@ -474,9 +483,23 @@ Arguments are as follows:
 .It Fa dmat
 DMA tag.
 .It Fa flags
-The value of this argument is currently undefined and should be
-specified as
-.Ql 0 .
+Are as follows:
+.Bl -tag -width ".Dv BUS_DMA_COHERENT"
+.It Dv BUS_DMA_COHERENT
+Attempt to map the memory loaded with this map such that cache sync
+operations are as cheap as possible.
+This flag is typically set on maps when the memory loaded with these will
+be accessed by both a CPU and a DMA engine, frequently such as control data
+and as opposed to streamable data such as receive and transmit buffers.
+Use of this flag does not remove the requirement of using
+.Fn bus_dmamap_sync ,
+but it may reduce the cost of performing these operations.
+For
+.Fn bus_dmamap_create ,
+the
+.Dv BUS_DMA_COHERENT
+flag is currently implemented on sparc64.
+.El
 .It Fa mapp
 Pointer to a
 .Vt bus_dmamap_t
@@ -538,6 +561,13 @@ Are as follows:
 .It Dv BUS_DMA_NOWAIT
 The load should not be deferred in case of insufficient mapping resources,
 and instead should return immediately with an appropriate error.
+.It Dv BUS_DMA_NOCACHE
+The generated transactions to and from the virtual page are non-cacheable.
+For
+.Fn bus_dmamap_load ,
+the
+.Dv BUS_DMA_NOCACHE
+flag is currently implemented on sparc64.
 .El
 .El
 .Pp
@@ -742,18 +772,27 @@ If resources are not available,
 .Dv ENOMEM
 is returned.
 .It Dv BUS_DMA_COHERENT
-Attempt to map this memory such that cache sync operations are
-as cheap as possible.
-This flag is typically set on memory that will be accessed by both
-a CPU and a DMA engine, frequently.
-Use of this flag does not remove the requirement of using
-bus_dmamap_sync, but it may reduce the cost of performing
-these operations.
-The
+Attempt to map this memory in a coherent fashion.
+See
+.Fn bus_dmamap_create
+above for a description of this flag.
+For
+.Fn bus_dmamem_alloc ,
+the
 .Dv BUS_DMA_COHERENT
-flag is currently implemented on sparc64 and arm.
+flag is currently implemented on arm and sparc64.
 .It Dv BUS_DMA_ZERO
 Causes the allocated memory to be set to all zeros.
+.It Dv BUS_DMA_NOCACHE
+The allocated memory will not be cached in the processor caches.
+All memory accesses appear on the bus and are executed
+without reordering.
+For
+.Fn bus_dmamem_alloc ,
+the
+.Dv BUS_DMA_NOCACHE
+flag is currently implemented on amd64 and i386 where it results in the
+Strong Uncacheable PAT to be set for the allocated virtual address range.
 .El
 .It Fa mapp
 Pointer to a

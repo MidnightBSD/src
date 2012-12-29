@@ -23,40 +23,59 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/pmap_addr_hint.9,v 1.3 2004/07/06 07:02:31 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd July 21, 2003
-.Dt PMAP_ADDR_HINT 9
+.Dd July 9, 2011
+.Dt VM_MAP_SYNC 9
 .Os
 .Sh NAME
-.Nm pmap_addr_hint
-.Nd get a hint for the best-fit mapping of a VM object
+.Nm vm_map_sync
+.Nd push dirty pages to their pager
 .Sh SYNOPSIS
 .In sys/param.h
 .In vm/vm.h
-.In vm/pmap.h
-.Ft vm_offset_t
-.Fn pmap_addr_hint "vm_object_t obj" "vm_offset_t addr" "vm_size_t size"
+.In vm/vm_map.h
+.Ft int
+.Fo vm_map_sync
+.Fa "vm_map_t map" "vm_offset_t start" "vm_offset_t end" "boolean_t syncio"
+.Fa "boolean_t invalidate"
+.Fc
 .Sh DESCRIPTION
 The
-.Fn pmap_addr_hint
-function returns a hint for the best address at which to map the object
-.Fa obj
-at address
-.Fa addr
-of
-.Fa size
-bytes.
-.Sh IMPLEMENTATION NOTES
-This function is typically called on behalf of
-.Xr mmap 2 .
+.Fn vm_map_sync
+function forces any dirty cached pages in the range
+.Fa start
+to
+.Fa end
+within the
+.Fa map
+to be pushed to their underlying pager.
+.Pp
+If
+.Fa syncio
+is TRUE, dirty pages are written synchronously.
+.Pp
+If
+.Fa invalidate
+is TRUE, any cached pages are also freed.
+.Pp
+The range provided must be contiguous, it MUST NOT contain holes.
+The range provided MUST NOT contain any sub-map entries.
 .Sh RETURN VALUES
-If the implementation can use the address unchanged, it will simply
-return
-.Fa addr .
+The
+.Fn vm_map_sync
+function returns
+.Dv KERN_SUCCESS
+if successful.
+.Pp
+Otherwise,
+.Dv KERN_INVALID_ADDRESS
+will be returned if the function encountered a sub-map entry;
+.Dv KERN_INVALID_ARGUMENT
+will be returned if the function encountered a hole in the region provided,
+or if an entry could not be found for the given start address.
 .Sh SEE ALSO
-.Xr mmap 2 ,
-.Xr pmap 9
+.Xr vm_map 9
 .Sh AUTHORS
 This manual page was written by
 .An Bruce M Simpson Aq bms@spc.org .

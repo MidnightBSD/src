@@ -24,7 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/condvar.9,v 1.21 2007/06/05 20:53:18 imp Exp $
+.\" $MidnightBSD$
 .\"
 .Dd June 5, 2007
 .Dt CONDVAR 9
@@ -117,10 +117,10 @@ argument is a pointer to either a
 or
 .Xr sx 9
 lock.
-A 
+A
 .Xr mutex 9
 argument must be initialized with
-.Dv MTX_DEF 
+.Dv MTX_DEF
 and not
 .Dv MTX_SPIN .
 A thread must hold
@@ -136,9 +136,27 @@ When a thread waits on a condition,
 .Fa lock
 is atomically released before the thread is blocked, then reacquired
 before the function call returns.
+In addition, the thread will fully drop the
+.Va Giant
+mutex
+(even if recursed)
+while the it is suspended and will reacquire the
+.Va Giant
+mutex before the function returns.
 The
 .Fn cv_wait_unlock
 function does not reacquire the lock before returning.
+Note that the
+.Va Giant
+mutex may be specified as
+.Fa lock .
+However,
+.Va Giant
+may not be used as
+.Fa lock
+for the
+.Fn cv_wait_unlock
+function.
 All waiters must pass the same
 .Fa lock
 in conjunction with

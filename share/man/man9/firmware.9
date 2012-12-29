@@ -21,11 +21,11 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/firmware.9,v 1.6 2007/02/15 17:52:17 luigi Exp $
+.\" $MidnightBSD$
 .\"
-.Dd January 6, 2006
-.Os
+.Dd August 2, 2008
 .Dt FIRMWARE 9
+.Os
 .Sh NAME
 .Nm firmware_register ,
 .Nm firmware_unregister ,
@@ -101,11 +101,13 @@ they want as an argument. If a matching image is not already registered,
 the firmware subsystem will try to load it using the
 mechanisms specified below (typically, a kernel module
 with
-.Nm the same name
+.Nm
+the same name
 as the image).
 .Sh API DESCRIPTION
 The kernel
-.Nm firmware API
+.Nm
+firmware API
 is made of the following functions:
 .Pp
 .Fn firmware_register
@@ -137,8 +139,11 @@ This involves the linker subsystem and disk access, so
 .Fn firmware_get
 must not be called with any locks (except for
 .Va Giant ) .
-The caller must also have a process context so filesystem state such as
-the root vnode is defined (e.g. you cannot load from a taskqueue thread).
+Note also that if the firmware image is loaded from a filesystem
+it must already be mounted.
+In particular this means that it may be necessary to defer requests
+from a driver attach method unless it is known the root filesystem is
+already mounted.
 .Pp
 On success,
 .Fn firmware_get
@@ -154,6 +159,10 @@ argument may be set to
 to indicate that
 firmware_put is free to reclaim resources associated with
 the firmware image if this is the last reference.
+By default a firmware image will be deferred to a
+.Xr taskqueue 9
+thread so the call may be done while holding a lock.
+In certain cases, such as on driver detach, this cannot be allowed.
 .Sh FIRMWARE LOADING MECHANISMS
 As mentioned before, any component of the system can register
 firmware images at any time by simply calling
@@ -218,7 +227,7 @@ in the module, the imagename and version of each firmware image.
 If you need to embed firmware images into a system, you should write
 appropriate entries in the <files.arch> file, e.g. this example is
 from
-.Nm sys/arm/xscale/ixp425/files.ixp425:
+.Nm sys/arm/xscale/ixp425/files.ixp425 :
 .Bd -literal
 ixp425_npe_fw.c                         optional npe_fw                 \\
         compile-with    "${AWK} -f $S/tools/fw_stub.awk			\\
@@ -238,11 +247,7 @@ IxNpeMicrocode.fwo  optional npe_fw					\\
         clean           "IxNpeMicrocode.fwo"
 IxNpeMicrocode.dat                      optional npe_fw                 \\
         dependency      ".PHONY"                                        \\
-        compile-with    "if [ -e $S/arm/xscale/ixp425/IxNpeMicrocode.dat ]; \\
-			then						\\
-			ln -sf $S/arm/xscale/ixp425/IxNpeMicrocode.dat .; \\
-			else echo 'WARNING, no IxNpeMicrocode.dat file; you must obtain this from the Intel web site'; false; \\
-			fi" \\
+        compile-with    "uudecode < $S/contrib/dev/npe/IxNpeMicrocode.dat.uu" \\
         no-obj no-implicit-rule                                         \\
         clean           "IxNpeMicrocode.dat"
 .Ed

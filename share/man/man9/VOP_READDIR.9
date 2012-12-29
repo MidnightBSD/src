@@ -26,11 +26,11 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/VOP_READDIR.9,v 1.14 2005/06/28 20:15:18 hmp Exp $
+.\" $MidnightBSD$
 .\"
 .Dd July 24, 1996
-.Os
 .Dt VOP_READDIR 9
+.Os
 .Sh NAME
 .Nm VOP_READDIR
 .Nd read contents of a directory
@@ -89,76 +89,10 @@ The value of
 the cookie should be the offset within the directory where the on-disc
 version of the appropriate directory entry starts.
 Memory for the cookies should be allocated using:
-.Pp
 .Bd -literal
 	...;
 	*ncookies = number of entries read;
-	*cookies = (u_int*)#
-		malloc(*ncookies * sizeof(u_int), M_TEMP, M_WAITOK);
-.Ed
-.Sh PSEUDOCODE
-.Bd -literal
-int
-vop_readdir(struct vnode *vp, struct uio *uio, struct ucred *cred,
-	    int *eofflag, int *ncookies, u_int **cookies)
-{
-    off_t off;
-    int error = 0;
-
-    /*
-     * Remember the original offset to use later in generating cookies.
-     */
-    off = uio->uio_offset;
-
-    /*
-     * Read directory contents starting at uio->uio_offset into buffer
-     * pointed to by uio.
-     */
-    ...;
-
-    if (!error && ncookies != NULL) {
-	struct dirent *dpStart;
-	struct dirent *dpEnd;
-	struct dirent *dp;
-	int count;
-	u_int *cookiebuf;
-	u_int *cookiep;
-
-	if (uio->uio_segflg != UIO_SYSSPACE || uio->uio_iovcnt != 1)
-	    panic("vop_readdir: unexpected uio from NFS server");
-
-	/*
-	 * Parse the stuff just read into the uio.
-	 */
-	dpStart = (struct dirent *)
-	    ((char *)uio->uio_iov->iov_base - (uio->uio_offset - off));
-	dpEnd = (struct dirent *) uio->uio_iov->iov_base;
-
-	/*
-	 * Count number of entries.
-	 */
-	for (dp = dpStart, count = 0;
-	     dp < dpEnd;
-	     dp = (struct dirent *)((caddr_t) dp + dp->d_reclen))
-	    count++;
-
-	cookiebuf = (u_int *) malloc(count * sizeof(u_int), M_TEMP, M_WAITOK);
-	for (dp = dpStart; cookiep = cookiebuf;
-	     dp < dpEnd;
-	     dp = (struct dirent *)((caddr_t) dp + dp->d_reclen)) {
-	    off += dp->d_reclen;
-	    *cookiep++ = (u_int) off;
-	}
-	*ncookies = count;
-	*cookies = cookiebuf;
-    }
-
-    if (eofflag && uio->uio_offset is past the end of the directory) {
-	*eofflag = TRUE;
-    }
-
-    return error;
-}
+	*cookies = malloc(*ncookies * sizeof(u_long), M_TEMP, M_WAITOK);
 .Ed
 .Sh ERRORS
 .Bl -tag -width Er

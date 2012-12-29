@@ -26,9 +26,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/devclass_get_maxunit.9,v 1.8 2005/06/28 20:15:18 hmp Exp $
+.\" $MidnightBSD$
 .\"
-.Dd April 3, 2005
+.Dd September 10, 2010
 .Dt DEVCLASS_GET_MAXUNIT 9
 .Os
 .Sh NAME
@@ -43,6 +43,19 @@
 Returns the next unit number to be allocated to device instances in the
 .Dv devclass .
 This is one greater than the highest currently allocated unit.
+.Sh RETURN VALUES
+The
+.Fn devclass_get_maxunit
+function returns -1 if
+.Fa dc
+is
+.Dv NULL ,
+otherwise it returns the next unit
+number in
+.Fa dc's
+devclass.
+.Sh ERRORS
+None.
 .Sh SEE ALSO
 .Xr devclass 9 ,
 .Xr device 9

@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/sysctl.9,v 1.8 2006/12/14 14:33:13 mpp Exp $
+.\" $MidnightBSD$
 .\"
-.Dd November 23, 2006
+.Dd January 16, 2010
 .Dt SYSCTL 9
 .Os
 .Sh NAME
@@ -39,8 +39,7 @@
 .Nm SYSCTL_STRUCT ,
 .Nm SYSCTL_UINT ,
 .Nm SYSCTL_ULONG ,
-.Nm SYSCTL_XINT ,
-.Nm SYSCTL_XLONG
+.Nm SYSCTL_QUAD
 .Nd Static sysctl declaration functions
 .Sh SYNOPSIS
 .In sys/types.h
@@ -55,8 +54,7 @@
 .Fn SYSCTL_STRUCT parent nbr name access ptr type descr
 .Fn SYSCTL_UINT parent nbr name access ptr val descr
 .Fn SYSCTL_ULONG parent nbr name access ptr val descr
-.Fn SYSCTL_XINT parent nbr name access ptr val descr
-.Fn SYSCTL_XLONG parent nbr name access ptr val descr
+.Fn SYSCTL_QUAD parent nbr name access ptr val descr
 .Sh DESCRIPTION
 The
 .Nm SYSCTL
@@ -82,9 +80,8 @@ New nodes are declared using one of
 .Fn SYSCTL_STRUCT ,
 .Fn SYSCTL_UINT ,
 .Fn SYSCTL_ULONG ,
-.Fn SYSCTL_XINT ,
 and
-.Fn SYSCTL_XLONG .
+.Fn SYSCTL_QUAD .
 Each macro accepts a parent name, as declared using
 .Fn SYSCTL_DECL ,
 an OID number, typically
@@ -104,19 +101,21 @@ This is a node intended to be a parent for other nodes.
 This is a signed integer.
 .It Dv CTLTYPE_STRING
 This is a nul-terminated string stored in a character array.
-.It Dv CTLTYPE_QUAD
+.It Dv CTLTYPE_S64
 This is a 64-bit signed integer.
 .It Dv CTLTYPE_OPAQUE
 This is an opaque data structure.
 .It Dv CTLTYPE_STRUCT
 Alias for
-.Dv CTLTYPE_OPAQUE.
+.Dv CTLTYPE_OPAQUE .
 .It Dv CTLTYPE_UINT
 This is an unsigned integer.
 .It Dv CTLTYPE_LONG
 This is a signed long.
 .It Dv CTLTYPE_ULONG
 This is an unsigned long.
+.It Dv CTLTYPE_U64
+This is a 64-bit unsigned integer.
 .El
 .Pp
 All sysctl types except for new node declarations require one or more flags
@@ -139,9 +138,9 @@ This sysctl can be written to by processes in
 .It Dv CTLFLAG_SKIP
 When iterating the sysctl name space, do not list this sysctl.
 .It Dv CTLFLAG_TUN
-Also declare a system tunable with the same name to initialize this variable.
+Advisory flag that a system tunable also exists for this variable.
 .It Dv CTLFLAG_RDTUN
-Also declare a system tunable with the same name to initialize this variable;
+Advisory flag that a system tunable also exists for this variable;
 however, the run-time variable is read-only.
 .El
 .Pp
@@ -203,7 +202,6 @@ Examples of integer, opaque, string, and procedure sysctls follow:
  * Example of a constant integer value.  Notice that the control
  * flags are CTLFLAG_RD, the variable pointer is NULL, and the
  * value is declared.
- * If sysctl(8) should print this value in hex, use 'SYSCTL_XINT'.
  */
 SYSCTL_INT(_debug_sizeof, OID_AUTO, bio, CTLFLAG_RD, NULL,
     sizeof(struct bio), "sizeof(struct bio)");
@@ -279,6 +277,7 @@ A temporary sysctl node that should not be relied upon must be designated
 as such by a leading underscore character in its name.  For example:
 .Va _dirty_hack .
 .Sh SEE ALSO
+.Xr sysctl 3 ,
 .Xr sysctl 8 ,
 .Xr sysctl_add_oid 9 ,
 .Xr sysctl_ctx_free 9 ,

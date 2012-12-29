@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/rwlock.9,v 1.10.2.1 2007/11/27 14:08:14 attilio Exp $
+.\" $MidnightBSD$
 .\"
-.Dd November 25, 2007
+.Dd April 1, 2008
 .Dt RWLOCK 9
 .Os
 .Sh NAME
@@ -36,7 +36,10 @@
 .Nm rw_wlock ,
 .Nm rw_runlock ,
 .Nm rw_wunlock ,
+.Nm rw_unlock ,
+.Nm rw_try_rlock ,
 .Nm rw_try_upgrade ,
+.Nm rw_try_wlock ,
 .Nm rw_downgrade ,
 .Nm rw_sleep ,
 .Nm rw_initialized ,
@@ -58,10 +61,16 @@
 .Fn rw_rlock "struct rwlock *rw"
 .Ft void
 .Fn rw_wlock "struct rwlock *rw"
+.Ft int
+.Fn rw_try_rlock "struct rwlock *rw"
+.Ft int
+.Fn rw_try_wlock "struct rwlock *rw"
 .Ft void
 .Fn rw_runlock "struct rwlock *rw"
 .Ft void
 .Fn rw_wunlock "struct rwlock *rw"
+.Ft void
+.Fn rw_unlock "struct rwlock *rw"
 .Ft int
 .Fn rw_try_upgrade "struct rwlock *rw"
 .Ft void
@@ -147,6 +156,7 @@ Do not log any operations for this lock via
 .It Dv RW_RECURSE
 Allow threads to recursively acquire exclusive locks for
 .Fa rw .
+.El
 .It Fn rw_rlock "struct rwlock *rw"
 Lock
 .Fa rw
@@ -172,11 +182,28 @@ function can be called recursively only if
 has been initialized with the
 .Dv RW_RECURSE
 option enabled.
+.It Fn rw_try_rlock "struct rwlock *rw"
+Try to lock
+.Fa rw
+as a reader.
+This function will return true if the operation succeeds, otherwise 0
+will be returned.
+.It Fn rw_try_wlock "struct rwlock *rw"
+Try to lock
+.Fa rw
+as a writer.
+This function will return true if the operation succeeds, otherwise 0
+will be returned.
 .It Fn rw_runlock "struct rwlock *rw"
 This function releases a shared lock previously acquired by
 .Fn rw_rlock .
 .It Fn rw_wunlock "struct rwlock *rw"
 This function releases an exclusive lock previously acquired by
+.Fn rw_wlock .
+.It Fn rw_unlock "struct rwlock *rw"
+This function releases a shared lock previously acquired by
+.Fn rw_rlock
+or an exclusive lock previously acquired by
 .Fn rw_wlock .
 .It Fn rw_try_upgrade "struct rwlock *rw"
 Attempt to upgrade a single shared lock to an exclusive lock.

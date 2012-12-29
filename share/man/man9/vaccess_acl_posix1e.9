@@ -23,11 +23,11 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/vaccess_acl_posix1e.9,v 1.5 2005/06/28 20:15:18 hmp Exp $
+.\" $MidnightBSD$
 .\"
 .Dd August 22, 2001
-.Os
 .Dt VACCESS_ACL_POSIX1E 9
+.Os
 .Sh NAME
 .Nm vaccess_acl_posix1e
 .Nd generate a POSIX.1e ACL access control decision using vnode parameters
@@ -41,7 +41,7 @@
 .Fa "uid_t file_uid"
 .Fa "gid_t file_gid"
 .Fa "struct acl *acl"
-.Fa "mode_t acc_mode"
+.Fa "accmode_t accmode"
 .Fa "struct ucred *cred"
 .Fa "int *privused"
 .Fc
@@ -59,7 +59,7 @@ owning GID
 access ACL for the file
 .Fa acl ,
 desired access mode
-.Fa acc_mode ,
+.Fa accmode ,
 requesting credential
 .Fa cred ,
 and an optional call-by-reference

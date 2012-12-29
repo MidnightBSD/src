@@ -26,11 +26,11 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/VOP_REMOVE.9,v 1.15 2006/11/04 23:58:15 pjd Exp $
+.\" $MidnightBSD$
 .\"
 .Dd July 24, 1996
-.Os
 .Dt VOP_REMOVE 9
+.Os
 .Sh NAME
 .Nm VOP_REMOVE ,
 .Nm VOP_RMDIR
@@ -62,27 +62,6 @@ and
 should be locked on entry and remain locked on return.
 .Sh RETURN VALUES
 Zero is returned on success, otherwise an error code is returned.
-.Sh PSEUDOCODE
-.Bd -literal
-int
-vop_remove(struct vnode *dvp, struct vnode *vp, struct componentname *cnp)
-{
-    int error = 0;
-
-    if (vp is immutable) {
-	error = EPERM;
-	goto out;
-    }
-
-    /*
-     * Remove name cnp->cn_nameptr from directory and update link count
-     * of vp.
-     */
-    ...;
-
-    return error;
-}
-.Ed
 .Sh ERRORS
 .Bl -tag -width Er
 .It Bq Er EPERM

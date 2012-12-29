@@ -24,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/vfs_busy.9,v 1.7 2003/10/23 06:17:12 hmp Exp $
+.\" $MidnightBSD$
 .\"
-.Dd July 8, 2001
+.Dd June 14, 2010
 .Dt VFS_BUSY 9
 .Os
 .Sh NAME
@@ -36,13 +36,12 @@
 .In sys/param.h
 .In sys/mount.h
 .Ft int
-.Fn vfs_busy "struct mount *mp" "int flags" "struct mtx *interlkp" "struct thread *td"
+.Fn vfs_busy "struct mount *mp" "int flags"
 .Sh DESCRIPTION
 The
 .Fn vfs_busy
-function marks a mount point as busy.
-The purpose of this
-function is to synchronize access to a mount point.
+function marks a mount point as busy by incrementing
+the reference count of a mount point.
 It also delays unmounting by sleeping on
 .Fa mp
 if the
@@ -50,47 +49,34 @@ if the
 flag is set in
 .Fa mp->mnt_kern_flag
 and the
-.Dv LK_NOWAIT
+.Dv MBF_NOWAIT
 flag is
 .Em not
 set.
 .Pp
 Its arguments are:
-.Bl -tag -width ".Fa interlkp"
+.Bl -tag -width ".Fa flags"
 .It Fa mp
 The mount point to busy.
 .It Fa flags
 Flags controlling how
 .Fn vfs_busy
 should act.
-.Bl -tag -width ".Dv LK_NOWAIT"
-.It Dv LK_NOWAIT
+.Bl -tag -width ".Dv MBF_MNTLSTLOCK"
+.It Dv MBF_NOWAIT
 do not sleep if
 .Dv MNTK_UNMOUNT
 is set.
+.It Dv MBF_MNTLSTLOCK
+drop the mountlist_mtx in the critical path.
 .El
-.It Fa interlkp
-The interlock mutex for
-.Fa mp->mount_lock .
-If there is any chance
-the mount point is being unmounted and
-.Dv LK_NOWAIT
-is not set then
-interlock must be valid locked mutex.
-.It Fa td
-The thread responsible for this call.
 .El
-.Sh LOCKS
-If
-.Fa interlkp
-is a valid pointer it must be locked on entry,
-and it will not be unlocked even in the case of an error.
 .Sh RETURN VALUES
 A 0 value is returned on success.
 If the mount point is being
-unmounted
+unmounted and MBF_NOWAIT flag is specified
 .Er ENOENT
-will always be returned.
+will be returned.
 .Sh ERRORS
 .Bl -tag -width Er
 .It Bq Er ENOENT

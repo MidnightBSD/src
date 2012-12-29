@@ -26,11 +26,11 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/VOP_LINK.9,v 1.23 2005/06/28 20:15:18 hmp Exp $
+.\" $MidnightBSD$
 .\"
 .Dd July 24, 1996
-.Os
 .Dt VOP_LINK 9
+.Os
 .Sh NAME
 .Nm VOP_LINK
 .Nd create a new name for a file
@@ -66,37 +66,6 @@ the vnodes locked on return.
 .Sh RETURN VALUES
 Zero is returned if the file was linked successfully, otherwise an
 error is returned.
-.Sh PSEUDOCODE
-.Bd -literal
-int
-vop_link(struct vnode *dvp, struct vnode *vp, struct componentname *cnp)
-{
-    int error = 0;
-
-    if (vp->v_mount != dvp->v_mount)
-	return (EXDEV);
-
-    if (vp would have too many links)
-	return (EMLINK);
-
-    if (vp is immutable)
-	return (EPERM);
-
-    /*
-     * Increment link count of vp and write back the on-disc version of it.
-     */
-    ...;
-
-    if (!error) {
-	/*
-	 * Add the new name to the directory.
-	 */
-	...;
-    }
-
-    return error;
-}
-.Ed
 .Sh ERRORS
 .Bl -tag -width Er
 .It Bq Er EMLINK

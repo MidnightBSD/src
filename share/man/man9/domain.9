@@ -24,13 +24,13 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/domain.9,v 1.5 2005/06/28 20:15:18 hmp Exp $
+.\" $MidnightBSD$
 .\"
-.Dd December 7, 2001
+.Dd February 23, 2012
 .Dt DOMAIN 9
 .Os
 .Sh NAME
-.Nm net_add_domain ,
+.Nm domain_add ,
 .Nm pfctlinput ,
 .Nm pfctlinput2 ,
 .Nm pffindproto ,
@@ -43,7 +43,7 @@
 .In sys/protosw.h
 .In sys/domain.h
 .Ft void
-.Fn net_add_domain "void *data"
+.Fn domain_add "void *data"
 .Ft void
 .Fn pfctlinput "int cmd" "struct sockaddr *sa"
 .Ft void
@@ -94,8 +94,6 @@ struct protosw {
 	pr_output_t *pr_output;		/* output to protocol (from above) */
 	pr_ctlinput_t *pr_ctlinput;	/* control input (from below) */
 	pr_ctloutput_t *pr_ctloutput;	/* control output (from above) */
-/* user-protocol hook */
-	pr_usrreq_t	*pr_ousrreq;
 /* utility hooks */
 	pr_init_t *pr_init;
 	pr_fasttimo_t *pr_fasttimo;	/* fast timeout (200ms) */
@@ -103,7 +101,6 @@ struct protosw {
 	pr_drain_t *pr_drain;		/* flush any excess space possible */
 
 	struct	pr_usrreqs *pr_usrreqs;	/* supersedes pr_usrreq() */
-	struct	pfil_head	pr_pfh;
 };
 .Ed
 .Pp
@@ -145,7 +142,7 @@ have their
 .Fn pr_ctlinput
 function called.
 .Pp
-.Fn net_add_domain
+.Fn domain_add
 adds a new protocol domain to the system.
 The argument
 .Fa data
@@ -156,13 +153,13 @@ within the function, but is declared
 in order to prevent compiler warnings when new domains are registered with
 .Fn SYSINIT .
 In most cases
-.Fn net_add_domain
+.Fn domain_add
 is not called directly, instead
 .Fn DOMAIN_SET
 is used.
 .Pp
 If the new domain has defined an initialization routine, it is called by
-.Fn net_add_domain ;
+.Fn domain_add ;
 as well, each of the protocols within the domain that have defined an
 initialization routine will have theirs called.
 .Pp

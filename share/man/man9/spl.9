@@ -23,11 +23,11 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/spl.9,v 1.20 2005/06/28 20:15:18 hmp Exp $
+.\" $MidnightBSD$
 .\"
 .Dd July 21, 1996
-.Os
 .Dt SPL 9
+.Os
 .Sh NAME
 .Nm splbio ,
 .Nm splclock ,
@@ -74,6 +74,15 @@ Use mutexes to protect data structures instead.
 See
 .Xr mutex 9
 for more information.
+The API is now a complete NOP.
+This man page documents historical behavior so you can understand the
+code locking that the spl did when converting code from versions of the
+kernel prior to
+.Fx 5.0 .
+The examples in this man page are also obsolete and should not be viewed
+as documenting
+.Fx 5.0
+and newer.
 .Ef
 .Pp
 The
@@ -103,8 +112,7 @@ The system automatically arranges for interrupts in
 the
 .Em xxx
 group to be called at a priority >=
-.Ns spl Ns Em xxx
-\&().
+.Em spl Ns Fn xxx
 .Pp
 The function
 .Fn splx
@@ -211,6 +219,10 @@ sets of functions to be blocked during some periods of the life of
 the system.
 The historical number scheme can be considered as a
 simple linearly ordered set of interrupt priority groups.
+.Pp
+.Fx 5.0
+eliminated spl entirely in favor of locking primitives which scale
+to more than one processor.
 .Sh AUTHORS
 This manual page was written by
 .An J\(:org Wunsch .

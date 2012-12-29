@@ -24,7 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/vm_page_bits.9,v 1.3 2005/06/28 20:15:18 hmp Exp $
+.\" $MidnightBSD$
 .\"
 .Dd December 1, 2001
 .Dt VM_PAGE_BITS 9
@@ -84,7 +84,7 @@ The range is expected to be
 .Dv DEV_BSIZE
 aligned and no larger than
 .Dv PAGE_SIZE .
-If it is not properly aligned, any unaligned chucks of the
+If it is not properly aligned, any unaligned chunks of the
 .Dv DEV_BSIZE
 blocks at the beginning and end of the range will be zeroed.
 .Pp
@@ -94,7 +94,7 @@ is zero and
 .Fa size
 is one page, the modified bit in the page map is cleared; as well,
 the
-.Dv PG_NOSYNC
+.Dv VPO_NOSYNC
 flag is cleared.
 .Pp
 .Fn vm_page_clear_dirty

@@ -24,34 +24,56 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/lock.9,v 1.17 2007/06/21 16:39:25 brueffer Exp $
+.\" $MidnightBSD$
 .\"
-.Dd June 20, 2006
+.Dd June 16, 2009
 .Dt LOCK 9
 .Os
 .Sh NAME
 .Nm lockinit ,
 .Nm lockdestroy ,
-.Nm lockcount ,
 .Nm lockmgr ,
+.Nm lockmgr_args ,
+.Nm lockmgr_args_rw ,
+.Nm lockmgr_disown ,
+.Nm lockmgr_printinfo ,
+.Nm lockmgr_recursed ,
+.Nm lockmgr_rw ,
+.Nm lockmgr_waiters ,
 .Nm lockstatus ,
-.Nm lockmgr_printinfo
+.Nm lockmgr_assert
 .Nd "lockmgr family of functions"
 .Sh SYNOPSIS
 .In sys/types.h
+.In sys/lock.h
 .In sys/lockmgr.h
 .Ft void
 .Fn lockinit "struct lock *lkp" "int prio" "const char *wmesg" "int timo" "int flags"
 .Ft void
 .Fn lockdestroy "struct lock *lkp"
 .Ft int
-.Fn lockcount "struct lock *lkp"
+.Fn lockmgr "struct lock *lkp" "u_int flags" "struct mtx *ilk"
 .Ft int
-.Fn lockmgr "struct lock *lkp" "u_int flags" "struct mtx *interlkp" "struct thread *td"
+.Fn lockmgr_args "struct lock *lkp" "u_int flags" "struct mtx *ilk" "const char *wmesg" "int prio" "int timo"
 .Ft int
-.Fn lockstatus "struct lock *lkp" "struct thread *td"
+.Fn lockmgr_args_rw "struct lock *lkp" "u_int flags" "struct rwlock *ilk" "const char *wmesg" "int prio" "int timo"
+.Ft void
+.Fn lockmgr_disown "struct lock *lkp"
 .Ft void
 .Fn lockmgr_printinfo "struct lock *lkp"
+.Ft int
+.Fn lockmgr_recursed "struct lock *lkp"
+.Ft int
+.Fn lockmgr_rw "struct lock *lkp" "u_int flags" "struct rwlock *ilk"
+.Ft int
+.Fn lockmgr_waiters "struct lock *lkp"
+.Ft int
+.Fn lockstatus "struct lock *lkp"
+.Pp
+.Cd "options INVARIANTS"
+.Cd "options INVARIANT_SUPPORT"
+.Ft void
+.Fn lockmgr_assert "struct lock *lkp" "int what"
 .Sh DESCRIPTION
 The
 .Fn lockinit
@@ -72,16 +94,28 @@ This is used for both debugging output and
 The timeout value passed to
 .Xr sleep 9 .
 .It Fa flags
-The flags the lock is to be initialized with.
-.Bl -tag -width ".Dv LG_CANRECURSE"
-.It Dv LK_NOWAIT
-Do not sleep while acquiring the lock.
-.It Dv LK_SLEEPFAIL
-Fail after a sleep.
+The flags the lock is to be initialized with:
+.Bl -tag -width ".Dv LK_CANRECURSE"
+.It Dv LK_ADAPTIVE
+Enable adaptive spinning for this lock if the kernel is compiled with the
+ADAPTIVE_LOCKMGRS option.
 .It Dv LK_CANRECURSE
 Allow recursive exclusive locks.
+.It Dv LK_NOPROFILE
+Disable lock profiling for this lock.
 .It Dv LK_NOSHARE
 Allow exclusive locks only.
+.It Dv LK_NOWITNESS
+Instruct
+.Xr witness 4
+to ignore this lock.
+.It Dv LK_NODUP
+.Xr witness 4
+should log messages about duplicate locks being acquired.
+.It Dv LK_QUIET
+Disable
+.Xr ktr 4
+logging for this lock.
 .It Dv LK_TIMELOCK
 Use
 .Fa timo
@@ -95,25 +129,23 @@ function is used to destroy a lock, and while it is called in a number of
 places in the kernel, it currently does nothing.
 .Pp
 The
-.Fn lockcount
-function returns a count of the number of exclusive locks and shared locks
-held against the lock
-.Fa lkp .
-.Pp
-The
 .Fn lockmgr
-function handles general locking functionality within the kernel, including
+and
+.Fn lockmgr_rw
+functions handle general locking functionality within the kernel, including
 support for shared and exclusive locks, and recursion.
 .Fn lockmgr
-is also able to upgrade and downgrade locks.
+and
+.Fn lockmgr_rw
+are also able to upgrade and downgrade locks.
 .Pp
-Its arguments are:
-.Bl -tag -width ".Fa interlkp"
+Their arguments are:
+.Bl -tag -width ".Fa flags"
 .It Fa lkp
 A pointer to the lock to manipulate.
 .It Fa flags
 Flags indicating what action is to be taken.
-.Bl -tag -width ".Dv LK_EXCLUPGRADE"
+.Bl -tag -width ".Dv LK_CANRECURSE"
 .It Dv LK_SHARED
 Acquire a shared lock.
 If an exclusive lock is currently held, it will be downgraded.
@@ -127,14 +159,6 @@ is not set, the system will
 Downgrade exclusive lock to a shared lock.
 Downgrading a shared lock is not permitted.
 If an exclusive lock has been recursed, all references will be downgraded.
-.It Dv LK_EXCLUPGRADE
-Upgrade a shared lock to an exclusive lock.
-Fails with
-.Er EBUSY
-if there is someone ahead of you in line waiting for an upgrade.
-If this call fails, the shared lock is lost.
-Attempts to upgrade an exclusive lock will cause a
-.Xr panic 9 .
 .It Dv LK_UPGRADE
 Upgrade a shared lock to an exclusive lock.
 If this call fails, the shared lock is lost.
@@ -157,42 +181,57 @@ Fail if operation has slept.
 .It Dv LK_NOWAIT
 Do not allow the call to sleep.
 This can be used to test the lock.
+.It Dv LK_NOWITNESS
+Skip the
+.Xr witness 4
+checks for this instance.
 .It Dv LK_CANRECURSE
 Allow recursion on an exclusive lock.
 For every lock there must be a release.
 .It Dv LK_INTERLOCK
 Unlock the interlock (which should be locked already).
 .El
-.It Fa interlkp
+.It Fa ilk
 An interlock mutex for controlling group access to the lock.
 If
 .Dv LK_INTERLOCK
 is specified,
 .Fn lockmgr
-assumes
-.Fa interlkp
+and
+.Fn lockmgr_rw
+assume
+.Fa ilk
 is currently owned and not recursed, and will return it unlocked.
 See
 .Xr mtx_assert 9 .
-.It Fa td
-A thread responsible for this call.
-.Dv NULL
-becomes
-.Dv LK_KERNPROC .
 .El
 .Pp
 The
-.Fn lockstatus
-function returns the status of the lock in relation to the
-.Vt thread
-passed to it.
-Note that if
-.Fa td
-is
-.Dv NULL
-and an exclusive lock is held,
-.Dv LK_EXCLUSIVE
-will be returned.
+.Fn lockmgr_args
+and
+.Fn lockmgr_args_rw
+function work like
+.Fn lockmgr
+and
+.Fn lockmgr_rw
+but accepting a
+.Fa wmesg ,
+.Fa timo
+and
+.Fa prio
+on a per-instance basis.
+The specified values will override the default
+ones, but this can still be used passing, respectively,
+.Dv LK_WMESG_DEFAULT ,
+.Dv LK_PRIO_DEFAULT
+and
+.Dv LK_TIMO_DEFAULT .
+.Pp
+The
+.Fn lockmgr_disown
+function switches the owner from the current thread to be
+.Dv LK_KERNPROC ,
+if the lock is already held.
 .Pp
 The
 .Fn lockmgr_printinfo
@@ -200,25 +239,82 @@ function prints debugging information about the lock.
 It is used primarily by
 .Xr VOP_PRINT 9
 functions.
-.Sh RETURN VALUES
-The
-.Fn lockcount
-function returns an integer greater than or equal to zero.
 .Pp
 The
+.Fn lockmgr_recursed
+function returns true if the lock is recursed, 0
+otherwise.
+.Pp
+The
+.Fn lockmgr_waiters
+function returns true if the lock has waiters, 0 otherwise.
+.Pp
+The
+.Fn lockstatus
+function returns the status of the lock in relation to the current thread.
+.Pp
+When compiled with
+.Cd "options INVARIANTS"
+and
+.Cd "options INVARIANT_SUPPORT" ,
+the
+.Fn lockmgr_assert
+function tests
+.Fa lkp
+for the assertions specified in
+.Fa what ,
+and panics if they are not met.
+One of the following assertions must be specified:
+.Bl -tag -width ".Dv KA_UNLOCKED"
+.It Dv KA_LOCKED
+Assert that the current thread has either a shared or an exclusive lock on the
+.Vt lkp
+lock pointed to by the first argument.
+.It Dv KA_SLOCKED
+Assert that the current thread has a shared lock on the
+.Vt lkp
+lock pointed to by the first argument.
+.It Dv KA_XLOCKED
+Assert that the current thread has an exclusive lock on the
+.Vt lkp
+lock pointed to by the first argument.
+.It Dv KA_UNLOCKED
+Assert that the current thread has no lock on the
+.Vt lkp
+lock pointed to by the first argument.
+.El
+.Pp
+In addition, one of the following optional assertions can be used with
+either an
+.Dv KA_LOCKED ,
+.Dv KA_SLOCKED ,
+or
+.Dv KA_XLOCKED
+assertion:
+.Bl -tag -width ".Dv KA_NOTRECURSED"
+.It Dv KA_RECURSED
+Assert that the current thread has a recursed lock on
+.Fa lkp .
+.It Dv KA_NOTRECURSED
+Assert that the current thread does not have a recursed lock on
+.Fa lkp .
+.El
+.Pp
+.Sh RETURN VALUES
+The
 .Fn lockmgr
-function returns 0 on success and non-zero on failure.
+and
+.Fn lockmgr_rw
+functions return 0 on success and non-zero on failure.
 .Pp
 The
 .Fn lockstatus
 function returns:
 .Bl -tag -width ".Dv LK_EXCLUSIVE"
 .It Dv LK_EXCLUSIVE
-An exclusive lock is held by the thread
-.Fa td .
+An exclusive lock is held by the current thread.
 .It Dv LK_EXCLOTHER
-An exclusive lock is held by someone other than the thread
-.Fa td .
+An exclusive lock is held by someone other than the current thread.
 .It Dv LK_SHARED
 A shared lock is held.
 .It Li 0
@@ -226,7 +322,9 @@ The lock is not held by anyone.
 .El
 .Sh ERRORS
 .Fn lockmgr
-fails if:
+and
+.Fn lockmgr_rw
+fail if:
 .Bl -tag -width Er
 .It Bq Er EBUSY
 .Dv LK_FORCEUPGRADE
@@ -238,6 +336,8 @@ was set, and a sleep would have been required.
 .Dv LK_SLEEPFAIL
 was set and
 .Fn lockmgr
+or
+.Fn lockmgr_rw
 did sleep.
 .It Bq Er EINTR
 .Dv PCATCH
@@ -258,11 +358,15 @@ If
 is passed in the
 .Fa flags
 argument to
-.Fn lockmgr ,
+.Fn lockmgr
+or
+.Fn lockmgr_rw ,
 the
-.Fa interlkp
+.Fa ilk
 must be held prior to calling
-.Fn lockmgr ,
+.Fn lockmgr
+or
+.Fn lockmgr_rw ,
 and will be returned unlocked.
 .Pp
 Upgrade attempts that fail result in the loss of the lock that

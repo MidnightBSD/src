@@ -14,13 +14,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"        This product includes software developed by the NetBSD
-.\"        Foundation, Inc. and its contributors.
-.\" 4. Neither the name of The NetBSD Foundation nor the names of its
-.\"    contributors may be used to endorse or promote products derived
-.\"    from this software without specific prior written permission.
 .\"
 .\" THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
 .\" ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -34,9 +27,9 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/timeout.9,v 1.31 2005/12/01 19:16:35 jhb Exp $
+.\" $MidnightBSD$
 .\"
-.Dd September 8, 2005
+.Dd August 2, 2008
 .Dt TIMEOUT 9
 .Os
 .Sh NAME
@@ -45,9 +38,11 @@
 .Nm callout_handle_init ,
 .Nm callout_init ,
 .Nm callout_init_mtx ,
+.Nm callout_init_rw ,
 .Nm callout_stop ,
 .Nm callout_drain ,
 .Nm callout_reset ,
+.Nm callout_schedule ,
 .Nm callout_pending ,
 .Nm callout_active ,
 .Nm callout_deactivate
@@ -55,7 +50,6 @@
 .Sh SYNOPSIS
 .In sys/types.h
 .In sys/systm.h
-.Pp
 .Bd -literal
 typedef void timeout_t (void *);
 .Ed
@@ -63,7 +57,6 @@ typedef void timeout_t (void *);
 .Fn timeout "timeout_t *func" "void *arg" "int ticks"
 .Ft void
 .Fn callout_handle_init "struct callout_handle *handle"
-.Pp
 .Bd -literal
 struct callout_handle handle = CALLOUT_HANDLE_INITIALIZER(&handle)
 .Ed
@@ -73,12 +66,16 @@ struct callout_handle handle = CALLOUT_HANDLE_INITIALIZER(&handle)
 .Fn callout_init "struct callout *c" "int mpsafe"
 .Ft void
 .Fn callout_init_mtx "struct callout *c" "struct mtx *mtx" "int flags"
+.Ft void
+.Fn callout_init_rw "struct callout *c" "struct rwlock *rw" "int flags"
 .Ft int
 .Fn callout_stop "struct callout *c"
 .Ft int
 .Fn callout_drain "struct callout *c"
 .Ft int
 .Fn callout_reset "struct callout *c" "int ticks" "timeout_t *func" "void *arg"
+.Ft int
+.Fn callout_schedule "struct callout *c" "int ticks"
 .Ft int
 .Fn callout_pending "struct callout *c"
 .Ft int
@@ -186,10 +183,12 @@ Thus they are protected from re-entrancy.
 The functions
 .Fn callout_init ,
 .Fn callout_init_mtx ,
+.Fn callout_init_rw ,
 .Fn callout_stop ,
-.Fn callout_drain
-and
+.Fn callout_drain ,
 .Fn callout_reset
+and
+.Fn callout_schedule
 are low-level routines for clients who wish to allocate their own
 callout structures.
 .Pp
@@ -197,9 +196,10 @@ The function
 .Fn callout_init
 initializes a callout so it can be passed to
 .Fn callout_stop ,
-.Fn callout_drain
-or
+.Fn callout_drain ,
 .Fn callout_reset
+or
+.Fn callout_schedule
 without any side effects.
 If the
 .Fa mpsafe
@@ -228,6 +228,27 @@ The callout function will release
 .Fa mtx
 itself, so the callout subsystem should not attempt to unlock it
 after the callout function returns.
+.El
+.Pp
+The
+.Fn callout_init_rw
+function serves the need of using rwlocks in conjunction with callouts.
+The function does basically the same as
+.Fn callout_init_mtx
+with the possibility of specifying an extra
+.Fa rw
+argument.
+The usable lock classes are currently limited to mutexes and rwlocks,
+because callout handlers run in softclock swi, so they cannot sleep nor
+acquire sleepable locks like sx or lockmgr.
+The following
+.Fa flags
+may be specified:
+.Bl -tag -width ".Dv CALLOUT_SHAREDLOCK"
+.It Dv CALLOUT_SHAREDLOCK
+The lock is only acquired in read mode when running the callout handler.
+It has no effects when used in conjunction with
+.Fa mtx .
 .El
 .Pp
 The function
@@ -269,6 +290,17 @@ If there was already a pending callout and it was rescheduled, then
 will return a non-zero value.
 If the callout has an associated mutex, then that mutex must be
 held when this function is called.
+The function
+.Fn callout_schedule
+(re)schedules an existing callout for a new period of time;
+it is equivalent to calling
+.Fn callout_reset
+with the
+.Fa func
+and
+.Fa arg
+parameters extracted from the callout structure (though possibly with
+lower overhead).
 .Pp
 The macros
 .Fn callout_pending ,

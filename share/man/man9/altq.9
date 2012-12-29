@@ -26,7 +26,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/altq.9,v 1.5 2004/10/07 12:10:25 mlaier Exp $
+.\" $MidnightBSD$
 .\"
 .Dd August 25, 2004
 .Dt ALTQ 9
@@ -543,11 +543,6 @@ Make sure that calls to
 and
 .Fn IFQ_DRV_PURGE
 are protected with a mutex of some kind.
-Setting
-.Dv IFF_NEEDSGIANT
-in
-.Va if_flags
-might also be appropriate.
 .Ss Attach routine
 Use
 .Fn IFQ_SET_MAXLEN

@@ -21,11 +21,11 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/atomic.9,v 1.13 2005/11/18 10:52:24 ru Exp $
+.\" $MidnightBSD$
 .\"
 .Dd September 27, 2005
-.Os
 .Dt ATOMIC 9
+.Os
 .Sh NAME
 .Nm atomic_add ,
 .Nm atomic_clear ,
@@ -62,7 +62,6 @@
 .Fn atomic_subtract_[acq_|rel_]<type> "volatile <type> *p" "<type> v"
 .Ft void
 .Fn atomic_store_rel_<type> "volatile <type> *p" "<type> v"
-.rm LB RB La Ra
 .Sh DESCRIPTION
 Each of the atomic operations is guaranteed to be atomic in the presence of
 interrupts.
@@ -211,7 +210,8 @@ return tmp;
 The
 .Fn atomic_fetchadd
 functions are only implemented for the types
-.Dq Li int
+.Dq Li int ,
+.Dq Li long
 and
 .Dq Li 32
 and do not have any variants with memory barriers at this time.
@@ -224,7 +224,7 @@ return (*addr)
 .Pp
 The
 .Fn atomic_load
-functions always have acquire semantics.
+functions are only provided with acquire memory barriers.
 .Bl -hang
 .It Fn atomic_readandclear addr
 .Bd -literal -compact
@@ -262,7 +262,7 @@ not have any variants with memory barriers at this time.
 .Pp
 The
 .Fn atomic_store
-functions always have release semantics.
+functions are only provided with release memory barriers.
 .Pp
 The type
 .Dq Li 64
