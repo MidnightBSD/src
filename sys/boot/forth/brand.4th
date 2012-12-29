@@ -22,7 +22,7 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \ 
-\ $MidnightBSD$
+\ $MidnightBSD: src/sys/boot/forth/brand.4th,v 1.2 2012/12/29 06:28:45 laffer1 Exp $
 
 marker task-brand.4th
 
@@ -33,15 +33,15 @@ variable brandY
 2 brandX !
 1 brandY !
 
-: fbsd-logo ( x y -- ) \ "FreeBSD" [wide] logo in B/W (7 rows x 42 columns)
+: mbsd-logo ( x y -- ) \ "MidnightBSD" [wide] logo in B/W (7 rows x 42 columns)
 
-	2dup at-xy ."  ______               ____   _____ _____  " 1+
-	2dup at-xy ." |  ____|             |  _ \ / ____|  __ \ " 1+
-	2dup at-xy ." | |___ _ __ ___  ___ | |_) | (___ | |  | |" 1+
-	2dup at-xy ." |  ___| '__/ _ \/ _ \|  _ < \___ \| |  | |" 1+
-	2dup at-xy ." | |   | | |  __/  __/| |_) |____) | |__| |" 1+
-	2dup at-xy ." | |   | | |    |    ||     |      |      |" 1+
-	     at-xy ." |_|   |_|  \___|\___||____/|_____/|_____/ "
+	2dup at-xy ."                       ____   _____ _____  " 1+
+	2dup at-xy ."                      |  _ \ / ____|  __ \ " 1+
+	2dup at-xy ."                      | |_) | (___ | |  | |" 1+
+	2dup at-xy ."     M i d n i g h t  |  _ < \___ \| |  | |" 1+
+	2dup at-xy ."                      | |_) |____) | |__| |" 1+
+	2dup at-xy ."                      |     |      |      |" 1+
+	     at-xy ."                      |____/|_____/|_____/ "
 
 	\ Put the cursor back at the bottom
 	0 25 at-xy
@@ -54,7 +54,7 @@ variable brandY
 \ Currently available:
 \
 \ 	NAME        DESCRIPTION
-\ 	fbsd        FreeBSD logo
+\ 	mbsd        MidnightBSD logo
 \ 
 \ NOTE: Setting `loader_brand' to an undefined value (such as "none") will
 \       prevent any brand from being drawn.
@@ -78,12 +78,12 @@ variable brandY
 	then
 
 	s" loader_brand" getenv dup -1 = if
-		brandX @ brandY @ fbsd-logo
+		brandX @ brandY @ mbsd-logo
 		drop exit
 	then
 
 	2dup s" fbsd" compare-insensitive 0= if
-		brandX @ brandY @ fbsd-logo
+		brandX @ brandY @ mbsd-logo
 		2drop exit
 	then
 
