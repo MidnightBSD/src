@@ -24,7 +24,7 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \ 
-\ $MidnightBSD$
+\ $MidnightBSD: src/sys/boot/forth/menu.4th,v 1.2 2012/12/29 05:00:30 laffer1 Exp $
 
 marker task-menu.4th
 
@@ -417,7 +417,7 @@ create init_text8 255 allot
 
 	\ Print the frame caption at (x,y)
 	s" loader_menu_title" getenv dup -1 = if
-		drop s" Welcome to FreeBSD"
+		drop s" Welcome to MidnightBSD"
 	then
 	24 over 2 / - 9 at-xy type 
 
