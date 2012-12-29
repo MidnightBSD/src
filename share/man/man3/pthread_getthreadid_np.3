@@ -1,4 +1,4 @@
-.\" Copyright (c) 2003 Alexey Zelkin <phantom@FreeBSD.org>
+.\" Copyright (c) 2011 Jung-uk Kim <jkim@FreeBSD.org>
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -24,37 +24,33 @@
 .\"
 .\" $MidnightBSD$
 .\"
-.Dd February 13, 2003
-.Dt PTHREAD_MAIN_NP 3
+.Dd February 25, 2012
+.Dt PTHREAD_GETTHREADID_NP 3
 .Os
 .Sh NAME
-.Nm pthread_main_np
-.Nd identify the initial thread
+.Nm pthread_getthreadid_np
+.Nd get the calling thread's integral ID
 .Sh LIBRARY
 .Lb libpthread
 .Sh SYNOPSIS
 .In pthread_np.h
 .Ft int
-.Fn pthread_main_np void
+.Fn pthread_getthreadid_np void
 .Sh DESCRIPTION
 The
-.Fn pthread_main_np
-function
-is used in userland threads environment to identify the initial thread.
-Its semantics is similar to the Solaris's
-.Fn thr_main
+.Fn pthread_getthreadid_np
+function returns the unique integral ID of the calling thread.
+Its semantics is similar to the AIX's
+.Fn pthread_getthreadid_np
 function.
 .Sh RETURN VALUES
 The
-.Fn pthread_main_np
-function returns
-1 if the calling thread is the initial thread,
-0 if the calling thread is not the initial thread,
-and \-1 if the thread's initialization has not yet completed.
+.Fn pthread_getthreadid_np
+function returns the thread integral ID of the calling thread.
+.Sh ERRORS
+None.
 .Sh SEE ALSO
-.Xr pthread_create 3 ,
-.Xr pthread_equal 3 ,
 .Xr pthread_self 3
 .Sh AUTHORS
 This manual page was written by
-.An Alexey Zelkin Aq phantom@FreeBSD.org .
+.An Jung-uk Kim Aq jkim@FreeBSD.org .

@@ -29,7 +29,7 @@
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
 .\" $FreeBSD: src/share/man/man3/tree.3,v 1.6 2006/01/19 07:20:20 jasone Exp $
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/share/man/man3/tree.3,v 1.3 2008/11/11 23:09:30 laffer1 Exp $
 .\"
 .Dd November 11, 2008
 .Dt TREE 3
@@ -62,6 +62,7 @@
 .Nm RB_ROOT ,
 .Nm RB_EMPTY ,
 .Nm RB_NEXT ,
+.Nm RB_PREV ,
 .Nm RB_MIN ,
 .Nm RB_MAX ,
 .Nm RB_FIND ,
@@ -70,6 +71,7 @@
 .Nm RB_RIGHT ,
 .Nm RB_PARENT ,
 .Nm RB_FOREACH ,
+.Nm RB_FOREACH_REVERSE ,
 .Nm RB_INIT ,
 .Nm RB_INSERT ,
 .Nm RB_REMOVE
@@ -118,6 +120,8 @@
 .Ft "struct TYPE *"
 .Fn RB_NEXT NAME "RB_HEAD *head" "struct TYPE *elm"
 .Ft "struct TYPE *"
+.Fn RB_PREV NAME "RB_HEAD *head" "struct TYPE *elm"
+.Ft "struct TYPE *"
 .Fn RB_MIN NAME "RB_HEAD *head"
 .Ft "struct TYPE *"
 .Fn RB_MAX NAME "RB_HEAD *head"
@@ -132,6 +136,7 @@
 .Ft "struct TYPE *"
 .Fn RB_PARENT "struct TYPE *elm" "RB_ENTRY NAME"
 .Fn RB_FOREACH VARNAME NAME "RB_HEAD *head"
+.Fn RB_FOREACH_REVERSE VARNAME NAME "RB_HEAD *head"
 .Ft void
 .Fn RB_INIT "RB_HEAD *head"
 .Ft "struct TYPE *"
@@ -380,7 +385,7 @@ macros, but should be used only once.
 Finally,
 the
 .Fa CMP
-argument is the name of a function used to compare tree noded
+argument is the name of a function used to compare tree nodes
 with each other.
 The function takes two arguments of type
 .Vt "struct TYPE *" .
@@ -434,14 +439,17 @@ The
 .Fn RB_ROOT ,
 .Fn RB_MIN ,
 .Fn RB_MAX ,
+.Fn RB_NEXT ,
 and
-.Fn RB_NEXT
+.Fn RB_PREV
 macros can be used to traverse the tree:
 .Pp
 .Dl "for (np = RB_MIN(NAME, &head); np != NULL; np = RB_NEXT(NAME, &head, np))"
 .Pp
 Or, for simplicity, one can use the
 .Fn RB_FOREACH
+or
+.Fn RB_FOREACH_REVERSE
 macro:
 .Bd -ragged -offset indent
 .Fn RB_FOREACH np NAME head
@@ -490,6 +498,8 @@ and
 return the pointer to the removed element otherwise they return
 .Dv NULL
 to indicate an error.
+.Sh SEE ALSO
+.Xr queue 3
 .Sh AUTHORS
 The author of the tree macros is
 .An Niels Provos .

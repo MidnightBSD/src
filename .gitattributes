@@ -40570,8 +40570,10 @@ share/man/man3/end.3 -text
 share/man/man3/fpgetround.3 -text
 share/man/man3/intro.3 -text
 share/man/man3/pthread.3 -text
+share/man/man3/pthread_affinity_np.3 -text
 share/man/man3/pthread_atfork.3 -text
 share/man/man3/pthread_attr.3 -text
+share/man/man3/pthread_attr_affinity_np.3 -text
 share/man/man3/pthread_attr_get_np.3 -text
 share/man/man3/pthread_attr_setcreatesuspend_np.3 -text
 share/man/man3/pthread_barrier_destroy.3 -text
@@ -40592,6 +40594,7 @@ share/man/man3/pthread_equal.3 -text
 share/man/man3/pthread_exit.3 -text
 share/man/man3/pthread_getconcurrency.3 -text
 share/man/man3/pthread_getspecific.3 -text
+share/man/man3/pthread_getthreadid_np.3 -text
 share/man/man3/pthread_join.3 -text
 share/man/man3/pthread_key_create.3 -text
 share/man/man3/pthread_key_delete.3 -text
