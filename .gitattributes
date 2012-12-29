@@ -40569,6 +40569,7 @@ share/man/man3/bitstring.3 -text
 share/man/man3/end.3 -text
 share/man/man3/fpgetround.3 -text
 share/man/man3/intro.3 -text
+share/man/man3/makedev.3 -text
 share/man/man3/pthread.3 -text
 share/man/man3/pthread_affinity_np.3 -text
 share/man/man3/pthread_atfork.3 -text
