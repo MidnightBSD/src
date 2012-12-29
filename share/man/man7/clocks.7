@@ -25,12 +25,11 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man7/clocks.7,v 1.24 2005/06/30 13:04:25 hmp Exp $
 .\" $MidnightBSD$
-.\"
-.Dd October 31, 2006
-.Os
+.\" "
+.Dd January 18, 2008
 .Dt CLOCKS 7
+.Os
 .Sh NAME
 .Nm clocks
 .Nd various system timers
@@ -80,7 +79,7 @@ This is a virtual clock with a frequency that happens to be 128.
 Its actual frequency is given by the macro
 .Dv CLK_TCK
 (deprecated; do not use) and by
-.Fn sysconf SC_CLK_TCK
+.Fn sysconf _SC_CLK_TCK
 and by
 .Xr sysctl 3 .
 Note that its frequency may be different from
@@ -177,9 +176,3 @@ This manual page was written by
 .An J\(:org Wunsch
 after a description posted by
 .An Bruce Evans .
-.Sh HISTORY
-The
-.Nm
-manual page appeared in
-.Fx  .
-

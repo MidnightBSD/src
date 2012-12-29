@@ -41357,6 +41357,7 @@ share/man/man7/sdoc.7 -text
 share/man/man7/security.7 -text
 share/man/man7/sprog.7 -text
 share/man/man7/stdint.7 -text
+share/man/man7/sticky.7 -text
 share/man/man7/tuning.7 -text
 share/man/man8/Makefile -text
 share/man/man8/crash.8 -text
@@ -41366,7 +41367,6 @@ share/man/man8/rc.8 -text
 share/man/man8/rc.sendmail.8 -text
 share/man/man8/rc.subr.8 -text
 share/man/man8/rescue.8 -text
-share/man/man8/sticky.8 -text
 share/man/man8/yp.8 -text
 share/man/man9/BUF_LOCK.9 -text
 share/man/man9/BUF_LOCKFREE.9 -text

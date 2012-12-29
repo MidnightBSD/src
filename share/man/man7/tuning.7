@@ -21,10 +21,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man7/tuning.7,v 1.72 2005/06/30 13:04:25 hmp Exp $
 .\" $MidnightBSD$
 .\"
-.Dd October 31, 2006
+.Dd October 16, 2010
 .Dt TUNING 7
 .Os
 .Sh NAME
@@ -52,7 +51,9 @@ I usually create, in order, a 128M root, 1G swap, 128M
 and use any remaining space for
 .Pa /home .
 .Pp
-You should typically size your swap space to approximately 2x main memory.
+You should typically size your swap space to approximately 2x main memory
+for systems with less than 2GB of RAM, or approximately 1x main memory
+if you have more.
 If you do not have a lot of RAM, though, you will generally want a lot
 more swap.
 It is not recommended that you configure any less than
@@ -313,7 +314,9 @@ A number of run-time
 options exist that can help you tune the system.
 The most obvious and most dangerous one is
 .Cm async .
-Do not ever use it; it is far too dangerous.
+Only use this option in conjunction with
+.Xr gjournal 8 ,
+as it is far too dangerous on a normal file system.
 A less dangerous and more
 useful
 .Xr mount 8
@@ -357,7 +360,8 @@ Striping can also improve
 the performance of a file system by splitting I/O operations across two
 or more disks.
 The
-.Xr vinum 8
+.Xr gstripe 8 ,
+.Xr gvinum 8 ,
 and
 .Xr ccdconfig 8
 utilities may be used to create simple striped file systems.
@@ -400,6 +404,53 @@ In this document we will only cover the ones that have the greatest effect
 on the system.
 .Pp
 The
+.Va vm.overcommit
+sysctl defines the overcommit behaviour of the vm subsystem.
+The virtual memory system always does accounting of the swap space
+reservation, both total for system and per-user.
+Corresponding values
+are available through sysctl
+.Va vm.swap_total ,
+that gives the total bytes available for swapping, and
+.Va vm.swap_reserved ,
+that gives number of bytes that may be needed to back all currently
+allocated anonymous memory.
+.Pp
+Setting bit 0 of the
+.Va vm.overcommit
+sysctl causes the virtual memory system to return failure
+to the process when allocation of memory causes
+.Va vm.swap_reserved
+to exceed
+.Va vm.swap_total .
+Bit 1 of the sysctl enforces
+.Dv RLIMIT_SWAP
+limit
+(see
+.Xr getrlimit 2 ) .
+Root is exempt from this limit.
+Bit 2 allows to count most of the physical
+memory as allocatable, except wired and free reserved pages
+(accounted by
+.Va vm.stats.vm.v_free_target
+and
+.Va vm.stats.vm.v_wire_count
+sysctls, respectively).
+.Pp
+The
+.Va kern.ipc.maxpipekva
+loader tunable is used to set a hard limit on the
+amount of kernel address space allocated to mapping of pipe buffers.
+Use of the mapping allows the kernel to eliminate a copy of the
+data from writer address space into the kernel, directly copying
+the content of mapped buffer to the reader.
+Increasing this value to a higher setting, such as `25165824' might
+improve performance on systems where space for mapping pipe buffers
+is quickly exhausted.
+This exhaustion is not fatal; however, and it will only cause pipes
+to fall back to using double-copy.
+.Pp
+The
 .Va kern.ipc.shm_use_phys
 sysctl defaults to 0 (off) and may be set to 0 (off) or 1 (on).
 Setting
@@ -419,7 +470,7 @@ sysctl defaults to 1 (on).
 This parameter controls how directories are cached
 by the system.
 Most directories are small and use but a single fragment
-(typically 1K) in the file system and even less (typically 512 bytes) in
+(typically 2K) in the file system and even less (typically 512 bytes) in
 the buffer cache.
 However, when operating in the default mode the buffer
 cache will only cache a fixed number of directories even if you have a huge
@@ -453,17 +504,53 @@ it off.
 The
 .Va vfs.hirunningspace
 sysctl determines how much outstanding write I/O may be queued to
-disk controllers system-wide at any given instance.
-The default is
-usually sufficient but on machines with lots of disks you may want to bump
-it up to four or five megabytes.
+disk controllers system-wide at any given time.
+It is used by the UFS file system.
+The default is self-tuned and
+usually sufficient but on machines with advanced controllers and lots
+of disks this may be tuned up to match what the controllers buffer.
+Configuring this setting to match tagged queuing capabilities of
+controllers or drives with average IO size used in production works
+best (for example: 16 MiB will use 128 tags with IO requests of 128 KiB).
 Note that setting too high a value
 (exceeding the buffer cache's write threshold) can lead to extremely
 bad clustering performance.
 Do not set this value arbitrarily high!
-Also,
-higher write queueing values may add latency to reads occurring at the same
-time.
+Higher write queueing values may also add latency to reads occurring at
+the same time.
+.Pp
+The
+.Va vfs.read_max
+sysctl governs VFS read-ahead and is expressed as the number of blocks
+to pre-read if the heuristics algorithm decides that the reads are
+issued sequentially.
+It is used by the UFS, ext2fs and msdosfs file systems.
+With the default UFS block size of 16 KiB, a setting of 32 will allow
+speculatively reading up to 512 KiB.
+This setting may be increased to get around disk I/O latencies, especially
+where these latencies are large such as in virtual machine emulated
+environments.
+It may be tuned down in specific cases where the I/O load is such that
+read-ahead adversely affects performance or where system memory is really
+low.
+.Pp
+The
+.Va vfs.ncsizefactor
+sysctl defines how large VFS namecache may grow.
+The number of currently allocated entries in namecache is provided by
+.Va debug.numcache
+sysctl and the condition
+debug.numcache < kern.maxvnodes * vfs.ncsizefactor
+is adhered to.
+.Pp
+The
+.Va vfs.ncnegfactor
+sysctl defines how many negative entries VFS namecache is allowed to create.
+The number of currently allocated negative entries is provided by
+.Va debug.numneg
+sysctl and the condition
+vfs.ncnegfactor * debug.numneg < debug.numcache
+is adhered to.
 .Pp
 There are various other buffer-cache and VM page cache related sysctls.
 We do not recommend modifying these values.
@@ -744,6 +831,26 @@ option
 .Cd maxusers
 instead.
 .Pp
+The
+.Va kern.dfldsiz
+and
+.Va kern.dflssiz
+tunables set the default soft limits for process data and stack size
+respectively.
+Processes may increase these up to the hard limits by calling
+.Xr setrlimit 2 .
+The
+.Va kern.maxdsiz ,
+.Va kern.maxssiz ,
+and
+.Va kern.maxtsiz
+tunables set the hard limits for process data, stack, and text size
+respectively; processes may not exceed these limits.
+The
+.Va kern.sgrowsiz
+tunable controls how much the stack segment will grow when a process
+needs to allocate more stack.
+.Pp
 .Va kern.ipc.nmbclusters
 may be adjusted to increase the number of network mbufs the system is
 willing to allocate.
@@ -923,12 +1030,14 @@ over services you export from your box (web services, email).
 .Sh SEE ALSO
 .Xr netstat 1 ,
 .Xr systat 1 ,
+.Xr sendfile 2 ,
 .Xr ata 4 ,
 .Xr dummynet 4 ,
 .Xr login.conf 5 ,
 .Xr rc.conf 5 ,
 .Xr sysctl.conf 5 ,
 .Xr firewall 7 ,
+.Xr eventtimers 7 ,
 .Xr hier 7 ,
 .Xr ports 7 ,
 .Xr boot 8 ,
@@ -936,6 +1045,9 @@ over services you export from your box (web services, email).
 .Xr ccdconfig 8 ,
 .Xr config 8 ,
 .Xr fsck 8 ,
+.Xr gjournal 8 ,
+.Xr gstripe 8 ,
+.Xr gvinum 8 ,
 .Xr ifconfig 8 ,
 .Xr ipfw 8 ,
 .Xr loader 8 ,
@@ -944,8 +1056,7 @@ over services you export from your box (web services, email).
 .Xr route 8 ,
 .Xr sysctl 8 ,
 .Xr sysinstall 8 ,
-.Xr tunefs 8 ,
-.Xr vinum 8
+.Xr tunefs 8
 .Sh HISTORY
 The
 .Nm

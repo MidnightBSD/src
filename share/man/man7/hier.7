@@ -9,6 +9,10 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
+.\" 3. All advertising materials mentioning features or use of this software
+.\"    must display the following acknowledgement:
+.\"	This product includes software developed by the University of
+.\"	California, Berkeley and its contributors.
 .\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
@@ -26,10 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)hier.7	8.1 (Berkeley) 6/5/93
-.\" $FreeBSD: src/share/man/man7/hier.7,v 1.115 2005/01/21 20:50:39 ru Exp $
-.\" $MidnightBSD: src/share/man/man7/hier.7,v 1.3 2006/10/31 19:20:02 laffer1 Exp $
+.\" $MidnightBSD$
 .\"
-.Dd October 31, 2006
+.Dd May 25, 2008
 .Dt HIER 7
 .Os
 .Sh NAME
@@ -87,19 +90,17 @@ mount point used by
 .It Pa /etc/
 system configuration files and scripts
 .Pp
-.Bl -tag -width ".Pa defaults/" -compact
+.Bl -tag -width ".Pa bluetooth/" -compact
 .It Pa defaults/
 default system configuration files;
 see
 .Xr rc 8
+.It Pa bluetooth/
+bluetooth configuration files
 .It Pa gnats/
 gnats configuration files;
 see
 .Xr send-pr 1
-.It Pa isdn/
-isdn4bsd configuration files;
-see
-.Xr isdnd 8
 .It Pa localtime
 local timezone information;
 see
@@ -116,18 +117,28 @@ see
 .Xr named 8
 .It Pa pam.d/
 configuration files for the Pluggable Authentication Modules (PAM)
-library;
-see
-.Xr pam 8
+library
 .It Pa periodic/
 scripts that are run daily, weekly, and monthly, via
 .Xr cron 8 ;
 see
 .Xr periodic 8
+.It Pa rc.d/
+System and daemon startup/control scripts;
+see
+.Xr rc 8
+.It Pa security/
+OpenBSM audit configuration files;
+see
+.Xr audit 8
 .It Pa ppp/
 ppp configuration files;
 see
 .Xr ppp 8
+.It Pa ssh/
+OpenSSH configuration files;
+see
+.Xr ssh 1
 .It Pa ssl/
 OpenSSL configuration files
 .El
@@ -148,14 +159,17 @@ critical system utilities needed for binaries in
 .Pa /bin
 and
 .Pa /sbin
+.It Pa /media/
+contains subdirectories to be used as mount points
+for removable media such as CDs, USB drives, and
+floppy disks
 .It Pa /mnt/
 empty directory commonly used by
 system administrators as a temporary mount point
 .It Pa /proc/
 process file system;
 see
-.Xr procfs 5 ,
-.Xr mount_procfs 8
+.Xr procfs 5
 .It Pa /rescue/
 statically linked programs for emergency recovery;
 see
@@ -165,8 +179,6 @@ root's HOME directory
 .It Pa /sbin/
 system programs and administration utilities
 fundamental to both single-user and multi-user environments
-.It Pa /stand/
-programs used in a standalone environment
 .It Pa /tmp/
 temporary files that are not guaranteed to persist across system reboots
 .It Pa /usr/
@@ -202,7 +214,7 @@ The SCSI device on top of CAM
 .El
 .It Pa dev/
 C include files for programming various
-.Mx
+.Fx
 devices
 .Bl -tag -width ".Pa kerberos5/" -compact
 .It Pa ic/
@@ -238,6 +250,8 @@ per-process file descriptors file system
 FIFOs file system
 .It Pa msdosfs/
 MS-DOS file system
+.It Pa nfs/
+C include files for NFS (Network File System) version 2, 3 and 4
 .It Pa ntfs/
 NTFS file system
 .It Pa nullfs/
@@ -252,8 +266,6 @@ process file system
 SMB/CIFS file system
 .It Pa udf/
 UDF file system
-.It Pa umapfs/
-alternate uid/gid mappings file system
 .It Pa unionfs
 union file system
 .El
@@ -292,10 +304,6 @@ machine-specific C include files
 miscellaneous network C include files
 .It Pa netatalk/
 Appletalk protocol
-.It Pa netatm/
-ATM include files;
-see
-.Xr atm 8
 .It Pa netinet/
 C include files for Internet standard protocols;
 see
@@ -304,10 +312,12 @@ see
 C include files for Internet protocol version 6;
 see
 .Xr inet6 4
+.It Pa netipsec/
+kernel key-management service;
+see
+.Xr ipsec 4
 .It Pa netipx/
 IPX/SPX protocol stacks
-.It Pa netkey/
-kernel key-management service
 .It Pa netnatm/
 NATM include files;
 see
@@ -326,17 +336,13 @@ include files for the UNI signalling protocol
 .It Pa netsmb/
 SMB/CIFS requester
 .It Pa nfs/
-C include files for NFS (Network File System)
+C include files for NFS (Network File System) version 2 and 3 (legacy)
 .It Pa objc/
 Objective C include files
 .It Pa openssl/
 OpenSSL (Cryptography/SSL toolkit) headers
 .It Pa pccard/
 PC-CARD controllers
-.It Pa posix4/
-POSIX real-time extensions includes;
-see
-.Xr p1003_1b 9
 .It Pa protocols/
 C include files for Berkeley service protocols
 .It Pa readline/
@@ -392,6 +398,10 @@ shared libraries for compatibility
 .It Pa aout/
 a.out backward compatibility libraries
 .El
+.It Pa dtrace/
+DTrace library scripts
+.It Pa engines/
+OpenSSL (Cryptography/SSL toolkit) dynamically loadable engines
 .El
 .Pp
 .It Pa libdata/
@@ -437,21 +447,21 @@ see
 .It Pa local/
 local executables, libraries, etc.
 Also used as the default destination for the
-.Mx
-mports framework.
+.Fx
+ports framework.
 Within local/, the general layout sketched out by
 .Nm
 for /usr
 should be used.
 Exceptions are the man directory (directly under local/
-rather than under local/share/), mports documentation (in share/doc/<port>/),
+rather than under local/share/), ports documentation (in share/doc/<port>/),
 and /usr/local/etc (mimics /etc).
 .It Pa obj/
 architecture-specific target tree produced by building the /usr/src tree
-.It Pa mports/
+.It Pa ports/
 The
-.Mx
-mports collection (optional).
+.Fx
+ports collection (optional).
 .It Pa sbin/
 system daemons & system utilities (executed by users)
 .It Pa share/
@@ -469,7 +479,7 @@ see
 .Pp
 .Bl -tag -width Fl -compact
 .It Pa freebsd
-.Mx Ns -specific
+.Fx Ns -specific
 terms, proper names, and jargon
 .It Pa words
 common words
@@ -499,10 +509,12 @@ documents pertaining to BIND (the Berkeley Internet Name Domain)
 .It Pa es/
 Spanish translations of documents in /usr/share/doc
 .It Pa handbook/
-.Mx
+.Fx
 Handbook
 .It Pa ja/
 Japanese translations of documents in /usr/share/doc
+.It Pa legal/
+License files for vendor supplied firmwares
 .It Pa ncurses/
 HTML documents pertaining to ncurses;
 see
@@ -518,7 +530,7 @@ Russian translations of documents in /usr/share/doc
 .It Pa smm/
 UNIX System Manager's Manual
 .It Pa tutorials/
-.Mx
+.Fx
 tutorials
 .It Pa usd/
 UNIX User's Supplementary Documents
@@ -534,8 +546,6 @@ ASCII text files used by various games
 device description file for device name
 .It Pa info/
 GNU Info hypertext system
-.It Pa isdn/
-ISDN
 .It Pa locale/
 localization files;
 see
@@ -551,10 +561,6 @@ miscellaneous system-wide ASCII text files
 .Bl -tag -width Fl -compact
 .It Pa fonts/
 ???
-.It Pa pcvtfonts/
-pcvt fonts;
-see
-.Xr pcvt 4
 .It Pa termcap
 terminal characteristics database;
 see
@@ -568,10 +574,6 @@ see
 national language support files;
 see
 .Xr mklocale 1
-.It Pa pcvt/
-pcvt documentation and etc examples;
-see
-.Xr pcvt 4
 .It Pa security/
 data files for security policies such as
 .Xr mac_lomac 4
@@ -657,7 +659,7 @@ source code for files in /usr/lib
 source code for files in /usr/libexec
 .It Pa release/
 files required to produce a
-.Mx
+.Fx
 release
 .It Pa sbin/
 source code for files in /sbin
@@ -669,28 +671,11 @@ source for files in /usr/share
 kernel source code
 .It Pa tools/
 tools used for maintenance and testing of
-.Mx
+.Fx
 .It Pa usr.bin/
 source code for files in /usr/bin
 .It Pa usr.sbin/
 source code for files in /usr/sbin
-.El
-.Pp
-.It Pa X11R6/
-X11R6 distribution executables, libraries, etc (optional).
-.Bl -tag -width ".Pa include/" -compact
-.It Pa bin/
-X11R6 binaries (servers, utilities, local packages/mports).
-.It Pa etc/
-X11R6 configuration files and scripts.
-.It Pa include/
-X11R6 include files.
-.It Pa lib/
-X11R6 libraries.
-.It Pa man/
-X11R6 manual pages.
-.It Pa share/
-architecture-independent files.
 .El
 .El
 .It Pa /var/
@@ -752,10 +737,14 @@ kerberos server databases; see
 miscellaneous system log files
 .Pp
 .Bl -tag -width Fl -compact
-.It Pa wtmp
+.It Pa utx.lastlogin
+last login log;
+see
+.Xr getutxent 3
+.It Pa utx.log
 login/logout log;
 see
-.Xr wtmp 5
+.Xr getutxent 3
 .El
 .Pp
 .It Pa mail/
@@ -786,10 +775,10 @@ writable by the
 .Dq network
 group for command connection sockets; see
 .Xr ppp 8
-.It Pa utmp
+.It Pa utx.active
 database of current users;
 see
-.Xr utmp 5
+.Xr getutxent 3
 .El
 .Pp
 .It Pa rwho/
@@ -829,7 +818,7 @@ the NIS maps
 .El
 .Sh NOTES
 This manual page documents the default
-.Mx
+.Fx
 file system layout, but
 the actual hierarchy on a given system is defined at the system
 administrator's discretion.

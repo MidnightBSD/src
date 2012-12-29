@@ -24,10 +24,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man8/diskless.8,v 1.26.2.4 2006/01/24 18:26:21 ceri Exp $
 .\" $MidnightBSD$
 .\"
-.Dd January 24, 2006
+.Dd August 7, 2011
 .Dt DISKLESS 8
 .Os
 .Sh NAME
@@ -377,7 +376,6 @@ As a minimum, you normally need to have the following in
 .Bd -literal -offset indent
 <SERVER>:<ROOT> /     nfs    ro 0 0
 <SERVER>:/usr   /usr  nfs    ro 0 0
-proc            /proc procfs rw 0 0
 .Ed
 .Pp
 You also need to create a customized version of
@@ -419,7 +417,7 @@ or
 .Tn TFTP ,
 must include support for the NFS client:
 .Pp
-.D1 Cd "options NFSCLIENT"
+.D1 Cd "options NFSCL"
 .D1 Cd "options NFS_ROOT"
 .Pp
 If you are using a boot mechanism that does not pass network configuration

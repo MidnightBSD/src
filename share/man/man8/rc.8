@@ -12,7 +12,11 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. Neither the name of the University nor the names of its contributors
+.\" 3. All advertising materials mentioning features or use of this software
+.\"    must display the following acknowledgement:
+.\"	This product includes software developed by the University of
+.\"	California, Berkeley and its contributors.
+.\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -29,10 +33,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)rc.8	8.2 (Berkeley) 12/11/93
-.\" $FreeBSD: src/share/man/man8/rc.8,v 1.29.2.1 2005/12/21 07:11:35 dougb Exp $
 .\" $MidnightBSD$
 .\"
-.Dd December 19, 2005
+.Dd November 17, 2009
 .Dt RC 8
 .Os
 .Sh NAME
@@ -120,7 +123,7 @@ Load the configuration files.
 .It
 Determine if booting in a jail,
 and add
-.Dq nojail
+.Dq Li nojail
 to the list of KEYWORDS to skip in
 .Xr rcorder 8 .
 .It
@@ -246,16 +249,11 @@ Extreme care must be taken in using this, as the startup sequence will
 terminate if the script does.
 .It Pa bar
 Scripts that are sourced in a subshell.
-These can stop the boot if necessary with the following shell
-commands:
-.Bd -literal -offset indent
-if [ "$autoboot" = yes ]; then
-	kill -TERM $$
-fi
-exit 1
-.Ed
-.Pp
-Note that this should be used extremely sparingly!
+The boot does not stop if such a script terminates with a non-zero status,
+but a script can stop the boot if necessary by invoking the
+.Fn stop_boot
+function (from
+.Xr rc.subr 8 ) .
 .El
 .Pp
 Each script should contain
@@ -328,7 +326,6 @@ section).
 .Pp
 The following key points apply to old-style scripts in
 .Pa /usr/local/etc/rc.d/ :
-.Pp
 .Bl -bullet
 .It
 Scripts are only executed if their
@@ -396,28 +393,12 @@ is not set, when going from single-user to multi-user mode for example,
 the script does not do anything.
 .Pp
 The
-.Nm rc.early
-script is run very early in the startup process, immediately before the
-file system check.
-The
-.Nm rc.early
-script is deprecated.
-Any commands in this
-file should be separated out into
-.Nm rc.d/
-style scripts and integrated into the
-.Nm
-system.
-.Pp
-The
 .Pa /etc/rc.d/local
 script can execute scripts from multiple
 .Nm rc.d/
 directories.
-The default locations are
-.Pa /usr/local/etc/rc.d/
-and
-.Pa /usr/X11R6/etc/rc.d/ ,
+The default location includes
+.Pa /usr/local/etc/rc.d/ ,
 but these may be overridden with the
 .Va local_startup
 .Xr rc.conf 5
@@ -471,7 +452,7 @@ before starting the daemon.
 Following tradition, all startup files reside in
 .Pa /etc .
 .Sh FILES
-.Bl -tag -compact
+.Bl -tag -compact -width Pa
 .It Pa /etc/rc
 .It Pa /etc/rc.conf
 .It Pa /etc/rc.conf.local
