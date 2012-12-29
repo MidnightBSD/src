@@ -1,5 +1,4 @@
-# $FreeBSD: src/share/skel/dot.profile,v 1.21 2002/07/07 00:00:54 mp Exp $
-# $MidnightBSD: src/share/skel/dot.profile,v 1.10 2012/06/15 03:46:47 laffer1 Exp $
+# $MidnightBSD: src/share/skel/dot.profile,v 1.11 2012/07/07 23:34:29 laffer1 Exp $
 #
 # .profile - Bourne Shell startup script for login shells
 #
@@ -22,8 +21,7 @@ alias ll="ls -lAF"
 # Setting TERM is normally done through /etc/ttys.  Do only override
 # if you're sure that you'll never log in via telnet or xterm or a
 # serial line.
-# Use cons25l1 for iso-* fonts
-# TERM=cons25; 	export TERM
+# TERM=xterm; 	export TERM
 
 BLOCKSIZE=K;	export BLOCKSIZE
 EDITOR=vi;   	export EDITOR

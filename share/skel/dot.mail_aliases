@@ -1,14 +1,13 @@
-# $FreeBSD: src/share/skel/dot.mail_aliases,v 1.3 2003/09/28 16:17:30 rwatson Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/share/skel/dot.mail_aliases,v 1.2 2006/10/31 19:20:02 laffer1 Exp $
 #
 # .mail_aliases - private mail aliases
 #
 # see also mail(1)
 #
 
-# FreeBSD Mailing lists aliases
-# alias freebsd-bugs freebsd-bugs@FreeBSD.org
-# alias freebsd-questions freebsd-questions@FreeBSD.org
+# MidnightBSD Mailing lists aliases
+# alias midnightbsd-users midnightbsd-users@MidnightBSD.org
+# alias midnightbsd-kernel midnightbsd-kernel@MidnightBSD.org
 
 # an alias for your good friends
 # alias bicycle  christoph gerhardt velophil zentralrad

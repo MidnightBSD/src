@@ -1,10 +1,10 @@
-# $FreeBSD: src/share/skel/dot.cshrc,v 1.13 2001/01/10 17:35:28 archie Exp $
-# $MidnightBSD: src/share/skel/dot.cshrc,v 1.5 2007/10/13 21:25:46 laffer1 Exp $
+# $MidnightBSD: src/share/skel/dot.cshrc,v 1.6 2012/06/15 03:46:47 laffer1 Exp $
 #
 # .cshrc - csh resource script, read at beginning of execution by each shell
 #
 # see also csh(1), environ(7).
 #
+# more examples available at /usr/share/examples/csh/
 
 alias h		history 25
 alias j		jobs -l
