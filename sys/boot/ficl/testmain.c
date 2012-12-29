@@ -1,6 +1,6 @@
 /*
 ** stub main for testing FICL under userland
-** $Id: testmain.c,v 1.1.1.3 2012-07-21 15:17:33 laffer1 Exp $
+** $Id: testmain.c,v 1.2 2012-12-29 04:58:20 laffer1 Exp $
 */
 /*
 ** Copyright (c) 1997-2001 John Sadler (john_sadler@alum.mit.edu)
@@ -37,7 +37,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 #include <stdlib.h>
 #include <stdio.h>

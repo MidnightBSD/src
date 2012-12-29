@@ -23,8 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/boot/common/bootstrap.h,v 1.44 2006/12/18 07:35:14 kmacy Exp $
+ * $MidnightBSD$
  */
+
+#ifndef _BOOTSTRAP_H_
+#define	_BOOTSTRAP_H_
 
 #include <sys/types.h>
 #include <sys/queue.h>
@@ -43,7 +46,9 @@ struct devdesc
 #define DEVT_DISK	1
 #define DEVT_NET	2
 #define	DEVT_CD		3
+#define DEVT_ZFS	4
     int			d_unit;
+    void		*d_opendata;
 };
 
 /* Commands and return values; nonzero return sets command_errmsg != NULL */
@@ -233,12 +238,14 @@ void file_addmetadata(struct preloaded_file *fp, int type, size_t size, void *p)
 int  file_addmodule(struct preloaded_file *fp, char *modname, int version,
 	struct kernel_module **newmp);
 
-
 /* MI module loaders */
 #ifdef __elfN
 /* Relocation types. */
 #define ELF_RELOC_REL	1
 #define ELF_RELOC_RELA	2
+
+/* Relocation offset for some architectures */
+extern u_int64_t __elfN(relocation_offset);
 
 struct elf_file;
 typedef Elf_Addr (symaddr_fn)(struct elf_file *ef, Elf_Size symidx);
@@ -292,8 +299,27 @@ struct arch_switch
     /* Perform ISA byte port I/O (only for systems with ISA) */
     int		(*arch_isainb)(int port);
     void	(*arch_isaoutb)(int port, int value);
-    /* Pass in initial kernel memory size */
-    void        (*arch_maphint)(vm_offset_t va, size_t len);	
+
+    /*
+     * Interface to adjust the load address according to the "object"
+     * being loaded.
+     */
+    uint64_t	(*arch_loadaddr)(u_int type, void *data, uint64_t addr);
+#define	LOAD_ELF	1	/* data points to the ELF header. */
+#define	LOAD_RAW	2	/* data points to the file name. */
+
+    /*
+     * Interface to inform MD code about a loaded (ELF) segment. This
+     * can be used to flush caches and/or set up translations.
+     */
+#ifdef __elfN
+    void	(*arch_loadseg)(Elf_Ehdr *eh, Elf_Phdr *ph, uint64_t delta);
+#else
+    void	(*arch_loadseg)(void *eh, void *ph, uint64_t delta);
+#endif
+
+    /* Probe ZFS pool(s), if needed. */
+    void	(*arch_zfs_probe)(void);
 };
 extern struct arch_switch archsw;
 
@@ -303,3 +329,11 @@ void	delay(int delay);
 void	dev_cleanup(void);
 
 time_t	time(time_t *tloc);
+
+#ifndef CTASSERT                /* Allow lint to override */
+#define CTASSERT(x)             _CTASSERT(x, __LINE__)
+#define _CTASSERT(x, y)         __CTASSERT(x, y)
+#define __CTASSERT(x, y)        typedef char __assert ## y[(x) ? 1 : -1]
+#endif
+
+#endif /* !_BOOTSTRAP_H_ */

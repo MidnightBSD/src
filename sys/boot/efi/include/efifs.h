@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/boot/efi/include/efifs.h,v 1.3 2006/11/02 02:42:47 marcel Exp $ */
+/* $MidnightBSD$ */
 #ifndef _EFI_FS_H
 #define _EFI_FS_H
 

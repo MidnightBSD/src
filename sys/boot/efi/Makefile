@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: src/sys/boot/efi/Makefile,v 1.2 2004/11/23 06:04:51 marcel Exp $
+# $MidnightBSD: src/sys/boot/efi/Makefile,v 1.2 2008/10/01 16:41:13 laffer1 Exp $
 
 SUBDIR=		libefi
 

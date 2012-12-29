@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 .PATH:		${.CURDIR}/../boot2 ${.CURDIR}/../gptboot \
 		${.CURDIR}/../zfsboot ${.CURDIR}/../common \

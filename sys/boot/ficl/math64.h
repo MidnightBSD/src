@@ -3,7 +3,7 @@
 ** Forth Inspired Command Language - 64 bit math support routines
 ** Author: John Sadler (john_sadler@alum.mit.edu)
 ** Created: 25 January 1998
-** $Id: math64.h,v 1.1.1.3 2012-07-21 15:17:33 laffer1 Exp $
+** $Id: math64.h,v 1.2 2012-12-29 04:58:20 laffer1 Exp $
 *******************************************************************/
 /*
 ** Copyright (c) 1997-2001 John Sadler (john_sadler@alum.mit.edu)
@@ -40,7 +40,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 #if !defined (__MATH64_H__)
 #define __MATH64_H__

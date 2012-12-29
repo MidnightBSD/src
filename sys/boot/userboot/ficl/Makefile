@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 #
 .include <bsd.own.mk>
 MK_SSP=		no

@@ -9,7 +9,7 @@
 ** FICL_ROBUST is enabled. This may require some consideration
 ** in firmware systems since assert often
 ** assumes stderr/stdout.  
-** $Id: sysdep.h,v 1.1.1.1 2012-07-21 15:17:33 laffer1 Exp $
+** $Id: sysdep.h,v 1.2 2012-12-29 04:58:20 laffer1 Exp $
 *******************************************************************/
 /*
 ** Copyright (c) 1997-2001 John Sadler (john_sadler@alum.mit.edu)
@@ -45,10 +45,10 @@
 ** OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 ** SUCH DAMAGE.
 **
-** $Id: sysdep.h,v 1.1.1.1 2012-07-21 15:17:33 laffer1 Exp $
+** $Id: sysdep.h,v 1.2 2012-12-29 04:58:20 laffer1 Exp $
 */
 
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 #if !defined (__SYSDEP_H__)
 #define __SYSDEP_H__ 

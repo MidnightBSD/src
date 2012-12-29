@@ -1,7 +1,7 @@
-# $MidnightBSD$
+# $MidnightBSD: src/sys/boot/i386/gptboot/Makefile,v 1.1 2011/10/16 21:11:44 laffer1 Exp $
 # $FreeBSD: src/sys/boot/i386/gptboot/Makefile,v 1.62.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
 
-.PATH:		${.CURDIR}/../boot2
+.PATH:		${.CURDIR}/../boot2 ${.CURDIR}/../common ${.CURDIR}/../../common
 
 FILES=		gptboot
 
@@ -20,20 +20,18 @@ GPTBOOT_UFS?=	UFS1_AND_UFS2
 #GPTBOOT_UFS?=	UFS2_ONLY
 #GPTBOOT_UFS?=	UFS1_ONLY
 
-CFLAGS=	-Os \
-	-fno-guess-branch-probability \
-	-fomit-frame-pointer \
-	-fno-unit-at-a-time \
-	-mno-align-long-strings \
-	-mrtd \
-	-mno-mmx -mno-3dnow -mno-sse -mno-sse2 -mno-sse3 \
+CFLAGS=	-DBOOTPROG=\"gptboot\" \
+	-O1 \
+	-DGPT \
 	-D${GPTBOOT_UFS} \
 	-DSIOPRT=${BOOT_COMCONSOLE_PORT} \
 	-DSIOFMT=${B2SIOFMT} \
 	-DSIOSPD=${BOOT_COMCONSOLE_SPEED} \
 	-I${.CURDIR}/../../common \
+	-I${.CURDIR}/../common \
 	-I${.CURDIR}/../btx/lib -I. \
 	-I${.CURDIR}/../boot2 \
+	-I${.CURDIR}/../../.. \
 	-Wall -Waggregate-return -Wbad-function-cast -Wcast-align \
 	-Wmissing-declarations -Wmissing-prototypes -Wnested-externs \
 	-Wpointer-arith -Wshadow -Wstrict-prototypes -Wwrite-strings \
@@ -58,17 +56,18 @@ gptldr.bin: gptldr.out
 gptldr.out: gptldr.o
 	${LD} ${LDFLAGS} -e start -Ttext ${ORG1} -o ${.TARGET} gptldr.o
 
-CLEANFILES+=	gptboot.bin gptboot.out gptboot.o sio.o
+CLEANFILES+=	gptboot.bin gptboot.out gptboot.o sio.o gpt.o crc32.o drv.o \
+		cons.o util.o
 
 gptboot.bin: gptboot.out
 	objcopy -S -O binary gptboot.out ${.TARGET}
 
-gptboot.out: ${BTXCRT} gptboot.o sio.o
-	${LD} ${LDFLAGS} -Ttext ${ORG2} -o ${.TARGET} ${.ALLSRC}
+gptboot.out: ${BTXCRT} gptboot.o sio.o gpt.o crc32.o drv.o cons.o util.o
+	${LD} ${LDFLAGS} -Ttext ${ORG2} -o ${.TARGET} ${.ALLSRC} ${LIBSTAND}
 
 gptboot.o: ${.CURDIR}/../../common/ufsread.c
 
-.if ${MACHINE_ARCH} == "amd64"
+.if ${MACHINE_CPUARCH} == "amd64"
 beforedepend gptboot.o: machine
 CLEANFILES+=	machine
 machine:
@@ -76,3 +75,7 @@ machine:
 .endif
 
 .include <bsd.prog.mk>
+
+# XXX: clang integrated-as doesn't grok .codeNN directives yet
+CFLAGS.gptldr.S=	${CLANG_NO_IAS}
+CFLAGS+=		${CFLAGS.${.IMPSRC:T}}

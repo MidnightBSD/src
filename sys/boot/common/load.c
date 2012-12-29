@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/common/load.c,v 1.5 2004/08/22 08:57:05 maxim Exp $");
+__MBSDID("$FreeBSD: src/sys/boot/common/load.c,v 1.5 2004/08/22 08:57:05 maxim Exp $");
 
 #include <stand.h>
 

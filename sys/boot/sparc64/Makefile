@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 SUBDIR=	boot1 loader zfsboot zfsloader
 

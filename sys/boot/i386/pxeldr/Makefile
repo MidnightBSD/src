@@ -1,5 +1,4 @@
 # $MidnightBSD$
-# $FreeBSD: src/sys/boot/i386/pxeldr/Makefile,v 1.16 2004/04/27 19:45:16 ru Exp $
 
 # Pick up ../Makefile.inc early.
 .include <bsd.init.mk>
@@ -24,6 +23,8 @@ CFLAGS+=-DPROBE_KEYBOARD
 CFLAGS+=-DALWAYS_SERIAL
 .endif
 
+CFLAGS+=-I${.CURDIR}/../common
+
 LOADERBIN= ${.OBJDIR}/../loader/loader.bin
 
 CLEANFILES+= ${BOOT}.tmp
@@ -33,7 +34,7 @@ ${BOOT}: ${LDR} ${LOADER}
 	dd if=${.TARGET}.tmp of=${.TARGET} obs=2k conv=osync
 	rm ${.TARGET}.tmp
 
-LDFLAGS+= -N -e start -Ttext ${ORG} -Wl,-S,--oformat,binary
+LDFLAGS+=-e start -Ttext ${ORG} -Wl,-N,-S,--oformat,binary
 
 CLEANFILES+= ${LOADER}
 
@@ -42,3 +43,7 @@ ${LOADER}: ${LOADERBIN} ${BTXLDR} ${BTXKERN}
 	    -b ${BTXKERN} ${LOADERBIN}
 
 .include <bsd.prog.mk>
+
+# XXX: clang integrated-as doesn't grok .codeNN directives yet
+CFLAGS.pxeldr.S=	${CLANG_NO_IAS}
+CFLAGS+=		${CFLAGS.${.IMPSRC:T}}

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 PROG=	boot1.elf
 INTERNALPROG=

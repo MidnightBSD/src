@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/common/module.c,v 1.27 2007/10/04 18:29:52 obrien Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * file/module function dispatcher, support, etc.
@@ -154,6 +154,44 @@ command_load(int argc, char *argv[])
     return (error == 0 ? CMD_OK : CMD_ERROR);
 }
 
+COMMAND_SET(load_geli, "load_geli", "load a geli key", command_load_geli);
+
+static int
+command_load_geli(int argc, char *argv[])
+{
+    char	typestr[80];
+    char	*cp;
+    int		ch, num;
+
+    if (argc < 3) {
+	    command_errmsg = "usage is [-n key#] <prov> <file>";
+	    return(CMD_ERROR);
+    }
+
+    num = 0;
+    optind = 1;
+    optreset = 1;
+    while ((ch = getopt(argc, argv, "n:")) != -1) {
+	switch(ch) {
+	case 'n':
+	    num = strtol(optarg, &cp, 0);
+	    if (cp == optarg) {
+		    sprintf(command_errbuf, "bad key index '%s'", optarg);
+		    return(CMD_ERROR);
+	    }
+	    break;
+	case '?':
+	default:
+	    /* getopt has already reported an error */
+	    return(CMD_OK);
+	}
+    }
+    argv += (optind - 1);
+    argc -= (optind - 1);
+    sprintf(typestr, "%s:geli_keyfile%d", argv[1], num);
+    return(file_loadraw(typestr, argv[2]));
+}
+
 COMMAND_SET(unload, "unload", "unload all modules", command_unload);
 
 static int
@@ -237,9 +275,12 @@ file_load(char *filename, vm_offset_t dest, struct preloaded_file **result)
     int error;
     int i;
 
+    if (archsw.arch_loadaddr != NULL)
+	dest = archsw.arch_loadaddr(LOAD_RAW, filename, dest);
+
     error = EFTYPE;
     for (i = 0, fp = NULL; file_formats[i] && fp == NULL; i++) {
-	error = (file_formats[i]->l_load)(filename, loadaddr, &fp);
+	error = (file_formats[i]->l_load)(filename, dest, &fp);
 	if (error == 0) {
 	    fp->f_loader = i;		/* remember the loader */
 	    *result = fp;
@@ -257,7 +298,8 @@ file_load(char *filename, vm_offset_t dest, struct preloaded_file **result)
 }
 
 static int
-file_load_dependencies(struct preloaded_file *base_file) {
+file_load_dependencies(struct preloaded_file *base_file)
+{
     struct file_metadata *md;
     struct preloaded_file *fp;
     struct mod_depend *verinfo;
@@ -327,12 +369,15 @@ file_loadraw(char *type, char *name)
 	return(CMD_ERROR);
     }
     name = cp;
-    
+
     if ((fd = open(name, O_RDONLY)) < 0) {
 	sprintf(command_errbuf, "can't open '%s': %s", name, strerror(errno));
 	free(name);
 	return(CMD_ERROR);
     }
+
+    if (archsw.arch_loadaddr != NULL)
+	loadaddr = archsw.arch_loadaddr(LOAD_RAW, name, loadaddr);
 
     laddr = loadaddr;
     for (;;) {

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 BINDIR?=	/boot
 CFLAGS+=	-ffreestanding

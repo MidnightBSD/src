@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/common/load_elf.c,v 1.37 2006/11/02 17:52:43 ru Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/exec.h>
@@ -83,6 +83,8 @@ static char	*fake_modname(const char *name);
 const char	*__elfN(kerneltype) = "elf kernel";
 const char	*__elfN(moduletype) = "elf module";
 
+u_int64_t	__elfN(relocation_offset) = 0;
+
 /*
  * Attempt to load the file (file) as an ELF module.  It will be stored at
  * (dest), and a pointer to a module structure describing the loaded object
@@ -95,12 +97,11 @@ __elfN(loadfile)(char *filename, u_int64_t dest, struct preloaded_file **result)
     struct elf_file		ef;
     Elf_Ehdr 			*ehdr;
     int				err;
-    u_int			pad;
     ssize_t			bytes_read;
 
     fp = NULL;
     bzero(&ef, sizeof(struct elf_file));
-    
+
     /*
      * Open the image, read and validate the ELF header 
      */
@@ -155,12 +156,6 @@ __elfN(loadfile)(char *filename, u_int64_t dest, struct preloaded_file **result)
 	/* Looks OK, got ahead */
 	ef.kernel = 0;
 
-	/* Page-align the load address */
-	pad = (u_int)dest & PAGE_MASK;
-	if (pad != 0) {
-	    pad = PAGE_SIZE - pad;
-	    dest += pad;
-	}
     } else if (ehdr->e_type == ET_EXEC) {
 	/* Looks like a kernel */
 	if (kfp != NULL) {
@@ -171,7 +166,7 @@ __elfN(loadfile)(char *filename, u_int64_t dest, struct preloaded_file **result)
 	/* 
 	 * Calculate destination address based on kernel entrypoint 	
 	 */
-	dest = ehdr->e_entry;
+	dest = (ehdr->e_entry & ~PAGE_MASK);
 	if (dest == 0) {
 	    printf("elf" __XSTRING(__ELF_WORD_SIZE) "_loadfile: not a kernel (maybe static binary?)\n");
 	    err = EPERM;
@@ -183,6 +178,11 @@ __elfN(loadfile)(char *filename, u_int64_t dest, struct preloaded_file **result)
 	err = EFTYPE;
 	goto oerr;
     }
+
+    if (archsw.arch_loadaddr != NULL)
+	dest = archsw.arch_loadaddr(LOAD_ELF, ehdr, dest);
+    else
+	dest = roundup(dest, PAGE_SIZE);
 
     /* 
      * Ok, we think we should handle this.
@@ -200,7 +200,7 @@ __elfN(loadfile)(char *filename, u_int64_t dest, struct preloaded_file **result)
 
 #ifdef ELF_VERBOSE
     if (ef.kernel)
-	printf("%s entry at 0x%jx\n", filename, (uintmax_t)dest);
+	printf("%s entry at 0x%jx\n", filename, (uintmax_t)ehdr->e_entry);
 #else
     printf("%s ", filename);
 #endif
@@ -260,15 +260,48 @@ __elfN(loadimage)(struct preloaded_file *fp, elf_file_t ef, u_int64_t off)
     firstaddr = lastaddr = 0;
     ehdr = ef->ehdr;
     if (ef->kernel) {
-#ifdef __i386__
+#if defined(__i386__) || defined(__amd64__)
 #if __ELF_WORD_SIZE == 64
 	off = - (off & 0xffffffffff000000ull);/* x86_64 relocates after locore */
 #else
 	off = - (off & 0xff000000u);	/* i386 relocates after locore */
 #endif
+#elif defined(__powerpc__)
+	/*
+	 * On the purely virtual memory machines like e500, the kernel is
+	 * linked against its final VA range, which is most often not
+	 * available at the loader stage, but only after kernel initializes
+	 * and completes its VM settings. In such cases we cannot use p_vaddr
+	 * field directly to load ELF segments, but put them at some
+	 * 'load-time' locations.
+	 */
+	if (off & 0xf0000000u) {
+	    off = -(off & 0xf0000000u);
+	    /*
+	     * XXX the physical load address should not be hardcoded. Note
+	     * that the Book-E kernel assumes that it's loaded at a 16MB
+	     * boundary for now...
+	     */
+	    off += 0x01000000;
+	    ehdr->e_entry += off;
+#ifdef ELF_VERBOSE
+	    printf("Converted entry 0x%08x\n", ehdr->e_entry);
+#endif
+	} else
+	    off = 0;
+#elif defined(__arm__)
+	if (off & 0xf0000000u) {
+	    off = -(off & 0xf0000000u);
+	    ehdr->e_entry += off;
+#ifdef ELF_VERBOSE
+	    printf("Converted entry 0x%08x\n", ehdr->e_entry);
+#endif
+	} else
+	    off = 0;
 #else
 	off = 0;		/* other archs use direct mapped kernels */
 #endif
+	__elfN(relocation_offset) = off;
     }
     ef->off = off;
 
@@ -326,6 +359,9 @@ __elfN(loadimage)(struct preloaded_file *fp, elf_file_t ef, u_int64_t off)
 #ifdef ELF_VERBOSE
 	printf("\n");
 #endif
+
+	if (archsw.arch_loadseg != NULL)
+	    archsw.arch_loadseg(ehdr, phdr + i, off);
 
 	if (firstaddr == 0 || firstaddr > (phdr[i].p_vaddr + off))
 	    firstaddr = phdr[i].p_vaddr + off;
@@ -418,7 +454,8 @@ __elfN(loadimage)(struct preloaded_file *fp, elf_file_t ef, u_int64_t off)
 	}
 	result = archsw.arch_readin(ef->fd, lastaddr, shdr[i].sh_size);
 	if (result < 0 || (size_t)result != shdr[i].sh_size) {
-	    printf("\nelf" __XSTRING(__ELF_WORD_SIZE) "_loadimage: could not read symbols - skipped!");
+	    printf("\nelf" __XSTRING(__ELF_WORD_SIZE) "_loadimage: could not read symbols - skipped! (%ju != %ju)", (uintmax_t)result,
+		(uintmax_t)shdr[i].sh_size);
 	    lastaddr = ssym;
 	    ssym = 0;
 	    goto nosyms;

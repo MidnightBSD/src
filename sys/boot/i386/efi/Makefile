@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 NO_MAN=
 WITHOUT_SSP=

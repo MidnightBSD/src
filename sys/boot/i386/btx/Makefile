@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 SUBDIR=	btx btxldr lib
 

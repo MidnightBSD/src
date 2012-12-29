@@ -13,7 +13,7 @@
 # purpose.
 #
 
-# $FreeBSD$
+# $MidnightBSD$
 
 # A 512 byte MBR boot manager that simply boots the active partition.
 

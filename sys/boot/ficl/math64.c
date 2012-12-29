@@ -5,7 +5,7 @@
 ** Created: 25 January 1998
 ** Rev 2.03: Support for 128 bit DP math. This file really ouught to
 ** be renamed!
-** $Id: math64.c,v 1.1.1.3 2012-07-21 15:17:33 laffer1 Exp $
+** $Id: math64.c,v 1.2 2012-12-29 04:58:20 laffer1 Exp $
 *******************************************************************/
 /*
 ** Copyright (c) 1997-2001 John Sadler (john_sadler@alum.mit.edu)
@@ -42,7 +42,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 #include "ficl.h"
 #include "math64.h"

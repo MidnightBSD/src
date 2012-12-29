@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 .PATH:	${.CURDIR}/../loader
 

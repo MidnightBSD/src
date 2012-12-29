@@ -4,7 +4,7 @@
 ** ANS Forth CORE word-set written in C
 ** Author: John Sadler (john_sadler@alum.mit.edu)
 ** Created: 19 July 1997
-** $Id: words.c,v 1.2 2008-09-21 15:21:33 laffer1 Exp $
+** $Id: words.c,v 1.3 2012-12-29 04:58:20 laffer1 Exp $
 *******************************************************************/
 /*
 ** Copyright (c) 1997-2001 John Sadler (john_sadler@alum.mit.edu)
@@ -41,7 +41,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $FreeBSD: src/sys/boot/ficl/words.c,v 1.40 2007/03/23 22:26:01 jkim Exp $ */
+/* $MidnightBSD$ */
 
 #ifdef TESTMAIN
 #include <stdlib.h>
@@ -1293,7 +1293,7 @@ static void ifCoIm(FICL_VM *pVM)
 ** compiles an "else"...
 ** 1) Compile a branch and a patch address; the address gets patched
 **    by "endif" to point past the "else" code.
-** 2) Pop the the "if" patch address
+** 2) Pop the "if" patch address
 ** 3) Patch the "if" branch to point to the current compile address.
 ** 4) Push the "else" patch address. ("endif" patches this to jump past 
 **    the "else" code.

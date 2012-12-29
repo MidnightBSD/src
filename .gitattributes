@@ -42557,7 +42557,6 @@ sys/boot/i386/btx/lib/btxv86.h -text
 sys/boot/i386/btx/lib/btxv86.s -text
 sys/boot/i386/cdboot/Makefile -text
 sys/boot/i386/cdboot/cdboot.S -text
-sys/boot/i386/cdboot/cdboot.s -text
 sys/boot/i386/common/bootargs.h -text
 sys/boot/i386/common/cons.c -text
 sys/boot/i386/common/cons.h -text

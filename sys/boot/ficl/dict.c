@@ -3,7 +3,7 @@
 ** Forth Inspired Command Language - dictionary methods
 ** Author: John Sadler (john_sadler@alum.mit.edu)
 ** Created: 19 July 1997
-** $Id: dict.c,v 1.1.1.3 2012-07-21 15:17:33 laffer1 Exp $
+** $Id: dict.c,v 1.2 2012-12-29 04:58:20 laffer1 Exp $
 *******************************************************************/
 /*
 ** This file implements the dictionary -- FICL's model of 
@@ -51,7 +51,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 #ifdef TESTMAIN
 #include <stdio.h>

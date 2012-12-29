@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 PROG=	kgzldr.o
 STRIP=

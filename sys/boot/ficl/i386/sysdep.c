@@ -7,7 +7,7 @@
 **
 *******************************************************************/
 
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 #ifdef TESTMAIN
 #include <stdio.h>

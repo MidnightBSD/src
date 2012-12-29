@@ -13,7 +13,6 @@
  * purpose.
  *
  * $MidnightBSD$
- * $FreeBSD: src/sys/boot/i386/pxeldr/pxeldr.S,v 1.15 2006/09/05 19:28:03 ru Exp $
  */
 
 /*
@@ -27,6 +26,7 @@
  */
 
 #include <sys/reboot.h>
+#include <bootargs.h>
 
 /*
  * Memory locations.
@@ -50,11 +50,6 @@
 		.set AOUT_SYMBOLS,0x10		# symbol table
 		.set AOUT_ENTRY,0x14		# entry point
 		.set AOUT_HEADER,MEM_PAGE_SIZE	# size of the a.out header
-/*
- * Flags for kargs->bootflags
- */
-		.set KARGS_FLAGS_PXE,0x2	# flag to indicate booting from
-						#  PXE loader
 /*
  * Segment selectors.
  */

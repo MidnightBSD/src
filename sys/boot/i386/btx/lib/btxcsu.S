@@ -13,7 +13,7 @@
 # purpose.
 #
 
-# $FreeBSD$
+# $MidnightBSD$
 
 #include <bootargs.h>
 

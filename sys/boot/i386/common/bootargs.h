@@ -12,7 +12,7 @@
  * warranties of merchantability and fitness for a particular
  * purpose.
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef _BOOT_I386_ARGS_H_

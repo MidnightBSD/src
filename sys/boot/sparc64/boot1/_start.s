@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 	.text
 	.globl	_start

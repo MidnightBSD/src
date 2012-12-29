@@ -3,7 +3,7 @@
 ** Forth Inspired Command Language - programming tools
 ** Author: John Sadler (john_sadler@alum.mit.edu)
 ** Created: 20 June 2000
-** $Id: tools.c,v 1.2 2008-09-21 15:21:33 laffer1 Exp $
+** $Id: tools.c,v 1.3 2012-12-29 04:58:20 laffer1 Exp $
 *******************************************************************/
 /*
 ** Copyright (c) 1997-2001 John Sadler (john_sadler@alum.mit.edu)
@@ -54,7 +54,7 @@
 ** Specify breakpoint default action
 */
 
-/* $FreeBSD: src/sys/boot/ficl/tools.c,v 1.3 2007/03/23 22:26:01 jkim Exp $ */
+/* $MidnightBSD$ */
 
 #ifdef TESTMAIN
 #include <stdlib.h>

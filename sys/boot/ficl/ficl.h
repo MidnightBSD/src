@@ -4,7 +4,7 @@
 ** Author: John Sadler (john_sadler@alum.mit.edu)
 ** Created: 19 July 1997
 ** Dedicated to RHS, in loving memory
-** $Id: ficl.h,v 1.2 2008-09-21 15:21:33 laffer1 Exp $
+** $Id: ficl.h,v 1.3 2012-12-29 04:58:20 laffer1 Exp $
 *******************************************************************/
 /*
 ** Copyright (c) 1997-2001 John Sadler (john_sadler@alum.mit.edu)
@@ -41,7 +41,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $FreeBSD: src/sys/boot/ficl/ficl.h,v 1.22 2007/03/23 22:26:01 jkim Exp $ */
+/* $MidnightBSD$ */
 
 #if !defined (__FICL_H__)
 #define __FICL_H__
@@ -757,6 +757,7 @@ void        dictAppendUNS  (FICL_DICT *pDict, FICL_UNS u);
 int         dictCellsAvail (FICL_DICT *pDict);
 int         dictCellsUsed  (FICL_DICT *pDict);
 void        dictCheck      (FICL_DICT *pDict, FICL_VM *pVM, int n);
+void        dictCheckThreshold(FICL_DICT* dp);
 FICL_DICT  *dictCreate(unsigned nCELLS);
 FICL_DICT  *dictCreateHashed(unsigned nCells, unsigned nHash);
 FICL_HASH  *dictCreateWordlist(FICL_DICT *dp, int nBuckets);
