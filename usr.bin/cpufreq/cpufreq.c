@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/usr.bin/cpufreq/cpufreq.c,v 1.1 2011/07/09 20:17:25 laffer1 Exp $ */
+/* $MidnightBSD: src/usr.bin/cpufreq/cpufreq.c,v 1.2 2012/12/30 20:20:10 laffer1 Exp $ */
 /*- 
  * Copyright (c) 2008, 2011 Lucas Holt
  * All rights reserved.
@@ -74,7 +74,7 @@ main(int argc, char *argv[])
 }
 
 static void
-usage()
+usage(void)
 {
 
 	fprintf(stderr, "usage: cpufreq [-v]\n");
