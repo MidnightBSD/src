@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/usr.bin/batt/batt.c,v 1.6 2011/09/15 02:02:56 laffer1 Exp $ */
+/* $MidnightBSD: src/usr.bin/batt/batt.c,v 1.7 2011/11/16 00:55:50 laffer1 Exp $ */
 /*- 
  * Copyright (c) 2008 Lucas Holt
  * All rights reserved.
@@ -33,7 +33,7 @@
 #include <err.h>
 #include <unistd.h>
 
-static void	usage();
+static void	usage(void);
 
 int 
 main(int argc, char *argv[])
@@ -67,7 +67,7 @@ main(int argc, char *argv[])
 	argv += optind;
 
 	/* if no flags are set, use the most likely */
-	if (lflag == tflag == uflag == 0)
+	if (lflag == 0 && tflag == 0 && uflag == 0)
 		lflag = tflag = 1;
 
 	if (lflag) {
@@ -114,7 +114,7 @@ main(int argc, char *argv[])
 }
 
 static void
-usage()
+usage(void)
 {
 
 	fprintf(stderr, "usage: batt [-cltu]\n");
