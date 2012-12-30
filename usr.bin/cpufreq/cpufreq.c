@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/usr.bin/batt/batt.c,v 1.5 2009/04/11 04:43:26 laffer1 Exp $ */
+/* $MidnightBSD: src/usr.bin/cpufreq/cpufreq.c,v 1.1 2011/07/09 20:17:25 laffer1 Exp $ */
 /*- 
  * Copyright (c) 2008, 2011 Lucas Holt
  * All rights reserved.
@@ -30,9 +30,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <err.h>
 #include <unistd.h>
 
-static void	usage();
+static void	usage(void);
 
 int 
 main(int argc, char *argv[])
