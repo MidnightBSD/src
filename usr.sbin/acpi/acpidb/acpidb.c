@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/usr.sbin/acpi/acpidb/acpidb.c,v 1.6 2007/03/22 18:16:43 jkim Exp $
+ *	$MidnightBSD$
  */
 
 #include <sys/param.h>
@@ -42,9 +42,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include <contrib/dev/acpica/acpi.h>
-#include <contrib/dev/acpica/acnamesp.h>
-#include <contrib/dev/acpica/acdebug.h>
+#include <contrib/dev/acpica/include/acpi.h>
+#include <contrib/dev/acpica/tools/acpiexec/aecommon.h>
 
 /*
  * Dummy DSDT Table Header
@@ -82,7 +81,7 @@ static int		 aml_simulate_regcontent_read(int regtype,
 static int		 aml_simulate_regcontent_write(int regtype,
 			     ACPI_PHYSICAL_ADDRESS addr,
 			     UINT8 *valuep);
-static ACPI_INTEGER	 aml_simulate_prompt(char *msg, ACPI_INTEGER def_val);
+static UINT64		 aml_simulate_prompt(char *msg, UINT64 def_val);
 static void		 aml_simulation_regload(const char *dumpfile);
 static void		 aml_simulation_regdump(const char *dumpfile);
 
@@ -90,7 +89,13 @@ static void		 aml_simulation_regdump(const char *dumpfile);
 ACPI_STATUS
 AeLocalGetRootPointer(void)
 {
-	return AE_ERROR;
+
+	return (AE_ERROR);
+}
+
+void
+AeTableOverride(ACPI_TABLE_HEADER *ExistingTable, ACPI_TABLE_HEADER **NewTable)
+{
 }
 
 static void
@@ -156,11 +161,11 @@ aml_simulate_regcontent_write(int regtype, ACPI_PHYSICAL_ADDRESS addr, UINT8 *va
 	return (aml_simulate_regcontent_add(regtype, addr, *valuep));
 }
 
-static ACPI_INTEGER
-aml_simulate_prompt(char *msg, ACPI_INTEGER def_val)
+static UINT64
+aml_simulate_prompt(char *msg, UINT64 def_val)
 {
 	char		buf[16], *ep;
-	ACPI_INTEGER	val;
+	UINT64		val;
 
 	val = def_val;
 	printf("DEBUG");
@@ -266,12 +271,12 @@ aml_vm_space_handler(
 	UINT32			Function,
 	ACPI_PHYSICAL_ADDRESS	Address,
 	UINT32			BitWidth,
-	ACPI_INTEGER		*Value,
+	UINT64			*Value,
 	int			Prompt)
 {
 	int			state;
 	UINT8			val;
-	ACPI_INTEGER		value, i;
+	UINT64			value, i;
 	char			msg[256];
 	static const char	*space_names[] = {
 		"SYSTEM_MEMORY", "SYSTEM_IO", "PCI_CONFIG",
@@ -331,7 +336,7 @@ aml_vm_space_handler_##name (					\
 	UINT32			Function,			\
 	ACPI_PHYSICAL_ADDRESS	Address,			\
 	UINT32			BitWidth,			\
-	ACPI_INTEGER		*Value)				\
+	UINT64			*Value)				\
 {								\
 	return (aml_vm_space_handler(id, Function, Address,	\
 		BitWidth, Value, aml_debug_prompt));		\
