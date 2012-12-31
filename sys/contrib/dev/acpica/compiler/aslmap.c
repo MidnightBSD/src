@@ -2,123 +2,49 @@
 /******************************************************************************
  *
  * Module Name: aslmap - parser to AML opcode mapping table
- *              $Revision: 1.2 $
  *
  *****************************************************************************/
 
-/******************************************************************************
- *
- * 1. Copyright Notice
- *
- * Some or all of this work - Copyright (c) 1999 - 2007, Intel Corp.
+/*
+ * Copyright (C) 2000 - 2011, Intel Corp.
  * All rights reserved.
  *
- * 2. License
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
  *
- * 2.1. This is your license from Intel Corp. under its intellectual property
- * rights.  You may have additional license terms from the party that provided
- * you this software, covering your right to use that party's intellectual
- * property rights.
+ * Alternatively, this software may be distributed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
  *
- * 2.2. Intel grants, free of charge, to any person ("Licensee") obtaining a
- * copy of the source code appearing in this file ("Covered Code") an
- * irrevocable, perpetual, worldwide license under Intel's copyrights in the
- * base code distributed originally by Intel ("Original Intel Code") to copy,
- * make derivatives, distribute, use and display any portion of the Covered
- * Code in any form, with the right to sublicense such rights; and
- *
- * 2.3. Intel grants Licensee a non-exclusive and non-transferable patent
- * license (with the right to sublicense), under only those claims of Intel
- * patents that are infringed by the Original Intel Code, to make, use, sell,
- * offer to sell, and import the Covered Code and derivative works thereof
- * solely to the minimum extent necessary to exercise the above copyright
- * license, and in no event shall the patent license extend to any additions
- * to or modifications of the Original Intel Code.  No other license or right
- * is granted directly or by implication, estoppel or otherwise;
- *
- * The above copyright and patent license is granted only if the following
- * conditions are met:
- *
- * 3. Conditions
- *
- * 3.1. Redistribution of Source with Rights to Further Distribute Source.
- * Redistribution of source code of any substantial portion of the Covered
- * Code or modification with rights to further distribute source must include
- * the above Copyright Notice, the above License, this list of Conditions,
- * and the following Disclaimer and Export Compliance provision.  In addition,
- * Licensee must cause all Covered Code to which Licensee contributes to
- * contain a file documenting the changes Licensee made to create that Covered
- * Code and the date of any change.  Licensee must include in that file the
- * documentation of any changes made by any predecessor Licensee.  Licensee
- * must include a prominent statement that the modification is derived,
- * directly or indirectly, from Original Intel Code.
- *
- * 3.2. Redistribution of Source with no Rights to Further Distribute Source.
- * Redistribution of source code of any substantial portion of the Covered
- * Code or modification without rights to further distribute source must
- * include the following Disclaimer and Export Compliance provision in the
- * documentation and/or other materials provided with distribution.  In
- * addition, Licensee may not authorize further sublicense of source of any
- * portion of the Covered Code, and must include terms to the effect that the
- * license from Licensee to its licensee is limited to the intellectual
- * property embodied in the software Licensee provides to its licensee, and
- * not to intellectual property embodied in modifications its licensee may
- * make.
- *
- * 3.3. Redistribution of Executable. Redistribution in executable form of any
- * substantial portion of the Covered Code or modification must reproduce the
- * above Copyright Notice, and the following Disclaimer and Export Compliance
- * provision in the documentation and/or other materials provided with the
- * distribution.
- *
- * 3.4. Intel retains all right, title, and interest in and to the Original
- * Intel Code.
- *
- * 3.5. Neither the name Intel nor any other trademark owned or controlled by
- * Intel shall be used in advertising or otherwise to promote the sale, use or
- * other dealings in products derived from or relating to the Covered Code
- * without prior written authorization from Intel.
- *
- * 4. Disclaimer and Export Compliance
- *
- * 4.1. INTEL MAKES NO WARRANTY OF ANY KIND REGARDING ANY SOFTWARE PROVIDED
- * HERE.  ANY SOFTWARE ORIGINATING FROM INTEL OR DERIVED FROM INTEL SOFTWARE
- * IS PROVIDED "AS IS," AND INTEL WILL NOT PROVIDE ANY SUPPORT,  ASSISTANCE,
- * INSTALLATION, TRAINING OR OTHER SERVICES.  INTEL WILL NOT PROVIDE ANY
- * UPDATES, ENHANCEMENTS OR EXTENSIONS.  INTEL SPECIFICALLY DISCLAIMS ANY
- * IMPLIED WARRANTIES OF MERCHANTABILITY, NONINFRINGEMENT AND FITNESS FOR A
- * PARTICULAR PURPOSE.
- *
- * 4.2. IN NO EVENT SHALL INTEL HAVE ANY LIABILITY TO LICENSEE, ITS LICENSEES
- * OR ANY OTHER THIRD PARTY, FOR ANY LOST PROFITS, LOST DATA, LOSS OF USE OR
- * COSTS OF PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES, OR FOR ANY INDIRECT,
- * SPECIAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THIS AGREEMENT, UNDER ANY
- * CAUSE OF ACTION OR THEORY OF LIABILITY, AND IRRESPECTIVE OF WHETHER INTEL
- * HAS ADVANCE NOTICE OF THE POSSIBILITY OF SUCH DAMAGES.  THESE LIMITATIONS
- * SHALL APPLY NOTWITHSTANDING THE FAILURE OF THE ESSENTIAL PURPOSE OF ANY
- * LIMITED REMEDY.
- *
- * 4.3. Licensee shall not export, either directly or indirectly, any of this
- * software or system incorporating such software without first obtaining any
- * required license or other approval from the U. S. Department of Commerce or
- * any other agency or department of the United States Government.  In the
- * event Licensee exports any such software from the United States or
- * re-exports any such software from a foreign destination, Licensee shall
- * ensure that the distribution and export/re-export of the software is in
- * compliance with all laws, regulations, orders, or other restrictions of the
- * U.S. Export Administration Regulations. Licensee agrees that neither it nor
- * any of its subsidiaries will export/re-export any technical data, process,
- * software, or service, directly or indirectly, to any country for which the
- * United States government or any agency thereof requires an export license,
- * other governmental approval, or letter of assurance, without first obtaining
- * such license, approval or letter.
- *
- *****************************************************************************/
-
+ * NO WARRANTY
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDERS OR CONTRIBUTORS BE LIABLE FOR SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+ * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGES.
+ */
 
 #include <contrib/dev/acpica/compiler/aslcompiler.h>
-#include <contrib/dev/acpica/amlcode.h>
-#include <contrib/dev/acpica/acparser.h>
+#include <contrib/dev/acpica/include/amlcode.h>
+#include <contrib/dev/acpica/include/acparser.h>
 
 
 #define _COMPONENT          ACPI_COMPILER
@@ -172,288 +98,6 @@ AslMapNamedOpcodeToDataType (
 
 /*******************************************************************************
  *
- * FUNCTION:    MpDisplayReservedNames
- *
- * PARAMETERS:  None
- *
- * RETURN:      None
- *
- * DESCRIPTION: Print the table above
- *
- ******************************************************************************/
-
-void
-MpDisplayReservedNames (
-    void)
-{
-    UINT32              i;
-
-    printf ("Reserved name information\n\n");
-
-    for (i = 0; ReservedMethods[i].Name; i++)
-    {
-        printf ("%s    ", ReservedMethods[i].Name);
-
-        if (ReservedMethods[i].Flags & ASL_RSVD_SCOPE)
-        {
-            printf ("Reserved scope name\n");
-        }
-        else if (ReservedMethods[i].Flags & ASL_RSVD_RESOURCE_NAME)
-        {
-            printf ("Resource data type reserved field name\n");
-        }
-        else
-        {
-            printf ("Method with %d arguments, ",
-                ReservedMethods[i].NumArguments);
-
-            if (ReservedMethods[i].Flags & ASL_RSVD_RETURN_VALUE)
-            {
-                printf ("must return a value\n");
-            }
-            else
-            {
-                printf ("no return value\n");
-            }
-        }
-    }
-}
-
-
-/*******************************************************************************
- *
- * DATA STRUCTURE:  ReservedMethods
- *
- * DESCRIPTION:     Contains all reserved methods and names as defined in the
- *                  ACPI specification.  Used during the analysis phase to
- *                  ensure that reserved methods have the required number of
- *                  arguments and the proper return type.
- *
- * Each entry in the table contains the following items:
- *
- * Name         - The ACPI reserved name
- * Args         - Number of arguments to the method
- * Flags        - Whether this method must return a value or not
- *
- ******************************************************************************/
-
-const ASL_RESERVED_INFO         ReservedMethods[] = {
-    {"_AC0",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_AC1",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_AC2",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_AC3",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_AC4",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_AC5",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_AC6",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_AC7",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_AC8",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_AC9",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_ADR",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_AL0",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_AL1",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_AL2",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_AL3",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_AL4",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_AL5",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_AL6",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_AL7",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_AL8",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_AL9",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_ALC",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_ALI",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_ALN",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_ALP",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_ALR",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_ALT",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_ASI",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_BAS",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_BBN",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_BCL",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_BCM",     1,      0},
-    {"_BDN",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_BFS",     1,      0},
-    {"_BIF",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_BLT",     3,      0},                        /* Acpi 3.0 */
-    {"_BM_",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_BMC",     1,      0},                        /* Acpi 3.0 */
-    {"_BMD",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_BQC",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_BST",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_BTM",     1,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_BTP",     1,      0},
-    {"_CBA",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_CID",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_CRS",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_CRT",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_CSD",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_CST",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_DCK",     1,      ASL_RSVD_RETURN_VALUE},
-    {"_DCS",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_DDC",     1,      ASL_RSVD_RETURN_VALUE},
-    {"_DDN",     0,      0},
-    {"_DEC",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_DGS",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_DIS",     0,      0},
-    {"_DMA",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_DOD",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_DOS",     1,      0},
-    {"_DSM",     4,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_DSS",     1,      0},
-    {"_DSW",     3,      0},                        /* Acpi 3.0 */
-    {"_EC_",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_EDL",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_EJ0",     1,      0},
-    {"_EJ1",     1,      0},
-    {"_EJ2",     1,      0},
-    {"_EJ3",     1,      0},
-    {"_EJ4",     1,      0},
-    {"_EJD",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_ERR",     3,      ASL_RSVD_RETURN_VALUE},
-    {"_FDE",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_FDI",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_FDM",     1,      0},
-    {"_FIX",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_GL_",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_GLK",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_GPD",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_GPE",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_GRA",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_GSB",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_GTF",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_GTM",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_GTS",     1,      0},
-    {"_HE_",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_HID",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_HOT",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_HPP",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_HPX",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_IFT",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_INI",     0,      0},
-    {"_INT",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_IRC",     0,      0},
-    {"_LCK",     1,      0},
-    {"_LEN",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_LID",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_LL_",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_MAF",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_MAT",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_MAX",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_MEM",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_MIF",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_MIN",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_MLS",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_MSG",     1,      0},
-    {"_OFF",     0,      0},
-    {"_ON_",     0,      0},
-    {"_OS_",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_OSC",     4,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_OSI",     1,      ASL_RSVD_RETURN_VALUE},
-    {"_OST",     3,      0},                        /* Acpi 3.0 */
-    {"_PCL",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_PCT",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_PDC",     1,      0},
-    {"_PIC",     1,      0},
-    {"_PLD",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_PPC",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_PPE",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_PR0",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_PR1",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_PR2",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_PRS",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_PRT",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_PRW",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_PS0",     0,      0},
-    {"_PS1",     0,      0},
-    {"_PS2",     0,      0},
-    {"_PS3",     0,      0},
-    {"_PSC",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_PSD",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_PSL",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_PSR",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_PSS",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_PSV",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_PSW",     1,      0},
-    {"_PTC",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_PTS",     1,      0},
-    {"_PXM",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_RBO",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_RBW",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_REG",     2,      0},
-    {"_REV",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_RMV",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_RNG",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_ROM",     2,      ASL_RSVD_RETURN_VALUE},
-    {"_RT_",     0,      ASL_RSVD_RESOURCE_NAME},   /* Acpi 3.0 */
-    {"_RTV",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_RW_",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_S0_",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_S1_",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_S2_",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_S3_",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_S4_",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_S5_",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_S1D",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_S2D",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_S3D",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_S4D",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_S0W",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_S1W",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_S2W",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_S3W",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_S4W",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_SB_",     0,      ASL_RSVD_SCOPE},
-    {"_SBS",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_SCP",     1,      0},
-    {"_SDD",     1,      0},                        /* Acpi 3.0 */
-    {"_SEG",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_SHR",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_SI_",     0,      ASL_RSVD_SCOPE},
-    {"_SIZ",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_SLI",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_SPD",     1,      ASL_RSVD_RETURN_VALUE},
-    {"_SRS",     1,      0},
-    {"_SRV",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_SST",     1,      0},
-    {"_STA",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_STM",     3,      0},
-    {"_STR",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_SUN",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_SWS",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_TC1",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_TC2",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_TDL",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0b */
-    {"_TMP",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_TPC",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_TPT",     1,      0},                        /* Acpi 3.0 */
-    {"_TRA",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_TRS",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_TRT",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_TSD",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_TSF",     0,      ASL_RSVD_RESOURCE_NAME},   /* Acpi 3.0 */
-    {"_TSP",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_TSS",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_TST",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_TTP",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_TTS",     1,      0},                        /* Acpi 3.0 */
-    {"_TYP",     0,      ASL_RSVD_RESOURCE_NAME},
-    {"_TZ_",     0,      ASL_RSVD_SCOPE},
-    {"_TZD",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_TZM",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_TZP",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_UID",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_UPC",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_UPD",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_UPP",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
-    {"_VPO",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_WAK",     1,      ASL_RSVD_RETURN_VALUE},
-    {"_WDG",     0,      ASL_RSVD_RETURN_VALUE},    /* MS Extension */
-    {"_WED",     1,      ASL_RSVD_RETURN_VALUE},    /* MS Extension */
-    {NULL,       0,      0},
-};
-
-
-/*******************************************************************************
- *
  * DATA STRUCTURE:  AslKeywordMapping
  *
  * DESCRIPTION:     Maps the ParseOpcode to the actual AML opcode.  The parse
@@ -497,7 +141,7 @@ const ASL_MAPPING_ENTRY     AslKeywordMapping [] =
 /* ACCESSTYPE_WORD */           OP_TABLE_ENTRY (AML_BYTE_OP,                AML_FIELD_ACCESS_WORD,          0,                  0),
 /* ACQUIRE */                   OP_TABLE_ENTRY (AML_ACQUIRE_OP,             0,                              0,                  ACPI_BTYPE_INTEGER),
 /* ADD */                       OP_TABLE_ENTRY (AML_ADD_OP,                 0,                              0,                  ACPI_BTYPE_INTEGER),
-/* ADDRESSSPACE_FFIXEDHW */     OP_TABLE_ENTRY (AML_BYTE_OP,                REGION_FIXED_HW,                0,                  0),
+/* ADDRESSSPACE_FFIXEDHW */     OP_TABLE_ENTRY (AML_BYTE_OP,                ACPI_ADR_SPACE_FIXED_HARDWARE,  0,                  0),
 /* ADDRESSTYPE_ACPI */          OP_TABLE_ENTRY (AML_BYTE_OP,                2,                              0,                  0),
 /* ADDRESSTYPE_MEMORY */        OP_TABLE_ENTRY (AML_BYTE_OP,                0,                              0,                  0),
 /* ADDRESSTYPE_NVS */           OP_TABLE_ENTRY (AML_BYTE_OP,                3,                              0,                  0),
@@ -677,13 +321,14 @@ const ASL_MAPPING_ENTRY     AslKeywordMapping [] =
 /* READWRITETYPE_BOTH */        OP_TABLE_ENTRY (AML_BYTE_OP,                1,                              0,                  0),
 /* READWRITETYPE_READONLY */    OP_TABLE_ENTRY (AML_BYTE_OP,                0,                              0,                  0),
 /* REFOF */                     OP_TABLE_ENTRY (AML_REF_OF_OP,              0,                              0,                  ACPI_BTYPE_REFERENCE),
-/* REGIONSPACE_CMOS */          OP_TABLE_ENTRY (AML_RAW_DATA_BYTE,          REGION_CMOS,                    0,                  0),
-/* REGIONSPACE_EC */            OP_TABLE_ENTRY (AML_RAW_DATA_BYTE,          REGION_EC,                      0,                  0),
-/* REGIONSPACE_IO */            OP_TABLE_ENTRY (AML_RAW_DATA_BYTE,          REGION_IO,                      0,                  0),
-/* REGIONSPACE_MEM */           OP_TABLE_ENTRY (AML_RAW_DATA_BYTE,          REGION_MEMORY,                  0,                  0),
-/* REGIONSPACE_PCI */           OP_TABLE_ENTRY (AML_RAW_DATA_BYTE,          REGION_PCI_CONFIG,              0,                  0),
-/* REGIONSPACE_PCIBAR */        OP_TABLE_ENTRY (AML_RAW_DATA_BYTE,          REGION_PCI_BAR,                 0,                  0),
-/* REGIONSPACE_SMBUS */         OP_TABLE_ENTRY (AML_RAW_DATA_BYTE,          REGION_SMBUS,                   0,                  0),
+/* REGIONSPACE_CMOS */          OP_TABLE_ENTRY (AML_RAW_DATA_BYTE,          ACPI_ADR_SPACE_CMOS,            0,                  0),
+/* REGIONSPACE_EC */            OP_TABLE_ENTRY (AML_RAW_DATA_BYTE,          ACPI_ADR_SPACE_EC,              0,                  0),
+/* REGIONSPACE_IO */            OP_TABLE_ENTRY (AML_RAW_DATA_BYTE,          ACPI_ADR_SPACE_SYSTEM_IO,       0,                  0),
+/* REGIONSPACE_IPMI */          OP_TABLE_ENTRY (AML_RAW_DATA_BYTE,          ACPI_ADR_SPACE_IPMI,            0,                  0),
+/* REGIONSPACE_MEM */           OP_TABLE_ENTRY (AML_RAW_DATA_BYTE,          ACPI_ADR_SPACE_SYSTEM_MEMORY,   0,                  0),
+/* REGIONSPACE_PCI */           OP_TABLE_ENTRY (AML_RAW_DATA_BYTE,          ACPI_ADR_SPACE_PCI_CONFIG,      0,                  0),
+/* REGIONSPACE_PCIBAR */        OP_TABLE_ENTRY (AML_RAW_DATA_BYTE,          ACPI_ADR_SPACE_PCI_BAR_TARGET,  0,                  0),
+/* REGIONSPACE_SMBUS */         OP_TABLE_ENTRY (AML_RAW_DATA_BYTE,          ACPI_ADR_SPACE_SMBUS,           0,                  0),
 /* REGISTER */                  OP_TABLE_ENTRY (AML_BYTE_OP,                0,                              0,                  0),
 /* RELEASE */                   OP_TABLE_ENTRY (AML_RELEASE_OP,             0,                              0,                  0),
 /* RESERVED_BYTES */            OP_TABLE_ENTRY (AML_INT_RESERVEDFIELD_OP,   0,                              0,                  0),

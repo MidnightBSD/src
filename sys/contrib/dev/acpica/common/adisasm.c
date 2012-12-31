@@ -1,129 +1,57 @@
 /******************************************************************************
  *
  * Module Name: adisasm - Application-level disassembler routines
- *              $Revision: 1.2 $
  *
  *****************************************************************************/
 
-/******************************************************************************
- *
- * 1. Copyright Notice
- *
- * Some or all of this work - Copyright (c) 1999 - 2007, Intel Corp.
+/*
+ * Copyright (C) 2000 - 2011, Intel Corp.
  * All rights reserved.
  *
- * 2. License
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
  *
- * 2.1. This is your license from Intel Corp. under its intellectual property
- * rights.  You may have additional license terms from the party that provided
- * you this software, covering your right to use that party's intellectual
- * property rights.
+ * Alternatively, this software may be distributed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
  *
- * 2.2. Intel grants, free of charge, to any person ("Licensee") obtaining a
- * copy of the source code appearing in this file ("Covered Code") an
- * irrevocable, perpetual, worldwide license under Intel's copyrights in the
- * base code distributed originally by Intel ("Original Intel Code") to copy,
- * make derivatives, distribute, use and display any portion of the Covered
- * Code in any form, with the right to sublicense such rights; and
- *
- * 2.3. Intel grants Licensee a non-exclusive and non-transferable patent
- * license (with the right to sublicense), under only those claims of Intel
- * patents that are infringed by the Original Intel Code, to make, use, sell,
- * offer to sell, and import the Covered Code and derivative works thereof
- * solely to the minimum extent necessary to exercise the above copyright
- * license, and in no event shall the patent license extend to any additions
- * to or modifications of the Original Intel Code.  No other license or right
- * is granted directly or by implication, estoppel or otherwise;
- *
- * The above copyright and patent license is granted only if the following
- * conditions are met:
- *
- * 3. Conditions
- *
- * 3.1. Redistribution of Source with Rights to Further Distribute Source.
- * Redistribution of source code of any substantial portion of the Covered
- * Code or modification with rights to further distribute source must include
- * the above Copyright Notice, the above License, this list of Conditions,
- * and the following Disclaimer and Export Compliance provision.  In addition,
- * Licensee must cause all Covered Code to which Licensee contributes to
- * contain a file documenting the changes Licensee made to create that Covered
- * Code and the date of any change.  Licensee must include in that file the
- * documentation of any changes made by any predecessor Licensee.  Licensee
- * must include a prominent statement that the modification is derived,
- * directly or indirectly, from Original Intel Code.
- *
- * 3.2. Redistribution of Source with no Rights to Further Distribute Source.
- * Redistribution of source code of any substantial portion of the Covered
- * Code or modification without rights to further distribute source must
- * include the following Disclaimer and Export Compliance provision in the
- * documentation and/or other materials provided with distribution.  In
- * addition, Licensee may not authorize further sublicense of source of any
- * portion of the Covered Code, and must include terms to the effect that the
- * license from Licensee to its licensee is limited to the intellectual
- * property embodied in the software Licensee provides to its licensee, and
- * not to intellectual property embodied in modifications its licensee may
- * make.
- *
- * 3.3. Redistribution of Executable. Redistribution in executable form of any
- * substantial portion of the Covered Code or modification must reproduce the
- * above Copyright Notice, and the following Disclaimer and Export Compliance
- * provision in the documentation and/or other materials provided with the
- * distribution.
- *
- * 3.4. Intel retains all right, title, and interest in and to the Original
- * Intel Code.
- *
- * 3.5. Neither the name Intel nor any other trademark owned or controlled by
- * Intel shall be used in advertising or otherwise to promote the sale, use or
- * other dealings in products derived from or relating to the Covered Code
- * without prior written authorization from Intel.
- *
- * 4. Disclaimer and Export Compliance
- *
- * 4.1. INTEL MAKES NO WARRANTY OF ANY KIND REGARDING ANY SOFTWARE PROVIDED
- * HERE.  ANY SOFTWARE ORIGINATING FROM INTEL OR DERIVED FROM INTEL SOFTWARE
- * IS PROVIDED "AS IS," AND INTEL WILL NOT PROVIDE ANY SUPPORT,  ASSISTANCE,
- * INSTALLATION, TRAINING OR OTHER SERVICES.  INTEL WILL NOT PROVIDE ANY
- * UPDATES, ENHANCEMENTS OR EXTENSIONS.  INTEL SPECIFICALLY DISCLAIMS ANY
- * IMPLIED WARRANTIES OF MERCHANTABILITY, NONINFRINGEMENT AND FITNESS FOR A
- * PARTICULAR PURPOSE.
- *
- * 4.2. IN NO EVENT SHALL INTEL HAVE ANY LIABILITY TO LICENSEE, ITS LICENSEES
- * OR ANY OTHER THIRD PARTY, FOR ANY LOST PROFITS, LOST DATA, LOSS OF USE OR
- * COSTS OF PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES, OR FOR ANY INDIRECT,
- * SPECIAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THIS AGREEMENT, UNDER ANY
- * CAUSE OF ACTION OR THEORY OF LIABILITY, AND IRRESPECTIVE OF WHETHER INTEL
- * HAS ADVANCE NOTICE OF THE POSSIBILITY OF SUCH DAMAGES.  THESE LIMITATIONS
- * SHALL APPLY NOTWITHSTANDING THE FAILURE OF THE ESSENTIAL PURPOSE OF ANY
- * LIMITED REMEDY.
- *
- * 4.3. Licensee shall not export, either directly or indirectly, any of this
- * software or system incorporating such software without first obtaining any
- * required license or other approval from the U. S. Department of Commerce or
- * any other agency or department of the United States Government.  In the
- * event Licensee exports any such software from the United States or
- * re-exports any such software from a foreign destination, Licensee shall
- * ensure that the distribution and export/re-export of the software is in
- * compliance with all laws, regulations, orders, or other restrictions of the
- * U.S. Export Administration Regulations. Licensee agrees that neither it nor
- * any of its subsidiaries will export/re-export any technical data, process,
- * software, or service, directly or indirectly, to any country for which the
- * United States government or any agency thereof requires an export license,
- * other governmental approval, or letter of assurance, without first obtaining
- * such license, approval or letter.
- *
- *****************************************************************************/
+ * NO WARRANTY
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDERS OR CONTRIBUTORS BE LIABLE FOR SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+ * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGES.
+ */
 
 
-#include <contrib/dev/acpica/acpi.h>
-#include <contrib/dev/acpica/acparser.h>
-#include <contrib/dev/acpica/amlcode.h>
-#include <contrib/dev/acpica/acdebug.h>
-#include <contrib/dev/acpica/acdisasm.h>
-#include <contrib/dev/acpica/acdispat.h>
-#include <contrib/dev/acpica/acnamesp.h>
-#include <contrib/dev/acpica/actables.h>
-#include <contrib/dev/acpica/acapps.h>
+#include <contrib/dev/acpica/include/acpi.h>
+#include <contrib/dev/acpica/include/accommon.h>
+#include <contrib/dev/acpica/include/acparser.h>
+#include <contrib/dev/acpica/include/amlcode.h>
+#include <contrib/dev/acpica/include/acdebug.h>
+#include <contrib/dev/acpica/include/acdisasm.h>
+#include <contrib/dev/acpica/include/acdispat.h>
+#include <contrib/dev/acpica/include/acnamesp.h>
+#include <contrib/dev/acpica/include/actables.h>
+#include <contrib/dev/acpica/include/acapps.h>
 
 #include <stdio.h>
 #include <time.h>
@@ -132,28 +60,35 @@
 #define _COMPONENT          ACPI_TOOLS
         ACPI_MODULE_NAME    ("adisasm")
 
-extern int                          AslCompilerdebug;
+
+extern int                  AslCompilerdebug;
+
 
 ACPI_STATUS
 LsDisplayNamespace (
     void);
 
 void
-LsSetupNsList (void * Handle);
+LsSetupNsList (
+    void                    *Handle);
 
 
 /* Local prototypes */
 
-void
+static void
 AdCreateTableHeader (
     char                    *Filename,
     ACPI_TABLE_HEADER       *Table);
 
-void
-AdDisassemblerHeader (
-    char                    *Filename);
+static ACPI_STATUS
+AdDeferredParse (
+    ACPI_PARSE_OBJECT       *Op,
+    UINT8                   *Aml,
+    UINT32                  AmlLength);
 
-ACPI_PARSE_OBJECT       *AcpiGbl_ParseOpRoot;
+static ACPI_STATUS
+AdParseDeferredOps (
+    ACPI_PARSE_OBJECT       *Root);
 
 
 /* Stubs for ASL compiler */
@@ -174,12 +109,11 @@ AcpiDsMethodError (
 {
     return (Status);
 }
-
 #endif
 
 ACPI_STATUS
 AcpiNsLoadTable (
-    ACPI_NATIVE_UINT        TableIndex,
+    UINT32                  TableIndex,
     ACPI_NAMESPACE_NODE     *Node)
 {
     return (AE_NOT_IMPLEMENTED);
@@ -220,18 +154,19 @@ AcpiDsMethodDataInitArgs (
 }
 
 
-ACPI_TABLE_DESC             LocalTables[1];
+static ACPI_TABLE_DESC      LocalTables[1];
+static ACPI_PARSE_OBJECT    *AcpiGbl_ParseOpRoot;
 
 
 /*******************************************************************************
  *
  * FUNCTION:    AdInitialize
  *
- * PARAMETERS:  None.
+ * PARAMETERS:  None
  *
  * RETURN:      Status
  *
- * DESCRIPTION: CA initialization
+ * DESCRIPTION: ACPICA and local initialization
  *
  ******************************************************************************/
 
@@ -245,101 +180,36 @@ AdInitialize (
     /* ACPI CA subsystem initialization */
 
     Status = AcpiOsInitialize ();
-    AcpiUtInitGlobals ();
+    if (ACPI_FAILURE (Status))
+    {
+        return (Status);
+    }
+
+    Status = AcpiUtInitGlobals ();
+    if (ACPI_FAILURE (Status))
+    {
+        return (Status);
+    }
 
     Status = AcpiUtMutexInitialize ();
     if (ACPI_FAILURE (Status))
     {
-        return Status;
+        return (Status);
     }
 
     Status = AcpiNsRootInitialize ();
     if (ACPI_FAILURE (Status))
     {
-        return Status;
+        return (Status);
     }
 
     /* Setup the Table Manager (cheat - there is no RSDT) */
 
-    AcpiGbl_RootTableList.Size = 1;
-    AcpiGbl_RootTableList.Count = 0;
+    AcpiGbl_RootTableList.MaxTableCount = 1;
+    AcpiGbl_RootTableList.CurrentTableCount = 0;
     AcpiGbl_RootTableList.Tables = LocalTables;
 
-    return Status;
-}
-
-
-/*******************************************************************************
- *
- * FUNCTION:    AdAddExternalsToNamespace
- *
- * PARAMETERS:
- *
- * RETURN:      Status
- *
- * DESCRIPTION:
- *
- ******************************************************************************/
-
-void
-AdAddExternalsToNamespace (
-    void)
-{
-    ACPI_STATUS             Status;
-    ACPI_NAMESPACE_NODE     *Node;
-    ACPI_EXTERNAL_LIST      *External = AcpiGbl_ExternalList;
-    ACPI_OPERAND_OBJECT     *MethodDesc;
-
-
-    while (External)
-    {
-        Status = AcpiNsLookup (NULL, External->InternalPath, External->Type,
-                   ACPI_IMODE_LOAD_PASS1, ACPI_NS_EXTERNAL | ACPI_NS_DONT_OPEN_SCOPE,
-                   NULL, &Node);
-
-        if (External->Type == ACPI_TYPE_METHOD)
-        {
-            MethodDesc = AcpiUtCreateInternalObject (ACPI_TYPE_METHOD);
-            MethodDesc->Method.ParamCount = (UINT8) External->Value;
-            Node->Object = MethodDesc;
-        }
-
-        External = External->Next;
-    }
-}
-
-
-/*******************************************************************************
- *
- * FUNCTION:    AdMethodExternalCount
- *
- * PARAMETERS:  None
- *
- * RETURN:      Status
- *
- * DESCRIPTION: Return the number of externals that have been generated
- *
- ******************************************************************************/
-
-UINT32
-AdMethodExternalCount (
-    void)
-{
-    ACPI_EXTERNAL_LIST      *External = AcpiGbl_ExternalList;
-    UINT32                  Count = 0;
-
-
-    while (External)
-    {
-        if (External->Type == ACPI_TYPE_METHOD)
-        {
-            Count++;
-        }
-
-        External = External->Next;
-    }
-
-    return (Count);
+    return (Status);
 }
 
 
@@ -347,19 +217,17 @@ AdMethodExternalCount (
  *
  * FUNCTION:    AdAmlDisassemble
  *
- * PARAMETERS:  Filename        - AML input filename
- *              OutToFile       - TRUE if output should go to a file
- *              Prefix          - Path prefix for output
- *              OutFilename     - where the filename is returned
- *              GetAllTables    - TRUE if all tables are desired
+ * PARAMETERS:  Filename            - AML input filename
+ *              OutToFile           - TRUE if output should go to a file
+ *              Prefix              - Path prefix for output
+ *              OutFilename         - where the filename is returned
+ *              GetAllTables        - TRUE if all tables are desired
  *
  * RETURN:      Status
  *
  * DESCRIPTION: Disassemble an entire ACPI table
  *
  *****************************************************************************/
-
-extern char *Gbl_ExternalFilename;
 
 ACPI_STATUS
 AdAmlDisassemble (
@@ -371,14 +239,17 @@ AdAmlDisassemble (
 {
     ACPI_STATUS             Status;
     char                    *DisasmFilename = NULL;
+    char                    *ExternalFilename;
+    ACPI_EXTERNAL_FILE      *ExternalFileList = AcpiGbl_ExternalFileList;
     FILE                    *File = NULL;
-    ACPI_TABLE_HEADER       *Table;
+    ACPI_TABLE_HEADER       *Table = NULL;
     ACPI_TABLE_HEADER       *ExternalTable;
+    ACPI_OWNER_ID           OwnerId;
 
 
     /*
-     * Input:  AML Code from either a file,
-     *         or via GetTables (memory or registry)
+     * Input: AML code from either a file or via GetTables (memory or
+     * registry)
      */
     if (Filename)
     {
@@ -388,13 +259,59 @@ AdAmlDisassemble (
             return Status;
         }
 
-        if (Gbl_ExternalFilename)
+        /*
+         * External filenames separated by commas
+         * Example: iasl -e file1,file2,file3 -d xxx.aml
+         */
+        while (ExternalFileList)
         {
-            Status = AcpiDbGetTableFromFile (Gbl_ExternalFilename, &ExternalTable);
+            ExternalFilename = ExternalFileList->Path;
+            if (!ACPI_STRCMP (ExternalFilename, Filename))
+            {
+                /* Next external file */
+
+                ExternalFileList = ExternalFileList->Next;
+
+                continue;
+            }
+
+            Status = AcpiDbGetTableFromFile (ExternalFilename, &ExternalTable);
             if (ACPI_FAILURE (Status))
             {
                 return Status;
             }
+
+            /* Load external table for symbol resolution */
+
+            if (ExternalTable)
+            {
+                Status = AdParseTable (ExternalTable, &OwnerId, TRUE, TRUE);
+                if (ACPI_FAILURE (Status))
+                {
+                    AcpiOsPrintf ("Could not parse external ACPI tables, %s\n",
+                        AcpiFormatException (Status));
+                    return Status;
+                }
+
+                /*
+                 * Load namespace from names created within control methods
+                 * Set owner id of nodes in external table
+                 */
+                AcpiDmFinishNamespaceLoad (AcpiGbl_ParseOpRoot,
+                    AcpiGbl_RootNode, OwnerId);
+                AcpiPsDeleteParseTree (AcpiGbl_ParseOpRoot);
+            }
+
+            /* Next external file */
+
+            ExternalFileList = ExternalFileList->Next;
+        }
+
+        /* Clear external list generated by Scope in external tables */
+
+        if (AcpiGbl_ExternalFileList)
+        {
+            AcpiDmClearExternalList ();
         }
     }
     else
@@ -427,8 +344,7 @@ AdAmlDisassemble (
     }
 
     /*
-     * Output:  ASL code.
-     *          Redirect to a file if requested
+     * Output:  ASL code. Redirect to a file if requested
      */
     if (OutToFile)
     {
@@ -470,7 +386,7 @@ AdAmlDisassemble (
     {
         /* Always parse the tables, only option is what to display */
 
-        Status = AdParseTable (Table);
+        Status = AdParseTable (Table, &OwnerId, TRUE, FALSE);
         if (ACPI_FAILURE (Status))
         {
             AcpiOsPrintf ("Could not parse ACPI tables, %s\n",
@@ -490,12 +406,12 @@ AdAmlDisassemble (
         /*
          * Load namespace from names created within control methods
          */
-        AcpiDmFinishNamespaceLoad (AcpiGbl_ParseOpRoot, AcpiGbl_RootNode);
+        AcpiDmFinishNamespaceLoad (AcpiGbl_ParseOpRoot, AcpiGbl_RootNode, OwnerId);
 
         /*
          * Cross reference the namespace here, in order to generate External() statements
          */
-        AcpiDmCrossReferenceNamespace (AcpiGbl_ParseOpRoot, AcpiGbl_RootNode);
+        AcpiDmCrossReferenceNamespace (AcpiGbl_ParseOpRoot, AcpiGbl_RootNode, OwnerId);
 
         if (AslCompilerdebug)
         {
@@ -510,24 +426,16 @@ AdAmlDisassemble (
 
         AcpiDmConvertResourceIndexes (AcpiGbl_ParseOpRoot, AcpiGbl_RootNode);
 
-        if (AslCompilerdebug)
-        {
-            AcpiOsPrintf ("/**** After second load and resource conversion\n");
-            LsSetupNsList (File);
-            LsDisplayNamespace ();
-            AcpiOsPrintf ("*****/\n");
-        }
-
         /*
          * If we found any external control methods, we must reparse the entire
          * tree with the new information (namely, the number of arguments per
          * method)
          */
-        if (AdMethodExternalCount ())
+        if (AcpiDmGetExternalMethodCount ())
         {
             fprintf (stderr,
-                "\nFound %d external control methods, reparsing with new information\n",
-                AdMethodExternalCount());
+                "\nFound %u external control methods, reparsing with new information\n",
+                AcpiDmGetExternalMethodCount ());
 
             /*
              * Reparse, rebuild namespace. no need to xref namespace
@@ -539,15 +447,18 @@ AdAmlDisassemble (
             AcpiGbl_RootNodeStruct.Name.Integer = ACPI_ROOT_NAME;
             AcpiGbl_RootNodeStruct.DescriptorType = ACPI_DESC_TYPE_NAMED;
             AcpiGbl_RootNodeStruct.Type         = ACPI_TYPE_DEVICE;
+            AcpiGbl_RootNodeStruct.Parent       = NULL;
             AcpiGbl_RootNodeStruct.Child        = NULL;
             AcpiGbl_RootNodeStruct.Peer         = NULL;
             AcpiGbl_RootNodeStruct.Object       = NULL;
-            AcpiGbl_RootNodeStruct.Flags        = ANOBJ_END_OF_PEER_LIST;
+            AcpiGbl_RootNodeStruct.Flags        = 0;
 
             Status = AcpiNsRootInitialize ();
-            AdAddExternalsToNamespace ();
+            AcpiDmAddExternalsToNamespace ();
 
-            Status = AdParseTable (Table);
+            /* Parse table. No need to reload it, however (FALSE) */
+
+            Status = AdParseTable (Table, NULL, FALSE, FALSE);
             if (ACPI_FAILURE (Status))
             {
                 AcpiOsPrintf ("Could not parse ACPI tables, %s\n",
@@ -557,6 +468,11 @@ AdAmlDisassemble (
 
             if (AslCompilerdebug)
             {
+                AcpiOsPrintf ("/**** After second load and resource conversion\n");
+                LsSetupNsList (File);
+                LsDisplayNamespace ();
+                AcpiOsPrintf ("*****/\n");
+
                 AcpiDmDumpTree (AcpiGbl_ParseOpRoot);
             }
         }
@@ -573,6 +489,17 @@ AdAmlDisassemble (
     }
 
 Cleanup:
+
+    if (Table && !AcpiUtIsAmlTable (Table))
+    {
+        ACPI_FREE (Table);
+    }
+
+    if (DisasmFilename)
+    {
+        ACPI_FREE (DisasmFilename);
+    }
+
     if (OutToFile && File)
     {
 
@@ -585,7 +512,8 @@ Cleanup:
     }
 
     AcpiPsDeleteParseTree (AcpiGbl_ParseOpRoot);
-    return Status;
+    AcpiGbl_ParseOpRoot = NULL;
+    return (Status);
 }
 
 
@@ -612,10 +540,10 @@ AdDisassemblerHeader (
 
     /* Header and input table info */
 
-    AcpiOsPrintf ("/*\n * Intel ACPI Component Architecture\n");
-    AcpiOsPrintf (" * AML Disassembler version %8.8X\n", ACPI_CA_VERSION);
+    AcpiOsPrintf ("/*\n");
+    AcpiOsPrintf (ACPI_COMMON_HEADER ("AML Disassembler", " * "));
 
-    AcpiOsPrintf (" *\n * Disassembly of %s, %s", Filename, ctime (&Timer));
+    AcpiOsPrintf (" * Disassembly of %s, %s", Filename, ctime (&Timer));
     AcpiOsPrintf (" *\n");
 }
 
@@ -634,26 +562,66 @@ AdDisassemblerHeader (
  *
  *****************************************************************************/
 
-void
+static void
 AdCreateTableHeader (
     char                    *Filename,
     ACPI_TABLE_HEADER       *Table)
 {
     char                    *NewFilename;
+    UINT8                   Checksum;
 
 
+    /*
+     * Print file header and dump original table header
+     */
     AdDisassemblerHeader (Filename);
 
-    AcpiOsPrintf (" *\n * Original Table Header:\n");
+    AcpiOsPrintf (" * Original Table Header:\n");
     AcpiOsPrintf (" *     Signature        \"%4.4s\"\n",    Table->Signature);
     AcpiOsPrintf (" *     Length           0x%8.8X (%u)\n", Table->Length, Table->Length);
-    AcpiOsPrintf (" *     Revision         0x%2.2X\n",      Table->Revision);
+
+    /* Print and validate the revision */
+
+    AcpiOsPrintf (" *     Revision         0x%2.2X",      Table->Revision);
+
+    switch (Table->Revision)
+    {
+    case 0:
+        AcpiOsPrintf (" **** Invalid Revision");
+        break;
+
+    case 1:
+        /* Revision of DSDT controls the ACPI integer width */
+
+        if (ACPI_COMPARE_NAME (Table->Signature, ACPI_SIG_DSDT))
+        {
+            AcpiOsPrintf (" **** 32-bit table (V1), no 64-bit math support");
+        }
+        break;
+
+    default:
+        break;
+    }
+    AcpiOsPrintf ("\n");
+
+    /* Print and validate the table checksum */
+
+    AcpiOsPrintf (" *     Checksum         0x%2.2X",        Table->Checksum);
+
+    Checksum = AcpiTbChecksum (ACPI_CAST_PTR (UINT8, Table), Table->Length);
+    if (Checksum)
+    {
+        AcpiOsPrintf (" **** Incorrect checksum, should be 0x%2.2X",
+            (UINT8) (Table->Checksum - Checksum));
+    }
+    AcpiOsPrintf ("\n");
+
     AcpiOsPrintf (" *     OEM ID           \"%.6s\"\n",     Table->OemId);
     AcpiOsPrintf (" *     OEM Table ID     \"%.8s\"\n",     Table->OemTableId);
     AcpiOsPrintf (" *     OEM Revision     0x%8.8X (%u)\n", Table->OemRevision, Table->OemRevision);
-    AcpiOsPrintf (" *     Creator ID       \"%.4s\"\n",     Table->AslCompilerId);
-    AcpiOsPrintf (" *     Creator Revision 0x%8.8X (%u)\n", Table->AslCompilerRevision, Table->AslCompilerRevision);
-    AcpiOsPrintf (" */\n");
+    AcpiOsPrintf (" *     Compiler ID      \"%.4s\"\n",     Table->AslCompilerId);
+    AcpiOsPrintf (" *     Compiler Version 0x%8.8X (%u)\n", Table->AslCompilerRevision, Table->AslCompilerRevision);
+    AcpiOsPrintf (" */\n\n");
 
     /* Create AML output filename based on input filename */
 
@@ -671,9 +639,11 @@ AdCreateTableHeader (
     /* Open the ASL definition block */
 
     AcpiOsPrintf (
-        "DefinitionBlock (\"%s\", \"%4.4s\", %hd, \"%.6s\", \"%.8s\", 0x%8.8X)\n",
+        "DefinitionBlock (\"%s\", \"%4.4s\", %hu, \"%.6s\", \"%.8s\", 0x%8.8X)\n",
         NewFilename, Table->Signature, Table->Revision,
         Table->OemId, Table->OemTableId, Table->OemRevision);
+
+    ACPI_FREE (NewFilename);
 }
 
 
@@ -728,9 +698,9 @@ AdDisplayTables (
  *
  * FUNCTION:    AdDeferredParse
  *
- * PARAMETERS:  Op              - Root Op of the deferred opcode
- *              Aml             - Pointer to the raw AML
- *              AmlLength       - Length of the AML
+ * PARAMETERS:  Op                  - Root Op of the deferred opcode
+ *              Aml                 - Pointer to the raw AML
+ *              AmlLength           - Length of the AML
  *
  * RETURN:      Status
  *
@@ -739,7 +709,7 @@ AdDisplayTables (
  *
  *****************************************************************************/
 
-ACPI_STATUS
+static ACPI_STATUS
 AdDeferredParse (
     ACPI_PARSE_OBJECT       *Op,
     UINT8                   *Aml,
@@ -854,7 +824,7 @@ AdDeferredParse (
  *
  * FUNCTION:    AdParseDeferredOps
  *
- * PARAMETERS:  Root            - Root of the parse tree
+ * PARAMETERS:  Root                - Root of the parse tree
  *
  * RETURN:      Status
  *
@@ -862,7 +832,7 @@ AdDeferredParse (
  *
  *****************************************************************************/
 
-ACPI_STATUS
+static ACPI_STATUS
 AdParseDeferredOps (
     ACPI_PARSE_OBJECT       *Root)
 {
@@ -904,6 +874,7 @@ AdParseDeferredOps (
         case AML_CREATE_BYTE_FIELD_OP:
         case AML_CREATE_BIT_FIELD_OP:
         case AML_CREATE_FIELD_OP:
+        case AML_BANK_FIELD_OP:
 
             /* Nothing to do in these cases */
 
@@ -927,8 +898,8 @@ AdParseDeferredOps (
  *
  * FUNCTION:    AdGetLocalTables
  *
- * PARAMETERS:  Filename        - Not used
- *              GetAllTables    - TRUE if all tables are desired
+ * PARAMETERS:  Filename            - Not used
+ *              GetAllTables        - TRUE if all tables are desired
  *
  * RETURN:      Status
  *
@@ -946,7 +917,7 @@ AdGetLocalTables (
     ACPI_TABLE_HEADER       *NewTable;
     UINT32                  NumTables;
     UINT32                  PointerSize;
-    ACPI_NATIVE_UINT        TableIndex;
+    UINT32                  TableIndex;
 
 
     if (GetAllTables)
@@ -957,6 +928,11 @@ AdGetLocalTables (
         {
             fprintf (stderr, "Could not obtain RSDT\n");
             return AE_NO_ACPI_TABLES;
+        }
+        else
+        {
+            AdWriteTable (NewTable, NewTable->Length,
+                ACPI_SIG_RSDT, NewTable->OemTableId);
         }
 
         if (ACPI_COMPARE_NAME (NewTable->Signature, ACPI_SIG_RSDT))
@@ -975,7 +951,7 @@ AdGetLocalTables (
          * is architecture-dependent.
          */
         NumTables = (NewTable->Length - sizeof (ACPI_TABLE_HEADER)) / PointerSize;
-        AcpiOsPrintf ("There are %d tables defined in the %4.4s\n\n",
+        AcpiOsPrintf ("There are %u tables defined in the %4.4s\n\n",
             NumTables, NewTable->Signature);
 
         /* Get the FADT */
@@ -1005,6 +981,11 @@ AdGetLocalTables (
 
         Status = AcpiTbStoreTable (0, NewTable, NewTable->Length,
                     0, &TableIndex);
+        if (ACPI_FAILURE (Status))
+        {
+            fprintf (stderr, "Could not store DSDT\n");
+            return AE_NO_ACPI_TABLES;
+        }
     }
     else
     {
@@ -1036,7 +1017,10 @@ AdGetLocalTables (
  *
  * FUNCTION:    AdParseTable
  *
- * PARAMETERS:  Table           - Pointer to the raw table
+ * PARAMETERS:  Table               - Pointer to the raw table
+ *              OwnerId             - Returned OwnerId of the table
+ *              LoadTable           - If add table to the global table list
+ *              External            - If this is an external table
  *
  * RETURN:      Status
  *
@@ -1046,13 +1030,16 @@ AdGetLocalTables (
 
 ACPI_STATUS
 AdParseTable (
-    ACPI_TABLE_HEADER       *Table)
+    ACPI_TABLE_HEADER       *Table,
+    ACPI_OWNER_ID           *OwnerId,
+    BOOLEAN                 LoadTable,
+    BOOLEAN                 External)
 {
     ACPI_STATUS             Status = AE_OK;
     ACPI_WALK_STATE         *WalkState;
     UINT8                   *AmlStart;
     UINT32                  AmlLength;
-    ACPI_NATIVE_UINT        TableIndex;
+    UINT32                  TableIndex;
 
 
     if (!Table)
@@ -1100,21 +1087,48 @@ AdParseTable (
         return Status;
     }
 
+    /* If LoadTable is FALSE, we are parsing the last loaded table */
+
+    TableIndex = AcpiGbl_RootTableList.CurrentTableCount - 1;
+
     /* Pass 2 */
 
-    Status = AcpiTbStoreTable ((ACPI_NATIVE_UINT) Table, Table,
-                Table->Length, ACPI_TABLE_ORIGIN_ALLOCATED, &TableIndex);
-    if (ACPI_FAILURE (Status))
+    if (LoadTable)
     {
-        return Status;
+        Status = AcpiTbStoreTable ((ACPI_PHYSICAL_ADDRESS) Table, Table,
+                    Table->Length, ACPI_TABLE_ORIGIN_ALLOCATED, &TableIndex);
+        if (ACPI_FAILURE (Status))
+        {
+            return Status;
+        }
+        Status = AcpiTbAllocateOwnerId (TableIndex);
+        if (ACPI_FAILURE (Status))
+        {
+            return Status;
+        }
+        if (OwnerId)
+        {
+            Status = AcpiTbGetOwnerId (TableIndex, OwnerId);
+            if (ACPI_FAILURE (Status))
+            {
+                return Status;
+            }
+        }
     }
 
     fprintf (stderr, "Pass 2 parse of [%4.4s]\n", (char *) Table->Signature);
 
-    Status = AcpiNsOneCompleteParse (ACPI_IMODE_LOAD_PASS2, 0);
+    Status = AcpiNsOneCompleteParse (ACPI_IMODE_LOAD_PASS2, TableIndex, NULL);
     if (ACPI_FAILURE (Status))
     {
         return (Status);
+    }
+
+    /* No need to parse control methods of external table */
+
+    if (External)
+    {
+        return AE_OK;
     }
 
     /* Pass 3: Parse control methods and link their parse trees into the main parse tree */

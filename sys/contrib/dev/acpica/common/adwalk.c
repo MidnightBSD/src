@@ -1,128 +1,55 @@
 /******************************************************************************
  *
  * Module Name: adwalk - Application-level disassembler parse tree walk routines
- *              $Revision: 1.1 $
  *
  *****************************************************************************/
 
-/******************************************************************************
- *
- * 1. Copyright Notice
- *
- * Some or all of this work - Copyright (c) 1999 - 2007, Intel Corp.
+/*
+ * Copyright (C) 2000 - 2011, Intel Corp.
  * All rights reserved.
  *
- * 2. License
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions, and the following disclaimer,
+ *    without modification.
+ * 2. Redistributions in binary form must reproduce at minimum a disclaimer
+ *    substantially similar to the "NO WARRANTY" disclaimer below
+ *    ("Disclaimer") and any redistribution must be conditioned upon
+ *    including a substantially similar Disclaimer requirement for further
+ *    binary redistribution.
+ * 3. Neither the names of the above-listed copyright holders nor the names
+ *    of any contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
  *
- * 2.1. This is your license from Intel Corp. under its intellectual property
- * rights.  You may have additional license terms from the party that provided
- * you this software, covering your right to use that party's intellectual
- * property rights.
+ * Alternatively, this software may be distributed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
  *
- * 2.2. Intel grants, free of charge, to any person ("Licensee") obtaining a
- * copy of the source code appearing in this file ("Covered Code") an
- * irrevocable, perpetual, worldwide license under Intel's copyrights in the
- * base code distributed originally by Intel ("Original Intel Code") to copy,
- * make derivatives, distribute, use and display any portion of the Covered
- * Code in any form, with the right to sublicense such rights; and
- *
- * 2.3. Intel grants Licensee a non-exclusive and non-transferable patent
- * license (with the right to sublicense), under only those claims of Intel
- * patents that are infringed by the Original Intel Code, to make, use, sell,
- * offer to sell, and import the Covered Code and derivative works thereof
- * solely to the minimum extent necessary to exercise the above copyright
- * license, and in no event shall the patent license extend to any additions
- * to or modifications of the Original Intel Code.  No other license or right
- * is granted directly or by implication, estoppel or otherwise;
- *
- * The above copyright and patent license is granted only if the following
- * conditions are met:
- *
- * 3. Conditions
- *
- * 3.1. Redistribution of Source with Rights to Further Distribute Source.
- * Redistribution of source code of any substantial portion of the Covered
- * Code or modification with rights to further distribute source must include
- * the above Copyright Notice, the above License, this list of Conditions,
- * and the following Disclaimer and Export Compliance provision.  In addition,
- * Licensee must cause all Covered Code to which Licensee contributes to
- * contain a file documenting the changes Licensee made to create that Covered
- * Code and the date of any change.  Licensee must include in that file the
- * documentation of any changes made by any predecessor Licensee.  Licensee
- * must include a prominent statement that the modification is derived,
- * directly or indirectly, from Original Intel Code.
- *
- * 3.2. Redistribution of Source with no Rights to Further Distribute Source.
- * Redistribution of source code of any substantial portion of the Covered
- * Code or modification without rights to further distribute source must
- * include the following Disclaimer and Export Compliance provision in the
- * documentation and/or other materials provided with distribution.  In
- * addition, Licensee may not authorize further sublicense of source of any
- * portion of the Covered Code, and must include terms to the effect that the
- * license from Licensee to its licensee is limited to the intellectual
- * property embodied in the software Licensee provides to its licensee, and
- * not to intellectual property embodied in modifications its licensee may
- * make.
- *
- * 3.3. Redistribution of Executable. Redistribution in executable form of any
- * substantial portion of the Covered Code or modification must reproduce the
- * above Copyright Notice, and the following Disclaimer and Export Compliance
- * provision in the documentation and/or other materials provided with the
- * distribution.
- *
- * 3.4. Intel retains all right, title, and interest in and to the Original
- * Intel Code.
- *
- * 3.5. Neither the name Intel nor any other trademark owned or controlled by
- * Intel shall be used in advertising or otherwise to promote the sale, use or
- * other dealings in products derived from or relating to the Covered Code
- * without prior written authorization from Intel.
- *
- * 4. Disclaimer and Export Compliance
- *
- * 4.1. INTEL MAKES NO WARRANTY OF ANY KIND REGARDING ANY SOFTWARE PROVIDED
- * HERE.  ANY SOFTWARE ORIGINATING FROM INTEL OR DERIVED FROM INTEL SOFTWARE
- * IS PROVIDED "AS IS," AND INTEL WILL NOT PROVIDE ANY SUPPORT,  ASSISTANCE,
- * INSTALLATION, TRAINING OR OTHER SERVICES.  INTEL WILL NOT PROVIDE ANY
- * UPDATES, ENHANCEMENTS OR EXTENSIONS.  INTEL SPECIFICALLY DISCLAIMS ANY
- * IMPLIED WARRANTIES OF MERCHANTABILITY, NONINFRINGEMENT AND FITNESS FOR A
- * PARTICULAR PURPOSE.
- *
- * 4.2. IN NO EVENT SHALL INTEL HAVE ANY LIABILITY TO LICENSEE, ITS LICENSEES
- * OR ANY OTHER THIRD PARTY, FOR ANY LOST PROFITS, LOST DATA, LOSS OF USE OR
- * COSTS OF PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES, OR FOR ANY INDIRECT,
- * SPECIAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THIS AGREEMENT, UNDER ANY
- * CAUSE OF ACTION OR THEORY OF LIABILITY, AND IRRESPECTIVE OF WHETHER INTEL
- * HAS ADVANCE NOTICE OF THE POSSIBILITY OF SUCH DAMAGES.  THESE LIMITATIONS
- * SHALL APPLY NOTWITHSTANDING THE FAILURE OF THE ESSENTIAL PURPOSE OF ANY
- * LIMITED REMEDY.
- *
- * 4.3. Licensee shall not export, either directly or indirectly, any of this
- * software or system incorporating such software without first obtaining any
- * required license or other approval from the U. S. Department of Commerce or
- * any other agency or department of the United States Government.  In the
- * event Licensee exports any such software from the United States or
- * re-exports any such software from a foreign destination, Licensee shall
- * ensure that the distribution and export/re-export of the software is in
- * compliance with all laws, regulations, orders, or other restrictions of the
- * U.S. Export Administration Regulations. Licensee agrees that neither it nor
- * any of its subsidiaries will export/re-export any technical data, process,
- * software, or service, directly or indirectly, to any country for which the
- * United States government or any agency thereof requires an export license,
- * other governmental approval, or letter of assurance, without first obtaining
- * such license, approval or letter.
- *
- *****************************************************************************/
+ * NO WARRANTY
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDERS OR CONTRIBUTORS BE LIABLE FOR SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+ * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGES.
+ */
 
 
-#include <contrib/dev/acpica/acpi.h>
-#include <contrib/dev/acpica/acparser.h>
-#include <contrib/dev/acpica/amlcode.h>
-#include <contrib/dev/acpica/acdebug.h>
-#include <contrib/dev/acpica/acdisasm.h>
-#include <contrib/dev/acpica/acdispat.h>
-#include <contrib/dev/acpica/acnamesp.h>
-#include <contrib/dev/acpica/acapps.h>
+#include <contrib/dev/acpica/include/acpi.h>
+#include <contrib/dev/acpica/include/accommon.h>
+#include <contrib/dev/acpica/include/acparser.h>
+#include <contrib/dev/acpica/include/amlcode.h>
+#include <contrib/dev/acpica/include/acdisasm.h>
+#include <contrib/dev/acpica/include/acdispat.h>
+#include <contrib/dev/acpica/include/acnamesp.h>
+#include <contrib/dev/acpica/include/acapps.h>
 
 
 #define _COMPONENT          ACPI_TOOLS
@@ -184,7 +111,7 @@ AcpiDmResourceDescendingOp (
  *
  * FUNCTION:    AcpiDmDumpTree
  *
- * PARAMETERS:  Origin          - Starting object
+ * PARAMETERS:  Origin              - Starting object
  *
  * RETURN:      None
  *
@@ -218,7 +145,7 @@ AcpiDmDumpTree (
  *
  * FUNCTION:    AcpiDmFindOrphanMethods
  *
- * PARAMETERS:  Origin          - Starting object
+ * PARAMETERS:  Origin              - Starting object
  *
  * RETURN:      None
  *
@@ -252,6 +179,7 @@ AcpiDmFindOrphanMethods (
  *
  * PARAMETERS:  ParseTreeRoot       - Root of the parse tree
  *              NamespaceRoot       - Root of the internal namespace
+ *              OwnerId             - OwnerId of the table to be disassembled
  *
  * RETURN:      None
  *
@@ -263,7 +191,8 @@ AcpiDmFindOrphanMethods (
 void
 AcpiDmFinishNamespaceLoad (
     ACPI_PARSE_OBJECT       *ParseTreeRoot,
-    ACPI_NAMESPACE_NODE     *NamespaceRoot)
+    ACPI_NAMESPACE_NODE     *NamespaceRoot,
+    ACPI_OWNER_ID           OwnerId)
 {
     ACPI_STATUS             Status;
     ACPI_OP_WALK_INFO       Info;
@@ -277,7 +206,7 @@ AcpiDmFinishNamespaceLoad (
 
     /* Create and initialize a new walk state */
 
-    WalkState = AcpiDsCreateWalkState (0, ParseTreeRoot, NULL, NULL);
+    WalkState = AcpiDsCreateWalkState (OwnerId, ParseTreeRoot, NULL, NULL);
     if (!WalkState)
     {
         return;
@@ -304,6 +233,7 @@ AcpiDmFinishNamespaceLoad (
  *
  * PARAMETERS:  ParseTreeRoot       - Root of the parse tree
  *              NamespaceRoot       - Root of the internal namespace
+ *              OwnerId             - OwnerId of the table to be disassembled
  *
  * RETURN:      None
  *
@@ -314,7 +244,8 @@ AcpiDmFinishNamespaceLoad (
 void
 AcpiDmCrossReferenceNamespace (
     ACPI_PARSE_OBJECT       *ParseTreeRoot,
-    ACPI_NAMESPACE_NODE     *NamespaceRoot)
+    ACPI_NAMESPACE_NODE     *NamespaceRoot,
+    ACPI_OWNER_ID           OwnerId)
 {
     ACPI_STATUS             Status;
     ACPI_OP_WALK_INFO       Info;
@@ -328,7 +259,7 @@ AcpiDmCrossReferenceNamespace (
 
     /* Create and initialize a new walk state */
 
-    WalkState = AcpiDsCreateWalkState (0, ParseTreeRoot, NULL, NULL);
+    WalkState = AcpiDsCreateWalkState (OwnerId, ParseTreeRoot, NULL, NULL);
     if (!WalkState)
     {
         return;
@@ -422,7 +353,6 @@ AcpiDmDumpDescending (
     void                    *Context)
 {
     ACPI_OP_WALK_INFO       *Info = Context;
-    const ACPI_OPCODE_INFO  *OpInfo;
     char                    *Path;
 
 
@@ -431,11 +361,9 @@ AcpiDmDumpDescending (
         return (AE_OK);
     }
 
-    OpInfo = AcpiPsGetOpcodeInfo (Op->Common.AmlOpcode);
-    Info->Count++;
-
     /* Most of the information (count, level, name) here */
 
+    Info->Count++;
     AcpiOsPrintf ("% 5d [%2.2d] ", Info->Count, Level);
     AcpiDmIndent (Level);
     AcpiOsPrintf ("%-28s", AcpiPsGetOpcodeName (Op->Common.AmlOpcode));
@@ -468,7 +396,10 @@ AcpiDmDumpDescending (
     case AML_METHOD_OP:
     case AML_DEVICE_OP:
     case AML_INT_NAMEDFIELD_OP:
-        AcpiOsPrintf ("%4.4s", &Op->Named.Name);
+        AcpiOsPrintf ("%4.4s", ACPI_CAST_PTR (char, &Op->Named.Name));
+        break;
+
+    default:
         break;
     }
 
@@ -529,22 +460,22 @@ AcpiDmFindOrphanDescending (
             {
                 /* This NamePath has no args, assume it is an integer */
 
-                AcpiDmAddToExternalList (ChildOp->Common.Value.String, ACPI_TYPE_INTEGER, 0);
+                AcpiDmAddToExternalList (ChildOp, ChildOp->Common.Value.String, ACPI_TYPE_INTEGER, 0);
                 return (AE_OK);
             }
 
             ArgCount = AcpiDmInspectPossibleArgs (3, 1, NextOp);
-            AcpiOsPrintf ("/* A-CHILDREN: %d Actual %d */\n", ArgCount, AcpiDmCountChildren (Op));
+            AcpiOsPrintf ("/* A-CHILDREN: %u Actual %u */\n", ArgCount, AcpiDmCountChildren (Op));
 
             if (ArgCount < 1)
             {
                 /* One Arg means this is just a Store(Name,Target) */
 
-                AcpiDmAddToExternalList (ChildOp->Common.Value.String, ACPI_TYPE_INTEGER, 0);
+                AcpiDmAddToExternalList (ChildOp, ChildOp->Common.Value.String, ACPI_TYPE_INTEGER, 0);
                 return (AE_OK);
             }
 
-            AcpiDmAddToExternalList (ChildOp->Common.Value.String, ACPI_TYPE_METHOD, ArgCount);
+            AcpiDmAddToExternalList (ChildOp, ChildOp->Common.Value.String, ACPI_TYPE_METHOD, ArgCount);
         }
         break;
 #endif
@@ -560,7 +491,7 @@ AcpiDmFindOrphanDescending (
             {
                 /* This NamePath has no args, assume it is an integer */
 
-                AcpiDmAddToExternalList (ChildOp->Common.Value.String, ACPI_TYPE_INTEGER, 0);
+                AcpiDmAddToExternalList (ChildOp, ChildOp->Common.Value.String, ACPI_TYPE_INTEGER, 0);
                 return (AE_OK);
             }
 
@@ -569,11 +500,11 @@ AcpiDmFindOrphanDescending (
             {
                 /* One Arg means this is just a Store(Name,Target) */
 
-                AcpiDmAddToExternalList (ChildOp->Common.Value.String, ACPI_TYPE_INTEGER, 0);
+                AcpiDmAddToExternalList (ChildOp, ChildOp->Common.Value.String, ACPI_TYPE_INTEGER, 0);
                 return (AE_OK);
             }
 
-            AcpiDmAddToExternalList (ChildOp->Common.Value.String, ACPI_TYPE_METHOD, ArgCount);
+            AcpiDmAddToExternalList (ChildOp, ChildOp->Common.Value.String, ACPI_TYPE_METHOD, ArgCount);
         }
         break;
 
@@ -604,7 +535,7 @@ AcpiDmFindOrphanDescending (
                      /* And namepath is the first argument */
                      (ParentOp->Common.Value.Arg == Op))
                 {
-                    AcpiDmAddToExternalList (Op->Common.Value.String, ACPI_TYPE_INTEGER, 0);
+                    AcpiDmAddToExternalList (Op, Op->Common.Value.String, ACPI_TYPE_INTEGER, 0);
                     break;
                 }
             }
@@ -614,9 +545,12 @@ AcpiDmFindOrphanDescending (
              * operator) - it *must* be a method invocation, nothing else is
              * grammatically possible.
              */
-            AcpiDmAddToExternalList (Op->Common.Value.String, ACPI_TYPE_METHOD, ArgCount);
+            AcpiDmAddToExternalList (Op, Op->Common.Value.String, ACPI_TYPE_METHOD, ArgCount);
 
         }
+        break;
+
+    default:
         break;
     }
 
@@ -650,6 +584,9 @@ AcpiDmLoadDescendingOp (
     char                    *Path = NULL;
     ACPI_PARSE_OBJECT       *NextOp;
     ACPI_NAMESPACE_NODE     *Node;
+    char                    FieldPath[5];
+    BOOLEAN                 PreDefined = FALSE;
+    UINT8                   PreDefineIndex = 0;
 
 
     WalkState = Info->WalkState;
@@ -672,6 +609,13 @@ AcpiDmLoadDescendingOp (
         /* For all named operators, get the new name */
 
         Path = (char *) Op->Named.Path;
+
+        if (!Path && Op->Common.AmlOpcode == AML_INT_NAMEDFIELD_OP)
+        {
+            *ACPI_CAST_PTR (UINT32, &FieldPath[0]) = Op->Named.Name;
+            FieldPath[4] = 0;
+            Path = FieldPath;
+        }
     }
     else if (OpInfo->Flags & AML_CREATE)
     {
@@ -698,6 +642,36 @@ AcpiDmLoadDescendingOp (
                 WalkState, &Node);
 
     Op->Common.Node = Node;
+
+    if (ACPI_SUCCESS (Status))
+    {
+        /* Check if it's a predefined node */
+
+        while (AcpiGbl_PreDefinedNames[PreDefineIndex].Name)
+        {
+            if (!ACPI_STRNCMP (Node->Name.Ascii,
+                AcpiGbl_PreDefinedNames[PreDefineIndex].Name, 4))
+            {
+                PreDefined = TRUE;
+                break;
+            }
+
+            PreDefineIndex++;
+        }
+
+        /*
+         * Set node owner id if it satisfies all the following conditions:
+         * 1) Not a predefined node, _SB_ etc
+         * 2) Not the root node
+         * 3) Not a node created by Scope
+         */
+
+        if (!PreDefined && Node != AcpiGbl_RootNode &&
+            Op->Common.AmlOpcode != AML_SCOPE_OP)
+        {
+            Node->OwnerId = WalkState->OwnerId;
+        }
+    }
 
 
 Exit:
@@ -740,10 +714,13 @@ AcpiDmXrefDescendingOp (
     const ACPI_OPCODE_INFO  *OpInfo;
     ACPI_WALK_STATE         *WalkState;
     ACPI_OBJECT_TYPE        ObjectType;
+    ACPI_OBJECT_TYPE        ObjectType2;
     ACPI_STATUS             Status;
     char                    *Path = NULL;
     ACPI_PARSE_OBJECT       *NextOp;
     ACPI_NAMESPACE_NODE     *Node;
+    ACPI_OPERAND_OBJECT     *Object;
+    UINT32                  ParamCount = 0;
 
 
     WalkState = Info->WalkState;
@@ -806,7 +783,7 @@ AcpiDmXrefDescendingOp (
     {
         if (Status == AE_NOT_FOUND)
         {
-            AcpiDmAddToExternalList (Path, (UINT8) ObjectType, 0);
+            AcpiDmAddToExternalList (Op, Path, (UINT8) ObjectType, 0);
 
             /*
              * We could install this into the namespace, but we catch duplicate
@@ -818,6 +795,28 @@ AcpiDmXrefDescendingOp (
                        WalkState, &Node);
 #endif
         }
+    }
+
+    /*
+     * Found the node in external table, add it to external list
+     * Node->OwnerId == 0 indicates built-in ACPI Names, _OS_ etc
+     */
+    else if (Node->OwnerId && WalkState->OwnerId != Node->OwnerId)
+    {
+        ObjectType2 = ObjectType;
+
+        Object = AcpiNsGetAttachedObject (Node);
+        if (Object)
+        {
+            ObjectType2 = Object->Common.Type;
+            if (ObjectType2 == ACPI_TYPE_METHOD)
+            {
+                ParamCount = Object->Method.ParamCount;
+            }
+        }
+
+        AcpiDmAddToExternalList (Op, Path, (UINT8) ObjectType2, ParamCount);
+        Op->Common.Node = Node;
     }
     else
     {
