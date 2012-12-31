@@ -1,3 +1,5 @@
+.include <bsd.own.mk>
+
 .include "../Makefile.inc0"
 .PATH:	${SRCDIR}/src ${SRCDIR}/man
 
@@ -16,7 +18,9 @@ SRCS=		analyze.c \
 		side.c \
 		util.c
 
-DPADD+=  ${LIBICONV}
-LDADD+=  -liconv
+#.if ${MK_ICONV} != "no"
+#DPADD+=  ${LIBICONV}
+#LDADD+=  -liconv
+#.endif
 
 .include <bsd.prog.mk>

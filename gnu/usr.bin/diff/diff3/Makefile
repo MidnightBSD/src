@@ -5,7 +5,9 @@ PROG=		diff3
 CFLAGS+=	-I${SRCDIR}/lib -I${.CURDIR}/../libdiffutils
 CFLAGS+=	-I${.CURDIR}/../diff -I${.CURDIR}/../libver
 
-DPADD+=  ${LIBICONV}
-LDADD+=  -liconv
+#.if ${MK_ICONV} != "no"
+#DPADD+=  ${LIBICONV}
+#LDADD+=  -liconv
+#.endif
 
 .include <bsd.prog.mk>

@@ -1,3 +1,5 @@
+.include <bsd.own.mk>
+
 .include 	"../Makefile.inc"
 
 LIB=		diffutils
@@ -74,5 +76,12 @@ SRCS=	c-stack.c \
 	u8-uctomb.c \
 	u8-uctomb-aux.c \
 	strerror-override.c
+
+
+#.if ${MK_ICONV} != "no"
+#DPADD+=	${LIBICONV}
+#LDADD+=	-liconv
+#CFLAGS+=	-DHAVE_ICONV=1
+#.endif
 
 .include <bsd.lib.mk>
