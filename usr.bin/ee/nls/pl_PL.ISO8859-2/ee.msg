@@ -3,7 +3,7 @@ $ ee.i18n.guide for more information
 $ 
 $ For ee patchlevel 3
 $ 
-$ $FreeBSD: src/usr.bin/ee/nls/pl_PL.ISO8859-2/ee.msg,v 1.6 2005/02/27 19:42:48 phantom Exp $
+$ $MidnightBSD$
 $ 
 $ 
 $set 1
@@ -110,7 +110,7 @@ $quote "
 100 "           ...szukam"
 101 "napis \"%s\" nie zosta³ znaleziony"
 102 "szukaj: "
-103 "nie mo¿na wykonaæ %s"
+103 "nie mo¿na wykonaæ %s\n"
 104 "naci¶nij Enter ¿eby kontynuowaæ "
 105 "naci¶nij Esc ¿eby anulowaæ"
 106 "menu zbyt du¿e dla tego okna"

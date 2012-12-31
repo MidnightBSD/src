@@ -3,7 +3,7 @@ $ ee.i18n.guide for more information
 $ 
 $ For ee patchlevel 3
 $ 
-$ $FreeBSD: src/usr.bin/ee/nls/de_DE.ISO8859-1/ee.msg,v 1.9 2001/03/28 21:33:30 joerg Exp $
+$ $MidnightBSD$
 $ 
 $ 
 $set 1
@@ -110,7 +110,7 @@ $quote "
 100 "           ...Suche läuft"
 101 "Zeichenfolge \"%s\" nicht gefunden"
 102 "Suchen nach: "
-103 "Kann %s nicht ausführen"
+103 "Kann %s nicht ausführen\n"
 104 "Bitte die Eingabetaste drücken "
 105 "Escape zum Beenden"
 106 "Menü ist zu groß für das Fenster"
