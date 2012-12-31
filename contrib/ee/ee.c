@@ -50,19 +50,19 @@
  |	proprietary information which is protected by
  |	copyright.  All rights are reserved.
  |
- |	$Header: /home/cvs/src/contrib/ee/ee.c,v 1.1.1.1 2012-12-31 07:46:38 laffer1 Exp $
+ |	$Header: /home/cvs/src/contrib/ee/ee.c,v 1.2 2012-12-31 07:47:11 laffer1 Exp $
  |
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 char *ee_copyright_message = 
 "Copyright (c) 1986, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 2009 Hugh Mahon ";
 
 #include "ee_version.h"
 
-char *version = "@(#) ee, version "  EE_VERSION  " $Revision: 1.1.1.1 $";
+char *version = "@(#) ee, version "  EE_VERSION  " $Revision: 1.2 $";
 
 #ifdef NCURSE
 #include "new_curse.h"
