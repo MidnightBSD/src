@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/usr.bin/progress/progress.c,v 1.3 2012/12/02 06:31:46 laffer1 Exp $ */
+/* $MidnightBSD: src/usr.bin/progress/progress.c,v 1.4 2012/12/31 17:14:39 laffer1 Exp $ */
 /*	$NetBSD: progress.c,v 1.17 2008/05/26 04:53:11 dholland Exp $ */
 
 /*-
@@ -33,9 +33,10 @@
 #include <sys/cdefs.h>
 #ifndef lint
 __RCSID("$NetBSD: progress.c,v 1.17 2008/05/26 04:53:11 dholland Exp $");
-#endif				/* not lint */
-__MBSDID("$MidnightBSD: src/usr.bin/progress/progress.c,v 1.3 2012/12/02 06:31:46 laffer1 Exp $");
+#endif
+__MBSDID("$MidnightBSD: src/usr.bin/progress/progress.c,v 1.4 2012/12/31 17:14:39 laffer1 Exp $");
 
+#include <sys/ttycom.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
@@ -95,7 +96,7 @@ main(int argc, char *argv[])
 	ssize_t nr, nw, off;
 	size_t buffersize;
 	struct stat statb;
-	struct ttysize ts;
+	struct winsize ts; /* tty struct winsize */
 
 	setprogname(argv[0]);
 
@@ -207,10 +208,10 @@ main(int argc, char *argv[])
 	progress = 1;
 	ttyout = eflag ? stderr : stdout;
 
-	if (ioctl(fileno(ttyout), TIOCGSIZE, &ts) == -1)
+	if (ioctl(fileno(ttyout), TIOCGWINSZ, &ts) == -1)
 		ttywidth = 80;
 	else
-		ttywidth = ts.ts_cols;
+		ttywidth = ts.ws_col;
 
 	fb_buf = malloc(buffersize);
 	if (fb_buf == NULL)
