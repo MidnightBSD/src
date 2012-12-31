@@ -5,6 +5,8 @@ SQLITEDIR=	${.CURDIR}/../../contrib/sqlite3
 
 CFLAGS+=	-DHAVE_READLINE=1 -DSQLITE_ENABLE_FTS3
 
+WARNS?=		0
+
 DPADD=		${LIBSQLITE3} ${LIBREADLINE}
 LDADD=		-lsqlite3 -lreadline
 
