@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/ftp/Makefile,v 1.17 2004/02/05 22:44:24 ru Exp $
+# $MidnightBSD$
 #	$NetBSD: Makefile,v 1.15 1997/10/18 15:31:20 lukem Exp $
 #	from: @(#)Makefile	8.2 (Berkeley) 4/3/94
 
@@ -19,15 +19,15 @@ SRCS=	cmds.c cmdtab.c complete.c domacro.c fetch.c ftp.c main.c \
 CFLAGS+= -DINET6
 .endif
 
-CFLAGS+=-I${.CURDIR} -I${LUKEMFTP}
+CFLAGS+= -I${.CURDIR} -I${LUKEMFTP}
 LDADD=	-ledit -ltermcap -lutil
 DPADD=	${LIBEDIT} ${LIBTERMCAP} ${LIBUTIL}
+
+WARNS?=	2
 
 LINKS=	${BINDIR}/ftp ${BINDIR}/pftp \
 	${BINDIR}/ftp ${BINDIR}/gate-ftp
 MLINKS=	ftp.1 pftp.1 \
 	ftp.1 gate-ftp.1
-
-WARNS?=	2
 
 .include <bsd.prog.mk>
