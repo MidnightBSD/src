@@ -1,10 +1,11 @@
-# $FreeBSD: src/usr.bin/less/Makefile.common,v 1.4 2003/06/06 13:46:55 kuriyama Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/usr.bin/less/Makefile.common,v 1.2 2007/04/10 22:05:46 laffer1 Exp $
 
 LSDIR=	${.CURDIR}/../../contrib/less
 .PATH:	${LSDIR}
 
 CFLAGS+=-I${.CURDIR}/../less -I${LSDIR}
+
+WARNS?=	1
 
 .SUFFIXES: .nro .1
 
