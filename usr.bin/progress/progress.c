@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/usr.bin/progress/progress.c,v 1.2 2012/12/02 06:26:32 laffer1 Exp $ */
+/* $MidnightBSD: src/usr.bin/progress/progress.c,v 1.3 2012/12/02 06:31:46 laffer1 Exp $ */
 /*	$NetBSD: progress.c,v 1.17 2008/05/26 04:53:11 dholland Exp $ */
 
 /*-
@@ -34,7 +34,7 @@
 #ifndef lint
 __RCSID("$NetBSD: progress.c,v 1.17 2008/05/26 04:53:11 dholland Exp $");
 #endif				/* not lint */
-__MBSDID("$MidnightBSD: src/usr.bin/progress/progress.c,v 1.2 2012/12/02 06:26:32 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.bin/progress/progress.c,v 1.3 2012/12/02 06:31:46 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -50,6 +50,7 @@ __MBSDID("$MidnightBSD: src/usr.bin/progress/progress.c,v 1.2 2012/12/02 06:26:3
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ttyent.h>
 #include <unistd.h>
 
 #define GLOBAL			/* force GLOBAL decls in progressbar.h to be
