@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: decl.c,v 1.29 2002/01/18 21:01:39 thorpej Exp $ */
 
 /*
@@ -37,7 +36,7 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: decl.c,v 1.29 2002/01/18 21:01:39 thorpej Exp $");
 #endif
-__FBSDID("$FreeBSD: src/usr.bin/xlint/lint1/decl.c,v 1.12 2003/01/01 18:13:44 schweikh Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <limits.h>
@@ -415,9 +414,6 @@ tdeferr(type_t *td, tspec_t t)
 	case ULONG:
 	case UINT:
 	case INT:
-		break;
-
-	case NTSPEC:	/* this value unused */
 		break;
 	}
 
@@ -826,15 +822,15 @@ getbound(type_t *tp)
 	} else if (t == FUNC) {
 		/* compiler takes alignment of function */
 		error(14);
-		a = ALIGN(1) * CHAR_BIT;
+		a = LINT_ALIGN(1) * CHAR_BIT;
 	} else {
 		if ((a = size(t)) == 0) {
 			a = CHAR_BIT;
-		} else if (a > ALIGN(1) * CHAR_BIT) {
-			a = ALIGN(1) * CHAR_BIT;
+		} else if (a > LINT_ALIGN(1) * CHAR_BIT) {
+			a = LINT_ALIGN(1) * CHAR_BIT;
 		}
 	}
-	if (a < CHAR_BIT || a > ALIGN(1) * CHAR_BIT)
+	if (a < CHAR_BIT || a > LINT_ALIGN(1) * CHAR_BIT)
 		lerror("getbound() 1");
 	return (a);
 }

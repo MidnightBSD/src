@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: mem1.c,v 1.7 2002/01/31 19:36:54 tv Exp $	*/
 
 /*
@@ -36,11 +35,12 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: mem1.c,v 1.7 2002/01/31 19:36:54 tv Exp $");
 #endif
-__FBSDID("$FreeBSD: src/usr.bin/xlint/lint1/mem1.c,v 1.9 2002/07/19 16:38:20 markm Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/param.h>
+#include <err.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -203,7 +203,7 @@ xgetblk(mbl_t **mbp, size_t s)
 	void	*p;
 	size_t	t = 0;
 
-	s = ALIGN(s);
+	s = LINT_ALIGN(s);
 	if ((mb = *mbp) == NULL || mb->nfree < s) {
 		if ((mb = frmblks) == NULL) {
 			if (s > mblklen) {
@@ -218,7 +218,7 @@ xgetblk(mbl_t **mbp, size_t s)
 			frmblks = mb->nxt;
 		}
 		mb->ffree = mb->blk;
-		mb->nfree = mb->size;;
+		mb->nfree = mb->size;
 		mb->nxt = *mbp;
 		*mbp = mb;
 	}

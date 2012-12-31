@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: msg.c,v 1.6 2002/01/21 19:49:52 tv Exp $	*/
 
 /*
@@ -33,6 +32,7 @@
  */
 
 #include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: msg.c,v 1.6 2002/01/21 19:49:52 tv Exp $");
 #endif
@@ -128,7 +128,7 @@ mkpos(pos_t *posp)
 	if (len > blen)
 		buf = xrealloc(buf, blen = len);
 	if (line != 0) {
-		(void)sprintf(buf, "%s%s(%hu)",
+		(void)sprintf(buf, "%s%s(%d)",
 			      fn, qm ? "?" : "", line);
 	} else {
 		(void)sprintf(buf, "%s", fn);

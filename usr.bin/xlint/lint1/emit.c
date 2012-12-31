@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: emit.c,v 1.2 1995/07/03 21:24:00 cgd Exp $	*/
 
 /*
@@ -31,7 +30,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/xlint/lint1/emit.c,v 1.2 2002/03/22 01:42:44 imp Exp $
+ * $MidnightBSD$
  */
 
 #ifndef lint
@@ -219,7 +218,7 @@ outint(i)
 
 /*
  * write the name of a symbol to the output buffer
- * the name is preceeded by its length
+ * the name is preceded by its length
  */
 void
 outname(name)

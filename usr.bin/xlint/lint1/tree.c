@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: tree.c,v 1.24 2002/01/31 22:30:20 tv Exp $	*/
 
 /*
@@ -36,7 +35,7 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: tree.c,v 1.24 2002/01/31 22:30:20 tv Exp $");
 #endif
-__FBSDID("$FreeBSD: src/usr.bin/xlint/lint1/tree.c,v 1.14 2003/01/01 18:13:44 schweikh Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <stdlib.h>
 #include <string.h>
@@ -3787,6 +3786,7 @@ catstrg(strg_t *strg1, strg_t *strg2)
 			     (len2 + 1) * sizeof (wchar_t));
 		free(strg2->st_wcp);
 	}
+	strg1->st_len = len;
 	free(strg2);
 
 	return (strg1);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: lint1.h,v 1.12 2002/01/31 19:33:27 tv Exp $ */
 
 /*
@@ -33,14 +32,14 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/xlint/lint1/lint1.h,v 1.2 2003/01/01 18:13:44 schweikh Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "lint.h"
 #include "op.h"
 
 /* XXX - works for most systems, but the whole ALIGN thing needs to go away */
-#ifndef ALIGN
-#define ALIGN(x) (((x) + 7) & ~7)
+#ifndef LINT_ALIGN
+#define LINT_ALIGN(x) (((x) + 15) & ~15)
 #endif
 
 /*
@@ -326,7 +325,7 @@ typedef	struct dinfo {
 	u_int	d_mscl : 1;	/* multiple storage classes */
 	u_int	d_terr : 1;	/* invalid type combination */
 	u_int	d_nedecl : 1;	/* 1 if at least a tag is declared */
-	u_int	d_vararg : 1;	/* ... in in current function decl. */
+	u_int	d_vararg : 1;	/* ... in current function decl. */
 	u_int	d_proto : 1;	/* current funct. decl. is prototype */
 	u_int	d_notyp : 1;	/* set if no type specifier was present */
 	u_int	d_asm : 1;	/* set if d_ctx == AUTO and asm() present */

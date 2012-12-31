@@ -1,5 +1,4 @@
 %{
-/* $MidnightBSD$ */
 /* $NetBSD: scan.l,v 1.26 2002/01/31 22:30:21 tv Exp $ */
 
 /*
@@ -38,7 +37,7 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: scan.l,v 1.26 2002/01/31 22:30:21 tv Exp $");
 #endif
-__FBSDID("$FreeBSD: src/usr.bin/xlint/lint1/scan.l,v 1.12 2003/01/01 18:13:44 schweikh Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <stdlib.h>
 #include <string.h>
@@ -320,7 +319,7 @@ allocsb(void)
 		if ((sb = malloc(sizeof (sbuf_t))) == NULL)
 			nomem();
 	}
-	(void)memset(sb, 0, sizeof (sb));
+	(void)memset(sb, 0, sizeof (*sb));
 	return (sb);
 }
 
@@ -580,9 +579,6 @@ icon(int base)
 	case SCHAR:
 	case CHAR:
 	case UNSIGN:
-		break;
-
-	case NTSPEC:	/* this value unused */
 		break;
 	}
 

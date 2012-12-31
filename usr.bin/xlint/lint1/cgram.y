@@ -1,5 +1,4 @@
 %{
-/* $MidnightBSD$ */
 /* $NetBSD: cgram.y,v 1.23 2002/01/31 19:36:53 tv Exp $ */
 
 /*
@@ -35,6 +34,10 @@
  */
 
 #include <sys/cdefs.h>
+#if defined(__RCSID) && !defined(lint)
+__RCSID("$NetBSD: cgram.y,v 1.23 2002/01/31 19:36:53 tv Exp $");
+#endif
+__MBSDID("$MidnightBSD$");
 
 #include <stdlib.h>
 #include <string.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: param.h,v 1.4 1995/07/23 18:14:41 ragge Exp $	*/
 
 /*
@@ -31,7 +30,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/xlint/lint1/param.h,v 1.9 2004/05/14 13:44:36 cognet Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -94,6 +93,9 @@
 #define PTRDIFF_IS_LONG         0
 #define SIZEOF_IS_ULONG         0
 #elif __arm__
+#define PTRDIFF_IS_LONG		0
+#define SIZEOF_IS_ULONG		0
+#elif __mips__
 #define PTRDIFF_IS_LONG		0
 #define SIZEOF_IS_ULONG		0
 #else

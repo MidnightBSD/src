@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: chk.c,v 1.15 2002/01/21 19:49:52 tv Exp $ */
 
 /*
@@ -37,8 +36,10 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: chk.c,v 1.15 2002/01/21 19:49:52 tv Exp $");
 #endif
+__MBSDID("$MidnightBSD$");
 
 #include <ctype.h>
+#include <err.h>
 #include <limits.h>
 #include <stdlib.h>
 

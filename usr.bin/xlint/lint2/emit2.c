@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: emit2.c,v 1.8 2002/01/21 19:49:52 tv Exp $ */
 
 /*
@@ -37,6 +36,9 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: emit2.c,v 1.8 2002/01/21 19:49:52 tv Exp $");
 #endif
+__MBSDID("$MidnightBSD$");
+
+#include <err.h>
 
 #include "lint2.h"
 

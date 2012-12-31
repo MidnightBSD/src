@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: mem2.c,v 1.6 2002/01/21 19:49:52 tv Exp $	*/
 
 /*
@@ -36,11 +35,12 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: mem2.c,v 1.6 2002/01/21 19:49:52 tv Exp $");
 #endif
-__FBSDID("$FreeBSD: src/usr.bin/xlint/lint2/mem2.c,v 1.7 2002/03/03 15:12:22 markm Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/mman.h>
+#include <err.h>
 #include <unistd.h>
 #include <string.h>
 
