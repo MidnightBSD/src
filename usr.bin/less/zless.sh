@@ -1,7 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/usr.bin/less/zless.sh,v 1.1 2005/05/17 11:14:11 des Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/usr.bin/less/zless.sh,v 1.2 2007/04/10 22:05:46 laffer1 Exp $
 
 export LESSOPEN="|/usr/bin/lesspipe.sh %s"
 exec /usr/bin/less "$@"

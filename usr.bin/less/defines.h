@@ -1,5 +1,4 @@
-/* $FreeBSD: src/usr.bin/less/defines.h,v 1.5.8.2.2.1 2007/12/04 22:41:43 delphij Exp $ */
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/usr.bin/less/defines.h,v 1.3 2008/04/17 23:42:30 laffer1 Exp $ */
 /* defines.h.  Generated from defines.h.in by configure.  */
 /* defines.h.in.  Generated from configure.ac by autoheader.  */
 
@@ -222,6 +221,9 @@
 /* Define HAVE_FILENO if you have the fileno() macro. */
 #define HAVE_FILENO 1
 
+/* Define HAVE_FLOAT if your compiler supports the "double" type. */
+#define HAVE_FLOAT 1
+
 /* Define to 1 if you have the `fsync' function. */
 #define HAVE_FSYNC 1
 
@@ -388,6 +390,9 @@
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "less"
+
+/* Define to the home page for this package. */
+#define PACKAGE_URL ""
 
 /* Define to the version of this package. */
 #define PACKAGE_VERSION "1"
