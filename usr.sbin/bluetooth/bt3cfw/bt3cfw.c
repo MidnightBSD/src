@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: bt3cfw.c,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/bt3cfw/bt3cfw.c,v 1.5 2004/04/09 23:58:53 emax Exp $
+ * $Id: bt3cfw.c,v 1.2 2013-01-01 17:42:43 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/types.h>

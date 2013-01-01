@@ -1,5 +1,5 @@
-# $Id: Makefile,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
-# $FreeBSD: src/usr.sbin/bluetooth/bt3cfw/Makefile,v 1.4 2005/01/28 16:08:09 ru Exp $
+# $Id: Makefile,v 1.2 2013-01-01 17:42:43 laffer1 Exp $
+# $MidnightBSD$
 
 PROG=		bt3cfw
 MAN=		bt3cfw.8
