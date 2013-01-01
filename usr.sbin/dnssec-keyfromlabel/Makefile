@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/usr.sbin/dnssec-keyfromlabel/Makefile,v 1.1 2010/01/16 17:09:56 laffer1 Exp $
 
 BIND_DIR=	${.CURDIR}/../../contrib/bind96
 LIB_BIND_REL=	../../lib/bind
@@ -16,6 +16,8 @@ CFLAGS+=	-I${SRCDIR}/unix/include -I${SRCDIR}/include
 
 DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD} ${PTHREAD_DPADD}
 LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD} ${PTHREAD_LDADD}
+
+WARNS?=		3
 
 MAN=		dnssec-keyfromlabel.8
 
