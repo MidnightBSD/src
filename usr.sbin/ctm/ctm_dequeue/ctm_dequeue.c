@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ctm/ctm_dequeue/ctm_dequeue.c,v 1.11 2002/09/21 01:28:40 wollman Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -143,7 +143,7 @@ main(int argc, char **argv)
 	 */
 	npieces = atoi(&ftsent->fts_name[ftsent->fts_namelen-3]);
 	piece = atoi(&ftsent->fts_name[ftsent->fts_namelen-7]);
-	err("%.*s %d/%d sent", ftsent->fts_namelen-8, ftsent->fts_name,
+	err("%.*s %d/%d sent", (int)(ftsent->fts_namelen-8), ftsent->fts_name,
 		piece, npieces);
 
 	if (chunk++ == num_to_send)

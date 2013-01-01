@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/ctm/ctm_smail/Makefile,v 1.6 2004/12/21 08:47:31 ru Exp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../ctm_rmail
 
@@ -7,5 +7,7 @@ NO_MAN=
 SRCS=	ctm_smail.c error.c
 
 CFLAGS+= -I${.CURDIR}/../ctm_rmail
+
+WARNS?=	2
 
 .include <bsd.prog.mk>

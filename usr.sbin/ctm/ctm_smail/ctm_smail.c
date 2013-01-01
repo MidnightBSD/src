@@ -11,7 +11,7 @@
  * In return you should think about all the nice people who give away software.
  * Maybe you should write some free software too.
  *
- * $FreeBSD: src/usr.sbin/ctm/ctm_smail/ctm_smail.c,v 1.13 2003/07/13 06:38:13 kris Exp $
+ * $FreeBSD$
  */
 
 #include <stdio.h>
@@ -29,7 +29,7 @@
 
 #define DEF_MAX_MSG	64000	/* Default maximum mail msg minus headers. */
 
-#define LINE_LENGTH	76	/* Chars per encoded line. Divisible by 4. */
+#define LINE_LENGTH	72	/* Chars per encoded line. Divisible by 4. */
 
 int chop_and_send_or_queue(FILE *dfp, char *delta, off_t ctm_size,
 	long max_msg_size, char *mail_alias, char *queue_dir);
