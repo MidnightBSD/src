@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: link_control.c,v 1.4 2009-10-07 02:26:32 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/hccontrol/link_control.c,v 1.11 2006/09/21 17:16:37 emax Exp $
+ * $Id: link_control.c,v 1.5 2013-01-01 17:41:47 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include <bluetooth.h>

@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: info.c,v 1.3 2009-10-07 02:26:32 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/hccontrol/info.c,v 1.4 2006/02/23 23:19:12 markus Exp $
+ * $Id: info.c,v 1.4 2013-01-01 17:41:47 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include <bluetooth.h>

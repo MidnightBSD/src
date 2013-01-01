@@ -22,8 +22,8 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $Id: rfcomm_pppd.8,v 1.2 2009-10-07 02:26:32 laffer1 Exp $
-.\" $FreeBSD: src/usr.sbin/bluetooth/rfcomm_pppd/rfcomm_pppd.8,v 1.14 2007/05/13 18:59:22 pav Exp $
+.\" $Id: rfcomm_pppd.8,v 1.3 2013-01-01 17:41:47 laffer1 Exp $
+.\" $MidnightBSD$
 .\"
 .Dd February 4, 2003
 .Dt RFCOMM_PPPD 8
@@ -41,7 +41,7 @@
 .Fl u Ar N
 .Nm
 .Fl s
-.Op Fl dhS
+.Op Fl dDhS
 .Op Fl a Ar address
 .Fl C Ar channel
 .Fl l Ar label
@@ -125,6 +125,15 @@ Act as an RFCOMM client.
 This is the default mode.
 .It Fl d
 Do not detach from the controlling terminal, i.e., run in foreground.
+.It Fl D
+In server mode, register the
+.Cm DUN
+(Dial-Up Networking) service in addition to the
+.Cm LAN
+(LAN Access Using PPP) service.
+AT-command exchange can be faked with
+.Xr ppp 8
+chat script.
 .It Fl h
 Display usage message and exit.
 .It Fl l Ar label
@@ -326,14 +335,6 @@ in
 mode with the
 .Dq Li rfcomm-client
 label.
-.Sh CAVEATS
-The
-.Nm
-utility in server mode will try to register the Bluetooth LAN Access Over PPP
-service with the local SPD daemon.
-If the local SDP daemon is not running,
-.Nm
-will exit with an error.
 .Sh SEE ALSO
 .Xr rfcomm_sppd 1 ,
 .Xr bluetooth 3 ,
@@ -343,3 +344,11 @@ will exit with an error.
 .Xr sdpd 8
 .Sh AUTHORS
 .An Maksim Yevmenkin Aq m_evmenkin@yahoo.com
+.Sh CAVEATS
+The
+.Nm
+utility in server mode will try to register the Bluetooth LAN Access Over PPP
+service with the local SPD daemon.
+If the local SDP daemon is not running,
+.Nm
+will exit with an error.

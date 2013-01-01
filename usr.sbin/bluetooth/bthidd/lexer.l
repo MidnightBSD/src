@@ -28,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: lexer.l,v 1.2 2009-10-07 02:26:32 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/bthidd/lexer.l,v 1.3 2006/09/07 21:47:49 emax Exp $
+ * $Id: lexer.l,v 1.3 2013-01-01 17:41:47 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include <bluetooth.h>
@@ -39,7 +39,7 @@
 	int	yylex	(void);
 %}
 
-%option yylineno noyywrap nounput
+%option yylineno noyywrap nounput noinput
 
 delim				[ \t\n]
 ws				{delim}+

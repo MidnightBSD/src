@@ -26,8 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: parser.y,v 1.1.1.2 2006-02-25 02:38:25 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/hcsecd/parser.y,v 1.4 2004/09/14 20:04:33 emax Exp $
+ * $Id: parser.y,v 1.2 2013-01-01 17:41:47 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/fcntl.h>

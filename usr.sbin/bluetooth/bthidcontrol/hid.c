@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: hid.c,v 1.2 2009-10-07 02:26:32 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/bthidcontrol/hid.c,v 1.2 2006/10/31 00:26:58 markus Exp $
+ * $Id: hid.c,v 1.3 2013-01-01 17:41:47 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/queue.h>

@@ -1,11 +1,13 @@
-# $Id: Makefile,v 1.2 2009-10-07 02:26:31 laffer1 Exp $
-# $FreeBSD: src/usr.sbin/bluetooth/Makefile,v 1.7 2006/09/07 21:47:49 emax Exp $
+# $Id: Makefile,v 1.3 2013-01-01 17:41:47 laffer1 Exp $
+# $MidnightBSD$
 
 SUBDIR= \
+	ath3kfw \
 	bcmfw \
 	bt3cfw \
 	bthidcontrol \
 	bthidd \
+	btpand \
 	hccontrol \
 	hcsecd \
 	hcseriald \

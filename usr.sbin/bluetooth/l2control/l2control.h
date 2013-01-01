@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: l2control.h,v 1.1.1.2 2006-02-25 02:38:25 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/l2control/l2control.h,v 1.2 2003/05/10 21:50:36 julian Exp $
+ * $Id: l2control.h,v 1.2 2013-01-01 17:41:47 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _L2CONTROL_H_

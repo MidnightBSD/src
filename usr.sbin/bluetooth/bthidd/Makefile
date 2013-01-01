@@ -1,5 +1,5 @@
-# $Id: Makefile,v 1.3 2012-06-26 02:16:55 laffer1 Exp $
-# $FreeBSD: src/usr.sbin/bluetooth/bthidd/Makefile,v 1.7 2007/10/01 18:15:10 ru Exp $
+# $Id: Makefile,v 1.4 2013-01-01 17:41:47 laffer1 Exp $
+# $MidnightBSD$
 
 PROG=		bthidd
 MAN=		bthidd.8

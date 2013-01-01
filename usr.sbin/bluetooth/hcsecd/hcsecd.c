@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: hcsecd.c,v 1.2 2009-10-07 02:26:32 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/hcsecd/hcsecd.c,v 1.5 2006/09/21 17:16:37 emax Exp $
+ * $Id: hcsecd.c,v 1.3 2013-01-01 17:41:47 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/queue.h>
@@ -128,9 +128,8 @@ main(int argc, char *argv[])
 			(void * const) &filter, sizeof(filter)) < 0)
 		err(1, "Could not set HCI socket filter");
 
-	if (detach)
-		if (daemon(0, 0) < 0)
-			err(1, "Could not daemon()ize");
+	if (detach && daemon(0, 0) < 0)
+		err(1, "Could not daemon()ize");
 
 	openlog(HCSECD_IDENT, LOG_NDELAY|LOG_PERROR|LOG_PID, LOG_DAEMON);
 

@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: hcseriald.c,v 1.1.1.2 2006-02-25 02:38:25 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/hcseriald/hcseriald.c,v 1.5 2004/11/02 20:12:06 emax Exp $
+ * $Id: hcseriald.c,v 1.2 2013-01-01 17:41:47 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/types.h>
@@ -101,23 +101,10 @@ main(int argc, char *argv[])
 	/* Open device */
 	n = open_device(device, speed, name);
 
-	if (detach) {
-		pid_t	pid = fork();
-
-		if (pid == (pid_t) -1) {
-			syslog(LOG_ERR, "Could not fork(). %s (%d)",
-				strerror(errno), errno);
-			exit(1);
-		}
-
-		if (pid != 0)
-			exit(0);
-
-		if (daemon(0, 0) < 0) {
-			syslog(LOG_ERR, "Could not daemon(0, 0). %s (%d)",
-				strerror(errno), errno);
-			exit(1);
-		}
+	if (detach && daemon(0, 0) < 0) {
+		syslog(LOG_ERR, "Could not daemon(0, 0). %s (%d)",
+			strerror(errno), errno);
+		exit(1);
 	}
 
 	/* Write PID file */

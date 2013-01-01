@@ -22,8 +22,8 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $Id: bthidd.8,v 1.1 2009-10-07 02:27:03 laffer1 Exp $
-.\" $FreeBSD: src/usr.sbin/bluetooth/bthidd/bthidd.8,v 1.2 2006/10/10 22:38:31 markus Exp $
+.\" $Id: bthidd.8,v 1.2 2013-01-01 17:41:47 laffer1 Exp $
+.\" $MidnightBSD$
 .\"
 .Dd September 7, 2006
 .Dt BTHIDD 8
@@ -83,23 +83,6 @@ disconnected
 Bluetooth HID devices and will attempt to establish an outgoing connection.
 The default rescan interval is 10 seconds.
 .El
-.Sh CAVEATS
-Any Bluetooth HID device that has
-.Dv HUP_KEYBOARD
-or
-.Dv HUP_CONSUMER
-entries in its descriptor is considered as
-.Dq keyboard .
-For each
-.Dq keyboard
-Bluetooth HID device,
-the
-.Nm
-daemon will use a separate instance of the virtual keyboard interface
-.Xr vkbd 4 .
-Therefore the
-.Xr kbdmux 4
-driver must be used to properly multiplex input from multiple keyboards.
 .Sh KNOWN LIMITATIONS
 The
 .Nm
@@ -125,3 +108,20 @@ configuration file is needed as well.
 .Xr bthidcontrol 8
 .Sh AUTHORS
 .An Maksim Yevmenkin Aq m_evmenkin@yahoo.com
+.Sh CAVEATS
+Any Bluetooth HID device that has
+.Dv HUP_KEYBOARD
+or
+.Dv HUP_CONSUMER
+entries in its descriptor is considered as
+.Dq keyboard .
+For each
+.Dq keyboard
+Bluetooth HID device,
+the
+.Nm
+daemon will use a separate instance of the virtual keyboard interface
+.Xr vkbd 4 .
+Therefore the
+.Xr kbdmux 4
+driver must be used to properly multiplex input from multiple keyboards.

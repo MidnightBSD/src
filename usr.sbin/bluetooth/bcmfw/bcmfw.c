@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: bcmfw.c,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/bcmfw/bcmfw.c,v 1.2 2004/06/25 23:14:06 imp Exp $
+ * $Id: bcmfw.c,v 1.2 2013-01-01 17:41:47 laffer1 Exp $
+ * $MidnightBSD$
  *
  * Based on Linux BlueZ BlueFW-0.9 package
  *
@@ -35,6 +35,7 @@
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <dev/usb/usb.h>
+#include <dev/usb/usb_ioctl.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <netgraph.h>

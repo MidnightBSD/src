@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: server.c,v 1.2 2009-10-07 02:26:32 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/bthidd/server.c,v 1.6 2006/09/21 02:32:27 emax Exp $
+ * $Id: server.c,v 1.3 2013-01-01 17:41:47 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/queue.h>

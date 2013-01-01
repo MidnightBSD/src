@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: l2control.c,v 1.1.1.2 2006-02-25 02:38:25 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/l2control/l2control.c,v 1.3 2003/10/12 22:04:23 emax Exp $
+ * $Id: l2control.c,v 1.2 2013-01-01 17:41:47 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include <assert.h>
@@ -207,7 +207,14 @@ print_l2cap_command(struct l2cap_command *category)
 static void
 usage(void)
 {
-	fprintf(stdout, "Usage: l2control -a BD_ADDR [-n] [-h] cmd [p1] [..]]\n");
+	fprintf(stderr, "Usage: l2control [-hn] -a local cmd [params ..]\n");
+	fprintf(stderr, "Where:\n");
+	fprintf(stderr, "  -a local   Specify local device to connect to\n");
+	fprintf(stderr, "  -h         Display this message\n");
+	fprintf(stderr, "  -n         Show addresses as numbers\n");
+	fprintf(stderr, "  cmd        Supported command " \
+		"(see l2control help)\n");
+	fprintf(stderr, "  params     Optional command parameters\n");
 	exit(255);
 } /* usage */
 

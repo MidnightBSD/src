@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: lan.c,v 1.1.1.2 2006-02-25 02:38:25 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/sdpd/lan.c,v 1.1 2004/01/20 20:48:26 emax Exp $
+ * $Id: lan.c,v 1.2 2013-01-01 17:41:47 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include <arpa/inet.h>
@@ -102,13 +102,8 @@ lan_profile_create_service_availability(
 	provider_p		provider = (provider_p) data;
 	sdp_lan_profile_p	lan = (sdp_lan_profile_p) provider->data;
 
-	if (buf + 2 > eob)
-		return (-1);
-
-	SDP_PUT8(SDP_DATA_UINT8, buf);
-	SDP_PUT8(lan->load_factor, buf);
-
-	return (2);
+	return (common_profile_create_service_availability(buf, eob,
+			&lan->load_factor, 1));
 }
 
 static int32_t

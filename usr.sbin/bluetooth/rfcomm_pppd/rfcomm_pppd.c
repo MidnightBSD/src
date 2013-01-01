@@ -1,7 +1,9 @@
 /*
  * rfcomm_pppd.c
- *
- * Copyright (c) 2001-2003 Maksim Yevmenkin <m_evmenkin@yahoo.com>
+ */
+
+/*-
+ * Copyright (c) 2001-2008 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: rfcomm_pppd.c,v 1.2 2009-10-07 02:26:32 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/rfcomm_pppd/rfcomm_pppd.c,v 1.6 2006/09/21 02:32:28 emax Exp $
+ * $Id: rfcomm_pppd.c,v 1.3 2013-01-01 17:41:47 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include <bluetooth.h>
@@ -62,7 +64,8 @@ main(int argc, char *argv[])
 	struct sockaddr_rfcomm   sock_addr;
 	char			*label = NULL, *unit = NULL, *ep = NULL;
 	bdaddr_t		 addr;
-	int			 s, channel, detach, server, service, regsp;
+	int			 s, channel, detach, server, service,
+				 regdun, regsp;
 	pid_t			 pid;
 
 	memcpy(&addr, NG_HCI_BDADDR_ANY, sizeof(addr));
@@ -70,10 +73,11 @@ main(int argc, char *argv[])
 	detach = 1;
 	server = 0;
 	service = 0;
+	regdun = 0;
 	regsp = 0;
 
 	/* Parse command line arguments */
-	while ((s = getopt(argc, argv, "a:cC:dhl:sSu:")) != -1) {
+	while ((s = getopt(argc, argv, "a:cC:dDhl:sSu:")) != -1) {
 		switch (s) {
 		case 'a': /* BDADDR */
 			if (!bt_aton(optarg, &addr)) {
@@ -108,6 +112,10 @@ main(int argc, char *argv[])
 
 		case 'd': /* do not detach */
 			detach = 0;
+			break;
+
+		case 'D': /* Register DUN service as well as LAN service */
+			regdun = 1;
 			break;
 
 		case 'l': /* PPP label */
@@ -158,22 +166,10 @@ main(int argc, char *argv[])
 
 	openlog(RFCOMM_PPPD, LOG_PID | LOG_PERROR | LOG_NDELAY, LOG_USER);
 
-	if (detach) {
-		pid = fork();
-		if (pid == (pid_t) -1) {
-			syslog(LOG_ERR, "Could not fork(). %s (%d)",
-				strerror(errno), errno);
-			exit(1);
-		}
-
-		if (pid != 0)
-			exit(0);
-
-		if (daemon(0, 0) < 0) {
-			syslog(LOG_ERR, "Could not daemon(0, 0). %s (%d)",
-				strerror(errno), errno);
-			exit(1);
-		}
+	if (detach && daemon(0, 0) < 0) {
+		syslog(LOG_ERR, "Could not daemon(0, 0). %s (%d)",
+			strerror(errno), errno);
+		exit(1);
 	}
 
 	s = socket(PF_BLUETOOTH, SOCK_STREAM, BLUETOOTH_PROTO_RFCOMM);
@@ -262,6 +258,31 @@ main(int argc, char *argv[])
 				"local SDP daemon. %s (%d)",
 				strerror(sdp_error(ss)), sdp_error(ss));
 			exit(1);
+		}
+
+		/*
+		 * Register DUN (Dial-Up Networking) service on the same
+		 * RFCOMM channel if requested. There is really no good reason
+		 * to not to support this. AT-command exchange can be faked
+		 * with chat script in ppp.conf
+		 */
+
+		if (regdun) {
+			sdp_dun_profile_t	dun;
+
+			memset(&dun, 0, sizeof(dun));
+			dun.server_channel = channel;
+
+			if (sdp_register_service(ss,
+					SDP_SERVICE_CLASS_DIALUP_NETWORKING,
+					&addr, (void *) &dun, sizeof(dun),
+					NULL) != 0) {
+				syslog(LOG_ERR, "Unable to register DUN " \
+					"service with local SDP daemon. " \
+					"%s (%d)", strerror(sdp_error(ss)),
+					sdp_error(ss));
+				exit(1);
+			}
 		}
 
 		/*
@@ -438,6 +459,7 @@ usage(void)
 "\t-c           Act as a clinet (default)\n" \
 "\t-C channel   RFCOMM channel to listen on or connect to (required)\n" \
 "\t-d           Run in foreground\n" \
+"\t-D           Register Dial-Up Networking service (server mode only)\n" \
 "\t-l label     Use PPP label (required)\n" \
 "\t-s           Act as a server\n" \
 "\t-S           Register Serial Port service (server mode only)\n" \

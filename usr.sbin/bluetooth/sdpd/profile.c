@@ -1,6 +1,8 @@
 /*
  * profile.c
- *
+ */
+
+/*-
  * Copyright (c) 2004 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -25,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: profile.c,v 1.1.1.2 2006-02-25 02:38:25 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/sdpd/profile.c,v 1.2 2004/07/28 07:15:44 kan Exp $
+ * $Id: profile.c,v 1.2 2013-01-01 17:41:47 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/queue.h>
@@ -50,6 +52,9 @@ profile_get_descriptor(uint16_t uuid)
 	extern	profile_t	lan_profile_descriptor;
 	extern	profile_t	opush_profile_descriptor;
 	extern	profile_t	sp_profile_descriptor;
+	extern	profile_t	nap_profile_descriptor;
+	extern	profile_t	gn_profile_descriptor;
+	extern	profile_t	panu_profile_descriptor;
 
 	static const profile_p	profiles[] = {
 		&dun_profile_descriptor,
@@ -58,7 +63,10 @@ profile_get_descriptor(uint16_t uuid)
 		&irmc_command_profile_descriptor,
 		&lan_profile_descriptor,
 		&opush_profile_descriptor,
-		&sp_profile_descriptor
+		&sp_profile_descriptor,
+		&nap_profile_descriptor,
+		&gn_profile_descriptor,
+		&panu_profile_descriptor
 	};
 
 	int32_t			i;
@@ -248,6 +256,24 @@ common_profile_create_string8(
 }
 
 /*
+ * Service Availability
+ */
+
+int32_t
+common_profile_create_service_availability(
+		uint8_t *buf, uint8_t const * const eob,
+		uint8_t const *data, uint32_t datalen)
+{
+	if (datalen != 1 || buf + 2 > eob)
+		return (-1);
+
+	SDP_PUT8(SDP_DATA_UINT8, buf);
+	SDP_PUT8(data[0], buf);
+
+	return (2);
+}
+
+/*
  * seq8 len8			- 2 bytes
  *	seq8 len8		- 2 bytes
  *		uuid16 value16	- 3 bytes
@@ -352,6 +378,16 @@ obex_profile_create_supported_formats_list(
 }
 
 /*
+ * do not check anything
+ */
+
+int32_t
+common_profile_always_valid(uint8_t const *data, uint32_t datalen)
+{
+	return (1);
+}
+
+/*
  * verify server channel number (the first byte in the data)
  */
 
@@ -381,5 +417,81 @@ obex_profile_data_valid(uint8_t const *data, uint32_t datalen)
 		return (0);
 
 	return (1);
+}
+
+/*
+ * BNEP protocol descriptor
+ */
+
+int32_t
+bnep_profile_create_protocol_descriptor_list(
+		uint8_t *buf, uint8_t const * const eob,
+		uint8_t const *data, uint32_t datalen)
+{
+	/* supported protocol types */
+	uint16_t	 ptype[] = {
+		0x0800,	/* IPv4 */
+		0x0806,	/* ARP */
+#ifdef INET6
+		0x86dd,	/* IPv6 */
+#endif
+	};
+
+	uint16_t	 i, psm, version = 0x0100,
+			 nptypes = sizeof(ptype)/sizeof(ptype[0]),
+			 nptypes_size = nptypes * 3;
+
+	if (datalen != 2 || 18 + nptypes_size > 255 ||
+	    buf + 20 + nptypes_size > eob)
+		return (-1);
+
+	memcpy(&psm, data, sizeof(psm));
+
+	SDP_PUT8(SDP_DATA_SEQ8, buf);
+	SDP_PUT8(18 + nptypes_size, buf);
+
+	SDP_PUT8(SDP_DATA_SEQ8, buf);
+	SDP_PUT8(6, buf);
+	SDP_PUT8(SDP_DATA_UUID16, buf);
+	SDP_PUT16(SDP_UUID_PROTOCOL_L2CAP, buf);
+	SDP_PUT8(SDP_DATA_UINT16, buf);
+	SDP_PUT16(psm, buf);
+	
+	SDP_PUT8(SDP_DATA_SEQ8, buf);
+	SDP_PUT8(8 + nptypes_size, buf);
+	SDP_PUT8(SDP_DATA_UUID16, buf);
+	SDP_PUT16(SDP_UUID_PROTOCOL_BNEP, buf);
+	SDP_PUT8(SDP_DATA_UINT16, buf);
+	SDP_PUT16(version, buf);
+	SDP_PUT8(SDP_DATA_SEQ8, buf);
+	SDP_PUT8(nptypes_size, buf);
+	for (i = 0; i < nptypes; i ++) {
+		SDP_PUT8(SDP_DATA_UINT16, buf);
+		SDP_PUT16(ptype[i], buf);
+	}
+
+	return (20 + nptypes_size);
+}
+
+/*
+ * BNEP security description
+ */
+
+int32_t
+bnep_profile_create_security_description(
+		uint8_t *buf, uint8_t const * const eob,
+		uint8_t const *data, uint32_t datalen)
+{
+	uint16_t	security_descr;
+
+	if (datalen != 2 || buf + 3 > eob)
+		return (-1);
+
+	memcpy(&security_descr, data, sizeof(security_descr));
+
+	SDP_PUT8(SDP_DATA_UINT16, buf);
+	SDP_PUT16(security_descr, buf);
+
+        return (3);
 }
 

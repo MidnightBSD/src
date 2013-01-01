@@ -1,5 +1,5 @@
-# $Id: Makefile,v 1.1.1.2 2006-02-25 02:38:25 laffer1 Exp $
-# $FreeBSD: src/usr.sbin/bluetooth/l2control/Makefile,v 1.3 2003/10/12 22:04:23 emax Exp $
+# $Id: Makefile,v 1.2 2013-01-01 17:41:47 laffer1 Exp $
+# $MidnightBSD$
 
 PROG=		l2control
 MAN=		l2control.8

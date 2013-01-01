@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: server.c,v 1.2 2009-10-07 02:26:32 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/sdpd/server.c,v 1.6 2007/02/23 19:37:47 emax Exp $
+ * $Id: server.c,v 1.3 2013-01-01 17:41:47 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/param.h>
@@ -73,7 +73,7 @@ server_init(server_p srv, char const *control)
 	assert(srv != NULL);
 	assert(control != NULL);
 
-	memset(srv, 0, sizeof(srv));
+	memset(srv, 0, sizeof(*srv));
 
 	/* Open control socket */
 	if (unlink(control) < 0 && errno != ENOENT) {

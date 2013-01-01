@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: bthidcontrol.h,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/bthidcontrol/bthidcontrol.h,v 1.1 2004/04/10 00:18:00 emax Exp $
+ * $Id: bthidcontrol.h,v 1.2 2013-01-01 17:41:47 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #ifndef __BTHIDCONTROL_H__

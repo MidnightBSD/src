@@ -1,5 +1,5 @@
-# $Id: Makefile,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
-# $FreeBSD: src/usr.sbin/bluetooth/bthidcontrol/Makefile,v 1.1 2004/04/10 00:18:00 emax Exp $
+# $Id: Makefile,v 1.2 2013-01-01 17:41:47 laffer1 Exp $
+# $MidnightBSD$
 
 .PATH:	${.CURDIR}/../bthidd
 
