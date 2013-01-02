@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/lpr/common_source/Makefile,v 1.11 2004/10/24 15:33:03 ru Exp $
+# $MidnightBSD$
 
 #
 # Library of internal routines for the print spooler suite.
@@ -9,5 +9,7 @@ LIB=		lpr
 INTERNALLIB=
 SRCS=		common.c ctlinfo.c displayq.c matchjobs.c net.c \
 		printcap.c request.c rmjob.c startdaemon.c
+
+WARNS?=		1
 
 .include <bsd.lib.mk>

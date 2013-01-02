@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -44,7 +40,7 @@ static char sccsid[] = "@(#)lpf.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: src/usr.sbin/lpr/filters/lpf.c,v 1.9 2003/07/15 07:01:01 gad Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * 	filter which reads the output of nroff and converts lines
@@ -59,6 +55,7 @@ __FBSDID("$FreeBSD: src/usr.sbin/lpr/filters/lpf.c,v 1.9 2003/07/15 07:01:01 gad
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #define MAXWIDTH  132
 #define MAXREP    10
@@ -119,7 +116,7 @@ main(int argc, char *argv[])
 			acctfile = cp;
 	}
 
-	for (cp = buf[0], limit = buf[MAXREP]; cp < limit; *cp++ = ' ');
+	memset(buf, ' ', sizeof(buf));
 	done = 0;
 
 	while (!done) {

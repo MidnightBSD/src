@@ -36,11 +36,13 @@
 #
 # Posix 1003.2 compliant print spooler interface.
 #
-# $FreeBSD: src/usr.sbin/lpr/lp/lp.sh,v 1.7 2000/03/08 10:02:11 sheldonh Exp $
+# $MidnightBSD$
 #
 
 ncopies=""
 symlink="-s"
+mailafter=""
+title=""
 
 # Posix says LPDEST gets precedence over PRINTER
 dest=${LPDEST:-${PRINTER:-lp}}
@@ -51,7 +53,7 @@ dest=${LPDEST:-${PRINTER:-lp}}
 # XXX We include the -s flag as a dummy.  SUSv2 requires it,
 # although we do not yet emit the affected messages.
 #
-while getopts "cd:n:o:s" option
+while getopts "cd:mn:o:st:" option
 do
 	case $option in
 
@@ -59,12 +61,16 @@ do
 		symlink="";;
 	d)			# destination
 		dest="${OPTARG}";;
+	m)			# mail after job
+		mailafter="-m";;
 	n)			# number of copies
 		ncopies="-#${OPTARG}";;
 	o)			# (printer option)
 		: ;;
 	s)			# (silent option)
 		: ;;
+	t)			# title for banner page
+		title="${OPTARG}";;
 	*)			# (error msg printed by getopts)
 		exit 2;;
 	esac
@@ -72,4 +78,4 @@ done
 
 shift $(($OPTIND - 1))
 
-exec /usr/bin/lpr "-P${dest}" ${symlink} ${ncopies} "$@"
+exec /usr/bin/lpr "-P${dest}" ${symlink} ${ncopies} ${mailafter} ${title:+-J"${title}"} "$@"

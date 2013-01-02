@@ -11,10 +11,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -45,7 +41,7 @@ static char sccsid[] = "@(#)cmds.c	8.2 (Berkeley) 4/28/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: src/usr.sbin/lpr/lpc/cmds.c,v 1.32 2003/07/14 22:24:28 gad Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * lpc -- line printer control program -- commands:
@@ -83,7 +79,7 @@ static char	*args2line(int argc, char **argv);
 static int	 doarg(char *_job);
 static int	 doselect(struct dirent *_d);
 static int	 kill_qtask(const char *lf);
-static int	 sortq(const void *_a, const void *_b);
+static int	 sortq(const struct dirent **a, const struct dirent **b);
 static int	 touch(struct jobqueue *_jq);
 static void	 unlinkf(char *_name);
 static void	 upstat(struct printer *_pp, const char *_msg, int _notify);
@@ -490,14 +486,14 @@ doselect(struct dirent *d)
  *   filenames (they will have datafile names which start with `dfB*').
  */
 static int
-sortq(const void *a, const void *b)
+sortq(const struct dirent **a, const struct dirent **b)
 {
 	const int a_lt_b = -1, a_gt_b = 1, cat_other = 10;
 	const char *fname_a, *fname_b, *jnum_a, *jnum_b;
 	int cat_a, cat_b, ch, res, seq_a, seq_b;
 
-	fname_a = (*(const struct dirent * const *)a)->d_name;
-	fname_b = (*(const struct dirent * const *)b)->d_name;
+	fname_a = (*a)->d_name;
+	fname_b = (*b)->d_name;
 
 	/*
 	 * First separate filenames into cagatories.  Catagories are

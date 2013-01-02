@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: src/usr.sbin/lpr/lpr/Makefile,v 1.12 2002/06/23 20:57:18 gad Exp $
+# $MidnightBSD$
 
 .PATH: ${.CURDIR}/../common_source
 
@@ -12,6 +12,8 @@ BINGRP=	daemon
 BINMODE= 6555
 
 CFLAGS+= -I${.CURDIR}/../common_source
+
+WARNS?=	2
 
 DPADD=	${LIBLPR}
 LDADD=	${LIBLPR}

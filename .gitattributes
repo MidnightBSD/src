@@ -54513,16 +54513,6 @@ usr.sbin/lmcconfig/lmcconfig.8 -text
 usr.sbin/lmcconfig/lmcconfig.c -text
 usr.sbin/lpr/Makefile -text
 usr.sbin/lpr/Makefile.inc -text
-usr.sbin/lpr/SMM.doc/0.t -text
-usr.sbin/lpr/SMM.doc/1.t -text
-usr.sbin/lpr/SMM.doc/2.t -text
-usr.sbin/lpr/SMM.doc/3.t -text
-usr.sbin/lpr/SMM.doc/4.t -text
-usr.sbin/lpr/SMM.doc/5.t -text
-usr.sbin/lpr/SMM.doc/6.t -text
-usr.sbin/lpr/SMM.doc/7.t -text
-usr.sbin/lpr/SMM.doc/Makefile -text
-usr.sbin/lpr/SMM.doc/spell.ok -text
 usr.sbin/lpr/chkprintcap/Makefile -text
 usr.sbin/lpr/chkprintcap/chkprintcap.8 -text
 usr.sbin/lpr/chkprintcap/chkprintcap.c -text

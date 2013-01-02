@@ -11,10 +11,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -45,7 +41,7 @@ static char sccsid[] = "@(#)printjob.c	8.7 (Berkeley) 5/10/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: src/usr.sbin/lpr/lpd/printjob.c,v 1.64 2006/07/07 01:12:26 gad Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * printjob -- print jobs in the queue.
@@ -66,6 +62,7 @@ __FBSDID("$FreeBSD: src/usr.sbin/lpr/lpd/printjob.c,v 1.64 2006/07/07 01:12:26 g
 #include <fcntl.h>
 #include <dirent.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -1142,9 +1139,10 @@ sendagain:
 	copycnt++;
 
 	if (copycnt < 2)
-		(void) sprintf(buf, "%c%qd %s\n", type, stb.st_size, file);
+		(void) sprintf(buf, "%c%" PRId64 " %s\n", type, stb.st_size,
+		    file);
 	else
-		(void) sprintf(buf, "%c%qd %s_c%d\n", type, stb.st_size,
+		(void) sprintf(buf, "%c%" PRId64 " %s_c%d\n", type, stb.st_size,
 		    file, copycnt);
 	amt = strlen(buf);
 	for (i = 0;  ; i++) {
@@ -1263,8 +1261,9 @@ wait4data(struct printer *pp, const char *dfile)
 {
 	const char *cp;
 	int statres;
+	u_int sleepreq;
 	size_t dlen, hlen;
-	time_t amtslept, checktime;
+	time_t amtslept, cur_time, prev_mtime;
 	struct stat statdf;
 
 	/* Skip these checks if the print job is from the local host. */
@@ -1297,15 +1296,30 @@ wait4data(struct printer *pp, const char *dfile)
 
 	/*
 	 * The file exists, so keep waiting until the data file has not
-	 * changed for some reasonable amount of time.
+	 * changed for some reasonable amount of time.  Extra care is
+	 * taken when computing wait-times, just in case there are data
+	 * files with a last-modify time in the future.  While that is
+	 * very unlikely to happen, it can happen when the system has
+	 * a flakey time-of-day clock.
 	 */
-	while (statres == 0 && amtslept < MAXWAIT_4DATA) {
-		checktime = time(NULL) - MINWAIT_4DATA;
-		if (statdf.st_mtime <= checktime)
-			break;
+	prev_mtime = statdf.st_mtime;
+	cur_time = time(NULL);
+	if (statdf.st_mtime >= cur_time - MINWAIT_4DATA) {
+		if (statdf.st_mtime >= cur_time)	/* some TOD oddity */
+			sleepreq = MINWAIT_4DATA;
+		else
+			sleepreq = cur_time - statdf.st_mtime;
 		if (amtslept == 0)
 			pstatus(pp, "Waiting for data file from remote host");
-		amtslept += MINWAIT_4DATA - sleep(MINWAIT_4DATA);
+		amtslept += sleepreq - sleep(sleepreq);
+		statres = stat(dfile, &statdf);
+	}
+	sleepreq = MINWAIT_4DATA;
+	while (statres == 0 && amtslept < MAXWAIT_4DATA) {
+		if (statdf.st_mtime == prev_mtime)
+			break;
+		prev_mtime = statdf.st_mtime;
+		amtslept += sleepreq - sleep(sleepreq);
 		statres = stat(dfile, &statdf);
 	}
 

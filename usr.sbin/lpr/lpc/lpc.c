@@ -11,10 +11,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -45,7 +41,7 @@ static char sccsid[] = "@(#)lpc.c	8.3 (Berkeley) 4/28/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: src/usr.sbin/lpr/lpc/lpc.c,v 1.31 2005/10/19 16:37:52 stefanf Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 
@@ -356,7 +352,8 @@ ingroup(const char *grname)
 {
 	static struct group *gptr=NULL;
 	static int ngroups = 0;
-	static gid_t groups[NGROUPS];
+	static long ngroups_max;
+	static gid_t *groups;
 	register gid_t gid;
 	register int i;
 
@@ -365,7 +362,10 @@ ingroup(const char *grname)
 			warnx("warning: unknown group '%s'", grname);
 			return(0);
 		}
-		ngroups = getgroups(NGROUPS, groups);
+		ngroups_max = sysconf(_SC_NGROUPS_MAX);
+		if ((groups = malloc(sizeof(gid_t) * ngroups_max)) == NULL)
+			err(1, "malloc");
+		ngroups = getgroups(ngroups_max, groups);
 		if (ngroups < 0)
 			err(1, "getgroups");
 	}
