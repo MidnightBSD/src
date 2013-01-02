@@ -54424,6 +54424,7 @@ usr.sbin/gstat/gstat.c -text
 usr.sbin/ifmcstat/Makefile -text
 usr.sbin/ifmcstat/ifmcstat.8 -text
 usr.sbin/ifmcstat/ifmcstat.c -text
+usr.sbin/ifmcstat/printb.c -text
 usr.sbin/inetd/Makefile -text
 usr.sbin/inetd/builtins.c -text
 usr.sbin/inetd/inetd.8 -text

@@ -1,11 +1,13 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: src/usr.sbin/ifmcstat/Makefile,v 1.11 2007/06/13 02:08:04 sepotvin Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
 PROG=	ifmcstat
+SRCS=	ifmcstat.c printb.c
+
 MAN=	ifmcstat.8
-BINMODE= 550
+BINMODE= 555
 
 WARNS?=	2
 
