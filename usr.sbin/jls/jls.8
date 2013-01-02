@@ -23,24 +23,83 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/jls/jls.8,v 1.1 2003/04/09 03:04:12 mike Exp $
+.\" $MidnightBSD$
 .\"
-.Dd April 8, 2003
+.Dd July 8, 2009
 .Dt JLS 8
 .Os
 .Sh NAME
 .Nm jls
-.Nd "list active jails"
+.Nd "list jails"
 .Sh SYNOPSIS
 .Nm
+.Op Fl dhnqsv
+.Op Fl j Ar jail
+.Op Ar parameter ...
 .Sh DESCRIPTION
 The
 .Nm
-utility lists all active jails.
-Each jail is represented by one row which contains the following columns:
-jail identifier (JID), IP address, hostname, and path.
+utility lists all active jails, or the specified jail.
+Each jail is represented by one row which contains space-separated values of
+the listed
+.Ar parameters ,
+including the pseudo-parameter
+.Va all
+which will show all available jail parameters.
+A list of available parameters can be retrieved via
+.Dq Nm sysctl Fl d Va security.jail.param .
+See
+.Xr jail 8
+for a description of some core parameters.
+.Pp
+If no
+.Ar parameters
+or any of the options
+.Fl hns
+are given, the following four columns will be printed:
+jail identifier (jid), IP address (ip4.addr), hostname (host.hostname),
+and path (path).
+.Pp
+The following options are available:
+.Bl -tag -width indent
+.It Fl d
+List
+.Va dying
+as well as active jails.
+.It Fl h
+Print a header line containing the parameters listed.
+If no parameters are given on the command line,
+.Va all
+is assumed.
+.It Fl n
+Print parameters in
+.Dq name=value
+format, where each parameter is preceded by its name.
+If no parameters are given on the command line,
+.Va all
+is assumed.
+.It Fl q
+Put quotes around parameters if they contain spaces or quotes, or are
+the empty string.
+.It Fl s
+Print parameters suitable for passing to
+.Xr jail 8 ,
+skipping read-only and unused parameters.
+Implies
+.Fl nq .
+.It Fl v
+Print a multiple-line summary per jail, with the following parameters:
+jail identifier (jid), hostname (host.hostname), path (path),
+jail name (name), jail state (dying), cpuset ID (cpuset),
+IP address(es) (ip4.addr and ip6.addr).
+.It Fl j Ar jail
+The jid or name of the
+.Ar jail
+to list.
+Without this option, all active jails will be listed.
+.El
 .Sh SEE ALSO
-.Xr jail 2 ,
+.Xr jail_get 2 ,
 .Xr jail 8 ,
 .Xr jexec 8
 .Sh HISTORY
@@ -48,3 +107,5 @@ The
 .Nm
 utility was added in
 .Fx 5.1 .
+Extensible jail parameters were introduced in
+.Fx 8.0 .
