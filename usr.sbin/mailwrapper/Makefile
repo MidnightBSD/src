@@ -1,5 +1,4 @@
 # $MidnightBSD$
-# $FreeBSD: src/usr.sbin/mailwrapper/Makefile,v 1.15 2006/06/06 05:01:12 delphij Exp $
 
 .include <bsd.own.mk>
 
@@ -9,7 +8,6 @@ MAN=	mailwrapper.8
 
 DPADD=	${LIBUTIL}
 LDADD=	-lutil
-WARNS?=	6
 .endif
 
 .if ${MK_MAILWRAPPER} != "no" || ${MK_SENDMAIL} != "no"
@@ -22,6 +20,10 @@ SYMLINKS= 	${BINDIR}/mailwrapper /usr/sbin/sendmail  \
 .if ${MK_MAILWRAPPER} == "no" && ${MK_SENDMAIL} != "no"
 SYMLINKS+=	/usr/libexec/sendmail/sendmail ${BINDIR}/mailwrapper
 .endif
+.endif
+
+.if ${MK_MAILWRAPPER} != "no" && ${MK_SENDMAIL} == "no"
+SYMLINKS+=	${BINDIR}/mailwrapper /bin/rmail
 .endif
 
 .if ${MK_MAILWRAPPER} != "no"
