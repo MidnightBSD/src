@@ -32,7 +32,7 @@
 static char sccsid[] = "@(#)keyserv.c	1.15	94/04/25 SMI";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/keyserv/keyserv.c,v 1.11 2003/02/18 01:35:58 kris Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 /*
@@ -72,10 +72,10 @@ static const char rcsid[] =
 #define KEYSERVSOCK "/var/run/keyservsock"
 #endif
 
-static void randomize __P(( des_block * ));
-static void usage __P(( void ));
-static int getrootkey __P(( des_block *, int ));
-static int root_auth __P(( SVCXPRT *, struct svc_req * ));
+static void randomize( des_block * );
+static void usage( void );
+static int getrootkey( des_block *, int );
+static int root_auth( SVCXPRT *, struct svc_req * );
 
 #ifdef DEBUG
 static int debugging = 1;
@@ -102,9 +102,9 @@ extern cryptkeyres *(*__key_decryptsession_pk_LOCAL)();
 extern des_block *(*__key_gendes_LOCAL)();
 extern int (*__des_crypt_LOCAL)();
 
-cryptkeyres *key_encrypt_pk_2_svc_prog __P(( uid_t, cryptkeyarg2 * ));
-cryptkeyres *key_decrypt_pk_2_svc_prog __P(( uid_t, cryptkeyarg2 * ));
-des_block *key_gen_1_svc_prog __P(( void *, struct svc_req * ));
+cryptkeyres *key_encrypt_pk_2_svc_prog( uid_t, cryptkeyarg2 * );
+cryptkeyres *key_decrypt_pk_2_svc_prog( uid_t, cryptkeyarg2 * );
+des_block *key_gen_1_svc_prog( void *, struct svc_req * );
 
 int
 main(argc, argv)
@@ -361,7 +361,7 @@ key_set_1_svc_prog(uid, key)
 	static keystatus status;
 
 	if (debugging) {
-		(void) fprintf(stderr, "set(%ld, %.*s) = ", uid,
+		(void) fprintf(stderr, "set(%u, %.*s) = ", uid,
 				(int) sizeof (keybuf), key);
 	}
 	status = pk_setkey(uid, key);
@@ -380,7 +380,7 @@ key_encrypt_pk_2_svc_prog(uid, arg)
 	static cryptkeyres res;
 
 	if (debugging) {
-		(void) fprintf(stderr, "encrypt(%ld, %s, %08x%08x) = ", uid,
+		(void) fprintf(stderr, "encrypt(%u, %s, %08x%08x) = ", uid,
 				arg->remotename, arg->deskey.key.high,
 				arg->deskey.key.low);
 	}
@@ -408,7 +408,7 @@ key_decrypt_pk_2_svc_prog(uid, arg)
 	static cryptkeyres res;
 
 	if (debugging) {
-		(void) fprintf(stderr, "decrypt(%ld, %s, %08x%08x) = ", uid,
+		(void) fprintf(stderr, "decrypt(%u, %s, %08x%08x) = ", uid,
 				arg->remotename, arg->deskey.key.high,
 				arg->deskey.key.low);
 	}
@@ -460,7 +460,7 @@ key_net_get_2_svc_prog(uid, arg)
 	static key_netstres keynetname;
 
 	if (debugging)
-		(void) fprintf(stderr, "net_get(%ld) = ", uid);
+		(void) fprintf(stderr, "net_get(%u) = ", uid);
 
 	keynetname.status = pk_netget(uid, &keynetname.key_netstres_u.knet);
 	if (debugging) {
@@ -489,8 +489,8 @@ key_get_conv_2_svc_prog(uid, arg)
 	static cryptkeyres  res;
 
 	if (debugging)
-		(void) fprintf(stderr, "get_conv(%ld, %.*s) = ", uid,
-			(int)sizeof (arg), arg);
+		(void) fprintf(stderr, "get_conv(%u, %.*s) = ", uid,
+			(int)sizeof (keybuf), arg);
 
 
 	res.status = pk_get_conv_key(uid, arg, &res);
@@ -517,7 +517,7 @@ key_encrypt_1_svc_prog(uid, arg)
 	static cryptkeyres res;
 
 	if (debugging) {
-		(void) fprintf(stderr, "encrypt(%ld, %s, %08x%08x) = ", uid,
+		(void) fprintf(stderr, "encrypt(%u, %s, %08x%08x) = ", uid,
 				arg->remotename, arg->deskey.key.high,
 				arg->deskey.key.low);
 	}
@@ -545,7 +545,7 @@ key_decrypt_1_svc_prog(uid, arg)
 	static cryptkeyres res;
 
 	if (debugging) {
-		(void) fprintf(stderr, "decrypt(%ld, %s, %08x%08x) = ", uid,
+		(void) fprintf(stderr, "decrypt(%u, %s, %08x%08x) = ", uid,
 				arg->remotename, arg->deskey.key.high,
 				arg->deskey.key.low);
 	}
@@ -789,7 +789,7 @@ root_auth(trans, rqstp)
 	}
 
 	if (debugging)
-		fprintf(stderr, "local_uid  %ld\n", uid);
+		fprintf(stderr, "local_uid  %u\n", uid);
 	if (uid == 0)
 		return (1);
 	if (rqstp->rq_cred.oa_flavor == AUTH_SYS) {
@@ -800,7 +800,7 @@ root_auth(trans, rqstp)
 		} else {
 			if (debugging)
 				fprintf(stderr,
-			"local_uid  %ld mismatches auth %ld\n", uid,
+			"local_uid  %u mismatches auth %u\n", uid,
 ((uid_t) ((struct authunix_parms *)rqstp->rq_clntcred)->aup_uid));
 			return (0);
 		}

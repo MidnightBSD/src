@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/keyserv/Makefile,v 1.14 2004/08/06 07:27:06 cperciva Exp $
+# $MidnightBSD$
 
 PROG=	keyserv
 MAN=	keyserv.8
@@ -9,11 +9,13 @@ CFLAGS+= -DKEYSERV_RANDOM -DBROKEN_DES -I.
 DPADD=	${LIBMP} ${LIBCRYPTO} ${LIBRPCSVC}
 LDADD=	-lmp -lcrypto -lrpcsvc
 
+WARNS?=	1
+
 RPCDIR=	${DESTDIR}/usr/include/rpcsvc
 
 CLEANFILES= crypt_svc.c crypt.h
 
-RPCGEN= rpcgen -C
+RPCGEN= RPCGEN_CPP=${CPP:Q} rpcgen -C
 
 crypt_svc.c: ${RPCDIR}/crypt.x
 	${RPCGEN} -m -o ${.TARGET} ${RPCDIR}/crypt.x
