@@ -1,4 +1,4 @@
-# $MidnightBSD: src/usr.sbin/dnssec-keygen/Makefile,v 1.2 2008/04/28 03:28:26 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/dnssec-keygen/Makefile,v 1.3 2010/01/16 17:00:06 laffer1 Exp $
 # $FreeBSD: src/usr.sbin/dnssec-keygen/Makefile,v 1.4 2007/06/02 23:19:57 dougb Exp $
 
 BIND_DIR=	${.CURDIR}/../../contrib/bind96
@@ -17,6 +17,8 @@ CFLAGS+=	-I${SRCDIR}/unix/include -I${SRCDIR}/include
 
 DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD} ${PTHREAD_DPADD}
 LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD} ${PTHREAD_LDADD}
+
+WARNS?=		3
 
 MAN=		dnssec-keygen.8
 
