@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/iostat/iostat.c,v 1.36 2007/08/03 15:45:55 maxim Exp $
+ * $MidnightBSD$
  */
 /*
  * Parts of this program are derived from the original FreeBSD iostat
@@ -43,10 +43,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -105,43 +101,49 @@
 #include <sys/resource.h>
 #include <sys/sysctl.h>
 
-#include <err.h>
 #include <ctype.h>
+#include <devstat.h>
+#include <err.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <kvm.h>
+#include <limits.h>
+#include <math.h>
 #include <nlist.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <termios.h>
 #include <unistd.h>
-#include <limits.h>
-#include <devstat.h>
-#include <math.h>
 
 struct nlist namelist[] = {
 #define X_TK_NIN	0
 	{ "_tk_nin" },
 #define X_TK_NOUT	1
 	{ "_tk_nout" },
-#define X_CP_TIME	2
-	{ "_cp_time" },
-#define X_BOOTTIME	3
+#define X_BOOTTIME	2
 	{ "_boottime" },
-#define X_END		3
+#define X_END		2
 	{ NULL },
 };
+
+#define	IOSTAT_DEFAULT_ROWS	20	/* Traditional default `wrows' */
 
 struct statinfo cur, last;
 int num_devices;
 struct device_selection *dev_select;
 int maxshowdevs;
 volatile sig_atomic_t headercount;
+volatile sig_atomic_t wresized;		/* Tty resized, when non-zero. */
+unsigned short wrows;			/* Current number of tty rows. */
 int dflag = 0, Iflag = 0, Cflag = 0, Tflag = 0, oflag = 0, Kflag = 0;
 int xflag = 0, zflag = 0;
 
 /* local function declarations */
 static void usage(void);
 static void needhdr(int signo);
+static void needresize(int signo);
+static void doresize(void);
 static void phdr(void);
 static void devstats(int perf_select, long double etime, int havelast);
 static void cpustats(void);
@@ -179,6 +181,7 @@ main(int argc, char **argv)
 	long select_generation;
 	char **specified_devices;
 	devstat_select_mode select_mode;
+	float f;
 	int havelast = 0;
 
 	matches = NULL;
@@ -234,9 +237,10 @@ main(int argc, char **argv)
 				break;
 			case 'w':
 				wflag++;
-				waittime = atoi(optarg);
+				f = atof(optarg);
+				waittime = f * 1000;
 				if (waittime < 1)
-					errx(1, "wait time is < 1");
+					errx(1, "wait time is < 1ms");
 				break;
 			case 'x':
 				xflag++;
@@ -306,16 +310,13 @@ main(int argc, char **argv)
 		}
 	}
 
-	cur.dinfo = (struct devinfo *)malloc(sizeof(struct devinfo));
+	cur.dinfo = (struct devinfo *)calloc(1, sizeof(struct devinfo));
 	if (cur.dinfo == NULL)
-		err(1, "malloc failed");
+		err(1, "calloc failed");
 
-	last.dinfo = (struct devinfo *)malloc(sizeof(struct devinfo));
+	last.dinfo = (struct devinfo *)calloc(1, sizeof(struct devinfo));
 	if (last.dinfo == NULL)
-		err(1, "malloc failed");
-
-	bzero(cur.dinfo, sizeof(struct devinfo));
-	bzero(last.dinfo, sizeof(struct devinfo));
+		err(1, "calloc failed");
 
 	/*
 	 * Grab all the devices.  We don't look to see if the list has
@@ -376,12 +377,13 @@ main(int argc, char **argv)
 	 * Look for the traditional wait time and count arguments.
 	 */
 	if (*argv) {
-		waittime = atoi(*argv);
+		f = atof(*argv);
+		waittime = f * 1000;
 
 		/* Let the user know he goofed, but keep going anyway */
 		if (wflag != 0)
 			warnx("discarding previous wait interval, using"
-			      " %d instead", waittime);
+			      " %g instead", waittime / 1000.0);
 		wflag++;
 
 		if (*++argv) {
@@ -399,7 +401,7 @@ main(int argc, char **argv)
 	 * to an interval of 1 second.
 	 */
 	if ((wflag == 0) && (cflag > 0))
-		waittime = 1;
+		waittime = 1 * 1000;
 
 	/*
 	 * If the user specified a wait time, but not a count, we want to
@@ -410,7 +412,7 @@ main(int argc, char **argv)
 	if ((wflag > 0) && (cflag == 0))
 		count = -1;
 
-	bzero(&cur.cp_time, sizeof(cur.cp_time));
+	bzero(cur.cp_time, sizeof(cur.cp_time));
 	cur.tk_nout = 0;
 	cur.tk_nin = 0;
 
@@ -425,6 +427,20 @@ main(int argc, char **argv)
 	 * print out the header again.
 	 */
 	(void)signal(SIGCONT, needhdr);
+
+	/*
+	 * If our standard output is a tty, then install a SIGWINCH handler
+	 * and set wresized so that our first iteration through the main
+	 * iostat loop will peek at the terminal's current rows to find out
+	 * how many lines can fit in a screenful of output.
+	 */
+	if (isatty(fileno(stdout)) != 0) {
+		wresized = 1;
+		(void)signal(SIGWINCH, needresize);
+	} else {
+		wresized = 0;
+		wrows = IOSTAT_DEFAULT_ROWS;
+	}
 
 	for (headercount = 1;;) {
 		struct devinfo *tmp_dinfo;
@@ -442,16 +458,26 @@ main(int argc, char **argv)
 		 }
 
 		if (Cflag > 0) {
-			if (readvar(kd, "kern.cp_time", X_CP_TIME,
-			    &cur.cp_time, sizeof(cur.cp_time)) != 0) {
-				Cflag = 0;
-				warnx("disabling CPU time statistics");
+			if (kd == NULL) {
+				if (readvar(kd, "kern.cp_time", 0,
+				    &cur.cp_time, sizeof(cur.cp_time)) != 0)
+					Cflag = 0;
+			} else {
+				if (kvm_getcptime(kd, cur.cp_time) < 0) {
+					warnx("kvm_getcptime: %s",
+					    kvm_geterr(kd));
+					Cflag = 0;
+				}
 			}
+			if (Cflag == 0)
+				warnx("disabling CPU time statistics");
 		}
 
 		if (!--headercount) {
 			phdr();
-			headercount = 20;
+			if (wresized != 0)
+				doresize();
+			headercount = wrows;
 		}
 
 		tmp_dinfo = last.dinfo;
@@ -493,7 +519,9 @@ main(int argc, char **argv)
 				break;
 			case 1:
 				phdr();
-				headercount = 20;
+				if (wresized != 0)
+					doresize();
+				headercount = wrows;
 				break;
 			default:
 				break;
@@ -528,7 +556,9 @@ main(int argc, char **argv)
 				break;
 			case 1:
 				phdr();
-				headercount = 20;
+				if (wresized != 0)
+					doresize();
+				headercount = wrows;
 				break;
 			default:
 				break;
@@ -556,7 +586,7 @@ main(int argc, char **argv)
 		}
 
 		if (xflag == 0 && Tflag > 0)
-			printf("%4.0Lf%5.0Lf", cur.tk_nin / etime,
+			printf("%4.0Lf %5.0Lf", cur.tk_nin / etime,
 			    cur.tk_nout / etime);
 
 		devstats(hflag, etime, havelast);
@@ -572,7 +602,7 @@ main(int argc, char **argv)
 		if (count >= 0 && --count <= 0)
 			break;
 
-		sleep(waittime);
+		usleep(waittime * 1000);
 		havelast = 1;
 	}
 
@@ -589,10 +619,52 @@ needhdr(int signo)
 	headercount = 1;
 }
 
+/*
+ * When the terminal is resized, force an update of the maximum number of rows
+ * printed between each header repetition.  Then force a new header to be
+ * prepended to the next output.
+ */
+void
+needresize(int signo)
+{
+
+	wresized = 1;
+	headercount = 1;
+}
+
+/*
+ * Update the global `wrows' count of terminal rows.
+ */
+void
+doresize(void)
+{
+	int status;
+	struct winsize w;
+
+	for (;;) {
+		status = ioctl(fileno(stdout), TIOCGWINSZ, &w);
+		if (status == -1 && errno == EINTR)
+			continue;
+		else if (status == -1)
+			err(1, "ioctl");
+		if (w.ws_row > 3)
+			wrows = w.ws_row - 3;
+		else
+			wrows = IOSTAT_DEFAULT_ROWS;
+		break;
+	}
+
+	/*
+	 * Inhibit doresize() calls until we are rescheduled by SIGWINCH.
+	 */
+	wresized = 0;
+}
+
 static void
 phdr(void)
 {
 	int i, printed;
+	char devbuf[256];
 
 	/*
 	 * If xflag is set, we need a per-loop header, not a page header, so
@@ -602,20 +674,19 @@ phdr(void)
 		return;
 
 	if (Tflag > 0)
-		(void)printf("      tty");
+		(void)printf("       tty");
 	for (i = 0, printed=0;(i < num_devices) && (printed < maxshowdevs);i++){
 		int di;
 		if ((dev_select[i].selected != 0)
 		 && (dev_select[i].selected <= maxshowdevs)) {
 			di = dev_select[i].position;
+			snprintf(devbuf, sizeof(devbuf), "%s%d", 
+					    cur.dinfo->devices[di].device_name,
+					    cur.dinfo->devices[di].unit_number);
 			if (oflag > 0)
-				(void)printf("%12.6s%d ",
-					    cur.dinfo->devices[di].device_name,
-					    cur.dinfo->devices[di].unit_number);
+				(void)printf("%13.6s ", devbuf);
 			else
-				printf("%15.6s%d ",
-					    cur.dinfo->devices[di].device_name,
-					    cur.dinfo->devices[di].unit_number);
+				printf("%16.6s ", devbuf);
 			printed++;
 		}
 	}
@@ -625,7 +696,7 @@ phdr(void)
 		(void)printf("\n");
 
 	if (Tflag > 0)
-		(void)printf(" tin tout");
+		(void)printf(" tin  tout");
 
 	for (i=0, printed = 0;(i < num_devices) && (printed < maxshowdevs);i++){
 		if ((dev_select[i].selected != 0)
@@ -670,20 +741,20 @@ devstats(int perf_select, long double etime, int havelast)
 	if (xflag > 0) {
 		printf("                        extended device statistics  ");
 		if (Tflag > 0)
-			printf("     tty ");
+			printf("      tty ");
 		if (Cflag > 0)
 			printf("           cpu ");
 		printf("\n");
 		if (Iflag == 0)
 			printf(
-		"device     r/s   w/s    kr/s    kw/s wait svc_t  %b  "
+		"device     r/s   w/s    kr/s    kw/s qlen svc_t  %%b  "
 			    );
 		else
 			printf(
-		"device     r/i   w/i    kr/i    kw/i wait svc_t  %b  "
+		"device     r/i   w/i    kr/i    kw/i qlen svc_t  %%b  "
 			    );
 		if (Tflag > 0)
-			printf("tin tout ");
+			printf("tin  tout ");
 		if (Cflag > 0)
 			printf("us ni sy in id ");
 		printf("\n");
@@ -735,9 +806,10 @@ devstats(int perf_select, long double etime, int havelast)
 		}
 
 		if (xflag > 0) {
-			asprintf(&devname, "%s%d",
+			if (asprintf(&devname, "%s%d",
 			    cur.dinfo->devices[di].device_name,
-			    cur.dinfo->devices[di].unit_number);
+			    cur.dinfo->devices[di].unit_number) == -1)
+				err(1, "asprintf");
 			/*
 			 * If zflag is set, skip any devices with zero I/O.
 			 */
@@ -747,7 +819,7 @@ devstats(int perf_select, long double etime, int havelast)
 			    mb_per_second_write > ((long double).0005)/1024 ||
 			    busy_pct > 0.5) {
 				if (Iflag == 0)
-					printf("%-8.8s %5.1Lf %5.1Lf %7.1Lf %7.1Lf %4qu %5.1Lf %3.0Lf ",
+					printf("%-8.8s %5.1Lf %5.1Lf %7.1Lf %7.1Lf %4" PRIu64 " %5.1Lf %3.0Lf ",
 					    devname, transfers_per_second_read,
 					    transfers_per_second_write,
 					    mb_per_second_read * 1024,
@@ -755,7 +827,7 @@ devstats(int perf_select, long double etime, int havelast)
 					    queue_len,
 					    ms_per_transaction, busy_pct);
 				else
-					printf("%-8.8s %5.1Lf %5.1Lf %7.1Lf %7.1Lf %4qu %5.1Lf %3.0Lf ",
+					printf("%-8.8s %5.1Lf %5.1Lf %7.1Lf %7.1Lf %4" PRIu64 " %5.1Lf %3.0Lf ",
 					    devname,
 					    (long double)total_transfers_read,
 					    (long double)total_transfers_write,
@@ -781,6 +853,7 @@ devstats(int perf_select, long double etime, int havelast)
 				}
 				printf("\n");
 			}
+			free(devname);
 		} else if (oflag > 0) {
 			int msdig = (ms_per_transaction < 100.0) ? 1 : 0;
 
@@ -791,7 +864,7 @@ devstats(int perf_select, long double etime, int havelast)
 				       msdig,
 				       ms_per_transaction);
 			else
-				printf("%4.1qu%4.1qu%5.*Lf ",
+				printf("%4.1" PRIu64 "%4.1" PRIu64 "%5.*Lf ",
 				       total_blocks,
 				       total_transfers,
 				       msdig,
@@ -806,7 +879,7 @@ devstats(int perf_select, long double etime, int havelast)
 				total_mb = total_bytes;
 				total_mb /= 1024 * 1024;
 
-				printf(" %5.2Lf %3.1qu %5.2Lf ",
+				printf(" %5.2Lf %3.1" PRIu64 " %5.2Lf ",
 				       kb_per_transfer,
 				       total_transfers,
 				       total_mb);
@@ -822,7 +895,7 @@ devstats(int perf_select, long double etime, int havelast)
 		 */
 		printf("%52s","");
 		if (Tflag > 0)
-			printf("%4.0Lf%5.0Lf", cur.tk_nin / etime,
+			printf("%4.0Lf %5.0Lf", cur.tk_nin / etime,
 			    cur.tk_nout / etime);
 		if (Cflag > 0)
 			cpustats();
