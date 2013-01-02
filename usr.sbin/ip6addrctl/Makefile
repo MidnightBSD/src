@@ -1,6 +1,8 @@
-# $FreeBSD: src/usr.sbin/ip6addrctl/Makefile,v 1.1 2003/10/30 17:46:40 ume Exp $
+# $MidnightBSD$
 
 PROG=	ip6addrctl
 MAN=	ip6addrctl.8
+
+WARNS?=	2
 
 .include <bsd.prog.mk>
