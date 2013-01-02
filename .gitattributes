@@ -54442,8 +54442,15 @@ usr.sbin/ipfwpcap/Makefile -text
 usr.sbin/ipfwpcap/ipfwpcap.8 -text
 usr.sbin/ipfwpcap/ipfwpcap.c -text
 usr.sbin/jail/Makefile -text
+usr.sbin/jail/command.c -text
+usr.sbin/jail/config.c -text
 usr.sbin/jail/jail.8 -text
 usr.sbin/jail/jail.c -text
+usr.sbin/jail/jail.conf.5 -text
+usr.sbin/jail/jaillex.l -text
+usr.sbin/jail/jailp.h -text
+usr.sbin/jail/jailparse.y -text
+usr.sbin/jail/state.c -text
 usr.sbin/jexec/Makefile -text
 usr.sbin/jexec/jexec.8 -text
 usr.sbin/jexec/jexec.c -text
