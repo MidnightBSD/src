@@ -1,7 +1,9 @@
-# $FreeBSD: src/usr.sbin/pppctl/Makefile,v 1.16 2004/01/31 17:28:09 marcel Exp $
+# $MidnightBSD$
 
 PROG=	pppctl
 MAN=	pppctl.8
+
+WARNS?=	2
 
 DPADD=	${LIBPTHREAD} ${LIBEDIT} ${LIBTERMCAP}
 LDADD=	-lpthread -ledit -ltermcap
