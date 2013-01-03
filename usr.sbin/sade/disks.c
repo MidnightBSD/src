@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/usr.sbin/sade/disks.c,v 1.161 2006/08/09 08:24:46 delphij Exp $
+ * $MidnightBSD$
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -49,7 +49,7 @@ enum size_units_t { UNIT_BLOCKS, UNIT_KILO, UNIT_MEG, UNIT_GIG, UNIT_SIZE };
 	"DOS FAT partition, 131 for a Linux ext2fs partition, or\n"	\
 	"130 for a Linux swap partition.\n\n"
 #define	NON_FREEBSD_NOTE						\
-	"Note:  If you choose a non-FreeBSD partition type, it will not\n" \
+	"Note:  If you choose a non-BSD partition type, it will not\n" \
 	"be formatted or otherwise prepared, it will simply reserve space\n" \
 	"for you to use another tool, such as DOS format, to later format\n" \
 	"and actually use the partition."
@@ -90,6 +90,46 @@ record_chunks(Disk *d)
 static daddr_t Total;
 
 static void
+check_geometry(Disk *d)
+{
+    int sg;
+
+#ifdef PC98
+    if (d->bios_cyl >= 65536 || d->bios_hd > 256 || d->bios_sect >= 256)
+#else
+    if (d->bios_cyl > 65536 || d->bios_hd > 256 || d->bios_sect >= 64)
+#endif
+    {
+	dialog_clear_norefresh();
+	sg = msgYesNo("WARNING:  It is safe to use a geometry of %lu/%lu/%lu for %s on\n"
+		      "computers with modern BIOS versions.  If this disk is to be used\n"
+		      "on an old machine it is recommended that it does not have more\n"
+		      "than 65535 cylinders, more than 255 heads, or more than\n"
+#ifdef PC98
+		      "255"
+#else
+		      "63"
+#endif
+		      " sectors per track.\n"
+		      "\n"
+		      "Would you like to keep using the current geometry?\n",
+		      d->bios_cyl, d->bios_hd, d->bios_sect, d->name);
+	if (sg == 1) {
+	    Sanitize_Bios_Geom(d);
+	    msgConfirm("A geometry of %lu/%lu/%lu was calculated for %s.\n"
+		       "\n"
+		       "If you are not sure about this, please consult the Hardware Guide\n"
+		       "in the Documentation submenu or use the (G)eometry command to\n"
+		       "change it.  Remember: you need to enter whatever your BIOS thinks\n"
+		       "the geometry is!  For IDE, it's what you were told in the BIOS\n"
+		       "setup.  For SCSI, it's the translation mode your controller is\n"
+		       "using.  Do NOT use a ``physical geometry''.\n",
+		       d->bios_cyl, d->bios_hd, d->bios_sect, d->name);
+	}
+    }
+}
+
+static void
 print_chunks(Disk *d, int u)
 {
     int row;
@@ -103,22 +143,6 @@ print_chunks(Disk *d, int u)
     Total = 0;
     for (i = 0; chunk_info[i]; i++)
 	Total += chunk_info[i]->size;
-    if (d->bios_cyl > 65536 || d->bios_hd > 256 || d->bios_sect >= 64) {
-	dialog_clear_norefresh();
-	msgConfirm("WARNING:  A geometry of %lu/%lu/%lu for %s is incorrect.  Using\n"
-		   "a more likely geometry.  If this geometry is incorrect or you\n"
-		   "are unsure as to whether or not it's correct, please consult\n"
-		   "the Hardware Guide in the Documentation submenu or use the\n"
-		   "(G)eometry command to change it now.\n\n"
-		   "Remember: you need to enter whatever your BIOS thinks the\n"
-		   "geometry is!  For IDE, it's what you were told in the BIOS\n"
-		   "setup. For SCSI, it's the translation mode your controller is\n"
-		   "using.  Do NOT use a ``physical geometry''.",
-	  d->bios_cyl, d->bios_hd, d->bios_sect, d->name);
-	Sanitize_Bios_Geom(d);
-	msgDebug("Sanitized geometry for %s is %lu/%lu/%lu.\n",
-	    d->name, d->bios_cyl, d->bios_hd, d->bios_sect);
-    }
     attrset(A_NORMAL);
     mvaddstr(0, 0, "Disk name:\t");
     clrtobot();
@@ -165,10 +189,9 @@ static void
 print_command_summary(void)
 {
     mvprintw(14, 0, "The following commands are supported (in upper or lower case):");
-    mvprintw(16, 0, "A = Use Entire Disk   G = set Drive Geometry   C = Create Slice   F = `DD' mode");
-    mvprintw(17, 0, "D = Delete Slice      Z = Toggle Size Units    S = Set Bootable   | = Wizard m.");
-    mvprintw(18, 0, "T = Change Type       U = Undo All Changes     Q = Finish");
-    mvprintw(18, 47, "W = Write Changes");
+    mvprintw(16, 0, "A = Use Entire Disk   G = set Drive Geometry   C = Create Slice");
+    mvprintw(17, 0, "D = Delete Slice      Z = Toggle Size Units    S = Set Bootable   | = Expert m.");
+    mvprintw(18, 0, "T = Change Type       U = Undo All Changes     W = Write Changes  Q = Finish");
     mvprintw(21, 0, "Use F1 or ? to get more help, arrow keys to select.");
     move(0, 0);
 }
@@ -267,6 +290,9 @@ diskPartition(Device *dev)
     /* Set up the chunk array */
     record_chunks(d);
 
+    /* Give the user a chance to sanitize the disk geometry, if necessary */
+    check_geometry(d);
+
     while (chunking) {
 	char *val, geometry[80];
 	    
@@ -338,7 +364,7 @@ diskPartition(Device *dev)
 			      "so as to remain cooperative with any future possible\n"
 			      "operating systems on the drive(s)?\n"
 			      "(See also the section about ``dangerously dedicated''\n"
-			      "disks in the FreeBSD FAQ.)");
+			      "disks in the BSD FAQ.)");
 		if (rv == -1)
 		    rv = 0;
 	    }
@@ -359,7 +385,7 @@ diskPartition(Device *dev)
 		chunk_e partitiontype;
 		name[0] = '\0';
 		snprintf(tmp, 20, "%jd", (intmax_t)chunk_info[current_chunk]->size);
-		val = msgGetInput(tmp, "Please specify the size for new FreeBSD slice in blocks\n"
+		val = msgGetInput(tmp, "Please specify the size for new BSD slice in blocks\n"
 				  "or append a trailing `M' for megabytes (e.g. 20M).");
 		if (val && (size = strtoimax(val, &cp, 0)) > 0) {
 		    if (*cp && toupper(*cp) == 'M')
@@ -368,7 +394,7 @@ diskPartition(Device *dev)
 			size *= ONE_GIG;
 		    sprintf(tmp, "%d", SUBTYPE_FREEBSD);
 		    val = msgGetInput(tmp, "Enter type of partition to create:\n\n"
-			"Pressing Enter will choose the default, a native FreeBSD\n"
+			"Pressing Enter will choose the default, a native BSD\n"
 			"slice (type %u).  "
 			OTHER_SLICE_VALUES
 			NON_FREEBSD_NOTE, SUBTYPE_FREEBSD);
@@ -413,7 +439,7 @@ diskPartition(Device *dev)
 		sprintf(tmp, "%d", chunk_info[current_chunk]->subtype);
 		val = msgGetInput(tmp, "New partition type:\n\n"
 		    "Pressing Enter will use the current type. To choose a native\n"
-		    "FreeBSD slice enter %u.  "
+		    "BSD slice enter %u.  "
 		    OTHER_SLICE_VALUES
 		    NON_FREEBSD_NOTE, SUBTYPE_FREEBSD);
 		if (val && (subtype = strtol(val, NULL, 0)) > 0) {
@@ -478,13 +504,10 @@ diskPartition(Device *dev)
 	    break;
 
 	case 'W':
-	    if (!msgNoYes("WARNING:  This should only be used when modifying an EXISTING\n"
-			       "installation.  If you are installing FreeBSD for the first time\n"
-			       "then you should simply type Q when you're finished here and your\n"
-			       "changes will be committed in one batch automatically at the end of\n"
-			       "these questions.  If you're adding a disk, you should NOT write\n"
-			       "from this screen, you should do it from the label editor.\n\n"
-			       "Are you absolutely sure you want to do this now?")) {
+	    if (!msgNoYes("WARNING:  You are about to modify an EXISTING installation.\n"
+			       "You should simply type Q when you are finished\n"
+			       "here and write to the disk from the label editor.\n\n"
+			       "Are you absolutely sure you want to continue?")) {
 		variable_set2(DISK_PARTITIONED, "yes", 0);
 
 		/*
@@ -496,8 +519,8 @@ diskPartition(Device *dev)
 		 */
 		/*
 		 * Don't offer to update the MBR on this disk if the first
-		 * "real" chunk looks like a FreeBSD "all disk" partition,
-		 * or the disk is entirely FreeBSD.
+		 * "real" chunk looks like a BSD "all disk" partition,
+		 * or the disk is entirely BSD.
 		 */
 		if ((d->chunks->part->type != freebsd) ||
 		    (d->chunks->part->offset > 1))
@@ -541,8 +564,8 @@ diskPartition(Device *dev)
 	     */
 	    /*
 	     * Don't offer to update the MBR on this disk if the first "real"
-	     * chunk looks like a FreeBSD "all disk" partition, or the disk is
-	     * entirely FreeBSD. 
+	     * chunk looks like a BSD "all disk" partition, or the disk is
+	     * entirely BSD. 
 	     */
 	    if ((d->chunks->part->type != freebsd) ||
 		(d->chunks->part->offset > 1)) {
@@ -760,18 +783,25 @@ diskPartitionNonInteractive(Device *dev)
     record_chunks(d);
     cp = variable_get(VAR_GEOMETRY);
     if (cp) {
-	msgDebug("Setting geometry from script to: %s\n", cp);
-	d->bios_cyl = strtol(cp, &cp, 0);
-	d->bios_hd = strtol(cp + 1, &cp, 0);
-	d->bios_sect = strtol(cp + 1, 0, 0);
-    }
-
-    if (d->bios_cyl > 65536 || d->bios_hd > 256 || d->bios_sect >= 64) {
-	msgDebug("Warning:  A geometry of %lu/%lu/%lu for %s is incorrect.\n",
-	    d->bios_cyl, d->bios_hd, d->bios_sect, d->name);
-	Sanitize_Bios_Geom(d);
-	msgDebug("Sanitized geometry for %s is %lu/%lu/%lu.\n",
-	    d->name, d->bios_cyl, d->bios_hd, d->bios_sect);
+	if (!strcasecmp(cp, "sane")) {
+#ifdef PC98
+	    if (d->bios_cyl >= 65536 || d->bios_hd > 256 || d->bios_sect >= 256)
+#else
+	    if (d->bios_cyl > 65536 || d->bios_hd > 256 || d->bios_sect >= 64)
+#endif
+	    {
+		msgDebug("Warning:  A geometry of %lu/%lu/%lu for %s is incorrect.\n",
+		    d->bios_cyl, d->bios_hd, d->bios_sect, d->name);
+		Sanitize_Bios_Geom(d);
+		msgDebug("Sanitized geometry for %s is %lu/%lu/%lu.\n",
+		    d->name, d->bios_cyl, d->bios_hd, d->bios_sect);
+	    }
+	} else {
+	    msgDebug("Setting geometry from script to: %s\n", cp);
+	    d->bios_cyl = strtol(cp, &cp, 0);
+	    d->bios_hd = strtol(cp + 1, &cp, 0);
+	    d->bios_sect = strtol(cp + 1, 0, 0);
+	}
     }
 
     cp = variable_get(VAR_PARTITION);
@@ -784,7 +814,7 @@ diskPartitionNonInteractive(Device *dev)
 		    Create_Chunk(d, chunk_info[i]->offset, chunk_info[i]->size,
 				 freebsd, 3,
 				 (chunk_info[i]->flags & CHUNK_ALIGN),
-				 "FreeBSD");
+				 "MidnightBSD");
 		    variable_set2(DISK_PARTITIONED, "yes", 0);
 		    break;
 		}
@@ -796,13 +826,13 @@ diskPartitionNonInteractive(Device *dev)
 	}
 	else if (!strcmp(cp, "all")) {
 	    /* Do all disk space case */
-	    msgDebug("Warning:  Devoting all of disk %s to FreeBSD.\n", d->name);
+	    msgDebug("Warning:  Devoting all of disk %s to MidnightBSD.\n", d->name);
 
 	    All_FreeBSD(d, FALSE);
 	}
 	else if (!strcmp(cp, "exclusive")) {
 	    /* Do really-all-the-disk-space case */
-	    msgDebug("Warning:  Devoting all of disk %s to FreeBSD.\n", d->name);
+	    msgDebug("Warning:  Devoting all of disk %s to MidnightBSD.\n", d->name);
 
 	    All_FreeBSD(d, all_disk = TRUE);
 	}
@@ -817,7 +847,7 @@ diskPartitionNonInteractive(Device *dev)
 		if (chunk_info[i]->type == unused && chunk_info[i]->size >= sz) {
 		    Create_Chunk(d, chunk_info[i]->offset, sz, freebsd, 3,
 				 (chunk_info[i]->flags & CHUNK_ALIGN),
-				 "FreeBSD");
+				 "MidnightBSD");
 		    variable_set2(DISK_PARTITIONED, "yes", 0);
 		    break;
 		}
@@ -829,13 +859,13 @@ diskPartitionNonInteractive(Device *dev)
 	    }
 	}
 	else if (!strcmp(cp, "existing")) {
-	    /* Do existing FreeBSD case */
+	    /* Do existing MidnightBSD case */
 	    for (i = 0; chunk_info[i]; i++) {
 		if (chunk_info[i]->type == freebsd)
 		    break;
 	    }
 	    if (!chunk_info[i]) {
-		msgConfirm("Unable to find any existing FreeBSD partitions on this disk!");
+		msgConfirm("Unable to find any existing BSD partitions on this disk!");
 		return;
 	    }
 	}
