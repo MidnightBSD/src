@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -28,12 +27,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * setfib file skeleton taken from nice.c
+ * setfib file skelaton taken from nice.c
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/setfib/setfib.c,v 1.3.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
-
+__MBSDID("$MidnightBSD$");
 
 #include <ctype.h>
 #include <err.h>
@@ -42,9 +40,10 @@ __FBSDID("$FreeBSD: src/usr.sbin/setfib/setfib.c,v 1.3.2.3.2.1 2008/11/25 02:59:
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/socket.h>
 #include <sys/sysctl.h>
 
-void usage(void);
+static void usage(void);
 
 int
 main(int argc, char *argv[])
@@ -96,7 +95,7 @@ main(int argc, char *argv[])
 	err(errno == ENOENT ? 127 : 126, "%s", *argv);
 }
 
-void
+static void
 usage(void)
 {
 
