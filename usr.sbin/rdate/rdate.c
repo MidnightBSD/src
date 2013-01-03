@@ -1,4 +1,4 @@
-/* 	$MidnightBSD: src/usr.sbin/rdate/rdate.c,v 1.4 2013/01/03 02:45:15 laffer1 Exp $ */
+/* 	$MidnightBSD: src/usr.sbin/rdate/rdate.c,v 1.5 2013/01/03 02:54:52 laffer1 Exp $ */
 /*	$OpenBSD: rdate.c,v 1.24 2009/10/27 23:59:54 deraadt Exp $	*/
 /*	$NetBSD: rdate.c,v 1.4 1996/03/16 12:37:45 pk Exp $	*/
 
@@ -61,11 +61,11 @@
 
 void rfc868time_client (const char *, int, struct timeval *, struct timeval *, int);
 void ntp_client (const char *, int, struct timeval *, struct timeval *, int);
-void usage(void);
+static void usage(void);
 
 extern char    *__progname;
 
-void
+static void
 usage(void)
 {
 	(void) fprintf(stderr, "usage: %s [-46acnpsv] host\n", __progname);
