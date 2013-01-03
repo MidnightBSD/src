@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/usr.sbin/sensorsd/sensorsd.c,v 1.1 2009/11/28 22:44:36 laffer1 Exp $ */
 /*	$OpenBSD: sensorsd.c,v 1.34 2007/08/14 17:10:02 cnst Exp $ */
 
 /*-
@@ -20,7 +20,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.sbin/sensorsd/sensorsd.c,v 1.1 2009/11/28 22:44:36 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -96,10 +96,11 @@ char			 *configfile;
 volatile sig_atomic_t	  reload = 0;
 int			  debug = 0;
 
+extern char *__progname;
+
 void
 usage(void)
 {
-	extern char *__progname;
 	fprintf(stderr, "usage: %s [-d]\n", __progname);
 	exit(1);
 }
@@ -303,7 +304,7 @@ check_sdlim(struct sdlim_t *sdlim)
 void
 execute(char *command)
 {
-	char *argp[] = {"sh", "-c", command, NULL};
+	char *argp[4] = {"sh", "-c", command, NULL};
 
 	switch (fork()) {
 	case -1:
