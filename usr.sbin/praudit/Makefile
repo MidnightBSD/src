@@ -1,12 +1,12 @@
-#
-# $FreeBSD: src/usr.sbin/praudit/Makefile,v 1.1 2006/02/02 10:15:30 rwatson Exp $
-#
+# $MidnightBSD$
 
 OPENBSMDIR=${.CURDIR}/../../contrib/openbsm
 .PATH: ${OPENBSMDIR}/bin/praudit
 
 PROG=	praudit
 MAN=	praudit.1
+
+WARNS?=	3
 
 DPADD=	${LIBBSM}
 LDADD=	-lbsm
