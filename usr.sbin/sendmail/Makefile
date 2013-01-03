@@ -1,5 +1,4 @@
 #	@(#)Makefile	8.8 (Berkeley) 3/28/97
-# $FreeBSD: src/usr.sbin/sendmail/Makefile,v 1.51.2.1 2005/08/20 01:39:08 gshapiro Exp $
 # $MidnightBSD$
 
 .include <bsd.own.mk>
@@ -44,6 +43,13 @@ CFLAGS+= ${DBMDEF} ${NIS} -DTCPWRAPPERS ${MAPS}
 CFLAGS+= -DNETINET6
 .endif
 
+WARNS?=	1
+
+# Unfortunately, clang gives warnings about sendmail code that cannot
+# be turned off yet.  Since this is contrib code, and we don't really
+# care about the warnings, just make them non-fatal for now.
+NO_WERROR.clang=
+
 DPADD=	${LIBUTIL} ${LIBWRAP}
 LDADD=	-lutil -lwrap
 
@@ -61,7 +67,7 @@ CLEANFILES+=sm_os.h
 
 .if ${MK_OPENSSL} != "no" && !defined(RELEASE_CRUNCH)
 # STARTTLS support
-CFLAGS+=	-DSTARTTLS -D_FFR_TLS_1 -D_FFR_DEAL_WITH_ERROR_SSL
+CFLAGS+=	-DSTARTTLS -D_FFR_TLS_1
 DPADD+=		${LIBSSL} ${LIBCRYPTO}
 LDADD+=		-lssl -lcrypto
 .endif
