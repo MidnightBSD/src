@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2002-2004 Sam Leffler, Errno Consulting
+ * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,13 +12,6 @@
  *    similar to the "NO WARRANTY" disclaimer below ("Disclaimer") and any
  *    redistribution must be conditioned upon including a substantially
  *    similar Disclaimer requirement for further binary redistribution.
- * 3. Neither the names of the above-listed copyright holders nor the names
- *    of any contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * Alternatively, this software may be distributed under the terms of the
- * GNU General Public License ("GPL") version 2 as published by the Free
- * Software Foundation.
  *
  * NO WARRANTY
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -33,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: src/usr.sbin/wlandebug/wlandebug.c,v 1.5 2007/07/28 00:05:25 thompsa Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -68,11 +61,11 @@ const char *progname;
 #define	IEEE80211_MSG_OUTPUT	0x00100000	/* output handling */
 #define	IEEE80211_MSG_STATE	0x00080000	/* state machine */
 #define	IEEE80211_MSG_POWER	0x00040000	/* power save handling */
-#define	IEEE80211_MSG_DOT1X	0x00020000	/* 802.1x authenticator */
+#define	IEEE80211_MSG_HWMP	0x00020000	/* hybrid mesh protocol */
 #define	IEEE80211_MSG_DOT1XSM	0x00010000	/* 802.1x state machine */
 #define	IEEE80211_MSG_RADIUS	0x00008000	/* 802.1x radius client */
 #define	IEEE80211_MSG_RADDUMP	0x00004000	/* dump 802.1x radius packets */
-#define	IEEE80211_MSG_RADKEYS	0x00002000	/* dump 802.1x keys */
+#define	IEEE80211_MSG_MESH	0x00002000	/* mesh networking */
 #define	IEEE80211_MSG_WPA	0x00001000	/* WPA/RSN protocol */
 #define	IEEE80211_MSG_ACL	0x00000800	/* ACL handling */
 #define	IEEE80211_MSG_WME	0x00000400	/* WME protocol */
@@ -81,6 +74,10 @@ const char *progname;
 #define	IEEE80211_MSG_INACT	0x00000080	/* inactivity handling */
 #define	IEEE80211_MSG_ROAM	0x00000040	/* sta-mode roaming */
 #define	IEEE80211_MSG_RATECTL	0x00000020	/* tx rate control */
+#define	IEEE80211_MSG_ACTION	0x00000010	/* action frame handling */
+#define	IEEE80211_MSG_WDS	0x00000008	/* WDS handling */
+#define	IEEE80211_MSG_IOCTL	0x00000004	/* ioctl handling */
+#define	IEEE80211_MSG_TDMA	0x00000002	/* TDMA handling */
 
 static struct {
 	const char	*name;
@@ -100,11 +97,11 @@ static struct {
 	{ "output",	IEEE80211_MSG_OUTPUT },
 	{ "state",	IEEE80211_MSG_STATE },
 	{ "power",	IEEE80211_MSG_POWER },
-	{ "dot1x",	IEEE80211_MSG_DOT1X },
+	{ "hwmp",	IEEE80211_MSG_HWMP },
 	{ "dot1xsm",	IEEE80211_MSG_DOT1XSM },
 	{ "radius",	IEEE80211_MSG_RADIUS },
 	{ "raddump",	IEEE80211_MSG_RADDUMP },
-	{ "radkeys",	IEEE80211_MSG_RADKEYS },
+	{ "mesh",	IEEE80211_MSG_MESH },
 	{ "wpa",	IEEE80211_MSG_WPA },
 	{ "acl",	IEEE80211_MSG_ACL },
 	{ "wme",	IEEE80211_MSG_WME },
@@ -113,6 +110,10 @@ static struct {
 	{ "inact",	IEEE80211_MSG_INACT },
 	{ "roam",	IEEE80211_MSG_ROAM },
 	{ "rate",	IEEE80211_MSG_RATECTL },
+	{ "action",	IEEE80211_MSG_ACTION },
+	{ "wds",	IEEE80211_MSG_WDS },
+	{ "ioctl",	IEEE80211_MSG_IOCTL },
+	{ "tdma",	IEEE80211_MSG_TDMA },
 };
 
 static u_int
@@ -131,54 +132,61 @@ usage(void)
 {
 	int i;
 
-	fprintf(stderr, "usage: %s [-i device] [flags]\n", progname);
+	fprintf(stderr, "usage: %s [-d | -i device] [flags]\n", progname);
 	fprintf(stderr, "where flags are:\n");
 	for (i = 0; i < N(flags); i++)
 		printf("%s\n", flags[i].name);
 	exit(-1);
 }
 
+static void
+setoid(char oid[], size_t oidlen, const char *wlan)
+{
+#ifdef __linux__
+	if (wlan)
+		snprintf(oid, oidlen, "net.%s.debug", wlan);
+#elif __MidnightBSD__
+	if (wlan)
+		snprintf(oid, oidlen, "net.wlan.%s.debug", wlan+4);
+	else
+		snprintf(oid, oidlen, "net.wlan.debug");
+#elif __NetBSD__
+	if (wlan)
+		snprintf(oid, oidlen, "net.link.ieee80211.%s.debug", wlan);
+	else
+		snprintf(oid, oidlen, "net.link.ieee80211.debug");
+#else
+#error "No support for this system"
+#endif
+}
+
 int
 main(int argc, char *argv[])
 {
-	const char *ifname = "ath0";
 	const char *cp, *tp;
 	const char *sep;
-	int op, i, unit;
+	int op, i;
 	u_int32_t debug, ndebug;
-	size_t debuglen, parentlen;
-	char oid[256], parent[256];
+	size_t debuglen;
+	char oid[256];
 
 	progname = argv[0];
+	setoid(oid, sizeof(oid), "wlan0");
 	if (argc > 1) {
-		if (strcmp(argv[1], "-i") == 0) {
+		if (strcmp(argv[1], "-d") == 0) {
+			setoid(oid, sizeof(oid), NULL);
+			argc -= 1, argv += 1;
+		} else if (strcmp(argv[1], "-i") == 0) {
 			if (argc < 2)
 				errx(1, "missing interface name for -i option");
-			ifname = argv[2];
+			if (strncmp(argv[2], "wlan", 4) != 0)
+				errx(1, "expecting a wlan interface name");
+			setoid(oid, sizeof(oid), argv[2]);
 			argc -= 2, argv += 2;
 		} else if (strcmp(argv[1], "-?") == 0)
 			usage();
 	}
 
-	for (unit = 0; unit < 10; unit++) {
-#ifdef __linux__
-		snprintf(oid, sizeof(oid), "net.wlan%d.%%parent", unit);
-#else
-		snprintf(oid, sizeof(oid), "net.wlan.%d.%%parent", unit);
-#endif
-		parentlen = sizeof(parent);
-		if (sysctlbyname(oid, parent, &parentlen, NULL, 0) < 0)
-			continue;
-		if (strncmp(parent, ifname, parentlen) == 0)
-			break;
-	}
-	if (unit == 10)
-		errx(1, "%s: cannot locate wlan sysctl node.", ifname);
-#ifdef __linux__
-	snprintf(oid, sizeof(oid), "net.wlan%d.debug", unit);
-#else
-	snprintf(oid, sizeof(oid), "net.wlan.%d.debug", unit);
-#endif
 	debuglen = sizeof(debug);
 	if (sysctlbyname(oid, &debug, &debuglen, NULL, 0) < 0)
 		err(1, "sysctl-get(%s)", oid);

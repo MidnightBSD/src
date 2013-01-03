@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/wlandebug/wlandebug.8,v 1.3 2007/07/28 00:05:25 thompsa Exp $
+.\" $MidnightBSD$
 .\"
-.Dd January 8, 2007
+.Dd July 17, 2009
 .Dt WLANDEBUG 8
 .Os
 .Sh NAME
@@ -32,7 +32,7 @@
 .Nd "set/query 802.11 wireless debugging messages"
 .Sh SYNOPSIS
 .Nm
-.Op Fl i Ar ifnet
+.Op Fl d | Fl i Ar ifnet
 .Op Fl flag|+flag Ar ...
 .Sh DESCRIPTION
 The
@@ -46,6 +46,10 @@ Running
 without any options will display the current messages
 enabled for the specified network interface
 (by default, ``ath0').
+The default debugging level for new interfaces can be set
+by specifying the
+.Fl d
+option.
 When run as the super-user
 .Nm
 can be used to enable and/or disable debugging messages.
@@ -93,11 +97,8 @@ state machine operation.
 802.11 power save operation; in hostap mode this enables
 copious information about buffered frames for stations operating
 in power save mode.
-.It Ar dot1x
-802.1x operation; not presently meaningful as 802.1x protocol
-support is implemented in user mode by the
-.Xr hostapd 8
-program.
+.It Ar hwmp
+trace operation of Hybrid Wireless Mesh Protocol processing.
 .It Ar dot1xsm
 802.1x state machine operation; not presently meaningful as 802.1x protocol
 support is implemented in user mode by the
@@ -115,15 +116,10 @@ not presently meaningful as 802.1x protocol
 support is implemented in user mode by the
 .Xr hostapd 8
 program.
-.It Ar radkeys
-include key contents when dumping packets exchanged with the
-radius backend for 802.1x operation;
-not presently meaningful as 802.1x protocol
-support is implemented in user mode by the
-.Xr hostapd 8
-program.
+.It Ar mesh
+trace operation of 802.11s mesh protocol processing.
 .It Ar wpa
-trace operation of the WPA protocol; 
+trace operation of the WPA protocol;
 only partly meaningful as WPA protocol
 support is mostly implemented in user mode by the
 .Xr hostapd 8
