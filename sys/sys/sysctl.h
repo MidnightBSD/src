@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)sysctl.h	8.1 (Berkeley) 6/2/93
- * $MidnightBSD$
+ * $MidnightBSD: src/sys/sys/sysctl.h,v 1.13 2012/10/09 04:05:36 laffer1 Exp $
  */
 
 #ifndef _SYS_SYSCTL_H_
@@ -592,7 +592,8 @@ SYSCTL_ALLOWED_TYPES(UINT64, uint64_t *a; unsigned long long *b; );
 #define HW_FLOATINGPT	10		/* int: has HW floating point? */
 #define HW_MACHINE_ARCH	11		/* string: machine architecture */
 #define	HW_REALMEM	12		/* int: 'real' memory */
-#define	HW_MAXID	13		/* number of valid hw ids */
+#define	HW_SENSORS	13		/* node: hardware monitors */
+#define	HW_MAXID	14		/* number of valid hw ids */
 
 #define CTL_HW_NAMES { \
 	{ 0, 0 }, \
@@ -608,6 +609,7 @@ SYSCTL_ALLOWED_TYPES(UINT64, uint64_t *a; unsigned long long *b; );
 	{ "floatingpoint", CTLTYPE_INT }, \
 	{ "machine_arch", CTLTYPE_STRING }, \
 	{ "realmem", CTLTYPE_ULONG }, \
+	{ "sensors", CTLTYPE_NODE }, \
 }
 
 /*
