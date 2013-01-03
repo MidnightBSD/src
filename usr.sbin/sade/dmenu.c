@@ -1,4 +1,5 @@
 /*
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sade/dmenu.c,v 1.51 2006/08/09 11:25:10 netchild Exp $
  *
  * Copyright (c) 1995

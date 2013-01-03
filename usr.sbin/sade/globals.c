@@ -1,4 +1,5 @@
 /*
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sade/globals.c,v 1.29 2006/08/07 23:35:48 netchild Exp $
  *
  * Copyright (c) 1995

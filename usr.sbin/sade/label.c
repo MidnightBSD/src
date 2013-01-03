@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/usr.sbin/sade/label.c,v 1.155 2006/08/08 13:45:46 delphij Exp $
+ * $MidnightBSD$
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -910,7 +910,7 @@ diskLabel(Device *dev)
 		}
 		if (msg) {
 		    if (req) {
-			msgConfirm(msg);
+			msgConfirm("%s", msg);
 			clear_wins();
 			msg = NULL;
 		    }
@@ -1168,14 +1168,11 @@ diskLabel(Device *dev)
 	    if (!variable_cmp(DISK_LABELLED, "written")) {
 		msgConfirm("You've already written out your changes - if you\n"
 			   "wish to overwrite them, you'll have to restart\n"
-			   "sysinstall first.");
+			   "%s first.", ProgName);
 	    }
-	    else if (!msgNoYes("WARNING:  This should only be used when modifying an EXISTING\n"
-			  "installation.  If you are installing FreeBSD for the first time\n"
-			  "then you should simply type Q when you're finished here and your\n"
-			  "changes will be committed in one batch automatically at the end of\n"
-			  "these questions.\n\n"
-			  "Are you absolutely sure you want to do this now?")) {
+	    else if (!msgNoYes("WARNING:  You are about to modify an EXISTING\n"
+			  "installation.\n\n"
+			  "Are you absolutely sure you want to continue?")) {
 		variable_set2(DISK_LABELLED, "yes", 0);
 		diskLabelCommit(NULL);
 	    }
