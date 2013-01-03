@@ -11,7 +11,7 @@
 # AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, WITHOUT
 # LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
 # A PARTICULAR PURPOSE.
-# $FreeBSD: src/usr.sbin/ndp/Makefile,v 1.6 2006/07/27 15:31:12 yar Exp $
+# $MidnightBSD$
 
 .PATH: ${.CURDIR}/../../contrib/tcpdump
 
@@ -21,5 +21,7 @@ SRCS=	ndp.c gmt2local.c
 
 CFLAGS+= -I. -I${.CURDIR} -I${.CURDIR}/../../contrib/tcpdump
 CFLAGS+= -D_U_=""
+
+WARNS?=	1
 
 .include <bsd.prog.mk>

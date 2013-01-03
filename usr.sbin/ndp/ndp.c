@@ -1,4 +1,4 @@
-/*	$FreeBSD: /usr/local/www/cvsroot/FreeBSD/src/usr.sbin/ndp/ndp.c,v 1.29 2011/01/08 01:57:23 delphij Exp $	*/
+/*	$MidnightBSD$	*/
 /*	$KAME: ndp.c,v 1.104 2003/06/27 07:48:39 itojun Exp $	*/
 
 /*
@@ -114,6 +114,11 @@
 	((a) > 0 ? (1 + (((a) - 1) | (sizeof(long) - 1))) : sizeof(long))
 #define ADVANCE(x, n) (x += ROUNDUP((n)->sa_len))
 
+#define NEXTADDR(w, s) \
+	if (rtm->rtm_addrs & (w)) { \
+		bcopy((char *)&s, cp, sizeof(s)); cp += SA_SIZE(&s);}
+
+
 static pid_t pid;
 static int nflag;
 static int tflag;
@@ -125,30 +130,30 @@ char ntop_buf[INET6_ADDRSTRLEN];	/* inet_ntop() */
 char host_buf[NI_MAXHOST];		/* getnameinfo() */
 char ifix_buf[IFNAMSIZ];		/* if_indextoname() */
 
-int main __P((int, char **));
-int file __P((char *));
-void getsocket __P((void));
-int set __P((int, char **));
-void get __P((char *));
-int delete __P((char *));
-void dump __P((struct in6_addr *, int));
-static struct in6_nbrinfo *getnbrinfo __P((struct in6_addr *, int, int));
-int ndp_ether_aton __P((char *, u_char *));
-void usage __P((void));
-int rtmsg __P((int));
-void ifinfo __P((char *, int, char **));
-void rtrlist __P((void));
-void plist __P((void));
-void pfx_flush __P((void));
-void rtr_flush __P((void));
-void harmonize_rtr __P((void));
+int main(int, char **);
+int file(char *);
+void getsocket(void);
+int set(int, char **);
+void get(char *);
+int delete(char *);
+void dump(struct in6_addr *, int);
+static struct in6_nbrinfo *getnbrinfo(struct in6_addr *, int, int);
+static char *ether_str(struct sockaddr_dl *);
+int ndp_ether_aton(char *, u_char *);
+void usage(void);
+int rtmsg(int);
+void ifinfo(char *, int, char **);
+void rtrlist(void);
+void plist(void);
+void pfx_flush(void);
+void rtr_flush(void);
+void harmonize_rtr(void);
 #ifdef SIOCSDEFIFACE_IN6	/* XXX: check SIOCGDEFIFACE_IN6 as well? */
-static void getdefif __P((void));
-static void setdefif __P((char *));
+static void getdefif(void);
+static void setdefif(char *);
 #endif
-static char *sec2str __P((time_t));
-static char *ether_str __P((struct sockaddr_dl *));
-static void ts_print __P((const struct timeval *));
+static char *sec2str(time_t);
+static void ts_print(const struct timeval *);
 
 #ifdef ICMPV6CTL_ND6_DRLIST
 static char *rtpref_str[] = {
@@ -427,11 +432,11 @@ set(argc, argv)
 	sdl = (struct sockaddr_dl *)(ROUNDUP(sin->sin6_len) + (char *)sin);
 	if (IN6_ARE_ADDR_EQUAL(&sin->sin6_addr, &sin_m.sin6_addr)) {
 		if (sdl->sdl_family == AF_LINK &&
-		    (rtm->rtm_flags & RTF_LLINFO) &&
 		    !(rtm->rtm_flags & RTF_GATEWAY)) {
 			switch (sdl->sdl_type) {
 			case IFT_ETHER: case IFT_FDDI: case IFT_ISO88023:
 			case IFT_ISO88024: case IFT_ISO88025:
+			case IFT_L2VLAN: case IFT_BRIDGE:
 				goto overwrite;
 			}
 		}
@@ -498,6 +503,7 @@ delete(host)
 {
 	struct sockaddr_in6 *sin = &sin_m;
 	register struct rt_msghdr *rtm = &m_rtmsg.m_rtm;
+	register char *cp = m_rtmsg.m_space;
 	struct sockaddr_dl *sdl;
 	struct addrinfo hints, *res;
 	int gai_error;
@@ -528,7 +534,6 @@ delete(host)
 	sdl = (struct sockaddr_dl *)(ROUNDUP(sin->sin6_len) + (char *)sin);
 	if (IN6_ARE_ADDR_EQUAL(&sin->sin6_addr, &sin_m.sin6_addr)) {
 		if (sdl->sdl_family == AF_LINK &&
-		    (rtm->rtm_flags & RTF_LLINFO) &&
 		    !(rtm->rtm_flags & RTF_GATEWAY)) {
 			goto delete;
 		}
@@ -544,6 +549,12 @@ delete:
 		printf("cannot locate %s\n", host);
 		return (1);
 	}
+        /* 
+         * need to reinit the field because it has rt_key
+         * but we want the actual address
+         */
+	NEXTADDR(RTA_DST, sin_m);
+	rtm->rtm_flags |= RTF_LLDATA;
 	if (rtmsg(RTM_DELETE) == 0) {
 		struct sockaddr_in6 s6 = *sin; /* XXX: for safety */
 
@@ -602,7 +613,11 @@ again:;
 	mib[2] = 0;
 	mib[3] = AF_INET6;
 	mib[4] = NET_RT_FLAGS;
+#ifdef RTF_LLINFO
 	mib[5] = RTF_LLINFO;
+#else
+	mib[5] = 0;
+#endif
 	if (sysctl(mib, 6, NULL, &needed, NULL, 0) < 0)
 		err(1, "sysctl(PF_ROUTE estimate)");
 	if (needed > 0) {
@@ -807,11 +822,15 @@ static char *
 ether_str(struct sockaddr_dl *sdl)
 {
 	static char hbuf[NI_MAXHOST];
+	char *cp;
 
-	if (sdl->sdl_alen > 0)
+	if (sdl->sdl_alen == ETHER_ADDR_LEN) {
 		strlcpy(hbuf, ether_ntoa((struct ether_addr *)LLADDR(sdl)),
 		    sizeof(hbuf));
-	else
+	} else if (sdl->sdl_alen) {
+		int n = sdl->sdl_nlen > 0 ? sdl->sdl_nlen + 1 : 0;
+		snprintf(hbuf, sizeof(hbuf), "%s", link_ntoa(sdl) + n);
+	} else
 		snprintf(hbuf, sizeof(hbuf), "(incomplete)");
 
 	return(hbuf);
@@ -878,7 +897,7 @@ rtmsg(cmd)
 			rtm->rtm_rmx.rmx_expire = expire_time;
 			rtm->rtm_inits = RTV_EXPIRE;
 		}
-		rtm->rtm_flags |= (RTF_HOST | RTF_STATIC);
+		rtm->rtm_flags |= (RTF_HOST | RTF_STATIC | RTF_LLDATA);
 #if 0 /* we don't support ipv6addr/128 type proxying */
 		if (rtm->rtm_flags & RTF_ANNOUNCE) {
 			rtm->rtm_flags &= ~RTF_HOST;
@@ -889,9 +908,6 @@ rtmsg(cmd)
 	case RTM_GET:
 		rtm->rtm_addrs |= RTA_DST;
 	}
-#define NEXTADDR(w, s) \
-	if (rtm->rtm_addrs & (w)) { \
-		bcopy((char *)&s, cp, sizeof(s)); cp += SA_SIZE(&s);}
 
 	NEXTADDR(RTA_DST, sin_m);
 	NEXTADDR(RTA_GATEWAY, sdl_m);
@@ -989,6 +1005,9 @@ ifinfo(ifname, argc, argv)
 #ifdef ND6_IFF_ACCEPT_RTADV
 		SETFLAG("accept_rtadv", ND6_IFF_ACCEPT_RTADV);
 #endif
+#ifdef ND6_IFF_AUTO_LINKLOCAL
+		SETFLAG("auto_linklocal", ND6_IFF_AUTO_LINKLOCAL);
+#endif
 #ifdef ND6_IFF_PREFER_SOURCE
 		SETFLAG("prefer_source", ND6_IFF_PREFER_SOURCE);
 #endif
@@ -1060,6 +1079,10 @@ ifinfo(ifname, argc, argv)
 #ifdef ND6_IFF_ACCEPT_RTADV
 		if ((ND.flags & ND6_IFF_ACCEPT_RTADV))
 			printf("accept_rtadv ");
+#endif
+#ifdef ND6_IFF_AUTO_LINKLOCAL
+		if ((ND.flags & ND6_IFF_AUTO_LINKLOCAL))
+			printf("auto_linklocal ");
 #endif
 #ifdef ND6_IFF_PREFER_SOURCE
 		if ((ND.flags & ND6_IFF_PREFER_SOURCE))
@@ -1612,3 +1635,5 @@ ts_print(tvp)
 	(void)printf("%02d:%02d:%02d.%06u ",
 	    s / 3600, (s % 3600) / 60, s % 60, (u_int32_t)tvp->tv_usec);
 }
+
+#undef NEXTADDR
