@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.37 2012/01/25 03:53:42 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.38 2012/01/25 04:19:30 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,7 +42,7 @@ static void usage(void);
 static void loadIndex(mportInstance *);
 static mportIndexEntry ** lookupIndex(mportInstance *, const char *);
 static int install(mportInstance *, const char *);
-static int delete(mportInstance *, const char *);
+static int delete(const char *);
 static int deleteAll(mportInstance *);
 static int download(mportInstance *, const char *);
 static int update(mportInstance *, const char *);
@@ -78,7 +78,7 @@ main(int argc, char *argv[]) {
 		resultCode = install(mport, argv[2]);
 	} else if (!strcmp(argv[1], "delete")) {
 		for (i = 2; i < argc; i++) {
-			tempResultCode = delete(mport, argv[i]);
+			tempResultCode = delete(argv[i]);
 			if (tempResultCode != 0)
 				resultCode = tempResultCode;
 		}
@@ -103,11 +103,12 @@ main(int argc, char *argv[]) {
 		asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.list");
 		if (argc > 2 && !strcmp(argv[2], "updates")) {
 			loadIndex(mport);
-			flag = "-u";
+			flag = strdup("-u");
 		} else {
-			flag = "-v";
+			flag = strdup("-v");
 		}
 		resultCode = execl(buf, "mport.list", flag, (char *)0);
+		free(flag);
 		free(buf);
 	} else if (!strcmp(argv[1], "info")) {
 		loadIndex(mport);
@@ -181,7 +182,6 @@ lookupIndex(mportInstance *mport, const char *packageName) {
 int
 search(mportInstance *mport, char **query) {
 	mportIndexEntry **indexEntry;
-	mportPackageMeta **packs;
 
 	if (query == NULL || *query == NULL) {
 		fprintf(stderr, "Search terms required\n");
@@ -232,8 +232,8 @@ info(mportInstance *mport, const char *packageName) {
 	}
 
 	if (packs == NULL) {
-		status = "N/A";
-		origin = "";
+		status = strdup("N/A");
+		origin = strdup("");
 	} else {
 		status = (*packs)->version;
 		origin = (*packs)->origin;
@@ -246,6 +246,11 @@ info(mportInstance *mport, const char *packageName) {
 		(*indexEntry)->license,
 		origin,
 		(*indexEntry)->comment);
+
+	if (packs == NULL) {
+		free(status);
+		free(origin);
+	}
 
 	mport_index_entry_free_vec(indexEntry);
 	return 0;
@@ -288,7 +293,7 @@ install(mportInstance *mport, const char *packageName) {
 }
 
 int
-delete(mportInstance *mport, const char *packageName) {
+delete(const char *packageName) {
 	char *buf;
 	int resultCode;
 
@@ -307,7 +312,7 @@ download(mportInstance *mport, const char *packageName) {
 
 	indexEntry = lookupIndex(mport, packageName);
 	if (indexEntry == NULL || *indexEntry == NULL) {
-		fprintf(stderr, "Package %s not found in index.\n");
+		fprintf(stderr, "Package %s not found in index.\n", packageName);
 		return 1;
 	}
 
@@ -378,7 +383,6 @@ update(mportInstance *mport, const char *packageName) {
 int
 upgrade(mportInstance *mport) {
 	mportPackageMeta **packs;
-	mportIndexEntry **indexEntries;
 	int total = 0;
 	int updated = 0;
 
@@ -522,7 +526,7 @@ deleteAll(mportInstance *mport) {
 		while (*packs != NULL) {
 			if (mport_pkgmeta_get_updepends(mport, *packs, &depends) == MPORT_OK) {
 				if (depends == NULL) {
-					if (delete(mport, (*packs)->name) != 0) {
+					if (delete((*packs)->name) != 0) {
 						fprintf(stderr, "Error deleting %s\n", (*packs)->name);
 						errors++;
 					}
