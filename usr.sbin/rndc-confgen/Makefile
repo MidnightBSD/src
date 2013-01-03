@@ -1,4 +1,4 @@
-# $MidnightBSD: src/usr.sbin/rndc-confgen/Makefile,v 1.2 2008/04/28 03:47:37 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/rndc-confgen/Makefile,v 1.3 2010/01/16 17:00:07 laffer1 Exp $
 # $FreeBSD: src/usr.sbin/rndc-confgen/Makefile,v 1.6 2007/06/02 23:19:58 dougb Exp $
 
 BIND_DIR=	${.CURDIR}/../../contrib/bind96
@@ -17,6 +17,8 @@ SRCS+=		os.c
 SRCS+=		rndc-confgen.c util.c
 
 CFLAGS+=	-I${SRCDIR}/unix/include -I${SRCDIR}/include -I${LIB_BIND_DIR}
+
+WARNS?=		3
 
 DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD} ${PTHREAD_DPADD}
 LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD} ${PTHREAD_LDADD}
