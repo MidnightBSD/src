@@ -1,5 +1,5 @@
 /*	$NetBSD: rpcb_svc_com.c,v 1.9 2002/11/08 00:16:39 fvdl Exp $	*/
-/*	$FreeBSD: src/usr.sbin/rpcbind/rpcb_svc_com.c,v 1.11 2003/10/29 09:30:37 mbr Exp $ */
+/*	$MidnightBSD$ */
 
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
@@ -92,29 +92,29 @@ struct finfo {
 static struct finfo     FINFO[NFORWARD];
 
 
-static bool_t xdr_encap_parms __P((XDR *, struct encap_parms *));
-static bool_t xdr_rmtcall_args __P((XDR *, struct r_rmtcall_args *));
-static bool_t xdr_rmtcall_result __P((XDR *, struct r_rmtcall_args *));
-static bool_t xdr_opaque_parms __P((XDR *, struct r_rmtcall_args *));
-static int find_rmtcallfd_by_netid __P((char *));
-static SVCXPRT *find_rmtcallxprt_by_fd __P((int));
-static int forward_register __P((u_int32_t, struct netbuf *, int, char *,
-    rpcproc_t, rpcvers_t, u_int32_t *));
-static struct finfo *forward_find __P((u_int32_t));
-static int free_slot_by_xid __P((u_int32_t));
-static int free_slot_by_index __P((int));
-static int netbufcmp __P((struct netbuf *, struct netbuf *));
-static struct netbuf *netbufdup __P((struct netbuf *));
-static void netbuffree __P((struct netbuf *));
-static int check_rmtcalls __P((struct pollfd *, int));
-static void xprt_set_caller __P((SVCXPRT *, struct finfo *));
-static void send_svcsyserr __P((SVCXPRT *, struct finfo *));
-static void handle_reply __P((int, SVCXPRT *));
-static void find_versions __P((rpcprog_t, char *, rpcvers_t *, rpcvers_t *));
-static rpcblist_ptr find_service __P((rpcprog_t, rpcvers_t, char *));
-static char *getowner __P((SVCXPRT *, char *, size_t));
-static int add_pmaplist __P((RPCB *));
-static int del_pmaplist __P((RPCB *));
+static bool_t xdr_encap_parms(XDR *, struct encap_parms *);
+static bool_t xdr_rmtcall_args(XDR *, struct r_rmtcall_args *);
+static bool_t xdr_rmtcall_result(XDR *, struct r_rmtcall_args *);
+static bool_t xdr_opaque_parms(XDR *, struct r_rmtcall_args *);
+static int find_rmtcallfd_by_netid(char *);
+static SVCXPRT *find_rmtcallxprt_by_fd(int);
+static int forward_register(u_int32_t, struct netbuf *, int, char *,
+    rpcproc_t, rpcvers_t, u_int32_t *);
+static struct finfo *forward_find(u_int32_t);
+static int free_slot_by_xid(u_int32_t);
+static int free_slot_by_index(int);
+static int netbufcmp(struct netbuf *, struct netbuf *);
+static struct netbuf *netbufdup(struct netbuf *);
+static void netbuffree(struct netbuf *);
+static int check_rmtcalls(struct pollfd *, int);
+static void xprt_set_caller(SVCXPRT *, struct finfo *);
+static void send_svcsyserr(SVCXPRT *, struct finfo *);
+static void handle_reply(int, SVCXPRT *);
+static void find_versions(rpcprog_t, char *, rpcvers_t *, rpcvers_t *);
+static rpcblist_ptr find_service(rpcprog_t, rpcvers_t, char *);
+static char *getowner(SVCXPRT *, char *, size_t);
+static int add_pmaplist(RPCB *);
+static int del_pmaplist(RPCB *);
 
 /*
  * Set a mapping of program, version, netid
@@ -1076,7 +1076,7 @@ netbuffree(struct netbuf *ap)
 extern bool_t __svc_clean_idle(fd_set *, int, bool_t);
 
 void
-my_svc_run()
+my_svc_run(void)
 {
 	size_t nfds;
 	struct pollfd pollfds[FD_SETSIZE];
@@ -1224,6 +1224,7 @@ handle_reply(int fd, SVCXPRT *xprt)
 		goto done;
 
 	do {
+		fromlen = sizeof(ss);
 		inlen = recvfrom(fd, buffer, RPC_BUF_MAX, 0,
 			    (struct sockaddr *)&ss, &fromlen);
 	} while (inlen < 0 && errno == EINTR);

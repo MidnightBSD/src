@@ -1,6 +1,6 @@
 /*
  * $NetBSD: util.c,v 1.4 2000/08/03 00:04:30 fvdl Exp $
- * $FreeBSD: src/usr.sbin/rpcbind/util.c,v 1.5 2002/10/07 02:56:59 alfred Exp $
+ * $MidnightBSD$
  */
 
 /*-
@@ -18,13 +18,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the NetBSD
- *	Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -58,21 +51,14 @@
 
 #include "rpcbind.h"
 
-#define	SA2SIN(sa)	((struct sockaddr_in *)(sa))
-#define	SA2SINADDR(sa)	(SA2SIN(sa)->sin_addr)
-#ifdef INET6
-#define	SA2SIN6(sa)	((struct sockaddr_in6 *)(sa))
-#define	SA2SIN6ADDR(sa)	(SA2SIN6(sa)->sin6_addr)
-#endif
-
 static struct sockaddr_in *local_in4;
 #ifdef INET6
 static struct sockaddr_in6 *local_in6;
 #endif
 
-static int bitmaskcmp __P((void *, void *, void *, int));
+static int bitmaskcmp(void *, void *, void *, int);
 #ifdef INET6
-static void in6_fillscopeid __P((struct sockaddr_in6 *));
+static void in6_fillscopeid(struct sockaddr_in6 *);
 #endif
 
 /*
@@ -176,9 +162,13 @@ addrmerge(struct netbuf *caller, char *serv_uaddr, char *clnt_uaddr,
 		goto freeit;
 
 	/*
-	 * Loop through all interfaces. For each interface, see if the
-	 * network portion of its address is equal to that of the client.
-	 * If so, we have found the interface that we want to use.
+	 * Loop through all interfaces. For each interface, see if it
+	 * is either the loopback interface (which we always listen
+	 * on) or is one of the addresses the program bound to (the
+	 * wildcard by default, or a subset if -h is specified) and
+	 * the network portion of its address is equal to that of the
+	 * client.  If so, we have found the interface that we want to
+	 * use.
 	 */
 	bestif = NULL;
 	for (ifap = ifp; ifap != NULL; ifap = ifap->ifa_next) {
@@ -187,6 +177,9 @@ addrmerge(struct netbuf *caller, char *serv_uaddr, char *clnt_uaddr,
 
 		if (ifsa == NULL || ifsa->sa_family != hint_sa->sa_family ||
 		    !(ifap->ifa_flags & IFF_UP))
+			continue;
+
+		if (!(ifap->ifa_flags & IFF_LOOPBACK) && !listen_addr(ifsa))
 			continue;
 
 		switch (hint_sa->sa_family) {
@@ -244,7 +237,7 @@ addrmerge(struct netbuf *caller, char *serv_uaddr, char *clnt_uaddr,
 
 found:
 	/*
-	 * Construct the new address using the the address from
+	 * Construct the new address using the address from
 	 * `bestif', and the port number from `serv_uaddr'.
 	 */
 	serv_nbp = uaddr2taddr(nconf, serv_uaddr);
@@ -290,7 +283,7 @@ freeit:
 }
 
 void
-network_init()
+network_init(void)
 {
 #ifdef INET6
 	struct ifaddrs *ifap, *ifp;

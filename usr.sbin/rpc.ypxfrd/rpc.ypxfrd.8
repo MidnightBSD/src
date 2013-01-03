@@ -28,7 +28,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/rpc.ypxfrd/rpc.ypxfrd.8,v 1.17 2006/11/02 07:36:33 maxim Exp $
+.\" $MidnightBSD$
 .\"
 .Dd June 2, 1996
 .Dt RPC.YPXFRD 8
@@ -44,7 +44,7 @@ The
 .Nm
 utility is used to speed up the distribution of very large NIS maps
 from NIS master to NIS slave servers.
-The normal method for transfering
+The normal method for transferring
 maps involves several steps:
 .Bl -bullet -offset indent
 .It
@@ -93,7 +93,7 @@ own from scratch.
 Simply put,
 .Nm
 implements an RPC-based file transfer protocol.
-Transfering even
+Transferring even
 a multi-megabyte file in this fashion takes only a few seconds compared
 to the several minutes it would take even a reasonably fast slave server
 to build a new map from scratch.

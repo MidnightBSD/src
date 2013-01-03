@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/rpc.ypupdated/Makefile,v 1.10 2004/12/21 08:47:34 ru Exp $
+# $MidnightBSD$
 
 .PATH: ${.CURDIR}/../ypserv ${.CURDIR}/../../libexec/ypxfr
 
@@ -11,13 +11,15 @@ SRCS=	ypupdate_prot_svc.c ypupdate_prot.h ypupdated_main.c \
 #CFLAGS+= -DYP
 CFLAGS+= -I${.CURDIR}/../ypserv -I. -I${.CURDIR}/../../libexec/ypxfr
 
+WARNS?=	1
+
 DPADD=	${LIBRPCSVC}
 LDADD=	-lrpcsvc
 
 CLEANFILES= ypupdate_prot_svc.c ypupdate_prot.h
 
 RPCDIR=	${DESTDIR}/usr/include/rpcsvc
-RPCGEN= rpcgen -I -C
+RPCGEN= RPCGEN_CPP=${CPP:Q} rpcgen -I -C
 
 # We need to remove the 'static' keyword from _rpcsvcstate so that
 # ypupdated_main.c can see it.

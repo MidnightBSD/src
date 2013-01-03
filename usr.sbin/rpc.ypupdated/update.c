@@ -33,7 +33,7 @@
 static	char sccsid[] = "@(#)update.c 1.2 91/03/11 Copyr 1986 Sun Micro";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/rpc.ypupdated/update.c,v 1.8 2007/02/15 02:45:14 trhodes Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 /*
@@ -57,7 +57,6 @@ static const char rcsid[] =
 #include <pwd.h>
 #include <string.h>
 #include <sys/resource.h>
-#include <stdlib.h>
 #include "ypupdated_extern.h"
 
 #ifdef YP

@@ -1,5 +1,5 @@
 /*	$NetBSD: check_bound.c,v 1.2 2000/06/22 08:09:26 fvdl Exp $	*/
-/*	$FreeBSD: src/usr.sbin/rpcbind/check_bound.c,v 1.4 2002/10/07 02:56:59 alfred Exp $ */
+/*	$MidnightBSD$ */
 
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
@@ -71,7 +71,7 @@ static struct fdlist *fdhead;	/* Link list of the check fd's */
 static struct fdlist *fdtail;
 static char *nullstring = "";
 
-static bool_t check_bound __P((struct fdlist *, char *uaddr));
+static bool_t check_bound(struct fdlist *, char *uaddr);
 
 /*
  * Returns 1 if the given address is bound for the given addr & transport

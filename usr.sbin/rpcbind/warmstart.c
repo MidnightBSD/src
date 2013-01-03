@@ -35,7 +35,7 @@
 
 /*
  * #ident	"@(#)warmstart.c	1.7	93/07/05 SMI"
- * $FreeBSD: src/usr.sbin/rpcbind/warmstart.c,v 1.3 2003/01/01 18:49:03 schweikh Exp $/
+ * $MidnightBSD$/
  */
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -63,8 +63,8 @@
 #define	PMAPFILE	"/tmp/portmap.file"
 #endif
 
-static bool_t write_struct __P((char *, xdrproc_t, void *));
-static bool_t read_struct __P((char *, xdrproc_t, void *));
+static bool_t write_struct(char *, xdrproc_t, void *);
+static bool_t read_struct(char *, xdrproc_t, void *);
 
 static bool_t
 write_struct(char *filename, xdrproc_t structproc, void *list)
@@ -142,7 +142,7 @@ error:	fprintf(stderr, "rpcbind: will start from scratch\n");
 }
 
 void
-write_warmstart()
+write_warmstart(void)
 {
 	(void) write_struct(RPCBFILE, (xdrproc_t)xdr_rpcblist_ptr, &list_rbl);
 #ifdef PORTMAP
@@ -152,7 +152,7 @@ write_warmstart()
 }
 
 void
-read_warmstart()
+read_warmstart(void)
 {
 	rpcblist_ptr tmp_rpcbl = NULL;
 #ifdef PORTMAP

@@ -1,5 +1,5 @@
 #	$NetBSD: Makefile,v 1.3 2000/06/20 13:56:43 fvdl Exp $
-# $FreeBSD: src/usr.sbin/rpcbind/Makefile,v 1.8 2006/03/17 18:54:43 ru Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
@@ -13,6 +13,8 @@ CFLAGS+= -DPORTMAP -DLIBWRAP
 .if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+= -DINET6
 .endif
+
+WARNS?=	1
 
 DPADD=	${LIBWRAP} ${LIBUTIL}
 LDADD=	-lwrap -lutil

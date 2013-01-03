@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/rpc.ypxfrd/Makefile,v 1.11 2001/07/20 06:20:18 obrien Exp $
+# $MidnightBSD$
 
 .PATH: ${.CURDIR}/../../usr.sbin/ypserv
 
@@ -9,13 +9,15 @@ SRCS=	ypxfrd_svc.c ypxfrd.h ypxfrd_server.c yp_error.c \
 
 CFLAGS+= -I. -DXFRBLOCKSIZE=65535
 
+WARNS?=	2
+
 DPADD=	${LIBRPCSVC}
 LDADD=	-lrpcsvc
 
 CLEANFILES= ypxfrd_svc.c ypxfrd.h
 
 RPCDIR=	${.CURDIR}/../../include/rpcsvc
-RPCGEN= rpcgen -I -C
+RPCGEN= RPCGEN_CPP=${CPP:Q} rpcgen -I -C
 
 # We need to remove the 'static' keyword from _rpcsvcstate so that
 # ypxfrd_main.c can see it.

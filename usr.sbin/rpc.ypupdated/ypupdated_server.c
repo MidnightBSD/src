@@ -37,13 +37,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/rpc.ypupdated/ypupdated_server.c,v 1.7 2003/05/03 21:06:40 obrien Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <stdio.h>
 #include <rpc/rpc.h>
 #include <rpc/key_prot.h>
 #include <sys/param.h>
-#include <sys/cdefs.h>
 #include <rpcsvc/yp.h>
 #include "ypupdate_prot.h"
 #include "ypupdated_extern.h"

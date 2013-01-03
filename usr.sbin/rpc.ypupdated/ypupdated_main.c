@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/rpc.ypupdated/ypupdated_main.c,v 1.10 2004/05/24 12:28:27 stefanf Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "ypupdate_prot.h"
 #include <stdio.h>
@@ -50,7 +50,6 @@ __FBSDID("$FreeBSD: src/usr.sbin/rpc.ypupdated/ypupdated_main.c,v 1.10 2004/05/2
 #include <sys/wait.h>
 #include <errno.h>
 #include <err.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include "ypupdated_extern.h"
 #include "yp_extern.h"
