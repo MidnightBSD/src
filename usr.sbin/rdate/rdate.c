@@ -1,5 +1,5 @@
 /* 	$MidnightBSD$ */
-/*	$OpenBSD: rdate.c,v 1.22 2004/02/18 20:10:53 jmc Exp $	*/
+/*	$OpenBSD: rdate.c,v 1.24 2009/10/27 23:59:54 deraadt Exp $	*/
 /*	$NetBSD: rdate.c,v 1.4 1996/03/16 12:37:45 pk Exp $	*/
 
 /*
@@ -51,7 +51,13 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+
+/* there are systems without libutil; for portability */
+#ifndef NO_UTIL
 #include <libutil.h>
+#else
+#define logwtmp(a,b,c)
+#endif
 
 void rfc868time_client (const char *, int, struct timeval *, struct timeval *, int);
 void ntp_client (const char *, int, struct timeval *, struct timeval *, int);
@@ -61,15 +67,16 @@ extern char    *__progname;
 void
 usage(void)
 {
-	(void) fprintf(stderr, "Usage: %s [-46acnpsv] host\n", __progname);
-	(void) fprintf(stderr, "  -4: use IPv4 only\n");
-	(void) fprintf(stderr, "  -6: use IPv6 only\n");
-	(void) fprintf(stderr, "  -a: use adjtime instead of instant change\n");
-	(void) fprintf(stderr, "  -c: correct leap second count\n"); 
-	(void) fprintf(stderr, "  -n: use SNTP instead of RFC868 time protocol\n");
-	(void) fprintf(stderr, "  -p: just print, don't set\n");
-	(void) fprintf(stderr, "  -s: just set, don't print\n");
-	(void) fprintf(stderr, "  -v: verbose output\n");
+	(void) fprintf(stderr, "usage: %s [-46acnpsv] host\n", __progname);
+	(void) fprintf(stderr,
+	    "  -4: use IPv4 only\n"
+	    "  -6: use IPv6 only\n"
+	    "  -a: use adjtime instead of instant change\n"
+	    "  -c: correct leap second count\n"
+	    "  -n: use SNTP instead of RFC868 time protocol\n"
+	    "  -p: just print, don't set\n"
+	    "  -s: just set, don't print\n"
+	    "  -v: verbose output\n");
 }
 
 int
@@ -78,13 +85,12 @@ main(int argc, char **argv)
 	int             pr = 0, silent = 0, ntp = 0, verbose = 0;
 	int		slidetime = 0, corrleaps = 0;
 	char           *hname;
-	extern int      optind;
 	int             c;
 	int		family = PF_UNSPEC;
 
 	struct timeval new, adjust;
 
-	while ((c = getopt(argc, argv, "46psacnv")) != -1)
+	while ((c = getopt(argc, argv, "46psancv")) != -1)
 		switch (c) {
 		case '4':
 			family = PF_INET;
@@ -158,14 +164,16 @@ main(int argc, char **argv)
 
 		adjsec  = adjust.tv_sec + adjust.tv_usec / 1.0e6;
 
-		if (ntp)
-			(void) fprintf(stdout,
-			   "%s: adjust local clock by %.6f seconds\n",
-			   __progname, adjsec);
-		else
-			(void) fprintf(stdout,
-			   "%s: adjust local clock by %ld seconds\n",
-			   __progname, adjust.tv_sec);
+		if (slidetime || verbose) {
+			if (ntp)
+				(void) fprintf(stdout,
+				   "%s: adjust local clock by %.6f seconds\n",
+				   __progname, adjsec);
+			else
+				(void) fprintf(stdout,
+				   "%s: adjust local clock by %ld seconds\n",
+				   __progname, adjust.tv_sec);
+		}
 	}
 
 	return 0;

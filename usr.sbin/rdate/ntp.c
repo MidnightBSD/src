@@ -1,4 +1,4 @@
-/*	$OpenBSD: ntp.c,v 1.28 2006/03/14 22:56:20 deraadt Exp $	*/
+/*	$OpenBSD: ntp.c,v 1.31 2011/12/28 21:39:30 sthen Exp $	*/
 
 /*
  * Copyright (c) 1996, 1997 by N.M. Maclaren. All rights reserved.
@@ -79,7 +79,7 @@
 #define NTP_MODE_CLIENT       3		/* NTP client mode */
 #define NTP_MODE_SERVER       4		/* NTP server mode */
 #define NTP_VERSION           4		/* The current version */
-#define NTP_VERSION_MIN       1		/* The minum valid version */
+#define NTP_VERSION_MIN       1		/* The minimum valid version */
 #define NTP_VERSION_MAX       4		/* The maximum valid version */
 #define NTP_STRATUM_MAX      14		/* The maximum valid stratum */
 #define NTP_INSANITY     3600.0		/* Errors beyond this are hopeless */
@@ -139,7 +139,7 @@ ntp_client(const char *hostname, int family, struct timeval *new,
 {
 	struct addrinfo hints, *res0, *res;
 	double offset, error;
-	int accept = 0, ret, s, ierror;
+	int ntp_accept = 0, ret, s, ierror;
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = family;
@@ -170,7 +170,7 @@ ntp_client(const char *hostname, int family, struct timeval *new,
 			continue;
 		}
 
-		accept++;
+		ntp_accept++;
 		break;
 	}
 	freeaddrinfo(res0);
@@ -179,7 +179,7 @@ ntp_client(const char *hostname, int family, struct timeval *new,
 	fprintf(stderr, "Correction: %.6f +/- %.6f\n", offset, error);
 #endif
 
-	if (accept < 1)
+	if (ntp_accept < 1)
 		errx(1, "Unable to get a reasonable time estimate");
 
 	create_timeval(offset, new, adjust);
@@ -263,7 +263,7 @@ printf("have sockaddr storage");
 		}
 
 		if ((data.status & STATUS_ALARM) == STATUS_ALARM) {
-			warnx("Ignoring NTP server wtih alarm flag set");
+			warnx("Ignoring NTP server with alarm flag set");
 			return (-1);
 		}
 
@@ -303,7 +303,7 @@ write_packet(int fd, struct ntp_data *data)
 	 * the transmit field intelligible.
 	 */
 
-	*(u_int64_t *)(packet + NTP_TRANSMIT) = data->xmitck;
+	bcopy(&data->xmitck, (packet + NTP_TRANSMIT), sizeof(data->xmitck));
 
 	data->originate = current_time(JAN_1970);
 
@@ -445,7 +445,7 @@ unpack_ntp(struct ntp_data *data, u_char *packet)
 	data->transmit = d / NTP_SCALE;
 
 	/* See write_packet for why this isn't an endian problem. */
-	data->recvck = *(u_int64_t *)(packet + NTP_ORIGINATE);
+	bcopy((packet + NTP_ORIGINATE), &data->recvck, sizeof(data->recvck));
 }
 
 /*

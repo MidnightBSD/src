@@ -1,5 +1,5 @@
 /*	$OpenBSD: ntpleaps.c,v 1.8 2006/01/28 07:25:23 tedu Exp $	*/
-/* $MidnightBSD: src/usr.sbin/rdate/ntpleaps.c,v 1.2 2006/08/23 17:39:39 laffer1 Exp $ */
+/* $MidnightBSD: src/usr.sbin/rdate/ntpleaps.c,v 1.3 2006/08/24 00:18:42 laffer1 Exp $ */
 
 /*-
  * Copyright (c) 2002 Thorsten Glaser. All rights reserved.
@@ -50,6 +50,7 @@
 
 static u_int64_t *leapsecs;
 static unsigned int leapsecs_num;
+u_int32_t read_be_dword(u_int8_t *);
 
 
 int
