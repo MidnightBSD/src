@@ -26,10 +26,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pmccontrol/pmccontrol.c,v 1.4.2.2 2006/02/27 17:36:01 jkoshy Exp $");
+__MBSDID("$MidnightBSD$");
 
-#include <sys/types.h>
+#include <sys/param.h>
 #include <sys/queue.h>
+#include <sys/cpuset.h>
 #include <sys/sysctl.h>
 
 #include <assert.h>
@@ -133,21 +134,22 @@ pmcc_init_debug(void)
 static int
 pmcc_do_enable_disable(struct pmcc_op_list *op_list)
 {
-	unsigned char op;
 	int c, error, i, j, ncpu, npmc, t;
-	int cpu, pmc;
 	struct pmcc_op *np;
 	unsigned char *map;
+	unsigned char op;
+	int cpu, pmc;
 
 	if ((ncpu = pmc_ncpu()) < 0)
 		err(EX_OSERR, "Unable to determine the number of cpus");
 
-	/* determine the maximum number of PMCs in any CPU */
+	/* Determine the maximum number of PMCs in any CPU. */
 	npmc = 0;
 	for (c = 0; c < ncpu; c++) {
 		if ((t = pmc_npmc(c)) < 0)
-			err(EX_OSERR, "Unable to determine the number of PMCs in "
-			    "CPU %d", c);
+			err(EX_OSERR,
+			    "Unable to determine the number of PMCs in CPU %d",
+			    c);
 		npmc = t > npmc ? t : npmc;
 	}
 
@@ -187,8 +189,9 @@ pmcc_do_enable_disable(struct pmcc_op_list *op_list)
 #define MAP(M,C,P)	(*((M) + (C)*npmc + (P)))
 
 		if (cpu == PMCC_CPU_ALL)
-			for (i = 0; i < ncpu; i++)
+			for (i = 0; i < ncpu; i++) {
 				SET_PMCS(i, pmc, op);
+			}
 		else
 			SET_PMCS(cpu, pmc, op);
 	}
@@ -209,8 +212,8 @@ pmcc_do_enable_disable(struct pmcc_op_list *op_list)
 
 			if (error < 0)
 				err(EX_OSERR, "%s of PMC %d on CPU %d failed",
-				    b == PMCC_OP_ENABLE ? "Enable" :
-				    "Disable", j, i);
+				    b == PMCC_OP_ENABLE ? "Enable" : "Disable",
+				    j, i);
 		}
 
 	return error;
@@ -219,9 +222,10 @@ pmcc_do_enable_disable(struct pmcc_op_list *op_list)
 static int
 pmcc_do_list_state(void)
 {
-	size_t dummy;
+	cpuset_t logical_cpus_mask;
+	long cpusetsize;
+	size_t setsize;
 	int c, cpu, n, npmc, ncpu;
-	unsigned int logical_cpus_mask;
 	struct pmc_info *pd;
 	struct pmc_pmcinfo *pi;
 	const struct pmc_cpuinfo *pc;
@@ -229,22 +233,34 @@ pmcc_do_list_state(void)
 	if (pmc_cpuinfo(&pc) != 0)
 		err(EX_OSERR, "Unable to determine CPU information");
 
-	dummy = sizeof(logical_cpus_mask);
+	printf("%d %s CPUs present, with %d PMCs per CPU\n", pc->pm_ncpu, 
+	       pmc_name_of_cputype(pc->pm_cputype),
+		pc->pm_npmc);
+
+	/* Determine the set of logical CPUs. */
+	cpusetsize = sysconf(_SC_CPUSET_SIZE);
+	if (cpusetsize == -1 || (u_long)cpusetsize > sizeof(cpuset_t))
+		err(EX_OSERR, "Cannot determine which CPUs are logical");
+	CPU_ZERO(&logical_cpus_mask);
+	setsize = (size_t)cpusetsize;
 	if (sysctlbyname("machdep.logical_cpus_mask", &logical_cpus_mask,
-		&dummy, NULL, 0) < 0)
-		logical_cpus_mask = 0;
+	    &setsize, NULL, 0) < 0)
+		CPU_ZERO(&logical_cpus_mask);
 
 	ncpu = pc->pm_ncpu;
 
 	for (c = cpu = 0; cpu < ncpu; cpu++) {
 #if	defined(__i386__) || defined(__amd64__)
 		if (pc->pm_cputype == PMC_CPU_INTEL_PIV &&
-		    (logical_cpus_mask & (1 << cpu)))
+		    CPU_ISSET(cpu, &logical_cpus_mask))
 			continue; /* skip P4-style 'logical' cpus */
 #endif
-		if (pmc_pmcinfo(cpu, &pi) < 0)
+		if (pmc_pmcinfo(cpu, &pi) < 0) {
+			if (errno == ENXIO)
+				continue;
 			err(EX_OSERR, "Unable to get PMC status for CPU %d",
 			    cpu);
+		}
 
 		printf("#CPU %d:\n", c++);
 		npmc = pmc_npmc(cpu);
@@ -293,8 +309,9 @@ pmcc_do_list_events(void)
 
 		printf("%s\n", pmc_name_of_class(c));
 		if (pmc_event_names_of_class(c, &eventnamelist, &nevents) < 0)
-			err(EX_OSERR, "ERROR: Cannot find information for "
-			    "event class \"%s\"", pmc_name_of_class(c));
+			err(EX_OSERR,
+"ERROR: Cannot find information for event class \"%s\"",
+			    pmc_name_of_class(c));
 
 		for (j = 0; j < nevents; j++)
 			printf("\t%s\n", eventnamelist[j]);
@@ -435,7 +452,7 @@ main(int argc, char **argv)
 
 		case '?':
 			warnx("Unrecognized option \"-%c\"", optopt);
-			errx(EX_USAGE, usage_message);
+			errx(EX_USAGE, "%s", usage_message);
 			break;
 
 		default:
@@ -445,7 +462,7 @@ main(int argc, char **argv)
 		}
 
 	if (command == PMCC_PRINT_USAGE)
-		(void) errx(EX_USAGE, usage_message);
+		(void) errx(EX_USAGE, "%s", usage_message);
 
 	if (error)
 		exit(EX_USAGE);
@@ -466,7 +483,8 @@ main(int argc, char **argv)
 		break;
 	case PMCC_ENABLE_DISABLE:
 		if (STAILQ_EMPTY(&head))
-			errx(EX_USAGE, "No PMCs specified to enable or disable");
+			errx(EX_USAGE,
+			    "No PMCs specified to enable or disable");
 		error = pmcc_do_enable_disable(&head);
 		break;
 	default:

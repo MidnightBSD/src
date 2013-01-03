@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)pwd_mkdb.c	8.5 (Berkeley) 4/20/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pwd_mkdb/pwd_mkdb.c,v 1.51 2005/06/15 10:13:04 dd Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -204,7 +204,11 @@ main(int argc, char *argv[])
 
 	/* check only if password database is valid */
 	if (Cflag) {
-		for (cnt = 1; scan(fp, &pwd); ++cnt);
+		while (scan(fp, &pwd))
+			if (!is_comment && strlen(pwd.pw_name) >= MAXLOGNAME) {
+				warnx("%s: username too long", pwd.pw_name);
+				exit(1);
+			}
 		exit(0);
 	}
 
@@ -347,14 +351,16 @@ main(int argc, char *argv[])
 		if ((dp->put)(sdp, &key, &data, 0) == -1)
 			error("put");
 	}
-	ypcnt = 1;
+	ypcnt = 0;
 	data.data = (u_char *)buf;
 	sdata.data = (u_char *)sbuf;
 	key.data = (u_char *)tbuf;
 	for (cnt = 1; scan(fp, &pwd); ++cnt) {
 		if (!is_comment && 
-		    (pwd.pw_name[0] == '+' || pwd.pw_name[0] == '-'))
+		    (pwd.pw_name[0] == '+' || pwd.pw_name[0] == '-')) {
 			yp_enabled = 1;
+			ypcnt++;
+		}
 		if (is_comment)
 			--cnt;
 #define	COMPACT(e)	t = e; while ((*p++ = *t++));
@@ -452,7 +458,6 @@ main(int argc, char *argv[])
 				tbuf[0] = CURRENT_VERSION(_PW_KEYYPBYNUM);
 				store = htonl(ypcnt);
 				memmove(tbuf + 1, &store, sizeof(store));
-				ypcnt++;
 				key.size = sizeof(store) + 1;
 				if ((dp->put)(dp, &key, &data, method) == -1)
 					error("put");
@@ -543,7 +548,6 @@ main(int argc, char *argv[])
 				tbuf[0] = LEGACY_VERSION(_PW_KEYYPBYNUM);
 				store = HTOL(ypcnt);
 				memmove(tbuf + 1, &store, sizeof(store));
-				ypcnt++;
 				key.size = sizeof(store) + 1;
 				if ((dp->put)(dp, &key, &data, method) == -1)
 					error("put");

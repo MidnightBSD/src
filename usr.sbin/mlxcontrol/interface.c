@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/usr.sbin/mlxcontrol/interface.c,v 1.2 2000/04/11 23:04:17 msmith Exp $
+ *	$MidnightBSD$
  */
 
 #include <fcntl.h>
@@ -79,16 +79,18 @@ void
 mlxd_foreach_ctrlr(int unit, void *arg)
 {
     struct mlxd_foreach_action	*ma = (struct mlxd_foreach_action *)arg;
-    int				i, fd;
+    int				i, fd, ctrlfd;
     
     /* Get the device */
-    if ((fd = open(ctrlrpath(unit), 0)) < 0)
+    if ((ctrlfd = open(ctrlrpath(unit), 0)) < 0)
 	return;
     
     for (i = -1; ;) {
 	/* Get the unit number of the next child device */
-	if (ioctl(fd, MLX_NEXT_CHILD, &i) < 0)
+	if (ioctl(ctrlfd, MLX_NEXT_CHILD, &i) < 0) {
+	    close(ctrlfd);
 	    return;
+	}
 	
 	/* check that we can open this unit */
 	if ((fd = open(drivepath(i), 0)) >= 0)
@@ -251,7 +253,7 @@ mlx_scsi_inquiry(int unit, int channel, int target, char **vendor, char **device
 
     /* build the cdb */
     inq_cmd->opcode = INQUIRY;
-    inq_cmd->length = SHORT_INQUIRY_LENGTH;
+    scsi_ulto2b(SHORT_INQUIRY_LENGTH, inq_cmd->length);
     
     /* hand it off for processing */
     mlx_perform(unit, mlx_command, &cmd);

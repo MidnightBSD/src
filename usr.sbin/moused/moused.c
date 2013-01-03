@@ -29,7 +29,6 @@
  ** OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  ** EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **
- ** $FreeBSD: src/usr.sbin/moused/moused.c,v 1.70.2.6 2007/09/21 17:25:02 obrien Exp $
  **/
 
 /**
@@ -79,6 +78,7 @@ __MBSDID("$MidnightBSD$");
 #define DFLT_CLICKTHRESHOLD	 500	/* 0.5 second */
 #define DFLT_BUTTON2TIMEOUT	 100	/* 0.1 second */
 #define DFLT_SCROLLTHRESHOLD	   3	/* 3 pixels */
+#define DFLT_SCROLLSPEED	   2	/* 2 pixels */
 
 /* Abort 3-button emulation delay after this many movement events. */
 #define BUTTON2_MAXMOVE	3
@@ -419,6 +419,7 @@ static struct rodentparam {
     float remainx;		/* Remainder on X and Y axis, respectively... */
     float remainy;		/*    ... to compensate for rounding errors. */
     int scrollthreshold;	/* Movement distance before virtual scrolling */
+    int scrollspeed;		/* Movement distance to rate of scrolling */
 } rodent = {
     .flags = 0,
     .portname = NULL,
@@ -442,6 +443,7 @@ static struct rodentparam {
     .remainx = 0.0,
     .remainy = 0.0,
     .scrollthreshold = DFLT_SCROLLTHRESHOLD,
+    .scrollspeed = DFLT_SCROLLSPEED,
 };
 
 /* button status */
@@ -562,8 +564,6 @@ static void	mremote_clientchg(int add);
 static int	kidspad(u_char rxc, mousestatus_t *act);
 static int	gtco_digipad(u_char, mousestatus_t *);
 
-static int	usbmodule(void);
-
 int
 main(int argc, char *argv[])
 {
@@ -575,7 +575,7 @@ main(int argc, char *argv[])
     for (i = 0; i < MOUSE_MAXBUTTON; ++i)
 	mstate[i] = &bstate[i];
 
-    while ((c = getopt(argc, argv, "3A:C:DE:F:HI:PRS:T:VU:a:cdfhi:l:m:p:r:st:w:z:")) != -1)
+    while ((c = getopt(argc, argv, "3A:C:DE:F:HI:L:PRS:T:VU:a:cdfhi:l:m:p:r:st:w:z:")) != -1)
 	switch(c) {
 
 	case '3':
@@ -761,6 +761,14 @@ main(int argc, char *argv[])
 	    pidfile = optarg;
 	    break;
 
+	case 'L':
+	    rodent.scrollspeed = atoi(optarg);
+	    if (rodent.scrollspeed < 0) {
+		warnx("invalid argument `%s'", optarg);
+		usage();
+	    }
+	    break;
+
 	case 'P':
 	    rodent.flags |= NoPnP;
 	    break;
@@ -870,8 +878,7 @@ main(int argc, char *argv[])
 
     retry = 1;
     if (strncmp(rodent.portname, "/dev/ums", 8) == 0) {
-	if (usbmodule() != 0)
-	    retry = 5;
+	retry = 5;
     }
 
     for (;;) {
@@ -921,7 +928,7 @@ main(int argc, char *argv[])
 		/*
 		 * We cannot continue because of error.  Exit if the
 		 * program has not become a daemon.  Otherwise, block
-		 * until the the user corrects the problem and issues SIGHUP.
+		 * until the user corrects the problem and issues SIGHUP.
 		 */
 		if (!background)
 		    exit(1);
@@ -941,12 +948,6 @@ main(int argc, char *argv[])
     /* NOT REACHED */
 
     exit(0);
-}
-
-static int
-usbmodule(void)
-{
-    return (kld_isloaded("uhub/ums") || kld_load("ums") != -1);
 }
 
 /*
@@ -1052,7 +1053,7 @@ moused(void)
     bzero(&action2, sizeof(action2));
     bzero(&mouse, sizeof(mouse));
     mouse_button_state = S0;
-    clock_gettime(CLOCK_MONOTONIC, &mouse_button_state_ts);
+    clock_gettime(CLOCK_MONOTONIC_FAST, &mouse_button_state_ts);
     mouse_move_delayed = 0;
     for (i = 0; i < MOUSE_MAXBUTTON; ++i) {
 	bstate[i].count = 0;
@@ -1080,7 +1081,8 @@ moused(void)
 	    FD_SET(rodent.mremcfd, &fds);
 
 	c = select(FD_SETSIZE, &fds, NULL, NULL,
-		   (rodent.flags & Emulate3Button) ? &timeout : NULL);
+		   ((rodent.flags & Emulate3Button) &&
+		    S_DELAYED(mouse_button_state)) ? &timeout : NULL);
 	if (c < 0) {                    /* error */
 	    logwarn("failed to read from mouse");
 	    continue;
@@ -1122,6 +1124,7 @@ moused(void)
 		if (action0.button == MOUSE_BUTTON2DOWN) {
 		    if (scroll_state == SCROLL_NOTSCROLLING) {
 			scroll_state = SCROLL_PREPARE;
+			scroll_movement = hscroll_movement = 0;
 			debug("PREPARING TO SCROLL");
 		    }
 		    debug("[BUTTON2] flags:%08x buttons:%08x obuttons:%08x",
@@ -1183,21 +1186,36 @@ moused(void)
 		 * the stick/trackpoint/nipple, scroll!
 		 */
 		if (scroll_state == SCROLL_PREPARE) {
-		    /* Ok, Set we're really scrolling now.... */
-		    if (action2.dy || action2.dx)
-			scroll_state = SCROLL_SCROLLING;
-		}
-		if (scroll_state == SCROLL_SCROLLING) {
+			/* Middle button down, waiting for movement threshold */
+			if (action2.dy || action2.dx) {
+				if (rodent.flags & VirtualScroll) {
+					scroll_movement += action2.dy;
+					if (scroll_movement < -rodent.scrollthreshold) {
+						scroll_state = SCROLL_SCROLLING;
+					} else if (scroll_movement > rodent.scrollthreshold) {
+						scroll_state = SCROLL_SCROLLING;
+					}
+				}
+				if (rodent.flags & HVirtualScroll) {
+					hscroll_movement += action2.dx;
+					if (hscroll_movement < -rodent.scrollthreshold) {
+						scroll_state = SCROLL_SCROLLING;
+					} else if (hscroll_movement > rodent.scrollthreshold) {
+						scroll_state = SCROLL_SCROLLING;
+					}
+				}
+				if (scroll_state == SCROLL_SCROLLING) scroll_movement = hscroll_movement = 0;
+			}
+		} else if (scroll_state == SCROLL_SCROLLING) {
 			 if (rodent.flags & VirtualScroll) {
 				 scroll_movement += action2.dy;
 				 debug("SCROLL: %d", scroll_movement);
-
-			    if (scroll_movement < -rodent.scrollthreshold) {
+			    if (scroll_movement < -rodent.scrollspeed) {
 				/* Scroll down */
 				action2.dz = -1;
 				scroll_movement = 0;
 			    }
-			    else if (scroll_movement > rodent.scrollthreshold) {
+			    else if (scroll_movement > rodent.scrollspeed) {
 				/* Scroll up */
 				action2.dz = 1;
 				scroll_movement = 0;
@@ -1207,11 +1225,11 @@ moused(void)
 				 hscroll_movement += action2.dx;
 				 debug("HORIZONTAL SCROLL: %d", hscroll_movement);
 
-				 if (hscroll_movement < -rodent.scrollthreshold) {
+				 if (hscroll_movement < -rodent.scrollspeed) {
 					 action2.dz = -2;
 					 hscroll_movement = 0;
 				 }
-				 else if (hscroll_movement > rodent.scrollthreshold) {
+				 else if (hscroll_movement > rodent.scrollspeed) {
 					 action2.dz = 2;
 					 hscroll_movement = 0;
 				 }
@@ -2386,7 +2404,7 @@ r_statetrans(mousestatus_t *a1, mousestatus_t *a2, int trans)
 	if (mouse_button_state != states[mouse_button_state].s[trans])
 		changed = TRUE;
 	if (changed)
-		clock_gettime(CLOCK_MONOTONIC, &mouse_button_state_ts);
+		clock_gettime(CLOCK_MONOTONIC_FAST, &mouse_button_state_ts);
 	mouse_button_state = states[mouse_button_state].s[trans];
 	a2->button &=
 	    ~(MOUSE_BUTTON1DOWN | MOUSE_BUTTON2DOWN | MOUSE_BUTTON3DOWN);
@@ -2542,7 +2560,7 @@ r_timestamp(mousestatus_t *act)
 	return;
 #endif
 
-    clock_gettime(CLOCK_MONOTONIC, &ts1);
+    clock_gettime(CLOCK_MONOTONIC_FAST, &ts1);
     drift_current_ts = ts1;
 
     /* double click threshold */
@@ -2600,7 +2618,7 @@ r_timeout(void)
 
     if (states[mouse_button_state].timeout)
 	return (TRUE);
-    clock_gettime(CLOCK_MONOTONIC, &ts1);
+    clock_gettime(CLOCK_MONOTONIC_FAST, &ts1);
     ts2.tv_sec = rodent.button2timeout / 1000;
     ts2.tv_nsec = (rodent.button2timeout % 1000) * 1000000;
     tssub(&ts1, &ts2, &ts);
@@ -3244,7 +3262,7 @@ kidspad(u_char rxc, mousestatus_t *act)
     act->flags = 0;
     act->obutton = act->button;
     act->dx = act->dy = act->dz = 0;
-    clock_gettime(CLOCK_MONOTONIC, &now);
+    clock_gettime(CLOCK_MONOTONIC_FAST, &now);
     if (buf[0] & 0x40) /* pen went out of reach */
 	status = S_IDLE;
     else if (status == S_IDLE) { /* pen is newly near the tablet */

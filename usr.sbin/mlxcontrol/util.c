@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/usr.sbin/mlxcontrol/util.c,v 1.2 2000/04/11 23:04:17 msmith Exp $
+ *	$MidnightBSD$
  */
 
 #include <sys/types.h>
