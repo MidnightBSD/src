@@ -53952,6 +53952,9 @@ usr.sbin/auditreduce/Makefile -text
 usr.sbin/authpf/Makefile -text
 usr.sbin/bluetooth/Makefile -text
 usr.sbin/bluetooth/Makefile.inc -text
+usr.sbin/bluetooth/ath3kfw/Makefile -text
+usr.sbin/bluetooth/ath3kfw/ath3kfw.8 -text
+usr.sbin/bluetooth/ath3kfw/ath3kfw.c -text
 usr.sbin/bluetooth/bcmfw/BCM-LEGAL.txt -text
 usr.sbin/bluetooth/bcmfw/Makefile -text
 usr.sbin/bluetooth/bcmfw/README -text
