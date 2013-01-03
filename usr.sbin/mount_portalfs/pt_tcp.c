@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/mount_portalfs/pt_tcp.c,v 1.13 2007/01/20 21:35:11 rodrigc Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <errno.h>
 #include <stdlib.h>

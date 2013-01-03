@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)mount_portal.c	8.6 (Berkeley) 4/26/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/mount_portalfs/mount_portalfs.c,v 1.24 2007/01/20 21:35:11 rodrigc Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/wait.h>
@@ -70,7 +70,7 @@ struct mntopt mopts[] = {
 
 static void usage(void) __dead2;
 
-static sig_atomic_t readcf;	/* Set when SIGHUP received */
+static volatile sig_atomic_t readcf;	/* Set when SIGHUP received */
 
 static void sighup(int sig __unused)
 {
@@ -272,7 +272,7 @@ main(int argc, char *argv[])
 }
 
 static void
-usage()
+usage(void)
 {
 	(void)fprintf(stderr,
 		"usage: mount_portalfs [-o options] config mount-point\n");
