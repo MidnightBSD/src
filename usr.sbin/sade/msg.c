@@ -1,4 +1,5 @@
-/*
+/*- 
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sade/msg.c,v 1.62 2006/08/08 13:45:46 delphij Exp $
  *
  * Copyright (c) 1995

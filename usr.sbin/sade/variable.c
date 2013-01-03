@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/usr.sbin/sade/variable.c,v 1.42 2007/07/04 00:00:41 scf Exp $
+ * $FreeBSD$
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -238,12 +238,12 @@ dump_variables(dialogMenuItem *unused)
     Variable *vp;
 
     if (isDebug())
-	msgDebug("Writing sysinstall variables to file..\n");
+	msgDebug("Writing %s variables to file..\n", ProgName);
 
-    fp = fopen("/etc/sysinstall.vars", "w");
+    fp = fopen("/etc/sade.vars", "w");
     if (!fp) {
-	msgConfirm("Unable to write to /etc/sysinstall.vars: %s",
-		   strerror(errno));
+	msgConfirm("Unable to write to /etc/%s.vars: %s",
+		   ProgName, strerror(errno));
 	return DITEM_FAILURE;
     }
 

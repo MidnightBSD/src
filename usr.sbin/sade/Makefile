@@ -1,5 +1,4 @@
-# $MidnightBSD: src/usr.sbin/sade/Makefile,v 1.2 2009/10/24 15:55:41 laffer1 Exp $
-# $FreeBSD: src/usr.sbin/sade/Makefile,v 1.147 2006/08/09 11:25:10 netchild Exp $
+# $MidnightBSD: src/usr.sbin/sade/Makefile,v 1.3 2011/12/18 03:49:30 laffer1 Exp $
 
 PROG=	sade
 MAN=	sade.8

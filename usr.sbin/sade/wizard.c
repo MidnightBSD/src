@@ -6,6 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sade/wizard.c,v 1.26 2006/08/07 23:35:49 netchild Exp $
  */
 

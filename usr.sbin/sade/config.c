@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/usr.sbin/sade/config.c,v 1.240 2006/08/08 13:45:46 delphij Exp $
+ * $FreeBSD$
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -181,8 +181,8 @@ configFstab(dialogMenuItem *self)
 	    return DITEM_SUCCESS;
 	else {
 	    msgConfirm("Attempting to rebuild your /etc/fstab file.  Warning: If you had\n"
-		       "any CD devices in use before running sysinstall then they may NOT\n"
-		       "be found by this run!");
+		       "any CD devices in use before running %s then they may NOT\n"
+		       "be found by this run!", ProgName);
 	}
 
     devs = deviceFind(NULL, DEVICE_TYPE_DISK);

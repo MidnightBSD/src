@@ -39,13 +39,13 @@ set_termcap(void)
 {
     char           *term;
     int		   stat;
-    struct ttysize ts;
+    struct winsize ws;
 
     term = getenv("TERM");
     stat = ioctl(STDERR_FILENO, GIO_COLOR, &ColorDisplay);
 
 	if (isDebug())
-	    DebugFD = open("sysinstall.debug", O_WRONLY|O_CREAT|O_TRUNC, 0644);
+	    DebugFD = open("sade.debug", O_WRONLY|O_CREAT|O_TRUNC, 0644);
 	else
 	    DebugFD = -1;
 	if (DebugFD < 0)
@@ -75,23 +75,30 @@ set_termcap(void)
 	    }
 	}
 
+#ifdef PC98
+	if (!term) {
+	    if (setenv("TERM", "cons25w", 1) < 0)
+		return -1;
+	}
+#else
 	if (ColorDisplay) {
 	    if (!term) {
-		if (setenv("TERM", "cons25", 1) < 0)
+		if (setenv("TERM", "xterm", 1) < 0)
 		    return -1;
 	    }
 	}
 	else {
 	    if (!term) {
-		if (setenv("TERM", "cons25-m", 1) < 0)
+		if (setenv("TERM", "vt100", 1) < 0)
 		    return -1;
 	    }
 	}
+#endif
     }
-    if (ioctl(0, TIOCGSIZE, &ts) == -1) {
+    if (ioctl(0, TIOCGWINSZ, &ws) == -1) {
 	msgDebug("Unable to get terminal size - errno %d\n", errno);
-	ts.ts_lines = 0;
+	ws.ws_row = 0;
     }
-    StatusLine = ts.ts_lines ? ts.ts_lines - 1: (OnVTY ? VTY_STATUS_LINE : TTY_STATUS_LINE);
+    StatusLine = ws.ws_row ? ws.ws_row - 1: (OnVTY ? VTY_STATUS_LINE : TTY_STATUS_LINE);
     return 0;
 }
