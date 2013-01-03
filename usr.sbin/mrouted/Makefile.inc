@@ -2,6 +2,8 @@
 
 CFLAGS+= -DRSRR -Dlog=logit
 
+WARNS?=	0
+
 LIBMROUTED=	${.OBJDIR}/../common/libmrouted.a
 
 .include "../Makefile.inc"
