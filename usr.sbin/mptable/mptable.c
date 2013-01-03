@@ -29,7 +29,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/mptable/mptable.c,v 1.19 2005/02/06 12:54:54 obrien Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 /*
@@ -147,7 +147,7 @@ tableEntry basetableEntryTypes[] =
 tableEntry extendedtableEntryTypes[] =
 {
     { 128, 20, "System Address Space" },
-    { 129,  8, "Bus Heirarchy" },
+    { 129,  8, "Bus Hierarchy" },
     { 130,  8, "Compatibility Bus Address" }
 };
 
