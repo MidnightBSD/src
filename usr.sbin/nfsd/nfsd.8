@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)nfsd.8	8.4 (Berkeley) 3/29/95
-.\" $FreeBSD: src/usr.sbin/nfsd/nfsd.8,v 1.24 2005/01/17 07:44:42 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd March 29, 1995
+.Dd April 23, 2011
 .Dt NFSD 8
 .Os
 .Sh NAME
@@ -38,7 +38,7 @@
 server
 .Sh SYNOPSIS
 .Nm
-.Op Fl ardut
+.Op Fl arduteo
 .Op Fl n Ar num_servers
 .Op Fl h Ar bindip
 .Sh DESCRIPTION
@@ -100,6 +100,12 @@ clients.
 Serve
 .Tn UDP NFS
 clients.
+.It Fl e
+The new NFS server that includes NFSv4 support is now the default, so this
+option is now a no-op and should be considered deprecated.
+.It Fl o
+Forces the use of the old NFS server that does not include NFSv4 support
+in it.
 .El
 .Pp
 For example,
@@ -120,8 +126,11 @@ utility listens for service requests at the port indicated in the
 .Tn NFS
 server specification; see
 .%T "Network File System Protocol Specification" ,
-RFC1094 and
-.%T "NFS: Network File System Version 3 Protocol Specification" .
+RFC1094,
+.%T "NFS: Network File System Version 3 Protocol Specification" ,
+RFC1813 and
+.%T "Network File System (NFS) Version 4 Protocol" ,
+RFC3530.
 .Pp
 If
 .Nm
@@ -178,13 +187,29 @@ just do a
 .Xr nfsstat 1 ,
 .Xr kldload 2 ,
 .Xr nfssvc 2 ,
+.Xr nfsv4 4 ,
 .Xr exports 5 ,
+.Xr stablerestart 5 ,
+.Xr gssd 8 ,
 .Xr ipfw 8 ,
 .Xr mountd 8 ,
 .Xr nfsiod 8 ,
+.Xr nfsrevoke 8 ,
+.Xr nfsuserd 8 ,
 .Xr rpcbind 8
 .Sh HISTORY
 The
 .Nm
 utility first appeared in
 .Bx 4.4 .
+.Sh BUGS
+If
+.Nm
+is started when
+.Xr gssd 8
+is not running, it will service AUTH_SYS requests only. To fix the problem
+you must kill
+.Nm
+and then restart it, after the
+.Xr gssd 8
+is running.

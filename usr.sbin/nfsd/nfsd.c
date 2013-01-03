@@ -41,24 +41,28 @@ static const char copyright[] =
 static char sccsid[] = "@(#)nfsd.c	8.9 (Berkeley) 3/29/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/nfsd/nfsd.c,v 1.34 2005/12/21 10:12:05 delphij Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
 #include <sys/syslog.h>
 #include <sys/wait.h>
 #include <sys/mount.h>
+#include <sys/fcntl.h>
 #include <sys/linker.h>
 #include <sys/module.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/ucred.h>
 
 #include <rpc/rpc.h>
 #include <rpc/pmap_clnt.h>
+#include <rpcsvc/nfs_prot.h>
 
 #include <netdb.h>
 #include <arpa/inet.h>
-#include <nfs/rpcv2.h>
-#include <nfs/nfsproto.h>
 #include <nfsserver/nfs.h>
+#include <nfs/nfssvc.h>
 
 #include <err.h>
 #include <errno.h>
@@ -67,7 +71,6 @@ static const char rcsid[] =
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <netdb.h>
 
 /* Global defs */
 #ifdef DEBUG
@@ -77,10 +80,17 @@ int	debug = 1;
 int	debug = 0;
 #endif
 
+#define	NFSD_STABLERESTART	"/var/db/nfs-stablerestart"
+#define	NFSD_STABLEBACKUP	"/var/db/nfs-stablerestart.bak"
 #define	MAXNFSDCNT	256
 #define	DEFNFSDCNT	 4
 pid_t	children[MAXNFSDCNT];	/* PIDs of children */
 int	nfsdcnt;		/* number of children */
+int	new_syscall;
+int	run_v4server = 1;	/* Force running of nfsv4 server */
+int	nfssvc_nfsd;		/* Set to correct NFSSVC_xxx flag */
+int	stablefd = -1;		/* Fd for the stable restart file */
+int	backupfd;		/* Fd for the backup stable restart file */
 
 void	cleanup(int);
 void	child_cleanup(int);
@@ -93,6 +103,9 @@ int	setbindhost(struct addrinfo **ia, const char *bindhost,
 void	start_server(int);
 void	unregistration(void);
 void	usage(void);
+void	open_stable(int *, int *);
+void	copy_stable(int, int);
+void	backup_stable(int);
 
 /*
  * Nfs server daemon mostly just a user context for nfssvc()
@@ -111,12 +124,13 @@ void	usage(void);
  *	-d - unregister with rpcbind
  *	-t - support tcp nfs clients
  *	-u - support udp nfs clients
+ *	-e - forces it to run a server that supports nfsv4
  * followed by "n" which is the number of nfsds' to fork off
  */
 int
 main(int argc, char **argv)
 {
-	struct nfsd_args nfsdargs;
+	struct nfsd_addsock_args addsockargs;
 	struct addrinfo *ai_udp, *ai_tcp, *ai_udp6, *ai_tcp6, hints;
 	struct netconfig *nconf_udp, *nconf_tcp, *nconf_udp6, *nconf_tcp6;
 	struct netbuf nb_udp, nb_tcp, nb_udp6, nb_tcp6;
@@ -128,22 +142,17 @@ main(int argc, char **argv)
 	socklen_t len;
 	int on = 1, unregister, reregister, sock;
 	int tcp6sock, ip6flag, tcpflag, tcpsock;
-	int udpflag, ecode, s, srvcnt;
+	int udpflag, ecode, error, s, srvcnt;
 	int bindhostc, bindanyflag, rpcbreg, rpcbregcnt;
+	int nfssvc_addsock;
 	char **bindhost = NULL;
 	pid_t pid;
-
-	if (modfind("nfsserver") < 0) {
-		/* Not present in kernel, try loading it */
-		if (kldload("nfsserver") < 0 || modfind("nfsserver") < 0)
-			errx(1, "NFS server is not available");
-	}
 
 	nfsdcnt = DEFNFSDCNT;
 	unregister = reregister = tcpflag = maxsock = 0;
 	bindanyflag = udpflag = connect_type_cnt = bindhostc = 0;
-#define	GETOPT	"ah:n:rdtu"
-#define	USAGE	"[-ardtu] [-n num_servers] [-h bindip]"
+#define	GETOPT	"ah:n:rdtueo"
+#define	USAGE	"[-ardtueo] [-n num_servers] [-h bindip]"
 	while ((ch = getopt(argc, argv, GETOPT)) != -1)
 		switch (ch) {
 		case 'a':
@@ -178,6 +187,12 @@ main(int argc, char **argv)
 		case 'u':
 			udpflag = 1;
 			break;
+		case 'e':
+			/* now a no-op, since this is the default */
+			break;
+		case 'o':
+			run_v4server = 0;
+			break;
 		default:
 		case '?':
 			usage();
@@ -200,6 +215,22 @@ main(int argc, char **argv)
 			    DEFNFSDCNT);
 			nfsdcnt = DEFNFSDCNT;
 		}
+	}
+
+	/*
+	 * Unless the "-o" option was specified, try and run "nfsd".
+	 * If "-o" was specified, try and run "nfsserver".
+	 */
+	if (run_v4server > 0) {
+		if (modfind("nfsd") < 0) {
+			/* Not present in kernel, try loading it */
+			if (kldload("nfsd") < 0 || modfind("nfsd") < 0)
+				errx(1, "NFS server is not available");
+		}
+	} else if (modfind("nfsserver") < 0) {
+		/* Not present in kernel, try loading it */
+		if (kldload("nfsserver") < 0 || modfind("nfsserver") < 0)
+			errx(1, "NFS server is not available");
 	}
 
 	ip6flag = 1;
@@ -244,8 +275,8 @@ main(int argc, char **argv)
 				err(1, "getnetconfigent udp failed");
 			nb_udp.buf = ai_udp->ai_addr;
 			nb_udp.len = nb_udp.maxlen = ai_udp->ai_addrlen;
-			if ((!rpcb_set(RPCPROG_NFS, 2, nconf_udp, &nb_udp)) ||
-			    (!rpcb_set(RPCPROG_NFS, 3, nconf_udp, &nb_udp)))
+			if ((!rpcb_set(NFS_PROGRAM, 2, nconf_udp, &nb_udp)) ||
+			    (!rpcb_set(NFS_PROGRAM, 3, nconf_udp, &nb_udp)))
 				err(1, "rpcb_set udp failed");
 			freeaddrinfo(ai_udp);
 		}
@@ -263,8 +294,8 @@ main(int argc, char **argv)
 				err(1, "getnetconfigent udp6 failed");
 			nb_udp6.buf = ai_udp6->ai_addr;
 			nb_udp6.len = nb_udp6.maxlen = ai_udp6->ai_addrlen;
-			if ((!rpcb_set(RPCPROG_NFS, 2, nconf_udp6, &nb_udp6)) ||
-			    (!rpcb_set(RPCPROG_NFS, 3, nconf_udp6, &nb_udp6)))
+			if ((!rpcb_set(NFS_PROGRAM, 2, nconf_udp6, &nb_udp6)) ||
+			    (!rpcb_set(NFS_PROGRAM, 3, nconf_udp6, &nb_udp6)))
 				err(1, "rpcb_set udp6 failed");
 			freeaddrinfo(ai_udp6);
 		}
@@ -282,8 +313,8 @@ main(int argc, char **argv)
 				err(1, "getnetconfigent tcp failed");
 			nb_tcp.buf = ai_tcp->ai_addr;
 			nb_tcp.len = nb_tcp.maxlen = ai_tcp->ai_addrlen;
-			if ((!rpcb_set(RPCPROG_NFS, 2, nconf_tcp, &nb_tcp)) ||
-			    (!rpcb_set(RPCPROG_NFS, 3, nconf_tcp, &nb_tcp)))
+			if ((!rpcb_set(NFS_PROGRAM, 2, nconf_tcp, &nb_tcp)) ||
+			    (!rpcb_set(NFS_PROGRAM, 3, nconf_tcp, &nb_tcp)))
 				err(1, "rpcb_set tcp failed");
 			freeaddrinfo(ai_tcp);
 		}
@@ -301,8 +332,8 @@ main(int argc, char **argv)
 				err(1, "getnetconfigent tcp6 failed");
 			nb_tcp6.buf = ai_tcp6->ai_addr;
 			nb_tcp6.len = nb_tcp6.maxlen = ai_tcp6->ai_addrlen;
-			if ((!rpcb_set(RPCPROG_NFS, 2, nconf_tcp6, &nb_tcp6)) ||
-			    (!rpcb_set(RPCPROG_NFS, 3, nconf_tcp6, &nb_tcp6)))
+			if ((!rpcb_set(NFS_PROGRAM, 2, nconf_tcp6, &nb_tcp6)) ||
+			    (!rpcb_set(NFS_PROGRAM, 3, nconf_tcp6, &nb_tcp6)))
 				err(1, "rpcb_set tcp6 failed");
 			freeaddrinfo(ai_tcp6);
 		}
@@ -323,26 +354,89 @@ main(int argc, char **argv)
 	}
 	(void)signal(SIGSYS, nonfs);
 	(void)signal(SIGCHLD, reapchild);
+	(void)signal(SIGUSR2, backup_stable);
 
 	openlog("nfsd", LOG_PID, LOG_DAEMON);
 
-	/* If we use UDP only, we start the last server below. */
-	srvcnt = tcpflag ? nfsdcnt : nfsdcnt - 1;
-	for (i = 0; i < srvcnt; i++) {
-		switch ((pid = fork())) {
-		case -1:
+	/*
+	 * For V4, we open the stablerestart file and call nfssvc()
+	 * to get it loaded. This is done before the daemons do the
+	 * regular nfssvc() call to service NFS requests.
+	 * (This way the file remains open until the last nfsd is killed
+	 *  off.)
+	 * It and the backup copy will be created as empty files
+	 * the first time this nfsd is started and should never be
+	 * deleted/replaced if at all possible. It should live on a
+	 * local, non-volatile storage device that does not do hardware
+	 * level write-back caching. (See SCSI doc for more information
+	 * on how to prevent write-back caching on SCSI disks.)
+	 */
+	if (run_v4server > 0) {
+		open_stable(&stablefd, &backupfd);
+		if (stablefd < 0) {
+			syslog(LOG_ERR, "Can't open %s\n", NFSD_STABLERESTART);
+			exit(1);
+		}
+		/* This system call will fail for old kernels, but that's ok. */
+		nfssvc(NFSSVC_BACKUPSTABLE, NULL);
+		if (nfssvc(NFSSVC_STABLERESTART, (caddr_t)&stablefd) < 0) {
+			syslog(LOG_ERR, "Can't read stable storage file\n");
+			exit(1);
+		}
+		nfssvc_addsock = NFSSVC_NFSDADDSOCK;
+		nfssvc_nfsd = NFSSVC_NFSDNFSD;
+		new_syscall = TRUE;
+	} else {
+		nfssvc_addsock = NFSSVC_ADDSOCK;
+		nfssvc_nfsd = NFSSVC_NFSD;
+		/*
+		 * Figure out if the kernel supports the new-style
+		 * NFSSVC_NFSD. Old kernels will return ENXIO because they
+		 * don't recognise the flag value, new ones will return EINVAL
+		 * because argp is NULL.
+		 */
+		new_syscall = FALSE;
+		if (nfssvc(NFSSVC_NFSD, NULL) < 0 && errno == EINVAL)
+			new_syscall = TRUE;
+	}
+
+	if (!new_syscall) {
+		/* If we use UDP only, we start the last server below. */
+		srvcnt = tcpflag ? nfsdcnt : nfsdcnt - 1;
+		for (i = 0; i < srvcnt; i++) {
+			switch ((pid = fork())) {
+			case -1:
+				syslog(LOG_ERR, "fork: %m");
+				nfsd_exit(1);
+			case 0:
+				break;
+			default:
+				children[i] = pid;
+				continue;
+			}
+			(void)signal(SIGUSR1, child_cleanup);
+			setproctitle("server");
+
+			start_server(0);
+		}
+	} else if (tcpflag) {
+		/*
+		 * For TCP mode, we fork once to start the first
+		 * kernel nfsd thread. The kernel will add more
+		 * threads as needed.
+		 */
+		pid = fork();
+		if (pid == -1) {
 			syslog(LOG_ERR, "fork: %m");
 			nfsd_exit(1);
-		case 0:
-			break;
-		default:
-			children[i] = pid;
-			continue;
 		}
-		(void)signal(SIGUSR1, child_cleanup);
-		setproctitle("server");
-
-		start_server(0);
+		if (pid) {
+			children[0] = pid;
+		} else {
+			(void)signal(SIGUSR1, child_cleanup);
+			setproctitle("server");
+			start_server(0);
+		}
 	}
 
 	(void)signal(SIGUSR1, cleanup);
@@ -378,10 +472,10 @@ main(int argc, char **argv)
 					nfsd_exit(1);
 				}
 				freeaddrinfo(ai_udp);
-				nfsdargs.sock = sock;
-				nfsdargs.name = NULL;
-				nfsdargs.namelen = 0;
-				if (nfssvc(NFSSVC_ADDSOCK, &nfsdargs) < 0) {
+				addsockargs.sock = sock;
+				addsockargs.name = NULL;
+				addsockargs.namelen = 0;
+				if (nfssvc(nfssvc_addsock, &addsockargs) < 0) {
 					syslog(LOG_ERR, "can't Add UDP socket");
 					nfsd_exit(1);
 				}
@@ -405,8 +499,8 @@ main(int argc, char **argv)
 				err(1, "getnetconfigent udp failed");
 			nb_udp.buf = ai_udp->ai_addr;
 			nb_udp.len = nb_udp.maxlen = ai_udp->ai_addrlen;
-			if ((!rpcb_set(RPCPROG_NFS, 2, nconf_udp, &nb_udp)) ||
-			    (!rpcb_set(RPCPROG_NFS, 3, nconf_udp, &nb_udp)))
+			if ((!rpcb_set(NFS_PROGRAM, 2, nconf_udp, &nb_udp)) ||
+			    (!rpcb_set(NFS_PROGRAM, 3, nconf_udp, &nb_udp)))
 				err(1, "rpcb_set udp failed");
 			freeaddrinfo(ai_udp);
 		}
@@ -446,10 +540,10 @@ main(int argc, char **argv)
 					nfsd_exit(1);
 				}
 				freeaddrinfo(ai_udp6);
-				nfsdargs.sock = sock;
-				nfsdargs.name = NULL;
-				nfsdargs.namelen = 0;
-				if (nfssvc(NFSSVC_ADDSOCK, &nfsdargs) < 0) {
+				addsockargs.sock = sock;
+				addsockargs.name = NULL;
+				addsockargs.namelen = 0;
+				if (nfssvc(nfssvc_addsock, &addsockargs) < 0) {
 					syslog(LOG_ERR,
 					    "can't add UDP6 socket");
 					nfsd_exit(1);
@@ -474,8 +568,8 @@ main(int argc, char **argv)
 				err(1, "getnetconfigent udp6 failed");
 			nb_udp6.buf = ai_udp6->ai_addr;
 			nb_udp6.len = nb_udp6.maxlen = ai_udp6->ai_addrlen;
-			if ((!rpcb_set(RPCPROG_NFS, 2, nconf_udp6, &nb_udp6)) ||
-			    (!rpcb_set(RPCPROG_NFS, 3, nconf_udp6, &nb_udp6)))
+			if ((!rpcb_set(NFS_PROGRAM, 2, nconf_udp6, &nb_udp6)) ||
+			    (!rpcb_set(NFS_PROGRAM, 3, nconf_udp6, &nb_udp6)))
 				err(1, "rpcb_set udp6 failed");
 			freeaddrinfo(ai_udp6);
 		}
@@ -540,8 +634,8 @@ main(int argc, char **argv)
 				err(1, "getnetconfigent tcp failed");
 			nb_tcp.buf = ai_tcp->ai_addr;
 			nb_tcp.len = nb_tcp.maxlen = ai_tcp->ai_addrlen;
-			if ((!rpcb_set(RPCPROG_NFS, 2, nconf_tcp,
-			    &nb_tcp)) || (!rpcb_set(RPCPROG_NFS, 3,
+			if ((!rpcb_set(NFS_PROGRAM, 2, nconf_tcp,
+			    &nb_tcp)) || (!rpcb_set(NFS_PROGRAM, 3,
 			    nconf_tcp, &nb_tcp)))
 				err(1, "rpcb_set tcp failed");
 			freeaddrinfo(ai_tcp);
@@ -615,8 +709,8 @@ main(int argc, char **argv)
 				err(1, "getnetconfigent tcp6 failed");
 			nb_tcp6.buf = ai_tcp6->ai_addr;
 			nb_tcp6.len = nb_tcp6.maxlen = ai_tcp6->ai_addrlen;
-			if ((!rpcb_set(RPCPROG_NFS, 2, nconf_tcp6, &nb_tcp6)) ||
-			    (!rpcb_set(RPCPROG_NFS, 3, nconf_tcp6, &nb_tcp6)))
+			if ((!rpcb_set(NFS_PROGRAM, 2, nconf_tcp6, &nb_tcp6)) ||
+			    (!rpcb_set(NFS_PROGRAM, 3, nconf_tcp6, &nb_tcp6)))
 				err(1, "rpcb_set tcp6 failed");
 			freeaddrinfo(ai_tcp6);
 		}
@@ -652,9 +746,10 @@ main(int argc, char **argv)
 		if (connect_type_cnt > 1) {
 			if (select(maxsock + 1,
 			    &ready, NULL, NULL, NULL) < 1) {
-				syslog(LOG_ERR, "select failed: %m");
-				if (errno == EINTR)
+				error = errno;
+				if (error == EINTR)
 					continue;
+				syslog(LOG_ERR, "select failed: %m");
 				nfsd_exit(1);
 			}
 		}
@@ -664,9 +759,10 @@ main(int argc, char **argv)
 					len = sizeof(inetpeer);
 					if ((msgsock = accept(tcpsock,
 					    (struct sockaddr *)&inetpeer, &len)) < 0) {
+						error = errno;
 						syslog(LOG_ERR, "accept failed: %m");
-						if (errno == ECONNABORTED ||
-						    errno == EINTR)
+						if (error == ECONNABORTED ||
+						    error == EINTR)
 							continue;
 						nfsd_exit(1);
 					}
@@ -676,20 +772,21 @@ main(int argc, char **argv)
 					    SO_KEEPALIVE, (char *)&on, sizeof(on)) < 0)
 						syslog(LOG_ERR,
 						    "setsockopt SO_KEEPALIVE: %m");
-					nfsdargs.sock = msgsock;
-					nfsdargs.name = (caddr_t)&inetpeer;
-					nfsdargs.namelen = len;
-					nfssvc(NFSSVC_ADDSOCK, &nfsdargs);
+					addsockargs.sock = msgsock;
+					addsockargs.name = (caddr_t)&inetpeer;
+					addsockargs.namelen = len;
+					nfssvc(nfssvc_addsock, &addsockargs);
 					(void)close(msgsock);
 				} else if (FD_ISSET(tcpsock, &v6bits)) {
 					len = sizeof(inet6peer);
 					if ((msgsock = accept(tcpsock,
 					    (struct sockaddr *)&inet6peer,
 					    &len)) < 0) {
+						error = errno;
 						syslog(LOG_ERR,
 						     "accept failed: %m");
-						if (errno == ECONNABORTED ||
-						    errno == EINTR)
+						if (error == ECONNABORTED ||
+						    error == EINTR)
 							continue;
 						nfsd_exit(1);
 					}
@@ -698,10 +795,10 @@ main(int argc, char **argv)
 					    sizeof(on)) < 0)
 						syslog(LOG_ERR, "setsockopt "
 						    "SO_KEEPALIVE: %m");
-					nfsdargs.sock = msgsock;
-					nfsdargs.name = (caddr_t)&inet6peer;
-					nfsdargs.namelen = len;
-					nfssvc(NFSSVC_ADDSOCK, &nfsdargs);
+					addsockargs.sock = msgsock;
+					addsockargs.name = (caddr_t)&inet6peer;
+					addsockargs.namelen = len;
+					nfssvc(nfssvc_addsock, &addsockargs);
 					(void)close(msgsock);
 				}
 			}
@@ -784,8 +881,8 @@ reapchild(__unused int signo)
 void
 unregistration(void)
 {
-	if ((!rpcb_unset(RPCPROG_NFS, 2, NULL)) ||
-	    (!rpcb_unset(RPCPROG_NFS, 3, NULL)))
+	if ((!rpcb_unset(NFS_PROGRAM, 2, NULL)) ||
+	    (!rpcb_unset(NFS_PROGRAM, 3, NULL)))
 		syslog(LOG_ERR, "rpcb_unset failed");
 }
 
@@ -829,15 +926,150 @@ nfsd_exit(int status)
 void
 start_server(int master)
 {
-	int status;
+	char principal[MAXHOSTNAMELEN + 5];
+	struct nfsd_nfsd_args nfsdargs;
+	int status, error;
+	char hostname[MAXHOSTNAMELEN + 1], *cp;
+	struct addrinfo *aip, hints;
 
 	status = 0;
-	if (nfssvc(NFSSVC_NFSD, NULL) < 0) {
-		syslog(LOG_ERR, "nfssvc: %m");
-		status = 1;
+	if (new_syscall) {
+		gethostname(hostname, sizeof (hostname));
+		snprintf(principal, sizeof (principal), "nfs@%s", hostname);
+		if ((cp = strchr(hostname, '.')) == NULL ||
+		    *(cp + 1) == '\0') {
+			/* If not fully qualified, try getaddrinfo() */
+			memset((void *)&hints, 0, sizeof (hints));
+			hints.ai_flags = AI_CANONNAME;
+			error = getaddrinfo(hostname, NULL, &hints, &aip);
+			if (error == 0) {
+				if (aip->ai_canonname != NULL &&
+				    (cp = strchr(aip->ai_canonname, '.')) !=
+				    NULL && *(cp + 1) != '\0')
+					snprintf(principal, sizeof (principal),
+					    "nfs@%s", aip->ai_canonname);
+				freeaddrinfo(aip);
+			}
+		}
+		nfsdargs.principal = principal;
+		nfsdargs.minthreads = nfsdcnt;
+		nfsdargs.maxthreads = nfsdcnt;
+		error = nfssvc(nfssvc_nfsd, &nfsdargs);
+		if (error < 0 && errno == EAUTH) {
+			/*
+			 * This indicates that it could not register the
+			 * rpcsec_gss credentials, usually because the
+			 * gssd daemon isn't running.
+			 * (only the experimental server with nfsv4)
+			 */
+			syslog(LOG_ERR, "No gssd, using AUTH_SYS only");
+			principal[0] = '\0';
+			error = nfssvc(nfssvc_nfsd, &nfsdargs);
+		}
+		if (error < 0) {
+			syslog(LOG_ERR, "nfssvc: %m");
+			status = 1;
+		}
+	} else {
+		if (nfssvc(NFSSVC_OLDNFSD, NULL) < 0) {
+			syslog(LOG_ERR, "nfssvc: %m");
+			status = 1;
+		}
 	}
 	if (master)
 		nfsd_exit(status);
 	else
 		exit(status);
 }
+
+/*
+ * Open the stable restart file and return the file descriptor for it.
+ */
+void
+open_stable(int *stable_fdp, int *backup_fdp)
+{
+	int stable_fd, backup_fd = -1, ret;
+	struct stat st, backup_st;
+
+	/* Open and stat the stable restart file. */
+	stable_fd = open(NFSD_STABLERESTART, O_RDWR, 0);
+	if (stable_fd < 0)
+		stable_fd = open(NFSD_STABLERESTART, O_RDWR | O_CREAT, 0600);
+	if (stable_fd >= 0) {
+		ret = fstat(stable_fd, &st);
+		if (ret < 0) {
+			close(stable_fd);
+			stable_fd = -1;
+		}
+	}
+
+	/* Open and stat the backup stable restart file. */
+	if (stable_fd >= 0) {
+		backup_fd = open(NFSD_STABLEBACKUP, O_RDWR, 0);
+		if (backup_fd < 0)
+			backup_fd = open(NFSD_STABLEBACKUP, O_RDWR | O_CREAT,
+			    0600);
+		if (backup_fd >= 0) {
+			ret = fstat(backup_fd, &backup_st);
+			if (ret < 0) {
+				close(backup_fd);
+				backup_fd = -1;
+			}
+		}
+		if (backup_fd < 0) {
+			close(stable_fd);
+			stable_fd = -1;
+		}
+	}
+
+	*stable_fdp = stable_fd;
+	*backup_fdp = backup_fd;
+	if (stable_fd < 0)
+		return;
+
+	/* Sync up the 2 files, as required. */
+	if (st.st_size > 0)
+		copy_stable(stable_fd, backup_fd);
+	else if (backup_st.st_size > 0)
+		copy_stable(backup_fd, stable_fd);
+}
+
+/*
+ * Copy the stable restart file to the backup or vice versa.
+ */
+void
+copy_stable(int from_fd, int to_fd)
+{
+	int cnt, ret;
+	static char buf[1024];
+
+	ret = lseek(from_fd, (off_t)0, SEEK_SET);
+	if (ret >= 0)
+		ret = lseek(to_fd, (off_t)0, SEEK_SET);
+	if (ret >= 0)
+		ret = ftruncate(to_fd, (off_t)0);
+	if (ret >= 0)
+		do {
+			cnt = read(from_fd, buf, 1024);
+			if (cnt > 0)
+				ret = write(to_fd, buf, cnt);
+			else if (cnt < 0)
+				ret = cnt;
+		} while (cnt > 0 && ret >= 0);
+	if (ret >= 0)
+		ret = fsync(to_fd);
+	if (ret < 0)
+		syslog(LOG_ERR, "stable restart copy failure: %m");
+}
+
+/*
+ * Back up the stable restart file when indicated by the kernel.
+ */
+void
+backup_stable(__unused int signo)
+{
+
+	if (stablefd >= 0)
+		copy_stable(stablefd, backupfd);
+}
+

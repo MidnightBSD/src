@@ -54790,6 +54790,8 @@ usr.sbin/newsyslog/ptimes.c -text
 usr.sbin/nfsd/Makefile -text
 usr.sbin/nfsd/nfsd.8 -text
 usr.sbin/nfsd/nfsd.c -text
+usr.sbin/nfsd/nfsv4.4 -text
+usr.sbin/nfsd/stablerestart.5 -text
 usr.sbin/ngctl/Makefile -text
 usr.sbin/ngctl/config.c -text
 usr.sbin/ngctl/connect.c -text
