@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
-# $MidnightBSD: src/usr.bin/Makefile,v 1.43 2012/11/17 19:32:55 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/Makefile,v 1.44 2012/11/23 01:13:49 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -9,7 +9,7 @@
 # Moved to secure: bdes
 #
 
-# xxx kdump
+# xxx kdump truss
 SUBDIR=	alias \
 	apply \
 	asa \
@@ -176,7 +176,6 @@ SUBDIR=	alias \
 	tr \
 	true \
 	truncate \
-	truss \
 	tset \
 	tsort \
 	tty \

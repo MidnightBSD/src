@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.15 2009/10/24 05:13:57 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.16 2012/12/01 14:50:49 laffer1 Exp $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -732,6 +732,7 @@ configPackages(dialogMenuItem *self)
 
     while (1) {
 	int ret, pos, scroll;
+	int current, low, high;
 
 	/* Bring up the packages menu */
 	pos = scroll = 0;
@@ -746,8 +747,15 @@ configPackages(dialogMenuItem *self)
 	    else if (DITEM_STATUS(ret) != DITEM_FAILURE) {
 		dialog_clear();
 		restoreflag = 1;
-		for (tmp = Plist.kids; tmp && tmp->name; tmp = tmp->next)
-		    (void)index_extract(mediaDevice, &Top, tmp, FALSE);
+		if (have_volumes) {
+			low = low_volume;
+			high = high_volume;
+		} else
+			low = high = 0;
+		for (current = low; current <= high; current++)
+			for (tmp = Plist.kids; tmp && tmp->name; tmp = tmp->next)
+				(void)index_extract(mediaDevice, &Top, tmp, FALSE, current);
+
 		break;
 	    }
 	}

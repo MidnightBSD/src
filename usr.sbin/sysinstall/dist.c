@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/dist.c,v 1.9 2011/01/29 23:36:46 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/dist.c,v 1.10 2012/12/01 14:50:49 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/dist.c,v 1.239.2.1 2005/08/30 20:01:32 murray Exp $
  *
  * Copyright (c) 1995
@@ -136,18 +136,15 @@ distVerifyFlags(void)
 	Dists |= DIST_SRC;
     if (KernelDists)
 	Dists |= DIST_KERNEL;
-    if (DocDists)
-	Dists |= DIST_DOC;
     if (isDebug())
-	msgDebug("Dist Masks: Dists: %0x, Srcs: %0x Kernels: %0x Docs: %0x\n", Dists,
-	    SrcDists, KernelDists, DocDists);
+	msgDebug("Dist Masks: Dists: %0x, Srcs: %0x Kernels: %0x\n", Dists,
+	    SrcDists, KernelDists);
 }
 
 int
 distReset(dialogMenuItem *self)
 {
     Dists = 0;
-    DocDists = 0;
     SrcDists = 0;
     KernelDists = 0;
     return DITEM_SUCCESS | DITEM_REDRAW;
@@ -162,9 +159,6 @@ distConfig(dialogMenuItem *self)
 
     if ((cp = variable_get(VAR_DIST_MAIN)) != NULL)
 	Dists = atoi(cp);
-
-    if ((cp = variable_get(VAR_DIST_DOC)) != NULL)
-	DocDists = atoi(cp);
 
     if ((cp = variable_get(VAR_DIST_SRC)) != NULL)
 	SrcDists = atoi(cp);
@@ -191,7 +185,6 @@ distSetDeveloper(dialogMenuItem *self)
     Dists = _DIST_DEVELOPER;
     SrcDists = DIST_SRC_ALL;
     KernelDists = selectKernel();
-    i = distSetDoc(self);
     i |= distMaybeSetPorts(self);
     distVerifyFlags();
     return i;
@@ -206,7 +199,6 @@ distSetKernDeveloper(dialogMenuItem *self)
     Dists = _DIST_DEVELOPER;
     SrcDists = DIST_SRC_SYS | DIST_SRC_BASE;
     KernelDists = selectKernel();
-    i = distSetDoc(self);
     i |= distMaybeSetPorts(self);
     distVerifyFlags();
     return i;
@@ -220,7 +212,6 @@ distSetUser(dialogMenuItem *self)
     distReset(NULL);
     Dists = _DIST_USER;
     KernelDists = selectKernel();
-    i = distSetDoc(self);
     i |= distMaybeSetPorts(self);
     distVerifyFlags();
     return i;
@@ -244,7 +235,6 @@ distSetEverything(dialogMenuItem *self)
     Dists = DIST_ALL;
     SrcDists = DIST_SRC_ALL;
     KernelDists = DIST_KERNEL_ALL;
-    DocDists = DIST_DOC_ALL;
     i = distMaybeSetPorts(self);
     distVerifyFlags();
     return i | DITEM_REDRAW;

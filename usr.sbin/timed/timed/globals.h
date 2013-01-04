@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -31,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)globals.h	8.1 (Berkeley) 6/6/93
- *	$FreeBSD: src/usr.sbin/timed/timed/globals.h,v 1.6 2001/11/20 07:13:39 jhb Exp $
+ *	$MidnightBSD$
  */
 
 #include <sys/param.h>
@@ -45,6 +41,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <netdb.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -54,8 +51,6 @@
 #include <protocols/timed.h>
 #define	SECHR	(60*60)
 #define	SECDAY	(24*SECHR)
-
-extern int sock;
 
 /* Best expected round trip for a measurement.
  * This is essentially the number of milliseconds per CPU tick (CLK_TCK?).

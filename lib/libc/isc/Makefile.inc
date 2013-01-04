@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 # isc sources
 .PATH: ${.CURDIR}/isc

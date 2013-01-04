@@ -1,4 +1,4 @@
-# $MidnightBSD: src/usr.sbin/named/Makefile,v 1.3 2008/04/28 03:44:18 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/named/Makefile,v 1.4 2010/01/16 17:00:07 laffer1 Exp $
 # $FreeBSD: src/usr.sbin/named/Makefile,v 1.43 2007/06/02 23:19:58 dougb Exp $
 
 BIND_DIR=	${.CURDIR}/../../contrib/bind96
@@ -10,7 +10,7 @@ SRCDIR=		${BIND_DIR}/bin/named
 
 PROG=		named
 
-CONFIGARGS='--prefix=/usr' '--infodir=/usr/share/info' '--mandir=/usr/share/man' '--enable-threads' '--disable-ipv6' '--enable-getifaddrs' '--disable-linux-caps' '--with-openssl=/usr' '--with-randomdev=/dev/random'
+CONFIGARGS='--prefix=/usr' '--infodir=/usr/share/info' '--mandir=/usr/share/man' '--enable-threads' '--enable-getifaddrs' '--disable-linux-caps' '--with-openssl=/usr' '--with-randomdev=/dev/random'
 
 # Optional features
 .if ${MK_BIND_LARGE_FILE} == "yes"
@@ -52,12 +52,15 @@ CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
 # Remove the date stamp to make it more obvious when real changes happen
 CFLAGS+=	-U__DATE__
 
+WARNS?=		0
+
 DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD} ${PTHREAD_DPADD}
 LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD} ${PTHREAD_LDADD}
 
 MAN=		named.8 lwresd.8 named.conf.5
 
-MANFILTER=	sed -e "s@/etc/named\.conf@/etc/namedb/named.conf@g"
+MANFILTER=	sed -e "s@/etc/named\.conf@/etc/namedb/named.conf@g" \
+		-e "s@/var\/run\/named\/named.pid@/var/run/named/pid@"
 
 LINKS=		${BINDIR}/named ${BINDIR}/lwresd
 

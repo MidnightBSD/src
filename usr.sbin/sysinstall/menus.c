@@ -35,7 +35,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.19 2011/03/26 16:53:46 laffer1 Exp $";
+  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.20 2012/12/01 14:50:49 laffer1 Exp $";
 #endif
 
 #include "sysinstall.h"
@@ -109,7 +109,6 @@ static int
 checkDistEverything(dialogMenuItem *self)
 {
     return Dists == DIST_ALL &&
-	_IS_SET(DocDists, DIST_DOC_ALL) &&
 	_IS_SET(SrcDists, DIST_SRC_ALL) &&
 	_IS_SET(KernelDists, DIST_KERNEL_ALL);
 }
@@ -124,12 +123,6 @@ static int
 kernelFlagCheck(dialogMenuItem *item)
 {
     return KernelDists;
-}
-
-static int
-docFlagCheck(dialogMenuItem *item)
-{
-    return DocDists;
 }
 
 static int
@@ -578,10 +571,6 @@ DMenu MenuSubDistributions = {
 	kernelFlagCheck,distSetKernel },
       { " dict",	"Spelling checker dictionary files",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_DICT },
-      { " doc",		"Documentation set",
-	docFlagCheck,	distSetDoc },
-      { " docuser",		"Miscellaneous userland docs",
-	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_DOCUSERLAND },
       { " games",	"Games (non-commercial)",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_GAMES },
       { " info",	"GNU info files",

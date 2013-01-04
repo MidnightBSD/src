@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2006 David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/librt/timer.c,v 1.5 2006/03/08 00:34:54 davidxu Exp $
+ * $MidnightBSD$
  *
  */
 
@@ -103,12 +102,14 @@ __timer_create(clockid_t clockid, struct sigevent *evp, timer_t *timerid)
 	}
 
 	if (__sigev_check_init()) {
+		free(timer);
 		errno = EINVAL;
 		return (-1);
 	}
 
 	sn = __sigev_alloc(SI_TIMER, evp, NULL, 0);
 	if (sn == NULL) {
+		free(timer);
 		errno = EAGAIN;
 		return (-1);
 	}

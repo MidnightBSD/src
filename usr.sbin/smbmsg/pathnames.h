@@ -24,7 +24,6 @@
  * SUCH DAMAGE.
  *
  * $MidnightBSD$
- * $FreeBSD: src/usr.sbin/smbmsg/pathnames.h,v 1.1.1.1 2004/05/17 10:56:04 joerg Exp $
  */
 
 #define PATH_DEFAULTSMBDEV	"/dev/smb0"

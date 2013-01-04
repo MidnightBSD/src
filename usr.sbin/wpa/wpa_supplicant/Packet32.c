@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/wpa/wpa_supplicant/Packet32.c,v 1.4 2007/07/11 16:04:08 sam Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * This file implements a small portion of the Winpcap API for the
@@ -44,7 +44,6 @@ __FBSDID("$FreeBSD: src/usr.sbin/wpa/wpa_supplicant/Packet32.c,v 1.4 2007/07/11 
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
-#include <sys/socket.h>
 #include <sys/errno.h>
 #include <sys/sysctl.h>
 #include <sys/fcntl.h>
@@ -109,8 +108,7 @@ PacketGetVersion(void)
 }
 
 void *
-PacketOpenAdapter(iface)
-	CHAR			*iface;
+PacketOpenAdapter(CHAR *iface)
 {
 	struct adapter		*a;
 	int			s;
@@ -164,10 +162,7 @@ PacketOpenAdapter(iface)
 }
 
 int
-PacketRequest(iface, set, oid)
-	void			*iface;
-	BOOLEAN			set;
-	PACKET_OID_DATA		*oid;
+PacketRequest(void *iface, BOOLEAN set, PACKET_OID_DATA *oid)
 {
 	struct adapter		*a;
 	uint32_t		retval;
@@ -239,9 +234,7 @@ PacketRequest(iface, set, oid)
 }
 
 int
-PacketGetAdapterNames(namelist, len)
-	CHAR			*namelist;
-	ULONG			*len;
+PacketGetAdapterNames(CHAR *namelist, ULONG *len)
 {
 	int			mib[6];
 	size_t			needed;
@@ -286,7 +279,7 @@ PacketGetAdapterNames(namelist, len)
 		ifm = (struct if_msghdr *)next;
 		if (ifm->ifm_type == RTM_IFINFO) {
 			sdl = (struct sockaddr_dl *)(ifm + 1);
-			if (strnstr(sdl->sdl_data, "ndis", sdl->sdl_nlen)) {
+			if (strnstr(sdl->sdl_data, "wlan", sdl->sdl_nlen)) {
 				if ((spc + sdl->sdl_nlen) > *len) {
 					free(buf);
 					return(FALSE);
@@ -319,7 +312,7 @@ PacketGetAdapterNames(namelist, len)
 		ifm = (struct if_msghdr *)next;
 		if (ifm->ifm_type == RTM_IFINFO) {
 			sdl = (struct sockaddr_dl *)(ifm + 1);
-			if (strnstr(sdl->sdl_data, "ndis", sdl->sdl_nlen)) {
+			if (strnstr(sdl->sdl_data, "wlan", sdl->sdl_nlen)) {
 				if ((spc + sdl->sdl_nlen) > *len) {
 					free(buf);
 					return(FALSE);
@@ -341,8 +334,7 @@ PacketGetAdapterNames(namelist, len)
 }
 
 void
-PacketCloseAdapter(iface)
-	void			*iface;
+PacketCloseAdapter(void *iface)
 {	
 	struct adapter		*a;
 	struct ifreq		ifr;
@@ -370,3 +362,53 @@ PacketCloseAdapter(iface)
 
 	return;
 }
+
+#if __FreeBSD_version < 600000
+
+/*
+ * The version of libpcap in FreeBSD 5.2.1 doesn't have these routines.
+ * Call me insane if you will, but I still run 5.2.1 on my laptop, and
+ * I'd like to use WPA there.
+ */
+
+int
+pcap_get_selectable_fd(pcap_t *p)
+{
+	return(pcap_fileno(p));
+}
+
+/*
+ * The old version of libpcap opens its BPF descriptor in read-only
+ * mode. We need to temporarily create a new one we can write to.
+ */
+
+int
+pcap_inject(pcap_t *p, const void *buf, size_t len)
+{
+	int			fd;
+	int			res, n = 0;
+	char			device[sizeof "/dev/bpf0000000000"];
+	struct ifreq		ifr;
+
+        /*
+         * Go through all the minors and find one that isn't in use.
+         */
+	do {
+		(void)snprintf(device, sizeof(device), "/dev/bpf%d", n++);
+		fd = open(device, O_RDWR);
+	} while (fd < 0 && errno == EBUSY);
+
+	if (fd == -1)
+		return(-1);
+
+	bzero((char *)&ifr, sizeof(ifr));
+	ioctl(pcap_fileno(p), BIOCGETIF, (caddr_t)&ifr);
+	ioctl(fd, BIOCSETIF, (caddr_t)&ifr);
+
+	res = write(fd, buf, len);
+
+	close(fd);
+
+	return(res);
+}
+#endif

@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/tcpdchk/Makefile,v 1.12 2006/03/17 18:54:43 ru Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
@@ -14,6 +14,8 @@ CFLAGS+=-DREAL_DAEMON_DIR=\"/usr/libexec\" \
 .if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+=-DINET6
 .endif
+
+WARNS?=	0
 
 DPADD=	${LIBWRAP}
 LDADD=	-lwrap

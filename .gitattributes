@@ -39664,7 +39664,14 @@ share/doc/smm/07.lpd/Makefile -text
 share/doc/smm/07.lpd/spell.ok -text
 share/doc/smm/08.sendmailop/Makefile -text
 share/doc/smm/11.timedop/Makefile -text
+share/doc/smm/11.timedop/timed.ms -text
 share/doc/smm/12.timed/Makefile -text
+share/doc/smm/12.timed/date -text
+share/doc/smm/12.timed/loop -text
+share/doc/smm/12.timed/spell.ok -text
+share/doc/smm/12.timed/time -text
+share/doc/smm/12.timed/timed.ms -text
+share/doc/smm/12.timed/unused -text
 share/doc/smm/18.net/0.t -text
 share/doc/smm/18.net/1.t -text
 share/doc/smm/18.net/2.t -text
@@ -55343,15 +55350,6 @@ usr.sbin/tcpdump/Makefile.inc -text
 usr.sbin/tcpdump/tcpdump/Makefile -text
 usr.sbin/tcpdump/tcpdump/config.h -text
 usr.sbin/timed/Makefile -text
-usr.sbin/timed/SMM.doc/timed/Makefile -text
-usr.sbin/timed/SMM.doc/timed/date -text
-usr.sbin/timed/SMM.doc/timed/loop -text
-usr.sbin/timed/SMM.doc/timed/spell.ok -text
-usr.sbin/timed/SMM.doc/timed/time -text
-usr.sbin/timed/SMM.doc/timed/timed.ms -text
-usr.sbin/timed/SMM.doc/timed/unused -text
-usr.sbin/timed/SMM.doc/timedop/Makefile -text
-usr.sbin/timed/SMM.doc/timedop/timed.ms -text
 usr.sbin/timed/timed/CHANGES -text
 usr.sbin/timed/timed/Makefile -text
 usr.sbin/timed/timed/acksend.c -text
@@ -55432,6 +55430,7 @@ usr.sbin/wlconfig/Makefile -text
 usr.sbin/wlconfig/wlconfig.8 -text
 usr.sbin/wlconfig/wlconfig.c -text
 usr.sbin/wpa/Makefile -text
+usr.sbin/wpa/Makefile.crypto -text
 usr.sbin/wpa/Makefile.inc -text
 usr.sbin/wpa/hostapd/Makefile -text
 usr.sbin/wpa/hostapd/driver_freebsd.c -text
@@ -55439,7 +55438,6 @@ usr.sbin/wpa/hostapd/hostapd.8 -text
 usr.sbin/wpa/hostapd/hostapd.conf.5 -text
 usr.sbin/wpa/hostapd_cli/Makefile -text
 usr.sbin/wpa/hostapd_cli/hostapd_cli.8 -text
-usr.sbin/wpa/l2_packet.c -text
 usr.sbin/wpa/ndis_events/Makefile -text
 usr.sbin/wpa/ndis_events/ndis_events.8 -text
 usr.sbin/wpa/ndis_events/ndis_events.c -text

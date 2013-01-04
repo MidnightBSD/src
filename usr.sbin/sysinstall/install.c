@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/install.c,v 1.8 2009/10/24 14:27:17 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/install.c,v 1.9 2011/03/26 16:53:46 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/install.c,v 1.363.2.1 2006/01/06 20:10:41 ceri Exp $
  *
  * Copyright (c) 1995
@@ -66,6 +66,7 @@ int NCpus;
 
 static void	create_termcap(void);
 static void	fixit_common(void);
+int		fixit_livefs_common(dialogMenuItem *self);
 
 #define TERMCAP_FILE	"/usr/share/misc/termcap"
 
@@ -286,19 +287,42 @@ installFixitHoloShell(dialogMenuItem *self)
     return DITEM_SUCCESS;
 }
 
+/*
+ * Load the live filesystem from USB media.
+ */
+int
+installFixitUSB(dialogMenuItem *self)
+{
+	if (!RunningAsInit)
+		return (DITEM_SUCCESS);
+
+	variable_set2(SYSTEM_STATE, "fixit", 0);
+
+	if (DITEM_STATUS(mediaSetUSB(NULL)) != DITEM_SUCCESS ||
+	    !DEVICE_INIT(mediaDevice)) {
+		msgConfirm("No USB devices found!");
+		return (DITEM_FAILURE);
+	} else if (!file_readable("/dist/rescue/ldconfig")) {
+		msgConfirm("Unable to find a FreeBSD live filesystem.");
+		return (DITEM_FAILURE);
+	}
+
+	if (DITEM_STATUS(fixit_livefs_common(self)) == DITEM_FAILURE)
+		return (DITEM_FAILURE);
+
+	mediaClose();
+	return (DITEM_SUCCESS);
+}
+
 int
 installFixitCDROM(dialogMenuItem *self)
 {
-    struct stat sb;
     int need_eject;
 
     if (!RunningAsInit)
 	return DITEM_SUCCESS;
 
     variable_set2(SYSTEM_STATE, "fixit", 0);
-    (void)unlink("/mnt2");
-    (void)rmdir("/mnt2");
-
     need_eject = 0;
     CDROMInitQuiet = 1;
     while (1) {
@@ -323,53 +347,9 @@ installFixitCDROM(dialogMenuItem *self)
     }
     CDROMInitQuiet = 0;
 
-    /* Since the fixit code expects everything to be in /mnt2, and the CDROM mounting stuff /dist, do
-     * a little kludge dance here..
-     */
-    if (symlink("/dist", "/mnt2")) {
-	msgConfirm("Unable to symlink /mnt2 to the disc mount point.  Please report this\n"
-		   "unexpected failure to luke@MidnightBSD.org.");
-	return DITEM_FAILURE;
-    }
+    if (DITEM_STATUS(fixit_livefs_common(self)) == DITEM_FAILURE)
+	return (DITEM_FAILURE);
 
-    /*
-     * If /tmp points to /mnt2/tmp from a previous fixit floppy session, it's
-     * not very good for us if we point it to the CDROM now.  Rather make it
-     * a directory in the root MFS then.  Experienced admins will still be
-     * able to mount their disk's /tmp over this if they need.
-     */
-    if (lstat("/tmp", &sb) == 0 && (sb.st_mode & S_IFMT) == S_IFLNK)
-	(void)unlink("/tmp");
-    Mkdir("/tmp");
-
-    /*
-     * Since setuid binaries ignore LD_LIBRARY_PATH, we indeed need the
-     * ld.so.hints file.  Fortunately, it's fairly small (~ 3 KB).
-     */
-    if (!file_readable("/var/run/ld.so.hints")) {
-	Mkdir("/var/run");
-	if (vsystem("/mnt2/rescue/ldconfig -s /mnt2/lib /mnt2/usr/lib")) {
-	    msgConfirm("Warning: ldconfig could not create the ld.so hints file.\n"
-		       "Dynamic executables from the disc likely won't work.");
-	}
-    }
-
-    /* Yet more iggly hardcoded pathnames. */
-    Mkdir("/libexec");
-    if (!file_readable("/libexec/ld.so") && file_readable("/mnt2/libexec/ld.so")) {
-	if (symlink("/mnt2/libexec/ld.so", "/libexec/ld.so"))
-	    msgDebug("Couldn't link to ld.so - not necessarily a problem for ELF\n");
-    }
-    if (!file_readable("/libexec/ld-elf.so.1")) {
-	if (symlink("/mnt2/libexec/ld-elf.so.1", "/libexec/ld-elf.so.1")) {
-	    msgConfirm("Warning: could not create the symlink for ld-elf.so.1\n"
-		       "Dynamic executables from the disc likely won't work.");
-	}
-    }
-    /* optional nicety */
-    if (!file_readable("/usr/bin/vi"))
-	symlink("/mnt2/usr/bin/vi", "/usr/bin/vi");
-    fixit_common();
     mediaClose();
     if (need_eject)
 	msgConfirm("Please remove the MidnightBSD fixit CDROM/DVD now.");
@@ -499,7 +479,7 @@ fixit_common(void)
 	    dialog_clear_norefresh();
 	    msgNotify("Waiting for fixit shell to exit.  Go to VTY4 now by\n"
 		"typing ALT-F4.  When you are done, type ``exit'' to exit\n"
-		"the fixit shell and be returned here\n.");
+		"the fixit shell and be returned here.\n");
 	}
 	(void)waitpid(child, &waitstatus, 0);
 	if (strcmp(variable_get(VAR_FIXIT_TTY), "serial") == 0)
@@ -512,22 +492,116 @@ fixit_common(void)
     dialog_clear();
 }
 
+/*
+ * Some path/lib setup is required for the livefs fixit image. Since there's
+ * more than one media type for livefs now, this has been broken off into it's
+ * own function.
+ */
+int
+fixit_livefs_common(dialogMenuItem *self)
+{
+	struct stat sb;
+
+	/*
+	 * USB and CDROM media get mounted to /dist, but fixit code looks in
+	 * /mnt2.
+	 */
+	unlink("/mnt2");
+	rmdir("/mnt2");
+
+	if (symlink("/dist", "/mnt2")) {
+		msgConfirm("Unable to symlink /mnt2 to the disc mount point.");
+		return (DITEM_FAILURE);
+	}
+
+	/*
+	 * If /tmp points to /mnt2/tmp from a previous fixit floppy session,
+	 * recreate it.
+	 */
+	if (lstat("/tmp", &sb) == 0 && (sb.st_mode & S_IFMT) == S_IFLNK)
+		unlink("/tmp");
+	Mkdir("/tmp");
+
+	/* Generate a new ld.so.hints */
+	if (!file_readable("/var/run/ld.so.hints")) {
+		Mkdir("/var/run");
+		if (vsystem("/mnt2/rescue/ldconfig -s /mnt2/lib "
+		    "/mnt2/usr/lib")) {
+			msgConfirm("Warning: ldconfig could not create the "
+			    "ld.so hints file.\nDynamic executables from the "
+			    "disc likely won't work.");
+		}
+	}
+
+	/* Create required libexec symlinks. */
+	Mkdir("/libexec");
+	if (!file_readable("/libexec/ld.so") &&
+	    file_readable("/mnt2/libexec/ld.so")) {
+		if (symlink("/mnt2/libexec/ld.so", "/libexec/ld.so"))
+			msgDebug("Couldn't link to ld.so\n");
+	}
+
+	if (!file_readable("/libexec/ld-elf.so.1")) {
+		if (symlink("/mnt2/libexec/ld-elf.so.1",
+		    "/libexec/ld-elf.so.1")) {
+			msgConfirm("Warning: could not create the symlink for "
+			    "ld-elf.so.1\nDynamic executables from the disc "
+			    "likely won't work.");
+		}
+	}
+
+	/* $PATH doesn't include /mnt2 by default. Create convenient symlink. */
+	if (!file_readable("/usr/bin/vi"))
+		symlink("/mnt2/usr/bin/vi", "/usr/bin/vi");
+
+	/* Shared code used by all fixit types. */
+	fixit_common();
+
+	return (DITEM_SUCCESS);
+}
+
+int
+installExpress(dialogMenuItem *self)
+{
+    int i;
+
+    dialog_clear_norefresh();
+    variable_set2(SYSTEM_STATE, "express", 0);
+#ifdef WITH_SLICES
+    if (DITEM_STATUS((i = diskPartitionEditor(self))) == DITEM_FAILURE)
+	return i;
+#endif
+    
+    if (DITEM_STATUS((i = diskLabelEditor(self))) == DITEM_FAILURE)
+	return i;
+
+    if (DITEM_STATUS((i = installCommit(self))) == DITEM_SUCCESS) {
+	i |= DITEM_LEAVE_MENU;
+
+	/* Give user the option of one last configuration spree */
+	installConfigure();
+    }
+    return i;
+}
 
 /* Standard mode installation */
 int
 installStandard(dialogMenuItem *self)
 {
-    int i, tries = 0;
+    int i;
+#ifdef WITH_SLICES
+    int tries = 0;
     Device **devs;
+#endif
 
     variable_set2(SYSTEM_STATE, "standard", 0);
     dialog_clear_norefresh();
 #ifdef WITH_SLICES
-    msgConfirm("In the next menu, you will need to set up a DOS-style (\"fdisk\") partitioning\n"
+    msgConfirm("In the next menu, you will need to set up an MBR partitioning\n"
 	       "scheme for your hard disk.  If you simply wish to devote all disk space\n"
-	       "to MidnightBSD (overwriting anything else that might be on the disk(s) selected)\n"
-	       "then use the (A)ll command to select the default partitioning scheme followed\n"
-	       "by a (Q)uit.  If you wish to allocate only free space to MidnightBSD, move to a\n"
+	       "to BSD (overwriting anything else that might be on the disk selected)\n"
+	       "then use the (A)ll command to create a single partition followed\n"
+	       "by a (Q)uit.  If you wish to allocate only free space to BSD, move to a\n"
 	       "partition marked \"unused\" and use the (C)reate command.");
 
 nodisks:
@@ -541,7 +615,7 @@ nodisks:
 	goto nodisks;
     }
 
-    msgConfirm("Now you need to create BSD partitions inside of the fdisk partition(s)\n"
+    msgConfirm("Now you need to create BSD partitions inside of the MBR partition(s)\n"
 	       "just created.  If you have a reasonable amount of disk space (1GB or more)\n"
 	       "and don't have any special requirements, simply use the (A)uto command to\n"
 	       "allocate space automatically.  If you have more specific needs or just don't\n"
@@ -564,8 +638,7 @@ nodisks:
 	msgConfirm("Installation completed with some errors.  You may wish to\n"
 		   "scroll through the debugging messages on VTY1 with the\n"
 		   "scroll-lock feature.  You can also choose \"No\" at the next\n"
-		   "prompt and go back into the installation menus to retry\n"
-		   "whichever operations have failed.");
+		   "prompt and reboot and try the installation again.");
 	return i;
 
     }
@@ -579,7 +652,7 @@ nodisks:
 		   "may do so by typing: /usr/sbin/sysinstall.");
     }
     if (mediaDevice->type != DEVICE_TYPE_FTP && mediaDevice->type != DEVICE_TYPE_NFS) {
-	if (!msgYesNo("Would you like to configure any Ethernet or SLIP/PPP network devices?")) {
+	if (!msgYesNo("Would you like to configure any Ethernet or PLIP network devices?")) {
 	    Device *tmp = tcpDeviceSelect();
 
 	    if (tmp && !((DevInfo *)tmp->private)->use_dhcp && !msgYesNo("Would you like to bring the %s interface up right now?", tmp->name))
@@ -621,12 +694,6 @@ nodisks:
     dialog_clear_norefresh();
     if (!msgYesNo("Would you like to set this machine's time zone now?"))
 	systemExecute("tzsetup");
-
-#ifdef WITH_LINUX
-    dialog_clear_norefresh();
-    if (!msgYesNo("Would you like to enable Linux binary compatibility?"))
-	(void)configLinux(self);
-#endif
 
 #ifdef WITH_MICE
     dialog_clear_norefresh();
@@ -715,8 +782,8 @@ installCommit(dialogMenuItem *self)
 	/* select reasonable defaults if necessary */
 	if (!Dists)
 	    Dists = _DIST_USER;
-        if (!KernelDists)
-            KernelDists = selectKernel();
+	if (!KernelDists)
+	    KernelDists = selectKernel();
     }
 
     if (!mediaVerify())
@@ -747,6 +814,9 @@ try_media:
     /* Now go get it all */
     i = distExtractAll(self);
 
+    if (i == FALSE)
+	    return DITEM_FAILURE;
+
     /* When running as init, *now* it's safe to grab the rc.foo vars */
     installEnvironment();
 
@@ -762,6 +832,9 @@ installConfigure(void)
     if (!msgNoYes("Visit the general configuration menu for a chance to set\n"
 		  "any last options?"))
 	dmenuOpenSimple(&MenuConfigure, FALSE);
+    else
+	dmenuExit(NULL);
+
     configRC_conf();
     sync();
 }
@@ -769,7 +842,12 @@ installConfigure(void)
 int
 installFixupBase(dialogMenuItem *self)
 {
+	FILE *orig, *new;
+	char buf[1024];
+	char *pos;
+#if defined(__i386__) || defined(__amd64__)
     FILE *fp;
+#endif
 
     /* All of this is done only as init, just to be safe */
     if (RunningAsInit) {
@@ -782,6 +860,32 @@ installFixupBase(dialogMenuItem *self)
 	    fclose(fp);
 	}
 #endif
+
+	/* Fixup /etc/ttys to start a getty on the serial port.
+	  This way after a serial installation you can login via
+	  the serial port */
+
+	if (!OnVTY){
+	    if (((orig=fopen("/etc/ttys","r")) != NULL) &&
+		((new=fopen("/etc/ttys.tmp","w")) != NULL)) {
+		while (fgets(buf,sizeof(buf),orig)){
+		    if (strstr(buf,"ttyu0")){
+			if ((pos=strstr(buf,"off"))){
+			    *pos++='o';
+			    *pos++='n';
+			    *pos++=' ';
+			}
+		    }
+		    fputs(buf,new);
+		}
+		fclose(orig);
+		fclose(new);
+
+		rename("/etc/ttys.tmp","/etc/ttys");
+		unlink("/etc/ttys.tmp");
+	    }
+	}
+
 	
 	/* BOGON #2: We leave /etc in a bad state */
 	chmod("/etc", 0755);
@@ -794,7 +898,7 @@ installFixupBase(dialogMenuItem *self)
 	Mkdir("/usr/compat");
 	vsystem("ln -s usr/compat /compat");
 
-	/* BOGON #5: aliases database not build for bin */
+	/* BOGON #5: aliases database not built for bin */
 	vsystem("newaliases");
 
 	/* BOGON #6: Remove /stand (finally) */
@@ -816,22 +920,14 @@ installFixupKernel(dialogMenuItem *self, int dists)
 
     /* All of this is done only as init, just to be safe */
     if (RunningAsInit) {
-       /*
-        * Install something as /boot/kernel.  Prefer SMP
-        * over generic--this should handle the case where
-        * both SMP and GENERIC are installed (otherwise we
-        * select the one kernel that was installed).
-        *
-        * NB: we assume any existing kernel has been saved
-        *     already and the /boot/kernel we remove is empty.
-        */
-       vsystem("rm -rf /boot/kernel");
-#if WITH_SMP
-       if (dists & DIST_KERNEL_SMP)
-               vsystem("mv /boot/SMP /boot/kernel");
-       else
-#endif
-               vsystem("mv /boot/GENERIC /boot/kernel");
+	/*
+	 * Install something as /boot/kernel.
+	 *
+	 * NB: we assume any existing kernel has been saved
+	 *     already and the /boot/kernel we remove is empty.
+	 */
+	vsystem("rm -rf /boot/kernel");
+		vsystem("mv /boot/" GENERIC_KERNEL_NAME " /boot/kernel");
     }
     return DITEM_SUCCESS | DITEM_RESTORE;
 }
@@ -866,10 +962,10 @@ performNewfs(PartInfo *pi, char *dname, int queue)
 		}
 
 		if (queue == QUEUE_YES) {
-			command_shell_add(pi->mountpoint, buffer);
+			command_shell_add(pi->mountpoint, "%s", buffer);
 			return (0);
 		} else
-			return (vsystem(buffer));
+			return (vsystem("%s", buffer));
 	}
 	return (0);
 }
@@ -1010,8 +1106,17 @@ installFilesystems(dialogMenuItem *self)
 	    return DITEM_FAILURE | DITEM_RESTORE;
 	}
 	for (c1 = disk->chunks->part; c1; c1 = c1->next) {
+#ifdef __ia64__
+	if (c1->type == part) {
+		c2 = c1;
+		{
+#elif defined(__powerpc__)
+	    if (c1->type == apple) {
+		for (c2 = c1->part; c2; c2 = c2->next) {
+#else
 	    if (c1->type == freebsd) {
 		for (c2 = c1->part; c2; c2 = c2->next) {
+#endif
 		    if (c2->type == part && c2->subtype != FS_SWAP && c2->private_data) {
 			PartInfo *tmp = (PartInfo *)c2->private_data;
 
@@ -1060,8 +1165,7 @@ installFilesystems(dialogMenuItem *self)
 		(root->do_newfs || upgrade)) {
 		char name[FILENAME_MAX];
 
-		sprintf(name, "%s/%s", RunningAsInit ? "/mnt" : "", 
-		    ((PartInfo *)c1->private_data)->mountpoint);
+		sprintf(name, "%s/%s", RunningAsInit ? "/mnt" : "", ((PartInfo *)c1->private_data)->mountpoint);
 		Mkdir(name);
 	    }
 	}
@@ -1084,10 +1188,8 @@ installVarDefaults(dialogMenuItem *self)
     variable_set2(VAR_RELNAME,			cp, 0);
     free(cp);
     variable_set2(VAR_CPIO_VERBOSITY,		"high", 0);
-    variable_set2(VAR_TAPE_BLOCKSIZE,		DEFAULT_TAPE_BLOCKSIZE, 0);
     variable_set2(VAR_INSTALL_ROOT,		"/", 0);
     variable_set2(VAR_INSTALL_CFG,		"install.cfg", 0);
-    variable_set2(VAR_SKIP_PCCARD,		"NO", 0);
     cp = getenv("EDITOR");
     if (!cp)
 	cp = "/usr/bin/ee";
@@ -1105,19 +1207,14 @@ installVarDefaults(dialogMenuItem *self)
 	    variable_set2(VAR_FIXIT_TTY,		"serial", 0);
     variable_set2(VAR_PKG_TMPDIR,		"/var/tmp", 0);
     variable_set2(VAR_MEDIA_TIMEOUT,		itoa(MEDIA_TIMEOUT), 0);
-    if (getpid() != 1)
+    if (!RunningAsInit)
 	variable_set2(SYSTEM_STATE,		"update", 0);
     else
 	variable_set2(SYSTEM_STATE,		"init", 0);
     variable_set2(VAR_NEWFS_ARGS,		"-b 16384 -f 2048", 0);
     variable_set2(VAR_CONSTERM,                 "NO", 0);
-#if defined(__i386__) || defined(__amd64__)
-    NCpus = acpi_detect();
-    if (NCpus == -1)
-       NCpus = biosmptable_detect();
-#endif
     if (NCpus <= 0)
-       NCpus = 1;
+	NCpus = 1;
     snprintf(ncpus, sizeof(ncpus), "%u", NCpus);
     variable_set2(VAR_NCPUS,			ncpus, 0);
     return DITEM_SUCCESS;

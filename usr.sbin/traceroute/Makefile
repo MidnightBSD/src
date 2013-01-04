@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/usr.sbin/traceroute/Makefile,v 1.3 2011/10/01 04:58:18 laffer1 Exp $
 # $FreeBSD: src/usr.sbin/traceroute/Makefile,v 1.22.2.2 2010/01/17 15:21:24 bz Exp $
 
 TRACEROUTE_DISTDIR?= ${.CURDIR}/../../contrib/traceroute
@@ -10,6 +10,8 @@ SRCS=	as.c version.c traceroute.c ifaddrlist.c findsaddr-socket.c
 BINOWN=	root
 BINMODE=4555
 CLEANFILES=	version.c
+
+WARNS?=	0
 
 CFLAGS+= -DHAVE_SYS_SELECT_H=1 -DHAVE_SYS_SOCKIO_H=1 \
 	 -DHAVE_NET_ROUTE_H=1 -DHAVE_NET_IF_DL_H=1 \

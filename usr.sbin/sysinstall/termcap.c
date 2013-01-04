@@ -10,7 +10,7 @@
  * software, nor does the author assume any responsibility for damages
  * incurred with its use.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/termcap.c,v 1.3 2007/07/17 13:14:24 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/termcap.c,v 1.4 2012/12/01 14:50:50 laffer1 Exp $
  */
 
 #include "sysinstall.h"
@@ -75,7 +75,7 @@ set_termcap(void)
 {
     char           *term;
     int		   stat;
-    struct ttysize ts;
+    struct winsize ws;
 
     term = getenv("TERM");
     stat = ioctl(STDERR_FILENO, GIO_COLOR, &ColorDisplay);
@@ -105,7 +105,7 @@ set_termcap(void)
     else {
 	int i, on;
 
-	if (getpid() == 1) {
+	if (RunningAsInit) {
 	    DebugFD = open("/dev/ttyv1", O_WRONLY);
 	    if (DebugFD != -1) {
 		on = 1;
@@ -125,26 +125,26 @@ set_termcap(void)
 #else
 	if (ColorDisplay) {
 	    if (!term) {
-		if (setenv("TERM", "cons25", 1) < 0)
+		if (setenv("TERM", "xterm", 1) < 0)
 		    return -1;
-		if (setenv("TERMCAP", termcap_cons25, 1) < 0)
+		if (setenv("TERMCAP", termcap_xterm, 1) < 0)
 		    return -1;
 	    }
 	}
 	else {
 	    if (!term) {
-		if (setenv("TERM", "cons25-m", 1) < 0)
+		if (setenv("TERM", "vt100", 1) < 0)
 		    return -1;
-		if (setenv("TERMCAP", termcap_cons25_m, 1) < 0)
+		if (setenv("TERMCAP", termcap_vt100, 1) < 0)
 		    return -1;
 	    }
 	}
 #endif
     }
-    if (ioctl(0, TIOCGSIZE, &ts) == -1) {
+    if (ioctl(0, TIOCGWINSZ, &ws) == -1) {
 	msgDebug("Unable to get terminal size - errno %d\n", errno);
-	ts.ts_lines = 0;
+	ws.ws_row = 0;
     }
-    StatusLine = ts.ts_lines ? ts.ts_lines - 1: (OnVTY ? VTY_STATUS_LINE : TTY_STATUS_LINE);
+    StatusLine = ws.ws_row ? ws.ws_row - 1: (OnVTY ? VTY_STATUS_LINE : TTY_STATUS_LINE);
     return 0;
 }

@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -36,11 +32,12 @@
 static char sccsid[] = "@(#)slave.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/timed/timed/slave.c,v 1.9 2001/11/20 07:13:40 jhb Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 #include "globals.h"
 #include <setjmp.h>
+#include <utmpx.h>
 #include "pathnames.h"
 
 extern jmp_buf jmpenv;
@@ -53,11 +50,9 @@ static char master_name[MAXHOSTNAMELEN];
 static struct netinfo *old_slavenet;
 static int old_status;
 
-static void schgdate __P((struct tsp *, char *));
-static void setmaster __P((struct tsp *));
-static void answerdelay __P((void));
-
-extern void logwtmp __P((char *, char *, char *));
+static void schgdate(struct tsp *, char *);
+static void setmaster(struct tsp *);
+static void answerdelay(void);
 
 int
 slave()
@@ -80,6 +75,7 @@ slave()
 	char newdate[32];
 	struct netinfo *ntp;
 	struct hosttbl *htp;
+	struct utmpx utx;
 
 
 	old_slavenet = 0;
@@ -280,9 +276,13 @@ loop:
 				 */
 				synch(tvtomsround(ntime));
 			} else {
-				logwtmp("|", "date", "");
- 				(void)settimeofday(&tmptv, 0);
-				logwtmp("{", "date", "");
+				utx.ut_type = OLD_TIME;
+				gettimeofday(&utx.ut_tv, NULL);
+				pututxline(&utx);
+				(void)settimeofday(&tmptv, 0);
+				utx.ut_type = NEW_TIME;
+				gettimeofday(&utx.ut_tv, NULL);
+				pututxline(&utx);
 				syslog(LOG_NOTICE,
 				       "date changed by %s from %s",
 					msg->tsp_name, olddate);

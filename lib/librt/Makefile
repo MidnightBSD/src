@@ -1,12 +1,16 @@
 # $MidnightBSD$
-# $FreeBSD: src/lib/librt/Makefile,v 1.5 2007/05/13 14:12:39 deischen Exp $
 
 LIB=rt
 SHLIB_MAJOR= 1
 CFLAGS+=-I${.CURDIR}/../libc/include -I${.CURDIR}
-CFLAGS+=-Winline -Wall -g
+.ifndef NO_THREAD_STACK_UNWIND
+CFLAGS+=-fexceptions
+.endif
+CFLAGS+=-Winline -Wall
+DPADD=	${LIBPTHREAD}
+LDADD=	-lpthread
 
-#MAN=	libthr.3
+WARNS?=	2
 
 SRCS+= aio.c mq.c sigev_thread.c timer.c
 

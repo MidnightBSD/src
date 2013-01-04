@@ -295,7 +295,7 @@ _citrus_load_module(_citrus_module_t *rhandle, const char *encname)
 	p = _findshlib(path, &maj, &min);
 	if (!p)
 		return (EINVAL);
-	handle = dlopen(p, RTLD_LAZY);
+	handle = libc_dlopen(p, RTLD_LAZY);
 	if (!handle) {
 		printf("%s", dlerror());
 		return (EINVAL);

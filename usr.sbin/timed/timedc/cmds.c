@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -38,7 +34,7 @@ static char sccsid[] = "@(#)cmds.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/timed/timedc/cmds.c,v 1.13 2004/02/04 21:59:29 johan Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "timedc.h"
 #include <sys/file.h>
@@ -271,7 +267,7 @@ msite(argc, argv)
 	int argc;
 	char *argv[];
 {
-	int cc;
+	ssize_t cc;
 	fd_set ready;
 	struct sockaddr_in dest;
 	int i, length;
@@ -337,7 +333,7 @@ msite(argc, argv)
 			 */
 			if (cc < (sizeof(struct tsp) - MAXHOSTNAMELEN + 32)) {
 				fprintf(stderr, 
-				   "short packet (%u/%u bytes) from %s\n",
+				   "short packet (%zd/%zu bytes) from %s\n",
 				   cc, sizeof(struct tsp) - MAXHOSTNAMELEN + 32,
 				   inet_ntoa(from.sin_addr));
 				continue;
@@ -432,7 +428,7 @@ tracing(argc, argv)
 {
 	int onflag;
 	int length;
-	int cc;
+	ssize_t cc;
 	fd_set ready;
 	struct sockaddr_in dest;
 	struct sockaddr_in from;
@@ -493,7 +489,7 @@ tracing(argc, argv)
 		 * least long enough to hold a 4.3BSD packet.
 		 */
 		if (cc < (sizeof(struct tsp) - MAXHOSTNAMELEN + 32)) {
-			fprintf(stderr, "short packet (%u/%u bytes) from %s\n",
+			fprintf(stderr, "short packet (%zd/%zu bytes) from %s\n",
 			    cc, sizeof(struct tsp) - MAXHOSTNAMELEN + 32,
 			    inet_ntoa(from.sin_addr));
 			return;

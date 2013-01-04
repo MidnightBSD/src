@@ -24,7 +24,6 @@
  * SUCH DAMAGE.
  *
  * $MidnightBSD$
- * $FreeBSD: src/usr.sbin/smbmsg/smbmsg.c,v 1.3 2004/05/27 13:31:16 joerg Exp $
  */
 
 /*

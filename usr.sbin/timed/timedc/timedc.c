@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -42,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)timedc.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/timed/timedc/timedc.c,v 1.5 2003/10/11 07:35:35 tjr Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 #include "timedc.h"
@@ -63,7 +59,7 @@ int	fromatty;
 char	*margv[MAX_MARGV];
 char	cmdline[200];
 jmp_buf	toplevel;
-static struct cmd *getcmd __P((char *));
+static struct cmd *getcmd(char *);
 
 int
 main(argc, argv)
@@ -79,7 +75,8 @@ main(argc, argv)
 	 */
 	if (priv_resources() < 0)
 		errx(1, "could not get privileged resources");
-	(void) setuid(getuid());
+	if (setuid(getuid()) != 0)
+		err(1, "setuid()");
 
 	if (--argc > 0) {
 		c = getcmd(*++argv);

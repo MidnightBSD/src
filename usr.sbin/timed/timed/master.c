@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -36,7 +32,7 @@
 static char sccsid[] = "@(#)master.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/timed/timed/master.c,v 1.9 2002/07/11 20:01:36 robert Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 #include "globals.h"
@@ -44,6 +40,7 @@ static const char rcsid[] =
 #include <sys/types.h>
 #include <sys/times.h>
 #include <setjmp.h>
+#include <utmpx.h>
 #include "pathnames.h"
 
 extern int measure_delta;
@@ -54,9 +51,7 @@ extern int justquit;
 static int dictate;
 static int slvcount;			/* slaves listening to our clock */
 
-static void mchgdate __P((struct tsp *));
-
-extern void logwtmp __P((char *, char *, char *));
+static void mchgdate(struct tsp *);
 
 /*
  * The main function of `master' is to periodically compute the differences
@@ -350,6 +345,7 @@ mchgdate(msg)
 	char tname[MAXHOSTNAMELEN];
 	char olddate[32];
 	struct timeval otime, ntime, tmptv;
+	struct utmpx utx;
 
 	(void)strcpy(tname, msg->tsp_name);
 
@@ -371,9 +367,13 @@ mchgdate(msg)
 		dictate = 3;
 		synch(tvtomsround(ntime));
 	} else {
-		logwtmp("|", "date", "");
+		utx.ut_type = OLD_TIME;
+		gettimeofday(&utx.ut_tv, NULL);
+		pututxline(&utx);
  		(void)settimeofday(&tmptv, 0);
-		logwtmp("{", "date", "");
+		utx.ut_type = NEW_TIME;
+		gettimeofday(&utx.ut_tv, NULL);
+		pututxline(&utx);
 		spreadtime();
 	}
 

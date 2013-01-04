@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/librt/sigev_thread.c,v 1.8 2006/03/29 04:20:53 deischen Exp $
+ * $MidnightBSD$
  *
  */
 
@@ -52,7 +51,7 @@ LIST_HEAD(sigev_list_head, sigev_node);
 static struct sigev_list_head	sigev_hash[HASH_QUEUES];
 static struct sigev_list_head	sigev_all;
 static LIST_HEAD(,sigev_thread)	sigev_threads;
-static int			sigev_generation;
+static unsigned int		sigev_generation;
 static pthread_mutex_t		*sigev_list_mtx;
 static pthread_once_t		sigev_once = PTHREAD_ONCE_INIT;
 static pthread_once_t		sigev_once_default = PTHREAD_ONCE_INIT;
@@ -440,9 +439,9 @@ worker_routine(void *arg)
 {
 	struct sigev_node *sn = arg;
 
-	_pthread_cleanup_push(worker_cleanup, sn);
+	pthread_cleanup_push(worker_cleanup, sn);
 	sn->sn_dispatch(sn);
-	_pthread_cleanup_pop(1);
+	pthread_cleanup_pop(1);
 
 	return (0);
 }

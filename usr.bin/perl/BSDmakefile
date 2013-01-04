@@ -1,4 +1,4 @@
-# $MidnightBSD: src/usr.bin/perl/BSDmakefile,v 1.15 2011/10/27 16:09:55 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/perl/BSDmakefile,v 1.16 2011/10/29 23:31:34 laffer1 Exp $
 #
 # This makefile deals with binding perl's build system to our own.
 # It is called BSDmakefile because perl's configure makes a 'Makefile',
@@ -13,6 +13,8 @@ NOPROFILE=
 SRCDIR= ${.CURDIR}/../../contrib/perl
 
 DPADD=${LIBC}
+
+WARNS?=	0
 
 # Perl builds with -fno-strict-aliasing, we want libperl to do the same
 CFLAGS+=	-fno-strict-aliasing

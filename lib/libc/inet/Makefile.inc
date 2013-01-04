@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 # inet sources
 .PATH: ${.CURDIR}/inet

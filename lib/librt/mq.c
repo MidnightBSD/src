@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/librt/mq.c,v 1.5 2006/03/07 08:28:07 davidxu Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/cdefs.h>
@@ -34,11 +33,13 @@
 
 #include "namespace.h"
 #include <errno.h>
+#include <pthread.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <signal.h>
 #include "sigev_thread.h"
 #include "un-namespace.h"
+#include "libc_private.h"
 
 extern int	__sys_kmq_notify(int, const struct sigevent *);
 extern int	__sys_kmq_open(const char *, int, mode_t,
@@ -67,15 +68,15 @@ __weak_reference(__mq_getattr, mq_getattr);
 __weak_reference(__mq_getattr, _mq_getattr);
 __weak_reference(__mq_setattr, mq_setattr);
 __weak_reference(__mq_setattr, _mq_setattr);
-__weak_reference(__mq_timedreceive, mq_timedreceive);
+__weak_reference(__mq_timedreceive_cancel, mq_timedreceive);
 __weak_reference(__mq_timedreceive, _mq_timedreceive);
-__weak_reference(__mq_timedsend, mq_timedsend);
+__weak_reference(__mq_timedsend_cancel, mq_timedsend);
 __weak_reference(__mq_timedsend, _mq_timedsend);
 __weak_reference(__mq_unlink, mq_unlink);
 __weak_reference(__mq_unlink, _mq_unlink);
-__weak_reference(__mq_send, mq_send);
+__weak_reference(__mq_send_cancel, mq_send);
 __weak_reference(__mq_send, _mq_send);
-__weak_reference(__mq_receive, mq_receive);
+__weak_reference(__mq_receive_cancel, mq_receive);
 __weak_reference(__mq_receive, _mq_receive);
 
 mqd_t
@@ -197,12 +198,34 @@ __mq_timedreceive(mqd_t mqd, char *buf, size_t len,
 }
 
 ssize_t
+__mq_timedreceive_cancel(mqd_t mqd, char *buf, size_t len,
+	unsigned *prio, const struct timespec *timeout)
+{
+	int ret;
+
+	_pthread_cancel_enter(1);
+	ret = __sys_kmq_timedreceive(mqd->oshandle, buf, len, prio, timeout);
+	_pthread_cancel_leave(ret == -1);
+	return (ret);
+}
+
+ssize_t
 __mq_receive(mqd_t mqd, char *buf, size_t len, unsigned *prio)
 {
 
 	return __sys_kmq_timedreceive(mqd->oshandle, buf, len, prio, NULL);
 }
 
+ssize_t
+__mq_receive_cancel(mqd_t mqd, char *buf, size_t len, unsigned *prio)
+{
+	int ret;
+
+	_pthread_cancel_enter(1);
+	ret = __sys_kmq_timedreceive(mqd->oshandle, buf, len, prio, NULL);
+	_pthread_cancel_leave(ret == -1);
+	return (ret);
+}
 ssize_t
 __mq_timedsend(mqd_t mqd, char *buf, size_t len,
 	unsigned prio, const struct timespec *timeout)
@@ -212,10 +235,34 @@ __mq_timedsend(mqd_t mqd, char *buf, size_t len,
 }
 
 ssize_t
+__mq_timedsend_cancel(mqd_t mqd, char *buf, size_t len,
+	unsigned prio, const struct timespec *timeout)
+{
+	int ret;
+
+	_pthread_cancel_enter(1);
+	ret = __sys_kmq_timedsend(mqd->oshandle, buf, len, prio, timeout);
+	_pthread_cancel_leave(ret == -1);
+	return (ret);
+}
+
+ssize_t
 __mq_send(mqd_t mqd, char *buf, size_t len, unsigned prio)
 {
 
 	return __sys_kmq_timedsend(mqd->oshandle, buf, len, prio, NULL);
+}
+
+
+ssize_t
+__mq_send_cancel(mqd_t mqd, char *buf, size_t len, unsigned prio)
+{
+	int ret;
+
+	_pthread_cancel_enter(1);
+	ret = __sys_kmq_timedsend(mqd->oshandle, buf, len, prio, NULL);
+	_pthread_cancel_leave(ret == -1);
+	return (ret);
 }
 
 int

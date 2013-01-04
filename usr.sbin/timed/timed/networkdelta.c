@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -36,12 +32,12 @@
 static char sccsid[] = "@(#)networkdelta.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/timed/timed/networkdelta.c,v 1.4 2000/05/19 08:26:17 kris Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 #include "globals.h"
 
-static long median __P((float, float *, long *, long *, unsigned int));
+static long median(float, float *, long *, long *, unsigned int);
 
 /*
  * Compute a corrected date.
@@ -141,7 +137,7 @@ networkdelta()
 	}
 
 	if (trace)
-		fprintf(fd, "median of %d values starting at %ld is ",
+		fprintf(fd, "median of %td values starting at %ld is ",
 		        xp-&x[0], med);
 	return median(med, &eps, &x[0], xp, 1);
 }
@@ -152,11 +148,11 @@ networkdelta()
  *	in <<Numerical Recipes>>.
  */
 static long
-median(a, eps_ptr, x, xlim, gnuf)
-	float a;			/* initial guess for the median */
-	float *eps_ptr;			/* spacing near the median */
-	long *x, *xlim;			/* the data */
-	unsigned int gnuf;		/* good enough estimate */
+median(float a, float *eps_ptr, long *x, long *xlim, unsigned int gnuf)
+	/* float a; */			/* initial guess for the median */
+	/* float *eps_ptr; */		/* spacing near the median */
+	/* long *x, *xlim; */		/* the data */
+	/* unsigned int gnuf; */	/* good enough estimate */
 {
 	long *xptr;
 	float ap = LONG_MAX;		/* bounds on the median */
