@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: xdr_mem.c,v 1.15 2000/01/22 22:19:18 mycroft Exp $	*/
 
 /*
@@ -35,7 +34,7 @@ static char *sccsid2 = "@(#)xdr_mem.c 1.19 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)xdr_mem.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/xdr/xdr_mem.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * xdr_mem.h, XDR implementation using memory buffers.
@@ -55,8 +54,6 @@ __FBSDID("$FreeBSD: src/sys/xdr/xdr_mem.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kens
 #include <rpc/types.h>
 #include <rpc/xdr.h>
 
-#define memmove(dst, src, len)	bcopy(src, dst, len)
-
 static void xdrmem_destroy(XDR *);
 static bool_t xdrmem_getlong_aligned(XDR *, long *);
 static bool_t xdrmem_putlong_aligned(XDR *, const long *);
@@ -69,7 +66,8 @@ static u_int xdrmem_getpos(XDR *);
 static bool_t xdrmem_setpos(XDR *, u_int);
 static int32_t *xdrmem_inline_aligned(XDR *, u_int);
 static int32_t *xdrmem_inline_unaligned(XDR *, u_int);
-
+static bool_t xdrmem_control(XDR *xdrs, int request, void *info);
+	
 static const struct	xdr_ops xdrmem_ops_aligned = {
 	xdrmem_getlong_aligned,
 	xdrmem_putlong_aligned,
@@ -78,7 +76,8 @@ static const struct	xdr_ops xdrmem_ops_aligned = {
 	xdrmem_getpos,
 	xdrmem_setpos,
 	xdrmem_inline_aligned,
-	xdrmem_destroy
+	xdrmem_destroy,
+	xdrmem_control
 };
 
 static const struct	xdr_ops xdrmem_ops_unaligned = {
@@ -89,7 +88,8 @@ static const struct	xdr_ops xdrmem_ops_unaligned = {
 	xdrmem_getpos,
 	xdrmem_setpos,
 	xdrmem_inline_unaligned,
-	xdrmem_destroy
+	xdrmem_destroy,
+	xdrmem_control
 };
 
 /*
@@ -230,4 +230,46 @@ xdrmem_inline_unaligned(XDR *xdrs, u_int len)
 {
 
 	return (0);
+}
+
+static bool_t
+xdrmem_control(XDR *xdrs, int request, void *info)
+{
+	xdr_bytesrec *xptr;
+	int32_t *l;
+	int len;
+
+	switch (request) {
+
+	case XDR_GET_BYTES_AVAIL:
+		xptr = (xdr_bytesrec *)info;
+		xptr->xc_is_last_record = TRUE;
+		xptr->xc_num_avail = xdrs->x_handy;
+		return (TRUE);
+
+	case XDR_PEEK:
+		/*
+		 * Return the next 4 byte unit in the XDR stream.
+		 */
+		if (xdrs->x_handy < sizeof (int32_t))
+			return (FALSE);
+		l = (int32_t *)info;
+		*l = (int32_t)ntohl((uint32_t)
+		    (*((int32_t *)(xdrs->x_private))));
+		return (TRUE);
+
+	case XDR_SKIPBYTES:
+		/*
+		 * Skip the next N bytes in the XDR stream.
+		 */
+		l = (int32_t *)info;
+		len = RNDUP((int)(*l));
+		if (xdrs->x_handy < len)
+			return (FALSE);
+		xdrs->x_handy -= len;
+		xdrs->x_private = (char *)xdrs->x_private + len;
+		return (TRUE);
+
+	}
+	return (FALSE);
 }
