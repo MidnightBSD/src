@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/acpi_support/acpi_aiboost.c,v 1.2 2008/12/02 02:12:26 laffer1 Exp $ */
 /*-
  * Copyright (c) 2006 Takanori Watanabe
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpi_support/acpi_aiboost.c,v 1.3 2006/11/06 12:14:27 takawata Exp $");
+__MBSDID("$FreeBSD: src/sys/dev/acpi_support/acpi_aiboost.c,v 1.3 2006/11/06 12:14:27 takawata Exp $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Takanori Watanabe
  * Copyright (c) 2005 Markus Brueffer <markus@FreeBSD.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpi_support/acpi_ibm.c,v 1.14.2.1 2007/11/02 18:54:09 jhb Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * Driver for extra ACPI-controlled gadgets found on IBM ThinkPad laptops.
@@ -43,13 +42,18 @@ __FBSDID("$FreeBSD: src/sys/dev/acpi_support/acpi_ibm.c,v 1.14.2.1 2007/11/02 18
 #include <sys/kernel.h>
 #include <sys/bus.h>
 #include <machine/cpufunc.h>
-#include <contrib/dev/acpica/acpi.h>
+
+#include <contrib/dev/acpica/include/acpi.h>
+#include <contrib/dev/acpica/include/accommon.h>
+
 #include "acpi_if.h"
 #include <sys/module.h>
 #include <dev/acpica/acpivar.h>
 #include <dev/led/led.h>
+#include <sys/power.h>
+#include <sys/sbuf.h>
 #include <sys/sysctl.h>
-#include <machine/clock.h>
+#include <isa/rtc.h>
 
 #define _COMPONENT	ACPI_OEM
 ACPI_MODULE_NAME("IBM")
@@ -68,6 +72,7 @@ ACPI_MODULE_NAME("IBM")
 #define ACPI_IBM_METHOD_FANLEVEL	11
 #define ACPI_IBM_METHOD_FANSTATUS	12
 #define ACPI_IBM_METHOD_THERMAL		13
+#define ACPI_IBM_METHOD_HANDLEREVENTS	14
 
 /* Hotkeys/Buttons */
 #define IBM_RTC_HOTKEY1			0x64
@@ -124,6 +129,21 @@ ACPI_MODULE_NAME("IBM")
 #define IBM_NAME_EVENTS_GET		"MHKP"
 #define IBM_NAME_EVENTS_AVAILMASK	"MHKA"
 
+/* Event Code */
+#define IBM_EVENT_LCD_BACKLIGHT		0x03
+#define IBM_EVENT_SUSPEND_TO_RAM	0x04
+#define IBM_EVENT_BLUETOOTH		0x05
+#define IBM_EVENT_SCREEN_EXPAND		0x07
+#define IBM_EVENT_SUSPEND_TO_DISK	0x0c
+#define IBM_EVENT_BRIGHTNESS_UP		0x10
+#define IBM_EVENT_BRIGHTNESS_DOWN	0x11
+#define IBM_EVENT_THINKLIGHT		0x12
+#define IBM_EVENT_ZOOM			0x14
+#define IBM_EVENT_VOLUME_UP		0x15
+#define IBM_EVENT_VOLUME_DOWN		0x16
+#define IBM_EVENT_MUTE			0x17
+#define IBM_EVENT_ACCESS_IBM_BUTTON	0x18
+
 #define ABS(x) (((x) < 0)? -(x) : (x))
 
 struct acpi_ibm_softc {
@@ -161,6 +181,8 @@ struct acpi_ibm_softc {
 	unsigned int	events_initialmask;
 	int		events_mask_supported;
 	int		events_enable;
+
+	unsigned int	handler_events;
 
 	struct sysctl_ctx_list	*sysctl_ctx;
 	struct sysctl_oid	*sysctl_tree;
@@ -253,6 +275,7 @@ ACPI_SERIAL_DECL(ibm, "ACPI IBM extras");
 static int	acpi_ibm_probe(device_t dev);
 static int	acpi_ibm_attach(device_t dev);
 static int	acpi_ibm_detach(device_t dev);
+static int	acpi_ibm_resume(device_t dev);
 
 static void	ibm_led(void *softc, int onoff);
 static void	ibm_led_task(struct acpi_ibm_softc *sc, int pending __unused);
@@ -264,13 +287,21 @@ static int	acpi_ibm_sysctl_set(struct acpi_ibm_softc *sc, int method, int val);
 
 static int	acpi_ibm_eventmask_set(struct acpi_ibm_softc *sc, int val);
 static int	acpi_ibm_thermal_sysctl(SYSCTL_HANDLER_ARGS);
+static int	acpi_ibm_handlerevents_sysctl(SYSCTL_HANDLER_ARGS);
 static void	acpi_ibm_notify(ACPI_HANDLE h, UINT32 notify, void *context);
+
+static int	acpi_ibm_brightness_set(struct acpi_ibm_softc *sc, int arg);
+static int	acpi_ibm_bluetooth_set(struct acpi_ibm_softc *sc, int arg);
+static int	acpi_ibm_thinklight_set(struct acpi_ibm_softc *sc, int arg);
+static int	acpi_ibm_volume_set(struct acpi_ibm_softc *sc, int arg);
+static int	acpi_ibm_mute_set(struct acpi_ibm_softc *sc, int arg);
 
 static device_method_t acpi_ibm_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe, acpi_ibm_probe),
 	DEVMETHOD(device_attach, acpi_ibm_attach),
 	DEVMETHOD(device_detach, acpi_ibm_detach),
+	DEVMETHOD(device_resume, acpi_ibm_resume),
 
 	{0, 0}
 };
@@ -333,7 +364,6 @@ static int
 acpi_ibm_attach(device_t dev)
 {
 	struct acpi_ibm_softc	*sc;
-	struct acpi_softc	*acpi_sc;
 	devclass_t		ec_devclass;
 
 	ACPI_FUNCTION_TRACE((char *)(uintptr_t) __func__);
@@ -341,8 +371,6 @@ acpi_ibm_attach(device_t dev)
 	sc = device_get_softc(dev);
 	sc->dev = dev;
 	sc->handle = acpi_get_handle(dev);
-
-	acpi_sc = acpi_device_get_parent_softc(dev);
 
 	/* Look for the first embedded controller */
         if (!(ec_devclass = devclass_find ("acpi_ec"))) {
@@ -357,8 +385,6 @@ acpi_ibm_attach(device_t dev)
 	}
 	sc->ec_handle = acpi_get_handle(sc->ec_dev);
 
-	ACPI_SERIAL_BEGIN(ibm);
-
 	/* Get the sysctl tree */
 	sc->sysctl_ctx = device_get_sysctl_ctx(dev);
 	sc->sysctl_tree = device_get_sysctl_tree(dev);
@@ -368,7 +394,7 @@ acpi_ibm_attach(device_t dev)
 	    IBM_NAME_EVENTS_MASK_GET, &sc->events_initialmask));
 
 	if (sc->events_mask_supported) {
-		SYSCTL_ADD_INT(sc->sysctl_ctx,
+		SYSCTL_ADD_UINT(sc->sysctl_ctx,
 		    SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
 		    "initialmask", CTLFLAG_RD,
 		    &sc->events_initialmask, 0, "Initial eventmask");
@@ -378,7 +404,7 @@ acpi_ibm_attach(device_t dev)
 		    IBM_NAME_EVENTS_AVAILMASK, &sc->events_availmask)))
 			sc->events_availmask = 0xffffffff;
 
-		SYSCTL_ADD_INT(sc->sysctl_ctx,
+		SYSCTL_ADD_UINT(sc->sysctl_ctx,
 		    SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
 		    "availmask", CTLFLAG_RD,
 		    &sc->events_availmask, 0, "Mask of supported events");
@@ -400,12 +426,19 @@ acpi_ibm_attach(device_t dev)
 	if (acpi_ibm_sysctl_init(sc, ACPI_IBM_METHOD_THERMAL)) {
 		SYSCTL_ADD_PROC(sc->sysctl_ctx,
 		    SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
-		    "thermal", CTLTYPE_STRING | CTLFLAG_RD,
+		    "thermal", CTLTYPE_INT | CTLFLAG_RD,
 		    sc, 0, acpi_ibm_thermal_sysctl, "I",
 		    "Thermal zones");
 	}
 
-	ACPI_SERIAL_END(ibm);
+	/* Hook up handlerevents node */
+	if (acpi_ibm_sysctl_init(sc, ACPI_IBM_METHOD_HANDLEREVENTS)) {
+		SYSCTL_ADD_PROC(sc->sysctl_ctx,
+		    SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
+		    "handlerevents", CTLTYPE_STRING | CTLFLAG_RW,
+		    sc, 0, acpi_ibm_handlerevents_sysctl, "I",
+		    "devd(8) events handled by acpi_ibm");
+	}
 
 	/* Handle notifies */
 	AcpiInstallNotifyHandler(sc->handle, ACPI_DEVICE_NOTIFY,
@@ -435,6 +468,34 @@ acpi_ibm_detach(device_t dev)
 
 	if (sc->led_dev != NULL)
 		led_destroy(sc->led_dev);
+
+	return (0);
+}
+
+static int
+acpi_ibm_resume(device_t dev)
+{
+	struct acpi_ibm_softc *sc = device_get_softc(dev);
+
+	ACPI_FUNCTION_TRACE((char *)(uintptr_t) __func__);
+
+	ACPI_SERIAL_BEGIN(ibm);
+	for (int i = 0; acpi_ibm_sysctls[i].name != NULL; i++) {
+		int val;
+
+		if ((acpi_ibm_sysctls[i].access & CTLFLAG_RD) == 0) {
+			continue;
+		}
+
+		val = acpi_ibm_sysctl_get(sc, i);
+
+		if ((acpi_ibm_sysctls[i].access & CTLFLAG_WR) == 0) {
+			continue;
+		}
+
+		acpi_ibm_sysctl_set(sc, i, val);
+	}
+	ACPI_SERIAL_END(ibm);
 
 	return (0);
 }
@@ -501,7 +562,7 @@ out:
 static int
 acpi_ibm_sysctl_get(struct acpi_ibm_softc *sc, int method)
 {
-	ACPI_INTEGER	val_ec;
+	UINT64		val_ec;
 	int 		val = 0, key;
 
 	ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
@@ -631,10 +692,8 @@ acpi_ibm_sysctl_get(struct acpi_ibm_softc *sc, int method)
 static int
 acpi_ibm_sysctl_set(struct acpi_ibm_softc *sc, int method, int arg)
 {
-	int			val, step;
-	ACPI_INTEGER		val_ec;
-	ACPI_OBJECT		Arg;
-	ACPI_OBJECT_LIST	Args;
+	int			val;
+	UINT64			val_ec;
 	ACPI_STATUS		status;
 
 	ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
@@ -658,103 +717,23 @@ acpi_ibm_sysctl_set(struct acpi_ibm_softc *sc, int method, int arg)
 		break;
 
 	case ACPI_IBM_METHOD_BRIGHTNESS:
-		if (arg < 0 || arg > 7)
-			return (EINVAL);
-
-		if (sc->cmos_handle) {
-			/* Read the current brightness */
-			status = ACPI_EC_READ(sc->ec_dev, IBM_EC_BRIGHTNESS, &val_ec, 1);
-			if (ACPI_FAILURE(status))
-				return (status);
-			val = val_ec & IBM_EC_MASK_BRI;
-
-			Args.Count = 1;
-			Args.Pointer = &Arg;
-			Arg.Type = ACPI_TYPE_INTEGER;
-			Arg.Integer.Value = (arg > val) ? IBM_CMOS_BRIGHTNESS_UP : IBM_CMOS_BRIGHTNESS_DOWN;
-
-			step = (arg > val) ? 1 : -1;
-			for (int i = val; i != arg; i += step) {
-				status = AcpiEvaluateObject(sc->cmos_handle, NULL, &Args, NULL);
-				if (ACPI_FAILURE(status))
-					break;
-			}
-		}
-		return ACPI_EC_WRITE(sc->ec_dev, IBM_EC_BRIGHTNESS, arg, 1);
+		return acpi_ibm_brightness_set(sc, arg);
 		break;
 
 	case ACPI_IBM_METHOD_VOLUME:
-		if (arg < 0 || arg > 14)
-			return (EINVAL);
-
-		status = ACPI_EC_READ(sc->ec_dev, IBM_EC_VOLUME, &val_ec, 1);
-		if (ACPI_FAILURE(status))
-			return (status);
-
-		if (sc->cmos_handle) {
-			val = val_ec & IBM_EC_MASK_VOL;
-
-			Args.Count = 1;
-			Args.Pointer = &Arg;
-			Arg.Type = ACPI_TYPE_INTEGER;
-			Arg.Integer.Value = (arg > val) ? IBM_CMOS_VOLUME_UP : IBM_CMOS_VOLUME_DOWN;
-
-			step = (arg > val) ? 1 : -1;
-			for (int i = val; i != arg; i += step) {
-				status = AcpiEvaluateObject(sc->cmos_handle, NULL, &Args, NULL);
-				if (ACPI_FAILURE(status))
-					break;
-			}
-		}
-		return ACPI_EC_WRITE(sc->ec_dev, IBM_EC_VOLUME, arg + (val_ec & (~IBM_EC_MASK_VOL)), 1);
+		return acpi_ibm_volume_set(sc, arg);
 		break;
 
 	case ACPI_IBM_METHOD_MUTE:
-		if (arg < 0 || arg > 1)
-			return (EINVAL);
-
-		status = ACPI_EC_READ(sc->ec_dev, IBM_EC_VOLUME, &val_ec, 1);
-		if (ACPI_FAILURE(status))
-			return (status);
-
-		if (sc->cmos_handle) {
-			val = val_ec & IBM_EC_MASK_VOL;
-
-			Args.Count = 1;
-			Args.Pointer = &Arg;
-			Arg.Type = ACPI_TYPE_INTEGER;
-			Arg.Integer.Value = IBM_CMOS_VOLUME_MUTE;
-
-			status = AcpiEvaluateObject(sc->cmos_handle, NULL, &Args, NULL);
-			if (ACPI_FAILURE(status))
-				break;
-		}
-		return ACPI_EC_WRITE(sc->ec_dev, IBM_EC_VOLUME, (arg==1) ? val_ec | IBM_EC_MASK_MUTE : val_ec & (~IBM_EC_MASK_MUTE), 1);
+		return acpi_ibm_mute_set(sc, arg);
 		break;
 
 	case ACPI_IBM_METHOD_THINKLIGHT:
-		if (arg < 0 || arg > 1)
-			return (EINVAL);
-
-		if (sc->light_set_supported) {
-			Args.Count = 1;
-			Args.Pointer = &Arg;
-			Arg.Type = ACPI_TYPE_INTEGER;
-			Arg.Integer.Value = arg ? sc->light_cmd_on : sc->light_cmd_off;
-
-			status = AcpiEvaluateObject(sc->light_handle, NULL, &Args, NULL);
-			if (ACPI_SUCCESS(status))
-				sc->light_val = arg;
-			return (status);
-		}
+		return acpi_ibm_thinklight_set(sc, arg);
 		break;
 
 	case ACPI_IBM_METHOD_BLUETOOTH:
-		if (arg < 0 || arg > 1)
-			return (EINVAL);
-
-		val = (arg == 1) ? sc->wlan_bt_flags | IBM_NAME_MASK_BT : sc->wlan_bt_flags & (~IBM_NAME_MASK_BT);
-		return acpi_SetInteger(sc->handle, IBM_NAME_WLAN_BT_SET, val);
+		return acpi_ibm_bluetooth_set(sc, arg);
 		break;
 
 	case ACPI_IBM_METHOD_FANLEVEL:
@@ -875,6 +854,9 @@ acpi_ibm_sysctl_init(struct acpi_ibm_softc *sc, int method)
 			return (TRUE);
 		}
 		return (FALSE);
+
+	case ACPI_IBM_METHOD_HANDLEREVENTS:
+		return (TRUE);
 	}
 	return (FALSE);
 }
@@ -914,6 +896,328 @@ acpi_ibm_thermal_sysctl(SYSCTL_HANDLER_ARGS)
 	return (error);
 }
 
+static int
+acpi_ibm_handlerevents_sysctl(SYSCTL_HANDLER_ARGS)
+{
+	struct acpi_ibm_softc	*sc;
+	int			error = 0;
+	struct sbuf		sb;
+	char			*cp, *ep;
+	int			l, val;
+	unsigned int		handler_events;
+
+	ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
+
+	sc = (struct acpi_ibm_softc *)oidp->oid_arg1;
+
+	if (sbuf_new(&sb, NULL, 128, SBUF_AUTOEXTEND) == NULL)
+		return (ENOMEM);
+
+	ACPI_SERIAL_BEGIN(ibm);
+
+	/* Get old values if this is a get request. */
+	if (req->newptr == NULL) {
+		for (int i = 0; i < 8 * sizeof(sc->handler_events); i++)
+			if (sc->handler_events & (1 << i))
+				sbuf_printf(&sb, "0x%02x ", i + 1);
+		if (sbuf_len(&sb) == 0)
+			sbuf_printf(&sb, "NONE");
+	}
+
+	sbuf_trim(&sb);
+	sbuf_finish(&sb);
+
+	/* Copy out the old values to the user. */
+	error = SYSCTL_OUT(req, sbuf_data(&sb), sbuf_len(&sb));
+	sbuf_delete(&sb);
+
+	if (error != 0 || req->newptr == NULL)
+		goto out;
+
+	/* If the user is setting a string, parse it. */
+	handler_events = 0;
+	cp = (char *)req->newptr;
+	while (*cp) {
+		if (isspace(*cp)) {
+			cp++;
+			continue;
+		}
+
+		ep = cp;
+
+		while (*ep && !isspace(*ep))
+			ep++;
+
+		l = ep - cp;
+		if (l == 0)
+			break;
+
+		if (strncmp(cp, "NONE", 4) == 0) {
+			cp = ep;
+			continue;
+		}
+
+		if (l >= 3 && cp[0] == '0' && (cp[1] == 'X' || cp[1] == 'x'))
+			val = strtoul(cp, &ep, 16);
+		else
+			val = strtoul(cp, &ep, 10);
+
+		if (val == 0 || ep == cp || val >= 8 * sizeof(handler_events)) {
+			cp[l] = '\0';
+			device_printf(sc->dev, "invalid event code: %s\n", cp);
+			error = EINVAL;
+			goto out;
+		}
+
+		handler_events |= 1 << (val - 1);
+
+		cp = ep;
+	}
+
+	sc->handler_events = handler_events;
+out:
+	ACPI_SERIAL_END(ibm);
+	return (error);
+}
+
+static int
+acpi_ibm_brightness_set(struct acpi_ibm_softc *sc, int arg)
+{
+	int			val, step;
+	UINT64			val_ec;
+	ACPI_OBJECT		Arg;
+	ACPI_OBJECT_LIST	Args;
+	ACPI_STATUS		status;
+
+	ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
+	ACPI_SERIAL_ASSERT(ibm);
+
+	if (arg < 0 || arg > 7)
+		return (EINVAL);
+
+	/* Read the current brightness */
+	status = ACPI_EC_READ(sc->ec_dev, IBM_EC_BRIGHTNESS, &val_ec, 1);
+	if (ACPI_FAILURE(status))
+		return (status);
+
+	if (sc->cmos_handle) {
+		val = val_ec & IBM_EC_MASK_BRI;
+
+		Args.Count = 1;
+		Args.Pointer = &Arg;
+		Arg.Type = ACPI_TYPE_INTEGER;
+		Arg.Integer.Value = (arg > val) ? IBM_CMOS_BRIGHTNESS_UP :
+						  IBM_CMOS_BRIGHTNESS_DOWN;
+
+		step = (arg > val) ? 1 : -1;
+		for (int i = val; i != arg; i += step) {
+			status = AcpiEvaluateObject(sc->cmos_handle, NULL,
+						    &Args, NULL);
+			if (ACPI_FAILURE(status)) {
+				/* Record the last value */
+				if (i != val) {
+					ACPI_EC_WRITE(sc->ec_dev,
+					    IBM_EC_BRIGHTNESS, i - step, 1);
+				}
+				return (status);
+			}
+		}
+	}
+
+	return ACPI_EC_WRITE(sc->ec_dev, IBM_EC_BRIGHTNESS, arg, 1);
+}
+
+static int
+acpi_ibm_bluetooth_set(struct acpi_ibm_softc *sc, int arg)
+{
+	int			val;
+
+	ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
+	ACPI_SERIAL_ASSERT(ibm);
+
+	if (arg < 0 || arg > 1)
+		return (EINVAL);
+
+	val = (arg == 1) ? sc->wlan_bt_flags | IBM_NAME_MASK_BT :
+			   sc->wlan_bt_flags & (~IBM_NAME_MASK_BT);
+	return acpi_SetInteger(sc->handle, IBM_NAME_WLAN_BT_SET, val);
+}
+
+static int
+acpi_ibm_thinklight_set(struct acpi_ibm_softc *sc, int arg)
+{
+	ACPI_OBJECT		Arg;
+	ACPI_OBJECT_LIST	Args;
+	ACPI_STATUS		status;
+
+	ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
+	ACPI_SERIAL_ASSERT(ibm);
+
+	if (arg < 0 || arg > 1)
+		return (EINVAL);
+
+	if (sc->light_set_supported) {
+		Args.Count = 1;
+		Args.Pointer = &Arg;
+		Arg.Type = ACPI_TYPE_INTEGER;
+		Arg.Integer.Value = arg ? sc->light_cmd_on : sc->light_cmd_off;
+
+		status = AcpiEvaluateObject(sc->light_handle, NULL,
+					    &Args, NULL);
+		if (ACPI_SUCCESS(status))
+			sc->light_val = arg;
+		return (status);
+	}
+
+	return (0);
+}
+
+static int
+acpi_ibm_volume_set(struct acpi_ibm_softc *sc, int arg)
+{
+	int			val, step;
+	UINT64			val_ec;
+	ACPI_OBJECT		Arg;
+	ACPI_OBJECT_LIST	Args;
+	ACPI_STATUS		status;
+
+	ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
+	ACPI_SERIAL_ASSERT(ibm);
+
+	if (arg < 0 || arg > 14)
+		return (EINVAL);
+
+	/* Read the current volume */
+	status = ACPI_EC_READ(sc->ec_dev, IBM_EC_VOLUME, &val_ec, 1);
+	if (ACPI_FAILURE(status))
+		return (status);
+
+	if (sc->cmos_handle) {
+		val = val_ec & IBM_EC_MASK_VOL;
+
+		Args.Count = 1;
+		Args.Pointer = &Arg;
+		Arg.Type = ACPI_TYPE_INTEGER;
+		Arg.Integer.Value = (arg > val) ? IBM_CMOS_VOLUME_UP :
+						  IBM_CMOS_VOLUME_DOWN;
+
+		step = (arg > val) ? 1 : -1;
+		for (int i = val; i != arg; i += step) {
+			status = AcpiEvaluateObject(sc->cmos_handle, NULL,
+						    &Args, NULL);
+			if (ACPI_FAILURE(status)) {
+				/* Record the last value */
+				if (i != val) {
+					val_ec = i - step +
+						 (val_ec & (~IBM_EC_MASK_VOL));
+					ACPI_EC_WRITE(sc->ec_dev, IBM_EC_VOLUME,
+						      val_ec, 1);
+				}
+				return (status);
+			}
+		}
+	}
+
+	val_ec = arg + (val_ec & (~IBM_EC_MASK_VOL));
+	return ACPI_EC_WRITE(sc->ec_dev, IBM_EC_VOLUME, val_ec, 1);
+}
+
+static int
+acpi_ibm_mute_set(struct acpi_ibm_softc *sc, int arg)
+{
+	UINT64			val_ec;
+	ACPI_OBJECT		Arg;
+	ACPI_OBJECT_LIST	Args;
+	ACPI_STATUS		status;
+
+	ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
+	ACPI_SERIAL_ASSERT(ibm);
+
+	if (arg < 0 || arg > 1)
+		return (EINVAL);
+
+	status = ACPI_EC_READ(sc->ec_dev, IBM_EC_VOLUME, &val_ec, 1);
+	if (ACPI_FAILURE(status))
+		return (status);
+
+	if (sc->cmos_handle) {
+		Args.Count = 1;
+		Args.Pointer = &Arg;
+		Arg.Type = ACPI_TYPE_INTEGER;
+		Arg.Integer.Value = IBM_CMOS_VOLUME_MUTE;
+
+		status = AcpiEvaluateObject(sc->cmos_handle, NULL, &Args, NULL);
+		if (ACPI_FAILURE(status))
+			return (status);
+	}
+
+	val_ec = (arg == 1) ? val_ec | IBM_EC_MASK_MUTE :
+			      val_ec & (~IBM_EC_MASK_MUTE);
+	return ACPI_EC_WRITE(sc->ec_dev, IBM_EC_VOLUME, val_ec, 1);
+}
+
+static void
+acpi_ibm_eventhandler(struct acpi_ibm_softc *sc, int arg)
+{
+	int			val;
+	UINT64			val_ec;
+	ACPI_STATUS		status;
+
+	ACPI_SERIAL_BEGIN(ibm);
+	switch (arg) {
+	case IBM_EVENT_SUSPEND_TO_RAM:
+		power_pm_suspend(POWER_SLEEP_STATE_SUSPEND);
+		break;
+
+	case IBM_EVENT_BLUETOOTH:
+		acpi_ibm_bluetooth_set(sc, (sc->wlan_bt_flags == 0));
+		break;
+
+	case IBM_EVENT_BRIGHTNESS_UP:
+	case IBM_EVENT_BRIGHTNESS_DOWN:
+		/* Read the current brightness */
+		status = ACPI_EC_READ(sc->ec_dev, IBM_EC_BRIGHTNESS,
+				      &val_ec, 1);
+		if (ACPI_FAILURE(status))
+			return;
+
+		val = val_ec & IBM_EC_MASK_BRI;
+		val = (arg == IBM_EVENT_BRIGHTNESS_UP) ? val + 1 : val - 1;
+		acpi_ibm_brightness_set(sc, val);
+		break;
+
+	case IBM_EVENT_THINKLIGHT:
+		acpi_ibm_thinklight_set(sc, (sc->light_val == 0));
+		break;
+
+	case IBM_EVENT_VOLUME_UP:
+	case IBM_EVENT_VOLUME_DOWN:
+		/* Read the current volume */
+		status = ACPI_EC_READ(sc->ec_dev, IBM_EC_VOLUME, &val_ec, 1);
+		if (ACPI_FAILURE(status))
+			return;
+
+		val = val_ec & IBM_EC_MASK_VOL;
+		val = (arg == IBM_EVENT_VOLUME_UP) ? val + 1 : val - 1;
+		acpi_ibm_volume_set(sc, val);
+		break;
+
+	case IBM_EVENT_MUTE:
+		/* Read the current value */
+		status = ACPI_EC_READ(sc->ec_dev, IBM_EC_VOLUME, &val_ec, 1);
+		if (ACPI_FAILURE(status))
+			return;
+
+		val = ((val_ec & IBM_EC_MASK_MUTE) == IBM_EC_MASK_MUTE);
+		acpi_ibm_mute_set(sc, (val == 0));
+		break;
+
+	default:
+		break;
+	}
+	ACPI_SERIAL_END(ibm);
+}
+
 static void
 acpi_ibm_notify(ACPI_HANDLE h, UINT32 notify, void *context)
 {
@@ -941,6 +1245,10 @@ acpi_ibm_notify(ACPI_HANDLE h, UINT32 notify, void *context)
 				device_printf(dev, "Unknown key %d\n", arg);
 				break;
 			}
+
+			/* Execute event handler */
+			if (sc->handler_events & (1 << (arg - 1)))
+				acpi_ibm_eventhandler(sc, (arg & 0xff));
 
 			/* Notify devd(8) */
 			acpi_UserNotify("IBM", h, (arg & 0xff));

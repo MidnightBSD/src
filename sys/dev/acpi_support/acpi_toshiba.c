@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Hiroyuki Aizu <aizu@navi.org>
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpi_support/acpi_toshiba.c,v 1.17 2005/09/11 18:39:01 obrien Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -35,7 +34,8 @@ __FBSDID("$FreeBSD: src/sys/dev/acpi_support/acpi_toshiba.c,v 1.17 2005/09/11 18
 #include <sys/module.h>
 #include <sys/bus.h>
 
-#include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
+
 #include <dev/acpica/acpivar.h>
 
 #define _COMPONENT	ACPI_OEM

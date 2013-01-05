@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Takanori Watanabe
  * All rights reserved.
@@ -26,13 +25,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpi_support/acpi_sony.c,v 1.10 2006/11/01 03:45:24 kevlo Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/bus.h>
-#include <contrib/dev/acpica/acpi.h>
+
+#include <contrib/dev/acpica/include/acpi.h>
+
 #include "acpi_if.h"
 #include <sys/module.h>
 #include <dev/acpica/acpivar.h>
@@ -41,14 +42,21 @@ __FBSDID("$FreeBSD: src/sys/dev/acpi_support/acpi_sony.c,v 1.10 2006/11/01 03:45
 #define _COMPONENT	ACPI_OEM
 ACPI_MODULE_NAME("Sony")
 
-#define ACPI_SONY_GET_BRIGHTNESS "GBRT"
-#define ACPI_SONY_SET_BRIGHTNESS "SBRT"
 #define ACPI_SONY_GET_PID "GPID"
 
 /*
  * SNY5001
+ *   This is the ACPI handle for the "Sony Notebook Control" driver under
+ *   Windows.
+ *   It provides several methods within the ACPI namespace, including:
  *  [GS]BRT [GS]PBR [GS]CTR [GS]PCR [GS]CMI [CDPW GCDP]? GWDP PWAK PWRN 
  *
+ * SNY6001
+ *   This is the ACPI handle for the "Sony Programmable I/O" driver under
+ *   Windows.
+ *   It is not yet supported by this driver, but provides control over the
+ *   power to the bluetooth, built-in camera and HSDPA modem devices in some
+ *   laptops, and also allows some control of the fan speed.
  */
 
 struct acpi_sony_softc {
@@ -62,13 +70,17 @@ static struct acpi_sony_name_list
 	char *comment;
 } acpi_sony_oids[] = {
 	{ "brightness", "GBRT", "SBRT", "Display Brightness"},
-	{ "ctr", "GCTR", "SCTR", "??"},
+	{ "brightness_default", "GPBR", "SPBR", "Default Display Brightness"},
+	{ "contrast", "GCTR", "SCTR", "Display Contrast"},
+	{ "bass_gain", "GMGB", "SMGB", "Multimedia Bass Gain"},
 	{ "pcr", "GPCR", "SPCR", "???"},
 #if 0
-	{ "cmi", "GCMI", "SCMI", "????"},
+	{ "cmi", "GCMI", "SCMI", "???"},
 #endif
-	{ "wdp", "GWDP", NULL, "?????"},
+	{ "wdp", "GWDP", NULL, "???"},
 	{ "cdp", "GCDP", "CDPW", "CD Power"},  /*shares [\GL03]&0x8 flag*/
+	{ "azp", "GAZP", "AZPW", "Audio Power"}, 
+	{ "lnp", "GLNP", "LNPW", "LAN Power"},
 	{ NULL, NULL, NULL }
 };
 
@@ -102,10 +114,7 @@ static char    *sny_id[] = {"SNY5001", NULL};
 static int
 acpi_sony_probe(device_t dev)
 {
-	struct acpi_sony_softc *sc;
-	int		ret = ENXIO;
-
-	sc = device_get_softc(dev);
+	int ret = ENXIO;
 
 	if (ACPI_ID_PROBE(device_get_parent(dev), dev, sny_id)) {
 		device_set_desc(dev, "Sony notebook controller");
