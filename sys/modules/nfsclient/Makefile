@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 .PATH: ${.CURDIR}/../../nfsclient ${.CURDIR}/../../nfs ${.CURDIR}/../../rpc
 
