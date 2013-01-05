@@ -50101,8 +50101,6 @@ sys/rpc/clnt_rc.c -text
 sys/rpc/clnt_stat.h -text
 sys/rpc/clnt_vc.c -text
 sys/rpc/getnetconfig.c -text
-sys/rpc/inet_ntop.c -text
-sys/rpc/inet_pton.c -text
 sys/rpc/netconfig.h -text
 sys/rpc/nettype.h -text
 sys/rpc/pmap_prot.h -text
@@ -50118,8 +50116,6 @@ sys/rpc/rpcb_clnt.c -text
 sys/rpc/rpcb_clnt.h -text
 sys/rpc/rpcb_prot.c -text
 sys/rpc/rpcb_prot.h -text
-sys/rpc/rpcclnt.c -text
-sys/rpc/rpcclnt.h -text
 sys/rpc/rpcm_subs.h -text
 sys/rpc/rpcsec_gss.h -text
 sys/rpc/rpcsec_gss/rpcsec_gss.c -text

@@ -28,7 +28,7 @@
  * 2550 Garcia Avenue
  * Mountain View, California  94043
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 /*
  * Copyright (c) 1986 - 1991 by Sun Microsystems, Inc.

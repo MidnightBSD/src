@@ -13,7 +13,7 @@ extern "C" {
 #endif
 
 /*
- * $FreeBSD$
+ * $MidnightBSD$
  *
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
  * unrestricted use provided that this legend is included on all tape
