@@ -44546,8 +44546,6 @@ sys/dev/ath/ath_hal/ar5416/ar5416_xmit.c -text
 sys/dev/ath/ath_hal/ar5416/ar5416desc.h -text
 sys/dev/ath/ath_hal/ar5416/ar5416phy.h -text
 sys/dev/ath/ath_hal/ar5416/ar5416reg.h -text
-sys/dev/ath/ath_hal/ar5416/ar9160.ini -text
-sys/dev/ath/ath_hal/ar5416/ar9160_attach.c -text
 sys/dev/ath/ath_hal/ar9001/ar9130.ini -text
 sys/dev/ath/ath_hal/ar9001/ar9130_attach.c -text
 sys/dev/ath/ath_hal/ar9001/ar9130_eeprom.c -text
