@@ -25,7 +25,7 @@
  * SUCH DAMAGE.
  *
  *      from BSDI nlminfo.h,v 2.1 1998/03/18 01:30:38 don Exp
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 /*
