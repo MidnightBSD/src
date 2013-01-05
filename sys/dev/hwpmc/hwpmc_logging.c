@@ -1,6 +1,10 @@
 /*-
- * Copyright (c) 2005 Joseph Koshy
+ * Copyright (c) 2005-2007 Joseph Koshy
+ * Copyright (c) 2007 The FreeBSD Foundation
  * All rights reserved.
+ *
+ * Portions of this software were developed by A. Joseph Koshy under
+ * sponsorship from the FreeBSD Foundation and Google, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,9 +34,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/hwpmc/hwpmc_logging.c,v 1.7 2007/04/19 08:02:51 jkoshy Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
+#include <sys/capability.h>
 #include <sys/file.h>
 #include <sys/kernel.h>
 #include <sys/kthread.h>
@@ -40,6 +45,7 @@ __FBSDID("$FreeBSD: src/sys/dev/hwpmc/hwpmc_logging.c,v 1.7 2007/04/19 08:02:51 
 #include <sys/module.h>
 #include <sys/mutex.h>
 #include <sys/pmc.h>
+#include <sys/pmckern.h>
 #include <sys/pmclog.h>
 #include <sys/proc.h>
 #include <sys/signalvar.h>
@@ -63,7 +69,6 @@ static int pmclog_buffer_size = PMC_LOG_BUFFER_SIZE;
 TUNABLE_INT(PMC_SYSCTL_NAME_PREFIX "logbuffersize", &pmclog_buffer_size);
 SYSCTL_INT(_kern_hwpmc, OID_AUTO, logbuffersize, CTLFLAG_TUN|CTLFLAG_RD,
     &pmclog_buffer_size, 0, "size of log buffers in kilobytes");
-
 
 /*
  * kern.hwpmc.nbuffer -- number of global log buffers
@@ -96,7 +101,6 @@ static struct mtx pmc_kthread_mtx;	/* sleep lock */
 /*
  * Log file record constructors.
  */
-
 #define	_PMCLOG_TO_HEADER(T,L)						\
 	((PMCLOG_HEADER_MAGIC << 24) |					\
 	 (PMCLOG_TYPE_ ## T << 16)   |					\
@@ -125,6 +129,7 @@ static struct mtx pmc_kthread_mtx;	/* sleep lock */
 
 /* Emit a string.  Caution: does NOT update _le, so needs to be last */
 #define	PMCLOG_EMITSTRING(S,L)	do { bcopy((S), _le, (L)); } while (0)
+#define	PMCLOG_EMITNULLSTRING(L) do { bzero(_le, (L)); } while (0)
 
 #define	PMCLOG_DESPATCH(PO)						\
 		pmclog_release((PO));					\
@@ -135,6 +140,8 @@ static struct mtx pmc_kthread_mtx;	/* sleep lock */
  * Assertions about the log file format.
  */
 
+CTASSERT(sizeof(struct pmclog_callchain) == 6*4 +
+    PMC_CALLCHAIN_DEPTH_MAX*sizeof(uintfptr_t));
 CTASSERT(sizeof(struct pmclog_closelog) == 3*4);
 CTASSERT(sizeof(struct pmclog_dropnotify) == 3*4);
 CTASSERT(sizeof(struct pmclog_map_in) == PATH_MAX +
@@ -195,7 +202,7 @@ pmclog_get_buffer(struct pmc_owner *po)
 	mtx_assert(&po->po_mtx, MA_OWNED);
 
 	KASSERT(po->po_curbuf == NULL,
-	    ("[pmc,%d] po=%p current buffer still valid", __LINE__, po));
+	    ("[pmclog,%d] po=%p current buffer still valid", __LINE__, po));
 
 	mtx_lock_spin(&pmc_bufferlist_mtx);
 	if ((plb = TAILQ_FIRST(&pmc_bufferlist)) != NULL)
@@ -208,7 +215,7 @@ pmclog_get_buffer(struct pmc_owner *po)
 	if (plb)
 		KASSERT(plb->plb_ptr == plb->plb_base &&
 		    plb->plb_base < plb->plb_fence,
-		    ("[pmc,%d] po=%p buffer invariants: ptr=%p "
+		    ("[pmclog,%d] po=%p buffer invariants: ptr=%p "
 		    "base=%p fence=%p", __LINE__, po, plb->plb_ptr,
 		    plb->plb_base, plb->plb_fence));
 #endif
@@ -220,7 +227,7 @@ pmclog_get_buffer(struct pmc_owner *po)
 	if (plb == NULL)
 		atomic_add_int(&pmc_stats.pm_buffer_requests_failed, 1);
 
-	return plb ? 0 : ENOMEM;
+	return (plb ? 0 : ENOMEM);
 }
 
 /*
@@ -235,6 +242,7 @@ pmclog_loop(void *arg)
 	int error;
 	struct pmc_owner *po;
 	struct pmclog_buffer *lb;
+	struct proc *p;
 	struct ucred *ownercred;
 	struct ucred *mycred;
 	struct thread *td;
@@ -243,16 +251,17 @@ pmclog_loop(void *arg)
 	size_t nbytes;
 
 	po = (struct pmc_owner *) arg;
+	p = po->po_owner;
 	td = curthread;
 	mycred = td->td_ucred;
 
-	PROC_LOCK(po->po_owner);
-	ownercred = crhold(po->po_owner->p_ucred);
-	PROC_UNLOCK(po->po_owner);
+	PROC_LOCK(p);
+	ownercred = crhold(p->p_ucred);
+	PROC_UNLOCK(p);
 
 	PMCDBG(LOG,INI,1, "po=%p kt=%p", po, po->po_kthread);
 	KASSERT(po->po_kthread == curthread->td_proc,
-	    ("[pmc,%d] proc mismatch po=%p po/kt=%p curproc=%p", __LINE__,
+	    ("[pmclog,%d] proc mismatch po=%p po/kt=%p curproc=%p", __LINE__,
 		po, po->po_kthread, curthread->td_proc));
 
 	lb = NULL;
@@ -277,10 +286,16 @@ pmclog_loop(void *arg)
 			if ((lb = TAILQ_FIRST(&po->po_logbuffers)) == NULL) {
 				mtx_unlock_spin(&po->po_mtx);
 
-				/* wakeup any processes waiting for a FLUSH */
-				if (po->po_flags & PMC_PO_IN_FLUSH) {
-					po->po_flags &= ~PMC_PO_IN_FLUSH;
-					wakeup_one(po->po_kthread);
+				/* No more buffers and shutdown required. */
+				if (po->po_flags & PMC_PO_SHUTDOWN) {
+					mtx_unlock(&pmc_kthread_mtx);
+					/*
+			 		 * Close the file to get PMCLOG_EOF
+					 * error in pmclog(3).
+					 */
+					fo_close(po->po_file, curthread);
+					mtx_lock(&pmc_kthread_mtx);
+					break;
 				}
 
 				(void) msleep(po, &pmc_kthread_mtx, PWAIT,
@@ -315,16 +330,14 @@ pmclog_loop(void *arg)
 		error = fo_write(po->po_file, &auio, ownercred, 0, td);
 		td->td_ucred = mycred;
 
-		mtx_lock(&pmc_kthread_mtx);
-
 		if (error) {
 			/* XXX some errors are recoverable */
-			/* XXX also check for SIGPIPE if a socket */
-
 			/* send a SIGIO to the owner and exit */
-			PROC_LOCK(po->po_owner);
-			psignal(po->po_owner, SIGIO);
-			PROC_UNLOCK(po->po_owner);
+			PROC_LOCK(p);
+			kern_psignal(p, SIGIO);
+			PROC_UNLOCK(p);
+
+			mtx_lock(&pmc_kthread_mtx);
 
 			po->po_error = error; /* save for flush log */
 
@@ -332,6 +345,8 @@ pmclog_loop(void *arg)
 
 			break;
 		}
+
+		mtx_lock(&pmc_kthread_mtx);
 
 		/* put the used buffer back into the global pool */
 		PMCLOG_INIT_BUFFER_DESCRIPTOR(lb);
@@ -343,6 +358,7 @@ pmclog_loop(void *arg)
 		lb = NULL;
 	}
 
+	wakeup_one(po->po_kthread);
 	po->po_kthread = NULL;
 
 	mtx_unlock(&pmc_kthread_mtx);
@@ -362,7 +378,7 @@ pmclog_loop(void *arg)
 
 	crfree(ownercred);
 
-	kthread_exit(0);
+	kproc_exit(0);
 }
 
 /*
@@ -373,10 +389,10 @@ static void
 pmclog_release(struct pmc_owner *po)
 {
 	KASSERT(po->po_curbuf->plb_ptr >= po->po_curbuf->plb_base,
-	    ("[pmc,%d] buffer invariants po=%p ptr=%p base=%p", __LINE__,
+	    ("[pmclog,%d] buffer invariants po=%p ptr=%p base=%p", __LINE__,
 		po, po->po_curbuf->plb_ptr, po->po_curbuf->plb_base));
 	KASSERT(po->po_curbuf->plb_ptr <= po->po_curbuf->plb_fence,
-	    ("[pmc,%d] buffer invariants po=%p ptr=%p fenc=%p", __LINE__,
+	    ("[pmclog,%d] buffer invariants po=%p ptr=%p fenc=%p", __LINE__,
 		po, po->po_curbuf->plb_ptr, po->po_curbuf->plb_fence));
 
 	/* schedule an I/O if we've filled a buffer */
@@ -412,18 +428,24 @@ pmclog_reserve(struct pmc_owner *po, int length)
 
 	mtx_lock_spin(&po->po_mtx);
 
+	/* No more data when shutdown in progress. */
+	if (po->po_flags & PMC_PO_SHUTDOWN) {
+		mtx_unlock_spin(&po->po_mtx);
+		return (NULL);
+	}
+
 	if (po->po_curbuf == NULL)
 		if (pmclog_get_buffer(po) != 0) {
 			mtx_unlock_spin(&po->po_mtx);
-			return NULL;
+			return (NULL);
 		}
 
 	KASSERT(po->po_curbuf != NULL,
-	    ("[pmc,%d] po=%p no current buffer", __LINE__, po));
+	    ("[pmclog,%d] po=%p no current buffer", __LINE__, po));
 
 	KASSERT(po->po_curbuf->plb_ptr >= po->po_curbuf->plb_base &&
 	    po->po_curbuf->plb_ptr <= po->po_curbuf->plb_fence,
-	    ("[pmc,%d] po=%p buffer invariants: ptr=%p base=%p fence=%p",
+	    ("[pmclog,%d] po=%p buffer invariants: ptr=%p base=%p fence=%p",
 		__LINE__, po, po->po_curbuf->plb_ptr, po->po_curbuf->plb_base,
 		po->po_curbuf->plb_fence));
 
@@ -431,7 +453,7 @@ pmclog_reserve(struct pmc_owner *po, int length)
 	newptr = oldptr + length;
 
 	KASSERT(oldptr != (uintptr_t) NULL,
-	    ("[pmc,%d] po=%p Null log buffer pointer", __LINE__, po));
+	    ("[pmclog,%d] po=%p Null log buffer pointer", __LINE__, po));
 
 	/*
 	 * If we have space in the current buffer, return a pointer to
@@ -450,18 +472,18 @@ pmclog_reserve(struct pmc_owner *po, int length)
 
 	if (pmclog_get_buffer(po) != 0) {
 		mtx_unlock_spin(&po->po_mtx);
-		return NULL;
+		return (NULL);
 	}
 
 	KASSERT(po->po_curbuf != NULL,
-	    ("[pmc,%d] po=%p no current buffer", __LINE__, po));
+	    ("[pmclog,%d] po=%p no current buffer", __LINE__, po));
 
 	KASSERT(po->po_curbuf->plb_ptr != NULL,
-	    ("[pmc,%d] null return from pmc_get_log_buffer", __LINE__));
+	    ("[pmclog,%d] null return from pmc_get_log_buffer", __LINE__));
 
 	KASSERT(po->po_curbuf->plb_ptr == po->po_curbuf->plb_base &&
 	    po->po_curbuf->plb_ptr <= po->po_curbuf->plb_fence,
-	    ("[pmc,%d] po=%p buffer invariants: ptr=%p base=%p fence=%p",
+	    ("[pmclog,%d] po=%p buffer invariants: ptr=%p base=%p fence=%p",
 		__LINE__, po, po->po_curbuf->plb_ptr, po->po_curbuf->plb_base,
 		po->po_curbuf->plb_fence));
 
@@ -473,7 +495,7 @@ pmclog_reserve(struct pmc_owner *po, int length)
 	getnanotime(&ts);		/* fill in the timestamp */
 	*lh++ = ts.tv_sec & 0xFFFFFFFF;
 	*lh++ = ts.tv_nsec & 0xFFFFFFF;
-	return (uint32_t *) oldptr;
+	return ((uint32_t *) oldptr);
 }
 
 /*
@@ -486,13 +508,13 @@ static void
 pmclog_schedule_io(struct pmc_owner *po)
 {
 	KASSERT(po->po_curbuf != NULL,
-	    ("[pmc,%d] schedule_io with null buffer po=%p", __LINE__, po));
+	    ("[pmclog,%d] schedule_io with null buffer po=%p", __LINE__, po));
 
 	KASSERT(po->po_curbuf->plb_ptr >= po->po_curbuf->plb_base,
-	    ("[pmc,%d] buffer invariants po=%p ptr=%p base=%p", __LINE__,
+	    ("[pmclog,%d] buffer invariants po=%p ptr=%p base=%p", __LINE__,
 		po, po->po_curbuf->plb_ptr, po->po_curbuf->plb_base));
 	KASSERT(po->po_curbuf->plb_ptr <= po->po_curbuf->plb_fence,
-	    ("[pmc,%d] buffer invariants po=%p ptr=%p fenc=%p", __LINE__,
+	    ("[pmclog,%d] buffer invariants po=%p ptr=%p fenc=%p", __LINE__,
 		po, po->po_curbuf->plb_ptr, po->po_curbuf->plb_fence));
 
 	PMCDBG(LOG,SIO, 1, "po=%p", po);
@@ -516,15 +538,20 @@ static void
 pmclog_stop_kthread(struct pmc_owner *po)
 {
 	/*
-	 * Unset flag, wakeup the helper thread,
+	 * Close the file to force the thread out of fo_write,
+	 * unset flag, wakeup the helper thread,
 	 * wait for it to exit
 	 */
 
-	mtx_assert(&pmc_kthread_mtx, MA_OWNED);
+	if (po->po_file != NULL)
+		fo_close(po->po_file, curthread);
+
+	mtx_lock(&pmc_kthread_mtx);
 	po->po_flags &= ~PMC_PO_OWNS_LOGFILE;
 	wakeup_one(po);
 	if (po->po_kthread)
 		msleep(po->po_kthread, &pmc_kthread_mtx, PPAUSE, "pmckstp", 0);
+	mtx_unlock(&pmc_kthread_mtx);
 }
 
 /*
@@ -539,34 +566,40 @@ pmclog_stop_kthread(struct pmc_owner *po)
  */
 
 int
-pmclog_configure_log(struct pmc_owner *po, int logfd)
+pmclog_configure_log(struct pmc_mdep *md, struct pmc_owner *po, int logfd)
 {
 	int error;
 	struct proc *p;
 
+	/*
+	 * As long as it is possible to get a LOR between pmc_sx lock and
+	 * proctree/allproc sx locks used for adding a new process, assure
+	 * the former is not held here.
+	 */
+	sx_assert(&pmc_sx, SA_UNLOCKED);
 	PMCDBG(LOG,CFG,1, "config po=%p logfd=%d", po, logfd);
 
 	p = po->po_owner;
 
 	/* return EBUSY if a log file was already present */
 	if (po->po_flags & PMC_PO_OWNS_LOGFILE)
-		return EBUSY;
+		return (EBUSY);
 
 	KASSERT(po->po_kthread == NULL,
-	    ("[pmc,%d] po=%p kthread (%p) already present", __LINE__, po,
+	    ("[pmclog,%d] po=%p kthread (%p) already present", __LINE__, po,
 		po->po_kthread));
 	KASSERT(po->po_file == NULL,
-	    ("[pmc,%d] po=%p file (%p) already present", __LINE__, po,
+	    ("[pmclog,%d] po=%p file (%p) already present", __LINE__, po,
 		po->po_file));
 
 	/* get a reference to the file state */
-	error = fget_write(curthread, logfd, &po->po_file);
+	error = fget_write(curthread, logfd, CAP_WRITE, &po->po_file);
 	if (error)
 		goto error;
 
 	/* mark process as owning a log file */
 	po->po_flags |= PMC_PO_OWNS_LOGFILE;
-	error = kthread_create(pmclog_loop, po, &po->po_kthread,
+	error = kproc_create(pmclog_loop, po, &po->po_kthread,
 	    RFHIGHPID, 0, "hwpmc: proc(%d)", p->p_pid);
 	if (error)
 		goto error;
@@ -583,24 +616,22 @@ pmclog_configure_log(struct pmc_owner *po, int logfd)
 	PMCLOG_EMIT32(md->pmd_cputype);
 	PMCLOG_DESPATCH(po);
 
-	return 0;
+	return (0);
 
  error:
 	/* shutdown the thread */
-	mtx_lock(&pmc_kthread_mtx);
 	if (po->po_kthread)
 		pmclog_stop_kthread(po);
-	mtx_unlock(&pmc_kthread_mtx);
 
-	KASSERT(po->po_kthread == NULL, ("[pmc,%d] po=%p kthread not stopped",
-	    __LINE__, po));
+	KASSERT(po->po_kthread == NULL, ("[pmclog,%d] po=%p kthread not "
+	    "stopped", __LINE__, po));
 
 	if (po->po_file)
 		(void) fdrop(po->po_file, curthread);
 	po->po_file  = NULL;	/* clear file and error state */
 	po->po_error = 0;
 
-	return error;
+	return (error);
 }
 
 
@@ -618,21 +649,18 @@ pmclog_deconfigure_log(struct pmc_owner *po)
 	PMCDBG(LOG,CFG,1, "de-config po=%p", po);
 
 	if ((po->po_flags & PMC_PO_OWNS_LOGFILE) == 0)
-		return EINVAL;
+		return (EINVAL);
 
 	KASSERT(po->po_sscount == 0,
-	    ("[pmc,%d] po=%p still owning SS PMCs", __LINE__, po));
+	    ("[pmclog,%d] po=%p still owning SS PMCs", __LINE__, po));
 	KASSERT(po->po_file != NULL,
-	    ("[pmc,%d] po=%p no log file", __LINE__, po));
+	    ("[pmclog,%d] po=%p no log file", __LINE__, po));
 
 	/* stop the kthread, this will reset the 'OWNS_LOGFILE' flag */
-	mtx_lock(&pmc_kthread_mtx);
-	if (po->po_kthread)
-		pmclog_stop_kthread(po);
-	mtx_unlock(&pmc_kthread_mtx);
+	pmclog_stop_kthread(po);
 
 	KASSERT(po->po_kthread == NULL,
-	    ("[pmc,%d] po=%p kthread not stopped", __LINE__, po));
+	    ("[pmclog,%d] po=%p kthread not stopped", __LINE__, po));
 
 	/* return all queued log buffers to the global pool */
 	while ((lb = TAILQ_FIRST(&po->po_logbuffers)) != NULL) {
@@ -656,7 +684,7 @@ pmclog_deconfigure_log(struct pmc_owner *po)
 	po->po_file  = NULL;
 	po->po_error = 0;
 
-	return error;
+	return (error);
 }
 
 /*
@@ -666,7 +694,8 @@ pmclog_deconfigure_log(struct pmc_owner *po)
 int
 pmclog_flush(struct pmc_owner *po)
 {
-	int error, has_pending_buffers;
+	int error;
+	struct pmclog_buffer *lb;
 
 	PMCDBG(LOG,FLS,1, "po=%p", po);
 
@@ -675,7 +704,7 @@ pmclog_flush(struct pmc_owner *po)
 	 * return that.
 	 */
 	if (po->po_error)
-		return po->po_error;
+		return (po->po_error);
 
 	error = 0;
 
@@ -689,30 +718,73 @@ pmclog_flush(struct pmc_owner *po)
 	}
 
 	/*
-	 * Schedule the current buffer if any.
+	 * Schedule the current buffer if any and not empty.
 	 */
 	mtx_lock_spin(&po->po_mtx);
-	if (po->po_curbuf)
+	lb = po->po_curbuf;
+	if (lb && lb->plb_ptr != lb->plb_base) {
 		pmclog_schedule_io(po);
-	has_pending_buffers = !TAILQ_EMPTY(&po->po_logbuffers);
+	} else
+		error = ENOBUFS;
 	mtx_unlock_spin(&po->po_mtx);
-
-	if (has_pending_buffers) {
-		po->po_flags |= PMC_PO_IN_FLUSH; /* ask for a wakeup */
-		error = msleep(po->po_kthread, &pmc_kthread_mtx, PWAIT,
-		    "pmcflush", 0);
-	}
 
  error:
 	mtx_unlock(&pmc_kthread_mtx);
 
-	return error;
+	return (error);
 }
 
+int
+pmclog_close(struct pmc_owner *po)
+{
 
-/*
- * Send a 'close log' event to the log file.
- */
+	PMCDBG(LOG,CLO,1, "po=%p", po);
+
+	mtx_lock(&pmc_kthread_mtx);
+
+	/*
+	 * Schedule the current buffer.
+	 */
+	mtx_lock_spin(&po->po_mtx);
+	if (po->po_curbuf)
+		pmclog_schedule_io(po);
+	else
+		wakeup_one(po);
+	mtx_unlock_spin(&po->po_mtx);
+
+	/*
+	 * Initiate shutdown: no new data queued,
+	 * thread will close file on last block.
+	 */
+	po->po_flags |= PMC_PO_SHUTDOWN;
+
+	mtx_unlock(&pmc_kthread_mtx);
+
+	return (0);
+}
+
+void
+pmclog_process_callchain(struct pmc *pm, struct pmc_sample *ps)
+{
+	int n, recordlen;
+	uint32_t flags;
+	struct pmc_owner *po;
+
+	PMCDBG(LOG,SAM,1,"pm=%p pid=%d n=%d", pm, ps->ps_pid,
+	    ps->ps_nsamples);
+
+	recordlen = offsetof(struct pmclog_callchain, pl_pc) +
+	    ps->ps_nsamples * sizeof(uintfptr_t);
+	po = pm->pm_owner;
+	flags = PMC_CALLCHAIN_TO_CPUFLAGS(ps->ps_cpu,ps->ps_flags);
+	PMCLOG_RESERVE(po, CALLCHAIN, recordlen);
+	PMCLOG_EMIT32(ps->ps_pid);
+	PMCLOG_EMIT32(pm->pm_id);
+	PMCLOG_EMIT32(flags);
+	for (n = 0; n < ps->ps_nsamples; n++)
+		PMCLOG_EMITADDR(ps->ps_pc[n]);
+	PMCLOG_DESPATCH(po);
+}
 
 void
 pmclog_process_closelog(struct pmc_owner *po)
@@ -761,37 +833,36 @@ pmclog_process_map_out(struct pmc_owner *po, pid_t pid, uintfptr_t start,
 }
 
 void
-pmclog_process_pcsample(struct pmc *pm, struct pmc_sample *ps)
-{
-	struct pmc_owner *po;
-
-	PMCDBG(LOG,SAM,1,"pm=%p pid=%d pc=%p", pm, ps->ps_pid,
-	    (void *) ps->ps_pc);
-
-	po = pm->pm_owner;
-
-	PMCLOG_RESERVE(po, PCSAMPLE, sizeof(struct pmclog_pcsample));
-	PMCLOG_EMIT32(ps->ps_pid);
-	PMCLOG_EMITADDR(ps->ps_pc);
-	PMCLOG_EMIT32(pm->pm_id);
-	PMCLOG_EMIT32(ps->ps_usermode);
-	PMCLOG_DESPATCH(po);
-}
-
-void
 pmclog_process_pmcallocate(struct pmc *pm)
 {
 	struct pmc_owner *po;
+	struct pmc_soft *ps;
 
 	po = pm->pm_owner;
 
 	PMCDBG(LOG,ALL,1, "pm=%p", pm);
 
-	PMCLOG_RESERVE(po, PMCALLOCATE, sizeof(struct pmclog_pmcallocate));
-	PMCLOG_EMIT32(pm->pm_id);
-	PMCLOG_EMIT32(pm->pm_event);
-	PMCLOG_EMIT32(pm->pm_flags);
-	PMCLOG_DESPATCH(po);
+	if (PMC_TO_CLASS(pm) == PMC_CLASS_SOFT) {
+		PMCLOG_RESERVE(po, PMCALLOCATEDYN,
+		    sizeof(struct pmclog_pmcallocatedyn));
+		PMCLOG_EMIT32(pm->pm_id);
+		PMCLOG_EMIT32(pm->pm_event);
+		PMCLOG_EMIT32(pm->pm_flags);
+		ps = pmc_soft_ev_acquire(pm->pm_event);
+		if (ps != NULL)
+			PMCLOG_EMITSTRING(ps->ps_ev.pm_ev_name,PMC_NAME_MAX);
+		else
+			PMCLOG_EMITNULLSTRING(PMC_NAME_MAX);
+		pmc_soft_ev_release(ps);
+		PMCLOG_DESPATCH(po);
+	} else {
+		PMCLOG_RESERVE(po, PMCALLOCATE,
+		    sizeof(struct pmclog_pmcallocate));
+		PMCLOG_EMIT32(pm->pm_id);
+		PMCLOG_EMIT32(pm->pm_event);
+		PMCLOG_EMIT32(pm->pm_flags);
+		PMCLOG_DESPATCH(po);
+	}
 }
 
 void
@@ -939,7 +1010,7 @@ pmclog_process_userlog(struct pmc_owner *po, struct pmc_op_writelog *wl)
 	PMCLOG_DESPATCH(po);
 
  error:
-	return error;
+	return (error);
 }
 
 /*
@@ -955,8 +1026,8 @@ pmclog_initialize()
 	struct pmclog_buffer *plb;
 
 	if (pmclog_buffer_size <= 0) {
-		(void) printf("hwpmc: tunable logbuffersize=%d must be greater "
-		    "than zero.\n", pmclog_buffer_size);
+		(void) printf("hwpmc: tunable logbuffersize=%d must be "
+		    "greater than zero.\n", pmclog_buffer_size);
 		pmclog_buffer_size = PMC_LOG_BUFFER_SIZE;
 	}
 
@@ -968,8 +1039,8 @@ pmclog_initialize()
 
 	/* create global pool of log buffers */
 	for (n = 0; n < pmc_nlogbuffers; n++) {
-		MALLOC(plb, struct pmclog_buffer *, 1024 * pmclog_buffer_size,
-		    M_PMC, M_ZERO|M_WAITOK);
+		plb = malloc(1024 * pmclog_buffer_size, M_PMC,
+		    M_WAITOK|M_ZERO);
 		PMCLOG_INIT_BUFFER_DESCRIPTOR(plb);
 		TAILQ_INSERT_HEAD(&pmc_bufferlist, plb, plb_next);
 	}
@@ -994,6 +1065,6 @@ pmclog_shutdown()
 
 	while ((plb = TAILQ_FIRST(&pmc_bufferlist)) != NULL) {
 		TAILQ_REMOVE(&pmc_bufferlist, plb, plb_next);
-		FREE(plb, M_PMC);
+		free(plb, M_PMC);
 	}
 }
