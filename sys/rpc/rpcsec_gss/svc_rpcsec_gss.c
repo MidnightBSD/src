@@ -57,11 +57,11 @@
   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-  $Id: svc_rpcsec_gss.c,v 1.1.1.1 2012-07-21 15:16:41 laffer1 Exp $
+  $Id: svc_rpcsec_gss.c,v 1.2 2013-01-05 20:24:00 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

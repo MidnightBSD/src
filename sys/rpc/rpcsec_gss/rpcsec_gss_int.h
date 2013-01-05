@@ -32,9 +32,9 @@
   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-  $Id: rpcsec_gss_int.h,v 1.1.1.1 2012-07-21 15:16:41 laffer1 Exp $
+  $Id: rpcsec_gss_int.h,v 1.2 2013-01-05 20:24:00 laffer1 Exp $
 */
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 #ifndef _RPCSEC_GSS_INT_H
 #define _RPCSEC_GSS_INT_H
