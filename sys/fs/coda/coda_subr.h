@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *
  *             Coda: an Experimental Distributed File System
@@ -28,7 +27,7 @@
  * Mellon the rights to redistribute these changes without encumbrance.
  *
  * 	@(#) src/sys/coda/coda_subr.h,v 1.1.1.1 1998/08/29 21:14:52 rvb Exp $
- * $FreeBSD: src/sys/fs/coda/coda_subr.h,v 1.10.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _CODA_SUBR_H_
@@ -36,7 +35,7 @@
 
 struct cnode	*coda_alloc(void);
 void		 coda_free(struct cnode *cp);
-struct cnode	*coda_find(CodaFid *fid);
+struct cnode	*coda_find(struct CodaFid *fid);
 void		 coda_flush(struct coda_mntinfo *mnt, enum dc_status dcstat);
 void		 coda_testflush(void);
 void		 coda_checkunmounting(struct mount *mp);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *             Coda: an Experimental Distributed File System
  *                              Release 3.1
@@ -43,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/fs/coda/coda_vnops.c,v 1.76.2.13.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -238,15 +237,15 @@ coda_open(struct vop_open_args *ap)
 	/*
 	 * Open the cache file.
 	 */
-	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
+	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 	error = VOP_OPEN(vp, flag, cred, td, NULL);
 	if (error) {
-		VOP_UNLOCK(vp, 0, td);
+		VOP_UNLOCK(vp, 0);
     		printf("coda_open: VOP_OPEN on container failed %d\n", error);
 		return (error);
 	}
 	(*vpp)->v_object = vp->v_object;
-	VOP_UNLOCK(vp, 0, td);
+	VOP_UNLOCK(vp, 0);
 	return (0);
 }
 
@@ -275,7 +274,7 @@ coda_close(struct vop_close_args *ap)
 		return (0);
 	}
 	if (cp->c_ovp) {
-		vn_lock(cp->c_ovp, LK_EXCLUSIVE | LK_RETRY, td);
+		vn_lock(cp->c_ovp, LK_EXCLUSIVE | LK_RETRY);
 		/* Do errors matter here? */
 		VOP_CLOSE(cp->c_ovp, flag, cred, td);
 		vput(cp->c_ovp);
@@ -332,7 +331,7 @@ coda_rdwr(struct vnode *vp, struct uio *uiop, enum uio_rw rw, int ioflag,
 	int error = 0;
 
 	MARK_ENTRY(CODA_RDWR_STATS);
-	CODADEBUG(CODA_RDWR, myprintf(("coda_rdwr(%d, %p, %d, %lld, %d)\n",
+	CODADEBUG(CODA_RDWR, myprintf(("coda_rdwr(%d, %p, %zd, %lld, %d)\n",
 	    rw, (void *)uiop->uio_iov->iov_base, uiop->uio_resid,
 	    (long long)uiop->uio_offset, uiop->uio_segflg)););
 
@@ -369,7 +368,7 @@ coda_rdwr(struct vnode *vp, struct uio *uiop, enum uio_rw rw, int ioflag,
 	 */
 	CODADEBUG(CODA_RDWR, myprintf(("indirect rdwr: fid = %s, refcnt = "
 	    "%d\n", coda_f2s(&cp->c_fid), CTOV(cp)->v_usecount)););
-	vn_lock(cfvp, LK_EXCLUSIVE | LK_RETRY, td);
+	vn_lock(cfvp, LK_EXCLUSIVE | LK_RETRY);
 	if (rw == UIO_READ) {
 		error = VOP_READ(cfvp, uiop, ioflag, cred);
 	} else {
@@ -383,11 +382,11 @@ coda_rdwr(struct vnode *vp, struct uio *uiop, enum uio_rw rw, int ioflag,
 		 */
 		{
 			struct vattr attr;
-			if (VOP_GETATTR(cfvp, &attr, cred, td) == 0)
+			if (VOP_GETATTR(cfvp, &attr, cred) == 0)
 				vnode_pager_setsize(vp, attr.va_size);
 		}
 	}
-	VOP_UNLOCK(cfvp, 0, td);
+	VOP_UNLOCK(cfvp, 0);
 	if (error)
 		MARK_INT_FAIL(CODA_RDWR_STATS);
 	else
@@ -472,7 +471,8 @@ coda_ioctl(struct vop_ioctl_args *ap)
 		    iap->path)););
 		return (EINVAL);
 	}
-	if (iap->vi.in_size > VC_MAXDATASIZE) {
+	if (iap->vi.in_size > VC_MAXDATASIZE ||
+	    iap->vi.out_size > VC_MAXDATASIZE) {
 		NDFREE(&ndp, 0);
 		return (EINVAL);
 	}
@@ -505,7 +505,6 @@ coda_getattr(struct vop_getattr_args *ap)
 	struct cnode *cp = VTOC(vp);
 	struct vattr *vap = ap->a_vap;
 	struct ucred *cred = ap->a_cred;
-	struct thread *td = ap->a_td;
 	/* locals */
     	struct vnode *convp;
 	int error, size;
@@ -534,7 +533,7 @@ coda_getattr(struct vop_getattr_args *ap)
 		MARK_INT_SAT(CODA_GETATTR_STATS);
 		return (0);
 	}
-    	error = venus_getattr(vtomi(vp), &cp->c_fid, cred, td->td_proc, vap);
+    	error = venus_getattr(vtomi(vp), &cp->c_fid, cred, vap);
 	if (!error) {
 		CODADEBUG(CODA_GETATTR, myprintf(("getattr miss %s: result "
 		    "%d\n", coda_f2s(&cp->c_fid), error)););
@@ -569,7 +568,6 @@ coda_setattr(struct vop_setattr_args *ap)
 	struct cnode *cp = VTOC(vp);
 	struct vattr *vap = ap->a_vap;
 	struct ucred *cred = ap->a_cred;
-	struct thread *td = ap->a_td;
 	/* locals */
     	struct vnode *convp;
 	int error, size;
@@ -585,7 +583,7 @@ coda_setattr(struct vop_setattr_args *ap)
 	}
 	if (codadebug & CODADBGMSK(CODA_SETATTR))
 		coda_print_vattr(vap);
-	error = venus_setattr(vtomi(vp), &cp->c_fid, vap, cred, td->td_proc);
+	error = venus_setattr(vtomi(vp), &cp->c_fid, vap, cred);
 	if (!error)
 		cp->c_flags &= ~(C_VATTR | C_ACCCACHE);
 
@@ -610,7 +608,7 @@ coda_access(struct vop_access_args *ap)
 	/* true args */
 	struct vnode *vp = ap->a_vp;
 	struct cnode *cp = VTOC(vp);
-	int mode = ap->a_mode;
+	accmode_t accmode = ap->a_accmode;
 	struct ucred *cred = ap->a_cred;
 	struct thread *td = ap->a_td;
 	/* locals */
@@ -627,7 +625,7 @@ coda_access(struct vop_access_args *ap)
 		 * Bogus hack - all will be marked as successes.
 		 */
 		MARK_INT_SAT(CODA_ACCESS_STATS);
-		return (((mode & VREAD) && !(mode & (VWRITE | VEXEC)))
+		return (((accmode & VREAD) && !(accmode & (VWRITE | VEXEC)))
 		    ? 0 : EACCES);
 	}
 
@@ -639,11 +637,11 @@ coda_access(struct vop_access_args *ap)
 	 */
 	if (coda_access_cache && VALID_ACCCACHE(cp) &&
 	    (cred->cr_uid == cp->c_cached_uid) &&
-	    (mode & cp->c_cached_mode) == mode) {
+	    (accmode & cp->c_cached_mode) == accmode) {
 		MARK_INT_SAT(CODA_ACCESS_STATS);
 		return (0);
 	}
-	error = venus_access(vtomi(vp), &cp->c_fid, mode, cred, td->td_proc);
+	error = venus_access(vtomi(vp), &cp->c_fid, accmode, cred, td->td_proc);
 	if (error == 0 && coda_access_cache) {
 		/*-
 		 * When we have a new successful request, we consider three
@@ -661,10 +659,10 @@ coda_access(struct vop_access_args *ap)
 		 */
 		cp->c_flags |= C_ACCCACHE;
 		if (cp->c_cached_uid != cred->cr_uid) {
-			cp->c_cached_mode = mode;
+			cp->c_cached_mode = accmode;
 			cp->c_cached_uid = cred->cr_uid;
 		} else
-			cp->c_cached_mode |= mode;
+			cp->c_cached_mode |= accmode;
 	}
 	return (error);
 }
@@ -755,9 +753,9 @@ coda_fsync(struct vop_fsync_args *ap)
 		return (0);
 	}
 	if (convp != NULL) {
-		vn_lock(convp, LK_EXCLUSIVE | LK_RETRY, td);
+		vn_lock(convp, LK_EXCLUSIVE | LK_RETRY);
 		VOP_FSYNC(convp, MNT_WAIT, td);
-		VOP_UNLOCK(convp, 0, td);
+		VOP_UNLOCK(convp, 0);
 	}
 
 	/*
@@ -875,7 +873,7 @@ coda_lookup(struct vop_cachedlookup_args *ap)
 	struct cnode *cp;
 	const char *nm = cnp->cn_nameptr;
 	int len = cnp->cn_namelen;
-	CodaFid VFid;
+	struct CodaFid VFid;
 	int vtype;
 	int error = 0;
 
@@ -964,24 +962,22 @@ exit:
 	 */
 	if (!error || (error == EJUSTRETURN)) {
 		if (cnp->cn_flags & ISDOTDOT) {
-			VOP_UNLOCK(dvp, 0, td);
+			VOP_UNLOCK(dvp, 0);
 			/*
 			 * The parent is unlocked.  As long as there is a
 			 * child, lock it without bothering to check anything
 			 * else.
 			 */
 			if (*ap->a_vpp)
-				vn_lock(*ap->a_vpp, LK_EXCLUSIVE | LK_RETRY,
-				    td);
-			vn_lock(dvp, LK_RETRY|LK_EXCLUSIVE, td);
+				vn_lock(*ap->a_vpp, LK_EXCLUSIVE | LK_RETRY);
+			vn_lock(dvp, LK_RETRY|LK_EXCLUSIVE);
 		} else {
 			/*
 			 * The parent is locked, and may be the same as the
 			 * child.  If different, go ahead and lock it.
 			 */
 			if (*ap->a_vpp && (*ap->a_vpp != dvp))
-				vn_lock(*ap->a_vpp, LK_EXCLUSIVE | LK_RETRY,
-				    td);
+				vn_lock(*ap->a_vpp, LK_EXCLUSIVE | LK_RETRY);
 		}
 	} else {
 		/*
@@ -1014,7 +1010,7 @@ coda_create(struct vop_create_args *ap)
 	struct cnode *cp;
 	const char *nm = cnp->cn_nameptr;
 	int len = cnp->cn_namelen;
-	CodaFid VFid;
+	struct CodaFid VFid;
 	struct vattr attr;
 
 	MARK_ENTRY(CODA_CREATE_STATS);
@@ -1075,7 +1071,7 @@ coda_create(struct vop_create_args *ap)
 		if (cnp->cn_flags & MAKEENTRY)
 			cache_enter(dvp, *vpp, cnp);
 		if (cnp->cn_flags & LOCKLEAF)
-			vn_lock(*ap->a_vpp, LK_EXCLUSIVE | LK_RETRY, td);
+			vn_lock(*ap->a_vpp, LK_EXCLUSIVE | LK_RETRY);
 	} else if (error == ENOENT) {
 		/*
 		 * XXXRW: We only enter a negative entry if ENOENT is
@@ -1283,7 +1279,7 @@ coda_mkdir(struct vop_mkdir_args *ap)
 	const char *nm = cnp->cn_nameptr;
 	int len = cnp->cn_namelen;
 	struct cnode *cp;
-	CodaFid VFid;
+	struct CodaFid VFid;
 	struct vattr ova;
 
 	MARK_ENTRY(CODA_MKDIR_STATS);
@@ -1328,7 +1324,7 @@ coda_mkdir(struct vop_mkdir_args *ap)
 		 * has changed.
 		 */
 		VTOC(dvp)->c_flags &= ~C_VATTR;
-		vn_lock(*vpp, LK_EXCLUSIVE | LK_RETRY, td);
+		vn_lock(*vpp, LK_EXCLUSIVE | LK_RETRY);
 		CODADEBUG( CODA_MKDIR, myprintf(("mkdir: %s result %d\n",
 		    coda_f2s(&VFid), error)););
 	} else {
@@ -1475,7 +1471,7 @@ coda_readdir(struct vop_readdir_args *ap)
 	int opened_internally = 0;
 
 	MARK_ENTRY(CODA_READDIR_STATS);
-	CODADEBUG(CODA_READDIR, myprintf(("coda_readdir(%p, %d, %lld, %d)\n",
+	CODADEBUG(CODA_READDIR, myprintf(("coda_readdir(%p, %zd, %lld, %d)\n",
 	    (void *)uiop->uio_iov->iov_base, uiop->uio_resid,
 	    (long long)uiop->uio_offset, uiop->uio_segflg)););
 
@@ -1511,10 +1507,10 @@ coda_readdir(struct vop_readdir_args *ap)
 	 */
 	CODADEBUG(CODA_READDIR, myprintf(("indirect readdir: fid = %s, "
 	    "refcnt = %d\n", coda_f2s(&cp->c_fid), vp->v_usecount)););
-	vn_lock(cp->c_ovp, LK_EXCLUSIVE | LK_RETRY, td);
+	vn_lock(cp->c_ovp, LK_SHARED | LK_RETRY);
 	error = VOP_READDIR(cp->c_ovp, uiop, cred, eofflag, ncookies,
 	    cookies);
-	VOP_UNLOCK(cp->c_ovp, 0, td);
+	VOP_UNLOCK(cp->c_ovp, 0);
 	if (error)
 		MARK_INT_FAIL(CODA_READDIR_STATS);
 	else
@@ -1553,9 +1549,6 @@ coda_reclaim(struct vop_reclaim_args *ap)
 				    "%p, cp %p\n", vp, cp);
 		}
 #endif
-	} else {
-		if (prtactive && vp->v_usecount != 0)
-			vprint("coda_reclaim: pushing active", vp);
 	}
 	cache_purge(vp);
 	coda_free(VTOC(vp));
@@ -1692,7 +1685,7 @@ coda_print_cred(struct ucred *cred)
  * coda_unsave.
  */
 struct cnode *
-make_coda_node(CodaFid *fid, struct mount *vfsp, short type)
+make_coda_node(struct CodaFid *fid, struct mount *vfsp, short type)
 {
 	struct cnode *cp;
 	struct vnode *vp;

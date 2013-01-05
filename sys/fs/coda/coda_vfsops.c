@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *             Coda: an Experimental Distributed File System
  *                              Release 3.1
@@ -43,11 +42,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/fs/coda/coda_vfsops.c,v 1.67.2.8.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/conf.h>
+#include <sys/fcntl.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
@@ -106,15 +106,15 @@ static const char *coda_opts[] = { "from", NULL };
  */
 /*ARGSUSED*/
 int
-coda_mount(struct mount *vfsp, struct thread *td)
+coda_mount(struct mount *vfsp)
 {
 	struct vnode *dvp;
 	struct cnode *cp;
 	struct cdev *dev;
 	struct coda_mntinfo *mi;
 	struct vnode *rootvp;
-	CodaFid rootfid = INVAL_FID;
-	CodaFid ctlfid = CTL_FID;
+	struct CodaFid rootfid = INVAL_FID;
+	struct CodaFid ctlfid = CTL_FID;
 	int error;
 	struct nameidata ndp;
 	ENTRY;
@@ -136,7 +136,7 @@ coda_mount(struct mount *vfsp, struct thread *td)
 	/*
 	 * Validate mount device.  Similar to getmdev().
 	 */
-	NDINIT(&ndp, LOOKUP, FOLLOW, UIO_SYSSPACE, from, td);
+	NDINIT(&ndp, LOOKUP, FOLLOW, UIO_SYSSPACE, from, curthread);
 	error = namei(&ndp);
 	dvp = ndp.ni_vp;
 	if (error) {
@@ -206,7 +206,7 @@ coda_mount(struct mount *vfsp, struct thread *td)
 }
 
 int
-coda_unmount(struct mount *vfsp, int mntflags, struct thread *td)
+coda_unmount(struct mount *vfsp, int mntflags)
 {
 	struct coda_mntinfo *mi = vftomi(vfsp);
 	int active, error = 0;
@@ -232,7 +232,7 @@ coda_unmount(struct mount *vfsp, int mntflags, struct thread *td)
 		vrele(coda_ctlvp);
 		coda_ctlvp = NULL;
 		active = coda_kill(vfsp, NOT_DOWNCALL);
-		error = vflush(mi->mi_vfsp, 0, FORCECLOSE, td);
+		error = vflush(mi->mi_vfsp, 0, FORCECLOSE, curthread);
 #ifdef CODA_VERBOSE
 		printf("coda_unmount: active = %d, vflush active %d\n",
 		    active, error);
@@ -262,19 +262,19 @@ coda_unmount(struct mount *vfsp, int mntflags, struct thread *td)
  * Find root of cfs.
  */
 int
-coda_root(struct mount *vfsp, int flags, struct vnode **vpp,
-     struct thread *td)
+coda_root(struct mount *vfsp, int flags, struct vnode **vpp)
 {
 	struct coda_mntinfo *mi = vftomi(vfsp);
-	struct vnode **result;
 	int error;
-	struct proc *p = td->td_proc;
-	CodaFid VFid;
-	static const CodaFid invalfid = INVAL_FID;
+	struct proc *p;
+	struct thread *td;
+	struct CodaFid VFid;
+	static const struct CodaFid invalfid = INVAL_FID;
 
+	td = curthread;
+	p = td->td_proc;
 	ENTRY;
 	MARK_ENTRY(CODA_ROOT_STATS);
-	result = NULL;
 	if (vfsp == mi->mi_vfsp) {
 		/*
 		 * Cache the root across calls.  We only need to pass the
@@ -288,7 +288,7 @@ coda_root(struct mount *vfsp, int flags, struct vnode **vpp,
 		 * but not in any released versions as of 6 Mar 2003.
 		 */
 		if (memcmp(&VTOC(mi->mi_rootvp)->c_fid, &invalfid,
-		    sizeof(CodaFid)) != 0 || mi->mi_started == 0) {
+		    sizeof(struct CodaFid)) != 0 || mi->mi_started == 0) {
 			/*
 			 * Found valid root.
 			 */
@@ -300,7 +300,7 @@ coda_root(struct mount *vfsp, int flags, struct vnode **vpp,
 			 * vn_lock.
 			 */
 			vref(*vpp);
-			vn_lock(*vpp, LK_EXCLUSIVE | LK_RETRY, td);
+			vn_lock(*vpp, LK_EXCLUSIVE | LK_RETRY);
 			MARK_INT_SAT(CODA_ROOT_STATS);
 			return (0);
 		}
@@ -317,7 +317,7 @@ coda_root(struct mount *vfsp, int flags, struct vnode **vpp,
 		coda_save(VTOC(mi->mi_rootvp));
 		*vpp = mi->mi_rootvp;
 		vref(*vpp);
-		vn_lock(*vpp, LK_EXCLUSIVE | LK_RETRY, td);
+		vn_lock(*vpp, LK_EXCLUSIVE | LK_RETRY);
 		MARK_INT_SAT(CODA_ROOT_STATS);
 	} else if (error == ENODEV || error == EINTR) {
 		/*
@@ -332,7 +332,7 @@ coda_root(struct mount *vfsp, int flags, struct vnode **vpp,
 		 */
 		*vpp = mi->mi_rootvp;
 		vref(*vpp);
-		vn_lock(*vpp, LK_EXCLUSIVE | LK_RETRY, td);
+		vn_lock(*vpp, LK_EXCLUSIVE | LK_RETRY);
 		MARK_INT_FAIL(CODA_ROOT_STATS);
 		error = 0;
 	} else {
@@ -347,7 +347,7 @@ coda_root(struct mount *vfsp, int flags, struct vnode **vpp,
  * Get filesystem statistics.
  */
 int
-coda_statfs(struct mount *vfsp, struct statfs *sbp, struct thread *td)
+coda_statfs(struct mount *vfsp, struct statfs *sbp)
 {
 
 	ENTRY;
@@ -379,7 +379,7 @@ coda_statfs(struct mount *vfsp, struct statfs *sbp, struct thread *td)
  * Flush any pending I/O.
  */
 int
-coda_sync(struct mount *vfsp, int waitfor, struct thread *td)
+coda_sync(struct mount *vfsp, int waitfor)
 {
 
 	ENTRY;
@@ -407,7 +407,7 @@ coda_fhtovp(struct mount *vfsp, struct fid *fhp, struct mbuf *nam,
 	int error;
 	struct thread *td = curthread; /* XXX -mach */
 	struct proc *p = td->td_proc;
-	CodaFid VFid;
+	struct CodaFid VFid;
 	int vtype;
 
 	ENTRY;

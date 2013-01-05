@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *
  *             Coda: an Experimental Distributed File System
@@ -28,7 +27,7 @@
  * Mellon the rights to redistribute these changes without encumbrance.
  *
  * 	@(#) src/sys/cfs/coda_vfsops.h,v 1.1.1.1 1998/08/29 21:14:52 rvb Exp $
- * $FreeBSD: src/sys/fs/coda/coda_vfsops.h,v 1.12.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _CODA_VFSOPS_H_
@@ -43,7 +42,7 @@
 struct cfid {
 	u_short	cfid_len;
 	u_short	padding;
-	CodaFid	cfid_fid;
+	struct CodaFid	cfid_fid;
 };
 
 struct mbuf;

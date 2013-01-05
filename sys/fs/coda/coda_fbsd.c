@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *             Coda: an Experimental Distributed File System
  *                              Release 3.1
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/fs/coda/coda_fbsd.c,v 1.46.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -128,7 +127,7 @@ coda_fbsd_clone(void *arg, struct ucred *cred, char *name, int namelen,
 		return;
 	if (dev_stdclone(name, NULL, "cfs", &u) != 1)
 		return;
-	*dev = make_dev(&codadevsw, unit2minor(u), UID_ROOT, GID_WHEEL, 0600,
+	*dev = make_dev(&codadevsw, u, UID_ROOT, GID_WHEEL, 0600,
 	    "cfs%d", u);
 	dev_ref(*dev);
 	mnt = malloc(sizeof(struct coda_mntinfo), M_CODA, M_WAITOK|M_ZERO);

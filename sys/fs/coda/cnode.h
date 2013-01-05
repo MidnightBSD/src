@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *
  *             Coda: an Experimental Distributed File System
@@ -28,7 +27,7 @@
  * Mellon the rights to redistribute these changes without encumbrance.
  *
  * 	@(#) src/sys/coda/cnode.h,v 1.1.1.1 1998/08/29 21:14:52 rvb Exp $
- * $FreeBSD: src/sys/fs/coda/cnode.h,v 1.21.2.8.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  *
  */
 
@@ -95,7 +94,7 @@ extern int coda_vfsop_print_entry;
 struct cnode {
 	struct vnode	*c_vnode;
 	u_short		 c_flags;	/* flags (see below) */
-	CodaFid		 c_fid;		/* file handle */
+	struct CodaFid	 c_fid;		/* file handle */
 	struct vnode	*c_ovp;		/* open vnode pointer */
 	u_short		 c_ocount;	/* count of openers */
 	u_short		 c_owrite;	/* count of open for write */
@@ -103,7 +102,7 @@ struct cnode {
 	char		*c_symlink;	/* pointer to symbolic link */
 	u_short		 c_symlen;	/* length of symbolic link */
 	uid_t		 c_cached_uid;	/* cached uid */
-	mode_t		 c_cached_mode;	/* cached access mode */
+	accmode_t	 c_cached_mode;	/* cached access mode */
 	struct cnode	*c_next;	/* links if on FreeBSD machine */
 };
 #define	VTOC(vp)	((struct cnode *)(vp)->v_data)
@@ -197,7 +196,8 @@ void	coda_unmounting(struct mount *whoIam);
 int	coda_vmflush(struct cnode *cp);
 
 /* cfs_vnodeops.h */
-struct cnode	*make_coda_node(CodaFid *fid, struct mount *vfsp, short type);
+struct cnode	*make_coda_node(struct CodaFid *fid, struct mount *vfsp,
+		 short type);
 int		 coda_vnodeopstats_init(void);
 
 /* sigh */

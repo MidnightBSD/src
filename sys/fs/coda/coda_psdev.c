@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *             Coda: an Experimental Distributed File System
  *                              Release 3.1
@@ -52,10 +51,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/fs/coda/coda_psdev.c,v 1.39.2.9.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/capability.h>
 #include <sys/conf.h>
 #include <sys/ioccom.h>
 #include <sys/kernel.h>
@@ -332,7 +332,7 @@ vc_write(struct cdev *dev, struct uio *uiop, int flag)
 	 * Get the rest of the data.
 	 */
 	if (vmp->vm_outSize < uiop->uio_resid) {
-		myprintf(("vcwrite: more data than asked for (%d < %d)\n",
+		myprintf(("vcwrite: more data than asked for (%d < %zd)\n",
 		    vmp->vm_outSize, uiop->uio_resid));
 
 		/*
@@ -372,7 +372,7 @@ vc_write(struct cdev *dev, struct uio *uiop, int flag)
 		struct vnode *vp = NULL;
 
 		if (tmp->oh.result == 0) {
-			error = getvnode(uiop->uio_td->td_proc->p_fd,
+			error = getvnode(uiop->uio_td->td_proc->p_fd, CAP_WRITE,
 			    tmp->fd, &fp);
 			if (!error) {
 				/*

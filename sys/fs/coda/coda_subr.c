@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *             Coda: an Experimental Distributed File System
  *                              Release 3.1
@@ -55,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/fs/coda/coda_subr.c,v 1.33.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -165,7 +164,7 @@ coda_unsave(struct cnode *cp)
  * NOTE: this allows multiple cnodes with same fid -- dcs 1/25/95
  */
 struct cnode *
-coda_find(CodaFid *fid)
+coda_find(struct CodaFid *fid)
 {
 	struct cnode *cp;
 
@@ -196,7 +195,7 @@ coda_acccache_purge(struct mount *mnt)
 				CODADEBUG(CODA_FLUSH, myprintf(("acccache "
 				    "purge fid %s uid %d mode 0x%x\n",
 				    coda_f2s(&cp->c_fid), cp->c_cached_uid,
-				    cp->c_cached_mode)););
+				    (int)cp->c_cached_mode)););
 				cp->c_flags &= ~C_ACCCACHE;
 			}
 		}
@@ -224,7 +223,7 @@ coda_acccache_purgeuser(struct mount *mnt, uid_t uid)
 				CODADEBUG(CODA_PURGEUSER, myprintf((
 				    "acccache purgeuser fid %s uid %d mode "
 				    "0x%x\n", coda_f2s(&cp->c_fid),
-				    cp->c_cached_uid, cp->c_cached_mode)););
+				    cp->c_cached_uid, (int)cp->c_cached_mode)););
 				cp->c_flags &= ~C_ACCCACHE;
 			}
 		}
@@ -366,13 +365,7 @@ coda_checkunmounting(struct mount *mp)
 	struct cnode *cp;
 	int count = 0, bad = 0;
 
-	MNT_ILOCK(mp);
-	MNT_VNODE_FOREACH(vp, mp, nvp) {
-		VI_LOCK(vp);
-		if (vp->v_iflag & VI_DOOMED) {
-			VI_UNLOCK(vp);
-			continue;
-		}
+	MNT_VNODE_FOREACH_ALL(vp, mp, nvp) {
 		cp = VTOC(vp);
 		count++;
 		if (!(cp->c_flags & C_UNMOUNTING)) {
@@ -382,7 +375,6 @@ coda_checkunmounting(struct mount *mp)
 		}
 		VI_UNLOCK(vp);
 	}
-	MNT_IUNLOCK(mp);
 }
 
 void
