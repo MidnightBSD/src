@@ -43315,7 +43315,6 @@ sys/cddl/contrib/opensolaris/uts/intel/dtrace/fasttrap_isa.c -text
 sys/cddl/contrib/opensolaris/uts/intel/sys/fasttrap_isa.h -text
 sys/cddl/contrib/opensolaris/uts/sparc/dtrace/fasttrap_isa.c -text
 sys/cddl/contrib/opensolaris/uts/sparc/sys/fasttrap_isa.h -text
-sys/cddl/dev/cyclic/amd64/cyclic_machdep.c -text
 sys/cddl/dev/cyclic/cyclic.c -text
 sys/cddl/dev/cyclic/cyclic_test.c -text
 sys/cddl/dev/cyclic/i386/cyclic_machdep.c -text
