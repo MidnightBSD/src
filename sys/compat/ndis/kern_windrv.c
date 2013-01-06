@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005
  *      Bill Paul <wpaul@windriver.com>.  All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/ndis/kern_windrv.c,v 1.14 2007/05/20 22:03:57 jeff Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -56,6 +55,8 @@ __FBSDID("$FreeBSD: src/sys/compat/ndis/kern_windrv.c,v 1.14 2007/05/20 22:03:57
 #ifdef __i386__
 #include <machine/segments.h>
 #endif
+
+#include <dev/usb/usb.h>
 
 #include <compat/ndis/pe_var.h>
 #include <compat/ndis/cfg_var.h>
@@ -93,7 +94,7 @@ windrv_libinit(void)
 {
 	STAILQ_INIT(&drvdb_head);
 	mtx_init(&drvdb_mtx, "Windows driver DB lock",
-           "Windows internal lock", MTX_DEF);
+	    "Windows internal lock", MTX_DEF);
 
 	/*
 	 * PCI and pccard devices don't need to use IRPs to
@@ -122,7 +123,7 @@ windrv_libinit(void)
 		panic("failed to allocate thread info blocks");
 	smp_rendezvous(NULL, x86_newldt, NULL, NULL);
 #endif
-	return(0);
+	return (0);
 }
 
 int
@@ -147,7 +148,7 @@ windrv_libfini(void)
 	smp_rendezvous(NULL, x86_oldldt, NULL, NULL);
 	ExFreePool(my_tids);
 #endif
-	return(0);
+	return (0);
 }
 
 /*
@@ -171,7 +172,7 @@ windrv_lookup(img, name)
 	if (name != NULL) {
 		RtlInitAnsiString(&as, name);
 		if (RtlAnsiStringToUnicodeString(&us, &as, TRUE))
-			return(NULL);
+			return (NULL);
 	}
 
 	mtx_lock(&drvdb_mtx); 
@@ -182,7 +183,7 @@ windrv_lookup(img, name)
 			mtx_unlock(&drvdb_mtx);
 			if (name != NULL)
 				ExFreePool(us.us_buf);
-			return(d->windrv_object);
+			return (d->windrv_object);
 		}
 	}
 	mtx_unlock(&drvdb_mtx);
@@ -190,7 +191,7 @@ windrv_lookup(img, name)
 	if (name != NULL)
 		RtlFreeUnicodeString(&us);
 
-	return(NULL);
+	return (NULL);
 }
 
 struct drvdb_ent *
@@ -208,12 +209,12 @@ windrv_match(matchfunc, ctx)
 		match = matchfunc(d->windrv_bustype, d->windrv_devlist, ctx);
 		if (match == TRUE) {
 			mtx_unlock(&drvdb_mtx);
-			return(d);
+			return (d);
 		}
 	}
 	mtx_unlock(&drvdb_mtx);
 
-	return(NULL);
+	return (NULL);
 }
 
 /*
@@ -282,9 +283,9 @@ windrv_unload(mod, img, len)
 		return (ENOENT);
 
 	if (drv == NULL)
-		return(ENOENT);
+		return (ENOENT);
 
-        /*
+	/*
 	 * Destroy any custom extensions that may have been added.
 	 */
 	drv = r->windrv_object;
@@ -305,10 +306,28 @@ windrv_unload(mod, img, len)
 	/* Free our DB handle */
 	free(r, M_DEVBUF);
 
-	return(0);
+	return (0);
 }
 
 #define WINDRV_LOADED		htonl(0x42534F44)
+
+#ifdef __amd64__
+static void
+patch_user_shared_data_address(vm_offset_t img, size_t len)
+{
+	unsigned long i, n, max_addr, *addr;
+
+	n = len - sizeof(unsigned long);
+	max_addr = KI_USER_SHARED_DATA + sizeof(kuser_shared_data);
+	for (i = 0; i < n; i++) {
+		addr = (unsigned long *)(img + i);
+		if (*addr >= KI_USER_SHARED_DATA && *addr < max_addr) {
+			*addr -= KI_USER_SHARED_DATA;
+			*addr += (unsigned long)&kuser_shared_data;
+		}
+	}
+}
+#endif
 
 /*
  * Loader routine for actual Windows driver modules, ultimately
@@ -339,31 +358,37 @@ windrv_load(mod, img, len, bustype, devlist, regvals)
 	 */
 
 	ptr = (uint32_t *)(img + 8);
-        if (*ptr == WINDRV_LOADED)
+	if (*ptr == WINDRV_LOADED)
 		goto skipreloc;
 
 	/* Perform text relocation */
 	if (pe_relocate(img))
-		return(ENOEXEC);
+		return (ENOEXEC);
 
 	/* Dynamically link the NDIS.SYS routines -- required. */
 	if (pe_patch_imports(img, "NDIS", ndis_functbl))
-		return(ENOEXEC);
+		return (ENOEXEC);
 
-	/* Dynamically link the HAL.dll routines -- also required. */
-	if (pe_patch_imports(img, "HAL", hal_functbl))
-		return(ENOEXEC);
+	/* Dynamically link the HAL.dll routines -- optional. */
+	if (pe_get_import_descriptor(img, &imp_desc, "HAL") == 0) {
+		if (pe_patch_imports(img, "HAL", hal_functbl))
+			return (ENOEXEC);
+	}
 
 	/* Dynamically link ntoskrnl.exe -- optional. */
 	if (pe_get_import_descriptor(img, &imp_desc, "ntoskrnl") == 0) {
 		if (pe_patch_imports(img, "ntoskrnl", ntoskrnl_functbl))
-			return(ENOEXEC);
+			return (ENOEXEC);
 	}
+
+#ifdef __amd64__
+	patch_user_shared_data_address(img, len);
+#endif
 
 	/* Dynamically link USBD.SYS -- optional */
 	if (pe_get_import_descriptor(img, &imp_desc, "USBD") == 0) {
 		if (pe_patch_imports(img, "USBD", usbd_functbl))
-			return(ENOEXEC);
+			return (ENOEXEC);
 	}
 
 	*ptr = WINDRV_LOADED;
@@ -386,7 +411,7 @@ skipreloc:
 		free (new, M_DEVBUF);
 		return (ENOMEM);
 	}
-	
+
 	/* Allocate a driver extension structure too. */
 
 	drv->dro_driverext = malloc(sizeof(driver_extension),
@@ -395,7 +420,7 @@ skipreloc:
 	if (drv->dro_driverext == NULL) {
 		free(new, M_DEVBUF);
 		free(drv, M_DEVBUF);
-		return(ENOMEM);
+		return (ENOMEM);
 	}
 
 	InitializeListHead((&drv->dro_driverext->dre_usrext));
@@ -407,7 +432,7 @@ skipreloc:
 	if (RtlAnsiStringToUnicodeString(&drv->dro_drivername, &as, TRUE)) {
 		free(new, M_DEVBUF);
 		free(drv, M_DEVBUF);
-		return(ENOMEM);
+		return (ENOMEM);
 	}
 
 	new->windrv_object = drv;
@@ -423,7 +448,7 @@ skipreloc:
 		RtlFreeUnicodeString(&drv->dro_drivername);
 		free(drv, M_DEVBUF);
 		free(new, M_DEVBUF);
-		return(ENODEV);
+		return (ENODEV);
 	}
 
 	mtx_lock(&drvdb_mtx); 
@@ -460,7 +485,7 @@ windrv_create_pdo(drv, bsddev)
 
 	dev->do_devext = bsddev;
 
-	return(STATUS_SUCCESS);
+	return (STATUS_SUCCESS);
 }
 
 void
@@ -479,8 +504,6 @@ windrv_destroy_pdo(drv, bsddev)
 	mtx_lock(&drvdb_mtx);
 	IoDeleteDevice(pdo);
 	mtx_unlock(&drvdb_mtx);
-
-	return;
 }
 
 /*
@@ -500,13 +523,13 @@ windrv_find_pdo(drv, bsddev)
 	while (pdo != NULL) {
 		if (pdo->do_devext == bsddev) {
 			mtx_unlock(&drvdb_mtx);
-			return(pdo);
+			return (pdo);
 		}
 		pdo = pdo->do_nextdev;
 	}
 	mtx_unlock(&drvdb_mtx);
 
-	return(NULL);
+	return (NULL);
 }
 
 /*
@@ -528,7 +551,10 @@ windrv_bus_attach(drv, name)
 
 	RtlInitAnsiString(&as, name);
 	if (RtlAnsiStringToUnicodeString(&drv->dro_drivername, &as, TRUE))
-		return(ENOMEM);
+	{
+		free(new, M_DEVBUF);
+		return (ENOMEM);
+	}
 
 	/*
 	 * Set up a fake image pointer to avoid false matches
@@ -540,11 +566,11 @@ windrv_bus_attach(drv, name)
 	new->windrv_devlist = NULL;
 	new->windrv_regvals = NULL;
 
-	mtx_lock(&drvdb_mtx); 
+	mtx_lock(&drvdb_mtx);
 	STAILQ_INSERT_HEAD(&drvdb_head, new, link);
 	mtx_unlock(&drvdb_mtx);
 
-	return(0);
+	return (0);
 }
 
 #ifdef __amd64__
@@ -572,7 +598,7 @@ windrv_wrap(func, wrap, argcnt, ftype)
 
 	p = malloc((wrapend - wrapstart), M_DEVBUF, M_NOWAIT);
 	if (p == NULL)
-		return(ENOMEM);
+		return (ENOMEM);
 
 	/* Copy over the code. */
 
@@ -585,7 +611,7 @@ windrv_wrap(func, wrap, argcnt, ftype)
 
 	*wrap = p;
 
-	return(0);
+	return (0);
 }
 #endif /* __amd64__ */
 
@@ -689,8 +715,6 @@ ctxsw_utow(void)
 	x86_critical_exit();
 
 	/* Now entering Windows land, population: you. */
-
-	return;
 }
 
 /*
@@ -716,48 +740,47 @@ ctxsw_wtou(void)
 	if (t->tid_cpu != curthread->td_oncpu)
 		panic("ctxsw GOT MOVED TO OTHER CPU!");
 #endif
-	return;
 }
 
 static int	windrv_wrap_stdcall(funcptr, funcptr *, int);
 static int	windrv_wrap_fastcall(funcptr, funcptr *, int);
 static int	windrv_wrap_regparm(funcptr, funcptr *);
 
-extern void     x86_fastcall_wrap(void);
-extern void     x86_fastcall_wrap_call(void);
-extern void     x86_fastcall_wrap_arg(void);
-extern void     x86_fastcall_wrap_end(void);
+extern void	x86_fastcall_wrap(void);
+extern void	x86_fastcall_wrap_call(void);
+extern void	x86_fastcall_wrap_arg(void);
+extern void	x86_fastcall_wrap_end(void);
 
 static int
 windrv_wrap_fastcall(func, wrap, argcnt)
-        funcptr                 func;
-        funcptr                 *wrap;
+	funcptr			func;
+	funcptr			*wrap;
 	int8_t			argcnt;
 {
-        funcptr                 p;
-        vm_offset_t             *calladdr;
+	funcptr			p;
+	vm_offset_t		*calladdr;
 	uint8_t			*argaddr;
-        vm_offset_t             wrapstart, wrapend, wrapcall, wraparg;
+	vm_offset_t		wrapstart, wrapend, wrapcall, wraparg;
 
-        wrapstart = (vm_offset_t)&x86_fastcall_wrap;
-        wrapend = (vm_offset_t)&x86_fastcall_wrap_end;
-        wrapcall = (vm_offset_t)&x86_fastcall_wrap_call;
-        wraparg = (vm_offset_t)&x86_fastcall_wrap_arg;
+	wrapstart = (vm_offset_t)&x86_fastcall_wrap;
+	wrapend = (vm_offset_t)&x86_fastcall_wrap_end;
+	wrapcall = (vm_offset_t)&x86_fastcall_wrap_call;
+	wraparg = (vm_offset_t)&x86_fastcall_wrap_arg;
 
-        /* Allocate a new wrapper instance. */
+	/* Allocate a new wrapper instance. */
 
-        p = malloc((wrapend - wrapstart), M_DEVBUF, M_NOWAIT);
-        if (p == NULL)
-                return(ENOMEM);
+	p = malloc((wrapend - wrapstart), M_DEVBUF, M_NOWAIT);
+	if (p == NULL)
+		return (ENOMEM);
 
-        /* Copy over the code. */
+	/* Copy over the code. */
 
 	bcopy((char *)wrapstart, p, (wrapend - wrapstart));
 
-        /* Insert the function address into the new wrapper instance. */
+	/* Insert the function address into the new wrapper instance. */
 
 	calladdr = (vm_offset_t *)((char *)p + ((wrapcall - wrapstart) + 1));
-        *calladdr = (vm_offset_t)func;
+	*calladdr = (vm_offset_t)func;
 
 	argcnt -= 2;
 	if (argcnt < 1)
@@ -766,125 +789,122 @@ windrv_wrap_fastcall(func, wrap, argcnt)
 	argaddr = (u_int8_t *)((char *)p + ((wraparg - wrapstart) + 1));
 	*argaddr = argcnt * sizeof(uint32_t);
 
-        *wrap = p;
+	*wrap = p;
 
-        return(0);
+	return (0);
 }
 
-extern void     x86_stdcall_wrap(void);
-extern void     x86_stdcall_wrap_call(void);
-extern void     x86_stdcall_wrap_arg(void);
-extern void     x86_stdcall_wrap_end(void);
+extern void	x86_stdcall_wrap(void);
+extern void	x86_stdcall_wrap_call(void);
+extern void	x86_stdcall_wrap_arg(void);
+extern void	x86_stdcall_wrap_end(void);
 
 static int
 windrv_wrap_stdcall(func, wrap, argcnt)
-        funcptr                 func;
-        funcptr                 *wrap;
+	funcptr			func;
+	funcptr			*wrap;
 	uint8_t			argcnt;
 {
-        funcptr                 p;
-        vm_offset_t             *calladdr;
+	funcptr			p;
+	vm_offset_t		*calladdr;
 	uint8_t			*argaddr;
-        vm_offset_t             wrapstart, wrapend, wrapcall, wraparg;
+	vm_offset_t		wrapstart, wrapend, wrapcall, wraparg;
 
-        wrapstart = (vm_offset_t)&x86_stdcall_wrap;
-        wrapend = (vm_offset_t)&x86_stdcall_wrap_end;
-        wrapcall = (vm_offset_t)&x86_stdcall_wrap_call;
-        wraparg = (vm_offset_t)&x86_stdcall_wrap_arg;
+	wrapstart = (vm_offset_t)&x86_stdcall_wrap;
+	wrapend = (vm_offset_t)&x86_stdcall_wrap_end;
+	wrapcall = (vm_offset_t)&x86_stdcall_wrap_call;
+	wraparg = (vm_offset_t)&x86_stdcall_wrap_arg;
 
-        /* Allocate a new wrapper instance. */
+	/* Allocate a new wrapper instance. */
 
-        p = malloc((wrapend - wrapstart), M_DEVBUF, M_NOWAIT);
-        if (p == NULL)
-                return(ENOMEM);
+	p = malloc((wrapend - wrapstart), M_DEVBUF, M_NOWAIT);
+	if (p == NULL)
+		return (ENOMEM);
 
-        /* Copy over the code. */
+	/* Copy over the code. */
 
 	bcopy((char *)wrapstart, p, (wrapend - wrapstart));
 
-        /* Insert the function address into the new wrapper instance. */
+	/* Insert the function address into the new wrapper instance. */
 
 	calladdr = (vm_offset_t *)((char *)p + ((wrapcall - wrapstart) + 1));
-        *calladdr = (vm_offset_t)func;
+	*calladdr = (vm_offset_t)func;
 
 	argaddr = (u_int8_t *)((char *)p + ((wraparg - wrapstart) + 1));
 	*argaddr = argcnt * sizeof(uint32_t);
 
-        *wrap = p;
+	*wrap = p;
 
-        return(0);
+	return (0);
 }
 
-extern void     x86_regparm_wrap(void);
-extern void     x86_regparm_wrap_call(void);
-extern void     x86_regparm_wrap_end(void);
+extern void	x86_regparm_wrap(void);
+extern void	x86_regparm_wrap_call(void);
+extern void	x86_regparm_wrap_end(void);
 
 static int
 windrv_wrap_regparm(func, wrap)
-        funcptr                 func;
-        funcptr                 *wrap;
+	funcptr			func;
+	funcptr			*wrap;
 {
-        funcptr                 p;
-        vm_offset_t             *calladdr;
-        vm_offset_t             wrapstart, wrapend, wrapcall;
+	funcptr			p;
+	vm_offset_t		*calladdr;
+	vm_offset_t		wrapstart, wrapend, wrapcall;
 
-        wrapstart = (vm_offset_t)&x86_regparm_wrap;
-        wrapend = (vm_offset_t)&x86_regparm_wrap_end;
-        wrapcall = (vm_offset_t)&x86_regparm_wrap_call;
+	wrapstart = (vm_offset_t)&x86_regparm_wrap;
+	wrapend = (vm_offset_t)&x86_regparm_wrap_end;
+	wrapcall = (vm_offset_t)&x86_regparm_wrap_call;
 
-        /* Allocate a new wrapper instance. */
+	/* Allocate a new wrapper instance. */
 
-        p = malloc((wrapend - wrapstart), M_DEVBUF, M_NOWAIT);
-        if (p == NULL)
-                return(ENOMEM);
+	p = malloc((wrapend - wrapstart), M_DEVBUF, M_NOWAIT);
+	if (p == NULL)
+		return (ENOMEM);
 
-        /* Copy over the code. */
+	/* Copy over the code. */
 
-        bcopy(x86_regparm_wrap, p, (wrapend - wrapstart));
+	bcopy(x86_regparm_wrap, p, (wrapend - wrapstart));
 
-        /* Insert the function address into the new wrapper instance. */
+	/* Insert the function address into the new wrapper instance. */
 
 	calladdr = (vm_offset_t *)((char *)p + ((wrapcall - wrapstart) + 1));
-        *calladdr = (vm_offset_t)func;
+	*calladdr = (vm_offset_t)func;
 
-        *wrap = p;
+	*wrap = p;
 
-        return(0);
+	return (0);
 }
 
 int
 windrv_wrap(func, wrap, argcnt, ftype)
-        funcptr                 func;
-        funcptr                 *wrap;
+	funcptr			func;
+	funcptr			*wrap;
 	int			argcnt;
 	int			ftype;
 {
 	switch(ftype) {
 	case WINDRV_WRAP_FASTCALL:
-		return(windrv_wrap_fastcall(func, wrap, argcnt));
+		return (windrv_wrap_fastcall(func, wrap, argcnt));
 	case WINDRV_WRAP_STDCALL:
-		return(windrv_wrap_stdcall(func, wrap, argcnt));
+		return (windrv_wrap_stdcall(func, wrap, argcnt));
 	case WINDRV_WRAP_REGPARM:
-		return(windrv_wrap_regparm(func, wrap));
+		return (windrv_wrap_regparm(func, wrap));
 	case WINDRV_WRAP_CDECL:
-		return(windrv_wrap_stdcall(func, wrap, 0));
+		return (windrv_wrap_stdcall(func, wrap, 0));
 	default:
 		break;
 	}
 
-	return(EINVAL);
+	return (EINVAL);
 }
 
 static void
 x86_oldldt(dummy)
 	void			*dummy;
 {
-	struct thread		*t;
 	struct x86desc		*gdt;
 	struct gdt		gtable;
 	uint16_t		ltable;
-
-	t = curthread;
 
 	mtx_lock_spin(&dt_lock);
 
@@ -906,8 +926,6 @@ x86_oldldt(dummy)
 	x86_setldt(&gtable, ltable);
 
 	mtx_unlock_spin(&dt_lock);
-
-	return;
 }
 
 static void
@@ -956,8 +974,6 @@ x86_newldt(dummy)
 	mtx_unlock_spin(&dt_lock);
 
 	/* Whew. */
-
-	return;
 }
 
 #endif /* __i386__ */
@@ -968,5 +984,5 @@ windrv_unwrap(func)
 {
 	free(func, M_DEVBUF);
 
-	return(0);
+	return (0);
 }

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003
  *	Bill Paul <wpaul@windriver.com>.  All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/ndis/subr_pe.c,v 1.13 2007/04/06 11:18:57 pjd Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * This file contains routines for relocating and dynamically linking
@@ -90,7 +89,7 @@ pe_get_dos_header(imgbase, hdr)
 
 	bcopy ((char *)imgbase, (char *)hdr, sizeof(image_dos_header));
 
-	return(0);
+	return (0);
 }
 
 /*
@@ -112,10 +111,10 @@ pe_is_nt_image(imgbase)
 		dos_hdr = (image_dos_header *)imgbase;
 		signature = *(uint32_t *)(imgbase + dos_hdr->idh_lfanew);
 		if (signature == IMAGE_NT_SIGNATURE)
-			return(0);
+			return (0);
 	}
 
-	return(ENOEXEC);
+	return (ENOEXEC);
 }
 
 /*
@@ -133,7 +132,7 @@ pe_get_optional_header(imgbase, hdr)
 	image_nt_header		*nt_hdr;
 
 	if (imgbase == 0 || hdr == NULL)
-		return(EINVAL);
+		return (EINVAL);
 
 	if (pe_is_nt_image(imgbase))
 		return (EINVAL);
@@ -144,7 +143,7 @@ pe_get_optional_header(imgbase, hdr)
 	bcopy ((char *)&nt_hdr->inh_optionalhdr, (char *)hdr,
 	    nt_hdr->inh_filehdr.ifh_optionalhdrlen);
 
-	return(0);
+	return (0);
 }
 
 /*
@@ -161,7 +160,7 @@ pe_get_file_header(imgbase, hdr)
 	image_nt_header		*nt_hdr;
 
 	if (imgbase == 0 || hdr == NULL)
-		return(EINVAL);
+		return (EINVAL);
 
 	if (pe_is_nt_image(imgbase))
 		return (EINVAL);
@@ -180,7 +179,7 @@ pe_get_file_header(imgbase, hdr)
 	bcopy ((char *)&nt_hdr->inh_filehdr, (char *)hdr,
 	    sizeof(image_file_header));
 
-	return(0);
+	return (0);
 }
 
 /*
@@ -198,7 +197,7 @@ pe_get_section_header(imgbase, hdr)
 	image_section_header	*sect_hdr;
 
 	if (imgbase == 0 || hdr == NULL)
-		return(EINVAL);
+		return (EINVAL);
 
 	if (pe_is_nt_image(imgbase))
 		return (EINVAL);
@@ -209,7 +208,7 @@ pe_get_section_header(imgbase, hdr)
 
 	bcopy ((char *)sect_hdr, (char *)hdr, sizeof(image_section_header));
 
-	return(0);
+	return (0);
 }
 
 /*
@@ -223,7 +222,7 @@ pe_numsections(imgbase)
 	image_file_header	file_hdr;
 
 	if (pe_get_file_header(imgbase, &file_hdr))
-		return(0);
+		return (0);
 
 	return (file_hdr.ifh_numsections);
 }
@@ -240,7 +239,7 @@ pe_imagebase(imgbase)
 	image_optional_header	optional_hdr;
 
 	if (pe_get_optional_header(imgbase, &optional_hdr))
-		return(0);
+		return (0);
 
 	return (optional_hdr.ioh_imagebase);
 }
@@ -259,14 +258,14 @@ pe_directory_offset(imgbase, diridx)
 	vm_offset_t		dir;
 
 	if (pe_get_optional_header(imgbase, &opt_hdr))
-		return(0);
+		return (0);
 
 	if (diridx >= opt_hdr.ioh_rva_size_cnt)
-		return(0);
+		return (0);
 
 	dir = opt_hdr.ioh_datadir[diridx].idd_vaddr;
 
-	return(pe_translate_addr(imgbase, dir));
+	return (pe_translate_addr(imgbase, dir));
 }
 
 vm_offset_t
@@ -281,7 +280,7 @@ pe_translate_addr(imgbase, rva)
 	int			i = 0, sections, fixedlen;
 
 	if (pe_get_optional_header(imgbase, &opt_hdr))
-		return(0);
+		return (0);
 
 	sections = pe_numsections(imgbase);
 
@@ -311,9 +310,9 @@ pe_translate_addr(imgbase, rva)
 	}
 
 	if (i > sections)
-		return(0);
+		return (0);
 
-	return((vm_offset_t)(imgbase + rva - sect_hdr->ish_vaddr +
+	return ((vm_offset_t)(imgbase + rva - sect_hdr->ish_vaddr +
 	    sect_hdr->ish_rawdataaddr));
 }
 
@@ -336,7 +335,7 @@ pe_get_section(imgbase, hdr, name)
 	int			i, sections;
 
 	if (imgbase == 0 || hdr == NULL)
-		return(EINVAL);
+		return (EINVAL);
 
 	if (pe_is_nt_image(imgbase))
 		return (EINVAL);
@@ -351,7 +350,7 @@ pe_get_section(imgbase, hdr, name)
 		if (!strcmp ((char *)&sect_hdr->ish_name, name)) {
 			bcopy((char *)sect_hdr, (char *)hdr,
 			    sizeof(image_section_header));
-			return(0);
+			return (0);
 		} else
 			sect_hdr++;
 	}
@@ -418,10 +417,10 @@ pe_relocate(imgbase)
 				    relhdr->ibr_vaddr + IMR_RELOFFSET(rel));
 				*qloc = pe_translate_addr(imgbase,
 				    (*qloc - base));
-                                break;
+				break;
 
 			default:
-				printf ("[%d]reloc type: %d\n",i,
+				printf("[%d]reloc type: %d\n",i,
 				    IMR_RELTYPE(rel));
 				break;
 			}
@@ -430,7 +429,7 @@ pe_relocate(imgbase)
 		    relhdr->ibr_blocksize);
 	} while (relhdr->ibr_blocksize);
 
-	return(0);
+	return (0);
 }
 
 /*
@@ -447,13 +446,13 @@ pe_get_import_descriptor(imgbase, desc, module)
 	vm_offset_t		imgbase;
 	image_import_descriptor	*desc;
 	char			*module;
-{	
+{
 	vm_offset_t		offset;
 	image_import_descriptor	*imp_desc;
 	char			*modname;
 
 	if (imgbase == 0 || module == NULL || desc == NULL)
-		return(EINVAL);
+		return (EINVAL);
 
 	offset = pe_directory_offset(imgbase, IMAGE_DIRECTORY_ENTRY_IMPORT);
 	if (offset == 0)
@@ -467,7 +466,7 @@ pe_get_import_descriptor(imgbase, desc, module)
 		if (!strncasecmp(module, modname, strlen(module))) {
 			bcopy((char *)imp_desc, (char *)desc,
 			    sizeof(image_import_descriptor));
-			return(0);
+			return (0);
 		}
 		imp_desc++;
 	}
@@ -487,7 +486,7 @@ pe_get_messagetable(imgbase, md)
 	int			i;
 
 	if (imgbase == 0)
-		return(EINVAL);
+		return (EINVAL);
 
 	offset = pe_directory_offset(imgbase, IMAGE_DIRECTORY_ENTRY_RESOURCE);
 	if (offset == 0)
@@ -515,10 +514,10 @@ pe_get_messagetable(imgbase, md)
 		    dent2->irde_dataoff);
 		*md = (message_resource_data *)pe_translate_addr(imgbase,
 		    rent->irde_offset);
-		return(0);
+		return (0);
 	}
 
-	return(ENOENT);
+	return (ENOENT);
 }
 
 int
@@ -537,7 +536,7 @@ pe_get_message(imgbase, id, str, len, flags)
 	pe_get_messagetable(imgbase, &md);
 
 	if (md == NULL)
-		return(ENOENT);
+		return (ENOENT);
 
 	mb = (message_resource_block *)((uintptr_t)md +
 	    sizeof(message_resource_data));
@@ -552,12 +551,12 @@ pe_get_message(imgbase, id, str, len, flags)
 			*str = me->mre_text;
 			*len = me->mre_len;
 			*flags = me->mre_flags;
-			return(0);
+			return (0);
 		}
 		mb++;
 	}
 
-	return(ENOENT);
+	return (ENOENT);
 }
 
 /*
@@ -574,16 +573,16 @@ pe_functbl_match(functbl, name)
 	image_patch_table	*p;
 
 	if (functbl == NULL || name == NULL)
-		return(0);
+		return (0);
 
 	p = functbl;
 
 	while (p->ipt_name != NULL) {
 		if (!strcmp(p->ipt_name, name))
-			return((vm_offset_t)p->ipt_wrap);
+			return ((vm_offset_t)p->ipt_wrap);
 		p++;
 	}
-	printf ("no match for %s\n", name);
+	printf("no match for %s\n", name);
 
 	/*
 	 * Return the wrapper pointer for this routine.
@@ -592,7 +591,7 @@ pe_functbl_match(functbl, name)
 	 * that does calling convention translation and
 	 * then invokes the underlying routine.
 	 */
-	return((vm_offset_t)p->ipt_wrap);
+	return ((vm_offset_t)p->ipt_wrap);
 }
 
 /*
@@ -616,10 +615,10 @@ pe_patch_imports(imgbase, module, functbl)
 	vm_offset_t		func;
 
 	if (imgbase == 0 || module == NULL || functbl == NULL)
-		return(EINVAL);
+		return (EINVAL);
 
 	if (pe_get_import_descriptor(imgbase, &imp_desc, module))
-		return(ENOEXEC);
+		return (ENOEXEC);
 
 	nptr = (vm_offset_t *)pe_translate_addr(imgbase,
 	    imp_desc.iid_import_name_table_addr);
@@ -633,11 +632,11 @@ pe_patch_imports(imgbase, module, functbl)
 			*fptr = func;
 #ifdef notdef
 		if (*fptr == 0)
-			return(ENOENT);
+			return (ENOENT);
 #endif
 		nptr++;
 		fptr++;
 	}
 
-	return(0);
+	return (0);
 }

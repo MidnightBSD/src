@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/ndis/winx32_wrap.S,v 1.5 2006/06/12 20:35:59 jhb Exp $
+ * $MidnightBSD$
  */
 
 /* The 'ret' macro doesn't work in this file if GPROF is enabled. */
@@ -369,7 +369,7 @@ ENTRY(x86_getfs)
 	ret
 
 ENTRY(x86_setfs)
-	movl	4(%esp),%fs
+	mov	4(%esp),%fs
 	ret
 
 ENTRY(x86_gettid)

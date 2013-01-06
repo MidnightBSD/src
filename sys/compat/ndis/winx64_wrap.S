@@ -32,7 +32,7 @@
  * The x86_64 callback routines were written and graciously submitted
  * by Ville-Pertti Keinonen <will@exomi.com>.
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #include <machine/asmacros.h>
