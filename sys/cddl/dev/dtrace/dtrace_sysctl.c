@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -19,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: src/sys/cddl/dev/dtrace/dtrace_sysctl.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  *
  */
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -19,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: src/sys/cddl/dev/dtrace/dtrace_load.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  *
  */
 
@@ -31,8 +30,8 @@ dtrace_ap_start(void *dummy)
 	mutex_enter(&cpu_lock);
 
 	/* Setup the rest of the CPUs. */
-	for (i = 1; i <= mp_maxid; i++) {
-		if (pcpu_find(i) == NULL)
+	CPU_FOREACH(i) {
+		if (i == 0)
 			continue;
 
 		(void) dtrace_cpu_setup(CPU_CONFIG, i);
@@ -155,7 +154,18 @@ dtrace_load(void *dummy)
 
 	mutex_exit(&cpu_lock);
 
-	dtrace_dev = make_dev(&dtrace_cdevsw, 0, UID_ROOT, GID_WHEEL, 0600, "dtrace/dtrace");
+#if __FreeBSD_version < 800039
+	/* Enable device cloning. */
+	clone_setup(&dtrace_clones);
+
+	/* Setup device cloning events. */
+	eh_tag = EVENTHANDLER_REGISTER(dev_clone, dtrace_clone, 0, 1000);
+#else
+	dtrace_dev = make_dev(&dtrace_cdevsw, 0, UID_ROOT, GID_WHEEL, 0600,
+	    "dtrace/dtrace");
+	helper_dev = make_dev(&helper_cdevsw, 0, UID_ROOT, GID_WHEEL, 0660,
+	    "dtrace/helper");
+#endif
 
 	return;
 }

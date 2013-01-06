@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: src/sys/cddl/dev/dtrace/i386/dtrace_subr.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  *
  */
 /*
@@ -31,6 +30,7 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/types.h>
+#include <sys/cpuset.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/kmem.h>
@@ -114,28 +114,15 @@ dtrace_toxic_ranges(void (*func)(uintptr_t base, uintptr_t limit))
 void
 dtrace_xcall(processorid_t cpu, dtrace_xcall_t func, void *arg)
 {
-	cpumask_t cpus;
-
-	critical_enter();
+	cpuset_t cpus;
 
 	if (cpu == DTRACE_CPUALL)
 		cpus = all_cpus;
 	else
-		cpus = (cpumask_t) (1 << cpu);
+		CPU_SETOF(cpu, &cpus);
 
-	/* If the current CPU is in the set, call the function directly: */
-	if ((cpus & (1 << curcpu)) != 0) {
-		(*func)(arg);
-
-		/* Mask the current CPU from the set */
-		cpus &= ~(1 << curcpu);
-	}
-
-	/* If there are any CPUs in the set, cross-call to those CPUs */
-	if (cpus != 0)
-		smp_rendezvous_cpus(cpus, NULL, func, smp_no_rendevous_barrier, arg);
-
-	critical_exit();
+	smp_rendezvous_cpus(cpus, smp_no_rendevous_barrier, func,
+	    smp_no_rendevous_barrier, arg);
 }
 
 static void
@@ -367,26 +354,10 @@ dtrace_safe_defer_signal(void)
 static int64_t	tgt_cpu_tsc;
 static int64_t	hst_cpu_tsc;
 static int64_t	tsc_skew[MAXCPU];
+static uint64_t	nsec_scale;
 
-static void
-dtrace_gethrtime_init_sync(void *arg)
-{
-#ifdef CHECK_SYNC
-	/*
-	 * Delay this function from returning on one
-	 * of the CPUs to check that the synchronisation
-	 * works.
-	 */
-	uintptr_t cpu = (uintptr_t) arg;
-
-	if (cpu == curcpu) {
-		int i;
-		for (i = 0; i < 1000000000; i++)
-			tgt_cpu_tsc = rdtsc();
-		tgt_cpu_tsc = 0;
-	}
-#endif
-}
+/* See below for the explanation of this macro. */
+#define SCALE_SHIFT	28
 
 static void
 dtrace_gethrtime_init_cpu(void *arg)
@@ -402,30 +373,56 @@ dtrace_gethrtime_init_cpu(void *arg)
 static void
 dtrace_gethrtime_init(void *arg)
 {
-	cpumask_t map;
+	cpuset_t map;
+	struct pcpu *pc;
+	uint64_t tsc_f;
 	int i;
-	struct pcpu *cp;
+
+	/*
+	 * Get TSC frequency known at this moment.
+	 * This should be constant if TSC is invariant.
+	 * Otherwise tick->time conversion will be inaccurate, but
+	 * will preserve monotonic property of TSC.
+	 */
+	tsc_f = atomic_load_acq_64(&tsc_freq);
+
+	/*
+	 * The following line checks that nsec_scale calculated below
+	 * doesn't overflow 32-bit unsigned integer, so that it can multiply
+	 * another 32-bit integer without overflowing 64-bit.
+	 * Thus minimum supported TSC frequency is 62.5MHz.
+	 */
+	KASSERT(tsc_f > (NANOSEC >> (32 - SCALE_SHIFT)), ("TSC frequency is too low"));
+
+	/*
+	 * We scale up NANOSEC/tsc_f ratio to preserve as much precision
+	 * as possible.
+	 * 2^28 factor was chosen quite arbitrarily from practical
+	 * considerations:
+	 * - it supports TSC frequencies as low as 62.5MHz (see above);
+	 * - it provides quite good precision (e < 0.01%) up to THz
+	 *   (terahertz) values;
+	 */
+	nsec_scale = ((uint64_t)NANOSEC << SCALE_SHIFT) / tsc_f;
 
 	/* The current CPU is the reference one. */
+	sched_pin();
 	tsc_skew[curcpu] = 0;
-
-	for (i = 0; i <= mp_maxid; i++) {
+	CPU_FOREACH(i) {
 		if (i == curcpu)
 			continue;
 
-		if ((cp = pcpu_find(i)) == NULL)
-			continue;
+		pc = pcpu_find(i);
+		CPU_SETOF(PCPU_GET(cpuid), &map);
+		CPU_SET(pc->pc_cpuid, &map);
 
-		map = 0;
-		map |= (1 << curcpu);
-		map |= (1 << i);
-
-		smp_rendezvous_cpus(map, dtrace_gethrtime_init_sync,
+		smp_rendezvous_cpus(map, NULL,
 		    dtrace_gethrtime_init_cpu,
 		    smp_no_rendevous_barrier, (void *)(uintptr_t) i);
 
 		tsc_skew[i] = tgt_cpu_tsc - hst_cpu_tsc;
 	}
+	sched_unpin();
 }
 
 SYSINIT(dtrace_gethrtime_init, SI_SUB_SMP, SI_ORDER_ANY, dtrace_gethrtime_init, NULL);
@@ -440,7 +437,21 @@ SYSINIT(dtrace_gethrtime_init, SI_SUB_SMP, SI_ORDER_ANY, dtrace_gethrtime_init, 
 uint64_t
 dtrace_gethrtime()
 {
-	return ((rdtsc() + tsc_skew[curcpu]) * (int64_t) 1000000000 / tsc_freq);
+	uint64_t tsc;
+	uint32_t lo;
+	uint32_t hi;
+
+	/*
+	 * We split TSC value into lower and higher 32-bit halves and separately
+	 * scale them with nsec_scale, then we scale them down by 2^28
+	 * (see nsec_scale calculations) taking into account 32-bit shift of
+	 * the higher half and finally add.
+	 */
+	tsc = rdtsc() + tsc_skew[curcpu];
+	lo = tsc;
+	hi = tsc >> 32;
+	return (((lo * nsec_scale) >> SCALE_SHIFT) +
+	    ((hi * nsec_scale) << (32 - SCALE_SHIFT)));
 }
 
 uint64_t
@@ -458,7 +469,7 @@ dtrace_trap(struct trapframe *frame, u_int type)
 	 * A trap can occur while DTrace executes a probe. Before
 	 * executing the probe, DTrace blocks re-scheduling and sets
 	 * a flag in it's per-cpu flags to indicate that it doesn't
-	 * want to fault. On returning from the the probe, the no-fault
+	 * want to fault. On returning from the probe, the no-fault
 	 * flag is cleared and finally re-scheduling is enabled.
 	 *
 	 * Check if DTrace has enabled 'no-fault' mode:

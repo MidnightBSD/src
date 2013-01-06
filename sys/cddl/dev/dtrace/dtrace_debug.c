@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2008 John Birrell <jb@freebsd.org>.
  * All rights reserved.
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * $FreeBSD: src/sys/cddl/dev/dtrace/dtrace_debug.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  *
  */
 
@@ -109,10 +108,7 @@ dtrace_debug_init(void *dummy)
 	int i;
 	struct dtrace_debug_data *d;
 
-	for (i = 0; i <= mp_maxid; i++) {
-		if (pcpu_find(i) == NULL)
-			continue;
-
+	CPU_FOREACH(i) {
 		d = &dtrace_debug_data[i];
 
 		if (d->first == NULL) {
@@ -135,10 +131,7 @@ dtrace_debug_output(void)
 	struct dtrace_debug_data *d;
 	uintptr_t count;
 
-	for (i = 0; i <= mp_maxid; i++) {
-		if (pcpu_find(i) == NULL)
-			continue;
-
+	CPU_FOREACH(i) {
 		dtrace_debug_lock(i);
 
 		d = &dtrace_debug_data[i];

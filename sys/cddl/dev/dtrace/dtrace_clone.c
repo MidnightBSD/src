@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2006 John Birrell <jb@freebsd.org>.
  * All rights reserved.
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * $FreeBSD: src/sys/cddl/dev/dtrace/dtrace_clone.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $MidnightBSD$
  *
  */
 
@@ -53,7 +52,7 @@ dtrace_clone(void *arg, struct ucred *cred, char *name, int namelen, struct cdev
 	/* Clone the device to the new minor number. */
 	if (clone_create(&dtrace_clones, &dtrace_cdevsw, &u, dev, 0) != 0)
 		/* Create the /dev/dtrace/dtraceNN entry. */
-		*dev = make_dev_cred(&dtrace_cdevsw, unit2minor(u), cred,
+		*dev = make_dev_cred(&dtrace_cdevsw, u, cred,
 		     UID_ROOT, GID_WHEEL, 0600, "dtrace/dtrace%d", u);
 	if (*dev != NULL) {
 		dev_ref(*dev);
