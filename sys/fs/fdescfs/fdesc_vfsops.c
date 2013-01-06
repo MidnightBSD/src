@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
  *
  *	@(#)fdesc_vfsops.c	8.4 (Berkeley) 1/21/94
  *
- * $FreeBSD: src/sys/fs/fdescfs/fdesc_vfsops.c,v 1.56 2007/04/04 09:11:32 rwatson Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -48,6 +47,7 @@
 #include <sys/malloc.h>
 #include <sys/mount.h>
 #include <sys/proc.h>
+#include <sys/racct.h>
 #include <sys/resourcevar.h>
 #include <sys/vnode.h>
 
@@ -65,7 +65,7 @@ static vfs_root_t	fdesc_root;
  * Compatibility shim for old mount(2) system call.
  */
 int
-fdesc_cmount(struct mntarg *ma, void *data, int flags, struct thread *td)
+fdesc_cmount(struct mntarg *ma, void *data, uint64_t flags)
 {
 	return kernel_mount(ma, flags);
 }
@@ -74,7 +74,7 @@ fdesc_cmount(struct mntarg *ma, void *data, int flags, struct thread *td)
  * Mount the per-process file descriptors (/dev/fd)
  */
 static int
-fdesc_mount(struct mount *mp, struct thread *td)
+fdesc_mount(struct mount *mp)
 {
 	int error = 0;
 	struct fdescmount *fmp;
@@ -86,18 +86,30 @@ fdesc_mount(struct mount *mp, struct thread *td)
 	if (mp->mnt_flag & (MNT_UPDATE | MNT_ROOTFS))
 		return (EOPNOTSUPP);
 
-	error = fdesc_allocvp(Froot, FD_ROOT, mp, &rvp, td);
-	if (error)
-		return (error);
-
-	MALLOC(fmp, struct fdescmount *, sizeof(struct fdescmount),
+	fmp = malloc(sizeof(struct fdescmount),
 				M_FDESCMNT, M_WAITOK);	/* XXX */
+
+	/*
+	 * We need to initialize a few bits of our local mount point struct to
+	 * avoid confusion in allocvp.
+	 */
+	mp->mnt_data = (qaddr_t) fmp;
+	fmp->flags = 0;
+	error = fdesc_allocvp(Froot, -1, FD_ROOT, mp, &rvp);
+	if (error) {
+		free(fmp, M_FDESCMNT);
+		mp->mnt_data = 0;
+		return (error);
+	}
 	rvp->v_type = VDIR;
 	rvp->v_vflag |= VV_ROOT;
 	fmp->f_root = rvp;
+	VOP_UNLOCK(rvp, 0);
 	/* XXX -- don't mark as local to work around fts() problems */
 	/*mp->mnt_flag |= MNT_LOCAL;*/
-	mp->mnt_data = (qaddr_t) fmp;
+	MNT_ILOCK(mp);
+	mp->mnt_kern_flag |= MNTK_MPSAFE;
+	MNT_IUNLOCK(mp);
 	vfs_getnewfsid(mp);
 
 	vfs_mountedfrom(mp, "fdescfs");
@@ -105,16 +117,23 @@ fdesc_mount(struct mount *mp, struct thread *td)
 }
 
 static int
-fdesc_unmount(mp, mntflags, td)
+fdesc_unmount(mp, mntflags)
 	struct mount *mp;
 	int mntflags;
-	struct thread *td;
 {
+	struct fdescmount *fmp;
+	caddr_t data;
 	int error;
 	int flags = 0;
 
-	if (mntflags & MNT_FORCE)
+	fmp = (struct fdescmount *)mp->mnt_data;
+	if (mntflags & MNT_FORCE) {
+		/* The hash mutex protects the private mount flags. */
+		mtx_lock(&fdesc_hashmtx);
+		fmp->flags |= FMNT_UNMOUNTF;
+		mtx_unlock(&fdesc_hashmtx);
 		flags |= FORCECLOSE;
+	}
 
 	/*
 	 * Clear out buffer cache.  I don't think we
@@ -124,24 +143,27 @@ fdesc_unmount(mp, mntflags, td)
 	 * There is 1 extra root vnode reference corresponding
 	 * to f_root.
 	 */
-	if ((error = vflush(mp, 1, flags, td)) != 0)
+	if ((error = vflush(mp, 1, flags, curthread)) != 0)
 		return (error);
 
 	/*
-	 * Finally, throw away the fdescmount structure
+	 * Finally, throw away the fdescmount structure. Hold the hashmtx to
+	 * protect the fdescmount structure.
 	 */
-	free(mp->mnt_data, M_FDESCMNT);	/* XXX */
+	mtx_lock(&fdesc_hashmtx);
+	data = mp->mnt_data;
 	mp->mnt_data = 0;
+	mtx_unlock(&fdesc_hashmtx);
+	free(data, M_FDESCMNT);	/* XXX */
 
 	return (0);
 }
 
 static int
-fdesc_root(mp, flags, vpp, td)
+fdesc_root(mp, flags, vpp)
 	struct mount *mp;
 	int flags;
 	struct vnode **vpp;
-	struct thread *td;
 {
 	struct vnode *vp;
 
@@ -149,23 +171,25 @@ fdesc_root(mp, flags, vpp, td)
 	 * Return locked reference to root.
 	 */
 	vp = VFSTOFDESC(mp)->f_root;
-	VREF(vp);
-	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
+	vget(vp, LK_EXCLUSIVE | LK_RETRY, curthread);
 	*vpp = vp;
 	return (0);
 }
 
 static int
-fdesc_statfs(mp, sbp, td)
+fdesc_statfs(mp, sbp)
 	struct mount *mp;
 	struct statfs *sbp;
-	struct thread *td;
 {
+	struct thread *td;
 	struct filedesc *fdp;
 	int lim;
 	int i;
 	int last;
 	int freefd;
+	uint64_t limit;
+
+	td = curthread;
 
 	/*
 	 * Compute number of free file descriptors.
@@ -178,6 +202,9 @@ fdesc_statfs(mp, sbp, td)
 	PROC_UNLOCK(td->td_proc);
 	fdp = td->td_proc->p_fd;
 	FILEDESC_SLOCK(fdp);
+	limit = racct_get_limit(td->td_proc, RACCT_NOFILE);
+	if (lim > limit)
+		lim = limit;
 	last = min(fdp->fd_nfiles, lim);
 	freefd = 0;
 	for (i = fdp->fd_freefile; i < last; i++)
@@ -209,6 +236,7 @@ static struct vfsops fdesc_vfsops = {
 	.vfs_mount =		fdesc_mount,
 	.vfs_root =		fdesc_root,
 	.vfs_statfs =		fdesc_statfs,
+	.vfs_uninit =		fdesc_uninit,
 	.vfs_unmount =		fdesc_unmount,
 };
 

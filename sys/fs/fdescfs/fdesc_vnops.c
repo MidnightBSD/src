@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/fs/fdescfs/fdesc_vnops.c,v 1.4 2008/12/03 00:25:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
  *
  *	@(#)fdesc_vnops.c	8.9 (Berkeley) 1/21/94
  *
- * $FreeBSD: src/sys/fs/fdescfs/fdesc_vnops.c,v 1.104 2007/04/04 09:11:32 rwatson Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -41,6 +40,7 @@
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/capability.h>
 #include <sys/conf.h>
 #include <sys/dirent.h>
 #include <sys/filedesc.h>
@@ -57,18 +57,15 @@
 
 #include <fs/fdescfs/fdesc.h>
 
-#define FDL_WANT	0x01
-#define FDL_LOCKED	0x02
-static int fdcache_lock;
-
 #define	NFDCACHE 4
 #define FD_NHASH(ix) \
 	(&fdhashtbl[(ix) & fdhash])
 static LIST_HEAD(fdhashhead, fdescnode) *fdhashtbl;
 static u_long fdhash;
 
+struct mtx fdesc_hashmtx;
+
 static vop_getattr_t	fdesc_getattr;
-static vop_inactive_t	fdesc_inactive;
 static vop_lookup_t	fdesc_lookup;
 static vop_open_t	fdesc_open;
 static vop_readdir_t	fdesc_readdir;
@@ -80,7 +77,6 @@ static struct vop_vector fdesc_vnodeops = {
 
 	.vop_access =		VOP_NULL,
 	.vop_getattr =		fdesc_getattr,
-	.vop_inactive =		fdesc_inactive,
 	.vop_lookup =		fdesc_lookup,
 	.vop_open =		fdesc_open,
 	.vop_pathconf =		vop_stdpathconf,
@@ -88,6 +84,9 @@ static struct vop_vector fdesc_vnodeops = {
 	.vop_reclaim =		fdesc_reclaim,
 	.vop_setattr =		fdesc_setattr,
 };
+
+static void fdesc_insmntque_dtr(struct vnode *, void *);
+static void fdesc_remove_entry(struct fdescnode *);
 
 /*
  * Initialise cache headers
@@ -97,79 +96,155 @@ fdesc_init(vfsp)
 	struct vfsconf *vfsp;
 {
 
+	mtx_init(&fdesc_hashmtx, "fdescfs_hash", NULL, MTX_DEF);
 	fdhashtbl = hashinit(NFDCACHE, M_CACHE, &fdhash);
 	return (0);
 }
 
+/*
+ * Uninit ready for unload.
+ */
 int
-fdesc_allocvp(ftype, ix, mp, vpp, td)
+fdesc_uninit(vfsp)
+	struct vfsconf *vfsp;
+{
+
+	hashdestroy(fdhashtbl, M_CACHE, fdhash);
+	mtx_destroy(&fdesc_hashmtx);
+	return (0);
+}
+
+/*
+ * If allocating vnode fails, call this.
+ */
+static void
+fdesc_insmntque_dtr(struct vnode *vp, void *arg)
+{
+
+	vgone(vp);
+	vput(vp);
+}
+
+/*
+ * Remove an entry from the hash if it exists.
+ */
+static void
+fdesc_remove_entry(struct fdescnode *fd)
+{
+	struct fdhashhead *fc;
+	struct fdescnode *fd2;
+
+	fc = FD_NHASH(fd->fd_ix);
+	mtx_lock(&fdesc_hashmtx);
+	LIST_FOREACH(fd2, fc, fd_hash) {
+		if (fd == fd2) {
+			LIST_REMOVE(fd, fd_hash);
+			break;
+		}
+	}
+	mtx_unlock(&fdesc_hashmtx);
+}
+
+int
+fdesc_allocvp(ftype, fd_fd, ix, mp, vpp)
 	fdntype ftype;
+	unsigned fd_fd;
 	int ix;
 	struct mount *mp;
 	struct vnode **vpp;
-	struct thread *td;
 {
+	struct fdescmount *fmp;
 	struct fdhashhead *fc;
-	struct fdescnode *fd;
+	struct fdescnode *fd, *fd2;
+	struct vnode *vp, *vp2;
+	struct thread *td;
 	int error = 0;
 
+	td = curthread;
 	fc = FD_NHASH(ix);
 loop:
+	mtx_lock(&fdesc_hashmtx);
+	/*
+	 * If a forced unmount is progressing, we need to drop it. The flags are
+	 * protected by the hashmtx.
+	 */
+	fmp = (struct fdescmount *)mp->mnt_data;
+	if (fmp == NULL || fmp->flags & FMNT_UNMOUNTF) {
+		mtx_unlock(&fdesc_hashmtx);
+		return (-1);
+	}
+
 	LIST_FOREACH(fd, fc, fd_hash) {
 		if (fd->fd_ix == ix && fd->fd_vnode->v_mount == mp) {
-			if (vget(fd->fd_vnode, 0, td))
+			/* Get reference to vnode in case it's being free'd */
+			vp = fd->fd_vnode;
+			VI_LOCK(vp);
+			mtx_unlock(&fdesc_hashmtx);
+			if (vget(vp, LK_EXCLUSIVE | LK_INTERLOCK, td))
 				goto loop;
-			*vpp = fd->fd_vnode;
+			*vpp = vp;
+			return (0);
+		}
+	}
+	mtx_unlock(&fdesc_hashmtx);
+
+	fd = malloc(sizeof(struct fdescnode), M_TEMP, M_WAITOK);
+
+	error = getnewvnode("fdescfs", mp, &fdesc_vnodeops, &vp);
+	if (error) {
+		free(fd, M_TEMP);
+		return (error);
+	}
+	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
+	vp->v_data = fd;
+	fd->fd_vnode = vp;
+	fd->fd_type = ftype;
+	fd->fd_fd = fd_fd;
+	fd->fd_ix = ix;
+	error = insmntque1(vp, mp, fdesc_insmntque_dtr, NULL);
+	if (error != 0) {
+		*vpp = NULLVP;
+		return (error);
+	}
+
+	/* Make sure that someone didn't beat us when inserting the vnode. */
+	mtx_lock(&fdesc_hashmtx);
+	/*
+	 * If a forced unmount is progressing, we need to drop it. The flags are
+	 * protected by the hashmtx.
+	 */
+	fmp = (struct fdescmount *)mp->mnt_data;
+	if (fmp == NULL || fmp->flags & FMNT_UNMOUNTF) {
+		mtx_unlock(&fdesc_hashmtx);
+		vgone(vp);
+		vput(vp);
+		*vpp = NULLVP;
+		return (-1);
+	}
+
+	LIST_FOREACH(fd2, fc, fd_hash) {
+		if (fd2->fd_ix == ix && fd2->fd_vnode->v_mount == mp) {
+			/* Get reference to vnode in case it's being free'd */
+			vp2 = fd2->fd_vnode;
+			VI_LOCK(vp2);
+			mtx_unlock(&fdesc_hashmtx);
+			error = vget(vp2, LK_EXCLUSIVE | LK_INTERLOCK, td);
+			/* Someone beat us, dec use count and wait for reclaim */
+			vgone(vp);
+			vput(vp);
+			/* If we didn't get it, return no vnode. */
+			if (error)
+				vp2 = NULLVP;
+			*vpp = vp2;
 			return (error);
 		}
 	}
 
-	/*
-	 * otherwise lock the array while we call getnewvnode
-	 * since that can block.
-	 */
-	if (fdcache_lock & FDL_LOCKED) {
-		fdcache_lock |= FDL_WANT;
-		(void) tsleep( &fdcache_lock, PINOD, "fdalvp", 0);
-		goto loop;
-	}
-	fdcache_lock |= FDL_LOCKED;
-
-	/*
-	 * Do the MALLOC before the getnewvnode since doing so afterward
-	 * might cause a bogus v_data pointer to get dereferenced
-	 * elsewhere if MALLOC should block.
-	 */
-	MALLOC(fd, struct fdescnode *, sizeof(struct fdescnode), M_TEMP, M_WAITOK);
-
-	error = getnewvnode("fdesc", mp, &fdesc_vnodeops, vpp);
-	if (error) {
-		FREE(fd, M_TEMP);
-		goto out;
-	}
-	(*vpp)->v_data = fd;
-	fd->fd_vnode = *vpp;
-	fd->fd_type = ftype;
-	fd->fd_fd = -1;
-	fd->fd_ix = ix;
-	/* XXX: vnode should be locked here */
-	error = insmntque(*vpp, mp); /* XXX: Too early for mpsafe fs */
-	if (error != 0) {
-		free(fd, M_TEMP);
-		*vpp = NULLVP;
-		goto out;
-	}
+	/* If we came here, we can insert it safely. */
 	LIST_INSERT_HEAD(fc, fd, fd_hash);
-
-out:
-	fdcache_lock &= ~FDL_LOCKED;
-
-	if (fdcache_lock & FDL_WANT) {
-		fdcache_lock &= ~FDL_WANT;
-		wakeup( &fdcache_lock);
-	}
-
-	return (error);
+	mtx_unlock(&fdesc_hashmtx);
+	*vpp = vp;
+	return (0);
 }
 
 /*
@@ -191,7 +266,7 @@ fdesc_lookup(ap)
 	struct thread *td = cnp->cn_thread;
 	struct file *fp;
 	int nlen = cnp->cn_namelen;
-	u_int fd;
+	u_int fd, fd1;
 	int error;
 	struct vnode *fvp;
 
@@ -223,19 +298,57 @@ fdesc_lookup(ap)
 			error = ENOENT;
 			goto bad;
 		}
-		fd = 10 * fd + *pname++ - '0';
+		fd1 = 10 * fd + *pname++ - '0';
+		if (fd1 < fd) {
+			error = ENOENT;
+			goto bad;
+		}
+		fd = fd1;
 	}
 
-	if ((error = fget(td, fd, &fp)) != 0)
+	/*
+	 * No rights to check since 'fp' isn't actually used.
+	 */
+	if ((error = fget(td, fd, 0, &fp)) != 0)
 		goto bad;
 
-	error = fdesc_allocvp(Fdesc, FD_DESC+fd, dvp->v_mount, &fvp, td);
-	fdrop(fp, td);
+	/* Check if we're looking up ourselves. */
+	if (VTOFDESC(dvp)->fd_ix == FD_DESC + fd) {
+		/*
+		 * In case we're holding the last reference to the file, the dvp
+		 * will be re-acquired.
+		 */
+		vhold(dvp);
+		VOP_UNLOCK(dvp, 0);
+		fdrop(fp, td);
+
+		/* Re-aquire the lock afterwards. */
+		vn_lock(dvp, LK_RETRY | LK_EXCLUSIVE);
+		vdrop(dvp);
+		fvp = dvp;
+	} else {
+		/*
+		 * Unlock our root node (dvp) when doing this, since we might
+		 * deadlock since the vnode might be locked by another thread
+		 * and the root vnode lock will be obtained afterwards (in case
+		 * we're looking up the fd of the root vnode), which will be the
+		 * opposite lock order. Vhold the root vnode first so we don't
+		 * loose it.
+		 */
+		vhold(dvp);
+		VOP_UNLOCK(dvp, 0);
+		error = fdesc_allocvp(Fdesc, fd, FD_DESC + fd, dvp->v_mount,
+		    &fvp);
+		fdrop(fp, td);
+		/*
+		 * The root vnode must be locked last to prevent deadlock condition.
+		 */
+		vn_lock(dvp, LK_RETRY | LK_EXCLUSIVE);
+		vdrop(dvp);
+	}
+	
 	if (error)
 		goto bad;
-	VTOFDESC(fvp)->fd_fd = fd;
-	if (fvp != dvp)
-		vn_lock(fvp, LK_EXCLUSIVE | LK_RETRY, td);
 	*vpp = fvp;
 	return (0);
 
@@ -259,7 +372,7 @@ fdesc_open(ap)
 		return (0);
 
 	/*
-	 * XXX Kludge: set td->td_proc->p_dupfd to contain the value of the the file
+	 * XXX Kludge: set td->td_proc->p_dupfd to contain the value of the file
 	 * descriptor being sought for duplication. The error return ensures
 	 * that the vnode for this device will be released by vn_open. Open
 	 * will detect this special error and take the actions in dupfdopen.
@@ -276,84 +389,38 @@ fdesc_getattr(ap)
 		struct vnode *a_vp;
 		struct vattr *a_vap;
 		struct ucred *a_cred;
-		struct thread *a_td;
 	} */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
 	struct vattr *vap = ap->a_vap;
-	struct file *fp;
-	struct stat stb;
-	u_int fd;
-	int error = 0;
+
+	vap->va_mode = S_IRUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH;
+	vap->va_fileid = VTOFDESC(vp)->fd_ix;
+	vap->va_uid = 0;
+	vap->va_gid = 0;
+	vap->va_blocksize = DEV_BSIZE;
+	vap->va_atime.tv_sec = boottime.tv_sec;
+	vap->va_atime.tv_nsec = 0;
+	vap->va_mtime = vap->va_atime;
+	vap->va_ctime = vap->va_mtime;
+	vap->va_gen = 0;
+	vap->va_flags = 0;
+	vap->va_bytes = 0;
+	vap->va_filerev = 0;
 
 	switch (VTOFDESC(vp)->fd_type) {
 	case Froot:
-		VATTR_NULL(vap);
-
-		vap->va_mode = S_IRUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH;
 		vap->va_type = VDIR;
 		vap->va_nlink = 2;
 		vap->va_size = DEV_BSIZE;
-		vap->va_fileid = VTOFDESC(vp)->fd_ix;
-		vap->va_uid = 0;
-		vap->va_gid = 0;
-		vap->va_blocksize = DEV_BSIZE;
-		vap->va_atime.tv_sec = boottime.tv_sec;
-		vap->va_atime.tv_nsec = 0;
-		vap->va_mtime = vap->va_atime;
-		vap->va_ctime = vap->va_mtime;
-		vap->va_gen = 0;
-		vap->va_flags = 0;
-		vap->va_rdev = 0;
-		vap->va_bytes = 0;
+		vap->va_rdev = NODEV;
 		break;
 
 	case Fdesc:
-		fd = VTOFDESC(vp)->fd_fd;
-
-		if ((error = fget(ap->a_td, fd, &fp)) != 0)
-			return (error);
-
-		bzero(&stb, sizeof(stb));
-		error = fo_stat(fp, &stb, ap->a_td->td_ucred, ap->a_td);
-		fdrop(fp, ap->a_td);
-		if (error == 0) {
-			VATTR_NULL(vap);
-			vap->va_type = IFTOVT(stb.st_mode);
-			vap->va_mode = stb.st_mode;
-#define FDRX (VREAD|VEXEC)
-			if (vap->va_type == VDIR)
-				vap->va_mode &= ~((FDRX)|(FDRX>>3)|(FDRX>>6));
-#undef FDRX
-			vap->va_nlink = 1;
-			vap->va_flags = 0;
-			vap->va_bytes = stb.st_blocks * stb.st_blksize;
-			vap->va_fileid = VTOFDESC(vp)->fd_ix;
-			vap->va_size = stb.st_size;
-			vap->va_blocksize = stb.st_blksize;
-			vap->va_rdev = stb.st_rdev;
-
-			/*
-			 * If no time data is provided, use the current time.
-			 */
-			if (stb.st_atim.tv_sec == 0 &&
-			    stb.st_atim.tv_nsec == 0)
-				nanotime(&stb.st_atim);
-
-			if (stb.st_ctim.tv_sec == 0 &&
-			    stb.st_ctim.tv_nsec == 0)
-				nanotime(&stb.st_ctim);
-
-			if (stb.st_mtim.tv_sec == 0 &&
-			    stb.st_mtim.tv_nsec == 0)
-				nanotime(&stb.st_mtim);
-
-			vap->va_atime = stb.st_atim;
-			vap->va_mtime = stb.st_mtim;
-			vap->va_ctime = stb.st_ctim;
-			vap->va_uid = stb.st_uid;
-			vap->va_gid = stb.st_gid;
-		}
+		vap->va_type = VCHR;
+		vap->va_nlink = 1;
+		vap->va_size = 0;
+		vap->va_rdev = makedev(0, vap->va_fileid);
 		break;
 
 	default:
@@ -361,9 +428,8 @@ fdesc_getattr(ap)
 		break;
 	}
 
-	if (error == 0)
-		vp->v_type = vap->va_type;
-	return (error);
+	vp->v_type = vap->va_type;
+	return (0);
 }
 
 static int
@@ -372,13 +438,13 @@ fdesc_setattr(ap)
 		struct vnode *a_vp;
 		struct vattr *a_vap;
 		struct ucred *a_cred;
-		struct thread *a_td;
 	} */ *ap;
 {
 	struct vattr *vap = ap->a_vap;
 	struct vnode *vp;
 	struct mount *mp;
 	struct file *fp;
+	struct thread *td = curthread;
 	unsigned fd;
 	int error;
 
@@ -393,7 +459,7 @@ fdesc_setattr(ap)
 	/*
 	 * Allow setattr where there is an underlying vnode.
 	 */
-	error = getvnode(ap->a_td->td_proc->p_fd, fd, &fp);
+	error = getvnode(td->td_proc->p_fd, fd, CAP_EXTATTR_SET, &fp);
 	if (error) {
 		/*
 		 * getvnode() returns EINVAL if the file descriptor is not
@@ -410,12 +476,12 @@ fdesc_setattr(ap)
 	}
 	vp = fp->f_vnode;
 	if ((error = vn_start_write(vp, &mp, V_WAIT | PCATCH)) == 0) {
-		vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, ap->a_td);
-		error = VOP_SETATTR(vp, ap->a_vap, ap->a_cred, ap->a_td);
-		VOP_UNLOCK(vp, 0, ap->a_td);
+		vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
+		error = VOP_SETATTR(vp, ap->a_vap, ap->a_cred);
+		VOP_UNLOCK(vp, 0);
 		vn_finished_write(mp);
 	}
-	fdrop(fp, ap->a_td);
+	fdrop(fp, td);
 	return (error);
 }
 
@@ -438,15 +504,11 @@ fdesc_readdir(ap)
 	struct dirent *dp = &d;
 	int error, i, off, fcnt;
 
-	/*
-	 * We don't allow exporting fdesc mounts, and currently local
-	 * requests do not need cookies.
-	 */
-	if (ap->a_ncookies)
-		panic("fdesc_readdir: not hungry");
-
 	if (VTOFDESC(ap->a_vp)->fd_type != Froot)
 		panic("fdesc_readdir: not dir");
+
+	if (ap->a_ncookies != NULL)
+		*ap->a_ncookies = 0;
 
 	off = (int)uio->uio_offset;
 	if (off != uio->uio_offset || off < 0 || (u_int)off % UIO_MX != 0 ||
@@ -460,11 +522,10 @@ fdesc_readdir(ap)
 
 	FILEDESC_SLOCK(fdp);
 	while (i < fdp->fd_nfiles + 2 && uio->uio_resid >= UIO_MX) {
+		bzero((caddr_t)dp, UIO_MX);
 		switch (i) {
 		case 0:	/* `.' */
 		case 1: /* `..' */
-			bzero((caddr_t)dp, UIO_MX);
-
 			dp->d_fileno = i + FD_ROOT;
 			dp->d_namlen = i + 1;
 			dp->d_reclen = UIO_MX;
@@ -473,26 +534,24 @@ fdesc_readdir(ap)
 			dp->d_type = DT_DIR;
 			break;
 		default:
-			if (fdp->fd_ofiles[fcnt] == NULL) {
-				FILEDESC_SUNLOCK(fdp);
-				goto done;
-			}
-
-			bzero((caddr_t) dp, UIO_MX);
+			if (fdp->fd_ofiles[fcnt] == NULL)
+				break;
 			dp->d_namlen = sprintf(dp->d_name, "%d", fcnt);
 			dp->d_reclen = UIO_MX;
 			dp->d_type = DT_UNKNOWN;
 			dp->d_fileno = i + FD_DESC;
 			break;
 		}
-		/*
-		 * And ship to userland
-		 */
-		FILEDESC_SUNLOCK(fdp);
-		error = uiomove(dp, UIO_MX, uio);
-		if (error)
-			goto done;
-		FILEDESC_SLOCK(fdp);
+		if (dp->d_namlen != 0) {
+			/*
+			 * And ship to userland
+			 */
+			FILEDESC_SUNLOCK(fdp);
+			error = uiomove(dp, UIO_MX, uio);
+			if (error)
+				goto done;
+			FILEDESC_SLOCK(fdp);
+		}
 		i++;
 		fcnt++;
 	}
@@ -504,34 +563,18 @@ done:
 }
 
 static int
-fdesc_inactive(ap)
-	struct vop_inactive_args /* {
-		struct vnode *a_vp;
-		struct thread *a_td;
-	} */ *ap;
-{
-	struct vnode *vp = ap->a_vp;
-
-	/*
-	 * Clear out the v_type field to avoid
-	 * nasty things happening in vgone().
-	 */
-	vp->v_type = VNON;
-	return (0);
-}
-
-static int
 fdesc_reclaim(ap)
 	struct vop_reclaim_args /* {
 		struct vnode *a_vp;
 	} */ *ap;
 {
-	struct vnode *vp = ap->a_vp;
-	struct fdescnode *fd = VTOFDESC(vp);
+	struct vnode *vp;
+	struct fdescnode *fd;
 
-	LIST_REMOVE(fd, fd_hash);
-	FREE(vp->v_data, M_TEMP);
-	vp->v_data = 0;
-
+ 	vp = ap->a_vp;
+ 	fd = VTOFDESC(vp);
+	fdesc_remove_entry(fd);
+	free(vp->v_data, M_TEMP);
+	vp->v_data = NULL;
 	return (0);
 }
