@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ichsmb/ichsmb_pci.c,v 1.19.2.1 2007/12/02 08:42:15 remko Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * Support for the SMBus controller logical device which is part of the
@@ -75,8 +75,16 @@ __FBSDID("$FreeBSD: src/sys/dev/ichsmb/ichsmb_pci.c,v 1.19.2.1 2007/12/02 08:42:
 #define ID_82801EB			0x24D38086
 #define ID_82801FB			0x266A8086
 #define ID_82801GB			0x27da8086
+#define ID_82801H			0x283e8086
+#define ID_82801I			0x29308086
+#define ID_82801JI			0x3a308086
+#define ID_PCH				0x3b308086
 #define ID_6300ESB			0x25a48086
 #define	ID_631xESB			0x269b8086
+#define ID_DH89XXCC			0x23308086
+#define ID_PATSBURG			0x1d228086
+#define ID_CPT				0x1c228086
+#define ID_PPT				0x1e228086
 
 #define PCIS_SERIALBUS_SMBUS_PROGIF	0x00
 
@@ -95,9 +103,6 @@ static device_method_t ichsmb_pci_methods[] = {
         DEVMETHOD(device_attach, ichsmb_pci_attach),
         DEVMETHOD(device_detach, ichsmb_detach),
 
-	/* Bus methods */
-        DEVMETHOD(bus_print_child, bus_generic_print_child),
-
 	/* SMBus methods */
         DEVMETHOD(smbus_callback, ichsmb_callback),
         DEVMETHOD(smbus_quick, ichsmb_quick),
@@ -110,7 +115,8 @@ static device_method_t ichsmb_pci_methods[] = {
         DEVMETHOD(smbus_pcall, ichsmb_pcall),
         DEVMETHOD(smbus_bwrite, ichsmb_bwrite),
         DEVMETHOD(smbus_bread, ichsmb_bread),
-	{ 0, 0 }
+
+	DEVMETHOD_END
 };
 
 static driver_t ichsmb_pci_driver = {
@@ -152,19 +158,37 @@ ichsmb_pci_probe(device_t dev)
 	case ID_82801GB:
 		device_set_desc(dev, "Intel 82801GB (ICH7) SMBus controller");
 		break;
+	case ID_82801H:
+		device_set_desc(dev, "Intel 82801H (ICH8) SMBus controller");
+		break;
+	case ID_82801I:
+		device_set_desc(dev, "Intel 82801I (ICH9) SMBus controller");
+		break;
+	case ID_82801JI:
+		device_set_desc(dev, "Intel 82801JI (ICH10) SMBus controller");
+		break;
+	case ID_PCH:
+		device_set_desc(dev, "Intel PCH SMBus controller");
+		break;
 	case ID_6300ESB:
 		device_set_desc(dev, "Intel 6300ESB (ICH) SMBus controller");
 		break;
 	case ID_631xESB:
 		device_set_desc(dev, "Intel 631xESB/6321ESB (ESB2) SMBus controller");
 		break;
+	case ID_DH89XXCC:
+		device_set_desc(dev, "Intel DH89xxCC SMBus controller");
+		break;
+	case ID_PATSBURG:
+		device_set_desc(dev, "Intel Patsburg SMBus controller");
+		break;
+	case ID_CPT:
+		device_set_desc(dev, "Intel Cougar Point SMBus controller");
+		break;
+	case ID_PPT:
+		device_set_desc(dev, "Intel Panther Point SMBus controller");
+		break;
 	default:
-		if (pci_get_class(dev) == PCIC_SERIALBUS
-		    && pci_get_subclass(dev) == PCIS_SERIALBUS_SMBUS
-		    && pci_get_progif(dev) == PCIS_SERIALBUS_SMBUS_PROGIF) {
-			device_set_desc(dev, "SMBus controller");
-			return (BUS_PROBE_DEFAULT); /* XXX */
-		}
 		return (ENXIO);
 	}
 
@@ -189,14 +213,12 @@ ichsmb_pci_attach(device_t dev)
 	    &sc->io_rid, 0, ~0, 16, RF_ACTIVE);
 	if (sc->io_res == NULL)
 		sc->io_res = bus_alloc_resource(dev, SYS_RES_IOPORT,
-		    &sc->io_rid, 0, ~0, 32, RF_ACTIVE);
+		    &sc->io_rid, 0ul, ~0ul, 32, RF_ACTIVE);
 	if (sc->io_res == NULL) {
 		device_printf(dev, "can't map I/O\n");
 		error = ENXIO;
 		goto fail;
 	}
-	sc->io_bst = rman_get_bustag(sc->io_res);
-	sc->io_bsh = rman_get_bushandle(sc->io_res);
 
 	/* Allocate interrupt */
 	sc->irq_rid = 0;
