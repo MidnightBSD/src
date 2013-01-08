@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 /*-
  * Copyright (c) 2011 Anybots Inc

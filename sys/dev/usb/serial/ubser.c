@@ -2,7 +2,7 @@
  * Copyright (c) 2004 Bernd Walter <ticso@FreeBSD.org>
  *
  * $URL: https://devel.bwct.de/svn/projects/ubser/ubser.c $
- * $Date: 2012-07-21 15:17:10 $
+ * $Date: 2013-01-08 02:57:52 $
  * $Author: laffer1 $
  * $Rev: 1127 $
  */
@@ -70,7 +70,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 /*
  * BWCT serial adapter driver

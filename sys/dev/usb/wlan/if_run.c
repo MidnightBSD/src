@@ -17,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 /*-
  * Ralink Technology RT2700U/RT2800U/RT3000U chipset driver.

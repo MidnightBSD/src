@@ -28,7 +28,7 @@
  * its contributors.
  */
 
-/*  $FreeBSD$ */
+/*  $MidnightBSD$ */
 
 #include <sys/ioccom.h>
 

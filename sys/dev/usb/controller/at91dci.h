@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 ATMEL
  * Copyright (c) 2007 Hans Petter Selasky <hselasky@FreeBSD.org>

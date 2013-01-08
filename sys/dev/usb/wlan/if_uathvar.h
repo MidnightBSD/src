@@ -1,5 +1,5 @@
 /*	$OpenBSD: if_uathvar.h,v 1.3 2006/09/20 19:47:17 damien Exp $	*/
-/*	$FreeBSD$	*/
+/*	$MidnightBSD$	*/
 
 /*-
  * Copyright (c) 2006
