@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 /*
  * PCI front-end device driver for the HME ethernet device.

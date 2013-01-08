@@ -28,7 +28,7 @@
  *
  *	from: NetBSD: hmereg.h,v 1.16 2003/11/02 11:07:45 wiz Exp
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 /*

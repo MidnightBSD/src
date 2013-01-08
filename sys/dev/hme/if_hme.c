@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 /*
  * HME Ethernet module driver.

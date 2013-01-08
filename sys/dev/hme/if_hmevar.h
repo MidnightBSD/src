@@ -28,7 +28,7 @@
  *
  *	from: NetBSD: hmevar.h,v 1.5 2000/06/25 01:10:04 eeh Exp
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #include <sys/callout.h>
