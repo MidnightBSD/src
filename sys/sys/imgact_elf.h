@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/sys/sys/imgact_elf.h,v 1.5 2012/10/09 04:05:36 laffer1 Exp $
  */
 
 #ifndef _SYS_IMGACT_ELF_H_
@@ -95,7 +95,6 @@ void	__elfN(dump_thread)(struct thread *, void *, size_t *);
 
 extern int __elfN(fallback_brand);
 extern Elf_Brandnote __elfN(freebsd_brandnote);
-extern Elf_Brandnote __elfN(kfreebsd_brandnote);
 #endif /* _KERNEL */
 
 #endif /* !_SYS_IMGACT_ELF_H_ */

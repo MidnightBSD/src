@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/ipfilter/netinet/ip_auth.c,v 1.44.2.2 2007/12/01 00:53:41 darrenr Exp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 1998-2003 by Darren Reed & Guido van Rooij.
@@ -27,7 +27,7 @@ struct file;
 # include <sys/uio.h>
 # undef _KERNEL
 #endif
-#if defined(_KERNEL) && (defined(__MidnightBSD__) || (__FreeBSD_version >= 220000))
+#if defined(_KERNEL) && (__FreeBSD_version >= 220000)
 # include <sys/filio.h>
 # include <sys/fcntl.h>
 #else
@@ -53,7 +53,7 @@ struct file;
 # include <sys/kmem.h>
 #endif
 #if (defined(_BSDI_VERSION) && _BSDI_VERSION >= 199802) || \
-    (__FreeBSD_version >= 400000) || defined(__MidnightBSD__)
+    (defined(__FreeBSD_version) &&(__FreeBSD_version >= 400000))
 # include <sys/queue.h>
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__) || defined(bsdi)
@@ -87,9 +87,9 @@ struct file;
 extern struct ifqueue   ipintrq;		/* ip packet input queue */
 #else
 # if !defined(__hpux) && !defined(linux)
-#  if __FreeBSD_version >= 300000 || defined(__MidnightBSD__)
+#  if __FreeBSD_version >= 300000
 #   include <net/if_var.h>
-#   if __FreeBSD_version >= 500042 || defined(__MidnightBSD__)
+#   if __FreeBSD_version >= 500042
 #    define IF_QFULL _IF_QFULL
 #    define IF_DROP _IF_DROP
 #   endif /* __FreeBSD_version >= 500042 */
@@ -106,11 +106,11 @@ extern struct ifqueue   ipintrq;		/* ip packet input queue */
 #include "netinet/ip_auth.h"
 #if !defined(MENTAT) && !defined(linux)
 # include <net/netisr.h>
-# if defined(__FreeBSD__) || defined(__MidnightBSD__)
+# ifdef __FreeBSD__
 #  include <machine/cpufunc.h>
 # endif
 #endif
-#if (__FreeBSD_version >= 300000) || defined(__MidnightBSD__)
+#if (__FreeBSD_version >= 300000)
 # include <sys/malloc.h>
 # if defined(_KERNEL) && !defined(IPFILTER_LKM)
 #  include <sys/libkern.h>
@@ -120,8 +120,8 @@ extern struct ifqueue   ipintrq;		/* ip packet input queue */
 /* END OF INCLUDES */
 
 #if !defined(lint)
-static const char rcsid[] = "@(#)$FreeBSD: src/sys/contrib/ipfilter/netinet/ip_auth.c,v 1.44.2.2 2007/12/01 00:53:41 darrenr Exp $";
-/* static const char rcsid[] = "@(#)$Id: ip_auth.c,v 1.3 2008-12-07 00:18:55 laffer1 Exp $"; */
+static const char rcsid[] = "@(#)$FreeBSD$";
+/* static const char rcsid[] = "@(#)$Id: ip_auth.c,v 1.4 2013-01-08 01:31:40 laffer1 Exp $"; */
 #endif
 
 
@@ -835,8 +835,7 @@ char *data;
 	mb_t *m;
 	char *t;
 #if defined(_KERNEL) && !defined(MENTAT) && !defined(linux) && \
-    (!defined(__FreeBSD_version) || (__FreeBSD_version < 501000)) && \
-    !defined(__MidnightBSD__)
+    (!defined(__FreeBSD_version) || (__FreeBSD_version < 501000))
 	SPL_INT(s);
 #endif
 

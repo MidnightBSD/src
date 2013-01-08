@@ -1,4 +1,4 @@
-/*	$MidnightBSD$	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 1997-2003 by Darren Reed
@@ -8,7 +8,7 @@
  * Simple FTP transparent proxy for in-kernel use.  For use with the NAT
  * code.
  *
- * $MidnightBSD$
+ * $FreeBSD$
  * Id: ip_ftp_pxy.c,v 2.88.2.19 2006/04/01 10:14:53 darrenr Exp $
  */
 

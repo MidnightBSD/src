@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/ipfilter/netinet/ip_proxy.c,v 1.29.2.1 2007/10/31 05:00:38 darrenr Exp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 1997-2003 by Darren Reed.
@@ -46,12 +46,10 @@ struct file;
 #  include <sys/mbuf.h>
 # endif
 #endif
-#if defined(_KERNEL) && \
-    ((__FreeBSD_version >= 220000) || defined(__MidnightBSD__))
+#if defined(_KERNEL) && (__FreeBSD_version >= 220000)
 # include <sys/filio.h>
 # include <sys/fcntl.h>
-# if (defined(__MidnightBSD__) || (__FreeBSD_version >= 300000)) && \
-    !defined(IPFILTER_LKM)
+# if (__FreeBSD_version >= 300000) && !defined(IPFILTER_LKM)
 #  include "opt_ipfilter.h"
 # endif
 #else
@@ -65,7 +63,7 @@ struct file;
 # include <sys/stream.h>
 # include <sys/kmem.h>
 #endif
-#if __FreeBSD__ > 2 || defined(__MidnightBSD__)
+#if __FreeBSD__ > 2
 # include <sys/queue.h>
 #endif
 #include <net/if.h>
@@ -88,7 +86,7 @@ struct file;
 #include "netinet/ip_nat.h"
 #include "netinet/ip_state.h"
 #include "netinet/ip_proxy.h"
-#if (__FreeBSD_version >= 300000) || defined(__MidnightBSD__)
+#if (__FreeBSD_version >= 300000)
 # include <sys/malloc.h>
 #endif
 
@@ -106,7 +104,7 @@ struct file;
 /* END OF INCLUDES */
 
 #if !defined(lint)
-static const char rcsid[] = "@(#)$Id: ip_proxy.c,v 1.3 2008-12-07 00:54:02 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ip_proxy.c,v 1.4 2013-01-08 01:31:40 laffer1 Exp $";
 #endif
 
 static int appr_fixseqack __P((fr_info_t *, ip_t *, ap_session_t *, int ));

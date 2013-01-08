@@ -4,7 +4,7 @@
  * See the IPFILTER.LICENCE file for details on licencing.
  *
  * @(#)ip_compat.h	1.8 1/14/96
- * $MidnightBSD$
+ * $FreeBSD$
  * Id: ip_compat.h,v 2.142.2.57 2007/10/10 09:51:42 darrenr Exp $
  */
 
@@ -40,7 +40,7 @@
 #  define	USE_INET6
 # endif
 #endif
-#if defined(__MidnightBSD_version) && \
+#if defined(__FreeBSD_version) && (__FreeBSD_version >= 400000) && \
     !defined(_KERNEL) && !defined(USE_INET6) && !defined(NOINET6)
 # define	USE_INET6
 #endif
@@ -828,19 +828,19 @@ typedef	u_int32_t	u_32_t;
 /* ----------------------------------------------------------------------- */
 /*                                F R E E B S D                            */
 /* ----------------------------------------------------------------------- */
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 # if  (__FreeBSD_version < 400000)
 #  define	NEED_LOCAL_RAND	1
 # else
 #  define	ipf_random	arc4random
 # endif
 # if defined(_KERNEL)
-#  if (__MidnightBSD_version >= 1000)                          
+#  if (__FreeBSD_version >= 500000)                          
 #   include "opt_bpf.h"
 #  else
 #   include "bpf.h"    
 #  endif
-#  if defined(__MidnightBSD_version)
+#  if defined(__FreeBSD_version) && (__FreeBSD_version >= 400000)
 #   include "opt_inet6.h"
 #  endif
 #  if defined(INET6) && !defined(USE_INET6)
@@ -849,27 +849,27 @@ typedef	u_int32_t	u_32_t;
 # endif
 
 # if defined(_KERNEL)
-#  if (__MidnightBSD_version >= 1000)
+#  if (__FreeBSD_version >= 400000)
 /*
  * When #define'd, the 5.2.1 kernel panics when used with the ftp proxy.
  * There may be other, safe, kernels but this is not extensively tested yet.
  */
 #   define HAVE_M_PULLDOWN
 #  endif
-#  if !defined(IPFILTER_LKM) && (__MidnightBSD_version >= 1000)
+#  if !defined(IPFILTER_LKM) && (__FreeBSD_version >= 300000)
 #   include "opt_ipfilter.h"
 #  endif
 #  define	COPYIN(a,b,c)	copyin((caddr_t)(a), (caddr_t)(b), (c))
 #  define	COPYOUT(a,b,c)	copyout((caddr_t)(a), (caddr_t)(b), (c))
 
-#  if (__MidnightBSD_version >= 1000)
+#  if (__FreeBSD_version >= 500043)
 #   define NETBSD_PF
 #  endif
 # endif /* _KERNEL */
 
-# if (__MidnightBSD_version >= 1000)
+# if (__FreeBSD_version >= 500043)
 #  include <sys/mutex.h>
-#  if (__MidnightBSD_version > 4016)
+#  if (__FreeBSD_version > 700014)
 #   include <sys/rwlock.h>
 #    define	KRWLOCK_T		struct rwlock
 #    ifdef _KERNEL
@@ -893,7 +893,7 @@ typedef	u_int32_t	u_32_t;
  * with a WITNESS kernel, it generates LOR messages.
  */
 #   ifdef _KERNEL
-#    if (__MidnightBSD_version < 3000)
+#    if (__FreeBSD_version < 700000)
 #     define	KRWLOCK_T		struct mtx
 #     define	READ_ENTER(x)		mtx_lock(&(x)->ipf_lk)
 #     define	WRITE_ENTER(x)		mtx_lock(&(x)->ipf_lk)
@@ -925,7 +925,7 @@ typedef	u_int32_t	u_32_t;
 #  define	KMUTEX_T		struct mtx
 # endif
 
-# if (__MidnightBSD_version >= 1000)
+# if (__FreeBSD_version >= 501113)
 #  include <net/if_var.h>
 #  define	IFNAME(x)	((struct ifnet *)x)->if_xname
 #  define	COPYIFNAME(v, x, b) \
@@ -933,7 +933,7 @@ typedef	u_int32_t	u_32_t;
 					       ((struct ifnet *)x)->if_xname, \
 					       LIFNAMSIZ)
 # endif
-# if (__MidnightBSD_version >= 1000)
+# if (__FreeBSD_version >= 500043)
 #  define	CACHE_HASH(x)	((((struct ifnet *)fin->fin_ifp)->if_index) & 7)
 # else
 #  define	IFNAME(x)	((struct ifnet *)x)->if_name
@@ -944,11 +944,13 @@ typedef	u_int32_t	u_32_t;
 # ifdef _KERNEL
 #  define	GETKTIME(x)	microtime((struct timeval *)x)
 
+#  if (__FreeBSD_version >= 500002)
 #   include <netinet/in_systm.h>
 #   include <netinet/ip.h>
 #   include <machine/in_cksum.h>
+#  endif
 
-#  if (__MidnightBSD_version >= 1000)
+#  if (__FreeBSD_version >= 500043)
 #   define	USE_MUTEXES
 #   define	MUTEX_ENTER(x)		mtx_lock(&(x)->ipf_lk)
 #   define	MUTEX_EXIT(x)		mtx_unlock(&(x)->ipf_lk)
@@ -975,7 +977,7 @@ typedef	u_int32_t	u_32_t;
 #   define	SPL_SCHED(x)	;
 #  else
 #   define	SPL_SCHED(x)	x = splhigh()
-#  endif /* __MidnightBSD_version >= 1000 */
+#  endif /* __FreeBSD_version >= 500043 */
 #  define	MSGDSIZE(x)	mbufchainlen(x)
 #  define	M_LEN(x)	(x)->m_len
 #  define	M_DUPLICATE(x)	m_copy((x), 0, M_COPYALL)
@@ -993,7 +995,11 @@ typedef struct mbuf mb_t;
 #  endif
 # endif
 
+# if (__FreeBSD_version >= 300000)
 typedef	u_long		ioctlcmd_t;
+# else
+typedef	int		ioctlcmd_t;
+# endif
 typedef	struct uio	uio_t;
 typedef	int		minor_t;
 typedef	u_int32_t	u_32_t;
@@ -1474,7 +1480,7 @@ typedef union {
 #define	ipf_magic	ipf_lkun_s.ipf_magic
 
 #if !defined(__GNUC__) || \
-    (defined(__MidnightBSD_version))
+    (defined(__FreeBSD_version) && (__FreeBSD_version >= 503000))
 # ifndef	INLINE
 #  define	INLINE
 # endif
@@ -1596,7 +1602,7 @@ extern void eMrwlock_downgrade __P((eMrwlock_t *, char *, int));
 
 #ifdef	USE_INET6
 # if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__FreeBSD__) || \
-     defined(__osf__) || defined(linux) || defined(__MidnightBSD__)
+     defined(__osf__) || defined(linux)
 #  include <netinet/ip6.h>
 #  include <netinet/icmp6.h>
 #  if !defined(linux)
@@ -1612,7 +1618,7 @@ typedef	struct ip6_hdr	ip6_t;
 # define	MAX(a,b)	(((a) > (b)) ? (a) : (b))
 #endif
 
-#if defined(_KERNEL) 
+#if defined(_KERNEL)
 # ifdef MENTAT
 #  define	COPYDATA	mb_copydata
 #  define	COPYBACK	mb_copyback
@@ -1620,13 +1626,13 @@ typedef	struct ip6_hdr	ip6_t;
 #  define	COPYDATA	m_copydata
 #  define	COPYBACK	m_copyback
 # endif
-# if (BSD >= 199306) || defined(__FreeBSD__) || defined(__MidnightBSD__)
+# if (BSD >= 199306) || defined(__FreeBSD__)
 #  if (defined(__NetBSD_Version__) && (__NetBSD_Version__ < 105180000)) || \
        defined(__FreeBSD__) || (defined(OpenBSD) && (OpenBSD < 200206)) || \
-       defined(_BSDI_VERSION) || defined(__MidnightBSD__)
+       defined(_BSDI_VERSION)
 #   include <vm/vm.h>
 #  endif
-#  if defined(__MidnightBSD__) || (defined (__FreeBSD_version) && \
+#  if !defined(__FreeBSD__) || (defined (__FreeBSD_version) && \
       (__FreeBSD_version >= 300000))
 #   if (defined(__NetBSD_Version__) && (__NetBSD_Version__ >= 105180000)) || \
        (defined(OpenBSD) && (OpenBSD >= 200111))

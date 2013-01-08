@@ -1,4 +1,4 @@
-/*	$MidnightBSD$	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 1995-2003 by Darren Reed.
@@ -23,7 +23,8 @@
 #  include "opt_ipfilter.h"
 # endif
 #endif
-#if defined(_KERNEL) && defined(__MidnightBSD_version) && !defined(KLD_MODULE)
+#if defined(_KERNEL) && defined(__FreeBSD_version) && \
+    (__FreeBSD_version >= 400000) && !defined(KLD_MODULE)
 #include "opt_inet6.h"
 #endif
 #if !defined(_KERNEL) && !defined(__KERNEL__)
@@ -37,10 +38,10 @@ struct file;
 # include <sys/uio.h>
 # undef _KERNEL
 #endif
-#if defined(_KERNEL) && (__MidnightBSD_version >= 1000)
+#if defined(_KERNEL) && (__FreeBSD_version >= 220000)
 # include <sys/filio.h>
 # include <sys/fcntl.h>
-# if (__MidnightBSD_version >= 1000) && !defined(IPFILTER_LKM)
+# if (__FreeBSD_version >= 300000) && !defined(IPFILTER_LKM)
 #  include "opt_ipfilter.h"
 # endif
 #else
@@ -100,7 +101,7 @@ struct file;
 #ifdef	USE_INET6
 #include <netinet/icmp6.h>
 #endif
-#if (__MidnightBSD_version >= 1000)
+#if (__FreeBSD_version >= 300000)
 # include <sys/malloc.h>
 # if defined(_KERNEL) && !defined(IPFILTER_LKM)
 #  include <sys/libkern.h>
@@ -112,7 +113,7 @@ struct file;
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)ip_state.c	1.8 6/5/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)$Id: ip_state.c,v 1.4 2012-12-22 15:41:36 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ip_state.c,v 1.5 2013-01-08 01:31:40 laffer1 Exp $";
 #endif
 
 static	ipstate_t **ips_table = NULL;

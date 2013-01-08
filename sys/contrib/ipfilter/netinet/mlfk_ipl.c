@@ -1,9 +1,9 @@
-/*	$MidnightBSD$	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2000 by Darren Reed.
  *
- * $MidnightBSD$
+ * $FreeBSD$
  * See the IPFILTER.LICENCE file for details on licencing.
  */
 
@@ -16,7 +16,7 @@
 #include <sys/socket.h>
 #include <sys/sysctl.h>
 #include <sys/select.h>
-#if __MidnightBSD_version >= 1000
+#if __FreeBSD_version >= 500000
 # include <sys/selinfo.h>
 #endif                  
 #include <net/if.h>
@@ -33,7 +33,11 @@
 #include <netinet/ip_frag.h>
 #include <netinet/ip_sync.h>
 
+#if __FreeBSD_version >= 502116
 static struct cdev *ipf_devs[IPL_LOGSIZE];
+#else
+static dev_t ipf_devs[IPL_LOGSIZE];
+#endif
 
 static int sysctl_ipf_int ( SYSCTL_HANDLER_ARGS );
 static int ipf_modload(void);
@@ -96,12 +100,12 @@ SYSCTL_IPF(_net_inet_ipf, OID_AUTO, fr_minttl, CTLFLAG_RW, &fr_minttl, 0, "");
 
 #define CDEV_MAJOR 79
 #include <sys/poll.h>
-#if __MidnightBSD_version >= 1000
+#if __FreeBSD_version >= 500043
 # include <sys/select.h>
 static int iplpoll(struct cdev *dev, int events, struct thread *td);
 
 static struct cdevsw ipl_cdevsw = {
-# if __MidnightBSD_version >= 1000
+# if __FreeBSD_version >= 502103
 	.d_version =	D_VERSION,
 	.d_flags =	0,	/* D_NEEDGIANT - Should be SMP safe */
 # endif
@@ -111,8 +115,11 @@ static struct cdevsw ipl_cdevsw = {
 	.d_write =	iplwrite,
 	.d_ioctl =	iplioctl,
 	.d_name =	"ipl",
-# if __MidnightBSD_version >= 1000
+# if __FreeBSD_version >= 500043
 	.d_poll =	iplpoll,
+# endif
+# if __FreeBSD_version < 600000
+	.d_maj =	CDEV_MAJOR,
 # endif
 };
 #else
@@ -135,7 +142,7 @@ static struct cdevsw ipl_cdevsw = {
 # if (__FreeBSD_version < 500043)
 	/* bmaj */	-1,
 # endif
-# if (__MidnightBSD_version >= 1000)
+# if (__FreeBSD_version > 430000)
 	/* kqfilter */	NULL
 # endif
 };
@@ -306,7 +313,7 @@ sysctl_ipf_int ( SYSCTL_HANDLER_ARGS )
 
 
 static int
-#if __MidnightBSD_version >= 1000
+#if __FreeBSD_version >= 500043
 iplpoll(struct cdev *dev, int events, struct thread *td)
 #else
 iplpoll(dev_t dev, int events, struct proc *td)

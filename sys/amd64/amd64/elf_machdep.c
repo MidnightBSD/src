@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/amd64/amd64/elf_machdep.c,v 1.5 2012/11/23 06:02:40 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -116,22 +116,6 @@ static Elf64_Brandinfo freebsd_brand_oinfo = {
 SYSINIT(oelf64, SI_SUB_EXEC, SI_ORDER_ANY,
 	(sysinit_cfunc_t) elf64_insert_brand_entry,
 	&freebsd_brand_oinfo);
-
-static Elf64_Brandinfo kfreebsd_brand_info = {
-	.brand		= ELFOSABI_FREEBSD,
-	.machine	= EM_X86_64,
-	.compat_3_brand	= "FreeBSD",
-	.emul_path	= NULL,
-	.interp_path	= "/lib/ld-kfreebsd-x86-64.so.1",
-	.sysvec		= &elf64_freebsd_sysvec,
-	.interp_newpath	= NULL,
-	.brand_note	= &elf64_kfreebsd_brandnote,
-	.flags		= BI_CAN_EXEC_DYN | BI_BRAND_NOTE_MANDATORY
-};
-
-SYSINIT(kelf64, SI_SUB_EXEC, SI_ORDER_ANY,
-	(sysinit_cfunc_t) elf64_insert_brand_entry,
-	&kfreebsd_brand_info);
 
 void
 elf64_dump_thread(struct thread *td __unused, void *dst __unused,

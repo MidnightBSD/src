@@ -1,4 +1,4 @@
-/*	$MidnightBSD$	*/
+/*	$FreeBSD$	*/
 
 extern int ipfrule_add __P((void));
 extern int ipfrule_remove __P((void));

@@ -1,12 +1,12 @@
-/*	$MidnightBSD$	*/
+/*	$FreeBSD$	*/
 
 /*
- * $MidnightBSD$
+ * $FreeBSD$
  * Copyright (C) 1998-2003 by Darren Reed
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $Id: ip_raudio_pxy.c,v 1.3 2012-12-22 16:20:51 laffer1 Exp $
+ * $Id: ip_raudio_pxy.c,v 1.4 2013-01-08 01:31:40 laffer1 Exp $
  */
 
 #define	IPF_RAUDIO_PROXY

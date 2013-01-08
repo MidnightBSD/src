@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/ipfilter/netinet/fil.c,v 1.52.2.2 2007/12/01 00:53:41 darrenr Exp $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 1993-2003 by Darren Reed.
@@ -24,9 +24,9 @@
 #  endif
 # endif
 #endif
-#if defined(_KERNEL) && (defined(__MidnightBSD__) || defined(__FreeBSD_version) && \
-    (__FreeBSD_version >= 220000))
-# if (__FreeBSD_version >= 400000 ) || defined(__MidnightBSD__)
+#if defined(_KERNEL) && defined(__FreeBSD_version) && \
+    (__FreeBSD_version >= 220000)
+# if (__FreeBSD_version >= 400000)
 #  if !defined(IPFILTER_LKM)
 #   include "opt_inet6.h"
 #  endif
@@ -82,9 +82,8 @@ struct file;
 #ifdef sun
 # include <net/af.h>
 #endif
-#if !defined(_KERNEL) && (defined(__FreeBSD__) || defined(SOLARIS2) || \
-    defined(__MidnightBSD__))
-# if (__FreeBSD_version >= 504000) || defined(__MidnightBSD__)
+#if !defined(_KERNEL) && (defined(__FreeBSD__) || defined(SOLARIS2))
+# if (__FreeBSD_version >= 504000)
 #  undef _RADIX_H_
 # endif
 # include "radix_ipf.h"
@@ -143,8 +142,7 @@ struct file;
 #if defined(IPFILTER_BPF) && defined(_KERNEL)
 # include <net/bpf.h>
 #endif
-#if defined(__MidnightBSD__) || \
-    defined(__FreeBSD_version) && (__FreeBSD_version >= 300000)
+#if defined(__FreeBSD_version) && (__FreeBSD_version >= 300000)
 # include <sys/malloc.h>
 # if defined(_KERNEL) && !defined(IPFILTER_LKM)
 #  include "opt_ipfilter.h"
@@ -157,8 +155,8 @@ struct file;
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)fil.c	1.36 6/5/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)$FreeBSD: src/sys/contrib/ipfilter/netinet/fil.c,v 1.52.2.2 2007/12/01 00:53:41 darrenr Exp $";
-/* static const char rcsid[] = "@(#)$Id: fil.c,v 1.4 2008-12-07 02:33:38 laffer1 Exp $"; */
+static const char rcsid[] = "@(#)$FreeBSD$";
+/* static const char rcsid[] = "@(#)$Id: fil.c,v 1.5 2013-01-08 01:31:40 laffer1 Exp $"; */
 #endif
 
 #ifndef	_KERNEL
@@ -2515,7 +2513,7 @@ int out;
 	} else
 #endif
 	{
-#if (defined(OpenBSD) && OpenBSD >= 200311) && defined(_KERNEL)
+#if (defined(OpenBSD) && (OpenBSD >= 200311)) && defined(_KERNEL)
 		ip->ip_len = ntohs(ip->ip_len);
 		ip->ip_off = ntohs(ip->ip_off);
 #endif
@@ -2779,7 +2777,7 @@ finished:
 	RWLOCK_EXIT(&ipf_global);
 
 #ifdef _KERNEL
-# if defined(OpenBSD) && OpenBSD >= 200311    
+# if (defined(OpenBSD) && (OpenBSD >= 200311))
 	if (FR_ISPASS(pass) && (v == 4)) {
 		ip = fin->fin_ip;
 		ip->ip_len = ntohs(ip->ip_len);
@@ -3209,7 +3207,7 @@ nodata:
  * SUCH DAMAGE.
  *
  *	@(#)uipc_mbuf.c	8.2 (Berkeley) 1/4/94
- * $Id: fil.c,v 1.4 2008-12-07 02:33:38 laffer1 Exp $
+ * $Id: fil.c,v 1.5 2013-01-08 01:31:40 laffer1 Exp $
  */
 /*
  * Copy data from an mbuf chain starting "off" bytes from the beginning,
@@ -4752,7 +4750,7 @@ void *data;
 }
 
 
-#if !defined(_KERNEL) || (!defined(__NetBSD__) && !defined(__OpenBSD__) && !defined(__FreeBSD__)) && !defined(__MidnightBSD__) || \
+#if !defined(_KERNEL) || (!defined(__NetBSD__) && !defined(__OpenBSD__) && !defined(__FreeBSD__)) || \
     (defined(__FreeBSD__) && (__FreeBSD_version < 501000)) || \
     (defined(__NetBSD__) && (__NetBSD_Version__ < 105000000)) || \
     (defined(__OpenBSD__) && (OpenBSD < 200006))
@@ -5335,7 +5333,6 @@ char *buffer;
 	static char namebuf[LIFNAMSIZ];
 # if defined(MENTAT) || defined(__FreeBSD__) || defined(__osf__) || \
      defined(__sgi) || defined(linux) || defined(_AIX51) || \
-     defined(__MidnightBSD__) || \
      (defined(sun) && !defined(__SVR4) && !defined(__svr4__))
 	int unit, space;
 	char temp[20];
@@ -5347,7 +5344,7 @@ char *buffer;
 	(void) strncpy(buffer, ifp->if_name, LIFNAMSIZ);
 	buffer[LIFNAMSIZ - 1] = '\0';
 # if defined(MENTAT) || defined(__FreeBSD__) || defined(__osf__) || \
-     defined(__sgi) || defined(_AIX51) || defined(__MidnightBSD__) || \
+     defined(__sgi) || defined(_AIX51) || \
      (defined(sun) && !defined(__SVR4) && !defined(__svr4__))
 	for (s = buffer; *s; s++)
 		;
@@ -7027,7 +7024,6 @@ void *ctx;
 				break;
 			}
 
-			RWLOCK_EXIT(&ipf_global);
 			WRITE_ENTER(&ipf_global);
 			if (tmp) {
 				if (fr_running > 0)
@@ -7043,6 +7039,7 @@ void *ctx;
 				if (error == 0)
 					fr_running = -1;
 			}
+			RWLOCK_EXIT(&ipf_global);
 		}
 		break;
 
@@ -7184,7 +7181,6 @@ void *ctx;
 		if (!(mode & FWRITE))
 			error = EPERM;
 		else {
-			RWLOCK_EXIT(&ipf_global);
 			WRITE_ENTER(&ipf_global);
 #ifdef MENTAT
 			error = ipfsync();
@@ -7192,6 +7188,7 @@ void *ctx;
 			frsync(NULL);
 			error = 0;
 #endif
+			RWLOCK_EXIT(&ipf_global);
 
 		}
 		break;
