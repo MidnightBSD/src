@@ -44378,7 +44378,6 @@ sys/dev/ata/ata-all.c -text
 sys/dev/ata/ata-all.h -text
 sys/dev/ata/ata-card.c -text
 sys/dev/ata/ata-cbus.c -text
-sys/dev/ata/ata-chipset.c -text
 sys/dev/ata/ata-disk.c -text
 sys/dev/ata/ata-disk.h -text
 sys/dev/ata/ata-dma.c -text
@@ -44391,7 +44390,6 @@ sys/dev/ata/ata-raid-ddf.h -text
 sys/dev/ata/ata-raid.c -text
 sys/dev/ata/ata-raid.h -text
 sys/dev/ata/ata-sata.c -text
-sys/dev/ata/ata-usb.c -text
 sys/dev/ata/ata_if.m -text
 sys/dev/ata/atapi-cam.c -text
 sys/dev/ata/atapi-cd.c -text
@@ -45741,7 +45739,6 @@ sys/dev/isp/Hardware.txt -text
 sys/dev/isp/isp.c -text
 sys/dev/isp/isp_freebsd.c -text
 sys/dev/isp/isp_freebsd.h -text
-sys/dev/isp/isp_inline.h -text
 sys/dev/isp/isp_ioctl.h -text
 sys/dev/isp/isp_library.c -text
 sys/dev/isp/isp_library.h -text
@@ -46239,12 +46236,9 @@ sys/dev/puc/puc_bfe.h -text
 sys/dev/puc/puc_bus.h -text
 sys/dev/puc/puc_cfg.c -text
 sys/dev/puc/puc_cfg.h -text
-sys/dev/puc/puc_ebus.c -text
 sys/dev/puc/puc_pccard.c -text
 sys/dev/puc/puc_pci.c -text
-sys/dev/puc/puc_sbus.c -text
 sys/dev/puc/pucdata.c -text
-sys/dev/puc/pucvar.h -text
 sys/dev/qlxgb/README.txt -text
 sys/dev/qlxgb/qla_dbg.c -text
 sys/dev/qlxgb/qla_dbg.h -text
@@ -46444,7 +46438,6 @@ sys/dev/sound/clone.h -text
 sys/dev/sound/driver.c -text
 sys/dev/sound/isa/ad1816.c -text
 sys/dev/sound/isa/ad1816.h -text
-sys/dev/sound/isa/es1888.c -text
 sys/dev/sound/isa/ess.c -text
 sys/dev/sound/isa/gusc.c -text
 sys/dev/sound/isa/mss.c -text
@@ -46477,8 +46470,6 @@ sys/dev/sound/pci/als4000.c -text
 sys/dev/sound/pci/als4000.h -text
 sys/dev/sound/pci/atiixp.c -text
 sys/dev/sound/pci/atiixp.h -text
-sys/dev/sound/pci/au88x0.c -text
-sys/dev/sound/pci/au88x0.h -text
 sys/dev/sound/pci/aureal.c -text
 sys/dev/sound/pci/aureal.h -text
 sys/dev/sound/pci/cmi.c -text
@@ -46550,12 +46541,10 @@ sys/dev/sound/pcm/channel.h -text
 sys/dev/sound/pcm/channel_if.m -text
 sys/dev/sound/pcm/dsp.c -text
 sys/dev/sound/pcm/dsp.h -text
-sys/dev/sound/pcm/fake.c -text
 sys/dev/sound/pcm/feeder.c -text
 sys/dev/sound/pcm/feeder.h -text
 sys/dev/sound/pcm/feeder_chain.c -text
 sys/dev/sound/pcm/feeder_eq.c -text
-sys/dev/sound/pcm/feeder_fmt.c -text
 sys/dev/sound/pcm/feeder_format.c -text
 sys/dev/sound/pcm/feeder_if.m -text
 sys/dev/sound/pcm/feeder_matrix.c -text
@@ -46712,7 +46701,6 @@ sys/dev/uart/uart_bus_puc.c -text
 sys/dev/uart/uart_bus_scc.c -text
 sys/dev/uart/uart_core.c -text
 sys/dev/uart/uart_cpu.h -text
-sys/dev/uart/uart_cpu_alpha.c -text
 sys/dev/uart/uart_cpu_amd64.c -text
 sys/dev/uart/uart_cpu_i386.c -text
 sys/dev/uart/uart_cpu_pc98.c -text

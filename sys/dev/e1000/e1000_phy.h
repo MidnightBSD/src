@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD$*/
+/*$MidnightBSD$*/
 
 #ifndef _E1000_PHY_H_
 #define _E1000_PHY_H_

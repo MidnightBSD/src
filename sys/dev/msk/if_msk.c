@@ -2,8 +2,8 @@
  *
  * Name   : sky2.c
  * Project: Gigabit Ethernet Driver for FreeBSD 5.x/6.x
- * Version: $Revision: 1.6 $
- * Date   : $Date: 2012-10-09 04:08:12 $
+ * Version: $Revision: 1.7 $
+ * Date   : $Date: 2013-01-08 03:53:24 $
  * Purpose: Main driver source file
  *
  *****************************************************************************/
@@ -99,7 +99,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 /** @file drm_auth.c
  * Implementation of the get/authmagic ioctls implementing the authentication

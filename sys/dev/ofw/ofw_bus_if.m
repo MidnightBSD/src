@@ -23,7 +23,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/dev/ofw/ofw_bus_if.m,v 1.3 2005/11/22 16:37:45 marius Exp $
+# $MidnightBSD$
 
 # Interface for retrieving the package handle and a subset, namely
 # 'compatible', 'device_type', 'model' and 'name', of the standard
@@ -89,7 +89,7 @@ CODE {
 	ofw_bus_default_get_node(device_t bus, device_t dev)
 	{
 
-		return (0);
+		return (-1);
 	}
 
 	static const char *

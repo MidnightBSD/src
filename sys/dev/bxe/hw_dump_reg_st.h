@@ -30,7 +30,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
- /*$FreeBSD$*/
+ /*$MidnightBSD$*/
 
 #ifndef _HW_DUMP_REG_ST_H
 #define	_HW_DUMP_REG_ST_H

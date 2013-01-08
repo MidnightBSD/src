@@ -36,7 +36,7 @@
  * Costa Mesa, CA 92626
  */
 
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 #include <sys/types.h>
 

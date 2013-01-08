@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/	
+/*	$MidnightBSD$	*/	
 
 /*-
  * Copyright 1999-2003 3Com Corporation.  All Rights Reserved.    

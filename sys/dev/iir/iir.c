@@ -39,11 +39,11 @@
  *              Mike Smith;             Some driver source code.
  *              FreeBSD.ORG;            Great O/S to work on and for.
  *
- * $Id: iir.c,v 1.4 2012-10-09 04:08:11 laffer1 Exp $"
+ * $Id: iir.c,v 1.5 2013-01-08 03:53:20 laffer1 Exp $"
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #define _IIR_C_
 

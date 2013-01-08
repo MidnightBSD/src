@@ -31,7 +31,7 @@
  * IDT manual.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <stdio.h>
@@ -445,7 +445,7 @@ main(int argc, char *argv[])
 	printf(" */\n");
 	printf("\n");
 	printf("#include <sys/cdefs.h>\n");
-	printf("__FBSDID(\"$FreeBSD$\");\n");
+	printf("__MBSDID(\"$MidnightBSD$\");\n");
 	printf("\n");
 	printf("#include <sys/types.h>\n");
 	printf("\n");

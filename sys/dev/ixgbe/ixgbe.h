@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD$*/
+/*$MidnightBSD$*/
 
 
 #ifndef _IXGBE_H_

@@ -53,7 +53,7 @@
  */
 
 #include <sys/cdefs.h> /* prerequisite */
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/module.h>

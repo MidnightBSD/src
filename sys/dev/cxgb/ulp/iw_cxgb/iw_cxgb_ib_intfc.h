@@ -1,7 +1,7 @@
 #ifndef  __IB_INTFC_H__
 #define  __IB_INTFC_H__
 
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 #undef prefetch
 #undef WARN_ON

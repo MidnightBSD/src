@@ -26,7 +26,7 @@
  *
  * Author: Hartmut Brandt <harti@freebsd.org>
  *
- * $FreeBSD$
+ * $MidnightBSD$
  *
  * Fore HE driver for NATM
  */

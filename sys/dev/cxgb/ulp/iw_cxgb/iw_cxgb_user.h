@@ -29,7 +29,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 #ifndef __IWCH_USER_H__
 #define __IWCH_USER_H__

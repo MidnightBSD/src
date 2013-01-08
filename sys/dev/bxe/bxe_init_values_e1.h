@@ -30,7 +30,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
- /*$FreeBSD$*/
+ /*$MidnightBSD$*/
 
 #ifndef __BXE_INIT_VALUES_E1_H__
 #define	__BXE_INIT_VALUES_E1_H__

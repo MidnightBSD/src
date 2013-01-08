@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 	Hardware that is Known To or Should Work with This Driver
 

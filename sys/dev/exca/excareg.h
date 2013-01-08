@@ -1,5 +1,5 @@
 /*	$NetBSD: i82365reg.h,v 1.3 1998/12/20 17:53:28 nathanw Exp $	*/
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 /*-
  * Copyright (c) 2002 M Warner Losh.  All rights reserved.

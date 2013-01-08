@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Jake Burkholder.
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ofw/openpromio.c,v 1.7.14.1 2007/12/23 11:26:48 marius Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -175,7 +174,7 @@ openprom_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flags,
 			error = OF_getprop(node, prop, buf, proplen);
 			break;
 		case OPROMNXTPROP:
-			error = OF_nextprop(node, prop, buf);
+			error = OF_nextprop(node, prop, buf, OPROMMAXPARAM);
 			proplen = strlen(buf);
 			break;
 		}

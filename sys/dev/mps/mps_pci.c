@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 /* PCI/PCI-X/PCIe bus interface for the LSI MPT2 controllers */
 

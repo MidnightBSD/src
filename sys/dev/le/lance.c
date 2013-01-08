@@ -72,7 +72,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/le/lance.c,v 1.4 2007/01/20 10:47:16 marius Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -133,8 +133,8 @@ lance_config(struct lance_softc *sc, const char* name, int unit)
 	ifp->if_flags &= ~IFF_MULTICAST;
 #endif
 	ifp->if_baudrate = IF_Mbps(10);
-	IFQ_SET_MAXLEN(&ifp->if_snd, IFQ_MAXLEN);
-	ifp->if_snd.ifq_drv_maxlen = IFQ_MAXLEN;
+	IFQ_SET_MAXLEN(&ifp->if_snd, ifqmaxlen);
+	ifp->if_snd.ifq_drv_maxlen = ifqmaxlen;
 	IFQ_SET_READY(&ifp->if_snd);
 
 	/* Initialize ifmedia structures. */
@@ -605,7 +605,7 @@ lance_setladrf(struct lance_softc *sc, uint16_t *af)
 	}
 
 	af[0] = af[1] = af[2] = af[3] = 0x0000;
-	IF_ADDR_LOCK(ifp);
+	if_maddr_rlock(ifp);
 	TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 		if (ifma->ifma_addr->sa_family != AF_LINK)
 			continue;
@@ -619,7 +619,7 @@ lance_setladrf(struct lance_softc *sc, uint16_t *af)
 		/* Set the corresponding bit in the filter. */
 		af[crc >> 4] |= LE_HTOLE16(1 << (crc & 0xf));
 	}
-	IF_ADDR_UNLOCK(ifp);
+	if_maddr_runlock(ifp);
 }
 
 /*

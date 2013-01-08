@@ -35,11 +35,11 @@
  * Written by: Achim Leubner <achim_leubner@adaptec.com>
  * Fixes/Additions: Boji Tony Kannanthanam <boji.t.kannanthanam@intel.com>
  *
- * $Id: iir_ctrl.c,v 1.1.1.3 2012-07-21 15:16:59 laffer1 Exp $"
+ * $Id: iir_ctrl.c,v 1.2 2013-01-08 03:53:20 laffer1 Exp $"
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

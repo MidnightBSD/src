@@ -31,7 +31,7 @@
 
 *******************************************************************************/
 
-/*$FreeBSD$*/
+/*$MidnightBSD$*/
 
 /* ixgb_hw.c
  * Shared functions for accessing and configuring the adapter

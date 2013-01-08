@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef _INTEL_RINGBUFFER_H_

@@ -34,7 +34,7 @@
 #include <dev/sound/version.h>
 #include <sys/sx.h>
 
-SND_DECLARE_FILE("$FreeBSD$");
+SND_DECLARE_FILE("$MidnightBSD$");
 
 #define	SS_TYPE_MODULE		0
 #define	SS_TYPE_FIRST		1

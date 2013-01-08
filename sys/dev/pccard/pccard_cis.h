@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 /*-
  * Copyright (c) 1997 Marc Horowitz.  All rights reserved.

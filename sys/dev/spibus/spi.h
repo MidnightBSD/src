@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 struct spi_command {
 	void	*tx_cmd;

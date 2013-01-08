@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  *
  *	maestro_reg.h,v 1.13 2001/11/11 18:29:46 taku Exp
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef	MAESTRO_REG_H_INCLUDED

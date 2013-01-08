@@ -29,7 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 /*
  * Sundance Technology PCI vendor ID

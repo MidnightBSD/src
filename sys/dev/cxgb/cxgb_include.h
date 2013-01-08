@@ -1,5 +1,5 @@
 /*
- *  $FreeBSD$
+ *  $MidnightBSD$
  */
 
 #include <sys/cdefs.h>

@@ -26,7 +26,7 @@
  *
  * LSI MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef _MPSVAR_H

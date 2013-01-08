@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/arcmsr/arcmsr.c,v 1.4 2012/08/03 02:32:47 laffer1 Exp $ */
 /*
 *****************************************************************************************
 **        O.S   : FreeBSD
@@ -74,6 +73,7 @@
 */
 
 #include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 #if 0
 #define ARCMSR_DEBUG1			1

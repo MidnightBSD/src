@@ -48,7 +48,7 @@
 
 #include <dev/sound/pci/via8233.h>
 
-SND_DECLARE_FILE("$FreeBSD$");
+SND_DECLARE_FILE("$MidnightBSD$");
 
 #define VIA8233_PCI_ID 0x30591106
 

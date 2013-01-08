@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 /*
  * This is prt of the Driver for Video Capture Cards (Frame grabbers)

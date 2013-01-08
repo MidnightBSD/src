@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 /** @file drm_drv.c
  * The catch-all file for DRM device support, including module setup/teardown,

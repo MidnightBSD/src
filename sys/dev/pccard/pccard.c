@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1258,9 +1258,7 @@ static void
 pccard_intr(void *arg)
 {
 	struct pccard_function *pf = (struct pccard_function*) arg;
-
-	if (pf->intr_handler == NULL)
-		return;	
+	
 	pf->intr_handler(pf->intr_handler_arg);	
 }
 

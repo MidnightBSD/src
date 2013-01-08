@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 /*-
  *       Copyright (c) 2000-04 ICP vortex GmbH
  *       Copyright (c) 2002-04 Intel Corporation
@@ -41,7 +41,7 @@
  * credits:     Niklas Hallqvist;       OpenBSD driver for the ICP Controllers.
  *              FreeBSD.ORG;            Great O/S to work on and for.
  *
- * $Id: iir.h,v 1.4 2012-10-09 04:08:11 laffer1 Exp $"
+ * $Id: iir.h,v 1.5 2013-01-08 03:53:20 laffer1 Exp $"
  */
 
 #ifndef _IIR_H

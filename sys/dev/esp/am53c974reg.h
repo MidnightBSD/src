@@ -29,7 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 #ifndef _AM53C974_H_
 #define	_AM53C974_H_

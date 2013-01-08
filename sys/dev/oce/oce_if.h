@@ -37,7 +37,7 @@
  */
 
 
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 #include <sys/param.h>
 #include <sys/endian.h>

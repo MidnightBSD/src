@@ -30,7 +30,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
- /*$FreeBSD$*/
+ /*$MidnightBSD$*/
 
 uint32_t regs_count_e1=319;
 

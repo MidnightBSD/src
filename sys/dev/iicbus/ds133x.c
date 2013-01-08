@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 /*
  * Dallas Semiconductor DS133X RTC sitting on the I2C bus.
  */

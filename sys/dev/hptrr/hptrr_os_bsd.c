@@ -23,10 +23,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 #include <dev/hptrr/hptrr_config.h>
-/* $Id: hptrr_os_bsd.c,v 1.1.1.2 2012-07-21 15:16:50 laffer1 Exp $
+/* $Id: hptrr_os_bsd.c,v 1.2 2013-01-08 03:53:20 laffer1 Exp $
  *
  * HighPoint RAID Driver for FreeBSD
  * Copyright (C) 2005 HighPoint Technologies, Inc. All Rights Reserved.

@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $MidnightBSD$
  * definitions for AT&T StarLAN 10 etc...
  */
 

@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: kbdmux.c,v 1.6 2012-10-09 04:08:11 laffer1 Exp $
- * $FreeBSD$
+ * $Id: kbdmux.c,v 1.7 2013-01-08 03:53:23 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include "opt_compat.h"

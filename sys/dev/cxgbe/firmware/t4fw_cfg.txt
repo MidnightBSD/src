@@ -138,5 +138,5 @@
 	version = 0x1
 	checksum = 0xdb5813f9
 #
-# $FreeBSD$
+# $MidnightBSD$
 #

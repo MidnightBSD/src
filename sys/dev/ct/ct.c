@@ -1,8 +1,8 @@
-/* $MidnightBSD: src/sys/dev/ct/ct.c,v 1.2 2008/12/02 02:24:39 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/ct/ct.c,v 1.3 2012/08/06 01:22:08 laffer1 Exp $ */
 /*	$NecBSD: ct.c,v 1.13.12.5 2001/06/26 07:31:53 honda Exp $	*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 /*	$NetBSD$	*/
 
 #define	CT_DEBUG

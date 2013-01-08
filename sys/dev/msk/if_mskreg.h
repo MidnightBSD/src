@@ -2,8 +2,8 @@
  *
  * Name:	skgehw.h
  * Project:	Gigabit Ethernet Adapters, Common Modules
- * Version:	$Revision: 1.6 $
- * Date:	$Date: 2012-10-09 04:08:12 $
+ * Version:	$Revision: 1.7 $
+ * Date:	$Date: 2013-01-08 03:53:24 $
  * Purpose:	Defines and Macros for the Gigabit Ethernet Adapter Product Family
  *
  ******************************************************************************/
@@ -93,7 +93,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/*$FreeBSD$*/
+/*$MidnightBSD$*/
 
 /*
  * SysKonnect PCI vendor ID

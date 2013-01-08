@@ -52,7 +52,7 @@
  * SUCH DAMAGE.
  *
  *
- *	$FreeBSD$
+ *	$MidnightBSD$
  */
 
 /*

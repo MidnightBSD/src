@@ -30,7 +30,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
- /*$FreeBSD$*/
+ /*$MidnightBSD$*/
 
 #ifndef _BXE_SELF_TEST_H
 #define	_BXE_SELF_TEST_H

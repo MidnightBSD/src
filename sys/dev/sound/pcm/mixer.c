@@ -35,7 +35,7 @@
 #include "feeder_if.h"
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD$");
+SND_DECLARE_FILE("$MidnightBSD$");
 
 MALLOC_DEFINE(M_MIXER, "mixer", "mixer");
 

@@ -33,7 +33,7 @@
 
 #include <dev/sound/pcm/sound.h>
 
-SND_DECLARE_FILE("$FreeBSD$");
+SND_DECLARE_FILE("$MidnightBSD$");
 
 /* board-specific include files */
 #include <dev/sound/isa/mss.h>

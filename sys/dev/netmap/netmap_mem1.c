@@ -24,7 +24,7 @@
  */
 
 /*
- * $FreeBSD$
+ * $MidnightBSD$
  *
  * The original netmap memory allocator, using a single large
  * chunk of memory allocated with contigmalloc.

@@ -28,6 +28,7 @@
  */
 
 #include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 /*
  * AMCC'S 3ware driver for 9000 series storage controllers.
@@ -564,7 +565,7 @@ tw_osli_alloc_mem(struct twa_softc *sc)
 	if (bus_dma_tag_create(bus_get_dma_tag(sc->bus_dev), /* parent */
 				sc->alignment,		/* alignment */
 				0,			/* boundary */
-				BUS_SPACE_MAXADDR_32BIT,/* lowaddr */
+				BUS_SPACE_MAXADDR,	/* lowaddr */
 				BUS_SPACE_MAXADDR, 	/* highaddr */
 				NULL, NULL, 		/* filter, filterarg */
 				TW_CL_MAX_IO_SIZE,	/* maxsize */
@@ -587,7 +588,7 @@ tw_osli_alloc_mem(struct twa_softc *sc)
 	if (bus_dma_tag_create(sc->parent_tag,		/* parent */
 				sc->alignment,		/* alignment */
 				0,			/* boundary */
-				BUS_SPACE_MAXADDR_32BIT,/* lowaddr */
+				BUS_SPACE_MAXADDR,	/* lowaddr */
 				BUS_SPACE_MAXADDR, 	/* highaddr */
 				NULL, NULL, 		/* filter, filterarg */
 				dma_mem_size,		/* maxsize */
@@ -634,7 +635,7 @@ tw_osli_alloc_mem(struct twa_softc *sc)
 	if (bus_dma_tag_create(sc->parent_tag,		/* parent */
 				sc->alignment,		/* alignment */
 				0,			/* boundary */
-				BUS_SPACE_MAXADDR_32BIT,/* lowaddr */
+				BUS_SPACE_MAXADDR,	/* lowaddr */
 				BUS_SPACE_MAXADDR, 	/* highaddr */
 				NULL, NULL, 		/* filter, filterarg */
 				TW_CL_MAX_IO_SIZE,	/* maxsize */
@@ -660,7 +661,7 @@ tw_osli_alloc_mem(struct twa_softc *sc)
 	if (bus_dma_tag_create(sc->parent_tag,		/* parent */
 				sc->alignment,		/* alignment */
 				0,			/* boundary */
-				BUS_SPACE_MAXADDR_32BIT,/* lowaddr */
+				BUS_SPACE_MAXADDR,	/* lowaddr */
 				BUS_SPACE_MAXADDR, 	/* highaddr */
 				NULL, NULL, 		/* filter, filterarg */
 				TW_CL_MAX_IO_SIZE,	/* maxsize */

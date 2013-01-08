@@ -1,5 +1,5 @@
 /*-
- * $FreeBSD$
+ * $MidnightBSD$
  *
  * Copyright (c) 1999 Roger Hardiman
  * Copyright (c) 1998 Amancio Hasty

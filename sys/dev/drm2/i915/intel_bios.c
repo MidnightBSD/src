@@ -23,7 +23,7 @@
  * Authors:
  *    Eric Anholt <eric@anholt.net>
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm.h>

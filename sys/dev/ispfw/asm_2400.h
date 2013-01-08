@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2005-2010 by Qlogic, Inc.
  * All rights reserved.

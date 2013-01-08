@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $MidnightBSD$
  */
 /*
    This file is auto-generated from the drm_pciids.txt in the DRM CVS

@@ -37,7 +37,7 @@
  */
 
 
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 
 #include "oce_if.h"

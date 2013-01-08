@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/dev/arcmsr/arcmsr.h,v 1.4 2012/04/12 01:42:32 laffer1 Exp $ */
 /*
 ***********************************************************************************************
 **        O.S   : FreeBSD
@@ -36,6 +35,7 @@
 **(INCLUDING NEGLIGENCE OR OTHERWISE)ARISING IN ANY WAY OUT OF THE USE OF
 ** THIS SOFTWARE,EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **************************************************************************
+* $MidnightBSD$
 */
 #define ARCMSR_SCSI_INITIATOR_ID			255
 #define ARCMSR_DEV_SECTOR_SIZE				512
@@ -721,7 +721,6 @@ struct CommandControlBlock {
 	u_int16_t					srb_state;                /* 538-539 */
 	struct	callout				ccb_callout;
     /*  ==========================================================  */
-/*	struct	callout				ccb_callout; */
 };
 /*	srb_flags */
 #define		SRB_FLAG_READ				0x0000

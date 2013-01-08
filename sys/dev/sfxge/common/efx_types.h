@@ -24,7 +24,7 @@
  *
  * Ackowledgement to Fen Systems Ltd.
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef	_SYS_EFX_TYPES_H

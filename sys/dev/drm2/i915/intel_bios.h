@@ -23,7 +23,7 @@
  * Authors:
  *    Eric Anholt <eric@anholt.net>
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef _I830_BIOS_H_

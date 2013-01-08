@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pcf/envctrl.c,v 1.8 2007/03/21 03:38:36 nyan Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * Device specific driver for the SUNW,envctrl device found on some
@@ -37,13 +37,15 @@ __FBSDID("$FreeBSD: src/sys/dev/pcf/envctrl.c,v 1.8 2007/03/21 03:38:36 nyan Exp
  */
 
 #include <sys/param.h>
-#include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/resource.h>
+#include <sys/systm.h>
 #include <sys/uio.h>
 
 #include <dev/ofw/ofw_bus.h>
@@ -53,6 +55,7 @@ __FBSDID("$FreeBSD: src/sys/dev/pcf/envctrl.c,v 1.8 2007/03/21 03:38:36 nyan Exp
 
 #include <sys/rman.h>
 
+#include <dev/iicbus/iicbus.h>
 #include <dev/iicbus/iiconf.h>
 #include <dev/pcf/pcfvar.h>
 #include "iicbus_if.h"
@@ -107,7 +110,7 @@ envctrl_attach(device_t dev)
 	int rv = ENXIO;
 
 	sc = DEVTOSOFTC(dev);
-	bzero(sc, sizeof(struct pcf_softc));
+	mtx_init(&sc->pcf_lock, device_get_nameunit(dev), "pcf", MTX_DEF);
 
 	/* IO port is mandatory */
 	sc->res_ioport = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
@@ -116,8 +119,6 @@ envctrl_attach(device_t dev)
 		device_printf(dev, "cannot reserve I/O port range\n");
 		goto error;
 	}
-	sc->bt_ioport = rman_get_bustag(sc->res_ioport);
-	sc->bh_ioport = rman_get_bushandle(sc->res_ioport);
 
 	sc->pcf_flags = device_get_flags(dev);
 
@@ -134,7 +135,7 @@ envctrl_attach(device_t dev)
 	pcf_rst_card(dev, IIC_FASTEST, PCF_DEFAULT_ADDR, NULL);
 
 	rv = bus_setup_intr(dev, sc->res_irq,
-			    INTR_TYPE_NET /* | INTR_ENTROPY */,
+			    INTR_TYPE_NET | INTR_MPSAFE /* | INTR_ENTROPY */,
 			    NULL, pcf_intr, sc, &sc->intr_cookie);
 	if (rv) {
 		device_printf(dev, "could not setup IRQ\n");
@@ -158,6 +159,7 @@ error:
 		bus_release_resource(dev, SYS_RES_MEMORY, sc->rid_ioport,
 				     sc->res_ioport);
 	}
+	mtx_destroy(&sc->pcf_lock);
 	return (rv);
 }
 
@@ -181,10 +183,10 @@ envctrl_detach(device_t dev)
 	}
 
 	bus_release_resource(dev, SYS_RES_MEMORY, sc->rid_ioport, sc->res_ioport);
+	mtx_destroy(&sc->pcf_lock);
 
 	return (0);
 }
 
 DRIVER_MODULE(envctrl, ebus, envctrl_driver, envctrl_devclass, 0, 0);
-MODULE_DEPEND(envctrl, iicbus, PCF_MINVER, PCF_PREFVER, PCF_MAXVER);
-MODULE_VERSION(envctrl, PCF_MODVER);
+DRIVER_MODULE(iicbus, envctrl, iicbus_driver, iicbus_devclass, 0, 0);

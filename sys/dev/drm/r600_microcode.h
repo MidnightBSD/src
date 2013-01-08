@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 static const int ME_JUMP_TABLE_START = 1764;
 static const int ME_JUMP_TABLE_END   = 1792;

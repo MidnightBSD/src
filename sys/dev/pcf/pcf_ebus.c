@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pcf/pcf_ebus.c,v 1.7 2007/03/21 03:38:36 nyan Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * Device specific driver for the EBus i2c devices found on some sun4u
@@ -64,11 +64,13 @@ __FBSDID("$FreeBSD: src/sys/dev/pcf/pcf_ebus.c,v 1.7 2007/03/21 03:38:36 nyan Ex
  */
 
 #include <sys/param.h>
-#include <sys/systm.h>
 #include <sys/bus.h>
+#include <sys/lock.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/resource.h>
+#include <sys/systm.h>
 
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/openfirm.h>
@@ -142,10 +144,10 @@ pcf_ebus_attach(device_t dev)
 	uint64_t own_addr;
 
 	sc = DEVTOSOFTC(dev);
-	bzero(sc, sizeof(struct pcf_softc));
+	mtx_init(&sc->pcf_lock, device_get_nameunit(dev), "pcf", MTX_DEF);
 
 	/* get OFW node of the pcf */
-	if ((node = ofw_bus_get_node(dev)) <= 0) {
+	if ((node = ofw_bus_get_node(dev)) == -1) {
 		device_printf(dev, "cannot get OFW node\n");
 		goto error;
 	}
@@ -157,8 +159,6 @@ pcf_ebus_attach(device_t dev)
 		device_printf(dev, "cannot reserve I/O port range\n");
 		goto error;
 	}
-	sc->bt_ioport = rman_get_bustag(sc->res_ioport);
-	sc->bh_ioport = rman_get_bushandle(sc->res_ioport);
 
 	sc->pcf_flags = device_get_flags(dev);
 
@@ -219,6 +219,7 @@ error:
 		bus_release_resource(dev, SYS_RES_MEMORY, sc->rid_ioport,
 		    sc->res_ioport);
 	}
+	mtx_destroy(&sc->pcf_lock);
 	return (rv);
 }
 
@@ -245,10 +246,9 @@ pcf_ebus_detach(device_t dev)
 
 	bus_release_resource(dev, SYS_RES_MEMORY, sc->rid_ioport,
 	    sc->res_ioport);
+	mtx_destroy(&sc->pcf_lock);
 
 	return (0);
 }
 
 DRIVER_MODULE(pcf_ebus, ebus, pcf_ebus_driver, pcf_ebus_devclass, 0, 0);
-MODULE_DEPEND(pcf_ebus, iicbus, PCF_MINVER, PCF_PREFVER, PCF_MAXVER);
-MODULE_VERSION(pcf_ebus, PCF_MODVER);

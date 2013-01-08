@@ -6,7 +6,7 @@
  * this file contains the description of the ENI ATM midway chip
  * data structures.   see midway.c for more details.
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #define MID_SZTOB(X) 	((X) * 256 * 4) /* size to bytes */

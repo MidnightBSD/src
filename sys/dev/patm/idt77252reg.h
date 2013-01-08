@@ -26,7 +26,7 @@
  *
  * Author: Hartmut Brandt <harti@freebsd.org>
  *
- * $FreeBSD$
+ * $MidnightBSD$
  *
  * Register definitions for the IDT77252 chip.
  */

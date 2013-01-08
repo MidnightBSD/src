@@ -53,7 +53,7 @@
  * SUCH DAMAGE.
  *
  *
- *      $FreeBSD$
+ *      $MidnightBSD$
  */
 
 #include <geom/geom_disk.h>

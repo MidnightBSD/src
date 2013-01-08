@@ -25,7 +25,7 @@
  *
  * LSI MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 struct mps_fw_event_work;

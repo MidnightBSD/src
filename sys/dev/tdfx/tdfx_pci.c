@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/tdfx/tdfx_pci.c,v 1.39.2.1.6.1 2010/02/10 00:26:20 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 /* 3dfx driver for FreeBSD 4.x - Finished 11 May 2000, 12:25AM ET
  *
@@ -42,7 +42,6 @@ __FBSDID("$FreeBSD: src/sys/dev/tdfx/tdfx_pci.c,v 1.39.2.1.6.1 2010/02/10 00:26:
 #include <sys/param.h>
 
 #include <sys/bus.h>
-#include <sys/cdefs.h>
 #include <sys/conf.h>
 #include <sys/fcntl.h>
 #include <sys/file.h>
@@ -250,11 +249,12 @@ tdfx_attach(device_t dev) {
 	/* 
 	 * make_dev registers the cdev to access the 3dfx card from /dev
 	 *	use hex here for the dev num, simply to provide better support if > 10
-	 * voodoo cards, for the mad. The user must set the link, or use MAKEDEV.
+	 * voodoo cards, for the mad. The user must set the link.
 	 * Why would we want that many voodoo cards anyhow? 
 	 */
 	tdfx_info->devt = make_dev(&tdfx_cdev, device_get_unit(dev),
 		UID_ROOT, GID_WHEEL, 0600, "3dfx%x", device_get_unit(dev));
+	tdfx_info->devt->si_drv1 = tdfx_info;
 	
 	return 0;
 }
@@ -393,8 +393,7 @@ tdfx_open(struct cdev *dev, int flags, int fmt, struct thread *td)
 	 *	The open cdev method handles open(2) calls to /dev/3dfx[n] 
 	 * We can pretty much allow any opening of the device.
 	 */
-	struct tdfx_softc *tdfx_info = devclass_get_softc(tdfx_devclass, 
-			UNIT(minor(dev)));
+	struct tdfx_softc *tdfx_info = dev->si_drv1;
 	if(tdfx_info->busy != 0) return EBUSY;
 #ifdef	DEBUG
 	printf("3dfx: Opened by #%d\n", td->td_proc->p_pid);
@@ -411,8 +410,7 @@ tdfx_close(struct cdev *dev, int fflag, int devtype, struct thread *td)
 	 *	The close cdev method handles close(2) calls to /dev/3dfx[n] 
 	 * We'll always want to close the device when it's called.
 	 */
-	struct tdfx_softc *tdfx_info = devclass_get_softc(tdfx_devclass, 
-		UNIT(minor(dev)));
+	struct tdfx_softc *tdfx_info = dev->si_drv1;
 	if(tdfx_info->busy == 0) return EBADF;
 	tdfx_info->busy = 0;
 #ifdef	DEBUG
@@ -422,7 +420,8 @@ tdfx_close(struct cdev *dev, int fflag, int devtype, struct thread *td)
 }
 
 static int
-tdfx_mmap(struct cdev *dev, vm_offset_t offset, vm_paddr_t *paddr, int nprot)
+tdfx_mmap(struct cdev *dev, vm_ooffset_t offset, vm_paddr_t *paddr,
+    int nprot, vm_memattr_t *memattr)
 {
 	/* 
 	 * mmap(2) is called by a user process to request that an area of memory
@@ -434,8 +433,7 @@ tdfx_mmap(struct cdev *dev, vm_offset_t offset, vm_paddr_t *paddr, int nprot)
 	/* struct tdfx_softc* tdfx_info; */
 	
 	/* Get the configuration for our card XXX*/
-	/*tdfx_info = (struct tdfx_softc*)devclass_get_softc(tdfx_devclass,
-			UNIT(minor(dev)));*/
+	/*tdfx_info = dev->si_drv1; */
 	/************************/
 
 	struct tdfx_softc* tdfx_info[2];

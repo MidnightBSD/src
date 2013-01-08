@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ncv/ncr53c500_pccard.c,v 1.29 2007/02/23 12:18:47 piso Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -260,11 +260,13 @@ ncv_pccard_attach(device_t dev)
 	return(0);
 }
 
-static	void
+static	int
 ncv_pccard_detach(device_t dev)
 {
 	ncv_card_unload(dev);
 	ncv_release_resource(dev);
+
+	return (0);
 }
 
 static device_method_t ncv_pccard_methods[] = {

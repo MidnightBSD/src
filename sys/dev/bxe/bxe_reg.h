@@ -30,7 +30,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
- /*$FreeBSD$*/
+ /*$MidnightBSD$*/
 
 /* bxe_reg.h: Broadcom Everest network driver.
  * The registers description starts with the register Access type followed

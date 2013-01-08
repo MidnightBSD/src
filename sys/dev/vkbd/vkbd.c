@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: vkbd.c,v 1.5 2012-10-09 04:08:14 laffer1 Exp $
- * $FreeBSD$
+ * $Id: vkbd.c,v 1.6 2013-01-08 03:53:29 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include "opt_compat.h"

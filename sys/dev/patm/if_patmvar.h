@@ -26,7 +26,7 @@
  *
  * Author: Hartmut Brandt <harti@freebsd.org>
  *
- * $FreeBSD$
+ * $MidnightBSD$
  *
  * Driver for IDT77252 (ABR) based cards like ProSum's.
  */

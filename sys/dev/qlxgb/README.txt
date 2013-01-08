@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 			README File
 	QLogic 3200 and 8200 series Single/Dual Port

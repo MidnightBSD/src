@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pcf/pcf_isa.c,v 1.9 2007/03/21 03:38:36 nyan Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * Hardware driver for a Philips PCF8584 I2C bus controller sitting
@@ -36,11 +36,13 @@ __FBSDID("$FreeBSD: src/sys/dev/pcf/pcf_isa.c,v 1.9 2007/03/21 03:38:36 nyan Exp
  */
 
 #include <sys/param.h>
-#include <sys/systm.h>
 #include <sys/bus.h>
+#include <sys/lock.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/resource.h>
+#include <sys/systm.h>
 
 #include <machine/bus.h>
 #include <machine/resource.h>
@@ -126,7 +128,7 @@ pcf_isa_attach(device_t dev)
 	int rv = ENXIO;
 
 	sc = DEVTOSOFTC(dev);
-	bzero(sc, sizeof(struct pcf_softc));
+	mtx_init(&sc->pcf_lock, device_get_nameunit(dev), "pcf", MTX_DEF);
 
 	/* IO port is mandatory */
 	sc->res_ioport = bus_alloc_resource_any(dev, SYS_RES_IOPORT,
@@ -135,8 +137,6 @@ pcf_isa_attach(device_t dev)
 		device_printf(dev, "cannot reserve I/O port range\n");
 		goto error;
 	}
-	sc->bt_ioport = rman_get_bustag(sc->res_ioport);
-	sc->bh_ioport = rman_get_bushandle(sc->res_ioport);
 
 	sc->pcf_flags = device_get_flags(dev);
 
@@ -179,6 +179,7 @@ error:
 		bus_release_resource(dev, SYS_RES_IOPORT, sc->rid_ioport,
 				     sc->res_ioport);
 	}
+	mtx_destroy(&sc->pcf_lock);
 	return (rv);
 }
 
@@ -202,10 +203,9 @@ pcf_isa_detach(device_t dev)
 	}
 
 	bus_release_resource(dev, SYS_RES_IOPORT, sc->rid_ioport, sc->res_ioport);
+	mtx_destroy(&sc->pcf_lock);
 
 	return (0);
 }
 
 DRIVER_MODULE(pcf_isa, isa, pcf_isa_driver, pcf_isa_devclass, 0, 0);
-MODULE_DEPEND(pcf_isa, iicbus, PCF_MINVER, PCF_PREFVER, PCF_MAXVER);
-MODULE_VERSION(pcf_isa, PCF_MODVER);

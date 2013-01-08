@@ -1,4 +1,4 @@
-/*      $FreeBSD$	*/
+/*      $MidnightBSD$	*/
 
 /*-
  * Copyright (c) 2004-2006

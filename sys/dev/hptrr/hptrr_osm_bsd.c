@@ -25,10 +25,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include <dev/hptrr/hptrr_config.h>
-/* $Id: hptrr_osm_bsd.c,v 1.1.1.2 2012-07-21 15:16:51 laffer1 Exp $
+/* $Id: hptrr_osm_bsd.c,v 1.2 2013-01-08 03:53:20 laffer1 Exp $
  *
  * HighPoint RAID Driver for FreeBSD
  * Copyright (C) 2005 HighPoint Technologies, Inc. All Rights Reserved.

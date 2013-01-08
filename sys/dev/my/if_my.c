@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -82,7 +82,7 @@ static int      MY_USEIOSPACE = 1;
 
 #ifndef lint
 static          const char rcsid[] =
-"$Id: if_my.c,v 1.1.1.4 2012-07-21 15:16:52 laffer1 Exp $";
+"$Id: if_my.c,v 1.2 2013-01-08 03:53:24 laffer1 Exp $";
 #endif
 
 /*

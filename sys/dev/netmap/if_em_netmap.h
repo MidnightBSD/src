@@ -24,8 +24,8 @@
  */
 
 /*
- * $FreeBSD$
- * $Id: if_em_netmap.h,v 1.1.1.1 2012-07-21 15:16:49 laffer1 Exp $
+ * $MidnightBSD$
+ * $Id: if_em_netmap.h,v 1.2 2013-01-08 03:53:24 laffer1 Exp $
  *
  * netmap support for em.
  *
