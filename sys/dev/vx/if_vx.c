@@ -31,6 +31,7 @@
  */
 
 #include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 /*
  * Created from if_ep.c driver by Fred Gray (fgray@rice.edu) to support

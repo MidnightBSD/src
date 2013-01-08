@@ -55,7 +55,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 /*
  * driver for Integrated Circuit Systems' ICS1889-1893 ethernet 10/100 PHY

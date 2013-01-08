@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 /*
  *   MODULE: GFP_TX.H
  *

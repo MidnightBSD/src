@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #define FILEMON_SET_FD		_IOWR('S', 1, int)
