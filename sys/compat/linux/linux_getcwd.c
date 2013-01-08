@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $OpenBSD: linux_getcwd.c,v 1.2 2001/05/16 12:50:21 ho Exp $ */
 /* $NetBSD: vfs_getcwd.c,v 1.3.2.3 1999/07/11 10:24:09 sommerfeld Exp $ */
 /*-
@@ -16,13 +15,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -38,10 +30,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/linux/linux_getcwd.c,v 1.27 2006/11/18 17:27:39 kib Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "opt_compat.h"
-#include "opt_mac.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -143,7 +134,7 @@ linux_getcwd_scandir(lvpp, uvpp, bpp, bufp, td)
 	 * current directory is still locked.
 	 */
 	if (bufp != NULL) {
-		error = VOP_GETATTR(lvp, &va, td->td_ucred, td);
+		error = VOP_GETATTR(lvp, &va, td->td_ucred);
 		if (error) {
 			vput(lvp);
 			*lvpp = NULL;
@@ -164,14 +155,14 @@ linux_getcwd_scandir(lvpp, uvpp, bpp, bufp, td)
 	cn.cn_nameptr = "..";
 	cn.cn_namelen = 2;
 	cn.cn_consume = 0;
-	cn.cn_lkflags = LK_EXCLUSIVE;
+	cn.cn_lkflags = LK_SHARED;
 	
 	/*
 	 * At this point, lvp is locked and will be unlocked by the lookup.
 	 * On successful return, *uvpp will be locked
 	 */
 #ifdef MAC
-	error = mac_check_vnode_lookup(td->td_ucred, lvp, &cn);
+	error = mac_vnode_check_lookup(td->td_ucred, lvp, &cn);
 	if (error == 0)
 #endif
 		error = VOP_LOOKUP(lvp, uvpp, &cn);
@@ -217,7 +208,7 @@ unionread:
 		eofflag = 0;
 
 #ifdef MAC
-		error = mac_check_vnode_readdir(td->td_ucred, uvp);
+		error = mac_vnode_check_readdir(td->td_ucred, uvp);
 		if (error == 0)
 #endif /* MAC */
 			error = VOP_READDIR(uvp, &uio, td->td_ucred, &eofflag,
@@ -308,7 +299,7 @@ linux_getcwd_common (lvp, rvp, bpp, bufp, limit, flags, td)
 	struct vnode *uvp = NULL;
 	char *bp = NULL;
 	int error;
-	int perms = VEXEC;
+	accmode_t accmode = VEXEC;
 
 	if (rvp == NULL) {
 		rvp = fdp->fd_rdir;
@@ -326,7 +317,7 @@ linux_getcwd_common (lvp, rvp, bpp, bufp, limit, flags, td)
 	 *	uvp is either NULL, or locked and held.
 	 */
 
-	error = vn_lock(lvp, LK_EXCLUSIVE | LK_RETRY, td);
+	error = vn_lock(lvp, LK_EXCLUSIVE | LK_RETRY);
 	if (error != 0)
 		panic("vn_lock LK_RETRY returned error %d", error);
 	if (bufp)
@@ -353,10 +344,10 @@ linux_getcwd_common (lvp, rvp, bpp, bufp, limit, flags, td)
 		 * whether or not caller cares.
 		 */
 		if (flags & GETCWD_CHECK_ACCESS) {
-			error = VOP_ACCESS(lvp, perms, td->td_ucred, td);
+			error = VOP_ACCESS(lvp, accmode, td->td_ucred, td);
 			if (error)
 				goto out;
-			perms = VEXEC|VREAD;
+			accmode = VEXEC|VREAD;
 		}
 		
 		/*
@@ -379,7 +370,7 @@ linux_getcwd_common (lvp, rvp, bpp, bufp, limit, flags, td)
 				goto out;
 			}
 			VREF(lvp);
-			error = vn_lock(lvp, LK_EXCLUSIVE | LK_RETRY, td);
+			error = vn_lock(lvp, LK_EXCLUSIVE | LK_RETRY);
 			if (error != 0)
 				panic("vn_lock LK_RETRY returned %d", error);
 		}

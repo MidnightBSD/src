@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/compat/linux/linux_socket.h,v 1.2 2008/12/03 00:24:37 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000 Assar Westerlund
  * All rights reserved.
@@ -26,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/linux/linux_socket.h,v 1.2 2002/06/02 20:05:42 schweikh Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _LINUX_SOCKET_H_
@@ -49,10 +48,12 @@
 #define LINUX_MSG_RST		0x1000
 #define LINUX_MSG_ERRQUEUE	0x2000
 #define LINUX_MSG_NOSIGNAL	0x4000
+#define LINUX_MSG_CMSG_CLOEXEC	0x40000000
 
 /* Socket-level control message types */
 
 #define LINUX_SCM_RIGHTS	0x01
+#define LINUX_SCM_CREDENTIALS   0x02
 
 /* Ancilliary data object information macros */
 
@@ -66,13 +67,14 @@
 #define LINUX_CMSG_FIRSTHDR(msg) \
 				((msg)->msg_controllen >= \
 				    sizeof(struct l_cmsghdr) ? \
-				    (struct l_cmsghdr *)((msg)->msg_control) : \
+				    (struct l_cmsghdr *) \
+				        PTRIN((msg)->msg_control) : \
 				    (struct l_cmsghdr *)(NULL))
 #define LINUX_CMSG_NXTHDR(msg, cmsg) \
 				((((char *)(cmsg) + \
 				    LINUX_CMSG_ALIGN((cmsg)->cmsg_len) + \
 				    sizeof(*(cmsg))) > \
-				    (((char *)(msg)->msg_control) + \
+				    (((char *)PTRIN((msg)->msg_control)) + \
 				    (msg)->msg_controllen)) ? \
 				    (struct l_cmsghdr *) NULL : \
 				    (struct l_cmsghdr *)((char *)(cmsg) + \

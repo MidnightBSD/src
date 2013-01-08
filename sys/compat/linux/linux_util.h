@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 Christos Zoulas
  * Copyright (c) 1995 Frank van der Linden
@@ -29,12 +28,7 @@
  *
  * from: svr4_util.h,v 1.5 1994/11/18 02:54:31 christos Exp
  * from: linux_util.h,v 1.2 1995/03/05 23:23:50 fvdl Exp
- * $FreeBSD: src/sys/compat/linux/linux_util.h,v 1.29 2007/03/29 02:11:45 julian Exp $
- */
-
-/*
- * This file is pretty much the same as Christos' svr4_util.h
- * (for now).
+ * $MidnightBSD$
  */
 
 #ifndef	_LINUX_UTIL_H_
@@ -52,23 +46,25 @@
 
 extern const char linux_emul_path[];
 
-int linux_emul_convpath(struct thread *, char *, enum uio_seg, char **, int);
+int linux_emul_convpath(struct thread *, const char *, enum uio_seg, char **, int, int);
 
-#define LCONVPATH_SEG(td, upath, pathp, i, seg)				\
+#define LCONVPATH_AT(td, upath, pathp, i, dfd)				\
 	do {								\
 		int _error;						\
 									\
-		_error = linux_emul_convpath(td, upath, seg,		\
-		    pathp, i);						\
+		_error = linux_emul_convpath(td, upath, UIO_USERSPACE,	\
+		    pathp, i, dfd);					\
 		if (*(pathp) == NULL)					\
 			return (_error);				\
 	} while (0)
 
 #define LCONVPATH(td, upath, pathp, i) 	\
-   LCONVPATH_SEG(td, upath, pathp, i, UIO_USERSPACE)
+   LCONVPATH_AT(td, upath, pathp, i, AT_FDCWD)
 
 #define LCONVPATHEXIST(td, upath, pathp) LCONVPATH(td, upath, pathp, 0)
+#define LCONVPATHEXIST_AT(td, upath, pathp, dfd) LCONVPATH_AT(td, upath, pathp, 0, dfd)
 #define LCONVPATHCREAT(td, upath, pathp) LCONVPATH(td, upath, pathp, 1)
+#define LCONVPATHCREAT_AT(td, upath, pathp, dfd) LCONVPATH_AT(td, upath, pathp, 1, dfd)
 #define LFREEPATH(path)	free(path, M_TEMP)
 
 #define DUMMY(s)							\
@@ -101,8 +97,37 @@ struct linux_device_handler {
 int	linux_device_register_handler(struct linux_device_handler *h);
 int	linux_device_unregister_handler(struct linux_device_handler *h);
 char	*linux_driver_get_name_dev(device_t dev);
-int	linux_driver_get_major_minor(char *node, int *major, int *minor);
+int	linux_driver_get_major_minor(const char *node, int *major, int *minor);
 char	*linux_get_char_devices(void);
 void	linux_free_get_char_devices(char *string);
+
+#if defined(KTR)
+
+#define	KTR_LINUX				KTR_SUBSYS
+#define	LINUX_CTRFMT(nm, fmt)	#nm"("fmt")"
+
+#define	LINUX_CTR6(f, m, p1, p2, p3, p4, p5, p6) do {			\
+	if (ldebug(f))							\
+		CTR6(KTR_LINUX, LINUX_CTRFMT(f, m),			\
+		    p1, p2, p3, p4, p5, p6);				\
+} while (0)
+
+#define	LINUX_CTR(f)			LINUX_CTR6(f, "", 0, 0, 0, 0, 0, 0)
+#define	LINUX_CTR0(f, m)		LINUX_CTR6(f, m, 0, 0, 0, 0, 0, 0)
+#define	LINUX_CTR1(f, m, p1)		LINUX_CTR6(f, m, p1, 0, 0, 0, 0, 0)
+#define	LINUX_CTR2(f, m, p1, p2)	LINUX_CTR6(f, m, p1, p2, 0, 0, 0, 0)
+#define	LINUX_CTR3(f, m, p1, p2, p3)	LINUX_CTR6(f, m, p1, p2, p3, 0, 0, 0)
+#define	LINUX_CTR4(f, m, p1, p2, p3, p4)	LINUX_CTR6(f, m, p1, p2, p3, p4, 0, 0)
+#define	LINUX_CTR5(f, m, p1, p2, p3, p4, p5)	LINUX_CTR6(f, m, p1, p2, p3, p4, p5, 0)
+#else
+#define	LINUX_CTR(f)
+#define	LINUX_CTR0(f, m)
+#define	LINUX_CTR1(f, m, p1)
+#define	LINUX_CTR2(f, m, p1, p2)
+#define	LINUX_CTR3(f, m, p1, p2, p3)
+#define	LINUX_CTR4(f, m, p1, p2, p3, p4)
+#define	LINUX_CTR5(f, m, p1, p2, p3, p4, p5)
+#define	LINUX_CTR6(f, m, p1, p2, p3, p4, p5, p6)
+#endif
 
 #endif /* !_LINUX_UTIL_H_ */

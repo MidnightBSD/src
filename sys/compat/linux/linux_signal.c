@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994-1995 Søren Schmidt
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/linux/linux_signal.c,v 1.65 2007/01/07 19:14:06 netchild Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -39,6 +38,8 @@ __FBSDID("$FreeBSD: src/sys/compat/linux/linux_signal.c,v 1.65 2007/01/07 19:14:
 #include <sys/signalvar.h>
 #include <sys/syscallsubr.h>
 #include <sys/sysproto.h>
+
+#include <security/audit/audit.h>
 
 #include "opt_compat.h"
 
@@ -430,7 +431,7 @@ int
 linux_rt_sigtimedwait(struct thread *td,
 	struct linux_rt_sigtimedwait_args *args)
 {
-	int error;
+	int error, sig;
 	l_timeval ltv;
 	struct timeval tv;
 	struct timespec ts, *tsa;
@@ -456,8 +457,9 @@ linux_rt_sigtimedwait(struct thread *td,
 			return (error);
 #ifdef DEBUG
 		if (ldebug(rt_sigtimedwait))
-			printf(LMSG("linux_rt_sigtimedwait: incoming timeout (%d/%d)\n"),
-				ltv.tv_sec, ltv.tv_usec);
+			printf(LMSG("linux_rt_sigtimedwait: "
+			    "incoming timeout (%d/%d)\n"),
+			    ltv.tv_sec, ltv.tv_usec);
 #endif
 		tv.tv_sec = (long)ltv.tv_sec;
 		tv.tv_usec = (suseconds_t)ltv.tv_usec;
@@ -476,8 +478,9 @@ linux_rt_sigtimedwait(struct thread *td,
 				timevalclear(&tv);
 #ifdef DEBUG
 			if (ldebug(rt_sigtimedwait))
-				printf(LMSG("linux_rt_sigtimedwait: converted timeout (%jd/%ld)\n"),
-					(intmax_t)tv.tv_sec, tv.tv_usec);
+				printf(LMSG("linux_rt_sigtimedwait: "
+				    "converted timeout (%jd/%ld)\n"),
+				    (intmax_t)tv.tv_sec, tv.tv_usec);
 #endif
 		}
 		TIMEVAL_TO_TIMESPEC(&tv, &ts);
@@ -486,24 +489,21 @@ linux_rt_sigtimedwait(struct thread *td,
 	error = kern_sigtimedwait(td, bset, &info, tsa);
 #ifdef DEBUG
 	if (ldebug(rt_sigtimedwait))
-		printf(LMSG("linux_rt_sigtimedwait: sigtimedwait returning (%d)\n"), error);
+		printf(LMSG("linux_rt_sigtimedwait: "
+		    "sigtimedwait returning (%d)\n"), error);
 #endif
 	if (error)
 		return (error);
 
+	sig = BSD_TO_LINUX_SIGNAL(info.ksi_signo);
+
 	if (args->ptr) {
 		memset(&linfo, 0, sizeof(linfo));
-		linfo.lsi_signo = info.ksi_signo;
+		ksiginfo_to_lsiginfo(&info, &linfo, sig);
 		error = copyout(&linfo, args->ptr, sizeof(linfo));
 	}
-
-	/* Repost if we got an error. */
-	if (error && info.ksi_signo) {
-		PROC_LOCK(td->td_proc);
-		tdsignal(td->td_proc, td, info.ksi_signo, &info);
-		PROC_UNLOCK(td->td_proc);
-	} else
-		td->td_retval[0] = info.ksi_signo; 
+	if (error == 0)
+		td->td_retval[0] = sig; 
 
 	return (error);
 }
@@ -525,7 +525,7 @@ linux_kill(struct thread *td, struct linux_kill_args *args)
 	 * Allow signal 0 as a means to check for privileges
 	 */
 	if (!LINUX_SIG_VALID(args->signum) && args->signum != 0)
-		return EINVAL;
+		return (EINVAL);
 
 	if (args->signum > 0 && args->signum <= LINUX_SIGTBLSZ)
 		tmp.signum = linux_to_bsd_signal[_SIG_IDX(args->signum)];
@@ -533,48 +533,78 @@ linux_kill(struct thread *td, struct linux_kill_args *args)
 		tmp.signum = args->signum;
 
 	tmp.pid = args->pid;
-	return (kill(td, &tmp));
+	return (sys_kill(td, &tmp));
+}
+
+static int
+linux_do_tkill(struct thread *td, l_int tgid, l_int pid, l_int signum)
+{
+	struct proc *proc = td->td_proc;
+	struct linux_emuldata *em;
+	struct proc *p;
+	ksiginfo_t ksi;
+	int error;
+
+	AUDIT_ARG_SIGNUM(signum);
+	AUDIT_ARG_PID(pid);
+
+	/*
+	 * Allow signal 0 as a means to check for privileges
+	 */
+	if (!LINUX_SIG_VALID(signum) && signum != 0)
+		return (EINVAL);
+
+	if (signum > 0 && signum <= LINUX_SIGTBLSZ)
+		signum = linux_to_bsd_signal[_SIG_IDX(signum)];
+
+	if ((p = pfind(pid)) == NULL) {
+		if ((p = zpfind(pid)) == NULL)
+			return (ESRCH);
+	}
+
+	AUDIT_ARG_PROCESS(p);
+	error = p_cansignal(td, p, signum);
+	if (error != 0 || signum == 0)
+		goto out;
+
+	error = ESRCH;
+	em = em_find(p, EMUL_DONTLOCK);
+
+	if (em == NULL) {
+#ifdef DEBUG
+		printf("emuldata not found in do_tkill.\n");
+#endif
+		goto out;
+	}
+	if (tgid > 0 && em->shared->group_pid != tgid)
+		goto out;
+
+	ksiginfo_init(&ksi);
+	ksi.ksi_signo = signum;
+	ksi.ksi_code = LINUX_SI_TKILL;
+	ksi.ksi_errno = 0;
+	ksi.ksi_pid = proc->p_pid;
+	ksi.ksi_uid = proc->p_ucred->cr_ruid;
+
+	error = pksignal(p, ksi.ksi_signo, &ksi);
+
+out:
+	PROC_UNLOCK(p);
+	return (error);
 }
 
 int
 linux_tgkill(struct thread *td, struct linux_tgkill_args *args)
 {
-   	struct linux_emuldata *em;
-	struct linux_kill_args ka;
-	struct proc *p;
 
 #ifdef DEBUG
 	if (ldebug(tgkill))
 		printf(ARGS(tgkill, "%d, %d, %d"), args->tgid, args->pid, args->sig);
 #endif
+	if (args->pid <= 0 || args->tgid <=0)
+		return (EINVAL);
 
-	ka.pid = args->pid;
-	ka.signum = args->sig;
-
-	if (args->tgid == -1)
-	   	return linux_kill(td, &ka);
-
-	if ((p = pfind(args->pid)) == NULL)
-	      	return ESRCH;
-
-	if (p->p_sysent != &elf_linux_sysvec)
-		return ESRCH;
-
-	PROC_UNLOCK(p);
-
-	em = em_find(p, EMUL_DONTLOCK);
-
-	if (em == NULL) {
-#ifdef DEBUG
-		printf("emuldata not found in tgkill.\n");
-#endif
-		return ESRCH;
-	}
-
-	if (em->shared->group_pid != args->tgid)
-	   	return ESRCH;
-
-	return linux_kill(td, &ka);
+	return (linux_do_tkill(td, args->tgid, args->pid, args->sig));
 }
 
 int
@@ -584,6 +614,43 @@ linux_tkill(struct thread *td, struct linux_tkill_args *args)
 	if (ldebug(tkill))
 		printf(ARGS(tkill, "%i, %i"), args->tid, args->sig);
 #endif
+	if (args->tid <= 0)
+		return (EINVAL);
 
-	return (linux_kill(td, (struct linux_kill_args *) args));
+	return (linux_do_tkill(td, 0, args->tid, args->sig));
+}
+
+void
+ksiginfo_to_lsiginfo(ksiginfo_t *ksi, l_siginfo_t *lsi, l_int sig)
+{
+
+	lsi->lsi_signo = sig;
+	lsi->lsi_code = ksi->ksi_code;
+
+	switch (sig) {
+	case LINUX_SIGPOLL:
+		/* XXX si_fd? */
+		lsi->lsi_band = ksi->ksi_band;
+		break;
+	case LINUX_SIGCHLD:
+		lsi->lsi_pid = ksi->ksi_pid;
+		lsi->lsi_uid = ksi->ksi_uid;
+		lsi->lsi_status = ksi->ksi_status;
+		break;
+	case LINUX_SIGBUS:
+	case LINUX_SIGILL:
+	case LINUX_SIGFPE:
+	case LINUX_SIGSEGV:
+		lsi->lsi_addr = PTROUT(ksi->ksi_addr);
+		break;
+	default:
+		/* XXX SI_TIMER etc... */
+		lsi->lsi_pid = ksi->ksi_pid;
+		lsi->lsi_uid = ksi->ksi_uid;
+		break;
+	}
+	if (sig >= LINUX_SIGRTMIN) {
+		lsi->lsi_int = ksi->ksi_info.si_value.sival_int;
+		lsi->lsi_ptr = PTROUT(ksi->ksi_info.si_value.sival_ptr);
+	}
 }

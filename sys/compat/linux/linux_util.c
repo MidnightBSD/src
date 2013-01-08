@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 Christos Zoulas
  * Copyright (c) 1995 Frank van der Linden
@@ -31,12 +30,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/linux/linux_util.c,v 1.32 2007/02/24 16:49:24 netchild Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "opt_compat.h"
 
 #include <sys/param.h>
 #include <sys/bus.h>
+#include <sys/fcntl.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/linker_set.h>
@@ -66,16 +66,17 @@ const char      linux_emul_path[] = "/compat/linux";
  * named file, i.e. we check if the directory it should be in exists.
  */
 int
-linux_emul_convpath(td, path, pathseg, pbuf, cflag)
+linux_emul_convpath(td, path, pathseg, pbuf, cflag, dfd)
 	struct thread	 *td;
-	char		 *path;
+	const char	 *path;
 	enum uio_seg	  pathseg;
 	char		**pbuf;
 	int		  cflag;
+	int		  dfd;
 {
 
 	return (kern_alternate_path(td, linux_emul_path, path, pathseg, pbuf,
-		cflag));
+		cflag, dfd));
 }
 
 void
@@ -123,12 +124,28 @@ linux_driver_get_name_dev(device_t dev)
 }
 
 int
-linux_driver_get_major_minor(char *node, int *major, int *minor)
+linux_driver_get_major_minor(const char *node, int *major, int *minor)
 {
 	struct device_element *de;
 
 	if (node == NULL || major == NULL || minor == NULL)
 		return 1;
+
+	if (strlen(node) > strlen("pts/") &&
+	    strncmp(node, "pts/", strlen("pts/")) == 0) {
+		unsigned long devno;
+
+		/*
+		 * Linux checks major and minors of the slave device
+		 * to make sure it's a pty device, so let's make him
+		 * believe it is.
+		 */
+		devno = strtoul(node + strlen("pts/"), NULL, 10);
+		*major = 136 + (devno / 256);
+		*minor = devno % 256;
+		return 0;
+	}
+
 	TAILQ_FOREACH(de, &devices, list) {
 		if (strcmp(node, de->entry.bsd_device_name) == 0) {
 			*major = de->entry.linux_major;
@@ -148,7 +165,7 @@ linux_get_char_devices()
 	char formated[256];
 	int current_size = 0, string_size = 1024;
 
-	MALLOC(string, char *, string_size, M_LINUX, M_WAITOK);
+	string = malloc(string_size, M_LINUX, M_WAITOK);
 	string[0] = '\000';
 	last = "";
 	TAILQ_FOREACH(de, &devices, list) {
@@ -164,10 +181,10 @@ linux_get_char_devices()
 			if (strlen(formated) + current_size
 			    >= string_size) {
 				string_size *= 2;
-				MALLOC(string, char *, string_size,
+				string = malloc(string_size,
 				    M_LINUX, M_WAITOK);
 				bcopy(temp, string, current_size);
-				FREE(temp, M_LINUX);
+				free(temp, M_LINUX);
 			}
 			strcat(string, formated);
 			current_size = strlen(string);
@@ -180,7 +197,7 @@ linux_get_char_devices()
 void
 linux_free_get_char_devices(char *string)
 {
-	FREE(string, M_LINUX);
+	free(string, M_LINUX);
 }
 
 static int linux_major_starting = 200;
@@ -193,7 +210,7 @@ linux_device_register_handler(struct linux_device_handler *d)
 	if (d == NULL)
 		return (EINVAL);
 
-	MALLOC(de, struct device_element *, sizeof(*de),
+	de = malloc(sizeof(*de),
 	    M_LINUX, M_WAITOK);
 	if (d->linux_major < 0) {
 		d->linux_major = linux_major_starting++;
@@ -217,7 +234,7 @@ linux_device_unregister_handler(struct linux_device_handler *d)
 	TAILQ_FOREACH(de, &devices, list) {
 		if (bcmp(d, &de->entry, sizeof(*d)) == 0) {
 			TAILQ_REMOVE(&devices, de, list);
-			FREE(de, M_LINUX);
+			free(de, M_LINUX);
 			return (0);
 		}
 	}

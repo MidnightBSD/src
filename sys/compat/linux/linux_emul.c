@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/compat/linux/linux_emul.c,v 1.2 2008/12/03 00:24:37 laffer1 Exp $ */
 /*-
  * Copyright (c) 2006 Roman Divacky
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/linux/linux_emul.c,v 1.20 2007/04/02 18:38:13 jkim Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "opt_compat.h"
 
@@ -42,11 +41,9 @@ __FBSDID("$FreeBSD: src/sys/compat/linux/linux_emul.c,v 1.20 2007/04/02 18:38:13
 #include <sys/sx.h>
 #include <sys/proc.h>
 #include <sys/syscallsubr.h>
+#include <sys/sysent.h>
 #include <sys/sysproto.h>
 #include <sys/unistd.h>
-
-#include <compat/linux/linux_emul.h>
-#include <compat/linux/linux_futex.h>
 
 #ifdef COMPAT_LINUX32
 #include <machine/../linux32/linux.h>
@@ -55,6 +52,9 @@ __FBSDID("$FreeBSD: src/sys/compat/linux/linux_emul.c,v 1.20 2007/04/02 18:38:13
 #include <machine/../linux/linux.h>
 #include <machine/../linux/linux_proto.h>
 #endif
+
+#include <compat/linux/linux_emul.h>
+#include <compat/linux/linux_futex.h>
 
 struct sx	emul_shared_lock;
 struct mtx	emul_lock;
@@ -87,6 +87,8 @@ linux_proc_init(struct thread *td, pid_t child, int flags)
 		em = malloc(sizeof *em, M_LINUX, M_WAITOK | M_ZERO);
 		em->pid = child;
 		em->pdeath_signal = 0;
+		em->flags = 0;
+		em->robust_futexes = NULL;
 		if (flags & LINUX_CLONE_THREAD) {
 			/* handled later in the code */
 		} else {
@@ -162,6 +164,8 @@ linux_proc_exit(void *arg __unused, struct proc *p)
 	if (__predict_true(p->p_sysent != &elf_linux_sysvec))
 		return;
 
+	release_futexes(p);
+
 	/* find the emuldata */
 	em = em_find(p, EMUL_DOLOCK);
 
@@ -195,11 +199,8 @@ linux_proc_exit(void *arg __unused, struct proc *p)
 	} else	
 		EMUL_SHARED_WUNLOCK(&emul_shared_lock);
 
-	if ((shared_flags & EMUL_SHARED_HASXSTAT) != 0) {
-		PROC_LOCK(p);
+	if ((shared_flags & EMUL_SHARED_HASXSTAT) != 0)
 		p->p_xstat = shared_xstat;
-		PROC_UNLOCK(p);
-	}
 
 	if (child_clear_tid != NULL) {
 		struct linux_sys_futex_args cup;
@@ -241,11 +242,11 @@ linux_proc_exit(void *arg __unused, struct proc *p)
 			continue;
 		em = em_find(q, EMUL_DOLOCK);
 		KASSERT(em != NULL, ("linux_reparent: emuldata not found: %i\n", q->p_pid));
-		if (em->pdeath_signal != 0) {
-			PROC_LOCK(q);
-			psignal(q, em->pdeath_signal);
-			PROC_UNLOCK(q);
+		PROC_LOCK(q);
+		if ((q->p_flag & P_WEXIT) == 0 && em->pdeath_signal != 0) {
+			kern_psignal(q, em->pdeath_signal);
 		}
+		PROC_UNLOCK(q);
 		EMUL_UNLOCK(&emul_lock);
 	}
 	sx_xunlock(&proctree_lock);
@@ -262,7 +263,8 @@ linux_proc_exec(void *arg __unused, struct proc *p, struct image_params *imgp)
 	if (__predict_false(imgp->sysent == &elf_linux_sysvec
 	    && p->p_sysent != &elf_linux_sysvec))
 		linux_proc_init(FIRST_THREAD_IN_PROC(p), p->p_pid, 0);
-	if (__predict_false(p->p_sysent == &elf_linux_sysvec))
+	if (__predict_false((p->p_sysent->sv_flags & SV_ABI_MASK) ==
+	    SV_ABI_LINUX))
 		/* Kill threads regardless of imgp->sysent value */
 		linux_kill_threads(FIRST_THREAD_IN_PROC(p), SIGKILL);
 	if (__predict_false(imgp->sysent != &elf_linux_sysvec
@@ -298,14 +300,14 @@ linux_proc_exec(void *arg __unused, struct proc *p, struct image_params *imgp)
 }
 
 void
-linux_schedtail(void *arg __unused, struct proc *p)
+linux_schedtail(struct thread *td)
 {
 	struct linux_emuldata *em;
+	struct proc *p;
 	int error = 0;
 	int *child_set_tid;
 
-	if (__predict_true(p->p_sysent != &elf_linux_sysvec))
-		return;
+	p = td->td_proc;
 
 	/* find the emuldata */
 	em = em_find(p, EMUL_DOLOCK);
@@ -360,7 +362,7 @@ linux_kill_threads(struct thread *td, int sig)
 
 		sp = pfind(em->pid);
 		if ((sp->p_flag & P_WEXIT) == 0)
-			psignal(sp, sig);
+			kern_psignal(sp, sig);
 		PROC_UNLOCK(sp);
 #ifdef DEBUG
 		printf(LMSG("linux_kill_threads: kill PID %d\n"), em->pid);

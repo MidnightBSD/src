@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Marcel Moolenaar
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/linux/linux_sysctl.c,v 1.17 2006/03/19 11:10:33 ru Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "opt_compat.h"
 
