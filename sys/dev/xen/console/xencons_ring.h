@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $MidnightBSD$
  *
  */
 #ifndef _XENCONS_RING_H
