@@ -45196,8 +45196,6 @@ sys/dev/fb/creatorreg.h -text
 sys/dev/fb/fb.c -text
 sys/dev/fb/fbreg.h -text
 sys/dev/fb/gallant12x22.c -text
-sys/dev/fb/gallant12x22.h -text
-sys/dev/fb/gfb.c -text
 sys/dev/fb/gfb.h -text
 sys/dev/fb/machfb.c -text
 sys/dev/fb/machfbreg.h -text
@@ -45207,8 +45205,6 @@ sys/dev/fb/splash_bmp.c -text
 sys/dev/fb/splash_pcx.c -text
 sys/dev/fb/splash_txt.c -text
 sys/dev/fb/splashreg.h -text
-sys/dev/fb/tga.c -text
-sys/dev/fb/tga.h -text
 sys/dev/fb/vesa.c -text
 sys/dev/fb/vesa.h -text
 sys/dev/fb/vga.c -text
