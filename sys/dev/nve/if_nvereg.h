@@ -24,8 +24,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE.
  *
- * $Id: if_nvereg.h,v 1.3 2010-06-20 20:15:12 laffer1 Exp $
- * $FreeBSD: src/sys/dev/nve/if_nvereg.h,v 1.8.2.1.4.1 2010/02/10 00:26:20 kensmith Exp $
+ * $Id: if_nvereg.h,v 1.4 2013-01-08 00:45:19 laffer1 Exp $
+ * $MidnightBSD$
  */
  
 #ifndef _IF_NVEREG_H_
@@ -138,6 +138,7 @@ struct nve_softc {
 	device_t miibus;
 	device_t dev;
 	struct callout stat_callout;
+	int tx_timer;
 
 	void *sc_ih;
 	bus_space_tag_t sc_st;
