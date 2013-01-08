@@ -5,7 +5,6 @@
  *      modified for FreeBSD by Andrew A. Chernov <ache@astral.msk.su>
  *
  * $MidnightBSD$
- * $FreeBSD: src/sys/dev/speaker/speaker.h,v 1.8.2.1 2005/11/16 10:50:11 ru Exp $
  */
 
 #ifndef	_DEV_SPEAKER_SPEAKER_H_
