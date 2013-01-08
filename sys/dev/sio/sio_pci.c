@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/sio/sio_pci.c,v 1.23 2007/03/29 04:26:52 maxim Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -43,7 +43,6 @@ __FBSDID("$FreeBSD: src/sys/dev/sio/sio_pci.c,v 1.23 2007/03/29 04:26:52 maxim E
 #include <dev/pci/pcivar.h>
 
 static	int	sio_pci_attach(device_t dev);
-static	void	sio_pci_kludge_unit(device_t dev);
 static	int	sio_pci_probe(device_t dev);
 
 static device_method_t sio_pci_methods[] = {
@@ -77,7 +76,8 @@ static struct pci_ids pci_ids[] = {
 	{ 0x7101135e, "SeaLevel Ultra 530.PCI Single Port Serial", 0x18 },
 	{ 0x0000151f, "SmartLink 5634PCV SurfRider", 0x10 },
 	{ 0x0103115d, "Xircom Cardbus modem", 0x10 },
-	{ 0x432214e4, "Broadcom 802.11g/GPRS CardBus (Serial)", 0x10 },
+	{ 0x432214e4, "Broadcom 802.11b/GPRS CardBus (Serial)", 0x10 },
+	{ 0x434414e4, "Broadcom 802.11bg/EDGE/GPRS CardBus (Serial)", 0x10 },
 	{ 0x01c0135c, "Quatech SSCLP-200/300", 0x18 
 		/* 
 		 * NB: You must mount the "SPAD" jumper to correctly detect
@@ -101,37 +101,7 @@ sio_pci_attach(dev)
 		id++;
 	if (id->desc == NULL)
 		return (ENXIO);
-	sio_pci_kludge_unit(dev);
 	return (sioattach(dev, id->rid, 0UL));
-}
-
-/*
- * Don't cut and paste this to other drivers.  It is a horrible kludge
- * which will fail to work and also be unnecessary in future versions.
- */
-static void
-sio_pci_kludge_unit(dev)
-	device_t dev;
-{
-	devclass_t	dc;
-	int		err;
-	int		start;
-	int		unit;
-
-	unit = 0;
-	start = 0;
-	while (resource_int_value("sio", unit, "port", &start) == 0 && 
-	    start > 0)
-		unit++;
-	if (device_get_unit(dev) < unit) {
-		dc = device_get_devclass(dev);
-		while (devclass_get_device(dc, unit))
-			unit++;
-		device_printf(dev, "moving to sio%d\n", unit);
-		err = device_set_unit(dev, unit);	/* EVIL DO NOT COPY */
-		if (err)
-			device_printf(dev, "error moving device %d\n", err);
-	}
 }
 
 static int
@@ -155,4 +125,3 @@ sio_pci_probe(dev)
 }
 
 DRIVER_MODULE(sio, pci, sio_pci_driver, sio_devclass, 0, 0);
-DRIVER_MODULE(sio, cardbus, sio_pci_driver, sio_devclass, 0, 0);

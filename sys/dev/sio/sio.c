@@ -31,9 +31,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/sio/sio.c,v 1.470 2007/02/23 12:18:53 piso Exp $");
+__MBSDID("$MidnightBSD$");
 
-#include "opt_comconsole.h"
 #include "opt_compat.h"
 #include "opt_gdb.h"
 #include "opt_kdb.h"
@@ -228,7 +227,7 @@ struct com_s {
 
 	struct	pps_state pps;
 	int	pps_bit;
-#ifdef ALT_BREAK_TO_DEBUGGER
+#ifdef KDB
 	int	alt_brk_state;
 #endif
 
@@ -600,7 +599,7 @@ sioprobe(dev, xrid, rclk, noprobe)
 	}
 
 	/*
-	 * Enable the interrupt gate and disable device interupts.  This
+	 * Enable the interrupt gate and disable device interrupts.  This
 	 * should leave the device driving the interrupt line low and
 	 * guarantee an edge trigger if an interrupt can be generated.
 	 */
@@ -696,6 +695,14 @@ sioprobe(dev, xrid, rclk, noprobe)
 		bus_release_resource(dev, SYS_RES_IOPORT, rid, port);
 		if (iobase == siocniobase)
 			result = 0;
+		/*
+		 * XXX: Since we don't return 0, we shouldn't be relying on
+		 * the softc that we set to persist to the call to attach
+		 * since other probe routines may be called, and the malloc
+		 * here causes subr_bus to not allocate anything for the
+		 * other probes.  Instead, this softc is preserved and other
+		 * probe routines can corrupt it.
+		 */
 		if (result != 0) {
 			device_set_softc(dev, NULL);
 			free(com, M_DEVBUF);
@@ -773,6 +780,13 @@ sioprobe(dev, xrid, rclk, noprobe)
 	bus_release_resource(dev, SYS_RES_IOPORT, rid, port);
 	if (iobase == siocniobase)
 		result = 0;
+	/*
+	 * XXX: Since we don't return 0, we shouldn't be relying on the softc
+	 * that we set to persist to the call to attach since other probe
+	 * routines may be called, and the malloc here causes subr_bus to not
+	 * allocate anything for the other probes.  Instead, this softc is
+	 * preserved and other probe routines can corrupt it.
+	 */
 	if (result != 0) {
 		device_set_softc(dev, NULL);
 		free(com, M_DEVBUF);
@@ -1087,8 +1101,7 @@ determined_type: ;
 		}
 		if (ret)
 			device_printf(dev, "could not activate interrupt\n");
-#if defined(KDB) && (defined(BREAK_TO_DEBUGGER) || \
-    defined(ALT_BREAK_TO_DEBUGGER))
+#if defined(KDB)
 		/*
 		 * Enable interrupts for early break-to-debugger support
 		 * on the console.
@@ -1181,8 +1194,7 @@ comclose(tp)
 	com->poll_output = FALSE;
 	sio_setreg(com, com_cfcr, com->cfcr_image &= ~CFCR_SBREAK);
 
-#if defined(KDB) && (defined(BREAK_TO_DEBUGGER) || \
-    defined(ALT_BREAK_TO_DEBUGGER))
+#if defined(KDB)
 	/*
 	 * Leave interrupts enabled and don't clear DTR if this is the
 	 * console. This allows us to detect break-to-debugger events
@@ -1451,7 +1463,6 @@ sysctl_siots(SYSCTL_HANDLER_ARGS)
 		error = SYSCTL_OUT(req, buf, len);
 		if (error != 0)
 			return (error);
-		uio_yield();
 	}
 	return (0);
 }
@@ -1469,6 +1480,10 @@ siointr1(com)
 	u_char	modem_status;
 	u_char	*ioptr;
 	u_char	recv_data;
+
+#ifdef KDB
+again:
+#endif
 
 	if (COM_IIR_TXRDYBUG(com->flags)) {
 		int_ctl = inb(com->int_ctl_port);
@@ -1499,12 +1514,9 @@ siointr1(com)
 			else
 				recv_data = inb(com->data_port);
 #ifdef KDB
-#ifdef ALT_BREAK_TO_DEBUGGER
 			if (com->unit == comconsole &&
 			    kdb_alt_break(recv_data, &com->alt_brk_state) != 0)
-				kdb_enter_why(KDB_WHY_BREAK,
-				    "Break sequence on console");
-#endif /* ALT_BREAK_TO_DEBUGGER */
+				goto again;
 #endif /* KDB */
 			if (line_status & (LSR_BI | LSR_FE | LSR_PE)) {
 				/*
@@ -1520,9 +1532,9 @@ siointr1(com)
 				 * Note: BI together with FE/PE means just BI.
 				 */
 				if (line_status & LSR_BI) {
-#if defined(KDB) && defined(BREAK_TO_DEBUGGER)
+#if defined(KDB)
 					if (com->unit == comconsole) {
-						kdb_enter("Line break on console");
+						kdb_break();
 						goto cont;
 					}
 #endif
@@ -2281,6 +2293,8 @@ static cn_init_t sio_cninit;
 static cn_term_t sio_cnterm;
 static cn_getc_t sio_cngetc;
 static cn_putc_t sio_cnputc;
+static cn_grab_t sio_cngrab;
+static cn_ungrab_t sio_cnungrab;
 
 CONSOLE_DRIVER(sio);
 
@@ -2444,7 +2458,7 @@ sio_cnprobe(cp)
 				continue;
 			iobase = port;
 			s = spltty();
-			if (boothowto & RB_SERIAL) {
+			if ((boothowto & RB_SERIAL) && COM_CONSOLE(flags)) {
 				boot_speed =
 				    siocngetspeed(iobase, comdefaultrclk);
 				if (boot_speed)
@@ -2498,6 +2512,16 @@ sio_cnterm(cp)
 	struct consdev	*cp;
 {
 	comconsole = -1;
+}
+
+static void
+sio_cngrab(struct consdev *cp)
+{
+}
+
+static void
+sio_cnungrab(struct consdev *cp)
+{
 }
 
 static int
