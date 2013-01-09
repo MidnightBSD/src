@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: src/etc/pam.d/atrun,v 1.1 2007/06/15 12:02:16 yar Exp $
+# $MidnightBSD: src/etc/pam.d/atrun,v 1.2 2008/12/09 22:13:10 laffer1 Exp $
 #
 # PAM configuration for the "atrun" service
 #

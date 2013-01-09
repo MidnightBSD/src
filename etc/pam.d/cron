@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: src/etc/pam.d/cron,v 1.1 2007/06/17 17:25:52 yar Exp $
+# $MidnightBSD: src/etc/pam.d/cron,v 1.1 2007/08/18 07:40:09 laffer1 Exp $
 #
 # PAM configuration for the "cron" service
 #

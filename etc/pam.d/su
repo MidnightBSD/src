@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: src/etc/pam.d/su,v 1.16 2003/07/09 18:40:49 des Exp $
+# $MidnightBSD: src/etc/pam.d/su,v 1.2 2006/08/28 01:35:55 laffer1 Exp $
 #
 # PAM configuration for the "su" service
 #
@@ -7,7 +6,7 @@
 # auth
 auth		sufficient	pam_rootok.so		no_warn
 auth		sufficient	pam_self.so		no_warn
-auth		requisite	pam_group.so		no_warn group=wheel root_only fail_safe
+auth		requisite	pam_group.so		no_warn group=wheel root_only fail_safe ruser
 auth		include		system
 
 # account

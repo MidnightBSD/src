@@ -59,5 +59,4 @@ particular service and module type may result in surprising behaviour.
 To get the intended semantics, add a "required" entry listing the
 pam_deny module at the end of the chain.
 
-$MidnightBSD$
-$FreeBSD: src/etc/pam.d/README,v 1.5 2004/06/06 11:46:29 schweikh Exp $
+$MidnightBSD: src/etc/pam.d/README,v 1.2 2006/08/28 01:35:55 laffer1 Exp $
