@@ -33025,6 +33025,10 @@ etc/defaults/pccard.conf -text
 etc/defaults/periodic.conf -text
 etc/defaults/rc.conf -text
 etc/devd.conf -text
+etc/devd/Makefile -text
+etc/devd/asus.conf -text
+etc/devd/uath.conf -text
+etc/devd/usb.conf -text
 etc/devfs.conf -text
 etc/dhclient.conf -text
 etc/dhcp6c.conf -text
