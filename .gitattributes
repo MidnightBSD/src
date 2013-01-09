@@ -33307,7 +33307,6 @@ etc/rc.d/securelevel -text
 etc/rc.d/sendmail -text
 etc/rc.d/sensorsd -text
 etc/rc.d/serial -text
-etc/rc.d/sound -text
 etc/rc.d/sppp -text
 etc/rc.d/sshd -text
 etc/rc.d/statd -text
@@ -33329,6 +33328,7 @@ etc/rc.d/ypset -text
 etc/rc.d/ypupdated -text
 etc/rc.d/ypxfrd -text
 etc/rc.d/zfs -text
+etc/rc.d/zvol -text
 etc/rc.firewall -text
 etc/rc.initdiskless -text
 etc/rc.resume -text

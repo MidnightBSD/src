@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/rc.d/Makefile,v 1.21 2011/08/22 01:56:30 laffer1 Exp $ 
+# $MidnightBSD: src/etc/rc.d/Makefile,v 1.22 2012/01/14 15:30:16 laffer1 Exp $ 
 
 .include <bsd.own.mk>
 
@@ -33,7 +33,7 @@ FILES=	DAEMON FILESYSTEMS LOGIN NETWORKING SERVERS \
 	random rarpd rdate resolv root \
 	route6d routed routing rpcbind rtadvd rwho \
 	savecore sdpd securelevel sendmail \
-	sensorsd serial sound sppp statd swap1 \
+	sensorsd serial sppp statd swap1 \
 	syscons sysctl syslogd \
 	timed tmp \
 	ugidfw \
@@ -41,7 +41,7 @@ FILES=	DAEMON FILESYSTEMS LOGIN NETWORKING SERVERS \
 	watchdogd wpa_supplicant \
 	ypbind yppasswdd ypserv \
 	ypset ypupdated ypxfrd \
-	zfs
+	zfs zvol
 
 .if ${MK_OPENSSH} != "no"
 FILES+=	sshd
