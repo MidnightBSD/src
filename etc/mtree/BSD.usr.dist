@@ -1,5 +1,4 @@
-# $MidnightBSD: src/etc/mtree/BSD.usr.dist,v 1.19 2012/07/04 16:05:41 laffer1 Exp $
-# $FreeBSD: src/etc/mtree/BSD.usr.dist,v 1.312.2.1 2005/11/16 07:47:43 ru Exp $
+# $MidnightBSD: src/etc/mtree/BSD.usr.dist,v 1.20 2012/08/06 01:56:52 laffer1 Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -581,6 +580,8 @@
             fr_FR.ISO8859-15
             ..
             fr_FR.UTF-8
+            ..
+            gl_ES.ISO8859-1
             ..
             he_IL.UTF-8
             ..
