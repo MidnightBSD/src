@@ -1,5 +1,5 @@
 /*
- * $MidnightBSD$
+ * $MidnightBSD: src/lib/libc/string/Symbol.map,v 1.5 2012/12/01 22:04:39 laffer1 Exp $
  */
 
 FBSD_1.0 {
@@ -40,6 +40,7 @@ FBSD_1.0 {
 	strncat;
 	strncmp;
 	strncpy;
+	strndup;
 	strnstr;
 	strpbrk;
 	strsep;
@@ -82,7 +83,6 @@ FBSD_1.1 {
 	flsll;
 	memrchr;
 	stpncpy;
-	strndup;
 	strnlen;
 	wcpcpy;
 	wcpncpy;
