@@ -1,8 +1,7 @@
 # $NetBSD: rc.subr,v 1.66 2006/04/01 10:05:50 he Exp $
-# $FreeBSD: /repoman/r/ncvs/src/etc/rc.subr,v 1.34.2.15 2006/08/24 10:32:40 yar Exp $
-# $MidnightBSD: src/etc/rc.subr,v 1.10 2008/04/11 05:59:20 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.subr,v 1.11 2009/01/18 00:36:38 laffer1 Exp $
 #
-# Copyright (c) 1997-2002 The NetBSD Foundation, Inc.
+# Copyright (c) 1997-2004 The NetBSD Foundation, Inc.
 # All rights reserved.
 #
 # This code is derived from software contributed to The NetBSD Foundation
@@ -16,13 +15,6 @@
 # 2. Redistributions in binary form must reproduce the above copyright
 #    notice, this list of conditions and the following disclaimer in the
 #    documentation and/or other materials provided with the distribution.
-# 3. All advertising materials mentioning features or use of this software
-#    must display the following acknowledgement:
-#        This product includes software developed by the NetBSD
-#        Foundation, Inc. and its contributors.
-# 4. Neither the name of The NetBSD Foundation nor the names of its
-#    contributors may be used to endorse or promote products derived
-#    from this software without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
 # ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -53,57 +45,97 @@ _rc_subr_loaded="YES"
 
 SYSCTL="/sbin/sysctl"
 SYSCTL_N="${SYSCTL} -n"
-CMD_OSTYPE="${SYSCTL_N} kern.ostype"
-OSTYPE=`${CMD_OSTYPE}`
+SYSCTL_W="${SYSCTL}"
 ID="/usr/bin/id"
+IDCMD="if [ -x $ID ]; then $ID -un; fi"
 PS="/bin/ps -ww"
 JID=`$PS -p $$ -o jid=`
-IDCMD="if [ -x $ID ]; then $ID -un; fi"
-
-SYSCTL_W="${SYSCTL}"
 
 #
 #	functions
 #	---------
 
+# set_rcvar [var] [defval] [desc]
 #
-# set_rcvar base_var
-#	Set the variable name enabling a specific service.
-#	FreeBSD uses ${service}_enable, while NetBSD uses
-#	just the name of the service. For example:
-#	FreeBSD: sendmail_enable="YES"
-#	NetBSD : sendmail="YES"
-#	$1 - if $name is not the base to work of off, specify
-#	     a different one
+#	Echo or define a rc.conf(5) variable name.  Global variable
+#	$rcvars is used.
+#
+#	If no argument is specified, echo "${name}_enable".
+#
+#	If only a var is specified, echo "${var}_enable".
+#
+#	If var and defval are specified, the ${var} is defined as
+#	rc.conf(5) variable and the default value is ${defvar}.  An
+#	optional argument $desc can also be specified to add a
+#	description for that.
 #
 set_rcvar()
 {
-	if [ -z "$1" ]; then
-		base_var=${name}
-	else
-		base_var="$1"
-	fi
-	
-	echo ${base_var}_enable
+	case $# in
+	0)
+		echo ${name}_enable
+		;;
+	1)
+		echo ${1}_enable
+		;;
+	*)
+		debug "rcvar_define: \$$1=$2 is added" \
+		    " as a rc.conf(5) variable."
+
+		local _var
+		_var=$1
+		rcvars="${rcvars# } $_var"
+		eval ${_var}_defval=\"$2\"
+		shift 2
+		# encode multiple lines of _desc
+		for l in "$@"; do
+			eval ${_var}_desc=\"\${${_var}_desc#^^}^^$l\"
+		done
+		eval ${_var}_desc=\"\${${_var}_desc#^^}\"
+		;;
+	esac
+}
+
+# set_rcvar_obsolete oldvar [newvar] [msg]
+#	Define obsolete variable.
+#	Global variable $rcvars_obsolete is used.
+#
+set_rcvar_obsolete()
+{
+	local _var
+	_var=$1
+	debug "rcvar_obsolete: \$$1(old) -> \$$2(new) is defined"
+
+	rcvars_obsolete="${rcvars_obsolete# } $1"
+	eval ${1}_newvar=\"$2\"
+	shift 2
+	eval ${_var}_obsolete_msg=\"$*\"
 }
 
 #
-# force_depend script
+# force_depend script [rcvar]
 #	Force a service to start. Intended for use by services
-#	to resolve dependency issues. It is assumed the caller
-#	has check to make sure this call is necessary
+#	to resolve dependency issues.
 #	$1 - filename of script, in /etc/rc.d, to run
+#	$2 - name of the script's rcvar (minus the _enable)
 #
 force_depend()
 {
+	local _depend _dep_rcvar
+
 	_depend="$1"
+	_dep_rcvar="${2:-$1}_enable"
+
+	[ -n "$rc_fast" ] && ! checkyesno always_force_depends &&
+	    checkyesno $_dep_rcvar && return 0
+
+	/etc/rc.d/${_depend} forcestatus >/dev/null 2>&1 && return 0
 
 	info "${name} depends on ${_depend}, which will be forced to start."
 	if ! /etc/rc.d/${_depend} forcestart; then
 		warn "Unable to force ${_depend}. It may already be running."
 		return 1
 	fi
-	return 0
 }
 
 #
@@ -155,11 +187,15 @@ stop_boot()
 {
 	local always
 
-	if [ -n "$1" ] && checkyesno $1; then
+	case $1 in
+		#	"yes", "true", "on", or "1"
+        [Yy][Ee][Ss]|[Tt][Rr][Uu][Ee]|[Oo][Nn]|1)
 		always=true
-	else
+		;;
+	*)
 		always=false
-	fi
+		;;
+	esac
 	if [ "$autoboot" = yes -o "$always" = true ]; then
 		echo "ERROR: ABORTING BOOT (sending SIGTERM to parent)!"
 		kill -TERM ${RC_PID}
@@ -326,6 +362,8 @@ _find_processes()
 #
 wait_for_pids()
 {
+	local _list _prefix _nlist _j
+
 	_list="$@"
 	if [ -z "$_list" ]; then
 		return
@@ -336,6 +374,7 @@ wait_for_pids()
 		for _j in $_list; do
 			if kill -0 $_j 2>/dev/null; then
 				_nlist="${_nlist}${_nlist:+ }$_j"
+				[ -n "$_prefix" ] && sleep 1
 			fi
 		done
 		if [ -z "$_nlist" ]; then
@@ -344,10 +383,67 @@ wait_for_pids()
 		_list=$_nlist
 		echo -n ${_prefix:-"Waiting for PIDS: "}$_list
 		_prefix=", "
-		sleep 2
+		pwait $_list 2>/dev/null
 	done
 	if [ -n "$_prefix" ]; then
 		echo "."
+	fi
+}
+
+#
+# get_pidfile_from_conf string file
+#
+#	Takes a string to search for in the specified file.
+#	Ignores lines with traditional comment characters.
+#
+# Example:
+#
+# if get_pidfile_from_conf string file; then
+#	pidfile="$_pidfile_from_conf"
+# else
+#	pidfile='appropriate default'
+# fi
+#
+get_pidfile_from_conf()
+{
+	if [ -z "$1" -o -z "$2" ]; then
+		err 3 "USAGE: get_pidfile_from_conf string file ($name)"
+	fi
+
+	local string file line
+
+	string="$1" ; file="$2"
+
+	if [ ! -s "$file" ]; then
+		err 3 "get_pidfile_from_conf: $file does not exist ($name)"
+	fi
+
+	while read line; do
+		case "$line" in
+		*[#\;]*${string}*)	continue ;;
+		*${string}*)		break ;;
+		esac
+	done < $file
+
+	if [ -n "$line" ]; then
+		line=${line#*/}
+		_pidfile_from_conf="/${line%%[\"\;]*}"
+	else
+		return 1
+	fi
+}
+
+#
+# check_startmsgs
+#	If rc_quiet is set (usually as a result of using faststart at
+#	boot time) check if rc_startmsgs is enabled.
+#
+check_startmsgs()
+{
+	if [ -n "$rc_quiet" ]; then
+		checkyesno rc_startmsgs
+	else
+		return 0
 	fi
 }
 
@@ -361,9 +457,10 @@ wait_for_pids()
 #	If argument has a given prefix, then change the operation as follows:
 #		Prefix	Operation
 #		------	---------
-#		fast	Skip the pid check, and set rc_fast=yes
+#		fast	Skip the pid check, and set rc_fast=yes, rc_quiet=yes
 #		force	Set ${rcvar} to YES, and set rc_force=yes
 #		one	Set ${rcvar} to YES
+#		quiet	Don't output some diagnostics, and set rc_quiet=yes
 #
 #	The following globals are used:
 #
@@ -379,6 +476,8 @@ wait_for_pids()
 #
 #	command_interpreter n	If not empty, command is interpreted, so
 #				call check_{pidfile,process}() appropriately.
+#
+#	desc		n	Description of script.
 #
 #	extra_commands	n	List of extra commands supported.
 #
@@ -506,6 +605,8 @@ wait_for_pids()
 #
 #	rc_force	Not empty if "force" was provided (q.v.)
 #
+#	rc_quiet	Not empty if "quiet" was provided
+#
 #
 run_rc_command()
 {
@@ -526,8 +627,9 @@ run_rc_command()
 	fast*)				# "fast" prefix; don't check pid
 		rc_arg=${rc_arg#fast}
 		rc_fast=yes
+		rc_quiet=yes
 		;;
-	force*)				# "force prefix; always run
+	force*)				# "force" prefix; always run
 		rc_force=yes
 		_rc_prefix=force
 		rc_arg=${rc_arg#${_rc_prefix}}
@@ -542,10 +644,15 @@ run_rc_command()
 			eval ${rcvar}=YES
 		fi
 		;;
+	quiet*)				# "quiet" prefix; omit some messages
+		_rc_prefix=quiet
+		rc_arg=${rc_arg#${_rc_prefix}}
+		rc_quiet=yes
+		;;
 	esac
 
 	eval _override_command=\$${name}_program
-	command=${command:+${_override_command:-$command}}
+	command=${_override_command:-$command}
 
 	_keywords="start stop restart rcvar $extra_commands"
 	rc_pid=
@@ -583,23 +690,30 @@ run_rc_command()
 		fi
 	fi
 
-					# if ${rcvar} is set, and $1 is not
-					# "rcvar", then run
-					#	checkyesno ${rcvar}
-					# and return if that failed
-					#
-	if [ -n "${rcvar}" -a "$rc_arg" != "rcvar" ]; then
-		if ! checkyesno ${rcvar}; then
-			return 0
-		fi
-	fi
-
-	eval $_pidcmd			# determine the pid if necessary
+	[ -z "$autoboot" ] && eval $_pidcmd	# determine the pid if necessary
 
 	for _elem in $_keywords; do
 		if [ "$_elem" != "$rc_arg" ]; then
 			continue
 		fi
+					# if ${rcvar} is set, $1 is not "rcvar"
+					# and ${rc_pid} is not set, then run
+					#	checkyesno ${rcvar}
+					# and return if that failed
+					#
+		if [ -n "${rcvar}" -a "$rc_arg" != "rcvar" -a "$rc_arg" != "stop" ] ||
+		    [ -n "${rcvar}" -a "$rc_arg" = "stop" -a -z "${rc_pid}" ]; then
+			if ! checkyesno ${rcvar}; then
+				if [ -n "${rc_quiet}" ]; then
+					return 0
+				fi
+				echo -n "Cannot '${rc_arg}' $name. Set ${rcvar} to "
+				echo -n "YES in /etc/rc.conf or use 'one${rc_arg}' "
+				echo "instead of '${rc_arg}'."
+				return 0
+			fi
+		fi
+
 					# if there's a custom ${XXX_cmd},
 					# run that instead of the default
 					#
@@ -638,11 +752,14 @@ run_rc_command()
 				return 1
 			fi
 
-			_run_rc_precmd || return 1
+			if ! _run_rc_precmd; then
+				warn "failed precmd routine for ${name}"
+				return 1
+			fi
 
 					# setup the full command to run
 					#
-			echo "Starting ${name}."
+			check_startmsgs && echo "Starting ${name}."
 			if [ -n "$_chroot" ]; then
 				_doit="\
 ${_nice:+nice -n $_nice }\
@@ -658,14 +775,17 @@ $command $rc_flags $command_args"
 				if [ -n "$_nice" ]; then
 					if [ -z "$_user" ]; then
 						_doit="sh -c \"$_doit\""
-					fi	
+					fi
 					_doit="nice -n $_nice $_doit"
 				fi
 			fi
 
 					# run the full command
 					#
-			_run_rc_doit "$_doit" || return 1
+			if ! _run_rc_doit "$_doit"; then
+				warn "failed to start ${name}"
+				return 1
+			fi
 
 					# finally, run postcmd
 					#
@@ -737,14 +857,49 @@ $command $rc_flags $command_args"
 			;;
 
 		rcvar)
-			echo "# $name"
-			if [ -n "$rcvar" ]; then
-				if checkyesno ${rcvar}; then
-					echo "${rcvar}=YES"
-				else
-					echo "${rcvar}=NO"
-				fi
+			echo -n "# $name"
+			if [ -n "$desc" ]; then
+				echo " : $desc"
+			else
+				echo ""
 			fi
+			echo "#"
+			# Get unique vars in $rcvar $rcvars
+			for _v in $rcvar $rcvars; do
+				case $v in
+				$_v\ *|\ *$_v|*\ $_v\ *) ;;
+				*)	v="${v# } $_v" ;;
+				esac
+			done
+
+			# Display variables.
+			for _v in $v; do
+				if [ -z "$_v" ]; then
+					continue
+				fi
+
+				eval _desc=\$${_v}_desc
+				eval _defval=\$${_v}_defval
+				_h="-"
+
+				eval echo \"$_v=\\\"\$$_v\\\"\"
+				# decode multiple lines of _desc
+				while [ -n "$_desc" ]; do
+					case $_desc in
+					*^^*)
+						echo "# $_h ${_desc%%^^*}"
+						_desc=${_desc#*^^}
+						_h=" "
+						;;
+					*)
+						echo "# $_h ${_desc}"
+						break
+						;;
+					esac
+				done
+				echo "#   (default: \"$_defval\")"
+			done
+			echo ""
 			;;
 
 		*)
@@ -840,10 +995,11 @@ _run_rc_killcmd()
 #
 # run_rc_script file arg
 #	Start the script `file' with `arg', and correctly handle the
-#	return value from the script.  If `file' ends with `.sh', it's
-#	sourced into the current environment.  If `file' appears to be
-#	a backup or scratch file, ignore it.  Otherwise if it's
-#	executable run as a child process.
+#	return value from the script.
+#	If `file' ends with `.sh', it's sourced into the current environment
+#	when $rc_fast_and_loose is set, otherwise it is run as a child process.
+#	If `file' appears to be a backup or scratch file, ignore it.
+#	Otherwise if it is executable run as a child process.
 #
 run_rc_script()
 {
@@ -855,12 +1011,13 @@ run_rc_script()
 
 	unset	name command command_args command_interpreter \
 		extra_commands pidfile procname \
-		rcvar required_dirs required_files required_vars
+		rcvar rcvars rcvars_obsolete required_dirs required_files \
+		required_vars
 	eval unset ${_arg}_cmd ${_arg}_precmd ${_arg}_postcmd
 
 	case "$_file" in
-	/etc/rc.d/*.sh)			# run in current shell
-		set $_arg; . $_file
+	/etc/rc.d/*.sh)			# no longer allowed in the base
+		warn "Ignoring old-style startup script $_file"
 		;;
 	*[~#]|*.OLD|*.bak|*.orig|*,v)	# scratch file; skip
 		warn "Ignoring scratch file $_file"
@@ -870,8 +1027,9 @@ run_rc_script()
 			if [ -n "$rc_fast_and_loose" ]; then
 				set $_arg; . $_file
 			else
-				( trap "echo Script $_file interrupted; kill -QUIT $$" 3
-				  trap "echo Script $_file interrupted; exit 1" 2
+				( trap "echo Script $_file interrupted >&2 ; kill -QUIT $$" 3
+				  trap "echo Script $_file interrupted >&2 ; exit 1" 2
+				  trap "echo Script $_file running >&2" 29
 				  set $_arg; . $_file )
 			fi
 		fi
@@ -885,6 +1043,7 @@ run_rc_script()
 #
 load_rc_config()
 {
+	local _name _var _defval _v _msg _new
 	_name=$1
 	if [ -z "$_name" ]; then
 		err 3 'USAGE: load_rc_config name'
@@ -907,8 +1066,38 @@ load_rc_config()
 		debug "Sourcing /etc/rc.conf.d/${_name}"
 		. /etc/rc.conf.d/"$_name"
 	fi
+
+	# Set defaults if defined.
+	for _var in $rcvar $rcvars; do
+		eval _defval=\$${_var}_defval
+		if [ -n "$_defval" ]; then
+			eval : \${$_var:=\$${_var}_defval}
+		fi
+	done
+
+	# check obsolete rc.conf variables
+	for _var in $rcvars_obsolete; do
+		eval _v=\$$_var
+		eval _msg=\$${_var}_obsolete_msg
+		eval _new=\$${_var}_newvar
+		case $_v in
+		"")
+			;;
+		*)
+			if [ -z "$_new" ]; then
+				_msg="Ignored."
+			else
+				eval $_new=\"\$$_var\"
+				if [ -z "$_msg" ]; then
+					_msg="Use \$$_new instead."
+				fi
+			fi
+			warn "\$$_var is obsolete.  $_msg"
+			;;
+		esac
+	done
 }
-  
+
 #
 # load_rc_config_var name var
 #	Read the rc.conf(5) var for name and set in the
@@ -935,7 +1124,7 @@ load_rc_config_var()
 #
 rc_usage()
 {
-	echo -n 1>&2 "Usage: $0 [fast|force|one]("
+	echo -n 1>&2 "Usage: $0 [fast|force|one|quiet]("
 
 	_sep=
 	for _elem; do
@@ -1207,7 +1396,10 @@ devfs_init_rulesets()
 		return
 	fi
 	for file in $devfs_rulesets; do
-		devfs_rulesets_from_file $file || return 1
+		if ! devfs_rulesets_from_file $file; then
+			warn "$_me: could not read rules from $file"
+			return 1
+		fi
 	done
 	devfs_rulesets_init=1
 	debug "$_me: devfs rulesets initialized"
@@ -1547,6 +1739,47 @@ check_required_after()
 	return 0
 }
 
-fi
+# check_kern_features mib
+#	Return existence of kern.features.* sysctl MIB as true or
+#	false.  The result will be cached in $_rc_cache_kern_features_
+#	namespace.  "0" means the kern.features.X exists.
+
+check_kern_features()
+{
+	local _v
+
+	[ -n "$1" ] || return 1;
+	eval _v=\$_rc_cache_kern_features_$1
+	[ -n "$_v" ] && return "$_v";
+
+	if ${SYSCTL_N} kern.features.$1 > /dev/null 2>&1; then
+		eval _rc_cache_kern_features_$1=0
+		return 0
+	else
+		eval _rc_cache_kern_features_$1=1
+		return 1
+	fi
+}
+
+# _echoonce var msg mode
+#	mode=0: Echo $msg if ${$var} is empty.
+#	        After doing echo, a string is set to ${$var}.
+#
+#	mode=1: Echo $msg if ${$var} is a string with non-zero length.
+#
+_echoonce()
+{
+	local _var _msg _mode
+	eval _var=\$$1
+	_msg=$2
+	_mode=$3
+
+	case $_mode in
+	1)	[ -n "$_var" ] && echo "$_msg" ;;
+	*)	[ -z "$_var" ] && echo -n "$_msg" && eval "$1=finished" ;;
+	esac
+}
+
+fi # [ -z "${_rc_subr_loaded}" ]
 
 _rc_subr_loaded=:

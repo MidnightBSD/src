@@ -24,8 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
-# $FreeBSD: src/etc/rc.shutdown,v 1.30.2.1 2005/12/21 07:11:34 dougb Exp $
+# $MidnightBSD: src/etc/rc.shutdown,v 1.2 2006/08/28 02:13:43 laffer1 Exp $
 #
 
 # Site-specific closing actions for daemons run by init on shutdown,
@@ -33,7 +32,7 @@
 # Output and errors are directed to console by init, and the
 # console is the controlling terminal.
 
-stty status '^T'
+stty status '^T' 2> /dev/null
 
 # Set shell to ignore SIGINT (2), but not children;
 # shell catches SIGQUIT (3) and returns to single user after fsck.
@@ -99,7 +98,7 @@ done
 # Terminate the background watchdog timer (if it is running)
 #
 if [ -n "$_rcshutdown_watchdog" ]; then
-	kill -TERM $_rcshutdown_watchdog >/dev/null 2>&1
+	pkill -TERM -P $_rcshutdown_watchdog >/dev/null 2>&1
 fi
 
 # Insert other shutdown procedures here

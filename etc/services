@@ -16,8 +16,7 @@
 # Kerberos services are for Kerberos v4, and are unofficial.  Sites running
 # v5 should uncomment v5 entries and comment v4 entries.
 #
-# $MidnightBSD: src/etc/services,v 1.3 2007/08/13 18:15:38 laffer1 Exp $
-# $FreeBSD: src/etc/services,v 1.110 2007/05/20 03:57:47 grog Exp $
+# $MidnightBSD: src/etc/services,v 1.4 2012/12/02 06:37:09 laffer1 Exp $
 #	From: @(#)services	5.8 (Berkeley) 5/9/91
 #
 # WELL KNOWN PORT NUMBERS
