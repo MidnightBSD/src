@@ -1,7 +1,7 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/ldconfig,v 1.17.2.1.2.1 2008/01/28 07:58:31 dougb Exp $
-# $MidnightBSD: src/etc/rc.d/ldconfig,v 1.3 2009/01/18 01:19:28 laffer1 Exp $
+# $MidnightBSD$
+#
 
 # PROVIDE: ldconfig
 # REQUIRE: mountcritremote cleanvar
@@ -36,7 +36,7 @@ ldconfig_start()
 				_LDC="${_LDC} ${i}"
 			fi
 		done
-		echo 'ELF ldconfig path:' ${_LDC}
+		check_startmsgs && echo 'ELF ldconfig path:' ${_LDC}
 		${ldconfig} -elf ${_ins} ${_LDC}
 
 		case `sysctl -n hw.machine_arch` in
@@ -55,7 +55,8 @@ ldconfig_start()
 					_LDC="${_LDC} ${i}"
 				fi
 			done
-			echo '32-bit compatibility ldconfig path:' ${_LDC}
+			check_startmsgs &&
+			    echo '32-bit compatibility ldconfig path:' ${_LDC}
 			${ldconfig} -32 -m ${_ins} ${_LDC}
 			;;
 		esac
@@ -71,7 +72,7 @@ ldconfig_start()
 					_LDC="${_LDC} ${i}"
 				fi
 			done
-			echo 'a.out ldconfig path:' ${_LDC}
+			check_startmsgs && echo 'a.out ldconfig path:' ${_LDC}
 			${ldconfig} -aout ${_ins} ${_LDC}
 			;;
 		esac

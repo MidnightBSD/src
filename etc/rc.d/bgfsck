@@ -1,7 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD: src/etc/rc.d/bgfsck,v 1.2 2006/08/28 02:13:44 laffer1 Exp $
-# $FreeBSD: src/etc/rc.d/bgfsck,v 1.6.2.1 2005/12/15 16:46:02 obrien Exp $
+# $MidnightBSD$
 #
 
 # PROVIDE: bgfsck
@@ -32,7 +31,7 @@ bgfsck_start ()
 		bgfsck_msg="${bgfsck_msg} in ${background_fsck_delay} seconds"
 	fi
 	if [ -z "${rc_force}" ]; then
-		echo "${bgfsck_msg}."
+		check_startmsgs && echo "${bgfsck_msg}."
 	fi
 
 	(sleep ${background_fsck_delay}; nice -4 fsck -B -p) 2>&1 | \

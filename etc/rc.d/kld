@@ -25,10 +25,9 @@
 # SUCH DAMAGE.
 #
 # $MidnightBSD$
-# $FreeBSD: src/etc/rc.d/kld,v 1.1.4.2 2011/06/25 23:09:25 dougb Exp $
 #
 # PROVIDE: kld
-# REQUIRE: FILESYSTEMS
+# REQUIRE: kldxref
 # KEYWORD: nojail
 
 . /etc/rc.subr

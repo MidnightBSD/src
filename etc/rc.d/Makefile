@@ -1,39 +1,38 @@
-# $MidnightBSD: src/etc/rc.d/Makefile,v 1.22 2012/01/14 15:30:16 laffer1 Exp $ 
+# $MidnightBSD: src/etc/rc.d/Makefile,v 1.23 2013/01/09 04:58:21 laffer1 Exp $ 
 
 .include <bsd.own.mk>
 
 FILES=	DAEMON FILESYSTEMS LOGIN NETWORKING SERVERS \
 	abi accounting addswap adjkerntz amd \
-	apm apmd archdep atm1 atm2 atm3 auditd auto_linklocal \
+	apm apmd archdep atm1 atm2 atm3 auditd \
 	bgfsck bluetooth bootparams bridge bsnmpd bthidd \
 	ccd cleanvar cleartmp cron \
-	devd devfs dhclient dhcp6c \
+	ddb defaultroute devd devfs dhclient dhcp6c \
 	dmesg dumpon \
 	encswap \
-	firstboot fsck ftp-proxy ftpd \
-	gbde geli geli2 \
-	hcsecd \
-	hostapd hostid hostname \
-	ike \
-	idmapd inetd initrandom \
-	ip6addrctl ip6fw ipfilter ipfs ipfw ipmon \
-	ipnat ipsec ipxrouted \
+	faith firstboot fsck ftp-proxy ftpd \
+	gbde geli geli2 gptboot gssd \
+	hastd hcsecd \
+	hostapd hostid hostid_save hostname \
+	inetd initrandom \
+	ip6addrctl ipfilter ipfs ipfw ipmon \
+	ipnat ipsec \
 	jail \
-	kadmind kerberos kernel keyserv kld kldxref kpasswdd \
+	kadmind kerberos keyserv kld kldxref kpasswdd \
 	ldconfig local localpkg lockd lpd \
 	mdnsd mixer motd mountcritlocal mountcritremote mountlate \
 	mdconfig mdconfig2 mountd moused mroute6d mrouted msgs \
 	named natd netif netoptions netwait \
-	network_ipv6 newsyslog nfsclient nfsd \
-	nfsserver nisdomain nsswitch ntpd \
+	newsyslog nfsclient nfscbd nfsd \
+	nfsuserd nisdomain nsswitch ntpd \
 	othermta \
 	pf pflog pfsync \
 	powerd power_profile ppp pppoed pwcheck \
 	quota \
-	random rarpd rdate resolv root \
-	route6d routed routing rpcbind rtadvd rwho \
+	random rarpd rctl rdate resolv rfcomm_pppd_server root \
+	route6d routed routing rpcbind rtadvd rtsold rwho \
 	savecore sdpd securelevel sendmail \
-	sensorsd serial sppp statd swap1 \
+	sensorsd serial sppp statd static_arp static_ndp stf swap1 \
 	syscons sysctl syslogd \
 	timed tmp \
 	ugidfw \
@@ -43,12 +42,24 @@ FILES=	DAEMON FILESYSTEMS LOGIN NETWORKING SERVERS \
 	ypset ypupdated ypxfrd \
 	zfs zvol
 
+.if ${MK_IPX} != "no"
+FILES+=	ipxrouted
+.endif
+
+.if ${MK_OFED} != "no"
+FILES+= opensm
+.endif
+
 .if ${MK_OPENSSH} != "no"
 FILES+=	sshd
 .endif
 
 .if ${MK_NS_CACHING} != "no"
 FILES+= nscd
+.endif
+
+.if ${MK_BLUETOOTH} != "no"
+FILES+=	ubthidhci
 .endif
 
 FILESDIR=	/etc/rc.d

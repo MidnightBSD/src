@@ -1,8 +1,7 @@
 #!/bin/sh
 #
-# $NetBSD: motd,v 1.5 2000/09/19 13:04:38 lukem Exp $
-# $FreeBSD: src/etc/rc.d/motd,v 1.9 2004/10/07 13:55:26 mtm Exp $
 # $MidnightBSD$
+#
 
 # PROVIDE: motd
 # REQUIRE: mountcritremote
@@ -23,13 +22,13 @@ motd_start()
 	#	Must be done *before* interactive logins are possible
 	#	to prevent possible race conditions.
 	#
-	echo -n 'Updating motd'
+	check_startmsgs && echo -n 'Updating motd:'
 	if [ ! -f /etc/motd ]; then
 		install -c -o root -g wheel -m ${PERMS} /dev/null /etc/motd
 	fi
 
 	if [ ! -w /etc/motd ]; then
-		echo ' ... /etc/motd is not writable, update failed.'
+		echo ' /etc/motd is not writable, update failed.'
 		return
 	fi
 
@@ -43,7 +42,7 @@ motd_start()
 	}
 	rm -f $T
 
-	echo .
+	check_startmsgs && echo '.'
 }
 
 load_rc_config $name

@@ -1,20 +1,19 @@
 #!/bin/sh
 #
-# $MidnightBSD: src/etc/rc.d/hcsecd,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
-# $FreeBSD: src/etc/rc.d/hcsecd,v 1.5 2006/12/31 10:37:18 yar Exp $
+# $MidnightBSD$
 #
 
 # PROVIDE: hcsecd
 # REQUIRE: DAEMON
 # BEFORE: LOGIN
-# KEYWORD: nojail
+# KEYWORD: nojail shutdown
 
 . /etc/rc.subr
 
 name="hcsecd"
+rcvar="hcsecd_enable"
 command="/usr/sbin/${name}"
 pidfile="/var/run/${name}.pid"
-rcvar=`set_rcvar`
 required_modules="ng_btsocket"
 
 load_rc_config $name

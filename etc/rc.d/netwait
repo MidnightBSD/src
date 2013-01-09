@@ -1,49 +1,27 @@
 #!/bin/sh
-#
-# $MidnightBSD: src/etc/rc.d/netwait,v 1.1.2.3 2011/01/23 21:32:46 laffer1 Exp $
 
+# $MidnightBSD$
+#
 # PROVIDE: netwait
 # REQUIRE: NETWORKING
-# BEFORE: mountcritremote
 # KEYWORD: nojail
+#
+# The netwait script is intended to be used by systems which have
+# statically-configured IP addresses in rc.conf(5).  If your system
+# uses DHCP, you should use synchronous_dhclient="YES" in your
+# /etc/rc.conf instead of using netwait.
 
 . /etc/rc.subr
 
 name="netwait"
+rcvar="netwait_enable"
+
 start_cmd="${name}_start"
 stop_cmd=":"
-
-# Add the following lines to /etc/rc.conf to enable netwait:
-#
-# netwait_enable (bool): Set to "NO" by default.
-#                        Set it to "YES" to enable netwait.
-# netwait_ip (str):      Set to "" by default; MUST BE SET BY USER.
-#                        IP address/destination to be ping'd.
-# netwait_timeout (int): Set to "60" by default.
-#                        Total number of seconds to perform pings,
-#                        at a rate of one ping per second.  If any
-#                        of these are successful (exit code 0), the
-#                        network is considered usable.  The 1 second
-#                        delay between pings is indirectly controlled
-#                        using the ping -t flag.
-# netwait_if (str):      Set to "" by default.
-#                        The interface name to watch link state on
-#                        before attempting pings.  Uses ifconfig(8)
-#                        to monitor link status.
-# netwait_if_timeout (int): Set to "30" by default.
-#                        Total number of seconds to wait for link
-#                        state to change from "status: no carrier"
-#                        to something else (presumably "active").
-#                        There is a 1 second delay between attempts.
 
 netwait_start()
 {
 	local ip rc count output link
-
-	if ! checkyesno netwait_enable 
-	then
-		return
-	fi
 
 	if [ -z "${netwait_ip}" ]; then
 		err 1 "You must define one or more IP addresses in netwait_ip"

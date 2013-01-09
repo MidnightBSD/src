@@ -25,7 +25,6 @@
 # SUCH DAMAGE.
 #
 # $MidnightBSD$
-# $FreeBSD: src/etc/rc.d/atm2,v 1.16 2004/10/07 13:55:25 mtm Exp $
 #
 
 # PROVIDE: atm2

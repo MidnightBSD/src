@@ -1,7 +1,7 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/jail,v 1.37.4.1 2008/01/29 00:22:33 dougb Exp $
-# $MidnightBSD: src/etc/rc.d/jail,v 1.6 2009/01/18 01:19:28 laffer1 Exp $
+# $MidnightBSD$
+#
 
 # PROVIDE: jail
 # REQUIRE: LOGIN cleanvar
@@ -12,12 +12,14 @@
 # processes inside the jails) and care must be taken when changing the
 # code related to this!  If you have any doubt whether a change is
 # correct and have security impact, please get the patch reviewed by
-# laffer1@ or ctriv@ prior to commit.
+# laffer1@ prior to commit.
 
 . /etc/rc.subr
 
 name="jail"
-rcvar=`set_rcvar`
+rcvar="jail_enable"
+
+start_precmd="jail_prestart"
 start_cmd="jail_start"
 stop_cmd="jail_stop"
 
@@ -41,16 +43,46 @@ init_variables()
 	eval _ip=\"\$jail_${_j}_ip\"
 	eval _interface=\"\${jail_${_j}_interface:-${jail_interface}}\"
 	eval _exec=\"\$jail_${_j}_exec\"
+
+	i=0
+	while : ; do
+		eval _exec_prestart${i}=\"\${jail_${_j}_exec_prestart${i}:-\${jail_exec_prestart${i}}}\"
+		[ -z "$(eval echo \"\$_exec_prestart${i}\")" ] && break
+		i=$((i + 1))
+	done
+
 	eval _exec_start=\"\${jail_${_j}_exec_start:-${jail_exec_start}}\"
 
 	i=1
-	while [ true ]; do
+	while : ; do
 		eval _exec_afterstart${i}=\"\${jail_${_j}_exec_afterstart${i}:-\${jail_exec_afterstart${i}}}\"
 		[ -z "$(eval echo \"\$_exec_afterstart${i}\")" ] &&  break
 		i=$((i + 1))
 	done
-	
+
+	i=0
+	while : ; do
+		eval _exec_poststart${i}=\"\${jail_${_j}_exec_poststart${i}:-\${jail_exec_poststart${i}}}\"
+		[ -z "$(eval echo \"\$_exec_poststart${i}\")" ] && break
+		i=$((i + 1))
+	done
+
+	i=0
+	while : ; do
+		eval _exec_prestop${i}=\"\${jail_${_j}_exec_prestop${i}:-\${jail_exec_prestop${i}}}\"
+		[ -z "$(eval echo \"\$_exec_prestop${i}\")" ] && break
+		i=$((i + 1))
+	done
+
 	eval _exec_stop=\"\${jail_${_j}_exec_stop:-${jail_exec_stop}}\"
+
+	i=0
+	while : ; do
+		eval _exec_poststop${i}=\"\${jail_${_j}_exec_poststop${i}:-\${jail_exec_poststop${i}}}\"
+		[ -z "$(eval echo \"\$_exec_poststop${i}\")" ] && break
+		i=$((i + 1))
+	done
+
 	if [ -n "${_exec}" ]; then
 		#   simple/backward-compatible execution
 		_exec_start="${_exec}"
@@ -83,6 +115,7 @@ init_variables()
 	[ -z "${_flags}" ] && _flags="-l -U root"
 	eval _consolelog=\"\${jail_${_j}_consolelog:-${jail_consolelog}}\"
 	[ -z "${_consolelog}" ] && _consolelog="/var/log/jail_${_j}_console.log"
+	eval _fib=\"\${jail_${_j}_fib:-${jail_fib}}\"
 
 	# Debugging aid
 	#
@@ -92,18 +125,30 @@ init_variables()
 	debug "$_j mount enable: $_mount"
 	debug "$_j hostname: $_hostname"
 	debug "$_j ip: $_ip"
+	jail_show_addresses ${_j}
 	debug "$_j interface: $_interface"
+	debug "$_j fib: $_fib"
 	debug "$_j root: $_rootdir"
 	debug "$_j devdir: $_devdir"
 	debug "$_j fdescdir: $_fdescdir"
 	debug "$_j procdir: $_procdir"
 	debug "$_j ruleset: $_ruleset"
 	debug "$_j fstab: $_fstab"
+
+	i=0
+	while : ; do
+		eval out=\"\${_exec_prestart${i}:-''}\"
+		if [ -z "$out" ]; then
+			break
+		fi
+		debug "$_j exec pre-start #${i}: ${out}"
+		i=$((i + 1))
+	done
+
 	debug "$_j exec start: $_exec_start"
-	debug "$_j consolelog: $_consolelog"
 
 	i=1
-	while [ true ]; do
+	while : ; do
 		eval out=\"\${_exec_afterstart${i}:-''}\"
 
 		if [ -z "$out" ]; then
@@ -114,7 +159,38 @@ init_variables()
 		i=$((i + 1))
 	done
 
+	i=0
+	while : ; do
+		eval out=\"\${_exec_poststart${i}:-''}\"
+		if [ -z "$out" ]; then
+			break
+		fi
+		debug "$_j exec post-start #${i}: ${out}"
+		i=$((i + 1))
+	done
+
+	i=0
+	while : ; do
+		eval out=\"\${_exec_prestop${i}:-''}\"
+		if [ -z "$out" ]; then
+			break
+		fi
+		debug "$_j exec pre-stop #${i}: ${out}"
+		i=$((i + 1))
+	done
+
 	debug "$_j exec stop: $_exec_stop"
+
+	i=0
+	while : ; do
+		eval out=\"\${_exec_poststop${i}:-''}\"
+		if [ -z "$out" ]; then
+			break
+		fi
+		debug "$_j exec post-stop #${i}: ${out}"
+		i=$((i + 1))
+	done
+
 	debug "$_j flags: $_flags"
 	debug "$_j consolelog: $_consolelog"
 
@@ -124,10 +200,6 @@ init_variables()
 	if [ -z "${_rootdir}" ]; then
 		err 3 "$name: No root directory has been defined for ${_j}"
 	fi
-	if [ -z "${_ip}" ]; then
-		err 3 "$name: No IP address has been defined for ${_j}"
-	fi
-
 }
 
 # set_sysctl rc_knob mib msg
@@ -147,12 +219,12 @@ set_sysctl()
 	if checkyesno $_knob ; then
 		if [ "$_current" -ne 1 ]; then
 			echo -n " ${_msg}=YES"
-			${SYSCTL_W} 1>/dev/null ${_mib}=1
+			${SYSCTL} 1>/dev/null ${_mib}=1
 		fi
 	else
 		if [ "$_current" -ne 0 ]; then
 			echo -n " ${_msg}=NO"
-			${SYSCTL_W} 1>/dev/null ${_mib}=0
+			${SYSCTL} 1>/dev/null ${_mib}=0
 		fi
 	fi
 }
@@ -273,6 +345,215 @@ jail_mount_fstab()
 	mount -a -F "${_fstab}"
 }
 
+# jail_show_addresses jail
+#	Debug print the input for the given _multi aliases
+#	for a jail for init_variables().
+#
+jail_show_addresses()
+{
+	local _j _type alias
+	_j="$1"
+	alias=0
+
+	if [ -z "${_j}" ]; then
+		warn "jail_show_addresses: you must specify a jail"
+		return
+	fi
+
+	while : ; do
+		eval _addr=\"\$jail_${_j}_ip_multi${alias}\"
+		if [ -n "${_addr}" ]; then
+			debug "${_j} ip_multi${alias}: $_addr"
+			alias=$((${alias} + 1))
+		else
+			break
+		fi
+	done
+}
+
+# jail_extract_address argument
+#	The second argument is the string from one of the _ip
+#	or the _multi variables. In case of a comma separated list
+#	only one argument must be passed in at a time.
+#	The function alters the _type, _iface, _addr and _mask variables.
+#
+jail_extract_address()
+{
+	local _i
+	_i=$1
+
+	if [ -z "${_i}" ]; then
+		warn "jail_extract_address: called without input"
+		return
+	fi
+
+	# Check if we have an interface prefix given and split into
+	# iFace and rest.
+	case "${_i}" in
+	*\|*)	# ifN|.. prefix there
+		_iface=${_i%%|*}
+		_r=${_i##*|}
+		;;
+	*)	_iface=""
+		_r=${_i}
+		;;
+	esac
+
+	# In case the IP has no interface given, check if we have a global one.
+	_iface=${_iface:-${_interface}}
+
+	# Set address, cut off any prefix/netmask/prefixlen.
+	_addr=${_r}
+	_addr=${_addr%%[/ ]*}
+
+	# Theoretically we can return here if interface is not set,
+	# as we only care about the _mask if we call ifconfig.
+	# This is not done because we may want to santize IP addresses
+	# based on _type later, and optionally change the type as well.
+
+	# Extract the prefix/netmask/prefixlen part by cutting off the address.
+	_mask=${_r}
+	_mask=`expr "${_mask}" : "${_addr}\(.*\)"`
+
+	# Identify type {inet,inet6}.
+	case "${_addr}" in
+	*\.*\.*\.*)	_type="inet" ;;
+	*:*)		_type="inet6" ;;
+	*)		warn "jail_extract_address: type not identified"
+			;;
+	esac
+
+	# Handle the special /netmask instead of /prefix or
+	# "netmask xxx" case for legacy IP.
+	# We do NOT support shortend class-full netmasks.
+	if [ "${_type}" = "inet" ]; then
+		case "${_mask}" in
+		/*\.*\.*\.*)	_mask=" netmask ${_mask#/}" ;;
+		*)		;;
+		esac
+
+		# In case _mask is still not set use /32.
+		_mask=${_mask:-/32}
+
+	elif [ "${_type}" = "inet6" ]; then
+		# In case _maske is not set for IPv6, use /128.
+		_mask=${_mask:-/128}
+	fi
+}
+
+# jail_handle_ips_option {add,del} input
+#	Handle a single argument imput which can be a comma separated
+#	list of addresses (theoretically with an option interface and
+#	prefix/netmask/prefixlen).
+#
+jail_handle_ips_option()
+{
+	local _x _action _type _i
+	_action=$1
+	_x=$2
+
+	if [ -z "${_x}" ]; then
+		# No IP given. This can happen for the primary address
+		# of each address family.
+		return
+	fi
+
+	# Loop, in case we find a comma separated list, we need to handle
+	# each argument on its own.
+	while [ ${#_x} -gt 0 ]; do
+		case "${_x}" in
+		*,*)	# Extract the first argument and strip it off the list.
+			_i=`expr "${_x}" : '^\([^,]*\)'`
+			_x=`expr "${_x}" : "^[^,]*,\(.*\)"`
+			;;
+		*)	_i=${_x}
+			_x=""
+			;;
+		esac
+
+		_type=""
+		_iface=""
+		_addr=""
+		_mask=""
+		jail_extract_address "${_i}"
+
+		# make sure we got an address.
+		case "${_addr}" in
+		"")	continue ;;
+		*)	;;
+		esac
+
+		# Append address to list of addresses for the jail command.
+		case "${_addrl}" in
+		"")	_addrl="${_addr}" ;;
+		*)	_addrl="${_addrl},${_addr}" ;;
+		esac
+
+		# Configure interface alias if requested by a given interface
+		# and if we could correctly parse everything.
+		case "${_iface}" in
+		"")	continue ;;
+		esac
+		case "${_type}" in
+		inet)	;;
+		inet6)	;;
+		*)	warn "Could not determine address family.  Not going" \
+			    "to ${_action} address '${_addr}' for ${_jail}."
+			continue
+			;;
+		esac
+		case "${_action}" in
+		add)	ifconfig ${_iface} ${_type} ${_addr}${_mask} alias
+			;;
+		del)	# When removing the IP, ignore the _mask.
+			ifconfig ${_iface} ${_type} ${_addr} -alias
+			;;
+		esac
+	done
+}
+
+# jail_ips {add,del}
+#	Extract the comma separated list of addresses and return them
+#	for the jail command.
+#	Handle more than one address via the _multi option as well.
+#	If an interface is given also add/remove an alias for the
+#	address with an optional netmask.
+#
+jail_ips()
+{
+	local _action
+	_action=$1
+
+	case "${_action}" in
+	add)	;;
+	del)	;;
+	*)	warn "jail_ips: invalid action '${_action}'"
+		return
+		;;
+	esac
+
+	# Handle addresses.
+	jail_handle_ips_option ${_action} "${_ip}"
+	# Handle jail_xxx_ip_multi<N>
+	alias=0
+	while : ; do
+		eval _x=\"\$jail_${_jail}_ip_multi${alias}\"
+		case "${_x}" in
+		"")	break ;;
+		*)	jail_handle_ips_option ${_action} "${_x}"
+			alias=$((${alias} + 1))
+			;;
+		esac
+	done
+}
+
+jail_prestart()
+{
+	if checkyesno jail_parallel_start; then
+		command_args='&'
+	fi
+}
+
 jail_start()
 {
 	echo -n 'Configuring jails:'
@@ -294,8 +575,12 @@ jail_start()
 			echo -n " [${_hostname} already running (/var/run/jail_${_jail}.id exists)]"
 			continue;
 		fi
-		if [ -n "${_interface}" ]; then
-			ifconfig ${_interface} alias ${_ip} netmask 255.255.255.255
+		_addrl=""
+		jail_ips "add"
+		if [ -n "${_fib}" ]; then
+			_setfib="setfib -F '${_fib}'"
+		else
+			_setfib=""
 		fi
 		if checkyesno _mount; then
 			info "Mounting fstab for jail ${_jail} (${_fstab})"
@@ -316,9 +601,7 @@ jail_start()
 				devfs_mount_jail "${_devdir}" ${_ruleset}
 				# Transitional symlink for old binaries
 				if [ ! -L "${_devdir}/log" ]; then
-					__pwd="`pwd`"
-					cd "${_devdir}" && ln -sf ../var/run/log log
-					cd "$__pwd"
+					ln -sf ../var/run/log "${_devdir}/log"
 				fi
 			fi
 
@@ -349,13 +632,23 @@ jail_start()
 			fi
 		fi
 		_tmp_jail=${_tmp_dir}/jail.$$
-		eval jail ${_flags} -i ${_rootdir} ${_hostname} \
-			${_ip} ${_exec_start} > ${_tmp_jail} 2>&1
+
+		i=0
+		while : ; do
+			eval out=\"\${_exec_prestart${i}:-''}\"
+			[ -z "$out" ] && break
+			${out}
+			i=$((i + 1))
+		done
+
+		eval ${_setfib} jail ${_flags} -i ${_rootdir} ${_hostname} \
+			\"${_addrl}\" ${_exec_start} > ${_tmp_jail} 2>&1 \
+			</dev/null
 
 		if [ "$?" -eq 0 ] ; then
 			_jail_id=$(head -1 ${_tmp_jail})
 			i=1
-			while [ true ]; do
+			while : ; do
 				eval out=\"\${_exec_afterstart${i}:-''}\"
 
 				if [ -z "$out" ]; then
@@ -369,11 +662,17 @@ jail_start()
 			echo -n " $_hostname"
 			tail +2 ${_tmp_jail} >${_consolelog}
 			echo ${_jail_id} > /var/run/jail_${_jail}.id
+
+			i=0
+			while : ; do
+				eval out=\"\${_exec_poststart${i}:-''}\"
+				[ -z "$out" ] && break
+				${out}
+				i=$((i + 1))
+			done
 		else
 			jail_umount_fs
-			if [ -n "${_interface}" ]; then
-				ifconfig ${_interface} -alias ${_ip}
-			fi
+			jail_ips "del"
 			echo " cannot start jail \"${_jail}\": "
 			tail +2 ${_tmp_jail}
 		fi
@@ -392,6 +691,15 @@ jail_stop()
 			_jail_id=$(cat /var/run/jail_${_jail}.id)
 			if [ ! -z "${_jail_id}" ]; then
 				init_variables $_jail
+
+				i=0
+				while : ; do
+					eval out=\"\${_exec_prestop${i}:-''}\"
+					[ -z "$out" ] && break
+					${out}
+					i=$((i + 1))
+				done
+
 				if [ -n "${_exec_stop}" ]; then
 					eval env -i /usr/sbin/jexec ${_jail_id} ${_exec_stop} \
 						>> ${_consolelog} 2>&1
@@ -401,10 +709,16 @@ jail_stop()
 				killall -j ${_jail_id} -KILL > /dev/null 2>&1
 				jail_umount_fs
 				echo -n " $_hostname"
+
+				i=0
+				while : ; do
+					eval out=\"\${_exec_poststop${i}:-''}\"
+					[ -z "$out" ] && break
+					${out}
+					i=$((i + 1))
+				done
 			fi
-			if [ -n "${_interface}" ]; then
-				ifconfig ${_interface} -alias ${_ip}
-			fi
+			jail_ips "del"
 			rm /var/run/jail_${_jail}.id
 		else
 			echo " cannot stop jail ${_jail}. No jail id in /var/run"
@@ -421,4 +735,5 @@ fi
 if [ -n "$*" ]; then
 	jail_list="$*"
 fi
+
 run_rc_command "${cmd}"

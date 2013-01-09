@@ -1,16 +1,16 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/bsnmpd,v 1.1 2005/04/17 10:47:58 glebius Exp $
 # $MidnightBSD$
+#
 
 # PROVIDE: bsnmpd
 # REQUIRE: NETWORKING syslogd
-# KEYWORD: nojail
+# KEYWORD: nojail shutdown
 
 . /etc/rc.subr
 
 name="bsnmpd"
-rcvar=`set_rcvar`
+rcvar="bsnmpd_enable"
 command="/usr/sbin/${name}"
 pidfile="/var/run/snmpd.pid"
 

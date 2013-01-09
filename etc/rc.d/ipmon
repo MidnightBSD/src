@@ -1,8 +1,7 @@
 #!/bin/sh
 #
-# $NetBSD: ipmon,v 1.9 2002/04/18 05:02:01 lukem Exp $
-# $FreeBSD: src/etc/rc.d/ipmon,v 1.13.2.1 2005/12/16 01:42:54 dougb Exp $
-# $MidnightBSD: src/etc/rc.d/ipmon,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
+# $MidnightBSD$
+#
 
 # PROVIDE: ipmon
 # REQUIRE: FILESYSTEMS hostname sysctl cleanvar ipfilter
@@ -12,7 +11,7 @@
 . /etc/rc.subr
 
 name="ipmon"
-rcvar=`set_rcvar`
+rcvar="ipmon_enable"
 command="/sbin/${name}"
 start_precmd="ipmon_precmd"
 
@@ -21,7 +20,7 @@ ipmon_precmd()
 	# Continue only if ipfilter or ipnat is enabled and the
 	# ipfilter module is loaded.
 	#
-	if ! checkyesno ipfilter_enable -o ! checkyesno ipnat_enable ; then
+	if ! checkyesno ipfilter_enable && ! checkyesno ipnat_enable ; then
 		err 1  "${name} requires either ipfilter or ipnat enabled"
 	fi
 	if ! sysctl net.inet.ipf.fr_pass >/dev/null 2>&1; then

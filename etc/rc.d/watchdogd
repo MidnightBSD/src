@@ -25,17 +25,16 @@
 # SUCH DAMAGE.
 #
 # $MidnightBSD$
-# $FreeBSD: src/etc/rc.d/watchdogd,v 1.5 2005/01/16 03:12:03 obrien Exp $
 #
 
 # PROVIDE: watchdogd
-# REQUIRE: DAEMON cleanvar
+# REQUIRE: FILESYSTEMS cleanvar syslogd
 # KEYWORD: nojail shutdown
 
 . /etc/rc.subr
 
 name="watchdogd"
-rcvar="`set_rcvar`"
+rcvar="watchdogd_enable"
 command="/usr/sbin/${name}"
 pidfile="/var/run/${name}.pid"
 

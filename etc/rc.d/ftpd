@@ -1,15 +1,16 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/ftpd,v 1.1.2.1 2006/01/29 13:52:34 yar Exp $
 # $MidnightBSD$
+#
 
 # PROVIDE: ftpd
 # REQUIRE: LOGIN cleanvar
+# KEYWORD: shutdown
 
 . /etc/rc.subr
 
 name="ftpd"
-rcvar=`set_rcvar`
+rcvar="ftpd_enable"
 command="/usr/libexec/${name}"
 pidfile="/var/run/${name}.pid"
 start_precmd=ftpd_prestart

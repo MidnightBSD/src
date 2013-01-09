@@ -1,7 +1,7 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/cleanvar,v 1.8.2.2 2006/01/17 06:37:48 dougb Exp $
-# $MidnightBSD: src/etc/rc.d/cleanvar,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
+# $MidnightBSD$
+#
 
 # PROVIDE: cleanvar
 # REQUIRE: FILESYSTEMS var
@@ -9,7 +9,7 @@
 . /etc/rc.subr
 
 name="cleanvar"
-rcvar=`set_rcvar`
+rcvar="cleanvar_enable"
 
 start_precmd="${name}_prestart"
 start_cmd="${name}_start"
@@ -54,12 +54,12 @@ cleanvar_prestart()
 	rm -f /var/run/clean_var /var/spool/lock/clean_var
 }
 
-cleanvar_start () 
+cleanvar_start ()
 {
 	if [ -d /var/run -a ! -f /var/run/clean_var ]; then
 		purgedir /var/run
-		# And an initial utmp file
-		(cd /var/run && cp /dev/null utmp && chmod 644 utmp)
+		# And an initial utmpx active session file
+		(cd /var/run && cp /dev/null utx.active && chmod 644 utx.active)
 		>/var/run/clean_var
 	fi
 	if [ -d /var/spool/lock -a ! -f /var/spool/lock/clean_var ]; then

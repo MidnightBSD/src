@@ -6,14 +6,14 @@
 # PROVIDE: bthidd
 # REQUIRE: DAEMON hcsecd
 # BEFORE: LOGIN
-# KEYWORD: nojail
+# KEYWORD: nojail shutdown
 
 . /etc/rc.subr
 
 name="bthidd"
+rcvar="bthidd_enable"
 command="/usr/sbin/${name}"
 pidfile="/var/run/${name}.pid"
-rcvar=`set_rcvar`
 start_precmd="bthidd_prestart"
 
 bthidd_prestart()

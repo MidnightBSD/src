@@ -2,13 +2,11 @@
 #
 # Add additional swap files
 #
-# $MidnightBSD: src/etc/rc.d/addswap,v 1.2 2006/08/28 02:13:44 laffer1 Exp $
-# $FreeBSD: src/etc/rc.d/addswap,v 1.4.2.1 2006/01/20 14:24:34 matteo Exp $
+# $MidnightBSD$
 #
 
 # PROVIDE: addswap
-# REQUIRE: FILESYSTEMS
-# BEFORE: sysctl
+# REQUIRE: FILESYSTEMS kld
 # KEYWORD: nojail
 
 . /etc/rc.subr

@@ -22,12 +22,11 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: src/etc/rc.d/bridge,v 1.2 2006/12/30 22:53:20 yar Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/bridge,v 1.1 2008/12/04 16:15:50 laffer1 Exp $
 #
 
 # PROVIDE: bridge
-# REQUIRE: netif
+# REQUIRE: netif faith ppp stf
 # KEYWORD: nojail
 
 . /etc/rc.subr
@@ -43,7 +42,7 @@ glob_int () {
 		$2 ) true ;;
 		* ) false ;;
 	esac
-} 
+}
 
 bridge_test () {
 	bridge=$1

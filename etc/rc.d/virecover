@@ -1,19 +1,18 @@
 #!/bin/sh
 #
-# $NetBSD: virecover,v 1.6 2002/03/22 04:34:00 thorpej Exp $
-# $FreeBSD: src/etc/rc.d/virecover,v 1.9 2004/10/07 13:55:26 mtm Exp $
-# $MidnightBSD: src/etc/rc.d/virecover,v 1.2 2006/08/28 02:28:59 laffer1 Exp $
+# $MidnightBSD$
+#
 
 # PROVIDE: virecover
 # REQUIRE: mountcritremote ldconfig
 # BEFORE:  DAEMON
-# KEYWORD: shutdown
+#
 # XXX: should require `mail'!
 
 . /etc/rc.subr
 
 name="virecover"
-rcvar="`set_rcvar`"
+rcvar="virecover_enable"
 stop_cmd=":"
 start_cmd="virecover_start"
 

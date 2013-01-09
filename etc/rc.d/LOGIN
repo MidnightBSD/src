@@ -1,8 +1,6 @@
 #!/bin/sh
 #
-# $NetBSD: LOGIN,v 1.7 2002/03/22 04:33:57 thorpej Exp $
-# $FreeBSD: src/etc/rc.d/LOGIN,v 1.5 2004/10/07 13:55:25 mtm Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/LOGIN,v 1.2 2006/08/28 02:13:44 laffer1 Exp $
 
 # PROVIDE: LOGIN
 # REQUIRE: DAEMON

@@ -24,13 +24,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD: src/etc/rc.d/hostid,v 1.2 2010/09/10 18:08:20 laffer1 Exp $
-# $FreeBSD: src/etc/rc.d/hostid,v 1.7 2007/05/22 13:53:59 rse Exp $
+# $MidnightBSD$
 #
 
 # PROVIDE: hostid
-# REQUIRE: root
-# BEFORE: mountcritlocal
+# REQUIRE: sysctl
 # KEYWORD: nojail
 
 . /etc/rc.subr
@@ -50,10 +48,11 @@ hostid_set()
 	id="0x${id%????????????????????????}"
 
 	# Set both kern.hostuuid and kern.hostid.
-	echo "Setting hostuuid: ${uuid}."
-	${SYSCTL_W} kern.hostuuid="${uuid}" >/dev/null
-	echo "Setting hostid: ${id}."
-	${SYSCTL_W} kern.hostid=${id} >/dev/null
+	#
+	check_startmsgs && echo "Setting hostuuid: ${uuid}."
+	${SYSCTL} kern.hostuuid="${uuid}" >/dev/null
+	check_startmsgs && echo "Setting hostid: ${id}."
+	${SYSCTL} kern.hostid=${id} >/dev/null
 }
 
 hostid_hardware()

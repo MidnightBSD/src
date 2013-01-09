@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD: src/etc/rc.d/ntpd,v 1.4 2006/12/27 17:18:07 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.d/ntpd,v 1.5 2007/09/28 22:17:23 laffer1 Exp $
 #
 
 # PROVIDE: ntpd
@@ -11,7 +11,7 @@
 . /etc/rc.subr
 
 name=ntpd
-rcvar=`set_rcvar`
+rcvar="ntpd_enable"
 command="/usr/sbin/${name}"
 start_precmd="ntpd_precmd"
 required_files="/etc/ntpd.conf"

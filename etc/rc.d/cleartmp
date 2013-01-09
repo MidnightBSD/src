@@ -1,7 +1,7 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/cleartmp,v 1.12.2.1 2006/01/17 06:37:48 dougb Exp $
-# $MidnightBSD: src/etc/rc.d/cleartmp,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
+# $MidnightBSD$
+#
 
 # PROVIDE: cleartmp
 # REQUIRE: mountcritremote tmp
@@ -10,7 +10,8 @@
 . /etc/rc.subr
 
 name="cleartmp"
-rcvar1=`set_rcvar clear_tmp`
+# Disguise rcvar for the start method to run irrespective of its setting.
+rcvar1="clear_tmp_enable"
 start_cmd="${name}_start"
 stop_cmd=":"
 
@@ -24,7 +25,7 @@ cleartmp_start()
 			       ${tmp}/.ICE-unix ${tmp}/.font-unix"
 
 	if checkyesno ${rcvar1}; then
-		echo "Clearing ${tmp}."
+		check_startmsgs && echo "Clearing ${tmp}."
 
 		# This is not needed for mfs, but doesn't hurt anything.
 		# Things to note:
@@ -35,7 +36,10 @@ cleartmp_start()
 		#   it can prevent foot-shooting in future.
 		# + /tmp/lost+found is preserved, but its contents are removed.
 		# + lost+found and quota.* in subdirectories are removed.
+		# + .sujournal and .snap are preserved.
 		find -x ${tmp}/. ! -name . \
+		    ! \( -name .sujournal -type f -user root \) \
+		    ! \( -name .snap -type d -user root \) \
 		    ! \( -name lost+found -type d -user root \) \
 		    ! \( \( -name quota.user -or -name quota.group \) \
 			-type f -user root \) \
@@ -43,7 +47,7 @@ cleartmp_start()
 	elif checkyesno clear_tmp_X; then
 		# Remove X lock files, since they will prevent you from
 		# restarting X.  Remove other X related directories.
-		echo "Clearing ${tmp} (X related)."
+		check_startmsgs && echo "Clearing ${tmp} (X related)."
 		rm -rf ${tmp}/.X[0-9]-lock ${x11_socket_dirs}
 	fi
 	if checkyesno clear_tmp_X; then

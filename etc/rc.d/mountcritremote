@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/mountcritremote,v 1.16.4.1 2008/01/28 07:58:31 dougb Exp $
 # $MidnightBSD$
+#
 
 # PROVIDE: mountcritremote
-# REQUIRE: NETWORKING FILESYSTEMS cleanvar ipsec
+# REQUIRE: NETWORKING FILESYSTEMS cleanvar ipsec netwait
 # KEYWORD: nojail
 
 . /etc/rc.subr
@@ -26,7 +26,7 @@ mountcritremote_precmd()
 	case "`mount -d -a -t nfs 2> /dev/null`" in
 	*mount_nfs*)
 		# Handle absent nfs client support
-		load_kld -m nfs nfsclient || return 1
+		load_kld -m nfs nfscl || return 1
 		;;
 	esac
 	return 0
@@ -36,9 +36,15 @@ mountcritremote_start()
 {
 	# Mount nfs filesystems.
 	#
-	echo -n 'Mounting NFS file systems:'
-	mount -a -t nfs
-	echo '.'
+	case "`/sbin/mount -d -a -t nfs`" in
+	'')
+		;;
+	*)
+		echo -n 'Mounting NFS file systems:'
+		mount -a -t nfs
+		echo '.'
+		;;
+	esac
 
 	# Mount other network filesystems if present in /etc/fstab.
 	case ${extra_netfs_types} in
@@ -65,7 +71,7 @@ mountcritremote_start()
 	done
 
 	# Cleanup /var again just in case it's a network mount.
-	/etc/rc.d/cleanvar reload
+	/etc/rc.d/cleanvar quietreload
 	rm -f /var/run/clean_var /var/spool/lock/clean_var
 }
 

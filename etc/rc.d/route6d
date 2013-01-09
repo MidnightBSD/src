@@ -1,25 +1,20 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/route6d,v 1.9 2004/10/07 13:55:26 mtm Exp $
-# $MidnightBSD: src/etc/rc.d/route6d,v 1.2 2006/08/28 02:47:46 laffer1 Exp $
+# $MidnightBSD$
+#
 
 # PROVIDE: route6d
-# REQUIRE: network_ipv6
+# REQUIRE: netif routing
 # KEYWORD: nojail
 
 . /etc/rc.subr
 
 name="route6d"
+rcvar="route6d_enable"
 
-# XXX - Executable may be in a different location. The $name variable
-#       is different from the variable in rc.conf(5) so the
-#       subroutines in rc.subr won't catch it. In this case, it
-#	is also needed by the eval statement in the FreeBSD conditional.
-#
+set_rcvar_obsolete ipv6_router_enable route6d_enable
+set_rcvar_obsolete ipv6_router route6d_program
+set_rcvar_obsolete ipv6_router_flags route6d_flags
+
 load_rc_config $name
-
-rcvar="ipv6_router_enable"
-command="${ipv6_router:-/usr/sbin/${name}}"
-eval ${name}_flags=\"${ipv6_router_flags}\"
-
 run_rc_command "$1"

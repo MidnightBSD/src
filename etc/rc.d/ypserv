@@ -1,8 +1,7 @@
 #!/bin/sh
 #
-# $NetBSD: ypserv,v 1.5 2000/09/19 13:04:39 lukem Exp $
-# $FreeBSD: src/etc/rc.d/ypserv,v 1.11 2004/10/07 13:55:26 mtm Exp $
-# $MidnightBSD: src/etc/rc.d/ypserv,v 1.2 2006/08/28 02:28:59 laffer1 Exp $ 
+# $MidnightBSD$
+#
 
 # PROVIDE: ypserv
 # REQUIRE: rpcbind
@@ -12,19 +11,20 @@
 
 name="ypserv"
 rcvar="nis_server_enable"
-command="/usr/sbin/${name}"
-start_precmd="ypserv_prestart"
 
 load_rc_config $name
+
+command="/usr/sbin/${name}"
 command_args="${nis_server_flags}"
+
+start_precmd="ypserv_prestart"
 
 ypserv_prestart()
 {
-	if ! checkyesno rpcbind_enable  && \
-	    ! /etc/rc.d/rpcbind forcestatus 1>/dev/null 2>&1
-	then
-		force_depend rpcbind || return 1
-	fi
+	local _domain
+
+	force_depend rpcbind || return 1
+
 	_domain=`domainname`
 	if [ -z "$_domain" ]; then
 		warn "NIS domainname(1) is not set."

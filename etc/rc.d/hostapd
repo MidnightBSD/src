@@ -1,7 +1,7 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/hostapd,v 1.1.2.1 2006/02/12 22:13:15 flz Exp $
 # $MidnightBSD$
+#
 
 # PROVIDE: hostapd
 # REQUIRE: mountcritremote
@@ -10,13 +10,16 @@
 . /etc/rc.subr
 
 name="hostapd"
+rcvar="hostapd_enable"
 command="/usr/sbin/${name}"
-rcvar=`set_rcvar`
 
 conf_file="/etc/${name}.conf"
+pidfile="/var/run/${name}.pid"
 
-command_args="-B ${conf_file}"
+command_args="-P ${pidfile} -B ${conf_file}"
 required_files="${conf_file}"
+required_modules="wlan_xauth wlan_wep wlan_tkip wlan_ccmp"
+extra_commands="reload"
 
 load_rc_config ${name}
 run_rc_command "$1"

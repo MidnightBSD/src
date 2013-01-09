@@ -1,7 +1,7 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/newsyslog,v 1.3.2.2 2006/01/17 06:46:54 dougb Exp $
-# $MidnightBSD: src/etc/rc.d/newsyslog,v 1.2 2006/08/28 02:47:46 laffer1 Exp $
+# $MidnightBSD$
+#
 
 # PROVIDE: newsyslog
 # REQUIRE: cleanvar mountcritremote
@@ -9,7 +9,7 @@
 . /etc/rc.subr
 
 name="newsyslog"
-rcvar=`set_rcvar`
+rcvar="newsyslog_enable"
 required_files="/etc/newsyslog.conf"
 command="/usr/sbin/${name}"
 start_cmd="newsyslog_start"
@@ -17,9 +17,9 @@ stop_cmd=":"
 
 newsyslog_start()
 {
-	echo -n "Creating and/or trimming log files:"
+	check_startmsgs && echo -n 'Creating and/or trimming log files'
 	${command} ${rc_flags}
-	echo "."
+	check_startmsgs && echo '.'
 }
 
 load_rc_config $name

@@ -1,7 +1,7 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/ypbind,v 1.9 2004/10/07 13:55:26 mtm Exp $
-# $MidnightBSD: src/etc/rc.d/ypbind,v 1.2 2006/08/28 02:28:59 laffer1 Exp $
+# $MidnightBSD$
+#
 
 # PROVIDE: ypbind
 # REQUIRE: ypserv
@@ -11,20 +11,20 @@
 . /etc/rc.subr
 
 name="ypbind"
-command="/usr/sbin/${name}"
-start_precmd="ypbind_precmd"
+rcvar="nis_client_enable"
 
 load_rc_config $name
-rcvar="nis_client_enable"
+
+command="/usr/sbin/${name}"
 command_args="${nis_client_flags}"
+
+start_precmd="ypbind_precmd"
 
 ypbind_precmd()
 {
-	if ! checkyesno rpcbind_enable  && \
-	    ! /etc/rc.d/rpcbind forcestatus 1>/dev/null 2>&1
-	then
-		force_depend rpcbind || return 1
-	fi
+	local _domain
+
+	force_depend rpcbind || return 1
 
 	_domain=`domainname`
 	if [ -z "$_domain" ]; then
