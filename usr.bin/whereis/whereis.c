@@ -32,7 +32,7 @@
 
 #include <sys/types.h>
 
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.bin/whereis/whereis.c,v 1.3 2012/11/23 01:59:03 laffer1 Exp $");
 
 #include <sys/stat.h>
 #include <sys/sysctl.h>
@@ -307,7 +307,7 @@ defaults(void)
 		decolonify(b, &mandirs, &nele);
 	}
 
-	/* -s defaults to precompiled list, plus subdirs of /usr/ports */
+	/* -s defaults to precompiled list, plus subdirs of /usr/mports */
 	if (!sourcedirs) {
 		if ((b = malloc(strlen(sourcepath) + 1)) == NULL)
 			abort();
@@ -317,12 +317,12 @@ defaults(void)
 
 		if (stat(PATH_PORTS, &sb) == -1) {
 			if (errno == ENOENT)
-				/* no /usr/ports, we are done */
+				/* no /usr/mports, we are done */
 				return;
 			err(EX_OSERR, "stat(" PATH_PORTS ")");
 		}
 		if ((sb.st_mode & S_IFMT) != S_IFDIR)
-			/* /usr/ports is not a directory, ignore */
+			/* /usr/mports is not a directory, ignore */
 			return;
 		if (access(PATH_PORTS, R_OK | X_OK) != 0)
 			return;

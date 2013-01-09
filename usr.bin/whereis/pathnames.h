@@ -22,7 +22,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.bin/whereis/pathnames.h,v 1.4 2012/11/23 01:59:03 laffer1 Exp $
  */
 
 /* Where to look for libexec and games */
@@ -42,7 +42,7 @@
 "/usr/src/games"
 
 /* Each subdirectory of PATH_PORTS will be appended to PATH_SOURCES. */
-#define PATH_PORTS "/usr/ports"
+#define PATH_PORTS "/usr/mports"
 
 /* How to query the current manpath. */
 #define MANPATHCMD "manpath -q"
