@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: src/etc/nls.alias,v 1.5 2003/06/10 01:22:30 ache Exp $
+# $MidnightBSD: src/etc/nls.alias,v 1.2 2006/08/28 01:35:54 laffer1 Exp $
 
 POSIX                   C
 en_US.US-ASCII          C

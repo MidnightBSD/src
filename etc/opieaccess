@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: src/etc/opieaccess,v 1.4 2003/02/16 13:04:27 des Exp $
+# $MidnightBSD: src/etc/opieaccess,v 1.2 2006/08/28 01:35:54 laffer1 Exp $
 #
 # This file controls whether UNIX passwords are to be permitted.  Rules
 # are matched in order, and the search terminates when the first matching

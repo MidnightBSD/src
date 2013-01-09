@@ -1,6 +1,5 @@
 #	from: @(#)Makefile	5.11 (Berkeley) 5/21/91
-# $FreeBSD: src/etc/Makefile,v 1.343.2.3 2005/11/16 07:24:02 ru Exp $
-# $MidnightBSD: src/etc/Makefile,v 1.24 2011/08/22 02:15:32 laffer1 Exp $
+# $MidnightBSD: src/etc/Makefile,v 1.25 2012/01/14 15:16:53 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -8,21 +7,59 @@
 SUBDIR=	sendmail
 .endif
 
-BIN1=	amd.map apmd.conf auth.conf \
-	crontab csh.cshrc csh.login csh.logout devd.conf \
-	devfs.conf dhclient.conf dhcp6c.conf disktab fbtab ftpusers gettytab \
-	group hosts hosts.allow hosts.equiv hosts.lpd \
-	inetd.conf libalias.conf login.access login.conf \
-	mac.conf motd netconfig network.subr networks newsyslog.conf \
-	nsswitch.conf ntpd.conf pf.conf pf.os phones profile protocols \
-	rc rc.bsdextended rc.firewall rc.firewall6 rc.initdiskless \
-	rc.sendmail rc.shutdown \
-	rc.subr remote rpc sensorsd.conf services shells \
-	snmpd.config sysctl.conf syslog.conf \
-	etc.${MACHINE_ARCH}/ttys \
-	${.CURDIR}/../gnu/usr.bin/man/manpath/manpath.config \
-	${.CURDIR}/../usr.bin/mail/misc/mail.rc \
-	${.CURDIR}/../usr.bin/locate/locate/locate.rc
+BIN1=	crontab \
+	devd.conf \
+	devfs.conf \
+	ddb.conf \
+	dhclient.conf \
+	dhcp6c.conf \
+	disktab \
+	fbtab \
+	ftpusers \
+	gettytab \
+	group \
+	hosts \
+	hosts.allow \
+	hosts.equiv \
+	inetd.conf \
+	libalias.conf \
+	login.access \
+	login.conf \
+	mac.conf \
+	motd \
+	netconfig \
+	network.subr \
+	networks \
+	newsyslog.conf \
+	nsswitch.conf \
+	phones \
+	profile \
+	protocols \
+	rc \
+	rc.bsdextended \
+	rc.firewall \
+	rc.initdiskless \
+	rc.sendmail \
+	rc.shutdown \
+	rc.subr \
+	remote \
+	rpc \
+	sensorsd.conf \
+	services \
+	shells \
+	sysctl.conf \
+	syslog.conf \
+	termcap.small
+
+.if exists(${.CURDIR}/etc.${MACHINE}/ttys)
+BIN1+=	etc.${MACHINE}/ttys
+.elif exists(${.CURDIR}/etc.${MACHINE_ARCH}/ttys)
+BIN1+=	etc.${MACHINE_ARCH}/ttys
+.elif exists(${.CURDIR}/etc.${MACHINE_CPUARCH}/ttys)
+BIN1+=	etc.${MACHINE_CPUARCH}/ttys
+.else
+.error etc.MACHINE/ttys missing
+.endif
 
 OPENBSMDIR=			${.CURDIR}/../contrib/openbsm
 BSM_ETC_OPEN_FILES=		${OPENBSMDIR}/etc/audit_class \
@@ -32,12 +69,34 @@ BSM_ETC_RESTRICTED_FILES=	${OPENBSMDIR}/etc/audit_control \
 BSM_ETC_EXEC_FILES=		${OPENBSMDIR}/etc/audit_warn
 BSM_ETC_DIR=			${DESTDIR}/etc/security
 
-.if ${MK_LPR} != "no"
-BIN1+=	printcap
+# NB: keep these sorted by MK_* knobs
+
+.if ${MK_AMD} != "no"
+BIN1+= amd.map
 .endif
 
-.if ${MK_NS_CACHING} != "no"
-BIN1+= nscd.conf
+.if ${MK_APM} != "no"
+BIN1+= apmd.conf
+.endif
+
+.if ${MK_BSNMP} != "no"
+BIN1+= snmpd.config
+.endif
+
+.if ${MK_LOCATE} != "no"
+BIN1+=	${.CURDIR}/../usr.bin/locate/locate/locate.rc
+.endif
+
+.if ${MK_LPR} != "no"
+BIN1+=	hosts.lpd printcap
+.endif
+
+.if ${MK_MAIL} != "no"
+BIN1+=	${.CURDIR}/../usr.bin/mail/misc/mail.rc
+.endif
+
+.if ${MK_NTP} != "no"
+BIN1+=	ntpd.conf
 .endif
 
 .if ${MK_OPENSSH} != "no"
@@ -50,6 +109,22 @@ SSL=	${.CURDIR}/../crypto/openssl/apps/openssl.cnf
 .endif
 
 SUDO=	${.CURDIR}/../contrib/sudo/sudoers
+
+.if ${MK_NS_CACHING} != "no"
+BIN1+= nscd.conf
+.endif
+
+.if ${MK_PF} != "no"
+BIN1+= pf.conf pf.os
+.endif
+
+.if ${MK_TCSH} != "no"
+BIN1+= csh.cshrc csh.login csh.logout
+.endif
+
+.if ${MK_WIRELESS} != "no"
+BIN1+= regdomain.xml
+.endif
 
 # -rwxr-xr-x root:wheel, for the new cron root:wheel
 BIN2=	netstart pccard_ether rc.suspend rc.resume
@@ -111,11 +186,20 @@ distribution:
 	    ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 755 \
 		${BIN2} ${DESTDIR}/etc; \
 	    ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 600 \
-		master.passwd nsmb.conf opieaccess ${DESTDIR}/etc; \
-	    pwd_mkdb ${PWD_MKDB_ENDIAN} -i -p -d ${DESTDIR}/etc \
-		${DESTDIR}/etc/master.passwd
+		master.passwd nsmb.conf opieaccess ${DESTDIR}/etc;
+.if ${MK_AT} == "no"
+	sed -i "" -e 's;.*/usr/libexec/atrun;#&;' ${DESTDIR}/etc/crontab
+.endif
+.if ${MK_TCSH} == "no"
+	sed -i "" -e 's;/bin/csh;/bin/sh;' ${DESTDIR}/etc/master.passwd
+.endif
+	pwd_mkdb ${PWD_MKDB_ENDIAN} -i -p -d ${DESTDIR}/etc \
+	    ${DESTDIR}/etc/master.passwd
+.if ${MK_BLUETOOTH} != "no"
 	${_+_}cd ${.CURDIR}/bluetooth; ${MAKE} install
+.endif
 	${_+_}cd ${.CURDIR}/defaults; ${MAKE} install
+	${_+_}cd ${.CURDIR}/devd; ${MAKE} install
 	${_+_}cd ${.CURDIR}/gss; ${MAKE} install
 	${_+_}cd ${.CURDIR}/periodic; ${MAKE} install
 	${_+_}cd ${.CURDIR}/rc.d; ${MAKE} install
@@ -172,8 +256,11 @@ distribution:
             ln ${DESTDIR}/root/.mkshrc ${DESTDIR}/.mkshrc
 	cd ${.CURDIR}/mtree; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 444 \
 	    ${MTREE} ${DESTDIR}/etc/mtree
+.if ${MK_PPP} != "no"
 	cd ${.CURDIR}/ppp; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 600 \
 	    ${PPPCNF} ${DESTDIR}/etc/ppp
+.endif
+.if ${MK_MAIL} != "no"
 	cd ${.CURDIR}/mail; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
 	    ${ETCMAIL} ${DESTDIR}/etc/mail
 	@if [ -d ${DESTDIR}/etc/mail -a -f ${DESTDIR}/etc/mail/aliases -a \
@@ -181,6 +268,7 @@ distribution:
 		set -x; \
 		ln -s mail/aliases ${DESTDIR}/etc/aliases; \
 	fi
+.endif
 	${INSTALL} -o ${BINOWN} -g operator -m 664 /dev/null \
 	    ${DESTDIR}/etc/dumpdates
 	${INSTALL} -o nobody -g ${BINGRP} -m 644 /dev/null \
@@ -189,10 +277,16 @@ distribution:
 	    ${DESTDIR}/var/crash
 	cd ${.CURDIR}/..; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 444 \
 		${FREEBSD} ${DESTDIR}/
+.if ${MK_BOOT} != "no"
 .if exists(${.CURDIR}/../sys/${MACHINE}/conf/GENERIC.hints)
 	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 444 \
 	    ${.CURDIR}/../sys/${MACHINE}/conf/GENERIC.hints \
 	    ${DESTDIR}/boot/device.hints
+.endif
+.endif
+.if ${MK_NIS} == "no"
+	sed -i "" -e 's/.*_compat:/# &/' -e 's/compat$$/files/' \
+		${DESTDIR}/etc/nsswitch.conf
 .endif
 
 distrib-dirs:
@@ -209,11 +303,15 @@ distrib-dirs:
 	mtree -deU ${MTREE_FOLLOWS_SYMLINKS} -f ${.CURDIR}/mtree/BIND.chroot.dist \
 	    -p ${DESTDIR}/var/named
 .endif
+.if ${MK_GROFF} != "no"
+	mtree -deU ${MTREE_FOLLOWS_SYMLINKS} -f ${.CURDIR}/mtree/BSD.groff.dist -p ${DESTDIR}/usr
+.endif
 .if ${MK_SENDMAIL} != "no"
 	mtree -deU ${MTREE_FOLLOWS_SYMLINKS} -f ${.CURDIR}/mtree/BSD.sendmail.dist -p ${DESTDIR}/
 .endif
 	cd ${DESTDIR}/; rm -f ${DESTDIR}/sys; ln -s usr/src/sys sys
 	cd ${DESTDIR}/usr/share/man/en.ISO8859-1; ln -sf ../man* .
+	cd ${DESTDIR}/usr/share/man/en.UTF-8; ln -sf ../man* .
 	cd ${DESTDIR}/usr/share/man; \
 	set - `grep "^[a-zA-Z]" ${.CURDIR}/man.alias`; \
 	while [ $$# -gt 0 ] ; \

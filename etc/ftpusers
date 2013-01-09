@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/etc/ftpusers,v 1.2 2006/08/28 01:35:53 laffer1 Exp $
 # $FreeBSD: src/etc/ftpusers,v 1.14 2005/06/07 03:41:19 maxim Exp $
 #
 # list of users disallowed any ftp access.
@@ -21,6 +21,7 @@ _dhcp
 uucp
 pop
 www
+hast
 _ntp
 nobody
 mailnull

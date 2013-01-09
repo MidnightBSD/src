@@ -33009,7 +33009,6 @@ crypto/openssl/util/x86asm.sh -text
 etc/Makefile -text
 etc/amd.map -text
 etc/apmd.conf -text
-etc/auth.conf -text
 etc/bluetooth/Makefile -text
 etc/bluetooth/hcsecd.conf -text
 etc/bluetooth/hosts -text
@@ -33018,6 +33017,7 @@ etc/crontab -text
 etc/csh.cshrc -text
 etc/csh.login -text
 etc/csh.logout -text
+etc/ddb.conf -text
 etc/defaults/Makefile -text
 etc/defaults/bluetooth.device.conf -text
 etc/defaults/devfs.rules -text
@@ -33330,13 +33330,13 @@ etc/rc.d/ypupdated -text
 etc/rc.d/ypxfrd -text
 etc/rc.d/zfs -text
 etc/rc.firewall -text
-etc/rc.firewall6 -text
 etc/rc.initdiskless -text
 etc/rc.resume -text
 etc/rc.sendmail -text
 etc/rc.shutdown -text
 etc/rc.subr -text
 etc/rc.suspend -text
+etc/regdomain.xml -text
 etc/remote -text
 etc/root/dot.cshrc -text
 etc/root/dot.k5login -text
