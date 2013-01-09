@@ -69,15 +69,16 @@
  *
  *
  * $MidnightBSD$
- * $FreeBSD: src/share/examples/kld/cdev/test/testcdev.c,v 1.5 2003/08/03 10:39:29 mbr Exp $
  */
+#include <sys/types.h>
+#include <sys/ioccom.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <paths.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/ioccom.h>
+#include <unistd.h>
 
 #define CDEV_IOCTL1     _IOR('C', 1, u_int)
 #define CDEV_DEVICE	"cdev"
@@ -86,7 +87,7 @@ static char writestr[] = "Hello kernel!";
 static char buf[512+1];
 
 int
-main(int argc, char *argv[])
+main(int argc __unused, char *argv[] __unused)
 {
     int kernel_fd;
     int one;

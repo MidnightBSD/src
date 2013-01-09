@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/examples/libvgl/Makefile,v 1.5 2004/12/21 08:47:10 ru Exp $
+# $MidnightBSD$
 
 PROG=	demo
 NO_MAN=

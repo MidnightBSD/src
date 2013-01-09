@@ -23,32 +23,25 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/share/examples/kld/syscall/test/call.c,v 1.3 1999/08/28 00:19:24 peter Exp $
+ * $MidnightBSD$
  */
 
-#include <stdio.h>
-#include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/module.h>
+#include <sys/syscall.h>
 
-static void usage (void);
-
-static void
-usage (void)
-{
-	fprintf (stderr, "call syscall-number\n");
-	exit (1);
-}
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 int
-main(int argc, char **argv)
+main(int argc __unused, char **argv __unused)
 {
-	char *endptr;
 	int syscall_num;
 	struct module_stat stat;
 
 	stat.version = sizeof(stat);
-	modstat(modfind("syscall"), &stat);
+	modstat(modfind("sys/syscall"), &stat);
 	syscall_num = stat.data.intval;
 	return syscall (syscall_num);
 }

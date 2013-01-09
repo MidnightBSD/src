@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/share/examples/kld/firmware/fwconsumer/fw_consumer.c,v 1.1 2006/01/29 02:52:40 mlaier Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -36,7 +36,7 @@ __FBSDID("$FreeBSD: src/share/examples/kld/firmware/fwconsumer/fw_consumer.c,v 1
 #include <sys/proc.h>
 #include <sys/module.h>
 
-static struct firmware *fp;
+static const struct firmware *fp;
 
 static int
 fw_consumer_modevent(module_t mod, int type, void *unused)

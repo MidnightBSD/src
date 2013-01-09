@@ -67,6 +67,6 @@
 # $FreeBSD: src/share/examples/kld/Makefile,v 1.3.14.1 2006/02/23 02:13:28 mlaier Exp $
 # $MIdnightBSD$
 
-SUBDIR=	cdev dyn_sysctl fdclone firmware syscall
+SUBDIR=	cdev dyn_sysctl fdclone firmware khelp syscall
 
 .include <bsd.subdir.mk>
