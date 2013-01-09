@@ -1,5 +1,5 @@
 \ Screen manipulation related words.
-\ $FreeBSD: src/share/examples/bootforth/screen.4th,v 1.2 1999/08/28 00:19:10 peter Exp $
+\ $MidnightBSD$
 
 marker task-screen.4th
 
