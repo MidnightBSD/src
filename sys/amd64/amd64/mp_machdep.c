@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/amd64/amd64/mp_machdep.c,v 1.7 2012/11/23 06:02:40 laffer1 Exp $");
 
 #include "opt_cpu.h"
 #include "opt_kstack_pages.h"
@@ -567,7 +567,7 @@ cpu_mp_announce(void)
 	const char *hyperthread;
 	int i;
 
-	printf("FreeBSD/SMP: %d package(s) x %d core(s)",
+	printf("MidnightBSD/SMP: %d package(s) x %d core(s)",
 	    mp_ncpus / (cpu_cores * cpu_logical), cpu_cores);
 	if (hyperthreading_cpus > 1)
 	    printf(" x %d HTT threads", cpu_logical);
