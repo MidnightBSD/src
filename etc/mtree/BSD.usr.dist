@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/mtree/BSD.usr.dist,v 1.20 2012/08/06 01:56:52 laffer1 Exp $
+# $MidnightBSD: src/etc/mtree/BSD.usr.dist,v 1.21 2013/01/09 01:01:44 laffer1 Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -801,6 +801,40 @@
             cat9
             ..
             en.ISO8859-1    uname=root
+                cat1
+                ..
+                cat1aout
+                ..
+                cat2
+                ..
+                cat3
+                ..
+                cat4
+                    amd64
+                    ..
+                    i386
+                    ..
+                    sparc64
+                    ..
+                ..
+                cat5
+                ..
+                cat6
+                ..
+                cat7
+                ..
+                cat8
+                    amd64
+                    ..
+                    i386
+                    ..
+                    sparc64
+                    ..
+                ..
+                cat9
+                ..
+            ..
+            en.UTF-8        uname=root
                 cat1
                 ..
                 cat1aout
