@@ -1,7 +1,7 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/periodic/daily/404.status-zfs,v 1.1 2007/04/06 02:33:06 pjd Exp $
 # $MidnightBSD$
+#
 
 # If there is a global system configuration file, suck it in.
 #
@@ -16,12 +16,21 @@ case "$daily_status_zfs_enable" in
 	echo
 	echo 'Checking status of zfs pools:'
 
-	out=`zpool status -x`
-	echo "$out"
+	case "$daily_status_zfs_zpool_list_enable" in
+	    [Yy][Ee][Ss])
+		lout=`zpool list`
+		echo "$lout"
+		echo
+		;;
+	    *)
+		;;
+	esac
+	sout=`zpool status -x`
+	echo "$sout"
 	# zpool status -x always exits with 0, so we have to interpret its
 	# output to see what's going on.
-	if [ "$out" = "all pools are healthy" \
-	    -o "$out" = "no pools available" ]; then
+	if [ "$sout" = "all pools are healthy" \
+	    -o "$sout" = "no pools available" ]; then
 		rc=0
 	else
 		rc=1
