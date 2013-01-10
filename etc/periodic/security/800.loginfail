@@ -24,8 +24,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/etc/periodic/security/800.loginfail,v 1.9.2.1.2.1 2009/10/25 01:10:29 kensmith Exp $
 # $MidnightBSD$
+#
 
 # Show login failures
 #

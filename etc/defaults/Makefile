@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: src/etc/defaults/Makefile,v 1.5.2.2 2005/12/15 18:57:11 dougb Exp $
+# $MidnightBSD: src/etc/defaults/Makefile,v 1.2 2006/08/28 01:35:54 laffer1 Exp $
 
-FILES=	bluetooth.device.conf devfs.rules pccard.conf periodic.conf rc.conf
+FILES=	bluetooth.device.conf devfs.rules periodic.conf rc.conf
 NO_OBJ=
 FILESDIR= /etc/defaults
 

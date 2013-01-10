@@ -35,19 +35,20 @@ then
     source_periodic_confs
 fi
 
-. /etc/periodic/security/security.functions
-
 rc=0
 
-case "$daily_status_security_ipfwdenied_enable" in
+case "$daily_status_security_neggrpperm_enable" in
     [Yy][Ee][Ss])
-	TMP=`mktemp -t security`
-	if ipfw -a list 2>/dev/null | egrep "deny|reset|unreach" > ${TMP}; then
-	  check_diff new_only ipfw ${TMP} "${host} ipfw denied packets:"
-	fi
-	rc=$?
-	rm -f ${TMP};;
-    *)	rc=0;;
+	echo ""
+	echo 'Checking negative group permissions:'
+	MP=`mount -t ufs,zfs | awk '$0 !~ /no(suid|exec)/ { print $3 }'`
+	n=$(find -sx $MP /dev/null -type f \
+	    \( \( ! -perm +010 -and -perm +001 \) -or \
+	    \( ! -perm +020 -and -perm +002 \) -or \
+	    \( ! -perm +040 -and -perm +004 \) \) \
+	    -exec ls -liTd \{\} \+ | tee /dev/stderr | wc -l)
+	[ $n -gt 0 ] && rc=1 || rc=0
+	;;
 esac
 
 exit $rc

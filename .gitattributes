@@ -33021,7 +33021,6 @@ etc/ddb.conf -text
 etc/defaults/Makefile -text
 etc/defaults/bluetooth.device.conf -text
 etc/defaults/devfs.rules -text
-etc/defaults/pccard.conf -text
 etc/defaults/periodic.conf -text
 etc/defaults/rc.conf -text
 etc/devd.conf -text
@@ -33149,6 +33148,7 @@ etc/periodic/monthly/200.accounting -text
 etc/periodic/monthly/999.local -text
 etc/periodic/monthly/Makefile -text
 etc/periodic/security/100.chksetuid -text
+etc/periodic/security/110.neggrpperm -text
 etc/periodic/security/200.chkmounts -text
 etc/periodic/security/300.chkuid0 -text
 etc/periodic/security/400.passwdless -text
@@ -33168,7 +33168,6 @@ etc/periodic/weekly/320.whatis -text
 etc/periodic/weekly/330.catman -text
 etc/periodic/weekly/340.noid -text
 etc/periodic/weekly/350.msearch -text
-etc/periodic/weekly/400.status-pkg -text
 etc/periodic/weekly/999.local -text
 etc/periodic/weekly/Makefile -text
 etc/pf.conf -text
