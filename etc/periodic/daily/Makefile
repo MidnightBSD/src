@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/periodic/daily/Makefile,v 1.4 2009/03/20 03:16:38 laffer1 Exp $
+# $MidnightBSD: src/etc/periodic/daily/Makefile,v 1.5 2013/01/10 13:29:28 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -6,7 +6,6 @@ FILES=	100.clean-disks \
 	110.clean-tmps \
 	120.clean-preserve \
 	200.backup-passwd \
-	220.backup-pkgdb \
 	330.news \
 	400.status-disks \
 	405.status-ata-raid \
