@@ -54,7 +54,7 @@ static char sccsid[] = "@(#)gethostnamadr.c	8.1 (Berkeley) 6/4/93";
 static char fromrcsid[] = "From: Id: gethnamaddr.c,v 8.23 1998/04/07 04:59:46 vixie Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/net/gethostbydns.c,v 1.58 2007/01/09 00:28:02 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -294,7 +294,7 @@ gethostanswer(const querybuf *answer, int anslen, const char *qname, int qtype,
 			continue;
 		}
 		if (type != qtype) {
-			if (type != T_SIG)
+			if (type != T_SIG && type != ns_t_dname)
 				syslog(LOG_NOTICE|LOG_AUTH,
 	"gethostby*.gethostanswer: asked for \"%s %s %s\", got type \"%s\"",
 				       qname, p_class(C_IN), p_type(qtype),
@@ -522,23 +522,34 @@ _dns_gethostbyname(void *rval, void *cb_data, va_list ap)
 		free(buf);
 		dprintf("res_nsearch failed (%d)\n", n, statp);
 		*h_errnop = statp->res_h_errno;
-		return (0);
+		return (NS_NOTFOUND);
 	} else if (n > sizeof(buf->buf)) {
 		free(buf);
 		dprintf("static buffer is too small (%d)\n", n, statp);
 		*h_errnop = statp->res_h_errno;
-		return (0);
+		return (NS_UNAVAIL);
 	}
 	error = gethostanswer(buf, n, name, type, &he, hed, statp);
 	free(buf);
 	if (error != 0) {
 		*h_errnop = statp->res_h_errno;
-		return (NS_NOTFOUND);
+		switch (statp->res_h_errno) {
+		case HOST_NOT_FOUND:
+			return (NS_NOTFOUND);
+		case TRY_AGAIN:
+			return (NS_TRYAGAIN);
+		default:
+			return (NS_UNAVAIL);
+		}
+		/*NOTREACHED*/
 	}
 	if (__copy_hostent(&he, hptr, buffer, buflen) != 0) {
+		*errnop = errno;
+		RES_SET_H_ERRNO(statp, NETDB_INTERNAL);
 		*h_errnop = statp->res_h_errno;
-		return (NS_NOTFOUND);
+		return (NS_RETURN);
 	}
+	RES_SET_H_ERRNO(statp, NETDB_SUCCESS);
 	*((struct hostent **)rval) = hptr;
 	return (NS_SUCCESS);
 }
@@ -629,7 +640,15 @@ _dns_gethostbyaddr(void *rval, void *cb_data, va_list ap)
 	if (gethostanswer(buf, n, qbuf, T_PTR, &he, hed, statp) != 0) {
 		free(buf);
 		*h_errnop = statp->res_h_errno;
-		return (NS_NOTFOUND);	/* h_errno was set by gethostanswer() */
+		switch (statp->res_h_errno) {
+		case HOST_NOT_FOUND:
+			return (NS_NOTFOUND);
+		case TRY_AGAIN:
+			return (NS_TRYAGAIN);
+		default:
+			return (NS_UNAVAIL);
+		}
+		/*NOTREACHED*/
 	}
 	free(buf);
 #ifdef SUNSECURITY
@@ -683,11 +702,13 @@ _dns_gethostbyaddr(void *rval, void *cb_data, va_list ap)
 		he.h_addrtype = AF_INET6;
 		he.h_length = NS_IN6ADDRSZ;
 	}
-	RES_SET_H_ERRNO(statp, NETDB_SUCCESS);
 	if (__copy_hostent(&he, hptr, buffer, buflen) != 0) {
+		*errnop = errno;
+		RES_SET_H_ERRNO(statp, NETDB_INTERNAL);
 		*h_errnop = statp->res_h_errno;
-		return (NS_NOTFOUND);
+		return (NS_RETURN);
 	}
+	RES_SET_H_ERRNO(statp, NETDB_SUCCESS);
 	*((struct hostent **)rval) = hptr;
 	return (NS_SUCCESS);
 }

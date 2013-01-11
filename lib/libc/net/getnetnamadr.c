@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/net/getnetnamadr.c,v 1.23 2006/04/28 12:03:35 ume Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "namespace.h"
 #include "reentrant.h"
@@ -360,13 +360,17 @@ getnetbyname_r(const char *name, struct netent *ne, char *buffer,
 #endif
 		{ 0 }
 	};
-	int rval, ret_errno;
+	int rval, ret_errno = 0;
 
 	rval = _nsdispatch((void *)result, dtab, NSDB_NETWORKS,
 	    "getnetbyname_r", default_src, name, ne, buffer, buflen,
 	    &ret_errno, h_errorp);
 
-	return ((rval == NS_SUCCESS) ? 0 : -1);
+	if (rval != NS_SUCCESS) {
+		errno = ret_errno;
+		return ((ret_errno != 0) ? ret_errno : -1);
+	}
+	return (0);
 }
 
 int
@@ -388,13 +392,17 @@ getnetbyaddr_r(uint32_t addr, int af, struct netent *ne, char *buffer,
 #endif
 		{ 0 }
 	};
-	int rval, ret_errno;
+	int rval, ret_errno = 0;
 
 	rval = _nsdispatch((void *)result, dtab, NSDB_NETWORKS,
 	    "getnetbyaddr_r", default_src, addr, af, ne, buffer, buflen,
 	    &ret_errno, h_errorp);
 
-	return ((rval == NS_SUCCESS) ? 0 : -1);
+	if (rval != NS_SUCCESS) {
+		errno = ret_errno;
+		return ((ret_errno != 0) ? ret_errno : -1);
+	}
+	return (0);
 }
 
 struct netent *

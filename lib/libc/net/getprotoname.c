@@ -31,8 +31,9 @@
 static char sccsid[] = "@(#)getprotoname.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/net/getprotoname.c,v 1.7 2007/01/09 00:28:02 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
+#include <errno.h>
 #include <netdb.h>
 #include <nsswitch.h>
 #include <string.h>
@@ -75,7 +76,7 @@ files_getprotobyname(void *retval, void *mdata, va_list ap)
 
 
 	if ((ped = __protoent_data_init()) == NULL) {
-		*errnop = -1;
+		*errnop = errno;
 		return (NS_NOTFOUND);
 	}
 
@@ -91,12 +92,12 @@ found:
 	if (!ped->stayopen)
 		__endprotoent_p(ped);
 	if (error != 0) {
-		*errnop = -1;
+		*errnop = errno;
 		return (NS_NOTFOUND);
 	}
 	if (__copy_protoent(&pe, pptr, buffer, buflen) != 0) {
-		*errnop = -1;
-		return (NS_NOTFOUND);
+		*errnop = errno;
+		return (NS_RETURN);
 	}
 
 	*((struct protoent **)retval) = pptr;
@@ -128,10 +129,11 @@ getprotobyname_r(const char *name, struct protoent *pptr, char *buffer,
 	rv = nsdispatch(result, dtab, NSDB_PROTOCOLS, "getprotobyname_r",
 	    defaultsrc, name, pptr, buffer, buflen, &ret_errno);
 
-	if (rv == NS_SUCCESS)
-		return (0);
-	else
+	if (rv != NS_SUCCESS) {
+		errno = ret_errno;
 		return (ret_errno);
+	}
+	return (0);
 }
 
 struct protoent *

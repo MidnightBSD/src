@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/net/nscache.c,v 1.1.2.1 2007/10/18 23:59:12 bushman Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "namespace.h"
 #include <nsswitch.h>

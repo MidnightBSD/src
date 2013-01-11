@@ -68,7 +68,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/net/nsdispatch.c,v 1.14.2.2 2010/10/30 10:37:11 ume Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -80,12 +80,14 @@ __FBSDID("$FreeBSD: src/lib/libc/net/nsdispatch.c,v 1.14.2.2 2010/10/30 10:37:11
 #define _NS_PRIVATE
 #include <nsswitch.h>
 #include <pthread.h>
+#include <pthread_np.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
 #include <unistd.h>
 #include "un-namespace.h"
+#include "nss_tls.h"
 #include "libc_private.h"
 #ifdef NS_CACHING
 #include "nscache.h"
@@ -135,6 +137,19 @@ static	void			*nss_builtin_handle = &__nss_builtin_handle;
  */
 static	void			*nss_cache_cycle_prevention_func = NULL;
 #endif
+
+/*
+ * When this is set to 1, nsdispatch won't use nsswitch.conf
+ * but will consult the 'defaults' source list only.
+ * NOTE: nested fallbacks (when nsdispatch calls fallback functions,
+ *     which in turn calls nsdispatch, which should call fallback
+ *     function) are not supported
+ */
+struct fb_state {
+	int	fb_dispatch;
+};
+static	void	fb_endstate(void *);
+NSS_TLS_HANDLING(fb);
 
 /*
  * Attempt to spew relatively uniform messages to syslog.
@@ -369,7 +384,7 @@ nss_configure(void)
 	confmod = statbuf.st_mtime;
 
 #ifdef NS_CACHING
-	handle = dlopen(NULL, RTLD_LAZY | RTLD_GLOBAL);
+	handle = libc_dlopen(NULL, RTLD_LAZY | RTLD_GLOBAL);
 	if (handle != NULL) {
 		nss_cache_cycle_prevention_func = dlsym(handle,
 			"_nss_cache_cycle_prevention_function");
@@ -482,7 +497,7 @@ nss_load_module(const char *source, nss_module_register_fn reg_fn)
 		if (snprintf(buf, sizeof(buf), "nss_%s.so.%d", mod.name,
 		    NSS_MODULE_INTERFACE_VERSION) >= (int)sizeof(buf))
 			goto fin;
-		mod.handle = dlopen(buf, RTLD_LOCAL|RTLD_LAZY);
+		mod.handle = libc_dlopen(buf, RTLD_LOCAL|RTLD_LAZY);
 		if (mod.handle == NULL) {
 #ifdef _NSS_DEBUG
 			/* This gets pretty annoying since the built-in
@@ -584,13 +599,16 @@ nss_method_lookup(const char *source, const char *database,
 			return (match->method);
 		}
 	}
-	if (is_dynamic())
-		nss_log(LOG_DEBUG, "%s, %s, %s, not found", source, database,
-		    method);
+
 	*mdata = NULL;
 	return (NULL);
 }
 
+static void
+fb_endstate(void *p)
+{
+	free(p);
+}
 
 __weak_reference(_nsdispatch, nsdispatch);
 
@@ -601,15 +619,19 @@ _nsdispatch(void *retval, const ns_dtab disp_tab[], const char *database,
 	va_list		 ap;
 	const ns_dbt	*dbt;
 	const ns_src	*srclist;
-	nss_method	 method;
+	nss_method	 method, fb_method;
 	void		*mdata;
 	int		 isthreaded, serrno, i, result, srclistsize;
+	struct fb_state	*st;
 
 #ifdef NS_CACHING
 	nss_cache_data	 cache_data;
 	nss_cache_data	*cache_data_p;
 	int		 cache_flag;
 #endif
+	
+	dbt = NULL;
+	fb_method = NULL;
 
 	isthreaded = __isthreaded;
 	serrno = errno;
@@ -620,13 +642,25 @@ _nsdispatch(void *retval, const ns_dtab disp_tab[], const char *database,
 			goto fin;
 		}
 	}
+
+	result = fb_getstate(&st);
+	if (result != 0) {
+		result = NS_UNAVAIL;
+		goto fin;
+	}
+
 	result = nss_configure();
 	if (result != 0) {
 		result = NS_UNAVAIL;
 		goto fin;
 	}
-	dbt = vector_search(&database, _nsmap, _nsmapsize, sizeof(*_nsmap),
-	    string_compare);
+	if (st->fb_dispatch == 0) {
+		dbt = vector_search(&database, _nsmap, _nsmapsize, sizeof(*_nsmap),
+		    string_compare);
+		fb_method = nss_method_lookup(NSSRC_FALLBACK, database,
+		    method_name, disp_tab, &mdata);
+	}
+
 	if (dbt != NULL) {
 		srclist = dbt->srclist;
 		srclistsize = dbt->srclistsize;
@@ -687,6 +721,18 @@ _nsdispatch(void *retval, const ns_dtab disp_tab[], const char *database,
 
 			if (result & (srclist[i].flags))
 				break;
+		} else {
+			if (fb_method != NULL) {
+				st->fb_dispatch = 1;
+				va_start(ap, defaults);
+				result = fb_method(retval,
+				    (void *)srclist[i].name, ap);
+				va_end(ap);
+				st->fb_dispatch = 0;
+			} else
+				nss_log(LOG_DEBUG, "%s, %s, %s, not found, "
+				    "and no fallback provided",
+				    srclist[i].name, database, method_name);
 		}
 	}
 

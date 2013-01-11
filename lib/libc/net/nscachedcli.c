@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/net/nscachedcli.c,v 1.3 2006/12/04 17:08:43 ume Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "namespace.h"
 #include <sys/types.h>

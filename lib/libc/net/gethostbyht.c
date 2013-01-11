@@ -51,7 +51,7 @@
 static char sccsid[] = "@(#)gethostnamadr.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/net/gethostbyht.c,v 1.27 2007/01/09 00:28:02 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -60,6 +60,7 @@ __FBSDID("$FreeBSD: src/lib/libc/net/gethostbyht.c,v 1.27 2007/01/09 00:28:02 im
 #include <netdb.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <errno.h>
 #include <string.h>
 #include <stdarg.h>
 #include <nsswitch.h>
@@ -192,8 +193,11 @@ gethostent_r(struct hostent *hptr, char *buffer, size_t buflen,
 	}
 	if (gethostent_p(&he, hed, statp->options & RES_USE_INET6, statp) != 0)
 		return (-1);
-	if (__copy_hostent(&he, hptr, buffer, buflen) != 0)
-		return (-1);
+	if (__copy_hostent(&he, hptr, buffer, buflen) != 0) {
+		RES_SET_H_ERRNO(statp, NETDB_INTERNAL);
+		*h_errnop = statp->res_h_errno;
+		return ((errno != 0) ? errno : -1);
+	}
 	*result = hptr;
 	return (0);
 }
@@ -268,8 +272,10 @@ found:
 		return (NS_NOTFOUND);
 	}
 	if (__copy_hostent(&he, hptr, buffer, buflen) != 0) {
+		*errnop = errno;
+		RES_SET_H_ERRNO(statp, NETDB_INTERNAL);
 		*h_errnop = statp->res_h_errno;
-		return (NS_NOTFOUND);
+		return (NS_RETURN);
 	}
 	*((struct hostent **)rval) = hptr;
 	return (NS_SUCCESS);
@@ -323,8 +329,10 @@ _ht_gethostbyaddr(void *rval, void *cb_data, va_list ap)
 	if (error != 0)
 		return (NS_NOTFOUND);
 	if (__copy_hostent(&he, hptr, buffer, buflen) != 0) {
+		*errnop = errno;
+		RES_SET_H_ERRNO(statp, NETDB_INTERNAL);
 		*h_errnop = statp->res_h_errno;
-		return (NS_NOTFOUND);
+		return (NS_RETURN);
 	}
 	*((struct hostent **)rval) = hptr;
 	return (NS_SUCCESS);

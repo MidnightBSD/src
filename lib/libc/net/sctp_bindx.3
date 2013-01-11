@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)send.2	8.2 (Berkeley) 2/21/94
-.\" $FreeBSD: src/lib/libc/net/sctp_bindx.3,v 1.3 2007/06/18 10:20:32 brueffer Exp $
+.\" $MidnightBSD$
 .\"
 .Dd December 15, 2006
 .Dt SCTP_BINDX 3
@@ -55,7 +55,7 @@ This allows a user to bind a subset of
 addresses.
 The
 .Fn sctp_bindx
-call operates similarly to 
+call operates similarly to
 .Fn bind
 but allows a list of addresses and also allows a bind or an
 unbind.
@@ -90,7 +90,7 @@ The call returns 0 on success and -1 upon failure.
 .Sh ERRORS
 The
 .Fn sctp_bindx
-can return the following errors.
+function can return the following errors:
 .Bl -tag -width Er
 .It Bq Er EINVAL
 This value is returned if the
@@ -98,7 +98,7 @@ This value is returned if the
 field is not one of the allowed values (see above).
 .It Bq Er ENOMEM
 This value is returned if the number of addresses
-being added causes a memory allocation failure in 
+being added causes a memory allocation failure in
 the call.
 .It Bq Er EBADF
 The argument

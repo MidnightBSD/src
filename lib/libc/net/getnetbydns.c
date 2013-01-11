@@ -58,7 +58,7 @@
 static char sccsid[] = "@(#)gethostnamadr.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/net/getnetbydns.c,v 1.34 2007/01/09 00:28:02 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -355,8 +355,10 @@ _dns_getnetbyaddr(void *rval, void *cb_data, va_list ap)
 			net >>= 8;
 		ne.n_net = net;
 		if (__copy_netent(&ne, nptr, buffer, buflen) != 0) {
+			*errnop = errno;
+			RES_SET_H_ERRNO(statp, NETDB_INTERNAL);
 			*h_errnop = statp->res_h_errno;
-			return (NS_NOTFOUND);
+			return (NS_RETURN);
 		}
 		*((struct netent **)rval) = nptr;
 		return (NS_SUCCESS);
@@ -431,8 +433,10 @@ _dns_getnetbyname(void *rval, void *cb_data, va_list ap)
 		return (NS_NOTFOUND);
 	}
 	if (__copy_netent(&ne, nptr, buffer, buflen) != 0) {
+		*errnop = errno;
+		RES_SET_H_ERRNO(statp, NETDB_INTERNAL);
 		*h_errnop = statp->res_h_errno;
-		return (NS_NOTFOUND);
+		return (NS_RETURN);
 	}
 	*((struct netent **)rval) = nptr;
 	return (NS_SUCCESS);

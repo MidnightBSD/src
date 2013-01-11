@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/net/vars.c,v 1.3 2002/04/19 04:46:20 suz Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <netinet/in.h>

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/net/if_nametoindex.c,v 1.5 2003/05/01 19:03:14 nectar Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "namespace.h"
 #include <sys/types.h>

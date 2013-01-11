@@ -29,9 +29,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libc/net/ethers.3,v 1.24 2007/05/13 13:57:45 rwatson Exp $
+.\" $MidnightBSD$
 .\"
-.Dd May 13, 2007
+.Dd October 30, 2007
 .Dt ETHERS 3
 .Os
 .Sh NAME
@@ -68,7 +68,7 @@
 These functions operate on ethernet addresses using an
 .Vt ether_addr
 structure, which is defined in the header file
-.In netinet/if_ether.h :
+.In net/ethernet.h :
 .Bd -literal -offset indent
 /*
  * The number of bytes in an ethernet (MAC) address.
@@ -166,7 +166,6 @@ stores the result in a static buffer;
 .Fn ether_ntoa_r
 stores the result in a user-passed buffer.
 .Pp
-
 Likewise,
 .Fn ether_aton
 and
@@ -190,7 +189,7 @@ unable to find a match in the
 .Pa /etc/ethers
 database.
 .Sh NOTES
-The user must insure that the hostname strings passed to the
+The user must ensure that the hostname strings passed to the
 .Fn ether_line ,
 .Fn ether_ntohost
 and
