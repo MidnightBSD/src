@@ -24,8 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD: src/etc/rc.suspend,v 1.2 2006/08/28 02:13:43 laffer1 Exp $
-# $FreeBSD: src/etc/rc.suspend,v 1.6 2004/01/21 03:03:40 njl Exp $
+# $MidnightBSD$
 #
 
 # sample run command file for APM Suspend Event
@@ -46,18 +45,18 @@ echo $$ 2> /dev/null > /var/run/rc.suspend.pid
 
 # If you have troubles on suspending with PC-CARD modem, try this.
 # See also contrib/pccardq.c (Only for PAO users).
-# pccardq | awk -F '~' '$5 == "filled" && $4 ~ /sio/ \
+# pccardq | awk -F '~' '$5 == "filled" && $4 ~ /uart/ \
 #	{ printf("pccardc power %d 0", $1); }' | sh
 
 # If a device driver has problems suspending, try unloading it before
 # suspend and reloading it on resume.  Example:
 # kldunload usb
 
-logger -t $subsystem suspend at `date +'%Y%m%d %H:%M:%S'`
-sync && sync && sync
-sleep 3
+/usr/bin/logger -t $subsystem suspend at `/bin/date +'%Y%m%d %H:%M:%S'`
+/bin/sync && /bin/sync && /bin/sync
+/bin/sleep 3
 
-rm -f /var/run/rc.suspend.pid
+/bin/rm -f /var/run/rc.suspend.pid
 if [ $subsystem = "apm" ]; then
 	/usr/sbin/zzz
 else

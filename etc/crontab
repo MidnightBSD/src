@@ -1,11 +1,10 @@
 # /etc/crontab - root's crontab for MidnightBSD
 #
 # $FreeBSD: src/etc/crontab,v 1.32 2002/11/22 16:13:39 tom Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/crontab,v 1.2 2006/08/28 01:35:53 laffer1 Exp $
 #
 SHELL=/bin/sh
 PATH=/etc:/bin:/sbin:/usr/bin:/usr/sbin
-HOME=/var/log
 #
 #minute	hour	mday	month	wday	who	command
 #

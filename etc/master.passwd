@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/etc/master.passwd,v 1.3 2006/08/28 01:35:54 laffer1 Exp $
 # $FreeBSD: src/etc/master.passwd,v 1.40 2005/06/06 20:19:56 brooks Exp $
 #
 root::0:0::0:0:Charlie &:/root:/bin/csh
@@ -22,4 +22,5 @@ uucp:*:66:66::0:0:UUCP pseudo-user:/var/spool/uucppublic:/usr/local/libexec/uucp
 pop:*:68:6::0:0:Post Office Owner:/nonexistent:/usr/sbin/nologin
 www:*:80:80::0:0:World Wide Web Owner:/nonexistent:/usr/sbin/nologin
 _ntp:*:123:123::0:0:OpenNTP Daemon:/var/empty:/usr/sbin/nologin
+hast:*:845:845::0:0:HAST unprivileged user:/var/empty:/usr/sbin/nologin
 nobody:*:65534:65534::0:0:Unprivileged user:/nonexistent:/usr/sbin/nologin

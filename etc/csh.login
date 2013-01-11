@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/etc/csh.login,v 1.2 2006/08/28 01:35:53 laffer1 Exp $
 # $FreeBSD: src/etc/csh.login,v 1.21 2004/06/06 11:46:27 schweikh Exp $
 #
 # System-wide .login file for csh(1).
@@ -10,7 +10,7 @@
 # login.conf(5) and in particular the charset and lang options.
 # For full locales list check /usr/share/locale/*
 #
-# Read system messages
-# msgs -f
+# Check system messages
+# msgs -q
 # Allow terminal messages
 # mesg y

@@ -1,7 +1,6 @@
 #!/bin/sh -
 #
-# $MidnightBSD: src/etc/pccard_ether,v 1.2 2006/08/28 01:35:54 laffer1 Exp $
-# $FreeBSD: src/etc/pccard_ether,v 1.45.2.2 2005/12/10 02:11:07 brooks Exp $
+# $MidnightBSD$
 #
 # pccard_ether interfacename [start|stop|restart]
 #
@@ -79,7 +78,7 @@ pccard_ether_start()
 		done
 	fi
 
-	/etc/rc.d/netif start $ifn
+	/etc/rc.d/netif quietstart $ifn
 
 	# Do route configuration if needed.
 	# XXX: should probably do this by calling rc.d/routing.
@@ -100,7 +99,7 @@ pccard_ether_stop()
 		fi
 	fi
 
-	/etc/rc.d/netif stop $ifn
+	/etc/rc.d/netif quietstop $ifn
 
 	# clean ARP table
 	ifexists $ifn && arp -d -i $ifn -a
