@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/lib/libgssapi/gss_release_oid_set.c,v 1.1 2005/12/29 14:40:20 dfr Exp $
+ *	$MidnightBSD$
  */
 
 #include <gssapi/gssapi.h>
@@ -36,11 +36,11 @@ gss_release_oid_set(OM_uint32 *minor_status,
 {
 
 	*minor_status = 0;
-	if (*set) {
+	if (set && *set) {
 		if ((*set)->elements)
 			free((*set)->elements);
 		free(*set);
-		*set = 0;
+		*set = GSS_C_NO_OID_SET;
 	}
 	return (GSS_S_COMPLETE);
 }

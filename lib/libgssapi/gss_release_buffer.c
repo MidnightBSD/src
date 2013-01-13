@@ -23,11 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/lib/libgssapi/gss_release_buffer.c,v 1.1 2005/12/29 14:40:20 dfr Exp $
+ *	$MidnightBSD$
  */
 
-#include <stdlib.h>
 #include <gssapi/gssapi.h>
+#include <stdlib.h>
+
+#include "utils.h"
 
 OM_uint32
 gss_release_buffer(OM_uint32 *minor_status,
@@ -37,8 +39,7 @@ gss_release_buffer(OM_uint32 *minor_status,
 	*minor_status = 0;
 	if (buffer->value)
 		free(buffer->value);
-	buffer->length = 0;
-	buffer->value = 0;
+	_gss_buffer_zero(buffer);
 
 	return (GSS_S_COMPLETE);
 }

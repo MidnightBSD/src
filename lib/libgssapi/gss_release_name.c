@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/lib/libgssapi/gss_release_name.c,v 1.1 2005/12/29 14:40:20 dfr Exp $
+ *	$MidnightBSD$
  */
 
 #include <gssapi/gssapi.h>
@@ -38,7 +38,6 @@ gss_release_name(OM_uint32 *minor_status,
     gss_name_t *input_name)
 {
 	struct _gss_name *name = (struct _gss_name *) *input_name;
-	struct _gss_mech_switch *m;
 
 	*minor_status = 0;
 	if (name) {
@@ -53,7 +52,8 @@ gss_release_name(OM_uint32 *minor_status,
 			free(mn);
 		}
 		gss_release_buffer(minor_status, &name->gn_value);
-		*input_name = 0;
+		free(name);
+		*input_name = GSS_C_NO_NAME;
 	}
 	return (GSS_S_COMPLETE);
 }

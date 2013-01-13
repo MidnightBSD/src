@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/lib/libgssapi/gss_utils.c,v 1.2 2007/04/04 02:28:48 kan Exp $
+ *	$MidnightBSD$
  */
 
 #include <gssapi/gssapi.h>
@@ -34,8 +34,13 @@
 #include "utils.h"
 
 int
-_gss_oid_equal(const gss_OID oid1, const gss_OID oid2)
+gss_oid_equal(const gss_OID oid1, const gss_OID oid2)
 {
+
+	if (oid1 == oid2)
+		return (1);
+	if (!oid1 || !oid2)
+		return (0);
 	if (oid1->length != oid2->length)
 		return (0);
 	if (memcmp(oid1->elements, oid2->elements, oid1->length))
@@ -52,6 +57,7 @@ _gss_copy_oid(OM_uint32 *minor_status,
 	*minor_status = 0;
 	to_oid->elements = malloc(len);
 	if (!to_oid->elements) {
+		to_oid->length = 0;
 		*minor_status = ENOMEM;
 		return GSS_S_FAILURE;
 	}
@@ -60,6 +66,18 @@ _gss_copy_oid(OM_uint32 *minor_status,
 	return (GSS_S_COMPLETE);
 }
 
+OM_uint32
+_gss_free_oid(OM_uint32 *minor_status, gss_OID oid)
+{
+
+	*minor_status = 0;
+	if (oid->elements) {
+		free(oid->elements);
+		oid->elements = NULL;
+		oid->length = 0;
+	}
+	return (GSS_S_COMPLETE);
+}
 
 OM_uint32
 _gss_copy_buffer(OM_uint32 *minor_status,
@@ -71,6 +89,7 @@ _gss_copy_buffer(OM_uint32 *minor_status,
 	to_buf->value = malloc(len);
 	if (!to_buf->value) {
 		*minor_status = ENOMEM;
+		to_buf->length = 0;
 		return GSS_S_FAILURE;
 	}
 	to_buf->length = len;

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/lib/libgssapi/name.h,v 1.1 2005/12/29 14:40:20 dfr Exp $
+ *	$MidnightBSD$
  */
 
 #include <sys/queue.h>
@@ -42,7 +42,8 @@ struct _gss_name {
 	struct _gss_mechanism_name_list gn_mn;	/* list of MNs */
 };
 
-extern struct _gss_mechanism_name *
-	_gss_find_mn(struct _gss_name *name, gss_OID mech);
-struct _gss_name *
+extern OM_uint32
+	_gss_find_mn(OM_uint32 *, struct _gss_name *, gss_OID, 
+	      struct _gss_mechanism_name **);
+extern struct _gss_name *
 	_gss_make_name(struct _gss_mech_switch *m, gss_name_t new_mn);

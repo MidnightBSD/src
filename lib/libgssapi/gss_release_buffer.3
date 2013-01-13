@@ -24,12 +24,12 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"	$FreeBSD: src/lib/libgssapi/gss_release_buffer.3,v 1.2 2006/01/25 10:06:28 dfr Exp $
+.\"	$MidnightBSD$
 .\"
 .\" The following commands are required for all man pages.
-.Dd November 12, 2005
-.Os
+.Dd January 26, 2010
 .Dt GSS_RELEASE_BUFFER 3 PRM
+.Os
 .Sh NAME
 .Nm gss_release_buffer
 .Nd Discard a buffer
@@ -53,7 +53,7 @@ field in the descriptor to
 .Dv NULL .
 Any buffer object returned by a GSS-API routine may be passed to
 .Fn gss_release_buffer
-(even if there is no storage associated with the buffer). 
+(even if there is no storage associated with the buffer).
 .Sh PARAMETERS
 .Bl -tag
 .It minor_status
@@ -74,12 +74,11 @@ Successful completion
 Generic Security Service Application Program Interface Version 2, Update 1
 .It RFC 2744
 Generic Security Service API Version 2 : C-bindings
-.\" .Sh HISTORY
 .El
 .Sh HISTORY
 The
 .Nm
-manual page example first appeared in
+function first appeared in
 .Fx 7.0 .
 .Sh AUTHORS
 John Wray, Iris Associates

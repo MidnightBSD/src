@@ -24,12 +24,12 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"	$FreeBSD: src/lib/libgssapi/gss_init_sec_context.3,v 1.2 2006/01/25 10:06:28 dfr Exp $
+.\"	$MidnightBSD$
 .\"
 .\" The following commands are required for all man pages.
-.Dd November 12, 2005
-.Os
+.Dd January 26, 2010
 .Dt GSS_INIT_SEC_CONTEXT 3 PRM
+.Os
 .Sh NAME
 .Nm gss_init_sec_context
 .Nd Initiate a security context with a peer application
@@ -153,7 +153,7 @@ The values of the
 .Dv GSS_C_MUTUAL_FLAG ,
 .Dv GSS_C_REPLAY_FLAG ,
 .Dv GSS_C_SEQUENCE_FLAG ,
-.Fv GSS_C_CONF_FLAG ,
+.Dv GSS_C_CONF_FLAG ,
 .Dv GSS_C_INTEG_FLAG and
 .Dv GSS_C_ANON_FLAG bits returned via the
 .Fa ret_flags
@@ -535,11 +535,10 @@ Generic Security Service Application Program Interface Version 2, Update 1
 .It RFC 2744
 Generic Security Service API Version 2 : C-bindings
 .El
-.\" .Sh HISTORY
 .Sh HISTORY
 The
 .Nm
-manual page example first appeared in
+function first appeared in
 .Fx 7.0 .
 .Sh AUTHORS
 John Wray, Iris Associates

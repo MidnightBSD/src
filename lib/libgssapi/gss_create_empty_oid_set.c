@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/lib/libgssapi/gss_create_empty_oid_set.c,v 1.1 2005/12/29 14:40:20 dfr Exp $
+ *	$MidnightBSD$
  */
 
 #include <gssapi/gssapi.h>
@@ -37,7 +37,7 @@ gss_create_empty_oid_set(OM_uint32 *minor_status,
 	gss_OID_set set;
 
 	*minor_status = 0;
-	*oid_set = 0;
+	*oid_set = GSS_C_NO_OID_SET;
 
 	set = malloc(sizeof(gss_OID_set_desc));
 	if (!set) {

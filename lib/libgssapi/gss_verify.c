@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/lib/libgssapi/gss_verify.c,v 1.1 2005/12/29 14:40:20 dfr Exp $
+ *	$MidnightBSD$
  */
 
 #include <gssapi/gssapi.h>
@@ -37,5 +37,6 @@ gss_verify(OM_uint32 *minor_status,
 {
 
 	return (gss_verify_mic(minor_status,
-		    context_handle, message_buffer, token_buffer, qop_state));
+		context_handle, message_buffer, token_buffer,
+		(gss_qop_t *)qop_state));
 }

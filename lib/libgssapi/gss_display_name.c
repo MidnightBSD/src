@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/lib/libgssapi/gss_display_name.c,v 1.2 2007/04/04 02:40:59 kan Exp $
+ *	$MidnightBSD$
  */
 
 #include <gssapi/gssapi.h>
@@ -33,6 +33,7 @@
 
 #include "mech_switch.h"
 #include "name.h"
+#include "utils.h"
 
 OM_uint32
 gss_display_name(OM_uint32 *minor_status,
@@ -43,6 +44,15 @@ gss_display_name(OM_uint32 *minor_status,
 	OM_uint32 major_status;
 	struct _gss_name *name = (struct _gss_name *) input_name;
 	struct _gss_mechanism_name *mn;
+
+	_gss_buffer_zero(output_name_buffer);
+	if (output_name_type)
+		*output_name_type = GSS_C_NO_OID;
+
+	if (name == NULL) {
+		*minor_status = 0;
+		return (GSS_S_BAD_NAME);
+	}
 
 	/*
 	 * If we know it, copy the buffer used to import the name in

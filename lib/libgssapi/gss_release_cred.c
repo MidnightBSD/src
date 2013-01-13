@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/lib/libgssapi/gss_release_cred.c,v 1.1 2005/12/29 14:40:20 dfr Exp $
+ *	$MidnightBSD$
  */
 
 #include <gssapi/gssapi.h>
@@ -51,6 +51,6 @@ gss_release_cred(OM_uint32 *minor_status, gss_cred_id_t *cred_handle)
 	free(cred);
 
 	*minor_status = 0;
-	*cred_handle = 0;
+	*cred_handle = GSS_C_NO_CREDENTIAL;
 	return (GSS_S_COMPLETE);
 }

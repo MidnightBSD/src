@@ -23,13 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/lib/libgssapi/gss_export_name.c,v 1.2 2007/06/30 07:47:45 dfr Exp $
+ *	$MidnightBSD$
  */
 
 #include <gssapi/gssapi.h>
 
 #include "mech_switch.h"
 #include "name.h"
+#include "utils.h"
 
 OM_uint32
 gss_export_name(OM_uint32 *minor_status,
@@ -39,8 +40,7 @@ gss_export_name(OM_uint32 *minor_status,
 	struct _gss_name *name = (struct _gss_name *) input_name;
 	struct _gss_mechanism_name *mn;
 
-	exported_name->value = NULL;
-	exported_name->length = 0;
+	_gss_buffer_zero(exported_name);
 
 	/*
 	 * If this name already has any attached MNs, export the first
@@ -48,12 +48,9 @@ gss_export_name(OM_uint32 *minor_status,
 	 * list.
 	 */
 	mn = SLIST_FIRST(&name->gn_mn);
-	if (!mn)
-		mn = _gss_find_mn(name,
-		    &SLIST_FIRST(&_gss_mechs)->gm_mech_oid);
 	if (!mn) {
 		*minor_status = 0;
-		return (GSS_S_BAD_MECH);
+		return (GSS_S_NAME_NOT_MN);
 	}
 
 	return mn->gmn_mech->gm_export_name(minor_status,

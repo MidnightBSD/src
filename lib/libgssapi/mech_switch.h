@@ -23,9 +23,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/lib/libgssapi/mech_switch.h,v 1.1 2005/12/29 14:40:20 dfr Exp $
+ *	$MidnightBSD$
  */
 
+#include <unistd.h>
 #include <sys/queue.h>
 
 typedef OM_uint32 _gss_acquire_cred_t
@@ -266,24 +267,53 @@ typedef OM_uint32 _gss_duplicate_name_t (
 	       gss_name_t *            /* dest_name */
 	      );
 
-typedef OM_uint32 _gsskrb5_register_acceptor_identity (
-	       const char *	       /* identity */
+typedef OM_uint32 _gss_inquire_sec_context_by_oid
+	      (OM_uint32 *,		/* minor_status */
+	       const gss_ctx_id_t,	/* context_handle */
+	       const gss_OID,		/* desired_object */
+	       gss_buffer_set_t *	/* result */
 	      );
 
-typedef OM_uint32 _gss_krb5_copy_ccache (
-	       OM_uint32 *,	       /* minor_status */
-	       gss_cred_id_t,	       /* cred_handle */
-	       struct krb5_ccache_data * /* out */
+typedef OM_uint32 _gss_inquire_cred_by_oid
+	      (OM_uint32 *,	       /* bminor_status */
+	       const gss_cred_id_t,    /* cred_handle, */
+	       const gss_OID,	       /* desired_object */
+	       gss_buffer_set_t *      /* data_set */
 	      );
 
-typedef OM_uint32 _gss_krb5_compat_des3_mic (
-	       OM_uint32 *,	       /* minor_status */
-	       gss_ctx_id_t,	       /* context_handle */
-	       int		       /* flag */
+typedef OM_uint32 _gss_set_sec_context_option
+	      (OM_uint32 *,		/* minor status */
+	       gss_ctx_id_t *,		/* context */
+	       const gss_OID,		/* option to set */
+	       const gss_buffer_t	/* option value */
+	      );
+
+typedef OM_uint32 _gss_set_cred_option
+	      (OM_uint32 *,		/* minor status */
+	       gss_cred_id_t *,		/* cred */
+	       const gss_OID,		/* option to set */
+	       const gss_buffer_t	/* option value */
+	      );
+
+typedef OM_uint32 _gss_pseudo_random
+	      (OM_uint32 *,	       /* minor status */
+	       gss_ctx_id_t,	       /* context */
+	       int,		       /* PRF key */
+	       const gss_buffer_t,     /* PRF input */
+	       ssize_t,		       /* desired output length */
+	       gss_buffer_t	       /* PRF output */
+	      );
+
+typedef OM_uint32 _gss_pname_to_uid
+	      (OM_uint32 *,		/* minor status */
+	       gss_name_t pname,	/* principal name */
+	       gss_OID mech,		/* mechanism to query */
+	       uid_t *uidp		/* pointer to UID for result */
 	      );
 
 struct _gss_mech_switch {
 	SLIST_ENTRY(_gss_mech_switch)	gm_link;
+	const char			*gm_name_prefix;
 	gss_OID_desc			gm_mech_oid;
 	void				*gm_so;
 	_gss_acquire_cred_t		*gm_acquire_cred;
@@ -315,9 +345,12 @@ struct _gss_mech_switch {
 	_gss_inquire_mechs_for_name_t	*gm_inquire_mechs_for_name;
 	_gss_canonicalize_name_t	*gm_canonicalize_name;
 	_gss_duplicate_name_t		*gm_duplicate_name;
-	_gsskrb5_register_acceptor_identity *gm_krb5_register_acceptor_identity;
-	_gss_krb5_copy_ccache		*gm_krb5_copy_ccache;
-	_gss_krb5_compat_des3_mic	*gm_krb5_compat_des3_mic;
+	_gss_inquire_sec_context_by_oid	*gm_inquire_sec_context_by_oid;
+	_gss_inquire_cred_by_oid	*gm_inquire_cred_by_oid;
+	_gss_set_sec_context_option	*gm_set_sec_context_option;
+	_gss_set_cred_option		*gm_set_cred_option;
+	_gss_pseudo_random		*gm_pseudo_random;
+	_gss_pname_to_uid		*gm_pname_to_uid;
 };
 SLIST_HEAD(_gss_mech_switch_list, _gss_mech_switch);
 extern struct _gss_mech_switch_list _gss_mechs;
@@ -325,3 +358,5 @@ extern gss_OID_set _gss_mech_oids;
 
 extern void _gss_load_mech(void);
 extern struct _gss_mech_switch *_gss_find_mech_switch(gss_OID);
+extern void _gss_mg_error(struct _gss_mech_switch *m, OM_uint32 maj,
+    OM_uint32 min);
