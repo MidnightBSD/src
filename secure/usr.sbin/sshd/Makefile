@@ -1,4 +1,4 @@
-# $MidnightBSD: src/secure/usr.sbin/sshd/Makefile,v 1.8 2009/11/26 16:48:49 laffer1 Exp $
+# $MidnightBSD: src/secure/usr.sbin/sshd/Makefile,v 1.9 2011/02/05 21:41:21 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -14,9 +14,10 @@ SRCS=	sshd.c auth-rhosts.c auth-passwd.c auth-rsa.c auth-rh-rsa.c \
 	auth2-gss.c gss-serv.c gss-serv-krb5.c \
 	loginrec.c auth-pam.c auth-shadow.c auth-sia.c md5crypt.c \
 	audit.c audit-bsm.c platform.c sftp-server.c sftp-common.c \
-	roaming_serv.c roaming_common.c gss-genr.c kexecdhs.c
+	roaming_serv.c roaming_common.c kexecdhs.c
 
 # gss-genr.c really belongs in libssh; see src/secure/lib/libssh/Makefile
+SRCS+=	gss-genr.c
 
 MAN=	sshd.8 sshd_config.5
 CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
@@ -25,31 +26,23 @@ DPADD=	${LIBSSH} ${LIBUTIL} ${LIBZ} ${LIBWRAP} ${LIBPAM}
 LDADD=	-lssh -lutil -lz -lwrap ${MINUSLPAM}
 
 .if ${MK_AUDIT} != "no"
-CFLAGS+= -DUSE_BSM_AUDIT
+CFLAGS+= -DUSE_BSM_AUDIT -DHAVE_GETAUDIT_ADDR
 DPADD+=  ${LIBBSM}
 LDADD+=  -lbsm
 .endif
 
 .if ${MK_KERBEROS_SUPPORT} != "no"
-CFLAGS+= -DGSSAPI -DHAVE_GSSAPI_GSSAPI_H=1 -DKRB5 -DHEIMDAL
-DPADD+=	 ${LIBGSSAPI} ${LIBKRB5} ${LIBASN1} ${LIBCOM_ERR} ${LIBROKEN}
-LDADD+=	 -lgssapi -lkrb5 -lasn1 -lcom_err -lroken
-.endif
-
-.if defined(X11BASE)
-# Recommended /etc/make.conf setting is X11BASE=${LOCALBASE} for x.org
-# we need to provide the default for users with old make.conf
-# settings.
-LOCALBASE?=     /usr/local
-  	 
-# Users may override either LOCALBASE or X11BASE to move the location
-# of xauth
-X11BASE?=       ${LOCALBASE}
-CFLAGS+= -DXAUTH_PATH=\"${X11BASE}/bin/xauth\"
+CFLAGS+= -DGSSAPI -DHAVE_GSSAPI_GSSAPI_H=1 -DHAVE_GSSAPI_GSSAPI_KRB5_H=1 -DKRB5 -DHEIMDAL
+DPADD+=	 ${LIBGSSAPI_KRB5} ${LIBGSSAPI} ${LIBKRB5} ${LIBASN1}
+LDADD+=	 -lgssapi_krb5 -lgssapi -lkrb5 -lasn1
 .endif
 
 DPADD+=	${LIBCRYPTO} ${LIBCRYPT}
 LDADD+=	-lcrypto -lcrypt
+
+.if defined(LOCALBASE)
+CFLAGS+= -DXAUTH_PATH=\"${LOCALBASE}/bin/xauth\"
+.endif
 
 .include <bsd.prog.mk>
 
