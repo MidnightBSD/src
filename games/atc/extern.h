@@ -57,7 +57,7 @@ extern C_SCREEN		screen, *sp;
 
 extern LIST		air, ground;
 
-extern struct sgttyb	tty_start, tty_new;
+extern struct termios	tty_start, tty_new;
 
 extern DISPLACEMENT	displacement[MAXDIR];
 
@@ -95,5 +95,5 @@ extern const char	*command(const PLANE *);
 extern PLANE	*findplane(int);
 extern char	name(const PLANE *);
 extern char	number(char);
-extern void	update(void);
+extern void	update(int);
 

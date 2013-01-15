@@ -66,6 +66,7 @@ main(__unused int ac, char **av)
 	int			f_printpath = 0;
 	const char		*file = NULL;
 	char			*p_name, *ptr;
+	struct sigaction	sa;
 #ifdef BSD
 	struct itimerval	itv;
 #endif
@@ -163,25 +164,20 @@ main(__unused int ac, char **av)
 	signal(SIGHUP, (sig_t)log_score);
 	signal(SIGTERM, (sig_t)log_score);
 
-#ifdef BSD
-	ioctl(fileno(stdin), TIOCGETP, &tty_start);
-	bcopy(&tty_start, &tty_new, sizeof(tty_new));
-	tty_new.sg_flags |= CBREAK;
-	tty_new.sg_flags &= ~ECHO;
-	ioctl(fileno(stdin), TIOCSETP, &tty_new);
-#endif
+	tcgetattr(fileno(stdin), &tty_start);
+	tty_new = tty_start;
+	tty_new.c_lflag &= ~(ICANON|ECHO);
 
-#ifdef SYSV
-	ioctl(fileno(stdin), TCGETA, &tty_start);
-	bcopy(&tty_start, &tty_new, sizeof(tty_new));
-	tty_new.c_lflag &= ~ICANON;
-	tty_new.c_lflag &= ~ECHO;
 	tty_new.c_cc[VMIN] = 1;
 	tty_new.c_cc[VTIME] = 0;
-	ioctl(fileno(stdin), TCSETAW, &tty_new);
-#endif
+	tcsetattr(fileno(stdin), TCSADRAIN, &tty_new);
 
-	signal(SIGALRM, (sig_t)update);
+	sa.sa_handler = update;
+	sigemptyset(&sa.sa_mask);
+ 	sigaddset(&sa.sa_mask, SIGALRM);
+ 	sigaddset(&sa.sa_mask, SIGINT);
+ 	sa.sa_flags = 0;
+ 	sigaction(SIGALRM, &sa, (struct sigaction *)0);
 
 #ifdef BSD
 	itv.it_value.tv_sec = 0;
@@ -207,7 +203,7 @@ main(__unused int ac, char **av)
 			alarm(0);
 #endif
 
-			update();
+			update(0);
 
 #ifdef BSD
 			itv.it_value.tv_sec = sp->update_secs;

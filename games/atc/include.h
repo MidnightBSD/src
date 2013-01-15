@@ -50,9 +50,9 @@
 #include <ctype.h>
 #include <sys/types.h>
 #include <pwd.h>
+#include <termios.h>
 
 #ifdef BSD
-#include <sgtty.h>
 #include <sys/time.h>
 #include <sys/file.h>
 #endif

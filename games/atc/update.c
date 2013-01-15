@@ -55,14 +55,11 @@ static int	dir_deg(int);
 
 
 void
-update(void)
+update(int dummy)
 {
-	int	i, dir_diff, mask, unclean;
+	int	i, dir_diff, unclean;
 	PLANE	*pp, *p1, *p2;
 
-#ifdef BSD
-	mask = sigblock(sigmask(SIGINT));
-#endif
 #ifdef SYSV
 	alarm(0);
 	signal(SIGALRM, update);
@@ -217,9 +214,6 @@ update(void)
 	if ((random() % sp->newplane_time) == 0)
 		addplane();
 
-#ifdef BSD
-	sigsetmask(mask);
-#endif
 #ifdef SYSV
 	alarm(sp->update_secs);
 #endif
@@ -236,7 +230,7 @@ command(const PLANE *pp)
 		(pp->fuel < LOWFUEL) ? '*' : ' ',
 		(pp->dest_type == T_AIRPORT) ? 'A' : 'E', pp->dest_no);
 
-	comm_start = bp = index(buf, '\0');
+	comm_start = bp = strchr(buf, '\0');
 	if (pp->altitude == 0)
 		(void)sprintf(bp, "Holding @ A%d", pp->orig_no);
 	else if (pp->new_dir >= MAXDIR || pp->new_dir < 0)
@@ -244,11 +238,11 @@ command(const PLANE *pp)
 	else if (pp->new_dir != pp->dir)
 		(void)sprintf(bp, "%d", dir_deg(pp->new_dir));
 
-	bp = index(buf, '\0');
+	bp = strchr(buf, '\0');
 	if (pp->delayd)
 		(void)sprintf(bp, " @ B%d", pp->delayd_no);
 
-	bp = index(buf, '\0');
+	bp = strchr(buf, '\0');
 	if (*comm_start == '\0' &&
 	    (pp->status == S_UNMARKED || pp->status == S_IGNORED))
 		strcpy(bp, "---------");
@@ -311,7 +305,7 @@ addplane(void)
 	PLANE	p, *pp, *p1;
 	int	i, num_starts, is_close, rnd, rnd2, pnum;
 
-	bzero(&p, sizeof (p));
+	memset(&p, 0, sizeof (p));
 
 	p.status = S_MARKED;
 	p.plane_type = random() % 2;
@@ -366,7 +360,7 @@ addplane(void)
 	p.plane_no = pnum;
 
 	pp = newplane();
-	bcopy(&p, pp, sizeof (p));
+	memcpy(pp, &p, sizeof (p));
 
 	if (pp->orig_type == T_AIRPORT)
 		append(&ground, pp);

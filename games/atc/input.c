@@ -276,10 +276,10 @@ getcommand(void)
 
 	do {
 		c = gettoken();
-		if (c == tty_new.sg_erase) {
+		if (c == tty_new.c_cc[VERASE]) {
 			if (pop() < 0)
 				noise();
-		} else if (c == tty_new.sg_kill) {
+		} else if (c == tty_new.c_cc[VKILL]) {
 			while (pop() >= 0)
 				;
 		} else {
@@ -373,8 +373,8 @@ gettoken(void)
 			}
 
 			wait(0);
+			tcsetattr(fileno(stdin), TCSADRAIN, &tty_new);
 #ifdef BSD
-			ioctl(fileno(stdin), TIOCSETP, &tty_new);
 			itv.it_value.tv_sec = 0;
 			itv.it_value.tv_usec = 1;
 			itv.it_interval.tv_sec = sp->update_secs;
@@ -382,7 +382,6 @@ gettoken(void)
 			setitimer(ITIMER_REAL, &itv, NULL);
 #endif
 #ifdef SYSV
-			ioctl(fileno(stdin), TCSETAW, &tty_new);
 			alarm(aval);
 #endif
 		}
