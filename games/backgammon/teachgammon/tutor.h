@@ -1,3 +1,5 @@
+/*	$NetBSD: tutor.h,v 1.11 2012/10/13 19:19:39 dholland Exp $	*/
+
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -10,11 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,14 +29,11 @@
  * SUCH DAMAGE.
  *
  *	@(#)tutor.h	8.1 (Berkeley) 5/31/93
- * $DragonFly: src/games/backgammon/teachgammon/tutor.h,v 1.2 2006/08/08 16:36:11 pavalos Exp $
- * $MidnightBSD$
  */
 
-void	leave(void);
-void	tutor(void);
+struct move; /* in back.h */
 
-struct situatn  {
+struct situatn {
 	int	brd[26];
 	int	roll1;
 	int	roll2;
@@ -48,6 +43,7 @@ struct situatn  {
 	int	new2;
 	const char	*const (*com[8]);
 };
+
 
 extern	const char	*const doubl[];
 extern	const char	*const endgame[];
@@ -63,7 +59,10 @@ extern	const char	*const moves[];
 extern	const char	*const opts;
 extern	const char	*const prog[];
 extern	const char	*const prompt;
-extern	const char	*const remove[];
 extern	const char	*const removepiece[];
 extern	const char	*const stragy[];
 extern	const struct situatn	test[];
+
+
+void	leave(void);
+void	tutor(struct move *);

@@ -1,3 +1,5 @@
+/*	$NetBSD: tutor.c,v 1.11 2012/10/13 19:19:39 dholland Exp $	*/
+
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -10,11 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,25 +27,30 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * @(#)tutor.c	8.1 (Berkeley) 5/31/93
- * $FreeBSD: src/games/backgammon/teachgammon/tutor.c,v 1.5 1999/11/30 03:48:31 billf Exp $
- * $DragonFly: src/games/backgammon/teachgammon/tutor.c,v 1.3 2006/08/08 16:36:11 pavalos Exp $
- * $MidnightBSD$
  */
+
+#include <sys/cdefs.h>
+#ifndef lint
+#if 0
+static char sccsid[] = "@(#)tutor.c	8.1 (Berkeley) 5/31/93";
+#else
+__RCSID("$NetBSD: tutor.c,v 1.11 2012/10/13 19:19:39 dholland Exp $");
+#endif
+#endif				/* not lint */
 
 #include "back.h"
 #include "tutor.h"
 
-static void	clrest(void);
-static int	brdeq(const int *, const int *);
+static const char better[] = 
+	"That is a legal move, but there is a better one.\n";
 
-static const char	better[] = "That is a legal move, but there is a better one.\n";
+static int brdeq(const int *, const int *);
+static void clrest(void);
 
 void
-tutor(void)
+tutor(struct move *mm)
 {
-	int	i, j;
+	int     i, j;
 
 	i = 0;
 	begscr = 18;
@@ -63,64 +66,63 @@ tutor(void)
 	colen = 5;
 	wrboard();
 
-	while (1)  {
-		if (! brdeq(test[i].brd,board))  {
+	while (1) {
+		if (!brdeq(test[i].brd, board)) {
 			if (tflag && curr == 23)
-				curmove (18,0);
-			writel (better);
+				curmove(18, 0);
+			writel(better);
 			nexturn();
-			movback (mvlim);
-			if (tflag)  {
+			movback(mm, mm->mvlim);
+			if (tflag) {
 				refresh();
-				clrest ();
+				clrest();
 			}
-			if ((! tflag) || curr == 19)  {
-				proll();
-				writec ('\t');
-			}
-			else
-				curmove (curr > 19? curr-2: curr+4,25);
-			getmove();
+			if ((!tflag) || curr == 19) {
+				proll(mm);
+				writec('\t');
+			} else
+				curmove(curr > 19 ? curr - 2 : curr + 4, 25);
+			getmove(mm);
 			if (cturn == 0)
 				leave();
 			continue;
 		}
 		if (tflag)
-			curmove (18,0);
-		text (*test[i].com);
-		if (! tflag)
-			writec ('\n');
+			curmove(18, 0);
+		wrtext(*test[i].com);
+		if (!tflag)
+			writec('\n');
 		if (i == maxmoves)
 			break;
-		D0 = test[i].roll1;
-		D1 = test[i].roll2;
-		d0 = 0;
-		mvlim = 0;
-		for (j = 0; j < 4; j++)  {
+		mm->D0 = test[i].roll1;
+		mm->D1 = test[i].roll2;
+		mm->d0 = 0;
+		mm->mvlim = 0;
+		for (j = 0; j < 4; j++) {
 			if (test[i].mp[j] == test[i].mg[j])
 				break;
-			p[j] = test[i].mp[j];
-			g[j] = test[i].mg[j];
-			mvlim++;
+			mm->p[j] = test[i].mp[j];
+			mm->g[j] = test[i].mg[j];
+			mm->mvlim++;
 		}
-		if (mvlim)
-			for (j = 0; j < mvlim; j++)
-				if (makmove(j))
-					writel ("AARGH!!!\n");
+		if (mm->mvlim)
+			for (j = 0; j < mm->mvlim; j++)
+				if (makmove(mm, j))
+					writel("AARGH!!!\n");
 		if (tflag)
 			refresh();
 		nexturn();
-		D0 = test[i].new1;
-		D1 = test[i].new2;
-		d0 = 0;
+		mm->D0 = test[i].new1;
+		mm->D1 = test[i].new2;
+		mm->d0 = 0;
 		i++;
-		mvlim = movallow();
-		if (mvlim)  {
+		mm->mvlim = movallow(mm);
+		if (mm->mvlim) {
 			if (tflag)
 				clrest();
-			proll();
+			proll(mm);
 			writec('\t');
-			getmove();
+			getmove(mm);
 			if (tflag)
 				refresh();
 			if (cturn == 0)
@@ -133,25 +135,25 @@ tutor(void)
 static void
 clrest(void)
 {
-	int	r, c, j;
+	int     r, c, j;
 
 	r = curr;
 	c = curc;
-	for (j = r+1; j < 24; j++)  {
-		curmove (j,0);
+	for (j = r + 1; j < 24; j++) {
+		curmove(j, 0);
 		cline();
 	}
-	curmove (r,c);
+	curmove(r, c);
 }
 
 static int
 brdeq(const int *b1, const int *b2)
 {
-	const int  *e;
+	const int    *e;
 
-	e = b1+26;
+	e = b1 + 26;
 	while (b1 < e)
 		if (*b1++ != *b2++)
-			return(0);
-	return(1);
+			return (0);
+	return (1);
 }

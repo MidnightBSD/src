@@ -1,3 +1,5 @@
+/*	$NetBSD: one.c,v 1.9 2012/10/13 19:19:39 dholland Exp $	*/
+
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -10,11 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,62 +27,66 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * @(#)one.c	8.1 (Berkeley) 5/31/93
- * $FreeBSD: src/games/backgammon/common_source/one.c,v 1.5 1999/11/30 03:48:27 billf Exp $
- * $DragonFly: src/games/backgammon/common_source/one.c,v 1.3 2006/08/08 16:36:11 pavalos Exp $
- * $MidnightBSD$
  */
+
+#include <sys/cdefs.h>
+#ifndef lint
+#if 0
+static char sccsid[] = "@(#)one.c	8.1 (Berkeley) 5/31/93";
+#else
+__RCSID("$NetBSD: one.c,v 1.9 2012/10/13 19:19:39 dholland Exp $");
+#endif
+#endif /* not lint */
 
 #include "back.h"
 
-static int	checkd(int);
-static int	last(void);
+static int checkd(struct move *, int);
+static int last(void);
 
 int
-makmove(int i)
+makmove(struct move *mm, int i)
 {
-	int	n, d;
-	int		max;
+	int     n, d;
+	int     max;
 
-	d = d0;
-	n = abs(g[i]-p[i]);
-	max = (*offptr < 0? 7: last());
-	if (board[p[i]]*cturn <= 0)
-		return (checkd(d)+2);
-	if (g[i] != home && board[g[i]]*cturn < -1)
-		return (checkd(d)+3);
-	if (i || D0 == D1)  {
-		if (n == max? D1 < n: D1 != n)
-			return (checkd(d)+1);
-	} else  {
-		if (n == max? D0 < n && D1 < n: D0 != n && D1 != n)
-			return (checkd(d)+1);
-		if (n == max? D0 < n: D0 != n)  {
-			if (d0)
-				return (checkd(d)+1);
-			swap;
+	d = mm->d0;
+	n = abs(mm->g[i] - mm->p[i]);
+	max = (*offptr < 0 ? 7 : last());
+	if (board[mm->p[i]] * cturn <= 0)
+		return (checkd(mm, d) + 2);
+	if (mm->g[i] != home && board[mm->g[i]] * cturn < -1)
+		return (checkd(mm, d) + 3);
+	if (i || mm->D0 == mm->D1) {
+		if (n == max ? mm->D1 < n : mm->D1 != n)
+			return (checkd(mm, d) + 1);
+	} else {
+		if (n == max ? mm->D0 < n && mm->D1 < n : mm->D0 != n && mm->D1 != n)
+			return (checkd(mm, d) + 1);
+		if (n == max ? mm->D0 < n : mm->D0 != n) {
+			if (mm->d0)
+				return (checkd(mm, d) + 1);
+			mswap(mm);
 		}
 	}
-	if (g[i] == home && *offptr < 0)
-		return (checkd(d)+4);
-	h[i] = 0;
-	board[p[i]] -= cturn;
-	if (g[i] != home)  {
-		if (board[g[i]] == -cturn)  {
+	if (mm->g[i] == home && *offptr < 0)
+		return (checkd(mm, d) + 4);
+	mm->h[i] = 0;
+	board[mm->p[i]] -= cturn;
+	if (mm->g[i] != home) {
+		if (board[mm->g[i]] == -cturn) {
 			board[home] -= cturn;
-			board[g[i]] = 0;
-			h[i] = 1;
-			if (abs(bar-g[i]) < 7)  {
+			board[mm->g[i]] = 0;
+			mm->h[i] = 1;
+			if (abs(bar - mm->g[i]) < 7) {
 				(*inopp)--;
 				if (*offopp >= 0)
 					*offopp -= 15;
 			}
 		}
-		board[g[i]] += cturn;
-		if (abs(home-g[i]) < 7 && abs(home-p[i]) > 6)  {
+		board[mm->g[i]] += cturn;
+		if (abs(home - mm->g[i]) < 7 && abs(home - mm->p[i]) > 6) {
 			(*inptr)++;
-			if (*inptr+*offptr == 0)
+			if (*inptr + *offptr == 0)
 				*offptr += 15;
 		}
 	} else {
@@ -95,75 +97,76 @@ makmove(int i)
 }
 
 void
-moverr(int i)
+moverr(struct move *mm, int i)
 {
-	int	j;
+	int     j;
 
 	if (tflag)
-		curmove (20,0);
+		curmove(20, 0);
 	else
-		writec ('\n');
-	writel ("Error:  ");
-	for (j = 0; j <= i; j++)  {
-		wrint (p[j]);
-		writec ('-');
-		wrint (g[j]);
+		writec('\n');
+	writel("Error:  ");
+	for (j = 0; j <= i; j++) {
+		wrint(mm->p[j]);
+		writec('-');
+		wrint(mm->g[j]);
 		if (j < i)
-			writec (',');
+			writec(',');
 	}
-	writel ("... ");
-	movback (i);
+	writel("... ");
+	movback(mm, i);
 }
 
+
 static int
-checkd(int d)
+checkd(struct move *mm, int d)
 {
-	if (d0 != d)
-		swap;
+	if (mm->d0 != d)
+		mswap(mm);
 	return (0);
 }
 
 static int
 last(void)
 {
-	int	i;
+	int     i;
 
-	for (i = home-6*cturn; i != home; i += cturn)
-		if (board[i]*cturn > 0)
-			return (abs(home-i));
-	return(-1);
+	for (i = home - 6 * cturn; i != home; i += cturn)
+		if (board[i] * cturn > 0)
+			return (abs(home - i));
+	return (-1);
 }
 
 void
-movback(int i)
+movback(struct move *mm, int i)
 {
-	int	j;
+	int     j;
 
-	for (j = i-1; j >= 0; j--)
-		backone(j);
+	for (j = i - 1; j >= 0; j--)
+		backone(mm, j);
 }
 
 void
-backone(int i)
+backone(struct move *mm, int i)
 {
-	board[p[i]] += cturn;
-	if (g[i] != home)  {
-		board[g[i]] -= cturn;
-		if (abs(g[i]-home) < 7 && abs(p[i]-home) > 6)  {
+	board[mm->p[i]] += cturn;
+	if (mm->g[i] != home) {
+		board[mm->g[i]] -= cturn;
+		if (abs(mm->g[i] - home) < 7 && abs(mm->p[i] - home) > 6) {
 			(*inptr)--;
-			if (*inptr+*offptr < 15 && *offptr >= 0)
+			if (*inptr + *offptr < 15 && *offptr >= 0)
 				*offptr -= 15;
 		}
-	} else  {
+	} else {
 		(*offptr)--;
 		(*inptr)++;
 	}
-	if (h[i])  {
+	if (mm->h[i]) {
 		board[home] += cturn;
-		board[g[i]] = -cturn;
-		if (abs(bar-g[i]) < 7)  {
+		board[mm->g[i]] = -cturn;
+		if (abs(bar - mm->g[i]) < 7) {
 			(*inopp)++;
-			if (*inopp+*offopp == 0)
+			if (*inopp + *offopp == 0)
 				*offopp += 15;
 		}
 	}

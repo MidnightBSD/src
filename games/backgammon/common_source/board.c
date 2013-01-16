@@ -1,3 +1,5 @@
+/*	$NetBSD: board.c,v 1.9 2009/08/12 05:17:57 dholland Exp $	*/
+
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -10,11 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,156 +27,158 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * @(#)board.c	8.1 (Berkeley) 5/31/93
- * $FreeBSD: src/games/backgammon/common_source/board.c,v 1.6 1999/11/30 03:48:25 billf Exp $
- * $DragonFly: src/games/backgammon/common_source/board.c,v 1.3 2006/08/08 16:36:11 pavalos Exp $
- * $MidnightBSD$
  */
 
-#include <string.h>
+#include <sys/cdefs.h>
+#ifndef lint
+#if 0
+static char sccsid[] = "@(#)board.c	8.1 (Berkeley) 5/31/93";
+#else
+__RCSID("$NetBSD: board.c,v 1.9 2009/08/12 05:17:57 dholland Exp $");
+#endif
+#endif /* not lint */
+
 #include "back.h"
 
-static void	wrbsub(void);
+static int i, j, k;
+static char ln[60];
 
-static int	i, j, k;
-static char	ln[60];
+static void wrbsub(void);
 
 void
 wrboard(void)
 {
-	int	l;
-	static const char	bl[] =
-		"|                       |   |                       |\n";
-	static const char	sv[] =
-		"|                       |   |                       |    \n";
+	int     l;
+	static const char bl[] =
+	"|                       |   |                       |\n";
+	static const char sv[] =
+	"|                       |   |                       |    \n";
 
-	fixtty (noech);
+	fixtty(&noech);
 	clear();
 
-	if (tflag)  {
+	if (tflag) {
 		fboard();
 		goto lastline;
 	}
-
-	writel ("_____________________________________________________\n");
-	writel (bl);
-	strcpy (ln,bl);
+	writel("_____________________________________________________\n");
+	writel(bl);
+	strcpy(ln, bl);
 	for (j = 1; j < 50; j += 4) {
-		k = j/4+(j > 24? 12: 13);
-		ln[j+1] = k%10+'0';
-		ln[j] = k/10+'0';
+		k = j / 4 + (j > 24 ? 12 : 13);
+		ln[j + 1] = k % 10 + '0';
+		ln[j] = k / 10 + '0';
 		if (j == 21)
 			j += 4;
 	}
-	writel (ln);
+	writel(ln);
 	for (i = 0; i < 5; i++) {
-		strcpy (ln,sv);
+		strcpy(ln, sv);
 		for (j = 1; j < 50; j += 4) {
-			k = j/4+(j > 24? 12: 13);
-			wrbsub ();
+			k = j / 4 + (j > 24 ? 12 : 13);
+			wrbsub();
 			if (j == 21)
 				j += 4;
 		}
 		if (-board[25] > i)
 			ln[26] = 'w';
-		if (-board[25] > i+5)
+		if (-board[25] > i + 5)
 			ln[25] = 'w';
-		if (-board[25] > i+10)
+		if (-board[25] > i + 10)
 			ln[27] = 'w';
 		l = 53;
-		if (off[1] > i || (off[1] < 0 && off[1]+15 > i))  {
+		if (off[1] > i || (off[1] < 0 && off[1] + 15 > i)) {
 			ln[54] = 'r';
 			l = 55;
 		}
-		if (off[1] > i+5 || (off[1] < 0 && off[1]+15 > i+5))  {
+		if (off[1] > i + 5 || (off[1] < 0 && off[1] + 15 > i + 5)) {
 			ln[55] = 'r';
 			l = 56;
 		}
-		if (off[1] > i+10 || (off[1] < 0 && off[1]+15 > i+10))  {
+		if (off[1] > i + 10 || (off[1] < 0 && off[1] + 15 > i + 10)) {
 			ln[56] = 'r';
 			l = 57;
 		}
 		ln[l++] = '\n';
 		ln[l] = '\0';
-		writel (ln);
+		writel(ln);
 	}
-	strcpy (ln,bl);
+	strcpy(ln, bl);
 	ln[25] = 'B';
 	ln[26] = 'A';
 	ln[27] = 'R';
-	writel (ln);
-	strcpy (ln,sv);
+	writel(ln);
+	strcpy(ln, sv);
 	for (i = 4; i > -1; i--) {
 		for (j = 1; j < 50; j += 4) {
-			k = ((j > 24? 53: 49)-j)/4;
+			k = ((j > 24 ? 53 : 49) - j) / 4;
 			wrbsub();
 			if (j == 21)
 				j += 4;
 		}
 		if (board[0] > i)
 			ln[26] = 'r';
-		if (board[0] > i+5)
+		if (board[0] > i + 5)
 			ln[25] = 'r';
-		if (board[0] > i+10)
+		if (board[0] > i + 10)
 			ln[27] = 'r';
 		l = 53;
-		if (off[0] > i || (off[0] < 0 && off[0]+15 > i))  {
+		if (off[0] > i || (off[0] < 0 && off[0] + 15 > i)) {
 			ln[54] = 'w';
 			l = 55;
 		}
-		if (off[0] > i+5 || (off[0] < 0 && off[0]+15 > i+5))  {
+		if (off[0] > i + 5 || (off[0] < 0 && off[0] + 15 > i + 5)) {
 			ln[55] = 'w';
 			l = 56;
 		}
-		if (off[0] > i+10 || (off[0] < 0 && off[0]+15 > i+10))  {
+		if (off[0] > i + 10 || (off[0] < 0 && off[0] + 15 > i + 10)) {
 			ln[56] = 'w';
 			l = 57;
 		}
 		ln[l++] = '\n';
 		ln[l] = '\0';
-		writel (ln);
+		writel(ln);
 	}
-	strcpy (ln,bl);
+	strcpy(ln, bl);
 	for (j = 1; j < 50; j += 4) {
-		k = ((j > 24? 53: 49)-j)/4;
-		ln[j+1] = k%10+'0';
+		k = ((j > 24 ? 53 : 49) - j) / 4;
+		ln[j + 1] = k % 10 + '0';
 		if (k > 9)
-			ln[j] = k/10+'0';
+			ln[j] = k / 10 + '0';
 		if (j == 21)
 			j += 4;
 	}
-	writel (ln);
-	writel ("|_______________________|___|_______________________|\n");
+	writel(ln);
+	writel("|_______________________|___|_______________________|\n");
 
 lastline:
-	gwrite ();
+	gwrite();
 	if (tflag)
-		curmove (18,0);
-	else  {
-		writec ('\n');
-		writec ('\n');
+		curmove(18, 0);
+	else {
+		writec('\n');
+		writec('\n');
 	}
-	fixtty(raw);
+	fixtty(&raw);
 }
 
 static void
 wrbsub(void)
 {
-	int		m;
-	char		d;
+	int     m;
+	char    d;
 
-	if (board[k] > 0)  {
+	if (board[k] > 0) {
 		m = board[k];
 		d = 'r';
 	} else {
 		m = -board[k];
 		d = 'w';
 	}
-	if (m>i)
-		ln[j+1] = d;
-	if (m>i+5)
+	if (m > i)
+		ln[j + 1] = d;
+	if (m > i + 5)
 		ln[j] = d;
-	if (m>i+10)
-		ln[j+2] = d;
+	if (m > i + 10)
+		ln[j + 2] = d;
 }
