@@ -40,17 +40,20 @@
 #include <sys/file.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include <ctype.h>
 #include <errno.h>
 #include <nlist.h>
+#include <paths.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <utmp.h>
+#include <utmpx.h>
 
 #include "pathnames.h"
 
@@ -71,6 +74,7 @@ static int	users(void);
 #ifdef LOG
 static void	logfile(void);
 #endif
+static int	ttystat(char *);
 
 int
 main(__unused int argc, char *argv[])
@@ -248,6 +252,19 @@ load(void)
 	return(avenrun[2]);
 }
 
+static int
+ttystat(char *line)
+{
+        struct stat sb;
+        char ttybuf[MAXPATHLEN];
+
+        (void)snprintf(ttybuf, sizeof(ttybuf), "%s%s", _PATH_DEV, line);
+        if (stat(ttybuf, &sb) == 0) {
+                return (0);
+        } else
+                return (-1);
+}
+
 /*
  * users --
  *	return current number of users
@@ -258,17 +275,17 @@ static int
 users(void)
 {
 
-	int nusers, utmp;
-	struct utmp buf;
+	int nusers;
+	struct utmpx *utx;
 
-	if ((utmp = open(_PATH_UTMP, O_RDONLY, 0)) < 0) {
-		fprintf(stderr, "dm: %s: %s\n",
-		    _PATH_UTMP, strerror(errno));
-		exit(1);
-	}
-	for (nusers = 0; read(utmp, (char *)&buf, sizeof(struct utmp)) > 0;)
-		if (buf.ut_name[0] != '\0')
+	while ((utx = getutxent()) != NULL) {
+		if (utx->ut_type != USER_PROCESS)
+                        continue;
+                if (ttystat(utx->ut_line) != 0)
+                        continue;
+		if (utx->ut_user[0] != '\0')
 			++nusers;
+	}
 	return(nusers);
 }
 
