@@ -58,12 +58,20 @@
  */
 
 #include "header.h"
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <term.h>
+#include <fcntl.h>
+#include <errno.h>
 
-#ifdef SYSV	/* system III or system V */
-#include <termio.h>
-#define sgttyb termio
-#define stty(_a,_b) ioctl(_a,TCSETA,_b)
-#define gtty(_a,_b) ioctl(_a,TCGETA,_b)
+#include <termios.h>
+#define sgttyb termios
+#define stty(_a,_b) tcsetattr(_a,TCSADRAIN,_b)
+#define gtty(_a,_b) tcgetattr(_a,_b)
+
+#if defined(TERMIO) || defined(TERMIOS)
 static int rawflg = 0;
 static char saveeof,saveeol;
 #define doraw(_a) if(!rawflg){++rawflg;saveeof=_a.c_cc[VMIN];saveeol=_a.c_cc[VTIME];}\
