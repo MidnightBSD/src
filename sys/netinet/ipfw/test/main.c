@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $MidnightBSD$
  *
  * Testing program for schedulers
  *

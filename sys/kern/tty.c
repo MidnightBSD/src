@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD$");
 
 #include "opt_capsicum.h"
 #include "opt_compat.h"
@@ -1498,6 +1498,8 @@ tty_generic_ioctl(struct tty *tp, u_long cmd, void *data, int fflag,
 		 */
 		if ((t->c_cflag & CIGNORE) == 0 &&
 		    (tp->t_termios.c_cflag != t->c_cflag ||
+		    ((tp->t_termios.c_iflag ^ t->c_iflag) &
+		    (IXON|IXOFF|IXANY)) ||
 		    tp->t_termios.c_ispeed != t->c_ispeed ||
 		    tp->t_termios.c_ospeed != t->c_ospeed)) {
 			error = ttydevsw_param(tp, t);

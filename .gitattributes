@@ -47941,7 +47941,6 @@ sys/kern/kern_idle.c -text
 sys/kern/kern_intr.c -text
 sys/kern/kern_jail.c -text
 sys/kern/kern_khelp.c -text
-sys/kern/kern_kse.c -text
 sys/kern/kern_kthread.c -text
 sys/kern/kern_ktr.c -text
 sys/kern/kern_ktrace.c -text
@@ -48058,14 +48057,10 @@ sys/kern/sysv_sem.c -text
 sys/kern/sysv_shm.c -text
 sys/kern/tty.c -text
 sys/kern/tty_compat.c -text
-sys/kern/tty_conf.c -text
-sys/kern/tty_cons.c -text
 sys/kern/tty_info.c -text
 sys/kern/tty_inq.c -text
 sys/kern/tty_outq.c -text
 sys/kern/tty_pts.c -text
-sys/kern/tty_pty.c -text
-sys/kern/tty_subr.c -text
 sys/kern/tty_tty.c -text
 sys/kern/tty_ttydisc.c -text
 sys/kern/uipc_accf.c -text
@@ -49414,7 +49409,6 @@ sys/netinet/ip_carp.c -text
 sys/netinet/ip_carp.h -text
 sys/netinet/ip_divert.c -text
 sys/netinet/ip_divert.h -text
-sys/netinet/ip_dummynet.c -text
 sys/netinet/ip_dummynet.h -text
 sys/netinet/ip_ecn.c -text
 sys/netinet/ip_ecn.h -text
@@ -49422,9 +49416,6 @@ sys/netinet/ip_encap.c -text
 sys/netinet/ip_encap.h -text
 sys/netinet/ip_fastfwd.c -text
 sys/netinet/ip_fw.h -text
-sys/netinet/ip_fw2.c -text
-sys/netinet/ip_fw_nat.c -text
-sys/netinet/ip_fw_pfil.c -text
 sys/netinet/ip_gre.c -text
 sys/netinet/ip_gre.h -text
 sys/netinet/ip_icmp.c -text
@@ -49466,7 +49457,6 @@ sys/netinet/ipfw/test/main.c -text
 sys/netinet/ipfw/test/mylist.h -text
 sys/netinet/ipfw/test/test_dn_heap.c -text
 sys/netinet/ipfw/test/test_dn_sched.c -text
-sys/netinet/ipprotosw.h -text
 sys/netinet/khelp/h_ertt.c -text
 sys/netinet/khelp/h_ertt.h -text
 sys/netinet/libalias/HISTORY -text
@@ -49501,7 +49491,6 @@ sys/netinet/sctp_auth.h -text
 sys/netinet/sctp_bsd_addr.c -text
 sys/netinet/sctp_bsd_addr.h -text
 sys/netinet/sctp_cc_functions.c -text
-sys/netinet/sctp_cc_functions.h -text
 sys/netinet/sctp_constants.h -text
 sys/netinet/sctp_crc32.c -text
 sys/netinet/sctp_crc32.h -text
@@ -49625,7 +49614,6 @@ sys/netipsec/ipsec.h -text
 sys/netipsec/ipsec6.h -text
 sys/netipsec/ipsec_input.c -text
 sys/netipsec/ipsec_mbuf.c -text
-sys/netipsec/ipsec_osdep.h -text
 sys/netipsec/ipsec_output.c -text
 sys/netipsec/key.c -text
 sys/netipsec/key.h -text
@@ -49718,7 +49706,6 @@ sys/nfs/nfs_nfssvc.c -text
 sys/nfs/nfsdiskless.h -text
 sys/nfs/nfsproto.h -text
 sys/nfs/nfssvc.h -text
-sys/nfs/rpcv2.h -text
 sys/nfs/xdr_subs.h -text
 sys/nfsclient/nfs.h -text
 sys/nfsclient/nfs_bio.c -text
@@ -49739,11 +49726,8 @@ sys/nfsserver/nfs.h -text
 sys/nfsserver/nfs_fha.c -text
 sys/nfsserver/nfs_fha.h -text
 sys/nfsserver/nfs_serv.c -text
-sys/nfsserver/nfs_srvcache.c -text
 sys/nfsserver/nfs_srvkrpc.c -text
-sys/nfsserver/nfs_srvsock.c -text
 sys/nfsserver/nfs_srvsubs.c -text
-sys/nfsserver/nfs_syscalls.c -text
 sys/nfsserver/nfsm_subs.h -text
 sys/nfsserver/nfsrvcache.h -text
 sys/nfsserver/nfsrvstats.h -text
@@ -50290,7 +50274,6 @@ sys/sparc64/sparc64/mp_exception.S -text
 sys/sparc64/sparc64/mp_locore.S -text
 sys/sparc64/sparc64/mp_machdep.c -text
 sys/sparc64/sparc64/nexus.c -text
-sys/sparc64/sparc64/ofw_bus.c -text
 sys/sparc64/sparc64/ofw_machdep.c -text
 sys/sparc64/sparc64/pmap.c -text
 sys/sparc64/sparc64/prof_machdep.c -text

@@ -1,7 +1,7 @@
 /* 
  * static configuration for libncp
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #define NCP_NLS_KOI2CP866

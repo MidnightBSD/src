@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)file.h	8.3 (Berkeley) 1/9/95
- * $MidnightBSD$
+ * $MidnightBSD: src/sys/sys/file.h,v 1.5 2012/10/09 04:05:36 laffer1 Exp $
  */
 
 #ifndef _SYS_FILE_H_
@@ -225,6 +225,8 @@ fo_chown_t	invfo_chown;
 
 void finit(struct file *, u_int, short, void *, struct fileops *);
 int fgetvp(struct thread *td, int fd, cap_rights_t rights, struct vnode **vpp);
+int fgetvp_exec(struct thread *td, int fd, cap_rights_t rights,
+    struct vnode **vpp);
 int fgetvp_rights(struct thread *td, int fd, cap_rights_t need,
     cap_rights_t *have, struct vnode **vpp);
 int fgetvp_read(struct thread *td, int fd, cap_rights_t rights,

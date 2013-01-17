@@ -47,7 +47,7 @@
  *	+1-313-764-2278
  *	netatalk@umich.edu
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef _NETATALK_DDP_PCB_H_

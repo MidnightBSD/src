@@ -57,7 +57,7 @@
 /* XXX is M_NETADDR correct? */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include "opt_mrouting.h"
 #include "opt_inet.h"

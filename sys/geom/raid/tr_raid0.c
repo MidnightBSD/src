@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -73,6 +73,7 @@ static struct g_raid_tr_class g_raid_tr_raid0_class = {
 	"RAID0",
 	g_raid_tr_raid0_methods,
 	sizeof(struct g_raid_tr_raid0_object),
+	.trc_enable = 1,
 	.trc_priority = 100
 };
 
@@ -323,4 +324,4 @@ g_raid_tr_free_raid0(struct g_raid_tr_object *tr)
 	return (0);
 }
 
-G_RAID_TR_DECLARE(g_raid_tr_raid0);
+G_RAID_TR_DECLARE(raid0, "RAID0");

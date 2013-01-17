@@ -58,7 +58,7 @@
  *
  *	@(#)spx_timer.h
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef _NETIPX_SPX_TIMER_H_

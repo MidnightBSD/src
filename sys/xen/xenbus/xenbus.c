@@ -40,7 +40,7 @@
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/cdefs.h>
 #include <sys/param.h>

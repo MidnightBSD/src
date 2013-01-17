@@ -1,4 +1,4 @@
-/* $FreeBSD$	*/
+/* $MidnightBSD$	*/
 
 /*
  * This file is derived from zlib.h and zconf.h from the zlib-1.0.4

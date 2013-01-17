@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -140,6 +140,7 @@ static struct g_raid_md_class g_raid_md_sii_class = {
 	"SiI",
 	g_raid_md_sii_methods,
 	sizeof(struct g_raid_md_sii_object),
+	.mdc_enable = 1,
 	.mdc_priority = 100
 };
 
@@ -1688,4 +1689,4 @@ g_raid_md_free_sii(struct g_raid_md_object *md)
 	return (0);
 }
 
-G_RAID_MD_DECLARE(g_raid_md_sii);
+G_RAID_MD_DECLARE(sii, "SiI");

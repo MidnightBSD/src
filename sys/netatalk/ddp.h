@@ -20,7 +20,7 @@
  *	+1-313-763-0525
  *	netatalk@itd.umich.edu
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef _NETATALK_DDP_H_

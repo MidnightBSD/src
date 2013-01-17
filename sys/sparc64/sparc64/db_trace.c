@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jake Burkholder.
  * All rights reserved.
@@ -26,12 +25,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/db_trace.c,v 1.26.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kdb.h>
-#include <sys/linker_set.h>
 #include <sys/proc.h>
 #include <sys/stack.h>
 #include <sys/sysent.h>

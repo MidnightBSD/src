@@ -1,4 +1,4 @@
-/*	$FreeBSD$	*/
+/*	$MidnightBSD$	*/
 /*	$KAME: key.h,v 1.21 2001/07/27 03:51:30 itojun Exp $	*/
 
 /*-

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Marius Strobl <marius@FreeBSD.org>
  * All rights reserved.
@@ -26,14 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/upa.c,v 1.9.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
-#include <sys/pcpu.h>
 #include <sys/resource.h>
 #include <sys/rman.h>
 
@@ -43,6 +41,7 @@ __FBSDID("$FreeBSD: src/sys/sparc64/sparc64/upa.c,v 1.9.2.1.2.1 2008/11/25 02:59
 
 #include <machine/bus.h>
 #include <machine/bus_common.h>
+#include <machine/intr_machdep.h>
 #include <machine/resource.h>
 
 #define	UPA_NREG	3
@@ -100,10 +99,11 @@ struct upa_softc {
 
 static device_probe_t upa_probe;
 static device_attach_t upa_attach;
-static bus_alloc_resource_t upa_alloc_resource;
-static bus_setup_intr_t upa_setup_intr;
 static bus_print_child_t upa_print_child;
 static bus_probe_nomatch_t upa_probe_nomatch;
+static bus_alloc_resource_t upa_alloc_resource;
+static bus_adjust_resource_t upa_adjust_resource;
+static bus_setup_intr_t upa_setup_intr;
 static bus_get_resource_list_t upa_get_resource_list;
 static ofw_bus_get_devinfo_t upa_get_devinfo;
 
@@ -131,11 +131,13 @@ static device_method_t upa_methods[] = {
 	DEVMETHOD(bus_alloc_resource,	upa_alloc_resource),
 	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
 	DEVMETHOD(bus_deactivate_resource, bus_generic_deactivate_resource),
+	DEVMETHOD(bus_adjust_resource,	upa_adjust_resource),
 	DEVMETHOD(bus_release_resource,	bus_generic_rl_release_resource),
 	DEVMETHOD(bus_setup_intr,	upa_setup_intr),
 	DEVMETHOD(bus_teardown_intr,	bus_generic_teardown_intr),
 	DEVMETHOD(bus_get_resource,	bus_generic_rl_get_resource),
 	DEVMETHOD(bus_get_resource_list, upa_get_resource_list),
+	DEVMETHOD(bus_child_pnpinfo_str, ofw_bus_gen_child_pnpinfo_str),
 
 	/* ofw_bus interface */
 	DEVMETHOD(ofw_bus_get_devinfo,	upa_get_devinfo),
@@ -145,13 +147,13 @@ static device_method_t upa_methods[] = {
 	DEVMETHOD(ofw_bus_get_node,	ofw_bus_gen_get_node),
 	DEVMETHOD(ofw_bus_get_type,	ofw_bus_gen_get_type),
 
-	{ NULL, NULL }
+	DEVMETHOD_END
 };
 
 static devclass_t upa_devclass;
 
 DEFINE_CLASS_0(upa, upa_driver, upa_methods, sizeof(struct upa_softc));
-DRIVER_MODULE(upa, nexus, upa_driver, upa_devclass, 0, 0);
+EARLY_DRIVER_MODULE(upa, nexus, upa_driver, upa_devclass, 0, 0, BUS_PASS_BUS);
 
 static const struct intr_controller upa_ic = {
 	upa_intr_enable,
@@ -242,7 +244,7 @@ upa_attach(device_t dev)
 				    "pci108e,8001") == 0 &&
 				    ((bus_get_resource_start(children[j],
 				    SYS_RES_MEMORY, 0) >> 20) & 1) == 1) {
-				    	schizo = children[j];
+					schizo = children[j];
 					break;
 				}
 			}
@@ -288,9 +290,10 @@ upa_attach(device_t dev)
 		goto fail;
 	}
 
- 	/*
+	/*
 	 * Hunt through all the interrupt mapping regs and register our
 	 * interrupt controller for the corresponding interrupt vectors.
+	 * We do this early in order to be able to catch stray interrupts.
 	 */
 	for (i = UPA_INO_BASE; i <= UPA_INO_MAX; i++) {
 		imr = 0;
@@ -313,10 +316,11 @@ upa_attach(device_t dev)
 		device_printf(dev, "intr map (INO %d) IMR%d: %#lx\n",
 		    i, imr, (u_long)UPA_READ(sc, imr, 0x0));
 #endif
-		if (intr_controller_register(INTMAP_VEC(sc->sc_ign, i),
-		    &upa_ic, uica) != 0)
-			panic("%s: could not register interrupt controller "
-			    "for INO %d", __func__, i);
+		j = intr_controller_register(INTMAP_VEC(sc->sc_ign, i),
+		    &upa_ic, uica);
+		if (j != 0)
+			device_printf(dev, "could not register interrupt "
+			    "controller for INO %d (%d)\n", i, j);
 	}
 
 	/* Make sure the power level is appropriate for normal operation. */
@@ -346,13 +350,13 @@ upa_attach(device_t dev)
 			device_printf(dev,
 			    "could not determine upa-portid of child 0x%lx\n",
 			    (unsigned long)child);
-		    	continue;
+			continue;
 		}
 		if (portid > 1) {
 			device_printf(dev,
 			    "upa-portid %d of child 0x%lx invalid\n", portid,
 			    (unsigned long)child);
-		    	continue;
+			continue;
 		}
 		if ((udi = upa_setup_dinfo(dev, sc, child, portid)) == NULL)
 			continue;
@@ -494,14 +498,23 @@ upa_setup_intr(device_t dev, device_t child, struct resource *ires, int flags,
 	/*
 	 * Make sure the vector is fully specified and we registered
 	 * our interrupt controller for it.
- 	 */
+	 */
 	vec = rman_get_start(ires);
 	if (INTIGN(vec) != sc->sc_ign || intr_vectors[vec].iv_ic != &upa_ic) {
 		device_printf(dev, "invalid interrupt vector 0x%lx\n", vec);
- 		return (EINVAL);
- 	}
+		return (EINVAL);
+	}
 	return (bus_generic_setup_intr(dev, child, ires, flags, filt, func,
 	    arg, cookiep));
+}
+
+static int
+upa_adjust_resource(device_t bus __unused, device_t child __unused,
+    int type __unused, struct resource *r __unused, u_long start __unused,
+    u_long end __unused)
+{
+
+	return (ENXIO);
 }
 
 static struct resource_list *

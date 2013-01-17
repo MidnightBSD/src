@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Alan L. Cox <alc@cs.rice.edu>
  * Copyright (c) 1982, 1986, 1991, 1993
@@ -37,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/uio_machdep.c,v 1.8.18.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -52,12 +51,13 @@ __FBSDID("$FreeBSD: src/sys/sparc64/sparc64/uio_machdep.c,v 1.8.18.1 2008/11/25 
 #include <vm/vm_page.h>
 #include <vm/vm_param.h>
 
+#include <machine/cache.h>
 #include <machine/tlb.h>
 
 /*
  * Implement uiomove(9) from physical memory using a combination
  * of the direct mapping and sf_bufs to reduce the creation and
- * destruction of ephemeral mappings.  
+ * destruction of ephemeral mappings.
  */
 int
 uiomove_fromphys(vm_page_t ma[], vm_offset_t offset, int n, struct uio *uio)
@@ -93,7 +93,8 @@ uiomove_fromphys(vm_page_t ma[], vm_offset_t offset, int n, struct uio *uio)
 		cnt = ulmin(cnt, PAGE_SIZE - page_offset);
 		m = ma[offset >> PAGE_SHIFT];
 		pa = VM_PAGE_TO_PHYS(m);
-		if (m->md.color != DCACHE_COLOR(pa)) {
+		if (dcache_color_ignore == 0 &&
+		    m->md.color != DCACHE_COLOR(pa)) {
 			sf = sf_buf_alloc(m, 0);
 			cp = (char *)sf_buf_kva(sf) + page_offset;
 		} else {
@@ -102,8 +103,7 @@ uiomove_fromphys(vm_page_t ma[], vm_offset_t offset, int n, struct uio *uio)
 		}
 		switch (uio->uio_segflg) {
 		case UIO_USERSPACE:
-			if (ticks - PCPU_GET(switchticks) >= hogticks)
-				uio_yield();
+			maybe_yield();
 			if (uio->uio_rw == UIO_READ)
 				error = copyout(cp, iov->iov_base, cnt);
 			else

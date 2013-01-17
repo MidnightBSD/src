@@ -34,7 +34,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "opt_inet6.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>  
 #include <sys/types.h>

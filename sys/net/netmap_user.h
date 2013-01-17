@@ -31,8 +31,8 @@
  */
 
 /*
- * $FreeBSD$
- * $Id: netmap_user.h,v 1.1.1.1 2012-07-21 15:17:28 laffer1 Exp $
+ * $MidnightBSD$
+ * $Id: netmap_user.h,v 1.2 2013-01-17 23:29:37 laffer1 Exp $
  *
  * This header contains the macros used to manipulate netmap structures
  * and packets in userspace. See netmap(4) for more information.

@@ -27,7 +27,7 @@
 /*
  * Userland code for testing binary heaps and hash tables
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #include <sys/cdefs.h>

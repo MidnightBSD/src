@@ -58,7 +58,7 @@
  *
  *	@(#)ipx_if.h
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef _NETIPX_IPX_IF_H_

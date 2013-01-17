@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)swap_pager.h	7.1 (Berkeley) 12/5/90
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef	_VM_SWAP_PAGER_H_

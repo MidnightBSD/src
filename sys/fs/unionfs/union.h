@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)union.h	8.9 (Berkeley) 12/10/94
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifdef _KERNEL

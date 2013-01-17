@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -26,12 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/gdb/gdb_packet.c,v 1.4 2007/06/09 21:55:17 marcel Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/ctype.h>
 #include <sys/kdb.h>
+#include <sys/ttydefaults.h>
 
 #include <machine/gdb_machdep.h>
 #include <machine/kdb.h>
@@ -61,6 +61,17 @@ gdb_getc(void)
 	do
 		c = gdb_cur->gdb_getc();
 	while (c == -1);
+
+	if (c == CTRL('C')) {
+		printf("Received ^C; trying to switch back to ddb.\n");
+
+		if (kdb_dbbe_select("ddb") != 0)
+			printf("The ddb backend could not be selected.\n");
+		else {
+			printf("using longjmp, hope it works!\n");
+			kdb_reenter();
+		}
+	}
 	return (c);
 }
 

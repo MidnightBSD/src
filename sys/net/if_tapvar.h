@@ -34,8 +34,8 @@
  */
 
 /*
- * $FreeBSD$
- * $Id: if_tapvar.h,v 1.4 2012-10-09 04:07:25 laffer1 Exp $
+ * $MidnightBSD$
+ * $Id: if_tapvar.h,v 1.5 2013-01-17 23:29:37 laffer1 Exp $
  */
 
 #ifndef _NET_IF_TAPVAR_H_

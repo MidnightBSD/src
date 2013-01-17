@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $MidnightBSD$
  *
  * library functions for userland testing of dummynet schedulers
  */

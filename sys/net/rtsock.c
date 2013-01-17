@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)rtsock.c	8.7 (Berkeley) 10/12/95
- * $FreeBSD$
+ * $MidnightBSD$
  */
 #include "opt_compat.h"
 #include "opt_sctp.h"

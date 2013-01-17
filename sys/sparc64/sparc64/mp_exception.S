@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/mp_exception.S,v 1.13.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <machine/asi.h>
 #include <machine/asmacros.h>
@@ -38,16 +38,28 @@ __FBSDID("$FreeBSD: src/sys/sparc64/sparc64/mp_exception.S,v 1.13.6.1 2008/11/25
 	.register	%g2, #ignore
 	.register	%g3, #ignore
 
-#define	IPI_DONE(r1, r2, r3, r4) \
-	lduw	[PCPU(CPUMASK)], r4 ;  \
-	ATOMIC_CLEAR_INT(r1, r2, r3, r4)
+#define	IPI_DONE(r1, r2, r3, r4, r5, r6)				\
+	rd	%y, r6 ;						\
+	lduw	[PCPU(CPUID)], r2 ;					\
+	mov	_NCPUBITS, r3 ;						\
+	mov	%g0, %y ;						\
+	udiv	r2, r3, r4 ;						\
+	srl	r4, 0, r5 ;						\
+	sllx	r5, PTR_SHIFT, r5 ;					\
+	add	r1, r5, r1 ;						\
+	smul	r4, r3, r3 ;						\
+	sub	r2, r3, r3 ;						\
+	mov	1, r4 ;							\
+	sllx	r4, r3, r4 ;						\
+	wr	r6, %y ;						\
+	ATOMIC_CLEAR_LONG(r1, r2, r3, r4)
 
 /*
  * Invalidate a physical page in the data cache.  For UltraSPARC I and II.
  */
 ENTRY(tl_ipi_spitfire_dcache_page_inval)
 #if KTR_COMPILE & KTR_SMP
-	CATR(KTR_SMP, "ipi_dcache_page_inval: pa=%#lx"
+	CATR(KTR_SMP, "tl_ipi_spitfire_dcache_page_inval: pa=%#lx"
 	    , %g1, %g2, %g3, 7, 8, 9)
 	ldx	[%g5 + ICA_PA], %g2
 	stx	%g2, [%g1 + KTR_PARM1]
@@ -57,9 +69,8 @@ ENTRY(tl_ipi_spitfire_dcache_page_inval)
 	ldx	[%g5 + ICA_PA], %g6
 	srlx	%g6, PAGE_SHIFT - DC_TAG_SHIFT, %g6
 
-	SET(cache, %g3, %g2)
-	lduw	[%g2 + DC_SIZE], %g3
-	lduw	[%g2 + DC_LINESIZE], %g4
+	lduw	[PCPU(CACHE) + DC_SIZE], %g3
+	lduw	[PCPU(CACHE) + DC_LINESIZE], %g4
 	sub	%g3, %g4, %g2
 
 1:	ldxa	[%g2] ASI_DCACHE_TAG, %g1
@@ -78,7 +89,7 @@ ENTRY(tl_ipi_spitfire_dcache_page_inval)
 2:	brgz,pt	%g2, 1b
 	 sub	%g2, %g4, %g2
 
-	IPI_DONE(%g5, %g1, %g2, %g3)
+	IPI_DONE(%g5, %g1, %g2, %g3, %g4, %g6)
 	retry
 END(tl_ipi_spitfire_dcache_page_inval)
 
@@ -88,7 +99,7 @@ END(tl_ipi_spitfire_dcache_page_inval)
  */
 ENTRY(tl_ipi_spitfire_icache_page_inval)
 #if KTR_COMPILE & KTR_SMP
-	CATR(KTR_SMP, "ipi_icache_page_inval: pa=%#lx"
+	CATR(KTR_SMP, "tl_ipi_spitfire_icache_page_inval: pa=%#lx"
 	    , %g1, %g2, %g3, 7, 8, 9)
 	ldx	[%g5 + ICA_PA], %g2
 	stx	%g2, [%g1 + KTR_PARM1]
@@ -98,9 +109,8 @@ ENTRY(tl_ipi_spitfire_icache_page_inval)
 	ldx	[%g5 + ICA_PA], %g6
 	srlx	%g6, PAGE_SHIFT - IC_TAG_SHIFT, %g6
 
-	SET(cache, %g3, %g2)
-	lduw	[%g2 + IC_SIZE], %g3
-	lduw	[%g2 + IC_LINESIZE], %g4
+	lduw	[PCPU(CACHE) + IC_SIZE], %g3
+	lduw	[PCPU(CACHE) + IC_LINESIZE], %g4
 	sub	%g3, %g4, %g2
 
 1:	ldda	[%g2] ASI_ICACHE_TAG, %g0 /*, %g1 */
@@ -119,7 +129,7 @@ ENTRY(tl_ipi_spitfire_icache_page_inval)
 2:	brgz,pt	%g2, 1b
 	 sub	%g2, %g4, %g2
 
-	IPI_DONE(%g5, %g1, %g2, %g3)
+	IPI_DONE(%g5, %g1, %g2, %g3, %g4, %g6)
 	retry
 END(tl_ipi_spitfire_icache_page_inval)
 
@@ -128,7 +138,7 @@ END(tl_ipi_spitfire_icache_page_inval)
  */
 ENTRY(tl_ipi_cheetah_dcache_page_inval)
 #if KTR_COMPILE & KTR_SMP
-	CATR(KTR_SMP, "ipi_dcache_page_inval: pa=%#lx"
+	CATR(KTR_SMP, "tl_ipi_cheetah_dcache_page_inval: pa=%#lx"
 	    , %g1, %g2, %g3, 7, 8, 9)
 	ldx	[%g5 + ICA_PA], %g2
 	stx	%g2, [%g1 + KTR_PARM1]
@@ -140,8 +150,7 @@ ENTRY(tl_ipi_cheetah_dcache_page_inval)
 	set	PAGE_SIZE, %g2
 	add	%g1, %g2, %g3
 
-	SET(cache, %g4, %g2)
-	lduw	[%g2 + DC_LINESIZE], %g2
+	lduw	[PCPU(CACHE) + DC_LINESIZE], %g2
 
 1:	stxa	%g0, [%g1] ASI_DCACHE_INVALIDATE
 	membar	#Sync
@@ -151,7 +160,7 @@ ENTRY(tl_ipi_cheetah_dcache_page_inval)
 	blt,a,pt %xcc, 1b
 	 nop
 
-	IPI_DONE(%g5, %g1, %g2, %g3)
+	IPI_DONE(%g5, %g1, %g2, %g3, %g4, %g6)
 	retry
 END(tl_ipi_cheetah_dcache_page_inval)
 
@@ -202,11 +211,12 @@ ENTRY(tl_ipi_tlb_page_demap)
 	ldx	[%g5 + ITA_VA], %g2
 	or	%g2, %g3, %g2
 
+	sethi	%hi(KERNBASE), %g3
 	stxa	%g0, [%g2] ASI_DMMU_DEMAP
 	stxa	%g0, [%g2] ASI_IMMU_DEMAP
-	membar	#Sync
+	flush	%g3
 
-	IPI_DONE(%g5, %g1, %g2, %g3)
+	IPI_DONE(%g5, %g1, %g2, %g3, %g4, %g6)
 	retry
 END(tl_ipi_tlb_page_demap)
 
@@ -237,19 +247,19 @@ ENTRY(tl_ipi_tlb_range_demap)
 	ldx	[%g5 + ITA_START], %g1
 	ldx	[%g5 + ITA_END], %g2
 
-	set	PAGE_SIZE, %g6
-
+	sethi	%hi(KERNBASE), %g6
 1:	or	%g1, %g3, %g4
 	stxa	%g0, [%g4] ASI_DMMU_DEMAP
 	stxa	%g0, [%g4] ASI_IMMU_DEMAP
-	membar	#Sync
+	flush	%g6
 
+	set	PAGE_SIZE, %g6
 	add	%g1, %g6, %g1
 	cmp	%g1, %g2
 	blt,a,pt %xcc, 1b
-	 nop
+	 sethi	%hi(KERNBASE), %g6
 
-	IPI_DONE(%g5, %g1, %g2, %g3)
+	IPI_DONE(%g5, %g1, %g2, %g3, %g4, %g6)
 	retry
 END(tl_ipi_tlb_range_demap)
 
@@ -258,7 +268,7 @@ END(tl_ipi_tlb_range_demap)
  */
 ENTRY(tl_ipi_tlb_context_demap)
 #if KTR_COMPILE & KTR_SMP
-	CATR(KTR_SMP, "ipi_tlb_page_demap: pm=%p va=%#lx"
+	CATR(KTR_SMP, "tl_ipi_tlb_context_demap: pm=%p va=%#lx"
 	    , %g1, %g2, %g3, 7, 8, 9)
 	ldx	[%g5 + ITA_PMAP], %g2
 	stx	%g2, [%g1 + KTR_PARM1]
@@ -268,10 +278,35 @@ ENTRY(tl_ipi_tlb_context_demap)
 #endif
 
 	mov	TLB_DEMAP_PRIMARY | TLB_DEMAP_CONTEXT, %g1
+	sethi	%hi(KERNBASE), %g3
 	stxa	%g0, [%g1] ASI_DMMU_DEMAP
 	stxa	%g0, [%g1] ASI_IMMU_DEMAP
-	membar	#Sync
+	flush	%g3
 
-	IPI_DONE(%g5, %g1, %g2, %g3)
+	IPI_DONE(%g5, %g1, %g2, %g3, %g4, %g6)
 	retry
 END(tl_ipi_tlb_context_demap)
+
+/*
+ * Read %stick.
+ */
+ENTRY(tl_ipi_stick_rd)
+	ldx	[%g5 + IRA_VAL], %g1
+	rd	%asr24, %g2
+	stx	%g2, [%g1]
+
+	IPI_DONE(%g5, %g1, %g2, %g3, %g4, %g6)
+	retry
+END(tl_ipi_stick_rd)
+
+/*
+ * Read %tick.
+ */
+ENTRY(tl_ipi_tick_rd)
+	ldx	[%g5 + IRA_VAL], %g1
+	rd	%tick, %g2
+	stx	%g2, [%g1]
+
+	IPI_DONE(%g5, %g1, %g2, %g3, %g4, %g6)
+	retry
+END(tl_ipi_tick_rd)

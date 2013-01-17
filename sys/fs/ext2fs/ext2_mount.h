@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ufsmount.h	8.6 (Berkeley) 3/30/95
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef _FS_EXT2FS_EXT2_MOUNT_H_

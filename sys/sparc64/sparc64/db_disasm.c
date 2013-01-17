@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 David S. Miller, davem@nadzieja.rutgers.edu
  * Copyright (c) 1995 Paul Kranenburg
@@ -29,8 +28,10 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *	from: NetBSD: db_disasm.c,v 1.9 2000/08/16 11:29:42 pk Exp
- * $FreeBSD: src/sys/sparc64/sparc64/db_disasm.c,v 1.8.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
+
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -77,18 +78,18 @@
 
 struct sparc_insn {
 	  unsigned int match;
-	  char* name;
-	  char* format;
+	  const char* name;
+	  const char* format;
 };
 
-char* regs[] = {
+static const char *const regs[] = {
 	"g0", "g1", "g2", "g3", "g4", "g5", "g6", "g7",
 	"o0", "o1", "o2", "o3", "o4", "o5", "sp", "o7",
 	"l0", "l1", "l2", "l3", "l4", "l5", "l6", "l7",
 	"i0", "i1", "i2", "i3", "i4", "i5", "fp", "i7"
 };
 
-char* priv_regs[] = {
+static const char *const priv_regs[] = {
 	"tpc", "tnpc", "tstate", "tt", "tick", "tba", "pstate", "tl",
 	"pil", "cwp", "cansave", "canrestore", "cleanwin", "otherwin",
 	"wstate", "fq",
@@ -96,18 +97,18 @@ char* priv_regs[] = {
 	"", "", "", "", "", "", "", "ver"
 };
 
-char* state_regs[] = {
+static const char *const state_regs[] = {
 	"y", "", "ccr", "asi", "tick", "pc", "fprs", "asr",
 	"", "", "", "", "", "", "", "",
-	"pcr", "pic", "dcr", "gsr", "set_softint", "clr_softint", "softint", "tick_cmpr", "",
-	"", "", "", "", "", "", "", ""
+	"pcr", "pic", "dcr", "gsr", "set_softint", "clr_softint", "softint",
+	"tick_cmpr", "sys_tick", "sys_tick_cmpr", "", "", "", "", "", "", ""
 };
 
-char* ccodes[] = {
+static const char *const ccodes[] = {
 	"fcc0", "fcc1", "fcc2", "fcc3", "icc", "", "xcc", ""
 };
 
-char* prefetch[] = {
+static const char *const prefetch[] = {
 	"n_reads", "one_read", "n_writes", "one_write", "page"
 };
 
@@ -163,7 +164,7 @@ V8 only:
 */
 
 
-struct sparc_insn sparc_i[] = {
+static const struct sparc_insn sparc_i[] = {
 
 	/*
 	 * Format 1: Call
@@ -804,11 +805,10 @@ struct sparc_insn sparc_i[] = {
 db_addr_t
 db_disasm(db_addr_t loc, boolean_t altfmt)
 {
-	struct sparc_insn*	i_ptr = (struct sparc_insn *)&sparc_i;
-
+	const struct sparc_insn* i_ptr = (struct sparc_insn *)&sparc_i;
 	unsigned int insn, you_lose, bitmask;
 	int matchp;
-	char* f_ptr, *cp;
+	const char* f_ptr, *cp;
 
 	you_lose = 0;
 	matchp = 0;
@@ -1029,4 +1029,3 @@ db_disasm(db_addr_t loc, boolean_t altfmt)
 
 	return (loc + 4);
 }
-

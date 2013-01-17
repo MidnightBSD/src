@@ -33,7 +33,7 @@
  *
  *	@(#)procfs_mem.c	8.5 (Berkeley) 6/15/94
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #include <sys/param.h>

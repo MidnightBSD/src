@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $MidnightBSD$
  *
  * userspace compatibility code for dummynet schedulers
  */

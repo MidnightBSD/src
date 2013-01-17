@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jake Burkholder.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/autoconf.c,v 1.14.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "opt_isa.h"
 
@@ -67,9 +66,6 @@ static void
 configure(void *dummy)
 {
 
-#ifdef SUN4V
-	intr_restore_all(0x16);
-#endif
 	root_bus_configure();
 #ifdef DEV_ISA
 	/*

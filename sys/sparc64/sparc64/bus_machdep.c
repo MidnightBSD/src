@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996, 1997, 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -15,13 +14,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the NetBSD
- *	Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -94,13 +86,13 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)machdep.c	8.6 (Berkeley) 1/14/94
- *	from: NetBSD: machdep.c,v 1.111 2001/09/15 07:13:40 eeh Exp
+ *	from: NetBSD: machdep.c,v 1.221 2008/04/28 20:23:37 martin Exp
  *	and
  *	from: FreeBSD: src/sys/i386/i386/busdma_machdep.c,v 1.24 2001/08/15
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/bus_machdep.c,v 1.46.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -109,6 +101,7 @@ __FBSDID("$FreeBSD: src/sys/sparc64/sparc64/bus_machdep.c,v 1.46.2.1.2.1 2008/11
 #include <sys/mbuf.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
+#include <sys/rman.h>
 #include <sys/smp.h>
 #include <sys/systm.h>
 #include <sys/uio.h>
@@ -183,11 +176,8 @@ busdma_lock_mutex(void *arg, bus_dma_lock_op_t op)
 static void
 dflt_lock(void *arg, bus_dma_lock_op_t op)
 {
-#ifdef INVARIANTS
+
 	panic("driver error: busdma dflt_lock called");
-#else
-	printf("DRIVER_ERROR: busdma dflt_lock called\n");
-#endif
 }
 
 /*
@@ -610,13 +600,6 @@ nexus_dmamap_sync(bus_dma_tag_t dmat, bus_dmamap_t map, bus_dmasync_op_t op)
 		 */
 		membar(Sync);
 	}
-#if 0
-	/* Should not be needed. */
-	if (op & BUS_DMASYNC_POSTREAD) {
-		ecache_flush((vm_offset_t)map->buf,
-		    (vm_offset_t)map->buf + map->buflen - 1);
-	}
-#endif
 	if (op & BUS_DMASYNC_POSTWRITE) {
 		/* Nothing to do.  Handled by the bus controller. */
 	}
@@ -639,9 +622,18 @@ nexus_dmamem_alloc(bus_dma_tag_t dmat, void **vaddr, int flags,
 	if (flags & BUS_DMA_ZERO)
 		mflags |= M_ZERO;
 
-	if ((dmat->dt_maxsize <= PAGE_SIZE)) {
+	/*
+	 * XXX:
+	 * (dmat->dt_alignment < dmat->dt_maxsize) is just a quick hack; the
+	 * exact alignment guarantees of malloc need to be nailed down, and
+	 * the code below should be rewritten to take that into account.
+	 *
+	 * In the meantime, we'll warn the user if malloc gets it wrong.
+	 */
+	if (dmat->dt_maxsize <= PAGE_SIZE &&
+	    dmat->dt_alignment < dmat->dt_maxsize)
 		*vaddr = malloc(dmat->dt_maxsize, M_DEVBUF, mflags);
-	} else {
+	else {
 		/*
 		 * XXX use contigmalloc until it is merged into this
 		 * facility and handles multi-seg allocations.  Nobody
@@ -654,6 +646,8 @@ nexus_dmamem_alloc(bus_dma_tag_t dmat, void **vaddr, int flags,
 	}
 	if (*vaddr == NULL)
 		return (ENOMEM);
+	if (vtophys(*vaddr) % dmat->dt_alignment)
+		printf("%s: failed to align memory properly.\n", __func__);
 	return (0);
 }
 
@@ -665,14 +659,14 @@ static void
 nexus_dmamem_free(bus_dma_tag_t dmat, void *vaddr, bus_dmamap_t map)
 {
 
-	if ((dmat->dt_maxsize <= PAGE_SIZE))
+	if (dmat->dt_maxsize <= PAGE_SIZE &&
+	    dmat->dt_alignment < dmat->dt_maxsize)
 		free(vaddr, M_DEVBUF);
-	else {
+	else
 		contigfree(vaddr, dmat->dt_maxsize, M_DEVBUF);
-	}
 }
 
-struct bus_dma_methods nexus_dma_methods = {
+static struct bus_dma_methods nexus_dma_methods = {
 	nexus_dmamap_create,
 	nexus_dmamap_destroy,
 	nexus_dmamap_load,
@@ -710,22 +704,43 @@ struct bus_dma_tag nexus_dmatag = {
  * Helpers to map/unmap bus memory
  */
 int
-sparc64_bus_mem_map(bus_space_tag_t tag, bus_space_handle_t handle,
-    bus_size_t size, int flags, vm_offset_t vaddr, void **hp)
+bus_space_map(bus_space_tag_t tag, bus_addr_t address, bus_size_t size,
+    int flags, bus_space_handle_t *handlep)
 {
-	vm_offset_t addr;
+
+	return (sparc64_bus_mem_map(tag, address, size, flags, 0, handlep));
+}
+
+int
+sparc64_bus_mem_map(bus_space_tag_t tag, bus_addr_t addr, bus_size_t size,
+    int flags, vm_offset_t vaddr, bus_space_handle_t *hp)
+{
 	vm_offset_t sva;
 	vm_offset_t va;
 	vm_paddr_t pa;
 	vm_size_t vsz;
 	u_long pm_flags;
 
-	addr = (vm_offset_t)handle;
+	/*
+	 * Given that we use physical access for bus_space(9) there's no need
+	 * need to map anything in unless BUS_SPACE_MAP_LINEAR is requested.
+	 */
+	if ((flags & BUS_SPACE_MAP_LINEAR) == 0) {
+		*hp = addr;
+		return (0);
+	}
+
+	if (tag->bst_cookie == NULL) {
+		printf("%s: resource cookie not set\n", __func__);
+		return (EINVAL);
+	}
+
 	size = round_page(size);
 	if (size == 0) {
 		printf("%s: zero size\n", __func__);
 		return (EINVAL);
 	}
+
 	switch (tag->bst_type) {
 	case PCI_CONFIG_BUS_SPACE:
 	case PCI_IO_BUS_SPACE:
@@ -737,7 +752,7 @@ sparc64_bus_mem_map(bus_space_tag_t tag, bus_space_handle_t handle,
 		break;
 	}
 
-	if (!(flags & BUS_SPACE_MAP_CACHEABLE))
+	if ((flags & BUS_SPACE_MAP_CACHEABLE) == 0)
 		pm_flags |= TD_E;
 
 	if (vaddr != 0L)
@@ -746,9 +761,6 @@ sparc64_bus_mem_map(bus_space_tag_t tag, bus_space_handle_t handle,
 		if ((sva = kmem_alloc_nofault(kernel_map, size)) == 0)
 			panic("%s: cannot allocate virtual memory", __func__);
 	}
-
-	/* Preserve page offset. */
-	*hp = (void *)(sva | ((u_long)addr & PAGE_MASK));
 
 	pa = trunc_page(addr);
 	if ((flags & BUS_SPACE_MAP_READONLY) == 0)
@@ -762,17 +774,32 @@ sparc64_bus_mem_map(bus_space_tag_t tag, bus_space_handle_t handle,
 		pa += PAGE_SIZE;
 	} while ((vsz -= PAGE_SIZE) > 0);
 	tlb_range_demap(kernel_pmap, sva, sva + size - 1);
+
+	/* Note: we preserve the page offset. */
+	rman_set_virtual(tag->bst_cookie, (void *)(sva | (addr & PAGE_MASK)));
 	return (0);
 }
 
+void
+bus_space_unmap(bus_space_tag_t tag, bus_space_handle_t handle,
+    bus_size_t size)
+{
+
+	sparc64_bus_mem_unmap(tag, handle, size);
+}
+
 int
-sparc64_bus_mem_unmap(void *bh, bus_size_t size)
+sparc64_bus_mem_unmap(bus_space_tag_t tag, bus_space_handle_t handle,
+    bus_size_t size)
 {
 	vm_offset_t sva;
 	vm_offset_t va;
 	vm_offset_t endva;
 
-	sva = trunc_page((vm_offset_t)bh);
+	if (tag->bst_cookie == NULL ||
+	    (sva = (vm_offset_t)rman_get_virtual(tag->bst_cookie)) == 0)
+		return (0);
+	sva = trunc_page(sva);
 	endva = sva + round_page(size);
 	for (va = sva; va < endva; va += PAGE_SIZE)
 		pmap_kremove_flags(va);
@@ -795,6 +822,25 @@ sparc64_fake_bustag(int space, bus_addr_t addr, struct bus_space_tag *ptag)
 	ptag->bst_type = space;
 	ptag->bst_bus_barrier = nexus_bus_barrier;
 	return (addr);
+}
+
+/*
+ * Allocate a bus tag.
+ */
+bus_space_tag_t
+sparc64_alloc_bus_tag(void *cookie, struct bus_space_tag *ptag, int type,
+    void *barrier)
+{
+	bus_space_tag_t bt;
+
+	bt = malloc(sizeof(struct bus_space_tag), M_DEVBUF, M_NOWAIT);
+	if (bt == NULL)
+		return (NULL);
+	bt->bst_cookie = cookie;
+	bt->bst_parent = ptag;
+	bt->bst_type = type;
+	bt->bst_bus_barrier = barrier;
+	return (bt);
 }
 
 /*

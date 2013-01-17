@@ -26,6 +26,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include "opt_compat.h"
 #include "opt_umtx_profiling.h"
@@ -299,15 +300,14 @@ umtxq_free(struct umtx_q *uq)
 	free(uq, M_UMTX);
 }
 
-static void
+static inline void
 umtxq_hash(struct umtx_key *key)
 {
 	unsigned n = (uintptr_t)key->info.both.a + key->info.both.b;
 	key->hash = ((n * GOLDEN_RATIO_PRIME) >> UMTX_SHIFTS) % UMTX_CHAINS;
 }
 
-/* XXX inline */
-static struct umtxq_chain *
+static inline struct umtxq_chain *
 umtxq_getchain(struct umtx_key *key)
 {
 	if (key->type <= TYPE_SEM)
@@ -318,8 +318,7 @@ umtxq_getchain(struct umtx_key *key)
 /*
  * Lock a chain.
  */
-/* XXX inline */
-static void
+static inline void
 umtxq_lock(struct umtx_key *key)
 {
 	struct umtxq_chain *uc;
@@ -331,8 +330,7 @@ umtxq_lock(struct umtx_key *key)
 /*
  * Unlock a chain.
  */
-/* XXX inline */
-static void
+static inline void
 umtxq_unlock(struct umtx_key *key)
 {
 	struct umtxq_chain *uc;
@@ -3023,8 +3021,7 @@ sys__umtx_unlock(struct thread *td, struct _umtx_unlock_args *uap)
 	return do_unlock_umtx(td, uap->umtx, td->td_tid);
 }
 
-/* XXX inline */
-int
+inline int
 umtx_copyin_timeout(const void *addr, struct timespec *tsp)
 {
 	int error;
@@ -3371,8 +3368,7 @@ struct timespec32 {
 	uint32_t tv_nsec;
 };
 
-/* XXX inline */
-static int
+static inline int
 umtx_copyin_timeout32(void *addr, struct timespec *tsp)
 {
 	struct timespec32 ts32;

@@ -12,7 +12,7 @@
 *     are bound using the provided bind/unbind functions.
 *
 *
-* $FreeBSD$
+* $MidnightBSD$
 */
 
 #define PIRQ_BASE   0

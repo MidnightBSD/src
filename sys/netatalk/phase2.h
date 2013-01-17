@@ -22,7 +22,7 @@
  *	Ann Arbor, Michigan
  *	+1-313-764-2278
  *	netatalk@umich.edu
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #include <net/if_llc.h>

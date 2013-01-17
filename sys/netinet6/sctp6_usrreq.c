@@ -31,14 +31,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include <netinet/sctp_os.h>
+#ifdef INET6
 #include <sys/proc.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_var.h>
-#if defined(INET6)
+#ifdef INET6
 #include <netinet6/sctp6_var.h>
 #endif
 #include <netinet/sctp_sysctl.h>
@@ -57,7 +58,7 @@ __FBSDID("$FreeBSD$");
 
 #ifdef IPSEC
 #include <netipsec/ipsec.h>
-#if defined(INET6)
+#ifdef INET6
 #include <netipsec/ipsec6.h>
 #endif				/* INET6 */
 #endif				/* IPSEC */
@@ -1354,3 +1355,5 @@ struct pr_usrreqs sctp6_usrreqs = {
 	.pru_sosend = sctp_sosend,
 	.pru_soreceive = sctp_soreceive
 };
+
+#endif

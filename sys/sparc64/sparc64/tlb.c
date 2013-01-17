@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jake Burkholder.
  * All rights reserved.
@@ -26,14 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/tlb.c,v 1.8.20.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "opt_pmap.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/ktr.h>
-#include <sys/linker_set.h>
 #include <sys/pcpu.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
@@ -46,6 +44,7 @@ __FBSDID("$FreeBSD: src/sys/sparc64/sparc64/tlb.c,v 1.8.20.2.2.1 2008/11/25 02:5
 #include <machine/pmap.h>
 #include <machine/smp.h>
 #include <machine/tlb.h>
+#include <machine/vmparam.h>
 
 PMAP_STATS_VAR(tlb_ncontext_demap);
 PMAP_STATS_VAR(tlb_npage_demap);
@@ -80,15 +79,15 @@ tlb_context_demap(struct pmap *pm)
 	 */
 	PMAP_STATS_INC(tlb_ncontext_demap);
 	cookie = ipi_tlb_context_demap(pm);
-	if (pm->pm_active & PCPU_GET(cpumask)) {
+	s = intr_disable();
+	if (CPU_ISSET(PCPU_GET(cpuid), &pm->pm_active)) {
 		KASSERT(pm->pm_context[curcpu] != -1,
 		    ("tlb_context_demap: inactive pmap?"));
-		s = intr_disable();
 		stxa(TLB_DEMAP_PRIMARY | TLB_DEMAP_CONTEXT, ASI_DMMU_DEMAP, 0);
 		stxa(TLB_DEMAP_PRIMARY | TLB_DEMAP_CONTEXT, ASI_IMMU_DEMAP, 0);
-		membar(Sync);
-		intr_restore(s);
+		flush(KERNBASE);
 	}
+	intr_restore(s);
 	ipi_wait(cookie);
 }
 
@@ -101,7 +100,8 @@ tlb_page_demap(struct pmap *pm, vm_offset_t va)
 
 	PMAP_STATS_INC(tlb_npage_demap);
 	cookie = ipi_tlb_page_demap(pm, va);
-	if (pm->pm_active & PCPU_GET(cpumask)) {
+	s = intr_disable();
+	if (CPU_ISSET(PCPU_GET(cpuid), &pm->pm_active)) {
 		KASSERT(pm->pm_context[curcpu] != -1,
 		    ("tlb_page_demap: inactive pmap?"));
 		if (pm == kernel_pmap)
@@ -109,12 +109,11 @@ tlb_page_demap(struct pmap *pm, vm_offset_t va)
 		else
 			flags = TLB_DEMAP_PRIMARY | TLB_DEMAP_PAGE;
 
-		s = intr_disable();
 		stxa(TLB_DEMAP_VA(va) | flags, ASI_DMMU_DEMAP, 0);
 		stxa(TLB_DEMAP_VA(va) | flags, ASI_IMMU_DEMAP, 0);
-		membar(Sync);
-		intr_restore(s);
+		flush(KERNBASE);
 	}
+	intr_restore(s);
 	ipi_wait(cookie);
 }
 
@@ -128,7 +127,8 @@ tlb_range_demap(struct pmap *pm, vm_offset_t start, vm_offset_t end)
 
 	PMAP_STATS_INC(tlb_nrange_demap);
 	cookie = ipi_tlb_range_demap(pm, start, end);
-	if (pm->pm_active & PCPU_GET(cpumask)) {
+	s = intr_disable();
+	if (CPU_ISSET(PCPU_GET(cpuid), &pm->pm_active)) {
 		KASSERT(pm->pm_context[curcpu] != -1,
 		    ("tlb_range_demap: inactive pmap?"));
 		if (pm == kernel_pmap)
@@ -136,13 +136,12 @@ tlb_range_demap(struct pmap *pm, vm_offset_t start, vm_offset_t end)
 		else
 			flags = TLB_DEMAP_PRIMARY | TLB_DEMAP_PAGE;
 
-		s = intr_disable();
 		for (va = start; va < end; va += PAGE_SIZE) {
 			stxa(TLB_DEMAP_VA(va) | flags, ASI_DMMU_DEMAP, 0);
 			stxa(TLB_DEMAP_VA(va) | flags, ASI_IMMU_DEMAP, 0);
-			membar(Sync);
+			flush(KERNBASE);
 		}
-		intr_restore(s);
 	}
+	intr_restore(s);
 	ipi_wait(cookie);
 }

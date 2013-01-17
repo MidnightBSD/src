@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef _NETINET_TCP_H_

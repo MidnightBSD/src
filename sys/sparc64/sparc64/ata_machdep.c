@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Marius Strobl <marius@FreeBSD.org>
  * All rights reserved.
@@ -26,25 +25,24 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/ata_machdep.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <geom/geom_disk.h>
 #include <machine/md_var.h>
 
 void
-sparc64_ad_firmware_geom_adjust(device_t dev, struct disk *disk)
+sparc64_ata_disk_firmware_geom_adjust(struct disk *disk)
 {
 
 	/*
-	 * The Sun disk label only uses 16-bit fields for cylinders,
-	 * heads and sectors so the geometry of large IDE disks has
-	 * to be adjusted.  If the disk is > 32GB at 16 heads and 63
-	 * sectors, the sectors have to be adjusted to 255.  If the
-	 * the disk is even > 128GB, additionally adjust the heads
-	 * to 255.
-	 * XXX the OpenSolaris dad(7D) driver limits the mediasize
-	 * to 128GB.
+	 * The VTOC8 disk label only uses 16-bit fields for cylinders, heads
+	 * and sectors so the geometry of large disks has to be adjusted.
+	 * If the disk is > 32GB at 16 heads and 63 sectors, adjust to 255
+	 * sectors (this matches what the OpenSolaris dad(7D) driver does).
+	 * If the the disk is even > 128GB, additionally adjust the heads to
+	 * 255.  This allows disks up to the 2TB limit of the extended VTOC8.
+	 * XXX the OpenSolaris dad(7D) driver limits the mediasize to 128GB.
 	 */
 	if (disk->d_mediasize > (off_t)65535 * 16 * 63 * disk->d_sectorsize)
 		disk->d_fwsectors = 255;

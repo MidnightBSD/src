@@ -1,7 +1,7 @@
 /*
  * Prototypes for the OSTA functions
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 /*-

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #ifndef _NETINET_SCTP_STRUCTS_H_
 #define _NETINET_SCTP_STRUCTS_H_

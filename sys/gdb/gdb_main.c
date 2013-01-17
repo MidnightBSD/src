@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/gdb/gdb_main.c,v 1.3 2008/12/03 00:25:46 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/gdb/gdb_main.c,v 1.7 2006/05/26 11:52:59 phk Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -45,7 +44,7 @@ __FBSDID("$FreeBSD: src/sys/gdb/gdb_main.c,v 1.7 2006/05/26 11:52:59 phk Exp $")
 static dbbe_init_f gdb_init;
 static dbbe_trap_f gdb_trap;
 
-KDB_BACKEND(gdb, gdb_init, NULL, gdb_trap);
+KDB_BACKEND(gdb, gdb_init, NULL, NULL, gdb_trap);
 
 static struct gdb_dbgport null_gdb_dbgport;
 DATA_SET(gdb_dbgport_set, null_gdb_dbgport);
@@ -96,7 +95,17 @@ gdb_init(void)
 static int
 gdb_trap(int type, int code)
 {
+	jmp_buf jb;
 	struct thread *thr_iter;
+	void *prev_jb;
+
+	prev_jb = kdb_jmpbuf(jb);
+	if (setjmp(jb) != 0) {
+		printf("%s bailing, hopefully back to ddb!\n", __func__);
+		gdb_listening = 0;
+		(void)kdb_jmpbuf(prev_jb);
+		return (1);
+	}
 
 	gdb_listening = 0;
 	/*
@@ -292,5 +301,6 @@ gdb_trap(int type, int code)
 			break;
 		}
 	}
+	(void)kdb_jmpbuf(prev_jb);
 	return (0);
 }

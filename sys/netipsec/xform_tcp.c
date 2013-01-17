@@ -1,4 +1,4 @@
-/*	$FreeBSD$ */
+/*	$MidnightBSD$ */
 
 /*-
  * Copyright (c) 2003 Bruce M. Simpson <bms@spc.org>

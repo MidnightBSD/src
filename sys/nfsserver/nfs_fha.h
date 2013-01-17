@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 void fha_nd_complete(SVCTHREAD *, struct svc_req *);
 SVCTHREAD *fha_assign(SVCTHREAD *, struct svc_req *);

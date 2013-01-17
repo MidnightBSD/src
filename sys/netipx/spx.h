@@ -58,7 +58,7 @@
  *
  *	@(#)spx.h
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef _NETIPX_SPX_H_

@@ -33,8 +33,8 @@
  *	@(#)procfs_ctl.c	8.4 (Berkeley) 6/15/94
  *
  * From:
- *	$Id: procfs_ctl.c,v 1.5 2012-10-09 04:08:14 laffer1 Exp $
- * $FreeBSD$
+ *	$Id: procfs_ctl.c,v 1.6 2013-01-17 23:29:36 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/param.h>

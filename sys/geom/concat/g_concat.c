@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/concat/g_concat.c,v 1.5 2011/12/10 15:46:15 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/geom/concat/g_concat.c,v 1.6 2012/10/06 04:54:38 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/concat/g_concat.c,v 1.29.2.2 2010/10/25 08:23:38 mav Exp $");
+__MBSDID("$FreeBSD: src/sys/geom/concat/g_concat.c,v 1.29.2.2 2010/10/25 08:23:38 mav Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

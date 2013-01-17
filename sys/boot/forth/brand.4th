@@ -22,7 +22,7 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \ 
-\ $MidnightBSD: src/sys/boot/forth/brand.4th,v 1.2 2012/12/29 06:28:45 laffer1 Exp $
+\ $MidnightBSD: src/sys/boot/forth/brand.4th,v 1.3 2012/12/29 06:43:38 laffer1 Exp $
 
 marker task-brand.4th
 
@@ -82,7 +82,7 @@ variable brandY
 		drop exit
 	then
 
-	2dup s" fbsd" compare-insensitive 0= if
+	2dup s" mbsd" compare-insensitive 0= if
 		brandX @ brandY @ mbsd-logo
 		2drop exit
 	then

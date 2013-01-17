@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Jake Burkholder.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/sc_machdep.c,v 1.3.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -58,7 +57,7 @@ static device_method_t sc_methods[] = {
 	DEVMETHOD(device_probe,		sc_probe),
 	DEVMETHOD(device_attach,	sc_attach),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t sc_driver = {

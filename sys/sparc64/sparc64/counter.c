@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 by Thomas Moestl <tmm@FreeBSD.org>.
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/counter.c,v 1.6.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -87,13 +86,12 @@ sparc64_counter_init(const char *name, bus_space_tag_t tag,
 	bus_space_write_8(tag, handle, offset + CTR_CT1 + CTR_LIMIT,
 	    COUNTER_MASK);
 	/* Register as a time counter. */
-	tc = malloc(sizeof(*tc), M_DEVBUF, M_WAITOK);
+	tc = malloc(sizeof(*tc), M_DEVBUF, M_WAITOK | M_ZERO);
 	sc = malloc(sizeof(*sc), M_DEVBUF, M_WAITOK);
 	sc->sc_tag = tag;
 	sc->sc_handle = handle;
 	sc->sc_offset = offset + CTR_CT0;
 	tc->tc_get_timecount = counter_get_timecount;
-	tc->tc_poll_pps = NULL;
 	tc->tc_counter_mask = COUNTER_MASK;
 	tc->tc_frequency = COUNTER_FREQ;
 	tc->tc_name = strdup(name, M_DEVBUF);
@@ -108,6 +106,5 @@ counter_get_timecount(struct timecounter *tc)
 	struct ct_softc *sc;
 
 	sc = tc->tc_priv;
-	return (bus_space_read_8(sc->sc_tag, sc->sc_handle, sc->sc_offset) &
-	    COUNTER_MASK);
+	return (bus_space_read_8(sc->sc_tag, sc->sc_handle, sc->sc_offset));
 }

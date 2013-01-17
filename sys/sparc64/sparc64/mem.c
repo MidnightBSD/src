@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988 University of Utah.
  * Copyright (c) 1982, 1986, 1990 The Regents of the University of California.
@@ -39,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/mem.c,v 1.18.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * Memory special file
@@ -70,9 +69,7 @@ __FBSDID("$FreeBSD: src/sys/sparc64/sparc64/mem.c,v 1.18.2.1.2.1 2008/11/25 02:5
 #include <vm/pmap.h>
 #include <vm/vm_extern.h>
 
-#ifndef SUN4V
 #include <machine/cache.h>
-#endif
 #include <machine/md_var.h>
 #include <machine/pmap.h>
 #include <machine/tlb.h>
@@ -96,8 +93,10 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 	vm_page_t m;
 	int error;
 	int i;
+	uint32_t colors;
 
 	cnt = 0;
+	colors = 1;
 	error = 0;
 	ova = 0;
 
@@ -112,7 +111,7 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 				panic("memrw");
 			continue;
 		}
-		if (minor(dev) == CDEV_MINOR_MEM) {
+		if (dev2unit(dev) == CDEV_MINOR_MEM) {
 			pa = uio->uio_offset & ~PAGE_MASK;
 			if (!is_physical_memory(pa)) {
 				error = EFAULT;
@@ -135,20 +134,16 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 			}
 
 			if (m != NULL) {
-#ifndef SUN4V
-				if (ova == 0)
+				if (ova == 0) {
+					if (dcache_color_ignore == 0)
+						colors = DCACHE_COLORS;
 					ova = kmem_alloc_wait(kernel_map,
-					    PAGE_SIZE * DCACHE_COLORS);
-				if (m->md.color != -1)
+					    PAGE_SIZE * colors);
+				}
+				if (colors != 1 && m->md.color != -1)
 					va = ova + m->md.color * PAGE_SIZE;
 				else
 					va = ova;
-#else
-				if (ova == 0)
-					ova = kmem_alloc_wait(kernel_map,
-					    PAGE_SIZE);
-				va = ova;
-#endif
 				pmap_qenter(va, &m, 1);
 				error = uiomove((void *)(va + off), cnt,
 				    uio);
@@ -159,8 +154,7 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 				    uio);
 			}
 			break;
-		}
-		else if (minor(dev) == CDEV_MINOR_KMEM) {
+		} else if (dev2unit(dev) == CDEV_MINOR_KMEM) {
 			va = trunc_page(uio->uio_offset);
 			eva = round_page(uio->uio_offset + iov->iov_len);
 
@@ -185,15 +179,6 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 		/* else panic! */
 	}
 	if (ova != 0)
-#ifndef SUN4V
-		kmem_free_wakeup(kernel_map, ova, PAGE_SIZE * DCACHE_COLORS);
-#else
-		kmem_free_wakeup(kernel_map, ova, PAGE_SIZE);
-#endif
+		kmem_free_wakeup(kernel_map, ova, PAGE_SIZE * colors);
 	return (error);
-}
-
-void
-dev_mem_md_init(void)
-{
 }

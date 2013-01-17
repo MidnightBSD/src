@@ -6,7 +6,7 @@
  * 
  * Copyright (c) 2004, K A Fraser
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef __ASM_EVTCHN_H__

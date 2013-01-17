@@ -5,7 +5,7 @@
 
 #include <nlm/sm_inter.h>
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 bool_t
 xdr_sm_name(XDR *xdrs, sm_name *objp)

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991 The Regents of the University of California.
  * All rights reserved.
@@ -60,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/intr_machdep.c,v 1.27.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -68,7 +67,6 @@ __FBSDID("$FreeBSD: src/sys/sparc64/sparc64/intr_machdep.c,v 1.27.2.4.2.1 2008/1
 #include <sys/errno.h>
 #include <sys/interrupt.h>
 #include <sys/kernel.h>
-#include <sys/ktr.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/pcpu.h>
@@ -85,12 +83,13 @@ CTASSERT((1 << IV_SHIFT) == sizeof(struct intr_vector));
 
 ih_func_t *intr_handlers[PIL_MAX];
 uint16_t pil_countp[PIL_MAX];
+static uint16_t pil_stray_count[PIL_MAX];
 
 struct intr_vector intr_vectors[IV_MAX];
 uint16_t intr_countp[IV_MAX];
-static u_long intr_stray_count[IV_MAX];
+static uint16_t intr_stray_count[IV_MAX];
 
-static const char *pil_names[] = {
+static const char *const pil_names[] = {
 	"stray",
 	"low",		/* PIL_LOW */
 	"ithrd",	/* PIL_ITHREAD */
@@ -98,8 +97,10 @@ static const char *pil_names[] = {
 	"ast",		/* PIL_AST */
 	"stop",		/* PIL_STOP */
 	"preempt",	/* PIL_PREEMPT */
-	"stray", "stray", "stray", "stray", "stray", "stray",
-	"fast",		/* PIL_FAST */
+	"hardclock",	/* PIL_HARDCLOCK */
+	"stray", "stray", "stray", "stray",
+	"filter",	/* PIL_FILTER */
+	"bridge",	/* PIL_BRIDGE */
 	"tick",		/* PIL_TICK */
 };
 
@@ -112,6 +113,7 @@ static struct mtx intrcnt_lock;
 static int assign_cpu;
 
 static void intr_assign_next_cpu(struct intr_vector *iv);
+static void intr_shuffle_irqs(void *arg __unused);
 #endif
 
 static int intr_assign_cpu(void *arg, u_char cpu);
@@ -169,7 +171,7 @@ static int
 intrcnt_setname(const char *name, int index)
 {
 
-	if (intrnames + (MAXCOMLEN + 1) * index >= eintrnames)
+	if ((MAXCOMLEN + 1) * index >= sintrnames)
 		return (E2BIG);
 	snprintf(intrnames + (MAXCOMLEN + 1) * index, MAXCOMLEN + 1, "%-*s",
 	    MAXCOMLEN, name);
@@ -198,22 +200,32 @@ intr_setup(int pri, ih_func_t *ihf, int vec, iv_func_t *ivf, void *iva)
 static void
 intr_stray_level(struct trapframe *tf)
 {
+	uint64_t level;
 
-	printf("stray level interrupt %ld\n", tf->tf_level);
+	level = tf->tf_level;
+	if (pil_stray_count[level] < MAX_STRAY_LOG) {
+		printf("stray level interrupt %ld\n", level);
+		pil_stray_count[level]++;
+		if (pil_stray_count[level] >= MAX_STRAY_LOG)
+			printf("got %d stray level interrupt %ld's: not "
+			    "logging anymore\n", MAX_STRAY_LOG, level);
+	}
 }
 
 static void
 intr_stray_vector(void *cookie)
 {
 	struct intr_vector *iv;
+	u_int vec;
 
 	iv = cookie;
-	if (intr_stray_count[iv->iv_vec] < MAX_STRAY_LOG) {
-		printf("stray vector interrupt %d\n", iv->iv_vec);
-		intr_stray_count[iv->iv_vec]++;
-		if (intr_stray_count[iv->iv_vec] >= MAX_STRAY_LOG)
-			printf("got %d stray interrupt %d's: not logging "
-			    "anymore\n", MAX_STRAY_LOG, iv->iv_vec);
+	vec = iv->iv_vec;
+	if (intr_stray_count[vec] < MAX_STRAY_LOG) {
+		printf("stray vector interrupt %d\n", vec);
+		intr_stray_count[vec]++;
+		if (intr_stray_count[vec] >= MAX_STRAY_LOG)
+			printf("got %d stray vector interrupt %d's: not "
+			    "logging anymore\n", MAX_STRAY_LOG, vec);
 	}
 }
 
@@ -274,57 +286,9 @@ static void
 intr_execute_handlers(void *cookie)
 {
 	struct intr_vector *iv;
-#ifndef INTR_FILTER
-	struct intr_event *ie;
-	struct intr_handler *ih;
-	int error, thread, ret;
-#endif
 
 	iv = cookie;
-#ifndef INTR_FILTER
-	ie = iv->iv_event;
-	if (iv->iv_ic == NULL || ie == NULL) {
-		intr_stray_vector(iv);
-		return;
-	}
-
-	/* Execute fast interrupt handlers directly. */
-	ret = 0;
-	thread = 0;
-	critical_enter();
-	TAILQ_FOREACH(ih, &ie->ie_handlers, ih_next) {
-		if (ih->ih_filter == NULL) {
-			thread = 1;
-			continue;
-		}
-		MPASS(ih->ih_filter != NULL && ih->ih_argument != NULL);
-		CTR3(KTR_INTR, "%s: executing handler %p(%p)", __func__,
-		    ih->ih_filter, ih->ih_argument);
-		ret = ih->ih_filter(ih->ih_argument);
-		/*
-		 * Wrapper handler special case: see
-		 * i386/intr_machdep.c::intr_execute_handlers()
-		 */
-		if (!thread) {
-			if (ret == FILTER_SCHEDULE_THREAD)
-				thread = 1;
-		}
-	}
-	if (!thread)
-		iv->iv_ic->ic_clear(iv);
-
-	/* Schedule a heavyweight interrupt process. */
-	if (thread)
-		error = intr_event_schedule_thread(ie);
-	else if (TAILQ_EMPTY(&ie->ie_handlers))
-		error = EINVAL;
-	else
-		error = 0;
-	critical_exit();
-	if (error == EINVAL)
-#else
-	if (iv->iv_ic == NULL || intr_event_handle(iv->iv_event, NULL) != 0)
-#endif
+	if (__predict_false(intr_event_handle(iv->iv_event, NULL) != 0))
 		intr_stray_vector(iv);
 }
 
@@ -344,12 +308,8 @@ intr_controller_register(int vec, const struct intr_controller *ic,
 	sx_xunlock(&intr_table_lock);
 	if (ie != NULL)
 		return (EEXIST);
-	error = intr_event_create(&ie, iv, 0, ic->ic_clear,
-#ifdef INTR_FILTER
-	    ic->ic_clear, NULL, intr_assign_cpu, "vec%d:", vec);
-#else
-	    intr_assign_cpu, "vec%d:", vec);
-#endif
+	error = intr_event_create(&ie, iv, 0, vec, NULL, ic->ic_clear,
+	    ic->ic_clear, intr_assign_cpu, "vec%d:", vec);
 	if (error != 0)
 		return (error);
 	sx_xlock(&intr_table_lock);
@@ -374,9 +334,15 @@ inthand_add(const char *name, int vec, driver_filter_t *filt,
 	struct intr_event *ie;
 	struct intr_handler *ih;
 	struct intr_vector *iv;
-	int error, fast;
+	int error, filter;
 
 	if (vec < 0 || vec >= IV_MAX)
+		return (EINVAL);
+	/*
+	 * INTR_BRIDGE filters/handlers are special purpose only, allowing
+	 * them to be shared just would complicate things unnecessarily.
+	 */
+	if ((flags & INTR_BRIDGE) != 0 && (flags & INTR_EXCL) == 0)
 		return (EINVAL);
 	sx_xlock(&intr_table_lock);
 	iv = &intr_vectors[vec];
@@ -394,24 +360,25 @@ inthand_add(const char *name, int vec, driver_filter_t *filt,
 	ic->ic_disable(iv);
 	iv->iv_refcnt++;
 	if (iv->iv_refcnt == 1)
-		intr_setup(filt != NULL ? PIL_FAST : PIL_ITHREAD, intr_fast,
+		intr_setup((flags & INTR_BRIDGE) != 0 ? PIL_BRIDGE :
+		    filt != NULL ? PIL_FILTER : PIL_ITHREAD, intr_fast,
 		    vec, intr_execute_handlers, iv);
 	else if (filt != NULL) {
 		/*
-		 * Check if we need to upgrade from PIL_ITHREAD to PIL_FAST.
+		 * Check if we need to upgrade from PIL_ITHREAD to PIL_FILTER.
 		 * Given that apart from the on-board SCCs and UARTs shared
 		 * interrupts are rather uncommon on sparc64 this sould be
 		 * pretty rare in practice.
 		 */
-		fast = 0;
+		filter = 0;
 		TAILQ_FOREACH(ih, &ie->ie_handlers, ih_next) {
 			if (ih->ih_filter != NULL && ih->ih_filter != filt) {
-				fast = 1;
+				filter = 1;
 				break;
 			}
 		}
-		if (fast == 0)
-			intr_setup(PIL_FAST, intr_fast, vec,
+		if (filter == 0)
+			intr_setup(PIL_FILTER, intr_fast, vec,
 			    intr_execute_handlers, iv);
 	}
 	intr_stray_count[vec] = 0;
@@ -422,7 +389,8 @@ inthand_add(const char *name, int vec, driver_filter_t *filt,
 #endif
 	ic->ic_enable(iv);
 	/* Ensure the interrupt is cleared, it might have triggered before. */
-	ic->ic_clear(iv);
+	if (ic->ic_clear != NULL)
+		ic->ic_clear(iv);
 	sx_xunlock(&intr_table_lock);
 	return (0);
 }
@@ -457,14 +425,38 @@ inthand_remove(int vec, void *cookie)
 	return (error);
 }
 
+/* Add a description to an active interrupt handler. */
+int
+intr_describe(int vec, void *ih, const char *descr)
+{
+	struct intr_vector *iv;
+	int error;
+
+	if (vec < 0 || vec >= IV_MAX)
+		return (EINVAL);
+	sx_xlock(&intr_table_lock);
+	iv = &intr_vectors[vec];
+	if (iv == NULL) {
+		sx_xunlock(&intr_table_lock);
+		return (EINVAL);
+	}
+	error = intr_event_describe_handler(iv->iv_event, ih, descr);
+	if (error) {
+		sx_xunlock(&intr_table_lock);
+		return (error);
+	}
+	intrcnt_updatename(vec, iv->iv_event->ie_fullname, 0);
+	sx_xunlock(&intr_table_lock);
+	return (error);
+}
+
 #ifdef SMP
 /*
  * Support for balancing interrupt sources across CPUs.  For now we just
  * allocate CPUs round-robin.
  */
 
-/* The BSP is always a valid target. */
-static cpumask_t intr_cpus = (1 << 0);
+static cpuset_t intr_cpus;
 static int current_cpu;
 
 static void
@@ -486,7 +478,7 @@ intr_assign_next_cpu(struct intr_vector *iv)
 		current_cpu++;
 		if (current_cpu > mp_maxid)
 			current_cpu = 0;
-	} while (!(intr_cpus & (1 << current_cpu)));
+	} while (!CPU_ISSET(current_cpu, &intr_cpus));
 }
 
 /* Attempt to bind the specified IRQ to the specified CPU. */
@@ -494,13 +486,19 @@ int
 intr_bind(int vec, u_char cpu)
 {
 	struct intr_vector *iv;
+	int error;
 
 	if (vec < 0 || vec >= IV_MAX)
 		return (EINVAL);
+	sx_xlock(&intr_table_lock);
 	iv = &intr_vectors[vec];
-	if (iv == NULL)
+	if (iv == NULL) {
+		sx_xunlock(&intr_table_lock);
 		return (EINVAL);
-	return (intr_event_bind(iv->iv_event, cpu));
+	}
+	error = intr_event_bind(iv->iv_event, cpu);
+	sx_xunlock(&intr_table_lock);
+	return (error);
 }
 
 /*
@@ -516,12 +514,12 @@ intr_add_cpu(u_int cpu)
 	if (bootverbose)
 		printf("INTR: Adding CPU %d as a target\n", cpu);
 
-	intr_cpus |= (1 << cpu);
+	CPU_SET(cpu, &intr_cpus);
 }
 
 /*
  * Distribute all the interrupt sources among the available CPUs once the
- * AP's have been launched.
+ * APs have been launched.
  */
 static void
 intr_shuffle_irqs(void *arg __unused)
@@ -534,7 +532,6 @@ intr_shuffle_irqs(void *arg __unused)
 	if (mp_ncpus == 1)
 		return;
 
-	/* Round-robin assign a CPU to each enabled source. */
 	sx_xlock(&intr_table_lock);
 	assign_cpu = 1;
 	for (i = 0; i < IV_MAX; i++) {
@@ -557,4 +554,11 @@ intr_shuffle_irqs(void *arg __unused)
 }
 SYSINIT(intr_shuffle_irqs, SI_SUB_SMP, SI_ORDER_SECOND, intr_shuffle_irqs,
     NULL);
+#else /* !SMP */
+/* Use an empty stub for compatibility. */
+void
+intr_add_cpu(u_int cpu __unused)
+{
+
+}
 #endif

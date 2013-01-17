@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  * at_rmx.c,v 1.13 1995/05/30 08:09:31 rgrimes Exp
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 /* This code generates debugging traces to the radix code. */

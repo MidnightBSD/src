@@ -1,6 +1,6 @@
 /**************************************************************************
 **
-** $FreeBSD$
+** $MidnightBSD$
 **
 **  Device driver for the   NCR 53C810   PCI-SCSI-Controller.
 **

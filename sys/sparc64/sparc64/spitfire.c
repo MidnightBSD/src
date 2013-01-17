@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Jake Burkholder.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/spitfire.c,v 1.5.20.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "opt_pmap.h"
 
@@ -57,7 +56,7 @@ PMAP_STATS_VAR(spitfire_icache_npage_inval_match);
  * Enable the level 1 caches.
  */
 void
-spitfire_cache_enable(void)
+spitfire_cache_enable(u_int cpu_impl __unused)
 {
 	u_long lsu;
 
@@ -73,9 +72,11 @@ spitfire_cache_flush(void)
 {
 	u_long addr;
 
-	for (addr = 0; addr < cache.dc_size; addr += cache.dc_linesize)
+	for (addr = 0; addr < PCPU_GET(cache.dc_size);
+	    addr += PCPU_GET(cache.dc_linesize))
 		stxa_sync(addr, ASI_DCACHE_TAG, 0);
-	for (addr = 0; addr < cache.ic_size; addr += cache.ic_linesize)
+	for (addr = 0; addr < PCPU_GET(cache.ic_size);
+	    addr += PCPU_GET(cache.ic_linesize))
 		stxa_sync(addr, ASI_ICACHE_TAG, 0);
 }
 
@@ -94,7 +95,8 @@ spitfire_dcache_page_inval(vm_paddr_t pa)
 	PMAP_STATS_INC(spitfire_dcache_npage_inval);
 	target = pa >> (PAGE_SHIFT - DC_TAG_SHIFT);
 	cookie = ipi_dcache_page_inval(tl_ipi_spitfire_dcache_page_inval, pa);
-	for (addr = 0; addr < cache.dc_size; addr += cache.dc_linesize) {
+	for (addr = 0; addr < PCPU_GET(cache.dc_size);
+	    addr += PCPU_GET(cache.dc_linesize)) {
 		tag = ldxa(addr, ASI_DCACHE_TAG);
 		if (((tag >> DC_VALID_SHIFT) & DC_VALID_MASK) == 0)
 			continue;
@@ -122,7 +124,8 @@ spitfire_icache_page_inval(vm_paddr_t pa)
 	PMAP_STATS_INC(spitfire_icache_npage_inval);
 	target = pa >> (PAGE_SHIFT - IC_TAG_SHIFT);
 	cookie = ipi_icache_page_inval(tl_ipi_spitfire_icache_page_inval, pa);
-	for (addr = 0; addr < cache.ic_size; addr += cache.ic_linesize) {
+	for (addr = 0; addr < PCPU_GET(cache.ic_size);
+	    addr += PCPU_GET(cache.ic_linesize)) {
 		__asm __volatile("ldda [%1] %2, %%g0" /*, %g1 */
 		    : "=r" (tag) : "r" (addr), "n" (ASI_ICACHE_TAG));
 		if (((tag >> IC_VALID_SHIFT) & IC_VALID_MASK) == 0)
@@ -137,47 +140,45 @@ spitfire_icache_page_inval(vm_paddr_t pa)
 }
 
 /*
- * Flush all non-locked mappings from the TLB.
+ * Flush all non-locked mappings from the TLBs.
  */
 void
 spitfire_tlb_flush_nonlocked(void)
 {
-	int i;
+	u_int i;
+	u_int slot;
 
 	for (i = 0; i < SPITFIRE_TLB_ENTRIES; i++) {
-		if ((ldxa(TLB_DAR_SLOT(i), ASI_DTLB_DATA_ACCESS_REG) &
-		    TD_L) == 0)
-			stxa_sync(TLB_DAR_SLOT(i),
-			    ASI_DTLB_DATA_ACCESS_REG, 0);
-		if ((ldxa(TLB_DAR_SLOT(i), ASI_ITLB_DATA_ACCESS_REG) &
-		    TD_L) == 0)
-			stxa_sync(TLB_DAR_SLOT(i),
-			    ASI_ITLB_DATA_ACCESS_REG, 0);
+		slot = TLB_DAR_SLOT(TLB_DAR_T32, i);
+		if ((ldxa(slot, ASI_DTLB_DATA_ACCESS_REG) & TD_L) == 0)
+			stxa_sync(slot, ASI_DTLB_DATA_ACCESS_REG, 0);
+		if ((ldxa(slot, ASI_ITLB_DATA_ACCESS_REG) & TD_L) == 0)
+			stxa_sync(slot, ASI_ITLB_DATA_ACCESS_REG, 0);
 	}
 }
 
 /*
- * Flush all user mappings from the TLB.
+ * Flush all user mappings from the TLBs.
  */
 void
 spitfire_tlb_flush_user(void)
 {
 	u_long data;
 	u_long tag;
-	int i;
+	u_int i;
+	u_int slot;
 
 	for (i = 0; i < SPITFIRE_TLB_ENTRIES; i++) {
-		data = ldxa(TLB_DAR_SLOT(i), ASI_DTLB_DATA_ACCESS_REG);
-		tag = ldxa(TLB_DAR_SLOT(i), ASI_DTLB_TAG_READ_REG);
+		slot = TLB_DAR_SLOT(TLB_DAR_T32, i);
+		data = ldxa(slot, ASI_DTLB_DATA_ACCESS_REG);
+		tag = ldxa(slot, ASI_DTLB_TAG_READ_REG);
 		if ((data & TD_V) != 0 && (data & TD_L) == 0 &&
 		    TLB_TAR_CTX(tag) != TLB_CTX_KERNEL)
-			stxa_sync(TLB_DAR_SLOT(i),
-			    ASI_DTLB_DATA_ACCESS_REG, 0);
-		data = ldxa(TLB_DAR_SLOT(i), ASI_ITLB_DATA_ACCESS_REG);
-		tag = ldxa(TLB_DAR_SLOT(i), ASI_ITLB_TAG_READ_REG);
+			stxa_sync(slot, ASI_DTLB_DATA_ACCESS_REG, 0);
+		data = ldxa(slot, ASI_ITLB_DATA_ACCESS_REG);
+		tag = ldxa(slot, ASI_ITLB_TAG_READ_REG);
 		if ((data & TD_V) != 0 && (data & TD_L) == 0 &&
 		    TLB_TAR_CTX(tag) != TLB_CTX_KERNEL)
-			stxa_sync(TLB_DAR_SLOT(i),
-			    ASI_ITLB_DATA_ACCESS_REG, 0);
+			stxa_sync(slot, ASI_ITLB_DATA_ACCESS_REG, 0);
 	}
 }

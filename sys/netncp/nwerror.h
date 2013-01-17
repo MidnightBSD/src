@@ -1,7 +1,7 @@
 /*
  * NetWare requestor error codes, they taken from NDK
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 #ifndef _NETNCP_NWERROR_H_
 #define _NETNCP_NWERROR_H_

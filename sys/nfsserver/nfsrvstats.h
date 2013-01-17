@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfs.h	8.4 (Berkeley) 5/1/95
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef _NFSSERVER_NFSRVSTATS_H_

@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsproto.h  8.2 (Berkeley) 3/30/95
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef _NFS_NFSPROTO_H_

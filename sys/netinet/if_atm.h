@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 /*      $NetBSD: if_atm.h,v 1.2 1996/07/03 17:17:17 chuck Exp $       */
 
 /*-

@@ -31,8 +31,8 @@
  */
 
 /*
- * $FreeBSD$
- * $Id: netmap.h,v 1.1.1.1 2012-07-21 15:17:28 laffer1 Exp $
+ * $MidnightBSD$
+ * $Id: netmap.h,v 1.2 2013-01-17 23:29:37 laffer1 Exp $
  *
  * Definitions of constants and the structures used by the netmap
  * framework, for the part visible to both kernel and userspace.

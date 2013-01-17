@@ -47,7 +47,7 @@
  *	+1-313-764-2278
  *	netatalk@umich.edu
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #include "opt_atalk.h"

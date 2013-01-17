@@ -23,10 +23,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
-// $Id: binstream.h,v 1.3 2012-10-06 19:34:53 laffer1 Exp $
+// $Id: binstream.h,v 1.4 2013-01-17 23:29:37 laffer1 Exp $
 
 
 #ifndef _BIN_STREAM_

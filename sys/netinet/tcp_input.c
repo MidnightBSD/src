@@ -48,7 +48,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include "opt_ipfw.h"		/* for ipfw_fwd	*/
 #include "opt_inet.h"
@@ -385,8 +385,7 @@ cc_conn_init(struct tcpcb *tp)
 		CC_ALGO(tp)->conn_init(tp->ccv);
 }
 
-/* XXX: inline */
-void
+void inline
 cc_cong_signal(struct tcpcb *tp, struct tcphdr *th, uint32_t type)
 {
 	INP_WLOCK_ASSERT(tp->t_inpcb);

@@ -24,10 +24,10 @@
  * SUCH DAMAGE.
  */
 
-// $Id: binstream.c,v 1.3 2012-10-06 19:34:53 laffer1 Exp $
+// $Id: binstream.c,v 1.4 2013-01-17 23:29:37 laffer1 Exp $
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/endian.h>
 #include <sys/param.h>

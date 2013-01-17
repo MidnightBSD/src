@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $FreeBSD$
+# $MidnightBSD$
 
 use strict;
 

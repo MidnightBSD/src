@@ -25,7 +25,7 @@
  */
 
 /*
- * $FreeBSD$
+ * $MidnightBSD$
  */
 #ifdef _KERNEL
 #include <sys/malloc.h>

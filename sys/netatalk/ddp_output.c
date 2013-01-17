@@ -21,7 +21,7 @@
  *	netatalk@itd.umich.edu
  */
 
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 #include <sys/param.h>
 #include <sys/systm.h>

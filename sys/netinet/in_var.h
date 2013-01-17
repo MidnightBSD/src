@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in_var.h	8.2 (Berkeley) 1/9/95
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef _NETINET_IN_VAR_H_
@@ -159,14 +159,16 @@ do { \
 #define IFP_TO_IA(ifp, ia)						\
 	/* struct ifnet *ifp; */					\
 	/* struct in_ifaddr *ia; */					\
-{									\
+do {									\
+	IN_IFADDR_RLOCK();						\
 	for ((ia) = TAILQ_FIRST(&V_in_ifaddrhead);			\
 	    (ia) != NULL && (ia)->ia_ifp != (ifp);			\
 	    (ia) = TAILQ_NEXT((ia), ia_link))				\
 		continue;						\
 	if ((ia) != NULL)						\
 		ifa_ref(&(ia)->ia_ifa);					\
-}
+	IN_IFADDR_RUNLOCK();						\
+} while (0)
 #endif
 
 /*

@@ -27,7 +27,7 @@
 /*
  * internal dummynet APIs.
  *
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 #ifndef _IP_DN_PRIVATE_H
