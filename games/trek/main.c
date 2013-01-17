@@ -38,7 +38,6 @@
 
 # include	"getpar.h"
 # include	"trek.h"
-# include	<sgtty.h>
 
 # define	PRIO		00	/* default priority */
 
@@ -151,7 +150,6 @@ main(int argc, char **argv)
 	int			prio;
 	int		ac;
 	char		**av;
-	struct	sgttyb		argp;
 
 	/* revoke */
 	setgid(getgid());
@@ -162,11 +160,7 @@ main(int argc, char **argv)
 	srandomdev();
 	opencode = 'w';
 	prio = PRIO;
-	if (ioctl(1, TIOCGETP, &argp) == 0)
-	{
-		if ((argp.sg_ispeed ) < B1200)
-			Etc.fast++;
-	}
+	Etc.fast = 1; /* assume fast path */
 	while (ac > 1 && av[0][0] == '-')
 	{
 		switch (av[0][1])
