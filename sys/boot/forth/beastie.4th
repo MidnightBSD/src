@@ -24,7 +24,7 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \ 
-\ $MidnightBSD: src/sys/boot/forth/beastie.4th,v 1.5 2012/12/29 06:35:45 laffer1 Exp $
+\ $MidnightBSD: src/sys/boot/forth/beastie.4th,v 1.6 2013/01/17 23:29:35 laffer1 Exp $
 
 marker task-beastie.4th
 
@@ -126,7 +126,7 @@ variable logoY
 
 : orb-logo ( x y -- ) \ color Orb mascot (15 rows x 30 columns)
 
-	3 + \ beastie adjustment (see `fbsdbw-logo' comments above)
+	3 + \ beastie adjustment (see `mbsdbw-logo' comments above)
 
 	2dup at-xy ."  [31m```                        [31;1m`[31m" 1+
 	2dup at-xy ." s` `.....---...[31;1m....--.```   -/[31m" 1+
@@ -150,7 +150,7 @@ variable logoY
 
 : orbbw-logo ( x y -- ) \ B/W Orb mascot (15 rows x 32 columns)
 
-	3 + \ beastie adjustment (see `fbsdbw-logo' comments above)
+	3 + \ beastie adjustment (see `mbsdbw-logo' comments above)
 
 	2dup at-xy ."  ```                        `" 1+
 	2dup at-xy ." s` `.....---.......--.```   -/" 1+
@@ -181,7 +181,7 @@ variable logoY
 \ 	NAME        DESCRIPTION
 \ 	beastie     Color ``Helper Daemon'' mascot (19 rows x 34 columns)
 \ 	beastiebw   B/W ``Helper Daemon'' mascot (19 rows x 34 columns)
-\ 	fbsdbw      "FreeBSD" logo in B/W (13 rows x 21 columns)
+\ 	mbsdbw      "MidnightBSD" logo in B/W (13 rows x 21 columns)
 \ 	orb         Color ``Orb'' mascot (15 rows x 30 columns)
 \ 	orbbw       B/W ``Orb'' mascot (15 rows x 32 columns) (default)
 \ 
@@ -219,8 +219,8 @@ variable logoY
 		logoX @ logoY @ beastiebw-logo
 		2drop exit
 	then
-	2dup s" fbsdbw" compare-insensitive 0= if
-		logoX @ logoY @ fbsdbw-logo
+	2dup s" mbsdbw" compare-insensitive 0= if
+		logoX @ logoY @ mbsdbw-logo
 		2drop exit
 	then
 	2dup s" orb" compare-insensitive 0= if

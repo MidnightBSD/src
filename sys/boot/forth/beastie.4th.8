@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/sys/boot/forth/beastie.4th.8,v 1.2 2012/12/29 06:36:20 laffer1 Exp $
 .\"
 .Dd May 16, 2011
 .Dt BEASTIE.4TH 8
@@ -69,7 +69,7 @@ variable in
 to one of
 .Dq Li beastie ,
 .Dq Li beastiebw ,
-.Dq Li fbsdbw ,
+.Dq Li mbsdbw ,
 .Dq Li orb ,
 and
 .Dq Li orbbw
@@ -103,7 +103,7 @@ The environment variables that effect its behavior are:
 .Bl -tag -width bootfile -offset indent
 .It Va loader_logo
 Selects the desired logo in the beastie boot menu. Possible values are:
-.Dq Li fbsdbw ,
+.Dq Li mbsdbw ,
 .Dq Li beastie ,
 .Dq Li beastiebw ,
 .Dq Li orb ,

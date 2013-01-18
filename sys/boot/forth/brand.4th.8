@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/sys/boot/forth/brand.4th.8,v 1.2 2012/12/29 06:28:45 laffer1 Exp $
 .\"
 .Dd May 18, 2011
 .Dt BRAND.4TH 8
@@ -65,7 +65,7 @@ The brand that is drawn is configured by setting the
 variable in
 .Xr loader.conf 5
 to one of
-.Dq Li fbsd
+.Dq Li mbsd
 (the default) or
 .Dq Li none .
 .Pp
@@ -82,7 +82,7 @@ The environment variables that effect its behavior are:
 .Bl -tag -width bootfile -offset indent
 .It Va loader_brand
 Selects the desired brand in the beastie boot menu. Possible values are:
-.Dq Li fbsd
+.Dq Li mbsd
 (default) or
 .Dq Li none .
 .It Va loader_brand_x
@@ -107,7 +107,7 @@ Set FreeBSD brand in
 .Xr loader.conf 5 :
 .Pp
 .Bd -literal -offset indent -compact
-loader_brand="fbsd"
+loader_brand="mbsd"
 .Ed
 .Sh SEE ALSO
 .Xr loader.conf 5 ,
