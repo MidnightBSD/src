@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/bsdinstall/distfetch/distfetch.c,v 1.1 2011/12/24 06:17:36 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/bsdinstall/distfetch/distfetch.c,v 1.2 2011/02/21 14:28:31 nwhitehorn Exp $
  */
 
@@ -38,9 +38,16 @@ static int fetch_files(int nfiles, char **urls);
 int
 main(void)
 {
-	char *diststring = strdup(getenv("DISTRIBUTIONS"));
+	char *diststring;
 	char **urls;
 	int i, nfetched, ndists = 0;
+
+	if (getenv("DISTRIBUTIONS") == NULL) {
+		fprintf(stderr, "DISTRIBUTIONS variable is not set\n");
+		return (1);
+	}
+
+	diststring = strdup(getenv("DISTRIBUTIONS"));
 	for (i = 0; diststring[i] != 0; i++)
 		if (isspace(diststring[i]) && !isspace(diststring[i+1]))
 			ndists++;
@@ -49,6 +56,7 @@ main(void)
 	urls = calloc(ndists, sizeof(const char *));
 	if (urls == NULL) {
 		fprintf(stderr, "Out of memory!\n");
+		free(diststring);
 		return (1);
 	}
 
