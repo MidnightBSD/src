@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/usr.sbin/bsdinstall/partedit/gpart_ops.c,v 1.2 2012/01/26 04:11:44 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/bsdinstall/partedit/gpart_ops.c,v 1.3 2012/01/27 04:53:26 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/bsdinstall/partedit/gpart_ops.c,v 1.10 2011/10/23 16:57:10 nwhitehorn Exp $
  */
 
@@ -88,6 +88,12 @@ newfs_command(const char *fstype, char *command, int use_default)
 			    "of version 2 (not recommended)", 0 },
 			{"SU", "Softupdates",
 			    "Enable softupdates (default)", 1 },
+			{"SUJ", "Softupdates journaling",
+			    "Enable file system journaling (default - "
+			    "turn off for SSDs)", 1 },
+			{"TRIM", "Enable SSD TRIM support",
+			    "Enable TRIM support, useful on solid-state drives",
+			    0 },
 		};
 
 		if (!use_default) {
@@ -107,6 +113,10 @@ newfs_command(const char *fstype, char *command, int use_default)
 				strcat(command, "-O1 ");
 			else if (strcmp(items[i].name, "SU") == 0)
 				strcat(command, "-U ");
+			else if (strcmp(items[i].name, "SUJ") == 0)
+				strcat(command, "-j ");
+			else if (strcmp(items[i].name, "TRIM") == 0)
+				strcat(command, "-t ");
 		}
 	} else if (strcmp(fstype, "fat32") == 0 || strcmp(fstype, "efi") == 0) {
 		int i;
@@ -136,6 +146,8 @@ newfs_command(const char *fstype, char *command, int use_default)
 				strcat(command, "-F 32 ");
 			else if (strcmp(items[i].name, "FAT16") == 0)
 				strcat(command, "-F 16 ");
+			else if (strcmp(items[i].name, "SUJ") == 0)
+				strcat(command, "-F 12 ");
 		}
 	} else {
 		if (!use_default)
@@ -283,7 +295,7 @@ gpart_bootcode(struct ggeom *gp)
 		return;
 
 	bootfd = open(bootcode, O_RDONLY);
-	if (bootfd <= 0) {
+	if (bootfd < 0) {
 		dialog_msgbox("Bootcode Error", strerror(errno), 0, 0,
 		    TRUE);
 		return;

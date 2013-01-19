@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/bsdinstall/partedit/diskeditor.c,v 1.1 2011/12/24 06:17:36 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/bsdinstall/partedit/diskeditor.c,v 1.3 2011/10/07 01:40:30 nwhitehorn Exp $
  */
 
@@ -75,7 +75,7 @@ diskeditor_show(const char *title, const char *cprompt,
 	int x, y;
 	int i;
 	int height, width, min_width;
-	int partlist_height, partlist_width, min_partlist_width;
+	int partlist_height, partlist_width;
 	int cur_scroll = 0;
 	int key, fkey;
 	int cur_button = 0, cur_part = 0;
@@ -103,7 +103,6 @@ diskeditor_show(const char *title, const char *cprompt,
 	min_width = 50;
 	height = width = 0;
 	partlist_height = 10;
-	min_partlist_width = 0;
 	dlg_tab_correct_str(prompt);
 	dlg_button_layout(buttons, &min_width);
 	dlg_auto_size(title, prompt, &height, &width, 2, min_width);

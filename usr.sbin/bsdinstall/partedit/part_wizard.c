@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/usr.sbin/bsdinstall/partedit/part_wizard.c,v 1.1 2011/12/24 06:17:36 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/bsdinstall/partedit/part_wizard.c,v 1.2 2012/01/27 04:53:26 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/bsdinstall/partedit/part_wizard.c,v 1.6 2011/10/07 01:40:30 nwhitehorn Exp $
  */
 
@@ -295,8 +295,6 @@ wizard_makeparts(struct gmesh *mesh, const char *disk)
 	struct gmesh submesh;
 	struct gclass *classp;
 	struct ggeom *gp;
-	struct gconfig *gc;
-	const char *scheme;
 	struct gprovider *pp;
 	intmax_t swapsize, available;
 	char swapsizestr[10], rootsizestr[10];
@@ -309,10 +307,6 @@ wizard_makeparts(struct gmesh *mesh, const char *disk)
 	LIST_FOREACH(gp, &classp->lg_geom, lg_geom) 
 		if (strcmp(gp->lg_name, disk) == 0)
 			break;
-
-	LIST_FOREACH(gc, &gp->lg_config, lg_config) 
-		if (strcmp(gc->lg_name, "scheme") == 0) 
-			scheme = gc->lg_val;
 
 	pp = provider_for_name(mesh, disk);
 
