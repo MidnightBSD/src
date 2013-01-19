@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/usr.sbin/bsdinstall/distextract/distextract.c,v 1.1 2011/12/24 06:17:36 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/bsdinstall/distextract/distextract.c,v 1.2 2012/01/14 14:18:54 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/bsdinstall/distextract/distextract.c,v 1.4 2011/03/13 18:26:16 nwhitehorn Exp $
  */
 
@@ -39,9 +39,16 @@ static int extract_files(int nfiles, const char **files);
 int
 main(void)
 {
-	char *diststring = strdup(getenv("DISTRIBUTIONS"));
+	char *diststring;
 	const char **dists;
 	int i, retval, ndists = 0;
+
+	if (getenv("DISTRIBUTIONS") == NULL) {
+		fprintf(stderr, "DISTRIBUTIONS variable is not set\n");
+		return (1);
+	}
+
+	diststring = strdup(getenv("DISTRIBUTIONS"));
 	for (i = 0; diststring[i] != 0; i++)
 		if (isspace(diststring[i]) && !isspace(diststring[i+1]))
 			ndists++;
@@ -50,6 +57,7 @@ main(void)
 	dists = calloc(ndists, sizeof(const char *));
 	if (dists == NULL) {
 		fprintf(stderr, "Out of memory!\n");
+		free(diststring);
 		return (1);
 	}
 
@@ -133,7 +141,7 @@ count_files(const char *file)
 	file_count = 0;
 	while (archive_read_next_header(archive, &entry) == ARCHIVE_OK)
 		file_count++;
-	archive_read_finish(archive);
+	archive_read_free(archive);
 
 	return (file_count);
 }
@@ -227,7 +235,7 @@ extract_files(int nfiles, const char **files)
 			return (err);
 		}
 
-		archive_read_finish(archive);
+		archive_read_free(archive);
 	}
 
 	return (0);
