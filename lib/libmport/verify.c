@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/verify.c,v 1.6 2012/01/25 04:46:51 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/verify.c,v 1.7 2012/01/26 02:17:23 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -89,8 +89,12 @@ mport_verify_package(mportInstance *mport, mportPackageMeta *pack) {
 				if (S_ISREG(st.st_mode)) {
 					if (MD5File(file, md5) == NULL) 
 						mport_call_msg_cb(mport, "Can't md5 %s: %s", file, strerror(errno));
-					
-					if (strcmp(md5, checksum) != 0) 
+
+					if (md5 == NULL)
+						mport_call_msg_cb(mport, "Destination checksum could not be computed %s", file);
+					else if (checksum == NULL)
+						mport_call_msg_cb(mport, "Source checksum missing %s", file);
+					else if (strcmp(md5, checksum) != 0) 
 						mport_call_msg_cb(mport, "Checksum mismatch: %s", file);
 				}
 				
