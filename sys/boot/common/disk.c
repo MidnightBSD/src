@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/boot/common/disk.c,v 1.2 2012/12/29 04:58:20 laffer1 Exp $");
 
 /*
  * MBR/GPT partitioned disk device handling.
@@ -89,6 +89,10 @@ static uuid_t freebsd_boot = GPT_ENT_TYPE_FREEBSD_BOOT;
 static uuid_t freebsd_ufs = GPT_ENT_TYPE_FREEBSD_UFS;
 static uuid_t freebsd_swap = GPT_ENT_TYPE_FREEBSD_SWAP;
 static uuid_t freebsd_zfs = GPT_ENT_TYPE_FREEBSD_ZFS;
+static uuid_t midnightbsd_boot = GPT_ENT_TYPE_MIDNIGHTBSD_BOOT;
+static uuid_t midnightbsd_ufs = GPT_ENT_TYPE_MIDNIGHTBSD_UFS;
+static uuid_t midnightbsd_swap = GPT_ENT_TYPE_MIDNIGHTBSD_SWAP;
+static uuid_t midnightbsd_zfs = GPT_ENT_TYPE_MIDNIGHTBSD_ZFS;
 static uuid_t ms_basic_data = GPT_ENT_TYPE_MS_BASIC_DATA;
 
 #endif
@@ -626,7 +630,9 @@ disk_bestgpt(struct gpt_part *gpt, int ngpt)
 			pref = PREF_DOS;
 		/* FreeBSD */
 		else if (uuid_equal(&gp->gp_type, &freebsd_ufs, NULL) ||
-		         uuid_equal(&gp->gp_type, &freebsd_zfs, NULL))
+		         uuid_equal(&gp->gp_type, &freebsd_zfs, NULL) ||
+			 uuid_equal(&gp->gp_type, &midnightbsd_ufs, NULL) ||
+			 uuid_equal(&gp->gp_type, &midnightbsd_zfs, NULL))
 			pref = PREF_FBSD;
 		else
 			pref = PREF_NONE;
@@ -716,6 +722,14 @@ disk_printgptpart(struct disk_devdesc *dev, struct gpt_part *gp,
 		sprintf(line, "%s: EFI         %s\n", prefix, stats);
 	else if (uuid_equal(&gp->gp_type, &ms_basic_data, NULL))
 		sprintf(line, "%s: FAT/NTFS    %s\n", prefix, stats);
+	else if (uuid_equal(&gp->gp_type, &midnightbsd_boot, NULL))
+		sprintf(line, "%s: MidnightBSD boot%s\n", prefix, stats);
+	else if (uuid_equal(&gp->gp_type, &midnightbsd_ufs, NULL))
+		sprintf(line, "%s: MidnightBSD UFS %s\n", prefix, stats);
+	else if (uuid_equal(&gp->gp_type, &midnightbsd_zfs, NULL))
+		sprintf(line, "%s: MidnightBSD ZFS %s\n", prefix, stats);
+	else if (uuid_equal(&gp->gp_type, &midnightbsd_swap, NULL))
+		sprintf(line, "%s: MidnightBSD swap%s\n", prefix, stats);
 	else if (uuid_equal(&gp->gp_type, &freebsd_boot, NULL))
 		sprintf(line, "%s: FreeBSD boot%s\n", prefix, stats);
 	else if (uuid_equal(&gp->gp_type, &freebsd_ufs, NULL))
