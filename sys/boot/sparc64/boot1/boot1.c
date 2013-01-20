@@ -16,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/boot/sparc64/boot1/boot1.c,v 1.2 2012/12/29 04:58:21 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/dirent.h>
@@ -340,10 +340,10 @@ main(int ac, char **av)
 	}
 
 #ifdef ZFSBOOT
-	printf(" \n>> FreeBSD/sparc64 ZFS boot block\n    Boot path:   %s\n",
+	printf(" \n>> MidnightBSD/sparc64 ZFS boot block\n    Boot path:   %s\n",
 	    bootpath);
 #else
-	printf(" \n>> FreeBSD/sparc64 boot block\n    Boot path:   %s\n"
+	printf(" \n>> MidnightBSD/sparc64 boot block\n    Boot path:   %s\n"
 	    "   Boot loader: %s\n", "", bootpath, path);
 #endif
 

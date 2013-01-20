@@ -14,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/boot/i386/zfsboot/zfsboot.c,v 1.2 2012/12/29 04:58:21 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -575,7 +575,7 @@ main(void)
 
     for (;;) {
 	if (!autoboot || !OPT_CHECK(RBX_QUIET)) {
-	    printf("\nFreeBSD/x86 boot\n");
+	    printf("\nMidnightBSD/x86 boot\n");
 	    if (zfs_rlookup(spa, zfsmount.rootobj, rootname) != 0)
 		printf("Default: %s:<0x%llx>:%s\n"
 		       "boot: ",
