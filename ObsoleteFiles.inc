@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/ObsoleteFiles.inc,v 1.25.2.3 2006/02/16 07:25:23 avatar Exp $
-# $MidnightBSD: src/ObsoleteFiles.inc,v 1.27 2012/01/04 02:22:01 laffer1 Exp $
+# $MidnightBSD: src/ObsoleteFiles.inc,v 1.28 2013/01/21 02:22:51 laffer1 Exp $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -16,6 +16,11 @@
 #
 
 #20130120
+OLD_FILES+=etc/auth.conf
+OLD_FILES+=usr/share/examples/etc/auth.conf
+OLD_FILES+=usr/share/man/man3/auth.3.gz
+OLD_FILES+=usr/share/man/man5/auth.conf.5.gz
+OLD_FILES+=usr/include/utmp.h
 OLD_FILES+=usr/include/sys/kse.h
 OLD_FILES+=usr/lib/libkse.so
 OLD_LIBS+=usr/lib/libkse.so.3
