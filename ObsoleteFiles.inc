@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/ObsoleteFiles.inc,v 1.25.2.3 2006/02/16 07:25:23 avatar Exp $
-# $MidnightBSD: src/ObsoleteFiles.inc,v 1.26 2011/06/12 19:15:26 laffer1 Exp $
+# $MidnightBSD: src/ObsoleteFiles.inc,v 1.27 2012/01/04 02:22:01 laffer1 Exp $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -15,6 +15,19 @@
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
 
+#20130120
+OLD_FILES+=usr/include/sys/kse.h
+OLD_FILES+=usr/lib/libkse.so
+OLD_LIBS+=usr/lib/libkse.so.3
+OLD_FILES+=usr/share/man/man2/kse.2.gz
+OLD_FILES+=usr/share/man/man2/kse_create.2.gz
+OLD_FILES+=usr/share/man/man2/kse_exit.2.gz
+OLD_FILES+=usr/share/man/man2/kse_release.2.gz
+OLD_FILES+=usr/share/man/man2/kse_switchin.2.gz
+OLD_FILES+=usr/share/man/man2/kse_thr_interrupt.2.gz
+OLD_FILES+=usr/share/man/man2/kse_wakeup.2.gz
+OLD_FILES+=usr/lib32/libkse.so
+OLD_LIBS+=usr/lib32/libkse.so.3
 #20120103:
 OLD_FILES+=usr/sbin/pkg_add
 OLD_FILES+=usr/sbin/pkg_check
@@ -3358,11 +3371,6 @@ OLD_FILES+=usr/share/man/man8/sunlabel.8.gz
 .endif
 OLD_FILES+=usr/share/man/man4/card.4.gz
 OLD_FILES+=usr/share/man/man4/oldcard.4.gz
-.if ${DEFAULT_THREAD_LIB} != "libkse" && ${MK_LIBTHR} != "no"
-OLD_FILES+=usr/lib/libkse.a
-OLD_FILES+=usr/lib/libkse_p.a
-OLD_FILES+=usr/lib/libkse_pic.a
-.endif
 OLD_FILES+=etc/cached.conf
 OLD_FILES+=etc/rc.d/cached
 OLD_FILES+=usr/sbin/cached
@@ -3768,11 +3776,6 @@ OLD_FILES+=usr/share/man/man1/sasc.1.gz
 OLD_FILES+=usr/share/man/man1/sgsc.1.gz
 OLD_FILES+=usr/share/man/man4/i386/stl.4.gz
 OLD_FILES+=usr/share/man/man8/raidctl.8.gz
-.if ${TARGET_ARCH} != "sparc64"
-# 20040130: libkse renamed to libpthread
-OLD_FILES+=usr/lib/libkse.a
-OLD_FILES+=usr/lib/libkse.so
-.endif
 # 200XYYZZ: /lib transition clitches
 OLD_FILES+=lib/libalias.so
 OLD_FILES+=lib/libatm.so
