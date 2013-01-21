@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$MidnightBSD: src/sys/kern/subr_smp.c,v 1.6 2012/10/09 04:08:16 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -146,7 +146,7 @@ mp_start(void *dummy)
 	}
 
 	cpu_mp_start();
-	printf("FreeBSD/SMP: Multiprocessor System Detected: %d CPUs\n",
+	printf("MidnightBSD/SMP: Multiprocessor System Detected: %d CPUs\n",
 	    mp_ncpus);
 	cpu_mp_announce();
 }
