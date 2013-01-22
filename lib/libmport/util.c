@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.31 2012/04/10 22:11:33 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.32 2012/09/02 19:26:23 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -478,6 +478,8 @@ int mport_decompress_bzip2(const char *input, const char *output)
   } else {
     BZ2_bzReadClose(&bzerror, b);
   }
+
+  fclose(fout);
 
   return MPORT_OK;
 }

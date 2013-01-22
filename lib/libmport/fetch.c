@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/fetch.c,v 1.9 2011/08/25 18:10:19 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/fetch.c,v 1.10 2011/12/24 05:55:12 laffer1 Exp $");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -99,8 +99,8 @@ mport_fetch_index(mportInstance *mport)
 
 /* mport_fetch_bootstrap_index(mportInstance *mport)
  *
- * Fetches the index for the bootstrap site.	The index need not be loaded for this 
- * to be used.
+ * Fetches the index for the bootstrap site. The index need 
+ * not be loaded for this to be used.
  */
 int
 mport_fetch_bootstrap_index(mportInstance *mport)

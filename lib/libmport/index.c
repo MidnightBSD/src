@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/index.c,v 1.16 2011/10/26 13:22:45 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/index.c,v 1.17 2012/01/26 02:16:54 laffer1 Exp $");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -87,6 +87,9 @@ mport_index_load(mportInstance *mport)
   } else {
     if (mport_fetch_bootstrap_index(mport) != MPORT_OK)
       RETURN_CURRENT_ERROR;
+
+    if (!mport_file_exists(MPORT_INDEX_FILE))
+      RETURN_ERROR(MPORT_ERR_FATAL, "Index file could not be extracted");
     
     if (mport_db_do(mport->db, "ATTACH %Q AS idx", MPORT_INDEX_FILE) != MPORT_OK)
       RETURN_CURRENT_ERROR;
