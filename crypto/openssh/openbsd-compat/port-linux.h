@@ -1,4 +1,4 @@
-/* $Id: port-linux.h,v 1.3 2011-02-04 14:36:14 laffer1 Exp $ */
+/* $Id: port-linux.h,v 1.4 2013-01-22 13:47:20 laffer1 Exp $ */
 
 /*
  * Copyright (c) 2006 Damien Miller <djm@openbsd.org>
@@ -24,6 +24,7 @@ int ssh_selinux_enabled(void);
 void ssh_selinux_setup_pty(char *, const char *);
 void ssh_selinux_setup_exec_context(char *);
 void ssh_selinux_change_context(const char *);
+void ssh_selinux_setfscreatecon(const char *);
 #endif
 
 #ifdef LINUX_OOM_ADJUST

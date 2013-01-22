@@ -1,4 +1,4 @@
-/* $Id: port-linux.c,v 1.3 2011-02-04 14:36:14 laffer1 Exp $ */
+/* $Id: port-linux.c,v 1.4 2013-01-22 13:47:20 laffer1 Exp $ */
 
 /*
  * Copyright (c) 2005 Daniel Walsh <dwalsh@redhat.com>
@@ -205,6 +205,22 @@ ssh_selinux_change_context(const char *newname)
 	xfree(oldctx);
 	xfree(newctx);
 }
+
+void
+ssh_selinux_setfscreatecon(const char *path)
+{
+	security_context_t context;
+
+	if (!ssh_selinux_enabled())
+		return;
+	if (path == NULL) {
+		setfscreatecon(NULL);
+		return;
+	}
+	if (matchpathcon(path, 0700, &context) == 0)
+		setfscreatecon(context);
+}
+
 #endif /* WITH_SELINUX */
 
 #ifdef LINUX_OOM_ADJUST
