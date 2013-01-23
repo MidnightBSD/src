@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)param.h	8.3 (Berkeley) 4/4/95
- * $MidnightBSD: src/sys/sys/param.h,v 1.50 2013/01/17 23:29:42 laffer1 Exp $
+ * $MidnightBSD: src/sys/sys/param.h,v 1.51 2013/01/23 02:36:12 laffer1 Exp $
  */
 
 #ifndef _SYS_PARAM_H_
@@ -55,7 +55,7 @@
 
 /* Version of FreeBSD we're compatible with */
 #undef __FreeBSD_version
-#define __FreeBSD_version 900506
+#define __FreeBSD_version 901000
 
 /*
  * It is tempting to use this macro in userland code when we want to enable
