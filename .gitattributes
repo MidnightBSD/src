@@ -39324,6 +39324,7 @@ secure/libexec/Makefile -text
 secure/libexec/Makefile.inc -text
 secure/libexec/sftp-server/Makefile -text
 secure/libexec/ssh-keysign/Makefile -text
+secure/libexec/ssh-pkcs11-helper/Makefile -text
 secure/usr.bin/Makefile -text
 secure/usr.bin/Makefile.inc -text
 secure/usr.bin/bdes/Makefile -text
