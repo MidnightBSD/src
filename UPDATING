@@ -1,6 +1,8 @@
 Updating Information for MidnightBSD users.
 
 20130122:
+	OpenSSH 5.8p2 imported
+
 	SQLite 3.7.15.2 imported
 
 	Fixed a longstanding bug in libmport extrating new index files.
@@ -1221,4 +1223,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.163 2012/07/10 13:23:14 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.164 2013/01/22 12:59:03 laffer1 Exp $
