@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $MidnightBSD$
+# $MidnightBSD: src/usr.bin/kdump/Makefile,v 1.2 2012/11/15 12:57:12 laffer1 Exp $
 
 .if (${MACHINE_ARCH} == "amd64")
 SFX=		32
@@ -9,7 +9,7 @@ SFX=		32
 
 PROG=		kdump
 SRCS=		kdump.c ioctl.c kdump_subr.c subr.c
-CFLAGS+=	-I${.CURDIR}/../ktrace -I${.CURDIR} -I${.CURDIR}/../..
+CFLAGS+=	-I${.CURDIR}/../ktrace -I${.CURDIR} -I${.CURDIR}/../.. -I${.CURDIR}/../../sys
 
 .if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386"
 SRCS+=		linux_syscalls.c
