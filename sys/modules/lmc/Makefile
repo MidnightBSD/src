@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 KMOD  = if_lmc
 .PATH: ${.CURDIR}/../../dev/lmc
