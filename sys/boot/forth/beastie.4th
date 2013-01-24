@@ -24,7 +24,7 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \ 
-\ $MidnightBSD: src/sys/boot/forth/beastie.4th,v 1.6 2013/01/17 23:29:35 laffer1 Exp $
+\ $MidnightBSD: src/sys/boot/forth/beastie.4th,v 1.7 2013/01/18 00:04:49 laffer1 Exp $
 
 marker task-beastie.4th
 
@@ -152,25 +152,27 @@ variable logoY
 
 	3 + \ beastie adjustment (see `mbsdbw-logo' comments above)
 
-	2dup at-xy ."  ```                        `" 1+
-	2dup at-xy ." s` `.....---.......--.```   -/" 1+
-	2dup at-xy ." +o   .--`         /y:`      +." 1+
-	2dup at-xy ."  yo`:.            :o      `+-" 1+
-	2dup at-xy ."   y/               -/`   -o/" 1+
-	2dup at-xy ."  .-                  ::/sy+:." 1+
-	2dup at-xy ."  /                     `--  /" 1+
-	2dup at-xy ." `:                          :`" 1+
-	2dup at-xy ." `:                          :`" 1+
-	2dup at-xy ."  /                          /" 1+
-	2dup at-xy ."  .-                        -." 1+
-	2dup at-xy ."   --                      -." 1+
-	2dup at-xy ."    `:`                  `:`" 1+
-	2dup at-xy ."      .--             `--." 1+
-	     at-xy ."         .---.....----."
+        2dup at-xy ."      ;@@#.      " 1+ 
+        2dup at-xy ."    @@.   :@'    " 1+ 
+        2dup at-xy ."   @ `@     ;@   " 1+
+        2dup at-xy ."  @ #@       .@  " 1+
+        2dup at-xy ." @ #@`        +. " 1+
+        2dup at-xy ." @ @@          @ " 1+
+        2dup at-xy .";.#@@          @ " 1+
+        2dup at-xy ."@ @@@       +  ; " 1+
+        2dup at-xy ."@ @@@      #@  ; " 1+
+        2dup at-xy ."# @@@'  ; #@@  + " 1+
+        2dup at-xy .".::@@@  .@@@#  @ " 1+
+        2dup at-xy ." @ @@@@  @@@   @ " 1+
+        2dup at-xy ." ';`@@@@@@@,; @  " 1+
+        2dup at-xy ."  @. @@@@@@@ #;  " 1+
+        2dup at-xy ."   @+  ;+;  @;   " 1+
+             at-xy ."    .@@;;+@@     "
 
  	\ Put the cursor back at the bottom
  	0 25 at-xy
 ;
+
 
 \ This function draws any number of beastie logos at (loader_logo_x,
 \ loader_logo_y) if defined, else (46,4) (to the right of the menu). To choose
