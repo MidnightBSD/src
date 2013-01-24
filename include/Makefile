@@ -1,6 +1,5 @@
 #	@(#)Makefile	8.2 (Berkeley) 1/4/94
-# $FreeBSD: src/include/Makefile,v 1.244.2.2 2005/11/16 10:50:09 ru Exp $
-# $MidnightBSD: src/include/Makefile,v 1.14 2012/07/14 15:17:00 laffer1 Exp $
+# $MidnightBSD: src/include/Makefile,v 1.15 2012/10/20 17:17:25 laffer1 Exp $
 #
 # Doing a "make install" builds /usr/include.
 
@@ -55,6 +54,7 @@ LSUBDIRS=	cam/ata cam/scsi \
 	security/mac_mls security/mac_partition \
 	ufs/ffs ufs/ufs
 
+LSUBSUBDIRS=	dev/mpt/mpilib
 .if ${MK_GPIB} != "no"
 _dev_ieee488=	dev/ieee488
 .endif
