@@ -1,4 +1,4 @@
-# $FreeBSD$ 
+# $MidnightBSD$ 
 
 NO_OBJ=
 INCS=	_ctype.h _inttypes.h _langinfo.h _locale.h _monetary.h _stdio.h\
