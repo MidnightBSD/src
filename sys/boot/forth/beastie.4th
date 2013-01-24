@@ -24,7 +24,7 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \ 
-\ $MidnightBSD: src/sys/boot/forth/beastie.4th,v 1.7 2013/01/18 00:04:49 laffer1 Exp $
+\ $MidnightBSD: src/sys/boot/forth/beastie.4th,v 1.8 2013/01/24 01:43:06 laffer1 Exp $
 
 marker task-beastie.4th
 
@@ -152,22 +152,22 @@ variable logoY
 
 	3 + \ beastie adjustment (see `mbsdbw-logo' comments above)
 
-        2dup at-xy ."      ;@@#.      " 1+ 
-        2dup at-xy ."    @@.   :@'    " 1+ 
-        2dup at-xy ."   @ `@     ;@   " 1+
-        2dup at-xy ."  @ #@       .@  " 1+
-        2dup at-xy ." @ #@`        +. " 1+
-        2dup at-xy ." @ @@          @ " 1+
-        2dup at-xy .";.#@@          @ " 1+
-        2dup at-xy ."@ @@@       +  ; " 1+
-        2dup at-xy ."@ @@@      #@  ; " 1+
-        2dup at-xy ."# @@@'  ; #@@  + " 1+
-        2dup at-xy .".::@@@  .@@@#  @ " 1+
-        2dup at-xy ." @ @@@@  @@@   @ " 1+
-        2dup at-xy ." ';`@@@@@@@,; @  " 1+
-        2dup at-xy ."  @. @@@@@@@ #;  " 1+
-        2dup at-xy ."   @+  ;+;  @;   " 1+
-             at-xy ."    .@@;;+@@     "
+        2dup at-xy ."       ;00#.      " 1+ 
+        2dup at-xy ."     00.   :0'    " 1+ 
+        2dup at-xy ."    0 `0     :0   " 1+
+        2dup at-xy ."   0 #0       .0  " 1+
+        2dup at-xy ."  0 #0`        +. " 1+
+        2dup at-xy ."  0 00          0 " 1+
+        2dup at-xy ." I #00          0 " 1+
+        2dup at-xy ." 0 000       +  : " 1+
+        2dup at-xy ." 0 000      #0  : " 1+
+        2dup at-xy ." # 000'  : #00  + " 1+
+        2dup at-xy ." .::000  .000#  0 " 1+
+        2dup at-xy ."  0 0000  000   0 " 1+
+        2dup at-xy ."  ':`0000000,: 0  " 1+
+        2dup at-xy ."   0. 0000000 #:  " 1+
+        2dup at-xy ."    0+  :+:  0:   " 1+
+             at-xy ."     .00::+00     "
 
  	\ Put the cursor back at the bottom
  	0 25 at-xy
