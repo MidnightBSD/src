@@ -19236,7 +19236,6 @@ contrib/mksh/Build.sh -text
 contrib/mksh/MIDNIGHTBSD-upgrade -text
 contrib/mksh/check.pl -text
 contrib/mksh/check.t -text
-contrib/mksh/copyright -text
 contrib/mksh/dot.mkshrc -text
 contrib/mksh/edit.c -text
 contrib/mksh/emacsfn.h -text
