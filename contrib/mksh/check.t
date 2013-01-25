@@ -1,4 +1,4 @@
-# $MirOS: src/bin/mksh/check.t,v 1.474.2.15 2012/04/06 14:40:11 tg Exp $
+# $MirOS: src/bin/mksh/check.t,v 1.569 2012/11/30 19:25:01 tg Exp $
 # $OpenBSD: bksl-nl.t,v 1.2 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: history.t,v 1.5 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: read.t,v 1.3 2003/03/10 03:48:16 david Exp $
@@ -29,12 +29,22 @@
 # http://www.freebsd.org/cgi/cvsweb.cgi/src/tools/regression/bin/test/regress.sh?rev=HEAD
 
 expected-stdout:
-	@(#)MIRBSD KSH R40 2012/04/06
+	@(#)MIRBSD KSH R41 2012/11/30
 description:
 	Check version of shell.
 stdin:
 	echo $KSH_VERSION
 name: KSH_VERSION
+category: shell:legacy-no
+---
+expected-stdout:
+	@(#)LEGACY KSH R41 2012/11/30
+description:
+	Check version of legacy shell.
+stdin:
+	echo $KSH_VERSION
+name: KSH_VERSION-legacy
+category: shell:legacy-yes
 ---
 name: selftest-1
 description:
@@ -69,12 +79,29 @@ category: disabled
 stdin:
 	set
 ---
+name: selftest-legacy
+description:
+	Check some things in the LEGACY KSH
+category: shell:legacy-yes
+stdin:
+	set +o emacs
+	set +o vi
+	[[ "$(set +o) -o" = *"-o emacs -o"* ]] && echo 1=emacs
+	[[ "$(set +o) -o" = *"-o vi -o"* ]] && echo 1=vi
+	set -o emacs
+	set -o vi
+	[[ "$(set +o) -o" = *"-o emacs -o"* ]] && echo 2=emacs
+	[[ "$(set +o) -o" = *"-o vi -o"* ]] && echo 2=vi
+expected-stdout:
+	2=emacs
+	2=vi
+---
 name: selftest-direct-builtin-call
 description:
 	Check that direct builtin calls work
 stdin:
-	ln -s "$__progname" cat
-	ln -s "$__progname" echo
+	ln -s "$__progname" cat || cp "$__progname" cat
+	ln -s "$__progname" echo || cp "$__progname" echo
 	./echo -c 'echo  foo' | ./cat -u
 expected-stdout:
 	-c echo  foo
@@ -297,12 +324,24 @@ expected-stderr-pattern:
 name: arith-div-intmin-by-minusone
 description:
 	Check division overflow wraps around silently
+category: int:32
 stdin:
 	echo signed:$((-2147483648 / -1))r$((-2147483648 % -1)).
 	echo unsigned:$((# -2147483648 / -1))r$((# -2147483648 % -1)).
 expected-stdout:
 	signed:-2147483648r0.
 	unsigned:0r2147483648.
+---
+name: arith-div-intmin-by-minusone-64
+description:
+	Check division overflow wraps around silently
+category: int:64
+stdin:
+	echo signed:$((-9223372036854775808 / -1))r$((-9223372036854775808 % -1)).
+	echo unsigned:$((# -9223372036854775808 / -1))r$((# -9223372036854775808 % -1)).
+expected-stdout:
+	signed:-9223372036854775808r0.
+	unsigned:0r9223372036854775808.
 ---
 name: arith-assop-assoc-1
 description:
@@ -315,9 +354,46 @@ expected-stdout:
 	6
 	6,5,3
 ---
+name: arith-mandatory
+description:
+	If MKSH_GCC55009 is set when compiling, passing of
+	this test is *mandatory* for a valid mksh executable!
+category: shell:legacy-no
+stdin:
+	typeset -i sari=0
+	typeset -Ui uari=0
+	typeset -i x=0
+	print -r -- $((x++)):$sari=$uari.
+	let --sari --uari
+	print -r -- $((x++)):$sari=$uari.
+	sari=2147483647 uari=2147483647
+	print -r -- $((x++)):$sari=$uari.
+	let ++sari ++uari
+	print -r -- $((x++)):$sari=$uari.
+	let --sari --uari
+	let 'sari *= 2' 'uari *= 2'
+	let ++sari ++uari
+	print -r -- $((x++)):$sari=$uari.
+	let ++sari ++uari
+	print -r -- $((x++)):$sari=$uari.
+	sari=-2147483648 uari=-2147483648
+	print -r -- $((x++)):$sari=$uari.
+	let --sari --uari
+	print -r -- $((x++)):$sari=$uari.
+expected-stdout:
+	0:0=0.
+	1:-1=4294967295.
+	2:2147483647=2147483647.
+	3:-2147483648=2147483648.
+	4:-1=4294967295.
+	5:0=0.
+	6:-2147483648=2147483648.
+	7:2147483647=2147483647.
+---
 name: arith-unsigned-1
 description:
 	Check if unsigned arithmetics work
+category: int:32
 stdin:
 	# signed vs unsigned
 	echo x1 $((-1)) $((#-1))
@@ -355,6 +431,7 @@ expected-stdout:
 name: arith-limit32-1
 description:
 	Check if arithmetics are 32 bit
+category: int:32
 stdin:
 	# signed vs unsigned
 	echo x1 $((-1)) $((#-1))
@@ -376,6 +453,34 @@ expected-stdout:
 	x2 2147483647 2147483647
 	x3 -2147483648 2147483648
 	x4 -1 4294967295
+	x5 0 0
+	x6 1 1
+---
+name: arith-limit64-1
+description:
+	Check if arithmetics are 64 bit
+category: int:64
+stdin:
+	# signed vs unsigned
+	echo x1 $((-1)) $((#-1))
+	# calculating
+	typeset -i vs
+	typeset -Ui vu
+	vs=9223372036854775807; vu=9223372036854775807
+	echo x2 $vs $vu
+	let vs++ vu++
+	echo x3 $vs $vu
+	vs=18446744073709551615; vu=18446744073709551615
+	echo x4 $vs $vu
+	let vs++ vu++
+	echo x5 $vs $vu
+	let vs++ vu++
+	echo x6 $vs $vu
+expected-stdout:
+	x1 -1 18446744073709551615
+	x2 9223372036854775807 9223372036854775807
+	x3 -9223372036854775808 9223372036854775808
+	x4 -1 18446744073709551615
 	x5 0 0
 	x6 1 1
 ---
@@ -1036,7 +1141,7 @@ description:
 need-pass: no
 # the mv command fails on Cygwin
 # Hurd aborts the testsuite (permission denied)
-category: !os:cygwin,!os:gnu,!os:msys
+category: !os:cygwin,!os:gnu,!os:msys,!nosymlink
 file-setup: file 644 "x"
 	mkdir noread noread/target noread/target/subdir
 	ln -s noread link
@@ -1489,6 +1594,19 @@ expected-stdout:
 	0 = 1 .
 	111 = 3 .
 ---
+name: expand-weird-3
+description:
+	Check that trimming works with positional parameters (Debian #48453)
+stdin:
+	A=9999-02
+	B=9999
+	echo 1=${A#$B?}.
+	set -- $A $B
+	echo 2=${1#$2?}.
+expected-stdout:
+	1=02.
+	2=02.
+---
 name: eglob-bad-1
 description:
 	Check that globbing isn't done when glob has syntax error
@@ -1895,7 +2013,7 @@ description:
 # breaks on FreeMiNT (cannot unlink dangling symlinks)
 # breaks on MSYS (does not support symlinks)
 # breaks on Dell UNIX 4.0 R2.2 (SVR4) where unlink also fails
-category: !os:mint,!os:msys,!os:svr4.0
+category: !os:mint,!os:msys,!os:svr4.0,!nosymlink
 file-setup: dir 755 "dir"
 file-setup: symlink 644 "dir/abc"
 	non-existent-file
@@ -2186,7 +2304,13 @@ stdin:
 			=c $x \x40=
 		EOF
 	}
-	typeset -f foo
+	fnd=$(typeset -f foo)
+	print -r -- "$fnd"
+	function foo {
+		echo blub
+	}
+	foo
+	eval "$fnd"
 	foo
 	# rather nonsensical, but…
 	vd=<<<"=d $x \x40="
@@ -2196,11 +2320,12 @@ stdin:
 	print -r -- "| va={$va} vb={$vb} vc={$vc} vd={$vd} ve={$ve} vf={$vf} |"
 expected-stdout:
 	function foo {
-		vc= <<-EOF 
+		vc=<<-EOF
 	=c $x \x40=
 	EOF
 	
 	} 
+	blub
 	| va={=a u \x40=
 	} vb={=b $x \x40=
 	} vc={=c u \x40=
@@ -2228,20 +2353,27 @@ stdin:
 			=d $x \x40=
 	
 	}
-	typeset -f foo
+	fnd=$(typeset -f foo)
+	print -r -- "$fnd"
+	function foo {
+		echo blub
+	}
+	foo
+	eval "$fnd"
 	foo
 	print -r -- "| va={$va} vb={$vb} vc={$vc} vd={$vd} |"
 expected-stdout:
 	function foo {
-		vc= <<- 
+		vc=<<-
 	=c $x \x40=
 	<<
 	
-		vd= <<-"" 
+		vd=<<-""
 	=d $x \x40=
 	
 	
 	} 
+	blub
 	| va={=a u \x40=
 	} vb={=b $x \x40=
 	} vc={=c u \x40=
@@ -3422,7 +3554,6 @@ expected-stdout:
 name: integer-base-err-1
 description:
 	Can't have 0 base (causes shell to exit)
-category: nodeprecated
 expected-exit: e != 0
 stdin:
 	typeset -i i
@@ -3431,19 +3562,6 @@ stdin:
 	echo $i
 expected-stderr-pattern:
 	/^.*:.*0#4.*\n$/
----
-name: integer-base-err-1-deprecated
-description:
-	Can't have 0 base (causes shell to exit)
-category: !nodeprecated
-expected-exit: e != 0
-stdin:
-	typeset -i i
-	i=3
-	i=0#4
-	echo $i
-expected-stderr-pattern:
-	/^.*octal is deprecated\n.*:.*0#4.*\n$/
 ---
 name: integer-base-err-2
 description:
@@ -3640,26 +3758,24 @@ expected-stdout:
 	64
 	64
 ---
-name: integer-base-check-flat-posix
-description:
-	Check behaviour of POSuX bases
-category: !nodeprecated
-stdin:
-	echo :$((10)).$((010)).$((0x10)).
-expected-stdout:
-	:10.8.16.
-expected-stderr-pattern:
-	/octal is deprecated/
----
-name: integer-base-check-flat-right
+name: integer-base-check-flat
 description:
 	Check behaviour does not match POSuX, because a not type-safe
 	scripting language has *no* business interpreting "010" as octal
-category: nodeprecated
+category: shell:legacy-no
 stdin:
 	echo :$((10)).$((010)).$((0x10)).
 expected-stdout:
 	:10.10.16.
+---
+name: integer-base-check-flat-legacy
+description:
+	Check behaviour matches POSuX for LEGACY KSH
+category: shell:legacy-yes
+stdin:
+	echo :$((10)).$((010)).$((0x10)).
+expected-stdout:
+	:10.8.16.
 ---
 name: integer-base-check-numeric-from
 description:
@@ -3766,12 +3882,24 @@ expected-stderr-pattern:
 name: integer-arithmetic-span
 description:
 	Check wraparound and size that is defined in mksh
+category: int:32
 stdin:
 	echo s:$((2147483647+1)).$(((2147483647*2)+1)).$(((2147483647*2)+2)).
 	echo u:$((#2147483647+1)).$((#(2147483647*2)+1)).$((#(2147483647*2)+2)).
 expected-stdout:
 	s:-2147483648.-1.0.
 	u:2147483648.4294967295.0.
+---
+name: integer-arithmetic-span-64
+description:
+	Check wraparound and size that is defined in mksh
+category: int:64
+stdin:
+	echo s:$((9223372036854775807+1)).$(((9223372036854775807*2)+1)).$(((9223372036854775807*2)+2)).
+	echo u:$((#9223372036854775807+1)).$((#(9223372036854775807*2)+1)).$((#(9223372036854775807*2)+2)).
+expected-stdout:
+	s:-9223372036854775808.-1.0.
+	u:9223372036854775808.18446744073709551615.0.
 ---
 name: lineno-stdin
 description:
@@ -4065,8 +4193,10 @@ description:
 	(so quotes could also be used to hide hem).  The former is
 	easier, the later better...
 stdin:
-	echo $(echo \()
+	echo $(echo \( )
+	echo $(echo "(" )
 expected-stdout:
+	(
 	(
 ---
 name: regression-9
@@ -4104,6 +4234,7 @@ description:
 	but not 0 according to the getopt(1) manual page, ksh88, and
 	Bourne sh (such as /bin/sh on Solaris).
 	In mksh R39b, we honour POSIX except when -o sh is set.
+category: shell:legacy-no
 stdin:
 	showf() {
 		[[ -o posix ]]; FPOSIX=$((1-$?))
@@ -4126,6 +4257,38 @@ expected-stdout:
 	FPOSIX=0 FSH=0 rv=0
 	FPOSIX=0 FSH=1 rv=1
 	FPOSIX=1 FSH=0 rv=0
+---
+name: regression-10-legacy
+description:
+	The following:
+		set -- `false`
+		echo $?
+	should print 0 according to POSIX (dash, bash, ksh93, posh)
+	but not 0 according to the getopt(1) manual page, ksh88, and
+	Bourne sh (such as /bin/sh on Solaris).
+category: shell:legacy-yes
+stdin:
+	showf() {
+		[[ -o posix ]]; FPOSIX=$((1-$?))
+		[[ -o sh ]]; FSH=$((1-$?))
+		echo -n "FPOSIX=$FPOSIX FSH=$FSH "
+	}
+	set +o posix +o sh
+	showf
+	set -- `false`
+	echo rv=$?
+	set -o sh
+	showf
+	set -- `false`
+	echo rv=$?
+	set -o posix
+	showf
+	set -- `false`
+	echo rv=$?
+expected-stdout:
+	FPOSIX=0 FSH=0 rv=1
+	FPOSIX=0 FSH=1 rv=1
+	FPOSIX=1 FSH=0 rv=1
 ---
 name: regression-11
 description:
@@ -4532,7 +4695,7 @@ stdin:
 	foo=stuff env | grep '^foo'
 expected-exit: e != 0
 expected-stderr-pattern:
-	/.*read *only.*/
+	/read-only/
 ---
 name: regression-43
 description:
@@ -4847,7 +5010,8 @@ expected-stdout:
 	M
 	    xxx[1]=7
 	N
-	    typeset -i xxx
+	    set -A xxx
+	    typeset -i xxx[1]
 ---
 name: regression-58
 description:
@@ -4948,6 +5112,9 @@ stdin:
 		typeset -
 		echo FNORD-8
 	} | fgrep FNORD
+	fnord=(42 23)
+	typeset -p fnord
+	echo FNORD-9
 expected-stdout:
 	FNORD-0
 	FNORD-1
@@ -4998,6 +5165,10 @@ expected-stdout:
 	FNORD_G=7
 	FNORD_H=8
 	FNORD-8
+	set -A fnord
+	typeset fnord[0]=42
+	typeset fnord[1]=23
+	FNORD-9
 ---
 name: regression-64
 description:
@@ -5027,7 +5198,7 @@ expected-stdout:
 name: regression-66
 description:
 	Check that quoting is sane
-	XXX not really in R40-stable
+category: !nojsig
 stdin:
 	ac_space=' '
 	ac_newline='
@@ -5046,7 +5217,7 @@ stdin:
 	done
 expected-stdout:
 	ac_space=' '
-	ac_newline='
+	ac_newline=$'\n'
 ---
 name: readonly-0
 description:
@@ -5064,7 +5235,7 @@ expected-stdout:
 	=
 	1 x .
 expected-stderr-pattern:
-	/read *only/
+	/read-only/
 ---
 name: readonly-1
 description:
@@ -5074,7 +5245,7 @@ stdin:
 expected-stdout:
 	aborted, 2
 expected-stderr-pattern:
-	/read *only/
+	/read-only/
 ---
 name: readonly-2a
 description:
@@ -5093,7 +5264,7 @@ stdin:
 expected-stdout:
 	2 .
 expected-stderr-pattern:
-	/read *only/
+	/read-only/
 ---
 name: readonly-3
 description:
@@ -5105,7 +5276,7 @@ expected-stdout:
 	0 x .
 	2 .
 expected-stderr-pattern:
-	/read *only/
+	/read-only/
 ---
 name: syntax-1
 description:
@@ -5437,10 +5608,29 @@ env-setup: !HOME=/sweet!
 stdin:
 	echo ${A=a=}~ b=~ c=d~ ~
 	set +o braceexpand
+	unset A
 	echo ${A=a=}~ b=~ c=d~ ~
 expected-stdout:
 	a=/sweet b=/sweet c=d~ /sweet
 	a=~ b=~ c=d~ /sweet
+---
+name: tilde-expand-2
+description:
+	Check tilde expansion works
+env-setup: !HOME=/sweet!
+stdin:
+	wd=$PWD
+	cd /
+	plus=$(print -r -- ~+)
+	minus=$(print -r -- ~-)
+	nix=$(print -r -- ~)
+	[[ $plus = / ]]; echo one $? .
+	[[ $minus = "$wd" ]]; echo two $? .
+	[[ $nix = /sweet ]]; echo nix $? .
+expected-stdout:
+	one 0 .
+	two 0 .
+	nix 0 .
 ---
 name: exit-err-1
 description:
@@ -5578,19 +5768,29 @@ name: exit-eval-1
 description:
 	Check eval vs substitution exit codes (ksh93 alike)
 stdin:
+	(exit 12)
 	eval $(false)
 	echo A $?
+	(exit 12)
 	eval ' $(false)'
 	echo B $?
+	(exit 12)
 	eval " $(false)"
 	echo C $?
+	(exit 12)
 	eval "eval $(false)"
 	echo D $?
+	(exit 12)
 	eval 'eval '"$(false)"
 	echo E $?
 	IFS="$IFS:"
+	(exit 12)
 	eval $(echo :; false)
 	echo F $?
+	echo -n "G "
+	(exit 12)
+	eval 'echo $?'
+	echo H $?
 expected-stdout:
 	A 0
 	B 1
@@ -5598,6 +5798,8 @@ expected-stdout:
 	D 0
 	E 0
 	F 0
+	G 12
+	H 0
 ---
 name: exit-trap-1
 description:
@@ -5807,10 +6009,10 @@ description:
 	Check that sh mode is *not* automatically turned on
 category: !binsh
 stdin:
-	ln -s "$__progname" ksh
-	ln -s "$__progname" sh
-	ln -s "$__progname" ./-ksh
-	ln -s "$__progname" ./-sh
+	ln -s "$__progname" ksh || cp "$__progname" ksh
+	ln -s "$__progname" sh || cp "$__progname" sh
+	ln -s "$__progname" ./-ksh || cp "$__progname" ./-ksh
+	ln -s "$__progname" ./-sh || cp "$__progname" ./-sh
 	for shell in {,-}{,k}sh; do
 		print -- $shell $(./$shell +l -c \
 		    '[[ $(set +o) == *@(-o sh)@(| *) ]] && echo sh || echo nosh')
@@ -5826,10 +6028,10 @@ description:
 	Check that sh mode *is* automatically turned on
 category: binsh
 stdin:
-	ln -s "$__progname" ksh
-	ln -s "$__progname" sh
-	ln -s "$__progname" ./-ksh
-	ln -s "$__progname" ./-sh
+	ln -s "$__progname" ksh || cp "$__progname" ksh
+	ln -s "$__progname" sh || cp "$__progname" sh
+	ln -s "$__progname" ./-ksh || cp "$__progname" ./-ksh
+	ln -s "$__progname" ./-sh || cp "$__progname" ./-sh
 	for shell in {,-}{,k}sh; do
 		print -- $shell $(./$shell +l -c \
 		    '[[ $(set +o) == *@(-o sh)@(| *) ]] && echo sh || echo nosh')
@@ -6059,21 +6261,6 @@ expected-stdout:
 	4 a=BAR
 expected-stderr-pattern:
 	/(Unrecognized character .... ignored at \..t4 line 1)*/
----
-name: utf8bom-3
-description:
-	Reading the UTF-8 BOM should enable the utf8-mode flag
-	(temporarily for COMSUBs)
-stdin:
-	"$__progname" -c ':; if [[ $- = *U* ]]; then echo 1 on; else echo 1 off; fi'
-	"$__progname" -c '﻿:; if [[ $- = *U* ]]; then echo 2 on; else echo 2 off; fi'
-	"$__progname" -c 'if [[ $- = *U* ]]; then echo 3 on; else echo 3 off; fi; x=$(﻿:; if [[ $- = *U* ]]; then echo 4 on; else echo 4 off; fi); echo $x; if [[ $- = *U* ]]; then echo 5 on; else echo 5 off; fi'
-expected-stdout:
-	1 off
-	2 on
-	3 off
-	4 on
-	5 off
 ---
 name: utf8opt-1a
 description:
@@ -6334,6 +6521,17 @@ expected-stdout:
 	r='fc -e -'
 	source='PATH=$PATH:. command .'
 	type='whence -v'
+---
+name: aliases-cmdline
+description:
+	Check that aliases work from the command line (Debian #517009)
+	Note that due to the nature of the lexing process, defining
+	aliases in COMSUBs then immediately using them, and things
+	like 'alias foo=bar && foo', still fail.
+stdin:
+	"$__progname" -c $'alias a="echo OK"\na'
+expected-stdout:
+	OK
 ---
 name: aliases-funcdef-1
 description:
@@ -7111,9 +7309,36 @@ stdin:
 	typeset -i8 foo=10
 	bar=baz
 	unset baz
+	bla=foo
 	print ${foo@#} ${bar@#} ${baz@#} .
+	print ${foo@#123} ${bar@#456} ${baz@#789} .
+	print ${foo@#bla} ${bar@#bar} ${baz@#OPTIND} .
 expected-stdout:
-	E76664C2 57F1BA9A 04808901 .
+	D50219A0 20E5DB5B 00000000 .
+	554A1C76 004A212E CB209562 .
+	6B21CF91 20E5DB5B 124EA49D .
+---
+name: varexpand-special-quote
+description:
+	Check special ${var@Q} expansion for quoted strings
+stdin:
+	set +U
+	i=x
+	j=a\ b
+	k=$'c
+	d\xA0''e€f'
+	print -r -- "<i=$i j=$j k=$k>"
+	s="u=${i@Q} v=${j@Q} w=${k@Q}"
+	print -r -- "s=\"$s\""
+	eval "$s"
+	typeset -p u v w
+expected-stdout:
+	<i=x j=a b k=c
+	d�e€f>
+	s="u=x v='a b' w=$'c\nd\240e\u20ACf'"
+	typeset u=x
+	typeset v='a b'
+	typeset w=$'c\nd\240e\u20ACf'
 ---
 name: varexpand-null-1
 description:
@@ -8180,6 +8405,7 @@ name: fd-cloexec-1
 description:
 	Verify that file descriptors > 2 are private for Korn shells
 	AT&T ksh93 does this still, which means we must keep it as well
+category: shell:legacy-no
 file-setup: file 644 "test.sh"
 	echo >&3 Fowl
 stdin:
@@ -8197,6 +8423,18 @@ file-setup: file 644 "test.sh"
 	echo >&3 Fowl
 stdin:
 	test -n "$POSH_VERSION" || set -o sh
+	exec 3>&1
+	"$__progname" test.sh
+expected-stdout:
+	Fowl
+---
+name: fd-cloexec-3
+description:
+	Verify that file descriptors > 2 are not private for LEGACY KSH
+category: shell:legacy-yes
+file-setup: file 644 "test.sh"
+	echo >&3 Fowl
+stdin:
 	exec 3>&1
 	"$__progname" test.sh
 expected-stdout:
@@ -8688,7 +8926,7 @@ expected-stdout:
 	EOFN
 	}
 	inline_IOWRITE_IOCLOB_IOHERE_noIOSKIP() {
-		cat >|bar <<"EOFN" 
+		cat >|bar <<"EOFN"
 		foo
 	EOFN
 	
@@ -8699,7 +8937,7 @@ expected-stdout:
 	EOFN
 	); }
 	function comsub_IOWRITE_IOCLOB_IOHERE_noIOSKIP {
-		x=$(cat >|bar <<"EOFN" 
+		x=$(cat >|bar <<"EOFN"
 		foo
 	EOFN
 	) 
@@ -8710,7 +8948,7 @@ expected-stdout:
 	EOFN
 	)|tr u x); }
 	function reread_IOWRITE_IOCLOB_IOHERE_noIOSKIP {
-		x=$(( cat >|bar <<"EOFN" 
+		x=$(( cat >|bar <<"EOFN"
 		foo
 	EOFN
 	) | tr u x ) 
@@ -8721,7 +8959,7 @@ expected-stdout:
 		EOFI
 	}
 	inline_IOWRITE_noIOCLOB_IOHERE_IOSKIP() {
-		cat >bar <<-EOFI 
+		cat >bar <<-EOFI
 	foo
 	EOFI
 	
@@ -8732,7 +8970,7 @@ expected-stdout:
 		EOFI
 	); }
 	function comsub_IOWRITE_noIOCLOB_IOHERE_IOSKIP {
-		x=$(cat >bar <<-EOFI 
+		x=$(cat >bar <<-EOFI
 	foo
 	EOFI
 	) 
@@ -8743,7 +8981,7 @@ expected-stdout:
 		EOFI
 	)|tr u x); }
 	function reread_IOWRITE_noIOCLOB_IOHERE_IOSKIP {
-		x=$(( cat >bar <<-EOFI 
+		x=$(( cat >bar <<-EOFI
 	foo
 	EOFI
 	) | tr u x ) 
@@ -8834,7 +9072,7 @@ expected-stdout:
 	EOFN); echo $x
 	}
 	inline_heredoc_closed() {
-		x=$(cat <<EOFN 
+		x=$(cat <<EOFN
 		note there must be no space between EOFN and )
 	EOFN
 	) 
@@ -8846,7 +9084,7 @@ expected-stdout:
 	EOFN); echo $x
 	); }
 	function comsub_heredoc_closed {
-		x=$(x=$(cat <<EOFN 
+		x=$(x=$(cat <<EOFN
 		note there must be no space between EOFN and )
 	EOFN
 	) ; echo $x ) 
@@ -8857,7 +9095,7 @@ expected-stdout:
 	EOFN); echo $x
 	)|tr u x); }
 	function reread_heredoc_closed {
-		x=$(( x=$(cat <<EOFN 
+		x=$(( x=$(cat <<EOFN
 		note there must be no space between EOFN and )
 	EOFN
 	) ; echo $x ) | tr u x ) 
@@ -8868,7 +9106,7 @@ expected-stdout:
 	EOFN ); echo $x
 	}
 	inline_heredoc_space() {
-		x=$(cat <<EOFN\  
+		x=$(cat <<EOFN\ 
 		note the space between EOFN and ) is actually part of the here document marker
 	EOFN 
 	) 
@@ -8880,7 +9118,7 @@ expected-stdout:
 	EOFN ); echo $x
 	); }
 	function comsub_heredoc_space {
-		x=$(x=$(cat <<EOFN\  
+		x=$(x=$(cat <<EOFN\ 
 		note the space between EOFN and ) is actually part of the here document marker
 	EOFN 
 	) ; echo $x ) 
@@ -8891,7 +9129,7 @@ expected-stdout:
 	EOFN ); echo $x
 	)|tr u x); }
 	function reread_heredoc_space {
-		x=$(( x=$(cat <<EOFN\  
+		x=$(( x=$(cat <<EOFN\ 
 		note the space between EOFN and ) is actually part of the here document marker
 	EOFN 
 	) ; echo $x ) | tr u x ) 
@@ -8914,7 +9152,7 @@ expected-stdout:
 	}
 	inline_patch_motd() {
 		x=$(sysctl -n kern.version | sed 1q ) 
-		[[ -s /etc/motd && "$([[ "$(head -1 /etc/motd )" != $x ]] && ed -s /etc/motd 2>&1 <<-EOF 
+		[[ -s /etc/motd && "$([[ "$(head -1 /etc/motd )" != $x ]] && ed -s /etc/motd 2>&1 <<-EOF
 	1,/^\$/d
 	0a
 	$x
@@ -8946,7 +9184,7 @@ expected-stdout:
 		fi
 	); }
 	function comsub_patch_motd {
-		x=$(x=$(sysctl -n kern.version | sed 1q ) ; [[ -s /etc/motd && "$([[ "$(head -1 /etc/motd )" != $x ]] && ed -s /etc/motd 2>&1 <<-EOF 
+		x=$(x=$(sysctl -n kern.version | sed 1q ) ; [[ -s /etc/motd && "$([[ "$(head -1 /etc/motd )" != $x ]] && ed -s /etc/motd 2>&1 <<-EOF
 	1,/^\$/d
 	0a
 	$x
@@ -8973,7 +9211,7 @@ expected-stdout:
 		fi
 	)|tr u x); }
 	function reread_patch_motd {
-		x=$(( x=$(sysctl -n kern.version | sed 1q ) ; [[ -s /etc/motd && "$([[ "$(head -1 /etc/motd )" != $x ]] && ed -s /etc/motd 2>&1 <<-EOF 
+		x=$(( x=$(sysctl -n kern.version | sed 1q ) ; [[ -s /etc/motd && "$([[ "$(head -1 /etc/motd )" != $x ]] && ed -s /etc/motd 2>&1 <<-EOF
 	1,/^\$/d
 	0a
 	$x
@@ -9335,6 +9573,27 @@ expected-stdout:
 		x=$(( echo $(true >&3 ) $((1+ 2)) ) | tr u x ) 
 	} 
 ---
+name: funsub-1
+description:
+	Check that non-subenvironment command substitution works
+category: !noexperimental
+stdin:
+	set -e
+	foo=bar
+	echo "ob $foo ."
+	echo "${
+		echo "ib $foo :"
+		foo=baz
+		echo "ia $foo :"
+		false
+	}" .
+	echo "oa $foo ."
+expected-stdout:
+	ob bar .
+	ib bar :
+	ia baz : .
+	oa baz .
+---
 name: test-stnze-1
 description:
 	Check that the short form [ $x ] works
@@ -9425,103 +9684,9 @@ expected-stdout:
 	11 0
 	12 0
 ---
-name: event-subst-1a
-description:
-	Check that '!' substitution in interactive mode works
-category: !smksh,!nodeprecated
-file-setup: file 755 "falsetto"
-	#! /bin/sh
-	echo molto bene
-	exit 42
-file-setup: file 755 "!false"
-	#! /bin/sh
-	echo si
-need-ctty: yes
-arguments: !-i!
-stdin:
-	export PATH=.:$PATH
-	falsetto
-	echo yeap
-	!false
-expected-exit: 42
-expected-stdout:
-	molto bene
-	yeap
-	molto bene
-expected-stderr-pattern:
-	/.*/
----
-name: event-subst-1b
-description:
-	Check that '!' substitution in interactive mode works
-	even when a space separates it from the search command,
-	which is not what GNU bash provides but required for the
-	other regression tests below to check
-category: !smksh,!nodeprecated
-file-setup: file 755 "falsetto"
-	#! /bin/sh
-	echo molto bene
-	exit 42
-file-setup: file 755 "!"
-	#! /bin/sh
-	echo si
-need-ctty: yes
-arguments: !-i!
-stdin:
-	export PATH=.:$PATH
-	falsetto
-	echo yeap
-	! false
-expected-exit: 42
-expected-stdout:
-	molto bene
-	yeap
-	molto bene
-expected-stderr-pattern:
-	/.*/
----
-name: event-subst-2
-description:
-	Check that '!' substitution in interactive mode
-	does not break things
-category: !smksh,!nodeprecated
-file-setup: file 755 "falsetto"
-	#! /bin/sh
-	echo molto bene
-	exit 42
-file-setup: file 755 "!"
-	#! /bin/sh
-	echo si
-need-ctty: yes
-arguments: !-i!
-env-setup: !ENV=./Env!
-file-setup: file 644 "Env"
-	PS1=X
-stdin:
-	export PATH=.:$PATH
-	falsetto
-	echo yeap
-	!false
-	echo meow
-	! false
-	echo = $?
-	if
-	! false; then echo foo; else echo bar; fi
-expected-stdout:
-	molto bene
-	yeap
-	molto bene
-	meow
-	molto bene
-	= 42
-	foo
-expected-stderr-pattern:
-	/.*/
----
 name: event-subst-3
 description:
 	Check that '!' substitution in noninteractive mode is ignored
-category: !smksh
 file-setup: file 755 "falsetto"
 	#! /bin/sh
 	echo molto bene
@@ -9550,7 +9715,6 @@ expected-stdout:
 name: event-subst-0
 description:
 	Check that '!' substitution in interactive mode is ignored
-category: nodeprecated
 need-ctty: yes
 arguments: !-i!
 file-setup: file 755 "falsetto"
@@ -10200,6 +10364,31 @@ expected-stdout:
 	=
 	b
 	x
+---
+name: case-braces
+description:
+	Check that case end tokens are not mixed up (Debian #220272)
+stdin:
+	i=0
+	for value in 'x' '}' 'esac'; do
+		print -n "$((++i))($value)bourne "
+		case $value in
+		}) echo brace ;;
+		*) echo no ;;
+		esac
+		print -n "$((++i))($value)korn "
+		case $value {
+		esac) echo esac ;;
+		*) echo no ;;
+		}
+	done
+expected-stdout:
+	1(x)bourne no
+	2(x)korn no
+	3(})bourne brace
+	4(})korn no
+	5(esac)bourne no
+	6(esac)korn esac
 ---
 name: stateptr-underflow
 description:

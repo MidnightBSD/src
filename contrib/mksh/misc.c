@@ -30,7 +30,20 @@
 #include <grp.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.167.2.5 2012/04/06 14:40:22 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.201 2012/11/30 17:34:46 tg Exp $");
+
+#define KSH_CHVT_FLAG
+#ifdef MKSH_SMALL
+#undef KSH_CHVT_FLAG
+#endif
+#ifdef TIOCSCTTY
+#define KSH_CHVT_CODE
+#define KSH_CHVT_FLAG
+#endif
+#ifdef MKSH_LEGACY_MODE
+#undef KSH_CHVT_CODE
+#undef KSH_CHVT_FLAG
+#endif
 
 /* type bits for unsigned char */
 unsigned char chtypes[UCHAR_MAX + 1];
@@ -40,7 +53,7 @@ static const unsigned char *pat_scan(const unsigned char *,
 static int do_gmatch(const unsigned char *, const unsigned char *,
     const unsigned char *, const unsigned char *);
 static const unsigned char *cclass(const unsigned char *, int);
-#ifdef TIOCSCTTY
+#ifdef KSH_CHVT_CODE
 static void chvt(const char *);
 #endif
 
@@ -88,9 +101,9 @@ initctypes(void)
 	chtypes['_'] |= C_ALPHA;
 	setctypes("0123456789", C_DIGIT);
 	/* \0 added automatically */
-	setctypes(" \t\n|&;<>()", C_LEX1);
+	setctypes(TC_LEX1, C_LEX1);
 	setctypes("*@#!$-?", C_VAR1);
-	setctypes(" \t\n", C_IFSWS);
+	setctypes(TC_IFSWS, C_IFSWS);
 	setctypes("=-+?", C_SUBOP1);
 	setctypes("\t\n \"#$&'()*;<=>?[\\]`|", C_QUOTE);
 }
@@ -142,12 +155,12 @@ struct options_info {
 	int opts[NELEM(options)];
 };
 
-static char *options_fmt_entry(char *, size_t, int, const void *);
+static char *options_fmt_entry(char *, size_t, unsigned int, const void *);
 static void printoptions(bool);
 
 /* format a single select menu item */
 static char *
-options_fmt_entry(char *buf, size_t buflen, int i, const void *arg)
+options_fmt_entry(char *buf, size_t buflen, unsigned int i, const void *arg)
 {
 	const struct options_info *oi = (const struct options_info *)arg;
 
@@ -163,7 +176,7 @@ printoptions(bool verbose)
 	size_t i = 0;
 
 	if (verbose) {
-		ssize_t n = 0, len, octs = 0;
+		size_t n = 0, len, octs = 0;
 		struct options_info oi;
 
 		/* verbose version */
@@ -177,8 +190,8 @@ printoptions(bool verbose)
 				if (len > octs)
 					octs = len;
 				len = utf_mbswidth(options[i].name);
-				if (len > oi.opt_width)
-					oi.opt_width = len;
+				if ((int)len > oi.opt_width)
+					oi.opt_width = (int)len;
 			}
 			++i;
 		}
@@ -226,6 +239,7 @@ change_flag(enum sh_flag f, int what, unsigned int newval)
 			j_change();
 	} else
 #endif
+#ifndef MKSH_NO_CMDLINE_EDITING
 	  if ((
 #if !MKSH_S_NOVI
 	    f == FVI ||
@@ -236,7 +250,9 @@ change_flag(enum sh_flag f, int what, unsigned int newval)
 #endif
 		    Flag(FEMACS) = Flag(FGMACS) = 0;
 		Flag(f) = (unsigned char)newval;
-	} else if (f == FPRIVILEGED && oldval && !newval) {
+	} else
+#endif
+	  if (f == FPRIVILEGED && oldval && !newval) {
 		/* Turning off -p? */
 
 		/*XXX this can probably be optimised */
@@ -251,13 +267,11 @@ change_flag(enum sh_flag f, int what, unsigned int newval)
 #else
 		/* seteuid, setegid, setgid don't EAGAIN on Linux */
 		ksheuid = kshuid = getuid();
-#ifndef __BEOS__
-		/* BeOS doesn't have different UIDs */
+#ifndef MKSH__NO_SETEUGID
 		seteuid(ksheuid);
 #endif
 		DO_SETUID(setuid, (ksheuid));
-#ifndef __BEOS__
-		/* BeOS doesn't have different GIDs */
+#ifndef MKSH__NO_SETEUGID
 		setegid(kshegid);
 #endif
 		setgid(kshegid);
@@ -299,7 +313,7 @@ parse_args(const char **argv,
 		/* see cmd_opts[] declaration */
 		*p++ = 'o';
 		*p++ = ':';
-#if !defined(MKSH_SMALL) || defined(TIOCSCTTY)
+#ifdef KSH_CHVT_FLAG
 		*p++ = 'T';
 		*p++ = ':';
 #endif
@@ -364,14 +378,6 @@ parse_args(const char **argv,
 				break;
 			}
 			i = option(go.optarg);
-#if !defined(MKSH_NO_DEPRECATED_WARNING) && !defined(MKSH_DISABLE_DEPRECATED)
-			if ((enum sh_flag)i == FARC4RANDOM) {
-				warningf(true, "Do not use set ±o arc4random,"
-				    " it will be removed in the next version"
-				    " of mksh!");
-				return (0);
-			}
-#endif
 			if ((i != (size_t)-1) && set == Flag(i))
 				/*
 				 * Don't check the context if the flag
@@ -388,11 +394,11 @@ parse_args(const char **argv,
 			}
 			break;
 
-#if !defined(MKSH_SMALL) || defined(TIOCSCTTY)
+#ifdef KSH_CHVT_FLAG
 		case 'T':
 			if (what != OF_FIRSTTIME)
 				break;
-#ifndef TIOCSCTTY
+#ifndef KSH_CHVT_CODE
 			errorf("no TIOCSCTTY ioctl");
 #else
 			change_flag(FTALKING, OF_CMDLINE, 1);
@@ -463,8 +469,10 @@ parse_args(const char **argv,
 int
 getn(const char *s, int *ai)
 {
-	int i, c, rv = 0;
+	int c;
+	unsigned int i, j, k;
 	bool neg = false;
+	int rv = 0;
 
 	do {
 		c = *s++;
@@ -474,33 +482,19 @@ getn(const char *s, int *ai)
 		c = *s++;
 	} else if (c == '+')
 		c = *s++;
-	*ai = i = 0;
+	k = neg ? 2147483648U : 2147483647U;
+	j = i = 0;
 	do {
 		if (!ksh_isdigit(c))
 			goto getn_out;
-		i *= 10;
-		if (i < *ai)
-			/* overflow */
+		if ((j = i * 10 + c - '0') > k)
 			goto getn_out;
-		i += c - '0';
-		*ai = i;
+		i = j;
 	} while ((c = *s++));
 	rv = 1;
 
  getn_out:
-	if (neg)
-		*ai = -*ai;
-	return (rv);
-}
-
-/* getn() that prints error */
-int
-bi_getn(const char *as, int *ai)
-{
-	int rv;
-
-	if (!(rv = getn(as, ai)))
-		bi_errorf("%s: %s", as, "bad number");
+	*ai = i == 2147483648U ? (int)i : neg ? -(int)i : (int)i;
 	return (rv);
 }
 
@@ -1046,41 +1040,116 @@ ksh_getopt(const char **argv, Getopt *go, const char *optionsp)
  * No trailing newline is printed.
  */
 void
-print_value_quoted(const char *s)
+print_value_quoted(struct shf *shf, const char *s)
 {
-	const char *p;
-	bool inquote = false;
+	unsigned char c;
+	const unsigned char *p = (const unsigned char *)s;
+	bool inquote = true;
 
 	/* first, check whether any quotes are needed */
-	for (p = s; *p; p++)
-		if (ctype(*p, C_QUOTE))
-			break;
-	if (!*p) {
-		/* nope, use the shortcut */
-		shf_puts(s, shl_stdout);
-		return;
-	}
+	while ((c = *p++) >= 32)
+		if (ctype(c, C_QUOTE))
+			inquote = false;
 
-	/* quote via state machine */
-	for (p = s; *p; p++) {
-		if (*p == '\'') {
-			/*
-			 * multiple '''s or any ' at beginning of string
-			 * look nicer this way than when simply substituting
-			 */
-			if (inquote) {
-				shf_putc('\'', shl_stdout);
-				inquote = false;
-			}
-			shf_putc('\\', shl_stdout);
-		} else if (!inquote) {
-			shf_putc('\'', shl_stdout);
-			inquote = true;
+	p = (const unsigned char *)s;
+	if (c == 0) {
+		if (inquote) {
+			/* nope, use the shortcut */
+			shf_puts(s, shf);
+			return;
 		}
-		shf_putc(*p, shl_stdout);
+
+		/* otherwise, quote nicely via state machine */
+		while ((c = *p++) != 0) {
+			if (c == '\'') {
+				/*
+				 * multiple single quotes or any of them
+				 * at the beginning of a string look nicer
+				 * this way than when simply substituting
+				 */
+				if (inquote) {
+					shf_putc('\'', shf);
+					inquote = false;
+				}
+				shf_putc('\\', shf);
+			} else if (!inquote) {
+				shf_putc('\'', shf);
+				inquote = true;
+			}
+			shf_putc(c, shf);
+		}
+	} else {
+		unsigned int wc;
+		size_t n;
+
+		/* use $'...' quote format */
+		shf_putc('$', shf);
+		shf_putc('\'', shf);
+		while ((c = *p) != 0) {
+			if (c >= 0xC2) {
+				n = utf_mbtowc(&wc, (const char *)p);
+				if (n != (size_t)-1) {
+					p += n;
+					shf_fprintf(shf, "\\u%04X", wc);
+					continue;
+				}
+			}
+			++p;
+			switch (c) {
+			/* see unbksl() in this file for comments */
+			case 7:
+				c = 'a';
+				if (0)
+					/* FALLTHROUGH */
+			case '\b':
+				  c = 'b';
+				if (0)
+					/* FALLTHROUGH */
+			case '\f':
+				  c = 'f';
+				if (0)
+					/* FALLTHROUGH */
+			case '\n':
+				  c = 'n';
+				if (0)
+					/* FALLTHROUGH */
+			case '\r':
+				  c = 'r';
+				if (0)
+					/* FALLTHROUGH */
+			case '\t':
+				  c = 't';
+				if (0)
+					/* FALLTHROUGH */
+			case 11:
+				  c = 'v';
+				if (0)
+					/* FALLTHROUGH */
+			case '\033':
+				/* take E not e because \e is \ in *roff */
+				  c = 'E';
+				/* FALLTHROUGH */
+			case '\\':
+				shf_putc('\\', shf);
+
+				if (0)
+					/* FALLTHROUGH */
+			default:
+				  if (c < 32 || c > 0x7E) {
+					/* FALLTHROUGH */
+			case '\'':
+					shf_fprintf(shf, "\\%03o", c);
+					break;
+				}
+
+				shf_putc(c, shf);
+				break;
+			}
+		}
+		inquote = true;
 	}
 	if (inquote)
-		shf_putc('\'', shl_stdout);
+		shf_putc('\'', shf);
 }
 
 /*
@@ -1088,29 +1157,32 @@ print_value_quoted(const char *s)
  * the i-th element
  */
 void
-print_columns(struct shf *shf, int n,
-    char *(*func)(char *, size_t, int, const void *),
+print_columns(struct shf *shf, unsigned int n,
+    char *(*func)(char *, size_t, unsigned int, const void *),
     const void *arg, size_t max_oct, size_t max_colz, bool prefcol)
 {
-	int i, r, c, rows, cols, nspace, max_col;
+	unsigned int i, r, c, rows, cols, nspace, max_col;
 	char *str;
 
-	if (n <= 0) {
+	if (!n)
+		return;
+
+	if (max_colz > 2147483646) {
 #ifndef MKSH_SMALL
-		internal_warningf("print_columns called with n=%d <= 0", n);
+		internal_warningf("print_columns called with %s=%zu >= INT_MAX",
+		    "max_col", max_colz);
 #endif
 		return;
 	}
+	max_col = (unsigned int)max_colz;
 
-	if (max_colz > 2147483647) {
+	if (max_oct > 2147483646) {
 #ifndef MKSH_SMALL
-		internal_warningf("print_columns called with max_col=%zu > INT_MAX",
-		    max_colz);
+		internal_warningf("print_columns called with %s=%zu >= INT_MAX",
+		    "max_oct", max_oct);
 #endif
 		return;
 	}
-	max_col = (int)max_colz;
-
 	++max_oct;
 	str = alloc(max_oct, ATEMP);
 
@@ -1231,7 +1303,7 @@ reset_nonblock(int fd)
 char *
 ksh_get_wd(void)
 {
-#ifdef NO_PATH_MAX
+#ifdef MKSH__NO_PATH_MAX
 	char *rv, *cp;
 
 	if ((cp = get_current_dir_name())) {
@@ -1264,7 +1336,7 @@ do_realpath(const char *upath)
 	size_t len;
 	int llen;
 	struct stat sb;
-#ifdef NO_PATH_MAX
+#ifdef MKSH__NO_PATH_MAX
 	size_t ldestlen = 0;
 #define pathlen sb.st_size
 #define pathcnd (ldestlen < (pathlen + 1))
@@ -1332,7 +1404,7 @@ do_realpath(const char *upath)
 		*xp = '\0';
 
 		/* lstat the current output, see if it's a symlink */
-		if (lstat(Xstring(xs, xp), &sb)) {
+		if (mksh_lstat(Xstring(xs, xp), &sb)) {
 			/* lstat failed */
 			if (errno == ENOENT) {
 				/* because the pathname does not exist */
@@ -1351,6 +1423,7 @@ do_realpath(const char *upath)
 
 		/* check if we encountered a symlink? */
 		if (S_ISLNK(sb.st_mode)) {
+#ifndef MKSH__NO_SYMLINK
 			/* reached maximum recursion depth? */
 			if (!symlinks--) {
 				/* yep, prevent infinite loops */
@@ -1360,7 +1433,7 @@ do_realpath(const char *upath)
 
 			/* get symlink(7) target */
 			if (pathcnd) {
-#ifdef NO_PATH_MAX
+#ifdef MKSH__NO_PATH_MAX
 				if (notoktoadd(pathlen, 1)) {
 					errno = ENAMETOOLONG;
 					goto notfound;
@@ -1385,7 +1458,9 @@ do_realpath(const char *upath)
 			if (ldest[0] != '/') {
 				/* symlink target is a relative path */
 				xp = Xrestpos(xs, xp, pos);
-			} else {
+			} else
+#endif
+			  {
 				/* symlink target is an absolute path */
 				xp = Xstring(xs, xp);
  beginning_of_a_pathname:
@@ -1746,7 +1821,7 @@ c_cd(const char **wp)
 		return (2);
 	}
 
-#ifdef NO_PATH_MAX
+#ifdef MKSH__NO_PATH_MAX
 	/* only a first guess; make_path will enlarge xs if necessary */
 	XinitN(xs, 1024, ATEMP);
 #else
@@ -1825,7 +1900,7 @@ c_cd(const char **wp)
 }
 
 
-#ifdef TIOCSCTTY
+#ifdef KSH_CHVT_CODE
 extern void chvt_reinit(void);
 
 static void
@@ -1863,9 +1938,9 @@ chvt(const char *fn)
 			    "new shell is potentially insecure, can't revoke",
 			    fn);
 	}
-	if ((fd = open(fn, O_RDWR)) == -1) {
+	if ((fd = open(fn, O_RDWR)) < 0) {
 		sleep(1);
-		if ((fd = open(fn, O_RDWR)) == -1)
+		if ((fd = open(fn, O_RDWR)) < 0)
 			errorf("%s: %s %s", "chvt", "can't open", fn);
 	}
 	switch (fork()) {
@@ -1892,9 +1967,9 @@ chvt(const char *fn)
 	{
 		register uint32_t h;
 
-		oaat1_init_impl(h);
-		oaat1_addmem_impl(h, &rndsetupstate, sizeof(rndsetupstate));
-		oaat1_fini_impl(h);
+		NZATInit(h);
+		NZATUpdateMem(h, &rndsetupstate, sizeof(rndsetupstate));
+		NZAATFinish(h);
 		rndset((long)h);
 	}
 	chvt_reinit();
@@ -1933,7 +2008,7 @@ strstr(char *b, const char *l)
 }
 #endif
 
-#ifdef MKSH_SMALL
+#if defined(MKSH_SMALL) && !defined(MKSH_SMALL_BUT_FAST)
 char *
 strndup_i(const char *src, size_t len, Area *ap)
 {

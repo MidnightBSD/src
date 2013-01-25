@@ -1,5 +1,5 @@
 #if defined(SHFLAGS_DEFNS)
-__RCSID("$MirOS: src/bin/mksh/sh_flags.h,v 1.8.2.1 2011/11/26 18:23:26 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/sh_flags.h,v 1.12 2012/06/28 20:14:17 tg Exp $");
 #define FN(sname,cname,ochar,flags)	/* nothing */
 #elif defined(SHFLAGS_ENUMS)
 #define FN(sname,cname,ochar,flags)	cname,
@@ -21,11 +21,6 @@ __RCSID("$MirOS: src/bin/mksh/sh_flags.h,v 1.8.2.1 2011/11/26 18:23:26 tg Exp $"
 /* -a	all new parameters are created with the export attribute */
 F0("allexport", FEXPORT, 'a', OF_ANY)
 
-#ifndef MKSH_DISABLE_DEPRECATED
-/* ./.	backwards compat: dummy, emits a warning */
-FN("arc4random", FARC4RANDOM, 0, OF_ANY)
-#endif
-
 #if HAVE_NICE
 /* ./.	bgnice */
 FN("bgnice", FBGNICE, 0, OF_ANY)
@@ -34,14 +29,18 @@ FN("bgnice", FBGNICE, 0, OF_ANY)
 /* ./.	enable {} globbing (non-standard) */
 FN("braceexpand", FBRACEEXPAND, 0, OF_ANY)
 
+#if !defined(MKSH_NO_CMDLINE_EDITING) || defined(MKSH_LEGACY_MODE)
 /* ./.	Emacs command line editing mode */
 FN("emacs", FEMACS, 0, OF_ANY)
+#endif
 
 /* -e	quit on error */
 FN("errexit", FERREXIT, 'e', OF_ANY)
 
+#if !defined(MKSH_NO_CMDLINE_EDITING) || defined(MKSH_LEGACY_MODE)
 /* ./.	Emacs command line editing mode, gmacs variant */
 FN("gmacs", FGMACS, 0, OF_ANY)
+#endif
 
 /* ./.	reading EOF does not exit */
 FN("ignoreeof", FIGNOREEOF, 0, OF_ANY)
@@ -113,7 +112,7 @@ FN("utf8-mode", FUNICODE, 'U', OF_ANY)
 /* -v	echo input */
 FN("verbose", FVERBOSE, 'v', OF_ANY)
 
-#if !MKSH_S_NOVI
+#if !defined(MKSH_NO_CMDLINE_EDITING) || defined(MKSH_LEGACY_MODE)
 /* ./.	Vi command line editing mode */
 FN("vi", FVI, 0, OF_ANY)
 

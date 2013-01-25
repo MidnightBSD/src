@@ -1,5 +1,5 @@
 #if defined(VARSPEC_DEFNS)
-__RCSID("$MirOS: src/bin/mksh/var_spec.h,v 1.2 2011/06/05 19:58:21 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/var_spec.h,v 1.6 2012/11/30 16:45:25 tg Exp $");
 #define FN(name)			/* nothing */
 #elif defined(VARSPEC_ENUMS)
 #define FN(name)			V_##name,
@@ -19,7 +19,9 @@ __RCSID("$MirOS: src/bin/mksh/var_spec.h,v 1.2 2011/06/05 19:58:21 tg Exp $");
 F0(NONE)
 
 /* 1 and up are special variables */
+FN(BASHPID)
 FN(COLUMNS)
+FN(EPOCHREALTIME)
 #if HAVE_PERSISTENT_HISTORY
 FN(HISTFILE)
 #endif

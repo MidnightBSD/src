@@ -27,7 +27,7 @@
 #include <sys/file.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/histrap.c,v 1.122 2012/04/06 13:29:00 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/histrap.c,v 1.128 2012/11/30 19:02:07 tg Exp $");
 
 Trap sigtraps[NSIG + 1];
 static struct sigaction Sigact_ign;
@@ -297,7 +297,7 @@ c_fc(const char **wp)
 	tf = maketemp(ATEMP, TT_HIST_EDIT, &e->temps);
 	if (!(shf = tf->shf)) {
 		bi_errorf("can't %s temporary file %s: %s",
-		    "create", tf->name, strerror(errno));
+		    "create", tf->tffn, strerror(errno));
 		return (1);
 	}
 	for (hp = rflag ? hlast : hfirst;
@@ -305,12 +305,12 @@ c_fc(const char **wp)
 		shf_fprintf(shf, "%s\n", *hp);
 	if (shf_close(shf) == EOF) {
 		bi_errorf("can't %s temporary file %s: %s",
-		    "write", tf->name, strerror(errno));
+		    "write", tf->tffn, strerror(errno));
 		return (1);
 	}
 
 	/* Ignore setstr errors here (arbitrary) */
-	setstr(local("_", false), tf->name, KSH_RETURN_ERROR);
+	setstr(local("_", false), tf->tffn, KSH_RETURN_ERROR);
 
 	/* XXX: source should not get trashed by this.. */
 	{
@@ -329,13 +329,13 @@ c_fc(const char **wp)
 		char *xp;
 		ssize_t n;
 
-		if (!(shf = shf_open(tf->name, O_RDONLY, 0, 0))) {
+		if (!(shf = shf_open(tf->tffn, O_RDONLY, 0, 0))) {
 			bi_errorf("can't %s temporary file %s: %s",
-			    "open", tf->name, strerror(errno));
+			    "open", tf->tffn, strerror(errno));
 			return (1);
 		}
 
-		if (stat(tf->name, &statb) < 0)
+		if (stat(tf->tffn, &statb) < 0)
 			n = 128;
 		else if ((off_t)statb.st_size > MKSH_MAXHISTFSIZE) {
 			bi_errorf("%s %s too large: %lu", Thistory,
@@ -351,7 +351,7 @@ c_fc(const char **wp)
 		}
 		if (n < 0) {
 			bi_errorf("can't %s temporary file %s: %s",
-			    "read", tf->name, strerror(shf_errno(shf)));
+			    "read", tf->tffn, strerror(shf_errno(shf)));
  errout:
 			shf_close(shf);
 			return (1);
@@ -475,7 +475,7 @@ hist_get_oldest(void)
 	return (history);
 }
 
-#if !MKSH_S_NOVI
+#if !defined(MKSH_NO_CMDLINE_EDITING) && !MKSH_S_NOVI
 /* current position in history[] */
 static char **current;
 
@@ -941,8 +941,10 @@ writehistline(int fd, int lno, const char *cmd)
 void
 hist_finish(void)
 {
-	mksh_unlkfd(histfd);
-	(void)close(histfd);
+	if (histfd >= 0) {
+		mksh_unlkfd(histfd);
+		(void)close(histfd);
+	}
 	histfd = -1;
 }
 #endif
@@ -1110,7 +1112,7 @@ void
 trapsig(int i)
 {
 	Trap *p = &sigtraps[i];
-	int errno_sv = errno;
+	int eno = errno;
 
 	trap = p->set = 1;
 	if (p->flags & TF_DFL_INTR)
@@ -1121,7 +1123,7 @@ trapsig(int i)
 	}
 	if (p->shtrap)
 		(*p->shtrap)(i);
-	errno = errno_sv;
+	errno = eno;
 }
 
 /*
@@ -1222,12 +1224,12 @@ runtrap(Trap *p, bool is_last)
 		/* SIG_DFL */
 		if (p->flags & TF_FATAL) {
 			/* eg, SIGHUP */
-			exstat = 128 + i;
+			exstat = (int)ksh_min(128U + (unsigned)i, 255U);
 			unwind(LLEAVE);
 		}
 		if (p->flags & TF_DFL_INTR) {
 			/* eg, SIGINT, SIGQUIT, SIGTERM, etc. */
-			exstat = 128 + i;
+			exstat = (int)ksh_min(128U + (unsigned)i, 255U);
 			unwind(LINTR);
 		}
 		goto donetrap;
@@ -1242,7 +1244,7 @@ runtrap(Trap *p, bool is_last)
 		p->trap = NULL;
 	}
 	if (trap_exstat == -1)
-		trap_exstat = exstat;
+		trap_exstat = exstat & 0xFF;
 	/*
 	 * Note: trapstr is fully parsed before anything is executed, thus
 	 * no problem with afree(p->trap) in settrap() while still in use.
@@ -1372,6 +1374,8 @@ setsig(Trap *p, sig_t f, int flags)
 
 	if (p->signal == ksh_SIGEXIT || p->signal == ksh_SIGERR)
 		return (1);
+
+	memset(&sigact, 0, sizeof(sigact));
 
 	/*
 	 * First time setting this signal? If so, get and note the current

@@ -1,7 +1,8 @@
 /*	$OpenBSD: exec.c,v 1.49 2009/01/29 23:27:26 jaredy Exp $	*/
 
 /*-
- * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+ *		 2011, 2012
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -22,7 +23,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/exec.c,v 1.97 2012/03/31 17:29:58 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/exec.c,v 1.106 2012/11/30 19:02:06 tg Exp $");
 
 #ifndef MKSH_DEFAULT_EXECSHELL
 #define MKSH_DEFAULT_EXECSHELL	"/bin/sh"
@@ -39,6 +40,9 @@ static Test_op dbteste_isa(Test_env *, Test_meta);
 static const char *dbteste_getopnd(Test_env *, Test_op, bool);
 static void dbteste_error(Test_env *, int, const char *);
 static int search_access(const char *, int);
+/* XXX: horrible kludge to fit within the framework */
+static char *plain_fmt_entry(char *, size_t, unsigned int, const void *);
+static char *select_fmt_entry(char *, size_t, unsigned int, const void *);
 
 /*
  * execute command tree
@@ -460,7 +464,7 @@ execute(struct op * volatile t,
 			errorf("%s: %s", s, strerror(rv));
 	}
  Break:
-	exstat = rv;
+	exstat = rv & 0xFF;
 	if (vp_pipest->flag & INT_L) {
 		unset(vp_pipest, 1);
 		vp_pipest->flag = DEFINED | ISSET | INTEGER | RDONLY |
@@ -601,10 +605,19 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 				/* go on, use the builtin */
 				break;
 #endif
+#if !defined(MKSH_SMALL) && !defined(MKSH_DISABLE_EXPERIMENTAL)
+		} else if (tp->val.f == c_trap) {
+			t->u.evalflags &= ~DOTCOMEXEC;
+			break;
+#endif
 		} else
 			break;
 		tp = findcom(ap[0], fcflags & (FC_BI|FC_FUNC));
 	}
+#if !defined(MKSH_SMALL) && !defined(MKSH_DISABLE_EXPERIMENTAL)
+	if (t->u.evalflags & DOTCOMEXEC)
+		flags |= XEXEC;
+#endif
 	l_expand = e->loc;
 	if (keepasn_ok && (!ap[0] || (tp && (tp->flag & KEEPASN))))
 		type_flags = 0;
@@ -678,7 +691,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 				    strerror(tp->u2.errnov));
 				break;
 			}
-			if (include(tp->u.fpath, 0, NULL, 0) < 0) {
+			if (include(tp->u.fpath, 0, NULL, false) < 0) {
 				rv = errno;
 				warningf(true, "%s: %s %s %s: %s", cp,
 				    "can't open", "function definition file",
@@ -728,7 +741,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 		e->type = E_FUNC;
 		if (!(i = kshsetjmp(e->jbuf))) {
 			/* seems odd to pass XERROK here, but AT&T ksh does */
-			exstat = execute(tp->val.t, flags & XERROK, xerrok);
+			exstat = execute(tp->val.t, flags & XERROK, xerrok) & 0xFF;
 			i = LRETURN;
 		}
 		kshname = old_kshname;
@@ -749,7 +762,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 		switch (i) {
 		case LRETURN:
 		case LERROR:
-			rv = exstat;
+			rv = exstat & 0xFF;
 			break;
 		case LINTR:
 		case LEXIT:
@@ -809,7 +822,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 	}
  Leave:
 	if (flags & XEXEC) {
-		exstat = rv;
+		exstat = rv & 0xFF;
 		unwind(LLEAVE);
 	}
 	return (rv);
@@ -1263,7 +1276,8 @@ iosetup(struct ioword *iop, struct tbl *tp)
 	int u = -1;
 	char *cp = iop->name;
 	int iotype = iop->flag & IOTYPE;
-	int do_open = 1, do_close = 0, flags = 0;
+	bool do_open = true, do_close = false;
+	int flags = 0;
 	struct ioword iotmp;
 	struct stat statb;
 
@@ -1305,7 +1319,7 @@ iosetup(struct ioword *iop, struct tbl *tp)
 		break;
 
 	case IOHERE:
-		do_open = 0;
+		do_open = false;
 		/* herein() returns -2 if error has been printed */
 		u = herein(iop->heredoc, iop->flag & IOEVAL, NULL);
 		/* cp may have wrong name */
@@ -1314,11 +1328,11 @@ iosetup(struct ioword *iop, struct tbl *tp)
 	case IODUP: {
 		const char *emsg;
 
-		do_open = 0;
+		do_open = false;
 		if (*cp == '-' && !cp[1]) {
 			/* prevent error return below */
 			u = 1009;
-			do_close = 1;
+			do_close = true;
 		} else if ((u = check_fd(cp,
 		    X_OK | ((iop->flag & IORDUP) ? R_OK : W_OK),
 		    &emsg)) < 0) {
@@ -1330,7 +1344,7 @@ iosetup(struct ioword *iop, struct tbl *tp)
 			/* "dup from" == "dup to" */
 			return (0);
 		break;
-	}
+	    }
 	}
 
 	if (do_open) {
@@ -1371,13 +1385,13 @@ iosetup(struct ioword *iop, struct tbl *tp)
 		close(iop->unit);
 	else if (u != iop->unit) {
 		if (ksh_dup2(u, iop->unit, true) < 0) {
-			int ev;
+			int eno;
 
-			ev = errno;
+			eno = errno;
 			warningf(true, "%s %s %s",
 			    "can't finish (dup) redirection",
 			    snptreef(NULL, 32, "%R", &iotmp),
-			    strerror(ev));
+			    strerror(eno));
 			if (iotype != IODUP)
 				close(u);
 			return (-1);
@@ -1467,10 +1481,10 @@ herein(const char *content, int sub, char **resbuf)
 	 * so temp doesn't get removed too soon).
 	 */
 	h = maketemp(ATEMP, TT_HEREDOC_EXP, &e->temps);
-	if (!(shf = h->shf) || (fd = open(h->name, O_RDONLY, 0)) < 0) {
+	if (!(shf = h->shf) || (fd = open(h->tffn, O_RDONLY, 0)) < 0) {
 		i = errno;
 		warningf(true, "can't %s temporary file %s: %s",
-		    !shf ? "create" : "open", h->name, strerror(i));
+		    !shf ? "create" : "open", h->tffn, strerror(i));
 		if (shf)
 			shf_close(shf);
 		/* special to iosetup(): don't print error */
@@ -1486,7 +1500,8 @@ herein(const char *content, int sub, char **resbuf)
 	if (shf_close(shf) == EOF) {
 		i = errno;
 		close(fd);
-		warningf(true, "%s: %s: %s", "write", h->name, strerror(i));
+		warningf(true, "can't %s temporary file %s: %s",
+		    "write", h->tffn, strerror(i));
 		/* special to iosetup(): don't print error */
 		return (-2);
 	}
@@ -1526,7 +1541,7 @@ do_selectargs(const char **ap, bool print_menu)
 			getn(s, &i);
 			return ((i >= 1 && i <= argct) ? ap[i - 1] : null);
 		}
-		print_menu = 1;
+		print_menu = true;
 	}
 }
 
@@ -1535,16 +1550,14 @@ struct select_menu_info {
 	int num_width;
 };
 
-static char *select_fmt_entry(char *, size_t, int, const void *);
-
 /* format a single select menu item */
 static char *
-select_fmt_entry(char *buf, size_t buflen, int i, const void *arg)
+select_fmt_entry(char *buf, size_t buflen, unsigned int i, const void *arg)
 {
 	const struct select_menu_info *smi =
 	    (const struct select_menu_info *)arg;
 
-	shf_snprintf(buf, buflen, "%*d) %s",
+	shf_snprintf(buf, buflen, "%*u) %s",
 	    smi->num_width, i + 1, smi->args[i]);
 	return (buf);
 }
@@ -1552,13 +1565,13 @@ select_fmt_entry(char *buf, size_t buflen, int i, const void *arg)
 /*
  *	print a select style menu
  */
-int
+void
 pr_menu(const char * const *ap)
 {
 	struct select_menu_info smi;
 	const char * const *pp;
 	size_t acols = 0, aocts = 0, i;
-	int n;
+	unsigned int n;
 
 	/*
 	 * width/column calculations were done once and saved, but this
@@ -1590,25 +1603,20 @@ pr_menu(const char * const *ap)
 	print_columns(shl_out, n, select_fmt_entry, (void *)&smi,
 	    smi.num_width + 2 + aocts, smi.num_width + 2 + acols,
 	    true);
-
-	return (n);
 }
 
-/* XXX: horrible kludge to fit within the framework */
-static char *plain_fmt_entry(char *, size_t, int, const void *);
-
 static char *
-plain_fmt_entry(char *buf, size_t buflen, int i, const void *arg)
+plain_fmt_entry(char *buf, size_t buflen, unsigned int i, const void *arg)
 {
 	strlcpy(buf, ((const char * const *)arg)[i], buflen);
 	return (buf);
 }
 
-int
+void
 pr_list(char * const *ap)
 {
 	size_t acols = 0, aocts = 0, i;
-	int n;
+	unsigned int n;
 	char * const *pp;
 
 	for (n = 0, pp = ap; *pp; n++, pp++) {
@@ -1622,8 +1630,6 @@ pr_list(char * const *ap)
 
 	print_columns(shl_out, n, plain_fmt_entry, (const void *)ap,
 	    aocts, acols, false);
-
-	return (n);
 }
 
 /*
@@ -1656,9 +1662,10 @@ dbteste_isa(Test_env *te, Test_meta meta)
 			char buf[8];
 			char *q = buf;
 
-			for (p = *te->pos.wp;
-			    *p == CHAR && q < &buf[sizeof(buf) - 1]; p += 2)
-				*q++ = p[1];
+			p = *te->pos.wp;
+			while (*p++ == CHAR &&
+			    (size_t)(q - buf) < sizeof(buf) - 1)
+				*q++ = *p++;
 			*q = '\0';
 			ret = test_isop(meta, buf);
 		}

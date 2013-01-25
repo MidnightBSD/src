@@ -27,7 +27,7 @@
 #include <sys/sysctl.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/var.c,v 1.130.2.8 2012/03/24 21:22:46 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/var.c,v 1.161 2012/11/30 19:25:08 tg Exp $");
 
 /*-
  * Variables
@@ -39,7 +39,6 @@ __RCSID("$MirOS: src/bin/mksh/var.c,v 1.130.2.8 2012/03/24 21:22:46 tg Exp $");
  * if (flag&EXPORT), val.s contains "name=value" for E-Z exporting.
  */
 
-static struct tbl vtemp;
 static struct table specials;
 static uint32_t lcg_state = 5381;
 
@@ -131,8 +130,8 @@ initvar(void)
 	struct tbl *tp;
 
 	ktinit(APERM, &specials,
-	    /* currently 12 specials -> 80% of 16 (2^4) */
-	    4);
+	    /* currently 14 specials: 75% of 32 = 2^5 */
+	    5);
 	while (i < V_MAX - 1) {
 		tp = ktenter(&specials, initvar_names[i],
 		    hash(initvar_names[i]));
@@ -141,8 +140,8 @@ initvar(void)
 	}
 }
 
-/* common code for several functions below */
-static struct block *
+/* common code for several functions below and c_typeset() */
+struct block *
 varsearch(struct block *l, struct tbl **vpp, const char *vn, uint32_t h)
 {
 	register struct tbl *vp;
@@ -261,7 +260,7 @@ global(const char *n)
 				vp->flag &= ~(ISSET|INTEGER);
 			break;
 		case '?':
-			vp->val.i = exstat;
+			vp->val.i = exstat & 0xFF;
 			break;
 		case '#':
 			vp->val.i = l->argc;
@@ -406,11 +405,11 @@ int
 setstr(struct tbl *vq, const char *s, int error_ok)
 {
 	char *salloc = NULL;
-	int no_ro_check = error_ok & 0x4;
+	bool no_ro_check = tobool(error_ok & 0x4);
 
 	error_ok &= ~0x4;
 	if ((vq->flag & RDONLY) && !no_ro_check) {
-		warningf(true, "%s: %s", vq->name, "is read only");
+		warningf(true, "read-only: %s", vq->name);
 		if (!error_ok)
 			errorfxz(2);
 		return (0);
@@ -418,12 +417,15 @@ setstr(struct tbl *vq, const char *s, int error_ok)
 	if (!(vq->flag&INTEGER)) {
 		/* string dest */
 		if ((vq->flag&ALLOC)) {
+#ifndef MKSH_SMALL
 			/* debugging */
 			if (s >= vq->val.s &&
-			    s <= vq->val.s + strlen(vq->val.s))
+			    s <= vq->val.s + strlen(vq->val.s)) {
 				internal_errorf(
 				    "setstr: %s=%s: assigning to self",
 				    vq->name, s);
+			}
+#endif
 			afree(vq->val.s, vq->areap);
 		}
 		vq->flag &= ~(ISSET|ALLOC);
@@ -488,27 +490,16 @@ getint(struct tbl *vp, mksh_ari_t *nump, bool arith)
 	base = 10;
 	num = 0;
 	neg = 0;
-#ifdef MKSH_DISABLE_DEPRECATED
 	if (arith && s[0] == '0' && (s[1] | 0x20) == 'x') {
 		s += 2;
 		base = 16;
 		have_base = true;
 	}
-#else
-	if (arith && *s == '0' && *(s+1)) {
-		s++;
-		if (*s == 'x' || *s == 'X') {
-			s++;
-			base = 16;
-		} else if (vp->flag & ZEROFIL) {
-			while (*s == '0')
-				s++;
-		} else {
-			warningf(true, "interpreting %s[%lu]='%s' as octal"
-			    " is deprecated", vp->name,
-			    arrayindex(vp), vp->val.s + vp->type);
-			base = 8;
-		}
+#ifdef MKSH_LEGACY_MODE
+	if (arith && s[0] == '0' && ksh_isdigit(s[1]) &&
+	    !(vp->flag & ZEROFIL)) {
+		/* interpret as octal (deprecated) */
+		base = 8;
 		have_base = true;
 	}
 #endif
@@ -814,7 +805,7 @@ typeset(const char *var, uint32_t set, uint32_t clr, int field, int base)
 	if ((vpbase->flag&RDONLY) &&
 	    (val || clr || (set & ~EXPORT)))
 		/* XXX check calls - is error here ok by POSIX? */
-		errorfx(2, "%s: %s", tvar, "is read only");
+		errorfx(2, "read-only: %s", tvar);
 	afree(tvar, ATEMP);
 
 	/* most calls are with set/clr == 0 */
@@ -1096,38 +1087,9 @@ getspec(struct tbl *vp)
 {
 	register mksh_ari_t i;
 	int st;
+	struct timeval tv;
 
 	switch ((st = special(vp->name))) {
-	case V_SECONDS:
-		/*
-		 * On start up the value of SECONDS is used before
-		 * it has been set - don't do anything in this case
-		 * (see initcoms[] in main.c).
-		 */
-		if (vp->flag & ISSET) {
-			struct timeval tv;
-
-			gettimeofday(&tv, NULL);
-			i = tv.tv_sec - seconds;
-		} else
-			return;
-		break;
-	case V_RANDOM:
-		/*
-		 * this is the same Linear Congruential PRNG as Borland
-		 * C/C++ allegedly uses in its built-in rand() function
-		 */
-		i = ((lcg_state = 22695477 * lcg_state + 1) >> 16) & 0x7FFF;
-		break;
-	case V_HISTSIZE:
-		i = histsize;
-		break;
-	case V_OPTIND:
-		i = user_opt.uoptind;
-		break;
-	case V_LINENO:
-		i = current_lineno + user_lineno;
-		break;
 	case V_COLUMNS:
 	case V_LINES:
 		/*
@@ -1137,7 +1099,55 @@ getspec(struct tbl *vp)
 		 * and the window is then resized, the app won't
 		 * see the change cause the environ doesn't change.
 		 */
-		i = st == V_COLUMNS ? x_cols : x_lins;
+		if (got_winch)
+			change_winsz();
+		break;
+	}
+	switch (st) {
+	case V_BASHPID:
+		i = (mksh_ari_t)procpid;
+		break;
+	case V_COLUMNS:
+		i = x_cols;
+		break;
+	case V_HISTSIZE:
+		i = histsize;
+		break;
+	case V_LINENO:
+		i = current_lineno + user_lineno;
+		break;
+	case V_LINES:
+		i = x_lins;
+		break;
+	case V_EPOCHREALTIME: {
+		/* 10(%u) + 1(.) + 6 + NUL */
+		char buf[18];
+
+		vp->flag &= ~SPECIAL;
+		mksh_TIME(tv);
+		shf_snprintf(buf, sizeof(buf), "%u.%06u",
+		    (unsigned)tv.tv_sec, (unsigned)tv.tv_usec);
+		setstr(vp, buf, KSH_RETURN_ERROR | 0x4);
+		vp->flag |= SPECIAL;
+		return;
+	}
+	case V_OPTIND:
+		i = user_opt.uoptind;
+		break;
+	case V_RANDOM:
+		i = rndget();
+		break;
+	case V_SECONDS:
+		/*
+		 * On start up the value of SECONDS is used before
+		 * it has been set - don't do anything in this case
+		 * (see initcoms[] in main.c).
+		 */
+		if (vp->flag & ISSET) {
+			mksh_TIME(tv);
+			i = tv.tv_sec - seconds;
+		} else
+			return;
 		break;
 	default:
 		/* do nothing, do not touch vp at all */
@@ -1156,6 +1166,15 @@ setspec(struct tbl *vp)
 	int st;
 
 	switch ((st = special(vp->name))) {
+#if HAVE_PERSISTENT_HISTORY
+	case V_HISTFILE:
+		sethistfile(str_val(vp));
+		return;
+#endif
+	case V_IFS:
+		setctypes(s = str_val(vp), C_IFS);
+		ifs0 = *s;
+		return;
 	case V_PATH:
 		if (path)
 			afree(path, APERM);
@@ -1163,10 +1182,6 @@ setspec(struct tbl *vp)
 		strdupx(path, s, APERM);
 		/* clear tracked aliases */
 		flushcom(true);
-		return;
-	case V_IFS:
-		setctypes(s = str_val(vp), C_IFS);
-		ifs0 = *s;
 		return;
 	case V_TMPDIR:
 		if (tmpdir) {
@@ -1187,20 +1202,21 @@ setspec(struct tbl *vp)
 				strdupx(tmpdir, s, APERM);
 		}
 		return;
-#if HAVE_PERSISTENT_HISTORY
-	case V_HISTFILE:
-		sethistfile(str_val(vp));
-		return;
-#endif
-
 	/* common sub-cases */
-	case V_OPTIND:
-	case V_HISTSIZE:
 	case V_COLUMNS:
 	case V_LINES:
+		if (vp->flag & IMPORT) {
+			/* do not touch */
+			unspecial(vp->name);
+			vp->flag &= ~SPECIAL;
+			return;
+		}
+		/* FALLTHROUGH */
+	case V_HISTSIZE:
+	case V_LINENO:
+	case V_OPTIND:
 	case V_RANDOM:
 	case V_SECONDS:
-	case V_LINENO:
 	case V_TMOUT:
 		vp->flag &= ~SPECIAL;
 		if (getint(vp, &i, false) == -1) {
@@ -1219,19 +1235,23 @@ setspec(struct tbl *vp)
 	/* process the singular parts of the common cases */
 
 	switch (st) {
-	case V_OPTIND:
-		getopts_reset((int)i);
-		break;
-	case V_HISTSIZE:
-		sethistsize(i);
-		break;
 	case V_COLUMNS:
 		if (i >= MIN_COLS)
 			x_cols = i;
 		break;
+	case V_HISTSIZE:
+		sethistsize(i);
+		break;
+	case V_LINENO:
+		/* The -1 is because line numbering starts at 1. */
+		user_lineno = (unsigned int)i - current_lineno - 1;
+		break;
 	case V_LINES:
 		if (i >= MIN_LINS)
 			x_lins = i;
+		break;
+	case V_OPTIND:
+		getopts_reset((int)i);
 		break;
 	case V_RANDOM:
 		/*
@@ -1244,13 +1264,9 @@ setspec(struct tbl *vp)
 		{
 			struct timeval tv;
 
-			gettimeofday(&tv, NULL);
+			mksh_TIME(tv);
 			seconds = tv.tv_sec - i;
 		}
-		break;
-	case V_LINENO:
-		/* The -1 is because line numbering starts at 1. */
-		user_lineno = (unsigned int)i - current_lineno - 1;
 		break;
 	case V_TMOUT:
 		ksh_tmout = i >= 0 ? i : 0;
@@ -1261,17 +1277,25 @@ setspec(struct tbl *vp)
 static void
 unsetspec(struct tbl *vp)
 {
+	/*
+	 * AT&T ksh man page says OPTIND, OPTARG and _ lose special
+	 * meaning, but OPTARG does not (still set by getopts) and _ is
+	 * also still set in various places. Don't know what AT&T does
+	 * for HISTSIZE, HISTFILE. Unsetting these in AT&T ksh does not
+	 * loose the 'specialness': IFS, COLUMNS, PATH, TMPDIR
+	 */
+
 	switch (special(vp->name)) {
+	case V_IFS:
+		setctypes(TC_IFSWS, C_IFS);
+		ifs0 = ' ';
+		break;
 	case V_PATH:
 		if (path)
 			afree(path, APERM);
 		strdupx(path, def_path, APERM);
 		/* clear tracked aliases */
 		flushcom(true);
-		break;
-	case V_IFS:
-		setctypes(" \t\n", C_IFS);
-		ifs0 = ' ';
 		break;
 	case V_TMPDIR:
 		/* should not become unspecial */
@@ -1287,14 +1311,6 @@ unsetspec(struct tbl *vp)
 		/* AT&T ksh leaves previous value in place */
 		unspecial(vp->name);
 		break;
-
-	/*
-	 * AT&T ksh man page says OPTIND, OPTARG and _ lose special
-	 * meaning, but OPTARG does not (still set by getopts) and _ is
-	 * also still set in various places. Don't know what AT&T does
-	 * for HISTSIZE, HISTFILE. Unsetting these in AT&T ksh does not
-	 * loose the 'specialness': IFS, COLUMNS, PATH, TMPDIR
-	 */
 	}
 }
 
@@ -1404,7 +1420,7 @@ set_array(const char *var, bool reset, const char **vals)
 
 	/* Note: AT&T ksh allows set -A but not set +A of a read-only var */
 	if ((vp->flag&RDONLY))
-		errorfx(2, "%s: %s", ccp, "is read only");
+		errorfx(2, "read-only: %s", ccp);
 	/* This code is quite non-optimal */
 	if (reset) {
 		/* trash existing values and attributes */
@@ -1464,7 +1480,7 @@ change_winsz(void)
 {
 #ifdef TIOCGWINSZ
 	/* check if window size has changed */
-	if (tty_fd >= 0) {
+	if (tty_init_fd() < 2) {
 		struct winsize ws;
 
 		if (ioctl(tty_fd, TIOCGWINSZ, &ws) >= 0) {
@@ -1492,10 +1508,20 @@ hash(const void *s)
 {
 	register uint32_t h;
 
-	oaat1_init_impl(h);
-	oaat1_addstr_impl(h, s);
-	oaat1_fini_impl(h);
+	NZATInit(h);
+	NZATUpdateString(h, s);
+	NZAATFinish(h);
 	return (h);
+}
+
+mksh_ari_t
+rndget(void)
+{
+	/*
+	 * this is the same Linear Congruential PRNG as Borland
+	 * C/C++ allegedly uses in its built-in rand() function
+	 */
+	return (((lcg_state = 22695477 * lcg_state + 1) >> 16) & 0x7FFF);
 }
 
 void
@@ -1503,9 +1529,9 @@ rndset(long v)
 {
 	register uint32_t h;
 
-	oaat1_init_impl(h);
-	oaat1_addmem_impl(h, &lcg_state, sizeof(lcg_state));
-	oaat1_addmem_impl(h, &v, sizeof(v));
+	NZATInit(h);
+	NZATUpdateMem(h, &lcg_state, sizeof(lcg_state));
+	NZATUpdateMem(h, &v, sizeof(v));
 
 #if defined(arc4random_pushb_fast) || defined(MKSH_A4PB)
 	/*
@@ -1514,16 +1540,16 @@ rndset(long v)
 	 * user requested us to use the old functions
 	 */
 	lcg_state = h;
-	oaat1_fini_impl(lcg_state);
+	NZAATFinish(lcg_state);
 #if defined(arc4random_pushb_fast)
 	arc4random_pushb_fast(&lcg_state, sizeof(lcg_state));
 	lcg_state = arc4random();
 #else
 	lcg_state = arc4random_pushb(&lcg_state, sizeof(lcg_state));
 #endif
-	oaat1_addmem_impl(h, &lcg_state, sizeof(lcg_state));
+	NZATUpdateMem(h, &lcg_state, sizeof(lcg_state));
 #endif
 
-	oaat1_fini_impl(h);
+	NZAATFinish(h);
 	lcg_state = h;
 }

@@ -1,7 +1,8 @@
 /*	$OpenBSD: lex.c,v 1.45 2011/03/09 09:30:39 okan Exp $	*/
 
 /*-
- * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+ *		 2011, 2012
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -22,7 +23,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/lex.c,v 1.160 2012/03/31 17:29:59 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/lex.c,v 1.171 2012/11/30 19:02:08 tg Exp $");
 
 /*
  * states while lexing word
@@ -107,8 +108,8 @@ void yyskiputf8bom(void);
 
 static int backslash_skip;
 static int ignore_backslash_newline;
-static struct sretrace_info *retrace_info;
-short subshell_nesting_level = 0;
+struct sretrace_info *retrace_info = NULL;
+int subshell_nesting_type = 0;
 
 /* optimised getsc_bn() */
 #define o_getsc()	(*source->str != '\0' && *source->str != '\\' && \
@@ -130,7 +131,7 @@ short subshell_nesting_level = 0;
 	return (cev);					\
 }
 
-#ifdef MKSH_SMALL
+#if defined(MKSH_SMALL) && !defined(MKSH_SMALL_BUT_FAST)
 static int getsc(void);
 
 static int
@@ -261,6 +262,13 @@ yylex(int cf)
 	while (!((c = getsc()) == 0 ||
 	    ((state == SBASE || state == SHEREDELIM || state == SHERESTRING) &&
 	    ctype(c, C_LEX1)))) {
+#ifndef MKSH_DISABLE_EXPERIMENTAL
+		if (state == SBASE &&
+		    subshell_nesting_type == /*{*/ '}' &&
+		    c == /*{*/ '}')
+			/* possibly end ${ :;} */
+			break;
+#endif
  accept_nonword:
 		Xcheck(ws, wp);
 		switch (state) {
@@ -394,14 +402,30 @@ yylex(int cf)
 					} else {
 						ungetsc(c);
  subst_command:
-						sp = yyrecursive();
+						c = COMSUB;
+#ifndef MKSH_DISABLE_EXPERIMENTAL
+ subst_command2:
+#endif
+						sp = yyrecursive(c);
 						cz = strlen(sp) + 1;
 						XcheckN(ws, wp, cz);
-						*wp++ = COMSUB;
+						*wp++ = c;
 						memcpy(wp, sp, cz);
 						wp += cz;
 					}
 				} else if (c == '{') /*}*/ {
+#ifndef MKSH_DISABLE_EXPERIMENTAL
+					c = getsc();
+					if (ctype(c, C_IFSWS)) {
+						/*
+						 * non-subenvironment
+						 * "command" substitution
+						 */
+						c = FUNSUB;
+						goto subst_command2;
+					}
+					ungetsc(c);
+#endif
 					*wp++ = OSUBST;
 					*wp++ = '{'; /*}*/
 					wp = get_brace_var(&ws, wp);
@@ -1033,17 +1057,17 @@ yylex(int cf)
 	sp = yylval.cp;
 	dp = ident;
 	if ((cf & HEREDELIM) && (sp[1] == '<'))
-		while (dp < ident+IDENT) {
+		while ((dp - ident) < IDENT) {
 			if ((c = *sp++) == CHAR)
 				*dp++ = *sp++;
 			else if ((c != OQUOTE) && (c != CQUOTE))
 				break;
 		}
 	else
-		while (dp < ident+IDENT && (c = *sp++) == CHAR)
+		while ((dp - ident) < IDENT && (c = *sp++) == CHAR)
 			*dp++ = *sp++;
 	/* Make sure the ident array stays '\0' padded */
-	memset(dp, 0, (ident+IDENT) - dp + 1);
+	memset(dp, 0, (ident + IDENT) - dp + 1);
 	if (c != EOS)
 		/* word is not unquoted */
 		*ident = '\0';
@@ -1170,7 +1194,7 @@ readhere(struct ioword *iop)
 		/* end of here document marker, what to do? */
 		switch (c) {
 		case /*(*/ ')':
-			if (!subshell_nesting_level)
+			if (!subshell_nesting_type)
 				/*-
 				 * not allowed outside $(...) or (...)
 				 * => mismatch
@@ -1282,6 +1306,7 @@ getsc_uu(void)
 			break;
 
 		case SSTRING:
+		case SSTRINGCMDLINE:
 			break;
 
 		case SWORDS:
@@ -1369,7 +1394,7 @@ getsc_line(Source *s)
 {
 	char *xp = Xstring(s->xs, xp), *cp;
 	bool interactive = Flag(FTALKING) && s->type == SSTDIN;
-	int have_tty = interactive && (s->flags & SF_TTY);
+	bool have_tty = tobool(interactive && (s->flags & SF_TTY));
 
 	/* Done here to ensure nothing odd happens when a timeout occurs */
 	XcheckN(s->xs, xp, LINE);
@@ -1382,6 +1407,7 @@ getsc_line(Source *s)
 	}
 	if (interactive)
 		change_winsz();
+#ifndef MKSH_NO_CMDLINE_EDITING
 	if (have_tty && (
 #if !MKSH_S_NOVI
 	    Flag(FVI) ||
@@ -1395,7 +1421,9 @@ getsc_line(Source *s)
 			nread = 0;
 		xp[nread] = '\0';
 		xp += nread;
-	} else {
+	} else
+#endif
+	  {
 		if (interactive)
 			pprompt(prompt, 0);
 		else
@@ -1440,25 +1468,6 @@ getsc_line(Source *s)
 		alarm(0);
 	}
 	cp = Xstring(s->xs, xp);
-#if !defined(MKSH_SMALL) && !defined(MKSH_DISABLE_DEPRECATED)
-	if (interactive && *cp == '!' && cur_prompt == PS1) {
-		int linelen;
-
-		linelen = Xlength(s->xs, xp);
-		XcheckN(s->xs, xp, Zfc_e_dash + /* NUL */ 1);
-		/* reload after potential realloc */
-		cp = Xstring(s->xs, xp);
-		/* change initial '!' into space */
-		*cp = ' ';
-		/* NUL terminate the current string */
-		*xp = '\0';
-		/* move the actual string forward */
-		memmove(cp + Zfc_e_dash, cp, linelen + /* NUL */ 1);
-		xp += Zfc_e_dash;
-		/* prepend it with "fc -e -" */
-		memcpy(cp, Tfc_e_dash, Zfc_e_dash);
-	}
-#endif
 	s->start = s->str = cp;
 	strip_nuls(Xstring(s->xs, xp), Xlength(s->xs, xp));
 	/* Note: if input is all nulls, this is not eof */
@@ -1691,7 +1700,7 @@ arraysub(char **strp)
 	XString ws;
 	char *wp, c;
 	/* we are just past the initial [ */
-	int depth = 1;
+	unsigned int depth = 1;
 
 	Xinit(ws, wp, 32, ATEMP);
 

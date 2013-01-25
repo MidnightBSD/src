@@ -1,4 +1,4 @@
-/*	$OpenBSD: main.c,v 1.47 2011/09/07 11:33:25 otto Exp $	*/
+/*	$OpenBSD: main.c,v 1.51 2012/09/10 01:25:30 tedu Exp $	*/
 /*	$OpenBSD: tty.c,v 1.9 2006/03/14 22:08:01 deraadt Exp $	*/
 /*	$OpenBSD: io.c,v 1.22 2006/03/17 16:30:13 millert Exp $	*/
 /*	$OpenBSD: table.c,v 1.15 2012/02/19 07:52:30 otto Exp $	*/
@@ -34,7 +34,7 @@
 #include <locale.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/main.c,v 1.195.2.8 2012/04/06 14:40:20 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/main.c,v 1.245 2012/11/30 19:58:47 tg Exp $");
 
 extern char **environ;
 
@@ -47,6 +47,7 @@ extern char **environ;
 #endif
 
 static uint8_t isuc(const char *);
+static int main_init(int, const char *[], Source **, struct block **);
 void chvt_reinit(void);
 static void reclaim(void);
 static void remove_temps(struct temp *);
@@ -58,12 +59,12 @@ static void x_sigwinch(int);
 static const char initifs[] = "IFS= \t\n";
 
 static const char initsubs[] =
-    "${PS2=> } ${PS3=#? } ${PS4=+ } ${SECONDS=0} ${TMOUT=0}";
+    "${PS2=> } ${PS3=#? } ${PS4=+ } ${SECONDS=0} ${TMOUT=0} ${EPOCHREALTIME=}";
 
 static const char *initcoms[] = {
 	Ttypeset, "-r", initvsn, NULL,
 	Ttypeset, "-x", "HOME", "PATH", "RANDOM", "SHELL", NULL,
-	Ttypeset, "-i10", "SECONDS", "TMOUT", NULL,
+	Ttypeset, "-i10", "COLUMNS", "LINES", "SECONDS", "TMOUT", NULL,
 	Talias,
 	"integer=typeset -i",
 	Tlocal_typeset,
@@ -134,14 +135,14 @@ rndsetup(void)
 	sigsetjmp(bufptr->jbuf, 1);
 #endif
 	/* introduce variation (and yes, second arg MBZ for portability) */
-	gettimeofday(&bufptr->tv, NULL);
+	mksh_TIME(bufptr->tv);
 
-	oaat1_init_impl(h);
+	NZATInit(h);
 	/* variation through pid, ppid, and the works */
-	oaat1_addmem_impl(h, &rndsetupstate, sizeof(rndsetupstate));
+	NZATUpdateMem(h, &rndsetupstate, sizeof(rndsetupstate));
 	/* some variation, some possibly entropy, depending on OE */
-	oaat1_addmem_impl(h, bufptr, sizeof(*bufptr));
-	oaat1_fini_impl(h);
+	NZATUpdateMem(h, bufptr, sizeof(*bufptr));
+	NZAATFinish(h);
 
 	afree(cp, APERM);
 	return ((mksh_uari_t)h);
@@ -183,8 +184,8 @@ isuc(const char *cx) {
 	return (rv);
 }
 
-int
-main(int argc, const char *argv[])
+static int
+main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 {
 	int argi, i;
 	Source *s = NULL;
@@ -237,8 +238,8 @@ main(int argc, const char *argv[])
 
 	/* define built-in commands and see if we were called as one */
 	ktinit(APERM, &builtins,
-	    /* currently 50 builtins -> 80% of 64 (2^6) */
-	    6);
+	    /* currently up to 50 builtins: 75% of 128 = 2^7 */
+	    7);
 	for (i = 0; mkshbuiltins[i].name != NULL; i++)
 		if (!strcmp(ccp, builtin(mkshbuiltins[i].name,
 		    mkshbuiltins[i].func)))
@@ -277,12 +278,8 @@ main(int argc, const char *argv[])
 
 	init_histvec();
 
-#ifdef TIOCGWINSZ
-	/* try to initialise tty size before importing environment */
-	tty_init(false, false);
+	/* initialise tty size before importing environment */
 	change_winsz();
-	tty_close();
-#endif
 
 #ifdef _PATH_DEFPATH
 	def_path = _PATH_DEFPATH;
@@ -326,6 +323,7 @@ main(int argc, const char *argv[])
 	 */
 	Flag(FBRACEEXPAND) = 1;
 
+#ifndef MKSH_NO_CMDLINE_EDITING
 	/*
 	 * Set edit mode to emacs by default, may be overridden
 	 * by the environment or the user. Also, we want tab completion
@@ -334,6 +332,7 @@ main(int argc, const char *argv[])
 	change_flag(FEMACS, OF_SPECIAL, 1);
 #if !MKSH_S_NOVI
 	Flag(FVITABCOMPLETE) = 1;
+#endif
 #endif
 
 	/* import environment */
@@ -365,8 +364,6 @@ main(int argc, const char *argv[])
 		while (*wp != NULL)
 			wp++;
 	}
-	setint_n(global("COLUMNS"), 0, 10);
-	setint_n(global("LINES"), 0, 10);
 	setint_n(global("OPTIND"), 1, 10);
 
 	kshuid = getuid();
@@ -380,6 +377,8 @@ main(int argc, const char *argv[])
 	    (!ksheuid && !strchr(str_val(vp), '#')))
 		/* setstr can't fail here */
 		setstr(vp, safe_prompt, KSH_RETURN_ERROR);
+	setint_n((vp = global("BASHPID")), 0, 10);
+	vp->flag |= INT_U;
 	setint_n((vp = global("PGRP")), (mksh_uari_t)kshpgrp, 10);
 	vp->flag |= INT_U;
 	setint_n((vp = global("PPID")), (mksh_uari_t)kshppid, 10);
@@ -458,9 +457,19 @@ main(int argc, const char *argv[])
 		/* auto-detect from environment variables, always */
 		utf_flag = 3;
 	} else if (Flag(FCOMMAND)) {
-		s = pushs(SSTRING, ATEMP);
+		s = pushs(SSTRINGCMDLINE, ATEMP);
 		if (!(s->start = s->str = argv[argi++]))
 			errorf("%s %s", "-c", "requires an argument");
+#if !defined(MKSH_SMALL) && !defined(MKSH_DISABLE_EXPERIMENTAL)
+		while (*s->str) {
+			if (*s->str != ' ' && ctype(*s->str, C_QUOTE))
+				break;
+			s->str++;
+		}
+		if (!*s->str)
+			s->flags |= SF_MAYEXEC;
+		s->str = s->start;
+#endif
 #ifdef MKSH_MIDNIGHTBSD01ASH_COMPAT
 		/* compatibility to MidnightBSD 0.1 /bin/sh (kludge) */
 		if (Flag(FSH) && argv[argi] && !strcmp(argv[argi], "--"))
@@ -503,7 +512,7 @@ main(int argc, const char *argv[])
 
 	/* initialise job control */
 	j_init();
-	/* Do this after j_init(), as tty_fd is not initialised until then */
+	/* do this after j_init() which calls tty_init_state() */
 	if (Flag(FTALKING)) {
 		if (utf_flag == 2) {
 #ifndef MKSH_ASSUME_UTF8
@@ -516,7 +525,9 @@ main(int argc, const char *argv[])
 			utf_flag = 0;
 #endif
 		}
+#ifndef MKSH_NO_CMDLINE_EDITING
 		x_init();
+#endif
 	}
 
 #ifdef SIGWINCH
@@ -532,8 +543,16 @@ main(int argc, const char *argv[])
 		l->argv[0] = ccp;
 	} else {
 		l->argc = argc - argi;
-		l->argv = &argv[argi - 1];
+		/*
+		 * allocate a new array because otherwise, when we modify
+		 * it in-place, ps(1) output changes; the meaning of argc
+		 * here is slightly different as it excludes kshname, and
+		 * we add a trailing NULL sentinel as well
+		 */
+		l->argv = alloc2(l->argc + 2, sizeof(void *), APERM);
 		l->argv[0] = kshname;
+		memcpy(&l->argv[1], &argv[argi], l->argc * sizeof(void *));
+		l->argv[l->argc + 1] = NULL;
 		getopts_reset(1);
 	}
 
@@ -594,13 +613,13 @@ main(int argc, const char *argv[])
 		warningf(false, "can't determine current directory");
 
 	if (Flag(FLOGIN)) {
-		include(MKSH_SYSTEM_PROFILE, 0, NULL, 1);
+		include(MKSH_SYSTEM_PROFILE, 0, NULL, true);
 		if (!Flag(FPRIVILEGED))
 			include(substitute("$HOME/.profile", 0), 0,
-			    NULL, 1);
+			    NULL, true);
 	}
 	if (Flag(FPRIVILEGED))
-		include(MKSH_SUID_PROFILE, 0, NULL, 1);
+		include(MKSH_SUID_PROFILE, 0, NULL, true);
 	else if (Flag(FTALKING)) {
 		char *env_file;
 
@@ -608,7 +627,7 @@ main(int argc, const char *argv[])
 		env_file = substitute(substitute("${ENV:-" MKSHRC_PATH "}", 0),
 		    DOTILDE);
 		if (*env_file != '\0')
-			include(env_file, 0, NULL, 1);
+			include(env_file, 0, NULL, true);
 	}
 
 	if (restricted) {
@@ -618,7 +637,7 @@ main(int argc, const char *argv[])
 	}
 	Flag(FERREXIT) = errexit;
 
-	if (Flag(FTALKING))
+	if (Flag(FTALKING) && s)
 		hist_init(s);
 	else
 		/* set after ENV */
@@ -626,17 +645,33 @@ main(int argc, const char *argv[])
 
 	alarm_init();
 
-	if (Flag(FAS_BUILTIN))
-		return (shcomexec(l->argv));
-
-	/* doesn't return */
-	shell(s, true);
-	/* NOTREACHED */
+	*sp = s;
+	*lp = l;
 	return (0);
 }
 
+/* this indirection barrier reduces stack usage during normal operation */
+
 int
-include(const char *name, int argc, const char **argv, int intr_ok)
+main(int argc, const char *argv[])
+{
+	int rv;
+	Source *s;
+	struct block *l;
+
+	if ((rv = main_init(argc, argv, &s, &l)) == 0) {
+		if (Flag(FAS_BUILTIN)) {
+			rv = shcomexec(l->argv);
+		} else {
+			shell(s, true);
+			/* NOTREACHED */
+		}
+	}
+	return (rv);
+}
+
+int
+include(const char *name, int argc, const char **argv, bool intr_ok)
 {
 	Source *volatile s = NULL;
 	struct shf *shf;
@@ -672,7 +707,7 @@ include(const char *name, int argc, const char **argv, int intr_ok)
 			 * intr_ok is set if we are including .profile or $ENV.
 			 * If user ^Cs out, we don't want to kill the shell...
 			 */
-			if (intr_ok && (exstat - 128) != SIGTERM)
+			if (intr_ok && ((exstat & 0xFF) - 128) != SIGTERM)
 				return (1);
 			/* FALLTHROUGH */
 		case LEXIT:
@@ -718,19 +753,19 @@ command(const char *comm, int line)
  * run the commands from the input source, returning status.
  */
 int
-shell(Source * volatile s, volatile int toplevel)
+shell(Source * volatile s, volatile bool toplevel)
 {
 	struct op *t;
-	volatile int wastty = s->flags & SF_TTY;
-	volatile int attempts = 13;
-	volatile int interactive = Flag(FTALKING) && toplevel;
+	volatile bool wastty = tobool(s->flags & SF_TTY);
+	volatile uint8_t attempts = 13;
+	volatile bool interactive = Flag(FTALKING) && toplevel;
 	volatile bool sfirst = true;
 	Source *volatile old_source = source;
 	int i;
 
 	newenv(E_PARSE);
 	if (interactive)
-		really_exit = 0;
+		really_exit = false;
 	switch ((i = kshsetjmp(e->jbuf))) {
 	case 0:
 		break;
@@ -755,7 +790,10 @@ shell(Source * volatile s, volatile int toplevel)
 			 * needs FMONITOR set (not FTALKING/SF_TTY)...
 			 */
 			/* toss any input we have so far */
+			yyrecursive_pop(true);
 			s->start = s->str = null;
+			retrace_info = NULL;
+			herep = heres;
 			break;
 		}
 		/* FALLTHROUGH */
@@ -789,13 +827,15 @@ shell(Source * volatile s, volatile int toplevel)
 		}
 		t = compile(s, sfirst);
 		sfirst = false;
-		if (t != NULL && t->type == TEOF) {
+		if (!t)
+			goto source_no_tree;
+		if (t->type == TEOF) {
 			if (wastty && Flag(FIGNOREEOF) && --attempts > 0) {
 				shellf("Use 'exit' to leave mksh\n");
 				s->type = SSTDIN;
 			} else if (wastty && !really_exit &&
 			    j_stopped_running()) {
-				really_exit = 1;
+				really_exit = true;
 				s->type = SSTDIN;
 			} else {
 				/*
@@ -809,20 +849,26 @@ shell(Source * volatile s, volatile int toplevel)
 				break;
 			}
 		}
-		if (t && (!Flag(FNOEXEC) || (s->flags & SF_TTY)))
-			exstat = execute(t, 0, NULL);
+#if !defined(MKSH_SMALL) && !defined(MKSH_DISABLE_EXPERIMENTAL)
+		  else if ((s->flags & SF_MAYEXEC) && t->type == TCOM)
+			t->u.evalflags |= DOTCOMEXEC;
+#endif
+		if (!Flag(FNOEXEC) || (s->flags & SF_TTY))
+			exstat = execute(t, 0, NULL) & 0xFF;
 
-		if (t != NULL && t->type != TEOF && interactive && really_exit)
-			really_exit = 0;
+		if (t->type != TEOF && interactive && really_exit)
+			really_exit = false;
 
+ source_no_tree:
 		reclaim();
 	}
 	quitenv(NULL);
 	source = old_source;
-	return (exstat);
+	return (exstat & 0xFF);
 }
 
 /* return to closest error handler or shell(), exit if none found */
+/* note: i MUST NOT be 0 */
 void
 unwind(int i)
 {
@@ -877,6 +923,7 @@ newenv(int type)
 	ep->loc = e->loc;
 	ep->savefd = NULL;
 	ep->temps = NULL;
+	ep->yyrecursive_statep = NULL;
 	ep->type = type;
 	ep->flags = 0;
 	/* jump buffer is invalid because flags == 0 */
@@ -890,6 +937,7 @@ quitenv(struct shf *shf)
 	char *cp;
 	int fd;
 
+	yyrecursive_pop(true);
 	if (ep->oenv && ep->oenv->loc != ep->loc)
 		popblock();
 	if (ep->savefd != NULL) {
@@ -914,7 +962,7 @@ quitenv(struct shf *shf)
 #endif
 			j_exit();
 			if (ep->flags & EF_FAKE_SIGDIE) {
-				int sig = exstat - 128;
+				int sig = (exstat & 0xFF) - 128;
 
 				/*
 				 * ham up our death a bit (AT&T ksh
@@ -933,7 +981,7 @@ quitenv(struct shf *shf)
 		if (shf)
 			shf_close(shf);
 		reclaim();
-		exit(exstat);
+		exit(exstat & 0xFF);
 	}
 	if (shf)
 		shf_close(shf);
@@ -998,75 +1046,80 @@ remove_temps(struct temp *tp)
 {
 	for (; tp != NULL; tp = tp->next)
 		if (tp->pid == procpid)
-			unlink(tp->name);
+			unlink(tp->tffn);
 }
 
 /*
- * Initialise tty_fd. Used for saving/reseting tty modes upon
- * foreground job completion and for setting up tty process group.
+ * Initialise tty_fd. Used for tracking the size of the terminal,
+ * saving/resetting tty modes upon forground job completion, and
+ * for setting up the tty process group. Return values:
+ *	0 = got controlling tty
+ *	1 = got terminal but no controlling tty
+ *	2 = cannot find a terminal
+ *	3 = cannot dup fd
+ *	4 = cannot make fd close-on-exec
+ * An existing tty_fd is cached if no "better" one could be found,
+ * i.e. if tty_devtty was already set or the new would not set it.
  */
-void
-tty_init(bool init_ttystate, bool need_tty)
+int
+tty_init_fd(void)
 {
-	bool do_close = true;
-	int tfd;
+	int fd, rv, eno = 0;
+	bool do_close = false, is_devtty = true;
 
-	if (tty_fd >= 0) {
-		close(tty_fd);
-		tty_fd = -1;
+	if (tty_devtty) {
+		/* already got a tty which is /dev/tty */
+		return (0);
 	}
-	tty_devtty = true;
 
 #ifdef _UWIN
 	/*XXX imake style */
 	if (isatty(3)) {
 		/* fd 3 on UWIN _is_ /dev/tty (or our controlling tty) */
-		tfd = 3;
-		do_close = false;
-	} else
+		fd = 3;
+		goto got_fd;
+	}
 #endif
-	  if ((tfd = open("/dev/tty", O_RDWR, 0)) < 0) {
-		tty_devtty = false;
-		if (need_tty)
-			warningf(false, "%s: %s %s: %s",
-			    "No controlling tty", "open", "/dev/tty",
-			    strerror(errno));
+	if ((fd = open("/dev/tty", O_RDWR, 0)) >= 0) {
+		do_close = true;
+		goto got_fd;
 	}
-	if (tfd < 0) {
-		do_close = false;
-		if (isatty(0))
-			tfd = 0;
-		else if (isatty(2))
-			tfd = 2;
-		else {
-			if (need_tty)
-				warningf(false, "can't find tty fd");
-			return;
-		}
-	}
-	if ((tty_fd = fcntl(tfd, F_DUPFD, FDBASE)) < 0) {
-		if (need_tty)
-			warningf(false, "%s: %s %s: %s", "j_ttyinit",
-			    "dup of tty fd", "failed", strerror(errno));
-	} else if (fcntl(tty_fd, F_SETFD, FD_CLOEXEC) < 0) {
-		if (need_tty)
-			warningf(false, "%s: %s: %s", "j_ttyinit",
-			    "can't set close-on-exec flag", strerror(errno));
-		close(tty_fd);
-		tty_fd = -1;
-	} else if (init_ttystate)
-		tcgetattr(tty_fd, &tty_state);
-	if (do_close)
-		close(tfd);
-}
+	eno = errno;
 
-void
-tty_close(void)
-{
 	if (tty_fd >= 0) {
-		close(tty_fd);
-		tty_fd = -1;
+		/* already got a non-devtty one */
+		rv = 1;
+		goto out;
 	}
+	is_devtty = false;
+
+	if (isatty((fd = 0)) || isatty((fd = 2)))
+		goto got_fd;
+	/* cannot find one */
+	rv = 2;
+	/* assert: do_close == false */
+	goto out;
+
+ got_fd:
+	if ((rv = fcntl(fd, F_DUPFD, FDBASE)) < 0) {
+		eno = errno;
+		rv = 3;
+		goto out;
+	}
+	if (fcntl(rv, F_SETFD, FD_CLOEXEC) < 0) {
+		eno = errno;
+		close(rv);
+		rv = 4;
+		goto out;
+	}
+	tty_fd = rv;
+	tty_devtty = is_devtty;
+	rv = eno = 0;
+ out:
+	if (do_close)
+		close(fd);
+	errno = eno;
+	return (rv);
 }
 
 /* A shell error occurred (eg, syntax error, etc.) */
@@ -1082,7 +1135,7 @@ static void vwarningf(unsigned int, const char *, va_list)
 static void
 vwarningf(unsigned int flags, const char *fmt, va_list ap)
 {
-	if (*fmt != 1) {
+	if (fmt) {
 		if (flags & VWARNINGF_INTERNAL)
 			shf_fprintf(shl_out, "internal error: ");
 		if (flags & VWARNINGF_ERRORPREFIX)
@@ -1257,14 +1310,20 @@ struct shf shf_iob[NSHF_IOB];
 void
 initio(void)
 {
+#ifdef DF
+	const char *lfp;
+#endif
+
 	/* force buffer allocation */
 	shf_fdopen(1, SHF_WR, shl_stdout);
 	shf_fdopen(2, SHF_WR, shl_out);
 	shf_fdopen(2, SHF_WR, shl_spare);
 #ifdef DF
-	if ((shl_dbg_fd = open("/tmp/mksh-dbg.txt",
-	    O_WRONLY | O_APPEND | O_CREAT, 0600)) == -1)
-		errorf("cannot open debug output file");
+	if ((lfp = getenv("SDMKSH_PATH")) == NULL)
+		lfp = "/tmp/mksh-dbg.txt";
+
+	if ((shl_dbg_fd = open(lfp, O_WRONLY | O_APPEND | O_CREAT, 0600)) < 0)
+		errorf("cannot open debug output file %s", lfp);
 	if (shl_dbg_fd < FDBASE) {
 		int nfd;
 
@@ -1273,6 +1332,7 @@ initio(void)
 		if ((shl_dbg_fd = nfd) == -1)
 			errorf("cannot dup debug output file");
 	}
+	fcntl(shl_dbg_fd, F_SETFD, FD_CLOEXEC);
 	shf_fdopen(shl_dbg_fd, SHF_WR, shl_dbg);
 	DF("=== open ===");
 #endif
@@ -1319,7 +1379,7 @@ void
 restfd(int fd, int ofd)
 {
 	if (fd == 2)
-		shf_flush(&shf_iob[fd]);
+		shf_flush(&shf_iob[/* fd */ 2]);
 	if (ofd < 0)
 		/* original fd closed */
 		close(fd);
@@ -1482,42 +1542,73 @@ coproc_cleanup(int reuse)
 struct temp *
 maketemp(Area *ap, Temp_type type, struct temp **tlist)
 {
-	struct temp *tp;
+	char *cp;
 	size_t len;
-	int fd;
-	char *pathname;
+	int i;
+	struct temp *tp;
 	const char *dir;
+	struct stat sb;
 
 	dir = tmpdir ? tmpdir : MKSH_DEFAULT_TMPDIR;
-#if HAVE_MKSTEMP
-	len = strlen(dir) + 6 + 10 + 1;
-#else
-	pathname = tempnam(dir, "mksh.");
-	len = ((pathname == NULL) ? 0 : strlen(pathname)) + 1;
-#endif
-	/* reasonably sure that this will not overflow */
-	tp = alloc(sizeof(struct temp) + len, ap);
-	tp->name = (char *)&tp[1];
-#if !HAVE_MKSTEMP
-	if (pathname == NULL)
-		tp->name[0] = '\0';
-	else {
-		memcpy(tp->name, pathname, len);
-		free_ostempnam(pathname);
+	/* add "/shXXXXXX.tmp" plus NUL */
+	len = strlen(dir);
+	checkoktoadd(len, offsetof(struct temp, tffn[0]) + 14);
+	tp = alloc(offsetof(struct temp, tffn[0]) + 14 + len, ap);
+
+	tp->shf = NULL;
+	tp->pid = procpid;
+	tp->type = type;
+
+	if (stat(dir, &sb) || !S_ISDIR(sb.st_mode)) {
+		tp->tffn[0] = '\0';
+		goto maketemp_out;
+	}
+
+	cp = (void *)tp;
+	cp += offsetof(struct temp, tffn[0]);
+	memcpy(cp, dir, len);
+	cp += len;
+	memcpy(cp, "/shXXXXXX.tmp", 14);
+	/* point to the first of six Xes */
+	cp += 3;
+	/* generate random part of filename */
+	len = -1;
+	do {
+		i = rndget() % 36;
+		cp[++len] = i < 26 ? 'a' + i : '0' + i - 26;
+	} while (len < 5);
+
+	/* cyclically attempt to open a temporary file */
+	while ((i = open(tp->tffn, O_CREAT | O_EXCL | O_RDWR, 0600)) < 0) {
+		if (errno != EEXIST)
+			goto maketemp_out;
+		/* count down from z to a then from 9 to 0 */
+		while (cp[len] == '0')
+			if (!len--)
+				goto maketemp_out;
+		if (cp[len] == 'a')
+			cp[len] = '9';
+		else
+			--cp[len];
+		/* do another cycle */
+	}
+
+#ifndef MKSH_DISABLE_EXPERIMENTAL
+	if (type == TT_FUNSUB) {
+		int nfd;
+
+		/* map us high and mark as close-on-exec */
+		if ((nfd = savefd(i)) != i) {
+			close(i);
+			i = nfd;
+		}
 	}
 #endif
-	pathname = tp->name;
-	tp->shf = NULL;
-	tp->type = type;
-#if HAVE_MKSTEMP
-	shf_snprintf(pathname, len, "%s%s", dir, "/mksh.XXXXXXXXXX");
-	if ((fd = mkstemp(pathname)) >= 0)
-#else
-	if (tp->name[0] && (fd = open(tp->name, O_CREAT | O_RDWR, 0600)) >= 0)
-#endif
-		tp->shf = shf_fdopen(fd, SHF_WR, NULL);
-	tp->pid = procpid;
 
+	/* shf_fdopen cannot fail, so no fd leak */
+	tp->shf = shf_fdopen(i, SHF_WR, NULL);
+
+ maketemp_out:
 	tp->next = *tlist;
 	*tlist = tp;
 	return (tp);
@@ -1552,8 +1643,10 @@ tgrow(struct table *tp)
 	/* multiplication cannot overflow: alloc2 checked that */
 	memset(ntblp, 0, i * sizeof(struct tbl *));
 
-	/* table can get 80% full except when reaching its limit */
-	tp->nfree = (tp->tshift == 30) ? 0x3FFF0000UL : ((i * 4) / 5);
+	/* table can get very full when reaching its size limit */
+	tp->nfree = (tp->tshift == 30) ? 0x3FFF0000UL :
+	    /* but otherwise, only 75% */
+	    ((i * 3) / 4);
 	tp->tbls = ntblp;
 	if (otblp == NULL)
 		return;
@@ -1718,11 +1811,15 @@ DF(const char *fmt, ...)
 {
 	va_list args;
 	struct timeval tv;
+	mirtime_mjd mjd;
 
 	mksh_lockfd(shl_dbg_fd);
-	gettimeofday(&tv, NULL);
-	shf_fprintf(shl_dbg, "[%d.%06d:%d] ", (int)tv.tv_sec, (int)tv.tv_usec,
-	    (int)getpid());
+	mksh_TIME(tv);
+	timet2mjd(&mjd, tv.tv_sec);
+	shf_fprintf(shl_dbg, "[%02u:%02u:%02u (%u) %u.%06u] ",
+	    (unsigned)mjd.sec / 3600, ((unsigned)mjd.sec / 60) % 60,
+	    (unsigned)mjd.sec % 60, (unsigned)getpid(),
+	    (unsigned)tv.tv_sec, (unsigned)tv.tv_usec);
 	va_start(args, fmt);
 	shf_vfprintf(shl_dbg, fmt, args);
 	va_end(args);
@@ -1731,3 +1828,34 @@ DF(const char *fmt, ...)
 	mksh_unlkfd(shl_dbg_fd);
 }
 #endif
+
+void
+x_mkraw(int fd, mksh_ttyst *ocb, bool forread)
+{
+	mksh_ttyst cb;
+
+	if (ocb)
+		mksh_tcget(fd, ocb);
+	else
+		ocb = &tty_state;
+
+	cb = *ocb;
+	if (forread) {
+		cb.c_lflag &= ~(ICANON) | ECHO;
+	} else {
+		cb.c_iflag &= ~(INLCR | ICRNL);
+		cb.c_lflag &= ~(ISIG | ICANON | ECHO);
+	}
+#if defined(VLNEXT) && defined(_POSIX_VDISABLE)
+	/* OSF/1 processes lnext when ~icanon */
+	cb.c_cc[VLNEXT] = _POSIX_VDISABLE;
+#endif
+	/* SunOS 4.1.x & OSF/1 processes discard(flush) when ~icanon */
+#if defined(VDISCARD) && defined(_POSIX_VDISABLE)
+	cb.c_cc[VDISCARD] = _POSIX_VDISABLE;
+#endif
+	cb.c_cc[VTIME] = 0;
+	cb.c_cc[VMIN] = 1;
+
+	mksh_tcset(fd, &cb);
+}
