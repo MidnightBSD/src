@@ -1,4 +1,4 @@
-# $MidnightBSD: src/usr.bin/perl/BSDmakefile,v 1.16 2011/10/29 23:31:34 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/perl/BSDmakefile,v 1.17 2013/01/04 23:44:54 laffer1 Exp $
 #
 # This makefile deals with binding perl's build system to our own.
 # It is called BSDmakefile because perl's configure makes a 'Makefile',
@@ -48,6 +48,7 @@ perl: ${PERL_MAKEFILE}
 	
 ${PERL_MAKEFILE}:
 	cd ${.OBJDIR} && LD_LIBRARY_PATH=${DESTDIR}/lib ${SRCDIR}/${CONFIGURE_SCRIPT} ${CONFIGURE_ARGS}
+	cd x2p && ${MAKE} -f Makefile  makedepend
 
 # if OBJDIR is ., then don't delete ourselves.            
 clean:
