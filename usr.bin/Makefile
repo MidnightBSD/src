@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
-# $MidnightBSD: src/usr.bin/Makefile,v 1.45 2013/01/04 23:44:54 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/Makefile,v 1.46 2013/01/24 14:00:24 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -129,6 +129,7 @@ SUBDIR=	alias \
 	passwd \
 	paste \
 	pathchk \
+	perl \
 	perror \
 	pr \
 	printenv \
