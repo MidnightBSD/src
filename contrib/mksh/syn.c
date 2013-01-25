@@ -23,14 +23,23 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/syn.c,v 1.73 2012/01/03 15:32:08 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/syn.c,v 1.84 2012/10/30 20:49:44 tg Exp $");
 
-extern short subshell_nesting_level;
+extern int subshell_nesting_type;
 extern void yyskiputf8bom(void);
 
 struct nesting_state {
 	int start_token;	/* token than began nesting (eg, FOR) */
 	int start_line;		/* line nesting began on */
+};
+
+struct yyrecursive_state {
+	struct yyrecursive_state *next;
+	struct ioword **old_herep;
+	int old_symbol;
+	int old_salias;
+	int old_nesting_type;
+	bool old_reject;
 };
 
 static void yyparse(void);
@@ -52,7 +61,7 @@ static struct op *newtp(int);
 static void syntaxerr(const char *) MKSH_A_NORETURN;
 static void nesting_push(struct nesting_state *, int);
 static void nesting_pop(struct nesting_state *);
-static int assign_command(char *);
+static int assign_command(const char *);
 static int inalias(struct source *);
 static Test_op dbtestp_isa(Test_env *, Test_meta);
 static const char *dbtestp_getopnd(Test_env *, Test_op, bool);
@@ -72,6 +81,9 @@ static int sALIAS = ALIAS;		/* 0 in yyrecursive */
 #define token(cf)	((reject) ? (ACCEPT, symbol) : (symbol = yylex(cf)))
 #define tpeek(cf)	((reject) ? (symbol) : (REJECT, symbol = yylex(cf)))
 #define musthave(c,cf)	do { if (token(cf) != (c)) syntaxerr(NULL); } while (/* CONSTCOND */ 0)
+
+static const char Tcbrace[] = "}";
+static const char Tesac[] = "esac";
 
 static void
 yyparse(void)
@@ -315,7 +327,7 @@ get_command(int cf)
 					ACCEPT;
 
 					/* manipulate the vars string */
-					tcp = *(--vars.cur);
+					tcp = XPptrv(vars)[(vars.len = 0)];
 					/* 'varname=' -> 'varname' */
 					tcp[wdscan(tcp, EOS) - tcp - 3] = EOS;
 
@@ -360,12 +372,15 @@ get_command(int cf)
  Leave:
 		break;
 
-	case '(':
+	case '(': /*)*/ {
+		int subshell_nesting_type_saved;
  Subshell:
-		++subshell_nesting_level;
+		subshell_nesting_type_saved = subshell_nesting_type;
+		subshell_nesting_type = ')';
 		t = nested(TPAREN, '(', ')');
-		--subshell_nesting_level;
+		subshell_nesting_type = subshell_nesting_type_saved;
 		break;
+	    }
 
 	case '{': /*}*/
 		t = nested(TBRACE, '{', '}');
@@ -602,7 +617,20 @@ casepart(int endtok)
 	if (token(CONTIN | KEYWORD) != '(')
 		REJECT;
 	do {
-		musthave(LWORD, 0);
+		switch (token(0)) {
+		case LWORD:
+			break;
+		case '}':
+		case ESAC:
+			if (symbol != endtok) {
+				strdupx(yylval.cp,
+				    symbol == '}' ? Tcbrace : Tesac, ATEMP);
+				break;
+			}
+			/* FALLTHROUGH */
+		default:
+			syntaxerr(NULL);
+		}
 		XPput(ptns, yylval.cp);
 	} while (token(0) == '|');
 	REJECT;
@@ -640,7 +668,6 @@ function_body(char *name,
 {
 	char *sname, *p;
 	struct op *t;
-	bool old_func_parse;
 
 	sname = wdstrip(name, 0);
 	/*-
@@ -662,7 +689,7 @@ function_body(char *name,
 	 */
 	if (ksh_func) {
 		if (tpeek(CONTIN|KEYWORD|sALIAS) == '(' /*)*/) {
-			/* function foo () { */
+			/* function foo () { //}*/
 			ACCEPT;
 			musthave(')', 0);
 			/* degrade to POSIX function */
@@ -677,8 +704,6 @@ function_body(char *name,
 	t->u.ksh_func = tobool(ksh_func);
 	t->lineno = source->line;
 
-	old_func_parse = e->flags & EF_FUNC_PARSE;
-	e->flags |= EF_FUNC_PARSE;
 	if ((t->left = get_command(CONTIN)) == NULL) {
 		char *tv;
 		/*
@@ -699,8 +724,6 @@ function_body(char *name,
 		t->left->vars[0] = NULL;
 		t->left->lineno = 1;
 	}
-	if (!old_func_parse)
-		e->flags &= ~EF_FUNC_PARSE;
 
 	return (t);
 }
@@ -760,7 +783,7 @@ const struct tokeninfo {
 	{ "elif",	ELIF,	true },
 	{ "fi",		FI,	true },
 	{ "case",	CASE,	true },
-	{ "esac",	ESAC,	true },
+	{ Tesac,	ESAC,	true },
 	{ "for",	FOR,	true },
 	{ Tselect,	SELECT,	true },
 	{ "while",	WHILE,	true },
@@ -771,7 +794,7 @@ const struct tokeninfo {
 	{ Tfunction,	FUNCTION, true },
 	{ "time",	TIME,	true },
 	{ "{",		'{',	true },
-	{ "}",		'}',	true },
+	{ Tcbrace,	'}',	true },
 	{ "!",		BANG,	true },
 	{ "[[",		DBRACKET, true },
 	/* Lexical tokens (0[EOF], LWORD and REDIR handled specially) */
@@ -794,7 +817,7 @@ initkeywords(void)
 	struct tbl *p;
 
 	ktinit(APERM, &keywords,
-	    /* currently 28 keywords -> 80% of 64 (2^6) */
+	    /* currently 28 keywords: 75% of 64 = 2^6 */
 	    6);
 	for (tt = tokentab; tt->name; tt++) {
 		if (tt->reserved) {
@@ -914,13 +937,13 @@ compile(Source *s, bool skiputf8bom)
  *	$
  */
 static int
-assign_command(char *s)
+assign_command(const char *s)
 {
 	if (!*s)
 		return (0);
 	return ((strcmp(s, Talias) == 0) ||
-	    (strcmp(s, "export") == 0) ||
-	    (strcmp(s, "readonly") == 0) ||
+	    (strcmp(s, Texport) == 0) ||
+	    (strcmp(s, Treadonly) == 0) ||
 	    (strcmp(s, Ttypeset) == 0));
 }
 
@@ -1104,35 +1127,68 @@ parse_usec(const char *s, struct timeval *tv)
  * a COMSUB recursively using the main shell parser and lexer
  */
 char *
-yyrecursive(void)
+yyrecursive(int subtype MKSH_A_UNUSED)
 {
 	struct op *t;
 	char *cp;
-	bool old_reject;
-	int old_symbol, old_salias;
-	struct ioword **old_herep;
+	struct yyrecursive_state *ys;
+	int stok, etok;
+
+#ifndef MKSH_DISABLE_EXPERIMENTAL
+	if (subtype == FUNSUB) {
+		stok = '{';
+		etok = '}';
+	} else
+#endif
+	  {
+		stok = '(';
+		etok = ')';
+	}
+
+	ys = alloc(sizeof(struct yyrecursive_state), ATEMP);
 
 	/* tell the lexer to accept a closing parenthesis as EOD */
-	++subshell_nesting_level;
+	ys->old_nesting_type = subshell_nesting_type;
+	subshell_nesting_type = etok;
 
 	/* push reject state, parse recursively, pop reject state */
-	old_reject = reject;
-	old_symbol = symbol;
+	ys->old_reject = reject;
+	ys->old_symbol = symbol;
 	ACCEPT;
-	old_herep = herep;
-	old_salias = sALIAS;
+	ys->old_herep = herep;
+	ys->old_salias = sALIAS;
 	sALIAS = 0;
+	ys->next = e->yyrecursive_statep;
+	e->yyrecursive_statep = ys;
 	/* we use TPAREN as a helper container here */
-	t = nested(TPAREN, '(', ')');
-	sALIAS = old_salias;
-	herep = old_herep;
-	reject = old_reject;
-	symbol = old_symbol;
+	t = nested(TPAREN, stok, etok);
+	yyrecursive_pop(false);
 
 	/* t->left because nested(TPAREN, ...) hides our goodies there */
 	cp = snptreef(NULL, 0, "%T", t->left);
 	tfree(t, ATEMP);
 
-	--subshell_nesting_level;
 	return (cp);
+}
+
+void
+yyrecursive_pop(bool popall)
+{
+	struct yyrecursive_state *ys;
+
+ popnext:
+	if (!(ys = e->yyrecursive_statep))
+		return;
+	e->yyrecursive_statep = ys->next;
+
+	sALIAS = ys->old_salias;
+	herep = ys->old_herep;
+	reject = ys->old_reject;
+	symbol = ys->old_symbol;
+
+	subshell_nesting_type = ys->old_nesting_type;
+
+	afree(ys, ATEMP);
+	if (popall)
+		goto popnext;
 }

@@ -1,10 +1,10 @@
-/*	$OpenBSD: sh.h,v 1.30 2010/01/04 18:07:11 deraadt Exp $	*/
+/*	$OpenBSD: sh.h,v 1.31 2012/09/10 01:25:30 tedu Exp $	*/
 /*	$OpenBSD: shf.h,v 1.6 2005/12/11 18:53:51 deraadt Exp $	*/
 /*	$OpenBSD: table.h,v 1.8 2012/02/19 07:52:30 otto Exp $	*/
 /*	$OpenBSD: tree.h,v 1.10 2005/03/28 21:28:22 deraadt Exp $	*/
 /*	$OpenBSD: expand.h,v 1.6 2005/03/30 17:16:37 deraadt Exp $	*/
 /*	$OpenBSD: lex.h,v 1.11 2006/05/29 18:22:24 otto Exp $	*/
-/*	$OpenBSD: proto.h,v 1.33 2010/05/19 17:36:08 jasper Exp $	*/
+/*	$OpenBSD: proto.h,v 1.34 2012/06/27 07:17:19 otto Exp $	*/
 /*	$OpenBSD: c_test.h,v 1.4 2004/12/20 11:34:26 otto Exp $	*/
 /*	$OpenBSD: tty.h,v 1.5 2004/12/20 11:34:26 otto Exp $	*/
 
@@ -79,7 +79,12 @@
 #if HAVE_STRINGS_H
 #include <strings.h>
 #endif
+#if HAVE_TERMIOS_H
 #include <termios.h>
+#else
+/* shudder… */
+#include <termio.h>
+#endif
 #include <time.h>
 #if HAVE_ULIMIT_H
 #include <ulimit.h>
@@ -152,9 +157,9 @@
 #endif
 
 #ifdef EXTERN
-__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.484.2.18 2012/04/06 15:24:15 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.608.2.1 2012/11/30 20:49:13 tg Exp $");
 #endif
-#define MKSH_VERSION "R40 2012/04/06"
+#define MKSH_VERSION "R41 2012/11/30"
 
 /* arithmetic types: C implementation */
 #if !HAVE_CAN_INTTYPES
@@ -167,16 +172,21 @@ typedef u_int32_t uint32_t;
 #endif
 
 /* arithmetic types: shell arithmetics */
+#ifdef MKSH_LEGACY_MODE
 /*
- * NOTE: these are currently hard-coded to exactly 32 bit, do not change
- *
- * TODO: make these configurable, or add 64-bit arithmetic, somehow
- * (on some operating environments, 64-bit types are needed for some
- * things, such as the ulimit builtin, to work proper), except mksh
- * must still be able to run on systems with no native 64-bit integers
+ * POSIX demands these to be the C environment's long type
+ */
+typedef long mksh_ari_t;
+typedef unsigned long mksh_uari_t;
+#else
+/*
+ * These types are exactly 32 bit wide; signed and unsigned
+ * integer wraparound, even across division and modulo, for
+ * any shell code using them, is guaranteed.
  */
 typedef int32_t mksh_ari_t;
 typedef uint32_t mksh_uari_t;
+#endif
 
 /* boolean type (no <stdbool.h> deliberately) */
 typedef unsigned char mksh_bool;
@@ -210,6 +220,14 @@ typedef unsigned long rlim_t;
 #if !HAVE_SIG_T
 #undef sig_t
 typedef void (*sig_t)(int);
+#endif
+
+#ifdef MKSH_TYPEDEF_SIG_ATOMIC_T
+typedef MKSH_TYPEDEF_SIG_ATOMIC_T sig_atomic_t;
+#endif
+
+#ifdef MKSH_TYPEDEF_SSIZE_T
+typedef MKSH_TYPEDEF_SSIZE_T ssize_t;
 #endif
 
 /* un-do vendor damage */
@@ -275,8 +293,10 @@ struct rusage {
 #define ksh_toupper(c)	(((c) >= 'a') && ((c) <= 'z') ? (c) - 'a' + 'A' : (c))
 #define ksh_isdash(s)	(((s) != NULL) && ((s)[0] == '-') && ((s)[1] == '\0'))
 #define ksh_isspace(c)	((((c) >= 0x09) && ((c) <= 0x0D)) || ((c) == 0x20))
+#define ksh_min(x,y)	((x) < (y) ? (x) : (y))
+#define ksh_max(x,y)	((x) > (y) ? (x) : (y))
 
-#ifdef NO_PATH_MAX
+#ifdef MKSH__NO_PATH_MAX
 #undef PATH_MAX
 #else
 #ifndef PATH_MAX
@@ -318,6 +338,15 @@ struct rusage {
 extern int flock(int, int);
 #endif
 
+#if !HAVE_GETTIMEOFDAY
+#define mksh_TIME(tv) do {		\
+	(tv).tv_usec = 0;		\
+	(tv).tv_sec = time(NULL);	\
+} while (/* CONSTCOND */ 0)
+#else
+#define mksh_TIME(tv) gettimeofday(&(tv), NULL)
+#endif
+
 #if !HAVE_GETRUSAGE
 extern int getrusage(int, struct rusage *);
 #endif
@@ -341,9 +370,34 @@ extern int __cdecl seteuid(uid_t);
 extern int __cdecl setegid(gid_t);
 #endif
 
+#if defined(__COHERENT__)
+#ifndef O_ACCMODE
+/* this need not work everywhere, take care */
+#define O_ACCMODE	(O_RDONLY | O_WRONLY | O_RDWR)
+#endif
+#endif
+
+#ifdef MKSH__NO_SYMLINK
+#undef S_ISLNK
+#define S_ISLNK(m)	(/* CONSTCOND */ 0)
+#define mksh_lstat	stat
+#else
+#define mksh_lstat	lstat
+#endif
+
+#if HAVE_TERMIOS_H
+#define mksh_ttyst	struct termios
+#define mksh_tcget(fd,st) tcgetattr((fd), (st))
+#define mksh_tcset(fd,st) tcsetattr((fd), TCSADRAIN, (st))
+#else
+#define mksh_ttyst	struct termio
+#define mksh_tcget(fd,st) ioctl((fd), TCGETA, (st))
+#define mksh_tcset(fd,st) ioctl((fd), TCSETAW, (st))
+#endif
+
 /* remove redundancies */
 
-#if defined(MirBSD) && (MirBSD >= 0x08A8)
+#if defined(MirBSD) && (MirBSD >= 0x08A8) && !defined(MKSH_OPTSTATIC)
 #define MKSH_mirbsd_wcwidth
 #define utf_wcwidth(i) wcwidth((__WCHAR_TYPE__)i)
 extern int wcwidth(__WCHAR_TYPE__);
@@ -363,15 +417,6 @@ extern int wcwidth(__WCHAR_TYPE__);
 #define BIT(i)		(1 << (i))
 #define NELEM(a)	(sizeof(a) / sizeof((a)[0]))
 
-/* these shall be smaller than 100 */
-#ifdef MKSH_CONSERVATIVE_FDS
-#define NUFILE		32	/* Number of user-accessible files */
-#define FDBASE		10	/* First file usable by Shell */
-#else
-#define NUFILE		56	/* Number of user-accessible files */
-#define FDBASE		24	/* First file usable by Shell */
-#endif
-
 /*
  * Make MAGIC a char that might be printed to make bugs more obvious, but
  * not a char that is used often. Also, can't use the high bit as it causes
@@ -383,7 +428,14 @@ extern int wcwidth(__WCHAR_TYPE__);
 #define LINE		4096	/* input line size */
 
 EXTERN const char *safe_prompt; /* safe prompt if PS1 substitution fails */
-EXTERN const char initvsn[] E_INIT("KSH_VERSION=@(#)MIRBSD KSH " MKSH_VERSION);
+
+#ifdef MKSH_LEGACY_MODE
+#define KSH_VERSIONNAME	"LEGACY"
+#else
+#define KSH_VERSIONNAME	"MIRBSD"
+#endif
+EXTERN const char initvsn[] E_INIT("KSH_VERSION=@(#)" KSH_VERSIONNAME \
+    " KSH " MKSH_VERSION);
 #define KSH_VERSION	(initvsn + /* "KSH_VERSION=@(#)" */ 16)
 
 EXTERN const char digits_uc[] E_INIT("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
@@ -434,6 +486,16 @@ char *ucstrstr(char *, const char *);
 #define mkssert(e)	((void)0)
 #endif
 
+#if (!defined(MKSH_BUILDMAKEFILE4BSD) && !defined(MKSH_BUILDSH)) || (MKSH_BUILD_R != 411)
+#error Must run Build.sh to compile this.
+int
+im_sorry_dave(void)
+{
+	/* I’m sorry, Dave. I’m afraid I can’t do that. */
+	return (thiswillneverbedefinedIhope());
+}
+#endif
+
 /* use this ipv strchr(s, 0) but no side effects in s! */
 #define strnul(s)	((s) + strlen(s))
 
@@ -441,7 +503,7 @@ char *ucstrstr(char *, const char *);
 	(dst) = (src) + utf_ptradj(src);				\
 } while (/* CONSTCOND */ 0)
 
-#ifdef MKSH_SMALL
+#if defined(MKSH_SMALL) && !defined(MKSH_SMALL_BUT_FAST)
 #define strdupx(d, s, ap) do {						\
 	(d) = strdup_i((s), (ap));					\
 } while (/* CONSTCOND */ 0)
@@ -475,6 +537,17 @@ char *ucstrstr(char *, const char *);
 } while (/* CONSTCOND */ 0)
 #endif
 
+#ifdef MKSH_LEGACY_MODE
+#ifndef MKSH_NO_CMDLINE_EDITING
+#define MKSH_NO_CMDLINE_EDITING	/* defined */
+#endif
+#ifndef MKSH_CONSERVATIVE_FDS
+#define MKSH_CONSERVATIVE_FDS	/* defined */
+#endif
+#undef MKSH_S_NOVI
+#define MKSH_S_NOVI		1
+#endif
+
 #ifdef MKSH_SMALL
 #ifndef MKSH_CONSERVATIVE_FDS
 #define MKSH_CONSERVATIVE_FDS	/* defined */
@@ -493,6 +566,15 @@ char *ucstrstr(char *, const char *);
 
 #if defined(MKSH_NOPROSPECTOFWORK) && !defined(MKSH_UNEMPLOYED)
 #define MKSH_UNEMPLOYED		1
+#endif
+
+/* these shall be smaller than 100 */
+#ifdef MKSH_CONSERVATIVE_FDS
+#define NUFILE		32	/* Number of user-accessible files */
+#define FDBASE		10	/* First file usable by Shell */
+#else
+#define NUFILE		56	/* Number of user-accessible files */
+#define FDBASE		24	/* First file usable by Shell */
 #endif
 
 /*
@@ -517,12 +599,7 @@ char *ucstrstr(char *, const char *);
 #define free_ossetmode(p)	free(p)
 #endif
 
-#if !HAVE_MKSTEMP
-/* tempnam(3) -> free(3) */
-#define free_ostempnam(p)	free(p)
-#endif
-
-#ifdef NO_PATH_MAX
+#ifdef MKSH__NO_PATH_MAX
 /* GNU libc: get_current_dir_name(3) -> free(3) */
 #define free_gnu_gcdn(p)	free(p)
 #endif
@@ -559,8 +636,10 @@ enum sh_flag {
 
 /*
  * parsing & execution environment
+ *
+ * note that kshlongjmp MUST NOT be passed 0 as second argument!
  */
-#if defined(NeXT) && !defined(__GLIBC__)
+#ifdef MKSH_NO_SIGSETJMP
 #define kshjmp_buf	jmp_buf
 #define kshsetjmp(jbuf)	_setjmp(jbuf)
 #define kshlongjmp	_longjmp
@@ -570,6 +649,11 @@ enum sh_flag {
 #define kshlongjmp	siglongjmp
 #endif
 
+struct sretrace_info;
+struct yyrecursive_state;
+
+extern struct sretrace_info *retrace_info;
+
 extern struct env {
 	ALLOC_ITEM alloc_INT;	/* internal, do not touch */
 	Area area;		/* temporary allocation area */
@@ -577,6 +661,8 @@ extern struct env {
 	struct block *loc;	/* local variables and functions */
 	short *savefd;		/* original redirected fds */
 	struct temp *temps;	/* temp files */
+	/* saved parser recursion state */
+	struct yyrecursive_state *yyrecursive_statep;
 	kshjmp_buf jbuf;	/* long jump back to env creator */
 	uint8_t type;		/* environment type - see below */
 	uint8_t flags;		/* EF_* */
@@ -593,7 +679,6 @@ extern struct env {
 /* # indicates env has valid jbuf (see unwind()) */
 
 /* struct env.flag values */
-#define EF_FUNC_PARSE	BIT(0)	/* function being parsed */
 #define EF_BRKCONT_PASS	BIT(1)	/* set if E_LOOP must pass break/continue on */
 #define EF_FAKE_SIGDIE	BIT(2)	/* hack to get info from unwind to quitenv */
 
@@ -604,6 +689,7 @@ extern struct env {
 #define STOP_RETURN(t)	((t) == E_FUNC || (t) == E_INCL)
 
 /* values for kshlongjmp(e->jbuf, i) */
+/* note that i MUST NOT be zero */
 #define LRETURN	1	/* return statement */
 #define LEXIT	2	/* exit statement */
 #define LERROR	3	/* errorf() called */
@@ -681,23 +767,38 @@ EXTERN const char Tpunalias[] E_INIT("+unalias");
 #define Tunalias	(Tpunalias + 1)		/* "unalias" */
 EXTERN const char Tsgset[] E_INIT("*=set");
 #define Tset		(Tsgset + 2)		/* "set" */
+EXTERN const char Tsgunset[] E_INIT("*=unset");
+#define Tunset		(Tsgunset + 2)		/* "unset" */
+EXTERN const char Tsgexport[] E_INIT("*=export");
+#define Texport		(Tsgexport + 2)		/* "export" */
+EXTERN const char Tsgreadonly[] E_INIT("*=readonly");
+#define Treadonly	(Tsgreadonly + 2)	/* "readonly" */
 EXTERN const char Tgbuiltin[] E_INIT("=builtin");
 #define Tbuiltin	(Tgbuiltin + 1)		/* "builtin" */
 EXTERN const char T_function[] E_INIT(" function");
 #define Tfunction	(T_function + 1)	/* "function" */
+EXTERN const char TC_LEX1[] E_INIT("|&;<>() \t\n");
+#define TC_IFSWS	(TC_LEX1 + 7)		/* space tab newline */
 
-enum temp_type {
-	TT_HEREDOC_EXP,	/* expanded heredoc */
-	TT_HIST_EDIT	/* temp file used for history editing (fc -e) */
-};
-typedef enum temp_type Temp_type;
+typedef uint8_t Temp_type;
+/* expanded heredoc */
+#define TT_HEREDOC_EXP	0
+/* temporary file used for history editing (fc -e) */
+#define TT_HIST_EDIT	1
+#ifndef MKSH_DISABLE_EXPERIMENTAL
+/* temporary file used during in-situ command substitution */
+#define TT_FUNSUB	2
+#endif
+
 /* temp/heredoc files. The file is removed when the struct is freed. */
 struct temp {
 	struct temp *next;
 	struct shf *shf;
-	char *name;
-	int pid;	/* pid of process parsed here-doc */
+	/* pid of process parsed here-doc */
+	pid_t pid;
 	Temp_type type;
+	/* actually longer: name (variable length) */
+	char tffn[3];
 };
 
 /*
@@ -776,7 +877,7 @@ EXTERN unsigned int ksh_tmout;
 EXTERN enum tmout_enum ksh_tmout_state E_INIT(TMOUT_EXECUTING);
 
 /* For "You have stopped jobs" message */
-EXTERN int really_exit;
+EXTERN bool really_exit;
 
 /*
  * fast character classes
@@ -874,15 +975,16 @@ EXTERN mksh_ari_t x_lins E_INIT(24);	/* tty lines */
 
 /* Determine the location of the system (common) profile */
 
-/* This is deliberately not configurable via CPPFLAGS */
+#ifndef MKSH_DEFAULT_PROFILEDIR
 #if defined(ANDROID)
-#define MKSH_ETC_LOCATION	"/system/etc"
+#define MKSH_DEFAULT_PROFILEDIR	"/system/etc"
 #else
-#define MKSH_ETC_LOCATION	"/etc"
+#define MKSH_DEFAULT_PROFILEDIR	"/etc"
+#endif
 #endif
 
-#define MKSH_SYSTEM_PROFILE	MKSH_ETC_LOCATION "/profile"
-#define MKSH_SUID_PROFILE	MKSH_ETC_LOCATION "/suid_profile"
+#define MKSH_SYSTEM_PROFILE	MKSH_DEFAULT_PROFILEDIR "/profile"
+#define MKSH_SUID_PROFILE	MKSH_DEFAULT_PROFILEDIR "/suid_profile"
 
 
 /* Used by v_evaluate() and setstr() to control action when error occurs */
@@ -989,6 +1091,8 @@ struct tbl {
 	/* actually longer: name (variable length) */
 	char name[4];
 };
+
+EXTERN struct tbl vtemp;
 
 /* common flag bits */
 #define ALLOC		BIT(0)	/* val.s has been allocated */
@@ -1196,6 +1300,9 @@ struct op {
 #define SPAT	10	/* separate pattern: | */
 #define CPAT	11	/* close pattern: ) */
 #define ADELIM	12	/* arbitrary delimiter: ${foo:2:3} ${foo/bar/baz} */
+#ifndef MKSH_DISABLE_EXPERIMENTAL
+#define FUNSUB	14	/* ${ foo;} substitution (NUL terminated) */
+#endif
 
 /*
  * IO redirection
@@ -1231,7 +1338,6 @@ struct ioword {
 #define XBGND	BIT(2)		/* command & */
 #define XPIPEI	BIT(3)		/* input is pipe */
 #define XPIPEO	BIT(4)		/* output is pipe */
-#define XPIPE	(XPIPEI|XPIPEO)	/* member of pipe */
 #define XXCOM	BIT(5)		/* `...` command */
 #define XPCLOSE	BIT(6)		/* exchild: close close_fd in parent */
 #define XCCLOSE	BIT(7)		/* exchild: close close_fd in child */
@@ -1255,6 +1361,9 @@ struct ioword {
 #define DOTEMP	BIT(8)		/* dito: in word part of ${..[%#=?]..} */
 #define DOVACHECK BIT(9)	/* var assign check (for typeset, set, etc) */
 #define DOMARKDIRS BIT(10)	/* force markdirs behaviour */
+#if !defined(MKSH_SMALL) && !defined(MKSH_DISABLE_EXPERIMENTAL)
+#define DOTCOMEXEC BIT(11)	/* not an eval flag, used by sh -c hack */
+#endif
 
 /*
  * The arguments of [[ .. ]] expressions are kept in t->args[] and flags
@@ -1325,35 +1434,38 @@ char *Xcheck_grow(XString *, const char *, size_t);
  * expandable vector of generic pointers
  */
 
-typedef struct XPtrV {
-	void **cur;		/* next avail pointer */
-	void **beg, **end;	/* begin, end of vector */
+typedef struct {
+	/* begin of allocated area */
+	void **beg;
+	/* currently used number of entries */
+	size_t len;
+	/* allocated number of entries */
+	size_t siz;
 } XPtrV;
 
-#define XPinit(x, n) do {					\
-	void **XPinit_vp;					\
-	XPinit_vp = alloc2((n), sizeof(void *), ATEMP);		\
-	(x).cur = (x).beg = XPinit_vp;				\
-	(x).end = XPinit_vp + (n);				\
-} while (/* CONSTCOND */ 0)
+#define XPinit(x, n)	do {					\
+	(x).siz = (n);						\
+	(x).len = 0;						\
+	(x).beg = alloc2((x).siz, sizeof(void *), ATEMP);	\
+} while (/* CONSTCOND */ 0)					\
 
-#define XPput(x, p) do {					\
-	if ((x).cur >= (x).end) {				\
-		size_t n = XPsize(x);				\
-		(x).beg = aresize2((x).beg,			\
-		    n, 2 * sizeof(void *), ATEMP);		\
-		(x).cur = (x).beg + n;				\
-		(x).end = (x).cur + n;				\
+#define XPput(x, p)	do {					\
+	if ((x).len == (x).siz) {				\
+		(x).beg = aresize2((x).beg, (x).siz,		\
+		    2 * sizeof(void *), ATEMP);			\
+		(x).siz <<= 1;					\
 	}							\
-	*(x).cur++ = (p);					\
+	(x).beg[(x).len++] = (p);				\
 } while (/* CONSTCOND */ 0)
 
 #define XPptrv(x)	((x).beg)
-#define XPsize(x)	((x).cur - (x).beg)
+#define XPsize(x)	((x).len)
 #define XPclose(x)	aresize2((x).beg, XPsize(x), sizeof(void *), ATEMP)
 #define XPfree(x)	afree((x).beg, ATEMP)
 
-#define IDENT	64
+/*
+ * Lexer internals
+ */
 
 typedef struct source Source;
 struct source {
@@ -1387,6 +1499,7 @@ struct source {
 #define SWORDSEP	6	/* string[] separator */
 #define SALIAS		7	/* alias expansion */
 #define SREREAD		8	/* read ahead to be re-scanned */
+#define SSTRINGCMDLINE	9	/* string from "mksh -c ..." */
 
 /* Source.flags values */
 #define SF_ECHO		BIT(0)	/* echo input to shlout */
@@ -1394,6 +1507,9 @@ struct source {
 #define SF_ALIASEND	BIT(2)	/* faking space at end of alias */
 #define SF_TTY		BIT(3)	/* type == SSTDIN & it is a tty */
 #define SF_HASALIAS	BIT(4)	/* u.tblp valid (SALIAS, SEOF) */
+#if !defined(MKSH_SMALL) && !defined(MKSH_DISABLE_EXPERIMENTAL)
+#define SF_MAYEXEC	BIT(5)	/* special sh -c optimisation hack */
+#endif
 
 typedef union {
 	int i;
@@ -1453,10 +1569,12 @@ typedef union {
 #define	CTRL(x)		((x) == '?' ? 0x7F : (x) & 0x1F)	/* ASCII */
 #define	UNCTRL(x)	((x) ^ 0x40)				/* ASCII */
 
+#define IDENT		64
+
 EXTERN Source *source;		/* yyparse/yylex source */
 EXTERN YYSTYPE yylval;		/* result from yylex */
 EXTERN struct ioword *heres[HERES], **herep;
-EXTERN char ident[IDENT+1];
+EXTERN char ident[IDENT + 1];
 
 EXTERN char **history;		/* saved commands */
 EXTERN char **histptr;		/* last history item */
@@ -1465,9 +1583,11 @@ EXTERN mksh_ari_t histsize;	/* history size */
 /* user and system time of last j_waitjed job */
 EXTERN struct timeval j_usrtime, j_systime;
 
-#define notoktomul(fac1, fac2)	(((fac1) != 0) && ((fac2) != 0) && \
-				    ((SIZE_MAX / (fac1)) < (fac2)))
-#define notoktoadd(val, cnst)	((val) > (SIZE_MAX - (cnst)))
+#define notok2mul(max, val, c)	(((val) != 0) && ((c) != 0) && \
+				    (((max) / (c)) < (val)))
+#define notok2add(max, val, c)	((val) > ((max) - (c)))
+#define notoktomul(val, cnst)	notok2mul(SIZE_MAX, (val), (cnst))
+#define notoktoadd(val, cnst)	notok2add(SIZE_MAX, (val), (cnst))
 #define checkoktoadd(val, cnst) do {					\
 	if (notoktoadd((val), (cnst)))					\
 		internal_errorf(Tintovfl, (size_t)(val),		\
@@ -1475,34 +1595,45 @@ EXTERN struct timeval j_usrtime, j_systime;
 } while (/* CONSTCOND */ 0)
 
 
-/* Bob Jenkins' one-at-a-time hash, with better start value */
-#define oaat1_init_impl(h) do {						\
-	(h) = 0x100;							\
+/* NZAAT hash based on Bob Jenkins' one-at-a-time hash */
+
+/* From: src/kern/include/nzat.h,v 1.2 2011/07/18 00:35:40 tg Exp $ */
+
+#define NZATInit(h) do {					\
+	(h) = 0;						\
 } while (/* CONSTCOND */ 0)
-#define oaat1_addmem_impl(h, buf, len) do {				\
-	register const uint8_t *oaat1_addmem_p = (const void *)(buf);	\
-	register size_t oaat1_addmem_n = (len);				\
-									\
-	while (oaat1_addmem_n--) {					\
-		(h) += *oaat1_addmem_p++;				\
-		(h) += (h) << 10;					\
-		(h) ^= (h) >> 6;					\
-	}								\
+
+#define NZATUpdateByte(h,b) do {				\
+	(h) += (uint8_t)(b);					\
+	++(h);							\
+	(h) += (h) << 10;					\
+	(h) ^= (h) >> 6;					\
 } while (/* CONSTCOND */ 0)
-#define oaat1_addstr_impl(h, s) do {					\
-	register const uint8_t *oaat1_addstr_p = (const void *)(s);	\
-	register uint8_t oaat1_addstr_c;				\
-									\
-	while ((oaat1_addstr_c = *oaat1_addstr_p++)) {			\
-		h += oaat1_addstr_c;					\
-		(h) += (h) << 10;					\
-		(h) ^= (h) >> 6;					\
-	}								\
+
+#define NZATUpdateMem(h,p,z) do {				\
+	register const uint8_t *NZATUpdateMem_p;		\
+	register size_t NZATUpdateMem_z = (z);			\
+								\
+	NZATUpdateMem_p = (const void *)(p);			\
+	while (NZATUpdateMem_z--)				\
+		NZATUpdateByte((h), *NZATUpdateMem_p++);	\
 } while (/* CONSTCOND */ 0)
-#define oaat1_fini_impl(h) do {						\
-	(h) += (h) << 3;						\
-	(h) ^= (h) >> 11;						\
-	(h) += (h) << 15;						\
+
+#define NZATUpdateString(h,s) do {				\
+	register const char *NZATUpdateString_s;		\
+	register uint8_t NZATUpdateString_c;			\
+								\
+	NZATUpdateString_s = (const void *)(s);			\
+	while ((NZATUpdateString_c = *NZATUpdateString_s++))	\
+		NZATUpdateByte((h), NZATUpdateString_c);	\
+} while (/* CONSTCOND */ 0)
+
+#define NZAATFinish(h) do {					\
+	(h) += (h) << 10;					\
+	(h) ^= (h) >> 6;					\
+	(h) += (h) << 3;					\
+	(h) ^= (h) >> 11;					\
+	(h) += (h) << 15;					\
 } while (/* CONSTCOND */ 0)
 
 
@@ -1516,14 +1647,16 @@ void *aresize(void *, size_t, Area *);
 void *aresize2(void *, size_t, size_t, Area *);
 void afree(void *, Area *);	/* can take NULL */
 /* edit.c */
+#ifndef MKSH_NO_CMDLINE_EDITING
 #ifndef MKSH_SMALL
 int x_bind(const char *, const char *, bool, bool);
 #else
 int x_bind(const char *, const char *, bool);
 #endif
 void x_init(void);
-void x_mkraw(int, struct termios *, bool);
 int x_read(char *, size_t);
+#endif
+void x_mkraw(int, mksh_ttyst *, bool);
 /* eval.c */
 char *substitute(const char *, int);
 char **eval(const char **, int);
@@ -1531,7 +1664,8 @@ char *evalstr(const char *cp, int);
 char *evalonestr(const char *cp, int);
 char *debunk(char *, const char *, size_t);
 void expand(const char *, XPtrV *, int);
-int glob_str(char *, XPtrV *, int);
+int glob_str(char *, XPtrV *, bool);
+char *tilde(char *);
 /* exec.c */
 int execute(struct op * volatile, volatile int, volatile int * volatile);
 int shcomexec(const char **);
@@ -1541,8 +1675,8 @@ const char *builtin(const char *, int (*)(const char **));
 struct tbl *findcom(const char *, int);
 void flushcom(bool);
 const char *search_path(const char *, const char *, int, int *);
-int pr_menu(const char * const *);
-int pr_list(char * const *);
+void pr_menu(const char * const *);
+void pr_list(char * const *);
 /* expr.c */
 int evaluate(const char *, mksh_ari_t *, int, bool);
 int v_evaluate(struct tbl *, const char *, volatile int, bool);
@@ -1557,6 +1691,7 @@ size_t utf_ptradj(const char *);
 int utf_wcwidth(unsigned int);
 #endif
 int ksh_access(const char *, int);
+struct tbl *tempvar(void);
 /* funcs.c */
 int c_hash(const char **);
 int c_pwd(const char **);
@@ -1577,7 +1712,9 @@ int c_fgbg(const char **);
 int c_kill(const char **);
 void getopts_reset(int);
 int c_getopts(const char **);
+#ifndef MKSH_NO_CMDLINE_EDITING
 int c_bind(const char **);
+#endif
 int c_shift(const char **);
 int c_umask(const char **);
 int c_dot(const char **);
@@ -1619,7 +1756,7 @@ void sethistsize(mksh_ari_t);
 #if HAVE_PERSISTENT_HISTORY
 void sethistfile(const char *);
 #endif
-#if !MKSH_S_NOVI
+#if !defined(MKSH_NO_CMDLINE_EDITING) && !MKSH_S_NOVI
 char **histpos(void);
 int histnum(int);
 #endif
@@ -1673,9 +1810,10 @@ void set_prompt(int, Source *);
 void pprompt(const char *, int);
 int promptlen(const char *);
 /* main.c */
-int include(const char *, int, const char **, int);
+int include(const char *, int, const char **, bool);
 int command(const char *, int);
-int shell(Source *volatile, int volatile);
+int shell(Source * volatile, volatile bool);
+/* argument MUST NOT be 0 */
 void unwind(int) MKSH_A_NORETURN;
 void newenv(int);
 void quitenv(struct shf *);
@@ -1691,9 +1829,9 @@ void warningf(bool, const char *, ...)
     MKSH_A_FORMAT(__printf__, 2, 3);
 void bi_errorf(const char *, ...)
     MKSH_A_FORMAT(__printf__, 1, 2);
-#define errorfz()	errorf("\1")
-#define errorfxz(rc)	errorfx((rc), "\1")
-#define bi_errorfz()	bi_errorf("\1")
+#define errorfz()	errorf(NULL)
+#define errorfxz(rc)	errorfx((rc), NULL)
+#define bi_errorfz()	bi_errorf(NULL)
 void internal_errorf(const char *, ...)
     MKSH_A_NORETURN
     MKSH_A_FORMAT(__printf__, 1, 2);
@@ -1740,16 +1878,15 @@ char *getoptions(void);
 void change_flag(enum sh_flag, int, unsigned int);
 int parse_args(const char **, int, bool *);
 int getn(const char *, int *);
-int bi_getn(const char *, int *);
 int gmatchx(const char *, const char *, bool);
 int has_globbing(const char *, const char *);
 int xstrcmp(const void *, const void *);
 void ksh_getopt_reset(Getopt *, int);
 int ksh_getopt(const char **, Getopt *, const char *);
-void print_value_quoted(const char *);
+void print_value_quoted(struct shf *, const char *);
 char *quote_value(const char *);
-void print_columns(struct shf *, int,
-    char *(*)(char *, size_t, int, const void *),
+void print_columns(struct shf *, unsigned int,
+    char *(*)(char *, size_t, unsigned int, const void *),
     const void *, size_t, size_t, bool);
 void strip_nuls(char *, int);
 ssize_t blocking_read(int, char *, size_t)
@@ -1760,7 +1897,7 @@ char *do_realpath(const char *);
 void simplify_path(char *);
 void set_current_wd(const char *);
 int c_cd(const char **);
-#ifdef MKSH_SMALL
+#if defined(MKSH_SMALL) && !defined(MKSH_SMALL_BUT_FAST)
 char *strdup_i(const char *, Area *);
 char *strndup_i(const char *, size_t, Area *);
 #endif
@@ -1778,7 +1915,7 @@ ssize_t shf_read(char *, ssize_t, struct shf *);
 char *shf_getse(char *, ssize_t, struct shf *);
 int shf_getchar(struct shf *s);
 int shf_ungetc(int, struct shf *);
-#ifdef MKSH_SMALL
+#if defined(MKSH_SMALL) && !defined(MKSH_SMALL_BUT_FAST)
 int shf_getc(struct shf *);
 int shf_putc(int, struct shf *);
 #else
@@ -1801,7 +1938,8 @@ ssize_t shf_vfprintf(struct shf *, const char *, va_list)
 void initkeywords(void);
 struct op *compile(Source *, bool);
 bool parse_usec(const char *, struct timeval *);
-char *yyrecursive(void);
+char *yyrecursive(int);
+void yyrecursive_pop(bool);
 /* tree.c */
 void fptreef(struct shf *, int, const char *, ...);
 char *snptreef(char *, ssize_t, const char *, ...);
@@ -1824,6 +1962,7 @@ void fpFUNCTf(struct shf *, int, bool, const char *, struct op *);
 void newblock(void);
 void popblock(void);
 void initvar(void);
+struct block *varsearch(struct block *, struct tbl **, const char *, uint32_t);
 struct tbl *global(const char *);
 struct tbl *local(const char *, bool);
 char *str_val(struct tbl *);
@@ -1845,6 +1984,7 @@ size_t array_ref_len(const char *);
 char *arrayname(const char *);
 mksh_uari_t set_array(const char *, bool, const char **);
 uint32_t hash(const void *);
+mksh_ari_t rndget(void);
 void rndset(long);
 
 enum Test_op {
@@ -1902,10 +2042,10 @@ int test_parse(Test_env *);
 
 EXTERN int tty_fd E_INIT(-1);	/* dup'd tty file descriptor */
 EXTERN bool tty_devtty;		/* true if tty_fd is from /dev/tty */
-EXTERN struct termios tty_state;	/* saved tty state */
+EXTERN mksh_ttyst tty_state;	/* saved tty state */
+EXTERN bool tty_hasstate;	/* true if tty_state is valid */
 
-extern void tty_init(bool, bool);
-extern void tty_close(void);
+extern int tty_init_fd(void);	/* initialise tty_fd, tty_devtty */
 
 /* be sure not to interfere with anyone else's idea about EXTERN */
 #ifdef EXTERN_DEFINED
