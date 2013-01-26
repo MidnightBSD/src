@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/ObsoleteFiles.inc,v 1.25.2.3 2006/02/16 07:25:23 avatar Exp $
-# $MidnightBSD: src/ObsoleteFiles.inc,v 1.30 2013/01/26 01:41:47 laffer1 Exp $
+# $MidnightBSD: src/ObsoleteFiles.inc,v 1.31 2013/01/26 03:34:32 laffer1 Exp $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -4781,3 +4781,4 @@ OLD_DIRS+=usr/share/doc/bind/html
 OLD_DIRS+=usr/share/doc/bind/misc
 OLD_DIRS+=usr/share/doc/bind/
 
+.include "tools/build/mk/OptionalObsoleteFiles.inc"
