@@ -1,4 +1,4 @@
-# $MidnightBSD: src/bin/mksh/Makefile,v 1.19 2012/04/07 23:00:52 laffer1 Exp $
+# $MidnightBSD: src/bin/mksh/Makefile,v 1.20 2013/01/26 00:51:07 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -11,7 +11,7 @@ SRCS=	lalloc.c eval.c exec.c expr.c funcs.c histrap.c jobs.c lex.c \
 	main.c misc.c shf.c syn.c tree.c var.c edit.c strlcpy.c
 
 DEFS=	-std=c99
-CFLAGS+=	${DEFS} -I${SRCDIR} -fstack-protector-all -fwrapv
+CFLAGS+=	${DEFS} -fstack-protector-all -fwrapv -I${MKSHDIR}
 
 CFLAGS+=	-DMKSH_BUILDSH -DHAVE_ATTRIBUTE_BOUNDED=0 \
 		-DHAVE_ATTRIBUTE_FORMAT=1 -DHAVE_ATTRIBUTE_NONNULL=1 \
