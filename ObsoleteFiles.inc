@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/ObsoleteFiles.inc,v 1.25.2.3 2006/02/16 07:25:23 avatar Exp $
-# $MidnightBSD: src/ObsoleteFiles.inc,v 1.32 2013/01/26 03:35:43 laffer1 Exp $
+# $MidnightBSD: src/ObsoleteFiles.inc,v 1.33 2013/01/26 15:49:30 laffer1 Exp $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -81,6 +81,9 @@ OLD_LIBS+=usr/lib/libmilter.so.4
 OLD_LIBS+=usr/lib/libmp.so.6
 OLD_LIBS+=usr/lib/libncp.so.3
 OLD_LIBS+=usr/lib/libobjc.so.3
+OLD_LIBS+=usr/lib/libobjc.a
+OLD_LIBS+=usr/lib/libobjc.so
+OLD_LIBS+=usr/lib/libobjc_p.a
 OLD_LIBS+=usr/lib/libopie.so.5
 OLD_LIBS+=usr/lib/libpam.so.4
 OLD_LIBS+=usr/lib/libpanel.so.4
