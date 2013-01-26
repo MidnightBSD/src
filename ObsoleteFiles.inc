@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/ObsoleteFiles.inc,v 1.25.2.3 2006/02/16 07:25:23 avatar Exp $
-# $MidnightBSD: src/ObsoleteFiles.inc,v 1.31 2013/01/26 03:34:32 laffer1 Exp $
+# $MidnightBSD: src/ObsoleteFiles.inc,v 1.32 2013/01/26 03:35:43 laffer1 Exp $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -15,7 +15,7 @@
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
 
-#20130120
+#20130120 0.4-CURRENT bump
 OLD_FILES+=etc/auth.conf
 OLD_FILES+=usr/share/examples/etc/auth.conf
 OLD_FILES+=usr/share/man/man3/auth.3.gz
@@ -57,11 +57,45 @@ OLD_LIBS+=usr/lib/libarchive.so.4
 OLD_LIBS+=usr/lib/libasn1.so.9
 OLD_LIBS+=usr/lib/libbluetooth.so.3
 OLD_LIBS+=usr/lib/libbsm.so.2
+OLD_LIBS+=usr/lib/libbz2.so.3
 OLD_LIBS+=usr/lib/libcalendar.so.4
 OLD_LIBS+=usr/lib/libcom_err.so.4
 OLD_LIBS+=usr/lib/libdevinfo.so.4
 OLD_LIBS+=usr/lib/libform.so.4
 OLD_LIBS+=usr/lib/libformw.so.4
+OLD_LIBS+=usr/lib/libftpio.so.7
+OLD_LIBS+=usr/lib/libgnuregex.so.4
+OLD_LIBS+=usr/lib/libgssapi.so.9
+OLD_LIBS+=usr/lib/libgssapi_krb5.so.9
+OLD_LIBS+=usr/lib/libhdb.so.9
+OLD_LIBS+=usr/lib/libhistory.so.7
+OLD_LIBS+=usr/lib/libkadm5clnt.so.9
+OLD_LIBS+=usr/lib/libkadm5srv.so.9
+OLD_LIBS+=usr/lib/libkafs5.so.9
+OLD_LIBS+=usr/lib/libkrb5.so.9
+OLD_LIBS+=usr/lib/liblzma.so.4
+OLD_LIBS+=usr/lib/libmemstat.so.2
+OLD_LIBS+=usr/lib/libmenu.so.4
+OLD_LIBS+=usr/lib/libmenuw.so.4
+OLD_LIBS+=usr/lib/libmilter.so.4
+OLD_LIBS+=usr/lib/libmp.so.6
+OLD_LIBS+=usr/lib/libncp.so.3
+OLD_LIBS+=usr/lib/libobjc.so.3
+OLD_LIBS+=usr/lib/libopie.so.5
+OLD_LIBS+=usr/lib/libpam.so.4
+OLD_LIBS+=usr/lib/libpanel.so.4
+OLD_LIBS+=usr/lib/libpanelw.so.4
+OLD_LIBS+=usr/lib/libpmc.so.4
+OLD_LIBS+=usr/lib/libradius.so.3
+OLD_LIBS+=usr/lib/libroken.so.9
+OLD_LIBS+=usr/lib/librpcsvc.so.4
+OLD_LIBS+=usr/lib/libsdp.so.3
+OLD_LIBS+=usr/lib/libssh.so.4
+OLD_LIBS+=usr/lib/libssl.so.5
+OLD_LIBS+=usr/lib/libtacplus.so.3
+OLD_LIBS+=usr/lib/libugidfw.so.3
+OLD_LIBS+=usr/lib/libusbhid.so.3
+OLD_LIBS+=usr/lib/libwrap.so.5
 OLD_LIBS+=usr/lib/pam_chroot.so.4
 OLD_LIBS+=usr/lib/pam_deny.so.4
 OLD_LIBS+=usr/lib/pam_echo.so.4
