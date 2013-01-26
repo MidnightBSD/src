@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20130125:
+	MKSH R41 imported
+
 20130122:
 	OpenSSH 5.8p2 imported
 
@@ -1223,4 +1226,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.164 2013/01/22 12:59:03 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.165 2013/01/23 02:35:12 laffer1 Exp $
