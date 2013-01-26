@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/ObsoleteFiles.inc,v 1.25.2.3 2006/02/16 07:25:23 avatar Exp $
-# $MidnightBSD: src/ObsoleteFiles.inc,v 1.28 2013/01/21 02:22:51 laffer1 Exp $
+# $MidnightBSD: src/ObsoleteFiles.inc,v 1.29 2013/01/21 02:46:25 laffer1 Exp $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -33,6 +33,39 @@ OLD_FILES+=usr/share/man/man2/kse_thr_interrupt.2.gz
 OLD_FILES+=usr/share/man/man2/kse_wakeup.2.gz
 OLD_FILES+=usr/lib32/libkse.so
 OLD_LIBS+=usr/lib32/libkse.so.3
+OLD_LIBS+=lib/libalias.so.6
+OLD_LIBS+=lib/libavl.so.1
+OLD_LIBS+=lib/libbegemot.so.3
+OLD_LIBS+=lib/libbsdxml.so.3
+OLD_LIBS+=lib/libbsnmp.so.4
+OLD_LIBS+=lib/libcam.so.4
+OLD_LIBS+=lib/libcrypt.so.4
+OLD_LIBS+=lib/libcrypto.so.5
+OLD_LIBS+=lib/libdevstat.so.6
+OLD_LIBS+=lib/libdtrace.so.1
+OLD_LIBS+=lib/libedit.so.6
+OLD_LIBS+=lib/libgeom.so.4
+OLD_LIBS+=lib/libipsec.so.3
+OLD_LIBS+=lib/libipx.so.4
+OLD_LIBS+=lib/libkiconv.so.3
+OLD_LIBS+=lib/libkvm.so.4
+OLD_LIBS+=lib/libmd.so.4
+OLD_LIBS+=lib/libncurses.so.7
+OLD_LIBS+=lib/libncursesw.so.7
+OLD_LIBS+=lib/libnvpair.so.1
+OLD_LIBS+=lib/libpcap.so.5
+OLD_LIBS+=lib/libreadline.so.7
+OLD_LIBS+=lib/libsbuf.so.4
+OLD_LIBS+=lib/libufs.so.4
+OLD_LIBS+=lib/libumem.so.1
+OLD_LIBS+=lib/libutil.so.7
+OLD_LIBS+=lib/libuutil.so.1
+OLD_LIBS+=lib/libz.so.4
+OLD_LIBS+=lib/libzfs.so.1
+OLD_LIBS+=lib/libzpool.so.1
+OLD_LIBS+=usr/lib32/libcam.so.4
+OLD_LIBS+=usr/lib32/libpcap.so.5
+OLD_LIBS+=usr/lib32/libufs.so.4
 #20120103:
 OLD_FILES+=usr/sbin/pkg_add
 OLD_FILES+=usr/sbin/pkg_check
