@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/ObsoleteFiles.inc,v 1.25.2.3 2006/02/16 07:25:23 avatar Exp $
-# $MidnightBSD: src/ObsoleteFiles.inc,v 1.29 2013/01/21 02:46:25 laffer1 Exp $
+# $MidnightBSD: src/ObsoleteFiles.inc,v 1.30 2013/01/26 01:41:47 laffer1 Exp $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -53,9 +53,48 @@ OLD_LIBS+=lib/libmd.so.4
 OLD_LIBS+=lib/libncurses.so.7
 OLD_LIBS+=lib/libncursesw.so.7
 OLD_LIBS+=lib/libnvpair.so.1
+OLD_LIBS+=usr/lib/libarchive.so.4
+OLD_LIBS+=usr/lib/libasn1.so.9
+OLD_LIBS+=usr/lib/libbluetooth.so.3
+OLD_LIBS+=usr/lib/libbsm.so.2
+OLD_LIBS+=usr/lib/libcalendar.so.4
+OLD_LIBS+=usr/lib/libcom_err.so.4
+OLD_LIBS+=usr/lib/libdevinfo.so.4
+OLD_LIBS+=usr/lib/libform.so.4
+OLD_LIBS+=usr/lib/libformw.so.4
+OLD_LIBS+=usr/lib/pam_chroot.so.4
+OLD_LIBS+=usr/lib/pam_deny.so.4
+OLD_LIBS+=usr/lib/pam_echo.so.4
+OLD_LIBS+=usr/lib/pam_exec.so.4
+OLD_LIBS+=usr/lib/pam_ftpusers.so.4
+OLD_LIBS+=usr/lib/pam_group.so.4
+OLD_LIBS+=usr/lib/pam_guest.so.4
+OLD_LIBS+=usr/lib/pam_krb5.so.4
+OLD_LIBS+=usr/lib/pam_ksu.so.4
+OLD_LIBS+=usr/lib/pam_lastlog.so.4
+OLD_LIBS+=usr/lib/pam_login_access.so.4
+OLD_LIBS+=usr/lib/pam_nologin.so.4
+OLD_LIBS+=usr/lib/pam_opie.so.4
+OLD_LIBS+=usr/lib/pam_opieaccess.so.4
+OLD_LIBS+=usr/lib/pam_passwdqc.so.4
+OLD_LIBS+=usr/lib/pam_permit.so.4
+OLD_LIBS+=usr/lib/pam_radius.so.4
+OLD_LIBS+=usr/lib/pam_rhosts.so.4
+OLD_LIBS+=usr/lib/pam_rootok.so.4
+OLD_LIBS+=usr/lib/pam_securetty.so.4
+OLD_LIBS+=usr/lib/pam_self.so.4
+OLD_LIBS+=usr/lib/pam_ssh.so.4
+OLD_LIBS+=usr/lib/pam_tacplus.so.4
+OLD_LIBS+=usr/lib/pam_unix.so.4
 OLD_LIBS+=lib/libpcap.so.5
 OLD_LIBS+=lib/libreadline.so.7
 OLD_LIBS+=lib/libsbuf.so.4
+OLD_LIBS+=usr/lib/snmp_atm.so.5
+OLD_LIBS+=usr/lib/snmp_bridge.so.5
+OLD_LIBS+=usr/lib/snmp_hostres.so.5
+OLD_LIBS+=usr/lib/snmp_mibII.so.5
+OLD_LIBS+=usr/lib/snmp_netgraph.so.5
+OLD_LIBS+=usr/lib/snmp_pf.so.5
 OLD_LIBS+=lib/libufs.so.4
 OLD_LIBS+=lib/libumem.so.1
 OLD_LIBS+=lib/libutil.so.7
