@@ -1,5 +1,5 @@
 #
-# $MidnightBSD: src/Makefile.inc1,v 1.42 2012/07/20 01:51:49 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.43 2012/08/19 14:05:10 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -1002,28 +1002,24 @@ _gperf=		gnu/usr.bin/gperf
 _groff=		gnu/usr.bin/groff
 .endif
 
-.if ${BOOTSTRAPPING} >= 4000 && ${BOOTSTRAPPING} < 4016
+.if ${BOOTSTRAPPING} >= 4000 && ${BOOTSTRAPPING} < 4015
 _ar=		usr.bin/ar
 .endif
 
-.if ${BOOTSTRAPPING} < 4016
+.if ${BOOTSTRAPPING} < 4015
 _mklocale=	usr.bin/mklocale
 .endif
 
-.if ${BOOTSTRAPPING} < 4016
+.if ${BOOTSTRAPPING} < 4015
 _sed=		usr.bin/sed
 .endif
 
-.if ${BOOTSTRAPPING} < 4016
+.if ${BOOTSTRAPPING} < 4015
 _lex=		usr.bin/lex
 .endif
 
-.if ${BOOTSTRAPPING} < 4016
+.if ${BOOTSTRAPPING} < 4015
 _yacc=		usr.bin/yacc
-.endif
-
-.if ${BOOTSTRAPPING} >= 4016
-_awk=		usr.bin/awk
 .endif
 
 .if ${MK_BSNMP} != "no" && \
@@ -1045,8 +1041,8 @@ _clang_tblgen= \
 .endif
 
 .if ${MK_CDDL} != "no" && \
-    ${BOOTSTRAPPING} < 4016 && \
-    !(${BOOTSTRAPPING} >= 4000 && ${BOOTSTRAPPING} < 4016)
+    ${BOOTSTRAPPING} < 4015 && \
+    !(${BOOTSTRAPPING} >= 4000 && ${BOOTSTRAPPING} < 4015)
 _dtrace_tools= cddl/usr.bin/sgsmsg cddl/lib/libctf lib/libelf \
     lib/libdwarf cddl/usr.bin/ctfconvert cddl/usr.bin/ctfmerge
 .endif
