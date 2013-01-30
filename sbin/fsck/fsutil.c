@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sbin/fsck/fsutil.c,v 1.4 2007/01/02 06:54:22 laffer1 Exp $ */
 /*	$NetBSD: fsutil.c,v 1.7 1998/07/30 17:41:03 thorpej Exp $	*/
 
 /*
@@ -34,8 +33,7 @@
 #ifndef lint
 __RCSID("$NetBSD: fsutil.c,v 1.7 1998/07/30 17:41:03 thorpej Exp $");
 #endif /* not lint */
-__MBSDID("$FreeBSD: src/sbin/fsck/fsutil.c,v 1.8 2004/04/09 19:58:28 markm Exp $");
-__MBSDID("$MidnightBSD: src/sbin/fsck/fsutil.c,v 1.4 2007/01/02 06:54:22 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -49,7 +47,7 @@ __MBSDID("$MidnightBSD: src/sbin/fsck/fsutil.c,v 1.4 2007/01/02 06:54:22 laffer1
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <libutil.h>
+
 #include "fsutil.h"
 
 static const char *dev = NULL;
@@ -112,7 +110,7 @@ pwarn(const char *fmt, ...)
 }
 
 void
-xperror(const char *s)
+perror(const char *s)
 {
 	pfatal("%s (%s)", s, strerror(errno));
 }
@@ -134,17 +132,17 @@ devcheck(const char *origname)
 	struct stat stslash, stchar;
 
 	if (stat("/", &stslash) < 0) {
-		xperror("/");
+		perror("/");
 		printf("Can't stat root\n");
 		return (origname);
 	}
 	if (stat(origname, &stchar) < 0) {
-		xperror(origname);
+		perror(origname);
 		printf("Can't stat %s\n", origname);
 		return (origname);
 	}
 	if (!S_ISCHR(stchar.st_mode)) {
-		xperror(origname);
+		perror(origname);
 		printf("%s is not a char device\n", origname);
 	}
 	return (origname);
@@ -158,7 +156,7 @@ getmntpt(const char *name)
 {
 	struct stat devstat, mntdevstat;
 	char device[sizeof(_PATH_DEV) - 1 + MNAMELEN];
-	char *devicename;
+	char *devname;
 	struct statfs *mntbuf, *statfsp;
 	int i, mntsize, isdev;
 
@@ -171,10 +169,10 @@ getmntpt(const char *name)
 	mntsize = getmntinfo(&mntbuf, MNT_NOWAIT);
 	for (i = 0; i < mntsize; i++) {
 		statfsp = &mntbuf[i];
-		devicename = statfsp->f_mntfromname;
-		if (*devicename != '/') {
+		devname = statfsp->f_mntfromname;
+		if (*devname != '/') {
 			strcpy(device, _PATH_DEV);
-			strcat(device, devicename);
+			strcat(device, devname);
 			strcpy(statfsp->f_mntfromname, device);
 		}
 		if (isdev == 0) {
@@ -182,7 +180,7 @@ getmntpt(const char *name)
 				continue;
 			return (statfsp);
 		}
-		if (stat(devicename, &mntdevstat) == 0 &&
+		if (stat(devname, &mntdevstat) == 0 &&
 		    mntdevstat.st_rdev == devstat.st_rdev)
 			return (statfsp);
 	}

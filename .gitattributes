@@ -38574,13 +38574,11 @@ sbin/ffsinfo/ffsinfo.8 -text
 sbin/ffsinfo/ffsinfo.c -text
 sbin/fsck/Makefile -text
 sbin/fsck/fdisk.8 -text
-sbin/fsck/fdisk.c -text
 sbin/fsck/fsck.8 -text
 sbin/fsck/fsck.c -text
 sbin/fsck/fsutil.c -text
 sbin/fsck/fsutil.h -text
 sbin/fsck/preen.c -text
-sbin/fsck/runtest.sh -text
 sbin/fsck_ffs/Makefile -text
 sbin/fsck_ffs/SMM.doc/0.t -text
 sbin/fsck_ffs/SMM.doc/1.t -text

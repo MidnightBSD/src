@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sbin/fsck/fsutil.h,v 1.4 2007/01/02 06:54:22 laffer1 Exp $ */
 /*	$NetBSD: fsutil.h,v 1.4 1998/07/26 20:02:36 mycroft Exp $	*/
 
 /*
@@ -29,10 +28,10 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/fsck/fsutil.h,v 1.8 2003/12/27 13:54:02 bde Exp $
+ * $MidnightBSD$
  */
 
-void xperror(const char *);
+void perror(const char *);
 void pfatal(const char *, ...) __printflike(1, 2);
 void pwarn(const char *, ...) __printflike(1, 2);
 void panic(const char *, ...) __dead2 __printflike(1, 2);
@@ -40,6 +39,9 @@ const char *devcheck(const char *);
 const char *cdevname(void);
 void setcdevname(const char *, int);
 struct statfs *getmntpt(const char *);
+void *emalloc(size_t);
+void *erealloc(void *, size_t);
+char *estrdup(const char *);
 
 #define	CHECK_PREEN	0x0001
 #define	CHECK_VERBOSE	0x0002

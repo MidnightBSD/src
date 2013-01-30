@@ -27,8 +27,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/sbin/fsck/fsck.8,v 1.37 2005/02/10 09:19:29 ru Exp $
-.\" $MidnightBSD: src/sbin/fsck/fsck.8,v 1.2 2007/01/02 06:37:58 laffer1 Exp $
+.\" $MidnightBSD$
 .\"
 .Dd January 25, 2009
 .Dt FSCK 8
@@ -170,6 +169,17 @@ so the check program is invoked with the
 flag to indicate that a check on the active file system should be done.
 When running in background mode,
 only one file system at a time will be checked.
+Note that background
+.Nm
+is limited to checking for only the most commonly occurring
+file system abnormalities.
+Under certain circumstances,
+some errors can escape background
+.Nm .
+It is recommended that you perform foreground
+.Nm
+on your systems periodically and whenever you encounter
+file-system\-related panics.
 .It Fl t Ar fstype
 Invoke
 .Nm

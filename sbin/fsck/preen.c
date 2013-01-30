@@ -1,3 +1,5 @@
+/*	$NetBSD: preen.c,v 1.18 1998/07/26 20:02:36 mycroft Exp $	*/
+
 /*
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -26,13 +28,17 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * @(#)preen.c     8.5 (Berkeley) 4/28/95
- * $NetBSD: preen.c,v 1.18 1998/07/26 20:02:36 mycroft Exp $
- * $FreeBSD: src/sbin/fsck/preen.c,v 1.28 2004/04/09 19:58:28 markm Exp $
  * $MidnightBSD$
  */
 
 #include <sys/cdefs.h>
+#ifndef lint
+#if 0
+static char sccsid[] = "@(#)preen.c	8.5 (Berkeley) 4/28/95";
+#else
+__RCSID("$NetBSD: preen.c,v 1.18 1998/07/26 20:02:36 mycroft Exp $");
+#endif
+#endif /* not lint */
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -46,7 +52,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <libutil.h>
 
 #include "fsutil.h"
 
@@ -290,19 +295,19 @@ printpart(void)
 
 
 static void
-addpart(const char *type, const char *devicename, const char *mntpt)
+addpart(const char *type, const char *devname, const char *mntpt)
 {
-	struct diskentry *d = finddisk(devicename);
+	struct diskentry *d = finddisk(devname);
 	struct partentry *p;
 
 	TAILQ_FOREACH(p, &d->d_part, p_entries)
-		if (strcmp(p->p_devname, devicename) == 0) {
-			warnx("%s in fstab more than once!\n", devicename);
+		if (strcmp(p->p_devname, devname) == 0) {
+			warnx("%s in fstab more than once!\n", devname);
 			return;
 		}
 
 	p = emalloc(sizeof(*p));
-	p->p_devname = estrdup(devicename);
+	p->p_devname = estrdup(devname);
 	p->p_mntpt = estrdup(mntpt);
 	p->p_type = estrdup(type);
 

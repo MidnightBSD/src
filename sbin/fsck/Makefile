@@ -1,16 +1,9 @@
+#	$NetBSD: Makefile,v 1.14 1996/09/27 22:38:37 christos Exp $
 # $MidnightBSD$
 
-PROG=	fdisk
-SRCS=	fdisk.c geom_mbr_enc.c
-WARNS?=	4
-MAN=	fdisk.8
-
-.PATH:	${.CURDIR}/../../sys/geom
-
-DPADD+=	${LIBGEOM} ${LIBBSDXML} ${LIBSBUF}
-LDADD+=	-lgeom -lbsdxml -lsbuf
+PROG=	fsck
+SRCS=	fsck.c fsutil.c preen.c
+WARNS?=	2
+MAN=	fsck.8
 
 .include <bsd.prog.mk>
-
-test:	${PROG}
-	sh ${.CURDIR}/runtest.sh
