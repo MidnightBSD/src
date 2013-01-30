@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/sh/jobs.c,v 1.4 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +36,7 @@ static char sccsid[] = "@(#)jobs.c	8.5 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/jobs.c,v 1.72.10.6 2010/11/14 19:40:22 jilles Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/ioctl.h>
 #include <sys/param.h>
@@ -71,11 +70,14 @@ __FBSDID("$FreeBSD: src/bin/sh/jobs.c,v 1.72.10.6 2010/11/14 19:40:22 jilles Exp
 #include "memalloc.h"
 #include "error.h"
 #include "mystring.h"
+#include "var.h"
+#include "builtins.h"
 
 
 static struct job *jobtab;	/* array of jobs */
 static int njobs;		/* size of array */
 MKINIT pid_t backgndpid = -1;	/* pid of last background process */
+MKINIT struct job *bgjob = NULL; /* last background process */
 #if JOBS
 static struct job *jobmru;	/* most recently used job list */
 static pid_t initialpgrp;	/* pgrp of shell on invocation */
@@ -92,6 +94,7 @@ static void freejob(struct job *);
 static struct job *getjob(char *);
 static pid_t dowait(int, struct job *);
 static pid_t waitproc(int, int *);
+static void checkzombies(void);
 static void cmdtxt(union node *);
 static void cmdputs(const char *);
 #if JOBS
@@ -99,7 +102,8 @@ static void setcurjob(struct job *);
 static void deljob(struct job *);
 static struct job *getcurjob(struct job *);
 #endif
-static void showjob(struct job *, pid_t, int);
+static void printjobcmd(struct job *);
+static void showjob(struct job *, int);
 
 
 /*
@@ -147,14 +151,12 @@ setjobctl(int on)
 		do { /* while we are in the background */
 			initialpgrp = tcgetpgrp(ttyfd);
 			if (initialpgrp < 0) {
-out:				out2str("sh: can't access tty; job control turned off\n");
+out:				out2fmt_flush("sh: can't access tty; job control turned off\n");
 				mflag = 0;
 				return;
 			}
-			if (initialpgrp == -1)
-				initialpgrp = getpgrp();
-			else if (initialpgrp != getpgrp()) {
-				killpg(0, SIGTTIN);
+			if (initialpgrp != getpgrp()) {
+				kill(0, SIGTTIN);
 				continue;
 			}
 		} while (0);
@@ -177,21 +179,6 @@ out:				out2str("sh: can't access tty; job control turned off\n");
 #endif
 
 
-#ifdef mkinit
-INCLUDE <sys/types.h>
-INCLUDE <stdlib.h>
-
-SHELLPROC {
-	backgndpid = -1;
-#if JOBS
-	jobctl = 0;
-#endif
-}
-
-#endif
-
-
-
 #if JOBS
 int
 fgcmd(int argc __unused, char **argv)
@@ -203,8 +190,7 @@ fgcmd(int argc __unused, char **argv)
 	jp = getjob(argv[1]);
 	if (jp->jobctl == 0)
 		error("job not created under job control");
-	out1str(jp->ps[0].cmd);
-	out1c('\n');
+	printjobcmd(jp);
 	flushout(&output);
 	pgrp = jp->ps[0].pid;
 	tcsetpgrp(ttyfd, pgrp);
@@ -220,7 +206,6 @@ fgcmd(int argc __unused, char **argv)
 int
 bgcmd(int argc, char **argv)
 {
-	char s[64];
 	struct job *jp;
 
 	do {
@@ -231,10 +216,8 @@ bgcmd(int argc, char **argv)
 			continue;
 		restartjob(jp);
 		jp->foreground = 0;
-		fmtstr(s, 64, "[%td] ", jp - jobtab + 1);
-		out1str(s);
-		out1str(jp->ps[0].cmd);
-		out1c('\n');
+		out1fmt("[%td] ", jp - jobtab + 1);
+		printjobcmd(jp);
 	} while (--argc > 1);
 	return 0;
 }
@@ -250,7 +233,7 @@ restartjob(struct job *jp)
 		return;
 	setcurjob(jp);
 	INTOFF;
-	killpg(jp->ps[0].pid, SIGCONT);
+	kill(-jp->ps[0].pid, SIGCONT);
 	for (ps = jp->ps, i = jp->nprocs ; --i >= 0 ; ps++) {
 		if (WIFSTOPPED(ps->status)) {
 			ps->status = -1;
@@ -294,19 +277,33 @@ jobscmd(int argc, char *argv[])
 		showjobs(0, mode);
 	else
 		while ((id = *argv++) != NULL)
-			showjob(getjob(id), 0, mode);
+			showjob(getjob(id), mode);
 
 	return (0);
 }
 
 static void
-showjob(struct job *jp, pid_t pid, int mode)
+printjobcmd(struct job *jp)
+{
+	struct procstat *ps;
+	int i;
+
+	for (ps = jp->ps, i = jp->nprocs ; --i >= 0 ; ps++) {
+		out1str(ps->cmd);
+		if (i > 0)
+			out1str(" | ");
+	}
+	out1c('\n');
+}
+
+static void
+showjob(struct job *jp, int mode)
 {
 	char s[64];
+	char statestr[64];
 	struct procstat *ps;
 	struct job *j;
 	int col, curr, i, jobno, prev, procno;
-	pid_t ppid;
 	char c;
 
 	procno = (mode == SHOWJOBS_PGIDS) ? 1 : jp->nprocs;
@@ -319,16 +316,44 @@ showjob(struct job *jp, pid_t pid, int mode)
 			prev = j - jobtab + 1;
 	}
 #endif
+	ps = jp->ps + jp->nprocs - 1;
+	if (jp->state == 0) {
+		strcpy(statestr, "Running");
+#if JOBS
+	} else if (jp->state == JOBSTOPPED) {
+		while (!WIFSTOPPED(ps->status) && ps > jp->ps)
+			ps--;
+		if (WIFSTOPPED(ps->status))
+			i = WSTOPSIG(ps->status);
+		else
+			i = -1;
+		if (i > 0 && i < sys_nsig && sys_siglist[i])
+			strcpy(statestr, sys_siglist[i]);
+		else
+			strcpy(statestr, "Suspended");
+#endif
+	} else if (WIFEXITED(ps->status)) {
+		if (WEXITSTATUS(ps->status) == 0)
+			strcpy(statestr, "Done");
+		else
+			fmtstr(statestr, 64, "Done(%d)",
+			    WEXITSTATUS(ps->status));
+	} else {
+		i = WTERMSIG(ps->status);
+		if (i > 0 && i < sys_nsig && sys_siglist[i])
+			strcpy(statestr, sys_siglist[i]);
+		else
+			fmtstr(statestr, 64, "Signal %d", i);
+		if (WCOREDUMP(ps->status))
+			strcat(statestr, " (core dumped)");
+	}
+
 	for (ps = jp->ps ; ; ps++) {	/* for each process */
 		if (mode == SHOWJOBS_PIDS || mode == SHOWJOBS_PGIDS) {
-			ppid = (mode == SHOWJOBS_PIDS) ? ps->pid :
-			    getpgid(ps->pid);
-			out1fmt("%d\n", (int)ppid);
+			out1fmt("%d\n", (int)ps->pid);
 			goto skip;
 		}
-		if (mode != SHOWJOBS_VERBOSE && ps != jp->ps && pid == 0)
-			goto skip;
-		if (pid != 0 && pid != ps->pid)
+		if (mode != SHOWJOBS_VERBOSE && ps != jp->ps)
 			goto skip;
 		if (jobno == curr && ps == jp->ps)
 			c = '+';
@@ -347,39 +372,19 @@ showjob(struct job *jp, pid_t pid, int mode)
 			out1str(s);
 			col += strlen(s);
 		}
-		s[0] = '\0';
-		if (ps != jp->ps) {
-			*s = '\0';
-		} else if (ps->status == -1) {
-			strcpy(s, "Running");
-		} else if (WIFEXITED(ps->status)) {
-			if (WEXITSTATUS(ps->status) == 0)
-				strcpy(s, "Done");
-			else
-				fmtstr(s, 64, "Done (%d)",
-				    WEXITSTATUS(ps->status));
-		} else {
-#if JOBS
-			if (WIFSTOPPED(ps->status))
-				i = WSTOPSIG(ps->status);
-			else
-#endif
-				i = WTERMSIG(ps->status);
-			if ((i & 0x7F) < sys_nsig && sys_siglist[i & 0x7F])
-				scopy(sys_siglist[i & 0x7F], s);
-			else
-				fmtstr(s, 64, "Signal %d", i & 0x7F);
-			if (WCOREDUMP(ps->status))
-				strcat(s, " (core dumped)");
+		if (ps == jp->ps) {
+			out1str(statestr);
+			col += strlen(statestr);
 		}
-		out1str(s);
-		col += strlen(s);
 		do {
 			out1c(' ');
 			col++;
 		} while (col < 30);
-		out1str(ps->cmd);
-		out1c('\n');
+		if (mode == SHOWJOBS_VERBOSE) {
+			out1str(ps->cmd);
+			out1c('\n');
+		} else
+			printjobcmd(jp);
 skip:		if (--procno <= 0)
 			break;
 	}
@@ -401,7 +406,7 @@ showjobs(int change, int mode)
 	struct job *jp;
 
 	TRACE(("showjobs(%d) called\n", change));
-	while (dowait(0, (struct job *)NULL) > 0);
+	checkzombies();
 	for (jobno = 1, jp = jobtab ; jobno <= njobs ; jobno++, jp++) {
 		if (! jp->used)
 			continue;
@@ -411,9 +416,13 @@ showjobs(int change, int mode)
 		}
 		if (change && ! jp->changed)
 			continue;
-		showjob(jp, 0, mode);
+		showjob(jp, mode);
 		jp->changed = 0;
-		if (jp->state == JOBDONE) {
+		/* Hack: discard jobs for which $! has not been referenced
+		 * in interactive mode when they terminate.
+		 */
+		if (jp->state == JOBDONE && !jp->remembered &&
+				(iflag || jp != bgjob)) {
 			freejob(jp);
 		}
 	}
@@ -431,6 +440,8 @@ freejob(struct job *jp)
 	int i;
 
 	INTOFF;
+	if (bgjob == jp)
+		bgjob = NULL;
 	for (i = jp->nprocs, ps = jp->ps ; --i >= 0 ; ps++) {
 		if (ps->cmd != nullstr)
 			ckfree(ps->cmd);
@@ -477,12 +488,27 @@ waitcmd(int argc, char **argv)
 #endif
 				else
 					retval = WTERMSIG(status) + 128;
-				if (! iflag)
+				if (! iflag || ! job->changed)
 					freejob(job);
+				else {
+					job->remembered = 0;
+					if (job == bgjob)
+						bgjob = NULL;
+				}
 				in_waitcmd--;
 				return retval;
 			}
 		} else {
+			for (jp = jobtab ; jp < jobtab + njobs; jp++)
+				if (jp->used && jp->state == JOBDONE) {
+					if (! iflag || ! jp->changed)
+						freejob(jp);
+					else {
+						jp->remembered = 0;
+						if (jp == bgjob)
+							bgjob = NULL;
+					}
+				}
 			for (jp = jobtab ; ; jp++) {
 				if (jp >= jobtab + njobs) {	/* no running procs */
 					in_waitcmd--;
@@ -592,6 +618,14 @@ currentjob:	if ((jp = getcurjob(NULL)) == NULL)
 }
 
 
+pid_t
+getjobpgrp(char *name)
+{
+	struct job *jp;
+
+	jp = getjob(name);
+	return -jp->ps[0].pid;
+}
 
 /*
  * Return a new job structure,
@@ -623,6 +657,8 @@ makejob(union node *node __unused, int nprocs)
 						jp[i].next = &jp[jp[i].next -
 						    jobtab];
 #endif
+				if (bgjob != NULL)
+					bgjob = &jp[bgjob - jobtab];
 				/* Relocate `ps' pointers */
 				for (i = 0; i < njobs; i++)
 					if (jp[i].ps == &jobtab[i].ps0)
@@ -644,6 +680,7 @@ makejob(union node *node __unused, int nprocs)
 	jp->changed = 0;
 	jp->nprocs = 0;
 	jp->foreground = 0;
+	jp->remembered = 0;
 #if JOBS
 	jp->jobctl = jobctl;
 	jp->next = NULL;
@@ -743,6 +780,8 @@ forkshell(struct job *jp, union node *n, int mode)
 	TRACE(("forkshell(%%%td, %p, %d) called\n", jp - jobtab, (void *)n,
 	    mode));
 	INTOFF;
+	if (mode == FORK_BG && (jp == NULL || jp->nprocs == 0))
+		checkzombies();
 	flushall();
 	pid = fork();
 	if (pid == -1) {
@@ -758,8 +797,10 @@ forkshell(struct job *jp, union node *n, int mode)
 		TRACE(("Child shell %d\n", (int)getpid()));
 		wasroot = rootshell;
 		rootshell = 0;
+		handler = &main_handler;
 		closescript();
 		INTON;
+		forcelocal = 0;
 		clear_traps();
 #if JOBS
 		jobctl = 0;		/* do job control only in root shell */
@@ -782,7 +823,7 @@ forkshell(struct job *jp, union node *n, int mode)
 			    ! fd0_redirected_p ()) {
 				close(0);
 				if (open(_PATH_DEVNULL, O_RDONLY) != 0)
-					error("Can't open %s: %s",
+					error("cannot open %s: %s",
 					    _PATH_DEVNULL, strerror(errno));
 			}
 		}
@@ -794,7 +835,7 @@ forkshell(struct job *jp, union node *n, int mode)
 			    ! fd0_redirected_p ()) {
 				close(0);
 				if (open(_PATH_DEVNULL, O_RDONLY) != 0)
-					error("Can't open %s: %s",
+					error("cannot open %s: %s",
 					    _PATH_DEVNULL, strerror(errno));
 			}
 		}
@@ -818,8 +859,13 @@ forkshell(struct job *jp, union node *n, int mode)
 			pgrp = jp->ps[0].pid;
 		setpgid(pid, pgrp);
 	}
-	if (mode == FORK_BG)
+	if (mode == FORK_BG) {
+		if (bgjob != NULL && bgjob->state == JOBDONE &&
+		    !bgjob->remembered && !iflag)
+			freejob(bgjob);
 		backgndpid = pid;		/* set $! */
+		bgjob = jp;
+	}
 	if (jp) {
 		struct procstat *ps = &jp->ps[jp->nprocs++];
 		ps->pid = pid;
@@ -896,9 +942,7 @@ waitforjob(struct job *jp, int *origstatus)
 	if (! JOBS || jp->state == JOBDONE)
 		freejob(jp);
 	if (int_pending()) {
-		if (WIFSIGNALED(status) && WTERMSIG(status) == SIGINT)
-			kill(getpid(), SIGINT);
-		else
+		if (!WIFSIGNALED(status) || WTERMSIG(status) != SIGINT)
 			CLEAR_PENDING_INT;
 	}
 #if JOBS
@@ -927,7 +971,7 @@ dowait(int block, struct job *job)
 	int done;
 	int stopped;
 	int sig;
-	int i;
+	int coredump;
 
 	in_dowait++;
 	TRACE(("dowait(%d) called\n", block));
@@ -949,7 +993,7 @@ dowait(int block, struct job *job)
 	INTOFF;
 	thisjob = NULL;
 	for (jp = jobtab ; jp < jobtab + njobs ; jp++) {
-		if (jp->used) {
+		if (jp->used && jp->nprocs > 0) {
 			done = 1;
 			stopped = 1;
 			for (sp = jp->ps ; sp < jp->ps + jp->nprocs ; sp++) {
@@ -972,45 +1016,44 @@ dowait(int block, struct job *job)
 				if (jp->state != state) {
 					TRACE(("Job %td: changing state from %d to %d\n", jp - jobtab + 1, jp->state, state));
 					jp->state = state;
+					if (jp != job) {
+						if (done && !jp->remembered &&
+						    !iflag && jp != bgjob)
+							freejob(jp);
 #if JOBS
-					if (done)
-						deljob(jp);
+						else if (done)
+							deljob(jp);
 #endif
+					}
 				}
 			}
 		}
 	}
 	INTON;
-	if (! rootshell || ! iflag || (job && thisjob == job)) {
-#if JOBS
-		if (WIFSTOPPED(status))
-			sig = WSTOPSIG(status);
-		else
-#endif
-		{
-			if (WIFEXITED(status))
-				sig = 0;
+	if (!thisjob || thisjob->state == 0)
+		;
+	else if ((!rootshell || !iflag || thisjob == job) &&
+	    thisjob->foreground && thisjob->state != JOBSTOPPED) {
+		sig = 0;
+		coredump = 0;
+		for (sp = thisjob->ps; sp < thisjob->ps + thisjob->nprocs; sp++)
+			if (WIFSIGNALED(sp->status)) {
+				sig = WTERMSIG(sp->status);
+				coredump = WCOREDUMP(sp->status);
+			}
+		if (sig > 0 && sig != SIGINT && sig != SIGPIPE) {
+			if (sig < sys_nsig && sys_siglist[sig])
+				out2str(sys_siglist[sig]);
 			else
-				sig = WTERMSIG(status);
-		}
-		if (sig != 0 && sig != SIGINT && sig != SIGPIPE) {
-			if (!mflag ||
-			    (thisjob->foreground && !WIFSTOPPED(status))) {
-				i = WTERMSIG(status);
-				if ((i & 0x7F) < sys_nsig && sys_siglist[i & 0x7F])
-					out1str(sys_siglist[i & 0x7F]);
-				else
-					out1fmt("Signal %d", i & 0x7F);
-				if (WCOREDUMP(status))
-					out1str(" (core dumped)");
-				out1c('\n');
-			} else
-				showjob(thisjob, pid, SHOWJOBS_DEFAULT);
+				outfmt(out2, "Signal %d", sig);
+			if (coredump)
+				out2str(" (core dumped)");
+			out2c('\n');
+			flushout(out2);
 		}
 	} else {
 		TRACE(("Not printing status, rootshell=%d, job=%p\n", rootshell, job));
-		if (thisjob)
-			thisjob->changed = 1;
+		thisjob->changed = 1;
 	}
 	return pid;
 }
@@ -1053,13 +1096,37 @@ stoppedjobs(void)
 		if (jp->used == 0)
 			continue;
 		if (jp->state == JOBSTOPPED) {
-			out2str("You have stopped jobs.\n");
+			out2fmt_flush("You have stopped jobs.\n");
 			job_warning = 2;
 			return (1);
 		}
 	}
 
 	return (0);
+}
+
+
+static void
+checkzombies(void)
+{
+	while (njobs > 0 && dowait(0, NULL) > 0)
+		;
+}
+
+
+int
+backgndpidset(void)
+{
+	return backgndpid != -1;
+}
+
+
+pid_t
+backgndpidval(void)
+{
+	if (bgjob != NULL && !forcelocal)
+		bgjob->remembered = 1;
+	return backgndpid;
 }
 
 /*
@@ -1237,13 +1304,46 @@ cmdputs(const char *s)
 			if (--cmdnleft > 0)
 				*q++ = '{';
 			subtype = *p++;
+			if ((subtype & VSTYPE) == VSLENGTH && --cmdnleft > 0)
+				*q++ = '#';
 		} else if (c == '=' && subtype != 0) {
-			*q++ = "}-+?="[(subtype & VSTYPE) - VSNORMAL];
+			*q = "}-+?=##%%\0X"[(subtype & VSTYPE) - VSNORMAL];
+			if (*q)
+				q++;
+			else
+				cmdnleft++;
+			if (((subtype & VSTYPE) == VSTRIMLEFTMAX ||
+			    (subtype & VSTYPE) == VSTRIMRIGHTMAX) &&
+			    --cmdnleft > 0)
+				*q = q[-1], q++;
 			subtype = 0;
 		} else if (c == CTLENDVAR) {
 			*q++ = '}';
-		} else if (c == CTLBACKQ || c == CTLBACKQ+CTLQUOTE)
-			cmdnleft++;		/* ignore it */
+		} else if (c == CTLBACKQ || c == CTLBACKQ+CTLQUOTE) {
+			cmdnleft -= 5;
+			if (cmdnleft > 0) {
+				*q++ = '$';
+				*q++ = '(';
+				*q++ = '.';
+				*q++ = '.';
+				*q++ = '.';
+				*q++ = ')';
+			}
+		} else if (c == CTLARI) {
+			cmdnleft -= 2;
+			if (cmdnleft > 0) {
+				*q++ = '$';
+				*q++ = '(';
+				*q++ = '(';
+			}
+			p++;
+		} else if (c == CTLENDARI) {
+			if (--cmdnleft > 0) {
+				*q++ = ')';
+				*q++ = ')';
+			}
+		} else if (c == CTLQUOTEMARK || c == CTLQUOTEEND)
+			cmdnleft++; /* ignore */
 		else
 			*q++ = c;
 		if (--cmdnleft <= 0) {

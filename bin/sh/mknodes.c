@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/sh/mknodes.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +42,7 @@ static char sccsid[] = "@(#)mknodes.c	8.2 (Berkeley) 5/4/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/mknodes.c,v 1.18.2.2 2009/10/11 16:35:12 jilles Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * This program reads the nodetypes file and nodes.c.pat file.  It generates

@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/sh/main.c,v 1.4 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +42,7 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/28/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/main.c,v 1.31.2.6 2010/10/20 18:25:00 obrien Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <stdio.h>
 #include <signal.h>
@@ -73,11 +72,15 @@ __FBSDID("$FreeBSD: src/bin/sh/main.c,v 1.31.2.6 2010/10/20 18:25:00 obrien Exp 
 #include "mystring.h"
 #include "exec.h"
 #include "cd.h"
+#include "builtins.h"
 
 int rootpid;
 int rootshell;
+struct jmploc main_handler;
+int localeisutf8, initial_localeisutf8;
 
-static void read_profile(const char *);
+static void cmdloop(int);
+static void read_profile(char *);
 static char *find_dot_file(char *);
 
 /*
@@ -91,27 +94,15 @@ static char *find_dot_file(char *);
 int
 main(int argc, char *argv[])
 {
-	struct jmploc jmploc;
-	struct stackmark smark;
+	struct stackmark smark, smark2;
 	volatile int state;
 	char *shinit;
 
 	(void) setlocale(LC_ALL, "");
+	initcharset();
 	state = 0;
-	if (setjmp(jmploc.loc)) {
-		/*
-		 * When a shell procedure is executed, we raise the
-		 * exception EXSHELLPROC to clean up before executing
-		 * the shell procedure.
-		 */
+	if (setjmp(main_handler.loc)) {
 		switch (exception) {
-		case EXSHELLPROC:
-			rootpid = getpid();
-			rootshell = 1;
-			minusc = NULL;
-			state = 3;
-			break;
-
 		case EXEXEC:
 			exitstatus = exerrno;
 			break;
@@ -124,15 +115,12 @@ main(int argc, char *argv[])
 			break;
 		}
 
-		if (exception != EXSHELLPROC) {
-		    if (state == 0 || iflag == 0 || ! rootshell)
-			    exitshell(exitstatus);
-		}
+		if (state == 0 || iflag == 0 || ! rootshell ||
+		    exception == EXEXIT)
+			exitshell(exitstatus);
 		reset();
-		if (exception == EXINT) {
-			out2c('\n');
-			flushout(&errout);
-		}
+		if (exception == EXINT)
+			out2fmt_flush("\n");
 		popstackmark(&smark);
 		FORCEINTON;				/* enable interrupts */
 		if (state == 1)
@@ -144,7 +132,7 @@ main(int argc, char *argv[])
 		else
 			goto state4;
 	}
-	handler = &jmploc;
+	handler = &main_handler;
 #ifdef DEBUG
 	opentrace();
 	trputs("Shell args:  ");  trargs(argv);
@@ -153,11 +141,9 @@ main(int argc, char *argv[])
 	rootshell = 1;
 	init();
 	setstackmark(&smark);
+	setstackmark(&smark2);
 	procargs(argc, argv);
-	if (getpwd() == NULL && iflag)
-		out2str("sh: cannot determine working directory\n");
-	if (getpwd() != NULL)
-		setvar ("PWD", getpwd(), VEXPORT);
+	pwd_init(iflag);
 	if (iflag)
 		chkmail(1);
 	if (argv[0] && argv[0][0] == '-') {
@@ -166,7 +152,7 @@ main(int argc, char *argv[])
 state1:
 		state = 2;
 		if (privileged == 0)
-			read_profile(".profile");
+			read_profile("${HOME-}/.profile");
 		else
 			read_profile("/etc/suid_profile");
 	}
@@ -180,6 +166,7 @@ state2:
 	}
 state3:
 	state = 4;
+	popstackmark(&smark2);
 	if (minusc) {
 		evalstring(minusc, sflag ? 0 : EV_EXIT);
 	}
@@ -198,7 +185,7 @@ state4:	/* XXX ??? - why isn't this before the "if" statement */
  * loop; it turns on prompting if the shell is interactive.
  */
 
-void
+static void
 cmdloop(int top)
 {
 	union node *n;
@@ -226,7 +213,7 @@ cmdloop(int top)
 			if (!stoppedjobs()) {
 				if (!Iflag)
 					break;
-				out2str("\nUse \"exit\" to leave shell.\n");
+				out2fmt_flush("\nUse \"exit\" to leave shell.\n");
 			}
 			numeof++;
 		} else if (n != NULL && nflag == 0) {
@@ -236,8 +223,9 @@ cmdloop(int top)
 		}
 		popstackmark(&smark);
 		setstackmark(&smark);
-		if (evalskip == SKIPFILE) {
-			evalskip = 0;
+		if (evalskip != 0) {
+			if (evalskip == SKIPFILE)
+				evalskip = 0;
 			break;
 		}
 	}
@@ -251,12 +239,16 @@ cmdloop(int top)
  */
 
 static void
-read_profile(const char *name)
+read_profile(char *name)
 {
 	int fd;
+	const char *expandedname;
 
+	expandedname = expandstr(name);
+	if (expandedname == NULL)
+		return;
 	INTOFF;
-	if ((fd = open(name, O_RDONLY)) >= 0)
+	if ((fd = open(expandedname, O_RDONLY)) >= 0)
 		setinputfd(fd, 1);
 	INTON;
 	if (fd < 0)
@@ -280,7 +272,7 @@ readcmdfile(const char *name)
 	if ((fd = open(name, O_RDONLY)) >= 0)
 		setinputfd(fd, 1);
 	else
-		error("Can't open %s: %s", name, strerror(errno));
+		error("cannot open %s: %s", name, strerror(errno));
 	INTON;
 	cmdloop(0);
 	popfile();
@@ -297,7 +289,6 @@ readcmdfile(const char *name)
 static char *
 find_dot_file(char *basename)
 {
-	static char localname[FILENAME_MAX+1];
 	char *fullname;
 	const char *path = pathval();
 	struct stat statb;
@@ -307,10 +298,14 @@ find_dot_file(char *basename)
 		return basename;
 
 	while ((fullname = padvance(&path, basename)) != NULL) {
-		strcpy(localname, fullname);
+		if ((stat(fullname, &statb) == 0) && S_ISREG(statb.st_mode)) {
+			/*
+			 * Don't bother freeing here, since it will
+			 * be freed by the caller.
+			 */
+			return fullname;
+		}
 		stunalloc(fullname);
-		if ((stat(fullname, &statb) == 0) && S_ISREG(statb.st_mode))
-			return localname;
 	}
 	return basename;
 }
@@ -318,14 +313,20 @@ find_dot_file(char *basename)
 int
 dotcmd(int argc, char **argv)
 {
-	char *fullname;
+	char *filename, *fullname;
 
 	if (argc < 2)
 		error("missing filename");
 
 	exitstatus = 0;
 
-	fullname = find_dot_file(argv[1]);
+	/*
+	 * Because we have historically not supported any options,
+	 * only treat "--" specially.
+	 */
+	filename = argc > 2 && strcmp(argv[1], "--") == 0 ? argv[2] : argv[1];
+
+	fullname = find_dot_file(filename);
 	setinputfile(fullname, 1);
 	commandname = fullname;
 	cmdloop(0);
@@ -340,10 +341,7 @@ exitcmd(int argc, char **argv)
 	if (stoppedjobs())
 		return 0;
 	if (argc > 1)
-		exitstatus = number(argv[1]);
+		exitshell(number(argv[1]));
 	else
-		exitstatus = oexitstatus;
-	exitshell(exitstatus);
-	/*NOTREACHED*/
-	return 0;
+		exitshell_savedstatus();
 }

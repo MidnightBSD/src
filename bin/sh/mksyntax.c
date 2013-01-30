@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/sh/mksyntax.c,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +42,7 @@ static char sccsid[] = "@(#)mksyntax.c	8.2 (Berkeley) 5/4/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/mksyntax.c,v 1.26.2.2 2010/10/03 21:56:20 jilles Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * This program creates syntax.h and syntax.c.
@@ -65,6 +64,7 @@ struct synclass synclass[] = {
 	{ "CWORD",	"character is nothing special" },
 	{ "CNL",	"newline character" },
 	{ "CBACK",	"a backslash character" },
+	{ "CSBACK",	"a backslash character in single quotes" },
 	{ "CSQUOTE",	"single quote" },
 	{ "CDQUOTE",	"double quote" },
 	{ "CENDQUOTE",	"a terminating quote" },
@@ -76,6 +76,7 @@ struct synclass synclass[] = {
 	{ "CEOF",	"end of file" },
 	{ "CCTL",	"like CWORD, except it must be escaped" },
 	{ "CSPCL",	"these terminate a word" },
+	{ "CIGN",       "character should be ignored" },
 	{ NULL,		NULL }
 };
 
@@ -224,6 +225,7 @@ main(int argc __unused, char **argv __unused)
 	init();
 	fputs("\n/* syntax table used when in single quotes */\n", cfile);
 	add("\n", "CNL");
+	add("\\", "CSBACK");
 	add("'", "CENDQUOTE");
 	/* ':/' for tilde expansion, '-' for [a\-x] pattern ranges */
 	add("!*?[=~:/-", "CCTL");
@@ -233,8 +235,7 @@ main(int argc __unused, char **argv __unused)
 	add("\n", "CNL");
 	add("\\", "CBACK");
 	add("`", "CBQUOTE");
-	add("'", "CSQUOTE");
-	add("\"", "CDQUOTE");
+	add("\"", "CIGN");
 	add("$", "CVAR");
 	add("}", "CENDVAR");
 	add("(", "CLP");
@@ -243,8 +244,8 @@ main(int argc __unused, char **argv __unused)
 	filltable("0");
 	fputs("\n/* character classification table */\n", cfile);
 	add("0123456789", "ISDIGIT");
-	add("abcdefghijklmnopqrstucvwxyz", "ISLOWER");
-	add("ABCDEFGHIJKLMNOPQRSTUCVWXYZ", "ISUPPER");
+	add("abcdefghijklmnopqrstuvwxyz", "ISLOWER");
+	add("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "ISUPPER");
 	add("_", "ISUNDER");
 	add("#?$!-*@", "ISSPECL");
 	print("is_type");
@@ -286,6 +287,7 @@ init(void)
 	syntax[base + CTLARI] = "CCTL";
 	syntax[base + CTLENDARI] = "CCTL";
 	syntax[base + CTLQUOTEMARK] = "CCTL";
+	syntax[base + CTLQUOTEEND] = "CCTL";
 }
 
 
@@ -340,12 +342,12 @@ print(const char *name)
  */
 
 static const char *macro[] = {
-	"#define is_digit(c)\t((is_type+SYNBASE)[c] & ISDIGIT)",
+	"#define is_digit(c)\t((is_type+SYNBASE)[(int)c] & ISDIGIT)",
 	"#define is_eof(c)\t((c) == PEOF)",
-	"#define is_alpha(c)\t(((c) < CTLESC || (c) > CTLQUOTEMARK) && isalpha((unsigned char) (c)))",
-	"#define is_name(c)\t(((c) < CTLESC || (c) > CTLQUOTEMARK) && ((c) == '_' || isalpha((unsigned char) (c))))",
-	"#define is_in_name(c)\t(((c) < CTLESC || (c) > CTLQUOTEMARK) && ((c) == '_' || isalnum((unsigned char) (c))))",
-	"#define is_special(c)\t((is_type+SYNBASE)[c] & (ISSPECL|ISDIGIT))",
+	"#define is_alpha(c)\t((is_type+SYNBASE)[(int)c] & (ISUPPER|ISLOWER))",
+	"#define is_name(c)\t((is_type+SYNBASE)[(int)c] & (ISUPPER|ISLOWER|ISUNDER))",
+	"#define is_in_name(c)\t((is_type+SYNBASE)[(int)c] & (ISUPPER|ISLOWER|ISUNDER|ISDIGIT))",
+	"#define is_special(c)\t((is_type+SYNBASE)[(int)c] & (ISSPECL|ISDIGIT))",
 	NULL
 };
 

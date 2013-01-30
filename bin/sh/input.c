@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +36,7 @@ static char sccsid[] = "@(#)input.c	8.3 (Berkeley) 6/9/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/input.c,v 1.25.2.4 2010/10/20 18:25:00 obrien Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <stdio.h>	/* defines BUFSIZ */
 #include <fcntl.h>
@@ -107,6 +106,7 @@ EditLine *el;			/* cookie for editline package */
 
 static void pushfile(void);
 static int preadfd(void);
+static void popstring(void);
 
 #ifdef mkinit
 INCLUDE "input.h"
@@ -120,12 +120,7 @@ INIT {
 
 RESET {
 	popallfiles();
-	if (exception != EXSHELLPROC)
-		parselleft = parsenleft = 0;	/* clear input buffer */
-}
-
-SHELLPROC {
-	popallfiles();
+	parselleft = parsenleft = 0;	/* clear input buffer */
 }
 #endif
 
@@ -216,7 +211,7 @@ retry:
                                 if (flags >= 0 && flags & O_NONBLOCK) {
                                         flags &=~ O_NONBLOCK;
                                         if (fcntl(0, F_SETFL, flags) >= 0) {
-						out2str("sh: turning off NDELAY mode\n");
+						out2fmt_flush("sh: turning off NDELAY mode\n");
                                                 goto retry;
                                         }
                                 }
@@ -360,7 +355,7 @@ pushstring(char *s, int len, void *ap)
 	struct strpush *sp;
 
 	INTOFF;
-/*dprintf("*** calling pushstring: %s, %d\n", s, len);*/
+/*out2fmt_flush("*** calling pushstring: %s, %d\n", s, len);*/
 	if (parsefile->strpush) {
 		sp = ckmalloc(sizeof (struct strpush));
 		sp->prev = parsefile->strpush;
@@ -378,7 +373,7 @@ pushstring(char *s, int len, void *ap)
 	INTON;
 }
 
-void
+static void
 popstring(void)
 {
 	struct strpush *sp = parsefile->strpush;
@@ -387,7 +382,7 @@ popstring(void)
 	parsenextc = sp->prevstring;
 	parsenleft = sp->prevnleft;
 	parselleft = sp->prevlleft;
-/*dprintf("*** calling popstring: restoring to '%s'\n", parsenextc);*/
+/*out2fmt_flush("*** calling popstring: restoring to '%s'\n", parsenextc);*/
 	if (sp->ap)
 		sp->ap->flag &= ~ALIASINUSE;
 	parsefile->strpush = sp->prev;
@@ -409,7 +404,7 @@ setinputfile(const char *fname, int push)
 
 	INTOFF;
 	if ((fd = open(fname, O_RDONLY)) < 0)
-		error("Can't open %s: %s", fname, strerror(errno));
+		error("cannot open %s: %s", fname, strerror(errno));
 	if (fd < 10) {
 		fd2 = fcntl(fd, F_DUPFD, 10);
 		close(fd);
@@ -508,6 +503,32 @@ popfile(void)
 	INTON;
 }
 
+
+/*
+ * Return current file (to go back to it later using popfilesupto()).
+ */
+
+struct parsefile *
+getcurrentfile(void)
+{
+	return parsefile;
+}
+
+
+/*
+ * Pop files until the given file is on top again. Useful for regular
+ * builtins that read shell commands from files or strings.
+ * If the given file is not an active file, an error is raised.
+ */
+
+void
+popfilesupto(struct parsefile *file)
+{
+	while (parsefile != file && parsefile != &basepf)
+		popfile();
+	if (parsefile != file)
+		error("popfilesupto() misused");
+}
 
 /*
  * Return to top level.

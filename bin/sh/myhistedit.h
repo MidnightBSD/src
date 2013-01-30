@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/sh/myhistedit.h,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)myhistedit.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/myhistedit.h,v 1.10.30.1 2009/08/03 08:13:06 kensmith Exp $
+ * $MidnightBSD$
  */
 
 #include <histedit.h>
@@ -39,8 +38,5 @@ extern int displayhist;
 
 void histedit(void);
 void sethistsize(const char *);
-int histcmd(int, char **);
-int not_fcnumber(const char *);
-int str_to_event(const char *, int);
-int bindcmd(int, char **);
+void setterm(const char *);
 

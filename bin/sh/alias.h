@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/sh/alias.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)alias.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/alias.h,v 1.8 2004/04/06 20:06:51 markm Exp $
+ * $MidnightBSD$
  */
 
 #define ALIASINUSE	1
@@ -44,6 +43,3 @@ struct alias {
 };
 
 struct alias *lookupalias(const char *, int);
-int aliascmd(int, char **);
-int unaliascmd(int, char **);
-void rmaliases(void);

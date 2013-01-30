@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/sh/redir.c,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +36,7 @@ static char sccsid[] = "@(#)redir.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/redir.c,v 1.27.2.2 2010/10/20 18:25:00 obrien Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -64,6 +63,7 @@ __FBSDID("$FreeBSD: src/bin/sh/redir.c,v 1.27.2.2 2010/10/20 18:25:00 obrien Exp
 
 
 #define EMPTY -2		/* marks an unused slot in redirtab */
+#define CLOSED -1		/* fd was not open before redir */
 #define PIPESIZE 4096		/* amount of buffering in a pipe */
 
 
@@ -102,7 +102,6 @@ redirect(union node *redir, int flags)
 	struct redirtab *sv = NULL;
 	int i;
 	int fd;
-	int try;
 	char memory[10];	/* file descriptors to write to memory */
 
 	for (i = 10 ; --i >= 0 ; )
@@ -117,38 +116,30 @@ redirect(union node *redir, int flags)
 	}
 	for (n = redir ; n ; n = n->nfile.next) {
 		fd = n->nfile.fd;
-		try = 0;
 		if ((n->nfile.type == NTOFD || n->nfile.type == NFROMFD) &&
 		    n->ndup.dupfd == fd)
 			continue; /* redirect from/to same file descriptor */
 
 		if ((flags & REDIR_PUSH) && sv->renamed[fd] == EMPTY) {
 			INTOFF;
-again:
 			if ((i = fcntl(fd, F_DUPFD, 10)) == -1) {
 				switch (errno) {
 				case EBADF:
-					if (!try) {
-						openredirect(n, memory);
-						try++;
-						goto again;
-					}
-					/* FALLTHROUGH*/
+					i = CLOSED;
+					break;
 				default:
 					INTON;
 					error("%d: %s", fd, strerror(errno));
 					break;
 				}
-			}
-			if (!try) {
-				sv->renamed[fd] = i;
-			}
+			} else
+				(void)fcntl(i, F_SETFD, FD_CLOEXEC);
+			sv->renamed[fd] = i;
 			INTON;
 		}
 		if (fd == 0)
 			fd0_redirected++;
-		if (!try)
-			openredirect(n, memory);
+		openredirect(n, memory);
 	}
 	if (memory[1])
 		out1 = &memout;
@@ -164,11 +155,15 @@ openredirect(union node *redir, char memory[10])
 	int fd = redir->nfile.fd;
 	char *fname;
 	int f;
+	int e;
 
 	/*
 	 * We suppress interrupts so that we won't leave open file
-	 * descriptors around.  This may not be such a good idea because
-	 * an open of a device or a fifo can block indefinitely.
+	 * descriptors around.  Because the signal handler remains
+	 * installed and we do not use system call restart, interrupts
+	 * will still abort blocking opens such as fifos (they will fail
+	 * with EINTR). There is, however, a race condition if an interrupt
+	 * arrives after INTOFF and before open blocks.
 	 */
 	INTOFF;
 	memory[fd] = 0;
@@ -179,7 +174,11 @@ openredirect(union node *redir, char memory[10])
 			error("cannot open %s: %s", fname, strerror(errno));
 movefd:
 		if (f != fd) {
-			dup2(f, fd);
+			if (dup2(f, fd) == -1) {
+				e = errno;
+				close(f);
+				error("%d: %s", fd, strerror(e));
+			}
 			close(f);
 		}
 		break;
@@ -223,8 +222,11 @@ movefd:
 		if (redir->ndup.dupfd >= 0) {	/* if not ">&-" */
 			if (memory[redir->ndup.dupfd])
 				memory[fd] = 1;
-			else
-				dup2(redir->ndup.dupfd, fd);
+			else {
+				if (dup2(redir->ndup.dupfd, fd) < 0)
+					error("%d: %s", redir->ndup.dupfd,
+							strerror(errno));
+			}
 		} else {
 			close(fd);
 		}
@@ -320,10 +322,6 @@ INCLUDE "redir.h"
 RESET {
 	while (redirlist)
 		popredir();
-}
-
-SHELLPROC {
-	clearredir();
 }
 
 #endif

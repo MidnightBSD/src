@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/sh/alias.c,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +36,7 @@ static char sccsid[] = "@(#)alias.c	8.3 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/alias.c,v 1.25.2.3 2010/10/20 18:25:00 obrien Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <stdlib.h>
 #include "shell.h"
@@ -47,6 +46,7 @@ __FBSDID("$FreeBSD: src/bin/sh/alias.c,v 1.25.2.3 2010/10/20 18:25:00 obrien Exp
 #include "mystring.h"
 #include "alias.h"
 #include "options.h"	/* XXX for argptr (should remove?) */
+#include "builtins.h"
 
 #define ATABSIZE 39
 
@@ -146,15 +146,7 @@ unalias(const char *name)
 	return (1);
 }
 
-#ifdef mkinit
-MKINIT void rmaliases(void);
-
-SHELLPROC {
-	rmaliases();
-}
-#endif
-
-void
+static void
 rmaliases(void)
 {
 	struct alias *ap, *tmp;
@@ -247,7 +239,7 @@ aliascmd(int argc, char **argv)
 	while ((n = *++argv) != NULL) {
 		if ((v = strchr(n+1, '=')) == NULL) /* n+1: funny ksh stuff */
 			if ((ap = lookupalias(n, 0)) == NULL) {
-				outfmt(out2, "alias: %s not found\n", n);
+				warning("%s: not found", n);
 				ret = 1;
 			} else
 				printalias(ap);

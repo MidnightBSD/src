@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/sh/jobs.h,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)jobs.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/jobs.h,v 1.19.10.1 2009/08/03 08:13:06 kensmith Exp $
+ * $MidnightBSD$
  */
 
 /* Mode argument to forkshell.  Don't change FORK_FG or FORK_BG. */
@@ -69,6 +68,7 @@ struct job {
 	char used;		/* true if this entry is in used */
 	char changed;		/* true if status has changed */
 	char foreground;	/* true if running in the foreground */
+	char remembered;	/* true if $! referenced */
 #if JOBS
 	char jobctl;		/* job running under job control */
 	struct job *next;	/* job used after this one */
@@ -82,23 +82,19 @@ enum {
 	SHOWJOBS_PGIDS		/* PID of the group leader only */
 };
 
-extern pid_t backgndpid;	/* pid of last background process */
 extern int job_warning;		/* user was warned about stopped jobs */
 extern int in_waitcmd;		/* are we in waitcmd()? */
 extern int in_dowait;		/* are we in dowait()? */
 extern volatile sig_atomic_t breakwaitcmd; /* break wait to process traps? */
 
 void setjobctl(int);
-int fgcmd(int, char **);
-int bgcmd(int, char **);
-int jobscmd(int, char **);
 void showjobs(int, int);
-int waitcmd(int, char **);
-int jobidcmd(int, char **);
 struct job *makejob(union node *, int);
 pid_t forkshell(struct job *, union node *, int);
 int waitforjob(struct job *, int *);
 int stoppedjobs(void);
+int backgndpidset(void);
+pid_t backgndpidval(void);
 char *commandtext(union node *);
 
 #if ! JOBS

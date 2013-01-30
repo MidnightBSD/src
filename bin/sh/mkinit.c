@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/sh/mkinit.c,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +42,7 @@ static char sccsid[] = "@(#)mkinit.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/mkinit.c,v 1.19.2.2 2010/10/03 21:56:20 jilles Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * This program scans all the source files for code to handle various
@@ -56,7 +55,6 @@ __FBSDID("$FreeBSD: src/bin/sh/mkinit.c,v 1.19.2.2 2010/10/03 21:56:20 jilles Ex
  */
 
 
-#include <sys/cdefs.h>
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -76,7 +74,7 @@ __FBSDID("$FreeBSD: src/bin/sh/mkinit.c,v 1.19.2.2 2010/10/03 21:56:20 jilles Ex
 
 
 /*
- * A text structure is basicly just a string that grows as more characters
+ * A text structure is basically just a string that grows as more characters
  * are added onto the end of it.  It is implemented as a linked list of
  * blocks of characters.  The routines addstr and addchar append a string
  * or a single character, respectively, to a text structure.  Writetext
@@ -127,16 +125,10 @@ char reset[] = "\
  * interactive shell and control is returned to the main command loop.\n\
  */\n";
 
-char shellproc[] = "\
-/*\n\
- * This routine is called to initialize the shell to run a shell procedure.\n\
- */\n";
-
 
 struct event event[] = {
 	{ "INIT", "init", init, { NULL, 0, NULL, NULL } },
 	{ "RESET", "reset", reset, { NULL, 0, NULL, NULL } },
-	{ "SHELLPROC", "initshellproc", shellproc, { NULL, 0, NULL, NULL } },
 	{ NULL, NULL, NULL, { NULL, 0, NULL, NULL } }
 };
 

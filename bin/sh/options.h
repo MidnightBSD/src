@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/sh/options.h,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)options.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/options.h,v 1.13.30.3 2010/10/03 21:56:20 jilles Exp $
+ * $MidnightBSD$
  */
 
 struct shparam {
@@ -63,8 +62,9 @@ struct shparam {
 #define	privileged optlist[15].val
 #define	Tflag optlist[16].val
 #define	Pflag optlist[17].val
+#define	hflag optlist[18].val
 
-#define NOPTS	18
+#define NOPTS	19
 
 struct optent {
 	const char *name;
@@ -92,6 +92,7 @@ struct optent optlist[NOPTS] = {
 	{ "privileged",	'p',	0 },
 	{ "trapsasync",	'T',	0 },
 	{ "physical",	'P',	0 },
+	{ "trackall",	'h',	0 },
 };
 #else
 extern struct optent optlist[NOPTS];
@@ -109,8 +110,5 @@ void procargs(int, char **);
 void optschanged(void);
 void setparam(char **);
 void freeparam(struct shparam *);
-int shiftcmd(int, char **);
-int setcmd(int, char **);
-int getoptscmd(int, char **);
 int nextopt(const char *);
 void getoptsreset(const char *);

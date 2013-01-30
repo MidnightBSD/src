@@ -30,7 +30,6 @@
 # SUCH DAMAGE.
 #
 #	@(#)nodetypes	8.2 (Berkeley) 5/4/95
-# $FreeBSD: src/bin/sh/nodetypes,v 1.10 2005/01/10 08:39:25 imp Exp $
 # $MidnightBSD$
 
 # This file describes the nodes used in parse trees.  Unindented lines
@@ -57,7 +56,6 @@ NSEMI nbinary			# two commands separated by a semicolon
 
 NCMD ncmd			# a simple command
 	type	  int
-	backgnd	  int			# set to run command in background
 	args	  nodeptr		# the arguments
 	redirect  nodeptr		# list of file redirections
 
@@ -97,12 +95,13 @@ NCASE ncase			# a case statement
 	expr	  nodeptr		# the word to switch on
 	cases	  nodeptr		# the list of cases (NCLIST nodes)
 
-NCLIST nclist			# a case
+NCLIST nclist			# a case ending with ;;
 	type	  int
 	next	  nodeptr		# the next case in list
 	pattern	  nodeptr		# list of patterns for this case
 	body	  nodeptr		# code to execute for this case
 
+NCLISTFALLTHRU nclist		# a case ending with ;&
 
 NDEFUN narg			# define a function.  The "next" field contains
 				# the body of the function.

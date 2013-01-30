@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/sh/var.h,v 1.4 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)var.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/var.h,v 1.14.10.3 2010/10/03 21:56:20 jilles Exp $
+ * $MidnightBSD$
  */
 
 /*
@@ -46,11 +45,14 @@
 #define VSTACK		0x10	/* text is allocated on the stack */
 #define VUNSET		0x20	/* the variable is not set */
 #define VNOFUNC		0x40	/* don't call the callback function */
+#define VNOSET		0x80	/* do not set variable - just readonly test */
+#define VNOLOCAL	0x100	/* ignore forcelocal */
 
 
 struct var {
 	struct var *next;		/* next entry in hash list */
 	int flags;			/* flags are defined above */
+	int name_len;			/* length of name */
 	char *text;			/* name=value */
 	void (*func)(const char *);
 					/* function to be called when  */
@@ -67,6 +69,7 @@ struct localvar {
 
 
 struct localvar *localvars;
+extern int forcelocal;
 
 extern struct var vifs;
 extern struct var vmail;
@@ -78,7 +81,12 @@ extern struct var vps2;
 extern struct var vps4;
 #ifndef NO_HISTORY
 extern struct var vhistsize;
+extern struct var vterm;
 #endif
+
+extern int localeisutf8;
+/* The parser uses the locale that was in effect at startup. */
+extern int initial_localeisutf8;
 
 /*
  * The following macros access the values of the above variables.
@@ -97,6 +105,7 @@ extern struct var vhistsize;
 #define optindval()	(voptind.text + 7)
 #ifndef NO_HISTORY
 #define histsizeval()	(vhistsize.text + 9)
+#define termval()	(vterm.text + 5)
 #endif
 
 #define mpathset()	((vmpath.flags & VUNSET) == 0)
@@ -105,16 +114,16 @@ void initvar(void);
 void setvar(const char *, const char *, int);
 void setvareq(char *, int);
 struct strlist;
-void listsetvar(struct strlist *);
+void listsetvar(struct strlist *, int);
 char *lookupvar(const char *);
 char *bltinlookup(const char *, int);
+void bltinsetlocale(void);
+void bltinunsetlocale(void);
+void updatecharset(void);
+void initcharset(void);
 char **environment(void);
 int showvarscmd(int, char **);
-int exportcmd(int, char **);
-int localcmd(int, char **);
 void mklocal(char *);
 void poplocalvars(void);
-int setvarcmd(int, char **);
-int unsetcmd(int, char **);
 int unsetvar(const char *);
 int setvarsafe(const char *, const char *, int);

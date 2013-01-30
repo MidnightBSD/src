@@ -32,7 +32,6 @@
 # SUCH DAMAGE.
 #
 #	@(#)mktokens	8.1 (Berkeley) 5/31/93
-# $FreeBSD: src/bin/sh/mktokens,v 1.10 2005/01/10 08:39:25 imp Exp $
 # $MidnightBSD$
 
 # The following is a list of tokens.  The second column is nonzero if the
@@ -51,7 +50,7 @@ TPIPE	0	"|"
 TLP	0	"("
 TRP	1	")"
 TENDCASE 1	";;"
-TENDBQUOTE 1	"`"
+TFALLTHRU 1	";&"
 TREDIR	0	redirection
 TWORD	0	word
 TIF	0	"if"

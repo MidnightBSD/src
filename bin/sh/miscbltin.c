@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/sh/miscbltin.c,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +36,7 @@ static char sccsid[] = "@(#)miscbltin.c	8.4 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/miscbltin.c,v 1.41.2.3 2010/10/03 21:56:20 jilles Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * Miscellaneous builtins.
@@ -173,11 +172,12 @@ readcmd(int argc __unused, char **argv __unused)
 		}
 		if (c == '\0')
 			continue;
+		CHECKSTRSPACE(1, p);
 		if (backslash) {
 			backslash = 0;
 			startword = 0;
 			if (c != '\n')
-				STPUTC(c, p);
+				USTPUTC(c, p);
 			continue;
 		}
 		if (!rflag && c == '\\') {
@@ -195,14 +195,14 @@ readcmd(int argc __unused, char **argv __unused)
 			if (is_ifs == 1) {
 				/* Ignore leading IFS whitespace */
 				if (saveall)
-					STPUTC(c, p);
+					USTPUTC(c, p);
 				continue;
 			}
 			if (is_ifs == 2 && startword == 1) {
 				/* Only one non-whitespace IFS per word */
 				startword = 2;
 				if (saveall)
-					STPUTC(c, p);
+					USTPUTC(c, p);
 				continue;
 			}
 		}
@@ -213,7 +213,7 @@ readcmd(int argc __unused, char **argv __unused)
 			if (saveall)
 				/* Not just a spare terminator */
 				saveall++;
-			STPUTC(c, p);
+			USTPUTC(c, p);
 			continue;
 		}
 
@@ -223,7 +223,7 @@ readcmd(int argc __unused, char **argv __unused)
 		if (ap[1] == NULL) {
 			/* Last variable needs all IFS chars */
 			saveall++;
-			STPUTC(c, p);
+			USTPUTC(c, p);
 			continue;
 		}
 
@@ -465,7 +465,7 @@ ulimitcmd(int argc __unused, char **argv __unused)
 					"(-%c) ", l->option);
 			out1fmt("%-18s %18s ", l->name, optbuf);
 			if (val == RLIM_INFINITY)
-				out1fmt("unlimited\n");
+				out1str("unlimited\n");
 			else
 			{
 				val /= l->factor;
@@ -491,7 +491,7 @@ ulimitcmd(int argc __unused, char **argv __unused)
 			val = limit.rlim_max;
 
 		if (val == RLIM_INFINITY)
-			out1fmt("unlimited\n");
+			out1str("unlimited\n");
 		else
 		{
 			val /= l->factor;

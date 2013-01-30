@@ -413,10 +413,10 @@ bin/sh/TOUR -text
 bin/sh/alias.c -text
 bin/sh/alias.h -text
 bin/sh/arith.h -text
-bin/sh/arith.y -text
-bin/sh/arith_lex.l -text
+bin/sh/arith_yacc.c -text
+bin/sh/arith_yacc.h -text
+bin/sh/arith_yylex.c -text
 bin/sh/bltin/bltin.h -text
-bin/sh/bltin/echo.1 -text
 bin/sh/bltin/echo.c -text
 bin/sh/builtins.def -text
 bin/sh/cd.c -text
@@ -431,7 +431,6 @@ bin/sh/expand.c -text
 bin/sh/expand.h -text
 bin/sh/funcs/cmv -text
 bin/sh/funcs/dirs -text
-bin/sh/funcs/kill -text
 bin/sh/funcs/login -text
 bin/sh/funcs/newgrp -text
 bin/sh/funcs/popd -text

@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/sh/init.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,9 +30,8 @@
  * SUCH DAMAGE.
  *
  *	@(#)init.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/init.h,v 1.8.30.1 2009/08/03 08:13:06 kensmith Exp $
+ * $MidnightBSD$
  */
 
 void init(void);
 void reset(void);
-void initshellproc(void);

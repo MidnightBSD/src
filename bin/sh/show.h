@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/sh/show.h,v 1.3 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1995
  *      The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)show.h	1.1 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/show.h,v 1.11.30.2 2010/10/02 20:39:45 jilles Exp $
+ * $MidnightBSD$
  */
 
 void showtree(union node *);

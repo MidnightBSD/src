@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/sh/parser.h,v 1.4 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,19 +30,20 @@
  * SUCH DAMAGE.
  *
  *	@(#)parser.h	8.3 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/parser.h,v 1.12.2.3 2010/10/03 21:56:20 jilles Exp $
+ * $MidnightBSD$
  */
 
 /* control characters in argument strings */
-#define CTLESC '\201'
-#define CTLVAR '\202'
-#define CTLENDVAR '\203'
-#define CTLBACKQ '\204'
+#define CTLESC '\300'
+#define CTLVAR '\301'
+#define CTLENDVAR '\371'
+#define CTLBACKQ '\372'
 #define CTLQUOTE 01		/* ored with CTLBACKQ code if in quotes */
 /*	CTLBACKQ | CTLQUOTE == '\205' */
-#define	CTLARI	'\206'
-#define	CTLENDARI '\207'
-#define	CTLQUOTEMARK '\210'
+#define	CTLARI	'\374'
+#define	CTLENDARI '\375'
+#define	CTLQUOTEMARK '\376'
+#define	CTLQUOTEEND '\377' /* only for ${v+-...} */
 
 /* variable substitution byte (follows CTLVAR) */
 #define VSTYPE		0x0f	/* type of variable substitution */
@@ -80,4 +80,6 @@ extern const char *const parsekwd[];
 union node *parsecmd(int);
 void fixredir(union node *, const char *, int);
 int goodname(const char *);
+int isassignment(const char *);
 char *getprompt(void *);
+const char *expandstr(char *);

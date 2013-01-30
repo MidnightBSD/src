@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/sh/shell.h,v 1.4 2010/01/16 17:38:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)shell.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/shell.h,v 1.18.2.2 2010/10/20 18:25:00 obrien Exp $
+ * $MidnightBSD$
  */
 
 #ifndef SHELL_H_
@@ -60,6 +59,8 @@ typedef intmax_t arith_t;
 #define	ARITH_FORMAT_STR  "%" PRIdMAX
 #define	atoarith_t(arg)  strtoimax(arg, NULL, 0)
 #define	strtoarith_t(nptr, endptr, base)  strtoimax(nptr, endptr, base)
+#define	ARITH_MIN INTMAX_MIN
+#define	ARITH_MAX INTMAX_MAX
 
 typedef void *pointer;
 #define MKINIT  /* empty */

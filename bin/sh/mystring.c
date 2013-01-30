@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/sh/mystring.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,14 +36,13 @@ static char sccsid[] = "@(#)mystring.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/mystring.c,v 1.13.30.1 2009/08/03 08:13:06 kensmith Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * String functions.
  *
  *	equal(s1, s2)		Return true if strings are equal.
  *	scopy(from, to)		Copy a string.
- *	scopyn(from, to, n)	Like scopy, but checks for overflow.
  *	number(s)		Convert a string of digits to an integer.
  *	is_number(s)		Return true if s is a string of digits.
  */
@@ -65,24 +63,6 @@ char nullstr[1];		/* zero length string */
 /*
  * scopy - #defined in mystring.h
  */
-
-
-/*
- * scopyn - copy a string from "from" to "to", truncating the string
- *		if necessary.  "To" is always nul terminated, even if
- *		truncation is performed.  "Size" is the size of "to".
- */
-
-void
-scopyn(const char *from, char *to, int size)
-{
-
-	while (--size > 0) {
-		if ((*to++ = *from++) == '\0')
-			return;
-	}
-	*to = '\0';
-}
 
 
 /*
@@ -109,7 +89,7 @@ int
 number(const char *s)
 {
 	if (! is_number(s))
-		error("Illegal number: %s", (char *)s);
+		error("Illegal number: %s", s);
 	return atoi(s);
 }
 

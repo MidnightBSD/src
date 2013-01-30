@@ -30,8 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nodes.c.pat	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/nodes.c.pat,v 1.15.30.3 2010/10/20 18:25:00 obrien Exp $
- * $MidnightBSD: src/bin/sh/nodes.c.pat,v 1.3 2010/01/16 17:38:41 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/param.h>
