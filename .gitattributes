@@ -55610,6 +55610,11 @@ usr.sbin/crunch/examples/filesystem.conf -text
 usr.sbin/crunch/examples/fixit.conf -text
 usr.sbin/crunch/examples/kcopy.conf -text
 usr.sbin/crunch/examples/really-big.conf -text
+usr.sbin/ctladm/Makefile -text
+usr.sbin/ctladm/ctladm.8 -text
+usr.sbin/ctladm/ctladm.c -text
+usr.sbin/ctladm/ctladm.h -text
+usr.sbin/ctladm/util.c -text
 usr.sbin/ctm/Makefile -text
 usr.sbin/ctm/Makefile.inc -text
 usr.sbin/ctm/README -text
@@ -55667,6 +55672,14 @@ usr.sbin/dnssec-keygen/Makefile -text
 usr.sbin/dnssec-revoke/Makefile -text
 usr.sbin/dnssec-settime/Makefile -text
 usr.sbin/dnssec-signzone/Makefile -text
+usr.sbin/dumpcis/Makefile -text
+usr.sbin/dumpcis/cardinfo.h -text
+usr.sbin/dumpcis/cis.h -text
+usr.sbin/dumpcis/dumpcis.8 -text
+usr.sbin/dumpcis/main.c -text
+usr.sbin/dumpcis/printcis.c -text
+usr.sbin/dumpcis/readcis.c -text
+usr.sbin/dumpcis/readcis.h -text
 usr.sbin/editmap/Makefile -text
 usr.sbin/edquota/Makefile -text
 usr.sbin/edquota/edquota.8 -text
@@ -55757,6 +55770,9 @@ usr.sbin/gssd/gssd.c -text
 usr.sbin/gstat/Makefile -text
 usr.sbin/gstat/gstat.8 -text
 usr.sbin/gstat/gstat.c -text
+usr.sbin/i2c/Makefile -text
+usr.sbin/i2c/i2c.8 -text
+usr.sbin/i2c/i2c.c -text
 usr.sbin/ifmcstat/Makefile -text
 usr.sbin/ifmcstat/ifmcstat.8 -text
 usr.sbin/ifmcstat/ifmcstat.c -text

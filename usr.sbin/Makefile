@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
-# $MidnightBSD: src/usr.sbin/Makefile,v 1.39 2013/01/30 03:23:31 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/Makefile,v 1.40 2013/01/30 12:40:24 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -17,11 +17,13 @@ SUBDIR=	adduser \
 	clear_locks \
 	crashinfo \
 	cron \
+	ctladm \
 	daemon \
 	dconschat \
 	devinfo \
 	digictl \
 	diskinfo \
+	dumpcis \
 	extattr \
 	extattrctl \
 	fifolog \
@@ -29,6 +31,7 @@ SUBDIR=	adduser \
 	getfmac \
 	getpmac \
 	gstat \
+	i2c \
 	ifmcstat \
 	inetd \
 	iostat \
@@ -42,7 +45,6 @@ SUBDIR=	adduser \
 	mixer \
 	mlxcontrol \
 	mountd \
-	${_mount_nwfs} \
 	mount_portalfs \
 	mount_smbfs \
 	mport \
