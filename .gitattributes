@@ -38573,7 +38573,6 @@ sbin/ffsinfo/Makefile -text
 sbin/ffsinfo/ffsinfo.8 -text
 sbin/ffsinfo/ffsinfo.c -text
 sbin/fsck/Makefile -text
-sbin/fsck/fdisk.8 -text
 sbin/fsck/fsck.8 -text
 sbin/fsck/fsck.c -text
 sbin/fsck/fsutil.c -text
