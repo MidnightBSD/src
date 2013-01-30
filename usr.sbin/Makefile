@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
-# $MidnightBSD: src/usr.sbin/Makefile,v 1.33 2012/11/29 23:28:20 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/Makefile,v 1.34 2013/01/30 02:39:23 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -50,7 +50,6 @@ SUBDIR=	adduser \
 	newsyslog \
 	nfsd \
 	nologin \
-	ntpd \
 	pciconf \
 	periodic \
 	powerd \
@@ -60,7 +59,6 @@ SUBDIR=	adduser \
 	pwd_mkdb \
 	quot \
 	rarpd \
-	rdate \
 	rmt \
 	rpcbind \
 	rpc.lockd \
@@ -230,6 +228,11 @@ SUBDIR+=	yppoll
 SUBDIR+=	yppush
 SUBDIR+=	ypserv
 SUBDIR+=	ypset
+.endif
+
+.if ${MK_NTP} != "no"
+SUBDIR+=	ntpd
+SUBDIR+=	rdate
 .endif
 
 .if ${MK_OPENSSL} != "no"
