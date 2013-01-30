@@ -1,7 +1,7 @@
-# $MidnightBSD: src/usr.sbin/named-checkzone/Makefile,v 1.2 2008/04/28 03:44:18 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/named-checkzone/Makefile,v 1.3 2010/01/16 17:00:07 laffer1 Exp $
 # $FreeBSD: src/usr.sbin/named-checkzone/Makefile,v 1.5 2007/06/02 23:19:58 dougb Exp $
 
-BIND_DIR=	${.CURDIR}/../../contrib/bind96
+BIND_DIR=	${.CURDIR}/../../contrib/bind98
 LIB_BIND_REL=	../../lib/bind
 LIB_BIND_DIR=	${.CURDIR}/${LIB_BIND_REL}
 SRCDIR=		${BIND_DIR}/bin/check
@@ -14,6 +14,8 @@ PROG=		named-checkzone
 SRCS+=		named-checkzone.c check-tool.c
 
 CFLAGS+=	-I${LIB_BIND_DIR}
+
+WARNS?=		3
 
 DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD} ${PTHREAD_DPADD}
 LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD} ${PTHREAD_LDADD}

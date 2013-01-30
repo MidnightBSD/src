@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
-# $MidnightBSD: src/usr.sbin/Makefile,v 1.32 2012/11/29 12:58:15 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/Makefile,v 1.33 2012/11/29 23:28:20 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -7,16 +7,16 @@
 SUBDIR=	adduser \
 	arp \
 	bootparamd \
-	bsdinstall \
-	bsnmpd \
 	burncd \
+	bsdinstall \
 	cdcontrol \
 	chkgrp \
 	chown \
 	chroot \
 	ckdist \
+	clear_locks \
+	crashinfo \
 	cron \
-	ctm \
 	daemon \
 	dconschat \
 	devinfo \
@@ -24,7 +24,7 @@ SUBDIR=	adduser \
 	diskinfo \
 	extattr \
 	extattrctl \
-	flowctl \
+	fifolog \
 	fwcontrol \
 	getfmac \
 	getpmac \
@@ -32,18 +32,9 @@ SUBDIR=	adduser \
 	ifmcstat \
 	inetd \
 	iostat \
-	ipfwpcap \
-	jail \
-	jexec \
-	jls \
-	kbdcontrol \
-	kbdmap \
-	${_keyserv} \
 	kldxref \
-	lmcconfig \
 	mailwrapper \
 	makefs \
-	manctl \
 	memcontrol \
 	mergemaster \
 	mixer \
@@ -52,28 +43,17 @@ SUBDIR=	adduser \
 	${_mount_nwfs} \
 	mount_portalfs \
 	mount_smbfs \
-	moused \
 	mport \
-	${_mptable} \
 	mrouted \
 	mtest \
 	mtree \
-	${_ndiscvt} \
 	newsyslog \
 	nfsd \
-	ngctl \
-	nghook \
 	nologin \
 	ntpd \
-	${_ofwdump} \
 	pciconf \
 	periodic \
-	pmccontrol \
-	pmcstat \
-	${_pnpinfo} \
 	powerd \
-	ppp \
-	${_pppctl} \
 	procctl \
 	pstat \
 	pw \
@@ -86,16 +66,13 @@ SUBDIR=	adduser \
 	rpc.lockd \
 	rpc.statd \
 	rpc.umntall \
-	${_rpc.yppasswdd} \
-	${_rpc.ypupdated} \
-	${_rpc.ypxfrd} \
 	rtprio \
-	setfib \
-	setfmac \
-	setpmac \
 	sensorsd \
 	service \
 	services_mkdb \
+	setfib \
+	setfmac \
+	setpmac \
 	smbmsg \
 	snapinfo \
 	spray \
@@ -110,17 +87,10 @@ SUBDIR=	adduser \
 	trpt \
 	tzsetup \
 	ugidfw \
-	vidcontrol \
 	vipw \
 	wake \
 	watch \
 	watchdogd \
-	${_ypbind} \
-	${_yp_mkdb} \
-	${_yppoll} \
-	${_yppush} \
-	${_ypserv} \
-	${_ypset} \
 	zic
 
 # NB: keep these sorted by MK_* knobs
@@ -149,13 +119,20 @@ SUBDIR+=	authpf
 SUBDIR+=	dnssec-dsfromkey
 SUBDIR+=	dnssec-keyfromlabel
 SUBDIR+=	dnssec-keygen
+SUBDIR+=	dnssec-revoke
+SUBDIR+=	dnssec-settime
 SUBDIR+=	dnssec-signzone
 .endif
 .if ${MK_BIND_NAMED} != "no"
+SUBDIR+=	arpaname
+SUBDIR+=	ddns-confgen
+SUBDIR+=	genrandom
+SUBDIR+=	isc-hmac-fixup
 SUBDIR+=	named
 SUBDIR+=	named-checkconf
 SUBDIR+=	named-checkzone
-SUBDIR+=	named.reload
+SUBDIR+=	named-journalprint
+SUBDIR+=	nsec3hash
 SUBDIR+=	rndc
 SUBDIR+=	rndc-confgen
 .endif
@@ -164,8 +141,12 @@ SUBDIR+=	rndc-confgen
 SUBDIR+=	bluetooth
 .endif
 
-.if ${MK_OPENSSL} != "no"
-_keyserv=	keyserv
+.if ${MK_BSNMP} != "no"
+SUBDIR+=	bsnmpd
+.endif
+
+.if ${MK_CTM} != "no"
+SUBDIR+=	ctm
 .endif
 
 .if ${MK_FLOPPY} != "no"
@@ -175,8 +156,8 @@ SUBDIR+=	fdread
 SUBDIR+=	fdwrite
 .endif
 
-.if ${MK_PF} != "no"
-SUBDIR+=	ftp-proxy
+.if ${MK_GSSAPI} != "no"
+SUBDIR+=	gssd
 .endif
 
 .if ${MK_INET6} != "no"
@@ -187,39 +168,87 @@ SUBDIR+=	ndp
 SUBDIR+=	rip6query
 SUBDIR+=	route6d
 SUBDIR+=	rrenumd
+SUBDIR+=	rtadvctl
 SUBDIR+=	rtadvd
 SUBDIR+=	rtsold
 SUBDIR+=	traceroute6
+.endif
+
+.if ${MK_IPFW} != "no"
+SUBDIR+=	ipfwpcap
 .endif
 
 .if ${MK_IPX} != "no"
 SUBDIR+=	IPXrouted
 .endif
 
-.if ${MK_NIS} != "no"
-_rpc.yppasswdd=	rpc.yppasswdd
-_rpc.ypupdated=	rpc.ypupdated
-_rpc.ypxfrd=	rpc.ypxfrd
-_ypbind=	ypbind
-_yp_mkdb=	yp_mkdb
-_yppoll=	yppoll
-_yppush=	yppush
-_ypserv=	ypserv
-_ypset=		ypset
+.if ${MK_JAIL} != "no"
+SUBDIR+=	jail
+SUBDIR+=	jexec
+SUBDIR+=	jls
 .endif
 
-.if ${MK_LIBTHR} != "no" || ${MK_LIBKSE} != "no"
-_pppctl=	pppctl
+# XXX MK_SYSCONS
+.if ${MK_LEGACY_CONSOLE} != "no"
+SUBDIR+=	kbdcontrol
+SUBDIR+=	kbdmap
+SUBDIR+=	moused
+SUBDIR+=	vidcontrol
+.endif
+
+.if ${MK_LIBTHR} != "no" || ${MK_LIBPTHREAD} != "no"
+.if ${MK_PPP} != "no"
+SUBDIR+=	pppctl
+.endif
+.if ${MK_NS_CACHING} != "no"
+SUBDIR+=	nscd
+.endif
 .endif
 
 .if ${MK_LPR} != "no"
 SUBDIR+=	lpr
 .endif
 
-.if ${MK_NS_CACHING} != "no"
-.if ${MK_LIBTHR} != "no" || ${MK_LIBKSE} != "no"
-SUBDIR+=	nscd
+.if ${MK_MAN_UTILS} != "no"
+SUBDIR+=	manctl
 .endif
+
+.if ${MK_NETGRAPH} != "no"
+SUBDIR+=	flowctl
+SUBDIR+=	lmcconfig
+SUBDIR+=	ngctl
+SUBDIR+=	nghook
+.endif
+
+.if ${MK_NIS} != "no"
+SUBDIR+=	rpc.yppasswdd
+SUBDIR+=	rpc.ypupdated
+SUBDIR+=	rpc.ypxfrd
+SUBDIR+=	ypbind
+SUBDIR+=	yp_mkdb
+SUBDIR+=	yppoll
+SUBDIR+=	yppush
+SUBDIR+=	ypserv
+SUBDIR+=	ypset
+.endif
+
+.if ${MK_OPENSSL} != "no"
+SUBDIR+=	keyserv
+.endif
+
+.if ${MK_PF} != "no"
+SUBDIR+=	ftp-proxy
+.endif
+
+# XXX MK_TOOLCHAIN?
+.if ${MK_PMC} != "no"
+SUBDIR+=	pmcannotate
+SUBDIR+=	pmccontrol
+SUBDIR+=	pmcstat
+.endif
+
+.if ${MK_PPP} != "no"
+SUBDIR+=	ppp
 .endif
 
 .if ${MK_QUOTAS} != "no"

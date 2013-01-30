@@ -1,7 +1,6 @@
-# $MidnightBSD: src/usr.sbin/named-checkconf/Makefile,v 1.2 2008/04/28 03:44:18 laffer1 Exp $
-# $FreeBSD: src/usr.sbin/named-checkconf/Makefile,v 1.6 2007/06/02 23:19:58 dougb Exp $
+# $MidnightBSD$
 
-BIND_DIR=	${.CURDIR}/../../contrib/bind96
+BIND_DIR=	${.CURDIR}/../../contrib/bind98
 LIB_BIND_REL=	../../lib/bind
 LIB_BIND_DIR=	${.CURDIR}/${LIB_BIND_REL}
 SRCDIR=		${BIND_DIR}/bin/check
@@ -14,6 +13,9 @@ PROG=		named-checkconf
 SRCS+=		named-checkconf.c check-tool.c
 
 CFLAGS+=	-I${LIB_BIND_DIR}
+CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
+
+WARNS?=		3
 
 DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD} ${PTHREAD_DPADD}
 LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD} ${PTHREAD_LDADD}

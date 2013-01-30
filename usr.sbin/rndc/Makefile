@@ -1,7 +1,6 @@
-# $MidnightBSD: src/usr.sbin/rndc/Makefile,v 1.3 2010/01/16 17:00:07 laffer1 Exp $
-# $FreeBSD: src/usr.sbin/rndc/Makefile,v 1.7 2007/06/02 23:19:58 dougb Exp $
+# $MidnightBSD$
 
-BIND_DIR=	${.CURDIR}/../../contrib/bind96
+BIND_DIR=	${.CURDIR}/../../contrib/bind98
 LIB_BIND_REL=	../../lib/bind
 LIB_BIND_DIR=	${.CURDIR}/${LIB_BIND_REL}
 SRCDIR=		${BIND_DIR}/bin/rndc
@@ -10,15 +9,13 @@ SRCDIR=		${BIND_DIR}/bin/rndc
 
 PROG=		rndc
 
-.PATH: ${SRCDIR}/unix
-SRCS+=		os.c
-
 .PATH: ${SRCDIR}
 SRCS+=		rndc.c util.c
 
-WARNS?=		3
+CFLAGS+=	-I${SRCDIR}/include -I${LIB_BIND_DIR}
+CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
 
-CFLAGS+=	-I${SRCDIR}/unix/include -I${SRCDIR}/include -I${LIB_BIND_DIR}
+WARNS?=		3
 
 DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD} ${PTHREAD_DPADD}
 LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD} ${PTHREAD_LDADD}

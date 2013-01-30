@@ -1,4 +1,4 @@
-# $MidnightBSD: src/usr.sbin/dnssec-keygen/Makefile,v 1.4 2013/01/02 05:18:54 laffer1 Exp $
+# $MidnightBSD$
 
 BIND_DIR=	${.CURDIR}/../../contrib/bind98
 LIB_BIND_REL=	../../lib/bind
@@ -7,10 +7,10 @@ SRCDIR=		${BIND_DIR}/bin/dnssec
 
 .include	"${LIB_BIND_DIR}/config.mk"
 
-PROG=		dnssec-keygen
+PROG=		dnssec-settime
 
 .PATH: ${SRCDIR}
-SRCS+=		dnssec-keygen.c dnssectool.c
+SRCS+=		dnssec-settime.c dnssectool.c
 
 CFLAGS+=	-I${SRCDIR}/unix/include -I${SRCDIR}/include
 
@@ -19,6 +19,6 @@ LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD} ${PTHREAD_LDADD}
 
 WARNS?=		3
 
-MAN=		dnssec-keygen.8
+MAN=		dnssec-settime.8
 
 .include <bsd.prog.mk>

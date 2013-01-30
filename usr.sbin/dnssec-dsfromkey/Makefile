@@ -1,6 +1,6 @@
-# $MidnightBSD: src/usr.sbin/dnssec-dsfromkey/Makefile,v 1.1 2010/01/16 17:09:56 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/dnssec-dsfromkey/Makefile,v 1.2 2013/01/01 23:11:02 laffer1 Exp $
 
-BIND_DIR=	${.CURDIR}/../../contrib/bind96
+BIND_DIR=	${.CURDIR}/../../contrib/bind98
 LIB_BIND_REL=	../../lib/bind
 LIB_BIND_DIR=	${.CURDIR}/${LIB_BIND_REL}
 SRCDIR=		${BIND_DIR}/bin/dnssec
