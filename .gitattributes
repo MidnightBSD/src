@@ -56125,6 +56125,9 @@ usr.sbin/newsyslog/newsyslog.c -text
 usr.sbin/newsyslog/newsyslog.conf.5 -text
 usr.sbin/newsyslog/pathnames.h -text
 usr.sbin/newsyslog/ptimes.c -text
+usr.sbin/nfscbd/Makefile -text
+usr.sbin/nfscbd/nfscbd.8 -text
+usr.sbin/nfscbd/nfscbd.c -text
 usr.sbin/nfsd/Makefile -text
 usr.sbin/nfsd/nfsd.8 -text
 usr.sbin/nfsd/nfsd.c -text
