@@ -55748,6 +55748,9 @@ usr.sbin/getfmac/getfmac.c -text
 usr.sbin/getpmac/Makefile -text
 usr.sbin/getpmac/getpmac.8 -text
 usr.sbin/getpmac/getpmac.c -text
+usr.sbin/gpioctl/Makefile -text
+usr.sbin/gpioctl/gpioctl.8 -text
+usr.sbin/gpioctl/gpioctl.c -text
 usr.sbin/gssd/Makefile -text
 usr.sbin/gssd/gssd.8 -text
 usr.sbin/gssd/gssd.c -text

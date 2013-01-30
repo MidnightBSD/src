@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
-# $MidnightBSD: src/usr.sbin/Makefile,v 1.37 2013/01/30 02:46:51 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/Makefile,v 1.38 2013/01/30 03:22:13 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -160,6 +160,10 @@ SUBDIR+=	fdwrite
 
 .if ${MK_GSSAPI} != "no"
 SUBDIR+=	gssd
+.endif
+
+.if ${MK_GPIO} != "no"
+SUBDIR+=	gpioctl
 .endif
 
 .if ${MK_INET6} != "no"
