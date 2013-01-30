@@ -1,7 +1,6 @@
-# $MidnightBSD: src/usr.sbin/named/Makefile,v 1.4 2010/01/16 17:00:07 laffer1 Exp $
-# $FreeBSD: src/usr.sbin/named/Makefile,v 1.43 2007/06/02 23:19:58 dougb Exp $
+# $MidnightBSD$
 
-BIND_DIR=	${.CURDIR}/../../contrib/bind96
+BIND_DIR=	${.CURDIR}/../../contrib/bind98
 LIB_BIND_REL=	../../lib/bind
 LIB_BIND_DIR=	${.CURDIR}/${LIB_BIND_REL}
 SRCDIR=		${BIND_DIR}/bin/named
@@ -31,18 +30,17 @@ CONFIGARGS+='--without-libxml2'
 .endif
 
 .PATH: ${SRCDIR}/unix
-SRCS+=		os.c
+SRCS+=		os.c dlz_dlopen_driver.c
 
 .PATH: ${SRCDIR}
 SRCS+=		builtin.c client.c config.c control.c \
 		controlconf.c interfacemgr.c \
 		listenlist.c log.c logconf.c main.c notify.c \
-		query.c server.c sortlist.c \
+		query.c server.c sortlist.c statschannel.c \
 		tkeyconf.c tsigconf.c update.c xfrout.c \
 		zoneconf.c \
 		lwaddr.c lwresd.c lwdclient.c lwderror.c lwdgabn.c \
-		lwdgnba.c lwdgrbn.c lwdnoop.c lwsearch.c \
-		statschannel.c
+		lwdgnba.c lwdgrbn.c lwdnoop.c lwsearch.c
 
 CFLAGS+=	-DCONFIGARGS="\"${CONFIGARGS}\""
 
