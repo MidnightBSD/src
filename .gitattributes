@@ -2349,7 +2349,6 @@ contrib/amd/amd/amfs_direct.c -text
 contrib/amd/amd/amfs_error.c -text
 contrib/amd/amd/amfs_generic.c -text
 contrib/amd/amd/amfs_host.c -text
-contrib/amd/amd/amfs_inherit.c -text
 contrib/amd/amd/amfs_link.c -text
 contrib/amd/amd/amfs_linkx.c -text
 contrib/amd/amd/amfs_nfsl.c -text
@@ -2471,18 +2470,6 @@ contrib/amd/libamu/util.c -text
 contrib/amd/libamu/wire.c -text
 contrib/amd/libamu/xdr_func.c -text
 contrib/amd/libamu/xutil.c -text
-contrib/amd/m4/GNUmakefile -text
-contrib/amd/m4/amdgrep -text
-contrib/amd/m4/amindent -text
-contrib/amd/m4/autopat -text
-contrib/amd/m4/chop-aclocal.pl -text
-contrib/amd/m4/copy-if-newbig -text
-contrib/amd/m4/macros/HEADER -text
-contrib/amd/m4/macros/TRAILER -text
-contrib/amd/m4/mk-aclocal -text
-contrib/amd/m4/mkconf -text
-contrib/amd/m4/rmtspc -text
-contrib/amd/m4/update_build_version -text
 contrib/amd/mk-amd-map/mk-amd-map.8 -text
 contrib/amd/mk-amd-map/mk-amd-map.c -text
 contrib/amd/scripts/Makefile.am -text
