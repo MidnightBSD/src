@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
-# $MidnightBSD: src/usr.sbin/Makefile,v 1.38 2013/01/30 03:22:13 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/Makefile,v 1.39 2013/01/30 03:23:31 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -53,6 +53,9 @@ SUBDIR=	adduser \
 	newsyslog \
 	nfscbd \
 	nfsd \
+	nfsdumpstate \
+	nfsrevoke \
+	nfsuserd \
 	nologin \
 	pciconf \
 	periodic \
