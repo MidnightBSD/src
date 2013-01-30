@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
-# $MidnightBSD: src/usr.sbin/Makefile,v 1.34 2013/01/30 02:39:23 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/Makefile,v 1.35 2013/01/30 02:43:21 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -35,6 +35,7 @@ SUBDIR=	adduser \
 	kldxref \
 	mailwrapper \
 	makefs \
+	manctl \
 	memcontrol \
 	mergemaster \
 	mixer \
@@ -44,6 +45,7 @@ SUBDIR=	adduser \
 	mount_portalfs \
 	mount_smbfs \
 	mport \
+	mptutil \
 	mrouted \
 	mtest \
 	mtree \
