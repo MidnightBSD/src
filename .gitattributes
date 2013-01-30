@@ -35910,6 +35910,7 @@ lib/bind/dns/dns/enumclass.h -text
 lib/bind/dns/dns/enumtype.h -text
 lib/bind/dns/dns/rdatastruct.h -text
 lib/bind/isc/Makefile -text
+lib/bind/isc/backtrace-emptytbl.c -text
 lib/bind/isc/isc/platform.h -text
 lib/bind/isccc/Makefile -text
 lib/bind/isccfg/Makefile -text

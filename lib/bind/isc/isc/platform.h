@@ -1,3 +1,5 @@
+/* $MidnightBSD$ */
+
 /*
  * Copyright (C) 2004-2010  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
@@ -15,7 +17,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: platform.h,v 1.6 2011-02-08 22:00:47 laffer1 Exp $ */
+/* $Id: platform.h,v 1.7 2013-01-30 01:55:40 laffer1 Exp $ */
 
 #ifndef ISC_PLATFORM_H
 #define ISC_PLATFORM_H 1
@@ -146,6 +148,11 @@
  */
 #undef ISC_PLATFORM_HAVEDEVPOLL
 
+/*! \brief
+ * Define if we want to log backtrace
+ */
+#define ISC_PLATFORM_USEBACKTRACE 1
+
 /*
  *** Printing.
  ***/
@@ -215,6 +222,12 @@
 
 
 /*
+ * Defined to <gssapi_krb5.h> or <gssapi/gssapi_krb5.h> for how to
+ * include the GSSAPI KRB5 header.
+ */
+
+
+/*
  * Defined to <krb5.h> or <krb5/krb5.h> for how to include
  * the KRB5 header.
  */
@@ -250,30 +263,65 @@
  * If the "xadd" operation is available on this architecture,
  * ISC_PLATFORM_HAVEXADD will be defined.
  */
+/*
+ * FreeBSD local modification, preserve this over upgrades
+ */
+#if defined (__i386__) || defined (__amd64__) || defined (__ia64__)
 #define ISC_PLATFORM_HAVEXADD 1
+#else
+#undef ISC_PLATFORM_HAVEXADD
+#endif
 
 /*
  * If the "xaddq" operation (64bit xadd) is available on this architecture,
  * ISC_PLATFORM_HAVEXADDQ will be defined.
  */
+/*
+ * FreeBSD local modification, preserve this over upgrades
+ */
+#ifdef __amd64__
+#define ISC_PLATFORM_HAVEXADDQ 1
+#else
 #undef ISC_PLATFORM_HAVEXADDQ
+#endif
 
 /*
  * If the "atomic swap" operation is available on this architecture,
  * ISC_PLATFORM_HAVEATOMICSTORE" will be defined.
  */
+/*
+ * FreeBSD local modification, preserve this over upgrades
+ */
+#if defined (__i386__) || defined (__amd64__) || defined (__ia64__)
 #define ISC_PLATFORM_HAVEATOMICSTORE 1
+#else
+#undef ISC_PLATFORM_HAVEATOMICSTORE
+#endif
 
 /*
  * If the "compare-and-exchange" operation is available on this architecture,
  * ISC_PLATFORM_HAVECMPXCHG will be defined.
  */
+/*
+ * FreeBSD local modification, preserve this over upgrades
+ */
+#if defined (__i386__) || defined (__amd64__) || defined (__ia64__)
 #define ISC_PLATFORM_HAVECMPXCHG 1
+#else
+#undef ISC_PLATFORM_HAVECMPXCHG
+#endif
 
 /*
  * Define if gcc ASM extension is available
  */
+/*
+ * FreeBSD local modification, preserve this over upgrades
+ */
+#if defined (__i386__) || defined (__amd64__) || defined (__ia64__)
 #define ISC_PLATFORM_USEGCCASM 1
+#else
+#undef ISC_PLATFORM_USEGCCASM
+#endif
 
 /*
  * Define if Tru64 style ASM syntax must be used.
@@ -289,6 +337,17 @@
  * Define if the platform has <strings.h>.
  */
 #define ISC_PLATFORM_HAVESTRINGSH 1
+
+/*
+ * Define if the hash functions must be provided by OpenSSL.
+ */
+#undef ISC_PLATFORM_OPENSSLHASH
+
+/*
+ * Defines for the noreturn attribute.
+ */
+#define ISC_PLATFORM_NORETURN_PRE
+#define ISC_PLATFORM_NORETURN_POST __attribute__((noreturn))
 
 /***
  ***	Windows dll support.

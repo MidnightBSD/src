@@ -1,9 +1,9 @@
-# $MidnightBSD: src/lib/bind/lwres/Makefile,v 1.7 2009/01/02 00:48:41 laffer1 Exp $
+# $MidnightBSD: src/lib/bind/lwres/Makefile,v 1.8 2010/01/16 16:51:32 laffer1 Exp $
 # $FreeBSD: src/lib/bind/lwres/Makefile,v 1.7.2.1 2005/11/16 07:59:50 ru Exp $
 
 .include <bsd.own.mk>
 
-BIND_DIR=	${.CURDIR}/../../../contrib/bind96
+BIND_DIR=	${.CURDIR}/../../../contrib/bind98
 LIB_BIND_REL=	..
 LIB_BIND_DIR=	${.CURDIR}/${LIB_BIND_REL}
 SRCDIR=		${BIND_DIR}/lib/lwres

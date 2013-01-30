@@ -1,9 +1,9 @@
-# $MidnightBSD: src/lib/bind/isccfg/Makefile,v 1.3 2008/11/11 16:49:47 laffer1 Exp $
+# $MidnightBSD: src/lib/bind/isccfg/Makefile,v 1.4 2010/01/16 17:40:19 laffer1 Exp $
 # $FreeBSD: src/lib/bind/isccfg/Makefile,v 1.7 2007/06/02 23:19:56 dougb Exp $
 
 .include <bsd.own.mk>
 
-BIND_DIR=	${.CURDIR}/../../../contrib/bind96
+BIND_DIR=	${.CURDIR}/../../../contrib/bind98
 LIB_BIND_REL=	..
 LIB_BIND_DIR=	${.CURDIR}/${LIB_BIND_REL}
 SRCDIR=		${BIND_DIR}/lib/isccfg
@@ -17,7 +17,7 @@ SRCS=		aclconf.c log.c namedconf.c parser.c version.c
 
 CFLAGS+=	-I${SRCDIR}/include -I${.CURDIR}
 CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
-      
+
 DPADD=		${PTHREAD_DPADD}
 LDADD=		${PTHREAD_LDADD}
 

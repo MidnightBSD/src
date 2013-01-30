@@ -1,9 +1,8 @@
-# $MidnightBSD: src/lib/bind/isc/Makefile,v 1.5 2009/03/25 19:23:09 laffer1 Exp $
-# $FreeBSD: src/lib/bind/isc/Makefile,v 1.8 2007/06/02 23:19:56 dougb Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
-BIND_DIR=	${.CURDIR}/../../../contrib/bind96
+BIND_DIR=	${.CURDIR}/../../../contrib/bind98
 LIB_BIND_REL=	..
 LIB_BIND_DIR=	${.CURDIR}/${LIB_BIND_REL}
 SRCDIR=		${BIND_DIR}/lib/isc
@@ -28,17 +27,25 @@ SRCS+=		condition.c mutex.c \
 
 .PATH:		${SRCDIR}
 SRCS+=		inet_pton.c \
-		assertions.c base32.c base64.c bitstring.c buffer.c \
-		bufferlist.c commandline.c entropy.c error.c event.c \
-		fsaccess.c hash.c heap.c hex.c hmacmd5.c hmacsha.c \
-		httpd.c inet_aton.c inet_ntop.c iterated_hash.c \
+		assertions.c backtrace.c base32.c base64.c bitstring.c \
+		buffer.c bufferlist.c commandline.c error.c event.c \
+		fsaccess.c hash.c \
+		heap.c hex.c hmacmd5.c hmacsha.c \
+		httpd.c inet_aton.c \
+		inet_ntop.c \
+		iterated_hash.c \
 		lex.c lfsr.c lib.c log.c \
 		md5.c mem.c mutexblock.c \
 		netaddr.c netscope.c ondestroy.c \
-		parseint.c portset.c print.c quota.c radix.c random.c \
+		parseint.c portset.c \
+		print.c \
+		quota.c radix.c random.c \
 		ratelimiter.c refcount.c region.c result.c rwlock.c \
 		serial.c sha1.c sha2.c sockaddr.c stats.c string.c strtoul.c \
 		symtab.c task.c taskpool.c timer.c version.c
+
+.PATH:		${.CURDIR}
+SRCS+=		backtrace-emptytbl.c
 
 CFLAGS+=	-I${SRCDIR}/unix/include -I${SRCDIR}/pthreads/include
 CFLAGS+=	-I${SRCDIR}/include -I${.CURDIR}
@@ -52,6 +59,7 @@ INCS=		${SRCDIR}/include/isc/app.h \
 		${SRCDIR}/include/isc/assertions.h \
 		${SRCDIR}/include/isc/base32.h \
 		${SRCDIR}/include/isc/base64.h \
+		${SRCDIR}/include/isc/bind9.h \
 		${SRCDIR}/include/isc/bitstring.h \
 		${SRCDIR}/include/isc/boolean.h \
 		${SRCDIR}/include/isc/buffer.h \
@@ -85,6 +93,7 @@ INCS=		${SRCDIR}/include/isc/app.h \
 		${SRCDIR}/include/isc/msgcat.h \
 		${SRCDIR}/include/isc/msgs.h \
 		${SRCDIR}/include/isc/mutexblock.h \
+		${SRCDIR}/include/isc/namespace.h \
 		${SRCDIR}/include/isc/netaddr.h \
 		${SRCDIR}/include/isc/netscope.h \
 		${SRCDIR}/include/isc/ondestroy.h \
