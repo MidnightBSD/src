@@ -1,7 +1,6 @@
-# $MidnightBSD: src/usr.bin/dig/Makefile,v 1.3 2010/01/16 16:53:28 laffer1 Exp $
-# $FreeBSD: src/usr.bin/dig/Makefile,v 1.13 2007/06/02 23:19:57 dougb Exp $
+# $MidnightBSD: src/usr.bin/dig/Makefile,v 1.4 2012/11/23 01:13:51 laffer1 Exp $
 
-BIND_DIR=	${.CURDIR}/../../contrib/bind96
+BIND_DIR=	${.CURDIR}/../../contrib/bind98
 LIB_BIND_REL=	../../lib/bind
 LIB_BIND_DIR=	${.CURDIR}/${LIB_BIND_REL}
 SRCDIR=		${BIND_DIR}/bin/dig
