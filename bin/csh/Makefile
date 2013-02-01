@@ -1,4 +1,4 @@
-# $MidnightBSD: src/bin/csh/Makefile,v 1.5 2012/07/08 16:02:29 laffer1 Exp $
+# $MidnightBSD: src/bin/csh/Makefile,v 1.6 2012/07/08 19:52:40 laffer1 Exp $
 # $FreeBSD: src/bin/csh/Makefile,v 1.36.2.1 2006/02/26 06:17:59 ume Exp $
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
 #
@@ -73,29 +73,7 @@ NLSLINKS_de_DE.ISO8859-1= de_AT.ISO8859-1 de_AT.ISO8859-15 de_CH.ISO8859-1 \
 NLSLINKS_it_IT.ISO8859-1= it_CH.ISO8859-1 it_CH.ISO8859-15 it_IT.ISO8859-15
 NLSLINKS_es_ES.ISO8859-1= es_ES.ISO8859-15
 
-.if ${MK_NLS_CATALOGS} == "no" || defined(RESCUE)
 CFLAGS+= -DNO_NLS_CATALOGS
-.else
-CFLAGS+= -DHAVE_ICONV
-DPADD+=  ${LIBICONV}
-LDADD+=  -liconv
-.if ${MK_ICONV} != "no"
-NLSLINKS_de_DE.ISO8859-1 += de_AT.UTF-8 de_CH.UTF-8 de_DE.UTF-8
-NLSLINKS_el_GR.ISO8859-7 = el_GR.UTF-8
-NLSLINKS_es_ES.ISO8859-1 += es_ES.UTF-8
-NLSLINKS_et_EE.ISO8859-15 = et_EE.UTF-8
-NLSLINKS_fi_FI.ISO8859-1 += fi_FI.UTF-8
-NLSLINKS_fr_FR.ISO8859-1 += fr_BE.UTF-8 fr_CA.UTF-8 fr_CH.UTF-8 fr_FR.UTF-8
-NLSLINKS_it_IT.ISO8859-1 += it_CH.UTF-8 it_IT.UTF-8
-NLSLINKS_ja_JP.eucJP = ja_JP.SJIS ja_JP.UTF-8
-NLSLINKS_ru_RU.KOI8-R = ru_RU.CP1251 ru_RU.CP866 ru_RU.ISO8859-5 ru_RU.UTF-8
-NLSLINKS_uk_UA.KOI8-U = uk_UA.ISO8859-5 uk_UA.UTF-8
-.else
-# Above links can be installed from ports/shells/tcsh_nls
-
-SRCS+=	iconv_stub.c
-.endif
-.endif
 
 NLSNAME= tcsh
 
