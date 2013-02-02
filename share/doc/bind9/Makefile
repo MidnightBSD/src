@@ -1,7 +1,6 @@
-# $MidnightBSD: src/share/doc/bind9/Makefile,v 1.2 2008/04/28 15:06:51 laffer1 Exp $
-# $FreeBSD: src/share/doc/bind9/Makefile,v 1.5 2007/06/02 23:19:56 dougb Exp $
+# $MidnightBSD$
 
-BIND_DIR=	${.CURDIR}/../../../contrib/bind96
+BIND_DIR=	${.CURDIR}/../../../contrib/bind98
 SRCDIR=		${BIND_DIR}/doc
 
 .PATH: ${BIND_DIR} ${SRCDIR}/arm ${SRCDIR}/misc
@@ -9,17 +8,20 @@ SRCDIR=		${BIND_DIR}/doc
 NO_OBJ=
 
 FILESGROUPS=	TOP ARM MISC
-TOP=		CHANGES COPYRIGHT FAQ KNOWN-DEFECTS NSEC3-NOTES README \
-		README.idnkit README.pkcs11
+TOP=		CHANGES COPYRIGHT FAQ HISTORY README
 TOPDIR=		${DOCDIR}/bind9
 ARM=		Bv9ARM.ch01.html Bv9ARM.ch02.html Bv9ARM.ch03.html \
 		Bv9ARM.ch04.html Bv9ARM.ch05.html Bv9ARM.ch06.html \
 		Bv9ARM.ch07.html Bv9ARM.ch08.html Bv9ARM.ch09.html \
-		Bv9ARM.ch10.html Bv9ARM.html man.dig.html \
+		Bv9ARM.ch10.html Bv9ARM.html Bv9ARM.pdf \
+		man.arpaname.html man.ddns-confgen.html man.dig.html \
 		man.dnssec-dsfromkey.html man.dnssec-keyfromlabel.html \
-		man.dnssec-keygen.html man.dnssec-signzone.html man.host.html \
+		man.dnssec-keygen.html man.dnssec-revoke.html \
+		man.dnssec-settime.html man.dnssec-signzone.html \
+		man.genrandom.html man.host.html man.isc-hmac-fixup.html \
 		man.named-checkconf.html man.named-checkzone.html \
-		man.named.html man.nsupdate.html \
+		man.named-journalprint.html man.named.html \
+		man.nsec3hash.html man.nsupdate.html \
 		man.rndc-confgen.html man.rndc.conf.html man.rndc.html
 ARMDIR=		${TOPDIR}/arm
 MISC=		dnssec format-options.pl ipv6 migration migration-4to9 \
