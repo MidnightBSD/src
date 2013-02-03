@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 /*
  * config.h -- configure various defines for tcsh
  *
