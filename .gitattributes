@@ -66,8 +66,6 @@ bin/cpdup/scripts/params -text
 bin/csh/Makefile -text
 bin/csh/config.h -text
 bin/csh/config_p.h -text
-bin/csh/host.defs -text
-bin/csh/iconv.h -text
 bin/csh/iconv_stub.c -text
 bin/date/Makefile -text
 bin/date/date.1 -text
