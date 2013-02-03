@@ -64,13 +64,6 @@ bin/cpdup/scripts/do_remote -text
 bin/cpdup/scripts/do_remote_host -text
 bin/cpdup/scripts/params -text
 bin/csh/Makefile -text
-bin/csh/USD.doc/csh.1 -text
-bin/csh/USD.doc/csh.2 -text
-bin/csh/USD.doc/csh.3 -text
-bin/csh/USD.doc/csh.4 -text
-bin/csh/USD.doc/csh.a -text
-bin/csh/USD.doc/csh.g -text
-bin/csh/USD.doc/tabs -text
 bin/csh/config.h -text
 bin/csh/config_p.h -text
 bin/csh/host.defs -text
