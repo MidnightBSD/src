@@ -1,5 +1,5 @@
 #
-# $MidnightBSD: src/Makefile,v 1.12 2011/10/27 00:26:45 laffer1 Exp $
+# $MidnightBSD: src/Makefile,v 1.13 2012/08/19 14:05:10 laffer1 Exp $
 #
 # The user-driven targets are:
 #
@@ -65,7 +65,7 @@
 #  6.  `mergemaster -p'
 #  7.  `make installworld'
 #  8.  `make delete-old'
-#  9.  `mergemaster'
+#  9.  `mergemaster' (you may wish to use -i, along with -U or -F)
 # 10.  `reboot'
 # 11.  `make delete-old-libs' (in case no 3rd party program uses them anymore)
 #
