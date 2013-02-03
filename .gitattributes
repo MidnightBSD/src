@@ -54042,7 +54042,7 @@ usr.bin/fsync/Makefile -text
 usr.bin/fsync/fsync.1 -text
 usr.bin/fsync/fsync.c -text
 usr.bin/ftp/Makefile -text
-usr.bin/ftp/config.h -text
+usr.bin/ftp/tnftp_config.h -text
 usr.bin/gcore/Makefile -text
 usr.bin/gcore/elfcore.c -text
 usr.bin/gcore/extern.h -text
