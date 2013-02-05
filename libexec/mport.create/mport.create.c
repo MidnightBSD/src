@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.8 2011/03/15 01:59:16 laffer1 Exp $
+ * $MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.9 2012/04/11 00:46:55 laffer1 Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.8 2011/03/15 01:59:16 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.9 2012/04/11 00:46:55 laffer1 Exp $");
 
 
 #include <stdlib.h>
@@ -123,8 +123,7 @@ int main(int argc, char *argv[])
     }
   } 
 
-  check_for_required_args(pack, extra);  
-  
+  check_for_required_args(pack, extra);
   if (plist_seen == 0) {
     warnx("Required arg missing: plist");
     usage();
