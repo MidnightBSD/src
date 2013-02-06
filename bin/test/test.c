@@ -1,5 +1,3 @@
-/* $MidnightBSD: src/bin/test/test.c,v 1.2 2007/07/26 20:13:02 laffer1 Exp $ */
-/* $FreeBSD: src/bin/test/test.c,v 1.53 2005/01/10 08:39:26 imp Exp $ */ 
 /*	$NetBSD: test.c,v 1.21 1999/04/05 09:48:38 kleink Exp $	*/
 
 /*-
@@ -32,8 +30,6 @@ __MBSDID("$MidnightBSD$");
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#define _XOPEN_SOURCE 700
 
 #ifdef SHELL
 #define main testcmd
@@ -122,8 +118,8 @@ enum token_types {
 	PAREN
 };
 
-static struct t_op {
-	char op_text[4];
+struct t_op {
+	const char *op_text;
 	short op_num, op_type;
 } const ops [] = {
 	{"-r",	FILRD,	UNOP},
@@ -166,13 +162,13 @@ static struct t_op {
 	{"-o",	BOR,	BBINOP},
 	{"(",	LPAREN,	PAREN},
 	{")",	RPAREN,	PAREN},
-	{"",	0,	0}
+	{0,	0,	0}
 };
 
-static struct t_op const *t_wp_op;
-static int nargc;
-static char **t_wp;
-static int parenlevel;
+struct t_op const *t_wp_op;
+int nargc;
+char **t_wp;
+int parenlevel;
 
 static int	aexpr(enum token);
 static int	binop(void);
@@ -431,7 +427,7 @@ t_lex(char *s)
 		t_wp_op = NULL;
 		return EOI;
 	}
-	while (*op->op_text) {
+	while (op->op_text) {
 		if (strcmp(s, op->op_text) == 0) {
 			if (((op->op_type == UNOP || op->op_type == BUNOP)
 						&& isunopoperand()) ||
@@ -460,7 +456,7 @@ isunopoperand(void)
 	if (nargc == 2)
 		return parenlevel == 1 && strcmp(s, ")") == 0;
 	t = *(t_wp + 2);
-	while (*op->op_text) {
+	while (op->op_text) {
 		if (strcmp(s, op->op_text) == 0)
 			return op->op_type == BINOP &&
 			    (parenlevel == 0 || t[0] != ')' || t[1] != '\0');
@@ -482,7 +478,7 @@ islparenoperand(void)
 		return parenlevel == 1 && strcmp(s, ")") == 0;
 	if (nargc != 3)
 		return 0;
-	while (*op->op_text) {
+	while (op->op_text) {
 		if (strcmp(s, op->op_text) == 0)
 			return op->op_type == BINOP;
 		op++;
