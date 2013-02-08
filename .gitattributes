@@ -333,7 +333,6 @@ bin/pax/ar_subs.c -text
 bin/pax/buf_subs.c -text
 bin/pax/cache.c -text
 bin/pax/cache.h -text
-bin/pax/cpio.1 -text
 bin/pax/cpio.c -text
 bin/pax/cpio.h -text
 bin/pax/extern.h -text
