@@ -29,7 +29,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/ls/ls.c,v 1.80.2.2 2005/11/22 20:58:58 ru Exp $ */
 
 #ifndef lint
 static const char copyright[] =
@@ -105,6 +104,7 @@ int termwidth = 80;		/* default terminal width */
 
 /* flags */
        int f_accesstime;	/* use time of last access */
+       int f_birthtime;		/* use time of birth */
        int f_flags;		/* show flags associated with a file */
        int f_humanval;		/* show human-readable file sizes */
        int f_inode;		/* print inode */
@@ -113,6 +113,7 @@ static int f_listdir;		/* list actual directory, not contents */
 static int f_listdot;		/* list files beginning with . */
 static int f_noautodot;		/* do not automatically enable -A for root */
        int f_longform;		/* long listing format */
+static int f_nofollow;		/* don't follow symbolic link arguments */
        int f_nonprint;		/* show unprintables as ? */
 static int f_nosort;		/* don't sort output */
        int f_notabs;		/* don't use tab-separated multi-col output */
@@ -125,10 +126,11 @@ static int f_reversesort;	/* reverse whatever sort is used */
 static int f_singlecol;		/* use single column output */
        int f_size;		/* list size in short listing */
        int f_slash;		/* similar to f_type, but only for dirs */
-       int f_sortacross;	/* sort across rows, not down columns */ 
+       int f_sortacross;	/* sort across rows, not down columns */
        int f_statustime;	/* use time of last mode change */
 static int f_stream;		/* stream the output, separate with commas */
 static int f_timesort;		/* sort by time vice name */
+       char *f_timeformat;      /* user-specified time format */
 static int f_sizesort;
        int f_type;		/* add type character for non-regular files */
 static int f_whiteout;		/* show whiteout entries */
@@ -179,7 +181,7 @@ main(int argc, char *argv[])
 
 	fts_options = FTS_PHYSICAL;
  	while ((ch = getopt(argc, argv,
-	    "1ABCFGHILPRSTWZabcdfghiklmnopqrstuwx")) != -1) {
+	    "1ABCD:FGHILPRSTUWZabcdfghiklmnopqrstuwx")) != -1) {
 		switch (ch) {
 		/*
 		 * The -1, -C, -x and -l options all override each other so
@@ -198,6 +200,9 @@ main(int argc, char *argv[])
 		case 'C':
 			f_sortacross = f_longform = f_singlecol = 0;
 			break;
+                case 'D':
+                        f_timeformat = optarg;
+                        break;
 		case 'l':
 			f_longform = 1;
 			f_singlecol = 0;
@@ -208,13 +213,20 @@ main(int argc, char *argv[])
 			f_longform = 0;
 			f_singlecol = 0;
 			break;
-		/* The -c and -u options override each other. */
+		/* The -c, -u, and -U options override each other. */
 		case 'c':
 			f_statustime = 1;
 			f_accesstime = 0;
+			f_birthtime = 0;
 			break;
 		case 'u':
 			f_accesstime = 1;
+			f_statustime = 0;
+			f_birthtime = 0;
+			break;
+		case 'U':
+			f_birthtime = 1;
+			f_accesstime = 0;
 			f_statustime = 0;
 			break;
 		case 'F':
@@ -223,6 +235,7 @@ main(int argc, char *argv[])
 			break;
 		case 'H':
 			fts_options |= FTS_COMFOLLOW;
+			f_nofollow = 0;
 			break;
 		case 'G':
 			setenv("CLICOLOR", "", 1);
@@ -230,11 +243,13 @@ main(int argc, char *argv[])
 		case 'L':
 			fts_options &= ~FTS_PHYSICAL;
 			fts_options |= FTS_LOGICAL;
+			f_nofollow = 0;
 			break;
 		case 'P':
 			fts_options &= ~FTS_COMFOLLOW;
 			fts_options &= ~FTS_LOGICAL;
 			fts_options |= FTS_PHYSICAL;
+			f_nofollow = 1;
 			break;
 		case 'R':
 			f_recursive = 1;
@@ -297,11 +312,14 @@ main(int argc, char *argv[])
 		case 'T':
 			f_sectime = 1;
 			break;
+		/* The -t and -S options override each other. */
 		case 't':
 			f_timesort = 1;
+			f_sizesort = 0;
 			break;
 		case 'S':
 			f_sizesort = 1;
+			f_timesort = 0;
 			break;
 		case 'W':
 			f_whiteout = 1;
@@ -382,10 +400,10 @@ main(int argc, char *argv[])
 		fts_options |= FTS_NOSTAT;
 
 	/*
-	 * If not -F, -d or -l options, follow any symbolic links listed on
+	 * If not -F, -P, -d or -l options, follow any symbolic links listed on
 	 * the command line.
 	 */
-	if (!f_longform && !f_listdir && !f_type)
+	if (!f_nofollow && !f_longform && !f_listdir && (!f_type || f_slash))
 		fts_options |= FTS_COMFOLLOW;
 
 	/*
@@ -409,23 +427,27 @@ main(int argc, char *argv[])
 	if (f_reversesort) {
 		if (!f_timesort && !f_sizesort)
 			sortfcn = revnamecmp;
-		else if (f_accesstime)
-			sortfcn = revacccmp;
-		else if (f_statustime)
-			sortfcn = revstatcmp;
 		else if (f_sizesort)
 			sortfcn = revsizecmp;
+		else if (f_accesstime)
+			sortfcn = revacccmp;
+		else if (f_birthtime)
+			sortfcn = revbirthcmp;
+		else if (f_statustime)
+			sortfcn = revstatcmp;
 		else		/* Use modification time. */
 			sortfcn = revmodcmp;
 	} else {
 		if (!f_timesort && !f_sizesort)
 			sortfcn = namecmp;
-		else if (f_accesstime)
-			sortfcn = acccmp;
-		else if (f_statustime)
-			sortfcn = statcmp;
 		else if (f_sizesort)
 			sortfcn = sizecmp;
+		else if (f_accesstime)
+			sortfcn = acccmp;
+		else if (f_birthtime)
+			sortfcn = birthcmp;
+		else if (f_statustime)
+			sortfcn = statcmp;
 		else		/* Use modification time. */
 			sortfcn = modcmp;
 	}
@@ -490,7 +512,7 @@ traverse(int argc, char *argv[], int options)
 			break;
 		case FTS_DNR:
 		case FTS_ERR:
-			warnx("%s: %s", p->fts_name, strerror(p->fts_errno));
+			warnx("%s: %s", p->fts_path, strerror(p->fts_errno));
 			rval = 1;
 			break;
 		case FTS_D:
@@ -541,7 +563,8 @@ display(const FTSENT *p, FTSENT *list, int options)
 	long maxblock;
 	u_long btotal, labelstrlen, maxinode, maxlen, maxnlink;
 	u_long maxlabelstr;
-	int bcfile, maxflags;
+	u_int devstrlen;
+	int maxflags;
 	gid_t maxgroup;
 	uid_t maxuser;
 	size_t flen, ulen, glen;
@@ -633,7 +656,7 @@ display(const FTSENT *p, FTSENT *list, int options)
 		MAKENINES(maxsize);
 		free(jinitmax);
 	}
-	bcfile = 0;
+	devstrlen = 0;
 	flags = NULL;
 	for (cur = list, entries = 0; cur; cur = cur->fts_link) {
 		if (cur->fts_info == FTS_ERR || cur->fts_info == FTS_NS) {
@@ -773,9 +796,15 @@ label_out:
 				np->group = &np->data[ulen + 1];
 				(void)strcpy(np->group, group);
 
-				if (S_ISCHR(sp->st_mode) ||
-				    S_ISBLK(sp->st_mode))
-					bcfile = 1;
+				if ((S_ISCHR(sp->st_mode) ||
+				    S_ISBLK(sp->st_mode)) &&
+				    devstrlen < DEVSTR_HEX_LEN) {
+					if (minor(sp->st_rdev) > 255 ||
+					    minor(sp->st_rdev) < 0)
+						devstrlen = DEVSTR_HEX_LEN;
+					else
+						devstrlen = DEVSTR_LEN;
+				}
 
 				if (f_flags) {
 					np->flags = &np->data[ulen + glen + 2];
@@ -807,7 +836,6 @@ label_out:
 	d.entries = entries;
 	d.maxlen = maxlen;
 	if (needstats) {
-		d.bcfile = bcfile;
 		d.btotal = btotal;
 		(void)snprintf(buf, sizeof(buf), "%lu", maxblock);
 		d.s_block = strlen(buf);
@@ -818,8 +846,14 @@ label_out:
 		d.s_inode = strlen(buf);
 		(void)snprintf(buf, sizeof(buf), "%lu", maxnlink);
 		d.s_nlink = strlen(buf);
-		(void)snprintf(buf, sizeof(buf), "%ju", maxsize);
-		d.s_size = strlen(buf);
+		if (f_humanval)
+			d.s_size = HUMANVALSTR_LEN;
+		else {
+			(void)snprintf(buf, sizeof(buf), "%ju", maxsize);
+			d.s_size = strlen(buf);
+		}
+		if (d.s_size < devstrlen)
+			d.s_size = devstrlen;
 		d.s_user = maxuser;
 	}
 	printfcn(&d);

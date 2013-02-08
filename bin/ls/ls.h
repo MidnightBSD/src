@@ -30,15 +30,19 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)ls.h	8.1 (Berkeley) 5/31/93
- * $FreeBSD: src/bin/ls/ls.h,v 1.21 2005/01/10 08:39:23 imp Exp $
  * $MidnightBSD$
  */
 
 #define NO_PRINT	1
 
+#define HUMANVALSTR_LEN	5
+#define DEVSTR_LEN	8
+#define DEVSTR_HEX_LEN	15
+
 extern long blocksize;		/* block size units */
 
 extern int f_accesstime;	/* use time of last access */
+extern int f_birthtime;	/* use time of file creation */
 extern int f_flags;		/* show flags associated with a file */
 extern int f_humanval;		/* show human-readable file sizes */
 extern int f_label;		/* show MAC label */
@@ -50,8 +54,9 @@ extern int f_nonprint;		/* show unprintables as ? */
 extern int f_sectime;		/* print the real time for all files */
 extern int f_size;		/* list size in short listing */
 extern int f_slash;		/* append a '/' if the file is a directory */
-extern int f_sortacross;	/* sort across rows, not down columns */ 
+extern int f_sortacross;	/* sort across rows, not down columns */
 extern int f_statustime;	/* use time of last mode change */
+extern char *f_timeformat;      /* user-specified time format */
 extern int f_notabs;		/* don't use tab-separated multi-col output */
 extern int f_type;		/* add type character for non-regular files */
 #ifdef COLORLS
@@ -61,7 +66,6 @@ extern int f_color;		/* add type in color for non-regular files */
 typedef struct {
 	FTSENT *list;
 	u_long btotal;
-	int bcfile;
 	int entries;
 	int maxlen;
 	u_int s_block;

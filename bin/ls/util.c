@@ -29,7 +29,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/ls/util.c,v 1.38.2.1 2005/11/22 20:58:58 ru Exp $ */
 
 #if 0
 #ifndef lint
@@ -223,9 +222,9 @@ usage(void)
 {
 	(void)fprintf(stderr,
 #ifdef COLORLS
-	"usage: ls [-ABCFGHILPRSTWZabcdfghiklmnopqrstuwx1]"
+	"usage: ls [-ABCFGHILPRSTUWZabcdfghiklmnopqrstuwx1] [-D format]"
 #else
-	"usage: ls [-ABCFHILPRSTWZabcdfghiklmnopqrstuwx1]"
+	"usage: ls [-ABCFHILPRSTUWZabcdfghiklmnopqrstuwx1] [-D format]"
 #endif
 		      " [file ...]\n");
 	exit(1);
