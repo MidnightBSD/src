@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 5/31/93
 # $FreeBSD: src/bin/Makefile,v 1.25 2005/03/02 11:53:21 trhodes Exp $
-# $MidnightBSD: src/bin/Makefile,v 1.15 2009/04/06 00:00:28 laffer1 Exp $
+# $MidnightBSD: src/bin/Makefile,v 1.16 2012/08/25 19:46:56 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -47,9 +47,9 @@ SUBDIR= cat \
 	test \
 	uuidgen
 
-#.if ${MK_ASH} != "no"
+.if ${MK_ASH} != "no"
 _sh=	sh
-#.endif
+.endif
 
 .if ${MK_RCMDS} != "no"
 _rcp=	rcp
