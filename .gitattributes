@@ -353,7 +353,6 @@ bin/pax/sel_subs.c -text
 bin/pax/sel_subs.h -text
 bin/pax/tables.c -text
 bin/pax/tables.h -text
-bin/pax/tar.1 -text
 bin/pax/tar.c -text
 bin/pax/tar.h -text
 bin/pax/tty_subs.c -text
