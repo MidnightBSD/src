@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1983, 1990, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -47,7 +46,7 @@ static char sccsid[] = "@(#)rcp.c	8.2 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/rcp/rcp.c,v 1.45 2005/02/09 17:37:38 ru Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -71,7 +70,6 @@ __FBSDID("$FreeBSD: src/bin/rcp/rcp.c,v 1.45 2005/02/09 17:37:38 ru Exp $");
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -391,8 +389,8 @@ syserr:			run_err("%s: %s", name, strerror(errno));
 			 * versions expecting microseconds.
 			 */
 			(void)snprintf(buf, sizeof(buf), "T%ld 0 %ld 0\n",
-			    (long)stb.st_mtimespec.tv_sec,
-			    (long)stb.st_atimespec.tv_sec);
+			    (long)stb.st_mtim.tv_sec,
+			    (long)stb.st_atim.tv_sec);
 			(void)write(rem, buf, strlen(buf));
 			if (response() < 0)
 				goto next;
@@ -404,7 +402,8 @@ syserr:			run_err("%s: %s", name, strerror(errno));
 		if (response() < 0)
 			goto next;
 		if ((bp = allocbuf(&buffer, fd, BUFSIZ)) == NULL) {
-next:			(void)close(fd);
+next:			if (fd >= 0)
+				(void)close(fd);
 			continue;
 		}
 
@@ -454,8 +453,8 @@ rsource(char *name, struct stat *statp)
 		last++;
 	if (pflag) {
 		(void)snprintf(path, sizeof(path), "T%ld 0 %ld 0\n",
-		    (long)statp->st_mtimespec.tv_sec,
-		    (long)statp->st_atimespec.tv_sec);
+		    (long)statp->st_mtim.tv_sec,
+		    (long)statp->st_atim.tv_sec);
 		(void)write(rem, path, strlen(path));
 		if (response() < 0) {
 			closedir(dirp);
@@ -789,6 +788,4 @@ run_err(const char *fmt, ...)
 		vwarnx(fmt, ap);
 		va_end(ap);
 	}
-
-	va_end(ap);
 }

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.1 (Berkeley) 5/31/93
- * $FreeBSD: src/bin/rcp/extern.h,v 1.9 2004/04/06 20:06:50 markm Exp $
+ * $MidnightBSD$
  */
 
 typedef struct {
