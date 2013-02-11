@@ -3,14 +3,14 @@
 /*	$OpenBSD: table.h,v 1.8 2012/02/19 07:52:30 otto Exp $	*/
 /*	$OpenBSD: tree.h,v 1.10 2005/03/28 21:28:22 deraadt Exp $	*/
 /*	$OpenBSD: expand.h,v 1.6 2005/03/30 17:16:37 deraadt Exp $	*/
-/*	$OpenBSD: lex.h,v 1.11 2006/05/29 18:22:24 otto Exp $	*/
+/*	$OpenBSD: lex.h,v 1.12 2013/01/20 14:47:46 stsp Exp $	*/
 /*	$OpenBSD: proto.h,v 1.34 2012/06/27 07:17:19 otto Exp $	*/
 /*	$OpenBSD: c_test.h,v 1.4 2004/12/20 11:34:26 otto Exp $	*/
 /*	$OpenBSD: tty.h,v 1.5 2004/12/20 11:34:26 otto Exp $	*/
 
 /*-
  * Copyright © 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
- *	       2011, 2012
+ *	       2011, 2012, 2013
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -38,7 +38,14 @@
 #include <sys/param.h>
 #endif
 #include <sys/types.h>
+#if HAVE_BOTH_TIME_H
 #include <sys/time.h>
+#include <time.h>
+#elif HAVE_SYS_TIME_H
+#include <sys/time.h>
+#elif HAVE_TIME_H
+#include <time.h>
+#endif
 #include <sys/ioctl.h>
 #if HAVE_SYS_SYSMACROS_H
 #include <sys/sysmacros.h>
@@ -49,7 +56,9 @@
 #if HAVE_SYS_MMAN_H
 #include <sys/mman.h>
 #endif
+#if HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
+#endif
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <dirent.h>
@@ -85,7 +94,10 @@
 /* shudder… */
 #include <termio.h>
 #endif
-#include <time.h>
+#ifdef _ISC_UNIX
+/* XXX imake style */
+#include <sys/sioctl.h>
+#endif
 #if HAVE_ULIMIT_H
 #include <ulimit.h>
 #endif
@@ -104,11 +116,6 @@
 #define MKSH_A_FORMAT(x,y,z)	__attribute__((__format__ (x, y, z)))
 #else
 #define MKSH_A_FORMAT(x,y,z)	/* nothing */
-#endif
-#if HAVE_ATTRIBUTE_NONNULL
-#define MKSH_A_NONNULL(a)	__attribute__(a)
-#else
-#define MKSH_A_NONNULL(a)	/* nothing */
 #endif
 #if HAVE_ATTRIBUTE_NORETURN
 #define MKSH_A_NORETURN		__attribute__((__noreturn__))
@@ -157,9 +164,9 @@
 #endif
 
 #ifdef EXTERN
-__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.608.2.1 2012/11/30 20:49:13 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.634.2.1 2013/02/11 17:25:03 tg Exp $");
 #endif
-#define MKSH_VERSION "R41 2012/11/30"
+#define MKSH_VERSION "R42 2013/02/10"
 
 /* arithmetic types: C implementation */
 #if !HAVE_CAN_INTTYPES
@@ -328,6 +335,8 @@ struct rusage {
 #define NSIG		_NSIG
 #elif defined(SIGMAX)
 #define NSIG		(SIGMAX+1)
+#elif defined(_SIGMAX)
+#define NSIG		(_SIGMAX+1)
 #endif
 #endif
 
@@ -351,16 +360,25 @@ extern int flock(int, int);
 extern int getrusage(int, struct rusage *);
 #endif
 
+#if !HAVE_MEMMOVE
+/* we assume either memmove or bcopy exist, at the moment */
+#define memmove(dst, src, len)	bcopy((src), (dst), (len))
+#endif
+
 #if !HAVE_REVOKE_DECL
 extern int revoke(const char *);
 #endif
 
-#if !HAVE_STRLCPY
-size_t strlcpy(char *, const char *, size_t);
+#if defined(DEBUG) || !HAVE_STRERROR
+#define strerror		/* poisoned */ dontuse_strerror
+#define cstrerror		/* replaced */ cstrerror
+extern const char *cstrerror(int);
+#else
+#define cstrerror(errnum)	((const char *)strerror(errnum))
 #endif
 
-#if !HAVE_SYS_SIGLIST_DECL
-extern const char *const sys_siglist[];
+#if !HAVE_STRLCPY
+size_t strlcpy(char *, const char *, size_t);
 #endif
 
 #ifdef __INTERIX
@@ -477,16 +495,23 @@ char *ucstrstr(char *, const char *);
 })
 #define vstrchr(s,c)	(cstrchr((s), (c)) != NULL)
 #define vstrstr(b,l)	(cstrstr((b), (l)) != NULL)
-#define mkssert(e)	((e) ? (void)0 : exit(255))
 #else /* !DEBUG, !gcc */
 #define cstrchr(s,c)	((const char *)strchr((s), (c)))
 #define cstrstr(s,c)	((const char *)strstr((s), (c)))
 #define vstrchr(s,c)	(strchr((s), (c)) != NULL)
 #define vstrstr(b,l)	(strstr((b), (l)) != NULL)
-#define mkssert(e)	((void)0)
 #endif
 
-#if (!defined(MKSH_BUILDMAKEFILE4BSD) && !defined(MKSH_BUILDSH)) || (MKSH_BUILD_R != 411)
+#if defined(DEBUG) || defined(__COVERITY__)
+#define mkssert(e)	do { if (!(e)) exit(255); } while (/* CONSTCOND */ 0)
+#ifndef DEBUG_LEAKS
+#define DEBUG_LEAKS
+#endif
+#else
+#define mkssert(e)	do { } while (/* CONSTCOND */ 0)
+#endif
+
+#if (!defined(MKSH_BUILDMAKEFILE4BSD) && !defined(MKSH_BUILDSH)) || (MKSH_BUILD_R != 421)
 #error Must run Build.sh to compile this.
 int
 im_sorry_dave(void)
@@ -652,7 +677,8 @@ enum sh_flag {
 struct sretrace_info;
 struct yyrecursive_state;
 
-extern struct sretrace_info *retrace_info;
+EXTERN struct sretrace_info *retrace_info E_INIT(NULL);
+EXTERN int subshell_nesting_type E_INIT(0);
 
 extern struct env {
 	ALLOC_ITEM alloc_INT;	/* internal, do not touch */
@@ -676,6 +702,7 @@ extern struct env {
 #define E_EXEC	4	/* executing command tree */
 #define E_LOOP	5	/* executing for/while # */
 #define E_ERRH	6	/* general error handler # */
+#define E_GONE	7	/* hidden in child */
 /* # indicates env has valid jbuf (see unwind()) */
 
 /* struct env.flag values */
@@ -785,10 +812,8 @@ typedef uint8_t Temp_type;
 #define TT_HEREDOC_EXP	0
 /* temporary file used for history editing (fc -e) */
 #define TT_HIST_EDIT	1
-#ifndef MKSH_DISABLE_EXPERIMENTAL
 /* temporary file used during in-situ command substitution */
 #define TT_FUNSUB	2
-#endif
 
 /* temp/heredoc files. The file is removed when the struct is freed. */
 struct temp {
@@ -1300,9 +1325,7 @@ struct op {
 #define SPAT	10	/* separate pattern: | */
 #define CPAT	11	/* close pattern: ) */
 #define ADELIM	12	/* arbitrary delimiter: ${foo:2:3} ${foo/bar/baz} */
-#ifndef MKSH_DISABLE_EXPERIMENTAL
 #define FUNSUB	14	/* ${ foo;} substitution (NUL terminated) */
-#endif
 
 /*
  * IO redirection
@@ -1361,7 +1384,7 @@ struct ioword {
 #define DOTEMP	BIT(8)		/* dito: in word part of ${..[%#=?]..} */
 #define DOVACHECK BIT(9)	/* var assign check (for typeset, set, etc) */
 #define DOMARKDIRS BIT(10)	/* force markdirs behaviour */
-#if !defined(MKSH_SMALL) && !defined(MKSH_DISABLE_EXPERIMENTAL)
+#if !defined(MKSH_SMALL)
 #define DOTCOMEXEC BIT(11)	/* not an eval flag, used by sh -c hack */
 #endif
 
@@ -1507,7 +1530,7 @@ struct source {
 #define SF_ALIASEND	BIT(2)	/* faking space at end of alias */
 #define SF_TTY		BIT(3)	/* type == SSTDIN & it is a tty */
 #define SF_HASALIAS	BIT(4)	/* u.tblp valid (SALIAS, SEOF) */
-#if !defined(MKSH_SMALL) && !defined(MKSH_DISABLE_EXPERIMENTAL)
+#if !defined(MKSH_SMALL)
 #define SF_MAYEXEC	BIT(5)	/* special sh -c optimisation hack */
 #endif
 
@@ -1561,7 +1584,8 @@ typedef union {
 #define CMDWORD		BIT(8)	/* parsing simple command (alias related) */
 #define HEREDELIM	BIT(9)	/* parsing <<,<<- delimiter */
 #define LQCHAR		BIT(10)	/* source string contains QCHAR */
-#define HEREDOC		BIT(11)	/* parsing a here document */
+#define HEREDOCBODY	BIT(11)	/* parsing a here document body */
+#define HERESTRBODY	BIT(12)	/* parsing a here string body */
 
 #define HERES		10	/* max number of << in line */
 
@@ -1654,6 +1678,9 @@ int x_bind(const char *, const char *, bool, bool);
 int x_bind(const char *, const char *, bool);
 #endif
 void x_init(void);
+#ifdef DEBUG_LEAKS
+void x_done(void);
+#endif
 int x_read(char *, size_t);
 #endif
 void x_mkraw(int, mksh_ttyst *, bool);
@@ -1802,6 +1829,7 @@ pid_t j_async(void);
 int j_stopped_running(void);
 /* lex.c */
 int yylex(int);
+void yyskiputf8bom(void);
 void yyerror(const char *, ...)
     MKSH_A_NORETURN
     MKSH_A_FORMAT(__printf__, 1, 2);
@@ -1875,7 +1903,7 @@ void setctypes(const char *, int);
 void initctypes(void);
 size_t option(const char *);
 char *getoptions(void);
-void change_flag(enum sh_flag, int, unsigned int);
+void change_flag(enum sh_flag, int, bool);
 int parse_args(const char **, int, bool *);
 int getn(const char *, int *);
 int gmatchx(const char *, const char *, bool);
@@ -1970,8 +1998,7 @@ int setstr(struct tbl *, const char *, int);
 struct tbl *setint_v(struct tbl *, struct tbl *, bool);
 void setint(struct tbl *, mksh_ari_t);
 void setint_n(struct tbl *, mksh_ari_t, int);
-struct tbl *typeset(const char *, uint32_t, uint32_t, int, int)
-    MKSH_A_NONNULL((__nonnull__ (1)));
+struct tbl *typeset(const char *, uint32_t, uint32_t, int, int);
 void unset(struct tbl *, int);
 const char *skip_varname(const char *, int);
 const char *skip_wdvarname(const char *, bool);
@@ -2034,7 +2061,7 @@ typedef struct test_env {
 	int flags;			/* TEF_* */
 } Test_env;
 
-extern const char *const dbtest_tokens[];
+extern const char * const dbtest_tokens[];
 
 Test_op	test_isop(Test_meta, const char *);
 int test_eval(Test_env *, Test_op, const char *, const char *, bool);
