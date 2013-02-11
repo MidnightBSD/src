@@ -5,7 +5,7 @@
 
 /*-
  * Copyright (c) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
- *		 2010, 2011, 2012
+ *		 2010, 2011, 2012, 2013
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -38,7 +38,7 @@
 #endif
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.230 2012/10/30 20:13:18 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.237 2013/01/01 20:45:02 tg Exp $");
 
 #if HAVE_KILLPG
 /*
@@ -220,8 +220,7 @@ static const char *ptest_getopnd(Test_env *, Test_op, bool);
 static void ptest_error(Test_env *, int, const char *);
 static char *kill_fmt_entry(char *, size_t, unsigned int, const void *);
 static void p_time(struct shf *, bool, long, int, int,
-    const char *, const char *)
-    MKSH_A_NONNULL((__nonnull__ (6, 7)));
+    const char *, const char *);
 
 int
 c_pwd(const char **wp)
@@ -254,7 +253,7 @@ c_pwd(const char **wp)
 		p = NULL;
 	if (!p && !(p = allocd = ksh_get_wd())) {
 		bi_errorf("%s: %s", "can't determine current directory",
-		    strerror(errno));
+		    cstrerror(errno));
 		return (1);
 	}
 	shprintf("%s\n", p);
@@ -853,8 +852,6 @@ c_typeset(const char **wp)
 	} else if (wp[builtin_opt.optind]) {
 		for (i = builtin_opt.optind; wp[i]; i++) {
 			varsearch(e->loc, &vp, wp[i], hash(wp[i]));
-			if (!vp)
-				continue;
 			c_typeset_vardump(vp, flag, thing, pflag, istset);
 		}
 	} else
@@ -883,6 +880,9 @@ c_typeset_vardump(struct tbl *vp, uint32_t flag, int thing, bool pflag,
 	struct tbl *tvp;
 	int any_set = 0;
 	char *s;
+
+	if (!vp)
+		return;
 
 	/*
 	 * See if the parameter is set (for arrays, if any
@@ -1379,7 +1379,7 @@ c_kill(const char **wp)
 			rv = 1;
 		} else {
 			if (mksh_kill(n, sig) < 0) {
-				bi_errorf("%s: %s", p, strerror(errno));
+				bi_errorf("%s: %s", p, cstrerror(errno));
 				rv = 1;
 			}
 		}
@@ -1726,7 +1726,7 @@ c_dot(const char **wp)
 		return (1);
 	}
 	if ((file = search_path(cp, path, R_OK, &errcode)) == NULL) {
-		bi_errorf("%s: %s", cp, strerror(errcode));
+		bi_errorf("%s: %s", cp, cstrerror(errcode));
 		return (1);
 	}
 
@@ -1743,7 +1743,7 @@ c_dot(const char **wp)
 	}
 	if ((i = include(file, argc, argv, false)) < 0) {
 		/* should not happen */
-		bi_errorf("%s: %s", cp, strerror(errno));
+		bi_errorf("%s: %s", cp, cstrerror(errno));
 		return (1);
 	}
 	return (i);
@@ -1834,7 +1834,7 @@ c_read(const char **wp)
 #if HAVE_SELECT
 	case 't':
 		if (parse_usec(builtin_opt.optarg, &tv)) {
-			bi_errorf("%s: %s '%s'", Tsynerr, strerror(errno),
+			bi_errorf("%s: %s '%s'", Tsynerr, cstrerror(errno),
 			    builtin_opt.optarg);
 			return (2);
 		}
@@ -1916,7 +1916,7 @@ c_read(const char **wp)
 			rv = 1;
 			goto c_read_out;
 		default:
-			bi_errorf("%s: %s", Tselect, strerror(errno));
+			bi_errorf("%s: %s", Tselect, cstrerror(errno));
 			rv = 2;
 			goto c_read_out;
 		}
@@ -2216,7 +2216,7 @@ c_eval(const char **wp)
 	exstat |= 0x4000;
 
 	savef = Flag(FERREXIT);
-	Flag(FERREXIT) = 0;
+	Flag(FERREXIT) |= 0x80;
 	rv = shell(s, false);
 	Flag(FERREXIT) = savef;
 	source = saves;
@@ -2710,7 +2710,7 @@ c_mknod(const char **wp)
 			goto c_mknod_failed;
 	} else if (mkfifo(argv[0], mode)) {
  c_mknod_failed:
-		bi_errorf("%s: %s", argv[0], strerror(errno));
+		bi_errorf("%s: %s", argv[0], cstrerror(errno));
  c_mknod_err:
 		rv = 1;
 	}
@@ -2766,6 +2766,8 @@ c_test(const char **wp)
 
 	for (argc = 0; wp[argc]; argc++)
 		;
+	mkssert(argc > 0);
+	mkssert(wp[0] != NULL);
 
 	if (strcmp(wp[0], "[") == 0) {
 		if (strcmp(wp[--argc], "]") != 0) {
@@ -2894,6 +2896,34 @@ test_eval(Test_env *te, Test_op op, const char *opnd1, const char *opnd2,
 
 	if (!do_eval)
 		return (0);
+
+#ifdef DEBUG
+	switch (op) {
+	/* Binary operators */
+	case TO_STEQL:
+	case TO_STNEQ:
+	case TO_STLT:
+	case TO_STGT:
+	case TO_INTEQ:
+	case TO_INTNE:
+	case TO_INTGT:
+	case TO_INTGE:
+	case TO_INTLT:
+	case TO_INTLE:
+	case TO_FILEQ:
+	case TO_FILNT:
+	case TO_FILOT:
+		/* consistency check, but does not happen in practice */
+		if (!opnd2) {
+			te->flags |= TEF_ERROR;
+			return (1);
+		}
+		break;
+	default:
+		/* for completeness of switch */
+		break;
+	}
+#endif
 
 	switch (op) {
 
@@ -3242,7 +3272,7 @@ static Test_op
 ptest_isa(Test_env *te, Test_meta meta)
 {
 	/* Order important - indexed by Test_meta values */
-	static const char *const tokens[] = {
+	static const char * const tokens[] = {
 		"-o", "-a", "!", "(", ")"
 	};
 	Test_op rv;
@@ -3580,7 +3610,7 @@ set_ulimit(const struct limits *l, const char *v, int how)
 	if (errno == EPERM)
 		bi_errorf("%s exceeds allowable %s limit", v, l->name);
 	else
-		bi_errorf("bad %s limit: %s", l->name, strerror(errno));
+		bi_errorf("bad %s limit: %s", l->name, cstrerror(errno));
 	return (1);
 }
 
@@ -3623,7 +3653,7 @@ c_rename(const char **wp)
 		bi_errorf(Tsynerr);
 	else if ((rv = rename(wp[0], wp[1])) != 0) {
 		rv = errno;
-		bi_errorf("%s: %s", "failed", strerror(rv));
+		bi_errorf("%s: %s", "failed", cstrerror(rv));
 	}
 
 	return (rv);
@@ -3646,7 +3676,7 @@ c_realpath(const char **wp)
 		bi_errorf(Tsynerr);
 	else if ((buf = do_realpath(wp[0])) == NULL) {
 		rv = errno;
-		bi_errorf("%s: %s", wp[0], strerror(rv));
+		bi_errorf("%s: %s", wp[0], cstrerror(rv));
 		if ((unsigned int)rv > 255)
 			rv = 255;
 	} else {
@@ -3693,7 +3723,7 @@ c_cat(const char **wp)
 				fd = STDIN_FILENO;
 			else if ((fd = open(fn, O_RDONLY)) < 0) {
 				eno = errno;
-				bi_errorf("%s: %s", fn, strerror(eno));
+				bi_errorf("%s: %s", fn, cstrerror(eno));
 				rv = 1;
 				continue;
 			}
@@ -3709,7 +3739,7 @@ c_cat(const char **wp)
 					continue;
 				}
 				/* an error occured during reading */
-				bi_errorf("%s: %s", fn, strerror(eno));
+				bi_errorf("%s: %s", fn, cstrerror(eno));
 				rv = 1;
 				break;
 			} else if (n == 0)
@@ -3724,7 +3754,7 @@ c_cat(const char **wp)
 					/* an error occured during writing */
 					eno = errno;
 					bi_errorf("%s: %s", "<stdout>",
-					    strerror(eno));
+					    cstrerror(eno));
 					rv = 1;
 					if (fd != STDIN_FILENO)
 						close(fd);
@@ -3759,7 +3789,7 @@ c_sleep(const char **wp)
 	if (!wp[0] || wp[1])
 		bi_errorf(Tsynerr);
 	else if (parse_usec(wp[0], &tv))
-		bi_errorf("%s: %s '%s'", Tsynerr, strerror(errno), wp[0]);
+		bi_errorf("%s: %s '%s'", Tsynerr, cstrerror(errno), wp[0]);
 	else {
 #ifndef MKSH_NOPROSPECTOFWORK
 		sigset_t omask, bmask;
@@ -3789,7 +3819,7 @@ c_sleep(const char **wp)
 			 */
 			rv = 0;
 		else
-			bi_errorf("%s: %s", Tselect, strerror(errno));
+			bi_errorf("%s: %s", Tselect, cstrerror(errno));
 #ifndef MKSH_NOPROSPECTOFWORK
 		/* this will re-schedule signal delivery */
 		sigprocmask(SIG_SETMASK, &omask, NULL);

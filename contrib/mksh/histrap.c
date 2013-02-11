@@ -27,7 +27,7 @@
 #include <sys/file.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/histrap.c,v 1.128 2012/11/30 19:02:07 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/histrap.c,v 1.131 2012/12/28 02:28:35 tg Exp $");
 
 Trap sigtraps[NSIG + 1];
 static struct sigaction Sigact_ign;
@@ -297,7 +297,7 @@ c_fc(const char **wp)
 	tf = maketemp(ATEMP, TT_HIST_EDIT, &e->temps);
 	if (!(shf = tf->shf)) {
 		bi_errorf("can't %s temporary file %s: %s",
-		    "create", tf->tffn, strerror(errno));
+		    "create", tf->tffn, cstrerror(errno));
 		return (1);
 	}
 	for (hp = rflag ? hlast : hfirst;
@@ -305,7 +305,7 @@ c_fc(const char **wp)
 		shf_fprintf(shf, "%s\n", *hp);
 	if (shf_close(shf) == EOF) {
 		bi_errorf("can't %s temporary file %s: %s",
-		    "write", tf->tffn, strerror(errno));
+		    "write", tf->tffn, cstrerror(errno));
 		return (1);
 	}
 
@@ -331,7 +331,7 @@ c_fc(const char **wp)
 
 		if (!(shf = shf_open(tf->tffn, O_RDONLY, 0, 0))) {
 			bi_errorf("can't %s temporary file %s: %s",
-			    "open", tf->tffn, strerror(errno));
+			    "open", tf->tffn, cstrerror(errno));
 			return (1);
 		}
 
@@ -351,7 +351,7 @@ c_fc(const char **wp)
 		}
 		if (n < 0) {
 			bi_errorf("can't %s temporary file %s: %s",
-			    "read", tf->tffn, strerror(shf_errno(shf)));
+			    "read", tf->tffn, cstrerror(shf_errno(shf)));
  errout:
 			shf_close(shf);
 			return (1);
@@ -634,6 +634,7 @@ histsave(int *lnp, const char *cmd, bool dowrite MKSH_A_UNUSED, bool ignoredups)
 	char **hp;
 	char *c, *cp;
 
+	mkssert(cmd != NULL);
 	strdupx(c, cmd, APERM);
 	if ((cp = strchr(c, '\n')) != NULL)
 		*cp = '\0';
@@ -806,7 +807,7 @@ hist_init(Source *s)
 		}
 		if (hs != hist_init_retry)
 			bi_errorf("can't %s %s: %s",
-			    "unlink HISTFILE", hname, strerror(errno));
+			    "unlink HISTFILE", hname, cstrerror(errno));
 		histfsize = 0;
 		return;
 	} else {
@@ -952,12 +953,18 @@ hist_finish(void)
 
 #if !HAVE_SYS_SIGNAME
 static const struct mksh_sigpair {
-	const char *const name;
+	const char * const name;
 	int nr;
 } mksh_sigpairs[] = {
 #include "signames.inc"
 	{ NULL, 0 }
 };
+#endif
+
+#if HAVE_SYS_SIGLIST
+#if !HAVE_SYS_SIGLIST_DECL
+extern const char * const sys_siglist[];
+#endif
 #endif
 
 void

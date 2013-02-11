@@ -5,7 +5,7 @@
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
- *		 2011, 2012
+ *		 2011, 2012, 2013
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -34,7 +34,7 @@
 #include <locale.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/main.c,v 1.245 2012/11/30 19:58:47 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/main.c,v 1.260 2013/02/10 21:42:16 tg Exp $");
 
 extern char **environ;
 
@@ -254,7 +254,7 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 #ifdef MKSH_BINSHREDUCED
 		/* set FSH if we're called as -sh or /bin/sh or so */
 		if (!strcmp(ccp, "sh"))
-			change_flag(FSH, OF_FIRSTTIME, 1);
+			change_flag(FSH, OF_FIRSTTIME, true);
 #endif
 	}
 
@@ -329,7 +329,7 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 	 * by the environment or the user. Also, we want tab completion
 	 * on in vi by default.
 	 */
-	change_flag(FEMACS, OF_SPECIAL, 1);
+	change_flag(FEMACS, OF_SPECIAL, true);
 #if !MKSH_S_NOVI
 	Flag(FVITABCOMPLETE) = 1;
 #endif
@@ -460,7 +460,7 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 		s = pushs(SSTRINGCMDLINE, ATEMP);
 		if (!(s->start = s->str = argv[argi++]))
 			errorf("%s %s", "-c", "requires an argument");
-#if !defined(MKSH_SMALL) && !defined(MKSH_DISABLE_EXPERIMENTAL)
+#if !defined(MKSH_SMALL)
 		while (*s->str) {
 			if (*s->str != ' ' && ctype(*s->str, C_QUOTE))
 				break;
@@ -484,7 +484,7 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 		    SHF_MAPHI | SHF_CLEXEC);
 		if (s->u.shf == NULL) {
 			shl_stdout_ok = false;
-			warningf(true, "%s: %s", s->file, strerror(errno));
+			warningf(true, "%s: %s", s->file, cstrerror(errno));
 			/* mandated by SUSv4 */
 			exstat = 127;
 			unwind(LERROR);
@@ -849,7 +849,7 @@ shell(Source * volatile s, volatile bool toplevel)
 				break;
 			}
 		}
-#if !defined(MKSH_SMALL) && !defined(MKSH_DISABLE_EXPERIMENTAL)
+#if !defined(MKSH_SMALL)
 		  else if ((s->flags & SF_MAYEXEC) && t->type == TCOM)
 			t->u.evalflags |= DOTCOMEXEC;
 #endif
@@ -872,19 +872,36 @@ shell(Source * volatile s, volatile bool toplevel)
 void
 unwind(int i)
 {
+	/*
+	 * This is a kludge. We need to restore everything that was
+	 * changed in the new environment, see cid 1005090337C7A669439
+	 * and 10050903386452ACBF1, but fail to even save things most of
+	 * the time. funcs.c:c_eval() changes FERREXIT temporarily to 0,
+	 * which needs to be restored thus (related to Debian #696823).
+	 * We did not save the shell flags, so we use a special or'd
+	 * value here... this is mostly to clean up behind *other*
+	 * callers of unwind(LERROR) here; exec.c has the regular case.
+	 */
+	if (Flag(FERREXIT) & 0x80) {
+		/* GNU bash does not run this trapsig */
+		trapsig(ksh_SIGERR);
+		Flag(FERREXIT) &= ~0x80;
+	}
+
 	/* ordering for EXIT vs ERR is a bit odd (this is what AT&T ksh does) */
-	if (i == LEXIT || (Flag(FERREXIT) && (i == LERROR || i == LINTR) &&
-	    sigtraps[ksh_SIGEXIT].trap)) {
+	if (i == LEXIT ||
+	    ((i == LERROR || i == LINTR) && sigtraps[ksh_SIGEXIT].trap)) {
 		++trap_nested;
 		runtrap(&sigtraps[ksh_SIGEXIT], trap_nested == 1);
 		--trap_nested;
 		i = LLEAVE;
-	} else if (Flag(FERREXIT) && (i == LERROR || i == LINTR)) {
+	} else if (Flag(FERREXIT) == 1 && (i == LERROR || i == LINTR)) {
 		++trap_nested;
 		runtrap(&sigtraps[ksh_SIGERR], trap_nested == 1);
 		--trap_nested;
 		i = LLEAVE;
 	}
+
 	while (/* CONSTCOND */ 1) {
 		switch (e->type) {
 		case E_PARSE:
@@ -938,7 +955,7 @@ quitenv(struct shf *shf)
 	int fd;
 
 	yyrecursive_pop(true);
-	if (ep->oenv && ep->oenv->loc != ep->loc)
+	while (ep->oenv && ep->oenv->loc != ep->loc)
 		popblock();
 	if (ep->savefd != NULL) {
 		for (fd = 0; fd < NUFILE; fd++)
@@ -954,6 +971,10 @@ quitenv(struct shf *shf)
 	 * Either main shell is exiting or cleanup_parents_env() was called.
 	 */
 	if (ep->oenv == NULL) {
+#ifdef DEBUG_LEAKS
+		int i;
+#endif
+
 		if (ep->type == E_NONE) {
 			/* Main shell exiting? */
 #if HAVE_PERSISTENT_HISTORY
@@ -981,6 +1002,19 @@ quitenv(struct shf *shf)
 		if (shf)
 			shf_close(shf);
 		reclaim();
+#ifdef DEBUG_LEAKS
+#ifndef MKSH_NO_CMDLINE_EDITING
+		x_done();
+#endif
+		afreeall(APERM);
+		for (fd = 3; fd < NUFILE; fd++)
+			if ((i = fcntl(fd, F_GETFD, 0)) != -1 &&
+			    (i & FD_CLOEXEC))
+				close(fd);
+		close(2);
+		close(1);
+		close(0);
+#endif
 		exit(exstat & 0xFF);
 	}
 	if (shf)
@@ -1018,8 +1052,14 @@ cleanup_parents_env(void)
 			afree(ep->savefd, &ep->area);
 			ep->savefd = NULL;
 		}
+#ifdef DEBUG_LEAKS
+		if (ep->type != E_NONE)
+			ep->type = E_GONE;
+#endif
 	}
+#ifndef DEBUG_LEAKS
 	e->oenv = NULL;
+#endif
 }
 
 /* Called just before an execve cleanup stuff temporary files */
@@ -1036,6 +1076,13 @@ cleanup_proc_env(void)
 static void
 reclaim(void)
 {
+	struct block *l;
+
+	while ((l = e->loc) && (!e->oenv || e->oenv->loc != l)) {
+		e->loc = l->next;
+		afreeall(&l->area);
+	}
+
 	remove_temps(e->temps);
 	e->temps = NULL;
 	afreeall(&e->area);
@@ -1319,8 +1366,11 @@ initio(void)
 	shf_fdopen(2, SHF_WR, shl_out);
 	shf_fdopen(2, SHF_WR, shl_spare);
 #ifdef DF
-	if ((lfp = getenv("SDMKSH_PATH")) == NULL)
-		lfp = "/tmp/mksh-dbg.txt";
+	if ((lfp = getenv("SDMKSH_PATH")) == NULL) {
+		if ((lfp = getenv("HOME")) == NULL || *lfp != '/')
+			errorf("cannot get home directory");
+		lfp = shf_smprintf("%s/mksh-dbg.txt", lfp);
+	}
 
 	if ((shl_dbg_fd = open(lfp, O_WRONLY | O_APPEND | O_CREAT, 0600)) < 0)
 		errorf("cannot open debug output file %s", lfp);
@@ -1593,7 +1643,6 @@ maketemp(Area *ap, Temp_type type, struct temp **tlist)
 		/* do another cycle */
 	}
 
-#ifndef MKSH_DISABLE_EXPERIMENTAL
 	if (type == TT_FUNSUB) {
 		int nfd;
 
@@ -1603,7 +1652,6 @@ maketemp(Area *ap, Temp_type type, struct temp **tlist)
 			i = nfd;
 		}
 	}
-#endif
 
 	/* shf_fdopen cannot fail, so no fd leak */
 	tp->shf = shf_fdopen(i, SHF_WR, NULL);
@@ -1656,7 +1704,7 @@ tgrow(struct table *tp)
 		if ((tblp = otblp[i]) != NULL) {
 			if ((tblp->flag & DEFINED)) {
 				/* search for free hash table slot */
-				j = (perturb = tblp->ua.hval) & mask;
+				j = perturb = tblp->ua.hval;
 				goto find_first_empty_slot;
  find_next_empty_slot:
 				j = (j << 2) + j + perturb + 1;
@@ -1694,7 +1742,7 @@ ktscan(struct table *tp, const char *name, uint32_t h, struct tbl ***ppp)
 
 	mask = ((size_t)1 << (tp->tshift)) - 1;
 	/* search for hash table slot matching name */
-	j = (perturb = h) & mask;
+	j = perturb = h;
 	goto find_first_slot;
  find_next_slot:
 	j = (j << 2) + j + perturb + 1;

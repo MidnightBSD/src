@@ -2,7 +2,7 @@
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
- *		 2011, 2012
+ *		 2011, 2012, 2013
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -23,7 +23,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.129 2012/10/22 20:19:12 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.136 2013/02/10 23:43:59 tg Exp $");
 
 /*
  * string expansion
@@ -59,6 +59,7 @@ typedef struct Expand {
 
 static int varsub(Expand *, const char *, const char *, int *, int *);
 static int comsub(Expand *, const char *, int);
+static void funsub(struct op *);
 static char *trimsub(char *, char *, int);
 static void glob(char *, XPtrV *, bool);
 static void globit(XString *, char **, char *, XPtrV *, int);
@@ -277,30 +278,24 @@ expand(const char *cp,	/* input word */
 				quote = st->quotew;
 				continue;
 			case COMSUB:
-#ifndef MKSH_DISABLE_EXPERIMENTAL
 			case FUNSUB:
-#endif
 				tilde_ok = 0;
 				if (f & DONTRUNCOMMAND) {
 					word = IFS_WORD;
 					*dp++ = '$';
-#ifndef MKSH_DISABLE_EXPERIMENTAL
 					if (c == FUNSUB) {
 						*dp++ = '{';
 						*dp++ = ' ';
 					} else
-#endif
 						*dp++ = '(';
 					while (*sp != '\0') {
 						Xcheck(ds, dp);
 						*dp++ = *sp++;
 					}
-#ifndef MKSH_DISABLE_EXPERIMENTAL
 					if (c == FUNSUB) {
 						*dp++ = ';';
 						*dp++ = '}';
 					} else
-#endif
 						*dp++ = ')';
 				} else {
 					type = comsub(&x, sp, c);
@@ -522,6 +517,7 @@ expand(const char *cp,	/* input word */
 
 						/* check for special cases */
 						d = str_val(st->var);
+						mkssert(d != NULL);
 						switch (*pat) {
 						case '#':
 							/* anchor at begin */
@@ -1322,7 +1318,6 @@ comsub(Expand *xp, const char *cp, int fn MKSH_A_UNUSED)
 			SHF_MAPHI|SHF_CLEXEC);
 		if (shf == NULL)
 			errorf("%s: %s %s", name, "can't open", "$() input");
-#ifndef MKSH_DISABLE_EXPERIMENTAL
 	} else if (fn == FUNSUB) {
 		int ofd1;
 		struct temp *tf = NULL;
@@ -1331,13 +1326,17 @@ comsub(Expand *xp, const char *cp, int fn MKSH_A_UNUSED)
 		maketemp(ATEMP, TT_FUNSUB, &tf);
 		if (!tf->shf) {
 			errorf("can't %s temporary file %s: %s",
-			    "create", tf->tffn, strerror(errno));
+			    "create", tf->tffn, cstrerror(errno));
 		}
 		/* save stdout and make the temporary file it */
 		ofd1 = savefd(1);
 		ksh_dup2(shf_fileno(tf->shf), 1, false);
-		/* run tree, with output thrown into the tempfile */
-		execute(t, XXCOM | XERROK, NULL);
+		/*
+		 * run tree, with output thrown into the tempfile,
+		 * in a new function block
+		 */
+		funsub(t);
+		subst_exstat = exstat & 0xFF;
 		/* close the tempfile and restore regular stdout */
 		shf_close(tf->shf);
 		restfd(1, ofd1);
@@ -1345,7 +1344,6 @@ comsub(Expand *xp, const char *cp, int fn MKSH_A_UNUSED)
 		shf = shf_open(tf->tffn, O_RDONLY, 0, SHF_MAPHI | SHF_CLEXEC);
 		unlink(tf->tffn);
 		afree(tf, ATEMP);
-#endif
 	} else {
 		int ofd1, pv[2];
 
@@ -1800,4 +1798,15 @@ alt_expand(XPtrV *wp, char *start, char *exp_start, char *end, int fdo)
 		}
 	}
 	return;
+}
+
+/* helper function due to setjmp/longjmp woes */
+static void
+funsub(struct op *t)
+{
+	newblock();
+	e->type = E_FUNC;
+	if (!kshsetjmp(e->jbuf))
+		execute(t, XXCOM | XERROK, NULL);
+	popblock();
 }

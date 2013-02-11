@@ -2,7 +2,7 @@
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
- *		 2011, 2012
+ *		 2011, 2012, 2013
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -23,7 +23,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/exec.c,v 1.106 2012/11/30 19:02:06 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/exec.c,v 1.114 2013/02/10 23:59:25 tg Exp $");
 
 #ifndef MKSH_DEFAULT_EXECSHELL
 #define MKSH_DEFAULT_EXECSHELL	"/bin/sh"
@@ -32,9 +32,9 @@ __RCSID("$MirOS: src/bin/mksh/exec.c,v 1.106 2012/11/30 19:02:06 tg Exp $");
 static int comexec(struct op *, struct tbl * volatile, const char **,
     int volatile, volatile int *);
 static void scriptexec(struct op *, const char **) MKSH_A_NORETURN;
-static int call_builtin(struct tbl *, const char **);
+static int call_builtin(struct tbl *, const char **, const char *);
 static int iosetup(struct ioword *, struct tbl *);
-static int herein(const char *, int, char **);
+static int herein(struct ioword *, char **);
 static const char *do_selectargs(const char **, bool);
 static Test_op dbteste_isa(Test_env *, Test_meta);
 static const char *dbteste_getopnd(Test_env *, Test_op, bool);
@@ -96,8 +96,7 @@ execute(struct op * volatile t,
 		    /* and has no right-hand side (i.e. "varname=") */
 		    ccp[0] == CHAR && ccp[1] == '=' && ccp[2] == EOS &&
 		    /* plus we can have a here document content */
-		    herein(t->ioact[0]->heredoc, t->ioact[0]->flag & IOEVAL,
-		    &cp) == 0 && cp && *cp) {
+		    herein(t->ioact[0], &cp) == 0 && cp && *cp) {
 			char *sp = cp, *dp;
 			size_t n = ccp - t->vars[0] + 2, z;
 
@@ -461,7 +460,7 @@ execute(struct op * volatile t,
 		if (rv == ENOEXEC)
 			scriptexec(t, (const char **)up);
 		else
-			errorf("%s: %s", s, strerror(rv));
+			errorf("%s: %s", s, cstrerror(rv));
 	}
  Break:
 	exstat = rv & 0xFF;
@@ -479,9 +478,14 @@ execute(struct op * volatile t,
 		unwind(LEXIT);
 	if (rv != 0 && !(flags & XERROK) &&
 	    (xerrok == NULL || !*xerrok)) {
-		trapsig(ksh_SIGERR);
-		if (Flag(FERREXIT))
-			unwind(LERROR);
+		if (Flag(FERREXIT) & 0x80) {
+			/* inside eval */
+			Flag(FERREXIT) = 0;
+		} else {
+			trapsig(ksh_SIGERR);
+			if (Flag(FERREXIT))
+				unwind(LERROR);
+		}
 	}
 	return (rv);
 }
@@ -501,7 +505,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 	/* Must be static (XXX but why?) */
 	static struct op texec;
 	int type_flags;
-	int keepasn_ok;
+	bool keepasn_ok;
 	int fcflags = FC_BI|FC_FUNC|FC_PATH;
 	bool bourne_function_call = false;
 	struct block *l_expand, *l_assign;
@@ -533,7 +537,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 	 *	FOO=bar command			FOO is neither kept nor exported
 	 *	PATH=... foobar			use new PATH in foobar search
 	 */
-	keepasn_ok = 1;
+	keepasn_ok = true;
 	while (tp && tp->type == CSHELL) {
 		/* undo effects of command */
 		fcflags = FC_BI|FC_FUNC|FC_PATH;
@@ -580,7 +584,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 			 * POSIX says special builtins lose their status
 			 * if accessed using command.
 			 */
-			keepasn_ok = 0;
+			keepasn_ok = false;
 			if (!ap[0]) {
 				/* ensure command with no args exits with 0 */
 				subst_exstat = 0;
@@ -605,7 +609,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 				/* go on, use the builtin */
 				break;
 #endif
-#if !defined(MKSH_SMALL) && !defined(MKSH_DISABLE_EXPERIMENTAL)
+#if !defined(MKSH_SMALL)
 		} else if (tp->val.f == c_trap) {
 			t->u.evalflags &= ~DOTCOMEXEC;
 			break;
@@ -614,7 +618,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 			break;
 		tp = findcom(ap[0], fcflags & (FC_BI|FC_FUNC));
 	}
-#if !defined(MKSH_SMALL) && !defined(MKSH_DISABLE_EXPERIMENTAL)
+#if !defined(MKSH_SMALL)
 	if (t->u.evalflags & DOTCOMEXEC)
 		flags |= XEXEC;
 #endif
@@ -672,7 +676,11 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 
 	/* shell built-in */
 	case CSHELL:
-		rv = call_builtin(tp, (const char **)ap);
+		rv = call_builtin(tp, (const char **)ap, null);
+		if (!keepasn_ok && tp->val.f == c_shift) {
+			l_expand->argc = l_assign->argc;
+			l_expand->argv = l_assign->argv;
+		}
 		break;
 
 	/* function call */
@@ -688,14 +696,14 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 				rv = (tp->u2.errnov == ENOENT) ? 127 : 126;
 				warningf(true, "%s: %s %s: %s", cp,
 				    "can't find", "function definition file",
-				    strerror(tp->u2.errnov));
+				    cstrerror(tp->u2.errnov));
 				break;
 			}
 			if (include(tp->u.fpath, 0, NULL, false) < 0) {
 				rv = errno;
 				warningf(true, "%s: %s %s %s: %s", cp,
 				    "can't open", "function definition file",
-				    tp->u.fpath, strerror(rv));
+				    tp->u.fpath, cstrerror(rv));
 				rv = 127;
 				break;
 			}
@@ -740,8 +748,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 
 		e->type = E_FUNC;
 		if (!(i = kshsetjmp(e->jbuf))) {
-			/* seems odd to pass XERROK here, but AT&T ksh does */
-			exstat = execute(tp->val.t, flags & XERROK, xerrok) & 0xFF;
+			execute(tp->val.t, 0, NULL);
 			i = LRETURN;
 		}
 		kshname = old_kshname;
@@ -789,7 +796,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 			} else {
 				rv = 126;
 				warningf(true, "%s: %s: %s", cp, "can't execute",
-				    strerror(tp->u2.errnov));
+				    cstrerror(tp->u2.errnov));
 			}
 			break;
 		}
@@ -924,7 +931,7 @@ scriptexec(struct op *tp, const char **ap)
 	execve(args.rw[0], args.rw, cap.rw);
 
 	/* report both the programme that was run and the bogus interpreter */
-	errorf("%s: %s: %s", tp->str, sh, strerror(errno));
+	errorf("%s: %s: %s", tp->str, sh, cstrerror(errno));
 }
 
 int
@@ -933,9 +940,7 @@ shcomexec(const char **wp)
 	struct tbl *tp;
 
 	tp = ktsearch(&builtins, *wp, hash(*wp));
-	if (tp == NULL)
-		internal_errorf("%s: %s", "shcomexec", *wp);
-	return (call_builtin(tp, wp));
+	return (call_builtin(tp, wp, "shcomexec"));
 }
 
 /*
@@ -984,6 +989,8 @@ define(const char *name, struct op *t)
 
 	while (/* CONSTCOND */ 1) {
 		tp = findfunc(name, nhash, true);
+		/* because findfunc:create=true */
+		mkssert(tp != NULL);
 
 		if (tp->flag & ISSET)
 			was_set = true;
@@ -1250,10 +1257,12 @@ search_path(const char *name, const char *lpath,
 }
 
 static int
-call_builtin(struct tbl *tp, const char **wp)
+call_builtin(struct tbl *tp, const char **wp, const char *where)
 {
 	int rv;
 
+	if (!tp)
+		internal_errorf("%s: %s", where, wp[0]);
 	builtin_argv0 = wp[0];
 	builtin_flag = tp->flag;
 	shf_reopen(1, SHF_WR, shl_stdout);
@@ -1321,7 +1330,7 @@ iosetup(struct ioword *iop, struct tbl *tp)
 	case IOHERE:
 		do_open = false;
 		/* herein() returns -2 if error has been printed */
-		u = herein(iop->heredoc, iop->flag & IOEVAL, NULL);
+		u = herein(iop, NULL);
 		/* cp may have wrong name */
 		break;
 
@@ -1361,7 +1370,7 @@ iosetup(struct ioword *iop, struct tbl *tp)
 			warningf(true, "can't %s %s: %s",
 			    iotype == IODUP ? "dup" :
 			    (iotype == IOREAD || iotype == IOHERE) ?
-			    "open" : "create", cp, strerror(u));
+			    "open" : "create", cp, cstrerror(u));
 		}
 		return (-1);
 	}
@@ -1391,7 +1400,7 @@ iosetup(struct ioword *iop, struct tbl *tp)
 			warningf(true, "%s %s %s",
 			    "can't finish (dup) redirection",
 			    snptreef(NULL, 32, "%R", &iotmp),
-			    strerror(eno));
+			    cstrerror(eno));
 			if (iotype != IODUP)
 				close(u);
 			return (-1);
@@ -1425,7 +1434,7 @@ iosetup(struct ioword *iop, struct tbl *tp)
 static int
 hereinval(const char *content, int sub, char **resbuf, struct shf *shf)
 {
-	const char *ccp;
+	const char * volatile ccp = content;
 	struct source *s, *osource;
 
 	osource = source;
@@ -1439,14 +1448,13 @@ hereinval(const char *content, int sub, char **resbuf, struct shf *shf)
 	if (sub) {
 		/* do substitutions on the content of heredoc */
 		s = pushs(SSTRING, ATEMP);
-		s->start = s->str = content;
+		s->start = s->str = ccp;
 		source = s;
-		if (yylex(ONEWORD|HEREDOC) != LWORD)
+		if (yylex(sub) != LWORD)
 			internal_errorf("%s: %s", "herein", "yylex");
 		source = osource;
 		ccp = evalstr(yylval.cp, 0);
-	} else
-		ccp = content;
+	}
 
 	if (resbuf == NULL)
 		shf_puts(ccp, shf);
@@ -1458,7 +1466,7 @@ hereinval(const char *content, int sub, char **resbuf, struct shf *shf)
 }
 
 static int
-herein(const char *content, int sub, char **resbuf)
+herein(struct ioword *iop, char **resbuf)
 {
 	int fd = -1;
 	struct shf *shf;
@@ -1466,15 +1474,20 @@ herein(const char *content, int sub, char **resbuf)
 	int i;
 
 	/* ksh -c 'cat << EOF' can cause this... */
-	if (content == NULL) {
+	if (iop->heredoc == NULL) {
 		warningf(true, "%s missing", "here document");
 		/* special to iosetup(): don't print error */
 		return (-2);
 	}
 
+	/* lexer substitution flags */
+	i = (iop->flag & IOEVAL) ?
+	    (ONEWORD | ((iop->flag & IOHERESTR) ? HERESTRBODY : HEREDOCBODY)) :
+	    0;
+
 	/* skip all the fd setup if we just want the value */
 	if (resbuf != NULL)
-		return (hereinval(content, sub, resbuf, NULL));
+		return (hereinval(iop->heredoc, i, resbuf, NULL));
 
 	/*
 	 * Create temp file to hold content (done before newenv
@@ -1484,14 +1497,14 @@ herein(const char *content, int sub, char **resbuf)
 	if (!(shf = h->shf) || (fd = open(h->tffn, O_RDONLY, 0)) < 0) {
 		i = errno;
 		warningf(true, "can't %s temporary file %s: %s",
-		    !shf ? "create" : "open", h->tffn, strerror(i));
+		    !shf ? "create" : "open", h->tffn, cstrerror(i));
 		if (shf)
 			shf_close(shf);
 		/* special to iosetup(): don't print error */
 		return (-2);
 	}
 
-	if (hereinval(content, sub, NULL, shf) == -2) {
+	if (hereinval(iop->heredoc, i, NULL, shf) == -2) {
 		close(fd);
 		/* special to iosetup(): don't print error */
 		return (-2);
@@ -1501,7 +1514,7 @@ herein(const char *content, int sub, char **resbuf)
 		i = errno;
 		close(fd);
 		warningf(true, "can't %s temporary file %s: %s",
-		    "write", h->tffn, strerror(i));
+		    "write", h->tffn, cstrerror(i));
 		/* special to iosetup(): don't print error */
 		return (-2);
 	}
@@ -1534,7 +1547,7 @@ do_selectargs(const char **ap, bool print_menu)
 		if (print_menu || !*str_val(global("REPLY")))
 			pr_menu(ap);
 		shellf("%s", str_val(global("PS3")));
-		if (call_builtin(findcom("read", FC_BI), read_args))
+		if (call_builtin(findcom("read", FC_BI), read_args, Tselect))
 			return (NULL);
 		s = str_val(global("REPLY"));
 		if (*s) {

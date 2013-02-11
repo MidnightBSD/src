@@ -30,7 +30,7 @@
 #include <grp.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.201 2012/11/30 17:34:46 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.205 2012/12/17 23:18:08 tg Exp $");
 
 #define KSH_CHVT_FLAG
 #ifdef MKSH_SMALL
@@ -52,7 +52,7 @@ static const unsigned char *pat_scan(const unsigned char *,
     const unsigned char *, bool);
 static int do_gmatch(const unsigned char *, const unsigned char *,
     const unsigned char *, const unsigned char *);
-static const unsigned char *cclass(const unsigned char *, int);
+static const unsigned char *cclass(const unsigned char *, unsigned char);
 #ifdef KSH_CHVT_CODE
 static void chvt(const char *);
 #endif
@@ -226,13 +226,13 @@ getoptions(void)
 
 /* change a Flag(*) value; takes care of special actions */
 void
-change_flag(enum sh_flag f, int what, unsigned int newval)
+change_flag(enum sh_flag f, int what, bool newset)
 {
 	unsigned char oldval;
+	unsigned char newval;
 
 	oldval = Flag(f);
-	/* needed for tristates */
-	Flag(f) = newval ? 1 : 0;
+	Flag(f) = newval = (newset ? 1 : 0);
 #ifndef MKSH_UNEMPLOYED
 	if (f == FMONITOR) {
 		if (what != OF_CMDLINE && newval != oldval)
@@ -249,7 +249,7 @@ change_flag(enum sh_flag f, int what, unsigned int newval)
 		Flag(FVI) =
 #endif
 		    Flag(FEMACS) = Flag(FGMACS) = 0;
-		Flag(f) = (unsigned char)newval;
+		Flag(f) = newval;
 	} else
 #endif
 	  if (f == FPRIVILEGED && oldval && !newval) {
@@ -278,12 +278,12 @@ change_flag(enum sh_flag f, int what, unsigned int newval)
 #endif
 	} else if ((f == FPOSIX || f == FSH) && newval) {
 		Flag(FPOSIX) = Flag(FSH) = Flag(FBRACEEXPAND) = 0;
-		Flag(f) = (unsigned char)newval;
+		Flag(f) = newval;
 	}
 	/* Changing interactive flag? */
 	if (f == FTALKING) {
 		if ((what == OF_CMDLINE || what == OF_SET) && procpid == kshpid)
-			Flag(FTALKING_I) = (unsigned char)newval;
+			Flag(FTALKING_I) = newval;
 	}
 }
 
@@ -299,7 +299,8 @@ parse_args(const char **argv,
 {
 	static char cmd_opts[NELEM(options) + 5]; /* o:T:\0 */
 	static char set_opts[NELEM(options) + 6]; /* A:o;s\0 */
-	char set, *opts;
+	bool set;
+	char *opts;
 	const char *array = NULL;
 	Getopt go;
 	size_t i;
@@ -354,7 +355,7 @@ parse_args(const char **argv,
 		opts = set_opts;
 	ksh_getopt_reset(&go, GF_ERROR|GF_PLUSOPT);
 	while ((optc = ksh_getopt(argv, &go, opts)) != -1) {
-		set = (go.info & GI_PLUS) ? 0 : 1;
+		set = tobool(!(go.info & GI_PLUS));
 		switch (optc) {
 		case 'A':
 			if (what == OF_FIRSTTIME)
@@ -378,7 +379,7 @@ parse_args(const char **argv,
 				break;
 			}
 			i = option(go.optarg);
-			if ((i != (size_t)-1) && set == Flag(i))
+			if ((i != (size_t)-1) && (set ? 1U : 0U) == Flag(i))
 				/*
 				 * Don't check the context if the flag
 				 * isn't changing - makes "set -o interactive"
@@ -401,7 +402,7 @@ parse_args(const char **argv,
 #ifndef KSH_CHVT_CODE
 			errorf("no TIOCSCTTY ioctl");
 #else
-			change_flag(FTALKING, OF_CMDLINE, 1);
+			change_flag(FTALKING, OF_CMDLINE, true);
 			chvt(go.optarg);
 			break;
 #endif
@@ -445,6 +446,7 @@ parse_args(const char **argv,
 	if (arrayset) {
 		const char *ccp = NULL;
 
+		mkssert(array != NULL);
 		if (*array)
 			ccp = skip_varname(array, false);
 		if (!ccp || !(!ccp[0] || (ccp[0] == '+' && !ccp[1]))) {
@@ -469,33 +471,40 @@ parse_args(const char **argv,
 int
 getn(const char *s, int *ai)
 {
-	int c;
-	unsigned int i, j, k;
+	char c;
+	unsigned int i = 0;
 	bool neg = false;
-	int rv = 0;
 
 	do {
 		c = *s++;
 	} while (ksh_isspace(c));
-	if (c == '-') {
+
+	switch (c) {
+	case '-':
 		neg = true;
+		/* FALLTHROUGH */
+	case '+':
 		c = *s++;
-	} else if (c == '+')
-		c = *s++;
-	k = neg ? 2147483648U : 2147483647U;
-	j = i = 0;
+		break;
+	}
+
 	do {
 		if (!ksh_isdigit(c))
-			goto getn_out;
-		if ((j = i * 10 + c - '0') > k)
-			goto getn_out;
-		i = j;
+			/* not numeric */
+			return (0);
+		if (i > 214748364U)
+			/* overflow on multiplication */
+			return (0);
+		i = i * 10U + (unsigned int)(c - '0');
+		/* now: i <= 2147483649U */
 	} while ((c = *s++));
-	rv = 1;
 
- getn_out:
-	*ai = i == 2147483648U ? (int)i : neg ? -(int)i : (int)i;
-	return (rv);
+	if (i > (neg ? 2147483648U : 2147483647U))
+		/* overflow for signed 32-bit int */
+		return (0);
+
+	*ai = neg ? -(int)i : (int)i;
+	return (1);
 }
 
 /**
@@ -698,7 +707,7 @@ static int
 do_gmatch(const unsigned char *s, const unsigned char *se,
     const unsigned char *p, const unsigned char *pe)
 {
-	int sc, pc;
+	unsigned char sc, pc;
 	const unsigned char *prest, *psub, *pnext;
 	const unsigned char *srest;
 
@@ -828,12 +837,13 @@ do_gmatch(const unsigned char *s, const unsigned char *se,
 }
 
 static const unsigned char *
-cclass(const unsigned char *p, int sub)
+cclass(const unsigned char *p, unsigned char sub)
 {
-	int c, d, notp, found = 0;
+	unsigned char c, d;
+	bool notp, found = false;
 	const unsigned char *orig_p = p;
 
-	if ((notp = (ISMAGIC(*p) && *++p == '!')))
+	if ((notp = tobool(ISMAGIC(*p) && *++p == '!')))
 		p++;
 	do {
 		c = *p++;
@@ -867,7 +877,7 @@ cclass(const unsigned char *p, int sub)
 		} else
 			d = c;
 		if (c == sub || (c <= sub && sub <= d))
-			found = 1;
+			found = true;
 	} while (!(ISMAGIC(p[0]) && p[1] == ']'));
 
 	return ((found != notp) ? p+2 : NULL);
@@ -1843,7 +1853,7 @@ c_cd(const char **wp)
 		if (cdnode)
 			bi_errorf("%s: %s", dir, "bad directory");
 		else
-			bi_errorf("%s: %s", tryp, strerror(errno));
+			bi_errorf("%s: %s", tryp, cstrerror(errno));
 		afree(allocd, ATEMP);
 		Xfree(xs, xp);
 		return (2);

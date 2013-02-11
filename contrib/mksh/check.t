@@ -1,10 +1,10 @@
-# $MirOS: src/bin/mksh/check.t,v 1.569 2012/11/30 19:25:01 tg Exp $
+# $MirOS: src/bin/mksh/check.t,v 1.593 2013/02/11 13:06:54 tg Exp $
 # $OpenBSD: bksl-nl.t,v 1.2 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: history.t,v 1.5 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: read.t,v 1.3 2003/03/10 03:48:16 david Exp $
 #-
 # Copyright © 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
-#	      2011, 2012
+#	      2011, 2012, 2013
 #	Thorsten Glaser <tg@mirbsd.org>
 #
 # Provided that these terms and disclaimer and all copyright notices
@@ -29,7 +29,7 @@
 # http://www.freebsd.org/cgi/cvsweb.cgi/src/tools/regression/bin/test/regress.sh?rev=HEAD
 
 expected-stdout:
-	@(#)MIRBSD KSH R41 2012/11/30
+	@(#)MIRBSD KSH R42 2013/02/10
 description:
 	Check version of shell.
 stdin:
@@ -38,7 +38,7 @@ name: KSH_VERSION
 category: shell:legacy-no
 ---
 expected-stdout:
-	@(#)LEGACY KSH R41 2012/11/30
+	@(#)LEGACY KSH R42 2013/02/10
 description:
 	Check version of legacy shell.
 stdin:
@@ -217,14 +217,21 @@ description:
 	the time-limit clause (e.g. to 7) if this occurs.
 time-limit: 3
 stdin:
-	echo -n >tf
-	alias ls=ls
-	ls
-	echo $(ls)
+	print '#!'"$__progname"'\necho tf' >lq
+	chmod +x lq
+	PATH=$PWD:$PATH
+	alias lq=lq
+	lq
+	echo = now
+	i=`lq`
+	print -r -- $i
+	echo = out
 	exit 0
 expected-stdout:
 	tf
+	= now
 	tf
+	= out
 ---
 name: alias-10
 description:
@@ -1141,7 +1148,8 @@ description:
 need-pass: no
 # the mv command fails on Cygwin
 # Hurd aborts the testsuite (permission denied)
-category: !os:cygwin,!os:gnu,!os:msys,!nosymlink
+# QNX does not find subdir to cd into
+category: !os:cygwin,!os:gnu,!os:msys,!os:nto,!nosymlink
 file-setup: file 644 "x"
 	mkdir noread noread/target noread/target/subdir
 	ln -s noread link
@@ -1199,49 +1207,49 @@ stdin:
 	print '#!'"$__progname"'\nfor x in "$@"; do print -r -- "$x"; done' >pfn
 	print '#!'"$__progname"'\nfor x in "$@"; do print -nr -- "<$x> "; done' >pfs
 	chmod +x pfn pfs
-	(echo 1 ${IFS+'}'z}) 2>&- || echo failed in 1
-	(echo 2 "${IFS+'}'z}") 2>&- || echo failed in 2
-	(echo 3 "foo ${IFS+'bar} baz") 2>&- || echo failed in 3
-	(echo -n '4 '; ./pfn "foo ${IFS+"b   c"} baz") 2>&- || echo failed in 4
-	(echo -n '5 '; ./pfn "foo ${IFS+b   c} baz") 2>&- || echo failed in 5
-	(echo 6 ${IFS+"}"z}) 2>&- || echo failed in 6
-	(echo 7 "${IFS+"}"z}") 2>&- || echo failed in 7
-	(echo 8 "${IFS+\"}\"z}") 2>&- || echo failed in 8
-	(echo 9 "${IFS+\"\}\"z}") 2>&- || echo failed in 9
-	(echo 10 foo ${IFS+'bar} baz'}) 2>&- || echo failed in 10
-	(echo 11 "$(echo "${IFS+'}'z}")") 2>&- || echo failed in 11
-	(echo 12 "$(echo ${IFS+'}'z})") 2>&- || echo failed in 12
-	(echo 13 ${IFS+\}z}) 2>&- || echo failed in 13
-	(echo 14 "${IFS+\}z}") 2>&- || echo failed in 14
-	u=x; (echo -n '15 '; ./pfs "foo ${IFS+a"b$u{ {"{{\}b} c ${IFS+d{}} bar" ${IFS-e{}} baz; echo .) 2>&- || echo failed in 15
-	l=t; (echo 16 ${IFS+h`echo -n i ${IFS+$l}h`ere}) 2>&- || echo failed in 16
-	l=t; (echo 17 ${IFS+h$(echo -n i ${IFS+$l}h)ere}) 2>&- || echo failed in 17
-	l=t; (echo 18 "${IFS+h`echo -n i ${IFS+$l}h`ere}") 2>&- || echo failed in 18
-	l=t; (echo 19 "${IFS+h$(echo -n i ${IFS+$l}h)ere}") 2>&- || echo failed in 19
-	l=t; (echo 20 ${IFS+h`echo -n i "${IFS+$l}"h`ere}) 2>&- || echo failed in 20
-	l=t; (echo 21 ${IFS+h$(echo -n i "${IFS+$l}"h)ere}) 2>&- || echo failed in 21
-	l=t; (echo 22 "${IFS+h`echo -n i "${IFS+$l}"h`ere}") 2>&- || echo failed in 22
-	l=t; (echo 23 "${IFS+h$(echo -n i "${IFS+$l}"h)ere}") 2>&- || echo failed in 23
-	key=value; (echo -n '24 '; ./pfn "${IFS+'$key'}") 2>&- || echo failed in 24
-	key=value; (echo -n '25 '; ./pfn "${IFS+"'$key'"}") 2>&- || echo failed in 25	# ksh93: “'$key'”
-	key=value; (echo -n '26 '; ./pfn ${IFS+'$key'}) 2>&- || echo failed in 26
-	key=value; (echo -n '27 '; ./pfn ${IFS+"'$key'"}) 2>&- || echo failed in 27
-	(echo -n '28 '; ./pfn "${IFS+"'"x ~ x'}'x"'}"x}" #') 2>&- || echo failed in 28
-	u=x; (echo -n '29 '; ./pfs foo ${IFS+a"b$u{ {"{ {\}b} c ${IFS+d{}} bar ${IFS-e{}} baz; echo .) 2>&- || echo failed in 29
+	(echo 1 ${IFS+'}'z}) 2>/dev/null || echo failed in 1
+	(echo 2 "${IFS+'}'z}") 2>/dev/null || echo failed in 2
+	(echo 3 "foo ${IFS+'bar} baz") 2>/dev/null || echo failed in 3
+	(echo -n '4 '; ./pfn "foo ${IFS+"b   c"} baz") 2>/dev/null || echo failed in 4
+	(echo -n '5 '; ./pfn "foo ${IFS+b   c} baz") 2>/dev/null || echo failed in 5
+	(echo 6 ${IFS+"}"z}) 2>/dev/null || echo failed in 6
+	(echo 7 "${IFS+"}"z}") 2>/dev/null || echo failed in 7
+	(echo 8 "${IFS+\"}\"z}") 2>/dev/null || echo failed in 8
+	(echo 9 "${IFS+\"\}\"z}") 2>/dev/null || echo failed in 9
+	(echo 10 foo ${IFS+'bar} baz'}) 2>/dev/null || echo failed in 10
+	(echo 11 "$(echo "${IFS+'}'z}")") 2>/dev/null || echo failed in 11
+	(echo 12 "$(echo ${IFS+'}'z})") 2>/dev/null || echo failed in 12
+	(echo 13 ${IFS+\}z}) 2>/dev/null || echo failed in 13
+	(echo 14 "${IFS+\}z}") 2>/dev/null || echo failed in 14
+	u=x; (echo -n '15 '; ./pfs "foo ${IFS+a"b$u{ {"{{\}b} c ${IFS+d{}} bar" ${IFS-e{}} baz; echo .) 2>/dev/null || echo failed in 15
+	l=t; (echo 16 ${IFS+h`echo -n i ${IFS+$l}h`ere}) 2>/dev/null || echo failed in 16
+	l=t; (echo 17 ${IFS+h$(echo -n i ${IFS+$l}h)ere}) 2>/dev/null || echo failed in 17
+	l=t; (echo 18 "${IFS+h`echo -n i ${IFS+$l}h`ere}") 2>/dev/null || echo failed in 18
+	l=t; (echo 19 "${IFS+h$(echo -n i ${IFS+$l}h)ere}") 2>/dev/null || echo failed in 19
+	l=t; (echo 20 ${IFS+h`echo -n i "${IFS+$l}"h`ere}) 2>/dev/null || echo failed in 20
+	l=t; (echo 21 ${IFS+h$(echo -n i "${IFS+$l}"h)ere}) 2>/dev/null || echo failed in 21
+	l=t; (echo 22 "${IFS+h`echo -n i "${IFS+$l}"h`ere}") 2>/dev/null || echo failed in 22
+	l=t; (echo 23 "${IFS+h$(echo -n i "${IFS+$l}"h)ere}") 2>/dev/null || echo failed in 23
+	key=value; (echo -n '24 '; ./pfn "${IFS+'$key'}") 2>/dev/null || echo failed in 24
+	key=value; (echo -n '25 '; ./pfn "${IFS+"'$key'"}") 2>/dev/null || echo failed in 25	# ksh93: “'$key'”
+	key=value; (echo -n '26 '; ./pfn ${IFS+'$key'}) 2>/dev/null || echo failed in 26
+	key=value; (echo -n '27 '; ./pfn ${IFS+"'$key'"}) 2>/dev/null || echo failed in 27
+	(echo -n '28 '; ./pfn "${IFS+"'"x ~ x'}'x"'}"x}" #') 2>/dev/null || echo failed in 28
+	u=x; (echo -n '29 '; ./pfs foo ${IFS+a"b$u{ {"{ {\}b} c ${IFS+d{}} bar ${IFS-e{}} baz; echo .) 2>/dev/null || echo failed in 29
 	(echo -n '30 '; ./pfs ${IFS+foo 'b\
-	ar' baz}; echo .) 2>&- || (echo failed in 30; echo failed in 31)
+	ar' baz}; echo .) 2>/dev/null || (echo failed in 30; echo failed in 31)
 	(echo -n '32 '; ./pfs ${IFS+foo "b\
-	ar" baz}; echo .) 2>&- || echo failed in 32
+	ar" baz}; echo .) 2>/dev/null || echo failed in 32
 	(echo -n '33 '; ./pfs "${IFS+foo 'b\
-	ar' baz}"; echo .) 2>&- || echo failed in 33
+	ar' baz}"; echo .) 2>/dev/null || echo failed in 33
 	(echo -n '34 '; ./pfs "${IFS+foo "b\
-	ar" baz}"; echo .) 2>&- || echo failed in 34
-	(echo -n '35 '; ./pfs ${v=a\ b} x ${v=c\ d}; echo .) 2>&- || echo failed in 35
-	(echo -n '36 '; ./pfs "${v=a\ b}" x "${v=c\ d}"; echo .) 2>&- || echo failed in 36
-	(echo -n '37 '; ./pfs ${v-a\ b} x ${v-c\ d}; echo .) 2>&- || echo failed in 37
-	(echo 38 ${IFS+x'a'y} / "${IFS+x'a'y}" .) 2>&- || echo failed in 38
-	foo="x'a'y"; (echo 39 ${foo%*'a'*} / "${foo%*'a'*}" .) 2>&- || echo failed in 39
-	foo="a b c"; (echo -n '40 '; ./pfs "${foo#a}"; echo .) 2>&- || echo failed in 40
+	ar" baz}"; echo .) 2>/dev/null || echo failed in 34
+	(echo -n '35 '; ./pfs ${v=a\ b} x ${v=c\ d}; echo .) 2>/dev/null || echo failed in 35
+	(echo -n '36 '; ./pfs "${v=a\ b}" x "${v=c\ d}"; echo .) 2>/dev/null || echo failed in 36
+	(echo -n '37 '; ./pfs ${v-a\ b} x ${v-c\ d}; echo .) 2>/dev/null || echo failed in 37
+	(echo 38 ${IFS+x'a'y} / "${IFS+x'a'y}" .) 2>/dev/null || echo failed in 38
+	foo="x'a'y"; (echo 39 ${foo%*'a'*} / "${foo%*'a'*}" .) 2>/dev/null || echo failed in 39
+	foo="a b c"; (echo -n '40 '; ./pfs "${foo#a}"; echo .) 2>/dev/null || echo failed in 40
 expected-stdout:
 	1 }z
 	2 ''z}
@@ -1295,12 +1303,12 @@ stdin:
 		(echo "$1 plus norm foo ${v+'bar'} baz")
 		(echo "$1 dash norm foo ${v-'bar'} baz")
 		(echo "$1 eqal norm foo ${v='bar'} baz")
-		(echo "$1 qstn norm foo ${v?'bar'} baz") 2>&- || \
+		(echo "$1 qstn norm foo ${v?'bar'} baz") 2>/dev/null || \
 		    echo "$1 qstn norm -> error"
 		(echo "$1 PLUS norm foo ${v:+'bar'} baz")
 		(echo "$1 DASH norm foo ${v:-'bar'} baz")
 		(echo "$1 EQAL norm foo ${v:='bar'} baz")
-		(echo "$1 QSTN norm foo ${v:?'bar'} baz") 2>&- || \
+		(echo "$1 QSTN norm foo ${v:?'bar'} baz") 2>/dev/null || \
 		    echo "$1 QSTN norm -> error"
 	}
 	tl_paren() {
@@ -1309,12 +1317,12 @@ stdin:
 		(echo "$1 plus parn foo ${v+(bar)} baz")
 		(echo "$1 dash parn foo ${v-(bar)} baz")
 		(echo "$1 eqal parn foo ${v=(bar)} baz")
-		(echo "$1 qstn parn foo ${v?(bar)} baz") 2>&- || \
+		(echo "$1 qstn parn foo ${v?(bar)} baz") 2>/dev/null || \
 		    echo "$1 qstn parn -> error"
 		(echo "$1 PLUS parn foo ${v:+(bar)} baz")
 		(echo "$1 DASH parn foo ${v:-(bar)} baz")
 		(echo "$1 EQAL parn foo ${v:=(bar)} baz")
-		(echo "$1 QSTN parn foo ${v:?(bar)} baz") 2>&- || \
+		(echo "$1 QSTN parn foo ${v:?(bar)} baz") 2>/dev/null || \
 		    echo "$1 QSTN parn -> error"
 	}
 	tl_brace() {
@@ -1323,12 +1331,12 @@ stdin:
 		(echo "$1 plus brac foo ${v+a$u{{{\}b} c ${v+d{}} baz")
 		(echo "$1 dash brac foo ${v-a$u{{{\}b} c ${v-d{}} baz")
 		(echo "$1 eqal brac foo ${v=a$u{{{\}b} c ${v=d{}} baz")
-		(echo "$1 qstn brac foo ${v?a$u{{{\}b} c ${v?d{}} baz") 2>&- || \
+		(echo "$1 qstn brac foo ${v?a$u{{{\}b} c ${v?d{}} baz") 2>/dev/null || \
 		    echo "$1 qstn brac -> error"
 		(echo "$1 PLUS brac foo ${v:+a$u{{{\}b} c ${v:+d{}} baz")
 		(echo "$1 DASH brac foo ${v:-a$u{{{\}b} c ${v:-d{}} baz")
 		(echo "$1 EQAL brac foo ${v:=a$u{{{\}b} c ${v:=d{}} baz")
-		(echo "$1 QSTN brac foo ${v:?a$u{{{\}b} c ${v:?d{}} baz") 2>&- || \
+		(echo "$1 QSTN brac foo ${v:?a$u{{{\}b} c ${v:?d{}} baz") 2>/dev/null || \
 		    echo "$1 QSTN brac -> error"
 	}
 	tl_norm 1 -
@@ -1425,12 +1433,12 @@ stdin:
 		(echo $1 plus norm foo ${v+'bar'} baz)
 		(echo $1 dash norm foo ${v-'bar'} baz)
 		(echo $1 eqal norm foo ${v='bar'} baz)
-		(echo $1 qstn norm foo ${v?'bar'} baz) 2>&- || \
+		(echo $1 qstn norm foo ${v?'bar'} baz) 2>/dev/null || \
 		    echo "$1 qstn norm -> error"
 		(echo $1 PLUS norm foo ${v:+'bar'} baz)
 		(echo $1 DASH norm foo ${v:-'bar'} baz)
 		(echo $1 EQAL norm foo ${v:='bar'} baz)
-		(echo $1 QSTN norm foo ${v:?'bar'} baz) 2>&- || \
+		(echo $1 QSTN norm foo ${v:?'bar'} baz) 2>/dev/null || \
 		    echo "$1 QSTN norm -> error"
 	}
 	tl_paren() {
@@ -1439,12 +1447,12 @@ stdin:
 		(echo $1 plus parn foo ${v+\(bar')'} baz)
 		(echo $1 dash parn foo ${v-\(bar')'} baz)
 		(echo $1 eqal parn foo ${v=\(bar')'} baz)
-		(echo $1 qstn parn foo ${v?\(bar')'} baz) 2>&- || \
+		(echo $1 qstn parn foo ${v?\(bar')'} baz) 2>/dev/null || \
 		    echo "$1 qstn parn -> error"
 		(echo $1 PLUS parn foo ${v:+\(bar')'} baz)
 		(echo $1 DASH parn foo ${v:-\(bar')'} baz)
 		(echo $1 EQAL parn foo ${v:=\(bar')'} baz)
-		(echo $1 QSTN parn foo ${v:?\(bar')'} baz) 2>&- || \
+		(echo $1 QSTN parn foo ${v:?\(bar')'} baz) 2>/dev/null || \
 		    echo "$1 QSTN parn -> error"
 	}
 	tl_brace() {
@@ -1453,12 +1461,12 @@ stdin:
 		(echo $1 plus brac foo ${v+a$u{{{\}b} c ${v+d{}} baz)
 		(echo $1 dash brac foo ${v-a$u{{{\}b} c ${v-d{}} baz)
 		(echo $1 eqal brac foo ${v=a$u{{{\}b} c ${v=d{}} baz)
-		(echo $1 qstn brac foo ${v?a$u{{{\}b} c ${v?d{}} baz) 2>&- || \
+		(echo $1 qstn brac foo ${v?a$u{{{\}b} c ${v?d{}} baz) 2>/dev/null || \
 		    echo "$1 qstn brac -> error"
 		(echo $1 PLUS brac foo ${v:+a$u{{{\}b} c ${v:+d{}} baz)
 		(echo $1 DASH brac foo ${v:-a$u{{{\}b} c ${v:-d{}} baz)
 		(echo $1 EQAL brac foo ${v:=a$u{{{\}b} c ${v:=d{}} baz)
-		(echo $1 QSTN brac foo ${v:?a$u{{{\}b} c ${v:?d{}} baz) 2>&- || \
+		(echo $1 QSTN brac foo ${v:?a$u{{{\}b} c ${v:?d{}} baz) 2>/dev/null || \
 		    echo "$1 QSTN brac -> error"
 	}
 	tl_norm 1 -
@@ -2060,7 +2068,9 @@ description:
 	Check that globbing matches the right things...
 # breaks on Mac OSX (HFS+ non-standard Unicode canonical decomposition)
 # breaks on Cygwin 1.7 (files are now UTF-16 or something)
-category: !os:cygwin,!os:darwin,!os:msys
+# breaks on QNX 6.4.1 (says RT)
+category: !os:cygwin,!os:darwin,!os:msys,!os:nto
+need-pass: no
 file-setup: file 644 "a�c"
 stdin:
 	echo a[�-�]*
@@ -2239,6 +2249,7 @@ stdin:
 	tr abcdefghijklmnopqrstuvwxyz nopqrstuvwxyzabcdefghijklm <<<'$bar'
 	tr abcdefghijklmnopqrstuvwxyz nopqrstuvwxyzabcdefghijklm <<<\$bar
 	tr abcdefghijklmnopqrstuvwxyz nopqrstuvwxyzabcdefghijklm <<<-foo
+	tr abcdefghijklmnopqrstuvwxyz nopqrstuvwxyzabcdefghijklm <<<"$(echo "foo bar")"
 expected-stdout:
 	sbb
 	sbb
@@ -2247,6 +2258,7 @@ expected-stdout:
 	$one
 	$one
 	-sbb
+	sbb one
 ---
 name: heredoc-9b
 description:
@@ -2284,7 +2296,7 @@ name: heredoc-9e
 description:
 	Check here string related regression with multiple iops
 stdin:
-	echo $(tr r z <<<'bar' 2>&-)
+	echo $(tr r z <<<'bar' 2>/dev/null)
 expected-stdout:
 	baz
 ---
@@ -4335,7 +4347,7 @@ stdin:
 	cat t1 t1 t1 t1  t1 t1 t1 t1  t1 t1 t1 t1  t1 t1 t1 t1  > t2
 	cat t2 t2 t2 t2  t2 t2 t2 t2  t2 t2 t2 t2  t2 t2 t2 t2  > t1
 	cat t1 t1 t1 t1 > t2
-	(: ; cat t2 2>&-) | sleep 1
+	(: ; cat t2 2>/dev/null) | sleep 1
 ---
 name: regression-14
 description:
@@ -5742,6 +5754,21 @@ expected-stdout:
 	
 	Stop in WD/zd/a (line 2 of Makefile).
 ---
+name: exit-err-7
+description:
+	"set -e" regression (LP#1104543)
+stdin:
+	set -e
+	bla() {
+		[ -x $PWD/nonexistant ] && $PWD/nonexistant
+	}
+	echo x
+	bla
+	echo y$?
+expected-stdout:
+	x
+expected-exit: 1
+---
 name: exit-enoent-1
 description:
 	SUSv4 says that the shell should exit with 126/127 in some situations
@@ -5810,6 +5837,140 @@ stdin:
 expected-stdout:
 	hi
 expected-exit: 9
+---
+name: exit-trap-2
+description:
+	Check that ERR and EXIT traps are run just like ksh93 does.
+	GNU bash does not run ERtrap in ±e eval-undef but runs it
+	twice (bug?) in +e eval-false, so does ksh93 (bug?), which
+	also has a bug to continue execution (echoing "and out" and
+	returning 0) in +e eval-undef.
+file-setup: file 644 "x"
+	v=; unset v
+	trap 'echo EXtrap' EXIT
+	trap 'echo ERtrap' ERR
+	set $1
+	echo "and run $2"
+	eval $2
+	echo and out
+file-setup: file 644 "xt"
+	v=; unset v
+	trap 'echo EXtrap' EXIT
+	trap 'echo ERtrap' ERR
+	set $1
+	echo 'and run true'
+	true
+	echo and out
+file-setup: file 644 "xf"
+	v=; unset v
+	trap 'echo EXtrap' EXIT
+	trap 'echo ERtrap' ERR
+	set $1
+	echo 'and run false'
+	false
+	echo and out
+file-setup: file 644 "xu"
+	v=; unset v
+	trap 'echo EXtrap' EXIT
+	trap 'echo ERtrap' ERR
+	set $1
+	echo 'and run ${v?}'
+	${v?}
+	echo and out
+stdin:
+	runtest() {
+		rm -f rc
+		(
+			"$__progname" "$@"
+			echo $? >rc
+		) 2>&1 | sed \
+		    -e 's/parameter not set/parameter null or not set/' \
+		    -e 's/[[]6]//' -e 's/: eval: line 1//' -e 's/: line 6//' \
+		    -e "s^${__progname%.exe}\.*e*x*e*: <stdin>\[[0-9]*]PROG"
+	}
+	xe=-e
+	echo : $xe
+	runtest x $xe true
+	echo = eval-true $(<rc) .
+	runtest x $xe false
+	echo = eval-false $(<rc) .
+	runtest x $xe '${v?}'
+	echo = eval-undef $(<rc) .
+	runtest xt $xe
+	echo = noeval-true $(<rc) .
+	runtest xf $xe
+	echo = noeval-false $(<rc) .
+	runtest xu $xe
+	echo = noeval-undef $(<rc) .
+	xe=+e
+	echo : $xe
+	runtest x $xe true
+	echo = eval-true $(<rc) .
+	runtest x $xe false
+	echo = eval-false $(<rc) .
+	runtest x $xe '${v?}'
+	echo = eval-undef $(<rc) .
+	runtest xt $xe
+	echo = noeval-true $(<rc) .
+	runtest xf $xe
+	echo = noeval-false $(<rc) .
+	runtest xu $xe
+	echo = noeval-undef $(<rc) .
+expected-stdout:
+	: -e
+	and run true
+	and out
+	EXtrap
+	= eval-true 0 .
+	and run false
+	ERtrap
+	EXtrap
+	= eval-false 1 .
+	and run ${v?}
+	x: v: parameter null or not set
+	ERtrap
+	EXtrap
+	= eval-undef 1 .
+	and run true
+	and out
+	EXtrap
+	= noeval-true 0 .
+	and run false
+	ERtrap
+	EXtrap
+	= noeval-false 1 .
+	and run ${v?}
+	xu: v: parameter null or not set
+	EXtrap
+	= noeval-undef 1 .
+	: +e
+	and run true
+	and out
+	EXtrap
+	= eval-true 0 .
+	and run false
+	ERtrap
+	and out
+	EXtrap
+	= eval-false 0 .
+	and run ${v?}
+	x: v: parameter null or not set
+	ERtrap
+	EXtrap
+	= eval-undef 1 .
+	and run true
+	and out
+	EXtrap
+	= noeval-true 0 .
+	and run false
+	ERtrap
+	and out
+	EXtrap
+	= noeval-false 0 .
+	and run ${v?}
+	xu: v: parameter null or not set
+	EXtrap
+	= noeval-undef 1 .
 ---
 name: test-stlt-1
 description:
@@ -7531,18 +7692,34 @@ expected-stdout:
 ---
 name: dollar-quotes-in-herestrings
 description:
-	They are, not parsed in here strings either
+	On the other hand, they are parsed in here strings and
+	parameter substitutions
 stdin:
 	cat <<<"dollar = strchr(s, '$');	/* ' */"
 	cat <<<'dollar = strchr(s, '\''$'\'');	/* '\'' */'
 	x="dollar = strchr(s, '$');	/* ' */"
 	cat <<<"$x"
 	cat <<<$'a\E[0m\tb'
+	unset nl; print -r -- "x${nl:=$'\n'}y"
+	echo "1 foo\"bar"
+	cat <<EOF
+	2 foo\"bar
+	EOF
+	cat <<<"3 foo\"bar"
+	cat <<<"4 foo\\\"bar"
+	cat <<<'5 foo\"bar'
 expected-stdout:
+	dollar = strchr(s, ');	/*  */
 	dollar = strchr(s, '$');	/* ' */
-	dollar = strchr(s, '$');	/* ' */
-	dollar = strchr(s, '$');	/* ' */
+	dollar = strchr(s, ');	/*  */
 	a[0m	b
+	x
+	y
+	1 foo"bar
+	2 foo\"bar
+	3 foo"bar
+	4 foo\"bar
+	5 foo\"bar
 ---
 name: dot-needs-argument
 description:
@@ -7571,7 +7748,7 @@ stdin:
 	foo
 	korn
 	unset -f foo
-	foo 2>&- || echo rab
+	foo 2>/dev/null || echo rab
 expected-stdout:
 	baz
 	bar
@@ -7593,11 +7770,13 @@ stdin:
 	mk 'foo ()' >f-dash
 	mk 'function foo ()' >f-bash
 	mk 'function stop ()' stop >f-stop
+	print '#!'"$__progname"'\nprint -r -- "${0%/f-argh}"' >f-argh
 	chmod +x f-*
-	echo "korn: $(./f-korn)"
-	echo "dash: $(./f-dash)"
-	echo "bash: $(./f-bash)"
-	echo "stop: $(./f-stop)"
+	u=$(./f-argh)
+	x="korn: $(./f-korn)"; echo "${x/@("$u")/.}"
+	x="dash: $(./f-dash)"; echo "${x/@("$u")/.}"
+	x="bash: $(./f-bash)"; echo "${x/@("$u")/.}"
+	x="stop: $(./f-stop)"; echo "${x/@("$u")/.}"
 expected-stdout:
 	korn: bar='foo'
 	dash: bar='./f-dash'
@@ -8133,6 +8312,36 @@ stdin:
 	fi
 expected-stdout:
 	okay
+---
+name: redir-1
+description:
+	Check some of the most basic invariants of I/O redirection
+stdin:
+	i=0
+	function d {
+		print o$i.
+		print -u2 e$((i++)).
+	}
+	d >a 2>b
+	echo =1=
+	cat a
+	echo =2=
+	cat b
+	echo =3=
+	d 2>&1 >c
+	echo =4=
+	cat c
+	echo =5=
+expected-stdout:
+	=1=
+	o0.
+	=2=
+	e0.
+	=3=
+	e1.
+	=4=
+	o1.
+	=5=
 ---
 name: bashiop-1
 description:
@@ -9576,7 +9785,6 @@ expected-stdout:
 name: funsub-1
 description:
 	Check that non-subenvironment command substitution works
-category: !noexperimental
 stdin:
 	set -e
 	foo=bar
@@ -9593,6 +9801,19 @@ expected-stdout:
 	ib bar :
 	ia baz : .
 	oa baz .
+---
+name: funsub-2
+description:
+	You can now reliably use local and return in funsubs
+	(not exit though)
+stdin:
+	x=q; e=1; x=${ echo a; e=2; echo x$e;}; echo 1:y$x,$e,$?.
+	x=q; e=1; x=${ echo a; typeset e=2; echo x$e;}; echo 2:y$x,$e,$?.
+	x=q; e=1; x=${ echo a; typeset e=2; return 3; echo x$e;}; echo 3:y$x,$e,$?.
+expected-stdout:
+	1:ya x2,2,0.
+	2:ya x2,1,0.
+	3:ya,1,3.
 ---
 name: test-stnze-1
 description:
@@ -10389,6 +10610,50 @@ expected-stdout:
 	4(})korn no
 	5(esac)bourne no
 	6(esac)korn esac
+---
+name: command-shift
+description:
+	Check that 'command shift' works
+stdin:
+	function snc {
+		echo "before	0='$0' 1='$1' 2='$2'"
+		shift
+		echo "after	0='$0' 1='$1' 2='$2'"
+	}
+	function swc {
+		echo "before	0='$0' 1='$1' 2='$2'"
+		command shift
+		echo "after	0='$0' 1='$1' 2='$2'"
+	}
+	echo = without command
+	snc 一 二
+	echo = with command
+	swc 一 二
+	echo = done
+expected-stdout:
+	= without command
+	before	0='snc' 1='一' 2='二'
+	after	0='snc' 1='二' 2=''
+	= with command
+	before	0='swc' 1='一' 2='二'
+	after	0='swc' 1='二' 2=''
+	= done
+---
+name: duffs-device
+description:
+	Check that the compiler did not optimise-break them
+	(lex.c has got a similar one in SHEREDELIM)
+stdin:
+	set +U
+	s=
+	typeset -i1 i=0
+	while (( ++i < 256 )); do
+		s+=${i#1#}
+	done
+	s+=$'\xC2\xA0\xE2\x82\xAC\xEF\xBF\xBD\xEF\xBF\xBE\xEF\xBF\xBF\xF0\x90\x80\x80.'
+	typeset -p s
+expected-stdout:
+	typeset s=$'\001\002\003\004\005\006\a\b\t\n\v\f\r\016\017\020\021\022\023\024\025\026\027\030\031\032\E\034\035\036\037 !"#$%&\047()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\177\200\201\202\203\204\205\206\207\210\211\212\213\214\215\216\217\220\221\222\223\224\225\226\227\230\231\232\233\234\235\236\237\240\241\242\243\244\245\246\247\250\251\252\253\254\255\256\257\260\261\262\263\264\265\266\267\270\271\272\273\274\275\276\277\300\301\302\303\304\305\306\307\310\311\312\313\314\315\316\317\320\321\322\323\324\325\326\327\330\331\332\333\334\335\336\337\340\341\342\343\344\345\346\347\350\351\352\353\354\355\356\357\360\361\362\363\364\365\366\367\370\371\372\373\374\375\376\377\u00A0\u20AC\uFFFD\357\277\276\357\277\277\360\220\200\200.'
 ---
 name: stateptr-underflow
 description:

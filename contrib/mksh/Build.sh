@@ -1,8 +1,8 @@
 #!/bin/sh
-srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.590.2.1 2012/11/30 20:49:10 tg Exp $'
+srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.616.2.1 2013/02/11 17:25:00 tg Exp $'
 #-
 # Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
-#		2011, 2012
+#		2011, 2012, 2013
 #	Thorsten Glaser <tg@mirbsd.org>
 #
 # Provided that these terms and disclaimer and all copyright notices
@@ -270,7 +270,21 @@ ac_header() {
 	echo "/* NeXTstep bug workaround */" >x
 	for i
 	do
-		echo "#include <$i>" >>x
+		case $i in
+		_time)
+			echo '#if HAVE_BOTH_TIME_H' >>x
+			echo '#include <sys/time.h>' >>x
+			echo '#include <time.h>' >>x
+			echo '#elif HAVE_SYS_TIME_H' >>x
+			echo '#include <sys/time.h>' >>x
+			echo '#elif HAVE_TIME_H' >>x
+			echo '#include <time.h>' >>x
+			echo '#endif' >>x
+			;;
+		*)
+			echo "#include <$i>" >>x
+			;;
+		esac
 	done
 	echo "#include <$hf>" >>x
 	echo 'int main(void) { return (0); }' >>x
@@ -594,7 +608,6 @@ IRIX*)
 Linux)
 	case $CC in
 	*tendracc*) ;;
-	*/musl-gcc*) add_cppflags -D_GNU_SOURCE -D_BSD_SOURCE ;;
 	*) add_cppflags -D_GNU_SOURCE ;;
 	esac
 	add_cppflags -DSETUID_CAN_FAIL_WITH_EAGAIN
@@ -604,6 +617,14 @@ LynxOS)
 	oswarn="; it has minor issues"
 	;;
 MidnightBSD)
+	;;
+Minix-vmd)
+	add_cppflags -DMKSH__NO_SETEUGID
+	add_cppflags -DMKSH_UNEMPLOYED
+	add_cppflags -DMKSH_CONSERVATIVE_FDS
+	add_cppflags -D_MINIX_SOURCE
+	oldish_ed=no-stderr-ed		# no /bin/ed, maybe see below
+	: ${HAVE_SETLOCALE_CTYPE=0}
 	;;
 Minix3)
 	add_cppflags -DMKSH_UNEMPLOYED
@@ -675,6 +696,7 @@ PW32*)
 	;;
 QNX)
 	add_cppflags -D__NO_EXT_QNX
+	add_cppflags -D__EXT_UNIX_MISC
 	case $TARGET_OSREV in
 	[012345].*|6.[0123].*|6.4.[01])
 		oldish_ed=no-stderr-ed		# oldish /bin/ed is broken
@@ -869,7 +891,7 @@ EOF
 ct=untested
 et=untested
 vv ']' "$CPP $CFLAGS $CPPFLAGS $NOWARN conftest.c | \
-    sed -n '/^[ce]t *= */s/\([ce]t\) *= */\1=/p' | tr -d \\\\015 >x"
+    sed -n '/^ *[ce]t *= */s/^ *\([ce]t\) *= */\1=/p' | tr -d \\\\015 >x"
 sed 's/^/[ /' x
 eval `cat x`
 rmf x vv.out
@@ -1003,9 +1025,7 @@ uslc)
 	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN -V conftest.c $LIBS"
 	;;
 watcom)
-	echo >&2 'Warning: Watcom C Compiler detected. This compiler has not yet
-    been tested for compatibility with mksh. Continue at your
-    own risk, please report success/failure to the developers.'
+	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN -v conftest.c $LIBS"
 	;;
 xlc)
 	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN $LIBS -qversion"
@@ -1110,6 +1130,9 @@ elif test $ct = tendra; then
 elif test $ct = ucode; then
 	save_NOWARN=
 	DOWARN=-w2
+elif test $ct = watcom; then
+	save_NOWARN=
+	DOWARN=-Wc,-we
 else
 	test x"$save_NOWARN" = x"" && save_NOWARN=-Wno-error
 	ac_flags 0 wnoerror "$save_NOWARN"
@@ -1155,6 +1178,8 @@ if test $ct = gcc; then
 	# The following tests run with -Werror (gcc only) if possible
 	NOWARN=$DOWARN; phase=u
 	ac_flags 0 wnooverflow -Wno-overflow
+	# mksh is not written in CFrustFrust!
+	ac_flags 1 no_eh_frame -fno-asynchronous-unwind-tables
 	ac_flags 1 fnostrictaliasing -fno-strict-aliasing
 	ac_flags 1 fstackprotectorall -fstack-protector-all
 	test $cm = dragonegg && case " $CC $CFLAGS $LDFLAGS " in
@@ -1235,7 +1260,7 @@ elif test $ct = msc; then
 elif test $ct = xlc; then
 	ac_flags 1 rodata "-qro -qroconst -qroptr"
 	ac_flags 1 rtcheck -qcheck=all
-	ac_flags 1 rtchkc -qextchk
+	#ac_flags 1 rtchkc -qextchk	# reported broken
 	ac_flags 1 wformat "-qformat=all -qformat=nozln"
 	#ac_flags 1 wp64 -qwarn64	# too verbose for now
 elif test $ct = tendra; then
@@ -1276,6 +1301,10 @@ ac_test attribute_bounded '' 'for __attribute__((__bounded__))' <<-'EOF'
 	    __attribute__((__bounded__ (__buffer__, 2, 3)));
 	int main(int ac, char *av[]) { return (xcopy(av[0], av[--ac], 1)); }
 	int xcopy(const void *s, void *d, size_t n) {
+		/*
+		 * if memmove does not exist, we are not on a system
+		 * with GCC with __bounded__ attribute either so poo
+		 */
 		memmove(d, s, n); return ((int)n);
 	}
 	#endif
@@ -1292,20 +1321,6 @@ ac_test attribute_format '' 'for __attribute__((__format__))' <<-'EOF'
 	extern int fprintf(FILE *, const char *format, ...)
 	    __attribute__((__format__ (__printf__, 2, 3)));
 	int main(int ac, char **av) { return (fprintf(stderr, "%s%d", *av, ac)); }
-	#endif
-EOF
-ac_test attribute_nonnull '' 'for __attribute__((__nonnull__))' <<-'EOF'
-	#if defined(__TenDRA__) || (defined(__GNUC__) && (__GNUC__ < 2))
-	/* force a failure: TenDRA and gcc 1.42 have false positive here */
-	int main(void) { return (thiswillneverbedefinedIhope()); }
-	#else
-	int foo(char *s1, char *s2) __attribute__((__nonnull__));
-	int bar(char *s1, char *s2) __attribute__((__nonnull__ (1, 2)));
-	int baz(char *s) __attribute__((__nonnull__ (1)));
-	int foo(char *s1, char *s2) { return (bar(s2, s1)); }
-	int bar(char *s1, char *s2) { return (baz(s1) - baz(s2)); }
-	int baz(char *s) { return (*s); }
-	int main(int ac, char **av) { return (ac == foo(av[0], av[ac-1])); }
 	#endif
 EOF
 ac_test attribute_noreturn '' 'for __attribute__((__noreturn__))' <<-'EOF'
@@ -1370,18 +1385,28 @@ ac_ifcpp 'ifdef MKSH_CONSERVATIVE_FDS' isset_MKSH_CONSERVATIVE_FDS '' \
 #ac_ifcpp 'ifdef MKSH_DISABLE_DEPRECATED' isset_MKSH_DISABLE_DEPRECATED '' \
 #    "if deprecated features are to be omitted" && \
 #    check_categories="$check_categories nodeprecated"
-ac_ifcpp 'ifdef MKSH_DISABLE_EXPERIMENTAL' isset_MKSH_DISABLE_EXPERIMENTAL '' \
-    "if experimental features are to be omitted" && \
-    check_categories="$check_categories noexperimental"
+#ac_ifcpp 'ifdef MKSH_DISABLE_EXPERIMENTAL' isset_MKSH_DISABLE_EXPERIMENTAL '' \
+#    "if experimental features are to be omitted" && \
+#    check_categories="$check_categories noexperimental"
 
 #
 # Environment: headers
 #
+ac_header sys/time.h sys/types.h
+ac_header time.h sys/types.h
+test "11" = "$HAVE_SYS_TIME_H$HAVE_TIME_H" || HAVE_BOTH_TIME_H=0
+ac_test both_time_h '' 'whether <sys/time.h> and <time.h> can both be included' <<-'EOF'
+	#include <sys/types.h>
+	#include <sys/time.h>
+	#include <time.h>
+	int main(void) { struct tm tm; return ((int)sizeof(tm)); }
+EOF
 ac_header sys/bsdtypes.h
 ac_header sys/file.h sys/types.h
 ac_header sys/mkdev.h sys/types.h
 ac_header sys/mman.h sys/types.h
 ac_header sys/param.h
+ac_header sys/resource.h sys/types.h _time
 ac_header sys/select.h sys/types.h
 ac_header sys/sysmacros.h
 ac_header bstring.h
@@ -1443,8 +1468,17 @@ EOF
 
 ac_test rlim_t <<-'EOF'
 	#include <sys/types.h>
+	#if HAVE_BOTH_TIME_H
 	#include <sys/time.h>
+	#include <time.h>
+	#elif HAVE_SYS_TIME_H
+	#include <sys/time.h>
+	#elif HAVE_TIME_H
+	#include <time.h>
+	#endif
+	#if HAVE_SYS_RESOURCE_H
 	#include <sys/resource.h>
+	#endif
 	#include <unistd.h>
 	int main(void) { return ((int)(rlim_t)0); }
 EOF
@@ -1495,7 +1529,7 @@ else
 		#define EXTERN
 		#define MKSH_INCLUDES_ONLY
 		#include "sh.h"
-		__RCSID("$MirOS: src/bin/mksh/Build.sh,v 1.590.2.1 2012/11/30 20:49:10 tg Exp $");
+		__RCSID("$MirOS: src/bin/mksh/Build.sh,v 1.616.2.1 2013/02/11 17:25:00 tg Exp $");
 		int main(void) { printf("Hello, World!\n"); return (0); }
 EOF
 	case $cm in
@@ -1528,18 +1562,35 @@ EOF
 fi
 
 #
-# Environment: signals
+# Environment: errors and signals
 #
 test x"NetBSD" = x"$TARGET_OS" && $e Ignore the compatibility warning.
+
+ac_testn sys_errlist '' "the sys_errlist[] array and sys_nerr" <<-'EOF'
+	extern const int sys_nerr;
+	extern const char * const sys_errlist[];
+	int main(void) { return (*sys_errlist[sys_nerr - 1]); }
+EOF
+ac_testn _sys_errlist '!' sys_errlist 0 "the _sys_errlist[] array and _sys_nerr" <<-'EOF'
+	extern const int _sys_nerr;
+	extern const char * const _sys_errlist[];
+	int main(void) { return (*_sys_errlist[_sys_nerr - 1]); }
+EOF
+if test 1 = "$HAVE__SYS_ERRLIST"; then
+	add_cppflags -Dsys_nerr=_sys_nerr
+	add_cppflags -Dsys_errlist=_sys_errlist
+	HAVE_SYS_ERRLIST=1
+fi
+ac_cppflags SYS_ERRLIST
 
 for what in name list; do
 	uwhat=`upper $what`
 	ac_testn sys_sig$what '' "the sys_sig${what}[] array" <<-EOF
-		extern const char *const sys_sig${what}[];
+		extern const char * const sys_sig${what}[];
 		int main(void) { return (sys_sig${what}[0][0]); }
 	EOF
 	ac_testn _sys_sig$what '!' sys_sig$what 0 "the _sys_sig${what}[] array" <<-EOF
-		extern const char *const _sys_sig${what}[];
+		extern const char * const _sys_sig${what}[];
 		int main(void) { return (_sys_sig${what}[0][0]); }
 	EOF
 	eval uwhat_v=\$HAVE__SYS_SIG$uwhat
@@ -1549,12 +1600,6 @@ for what in name list; do
 	fi
 	ac_cppflags SYS_SIG$uwhat
 done
-
-ac_test strsignal '!' sys_siglist 0 <<-'EOF'
-	#include <string.h>
-	#include <signal.h>
-	int main(void) { return (strsignal(1)[0]); }
-EOF
 
 #
 # Environment: library functions
@@ -1592,12 +1637,24 @@ EOF
 ac_test gettimeofday <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
-	int main(void) { return (gettimeofday(NULL, NULL)); }
+	int main(void) { struct timeval tv; return (gettimeofday(&tv, NULL)); }
 EOF
 
 ac_test killpg <<-'EOF'
 	#include <signal.h>
 	int main(int ac, char *av[]) { return (av[0][killpg(123, ac)]); }
+EOF
+
+ac_test memmove <<-'EOF'
+	#include <sys/types.h>
+	#include <stddef.h>
+	#include <string.h>
+	#if HAVE_STRINGS_H
+	#include <strings.h>
+	#endif
+	int main(int ac, char *av[]) {
+		return (*(int *)(void *)memmove(av[0], av[1], ac));
+	}
 EOF
 
 ac_test mknod '' 'if to use mknod(), makedev() and friends' <<-'EOF'
@@ -1654,7 +1711,14 @@ EOF
 
 ac_test select <<-'EOF'
 	#include <sys/types.h>
+	#if HAVE_BOTH_TIME_H
 	#include <sys/time.h>
+	#include <time.h>
+	#elif HAVE_SYS_TIME_H
+	#include <sys/time.h>
+	#elif HAVE_TIME_H
+	#include <time.h>
+	#endif
 	#if HAVE_SYS_BSDTYPES_H
 	#include <sys/bsdtypes.h>
 	#endif
@@ -1725,6 +1789,17 @@ EOF
 	fi
 fi
 
+ac_test strerror '!' sys_errlist 0 <<-'EOF'
+	extern char *strerror(int);
+	int main(int ac, char *av[]) { return (*strerror(*av[ac])); }
+EOF
+
+ac_test strsignal '!' sys_siglist 0 <<-'EOF'
+	#include <string.h>
+	#include <signal.h>
+	int main(void) { return (strsignal(1)[0]); }
+EOF
+
 ac_test strlcpy <<-'EOF'
 	#include <string.h>
 	int main(int ac, char *av[]) { return (strlcpy(*av, av[1],
@@ -1734,8 +1809,8 @@ EOF
 #
 # check headers for declarations
 #
-save_CC=$CC; save_LDFLAGS=$LDFLAGS; save_LIBS=$LIBS
-CC="$CC -c -o $tcfn"; LDFLAGS=; LIBS=
+save_tcfn=$tcfn; save_CC=$CC; save_LDFLAGS=$LDFLAGS; save_LIBS=$LIBS
+tcfn=conftest.o; CC="$CC -c -o $tcfn"; LDFLAGS=; LIBS=
 ac_test '!' flock_decl flock 1 'if flock() does not need to be declared' <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
@@ -1751,13 +1826,17 @@ ac_test '!' revoke_decl revoke 1 'if revoke() does not need to be declared' <<-'
 	long revoke(void);		/* this clashes if defined before */
 	int main(void) { return ((int)revoke()); }
 EOF
-ac_test '!' sys_siglist_decl sys_siglist 1 'if sys_siglist[] does not need to be declared' <<-'EOF'
+ac_test sys_errlist_decl sys_errlist 0 "for declaration of sys_errlist[] and sys_nerr" <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
-	extern int sys_siglist[5][5][5][5][5];	/* this clashes happily */
-	int main(void) { return (sys_siglist[0][0][0][0][0]); }
+	int main(void) { return (*sys_errlist[sys_nerr - 1]); }
 EOF
-CC=$save_CC; LDFLAGS=$save_LDFLAGS; LIBS=$save_LIBS
+ac_test sys_siglist_decl sys_siglist 0 'for declaration of sys_siglist[]' <<-'EOF'
+	#define MKSH_INCLUDES_ONLY
+	#include "sh.h"
+	int main(void) { return (sys_siglist[0][0]); }
+EOF
+tcfn=$save_tcfn; CC=$save_CC; LDFLAGS=$save_LDFLAGS; LIBS=$save_LIBS
 
 #
 # other checks
@@ -1982,6 +2061,8 @@ if test 0 = $HAVE_SYS_SIGNAME; then
 #define NSIG _NSIG
 #elif defined(SIGMAX)
 #define NSIG (SIGMAX+1)
+#elif defined(_SIGMAX)
+#define NSIG (_SIGMAX+1)
 #endif
 #endif
 int
@@ -1989,14 +2070,15 @@ mksh_cfg= NSIG
 ;' >conftest.c
 	# GNU sed 2.03 segfaults when optimising this to sed -n
 	NSIG=`vq "$CPP $CFLAGS $CPPFLAGS $NOWARN conftest.c" | \
-	    grep '^mksh_cfg *=' | \
-	    sed 's/^mksh_cfg *=[	 ]*\([()0-9x+-][()0-9x+	 -]*\).*$/\1/'`
+	    grep '^ *mksh_cfg *=' | \
+	    sed 's/^ *mksh_cfg *=[	 ]*\([()0-9x+-][()0-9x+	 -]*\).*$/\1/'`
 	case $NSIG in
 	*mksh_cfg*) $e "Error: NSIG='$NSIG'"; NSIG=0 ;;
 	*[\ \(\)+-]*) NSIG=`"$AWK" "BEGIN { print $NSIG }" </dev/null` ;;
 	esac
 	printf=printf
 	(printf hallo) >/dev/null 2>&1 || printf=echo
+	test $printf = echo || test "`printf %d 42`" = 42 || printf=echo
 	test $printf = echo || NSIG=`printf %d "$NSIG" 2>/dev/null`
 	$printf "NSIG=$NSIG ... "
 	sigs="INT SEGV ABRT KILL ALRM BUS CHLD CLD CONT DIL EMT FPE HUP ILL"
@@ -2018,8 +2100,8 @@ mksh_cfg= NSIG
 		echo ';' >>conftest.c
 		# GNU sed 2.03 croaks on optimising this, too
 		vq "$CPP $CFLAGS $CPPFLAGS $NOWARN conftest.c" | \
-		    grep '^mksh_cfg *=' | \
-		    sed 's/^mksh_cfg *=[	 ]*\([0-9][0-9x]*\).*$/:\1 '$name/
+		    grep '^ *mksh_cfg *=' | \
+		    sed 's/^ *mksh_cfg *=[	 ]*\([0-9][0-9x]*\).*$/:\1 '$name/
 	done | sed -n '/^:[^ ]/s/^://p' | while read nr name; do
 		test $printf = echo || nr=`printf %d "$nr" 2>/dev/null`
 		test $nr -gt 0 && test $nr -le $NSIG || continue
@@ -2040,7 +2122,7 @@ addsrcs USE_PRINTF_BUILTIN printf.c
 test 1 = "$USE_PRINTF_BUILTIN" && add_cppflags -DMKSH_PRINTF_BUILTIN
 test 1 = "$HAVE_CAN_VERB" && CFLAGS="$CFLAGS -verbose"
 test -n "$LDSTATIC" && add_cppflags -DMKSH_OPTSTATIC
-add_cppflags -DMKSH_BUILD_R=411
+add_cppflags -DMKSH_BUILD_R=421
 
 $e $bi$me: Finished configuration testing, now producing output.$ao
 
@@ -2062,17 +2144,22 @@ cat >test.sh <<-EOF
 	set -A check_categories -- $check_categories
 	pflag='$curdir/$mkshexe'
 	sflag='$srcdir/check.t'
-	usee=0 Pflag=0 Sflag=0 uset=0 vflag=0 xflag=0
-	while getopts "C:e:fPp:Ss:t:v" ch; do case \$ch {
+	usee=0 Pflag=0 Sflag=0 uset=0 vflag=1 xflag=0
+	while getopts "C:e:fPp:QSs:t:v" ch; do case \$ch {
 	(C)	check_categories[\${#check_categories[*]}]=\$OPTARG ;;
 	(e)	usee=1; eflag=\$OPTARG ;;
 	(f)	check_categories[\${#check_categories[*]}]=fastbox ;;
 	(P)	Pflag=1 ;;
+	(+P)	Pflag=0 ;;
 	(p)	pflag=\$OPTARG ;;
+	(Q)	vflag=0 ;;
+	(+Q)	vflag=1 ;;
 	(S)	Sflag=1 ;;
+	(+S)	Sflag=0 ;;
 	(s)	sflag=\$OPTARG ;;
 	(t)	uset=1; tflag=\$OPTARG ;;
 	(v)	vflag=1 ;;
+	(+v)	vflag=0 ;;
 	(*)	xflag=1 ;;
 	}
 	done
@@ -2200,7 +2287,7 @@ LIBS=		$LIBS
 #	\$(CC) \$(CFLAGS) \$(CPPFLAGS) -c \$<
 
 # for all make variants:
-#REGRESS_FLAGS=	-v
+#REGRESS_FLAGS=	-f
 #regress:
 #	./test.sh \$(REGRESS_FLAGS)
 
@@ -2298,6 +2385,8 @@ HAVE_STRING_H			ac_header
 HAVE_CAN_FSTACKPROTECTORALL	ac_flags
 
 ==== cpp definitions ====
+DEBUG				dont use in production, wants gcc, implies:
+DEBUG_LEAKS			enable freeing resources before exiting
 MKSHRC_PATH			"~/.mkshrc" (do not change)
 MKSH_A4PB			force use of arc4random_pushb
 MKSH_ASSUME_UTF8		(0=disabled, 1=enabled; default: unset)
@@ -2312,6 +2401,7 @@ MKSH_DISABLE_DEPRECATED		disable code paths scheduled for later removal
 MKSH_DISABLE_EXPERIMENTAL	disable code not yet comfy for (LTS) snapshots
 MKSH_DISABLE_TTY_WARNING	shut up warning about ctty if OS cant be fixed
 MKSH_DONT_EMIT_IDSTRING		omit RCS IDs from binary
+MKSH_GCC55009			DANGER! see http://www.mirbsd.org/mksh.htm#p41
 MKSH_MIDNIGHTBSD01ASH_COMPAT	set -o sh: additional compatibility quirk
 MKSH_NOPROSPECTOFWORK		disable jobs, co-processes, etc. (do not use)
 MKSH_NOPWNAM			skip PAM calls, for -static on eglibc, Solaris
@@ -2336,7 +2426,7 @@ them, set to a value other than 0 or 1. Ensure /bin/ed is installed. For
 MKSH_SMALL but with Vi mode, add -DMKSH_S_NOVI=0 to CPPFLAGS as well.
 
 Normally, the following command is what you want to run, then:
-$ (sh Build.sh -r -c lto && ./test.sh -v) 2>&1 | tee log
+$ (sh Build.sh -r -c lto && ./test.sh -f) 2>&1 | tee log
 
 Copy dot.mkshrc to /etc/skel/.mkshrc; install mksh into $prefix/bin; or
 /bin; install the manpage, if omitting the -r flag a catmanpage is made

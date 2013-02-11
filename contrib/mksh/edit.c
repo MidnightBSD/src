@@ -1,11 +1,11 @@
-/*	$OpenBSD: edit.c,v 1.35 2012/09/10 01:25:30 tedu Exp $	*/
+/*	$OpenBSD: edit.c,v 1.37 2013/01/21 10:13:24 halex Exp $	*/
 /*	$OpenBSD: edit.h,v 1.9 2011/05/30 17:14:35 martynas Exp $	*/
 /*	$OpenBSD: emacs.c,v 1.44 2011/09/05 04:50:33 marco Exp $	*/
 /*	$OpenBSD: vi.c,v 1.26 2009/06/29 22:50:19 martynas Exp $	*/
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
- *		 2011, 2012
+ *		 2011, 2012, 2013
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -28,7 +28,7 @@
 
 #ifndef MKSH_NO_CMDLINE_EDITING
 
-__RCSID("$MirOS: src/bin/mksh/edit.c,v 1.256 2012/11/26 22:39:14 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/edit.c,v 1.265 2013/02/10 19:05:36 tg Exp $");
 
 /*
  * in later versions we might use libtermcap for this, but since external
@@ -73,16 +73,15 @@ static void x_putcf(int);
 static void x_modified(void);
 static void x_mode(bool);
 static int x_do_comment(char *, ssize_t, ssize_t *);
-static void x_print_expansions(int, char *const *, bool);
+static void x_print_expansions(int, char * const *, bool);
 static int x_cf_glob(int *, const char *, int, int, int *, int *, char ***);
-static size_t x_longest_prefix(int, char *const *);
+static size_t x_longest_prefix(int, char * const *);
 static void x_glob_hlp_add_qchar(char *);
 static char *x_glob_hlp_tilde_and_rem_qchar(char *, bool);
 static int x_basename(const char *, const char *);
 static void x_free_words(int, char **);
 static int x_escape(const char *, size_t, int (*)(const char *, size_t));
 static int x_emacs(char *, size_t);
-static void x_init_emacs(void);
 static void x_init_prompt(void);
 #if !MKSH_S_NOVI
 static int x_vi(char *, size_t);
@@ -106,21 +105,6 @@ static int x_e_getmbc(char *);
 static int x_e_rebuildline(const char *);
 
 /* +++ generic editing functions +++ */
-
-/* Called from main */
-void
-x_init(void)
-{
-	/*
-	 * Set edchars to -2 to force initial binding, except
-	 * we need default values for some deficient systems…
-	 */
-	edchars.erase = edchars.kill = edchars.intr = edchars.quit =
-	    edchars.eof = -2;
-	/* ^W */
-	edchars.werase = 027;
-	x_init_emacs();
-}
 
 /*
  * read an edited command line
@@ -607,6 +591,8 @@ x_cf_glob(int *flagsp, const char *buf, int buflen, int pos, int *startp,
 	char **words = NULL;
 	bool is_command;
 
+	mkssert(buf != NULL);
+
 	len = x_locate_word(buf, buflen, pos, startp, &is_command);
 	if (!((*flagsp) & XCF_COMMAND))
 		is_command = false;
@@ -990,8 +976,7 @@ static int x_search_dir(int);
 static int x_match(char *, char *);
 static void x_redraw(int);
 static void x_push(int);
-static char *x_mapin(const char *, Area *)
-    MKSH_A_NONNULL((__nonnull__ (1)));
+static char *x_mapin(const char *, Area *);
 static char *x_mapout(int);
 static void x_mapout2(int, char **);
 static void x_print(int, int);
@@ -2274,6 +2259,7 @@ x_push(int nchars)
 {
 	char *cp;
 
+	mkssert(xcp != NULL);
 	strndupx(cp, xcp, nchars, AEDIT);
 	if (killstack[killsp])
 		afree(killstack[killsp], AEDIT);
@@ -2394,9 +2380,6 @@ static char *
 x_mapin(const char *cp, Area *ap)
 {
 	char *news, *op;
-
-	/* for clang's static analyser, the nonnull attribute isn't enough */
-	mkssert(cp != NULL);
 
 	strdupx(news, cp, ap);
 	op = news;
@@ -2584,32 +2567,6 @@ x_bind(const char *a1, const char *a2,
 		    (1 << ((prefix * X_TABSZ + key) % 8));
 
 	return (0);
-}
-
-static void
-x_init_emacs(void)
-{
-	int i, j;
-
-	ainit(AEDIT);
-	x_nextcmd = -1;
-
-	x_tab = alloc2(X_NTABS, sizeof(*x_tab), AEDIT);
-	for (j = 0; j < X_TABSZ; j++)
-		x_tab[0][j] = XFUNC_insert;
-	for (i = 1; i < X_NTABS; i++)
-		for (j = 0; j < X_TABSZ; j++)
-			x_tab[i][j] = XFUNC_error;
-	for (i = 0; i < (int)NELEM(x_defbindings); i++)
-		x_tab[x_defbindings[i].xdb_tab][x_defbindings[i].xdb_char]
-		    = x_defbindings[i].xdb_func;
-
-#ifndef MKSH_SMALL
-	x_atab = alloc2(X_NTABS, sizeof(*x_atab), AEDIT);
-	for (i = 1; i < X_NTABS; i++)
-		for (j = 0; j < X_TABSZ; j++)
-			x_atab[i][j] = NULL;
-#endif
 }
 
 static void
@@ -5452,4 +5409,50 @@ vi_macro_reset(void)
 	}
 }
 #endif /* !MKSH_S_NOVI */
+
+/* called from main.c */
+void
+x_init(void)
+{
+	int i, j;
+
+	/*
+	 * Set edchars to -2 to force initial binding, except
+	 * we need default values for some deficient systems…
+	 */
+	edchars.erase = edchars.kill = edchars.intr = edchars.quit =
+	    edchars.eof = -2;
+	/* ^W */
+	edchars.werase = 027;
+
+	/* initialise Emacs command line editing mode */
+	ainit(AEDIT);
+	x_nextcmd = -1;
+
+	x_tab = alloc2(X_NTABS, sizeof(*x_tab), AEDIT);
+	for (j = 0; j < X_TABSZ; j++)
+		x_tab[0][j] = XFUNC_insert;
+	for (i = 1; i < X_NTABS; i++)
+		for (j = 0; j < X_TABSZ; j++)
+			x_tab[i][j] = XFUNC_error;
+	for (i = 0; i < (int)NELEM(x_defbindings); i++)
+		x_tab[x_defbindings[i].xdb_tab][x_defbindings[i].xdb_char]
+		    = x_defbindings[i].xdb_func;
+
+#ifndef MKSH_SMALL
+	x_atab = alloc2(X_NTABS, sizeof(*x_atab), AEDIT);
+	for (i = 1; i < X_NTABS; i++)
+		for (j = 0; j < X_TABSZ; j++)
+			x_atab[i][j] = NULL;
+#endif
+}
+
+#ifdef DEBUG_LEAKS
+void
+x_done(void)
+{
+	if (x_tab != NULL)
+		afreeall(AEDIT);
+}
+#endif
 #endif /* !MKSH_NO_CMDLINE_EDITING */
