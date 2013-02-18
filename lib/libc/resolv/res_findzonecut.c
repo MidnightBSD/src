@@ -1,5 +1,5 @@
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_findzonecut.c,v 1.1.1.1 2008-10-30 20:39:06 laffer1 Exp $";
+static const char rcsid[] = "$Id: res_findzonecut.c,v 1.2 2013-02-18 00:12:22 laffer1 Exp $";
 #endif /* not lint */
 
 /*
@@ -20,7 +20,7 @@ static const char rcsid[] = "$Id: res_findzonecut.c,v 1.1.1.1 2008-10-30 20:39:0
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/resolv/res_findzonecut.c,v 1.3 2007/06/03 17:20:27 ume Exp $");
+__MBSDID("$MidnightBSD$");
 
 /* Import. */
 

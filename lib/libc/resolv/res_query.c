@@ -66,10 +66,10 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_query.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: res_query.c,v 1.2 2011-11-18 01:15:50 laffer1 Exp $";
+static const char rcsid[] = "$Id: res_query.c,v 1.3 2013-02-18 00:12:22 laffer1 Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/resolv/res_query.c,v 1.5.2.1 2008/12/17 12:31:04 ume Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "port_before.h"
 #include <sys/types.h>

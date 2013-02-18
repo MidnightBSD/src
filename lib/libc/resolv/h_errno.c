@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libc/resolv/h_errno.c,v 1.2 2006/05/21 11:29:26 ume Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/types.h>
