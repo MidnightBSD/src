@@ -6,7 +6,7 @@
 ** This file is in the public domain, so clarified as of
 ** 1996-06-05 by Arthur David Olson.
 **
-** $FreeBSD$
+** $MidnightBSD$
 */
 
 /* Stuff moved from Makefile.inc to reduce clutter */

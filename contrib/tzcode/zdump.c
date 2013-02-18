@@ -5,7 +5,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD$";
+  "$MidnightBSD$";
 static char	elsieid[] = "@(#)zdump.c	8.10";
 #endif /* not lint */
 
