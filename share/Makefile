@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $MidnightBSD: src/share/Makefile,v 1.7 2012/07/07 23:00:37 laffer1 Exp $
+# $MidnightBSD: src/share/Makefile,v 1.8 2012/12/28 03:13:20 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -21,7 +21,6 @@ SUBDIR=	${_colldef} \
 	${_sendmail} \
 	skel \
 	${_snmp} \
-	sound \
 	${_syscons} \
 	tabset \
 	termcap \
