@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/nscd,v 1.4 2013/01/09 13:41:05 laffer1 Exp $
 #
 
 # PROVIDE: nscd
@@ -38,9 +38,9 @@ _nscd_set_option() {
 	if [ -n "$_cached_opt_val" -a "$_nscd_opt_val" != "$_defoptval" ]; then
 		warn "You should use nscd_${_optname} instead of" \
 		    "cached_${_optname}"
-		setvar "nscd_${_optname}" "$_cached_opt_val"
+		eval export "nscd_${_optname}"="$_cached_opt_val"
 	else
-		setvar "nscd_${_optname}" "${_nscd_opt_val:-$_defoptval}"
+		eval export "nscd_${_optname}"="${_nscd_opt_val:-$_defoptval}"
 	fi
 }
 
