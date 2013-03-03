@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/fetch.c,v 1.10 2011/12/24 05:55:12 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/fetch.c,v 1.11 2013/01/22 02:26:09 laffer1 Exp $");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -124,7 +124,7 @@ mport_fetch_bundle(mportInstance *mport, const char *filename)
 	char **mirrorsPtr;
 	char *url;
 	char *dest;
-	int mirrorCount;
+	int mirrorCount = 0;
 
 	MPORT_CHECK_FOR_INDEX(mport, "mport_fetch_bundle()");
 	
@@ -145,7 +145,8 @@ mport_fetch_bundle(mportInstance *mport, const char *filename)
 			url = NULL;
 			free(dest);
 			dest = NULL;
-			mport_free_vec(mirrors);
+			for (int mi = 0; mi < mirrorCount; mi++)
+				free(mirrors[mi]);
 			return MPORT_OK;
 		} 
 		
@@ -153,9 +154,11 @@ mport_fetch_bundle(mportInstance *mport, const char *filename)
 		url = NULL;
 		mirrorsPtr++;
 	}
-	
+
 	free(dest);
-	mport_free_vec(mirrors);
+	for (int mi = 0; mi < mirrorCount; mi++)
+		free(mirrors[mi]);
+
 	RETURN_CURRENT_ERROR; 
 }
 
