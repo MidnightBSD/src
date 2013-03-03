@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/index.c,v 1.17 2012/01/26 02:16:54 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/index.c,v 1.18 2013/01/22 02:26:09 laffer1 Exp $");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -215,6 +215,7 @@ int mport_index_get_mirror_list(mportInstance *mport, char ***list_p, int *list_
       list[i] = NULL;
       break;
     } else {
+      list[i] = NULL;
       sqlite3_finalize(stmt);
       RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
     }
