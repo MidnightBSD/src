@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/fetch.c,v 1.11 2013/01/22 02:26:09 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/fetch.c,v 1.12 2013/03/03 00:29:51 laffer1 Exp $");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -73,14 +73,16 @@ mport_fetch_index(mportInstance *mport)
 		asprintf(&url, "%s/%s", *mirrorsPtr, MPORT_INDEX_URL_PATH);
 
 		if (url == NULL) {
-			mport_free_vec(mirrors);
+			for (int mi = 0; mi < mirrorCount; mi++)
+				free(mirrors[mi]);
 			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 		}
 
 		if (fetch(mport, url, MPORT_INDEX_FILE_BZ2) == MPORT_OK) {
 			mport_decompress_bzip2(MPORT_INDEX_FILE_BZ2, MPORT_INDEX_FILE);
 			free(url);
-			mport_free_vec(mirrors);
+			for (int mi = 0; mi < mirrorCount; mi++)
+				free(mirrors[mi]);
 			return MPORT_OK;
 		}
 		free(url);
@@ -90,8 +92,10 @@ mport_fetch_index(mportInstance *mport)
 	/* fallback to mport bootstrap site in a pinch */
 	if (mport_fetch_bootstrap_index(mport) == MPORT_OK)
 		return MPORT_OK;
-	 
-	mport_free_vec(mirrors);
+	
+	for (int mi = 0; mi < mirrorCount; mi++) 
+		free(mirrors[mi]);
+
 	RETURN_ERRORX(MPORT_ERR_FATAL, "Unable to fetch index file: %s", mport_err_string());
 }
 
