@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.39 2013/01/03 01:10:55 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.40 2013/03/03 00:38:44 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -101,10 +101,15 @@ main(int argc, char *argv[]) {
 		resultCode = upgrade(mport);
         } else if (!strcmp(argv[1], "list")) {
 		asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.list");
-		if (argc > 2 && (!strcmp(argv[2], "updates") ||
-				 !strcmp(argv[2], "up"))) {
-			loadIndex(mport);
-			flag = strdup("-u");
+		if (argc > 2) {
+			if (!strcmp(argv[2], "updates") || 
+			    !strcmp(argv[2], "up")) {
+				loadIndex(mport);
+				flag = strdup("-u");
+			} else {
+				mport_instance_free(mport);
+				usage();
+			}
 		} else {
 			flag = strdup("-v");
 		}
