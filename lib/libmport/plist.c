@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/plist.c,v 1.12 2011/07/24 15:59:08 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/plist.c,v 1.13 2012/04/10 22:11:33 laffer1 Exp $");
 
 #include <sys/cdefs.h>
 #include <stdio.h>
@@ -77,6 +77,7 @@ MPORT_PUBLIC_API void mport_assetlist_free(mportAssetList *list)
 MPORT_PUBLIC_API int mport_parse_plistfile(FILE *fp, mportAssetList *list)
 {
   size_t length;
+  size_t entrylen;
   char *line;
 
   assert(fp != NULL);
@@ -131,8 +132,9 @@ MPORT_PUBLIC_API int mport_parse_plistfile(FILE *fp, mportAssetList *list)
           entry->type = ASSET_DEPORIGIN;
         }
       }     
-      
-      entry->data = (char *)calloc(strlen(line) + 1, sizeof(char));
+     
+      entrylen = strlen(line) + 1; 
+      entry->data = (char *)calloc(entrylen, sizeof(char));
       if (entry->data == NULL) {
         RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
       }
@@ -144,7 +146,7 @@ MPORT_PUBLIC_API int mport_parse_plistfile(FILE *fp, mportAssetList *list)
         pos--;
       }
       
-      strlcpy(entry->data, line, (strlen(line) + 1));
+      strlcpy(entry->data, line, entrylen);
     }
     
     STAILQ_INSERT_TAIL(list, entry, next);
