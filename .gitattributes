@@ -29521,8 +29521,10 @@ contrib/tzcode/zic/private.h -text
 contrib/tzcode/zic/scheck.c -text
 contrib/tzcode/zic/zdump.8 -text
 contrib/tzcode/zic/zdump.c -text
+contrib/tzcode/zic/zdump/Makefile -text
 contrib/tzcode/zic/zic.8 -text
 contrib/tzcode/zic/zic.c -text
+contrib/tzcode/zic/zic/Makefile -text
 contrib/tzcode/zoneinfo2tdf.pl -text
 contrib/tzdata/Makefile -text
 contrib/tzdata/africa -text
