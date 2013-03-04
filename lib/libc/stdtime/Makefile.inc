@@ -2,14 +2,14 @@
 # $MidnightBSD$
 
 .PATH:	${.CURDIR}/stdtime ${.CURDIR}/../locale \
-	${.CURDIR}/../../contrib/tzcode
+	${.CURDIR}/../../contrib/tzcode/stdtime
 
 SRCS+=	asctime.c difftime.c localtime.c strftime.c strptime.c timelocal.c \
 	time32.c
 
 SYM_MAPS+= ${.CURDIR}/stdtime/Symbol.map
 
-CFLAGS+= -I${.CURDIR}/../../contrib/tzcode -I${.CURDIR}/stdtime
+CFLAGS+= -I${.CURDIR}/../../contrib/tzcode/stdtime -I${.CURDIR}/stdtime
 
 MAN+=	ctime.3 strftime.3 strptime.3 time2posix.3
 MAN+=	tzfile.5
