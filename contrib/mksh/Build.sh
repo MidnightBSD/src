@@ -1,5 +1,5 @@
 #!/bin/sh
-srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.616 2013/02/11 16:27:56 tg Exp $'
+srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.624 2013/03/05 15:41:39 tg Exp $'
 #-
 # Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
 #		2011, 2012, 2013
@@ -1388,6 +1388,9 @@ ac_ifcpp 'ifdef MKSH_CONSERVATIVE_FDS' isset_MKSH_CONSERVATIVE_FDS '' \
 #ac_ifcpp 'ifdef MKSH_DISABLE_EXPERIMENTAL' isset_MKSH_DISABLE_EXPERIMENTAL '' \
 #    "if experimental features are to be omitted" && \
 #    check_categories="$check_categories noexperimental"
+ac_ifcpp 'ifdef MKSH_MIDNIGHTBSD01ASH_COMPAT' isset_MKSH_MIDNIGHTBSD01ASH_COMPAT '' \
+    'if the MidnightBSD 0.1 ash compatibility mode is requested' && \
+    check_categories="$check_categories mnbsdash"
 
 #
 # Environment: headers
@@ -1529,7 +1532,7 @@ else
 		#define EXTERN
 		#define MKSH_INCLUDES_ONLY
 		#include "sh.h"
-		__RCSID("$MirOS: src/bin/mksh/Build.sh,v 1.616 2013/02/11 16:27:56 tg Exp $");
+		__RCSID("$MirOS: src/bin/mksh/Build.sh,v 1.624 2013/03/05 15:41:39 tg Exp $");
 		int main(void) { printf("Hello, World!\n"); return (0); }
 EOF
 	case $cm in
@@ -1809,22 +1812,18 @@ EOF
 #
 # check headers for declarations
 #
-save_tcfn=$tcfn; save_CC=$CC; save_LDFLAGS=$LDFLAGS; save_LIBS=$LIBS
-tcfn=conftest.o; CC="$CC -c -o $tcfn"; LDFLAGS=; LIBS=
-ac_test '!' flock_decl flock 1 'if flock() does not need to be declared' <<-'EOF'
+ac_test flock_decl flock 1 'for declaration of flock()' <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
 	#if HAVE_SYS_FILE_H
 	#include <sys/file.h>
 	#endif
-	long flock(void);		/* this clashes if defined before */
-	int main(void) { return ((int)flock()); }
+	int main(void) { return ((flock)(0, 0)); }
 EOF
-ac_test '!' revoke_decl revoke 1 'if revoke() does not need to be declared' <<-'EOF'
+ac_test revoke_decl revoke 1 'for declaration of revoke()' <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
-	long revoke(void);		/* this clashes if defined before */
-	int main(void) { return ((int)revoke()); }
+	int main(void) { return ((revoke)("")); }
 EOF
 ac_test sys_errlist_decl sys_errlist 0 "for declaration of sys_errlist[] and sys_nerr" <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
@@ -1836,7 +1835,6 @@ ac_test sys_siglist_decl sys_siglist 0 'for declaration of sys_siglist[]' <<-'EO
 	#include "sh.h"
 	int main(void) { return (sys_siglist[0][0]); }
 EOF
-tcfn=$save_tcfn; CC=$save_CC; LDFLAGS=$save_LDFLAGS; LIBS=$save_LIBS
 
 #
 # other checks
@@ -2122,7 +2120,7 @@ addsrcs USE_PRINTF_BUILTIN printf.c
 test 1 = "$USE_PRINTF_BUILTIN" && add_cppflags -DMKSH_PRINTF_BUILTIN
 test 1 = "$HAVE_CAN_VERB" && CFLAGS="$CFLAGS -verbose"
 test -n "$LDSTATIC" && add_cppflags -DMKSH_OPTSTATIC
-add_cppflags -DMKSH_BUILD_R=419
+add_cppflags -DMKSH_BUILD_R=441
 
 $e $bi$me: Finished configuration testing, now producing output.$ao
 
@@ -2290,6 +2288,7 @@ LIBS=		$LIBS
 #REGRESS_FLAGS=	-f
 #regress:
 #	./test.sh \$(REGRESS_FLAGS)
+check_categories=$check_categories
 
 # for BSD make only:
 #.PATH: $srcdir

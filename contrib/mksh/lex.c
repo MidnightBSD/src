@@ -23,7 +23,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/lex.c,v 1.179 2013/02/10 17:18:48 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/lex.c,v 1.182 2013/02/19 18:45:20 tg Exp $");
 
 /*
  * states while lexing word
@@ -348,6 +348,22 @@ yylex(int cf)
 				*wp++ = OQUOTE;
 				PUSH_STATE(SDQUOTE);
 				break;
+			case '$':
+				/*
+				 * processing of dollar sign belongs into
+				 * Subst, except for those which can open
+				 * a string: $'…' and $"…"
+				 */
+ subst_dollar_ex:
+				c = getsc();
+				switch (c) {
+				case '"':
+					goto open_sdquote;
+				case '\'':
+					goto open_sequote;
+				default:
+					goto SubstS;
+				}
 			default:
 				goto Subst;
 			}
@@ -359,7 +375,7 @@ yylex(int cf)
 				c = getsc();
 				switch (c) {
 				case '"':
-					if ((cf & (HEREDOCBODY | HERESTRBODY)))
+					if ((cf & HEREDOC))
 						goto heredocquote;
 					/* FALLTHROUGH */
 				case '\\':
@@ -382,8 +398,8 @@ yylex(int cf)
 				}
 				break;
 			case '$':
- subst_dollar:
 				c = getsc();
+ SubstS:
 				if (c == '(') /*)*/ {
 					c = getsc();
 					if (c == '(') /*)*/ {
@@ -504,18 +520,9 @@ yylex(int cf)
 					*wp++ = '\0';
 					*wp++ = CSUBST;
 					*wp++ = 'X';
-				} else if (c == '\'' && !(cf & HEREDOCBODY)) {
-					*wp++ = OQUOTE;
-					ignore_backslash_newline++;
-					PUSH_STATE(SEQUOTE);
-					statep->ls_bool = false;
-					break;
-				} else if (c == '"' && !(cf & HEREDOCBODY)) {
-					goto DEQUOTE;
 				} else {
 					*wp++ = CHAR;
 					*wp++ = '$';
- DEQUOTE:
 					ungetsc(c);
 				}
 				break;
@@ -693,7 +700,7 @@ yylex(int cf)
 			if (c == '"')
 				goto open_sdquote;
 			else if (c == '$')
-				goto subst_dollar;
+				goto subst_dollar_ex;
 			else if (c == '`')
 				goto subst_gravis;
 			else if (c != /*{*/ '}')
@@ -804,16 +811,15 @@ yylex(int cf)
 					*wp++ = c;
 				}
 				break;
+			case '\'':
+				goto open_ssquote;
 			case '$':
 				if ((c2 = getsc()) == '\'') {
-					PUSH_STATE(SEQUOTE);
-					statep->ls_bool = false;
-					if (0)
-						/* FALLTHROUGH */
-			case '\'':
-					  PUSH_STATE(SSQUOTE);
+ open_sequote:
 					*wp++ = OQUOTE;
 					ignore_backslash_newline++;
+					PUSH_STATE(SEQUOTE);
+					statep->ls_bool = false;
 					break;
 				} else if (c2 == '"') {
 					/* FALLTHROUGH */
@@ -1502,7 +1508,8 @@ set_prompt(int to, Source *s)
 static int
 dopprompt(const char *cp, int ntruncate, bool doprint)
 {
-	int columns = 0, lines = 0, indelimit = 0;
+	int columns = 0, lines = 0;
+	bool indelimit = false;
 	char delimiter = 0;
 
 	/*

@@ -3,7 +3,7 @@
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
- *		 2011, 2012
+ *		 2011, 2012, 2013
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -30,7 +30,7 @@
 #include <grp.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.205 2012/12/17 23:18:08 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.207 2013/02/24 14:22:43 tg Exp $");
 
 #define KSH_CHVT_FLAG
 #ifdef MKSH_SMALL
@@ -1206,16 +1206,15 @@ print_columns(struct shf *shf, unsigned int n,
 	/* if we can only print one column anyway, skip the goo */
 	if (cols < 2) {
 		for (i = 0; i < n; ++i)
-			shf_fprintf(shf, "%s \n",
+			shf_fprintf(shf, "%s\n",
 			    (*func)(str, max_oct, i, arg));
 		goto out;
 	}
 
 	rows = (n + cols - 1) / cols;
 	if (prefcol && cols > rows) {
-		i = rows;
-		rows = cols > n ? n : cols;
-		cols = i;
+		cols = rows;
+		rows = (n + cols - 1) / cols;
 	}
 
 	max_col = -max_col;
