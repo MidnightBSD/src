@@ -164,9 +164,9 @@
 #endif
 
 #ifdef EXTERN
-__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.635 2013/02/15 18:50:14 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.642 2013/03/05 15:41:41 tg Exp $");
 #endif
-#define MKSH_VERSION "R42 2013/02/15"
+#define MKSH_VERSION "R44 2013/02/24"
 
 /* arithmetic types: C implementation */
 #if !HAVE_CAN_INTTYPES
@@ -511,7 +511,7 @@ char *ucstrstr(char *, const char *);
 #define mkssert(e)	do { } while (/* CONSTCOND */ 0)
 #endif
 
-#if (!defined(MKSH_BUILDMAKEFILE4BSD) && !defined(MKSH_BUILDSH)) || (MKSH_BUILD_R != 419)
+#if (!defined(MKSH_BUILDMAKEFILE4BSD) && !defined(MKSH_BUILDSH)) || (MKSH_BUILD_R != 441)
 #error Must run Build.sh to compile this.
 int
 im_sorry_dave(void)
@@ -1584,8 +1584,7 @@ typedef union {
 #define CMDWORD		BIT(8)	/* parsing simple command (alias related) */
 #define HEREDELIM	BIT(9)	/* parsing <<,<<- delimiter */
 #define LQCHAR		BIT(10)	/* source string contains QCHAR */
-#define HEREDOCBODY	BIT(11)	/* parsing a here document body */
-#define HERESTRBODY	BIT(12)	/* parsing a here string body */
+#define HEREDOC 	BIT(11)	/* parsing a here document body */
 
 #define HERES		10	/* max number of << in line */
 
