@@ -1,10 +1,7 @@
-#
-# $FreeBSD: src/rescue/librescue/Makefile,v 1.9 2006/07/27 12:28:05 yar Exp $
-# $MidnightBSD: src/rescue/librescue/Makefile,v 1.3 2008/11/11 20:17:50 laffer1 Exp $
-#
+# $MidnightBSD: src/rescue/librescue/Makefile,v 1.4 2011/02/06 22:37:44 laffer1 Exp $
 
 .include <bsd.own.mk>
-MK_SSP=	no
+MK_SSP=		no
 
 # Certain library entries have hard-coded references to
 # /bin, /sbin, etc, that require those entries to be
