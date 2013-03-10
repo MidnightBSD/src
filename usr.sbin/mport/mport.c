@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.40 2013/03/03 00:38:44 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.41 2013/03/03 00:41:13 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -168,7 +168,7 @@ void
 loadIndex(mportInstance *mport) {
 	int result = mport_index_load(mport);
 	if (result == MPORT_ERR_WARN)
-		warnx(mport_err_string());
+		warnx("%s", mport_err_string());
 	else if (result != MPORT_OK)
                 errx(4, "Unable to load index %s", mport_err_string());
 }
