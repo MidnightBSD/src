@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/lib/libmport/create_primative.c,v 1.8 2011/07/24 15:59:08 laffer1 Exp $");
 
 #include <sys/cdefs.h>
 #include <sys/stat.h>
@@ -67,7 +67,7 @@ MPORT_PUBLIC_API int mport_create_primative(mportAssetList *assetlist, mportPack
     ret = SET_ERROR(MPORT_ERR_FATAL, strerror(errno));
     goto CLEANUP;
   }
-  
+
   if ((ret = create_stub_db(&db, tmpdir)) != MPORT_OK)
     goto CLEANUP;
 
@@ -76,12 +76,12 @@ MPORT_PUBLIC_API int mport_create_primative(mportAssetList *assetlist, mportPack
 
   if ((ret = insert_meta(db, pack, extra)) != MPORT_OK)
     goto CLEANUP;
-  
+ 
   if (sqlite3_close(db) != SQLITE_OK) {
     ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
     goto CLEANUP;
   }
-  
+
   if ((ret = archive_files(assetlist, pack, extra, tmpdir)) != MPORT_OK)
     goto CLEANUP;
   
@@ -220,9 +220,8 @@ static int insert_meta(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *e
   
   sqlite3_finalize(stmnt);  
 
-
   if (insert_depends(db, pack, extra) != MPORT_OK)
-    RETURN_CURRENT_ERROR;        
+    RETURN_CURRENT_ERROR;
   if (insert_conflicts(db, pack, extra) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   if (insert_categories(db, pack) != MPORT_OK)
@@ -321,7 +320,7 @@ static int insert_depends(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras
   char **depend    = extra->depends;
   char *pkgversion = NULL;
   char *port = NULL;
-  
+
   /* we're done if there are no deps to record. */
   if (depend == NULL) 
     return MPORT_OK;
@@ -333,7 +332,9 @@ static int insert_depends(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras
    * perl:lang/perl5.8:>=5.8.3
    */
   while (*depend != NULL) {
-    port = index(*depend, ':');
+    port = strchr(*depend, ':');
+    if (port == NULL)
+      RETURN_ERRORX(MPORT_ERR_FATAL, "Malformed depend: %s", *depend);
     *port = '\0';
     port++;
 
