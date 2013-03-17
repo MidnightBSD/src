@@ -25,18 +25,19 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/install.c,v 1.7 2013/03/17 22:05:54 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/install.c,v 1.8 2013/03/17 22:49:33 laffer1 Exp $");
 
 #include "mport.h"
 #include "mport_private.h"
 #include <stdlib.h>
 #include <string.h>
 
-MPORT_PUBLIC_API int mport_install(mportInstance *mport, const char *pkgname, const char *prefix)
+MPORT_PUBLIC_API int mport_install(mportInstance *mport, const char *pkgname, const char *version, const char *prefix)
 {
   mportIndexEntry **e;
   char *filename;
   int ret = MPORT_OK;
+  int e_loc = 0;
 
   MPORT_CHECK_FOR_INDEX(mport, "mport_install()");
   
@@ -61,27 +62,40 @@ MPORT_PUBLIC_API int mport_install(mportInstance *mport, const char *pkgname, co
    * easy to piece together with mport_index_lookup_pkgname(), a
    * check for already installed packages, and mport_install().
    */
-  
+
   if (e[1] != NULL) {
-    mport_index_entry_free_vec(e);
-    RETURN_ERRORX(MPORT_ERR_FATAL, "Could not resolve '%s' to a single package.", pkgname);
+    if (version != NULL) {
+        while (e[e_loc] != NULL) {
+          if (strcmp(e[e_loc]->version, version) == 0) {
+            break;
+          }
+        }
+        if (e[e_loc] == NULL) {
+          mport_index_entry_free_vec(e);
+          RETURN_ERRORX(MPORT_ERR_FATAL, "Cound not resolve '%s-%s'.",
+            pkgname, version);
+        }
+    } else {
+      mport_index_entry_free_vec(e);
+      RETURN_ERRORX(MPORT_ERR_FATAL, "Could not resolve '%s' to a single package.", pkgname);
+    }
   }
  
-  asprintf(&filename, "%s/%s", MPORT_FETCH_STAGING_DIR, e[0]->bundlefile);
+  asprintf(&filename, "%s/%s", MPORT_FETCH_STAGING_DIR, e[e_loc]->bundlefile);
   if (filename == NULL) {
     mport_index_entry_free_vec(e);
     RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
   }
 
   if (!mport_file_exists(filename)) {
-    if (mport_fetch_bundle(mport, e[0]->bundlefile) != MPORT_OK) {
+    if (mport_fetch_bundle(mport, e[e_loc]->bundlefile) != MPORT_OK) {
       free(filename);
       mport_index_entry_free_vec(e);
       RETURN_CURRENT_ERROR;
     }
   }
 
-  if (!mport_verify_hash(filename, e[0]->hash)) {
+  if (!mport_verify_hash(filename, e[e_loc]->hash)) {
     free(filename);
     mport_index_entry_free_vec(e);
     /* XXX should we unlink the bad file here? */

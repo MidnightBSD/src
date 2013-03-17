@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport.h,v 1.24 2012/01/25 03:56:56 laffer1 Exp $
+/* $MidnightBSD: src/lib/libmport/mport.h,v 1.25 2013/03/17 21:13:21 laffer1 Exp $
  *
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
@@ -173,7 +173,7 @@ int mport_create_primative(mportAssetList *, mportPackageMeta *, mportCreateExtr
 int mport_merge_primative(const char **, const char *);
 
 /* Package installation */
-int mport_install(mportInstance *, const char *, const char *);
+int mport_install(mportInstance *, const char *, const char *, const char *);
 int mport_install_primative(mportInstance *, const char *, const char *);
 
 /* package updating */

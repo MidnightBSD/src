@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD: src/lib/libmport/mport.3,v 1.4 2012/01/22 17:39:18 laffer1 Exp $
+.\" $MidnightBSD: src/lib/libmport/mport.3,v 1.5 2012/01/25 03:45:25 laffer1 Exp $
 .\"
 .Dd January 22, 2012
 .Dt MPORT 3
@@ -98,7 +98,7 @@
 .Ft void
 .Fn mport_index_entry_free "mportIndexEntry *e"
 .Ft int
-.Fn mport_install "mportInstance *mport" "const char *pkgname" "const char *prefix"
+.Fn mport_install "mportInstance *mport" "const char *pkgname" "const char *version" "const char *prefix"
 .Ft int
 .Fn mport_install_primative "mportInstance *mport" "const char *filename" "const char *prefix"
 .Ft int
