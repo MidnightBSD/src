@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.42 2013/03/10 03:00:12 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.43 2013/03/17 18:50:20 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -268,7 +268,6 @@ int
 install_depends(mportInstance *mport, const char *packageName, const char *version) {
 	mportPackageMeta **packs;
 	mportDependsEntry **depends;
-	int updated = 0;
 
 	if (packageName == NULL || version == NULL)
 		return 1;
@@ -302,7 +301,7 @@ install_depends(mportInstance *mport, const char *packageName, const char *versi
 
 int
 install(mportInstance *mport, const char *packageName) {
-	char *buf, *packagePath;
+	char *packagePath;
 	mportIndexEntry **indexEntry;
 	int resultCode;
 
