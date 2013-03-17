@@ -1,4 +1,4 @@
-# $MidnightBSD: src/lib/libmport/Makefile,v 1.15 2012/01/25 03:48:03 laffer1 Exp $
+# $MidnightBSD: src/lib/libmport/Makefile,v 1.16 2013/03/03 00:25:12 laffer1 Exp $
 
 LIB=		mport
 SRCS=		bundle_write.c bundle_read.c plist.c create_primative.c db.c \
@@ -6,7 +6,7 @@ SRCS=		bundle_write.c bundle_read.c plist.c create_primative.c db.c \
 		version_cmp.c check_preconditions.c delete_primative.c \
 		default_cbs.c  merge_primative.c bundle_read_install_pkg.c \
 		update_primative.c bundle_read_update_pkg.c pkgmeta.c \
-		fetch.c index.c install.c clean.c setting.c verify.c
+		fetch.c index.c index_depends.c install.c clean.c setting.c verify.c
 INCS=		mport.h 
 
 CFLAGS+=	-I${.CURDIR} -g
