@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport.h,v 1.23 2012/01/25 03:46:21 laffer1 Exp $
+/* $MidnightBSD: src/lib/libmport/mport.h,v 1.24 2012/01/25 03:56:56 laffer1 Exp $
  *
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
@@ -137,6 +137,19 @@ int mport_index_lookup_pkgname(mportInstance *, const char *, mportIndexEntry **
 int mport_index_search(mportInstance *, mportIndexEntry ***, const char *, ...);
 void mport_index_entry_free_vec(mportIndexEntry **);
 void mport_index_entry_free(mportIndexEntry *);
+
+/* Index Depends */
+
+typedef struct {
+  char *pkgname;
+  char *version;
+  char *d_pkgname;
+  char *d_version;
+} mportDependsEntry;
+
+int mport_index_depends_list(mportInstance *, const char *, const char *, mportDependsEntry ***);
+void mport_index_depends_free_vec(mportDependsEntry **);
+void mport_index_depends_free(mportDependsEntry *);
 
 /* Package creation */
 
