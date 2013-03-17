@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/install.c,v 1.6 2013/03/17 21:43:55 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/install.c,v 1.7 2013/03/17 22:05:54 laffer1 Exp $");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -39,9 +39,6 @@ MPORT_PUBLIC_API int mport_install(mportInstance *mport, const char *pkgname, co
   int ret = MPORT_OK;
 
   MPORT_CHECK_FOR_INDEX(mport, "mport_install()");
-  
-  if (mport_file_exists(pkgname)) 
-    return mport_install_primative(mport, pkgname, prefix);
   
   if (mport_index_lookup_pkgname(mport, pkgname, &e) != MPORT_OK)
     RETURN_CURRENT_ERROR;
@@ -65,21 +62,35 @@ MPORT_PUBLIC_API int mport_install(mportInstance *mport, const char *pkgname, co
    * check for already installed packages, and mport_install().
    */
   
-  if (e[1] != NULL)
+  if (e[1] != NULL) {
+    mport_index_entry_free_vec(e);
     RETURN_ERRORX(MPORT_ERR_FATAL, "Could not resolve '%s' to a single package.", pkgname);
-  
-  if (mport_fetch_bundle(mport, e[0]->bundlefile) != MPORT_OK)
+  }
+ 
+  asprintf(&filename, "%s/%s", MPORT_FETCH_STAGING_DIR, e[0]->bundlefile);
+  if (filename == NULL) {
+    mport_index_entry_free_vec(e);
+    RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+  }
+
+  if (!mport_file_exists(filename)) {
+    if (mport_fetch_bundle(mport, e[0]->bundlefile) != MPORT_OK) {
+      free(filename);
+      mport_index_entry_free_vec(e);
       RETURN_CURRENT_ERROR;
-    
-  (void)asprintf(&filename, "%s/%s", MPORT_FETCH_STAGING_DIR, e[0]->bundlefile);
-    
-  if (filename == NULL) 
-    RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory."); 
-    
+    }
+  }
+
+  if (!mport_verify_hash(filename, e[0]->hash)) {
+    free(filename);
+    mport_index_entry_free_vec(e);
+    /* XXX should we unlink the bad file here? */
+    RETURN_ERROR(MPORT_ERR_FATAL, "Package fails hash verification.\n");
+  }
+ 
   ret = mport_install_primative(mport, filename, prefix);
 
   free(filename);
-  
   mport_index_entry_free_vec(e);
   
   return ret;
