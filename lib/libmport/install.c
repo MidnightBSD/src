@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/lib/libmport/install.c,v 1.5 2011/07/24 15:59:08 laffer1 Exp $");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -79,8 +79,9 @@ MPORT_PUBLIC_API int mport_install(mportInstance *mport, const char *pkgname, co
   if (filename == NULL) 
     RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory."); 
     
-  ret = install_bundle_file(mport, filename, prefix);
-  
+  //ret = install_bundle_file(mport, filename, prefix);
+  ret = mport_install_primative(mport, filename, prefix);
+
   free(filename);
   
   mport_index_entry_free_vec(e);
