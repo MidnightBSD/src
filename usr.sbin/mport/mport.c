@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.41 2013/03/03 00:41:13 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.42 2013/03/10 03:00:12 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,6 +41,7 @@ __MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.41 2013/03/03 00:41:13 la
 static void usage(void);
 static void loadIndex(mportInstance *);
 static mportIndexEntry ** lookupIndex(mportInstance *, const char *);
+static int install_depends(mportInstance *, const char *, const char *);
 static int install(mportInstance *, const char *);
 static int delete(const char *);
 static int deleteAll(mportInstance *);
@@ -262,6 +263,43 @@ info(mportInstance *mport, const char *packageName) {
 	return 0;
 }
 
+/* recursive function */ 
+int
+install_depends(mportInstance *mport, const char *packageName, const char *version) {
+	mportPackageMeta **packs;
+	mportDependsEntry **depends;
+	int updated = 0;
+
+	if (packageName == NULL || version == NULL)
+		return 1;
+
+	mport_index_depends_list(mport, packageName, version, &depends);
+	if (depends == NULL)
+		return 0;
+
+	if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", packageName) != MPORT_OK) {
+                warnx("%s", mport_err_string());
+                return 1;
+        }
+
+	if (packs == NULL) {
+		/* Package is not installed */
+		while (*depends != NULL) {
+			install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version);
+                	depends++;
+        	}
+		if (mport_install(mport, packageName, NULL) != MPORT_OK) 
+			return 1;
+	} else {
+		/* already installed */
+		printf("Package %s is already installed.\n", packageName);
+		mport_index_depends_free_vec(depends);
+		free(packs); // XXX
+	}
+
+	return 0;
+}
+
 int
 install(mportInstance *mport, const char *packageName) {
 	char *buf, *packagePath;
@@ -288,11 +326,8 @@ install(mportInstance *mport, const char *packageName) {
 		return 1;
         }
 
-	asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.install");
+	resultCode = install_depends(mport, (*indexEntry)->pkgname, (*indexEntry)->version);
 
-	resultCode = execl(buf, "mport.install", packagePath, (char *)0);
-	free(buf);
-	free(packagePath);
 	mport_index_entry_free_vec(indexEntry);
 
 	return resultCode;
