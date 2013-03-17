@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.43 2013/03/17 18:50:20 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.44 2013/03/17 21:16:21 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -285,13 +285,13 @@ install_depends(mportInstance *mport, const char *packageName, const char *versi
 		/* Package is not installed */
 		while (*depends != NULL) {
 			install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version);
-                	depends++;
+		   	depends++;
         	}
 		if (mport_install(mport, packageName, NULL) != MPORT_OK) 
 			return 1;
 	} else {
 		/* already installed */
-		printf("Package %s is already installed.\n", packageName);
+		//printf("Package %s is already installed.\n", packageName);
 		mport_index_depends_free_vec(depends);
 		free(packs); // XXX
 	}
@@ -301,29 +301,12 @@ install_depends(mportInstance *mport, const char *packageName, const char *versi
 
 int
 install(mportInstance *mport, const char *packageName) {
-	char *packagePath;
 	mportIndexEntry **indexEntry;
 	int resultCode;
 
 	indexEntry = lookupIndex(mport, packageName);
 	if (indexEntry == NULL || *indexEntry == NULL)
 		return 1;
-
-	asprintf(&packagePath, "%s/%s", MPORT_LOCAL_PKG_PATH, (*indexEntry)->bundlefile);
-
-	if (!mport_file_exists(packagePath)) {
-		if (mport_fetch_bundle(mport, (*indexEntry)->bundlefile) != MPORT_OK) {
-			fprintf(stderr, "%s\n", mport_err_string());
-			free(packagePath);
-			return mport_err_code();
-		}
-	}
-
-	if (!mport_verify_hash(packagePath, (*indexEntry)->hash)) {
-		fprintf(stderr, "Package fails hash verification.\n");
-		free(packagePath);
-		return 1;
-        }
 
 	resultCode = install_depends(mport, (*indexEntry)->pkgname, (*indexEntry)->version);
 
