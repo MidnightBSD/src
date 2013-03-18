@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.46 2013/03/17 23:53:36 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.47 2013/03/18 02:11:43 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -223,19 +223,19 @@ info(mportInstance *mport, const char *packageName) {
 	char *status, *origin;
 
 	if (packageName == NULL) {
-		fprintf(stderr, "Specify package name\n");
+		warnx("%s", "Specify package name");
 		return 1;
 	}
 
 	indexEntry = lookupIndex(mport, packageName);
 	if (indexEntry == NULL || *indexEntry == NULL) {
-		fprintf(stderr, "%s not found in index.\n", packageName);
+		warnx("%s not found in index.", packageName);
 		return 1;
 	}
 
 	if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", packageName) != MPORT_OK) {
 		warnx("%s", mport_err_string());
-		return 1;
+		return(1);
 	}
 
 	if (packs == NULL) {
@@ -257,10 +257,11 @@ info(mportInstance *mport, const char *packageName) {
 	if (packs == NULL) {
 		free(status);
 		free(origin);
-	}
+	} else
+		mport_pkgmeta_vec_free(packs);
 
 	mport_index_entry_free_vec(indexEntry);
-	return 0;
+	return(0);
 }
 
 /* recursive function */ 
@@ -276,7 +277,7 @@ install_depends(mportInstance *mport, const char *packageName, const char *versi
 
 	if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", packageName) != MPORT_OK) {
                 warnx("%s", mport_err_string());
-                return 2;
+                return mport_err_code();
         }
 
 	if (packs == NULL && depends == NULL) {
@@ -299,11 +300,11 @@ install_depends(mportInstance *mport, const char *packageName, const char *versi
 	} else {
 		/* already installed */
 		//printf("Package %s is already installed.\n", packageName);
+		mport_pkgmeta_vec_free(packs);
 		mport_index_depends_free_vec(depends);
-		free(packs); // XXX
 	}
 
-	return 0;
+	return(0);
 }
 
 int
@@ -398,7 +399,7 @@ download(mportInstance *mport, const char *packageName) {
 	free(path);
 	mport_index_entry_free_vec(indexEntry);
 
-	return 0;
+	return(0);
 }
 
 int
@@ -434,7 +435,7 @@ update(mportInstance *mport, const char *packageName) {
 	free(path);
 	mport_index_entry_free_vec(indexEntry);
 
-	return 0;
+	return (0);
 }
 
 int
@@ -472,12 +473,12 @@ verify(mportInstance *mport) {
 	
 	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
 		warnx("%s", mport_err_string());
-		return(1);
+		return mport_err_code();
 	}
 
 	if (packs == NULL) {
-		fprintf(stderr, "No packages installed.\n");
-		return(1);
+		warnx("No packages installed.\n");
+		return(2);
 	}
 	
 	while (*packs != NULL) {
