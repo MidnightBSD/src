@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2010, 2011 Lucas Holt
+ * Copyright (c) 2010, 2011, 2013 Lucas Holt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.45 2013/03/17 22:51:25 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.46 2013/03/17 23:53:36 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -316,7 +316,7 @@ install(mportInstance *mport, const char *packageName) {
 
 	indexEntry = lookupIndex(mport, packageName);
 	if (indexEntry == NULL || *indexEntry == NULL)
-		return 1;
+		errx(4, "Package %s not found in the index.", packageName);
 
 	if (indexEntry[1] != NULL) {
 		printf("Multiple packages found. Please select one:\n");
@@ -353,6 +353,8 @@ delete(const char *packageName) {
 	int resultCode;
 
 	asprintf(&buf, "%s%s %s %s", MPORT_TOOLS_PATH, "mport.delete", "-n", packageName);
+	if (buf == NULL)
+		errx(1, "Out of memory.");
 	resultCode = system(buf);
 	free(buf);
 
@@ -366,12 +368,12 @@ download(mportInstance *mport, const char *packageName) {
 	bool existed = true;
 
 	indexEntry = lookupIndex(mport, packageName);
-	if (indexEntry == NULL || *indexEntry == NULL) {
-		fprintf(stderr, "Package %s not found in index.\n", packageName);
-		return 1;
-	}
+	if (indexEntry == NULL || *indexEntry == NULL)
+		errx(1, "Package %s not found in index.\n", packageName);
 
 	asprintf(&path, "%s/%s", MPORT_LOCAL_PKG_PATH, (*indexEntry)->bundlefile);
+	if (path == NULL)
+		errx(2, "Out of memory.");
 
 	if (!mport_file_exists(path)) {
 		if (mport_fetch_bundle(mport, (*indexEntry)->bundlefile) != MPORT_OK) {
