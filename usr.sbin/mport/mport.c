@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.47 2013/03/18 02:11:43 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.48 2013/03/18 02:23:53 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -469,7 +469,7 @@ upgrade(mportInstance *mport) {
 int
 verify(mportInstance *mport) {
 	mportPackageMeta **packs;
-	int total;
+	int total = 0;
 	
 	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
 		warnx("%s", mport_err_string());
