@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.48 2013/03/18 02:23:53 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.49 2013/03/18 02:24:40 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -70,8 +70,7 @@ main(int argc, char *argv[]) {
 	mport = mport_instance_new();
 
 	if (mport_instance_init(mport, NULL) != MPORT_OK) {
-		warnx("%s", mport_err_string());
-		exit(1);
+		errx(1, "%s", mport_err_string());
 	}
 
 	if (!strcmp(argv[1], "install")) {
@@ -143,7 +142,7 @@ main(int argc, char *argv[]) {
 	}
 
 	mport_instance_free(mport);
-	return resultCode;
+	return (resultCode);
 }
 
 void
@@ -171,7 +170,7 @@ loadIndex(mportInstance *mport) {
 	if (result == MPORT_ERR_WARN)
 		warnx("%s", mport_err_string());
 	else if (result != MPORT_OK)
-                errx(4, "Unable to load index %s", mport_err_string());
+		errx(4, "Unable to load index %s", mport_err_string());
 }
 
 mportIndexEntry **
@@ -179,11 +178,12 @@ lookupIndex(mportInstance *mport, const char *packageName) {
 	mportIndexEntry **indexEntries;
 
 	if (mport_index_lookup_pkgname(mport, packageName, &indexEntries) != MPORT_OK) {
-		fprintf(stderr, "Error looking up package name %s: %d %s\n", packageName,  mport_err_code(), mport_err_string());
-		exit(mport_err_code());
+		fprintf(stderr, "Error looking up package name %s: %d %s\n",
+			packageName,  mport_err_code(), mport_err_string());
+		errx(mport_err_code(), "%s", mport_err_string());
 	}
 
-	return indexEntries;
+	return (indexEntries);
 }
 
 int
@@ -192,7 +192,7 @@ search(mportInstance *mport, char **query) {
 
 	if (query == NULL || *query == NULL) {
 		fprintf(stderr, "Search terms required\n");
-		return 1;
+		return (1);
 	}
 
 	while (query != NULL && *query != NULL) {
@@ -213,7 +213,7 @@ search(mportInstance *mport, char **query) {
 		query++;	
 	}
 
-	return 0;
+	return (0);
 }
 
 int
@@ -224,18 +224,18 @@ info(mportInstance *mport, const char *packageName) {
 
 	if (packageName == NULL) {
 		warnx("%s", "Specify package name");
-		return 1;
+		return (1);
 	}
 
 	indexEntry = lookupIndex(mport, packageName);
 	if (indexEntry == NULL || *indexEntry == NULL) {
 		warnx("%s not found in index.", packageName);
-		return 1;
+		return (1);
 	}
 
 	if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", packageName) != MPORT_OK) {
 		warnx("%s", mport_err_string());
-		return(1);
+		return (1);
 	}
 
 	if (packs == NULL) {
@@ -261,7 +261,7 @@ info(mportInstance *mport, const char *packageName) {
 		mport_pkgmeta_vec_free(packs);
 
 	mport_index_entry_free_vec(indexEntry);
-	return(0);
+	return (0);
 }
 
 /* recursive function */ 
@@ -271,26 +271,26 @@ install_depends(mportInstance *mport, const char *packageName, const char *versi
 	mportDependsEntry **depends;
 
 	if (packageName == NULL || version == NULL)
-		return 1;
+		return (1);
 
 	mport_index_depends_list(mport, packageName, version, &depends);
 
 	if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", packageName) != MPORT_OK) {
-                warnx("%s", mport_err_string());
-                return mport_err_code();
-        }
+		warnx("%s", mport_err_string());
+		return mport_err_code();
+	}
 
 	if (packs == NULL && depends == NULL) {
 		/* Package is not installed and there are no dependencies */
 		if (mport_install(mport, packageName, version, NULL) != MPORT_OK) {
 			warnx("%s", mport_err_string());
-                        return mport_err_code();
+			return mport_err_code();
 		}
 	} else if (packs == NULL) {
 		/* Package is not installed */
 		while (*depends != NULL) {
 			install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version);
-		   	depends++;
+			depends++;
         	}
 		if (mport_install(mport, packageName, version, NULL) != MPORT_OK) {
 			warnx("%s", mport_err_string());
@@ -299,12 +299,11 @@ install_depends(mportInstance *mport, const char *packageName, const char *versi
 		mport_index_depends_free_vec(depends);
 	} else {
 		/* already installed */
-		//printf("Package %s is already installed.\n", packageName);
 		mport_pkgmeta_vec_free(packs);
 		mport_index_depends_free_vec(depends);
 	}
 
-	return(0);
+	return (0);
 }
 
 int
@@ -345,7 +344,7 @@ install(mportInstance *mport, const char *packageName) {
 
 	mport_index_entry_free_vec(indexEntry);
 
-	return resultCode;
+	return (resultCode);
 }
 
 int
@@ -354,12 +353,14 @@ delete(const char *packageName) {
 	int resultCode;
 
 	asprintf(&buf, "%s%s %s %s", MPORT_TOOLS_PATH, "mport.delete", "-n", packageName);
-	if (buf == NULL)
-		errx(1, "Out of memory.");
+	if (buf == NULL) {
+		warnx("Out of memory.");
+		return (1);
+	}
 	resultCode = system(buf);
 	free(buf);
 
-	return resultCode;
+	return (resultCode);
 }
 
 int
@@ -374,7 +375,7 @@ download(mportInstance *mport, const char *packageName) {
 
 	asprintf(&path, "%s/%s", MPORT_LOCAL_PKG_PATH, (*indexEntry)->bundlefile);
 	if (path == NULL)
-		errx(2, "Out of memory.");
+		errx(1, "Out of memory.");
 
 	if (!mport_file_exists(path)) {
 		if (mport_fetch_bundle(mport, (*indexEntry)->bundlefile) != MPORT_OK) {
@@ -388,7 +389,7 @@ download(mportInstance *mport, const char *packageName) {
 	if (!mport_verify_hash(path, (*indexEntry)->hash)) {
 		fprintf(stderr, "Package %s fails hash verification.\n", packageName);
 		free(path);
-		return 1;
+		return (1);
 	}
 
 	if (!existed)
@@ -399,7 +400,7 @@ download(mportInstance *mport, const char *packageName) {
 	free(path);
 	mport_index_entry_free_vec(indexEntry);
 
-	return(0);
+	return (0);
 }
 
 int
@@ -409,22 +410,22 @@ update(mportInstance *mport, const char *packageName) {
 
 	indexEntry = lookupIndex(mport, packageName);
         if (indexEntry == NULL || *indexEntry == NULL)
-                return 1;
+                return (1);
 
 	asprintf(&path, "%s/%s", MPORT_LOCAL_PKG_PATH, (*indexEntry)->bundlefile);
 
 	if (!mport_file_exists(path)) {
         	if (mport_fetch_bundle(mport, (*indexEntry)->bundlefile) != MPORT_OK) {
-                	fprintf(stderr, "%s\n", mport_err_string());
+			fprintf(stderr, "%s\n", mport_err_string());
 			free(path);
-                	return mport_err_code();
-        	}
+			return mport_err_code();
+		}
 	}
 
 	if (!mport_verify_hash(path, (*indexEntry)->hash)) {
 		fprintf(stderr, "Package fails hash verification.\n");
 		free(path);
-		return 1;
+		return (1);
 	}
 
 	if (mport_update_primative(mport, path) != MPORT_OK) {
@@ -446,12 +447,12 @@ upgrade(mportInstance *mport) {
 
 	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
 		warnx("%s", mport_err_string());
-		return(1);
+		return (1);
 	}
 
 	if (packs == NULL) {
-		fprintf(stderr, "No packages installed.\n");
-		return(1);
+		warnx("No packages installed.\n");
+		return (1);
 	}
 
 	while (*packs != NULL) {
@@ -477,8 +478,8 @@ verify(mportInstance *mport) {
 	}
 
 	if (packs == NULL) {
-		warnx("No packages installed.\n");
-		return(2);
+		warnx("No packages installed.");
+		return (1);
 	}
 	
 	while (*packs != NULL) {
@@ -490,7 +491,7 @@ verify(mportInstance *mport) {
 	mport_pkgmeta_vec_free(packs);
 	printf("Packages verified: %d\n", total);
 	
-	return(0);
+	return (0);
 }
 
 int
@@ -500,7 +501,7 @@ indexCheck(mportInstance *mport, mportPackageMeta *pack) {
 
 	if (mport_index_lookup_pkgname(mport, pack->name, &indexEntries) != MPORT_OK) {
 		fprintf(stderr, "Error Looking up package name %s: %d %s\n", pack->name,  mport_err_code(), mport_err_string());
-		return 0;
+		return (0);
 	}
 
 	if (indexEntries != NULL) {
@@ -514,7 +515,7 @@ indexCheck(mportInstance *mport, mportPackageMeta *pack) {
 		mport_index_entry_free_vec(indexEntries);
 	}
 
-	return ret;
+	return (ret);
 }
 
 int
@@ -558,7 +559,7 @@ updateDown(mportInstance *mport, mportPackageMeta *pack) {
 		mport_pkgmeta_vec_free(depends);
 	}
 
-	return ret;
+	return (ret);
 }
 
 int
@@ -571,12 +572,12 @@ deleteAll(mportInstance *mport) {
 
 	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
 		warnx("%s", mport_err_string());
-		return(1);
+		return (1);
 	}
 
 	if (packs == NULL) {
 		fprintf(stderr, "No packages installed.\n");
-		return(1);
+		return (1);
 	}
 
 	while (1) {
@@ -601,7 +602,7 @@ deleteAll(mportInstance *mport) {
 		mport_pkgmeta_vec_free(packs);
 		if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
 			warnx("%s", mport_err_string());
-			return(1);
+			return (1);
 		}
 	}
 
@@ -618,5 +619,5 @@ clean(mportInstance *mport) {
 	ret = mport_clean_database(mport);
 	if (ret == MPORT_OK)
 		ret = mport_clean_oldpackages(mport);
-	return ret;
+	return (ret);
 }
