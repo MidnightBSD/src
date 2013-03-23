@@ -1,6 +1,7 @@
 PROG= mport.install
 
-CFLAGS+=	-I${.CURDIR}/../../lib/libmport/ -O0 -g
+CC=	clang
+CFLAGS+=	-I${.CURDIR}/../../lib/libmport/
 WARNS?= 	6
 
 NO_MAN=		yes

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.install/mport.install.c,v 1.8 2011/09/25 21:03:48 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.install/mport.install.c,v 1.9 2012/04/11 00:46:55 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -64,15 +64,15 @@ main(int argc, char *argv[])
 	mport = mport_instance_new();
 
 	if (mport_instance_init(mport, NULL) != MPORT_OK) {
-		warnx("%s", mport_err_string());
+		warnx("Init failed: %s", mport_err_string());
 		return 1;
 	}
 	
 	for (i = 0; i < argc; i++) {
 		if (mport_install_primative(mport, argv[i], prefix) != MPORT_OK) {
-			warnx("%s", mport_err_string());
+			warnx("install failed: %s", mport_err_string());
 			mport_instance_free(mport);
-			return 3;
+			return 1;
 		}
 	}
  
@@ -86,5 +86,5 @@ void usage(void)
 {
 
 	fprintf(stderr, "Usage: mport.install [-p prefix] pkgfile1 pkgfile2 ...\n");
-	exit(2);
+	exit(1);
 }
