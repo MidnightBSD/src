@@ -1,6 +1,5 @@
 PROG= mport.install
 
-CC=	clang
 CFLAGS+=	-I${.CURDIR}/../../lib/libmport/
 WARNS?= 	6
 
