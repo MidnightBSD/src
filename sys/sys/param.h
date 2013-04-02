@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)param.h	8.3 (Berkeley) 4/4/95
- * $MidnightBSD: src/sys/sys/param.h,v 1.51 2013/01/23 02:36:12 laffer1 Exp $
+ * $MidnightBSD: src/sys/sys/param.h,v 1.52 2013/01/23 02:56:07 laffer1 Exp $
  */
 
 #ifndef _SYS_PARAM_H_
@@ -51,7 +51,7 @@
  * 		or r is 5-9 in stable after 1.0 is released.
  */
 #undef __MidnightBSD_version
-#define __MidnightBSD_version 4017	/* Master, propagated to newvers */
+#define __MidnightBSD_version 4018	/* Master, propagated to newvers */
 
 /* Version of FreeBSD we're compatible with */
 #undef __FreeBSD_version
