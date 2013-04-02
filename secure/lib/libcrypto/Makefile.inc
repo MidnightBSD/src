@@ -1,10 +1,10 @@
-# $MidnightBSD: src/secure/lib/libcrypto/Makefile.inc,v 1.4 2011/02/05 19:28:24 laffer1 Exp $
+# $MidnightBSD: src/secure/lib/libcrypto/Makefile.inc,v 1.5 2012/08/26 23:40:28 laffer1 Exp $
 
 .include <bsd.own.mk>
 
 # OpenSSL version used for manual page generation
-OPENSSL_VER=	0.9.8x
-OPENSSL_DATE=	2012-05-10
+OPENSSL_VER=	0.9.8y
+OPENSSL_DATE=	2013-02-05
 
 LCRYPTO_SRC=	${.CURDIR}/../../../crypto/openssl
 LCRYPTO_DOC=	${.CURDIR}/../../../crypto/openssl/doc
