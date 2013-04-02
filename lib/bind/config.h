@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/lib/bind/config.h,v 1.10 2013/01/30 01:55:39 laffer1 Exp $ */
 
 /* config.h.  Generated from config.h.in by configure.  */
 /* config.h.in.  Generated from configure.in by autoheader.  */
@@ -19,7 +19,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: config.h,v 1.10 2013-01-30 01:55:39 laffer1 Exp $ */
+/* $Id: config.h,v 1.11 2013-04-02 22:43:24 laffer1 Exp $ */
 
 /*! \file */
 
@@ -281,7 +281,7 @@ int sigwait(const unsigned int *set, int *sig);
 /* #undef HAVE_OPENSSL_GOST */
 
 /* Define to 1 if you have the <regex.h> header file. */
-#define HAVE_REGEX_H 1
+/* #undef HAVE_REGEX_H */
 
 /* Define to 1 if you have the `setegid' function. */
 #define HAVE_SETEGID 1
