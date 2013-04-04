@@ -48789,8 +48789,6 @@ sys/geom/virstor/g_virstor.h -text
 sys/geom/virstor/g_virstor_md.c -text
 sys/geom/virstor/g_virstor_md.h -text
 sys/geom/zero/g_zero.c -text
-sys/gnu/dev/sound/pci/emu10k1-ac97.h -text
-sys/gnu/dev/sound/pci/emu10k1.h -text
 sys/gnu/fs/reiserfs/README -text
 sys/gnu/fs/reiserfs/reiserfs_fs.h -text
 sys/gnu/fs/reiserfs/reiserfs_fs_i.h -text
