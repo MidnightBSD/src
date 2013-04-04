@@ -29,7 +29,7 @@
 #include "opt_compat.h"
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/compat/linux/linux_ioctl.c,v 1.4 2013/01/08 00:27:47 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -2260,8 +2260,9 @@ again:
 
 	ifc.ifc_len = valid_len; 
 	sbuf_finish(sb);
-	memcpy(PTRIN(ifc.ifc_buf), sbuf_data(sb), ifc.ifc_len);
-	error = copyout(&ifc, uifc, sizeof(ifc));
+	error = copyout(sbuf_data(sb), PTRIN(ifc.ifc_buf), ifc.ifc_len);
+	if (error == 0)
+		error = copyout(&ifc, uifc, sizeof(ifc));
 	sbuf_delete(sb);
 	CURVNET_RESTORE();
 
