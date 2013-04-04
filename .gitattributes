@@ -34146,6 +34146,7 @@ crypto/openssl/ssl/s2_meth.c -text
 crypto/openssl/ssl/s2_pkt.c -text
 crypto/openssl/ssl/s2_srvr.c -text
 crypto/openssl/ssl/s3_both.c -text
+crypto/openssl/ssl/s3_cbc.c -text
 crypto/openssl/ssl/s3_clnt.c -text
 crypto/openssl/ssl/s3_enc.c -text
 crypto/openssl/ssl/s3_lib.c -text
