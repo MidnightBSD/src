@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.37 2012/01/18 14:59:40 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.38 2012/01/21 23:04:27 laffer1 Exp $
 #
 # Makefile for building releases and release media.
 # 
@@ -67,11 +67,16 @@ kernel.txz:
 	mv ${DISTDIR}/kernel.txz ${.OBJDIR}
 
 src.txz:
+	echo "src.txz"
+	-unlink ${DISTDIR}/usr/src
 	-mkdir -p ${DISTDIR}/usr
 	ln -fs ${WORLDDIR} ${DISTDIR}/usr/src
-	cd ${DISTDIR} && tar cLvJf ${.OBJDIR}/src.txz --exclude CVS usr/src
+	cd ${DISTDIR} && tar cLvJf ${.OBJDIR}/src.txz --exclude .svn \
+	    --exclude "release/*.txz" --exclude CVS usr/src
 
 mports.txz:
+	echo "mports.txz"
+	-unlink ${DISTDIR}/usr/mports
 	-mkdir -p ${DISTDIR}/usr
 	ln -fs ${PORTSDIR} ${DISTDIR}/usr/mports
 	cd ${DISTDIR} && tar cLvJf ${.OBJDIR}/mports.txz \
