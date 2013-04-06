@@ -7,8 +7,7 @@
 # The output file looks like this (tab-delimited):
 #  foo1.txz SHA256-checksu Number-of-files foo1 Description Install-by-default
 #
-# $MidnightBSD$
-# $FreeBSD: src/release/scripts/make-manifest.sh,v 1.1 2011/03/13 17:15:31 nwhitehorn Exp $
+# $MidnightBSD: src/release/scripts/make-manifest.sh,v 1.1 2011/12/02 13:15:03 laffer1 Exp $
 
 desc_base="Base system (MANDATORY)"
 desc_kernel="Kernel (MANDATORY)"
