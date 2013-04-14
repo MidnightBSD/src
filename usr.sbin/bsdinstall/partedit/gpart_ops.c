@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/usr.sbin/bsdinstall/partedit/gpart_ops.c,v 1.4 2013/01/19 23:30:56 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/bsdinstall/partedit/gpart_ops.c,v 1.5 2013/04/06 04:41:31 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/bsdinstall/partedit/gpart_ops.c,v 1.10 2011/10/23 16:57:10 nwhitehorn Exp $
  */
 
@@ -608,9 +608,9 @@ set_default_part_metadata(const char *name, const char *scheme,
 		md->fstab->fs_spec = malloc(strlen(name) + 6);
 		sprintf(md->fstab->fs_spec, "/dev/%s", name);
 		md->fstab->fs_file = strdup(mountpoint);
-		/* Get VFS from text after midnightbsd-, if possible */
+		/* Get VFS from text after mnbsd-, if possible */
 		if (strncmp("mnbsd-", type, 6) == 0)
-			md->fstab->fs_vfstype = strdup(&type[8]);
+			md->fstab->fs_vfstype = strdup(&type[6]);
 		else if (strcmp("fat32", type) == 0 || strcmp("efi", type) == 0)
 			md->fstab->fs_vfstype = strdup("msdosfs");
 		else
