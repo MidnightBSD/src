@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD: src/etc/rc.d/firstboot,v 1.3 2008/09/02 01:33:17 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.d/firstboot,v 1.4 2008/10/17 17:20:42 laffer1 Exp $
 
 # PROVIDE: firstboot
 # REQUIRE: NETWORKING cleanvar
@@ -33,7 +33,7 @@ firstboot_start()
 		if [ ${installbstat} = "yes" ]; then
 			if [ ! -f /usr/local/etc/rc.d/bsdstats.sh ]; then
 				/sbin/ipfw disable firewall
-				/usr/sbin/pkg_add -r bsdstats
+				/usr/sbin/mport install bsdstats
 				/sbin/ipfw enable firewall
 			fi
 			echo "bsdstats_enable=\"YES\"" >> /etc/rc.conf
@@ -51,9 +51,9 @@ firstboot_start()
 			else
 #			GNUSTEP/WindowMaker/Slim
 				/sbin/ipfw disable firewall
-				/usr/sbin/pkg_add -r gnustep
-				/usr/sbin/pkg_add -r slim
-				/usr/sbin/pkg_add -r windowmaker
+				/usr/sbin/mport install gnustep
+				/usr/sbin/mport install slim
+				/usr/sbin/mport install windowmaker
 				/sbin/ipfw enable firewall
 				echo "slim_enable=\"YES\"" >> /etc/rc.conf
 			fi
