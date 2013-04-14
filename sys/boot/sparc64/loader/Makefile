@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/sys/boot/sparc64/loader/Makefile,v 1.3 2012/07/21 16:50:01 laffer1 Exp $
 
 .include <bsd.own.mk>
 MK_SSP=		no
@@ -100,6 +100,7 @@ FILES=	loader.help loader.4th support.4th loader.conf
 FILES+=	screen.4th frames.4th
 FILES+=	beastie.4th brand.4th check-password.4th color.4th delay.4th
 FILES+=	menu.4th menu-commands.4th shortcuts.4th version.4th
+FILES+=	vm.4th
 FILESDIR_loader.conf=	/boot/defaults
 
 .if !exists(${DESTDIR}/boot/loader.rc)
