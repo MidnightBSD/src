@@ -1,8 +1,0 @@
-#!/bin/sh
-
-# $Id: reconf,v 1.1.1.2 2011-10-26 11:58:40 laffer1 Exp $
-
-autoreconf
-# We do not use automake but we need its install-sh file. We do not 
-# care about the exit code.
-automake --add-missing || true
