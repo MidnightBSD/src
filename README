@@ -1,6 +1,6 @@
 This is the top level of the MidnightBSD source directory.  This file
 was last revised on:
-$MidnightBSD: src/README,v 1.8 2009/10/08 01:33:06 laffer1 Exp $
+$MidnightBSD: src/README,v 1.9 2011/03/14 00:16:12 laffer1 Exp $
 
 For copyright information, please see the file COPYRIGHT in this
 directory (additional copyright information also exists for some
@@ -41,7 +41,8 @@ apache		Various commands and libraries under the APACHE license.
 
 bin		System/user commands.
 
-cddl		Various commands and libraries under the Sun CDDL license.
+cddl		Various commands and libraries under the Common Development
+		and Distribution License.
 
 contrib		Packages contributed by 3rd parties.
 
@@ -65,6 +66,8 @@ libexec		System daemons.
 nrelease	Release building from DragonFly.  Used for making live CDs.
 
 release		Release building Makefile & associated tools.
+
+rescue		Build system for statically linked /rescue utilities.
 
 sbin		System commands.
 
