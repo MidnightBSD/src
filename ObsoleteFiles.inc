@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/ObsoleteFiles.inc,v 1.25.2.3 2006/02/16 07:25:23 avatar Exp $
-# $MidnightBSD: src/ObsoleteFiles.inc,v 1.34 2013/01/26 15:52:50 laffer1 Exp $
+# $MidnightBSD: src/ObsoleteFiles.inc,v 1.35 2013/04/19 12:15:41 laffer1 Exp $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -17,6 +17,8 @@
 
 #20130120 0.4-CURRENT bump
 OLD_FILES+=etc/auth.conf
+OLD_FILES+=usr/bin/deroff
+OLD_FILES+=usr/bin/objformat
 OLD_FILES+=usr/bin/ssh-vulnkey
 OLD_FILES+=usr/share/examples/etc/auth.conf
 OLD_FILES+=usr/share/man/man3/auth.3.gz
@@ -152,6 +154,7 @@ OLD_FILES+=usr/sbin/pkg_info
 OLD_FILES+=usr/sbin/pkg_sign
 OLD_FILES+=usr/sbin/pkg_version
 #20110610:
+OLD_FILES+=usr/bin/perl5.10.0
 OLD_FILES+=usr/lib/perl5/5.10.0/i386-midnightbsd-64int/Cwd.pm
 OLD_FILES+=usr/lib/perl5/5.10.0/i386-midnightbsd-64int/Config.pod
 OLD_FILES+=usr/lib/perl5/5.10.0/i386-midnightbsd-64int/Config.pm
