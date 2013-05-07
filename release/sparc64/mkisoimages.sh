@@ -4,7 +4,7 @@
 # Author: Jordan K Hubbard
 # Date:   22 June 2001
 #
-# $MidnightBSD$
+# $MidnightBSD: src/release/sparc64/mkisoimages.sh,v 1.2 2007/03/17 16:07:24 laffer1 Exp $
 # $FreeBSD: src/release/sparc64/mkisoimages.sh,v 1.9 2005/01/30 21:10:52 kensmith Exp $
 #
 # This script is used by release/Makefile to build the (optional) ISO images
@@ -32,8 +32,8 @@ if [ "x$1" = "x-b" ]; then
 	dd if=/dev/zero of=${IMG} bs=512 count=1024
 	MD=`mdconfig -a -t vnode -f ${IMG}`
 	sunlabel -w -B -b $4/boot/boot1 ${MD} auto
-	newfs -O1 -o space -m 0 /dev/${MD}c
-	mount /dev/${MD}c ${MNT}
+	newfs -O1 -o space -m 0 /dev/${MD}
+	mount /dev/${MD} ${MNT}
 	mkdir ${MNT}/boot
 	cp $4/boot/loader ${MNT}/boot
 	umount ${MNT}
@@ -67,5 +67,7 @@ fi
 LABEL=$1; shift
 NAME=$1; shift
 
+echo "/dev/iso9660/$LABEL / cd9660 ro 0 0" > $1/etc/fstab
 mkisofs $bootable -r -J -V $LABEL -publisher "$publisher" -o $NAME $*
+rm $1/etc/fstab
 rm -f ${IMG}
