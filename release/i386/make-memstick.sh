@@ -7,7 +7,7 @@
 #
 # Usage: make-memstick.sh <directory tree> <image filename>
 #
-# $MidnightBSD$
+# $MidnightBSD: src/release/i386/make-memstick.sh,v 1.1 2011/12/02 13:15:03 laffer1 Exp $
 # $FreeBSD: src/release/i386/make-memstick.sh,v 1.4 2011/10/09 16:23:04 nwhitehorn Exp $
 #
 
@@ -44,6 +44,6 @@ if [ $? -ne 0 ]; then
 fi
 gpart create -s BSD ${unit}
 gpart bootcode -b ${1}/boot/boot ${unit}
-gpart add -t freebsd-ufs ${unit}
+gpart add -t mnbsd-ufs ${unit}
 mdconfig -d -u ${unit}
 
