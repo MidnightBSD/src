@@ -8,7 +8,7 @@
 # Copyright 1998-2011 Douglas Barton
 # dougb@FreeBSD.org
 
-# $MidnightBSD$
+# $MidnightBSD: src/usr.sbin/mergemaster/mergemaster.sh,v 1.4 2013/01/23 02:48:14 laffer1 Exp $
 
 PATH=/bin:/usr/bin:/usr/sbin
 
@@ -493,6 +493,7 @@ if [ ! -f ${SOURCEDIR}/Makefile.inc1 -a \
   sleep 3
   SOURCEDIR=${SOURCEDIR}/..
 fi
+SOURCEDIR=$(realpath "$SOURCEDIR")
 
 # Setup make to use system files from SOURCEDIR
 MM_MAKE="make ${ARCHSTRING} -m ${SOURCEDIR}/share/mk"
