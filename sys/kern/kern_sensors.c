@@ -21,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/kern/kern_sensors.c,v 1.4 2012/01/04 03:34:07 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/sys/kern/kern_sensors.c,v 1.5 2012/02/19 16:58:07 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -216,9 +216,9 @@ sensor_task_register(void *arg, void (*func)(void *), int period)
 	TAILQ_INSERT_HEAD(&tasklist, st, entry);
 
 	if (create_thread)
-		if (kthread_create(sensor_task_thread, NULL, NULL, 0, 0,
+		if (kproc_create(sensor_task_thread, NULL, NULL, 0, 0,
 		    "sensors") != 0)
-			panic("sensors kthread");
+			panic("sensors kproc");
 	
 	wakeup(&tasklist);
 
@@ -268,7 +268,7 @@ sensor_task_thread(void *arg)
 		}
 	}
 
-	kthread_exit(0);
+	kproc_exit(0);
 }
 
 void
