@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/dev/amdtemp/amdtemp.c,v 1.2 2011/02/19 18:36:55 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -188,7 +188,7 @@ amdtemp_probe(device_t dev)
 	case 0xf51:
 		return (ENXIO);
 	}
-	device_set_desc(dev, "AMD K8 Thermal Sensors");
+	device_set_desc(dev, "AMD CPU On-Die Thermal Sensors");
 	
 	return (BUS_PROBE_GENERIC);
 }
