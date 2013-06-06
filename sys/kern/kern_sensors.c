@@ -21,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/kern/kern_sensors.c,v 1.5 2012/02/19 16:58:07 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/sys/kern/kern_sensors.c,v 1.6 2013/06/05 23:56:12 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -218,7 +218,7 @@ sensor_task_register(void *arg, void (*func)(void *), int period)
 	if (create_thread)
 		if (kproc_create(sensor_task_thread, NULL, NULL, 0, 0,
 		    "sensors") != 0)
-			panic("sensors kproc");
+			panic("sensors kproc_create failed");
 	
 	wakeup(&tasklist);
 
