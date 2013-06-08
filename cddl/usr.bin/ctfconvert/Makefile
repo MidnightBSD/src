@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 .PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/tools/ctf/common
 .PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/tools/ctf/cvt
