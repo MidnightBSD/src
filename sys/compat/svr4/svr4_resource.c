@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -67,7 +66,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/svr4/svr4_resource.c,v 1.18 2005/01/05 22:34:36 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -128,7 +127,7 @@ svr4_to_native_rl(rl)
 
 int
 svr4_sys_getrlimit(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_getrlimit_args *uap;
 {
 	int rl = svr4_to_native_rl(uap->which);
@@ -175,7 +174,7 @@ svr4_sys_getrlimit(td, uap)
 
 int
 svr4_sys_setrlimit(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_setrlimit_args *uap;
 {
 	int rl = svr4_to_native_rl(uap->which);
@@ -226,7 +225,7 @@ svr4_sys_setrlimit(td, uap)
 
 int
 svr4_sys_getrlimit64(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_getrlimit64_args *uap;
 {
 	int rl = svr4_to_native_rl(uap->which);
@@ -273,7 +272,7 @@ svr4_sys_getrlimit64(td, uap)
 
 int
 svr4_sys_setrlimit64(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_setrlimit64_args *uap;
 {
 	int rl = svr4_to_native_rl(uap->which);

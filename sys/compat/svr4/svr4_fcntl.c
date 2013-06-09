@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1994, 1997 Christos Zoulas.  
@@ -31,11 +30,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/svr4/svr4_fcntl.c,v 1.40 2007/06/12 00:11:57 rwatson Exp $");
-
-#include "opt_mac.h"
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
+#include <sys/capability.h>
 #include <sys/systm.h>
 #include <sys/file.h>
 #include <sys/filedesc.h>
@@ -80,6 +78,8 @@ svr4_to_bsd_cmd(cmd)
 	switch (cmd) {
 	case SVR4_F_DUPFD:
 		return F_DUPFD;
+	case SVR4_F_DUP2FD:
+		return F_DUP2FD;
 	case SVR4_F_GETFD:
 		return F_GETFD;
 	case SVR4_F_SETFD:
@@ -192,7 +192,7 @@ svr4_to_bsd_flock(iflp, oflp)
 	oflp->l_start = (off_t) iflp->l_start;
 	oflp->l_len = (off_t) iflp->l_len;
 	oflp->l_pid = (pid_t) iflp->l_pid;
-
+	oflp->l_sysid = iflp->l_sysid;
 }
 
 static void
@@ -218,7 +218,7 @@ bsd_to_svr4_flock64(iflp, oflp)
 	oflp->l_whence = (short) iflp->l_whence;
 	oflp->l_start = (svr4_off64_t) iflp->l_start;
 	oflp->l_len = (svr4_off64_t) iflp->l_len;
-	oflp->l_sysid = 0;
+	oflp->l_sysid = iflp->l_sysid;
 	oflp->l_pid = (svr4_pid_t) iflp->l_pid;
 }
 
@@ -262,7 +262,17 @@ fd_revoke(td, fd)
 	int error, *retval;
 
 	retval = td->td_retval;
-	if ((error = fgetvp(td, fd, &vp)) != 0)
+	/*
+	 * If we ever want to support Capsicum on SVR4 processes (unlikely)
+	 * or FreeBSD grows a native frevoke() (more likely), we will need a
+	 * CAP_REVOKE here.
+	 *
+	 * In the meantime, use CAP_MASK_VALID: if a SVR4 process wants to
+	 * do an frevoke(), it needs to do it on either a regular file
+	 * descriptor or a fully-privileged capability (which is effectively
+	 * the same as a non-capability-restricted file descriptor).
+	 */
+	if ((error = fgetvp(td, fd, CAP_MASK_VALID, &vp)) != 0)
 		return (error);
 
 	if (vp->v_type != VCHR && vp->v_type != VBLK) {
@@ -271,14 +281,14 @@ fd_revoke(td, fd)
 	}
 
 #ifdef MAC
-	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
-	error = mac_check_vnode_revoke(td->td_ucred, vp);
-	VOP_UNLOCK(vp, 0, td);
+	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
+	error = mac_vnode_check_revoke(td->td_ucred, vp);
+	VOP_UNLOCK(vp, 0);
 	if (error)
 		goto out;
 #endif
 
-	if ((error = VOP_GETATTR(vp, &vattr, td->td_ucred, td)) != 0)
+	if ((error = VOP_GETATTR(vp, &vattr, td->td_ucred)) != 0)
 		goto out;
 
 	if (td->td_ucred->cr_uid != vattr.va_uid &&
@@ -314,7 +324,7 @@ fd_truncate(td, fd, flp)
 	/*
 	 * We only support truncating the file.
 	 */
-	if ((error = fget(td, fd, &fp)) != 0)
+	if ((error = fget(td, fd, CAP_FTRUNCATE, &fp)) != 0)
 		return (error);
 
 	vp = fp->f_vnode;
@@ -324,7 +334,7 @@ fd_truncate(td, fd, flp)
 		return ESPIPE;
 	}
 
-	if ((error = VOP_GETATTR(vp, &vattr, td->td_ucred, td)) != 0) {
+	if ((error = VOP_GETATTR(vp, &vattr, td->td_ucred)) != 0) {
 		fdrop(fp, td);
 		return error;
 	}
@@ -358,7 +368,7 @@ fd_truncate(td, fd, flp)
 	ft.fd = fd;
 	ft.length = start;
 
-	error = ftruncate(td, &ft);
+	error = sys_ftruncate(td, &ft);
 
 	fdrop(fp, td);
 	return (error);
@@ -366,7 +376,7 @@ fd_truncate(td, fd, flp)
 
 int
 svr4_sys_open(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_open_args *uap;
 {
 	struct proc *p = td->td_proc;
@@ -393,7 +403,7 @@ svr4_sys_open(td, uap)
 #if defined(NOTYET)
 		struct file	*fp;
 
-		error = fget(td, retval, &fp);
+		error = fget(td, retval, CAP_IOCTL, &fp);
 		PROC_UNLOCK(p);
 		/*
 		 * we may have lost a race the above open() and
@@ -418,7 +428,7 @@ svr4_sys_open(td, uap)
 
 int
 svr4_sys_open64(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_open64_args *uap;
 {
 	return svr4_sys_open(td, (struct svr4_sys_open_args *)uap);
@@ -426,7 +436,7 @@ svr4_sys_open64(td, uap)
 
 int
 svr4_sys_creat(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_creat_args *uap;
 {
 	char *newpath;
@@ -442,7 +452,7 @@ svr4_sys_creat(td, uap)
 
 int
 svr4_sys_creat64(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_creat64_args *uap;
 {
 	return svr4_sys_creat(td, (struct svr4_sys_creat_args *)uap);
@@ -450,7 +460,7 @@ svr4_sys_creat64(td, uap)
 
 int
 svr4_sys_llseek(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_llseek_args *uap;
 {
 	struct lseek_args ap;
@@ -466,12 +476,12 @@ svr4_sys_llseek(td, uap)
 #endif
 	ap.whence = uap->whence;
 
-	return lseek(td, &ap);
+	return sys_lseek(td, &ap);
 }
 
 int
 svr4_sys_access(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_access_args *uap;
 {
 	char *newpath;
@@ -486,7 +496,7 @@ svr4_sys_access(td, uap)
 #if defined(NOTYET)
 int
 svr4_sys_pread(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_pread_args *uap;
 {
 	struct pread_args pra;
@@ -507,7 +517,7 @@ svr4_sys_pread(td, uap)
 #if defined(NOTYET)
 int
 svr4_sys_pread64(td, v, retval)
-	register struct thread *td;
+	struct thread *td;
 	void *v; 
 	register_t *retval;
 {
@@ -531,7 +541,7 @@ svr4_sys_pread64(td, v, retval)
 #if defined(NOTYET)
 int
 svr4_sys_pwrite(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_pwrite_args *uap;
 {
 	struct pwrite_args pwa;
@@ -552,7 +562,7 @@ svr4_sys_pwrite(td, uap)
 #if defined(NOTYET)
 int
 svr4_sys_pwrite64(td, v, retval)
-	register struct thread *td;
+	struct thread *td;
 	void *v; 
 	register_t *retval;
 {
@@ -574,7 +584,7 @@ svr4_sys_pwrite64(td, v, retval)
 
 int
 svr4_sys_fcntl(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_fcntl_args *uap;
 {
 	int cmd, error, *retval;
@@ -585,6 +595,7 @@ svr4_sys_fcntl(td, uap)
 
 	switch (cmd) {
 	case F_DUPFD:
+	case F_DUP2FD:
 	case F_GETFD:
 	case F_SETFD:
 		return (kern_fcntl(td, uap->fd, cmd, (intptr_t)uap->arg));
@@ -638,19 +649,6 @@ svr4_sys_fcntl(td, uap)
 		}
 	case -1:
 		switch (uap->cmd) {
-		case SVR4_F_DUP2FD:
-			{
-				struct dup2_args du;
-
-				du.from = uap->fd;
-				du.to = (int)uap->arg;
-				error = dup2(td, &du);
-				if (error)
-					return error;
-				*retval = du.to;
-				return 0;
-			}
-
 		case SVR4_F_FREESP:
 			{
 				struct svr4_flock	 ifl;

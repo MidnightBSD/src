@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1994 Christos Zoulas
@@ -28,11 +27,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/svr4/svr4_filio.c,v 1.35 2007/04/04 09:11:31 rwatson Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/proc.h>
 #include <sys/systm.h>
+#include <sys/capability.h>
 #include <sys/file.h>
 #include <sys/filio.h>
 #include <sys/lock.h>
@@ -41,8 +41,6 @@ __FBSDID("$FreeBSD: src/sys/compat/svr4/svr4_filio.c,v 1.35 2007/04/04 09:11:31 
 #include <sys/poll.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
-#include <sys/resource.h>
-#include <sys/resourcevar.h>
 
 #include <sys/sysproto.h>
 
@@ -67,13 +65,8 @@ svr4_sys_poll(td, uap)
      int idx = 0, cerr;
      u_long siz;
 
-     PROC_LOCK(td->td_proc);
-     if (uap->nfds > lim_cur(td->td_proc, RLIMIT_NOFILE) &&
-       uap->nfds > FD_SETSIZE) {
-       PROC_UNLOCK(td->td_proc);
+     if (uap->nfds > maxfilesperproc && uap->nfds > FD_SETSIZE)
        return (EINVAL);
-     }
-     PROC_UNLOCK(td->td_proc);
 
      pa.fds = uap->fds;
      pa.nfds = uap->nfds;
@@ -82,7 +75,7 @@ svr4_sys_poll(td, uap)
      siz = uap->nfds * sizeof(struct pollfd);
      pfd = (struct pollfd *)malloc(siz, M_TEMP, M_WAITOK);
 
-     error = poll(td, (struct poll_args *)uap);
+     error = sys_poll(td, (struct poll_args *)uap);
 
      if ((cerr = copyin(uap->fds, pfd, siz)) != 0) {
        error = cerr;
@@ -121,7 +114,7 @@ svr4_sys_read(td, uap)
      ra.buf = uap->buf;
      ra.nbyte = uap->nbyte;
 
-     if (fget(td, uap->fd, &fp) != 0) {
+     if (fget(td, uap->fd, CAP_READ, &fp) != 0) {
        DPRINTF(("Something fishy with the user-supplied file descriptor...\n"));
        return EBADF;
      }

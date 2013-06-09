@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	Derived from:
  *	$NetBSD: svr4_resource.h,v 1.1 1998/11/28 21:53:02 christos Exp $	*/
 
@@ -39,7 +38,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/compat/svr4/svr4_resource.h,v 1.4 2005/01/05 22:34:36 imp Exp $
+ * $MidnightBSD$
  */
 
 /*-

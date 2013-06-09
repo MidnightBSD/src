@@ -41476,8 +41476,6 @@ sys/compat/svr4/svr4_termios.c -text
 sys/compat/svr4/svr4_termios.h -text
 sys/compat/svr4/svr4_time.h -text
 sys/compat/svr4/svr4_timod.h -text
-sys/compat/svr4/svr4_ttold.c -text
-sys/compat/svr4/svr4_ttold.h -text
 sys/compat/svr4/svr4_types.h -text
 sys/compat/svr4/svr4_ucontext.h -text
 sys/compat/svr4/svr4_ulimit.h -text

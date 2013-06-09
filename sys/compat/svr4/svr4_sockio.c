@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1995 Christos Zoulas
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/svr4/svr4_sockio.c,v 1.18 2006/08/04 21:15:09 brooks Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -37,8 +36,9 @@ __FBSDID("$FreeBSD: src/sys/compat/svr4/svr4_sockio.c,v 1.18 2006/08/04 21:15:09
 #include <sys/filedesc.h>
 #include <sys/sockio.h>
 #include <sys/socket.h>
-#include <net/if.h>
 
+#include <net/if.h>
+#include <net/vnet.h>
 
 #include <compat/svr4/svr4.h>
 #include <compat/svr4/svr4_util.h>
@@ -104,7 +104,7 @@ svr4_sock_ioctl(fp, td, retval, fd, cmd, data)
 			 * entry per physical interface?
 			 */
 			IFNET_RLOCK();
-			TAILQ_FOREACH(ifp, &ifnet, if_link)
+			TAILQ_FOREACH(ifp, &V_ifnet, if_link)
 				if (TAILQ_EMPTY(&ifp->if_addrhead))
 					ifnum++;
 				else

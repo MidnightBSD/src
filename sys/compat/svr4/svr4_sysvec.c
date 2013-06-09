@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * All rights reserved.
@@ -30,14 +29,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/svr4/svr4_sysvec.c,v 1.42 2006/07/21 20:40:13 jhb Exp $");
+__MBSDID("$MidnightBSD$");
 
 /* XXX we use functions that might not exist. */
 #include "opt_compat.h"
-
-#ifndef COMPAT_43
-#error "Unable to compile SVR4-emulator due to missing COMPAT_43 option!"
-#endif
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -45,6 +40,7 @@ __FBSDID("$FreeBSD: src/sys/compat/svr4/svr4_sysvec.c,v 1.42 2006/07/21 20:40:13
 #include <sys/sysent.h>
 #include <sys/imgact.h>
 #include <sys/imgact_elf.h>
+#include <sys/fcntl.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
@@ -168,44 +164,52 @@ extern int svr4_szsigcode;
 extern char svr4_sigcode[];
 
 struct sysentvec svr4_sysvec = {
-  SVR4_SYS_MAXSYSCALL,
-  svr4_sysent,
-  0xff,
-  SVR4_NSIG-1,		/* NB: signal trans table indexed with signno-1 */
-  bsd_to_svr4_sig+1,
-  ELAST,  /* ELAST */
-  bsd_to_svr4_errno,
-  NULL,
-  svr4_fixup,
-  svr4_sendsig,
-  svr4_sigcode,
-  &svr4_szsigcode,
-  NULL,
-  "SVR4",
-  elf32_coredump,
-  NULL,
-  SVR4_MINSIGSTKSZ,
-  PAGE_SIZE,
-  VM_MIN_ADDRESS,
-  VM_MAXUSER_ADDRESS,
-  USRSTACK,
-  PS_STRINGS,
-  VM_PROT_ALL,
-  exec_copyout_strings,
-  exec_setregs,
-  NULL
+	.sv_size	= SVR4_SYS_MAXSYSCALL,
+	.sv_table	= svr4_sysent,
+	.sv_mask	= 0xff,
+	.sv_sigsize	= SVR4_NSIG-1, /* NB: signal trans table indexed with signno-1 */
+	.sv_sigtbl	= bsd_to_svr4_sig+1,
+	.sv_errsize	= ELAST,  /* ELAST */
+	.sv_errtbl	= bsd_to_svr4_errno,
+	.sv_transtrap	= NULL,
+	.sv_fixup	= svr4_fixup,
+	.sv_sendsig	= svr4_sendsig,
+	.sv_sigcode	= svr4_sigcode,
+	.sv_szsigcode	= &svr4_szsigcode,
+	.sv_prepsyscall	= NULL,
+	.sv_name	= "SVR4",
+	.sv_coredump	= elf32_coredump,
+	.sv_imgact_try	= NULL,
+	.sv_minsigstksz	= SVR4_MINSIGSTKSZ,
+	.sv_pagesize	= PAGE_SIZE,
+	.sv_minuser	= VM_MIN_ADDRESS,
+	.sv_maxuser	= VM_MAXUSER_ADDRESS,
+	.sv_usrstack	= USRSTACK,
+	.sv_psstrings	= PS_STRINGS,
+	.sv_stackprot	= VM_PROT_ALL,
+	.sv_copyout_strings = exec_copyout_strings,
+	.sv_setregs	= exec_setregs,
+	.sv_fixlimit	= NULL,
+	.sv_maxssiz     = NULL,
+	.sv_flags	= SV_ABI_UNDEF | SV_IA32 | SV_ILP32,
+	.sv_set_syscall_retval = cpu_set_syscall_retval,
+	.sv_fetch_syscall_args = cpu_fetch_syscall_args,
+	.sv_syscallnames = NULL,
+	.sv_schedtail	= NULL,
 };
 
 const char      svr4_emul_path[] = "/compat/svr4";
 
 Elf32_Brandinfo svr4_brand = {
-  ELFOSABI_SYSV,
-  EM_386,			/* XXX only implemented for x86 so far. */
-  "SVR4",
-  svr4_emul_path,
-  "/lib/libc.so.1",
-  &svr4_sysvec,
-  NULL,
+	.brand		= ELFOSABI_SYSV,
+	.machine	= EM_386, /* XXX only implemented for x86 so far. */
+	.compat_3_brand	= "SVR4",
+	.emul_path	= svr4_emul_path,
+	.interp_path	= "/lib/libc.so.1",
+	.sysvec		= &svr4_sysvec,
+	.interp_newpath	= NULL,
+	.brand_note	= NULL,
+	.flags		= 0
 };
 
 static int
@@ -214,14 +218,11 @@ svr4_fixup(register_t **stack_base, struct image_params *imgp)
 	Elf32_Auxargs *args;
 	register_t *pos;
              
-	KASSERT(curthread->td_proc == imgp->proc &&
-	    (curthread->td_proc->p_flag & P_SA) == 0,
+	KASSERT(curthread->td_proc == imgp->proc,
 	    ("unsafe svr4_fixup(), should be curproc"));
 	args = (Elf32_Auxargs *)imgp->auxargs;
 	pos = *stack_base + (imgp->args->argc + imgp->args->envc + 2);  
     
-	if (args->trace)
-		AUXARGS_ENTRY(pos, AT_DEBUG, 1);
 	if (args->execfd != -1)
 		AUXARGS_ENTRY(pos, AT_EXECFD, args->execfd);
 	AUXARGS_ENTRY(pos, AT_PHDR, args->phdr);
@@ -259,7 +260,7 @@ svr4_emul_find(struct thread *td, char *path, enum uio_seg pathseg,
 {
 
 	return (kern_alternate_path(td, svr4_emul_path, path, pathseg, pbuf,
-	    create));
+	    create, AT_FDCWD));
 }
 
 static int
@@ -309,5 +310,5 @@ static moduledata_t svr4_elf_mod = {
 	svr4_elf_modevent,
 	0
 };
-DECLARE_MODULE(svr4elf, svr4_elf_mod, SI_SUB_EXEC, SI_ORDER_ANY);
+DECLARE_MODULE_TIED(svr4elf, svr4_elf_mod, SI_SUB_EXEC, SI_ORDER_ANY);
 MODULE_DEPEND(svr4elf, streams, 1, 1, 1);

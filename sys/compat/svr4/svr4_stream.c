@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton.  All rights reserved.
  * Copyright (c) 1994, 1996 Christos Zoulas.  All rights reserved.
@@ -37,13 +36,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/svr4/svr4_stream.c,v 1.62 2006/08/05 22:04:21 rwatson Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "opt_compat.h"
 #include "opt_ktrace.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/capability.h>
 #include <sys/fcntl.h>
 #include <sys/filedesc.h>
 #include <sys/filio.h>
@@ -523,7 +523,7 @@ si_listen(fp, fd, ioc, td)
 	DPRINTF(("SI_LISTEN: fileno %d backlog = %d\n", fd, 5));
 	la.backlog = 5;
 
-	if ((error = listen(td, &la)) != 0) {
+	if ((error = sys_listen(td, &la)) != 0) {
 		DPRINTF(("SI_LISTEN: listen failed %d\n", error));
 		return error;
 	}
@@ -637,7 +637,7 @@ si_shutdown(fp, fd, ioc, td)
 
 	ap.s = fd;
 
-	return shutdown(td, &ap);
+	return sys_shutdown(td, &ap);
 }
 
 
@@ -1056,7 +1056,7 @@ i_fdinsert(fp, td, retval, fd, cmd, dat)
 	d2p.from = st->s_afd;
 	d2p.to = fdi.fd;
 
-	if ((error = dup2(td, &d2p)) != 0) {
+	if ((error = sys_dup2(td, &d2p)) != 0) {
 		DPRINTF(("fdinsert: dup2(%d, %d) failed %d\n", 
 		    st->s_afd, fdi.fd, error));
 		mtx_unlock(&Giant);
@@ -1099,7 +1099,7 @@ _i_bind_rsvd(fp, td, retval, fd, cmd, dat)
 	ap.path = dat;
 	ap.mode = S_IFIFO;
 
-	return mkfifo(td, &ap);
+	return sys_mkfifo(td, &ap);
 }
 
 static int
@@ -1119,7 +1119,7 @@ _i_rele_rsvd(fp, td, retval, fd, cmd, dat)
 	 */
 	ap.path = dat;
 
-	return unlink(td, &ap);
+	return sys_unlink(td, &ap);
 }
 
 static int
@@ -1443,13 +1443,13 @@ svr4_stream_ioctl(fp, td, retval, fd, cmd, dat)
 
 int
 svr4_sys_putmsg(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_putmsg_args *uap;
 {
 	struct file     *fp;
 	int error;
 
-	if ((error = fget(td, uap->fd, &fp)) != 0) {
+	if ((error = fget(td, uap->fd, CAP_WRITE, &fp)) != 0) {
 #ifdef DEBUG_SVR4
 	        uprintf("putmsg: bad fp\n");
 #endif
@@ -1481,8 +1481,6 @@ svr4_do_putmsg(td, uap, fp)
 	show_msg(">putmsg", uap->fd, uap->ctl,
 		 uap->dat, uap->flags);
 #endif /* DEBUG_SVR4 */
-
-	FILE_LOCK_ASSERT(fp, MA_NOTOWNED);
 
 	if (uap->ctl != NULL) {
 	  if ((error = copyin(uap->ctl, &ctl, sizeof(ctl))) != 0) {
@@ -1541,7 +1539,7 @@ svr4_do_putmsg(td, uap, fp)
 				wa.fd = uap->fd;
 				wa.buf = dat.buf;
 				wa.nbyte = dat.len;
-				return write(td, &wa);
+				return sys_write(td, &wa);
 			}
 	                DPRINTF(("putmsg: Invalid inet length %ld\n", sc.len));
 	                return EINVAL;
@@ -1623,7 +1621,7 @@ svr4_sys_getmsg(td, uap)
 	struct file     *fp;
 	int error;
 
-	if ((error = fget(td, uap->fd, &fp)) != 0) {
+	if ((error = fget(td, uap->fd, CAP_READ, &fp)) != 0) {
 #ifdef DEBUG_SVR4
 	        uprintf("getmsg: bad fp\n");
 #endif
@@ -1636,7 +1634,7 @@ svr4_sys_getmsg(td, uap)
 
 int
 svr4_do_getmsg(td, uap, fp)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_getmsg_args *uap;
 	struct file *fp;
 {
@@ -1656,8 +1654,6 @@ svr4_do_getmsg(td, uap, fp)
 	retval = td->td_retval;
 	error = 0;
 	afp = NULL;
-
-	FILE_LOCK_ASSERT(fp, MA_NOTOWNED);
 
 	memset(&sc, 0, sizeof(sc));
 
@@ -1930,7 +1926,7 @@ svr4_do_getmsg(td, uap, fp)
 			ra.fd = uap->fd;
 			ra.buf = dat.buf;
 			ra.nbyte = dat.maxlen;
-			if ((error = read(td, &ra)) != 0) {
+			if ((error = sys_read(td, &ra)) != 0) {
 				mtx_unlock(&Giant);
 			        return error;
 			}
@@ -1990,24 +1986,32 @@ int svr4_sys_send(td, uap)
 	struct thread *td;
 	struct svr4_sys_send_args *uap;
 {
-	struct osend_args osa;
-	osa.s = uap->s;
-	osa.buf = uap->buf;
-	osa.len = uap->len;
-	osa.flags = uap->flags;
-	return osend(td, &osa);
+	struct sendto_args sta;
+
+	sta.s = uap->s;
+	sta.buf = uap->buf;
+	sta.len = uap->len;
+	sta.flags = uap->flags;
+	sta.to = NULL;
+	sta.tolen = 0;
+
+	return (sys_sendto(td, &sta));
 }
 
 int svr4_sys_recv(td, uap)
 	struct thread *td;
 	struct svr4_sys_recv_args *uap;
 {
-	struct orecv_args ora;
-	ora.s = uap->s;
-	ora.buf = uap->buf;
-	ora.len = uap->len;
-	ora.flags = uap->flags;
-	return orecv(td, &ora);
+	struct recvfrom_args rfa;
+
+	rfa.s = uap->s;
+	rfa.buf = uap->buf;
+	rfa.len = uap->len;
+	rfa.flags = uap->flags;
+	rfa.from = NULL;
+	rfa.fromlenaddr = NULL;
+
+	return (sys_recvfrom(td, &rfa));
 }
 
 /* 
@@ -2029,6 +2033,6 @@ svr4_sys_sendto(td, uap)
 	sa.tolen = uap->tolen;
 
 	DPRINTF(("calling sendto()\n"));
-	return sendto(td, &sa);
+	return sys_sendto(td, &sa);
 }
 

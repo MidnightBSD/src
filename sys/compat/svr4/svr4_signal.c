@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1994 Christos Zoulas
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/svr4/svr4_signal.c,v 1.35 2005/09/28 07:03:02 rwatson Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -260,7 +259,7 @@ bsd_to_svr4_sigaltstack(bss, sss)
 
 int
 svr4_sys_sigaction(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_sigaction_args *uap;
 {
 	struct svr4_sigaction isa;
@@ -302,7 +301,7 @@ svr4_sys_sigaction(td, uap)
 
 int 
 svr4_sys_sigaltstack(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_sigaltstack_args *uap;
 {
 	struct svr4_sigaltstack sss;
@@ -329,7 +328,7 @@ svr4_sys_sigaltstack(td, uap)
  */
 int
 svr4_sys_signal(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_signal_args *uap;
 {
 	struct proc *p;
@@ -494,7 +493,7 @@ svr4_sys_sigpending(td, uap)
 
 int
 svr4_sys_sigsuspend(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_sigsuspend_args *uap;
 {
 	svr4_sigset_t sss;
@@ -511,7 +510,7 @@ svr4_sys_sigsuspend(td, uap)
 
 int
 svr4_sys_kill(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_kill_args *uap;
 {
 	struct kill_args ka;
@@ -520,13 +519,13 @@ svr4_sys_kill(td, uap)
 		return (EINVAL);
 	ka.pid = uap->pid;
 	ka.signum = SVR4_SVR42BSD_SIG(uap->signum);
-	return kill(td, &ka);
+	return sys_kill(td, &ka);
 }
 
 
 int 
 svr4_sys_context(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_context_args *uap;
 {
 	struct svr4_ucontext uc;
@@ -566,7 +565,7 @@ svr4_sys_context(td, uap)
 
 int
 svr4_sys_pause(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_pause_args *uap;
 {
 	sigset_t mask;

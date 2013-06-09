@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1994 Christos Zoulas
@@ -34,12 +33,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/svr4/svr4_misc.c,v 1.97 2007/06/12 00:11:57 rwatson Exp $");
-
-#include "opt_mac.h"
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/capability.h>
 #include <sys/dirent.h>
 #include <sys/fcntl.h>
 #include <sys/filedesc.h>
@@ -122,7 +120,7 @@ static struct proc *svr4_pfind(pid_t pid);
 #if defined(BOGUS)
 int
 svr4_sys_setitimer(td, uap)
-        register struct thread *td;
+        struct thread *td;
 	struct svr4_sys_setitimer_args *uap;
 {
         td->td_retval[0] = 0;
@@ -232,7 +230,7 @@ svr4_sys_getdents64(td, uap)
 	struct thread *td;
 	struct svr4_sys_getdents64_args *uap;
 {
-	register struct dirent *bdp;
+	struct dirent *bdp;
 	struct vnode *vp;
 	caddr_t inp, buf;		/* BSD-format */
 	int len, reclen;		/* BSD-format */
@@ -249,7 +247,8 @@ svr4_sys_getdents64(td, uap)
 
 	DPRINTF(("svr4_sys_getdents64(%d, *, %d)\n",
 		uap->fd, uap->nbytes));
-	if ((error = getvnode(td->td_proc->p_fd, uap->fd, &fp)) != 0) {
+	if ((error = getvnode(td->td_proc->p_fd, uap->fd,
+	    CAP_READ | CAP_SEEK, &fp)) != 0) {
 		return (error);
 	}
 
@@ -279,7 +278,7 @@ svr4_sys_getdents64(td, uap)
 	buflen = max(DIRBLKSIZ, nbytes);
 	buflen = min(buflen, MAXBSIZE);
 	buf = malloc(buflen, M_TEMP, M_WAITOK);
-	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
+	vn_lock(vp, LK_SHARED | LK_RETRY);
 again:
 	aiov.iov_base = buf;
 	aiov.iov_len = buflen;
@@ -297,7 +296,7 @@ again:
 	}
 
 #ifdef MAC
-	error = mac_check_vnode_readdir(td->td_ucred, vp);
+	error = mac_vnode_check_readdir(td->td_ucred, vp);
 	if (error)
 		goto out;
 #endif
@@ -371,7 +370,7 @@ again:
 			svr4_dirent.d_off = (svr4_off_t)(off + reclen);
 			svr4_dirent.d_reclen = (u_short) svr4reclen;
 		}
-		strcpy(svr4_dirent.d_name, bdp->d_name);
+		strlcpy(svr4_dirent.d_name, bdp->d_name, sizeof(svr4_dirent.d_name));
 		if ((error = copyout((caddr_t)&svr4_dirent, outp, svr4reclen)))
 			goto out;
 		inp += reclen;
@@ -397,7 +396,7 @@ again:
 eof:
 	td->td_retval[0] = nbytes - resid;
 out:
-	VOP_UNLOCK(vp, 0, td);
+	VOP_UNLOCK(vp, 0);
 	VFS_UNLOCK_GIANT(vfslocked);
 	fdrop(fp, td);
 	if (cookies)
@@ -430,7 +429,8 @@ svr4_sys_getdents(td, uap)
 	if (uap->nbytes < 0)
 		return (EINVAL);
 
-	if ((error = getvnode(td->td_proc->p_fd, uap->fd, &fp)) != 0)
+	if ((error = getvnode(td->td_proc->p_fd, uap->fd,
+	    CAP_READ | CAP_SEEK, &fp)) != 0)
 		return (error);
 
 	if ((fp->f_flag & FREAD) == 0) {
@@ -448,7 +448,7 @@ svr4_sys_getdents(td, uap)
 
 	buflen = min(MAXBSIZE, uap->nbytes);
 	buf = malloc(buflen, M_TEMP, M_WAITOK);
-	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
+	vn_lock(vp, LK_SHARED | LK_RETRY);
 	off = fp->f_offset;
 again:
 	aiov.iov_base = buf;
@@ -462,7 +462,7 @@ again:
 	auio.uio_offset = off;
 
 #ifdef MAC
-	error = mac_check_vnode_readdir(td->td_ucred, vp);
+	error = mac_vnode_check_readdir(td->td_ucred, vp);
 	if (error)
 		goto out;
 #endif
@@ -488,7 +488,10 @@ again:
 		reclen = bdp->d_reclen;
 		if (reclen & 3)
 			panic("svr4_sys_getdents64: bad reclen");
-		off = *cookie++;	/* each entry points to the next */
+		if (cookie)
+			off = *cookie++; /* each entry points to the next */
+		else
+			off += reclen;
 		if ((off >> 32) != 0) {
 			uprintf("svr4_sys_getdents64: dir offset too large for emulated program");
 			error = EINVAL;
@@ -512,7 +515,7 @@ again:
 		idb.d_ino = (svr4_ino_t)bdp->d_fileno;
 		idb.d_off = (svr4_off_t)off;
 		idb.d_reclen = (u_short)svr4_reclen;
-		strcpy(idb.d_name, bdp->d_name);
+		strlcpy(idb.d_name, bdp->d_name, sizeof(idb.d_name));
 		if ((error = copyout((caddr_t)&idb, outp, svr4_reclen)))
 			goto out;
 		/* advance past this real entry */
@@ -530,7 +533,7 @@ again:
 eof:
 	*retval = uap->nbytes - resid;
 out:
-	VOP_UNLOCK(vp, 0, td);
+	VOP_UNLOCK(vp, 0);
 	VFS_UNLOCK_GIANT(vfslocked);
 	fdrop(fp, td);
 	if (cookiebuf)
@@ -566,7 +569,7 @@ svr4_sys_mmap(td, uap)
 	mm.addr = uap->addr;
 	mm.pos = uap->pos;
 
-	return mmap(td, &mm);
+	return sys_mmap(td, &mm);
 }
 
 int
@@ -599,7 +602,7 @@ svr4_sys_mmap64(td, uap)
 	    mm.addr != 0 && (void *)mm.addr < rp)
 		mm.addr = rp;
 
-	return mmap(td, &mm);
+	return sys_mmap(td, &mm);
 }
 
 
@@ -615,22 +618,23 @@ svr4_sys_fchroot(td, uap)
 
 	if ((error = priv_check(td, PRIV_VFS_FCHROOT)) != 0)
 		return error;
-	if ((error = getvnode(fdp, uap->fd, &fp)) != 0)
+	/* XXX: we have the chroot priv... what cap might we need? all? */
+	if ((error = getvnode(fdp, uap->fd, 0, &fp)) != 0)
 		return error;
 	vp = fp->f_vnode;
 	VREF(vp);
 	fdrop(fp, td);
 	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
-	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
+	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 	error = change_dir(vp, td);
 	if (error)
 		goto fail;
 #ifdef MAC
-	error = mac_check_vnode_chroot(td->td_ucred, vp);
+	error = mac_vnode_check_chroot(td->td_ucred, vp);
 	if (error)
 		goto fail;
 #endif
-	VOP_UNLOCK(vp, 0, td);
+	VOP_UNLOCK(vp, 0);
 	error = change_root(vp, td);
 	vrele(vp);
 	VFS_UNLOCK_GIANT(vfslocked);
@@ -666,7 +670,7 @@ svr4_mknod(td, retval, path, mode, dev)
 
 int
 svr4_sys_mknod(td, uap)
-	register struct thread *td;
+	struct thread *td;
 	struct svr4_sys_mknod_args *uap;
 {
         int *retval = td->td_retval;
@@ -707,11 +711,8 @@ svr4_sys_sysconfig(td, uap)
 	retval = &(td->td_retval[0]);
 
 	switch (uap->name) {
-	case SVR4_CONFIG_UNUSED:
-		*retval = 0;
-		break;
 	case SVR4_CONFIG_NGROUPS:
-		*retval = NGROUPS_MAX;
+		*retval = ngroups_max;
 		break;
 	case SVR4_CONFIG_CHILD_MAX:
 		*retval = maxproc;
@@ -789,7 +790,45 @@ svr4_sys_sysconfig(td, uap)
 #endif
 		break;
 #endif /* NOTYET */
-
+	case SVR4_CONFIG_COHERENCY:
+		*retval = 0;	/* XXX */
+		break;
+	case SVR4_CONFIG_SPLIT_CACHE:
+		*retval = 0;	/* XXX */
+		break;
+	case SVR4_CONFIG_ICACHESZ:
+		*retval = 256;	/* XXX */
+		break;
+	case SVR4_CONFIG_DCACHESZ:
+		*retval = 256;	/* XXX */
+		break;
+	case SVR4_CONFIG_ICACHELINESZ:
+		*retval = 64;	/* XXX */
+		break;
+	case SVR4_CONFIG_DCACHELINESZ:
+		*retval = 64;	/* XXX */
+		break;
+	case SVR4_CONFIG_ICACHEBLKSZ:
+		*retval = 64;	/* XXX */
+		break;
+	case SVR4_CONFIG_DCACHEBLKSZ:
+		*retval = 64;	/* XXX */
+		break;
+	case SVR4_CONFIG_DCACHETBLKSZ:
+		*retval = 64;	/* XXX */
+		break;
+	case SVR4_CONFIG_ICACHE_ASSOC:
+		*retval = 1;	/* XXX */
+		break;
+	case SVR4_CONFIG_DCACHE_ASSOC:
+		*retval = 1;	/* XXX */
+		break;
+	case SVR4_CONFIG_MAXPID:
+		*retval = PID_MAX;
+		break;
+	case SVR4_CONFIG_STACK_PROT:
+		*retval = PROT_READ|PROT_WRITE|PROT_EXEC;
+		break;
 	default:
 		return EINVAL;
 	}
@@ -805,7 +844,7 @@ svr4_sys_break(td, uap)
 	struct obreak_args ap;
 
 	ap.nsize = uap->nsize;
-	return (obreak(td, &ap));
+	return (sys_obreak(td, &ap));
 }
 
 static __inline clock_t
@@ -899,9 +938,7 @@ svr4_sys_ulimit(td, uap)
 
 			if (r == -1)
 				r = 0x7fffffff;
-			mtx_lock(&Giant);	/* XXX */
 			r += (long) vm->vm_daddr;
-			mtx_unlock(&Giant);
 			if (r < 0)
 				r = 0x7fffffff;
 			*retval = r;
@@ -953,7 +990,7 @@ svr4_sys_pgrpsys(td, uap)
 		 * setsid() for SVR4.  (Under BSD, the difference is that
 		 * a setpgid(0,0) will not create a new session.)
 		 */
-		setsid(td, NULL);
+		sys_setsid(td, NULL);
 		/*FALLTHROUGH*/
 
 	case 0:			/* getpgrp() */
@@ -976,7 +1013,7 @@ svr4_sys_pgrpsys(td, uap)
 		return 0;
 
 	case 3:			/* setsid() */
-		return setsid(td, NULL);
+		return sys_setsid(td, NULL);
 
 	case 4:			/* getpgid(pid) */
 
@@ -995,7 +1032,7 @@ svr4_sys_pgrpsys(td, uap)
 
 			sa.pid = uap->pid;
 			sa.pgid = uap->pgid;
-			return setpgid(td, &sa);
+			return sys_setpgid(td, &sa);
 		}
 
 	default:
@@ -1202,12 +1239,12 @@ svr4_sys_waitsys(td, uap)
 
 	/*
 	 * Ok, handle the weird cases.  Either WNOWAIT is set (meaning we
-	 * just want to see if there is a process to harvest, we dont'
+	 * just want to see if there is a process to harvest, we don't
 	 * want to actually harvest it), or WEXIT and WTRAPPED are clear
 	 * meaning we want to ignore zombies.  Either way, we don't have
 	 * to handle harvesting zombies here.  We do have to duplicate the
-	 * other portions of kern_wait() though, especially for the
-	 * WCONTINUED and WSTOPPED.
+	 * other portions of kern_wait() though, especially for WCONTINUED
+	 * and WSTOPPED.
 	 */
 loop:
 	nfound = 0;
@@ -1561,7 +1598,7 @@ svr4_sys_memcntl(td, uap)
 			msa.len = uap->len;
 			msa.flags = (int)uap->arg;
 
-			return msync(td, &msa);
+			return sys_msync(td, &msa);
 		}
 	case SVR4_MC_ADVISE:
 		{
@@ -1571,7 +1608,7 @@ svr4_sys_memcntl(td, uap)
 			maa.len = uap->len;
 			maa.behav = (int)uap->arg;
 
-			return madvise(td, &maa);
+			return sys_madvise(td, &maa);
 		}
 	case SVR4_MC_LOCK:
 	case SVR4_MC_UNLOCK:
@@ -1596,11 +1633,11 @@ svr4_sys_nice(td, uap)
 	ap.who = 0;
 	ap.prio = uap->prio;
 
-	if ((error = setpriority(td, &ap)) != 0)
+	if ((error = sys_setpriority(td, &ap)) != 0)
 		return error;
 
 	/* the cast is stupid, but the structures are the same */
-	if ((error = getpriority(td, (struct getpriority_args *)&ap)) != 0)
+	if ((error = sys_getpriority(td, (struct getpriority_args *)&ap)) != 0)
 		return error;
 
 	return 0;
@@ -1614,14 +1651,14 @@ svr4_sys_resolvepath(td, uap)
 	struct nameidata nd;
 	int error, *retval = td->td_retval;
 	unsigned int ncopy;
-	int vfslocked;
 
 	NDINIT(&nd, LOOKUP, NOFOLLOW | SAVENAME | MPSAFE, UIO_USERSPACE,
 	    uap->path, td);
 
 	if ((error = namei(&nd)) != 0)
-		return error;
-	vfslocked = NDHASGIANT(&nd);
+		return (error);
+	NDFREE(&nd, NDF_NO_FREE_PNBUF);
+	VFS_UNLOCK_GIANT(NDHASGIANT(&nd));
 
 	ncopy = min(uap->bufsiz, strlen(nd.ni_cnd.cn_pnbuf) + 1);
 	if ((error = copyout(nd.ni_cnd.cn_pnbuf, uap->buf, ncopy)) != 0)
@@ -1630,7 +1667,5 @@ svr4_sys_resolvepath(td, uap)
 	*retval = ncopy;
 bad:
 	NDFREE(&nd, NDF_ONLY_PNBUF);
-	vput(nd.ni_vp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return error;
 }
