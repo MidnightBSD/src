@@ -1,4 +1,4 @@
-/* 	$MidnightBSD: src/usr.sbin/rdate/rdate.c,v 1.5 2013/01/03 02:54:52 laffer1 Exp $ */
+/* 	$MidnightBSD: src/usr.sbin/rdate/rdate.c,v 1.6 2013/01/03 02:58:09 laffer1 Exp $ */
 /*	$OpenBSD: rdate.c,v 1.24 2009/10/27 23:59:54 deraadt Exp $	*/
 /*	$NetBSD: rdate.c,v 1.4 1996/03/16 12:37:45 pk Exp $	*/
 
@@ -172,7 +172,7 @@ main(int argc, char **argv)
 				   __progname, adjsec);
 			else
 				(void) fprintf(stdout,
-				   "%s: adjust local clock by %ld seconds\n",
+				   "%s: adjust local clock by %d seconds\n",
 				   __progname, adjust.tv_sec);
 		}
 	}
