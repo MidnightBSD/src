@@ -25574,7 +25574,6 @@ contrib/tcsh/MAKEDIFFS -text
 contrib/tcsh/MAKESHAR -text
 contrib/tcsh/MIDNIGHTBSD-Xlist -text
 contrib/tcsh/MIDNIGHTBSD-upgrade -text
-contrib/tcsh/Makefile.ADMIN -text
 contrib/tcsh/Makefile.in -text
 contrib/tcsh/Makefile.std -text
 contrib/tcsh/Makefile.vms -text
@@ -25582,7 +25581,6 @@ contrib/tcsh/NewThings -text
 contrib/tcsh/Ported -text
 contrib/tcsh/README -text
 contrib/tcsh/README.imake -text
-contrib/tcsh/RELEASE-PROCEDURE -text
 contrib/tcsh/WishList -text
 contrib/tcsh/Y2K -text
 contrib/tcsh/complete.tcsh -text
