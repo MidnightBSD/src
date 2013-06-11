@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/csh/config_p.h,v 1.5 2013/02/03 21:47:43 laffer1 Exp $ */
 /*
  * config.h -- configure various defines for tcsh
  *
@@ -79,7 +79,7 @@
 
 /****************** local defines *********************/
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 #define NLS_BUGS
 #define BSD_STYLE_COLORLS
 /* Use LC_MESSAGES locale category to open the message catalog */
