@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/tc.who.c,v 1.1.1.4 2012-07-08 16:12:19 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/tc.who.c,v 1.2 2013-06-11 11:52:43 laffer1 Exp $ */
 /*
  * tc.who.c: Watch logins and logouts...
  */
@@ -60,6 +60,8 @@ RCSID("$tcsh: tc.who.c,v 3.57 2012/01/17 20:53:38 christos Exp $")
 #  define TCSH_PATH_UTMP _PATH_UTMPX
 # elif defined(UTMPX_FILE)
 #  define TCSH_PATH_UTMP UTMPX_FILE
+# elif __MidnightBSD_version >= 4015
+#  define TCSH_PATH_UTMP "/var/run/utx.active"
 # elif __FreeBSD_version >= 900000
 #  /* Why isn't this defined somewhere? */
 #  define TCSH_PATH_UTMP "/var/run/utx.active"
