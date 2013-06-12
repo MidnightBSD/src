@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 The Regents of the University of California.
  * All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: FreeBSD: src/sys/i386/include/sysarch.h,v 1.14 2000/09/21
- * $FreeBSD: src/sys/sparc64/include/sysarch.h,v 1.4.18.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*

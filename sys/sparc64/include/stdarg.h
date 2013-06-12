@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 David E. O'Brien.  All rights reserved.
  * Copyright (c) 1992, 1993
@@ -36,7 +35,7 @@
  *
  *	@(#)stdarg.h	8.2 (Berkeley) 9/27/93
  *	$NetBSD: stdarg.h,v 1.11 2000/07/23 21:36:56 mycroft Exp $
- * $FreeBSD: src/sys/sparc64/include/stdarg.h,v 1.9.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_STDARG_H_
