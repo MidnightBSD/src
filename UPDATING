@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20130612:
+	RELENG_0_4 created for 0.4. Development continues on 0.5.
+
 20130402:
 	Update BIND and OpenSSL to resolve security advisories.
 
@@ -1238,4 +1241,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.169 2013/03/06 00:57:22 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.170 2013/04/02 22:45:24 laffer1 Exp $
