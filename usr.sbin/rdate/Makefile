@@ -1,5 +1,4 @@
-#	$MidnightBSD: src/usr.sbin/rdate/Makefile,v 1.1 2006/08/22 05:52:12 laffer1 Exp $ 
-#	$OpenBSD: Makefile,v 1.7 2003/11/20 23:23:09 avsm Exp $
+#	$MidnightBSD: src/usr.sbin/rdate/Makefile,v 1.2 2013/01/03 02:54:52 laffer1 Exp $ 
 
 PROG=	rdate
 SRCS=	rdate.c rfc868time.c ntp.c ntpleaps.c

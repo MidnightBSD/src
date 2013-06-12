@@ -1,6 +1,6 @@
 /*	$OpenBSD: rfc868time.c,v 1.6 2004/02/16 21:25:41 jakob Exp $	*/
 /*	$NetBSD: rdate.c,v 1.4 1996/03/16 12:37:45 pk Exp $	*/
-/* $MidnightBSD: src/usr.sbin/rdate/rfc868time.c,v 1.2 2006/08/23 17:39:39 laffer1 Exp $ */
+/* $MidnightBSD: src/usr.sbin/rdate/rfc868time.c,v 1.3 2013/01/03 02:45:15 laffer1 Exp $ */
 
 /*
  * Copyright (c) 1994 Christos Zoulas
@@ -14,11 +14,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by Christos Zoulas.
- * 4. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -57,7 +52,7 @@
 #include "ntpleaps.h"
 
 /* seconds from midnight Jan 1900 - 1970 */
-#define DIFFERENCE 2208988800UL
+#define DIFFERENCE 2208988800ULL
 
 
 void rfc868time_client (const char *, int, struct timeval *, struct timeval *, int);
@@ -68,7 +63,7 @@ rfc868time_client (const char *hostname, int family, struct timeval *new,
 {
 	struct addrinfo hints, *res0, *res;
 	struct timeval old;
-	u_int32_t tim;	/* RFC 868 states clearly this is an uint32 */
+	uint32_t tim;	/* RFC 868 states clearly this is an uint32 */
 	int s;
 	int error;
 	u_int64_t td;
