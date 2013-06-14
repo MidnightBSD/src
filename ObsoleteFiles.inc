@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/ObsoleteFiles.inc,v 1.25.2.3 2006/02/16 07:25:23 avatar Exp $
-# $MidnightBSD: src/ObsoleteFiles.inc,v 1.35 2013/04/19 12:15:41 laffer1 Exp $
+# $MidnightBSD: src/ObsoleteFiles.inc,v 1.36 2013/04/19 12:18:10 laffer1 Exp $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -15,6 +15,26 @@
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
 
+#20130613
+OLD_FILES+=sbin/bsdlabel
+OLD_FILES+=sbin/disklabel
+OLD_FILES+=sbin/fdisk
+OLD_FILES+=sbin/gpt
+OLD_FILES+=sbin/graid3
+OLD_FILES+=sbin/idmapd
+OLD_FILES+=sbin/mount.nfs4
+OLD_FILES+=sbin/slattach
+OLD_FILES+=sbin/startslip
+OLD_FILES+=usr/bin/perl5.14
+OLD_FILES+=usr/bin/window
+OLD_FILES+=usr/sbin/named.reload
+OLD_FILES+=usr/sbin/named.reconfig
+OLD_FILES+=usr/sbin/pppd
+OLD_FILES+=usr/sbin/pppstats
+OLD_FILES+=usr/sbin/raycontrol
+OLD_FILES+=usr/sbin/sliplogin
+OLD_FILES+=usr/sbin/slstat
+OLD_FILES+=usr/sbin/usbdevs
 #20130120 0.4-CURRENT bump
 OLD_FILES+=etc/auth.conf
 OLD_FILES+=usr/bin/deroff
