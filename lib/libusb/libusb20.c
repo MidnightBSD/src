@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/lib/libusb/libusb20.c,v 1.2 2012/08/18 20:38:47 laffer1 Exp $ */
 /*-
  * Copyright (c) 2008-2009 Hans Petter Selasky. All rights reserved.
  *
@@ -1186,7 +1186,7 @@ libusb20_be_alloc_ugen20(void)
 {
 	struct libusb20_backend *pbe;
 
-#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
+#if defined(__MidnightBSD__) || defined(__MidnightBSD_kernel__)
 	pbe = libusb20_be_alloc(&libusb20_ugen20_backend);
 #else
 	pbe = NULL;
