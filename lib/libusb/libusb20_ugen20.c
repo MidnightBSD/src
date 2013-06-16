@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/lib/libusb/libusb20_ugen20.c,v 1.2.2.1 2013/06/16 00:27:30 laffer1 Exp $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -88,7 +88,7 @@ static const struct libusb20_device_methods libusb20_ugen20_device_methods = {
 static const char *
 ugen20_get_backend_name(void)
 {
-	return ("FreeBSD UGEN 2.0");
+	return ("MidnightBSD UGEN 2.0");
 }
 
 static uint32_t

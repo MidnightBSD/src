@@ -1,7 +1,7 @@
 #
-# $MidnightBSD$
+# $MidnightBSD: src/lib/libusb/Makefile,v 1.2.2.1 2013/06/16 00:27:30 laffer1 Exp $
 #
-# Makefile for the FreeBSD specific LibUSB 2.0
+# Makefile for the MidnightBSD specific LibUSB 2.0
 #
 
 LIB=		usb
