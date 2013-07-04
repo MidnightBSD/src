@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20130704:
+	0.4-RELEASE
+
 20130612:
 	0.4-PRERELEASE (osreldate 4019)	
 
@@ -1241,4 +1244,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.170 2013/04/02 22:45:24 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.170.2.1 2013/06/14 00:08:19 laffer1 Exp $
