@@ -1,0 +1,10 @@
+# HEAD tinderbox setup, shared source - update stage
+#
+# $MidnightBSD$
+
+branches	 = HEAD
+platforms	 = none
+srcdir		 = %%SANDBOX%%/%%BRANCH%%/src
+targets		 = update, version
+recipient	+= <luke@midnightbsd.org>
+subject		= [%%COMMENT%%] source tree update failure

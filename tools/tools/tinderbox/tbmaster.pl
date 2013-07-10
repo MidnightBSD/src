@@ -1,49 +1,53 @@
 #!/usr/bin/perl -Tw
 #-
-# Copyright (c) 2003-2008 Dag-Erling Coïdan Smørgrav
+# Copyright (c) 2003-2012 Dag-Erling Smørgrav
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
 # are met:
 # 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer
-#    in this position and unchanged.
+#    notice, this list of conditions and the following disclaimer.
 # 2. Redistributions in binary form must reproduce the above copyright
 #    notice, this list of conditions and the following disclaimer in the
 #    documentation and/or other materials provided with the distribution.
 #
-# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
-# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-# OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
-# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-# NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
-# THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
 #
 # $FreeBSD: src/tools/tools/tinderbox/tbmaster.pl,v 1.53 2005/03/03 07:18:01 des Exp $
-# $MidnightBSD: src/tools/tools/tinderbox/tbmaster.pl,v 1.2 2008/03/06 20:23:45 laffer1 Exp $
+# $MidnightBSD: src/tools/tools/tinderbox/tbmaster.pl,v 1.3 2008/03/07 04:26:00 laffer1 Exp $
 #
 
-use 5.006_001;
+use v5.10.1;
 use strict;
 use Fcntl qw(:DEFAULT :flock);
 use POSIX;
 use Getopt::Long;
 
-my $VERSION	= "2.4";
-my $COPYRIGHT	= "Copyright (c) 2003-2008 Dag-Erling Coïdan Smørgrav. " .
+my $VERSION	= "2.10";
+my $COPYRIGHT	= "Copyright (c) 2003-2012 Dag-Erling Smørgrav. " .
 		  "All rights reserved.";
 
+my $BACKLOG	= 8;
+
+my $abbreviate;			# Abbreviate path names in log file
 my @configs;			# Names of requested configations
 my $dump;			# Dump configuration and exit
 my $etcdir;			# Configuration directory
 my $lockfile;			# Lock file name
 my $lock;			# Lock file descriptor
 my $ncpu;			# Number of CPUs
+my %platforms;			# Specific platforms to build
 
 my %INITIAL_CONFIG = (
     'BRANCHES'	=> [ 'HEAD' ],
@@ -51,19 +55,21 @@ my %INITIAL_CONFIG = (
     'COPTFLAGS'	=> '',
     'COMMENT'	=> '',
     'CVSUP'	=> '',
-    'DATE'	=> '',
-    'ENV'	=> [],
+    'ENV'	=> [ ],
     'HOSTNAME'	=> '',
     'JOBS'	=> '',
     'LOGDIR'	=> '%%SANDBOX%%/logs',
-    'OPTIONS'	=> [],
+    'OBJDIR'	=> '',
+    'OPTIONS'	=> [ ],
     'PATCH'	=> '',
     'PLATFORMS'	=> [ 'i386' ],
-    'RECIPIENT'	=> '',
+    'RECIPIENT'	=> [ '%%SENDER%%' ],
     'REPOSITORY'=> '',
     'SANDBOX'	=> '/tmp/tinderbox',
     'SENDER'	=> '',
+    'SRCDIR'	=> '',
     'SUBJECT'	=> 'Tinderbox failure on %%arch%%/%%machine%%',
+    'SVNBASE'	=> '',
     'TARGETS'	=> [ 'update', 'world' ],
     'TIMEOUT'   => '',
     'TINDERBOX'	=> '%%HOME%%/bin/tinderbox',
@@ -71,73 +77,91 @@ my %INITIAL_CONFIG = (
 );
 my %CONFIG;
 
-###
-### Expand a path
-###
+#
+# Expand a path
+#
 sub realpath($;$);
 sub realpath($;$) {
     my $path = shift;
     my $base = shift || "";
 
     my $realpath = ($path =~ m|^/|) ? "" : $base;
-    my @parts = split('/', $path);
-    while (defined(my $part = shift(@parts))) {
-        if ($part eq '' || $part eq '.') {
-            # nothing
-        } elsif ($part eq '..') {
-            $realpath =~ s|/[^/]+$||
-                or die("'$path' is not a valid path relative to '$base'\n");
-        } elsif (-l "$realpath/$part") {
-            my $target = readlink("$realpath/$part")
-                or die("unable to resolve symlink '$realpath/$part': $!\n");
-            $realpath = realpath($target, $realpath);
-        } else {
+    foreach my $part (split('/', $path)) {
+	if ($part eq '' || $part eq '.') {
+	    # nothing
+	} elsif ($part eq '..') {
+	    $realpath =~ s|/[^/]+$||
+		or die("'$path' is not a valid path relative to '$base'\n");
+	} elsif (-l "$realpath/$part") {
+	    my $target = readlink("$realpath/$part")
+		or die("unable to resolve symlink '$realpath/$part': $!\n");
+	    $realpath = realpath($target, $realpath);
+	} else {
 	    $part =~ m/^([\w.-]+)$/
 		or die("unsafe path '$realpath/$part'\n");
-            $realpath .= "/$1";
-        }
+	    $realpath .= "/$1";
+	}
     }
     return $realpath;
 }
 
-###
-### Perform variable expansion
-###
+#
+# Perform variable expansion
+#
 sub expand($);
 sub expand($) {
     my $key = shift;
 
     return "??$key??"
 	unless exists($CONFIG{uc($key)});
-    return $CONFIG{uc($key)}
-	if (ref($CONFIG{uc($key)}));
-    my $str = $CONFIG{uc($key)};
-    while ($str =~ s/\%\%(\w+)\%\%/expand($1)/eg) {
-	# nothing
+    my $value = $CONFIG{uc($key)};
+    my @elements = ref($value) ? @{$value} : $value;
+    my @expanded;
+    while (@elements) {
+	my $elem = shift(@elements);
+	if (ref($elem)) {
+	    # prepend to queue for further processing
+	    unshift(@elements, @{$elem});
+	} elsif ($elem =~ m/^\%\%(\w+)\%\%$/) {
+	    # prepend to queue for further processing
+	    # note - can expand to a list
+	    unshift(@elements, expand($1));
+	} else {
+	    $elem =~ s/\%\%(\w+)\%\%/expand($1)/eg;
+	    push(@expanded, $elem);
+	}
     }
-    return ($key =~ m/[A-Z]/) ? $str : lc($str);
+    if ($key !~ m/[A-Z]/) {
+	@expanded = map { lc($_) } @expanded;
+    }
+    if (ref($value)) {
+	return @expanded;
+    } elsif (@expanded != 1) {
+	die("expand($key): expected one value, got ", int(@expanded), "\n");
+    } else {
+	return $expanded[0];
+    }
 }
 
-###
-### Reset the configuration to initial values
-###
+#
+# Reset the configuration to initial values
+#
 sub clearconf() {
 
     %CONFIG = %INITIAL_CONFIG;
 }
 
-###
-### Read in a configuration file
-###
+#
+# Read in a configuration file
+#
 sub readconf($) {
     my $fn = shift;
 
-    local *CONF;
-    sysopen(CONF, $fn, O_RDONLY)
+    open(my $fh, "<", $fn)
 	or return undef;
     my $line = "";
     my $n = 0;
-    while (<CONF>) {
+    while (<$fh>) {
 	++$n;
 	chomp();
 	s/\s*(\#.*)?$//;
@@ -175,13 +199,13 @@ sub readconf($) {
 	    $line = "";
 	}
     }
-    close(CONF);
+    close($fh);
     return 1;
 }
 
-###
-### Record a tinderbox result in the history file
-###
+#
+# Record a tinderbox result in the history file
+#
 sub history($$$) {
     my $start = shift;
     my $end = shift;
@@ -193,28 +217,21 @@ sub history($$$) {
     $history .= strftime("%Y-%m-%d %H:%M:%S\t", localtime($end));
     $history .= expand('ARCH') . "\t";
     $history .= expand('MACHINE') . "\t";
-    my $date = expand('DATE');
-    if ($date) {
-	$date =~ s/\s+/ /g;
-	$history .= expand('BRANCH') . ":" . expand('DATE') . "\t";
-    } else {
-	$history .= expand('BRANCH') . "\t";
-    }
+    $history .= expand('BRANCH') . "\t";
     $history .= $success ? "OK\n" : "FAIL\n";
 
     my $fn = expand('LOGDIR') . "/history";
-    local *HISTORY;
-    if (sysopen(HISTORY, $fn, O_WRONLY|O_APPEND|O_CREAT, 0644)) {
-	syswrite(HISTORY, $history, length($history));
-	close(HISTORY);
+    if (open(my $fh, ">>", $fn)) {
+	print($fh $history);
+	close($fh);
     } else {
 	print(STDERR "failed to record result to history file:\n$history\n");
     }
 }
 
-###
-### Report a tinderbox failure
-###
+#
+# Report a tinderbox failure
+#
 sub report($$$$) {
     my $sender = shift;
     my $recipient = shift;
@@ -231,25 +248,24 @@ sub report($$$$) {
 	return;
     }
 
-    local *PIPE;
-    if (open(PIPE, "|-", "/usr/sbin/sendmail", "-i", "-t", "-f$sender")) {
-	print(PIPE "Sender: $sender\n");
-	print(PIPE "From: $sender\n");
-	print(PIPE "To: $recipient\n");
-	print(PIPE "Subject: $subject\n");
-	print(PIPE "Precedence: bulk\n");
-	print(PIPE "\n");
-	print(PIPE "$message\n");
-	close(PIPE);
+    if (open(my $pipe, "|-", "/usr/sbin/sendmail", "-i", "-t", "-f$sender")) {
+	print($pipe "Sender: $sender\n");
+	print($pipe "From: $sender\n");
+	print($pipe "To: $recipient\n");
+	print($pipe "Subject: $subject\n");
+	print($pipe "Precedence: bulk\n");
+	print($pipe "\n");
+	print($pipe "$message\n");
+	close($pipe);
     } else {
 	print(STDERR "[failed to send report by email]\n\n");
 	print(STDERR $message);
     }
 }
 
-###
-### Run the tinderbox
-###
+#
+# Run the tinderbox
+#
 sub tinderbox($$$) {
     my $branch = shift;
     my $arch = shift;
@@ -267,37 +283,42 @@ sub tinderbox($$$) {
     # Open log files: one for the full log and one for the summary
     my $logdir = expand('LOGDIR');
     my $logfile = "tinderbox-$config-$branch-$arch-$machine";
-    local (*FULL, *BRIEF);
-    if (!open(FULL, ">", "$logdir/$logfile.full.$$")) {
+    my $full;
+    if (!open($full, ">", "$logdir/$logfile.full.$$")) {
 	warn("$logdir/$logfile.full.$$: $!\n");
 	return undef;
     }
-    select(FULL);
+    select($full);
     $| = 1;
     select(STDOUT);
-    if (!open(BRIEF, ">", "$logdir/$logfile.brief.$$")) {
+    my $brief;
+    if (!open($brief, ">", "$logdir/$logfile.brief.$$")) {
 	warn("$logdir/$logfile.brief.$$: $!\n");
 	return undef;
     }
-    select(BRIEF);
+    select($brief);
     $| = 1;
     select(STDOUT);
 
     # Open a pipe for the tinderbox process
-    local (*RPIPE, *WPIPE);
-    if (!pipe(RPIPE, WPIPE)) {
+    my ($rpipe, $wpipe);
+    if (!pipe($rpipe, $wpipe)) {
 	warn("pipe(): $!\n");
 	unlink("$logdir/$logfile.brief.$$");
-	close(BRIEF);
+	close($brief);
 	unlink("$logdir/$logfile.full.$$");
-	close(FULL);
+	close($full);
 	return undef;
     }
 
     # Fork and start the tinderbox
-    my @args = @{$CONFIG{'OPTIONS'}};
+    my @args = expand('OPTIONS');
     push(@args, "--hostname=" . expand('HOSTNAME'));
     push(@args, "--sandbox=" . realpath(expand('SANDBOX')));
+    push(@args, "--srcdir=" . realpath(expand('SRCDIR')))
+	if ($CONFIG{'SRCDIR'});
+    push(@args, "--objdir=" . realpath(expand('OBJDIR')))
+	if ($CONFIG{'OBJDIR'});
     push(@args, "--arch=$arch");
     push(@args, "--machine=$machine");
     push(@args, "--cvsup=" . expand('CVSUP'))
@@ -305,16 +326,16 @@ sub tinderbox($$$) {
     push(@args, "--repository=" . expand('REPOSITORY'))
 	if ($CONFIG{'REPOSITORY'});
     push(@args, "--branch=$branch");
-    push(@args, "--date=" . expand('DATE'))
-	if ($CONFIG{'DATE'});
     push(@args, "--patch=" . expand('PATCH'))
 	if ($CONFIG{'PATCH'});
     push(@args, "--jobs=" . expand('JOBS'))
 	if ($CONFIG{'JOBS'});
+    push(@args, "--svnbase=" . expand('SVNBASE'))
+	if ($CONFIG{'SVNBASE'});
     push(@args, "--timeout=" . expand('TIMEOUT'))
 	if ($CONFIG{'TIMEOUT'});
-    push(@args, @{$CONFIG{'TARGETS'}});
-    push(@args, @{$CONFIG{'ENV'}});
+    push(@args, expand('TARGETS'));
+    push(@args, expand('ENV'));
     push(@args, "CFLAGS=" . expand('CFLAGS'))
 	if ($CONFIG{'CFLAGS'});
     push(@args, "COPTFLAGS=" . expand('COPTFLAGS'))
@@ -323,53 +344,59 @@ sub tinderbox($$$) {
     if (!defined($pid)) {
 	warn("fork(): $!\n");
 	unlink("$logdir/$logfile.brief.$$");
-	close(BRIEF);
+	close($brief);
 	unlink("$logdir/$logfile.full.$$");
-	close(FULL);
+	close($full);
 	return undef;
     } elsif ($pid == 0) {
-	close(RPIPE);
-	open(STDOUT, ">&WPIPE");
-	open(STDERR, ">&WPIPE");
+	close($rpipe);
+	open(STDOUT, ">&", $wpipe);
+	open(STDERR, ">&", $wpipe);
 	$| = 1;
 	exec(expand('TINDERBOX'), @args);
-	die("child: exec(): $!\n");
+	die("exec(): $!\n");
     }
 
     # Process the output
-    close(WPIPE);
+    close($wpipe);
     my @lines = ();
     my $error = 0;
     my $summary = "";
     my $root = realpath(expand('SANDBOX') . "/$branch/$arch/$machine");
-    while (<RPIPE>) {
-	s/\Q$root\E\/(src|obj)/\/$1/g;
-	print(FULL $_);
+    my $srcdir = realpath(expand('SRCDIR')) || "$root/src";
+    my $objdir = realpath(expand('OBJDIR')) || "$root/obj";
+    while (<$rpipe>) {
+	if ($abbreviate) {
+	    s/\Q$srcdir\E/\/src/g;
+	    s/\Q$objdir\E/\/obj/g;
+	}
+	print($full $_);
 	if (/^TB ---/ || /^>>> /) {
 	    if ($error) {
 		$summary .= join('', @lines);
-		print(BRIEF join('', @lines));
+		print($brief join('', @lines));
 		@lines = ();
 		$error = 0;
 	    }
 	    $summary .= $_;
-	    print(BRIEF $_);
+	    print($brief $_);
 	    @lines = ();
 	    next;
 	}
-	if (/^Stop in /) {
+	if (/^\*\*\*( \[.*?\])? (Error code|Stopped|Signal)/ &&
+	    !/\(ignored\)/) {
 	    $error = 1;
 	}
-	if (@lines > 10 && !$error) {
+	if (@lines > $BACKLOG && !$error) {
 	    shift(@lines);
 	    $lines[0] = "[...]\n";
 	}
 	push(@lines, $_);
     }
-    close(RPIPE);
+    close($rpipe);
     if ($error) {
 	$summary .= join('', @lines);
-	print(BRIEF join('', @lines));
+	print($brief join('', @lines));
     }
 
     # Done...
@@ -377,27 +404,34 @@ sub tinderbox($$$) {
 	warn("waitpid(): $!\n");
     } elsif ($? & 0xff) {
 	my $msg = "tinderbox caught signal " . ($? & 0x7f) . "\n";
-	print(BRIEF $msg);
-	print(FULL $msg);
+	print($brief $msg);
+	print($full $msg);
 	$error = 1;
     } elsif ($? >> 8) {
 	my $msg = "tinderbox returned exit code " . ($? >> 8) . "\n";
-	print(BRIEF $msg);
-	print(FULL $msg);
+	print($brief $msg);
+	print($full $msg);
 	$error = 1;
     }
-    close(BRIEF);
-    close(FULL);
+    close($brief);
+    close($full);
 
     my $end = time();
 
     # Record result in history file
     history($start, $end, !$error);
 
+    # Filter recipients
+    my @recipients = expand('RECIPIENT');
+    if (!$ENV{'MAGIC_SAUCE'} ||
+	$ENV{'MAGIC_SAUCE'} ne 'MIDNIGHTBSD_TINDERBOX') {
+	@recipients = grep { ! m/\@midnightbsd\.org/i } @recipients;
+    }
+
     # Mail out error reports
-    if ($error && $CONFIG{'RECIPIENT'}) {
+    if ($error && @recipients) {
 	my $sender = expand('SENDER');
-	my $recipient = expand('RECIPIENT');
+	my $recipient = join(', ', @recipients);
 	my $subject = expand('SUBJECT');
 	if ($CONFIG{'URLBASE'}) {
 	    $summary .= "\n\n" . expand('URLBASE') . "$logfile.full";
@@ -409,25 +443,25 @@ sub tinderbox($$$) {
     rename("$logdir/$logfile.brief.$$", "$logdir/$logfile.brief");
 }
 
-###
-### Open and lock a file reliably
-###
+#
+# Open and lock a file reliably
+#
 sub open_locked($;$$) {
     my $fn = shift;		# File name
-    my $flags = shift;		# Open flags
-    my $mode = shift;		# File mode
+    my $mode = shift;		# Open mode
+    my $perm = shift;		# File permissions
 
-    local *FILE;		# File handle
+    my $fh;			# File handle
     my (@sb1, @sb2);		# File status
 
-    for (;; close(FILE)) {
-	sysopen(FILE, $fn, $flags || O_RDONLY, $mode || 0640)
+    for (;; close($fh)) {
+	open($fh, $mode, $fn)
 	    or last;
-	if (!(@sb1 = stat(FILE))) {
+	if (!(@sb1 = stat($fh))) {
 	    # Huh? shouldn't happen
 	    last;
 	}
-	if (!flock(FILE, LOCK_EX|LOCK_NB)) {
+	if (!flock($fh, LOCK_EX|LOCK_NB)) {
 	    # A failure here means the file can't be locked, or
 	    # something really weird happened, so just give up.
 	    last;
@@ -441,15 +475,17 @@ sub open_locked($;$$) {
 	    # File changed under our feet, try again
 	    next;
 	}
-	return *FILE{IO};
+	chmod($fh, $perm)
+	    if defined($perm);
+	return $fh;
     }
-    close(FILE);
+    close($fh);
     return undef;
 }
 
-###
-### Print a usage message and exit
-###
+#
+# Print a usage message and exit
+#
 sub usage() {
 
     (my $self = $0) =~ s|^.*/||;
@@ -457,12 +493,13 @@ sub usage() {
 $COPYRIGHT
 
 Usage:
-    $self [options] [parameters]
+  $self [options] [parameters]
 
 Options:
   -d, --dump                    Dump the processed configuration
 
 Parameters:
+  -a, --abbreviate		Abbreviate path names in log file
   -c, --config=NAME             Configuration name
   -e, --etcdir=DIR              Configuration directory
   -l, --lockfile=FILE           Lock file name
@@ -472,9 +509,9 @@ Parameters:
     exit(1);
 }
 
-###
-### Main loop
-###
+#
+# Main loop
+#
 sub tbmaster($) {
     my $config = shift;
 
@@ -505,8 +542,9 @@ sub tbmaster($) {
 
     my $stopfile = expand('SANDBOX') . "/stop";
     my @jobs;
-    foreach my $branch (@{$CONFIG{'BRANCHES'}}) {
-	foreach my $platform (@{$CONFIG{'PLATFORMS'}}) {
+    foreach my $branch (expand('BRANCHES')) {
+	foreach my $platform (expand('PLATFORMS')) {
+	    next if (%platforms && !$platforms{$platform});
 	    my ($arch, $machine) = split('/', $platform, 2);
 	    $machine = $arch
 		unless defined($machine);
@@ -516,6 +554,7 @@ sub tbmaster($) {
 
     $0 = "tbmaster: supervisor";
     my %children;
+    my $done = 0;
     while (@jobs || keys(%children)) {
 	# start more children if we can
 	while (@jobs && keys(%children) < $ncpu) {
@@ -536,8 +575,10 @@ sub tbmaster($) {
 	    }
 	    warn("forked child $child for $branch $arch/$machine\n");
 	}
-	$0 = "tbmaster: supervisor (".
-	    keys(%children) . " running, " . @jobs . " pending)";
+	$0 = "tbmaster: supervisor (" .
+	    keys(%children) . " running, " .
+	    @jobs . " pending, " .
+	    $done . " completed)";
 	# wait for a child to terminate
 	if (keys(%children)) {
 	    my $child = wait();
@@ -545,14 +586,15 @@ sub tbmaster($) {
 		my ($branch, $arch, $machine) = @{$children{$child}};
 		warn("child $child for $branch $arch/$machine terminated\n");
 		delete($children{$child});
+		++$done;
 	    }
 	}
     }
 }
 
-###
-### Main
-###
+#
+# Main
+#
 MAIN:{
     # Set defaults
     $ENV{'TZ'} = "UTC";
@@ -579,14 +621,20 @@ MAIN:{
     # Get options
     {Getopt::Long::Configure("auto_abbrev", "bundling");}
     GetOptions(
-	"c|config=s"	        => \@configs,
+	"a|abbreviate!"		=> \$abbreviate,
+	"c|config=s"		=> \@configs,
 	"d|dump"		=> \$dump,
 	"e|etcdir=s"		=> \$etcdir,
 	"l|lockfile=s"		=> \$lockfile,
 	"n|ncpu=i"		=> \$ncpu,
 	) or usage();
-    if (@ARGV) {
-	usage();
+
+    foreach (@ARGV) {
+	if (m/^(\w+(?:\/\w+)?)$/) {
+	    $platforms{$1} = 1;
+	} else {
+	    die("invalid platform: $_\n");
+	}
     }
 
     # Check options
@@ -606,7 +654,7 @@ MAIN:{
 	    or die("$etcdir: $!\n");
     }
     for (my $n = 0; $n < @configs; ++$n) {
-	$configs[$n] =~ m/^(\w+)$/
+	$configs[$n] =~ m/^([\w-]+)$/
 	    or die("invalid config: $configs[$n]\n");
 	$configs[$n] = $1;
     }
@@ -617,7 +665,7 @@ MAIN:{
 	    die("invalid lockfile\n");
 	}
 	$lockfile = $1;
-	$lock = open_locked($lockfile, O_WRONLY|O_CREAT, 0600)
+	$lock = open_locked($lockfile, ">", 0600)
 	    or die("unable to acquire lock on $lockfile\n");
 	# Lock will be released upon termination.
     }

@@ -1,34 +1,34 @@
 #!/usr/bin/perl -Tw
 #-
-# Copyright (c) 2003-2008 Dag-Erling CoÃ¯dan SmÃ¸rgrav
+# Copyright (c) 2003-2013 Dag-Erling Smørgrav
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
 # are met:
 # 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer
-#    in this position and unchanged.
+#    notice, this list of conditions and the following disclaimer.
 # 2. Redistributions in binary form must reproduce the above copyright
 #    notice, this list of conditions and the following disclaimer in the
 #    documentation and/or other materials provided with the distribution.
 #
-# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
-# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-# OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
-# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-# NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
-# THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
 #
-# $MidnightBSD: src/tools/tools/tinderbox/www/index.cgi,v 1.3 2008/03/07 04:40:14 laffer1 Exp $
+# $MidnightBSD: src/tools/tools/tinderbox/www/index.cgi,v 1.4 2008/03/07 04:44:04 laffer1 Exp $
 # $FreeBSD: projects/tinderbox/www/index.cgi,v 1.32 2008/02/10 17:04:26 des Exp $
 #
 
-use 5.006_001;
+use v5.10.1;
 use strict;
 use POSIX qw(strftime);
 use Sys::Hostname;
@@ -85,8 +85,10 @@ sub do_config($) {
 
     my %branches = %{$CONFIGS{$config}};
 
+    my $prettyconfig = $config;
+    $prettyconfig =~ s/^(.*?)-build$/$1/;
     print "      <tr class='header'>
-        <th>$config</th>
+        <th>$prettyconfig</th>
 ";
     foreach my $arch (sort(keys(%ARCHES))) {
 	foreach my $machine (sort(keys(%{$ARCHES{$arch}}))) {
@@ -102,34 +104,32 @@ sub do_config($) {
     my $now = time();
 
     foreach my $branch (sort(inverse_branch_sort keys(%branches))) {
+	my $prettybranch = $branch;
+	$prettybranch =~ s@^HEAD$@/head@;
+	$prettybranch =~ s@^RELENG_(\d+)_(\d+)$@/releng/$1.$2@;
+	$prettybranch =~ s@^RELENG_(\d+)$@/stable/$1@;
 	print "      <tr>
-	<th>$branch</th>
+	<th>$prettybranch</th>
 ";
 	foreach my $arch (sort(keys(%ARCHES))) {
 	    foreach my $machine (sort(keys(%{$ARCHES{$arch}}))) {
 		my $log = "tinderbox-$config-$branch-$arch-$machine";
-		print "        <td align='center' class='result'>";
 		if (-f "$DIR/$log.brief") {
+		    print "        <td align='center' class='result'>";
 		    my @stat = stat(_);
 		    my $class = success("$DIR/$log.brief") ? "ok" : "fail";
 		    my $age = int(($now - $stat[9]) / 1800);
-		    $age = 9
-			if ($age > 9);
+		    $age = ($age < 0) ? 0 : ($age > 9) ? 9 : $age;
 		    $class .= "-$age";
 		    print "<span class='$class'>" .
 			strftime("%Y-%m-%d<br />%H:%M&nbsp;UTC", gmtime($stat[9])) .
 			"</span><br />";
-		    my $size = sprintf("[%.1f&nbsp;kB]", $stat[7] / 1024);
-		    print " <span class='tiny'>" .
-			"<a href='$log.brief'>summary&nbsp;$size</a>" .
-			"</span><br />";
+		    print "<span class='tiny'>" .
+			"<a href='$log.brief'>summary</a>";
 		    if (-f "$DIR/$log.full") {
-			@stat = stat(_);
-			$size = sprintf("[%.1f&nbsp;MB]", $stat[7] / 1048576);
-			print " <span class='tiny'>" .
-			    "<a href='$log.full'>full&nbsp;log&nbsp;$size</a>" .
-			    "</span><br />";
+			print " | <a href='$log.full'>full&nbsp;log</a>";
 		    }
+		    print "</span>";
 		    print "</td>\n";
 		} else {
 		    print "        <td align='center' class='noresult'>n/a</td>\n";
@@ -164,7 +164,7 @@ MAIN:{
     opendir(DIR, $DIR)
 	or die("$DIR: $!\n");
     foreach (readdir(DIR)) {
-	next unless m/^tinderbox-(\w+)-(\w+)-(\w+)-(\w+)\.(brief|full)$/;
+	next unless m/^tinderbox-([\w-]+)-(\w+)-(\w+)-(\w+)\.(brief|full)$/;
 	$CONFIGS{$1}->{$2} = $ARCHES{$3}->{$4} = 1;
     }
     closedir(DIR);

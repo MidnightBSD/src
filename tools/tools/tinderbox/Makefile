@@ -1,5 +1,4 @@
-# $MidnightBSD: src/tools/tools/tinderbox/Makefile,v 1.1.1.1.2.1 2008/03/04 03:06:59 laffer1 Exp $
-# $FreeBSD: src/tools/tools/tinderbox/Makefile,v 1.9 2003/08/01 07:24:30 des Exp $
+# $MidnightBSD: src/tools/tools/tinderbox/Makefile,v 1.2 2008/03/06 20:23:45 laffer1 Exp $
 
 BINDIR		?= ${HOME}/bin
 BINOWN		?= ${USER}

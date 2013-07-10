@@ -1,10 +1,9 @@
-# $MidnightBSD: src/tools/tools/tinderbox/etc/Makefile,v 1.1.1.1.2.1 2008/03/04 03:06:59 laffer1 Exp $
-# $FreeBSD: src/tools/tools/tinderbox/etc/Makefile,v 1.9 2004/08/19 07:28:30 des Exp $
+# $MidnightBSD: src/tools/tools/tinderbox/etc/Makefile,v 1.2 2008/03/06 20:23:45 laffer1 Exp $
 
 ETCFILES	 =
 ETCFILES	+= default.rc
-ETCFILES	+= releng_0_1.rc update_releng_0_1.rc
-ETCFILES	+= current.rc update_current.rc
+ETCFILES	+= midnightbsd0.4-build.rc midnightbsd0.4-update.rc
+ETCFILES	+= head-build.rc head-update.rc
 ETCDIR		?= ${HOME}/etc
 ETCOWN		?= ${USER}
 ETCGRP		?= ${USER}

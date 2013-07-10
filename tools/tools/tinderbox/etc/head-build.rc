@@ -1,0 +1,9 @@
+# HEAD tinderbox setup, shared source - build stage
+#
+# $MidnightBSD$
+
+branches	 = HEAD
+platforms	 = amd64, i386, sparc64
+targets		 = precleanobj, version, world, lint, kernels, postcleanobj
+srcdir		 = %%SANDBOX%%/%%BRANCH%%/src
+recipient	+= <luke@midnightbsd.org>,%%SENDER%%
