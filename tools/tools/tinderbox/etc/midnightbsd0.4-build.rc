@@ -1,0 +1,9 @@
+# MidnightBSD 0.4 tinderbox setup, shared source - build stage
+#
+# $MidnightBSD: src/tools/tools/tinderbox/etc/releng_0_1.rc,v 1.2 2008/03/06 20:24:11 laffer1 Exp $
+
+branches	 = RELENG_0_4
+platforms	= amd64, i386, sparc64
+targets		 = precleanobj, version, world, lint, kernels, postcleanobj
+srcdir		 = %%SANDBOX%%/%%BRANCH%%/src
+recipient	+= %%SENDER%%,<luke@midnightbsd.org>

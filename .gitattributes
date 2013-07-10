@@ -50179,6 +50179,8 @@ tools/tools/tinderbox/etc/Makefile -text
 tools/tools/tinderbox/etc/default.rc -text
 tools/tools/tinderbox/etc/head-build.rc -text
 tools/tools/tinderbox/etc/head-update.rc -text
+tools/tools/tinderbox/etc/midnightbsd0.4-build.rc -text
+tools/tools/tinderbox/etc/midnightbsd0.4-update.rc -text
 tools/tools/tinderbox/tbmaster.1 -text
 tools/tools/tinderbox/tbmaster.pl -text
 tools/tools/tinderbox/tinderbox.1 -text
