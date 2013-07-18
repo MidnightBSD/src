@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)util.c	8.3 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/bin/ls/util.c,v 1.3 2013/02/08 02:32:17 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -222,9 +222,9 @@ usage(void)
 {
 	(void)fprintf(stderr,
 #ifdef COLORLS
-	"usage: ls [-ABCFGHILPRSTUWZabcdfghiklmnopqrstuwx1] [-D format]"
+	"usage: ls [-ABCFGHILPRSTUWZabcdfghiklmnopqrstuwxy1,] [-D format]"
 #else
-	"usage: ls [-ABCFHILPRSTUWZabcdfghiklmnopqrstuwx1] [-D format]"
+	"usage: ls [-ABCFHILPRSTUWZabcdfghiklmnopqrstuwxy1,] [-D format]"
 #endif
 		      " [file ...]\n");
 	exit(1);
