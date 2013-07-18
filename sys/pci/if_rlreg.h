@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/sys/pci/if_rlreg.h,v 1.12 2013/01/17 23:29:42 laffer1 Exp $
  */
 
 /*
@@ -1046,6 +1046,11 @@ struct rl_softc {
  * D-Link DFE-530TX+ device ID
  */
 #define	DLINK_DEVICEID_530TXPLUS		0x1300
+
+/*
+ * D-Link DFE-520TX rev. C1 device ID
+ */
+#define	DLINK_DEVICEID_520TX_REVC1		0x4200
 
 /*
  * D-Link DFE-5280T device ID
