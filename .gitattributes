@@ -46949,6 +46949,13 @@ sys/modules/utopia/Makefile -text
 sys/modules/vesa/Makefile -text
 sys/modules/vge/Makefile -text
 sys/modules/viawd/Makefile -text
+sys/modules/virtio/Makefile -text
+sys/modules/virtio/balloon/Makefile -text
+sys/modules/virtio/block/Makefile -text
+sys/modules/virtio/network/Makefile -text
+sys/modules/virtio/pci/Makefile -text
+sys/modules/virtio/scsi/Makefile -text
+sys/modules/virtio/virtio/Makefile -text
 sys/modules/vkbd/Makefile -text
 sys/modules/vpo/Makefile -text
 sys/modules/vr/Makefile -text
