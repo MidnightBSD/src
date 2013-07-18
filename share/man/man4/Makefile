@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/18/93
-# $MidnightBSD$
+# $MidnightBSD: src/share/man/man4/Makefile,v 1.33 2012/12/29 16:29:12 laffer1 Exp $
 
 MAN=	aac.4 \
 	acpi.4 \
@@ -511,6 +511,10 @@ MAN=	aac.4 \
 	viapm.4 \
 	${_viawd.4} \
 	vinum.4 \
+	${_virtio.4} \
+	${_virtio_balloon.4} \
+	${_virtio_blk.4} \
+	${_virtio_scsi.4} \
 	vkbd.4 \
 	vlan.4 \
 	vpo.4 \
@@ -736,6 +740,11 @@ _nfsmb.4=	nfsmb.4
 _nve.4=		nve.4
 _nvram.4=	nvram.4
 _nxge.4=	nxge.4
+_virtio.4=	virtio.4
+_virtio_balloon.4=virtio_balloon.4
+_virtio_blk.4=	virtio_blk.4
+_virtio_scsi.4= virtio_scsi.4
+_vtnet.4=	vtnet.4
 _vxge.4=	vxge.4
 _padlock.4=	padlock.4
 _rr232x.4=	rr232x.4

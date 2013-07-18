@@ -39265,6 +39265,10 @@ share/man/man4/vge.4 -text
 share/man/man4/viapm.4 -text
 share/man/man4/viawd.4 -text
 share/man/man4/vinum.4 -text
+share/man/man4/virtio.4 -text
+share/man/man4/virtio_balloon.4 -text
+share/man/man4/virtio_blk.4 -text
+share/man/man4/virtio_scsi.4 -text
 share/man/man4/vkbd.4 -text
 share/man/man4/vlan.4 -text
 share/man/man4/vpo.4 -text
