@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20130717:
+	libmport bug was fixed causing hash verification to fail.
+
+	virtio(4) imported from FreeBSD 9-stable. scsi support not
+	included.
+
 20130612:
 	RELENG_0_4 created for 0.4. Development continues on 0.5.
 
@@ -1241,4 +1247,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.170 2013/04/02 22:45:24 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.171 2013/06/12 12:09:47 laffer1 Exp $
