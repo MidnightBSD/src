@@ -30,7 +30,7 @@
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/xen/xenstore/xenstore.c,v 1.2 2013/01/17 23:29:42 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -307,7 +307,8 @@ split(char *strings, u_int len, u_int *num)
 	const char **ret;
 
 	/* Protect against unterminated buffers. */
-	strings[len - 1] = '\0';
+	if (len > 0)
+		strings[len - 1] = '\0';
 
 	/* Count the strings. */
 	*num = extract_strings(strings, /*dest*/NULL, len);
@@ -559,7 +560,7 @@ xs_read_store(void *tdata, unsigned len)
 			 * when msleep returns.
 			 */
 			error = msleep(xen_store, &xs.ring_lock, PCATCH|PDROP,
-			    "xbread", /*timout*/0);
+			    "xbread", /*timeout*/0);
 			if (error && error != EWOULDBLOCK)
 				return (error);
 			continue;
