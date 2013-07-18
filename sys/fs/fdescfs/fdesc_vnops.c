@@ -31,7 +31,7 @@
  *
  *	@(#)fdesc_vnops.c	8.9 (Berkeley) 1/21/94
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/sys/fs/fdescfs/fdesc_vnops.c,v 1.6 2013/01/06 17:29:31 laffer1 Exp $
  */
 
 /*
@@ -538,7 +538,7 @@ fdesc_readdir(ap)
 				break;
 			dp->d_namlen = sprintf(dp->d_name, "%d", fcnt);
 			dp->d_reclen = UIO_MX;
-			dp->d_type = DT_UNKNOWN;
+			dp->d_type = DT_CHR;
 			dp->d_fileno = i + FD_DESC;
 			break;
 		}
