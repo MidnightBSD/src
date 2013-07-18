@@ -1,7 +1,7 @@
 # This file tells config what files go into building a kernel,
 # files marked standard are always included.
 #
-# $MidnightBSD$
+# $MidnightBSD: src/sys/conf/files.amd64,v 1.12 2012/09/14 01:54:57 laffer1 Exp $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -381,6 +381,15 @@ dev/isci/scil/scif_sas_task_request.c				optional isci
 dev/isci/scil/scif_sas_task_request_state_handlers.c		optional isci
 dev/isci/scil/scif_sas_task_request_states.c			optional isci
 dev/isci/scil/scif_sas_timer.c					optional isci
+dev/virtio/virtio.c			optional	virtio
+dev/virtio/virtqueue.c			optional	virtio
+dev/virtio/virtio_bus_if.m		optional	virtio
+dev/virtio/virtio_if.m			optional	virtio
+dev/virtio/pci/virtio_pci.c		optional	virtio_pci
+dev/virtio/network/if_vtnet.c		optional	vtnet
+dev/virtio/block/virtio_blk.c		optional	virtio_blk
+dev/virtio/balloon/virtio_balloon.c	optional	virtio_balloon
+dev/virtio/scsi/virtio_scsi.c		optional	virtio_scsi
 isa/syscons_isa.c		optional	sc
 isa/vga_isa.c			optional	vga
 kern/kern_clocksource.c		standard
