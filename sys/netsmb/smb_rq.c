@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/netsmb/smb_rq.c,v 1.6 2013/01/17 23:29:41 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -46,7 +46,7 @@ __MBSDID("$MidnightBSD$");
 #include <netsmb/smb_subr.h>
 #include <netsmb/smb_tran.h>
 
-MALLOC_DEFINE(M_SMBRQ, "SMBRQ", "SMB request");
+static MALLOC_DEFINE(M_SMBRQ, "SMBRQ", "SMB request");
 
 MODULE_DEPEND(netsmb, libmchain, 1, 1, 1);
 

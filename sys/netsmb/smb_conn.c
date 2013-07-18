@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/netsmb/smb_conn.c,v 1.6 2013/01/17 23:29:41 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -54,7 +54,7 @@ static int smb_vcnext = 1;	/* next unique id for VC */
 
 SYSCTL_NODE(_net, OID_AUTO, smb, CTLFLAG_RW, NULL, "SMB protocol");
 
-MALLOC_DEFINE(M_SMBCONN, "smb_conn", "SMB connection");
+static MALLOC_DEFINE(M_SMBCONN, "smb_conn", "SMB connection");
 
 static void smb_co_init(struct smb_connobj *cp, int level, char *ilockname,
     char *lockname);
