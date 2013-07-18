@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/net80211/ieee80211_power.c,v 1.5 2013/01/17 23:29:38 laffer1 Exp $");
 
 /*
  * IEEE 802.11 power save support.
@@ -48,7 +48,7 @@ __MBSDID("$MidnightBSD$");
 static void ieee80211_update_ps(struct ieee80211vap *, int);
 static int ieee80211_set_tim(struct ieee80211_node *, int);
 
-MALLOC_DEFINE(M_80211_POWER, "80211power", "802.11 power save state");
+static MALLOC_DEFINE(M_80211_POWER, "80211power", "802.11 power save state");
 
 void
 ieee80211_power_attach(struct ieee80211com *ic)

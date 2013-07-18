@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/net80211/ieee80211_acl.c,v 1.6 2013/01/17 23:29:37 laffer1 Exp $");
 
 /*
  * IEEE 802.11 MAC ACL support.
@@ -87,7 +87,7 @@ struct aclstate {
 #define	ACL_HASH(addr)	\
 	(((const uint8_t *)(addr))[IEEE80211_ADDR_LEN - 1] % ACL_HASHSIZE)
 
-MALLOC_DEFINE(M_80211_ACL, "acl", "802.11 station acl");
+static MALLOC_DEFINE(M_80211_ACL, "acl", "802.11 station acl");
 
 static	int acl_free_all(struct ieee80211vap *);
 

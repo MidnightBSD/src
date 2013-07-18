@@ -25,7 +25,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __FreeBSD__
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/net80211/ieee80211_dfs.c,v 1.2 2013/01/17 23:29:38 laffer1 Exp $");
 #endif
 
 /*
@@ -52,7 +52,7 @@ __MBSDID("$MidnightBSD$");
 
 #include <net80211/ieee80211_var.h>
 
-MALLOC_DEFINE(M_80211_DFS, "80211dfs", "802.11 DFS state");
+static MALLOC_DEFINE(M_80211_DFS, "80211dfs", "802.11 DFS state");
 
 static	int ieee80211_nol_timeout = 30*60;		/* 30 minutes */
 SYSCTL_INT(_net_wlan, OID_AUTO, nol_timeout, CTLFLAG_RW,

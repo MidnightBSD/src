@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/net80211/ieee80211_freebsd.c,v 1.6 2013/01/17 23:29:38 laffer1 Exp $");
 
 /*
  * IEEE 802.11 support (FreeBSD-specific code)
@@ -63,7 +63,7 @@ SYSCTL_INT(_net_wlan, OID_AUTO, debug, CTLFLAG_RW, &ieee80211_debug,
 	    0, "debugging printfs");
 #endif
 
-MALLOC_DEFINE(M_80211_COM, "80211com", "802.11 com state");
+static MALLOC_DEFINE(M_80211_COM, "80211com", "802.11 com state");
 
 /*
  * Allocate/free com structure in conjunction with ifnet;
