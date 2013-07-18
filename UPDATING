@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20130717:
+	Fix a bug in libmport that causes hash verification of 
+	package files to file with the mport tool.
+
 20130704:
 	0.4-RELEASE
 
@@ -1244,4 +1248,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.170.2.1 2013/06/14 00:08:19 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.170.2.2 2013/07/04 18:52:06 laffer1 Exp $
