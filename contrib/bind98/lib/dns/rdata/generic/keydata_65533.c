@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: keydata_65533.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: keydata_65533.c,v 1.2 2013-07-28 15:42:06 laffer1 Exp $ */
 
 #ifndef GENERIC_KEYDATA_65533_C
 #define GENERIC_KEYDATA_65533_C 1
@@ -176,7 +176,7 @@ fromwire_keydata(ARGS_FROMWIRE) {
 	UNUSED(options);
 
 	isc_buffer_activeregion(source, &sr);
-	if (sr.length < 4)
+	if (sr.length < 16)
 		return (ISC_R_UNEXPECTEDEND);
 
 	isc_buffer_forward(source, sr.length);
