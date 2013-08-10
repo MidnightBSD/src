@@ -1,4 +1,5 @@
 /*-
+ * Copyright (c) 2013 Lucas Holt <luke@MidnightBSD.org>
  * Copyright (c) 2007-2009 Sean C. Farley <scf@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 
 #include "namespace.h"
@@ -681,6 +682,25 @@ unsetenv(const char *name)
 			__remove_putenv(envNdx);
 		__rebuild_environ(envActive - 1);
 	}
+
+	return (0);
+}
+
+int
+clearenv(void)
+{
+        int envNdx;
+
+ 	if (envVars != NULL) {
+		for (envNdx = envVarsTotal - 1; envNdx >= 0; envNdx--)
+			if (! envVars[envNdx].putenv) {
+				free(envVars[envNdx].name);
+			}
+		free(envVars);
+		envVars = NULL;
+		environ = NULL;
+	} else
+		environ = NULL;
 
 	return (0);
 }

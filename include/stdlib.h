@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)stdlib.h	8.5 (Berkeley) 5/19/95
- * $MidnightBSD$
+ * $MidnightBSD: src/include/stdlib.h,v 1.6 2012/10/20 17:17:25 laffer1 Exp $
  */
 
 #ifndef _STDLIB_H_
@@ -88,6 +88,7 @@ long	 atol(const char *);
 void	*bsearch(const void *, const void *, size_t,
 	    size_t, int (*)(const void *, const void *));
 void	*calloc(size_t, size_t) __malloc_like;
+int	clearenv(void);
 div_t	 div(int, int) __pure2;
 _Noreturn void	 exit(int);
 void	 free(void *);

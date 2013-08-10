@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $MidnightBSD$
  */
 
 FBSD_1.0 {
@@ -110,6 +110,10 @@ FBSD_1.3 {
 	strtoull_l;
 	strtoumax_l;
 	strtouq_l;
+};
+
+MNBSD_1.1 {
+	clearenv;
 };
 
 FBSDprivate_1.0 {

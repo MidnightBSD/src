@@ -30,12 +30,13 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)getenv.3	8.2 (Berkeley) 12/11/93
-.\" $FreeBSD$
+.\" $MidnightBSD$
 .\"
-.Dd June 20, 2007
+.Dd August 10, 2013
 .Dt GETENV 3
 .Os
 .Sh NAME
+.Nm clearenv,
 .Nm getenv ,
 .Nm putenv ,
 .Nm setenv ,
@@ -45,6 +46,8 @@
 .Lb libc
 .Sh SYNOPSIS
 .In stdlib.h
+.Ft int
+.Fn clearenv "void"
 .Ft char *
 .Fn getenv "const char *name"
 .Ft int
@@ -54,9 +57,13 @@
 .Ft int
 .Fn unsetenv "const char *name"
 .Sh DESCRIPTION
-These functions set, unset and fetch environment variables from the
+These functions clear, set, unset and fetch environment variables from the
 host
 .Em environment list .
+.Pp
+The
+.Fn clearenv
+function clears the environment of all name-value pairs.
 .Pp
 The
 .Fn getenv
@@ -187,6 +194,12 @@ and
 .Fn unsetenv
 functions conforms to
 .St -p1003.1-2001 .
+The
+.Fn clearenv
+function was to be included in
+.St -p1003.1-1996 
+but was delayed and never included in
+future standards.
 .Sh HISTORY
 The functions
 .Fn setenv
@@ -211,6 +224,10 @@ This was changed to use
 as the memory location of the ``name=value'' pair to follow the
 .Tn POSIX
 specification.
+The 
+.Fn clearenv
+function first appeared in
+.Mx 0.5 .
 .Sh BUGS
 Successive calls to
 .Fn setenv
@@ -228,3 +245,7 @@ are copied and that old values remain accessible indefinitely) make this
 bug unavoidable.
 Future versions may eliminate one or both of these
 semantic guarantees in order to fix the bug.
+The 
+.Fn clearenv
+function marks items inactive in the list, but does not remove them from
+memory.
