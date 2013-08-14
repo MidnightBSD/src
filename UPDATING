@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20130814:
+	mksh R48 imported.
+
 20130717:
 	libmport bug was fixed causing hash verification to fail.
 
@@ -1247,4 +1250,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.171 2013/06/12 12:09:47 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.172 2013/07/18 01:58:36 laffer1 Exp $
