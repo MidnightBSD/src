@@ -1,7 +1,8 @@
-/*	$OpenBSD: jobs.c,v 1.38 2009/12/12 04:28:44 deraadt Exp $	*/
+/*	$OpenBSD: jobs.c,v 1.39 2009/12/13 04:36:48 deraadt Exp $	*/
 
 /*-
- * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2011, 2012
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2011,
+ *		 2012, 2013
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -22,7 +23,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/jobs.c,v 1.94 2012/12/28 02:28:36 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/jobs.c,v 1.100 2013/07/26 20:33:23 tg Exp $");
 
 #if HAVE_KILLPG
 #define mksh_killpg		killpg
@@ -44,12 +45,11 @@ struct proc {
 	int state;
 	int status;		/* wait status */
 	/* process command string from vistree */
-	char command[64 - (ALLOC_SIZE + sizeof(Proc *) + sizeof(pid_t) +
+	char command[256 - (ALLOC_SIZE + sizeof(Proc *) + sizeof(pid_t) +
 	    2 * sizeof(int))];
 };
 
 /* Notify/print flag - j_print() argument */
-#define JP_NONE		0	/* don't print anything */
 #define JP_SHORT	1	/* print signals processes were killed by */
 #define JP_MEDIUM	2	/* print [job-num] -/+ command */
 #define JP_LONG		3	/* print [job-num] -/+ pid command */
@@ -102,17 +102,14 @@ struct job {
 #define JW_PIPEST	0x08	/* want PIPESTATUS */
 
 /* Error codes for j_lookup() */
-#define JL_OK		0
-#define JL_NOSUCH	1	/* no such job */
-#define JL_AMBIG	2	/* %foo or %?foo is ambiguous */
-#define JL_INVALID	3	/* non-pid, non-% job id */
+#define JL_NOSUCH	0	/* no such job */
+#define JL_AMBIG	1	/* %foo or %?foo is ambiguous */
+#define JL_INVALID	2	/* non-pid, non-% job id */
 
 static const char * const lookup_msgs[] = {
-	null,
 	"no such job",
 	"ambiguous",
-	"argument must be %job or process id",
-	NULL
+	"argument must be %job or process id"
 };
 
 static Job *job_list;		/* job list */
@@ -463,7 +460,7 @@ exchild(struct op *t, int flags,
 		forksleep <<= 1;
 	}
 	/* ensure $RANDOM changes between parent and child */
-	rndset((long)cldpid);
+	rndset((unsigned long)cldpid);
 	/* fork failed? */
 	if (cldpid < 0) {
 		kill_job(j, SIGKILL);
@@ -506,9 +503,6 @@ exchild(struct op *t, int flags,
 		/* Do this before restoring signal */
 		if (flags & XCOPROC)
 			coproc_cleanup(false);
-#ifndef MKSH_NOPROSPECTOFWORK
-		sigprocmask(SIG_SETMASK, &omask, NULL);
-#endif
 		cleanup_parents_env();
 #ifndef MKSH_UNEMPLOYED
 		/*
@@ -543,6 +537,10 @@ exchild(struct op *t, int flags,
 		}
 		/* in case of $(jobs) command */
 		remove_job(j, "child");
+#ifndef MKSH_NOPROSPECTOFWORK
+		/* remove_job needs SIGCHLD blocked still */
+		sigprocmask(SIG_SETMASK, &omask, NULL);
+#endif
 		nzombie = 0;
 #ifndef MKSH_UNEMPLOYED
 		ttypgrp_ok = false;
@@ -906,7 +904,7 @@ j_jobs(const char *cp, int slp,
 		zflag = 1;
 	}
 	if (cp) {
-		int	ecode;
+		int ecode;
 
 		if ((j = j_lookup(cp, &ecode)) == NULL) {
 #ifndef MKSH_NOPROSPECTOFWORK
@@ -1220,6 +1218,8 @@ j_waitj(Job *j,
 			    ARRAY | INT_U | AINDEX;
  got_array:
 			vp->val.i = proc_errorlevel(p);
+			if (Flag(FPIPEFAIL) && vp->val.i)
+				rv = vp->val.i;
 			p = p->next;
 		}
 	}
@@ -1251,8 +1251,7 @@ j_waitj(Job *j,
 static void
 j_sigchld(int sig MKSH_A_UNUSED)
 {
-	/* this runs inside interrupt context, with errno saved */
-
+	int saved_errno = errno;
 	Job *j;
 	Proc *p = NULL;
 	pid_t pid;
@@ -1340,7 +1339,7 @@ j_sigchld(int sig MKSH_A_UNUSED)
 #ifdef MKSH_NO_SIGSUSPEND
 	sigprocmask(SIG_SETMASK, &omask, NULL);
 #endif
-	/* nothing */;
+	errno = saved_errno;
 }
 
 /*

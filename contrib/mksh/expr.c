@@ -1,4 +1,4 @@
-/*	$OpenBSD: expr.c,v 1.21 2009/06/01 19:00:57 deraadt Exp $	*/
+/*	$OpenBSD: expr.c,v 1.22 2013/03/28 08:39:28 nicm Exp $	*/
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
@@ -23,23 +23,9 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/expr.c,v 1.61 2013/02/15 18:36:48 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/expr.c,v 1.72 2013/07/21 18:38:56 tg Exp $");
 
-#if !HAVE_SILENT_IDIVWRAPV
-#if !defined(MKSH_LEGACY_MODE) || HAVE_LONG_32BIT
-#define IDIVWRAPV_VL	(mksh_uari_t)0x80000000UL
-#define IDIVWRAPV_VR	(mksh_uari_t)0xFFFFFFFFUL
-#elif HAVE_LONG_64BIT
-#define IDIVWRAPV_VL	(mksh_uari_t)0x8000000000000000UL
-#define IDIVWRAPV_VR	(mksh_uari_t)0xFFFFFFFFFFFFFFFFUL
-#else
-# warning "cannot guarantee integer division wraparound"
-#undef HAVE_SILENT_IDIVWRAPV
-#define HAVE_SILENT_IDIVWRAPV 1
-#endif
-#endif
-
-/* The order of these enums is constrained by the order of opinfo[] */
+/* the order of these enums is constrained by the order of opinfo[] */
 enum token {
 	/* some (long) unary operators */
 	O_PLUSPLUS = 0, O_MINUSMINUS,
@@ -47,7 +33,14 @@ enum token {
 	O_EQ, O_NE,
 	/* assignments are assumed to be in range O_ASN .. O_BORASN */
 	O_ASN, O_TIMESASN, O_DIVASN, O_MODASN, O_PLUSASN, O_MINUSASN,
+#ifndef MKSH_LEGACY_MODE
+	O_ROLASN, O_RORASN,
+#endif
 	O_LSHIFTASN, O_RSHIFTASN, O_BANDASN, O_BXORASN, O_BORASN,
+	/* binary non-assignment operators */
+#ifndef MKSH_LEGACY_MODE
+	O_ROL, O_ROR,
+#endif
 	O_LSHIFT, O_RSHIFT,
 	O_LE, O_GE, O_LT, O_GT,
 	O_LAND,
@@ -67,14 +60,13 @@ enum token {
 	/* things that don't appear in the opinfo[] table */
 	VAR, LIT, END, BAD
 };
-#define IS_BINOP(op) (((int)op) >= (int)O_EQ && ((int)op) <= (int)O_COMMA)
 #define IS_ASSIGNOP(op)	((int)(op) >= (int)O_ASN && (int)(op) <= (int)O_BORASN)
 
 /* precisions; used to be enum prec but we do arithmetics on it */
-#define P_PRIMARY	0	/* VAR, LIT, (), ~ ! - + */
+#define P_PRIMARY	0	/* VAR, LIT, (), ! ~ ++ -- */
 #define P_MULT		1	/* * / % */
 #define P_ADD		2	/* + - */
-#define P_SHIFT		3	/* << >> */
+#define P_SHIFT		3	/* <<< >>> << >> */
 #define P_RELATION	4	/* < <= > >= */
 #define P_EQUALITY	5	/* == != */
 #define P_BAND		6	/* & */
@@ -83,60 +75,72 @@ enum token {
 #define P_LAND		9	/* && */
 #define P_LOR		10	/* || */
 #define P_TERN		11	/* ?: */
-#define P_ASSIGN	12	/* = *= /= %= += -= <<= >>= &= ^= |= */
+	/* = += -= *= /= %= <<<= >>>= <<= >>= &= ^= |= */
+#define P_ASSIGN	12
 #define P_COMMA		13	/* , */
 #define MAX_PREC	P_COMMA
 
 struct opinfo {
-	char		name[4];
-	int		len;	/* name length */
-	int		prec;	/* precedence: lower is higher */
+	char name[5];
+	/* name length */
+	uint8_t len;
+	/* precedence: lower is higher */
+	uint8_t prec;
 };
 
-/* Tokens in this table must be ordered so the longest are first
+/*
+ * Tokens in this table must be ordered so the longest are first
  * (eg, += before +). If you change something, change the order
  * of enum token too.
  */
 static const struct opinfo opinfo[] = {
-	{ "++",	 2, P_PRIMARY },	/* before + */
-	{ "--",	 2, P_PRIMARY },	/* before - */
-	{ "==",	 2, P_EQUALITY },	/* before = */
-	{ "!=",	 2, P_EQUALITY },	/* before ! */
-	{ "=",	 1, P_ASSIGN },		/* keep assigns in a block */
-	{ "*=",	 2, P_ASSIGN },
-	{ "/=",	 2, P_ASSIGN },
-	{ "%=",	 2, P_ASSIGN },
-	{ "+=",	 2, P_ASSIGN },
-	{ "-=",	 2, P_ASSIGN },
-	{ "<<=", 3, P_ASSIGN },
-	{ ">>=", 3, P_ASSIGN },
-	{ "&=",	 2, P_ASSIGN },
-	{ "^=",	 2, P_ASSIGN },
-	{ "|=",	 2, P_ASSIGN },
-	{ "<<",	 2, P_SHIFT },
-	{ ">>",	 2, P_SHIFT },
-	{ "<=",	 2, P_RELATION },
-	{ ">=",	 2, P_RELATION },
-	{ "<",	 1, P_RELATION },
-	{ ">",	 1, P_RELATION },
-	{ "&&",	 2, P_LAND },
-	{ "||",	 2, P_LOR },
-	{ "*",	 1, P_MULT },
-	{ "/",	 1, P_MULT },
-	{ "%",	 1, P_MULT },
-	{ "+",	 1, P_ADD },
-	{ "-",	 1, P_ADD },
-	{ "&",	 1, P_BAND },
-	{ "^",	 1, P_BXOR },
-	{ "|",	 1, P_BOR },
-	{ "?",	 1, P_TERN },
-	{ ",",	 1, P_COMMA },
-	{ "~",	 1, P_PRIMARY },
-	{ "!",	 1, P_PRIMARY },
-	{ "(",	 1, P_PRIMARY },
-	{ ")",	 1, P_PRIMARY },
-	{ ":",	 1, P_PRIMARY },
-	{ "",	 0, P_PRIMARY }
+	{ "++",   2, P_PRIMARY },	/* before + */
+	{ "--",   2, P_PRIMARY },	/* before - */
+	{ "==",   2, P_EQUALITY },	/* before = */
+	{ "!=",   2, P_EQUALITY },	/* before ! */
+	{ "=",    1, P_ASSIGN },	/* keep assigns in a block */
+	{ "*=",   2, P_ASSIGN },
+	{ "/=",   2, P_ASSIGN },
+	{ "%=",   2, P_ASSIGN },
+	{ "+=",   2, P_ASSIGN },
+	{ "-=",   2, P_ASSIGN },
+#ifndef MKSH_LEGACY_MODE
+	{ "<<<=", 4, P_ASSIGN },	/* before <<< */
+	{ ">>>=", 4, P_ASSIGN },	/* before >>> */
+#endif
+	{ "<<=",  3, P_ASSIGN },
+	{ ">>=",  3, P_ASSIGN },
+	{ "&=",   2, P_ASSIGN },
+	{ "^=",   2, P_ASSIGN },
+	{ "|=",   2, P_ASSIGN },
+#ifndef MKSH_LEGACY_MODE
+	{ "<<<",  3, P_SHIFT },		/* before << */
+	{ ">>>",  3, P_SHIFT },		/* before >> */
+#endif
+	{ "<<",   2, P_SHIFT },
+	{ ">>",   2, P_SHIFT },
+	{ "<=",   2, P_RELATION },
+	{ ">=",   2, P_RELATION },
+	{ "<",    1, P_RELATION },
+	{ ">",    1, P_RELATION },
+	{ "&&",   2, P_LAND },
+	{ "||",   2, P_LOR },
+	{ "*",    1, P_MULT },
+	{ "/",    1, P_MULT },
+	{ "%",    1, P_MULT },
+	{ "+",    1, P_ADD },
+	{ "-",    1, P_ADD },
+	{ "&",    1, P_BAND },
+	{ "^",    1, P_BXOR },
+	{ "|",    1, P_BOR },
+	{ "?",    1, P_TERN },
+	{ ",",    1, P_COMMA },
+	{ "~",    1, P_PRIMARY },
+	{ "!",    1, P_PRIMARY },
+	{ "(",    1, P_PRIMARY },
+	{ ")",    1, P_PRIMARY },
+	{ ":",    1, P_PRIMARY },
+	{ "",     0, P_PRIMARY }
 };
 
 typedef struct expr_state {
@@ -151,17 +155,12 @@ typedef struct expr_state {
 	/* token from token() */
 	enum token tok;
 	/* don't do assignments (for ?:, &&, ||) */
-	short noassign;
+	uint8_t noassign;
 	/* evaluating an $(()) expression? */
 	bool arith;
 	/* unsigned arithmetic calculation */
 	bool natural;
 } Expr_state;
-
-#define bivui(x, op, y)	(es->natural ?			\
-	(mksh_uari_t)((x)->val.u op (y)->val.u) :	\
-	(mksh_uari_t)((x)->val.i op (y)->val.i)		\
-)
 
 enum error_type {
 	ET_UNEXPECTED, ET_BADLIT, ET_RECURSIVE,
@@ -170,7 +169,7 @@ enum error_type {
 
 static void evalerr(Expr_state *, enum error_type, const char *)
     MKSH_A_NORETURN;
-static struct tbl *evalexpr(Expr_state *, int);
+static struct tbl *evalexpr(Expr_state *, unsigned int);
 static void exprtoken(Expr_state *);
 static struct tbl *do_ppmm(Expr_state *, enum token, struct tbl *, bool);
 static void assign_check(Expr_state *, enum token, struct tbl *);
@@ -185,7 +184,7 @@ evaluate(const char *expr, mksh_ari_t *rval, int error_ok, bool arith)
 	struct tbl v;
 	int ret;
 
-	v.flag = DEFINED|INTEGER;
+	v.flag = DEFINED | INTEGER;
 	v.type = 0;
 	ret = v_evaluate(&v, expr, error_ok, arith);
 	*rval = v.val.i;
@@ -307,52 +306,103 @@ evalerr(Expr_state *es, enum error_type type, const char *str)
 	unwind(LAEXPR);
 }
 
+/* do a ++ or -- operation */
 static struct tbl *
-evalexpr(Expr_state *es, int prec)
+do_ppmm(Expr_state *es, enum token op, struct tbl *vasn, bool is_prefix)
+{
+	struct tbl *vl;
+	mksh_uari_t oval;
+
+	assign_check(es, op, vasn);
+
+	vl = intvar(es, vasn);
+	oval = vl->val.u;
+	if (op == O_PLUSPLUS)
+		++vl->val.u;
+	else
+		--vl->val.u;
+	if (!es->noassign) {
+		if (vasn->flag & INTEGER)
+			setint_v(vasn, vl, es->arith);
+		else
+			setint(vasn, vl->val.i);
+	}
+	if (!is_prefix)
+		/* undo the increment/decrement */
+		vl->val.u = oval;
+
+	return (vl);
+}
+
+static struct tbl *
+evalexpr(Expr_state *es, unsigned int prec)
 {
 	struct tbl *vl, *vr = NULL, *vasn;
 	enum token op;
-	mksh_uari_t res = 0;
+	mksh_uari_t res = 0, t1, t2, t3;
 
 	if (prec == P_PRIMARY) {
-		op = es->tok;
-		if (op == O_BNOT || op == O_LNOT || op == O_MINUS ||
-		    op == O_PLUS) {
+		switch ((int)(op = es->tok)) {
+		case O_BNOT:
+		case O_LNOT:
+		case O_MINUS:
+		case O_PLUS:
 			exprtoken(es);
 			vl = intvar(es, evalexpr(es, P_PRIMARY));
-			if (op == O_BNOT)
-				vl->val.i = ~vl->val.i;
-			else if (op == O_LNOT)
-				vl->val.i = !vl->val.i;
-			else if (op == O_MINUS)
-				vl->val.i = -vl->val.i;
-			/* op == O_PLUS is a no-op */
-		} else if (op == OPEN_PAREN) {
+			switch ((int)op) {
+			case O_BNOT:
+				vl->val.u = ~vl->val.u;
+				break;
+			case O_LNOT:
+				vl->val.u = !vl->val.u;
+				break;
+			case O_MINUS:
+				vl->val.u = -vl->val.u;
+				break;
+			case O_PLUS:
+				/* nop */
+				break;
+			}
+			break;
+
+		case OPEN_PAREN:
 			exprtoken(es);
 			vl = evalexpr(es, MAX_PREC);
 			if (es->tok != CLOSE_PAREN)
 				evalerr(es, ET_STR, "missing )");
 			exprtoken(es);
-		} else if (op == O_PLUSPLUS || op == O_MINUSMINUS) {
+			break;
+
+		case O_PLUSPLUS:
+		case O_MINUSMINUS:
 			exprtoken(es);
 			vl = do_ppmm(es, op, es->val, true);
 			exprtoken(es);
-		} else if (op == VAR || op == LIT) {
+			break;
+
+		case VAR:
+		case LIT:
 			vl = es->val;
 			exprtoken(es);
-		} else {
+			break;
+
+		default:
 			evalerr(es, ET_UNEXPECTED, NULL);
 			/* NOTREACHED */
 		}
+
 		if (es->tok == O_PLUSPLUS || es->tok == O_MINUSMINUS) {
 			vl = do_ppmm(es, es->tok, vl, false);
 			exprtoken(es);
 		}
+
 		return (vl);
+		/* prec == P_PRIMARY */
 	}
+
 	vl = evalexpr(es, prec - 1);
-	for (op = es->tok; IS_BINOP(op) && opinfo[(int)op].prec == prec;
-	    op = es->tok) {
+	while ((int)(op = es->tok) >= (int)O_EQ && (int)op <= (int)O_COMMA &&
+	    opinfo[(int)op].prec == prec) {
 		exprtoken(es);
 		vasn = vl;
 		if (op != O_ASN)
@@ -362,152 +412,204 @@ evalexpr(Expr_state *es, int prec)
 			if (!es->noassign)
 				assign_check(es, op, vasn);
 			vr = intvar(es, evalexpr(es, P_ASSIGN));
-		} else if (op != O_TERN && op != O_LAND && op != O_LOR)
+		} else if (op == O_TERN) {
+			bool ev = vl->val.u != 0;
+
+			if (!ev)
+				es->noassign++;
+			vl = evalexpr(es, MAX_PREC);
+			if (!ev)
+				es->noassign--;
+			if (es->tok != CTERN)
+				evalerr(es, ET_STR, "missing :");
+			exprtoken(es);
+			if (ev)
+				es->noassign++;
+			vr = evalexpr(es, P_TERN);
+			if (ev)
+				es->noassign--;
+			vl = ev ? vl : vr;
+			continue;
+		} else if (op != O_LAND && op != O_LOR)
 			vr = intvar(es, evalexpr(es, prec - 1));
-		if ((op == O_DIV || op == O_MOD || op == O_DIVASN ||
-		    op == O_MODASN) && vr->val.i == 0) {
-			if (es->noassign)
-				vr->val.i = 1;
-			else
-				evalerr(es, ET_STR, "zero divisor");
+
+		/* common ops setup */
+		switch ((int)op) {
+		case O_DIV:
+		case O_DIVASN:
+		case O_MOD:
+		case O_MODASN:
+			if (vr->val.u == 0) {
+				if (!es->noassign)
+					evalerr(es, ET_STR, "zero divisor");
+				vr->val.u = 1;
+			}
+			/* calculate the absolute values */
+			t1 = vl->val.i < 0 ? -vl->val.u : vl->val.u;
+			t2 = vr->val.i < 0 ? -vr->val.u : vr->val.u;
+			break;
+#ifndef MKSH_LEGACY_MODE
+		case O_LSHIFT:
+		case O_LSHIFTASN:
+		case O_RSHIFT:
+		case O_RSHIFTASN:
+		case O_ROL:
+		case O_ROLASN:
+		case O_ROR:
+		case O_RORASN:
+			t1 = vl->val.u;
+			t2 = vr->val.u & 31;
+			break;
+#endif
+		case O_LAND:
+		case O_LOR:
+			t1 = vl->val.u;
+			t2 = 0;	/* gcc */
+			break;
+		default:
+			t1 = vl->val.u;
+			t2 = vr->val.u;
+			break;
 		}
+
+#define cmpop(op)	(es->natural ?			\
+	(mksh_uari_t)(vl->val.u op vr->val.u) :		\
+	(mksh_uari_t)(vl->val.i op vr->val.i)		\
+)
+
+		/* op calculation */
 		switch ((int)op) {
 		case O_TIMES:
 		case O_TIMESASN:
-			res = bivui(vl, *, vr);
-			break;
-		case O_DIV:
-		case O_DIVASN:
-#if !HAVE_SILENT_IDIVWRAPV
-			/*
-			 * we are doing the comparisons here for the
-			 * signed arithmetics (!es->natural) case,
-			 * but the exact value checks and the bypass
-			 * case assignments are done unsignedly as
-			 * several compilers bitch around otherwise
-			 */
-			if (!es->natural &&
-			    vl->val.u == IDIVWRAPV_VL &&
-			    vr->val.u == IDIVWRAPV_VR) {
-				/* -2147483648 / -1 = 2147483648 */
-				/* this ^ is really (1 << 31) though */
-				res = IDIVWRAPV_VL;
-			} else
-#endif
-				res = bivui(vl, /, vr);
+			res = t1 * t2;
 			break;
 		case O_MOD:
 		case O_MODASN:
-#if !HAVE_SILENT_IDIVWRAPV
-			/* see O_DIV / O_DIVASN for the reason behind this */
-			if (!es->natural &&
-			    vl->val.u == IDIVWRAPV_VL &&
-			    vr->val.u == IDIVWRAPV_VR) {
-				/* -2147483648 % -1 = 0 */
-				res = 0;
-			} else
+			if (es->natural) {
+				res = vl->val.u % vr->val.u;
+				break;
+			}
+			goto signed_division;
+		case O_DIV:
+		case O_DIVASN:
+			if (es->natural) {
+				res = vl->val.u / vr->val.u;
+				break;
+			}
+ signed_division:
+			/*
+			 * a / b = abs(a) / abs(b) * sgn((u)a^(u)b)
+			 */
+			t3 = t1 / t2;
+#ifndef MKSH_LEGACY_MODE
+			res = ((vl->val.u ^ vr->val.u) & 0x80000000) ? -t3 : t3;
+#else
+			res = ((t1 == vl->val.u ? 0 : 1) ^
+			    (t2 == vr->val.u ? 0 : 1)) ? -t3 : t3;
 #endif
-				res = bivui(vl, %, vr);
+			if (op == O_MOD || op == O_MODASN) {
+				/*
+				 * primitive modulo, to get the sign of
+				 * the result correct:
+				 * (a % b) = a - ((a / b) * b)
+				 * the subtraction and multiplication
+				 * are, amazingly enough, sign ignorant
+				 */
+				res = vl->val.u - (res * vr->val.u);
+			}
 			break;
 		case O_PLUS:
 		case O_PLUSASN:
-			res = bivui(vl, +, vr);
+			res = t1 + t2;
 			break;
 		case O_MINUS:
 		case O_MINUSASN:
-			res = bivui(vl, -, vr);
+			res = t1 - t2;
 			break;
+#ifndef MKSH_LEGACY_MODE
+		case O_ROL:
+		case O_ROLASN:
+			res = (t1 << t2) | (t1 >> (32 - t2));
+			break;
+		case O_ROR:
+		case O_RORASN:
+			res = (t1 >> t2) | (t1 << (32 - t2));
+			break;
+#endif
 		case O_LSHIFT:
 		case O_LSHIFTASN:
-			res = bivui(vl, <<, vr);
+			res = t1 << t2;
 			break;
 		case O_RSHIFT:
 		case O_RSHIFTASN:
-			res = bivui(vl, >>, vr);
+			res = es->natural || vl->val.i >= 0 ?
+			    t1 >> t2 :
+			    ~(~t1 >> t2);
 			break;
 		case O_LT:
-			res = bivui(vl, <, vr);
+			res = cmpop(<);
 			break;
 		case O_LE:
-			res = bivui(vl, <=, vr);
+			res = cmpop(<=);
 			break;
 		case O_GT:
-			res = bivui(vl, >, vr);
+			res = cmpop(>);
 			break;
 		case O_GE:
-			res = bivui(vl, >=, vr);
+			res = cmpop(>=);
 			break;
 		case O_EQ:
-			res = bivui(vl, ==, vr);
+			res = t1 == t2;
 			break;
 		case O_NE:
-			res = bivui(vl, !=, vr);
+			res = t1 != t2;
 			break;
 		case O_BAND:
 		case O_BANDASN:
-			res = bivui(vl, &, vr);
+			res = t1 & t2;
 			break;
 		case O_BXOR:
 		case O_BXORASN:
-			res = bivui(vl, ^, vr);
+			res = t1 ^ t2;
 			break;
 		case O_BOR:
 		case O_BORASN:
-			res = bivui(vl, |, vr);
+			res = t1 | t2;
 			break;
 		case O_LAND:
-			if (!vl->val.i)
+			if (!t1)
 				es->noassign++;
 			vr = intvar(es, evalexpr(es, prec - 1));
-			res = bivui(vl, &&, vr);
-			if (!vl->val.i)
+			res = t1 && vr->val.u;
+			if (!t1)
 				es->noassign--;
 			break;
 		case O_LOR:
-			if (vl->val.i)
+			if (t1)
 				es->noassign++;
 			vr = intvar(es, evalexpr(es, prec - 1));
-			res = bivui(vl, ||, vr);
-			if (vl->val.i)
+			res = t1 || vr->val.u;
+			if (t1)
 				es->noassign--;
 			break;
-		case O_TERN:
-			{
-				bool ev = vl->val.i != 0;
-
-				if (!ev)
-					es->noassign++;
-				vl = evalexpr(es, MAX_PREC);
-				if (!ev)
-					es->noassign--;
-				if (es->tok != CTERN)
-					evalerr(es, ET_STR, "missing :");
-				exprtoken(es);
-				if (ev)
-					es->noassign++;
-				vr = evalexpr(es, P_TERN);
-				if (ev)
-					es->noassign--;
-				vl = ev ? vl : vr;
-			}
-			break;
 		case O_ASN:
-			res = vr->val.u;
-			break;
 		case O_COMMA:
-			res = vr->val.u;
+			res = t2;
 			break;
 		}
+
+#undef cmpop
+
 		if (IS_ASSIGNOP(op)) {
 			vr->val.u = res;
 			if (!es->noassign) {
 				if (vasn->flag & INTEGER)
 					setint_v(vasn, vr, es->arith);
 				else
-					setint(vasn, (mksh_ari_t)res);
+					setint(vasn, vr->val.i);
 			}
 			vl = vr;
-		} else if (op != O_TERN)
+		} else
 			vl->val.u = res;
 	}
 	return (vl);
@@ -520,13 +622,14 @@ exprtoken(Expr_state *es)
 	int c;
 	char *tvar;
 
-	/* skip white space */
+	/* skip whitespace */
  skip_spaces:
 	while ((c = *cp), ksh_isspace(c))
 		++cp;
 	if (es->tokp == es->expression && c == '#') {
 		/* expression begins with # */
-		es->natural = true;	/* switch to unsigned */
+		/* switch to unsigned */
+		es->natural = true;
 		++cp;
 		goto skip_spaces;
 	}
@@ -544,12 +647,6 @@ exprtoken(Expr_state *es)
 			if (len == 0)
 				evalerr(es, ET_STR, "missing ]");
 			cp += len;
-		} else if (c == '(' /*)*/ ) {
-			/* todo: add math functions (all take single argument):
-			 * abs acos asin atan cos cosh exp int log sin sinh sqrt
-			 * tan tanh
-			 */
-			;
 		}
 		if (es->noassign) {
 			es->val = tempvar();
@@ -608,39 +705,6 @@ exprtoken(Expr_state *es)
 			es->tok = BAD;
 	}
 	es->tokp = cp;
-}
-
-/* Do a ++ or -- operation */
-static struct tbl *
-do_ppmm(Expr_state *es, enum token op, struct tbl *vasn, bool is_prefix)
-{
-	struct tbl *vl;
-	mksh_ari_t oval;
-
-	assign_check(es, op, vasn);
-
-	vl = intvar(es, vasn);
-	oval = vl->val.i;
-	if (op == O_PLUSPLUS) {
-		if (es->natural)
-			++vl->val.u;
-		else
-			++vl->val.i;
-	} else {
-		if (es->natural)
-			--vl->val.u;
-		else
-			--vl->val.i;
-	}
-	if (vasn->flag & INTEGER)
-		setint_v(vasn, vl, es->arith);
-	else
-		setint(vasn, vl->val.i);
-	if (!is_prefix)
-		/* undo the increment/decrement */
-		vl->val.i = oval;
-
-	return (vl);
 }
 
 static void
@@ -833,129 +897,6 @@ utf_wctomb(char *dst, unsigned int wc)
 	return ((char *)d - dst);
 }
 
-
-#ifndef MKSH_mirbsd_wcwidth
-/* --- begin of wcwidth.c excerpt --- */
-/*-
- * Markus Kuhn -- 2007-05-26 (Unicode 5.0)
- *
- * Permission to use, copy, modify, and distribute this software
- * for any purpose and without fee is hereby granted. The author
- * disclaims all warranties with regard to this software.
- */
-
-__RCSID("$miros: src/lib/libc/i18n/wcwidth.c,v 1.11 2012/09/01 23:46:43 tg Exp $");
-
-int
-utf_wcwidth(unsigned int c)
-{
-	static const struct cbset {
-		unsigned short first;
-		unsigned short last;
-	} comb[] = {
-		/* Unicode 6.1.0 BMP */
-		{ 0x0300, 0x036F }, { 0x0483, 0x0489 }, { 0x0591, 0x05BD },
-		{ 0x05BF, 0x05BF }, { 0x05C1, 0x05C2 }, { 0x05C4, 0x05C5 },
-		{ 0x05C7, 0x05C7 }, { 0x0600, 0x0604 }, { 0x0610, 0x061A },
-		{ 0x064B, 0x065F }, { 0x0670, 0x0670 }, { 0x06D6, 0x06DD },
-		{ 0x06DF, 0x06E4 }, { 0x06E7, 0x06E8 }, { 0x06EA, 0x06ED },
-		{ 0x070F, 0x070F }, { 0x0711, 0x0711 }, { 0x0730, 0x074A },
-		{ 0x07A6, 0x07B0 }, { 0x07EB, 0x07F3 }, { 0x0816, 0x0819 },
-		{ 0x081B, 0x0823 }, { 0x0825, 0x0827 }, { 0x0829, 0x082D },
-		{ 0x0859, 0x085B }, { 0x08E4, 0x08FE }, { 0x0900, 0x0902 },
-		{ 0x093A, 0x093A }, { 0x093C, 0x093C }, { 0x0941, 0x0948 },
-		{ 0x094D, 0x094D }, { 0x0951, 0x0957 }, { 0x0962, 0x0963 },
-		{ 0x0981, 0x0981 }, { 0x09BC, 0x09BC }, { 0x09C1, 0x09C4 },
-		{ 0x09CD, 0x09CD }, { 0x09E2, 0x09E3 }, { 0x0A01, 0x0A02 },
-		{ 0x0A3C, 0x0A3C }, { 0x0A41, 0x0A42 }, { 0x0A47, 0x0A48 },
-		{ 0x0A4B, 0x0A4D }, { 0x0A51, 0x0A51 }, { 0x0A70, 0x0A71 },
-		{ 0x0A75, 0x0A75 }, { 0x0A81, 0x0A82 }, { 0x0ABC, 0x0ABC },
-		{ 0x0AC1, 0x0AC5 }, { 0x0AC7, 0x0AC8 }, { 0x0ACD, 0x0ACD },
-		{ 0x0AE2, 0x0AE3 }, { 0x0B01, 0x0B01 }, { 0x0B3C, 0x0B3C },
-		{ 0x0B3F, 0x0B3F }, { 0x0B41, 0x0B44 }, { 0x0B4D, 0x0B4D },
-		{ 0x0B56, 0x0B56 }, { 0x0B62, 0x0B63 }, { 0x0B82, 0x0B82 },
-		{ 0x0BC0, 0x0BC0 }, { 0x0BCD, 0x0BCD }, { 0x0C3E, 0x0C40 },
-		{ 0x0C46, 0x0C48 }, { 0x0C4A, 0x0C4D }, { 0x0C55, 0x0C56 },
-		{ 0x0C62, 0x0C63 }, { 0x0CBC, 0x0CBC }, { 0x0CBF, 0x0CBF },
-		{ 0x0CC6, 0x0CC6 }, { 0x0CCC, 0x0CCD }, { 0x0CE2, 0x0CE3 },
-		{ 0x0D41, 0x0D44 }, { 0x0D4D, 0x0D4D }, { 0x0D62, 0x0D63 },
-		{ 0x0DCA, 0x0DCA }, { 0x0DD2, 0x0DD4 }, { 0x0DD6, 0x0DD6 },
-		{ 0x0E31, 0x0E31 }, { 0x0E34, 0x0E3A }, { 0x0E47, 0x0E4E },
-		{ 0x0EB1, 0x0EB1 }, { 0x0EB4, 0x0EB9 }, { 0x0EBB, 0x0EBC },
-		{ 0x0EC8, 0x0ECD }, { 0x0F18, 0x0F19 }, { 0x0F35, 0x0F35 },
-		{ 0x0F37, 0x0F37 }, { 0x0F39, 0x0F39 }, { 0x0F71, 0x0F7E },
-		{ 0x0F80, 0x0F84 }, { 0x0F86, 0x0F87 }, { 0x0F8D, 0x0F97 },
-		{ 0x0F99, 0x0FBC }, { 0x0FC6, 0x0FC6 }, { 0x102D, 0x1030 },
-		{ 0x1032, 0x1037 }, { 0x1039, 0x103A }, { 0x103D, 0x103E },
-		{ 0x1058, 0x1059 }, { 0x105E, 0x1060 }, { 0x1071, 0x1074 },
-		{ 0x1082, 0x1082 }, { 0x1085, 0x1086 }, { 0x108D, 0x108D },
-		{ 0x109D, 0x109D }, { 0x1160, 0x11FF }, { 0x135D, 0x135F },
-		{ 0x1712, 0x1714 }, { 0x1732, 0x1734 }, { 0x1752, 0x1753 },
-		{ 0x1772, 0x1773 }, { 0x17B4, 0x17B5 }, { 0x17B7, 0x17BD },
-		{ 0x17C6, 0x17C6 }, { 0x17C9, 0x17D3 }, { 0x17DD, 0x17DD },
-		{ 0x180B, 0x180D }, { 0x18A9, 0x18A9 }, { 0x1920, 0x1922 },
-		{ 0x1927, 0x1928 }, { 0x1932, 0x1932 }, { 0x1939, 0x193B },
-		{ 0x1A17, 0x1A18 }, { 0x1A56, 0x1A56 }, { 0x1A58, 0x1A5E },
-		{ 0x1A60, 0x1A60 }, { 0x1A62, 0x1A62 }, { 0x1A65, 0x1A6C },
-		{ 0x1A73, 0x1A7C }, { 0x1A7F, 0x1A7F }, { 0x1B00, 0x1B03 },
-		{ 0x1B34, 0x1B34 }, { 0x1B36, 0x1B3A }, { 0x1B3C, 0x1B3C },
-		{ 0x1B42, 0x1B42 }, { 0x1B6B, 0x1B73 }, { 0x1B80, 0x1B81 },
-		{ 0x1BA2, 0x1BA5 }, { 0x1BA8, 0x1BA9 }, { 0x1BAB, 0x1BAB },
-		{ 0x1BE6, 0x1BE6 }, { 0x1BE8, 0x1BE9 }, { 0x1BED, 0x1BED },
-		{ 0x1BEF, 0x1BF1 }, { 0x1C2C, 0x1C33 }, { 0x1C36, 0x1C37 },
-		{ 0x1CD0, 0x1CD2 }, { 0x1CD4, 0x1CE0 }, { 0x1CE2, 0x1CE8 },
-		{ 0x1CED, 0x1CED }, { 0x1CF4, 0x1CF4 }, { 0x1DC0, 0x1DE6 },
-		{ 0x1DFC, 0x1DFF }, { 0x200B, 0x200F }, { 0x202A, 0x202E },
-		{ 0x2060, 0x2064 }, { 0x206A, 0x206F }, { 0x20D0, 0x20F0 },
-		{ 0x2CEF, 0x2CF1 }, { 0x2D7F, 0x2D7F }, { 0x2DE0, 0x2DFF },
-		{ 0x302A, 0x302D }, { 0x3099, 0x309A }, { 0xA66F, 0xA672 },
-		{ 0xA674, 0xA67D }, { 0xA69F, 0xA69F }, { 0xA6F0, 0xA6F1 },
-		{ 0xA802, 0xA802 }, { 0xA806, 0xA806 }, { 0xA80B, 0xA80B },
-		{ 0xA825, 0xA826 }, { 0xA8C4, 0xA8C4 }, { 0xA8E0, 0xA8F1 },
-		{ 0xA926, 0xA92D }, { 0xA947, 0xA951 }, { 0xA980, 0xA982 },
-		{ 0xA9B3, 0xA9B3 }, { 0xA9B6, 0xA9B9 }, { 0xA9BC, 0xA9BC },
-		{ 0xAA29, 0xAA2E }, { 0xAA31, 0xAA32 }, { 0xAA35, 0xAA36 },
-		{ 0xAA43, 0xAA43 }, { 0xAA4C, 0xAA4C }, { 0xAAB0, 0xAAB0 },
-		{ 0xAAB2, 0xAAB4 }, { 0xAAB7, 0xAAB8 }, { 0xAABE, 0xAABF },
-		{ 0xAAC1, 0xAAC1 }, { 0xAAEC, 0xAAED }, { 0xAAF6, 0xAAF6 },
-		{ 0xABE5, 0xABE5 }, { 0xABE8, 0xABE8 }, { 0xABED, 0xABED },
-		{ 0xFB1E, 0xFB1E }, { 0xFE00, 0xFE0F }, { 0xFE20, 0xFE26 },
-		{ 0xFEFF, 0xFEFF }, { 0xFFF9, 0xFFFB }
-	};
-	size_t min = 0, mid, max = NELEM(comb) - 1;
-
-	/* test for 8-bit control characters */
-	if (c < 32 || (c >= 0x7F && c < 0xA0))
-		return (c ? -1 : 0);
-
-	/* binary search in table of non-spacing characters */
-	if (c >= comb[0].first && c <= comb[max].last)
-		while (max >= min) {
-			mid = (min + max) / 2;
-			if (c > comb[mid].last)
-				min = mid + 1;
-			else if (c < comb[mid].first)
-				max = mid - 1;
-			else
-				return (0);
-		}
-
-	/* if we arrive here, c is not a combining or C0/C1 control char */
-
-	return ((c >= 0x1100 && (
-	    c <= 0x115F || /* Hangul Jamo init. consonants */
-	    c == 0x2329 || c == 0x232A ||
-	    (c >= 0x2E80 && c <= 0xA4CF && c != 0x303F) || /* CJK ... Yi */
-	    (c >= 0xAC00 && c <= 0xD7A3) || /* Hangul Syllables */
-	    (c >= 0xF900 && c <= 0xFAFF) || /* CJK Compatibility Ideographs */
-	    (c >= 0xFE10 && c <= 0xFE19) || /* Vertical forms */
-	    (c >= 0xFE30 && c <= 0xFE6F) || /* CJK Compatibility Forms */
-	    (c >= 0xFF00 && c <= 0xFF60) || /* Fullwidth Forms */
-	    (c >= 0xFFE0 && c <= 0xFFE6))) ? 2 : 1);
-}
-/* --- end of wcwidth.c excerpt --- */
-#endif
-
 /*
  * Wrapper around access(2) because it says root can execute everything
  * on some operating systems. Does not set errno, no user needs it. Use
@@ -974,3 +915,277 @@ ksh_access(const char *fn, int mode)
 
 	return (rv);
 }
+
+#ifndef MKSH_mirbsd_wcwidth
+/* From: X11/xc/programs/xterm/wcwidth.c,v 1.6 2013/05/31 23:27:09 tg Exp $ */
+
+struct mb_ucsrange {
+	unsigned short beg;
+	unsigned short end;
+};
+
+static int mb_ucsbsearch(const struct mb_ucsrange arr[], size_t elems,
+    unsigned int val);
+
+/*
+ * Generated by MirOS: contrib/code/Snippets/eawparse,v 1.1 2013/05/31 23:27:16 tg Exp $
+ * from Unicode 6.2.0
+ */
+
+static const struct mb_ucsrange mb_ucs_combining[] = {
+	{ 0x0300, 0x036F },
+	{ 0x0483, 0x0489 },
+	{ 0x0591, 0x05BD },
+	{ 0x05BF, 0x05BF },
+	{ 0x05C1, 0x05C2 },
+	{ 0x05C4, 0x05C5 },
+	{ 0x05C7, 0x05C7 },
+	{ 0x0600, 0x0604 },
+	{ 0x0610, 0x061A },
+	{ 0x064B, 0x065F },
+	{ 0x0670, 0x0670 },
+	{ 0x06D6, 0x06DD },
+	{ 0x06DF, 0x06E4 },
+	{ 0x06E7, 0x06E8 },
+	{ 0x06EA, 0x06ED },
+	{ 0x070F, 0x070F },
+	{ 0x0711, 0x0711 },
+	{ 0x0730, 0x074A },
+	{ 0x07A6, 0x07B0 },
+	{ 0x07EB, 0x07F3 },
+	{ 0x0816, 0x0819 },
+	{ 0x081B, 0x0823 },
+	{ 0x0825, 0x0827 },
+	{ 0x0829, 0x082D },
+	{ 0x0859, 0x085B },
+	{ 0x08E4, 0x08FE },
+	{ 0x0900, 0x0902 },
+	{ 0x093A, 0x093A },
+	{ 0x093C, 0x093C },
+	{ 0x0941, 0x0948 },
+	{ 0x094D, 0x094D },
+	{ 0x0951, 0x0957 },
+	{ 0x0962, 0x0963 },
+	{ 0x0981, 0x0981 },
+	{ 0x09BC, 0x09BC },
+	{ 0x09C1, 0x09C4 },
+	{ 0x09CD, 0x09CD },
+	{ 0x09E2, 0x09E3 },
+	{ 0x0A01, 0x0A02 },
+	{ 0x0A3C, 0x0A3C },
+	{ 0x0A41, 0x0A42 },
+	{ 0x0A47, 0x0A48 },
+	{ 0x0A4B, 0x0A4D },
+	{ 0x0A51, 0x0A51 },
+	{ 0x0A70, 0x0A71 },
+	{ 0x0A75, 0x0A75 },
+	{ 0x0A81, 0x0A82 },
+	{ 0x0ABC, 0x0ABC },
+	{ 0x0AC1, 0x0AC5 },
+	{ 0x0AC7, 0x0AC8 },
+	{ 0x0ACD, 0x0ACD },
+	{ 0x0AE2, 0x0AE3 },
+	{ 0x0B01, 0x0B01 },
+	{ 0x0B3C, 0x0B3C },
+	{ 0x0B3F, 0x0B3F },
+	{ 0x0B41, 0x0B44 },
+	{ 0x0B4D, 0x0B4D },
+	{ 0x0B56, 0x0B56 },
+	{ 0x0B62, 0x0B63 },
+	{ 0x0B82, 0x0B82 },
+	{ 0x0BC0, 0x0BC0 },
+	{ 0x0BCD, 0x0BCD },
+	{ 0x0C3E, 0x0C40 },
+	{ 0x0C46, 0x0C48 },
+	{ 0x0C4A, 0x0C4D },
+	{ 0x0C55, 0x0C56 },
+	{ 0x0C62, 0x0C63 },
+	{ 0x0CBC, 0x0CBC },
+	{ 0x0CBF, 0x0CBF },
+	{ 0x0CC6, 0x0CC6 },
+	{ 0x0CCC, 0x0CCD },
+	{ 0x0CE2, 0x0CE3 },
+	{ 0x0D41, 0x0D44 },
+	{ 0x0D4D, 0x0D4D },
+	{ 0x0D62, 0x0D63 },
+	{ 0x0DCA, 0x0DCA },
+	{ 0x0DD2, 0x0DD4 },
+	{ 0x0DD6, 0x0DD6 },
+	{ 0x0E31, 0x0E31 },
+	{ 0x0E34, 0x0E3A },
+	{ 0x0E47, 0x0E4E },
+	{ 0x0EB1, 0x0EB1 },
+	{ 0x0EB4, 0x0EB9 },
+	{ 0x0EBB, 0x0EBC },
+	{ 0x0EC8, 0x0ECD },
+	{ 0x0F18, 0x0F19 },
+	{ 0x0F35, 0x0F35 },
+	{ 0x0F37, 0x0F37 },
+	{ 0x0F39, 0x0F39 },
+	{ 0x0F71, 0x0F7E },
+	{ 0x0F80, 0x0F84 },
+	{ 0x0F86, 0x0F87 },
+	{ 0x0F8D, 0x0F97 },
+	{ 0x0F99, 0x0FBC },
+	{ 0x0FC6, 0x0FC6 },
+	{ 0x102D, 0x1030 },
+	{ 0x1032, 0x1037 },
+	{ 0x1039, 0x103A },
+	{ 0x103D, 0x103E },
+	{ 0x1058, 0x1059 },
+	{ 0x105E, 0x1060 },
+	{ 0x1071, 0x1074 },
+	{ 0x1082, 0x1082 },
+	{ 0x1085, 0x1086 },
+	{ 0x108D, 0x108D },
+	{ 0x109D, 0x109D },
+	{ 0x1160, 0x11FF },
+	{ 0x135D, 0x135F },
+	{ 0x1712, 0x1714 },
+	{ 0x1732, 0x1734 },
+	{ 0x1752, 0x1753 },
+	{ 0x1772, 0x1773 },
+	{ 0x17B4, 0x17B5 },
+	{ 0x17B7, 0x17BD },
+	{ 0x17C6, 0x17C6 },
+	{ 0x17C9, 0x17D3 },
+	{ 0x17DD, 0x17DD },
+	{ 0x180B, 0x180D },
+	{ 0x18A9, 0x18A9 },
+	{ 0x1920, 0x1922 },
+	{ 0x1927, 0x1928 },
+	{ 0x1932, 0x1932 },
+	{ 0x1939, 0x193B },
+	{ 0x1A17, 0x1A18 },
+	{ 0x1A56, 0x1A56 },
+	{ 0x1A58, 0x1A5E },
+	{ 0x1A60, 0x1A60 },
+	{ 0x1A62, 0x1A62 },
+	{ 0x1A65, 0x1A6C },
+	{ 0x1A73, 0x1A7C },
+	{ 0x1A7F, 0x1A7F },
+	{ 0x1B00, 0x1B03 },
+	{ 0x1B34, 0x1B34 },
+	{ 0x1B36, 0x1B3A },
+	{ 0x1B3C, 0x1B3C },
+	{ 0x1B42, 0x1B42 },
+	{ 0x1B6B, 0x1B73 },
+	{ 0x1B80, 0x1B81 },
+	{ 0x1BA2, 0x1BA5 },
+	{ 0x1BA8, 0x1BA9 },
+	{ 0x1BAB, 0x1BAB },
+	{ 0x1BE6, 0x1BE6 },
+	{ 0x1BE8, 0x1BE9 },
+	{ 0x1BED, 0x1BED },
+	{ 0x1BEF, 0x1BF1 },
+	{ 0x1C2C, 0x1C33 },
+	{ 0x1C36, 0x1C37 },
+	{ 0x1CD0, 0x1CD2 },
+	{ 0x1CD4, 0x1CE0 },
+	{ 0x1CE2, 0x1CE8 },
+	{ 0x1CED, 0x1CED },
+	{ 0x1CF4, 0x1CF4 },
+	{ 0x1DC0, 0x1DE6 },
+	{ 0x1DFC, 0x1DFF },
+	{ 0x200B, 0x200F },
+	{ 0x202A, 0x202E },
+	{ 0x2060, 0x2064 },
+	{ 0x206A, 0x206F },
+	{ 0x20D0, 0x20F0 },
+	{ 0x2CEF, 0x2CF1 },
+	{ 0x2D7F, 0x2D7F },
+	{ 0x2DE0, 0x2DFF },
+	{ 0x302A, 0x302D },
+	{ 0x3099, 0x309A },
+	{ 0xA66F, 0xA672 },
+	{ 0xA674, 0xA67D },
+	{ 0xA69F, 0xA69F },
+	{ 0xA6F0, 0xA6F1 },
+	{ 0xA802, 0xA802 },
+	{ 0xA806, 0xA806 },
+	{ 0xA80B, 0xA80B },
+	{ 0xA825, 0xA826 },
+	{ 0xA8C4, 0xA8C4 },
+	{ 0xA8E0, 0xA8F1 },
+	{ 0xA926, 0xA92D },
+	{ 0xA947, 0xA951 },
+	{ 0xA980, 0xA982 },
+	{ 0xA9B3, 0xA9B3 },
+	{ 0xA9B6, 0xA9B9 },
+	{ 0xA9BC, 0xA9BC },
+	{ 0xAA29, 0xAA2E },
+	{ 0xAA31, 0xAA32 },
+	{ 0xAA35, 0xAA36 },
+	{ 0xAA43, 0xAA43 },
+	{ 0xAA4C, 0xAA4C },
+	{ 0xAAB0, 0xAAB0 },
+	{ 0xAAB2, 0xAAB4 },
+	{ 0xAAB7, 0xAAB8 },
+	{ 0xAABE, 0xAABF },
+	{ 0xAAC1, 0xAAC1 },
+	{ 0xAAEC, 0xAAED },
+	{ 0xAAF6, 0xAAF6 },
+	{ 0xABE5, 0xABE5 },
+	{ 0xABE8, 0xABE8 },
+	{ 0xABED, 0xABED },
+	{ 0xFB1E, 0xFB1E },
+	{ 0xFE00, 0xFE0F },
+	{ 0xFE20, 0xFE26 },
+	{ 0xFEFF, 0xFEFF },
+	{ 0xFFF9, 0xFFFB }
+};
+
+static const struct mb_ucsrange mb_ucs_fullwidth[] = {
+	{ 0x1100, 0x115F },
+	{ 0x2329, 0x232A },
+	{ 0x2E80, 0x303E },
+	{ 0x3040, 0xA4CF },
+	{ 0xA960, 0xA97F },
+	{ 0xAC00, 0xD7A3 },
+	{ 0xF900, 0xFAFF },
+	{ 0xFE10, 0xFE19 },
+	{ 0xFE30, 0xFE6F },
+	{ 0xFF00, 0xFF60 },
+	{ 0xFFE0, 0xFFE6 }
+};
+
+/* simple binary search in ranges, with bounds optimisation */
+static int
+mb_ucsbsearch(const struct mb_ucsrange arr[], size_t elems, unsigned int val)
+{
+	size_t min = 0, mid, max = elems;
+
+	if (val < arr[min].beg || val > arr[max - 1].end)
+		return (0);
+
+	while (min < max) {
+		mid = (min + max) / 2;
+
+		if (val < arr[mid].beg)
+			max = mid;
+		else if (val > arr[mid].end)
+			min = mid + 1;
+		else
+			return (1);
+	}
+	return (0);
+}
+
+/* Unix column width of a wide character (Unicode code point, really) */
+int
+utf_wcwidth(unsigned int wc)
+{
+	/* except NUL, C0/C1 control characters and DEL yield -1 */
+	if (wc < 0x20 || (wc >= 0x7F && wc < 0xA0))
+		return (wc ? -1 : 0);
+
+	/* combining characters use 0 screen columns */
+	if (mb_ucsbsearch(mb_ucs_combining, NELEM(mb_ucs_combining), wc))
+		return (0);
+
+	/* all others use 1 or 2 screen columns */
+	if (mb_ucsbsearch(mb_ucs_fullwidth, NELEM(mb_ucs_fullwidth), wc))
+		return (2);
+	return (1);
+}
+#endif

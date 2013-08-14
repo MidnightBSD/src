@@ -1,4 +1,4 @@
-/*	$OpenBSD: main.c,v 1.51 2012/09/10 01:25:30 tedu Exp $	*/
+/*	$OpenBSD: main.c,v 1.52 2013/06/15 17:25:19 millert Exp $	*/
 /*	$OpenBSD: tty.c,v 1.9 2006/03/14 22:08:01 deraadt Exp $	*/
 /*	$OpenBSD: io.c,v 1.22 2006/03/17 16:30:13 millert Exp $	*/
 /*	$OpenBSD: table.c,v 1.15 2012/02/19 07:52:30 otto Exp $	*/
@@ -34,7 +34,7 @@
 #include <locale.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/main.c,v 1.260 2013/02/10 21:42:16 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/main.c,v 1.269 2013/07/25 18:07:46 tg Exp $");
 
 extern char **environ;
 
@@ -48,6 +48,7 @@ extern char **environ;
 
 static uint8_t isuc(const char *);
 static int main_init(int, const char *[], Source **, struct block **);
+uint32_t chvt_rndsetup(const void *, size_t);
 void chvt_reinit(void);
 static void reclaim(void);
 static void remove_temps(struct temp *);
@@ -137,15 +138,25 @@ rndsetup(void)
 	/* introduce variation (and yes, second arg MBZ for portability) */
 	mksh_TIME(bufptr->tv);
 
+	h = chvt_rndsetup(bufptr, sizeof(*bufptr));
+
+	afree(cp, APERM);
+	return ((mksh_uari_t)h);
+}
+
+uint32_t
+chvt_rndsetup(const void *bp, size_t sz)
+{
+	register uint32_t h;
+
 	NZATInit(h);
 	/* variation through pid, ppid, and the works */
 	NZATUpdateMem(h, &rndsetupstate, sizeof(rndsetupstate));
 	/* some variation, some possibly entropy, depending on OE */
-	NZATUpdateMem(h, bufptr, sizeof(*bufptr));
+	NZATUpdateMem(h, bp, sz);
 	NZAATFinish(h);
 
-	afree(cp, APERM);
-	return ((mksh_uari_t)h);
+	return (h);
 }
 
 void
@@ -238,7 +249,7 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 
 	/* define built-in commands and see if we were called as one */
 	ktinit(APERM, &builtins,
-	    /* currently up to 50 builtins: 75% of 128 = 2^7 */
+	    /* currently up to 51 builtins: 75% of 128 = 2^7 */
 	    7);
 	for (i = 0; mkshbuiltins[i].name != NULL; i++)
 		if (!strcmp(ccp, builtin(mkshbuiltins[i].name,
@@ -251,10 +262,19 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 		if (argi < 0)
 			return (1);
 
+#if defined(MKSH_BINSHPOSIX) || defined(MKSH_BINSHREDUCED)
+		/* are we called as -sh or /bin/sh or so? */
+		if (!strcmp(ccp, "sh")) {
+			/* either also turns off braceexpand */
+#ifdef MKSH_BINSHPOSIX
+			/* enable better POSIX conformance */
+			change_flag(FPOSIX, OF_FIRSTTIME, true);
+#endif
 #ifdef MKSH_BINSHREDUCED
-		/* set FSH if we're called as -sh or /bin/sh or so */
-		if (!strcmp(ccp, "sh"))
+			/* enable kludge/compat mode */
 			change_flag(FSH, OF_FIRSTTIME, true);
+#endif
+		}
 #endif
 	}
 
@@ -322,6 +342,11 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 	 * alternation always have it on.
 	 */
 	Flag(FBRACEEXPAND) = 1;
+
+	/*
+	 * Turn on "set -x" inheritance by default.
+	 */
+	Flag(FXTRACEREC) = 1;
 
 #ifndef MKSH_NO_CMDLINE_EDITING
 	/*
@@ -411,7 +436,7 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 			return (1);
 	}
 
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(MKSH_LEGACY_MODE)
 	/* test wraparound of arithmetic types */
 	{
 		volatile long xl;
@@ -442,7 +467,7 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 		xc = 0;
 		--xc;
 		if ((xua2 != 2147483648UL) ||
-		    (xl != -2147483648L) || (xul != 2147483648UL) ||
+		    (xl != (-2147483647L-1)) || (xul != 2147483648UL) ||
 		    (xi != -1) || (xui != 4294967295U) ||
 		    (xa != 0) || (xua != 0) || (xc != 255))
 			errorf("integer wraparound test failed");
@@ -889,8 +914,9 @@ unwind(int i)
 	}
 
 	/* ordering for EXIT vs ERR is a bit odd (this is what AT&T ksh does) */
-	if (i == LEXIT ||
-	    ((i == LERROR || i == LINTR) && sigtraps[ksh_SIGEXIT].trap)) {
+	if (i == LEXIT || ((i == LERROR || i == LINTR) &&
+	    sigtraps[ksh_SIGEXIT].trap &&
+	    (!Flag(FTALKING) || Flag(FERREXIT)))) {
 		++trap_nested;
 		runtrap(&sigtraps[ksh_SIGEXIT], trap_nested == 1);
 		--trap_nested;
@@ -1005,6 +1031,10 @@ quitenv(struct shf *shf)
 #ifdef DEBUG_LEAKS
 #ifndef MKSH_NO_CMDLINE_EDITING
 		x_done();
+#endif
+#ifndef MKSH_NOPROSPECTOFWORK
+		/* block at least SIGCHLD during/after afreeall */
+		sigprocmask(SIG_BLOCK, &sm_sigchld, NULL);
 #endif
 		afreeall(APERM);
 		for (fd = 3; fd < NUFILE; fd++)
@@ -1364,7 +1394,7 @@ initio(void)
 	/* force buffer allocation */
 	shf_fdopen(1, SHF_WR, shl_stdout);
 	shf_fdopen(2, SHF_WR, shl_out);
-	shf_fdopen(2, SHF_WR, shl_spare);
+	shf_fdopen(2, SHF_WR, shl_xtrace);
 #ifdef DF
 	if ((lfp = getenv("SDMKSH_PATH")) == NULL) {
 		if ((lfp = getenv("HOME")) == NULL || *lfp != '/')
@@ -1594,7 +1624,7 @@ maketemp(Area *ap, Temp_type type, struct temp **tlist)
 {
 	char *cp;
 	size_t len;
-	int i;
+	int i, j;
 	struct temp *tp;
 	const char *dir;
 	struct stat sb;
@@ -1644,17 +1674,19 @@ maketemp(Area *ap, Temp_type type, struct temp **tlist)
 	}
 
 	if (type == TT_FUNSUB) {
-		int nfd;
-
 		/* map us high and mark as close-on-exec */
-		if ((nfd = savefd(i)) != i) {
+		if ((j = savefd(i)) != i) {
 			close(i);
-			i = nfd;
+			i = j;
 		}
-	}
+
+		/* operation mode for the shf */
+		j = SHF_RD;
+	} else
+		j = SHF_WR;
 
 	/* shf_fdopen cannot fail, so no fd leak */
-	tp->shf = shf_fdopen(i, SHF_WR, NULL);
+	tp->shf = shf_fdopen(i, j, NULL);
 
  maketemp_out:
 	tp->next = *tlist;

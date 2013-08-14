@@ -1,7 +1,9 @@
-# $MirOS: src/bin/mksh/check.t,v 1.599 2013/02/24 14:22:41 tg Exp $
+# $MirOS: src/bin/mksh/check.t,v 1.629 2013/08/14 20:26:15 tg Exp $
 # $OpenBSD: bksl-nl.t,v 1.2 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: history.t,v 1.5 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: read.t,v 1.3 2003/03/10 03:48:16 david Exp $
+# $OpenBSD: regress.t,v 1.15 2013/07/01 17:25:27 jca Exp $
+# $OpenBSD: obsd-regress.t,v 1.5 2013/07/01 17:25:27 jca Exp $
 #-
 # Copyright © 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
 #	      2011, 2012, 2013
@@ -29,7 +31,7 @@
 # http://www.freebsd.org/cgi/cvsweb.cgi/src/tools/regression/bin/test/regress.sh?rev=HEAD
 
 expected-stdout:
-	@(#)MIRBSD KSH R44 2013/02/24
+	@(#)MIRBSD KSH R48 2013/08/14
 description:
 	Check version of shell.
 stdin:
@@ -38,7 +40,7 @@ name: KSH_VERSION
 category: shell:legacy-no
 ---
 expected-stdout:
-	@(#)LEGACY KSH R44 2013/02/24
+	@(#)LEGACY KSH R48 2013/08/14
 description:
 	Check version of legacy shell.
 stdin:
@@ -290,6 +292,22 @@ stdin:
 expected-stdout:
 	= 4 2 =
 ---
+name: arith-lazy-4
+description:
+	Check that preun/postun not done on non-evaluated side of ternary
+	operator
+stdin:
+	(( m = n = 0, 1 ? n++ : m++ ? 2 : 3 ))
+	echo "($n, $m)"
+	m=0; echo $(( 0 ? ++m : 2 )); echo $m
+	m=0; echo $(( 0 ? m++ : 2 )); echo $m
+expected-stdout:
+	(1, 0)
+	2
+	0
+	2
+	0
+---
 name: arith-ternary-prec-1
 description:
 	Check precedence of ternary operator vs assignment
@@ -363,30 +381,35 @@ expected-stdout:
 ---
 name: arith-mandatory
 description:
-	If MKSH_GCC55009 is set when compiling, passing of
-	this test is *mandatory* for a valid mksh executable!
+	Passing of this test is *mandatory* for a valid mksh executable!
 category: shell:legacy-no
 stdin:
 	typeset -i sari=0
 	typeset -Ui uari=0
 	typeset -i x=0
-	print -r -- $((x++)):$sari=$uari.
+	print -r -- $((x++)):$sari=$uari. #0
 	let --sari --uari
-	print -r -- $((x++)):$sari=$uari.
+	print -r -- $((x++)):$sari=$uari. #1
 	sari=2147483647 uari=2147483647
-	print -r -- $((x++)):$sari=$uari.
+	print -r -- $((x++)):$sari=$uari. #2
 	let ++sari ++uari
-	print -r -- $((x++)):$sari=$uari.
+	print -r -- $((x++)):$sari=$uari. #3
 	let --sari --uari
 	let 'sari *= 2' 'uari *= 2'
 	let ++sari ++uari
-	print -r -- $((x++)):$sari=$uari.
+	print -r -- $((x++)):$sari=$uari. #4
 	let ++sari ++uari
-	print -r -- $((x++)):$sari=$uari.
+	print -r -- $((x++)):$sari=$uari. #5
 	sari=-2147483648 uari=-2147483648
-	print -r -- $((x++)):$sari=$uari.
+	print -r -- $((x++)):$sari=$uari. #6
 	let --sari --uari
-	print -r -- $((x++)):$sari=$uari.
+	print -r -- $((x++)):$sari=$uari. #7
+	(( sari = -5 >> 1 ))
+	((# uari = -5 >> 1 ))
+	print -r -- $((x++)):$sari=$uari. #8
+	(( sari = -2 ))
+	((# uari = sari ))
+	print -r -- $((x++)):$sari=$uari. #9
 expected-stdout:
 	0:0=0.
 	1:-1=4294967295.
@@ -396,6 +419,8 @@ expected-stdout:
 	5:0=0.
 	6:-2147483648=2147483648.
 	7:2147483647=2147483647.
+	8:-3=2147483645.
+	9:-2=4294967294.
 ---
 name: arith-unsigned-1
 description:
@@ -2530,30 +2555,6 @@ expected-stdout:
 	\END
 	end
 ---
-name: heredoc-quoting-unsubst
-description:
-	Check for correct handling of quoted characters in
-	here documents without substitution (marker is quoted).
-stdin:
-	foo=bar
-	cat <<-'EOF'
-		x " \" \ \\ $ \$ `echo baz` \`echo baz\` $foo \$foo x
-	EOF
-expected-stdout:
-	x " \" \ \\ $ \$ `echo baz` \`echo baz\` $foo \$foo x
----
-name: heredoc-quoting-subst
-description:
-	Check for correct handling of quoted characters in
-	here documents with substitution (marker is not quoted).
-stdin:
-	foo=bar
-	cat <<-EOF
-		x " \" \ \\ $ \$ `echo baz` \`echo baz\` $foo \$foo x
-	EOF
-expected-stdout:
-	x " \" \ \ $ $ baz `echo baz` bar $foo x
----
 name: heredoc-tmpfile-1
 description:
 	Check that heredoc temp files aren't removed too soon or too late.
@@ -2735,6 +2736,131 @@ expected-stdout:
 	hi
 	hi
 	Left overs: *
+---
+name: heredoc-quoting-unsubst
+description:
+	Check for correct handling of quoted characters in
+	here documents without substitution (marker is quoted).
+stdin:
+	foo=bar
+	cat <<-'EOF'
+		x " \" \ \\ $ \$ `echo baz` \`echo baz\` $foo \$foo x
+	EOF
+expected-stdout:
+	x " \" \ \\ $ \$ `echo baz` \`echo baz\` $foo \$foo x
+---
+name: heredoc-quoting-subst
+description:
+	Check for correct handling of quoted characters in
+	here documents with substitution (marker is not quoted).
+stdin:
+	foo=bar
+	cat <<-EOF
+		x " \" \ \\ $ \$ `echo baz` \`echo baz\` $foo \$foo x
+	EOF
+expected-stdout:
+	x " \" \ \ $ $ baz `echo baz` bar $foo x
+---
+name: single-quotes-in-braces
+description:
+	Check that single quotes inside unquoted {} are treated as quotes
+stdin:
+	foo=1
+	echo ${foo:+'blah  $foo'}
+expected-stdout:
+	blah  $foo
+---
+name: single-quotes-in-quoted-braces
+description:
+	Check that single quotes inside quoted {} are treated as
+	normal char
+stdin:
+	foo=1
+	echo "${foo:+'blah  $foo'}"
+expected-stdout:
+	'blah  1'
+---
+name: single-quotes-in-braces-nested
+description:
+	Check that single quotes inside unquoted {} are treated as quotes,
+	even if that's inside a double-quoted command expansion
+stdin:
+	foo=1
+	echo "$( echo ${foo:+'blah  $foo'})"
+expected-stdout:
+	blah  $foo
+---
+name: single-quotes-in-brace-pattern
+description:
+	Check that single quotes inside {} pattern are treated as quotes
+stdin:
+	foo=1234
+	echo ${foo%'2'*} "${foo%'2'*}" ${foo%2'*'} "${foo%2'*'}"
+expected-stdout:
+	1 1 1234 1234
+---
+name: single-quotes-in-heredoc-braces
+description:
+	Check that single quotes inside {} in heredoc are treated
+	as normal char
+stdin:
+	foo=1
+	cat <<EOM
+	${foo:+'blah  $foo'}
+	EOM
+expected-stdout:
+	'blah  1'
+---
+name: single-quotes-in-nested-braces
+description:
+	Check that single quotes inside nested unquoted {} are
+	treated as quotes
+stdin:
+	foo=1
+	echo ${foo:+${foo:+'blah  $foo'}}
+expected-stdout:
+	blah  $foo
+---
+name: single-quotes-in-nested-quoted-braces
+description:
+	Check that single quotes inside nested quoted {} are treated
+	as normal char
+stdin:
+	foo=1
+	echo "${foo:+${foo:+'blah  $foo'}}"
+expected-stdout:
+	'blah  1'
+---
+name: single-quotes-in-nested-braces-nested
+description:
+	Check that single quotes inside nested unquoted {} are treated
+	as quotes, even if that's inside a double-quoted command expansion
+stdin:
+	foo=1
+	echo "$( echo ${foo:+${foo:+'blah  $foo'}})"
+expected-stdout:
+	blah  $foo
+---
+name: single-quotes-in-nested-brace-pattern
+description:
+	Check that single quotes inside nested {} pattern are treated as quotes
+stdin:
+	foo=1234
+	echo ${foo:+${foo%'2'*}} "${foo:+${foo%'2'*}}" ${foo:+${foo%2'*'}} "${foo:+${foo%2'*'}}"
+expected-stdout:
+	1 1 1234 1234
+---
+name: single-quotes-in-heredoc-nested-braces
+description:
+	Check that single quotes inside nested {} in heredoc are treated
+	as normal char
+stdin:
+	foo=1
+	cat <<EOM
+	${foo:+${foo:+'blah  $foo'}}
+	EOM
+expected-stdout:
+	'blah  1'
 ---
 name: history-basic
 description:
@@ -3772,22 +3898,17 @@ expected-stdout:
 ---
 name: integer-base-check-flat
 description:
-	Check behaviour does not match POSuX, because a not type-safe
-	scripting language has *no* business interpreting "010" as octal
-category: shell:legacy-no
+	Check behaviour does not match POSuX (except if set -o posix),
+	because a not type-safe scripting language has *no* business
+	interpreting the string "010" as octal numer eight (dangerous).
 stdin:
-	echo :$((10)).$((010)).$((0x10)).
+	echo 1 "$("$__progname" -c 'echo :$((10))/$((010)),$((0x10)):')" .
+	echo 2 "$("$__progname" -o posix -c 'echo :$((10))/$((010)),$((0x10)):')" .
+	echo 3 "$("$__progname" -o sh -c 'echo :$((10))/$((010)),$((0x10)):')" .
 expected-stdout:
-	:10.10.16.
----
-name: integer-base-check-flat-legacy
-description:
-	Check behaviour matches POSuX for LEGACY KSH
-category: shell:legacy-yes
-stdin:
-	echo :$((10)).$((010)).$((0x10)).
-expected-stdout:
-	:10.8.16.
+	1 :10/10,16: .
+	2 :10/8,16: .
+	3 :10/10,16: .
 ---
 name: integer-base-check-numeric-from
 description:
@@ -3912,6 +4033,13 @@ stdin:
 expected-stdout:
 	s:-9223372036854775808.-1.0.
 	u:9223372036854775808.18446744073709551615.0.
+---
+name: integer-size-FAIL-to-detect
+description:
+	Notify the user that their ints are not 32 or 64 bit
+category: int:u
+stdin:
+	:
 ---
 name: lineno-stdin
 description:
@@ -4245,7 +4373,7 @@ description:
 	should print 0 according to POSIX (dash, bash, ksh93, posh)
 	but not 0 according to the getopt(1) manual page, ksh88, and
 	Bourne sh (such as /bin/sh on Solaris).
-	In mksh R39b, we honour POSIX except when -o sh is set.
+	We honour POSIX except when -o sh is set.
 category: shell:legacy-no
 stdin:
 	showf() {
@@ -4265,10 +4393,15 @@ stdin:
 	showf
 	set -- `false`
 	echo rv=$?
+	set -o posix -o sh
+	showf
+	set -- `false`
+	echo rv=$?
 expected-stdout:
 	FPOSIX=0 FSH=0 rv=0
 	FPOSIX=0 FSH=1 rv=1
 	FPOSIX=1 FSH=0 rv=0
+	FPOSIX=1 FSH=1 rv=0
 ---
 name: regression-10-legacy
 description:
@@ -4297,10 +4430,15 @@ stdin:
 	showf
 	set -- `false`
 	echo rv=$?
+	set -o posix -o sh
+	showf
+	set -- `false`
+	echo rv=$?
 expected-stdout:
 	FPOSIX=0 FSH=0 rv=1
 	FPOSIX=0 FSH=1 rv=1
-	FPOSIX=1 FSH=0 rv=1
+	FPOSIX=1 FSH=0 rv=0
+	FPOSIX=1 FSH=1 rv=0
 ---
 name: regression-11
 description:
@@ -4663,18 +4801,16 @@ expected-stdout:
 ---
 name: regression-39
 description:
-	set -e: errors in command substitutions aren't ignored
-	Not clear if they should be or not... bash passes here
-	this may actually be required for make, so changed the
-	test to make this an mksh feature, not a bug
-arguments: !-e!
+	Only posh and oksh(2013-07) say “hi” below; FreeBSD sh,
+	GNU bash in POSIX mode, dash, ksh93, mksh don’t. All of
+	them exit 0. The POSIX behaviour is needed by BSD make.
 stdin:
+	set -e
 	echo `false; echo hi`
-#expected-fail: yes
-#expected-stdout:
-#	hi
+	echo $?
 expected-stdout:
 	
+	0
 ---
 name: regression-40
 description:
@@ -5984,6 +6120,27 @@ expected-stdout:
 	EXtrap
 	= noeval-undef 1 .
 ---
+name: exit-trap-interactive
+description:
+	Check that interactive shell doesn't exit via EXIT trap on syntax error
+arguments: !-i!
+stdin:
+	trap -- EXIT
+	echo Syntax error <
+	echo 'After error 1'
+	trap 'echo Exit trap' EXIT
+	echo Syntax error <
+	echo 'After error 2'
+	trap 'echo Exit trap' EXIT
+	exit
+	echo 'After exit'
+expected-stdout:
+	After error 1
+	After error 2
+	Exit trap
+expected-stderr-pattern:
+	/syntax error: 'newline' unexpected/
+---
 name: test-stlt-1
 description:
 	Check that test also can handle string1 < string2 etc.
@@ -6178,7 +6335,7 @@ expected-stdout:
 ---
 name: sh-mode-2a
 description:
-	Check that sh mode is *not* automatically turned on
+	Check that posix or sh mode is *not* automatically turned on
 category: !binsh
 stdin:
 	ln -s "$__progname" ksh || cp "$__progname" ksh
@@ -6187,7 +6344,7 @@ stdin:
 	ln -s "$__progname" ./-sh || cp "$__progname" ./-sh
 	for shell in {,-}{,k}sh; do
 		print -- $shell $(./$shell +l -c \
-		    '[[ $(set +o) == *@(-o sh)@(| *) ]] && echo sh || echo nosh')
+		    '[[ $(set +o) == *"-o "@(sh|posix)@(| *) ]] && echo sh || echo nosh')
 	done
 expected-stdout:
 	sh nosh
@@ -6197,7 +6354,7 @@ expected-stdout:
 ---
 name: sh-mode-2b
 description:
-	Check that sh mode *is* automatically turned on
+	Check that posix or sh mode *is* automatically turned on
 category: binsh
 stdin:
 	ln -s "$__progname" ksh || cp "$__progname" ksh
@@ -6206,7 +6363,7 @@ stdin:
 	ln -s "$__progname" ./-sh || cp "$__progname" ./-sh
 	for shell in {,-}{,k}sh; do
 		print -- $shell $(./$shell +l -c \
-		    '[[ $(set +o) == *@(-o sh)@(| *) ]] && echo sh || echo nosh')
+		    '[[ $(set +o) == *"-o "@(sh|posix)@(| *) ]] && echo sh || echo nosh')
 	done
 expected-stdout:
 	sh sh
@@ -6274,6 +6431,28 @@ expected-stdout:
 	6 0 .
 	PIPESTATUS[0]=0
 	8 PIPESTATUS[0]=0 PIPESTATUS[1]=0 .
+---
+name: pipeline-4
+description:
+	Check that "set -o pipefail" does what it's supposed to
+stdin:
+	echo 1 "$("$__progname" -c '(exit 12) | (exit 23) | (exit 42); echo $?')" .
+	echo 2 "$("$__progname" -c '! (exit 12) | (exit 23) | (exit 42); echo $?')" .
+	echo 3 "$("$__progname" -o pipefail -c '(exit 12) | (exit 23) | (exit 42); echo $?')" .
+	echo 4 "$("$__progname" -o pipefail -c '! (exit 12) | (exit 23) | (exit 42); echo $?')" .
+	echo 5 "$("$__progname" -c '(exit 23) | (exit 42) | :; echo $?')" .
+	echo 6 "$("$__progname" -c '! (exit 23) | (exit 42) | :; echo $?')" .
+	echo 7 "$("$__progname" -o pipefail -c '(exit 23) | (exit 42) | :; echo $?')" .
+	echo 8 "$("$__progname" -o pipefail -c '! (exit 23) | (exit 42) | :; echo $?')" .
+expected-stdout:
+	1 42 .
+	2 0 .
+	3 42 .
+	4 0 .
+	5 0 .
+	6 1 .
+	7 42 .
+	8 0 .
 ---
 name: persist-history-1
 description:
@@ -7551,6 +7730,28 @@ stdin:
 expected-stdout:
 	ab
 ---
+name: print-cr
+description:
+	Check that CR+LF is not collapsed into LF as some MSYS shells wrongly do
+stdin:
+	echo '#!'"$__progname" >foo
+	cat >>foo <<-'EOF'
+		print -n -- '220-blau.mirbsd.org ESMTP ready at Thu, 25 Jul 2013 15:57:57 GMT\r\n220->> Bitte keine Werbung einwerfen! <<\r\r\n220 Who do you wanna pretend to be today'
+		print \?
+	EOF
+	chmod +x foo
+	echo "[$(./foo)]"
+	./foo | while IFS= read -r line; do
+		print -r -- "{$line}"
+	done
+expected-stdout:
+	[220-blau.mirbsd.org ESMTP ready at Thu, 25 Jul 2013 15:57:57 GMT
+	220->> Bitte keine Werbung einwerfen! <<
+	220 Who do you wanna pretend to be today?]
+	{220-blau.mirbsd.org ESMTP ready at Thu, 25 Jul 2013 15:57:57 GMT}
+	{220->> Bitte keine Werbung einwerfen! <<}
+	{220 Who do you wanna pretend to be today?}
+---
 name: print-nul-chars
 description:
 	Check handling of NUL characters for print and COMSUB
@@ -8363,6 +8564,7 @@ name: bashiop-1
 description:
 	Check if GNU bash-like I/O redirection works
 	Part 1: this is also supported by GNU bash
+category: shell:legacy-no
 stdin:
 	exec 3>&1
 	function threeout {
@@ -8383,6 +8585,7 @@ name: bashiop-2a
 description:
 	Check if GNU bash-like I/O redirection works
 	Part 2: this is *not* supported by GNU bash
+category: shell:legacy-no
 stdin:
 	exec 3>&1
 	function threeout {
@@ -8403,6 +8606,7 @@ name: bashiop-2b
 description:
 	Check if GNU bash-like I/O redirection works
 	Part 2: this is *not* supported by GNU bash
+category: shell:legacy-no
 stdin:
 	exec 3>&1
 	function threeout {
@@ -8423,6 +8627,7 @@ name: bashiop-2c
 description:
 	Check if GNU bash-like I/O redirection works
 	Part 2: this is supported by GNU bash 4 only
+category: shell:legacy-no
 stdin:
 	echo mir >foo
 	set -o noclobber
@@ -8446,6 +8651,7 @@ name: bashiop-3a
 description:
 	Check if GNU bash-like I/O redirection fails correctly
 	Part 1: this is also supported by GNU bash
+category: shell:legacy-no
 stdin:
 	echo mir >foo
 	set -o noclobber
@@ -8467,6 +8673,7 @@ name: bashiop-3b
 description:
 	Check if GNU bash-like I/O redirection fails correctly
 	Part 2: this is *not* supported by GNU bash
+category: shell:legacy-no
 stdin:
 	echo mir >foo
 	set -o noclobber
@@ -8490,6 +8697,7 @@ description:
 	Check if GNU bash-like I/O redirection works
 	Part 4: this is also supported by GNU bash,
 	but failed in some mksh versions
+category: shell:legacy-no
 stdin:
 	exec 3>&1
 	function threeout {
@@ -8510,6 +8718,34 @@ expected-stdout:
 	===
 	ras
 	dwa
+---
+name: bashiop-5-normal
+description:
+	Check if GNU bash-like I/O redirection is only supported
+	in !POSIX !sh mode as it breaks existing scripts' syntax
+category: shell:legacy-no
+stdin:
+	:>x; echo 1 "$("$__progname" -c 'echo foo>/dev/null&>x echo bar')" = "$(<x)" .
+	:>x; echo 2 "$("$__progname" -o posix -c 'echo foo>/dev/null&>x echo bar')" = "$(<x)" .
+	:>x; echo 3 "$("$__progname" -o sh -c 'echo foo>/dev/null&>x echo bar')" = "$(<x)" .
+expected-stdout:
+	1  = foo echo bar .
+	2  = bar .
+	3  = bar .
+---
+name: bashiop-5-legacy
+description:
+	Check if GNU bash-like I/O redirection is not parsed
+	in lksh as it breaks existing scripts' syntax
+category: shell:legacy-yes
+stdin:
+	:>x; echo 1 "$("$__progname" -c 'echo foo>/dev/null&>x echo bar')" = "$(<x)" .
+	:>x; echo 2 "$("$__progname" -o posix -c 'echo foo>/dev/null&>x echo bar')" = "$(<x)" .
+	:>x; echo 3 "$("$__progname" -o sh -c 'echo foo>/dev/null&>x echo bar')" = "$(<x)" .
+expected-stdout:
+	1  = bar .
+	2  = bar .
+	3  = bar .
 ---
 name: mkshiop-1
 description:
@@ -8534,10 +8770,57 @@ expected-stdout:
 	bar
 	baz
 ---
-name: oksh-shcrash
+name: oksh-eval
 description:
-	src/regress/bin/ksh/shcrash.sh,v 1.1
+	$OpenBSD: eval.sh,v 1.1 2010/03/24 08:29:44 fgsch Exp $
 stdin:
+	a=
+	for n in ${a#*=}; do echo 1hu ${n} .; done
+	for n in "${a#*=}"; do echo 1hq ${n} .; done
+	for n in ${a##*=}; do echo 2hu ${n} .; done
+	for n in "${a##*=}"; do echo 2hq ${n} .; done
+	for n in ${a%=*}; do echo 1pu ${n} .; done
+	for n in "${a%=*}"; do echo 1pq ${n} .; done
+	for n in ${a%%=*}; do echo 2pu ${n} .; done
+	for n in "${a%%=*}"; do echo 2pq ${n} .; done
+expected-stdout:
+	1hq .
+	2hq .
+	1pq .
+	2pq .
+---
+name: oksh-and-list-error-1
+description:
+	Test exit status of rightmost element in 2 element && list in -e mode
+stdin:
+	true && false
+	echo "should not print"
+arguments: !-e!
+expected-exit: e != 0
+---
+name: oksh-and-list-error-2
+description:
+	Test exit status of rightmost element in 3 element && list in -e mode
+stdin:
+	true && true && false
+	echo "should not print"
+arguments: !-e!
+expected-exit: e != 0
+---
+name: oksh-or-list-error-1
+description:
+	Test exit status of || list in -e mode
+stdin:
+	false || false
+	echo "should not print"
+arguments: !-e!
+expected-exit: e != 0
+---
+name: oksh-longline-crash
+description:
+	This used to cause a core dump
+stdin:
+	ulimit -c 0
 	deplibs="-lz -lpng /usr/local/lib/libjpeg.la -ltiff -lm -lX11 -lXext /usr/local/lib/libiconv.la -L/usr/local/lib -L/usr/ports/devel/gettext/w-gettext-0.10.40/gettext-0.10.40/intl/.libs /usr/local/lib/libintl.la /usr/local/lib/libglib.la /usr/local/lib/libgmodule.la -lintl -lm -lX11 -lXext -L/usr/X11R6/lib -lglib -lgmodule -L/usr/local/lib /usr/local/lib/libgdk.la -lintl -lm -lX11 -lXext -L/usr/X11R6/lib -lglib -lgmodule -L/usr/local/lib /usr/local/lib/libgtk.la -ltiff -ljpeg -lz -lpng -lm -lX11 -lXext -lintl -lglib -lgmodule -lgdk -lgtk -L/usr/X11R6/lib -lglib -lgmodule -L/usr/local/lib /usr/local/lib/libgdk_pixbuf.la -lz -lpng /usr/local/lib/libiconv.la -L/usr/local/lib -L/usr/ports/devel/gettext/w-gettext-0.10.40/gettext-0.10.40/intl/.libs /usr/local/lib/libintl.la /usr/local/lib/libglib.la -lm -lm /usr/local/lib/libaudiofile.la -lm -lm -laudiofile -L/usr/local/lib /usr/local/lib/libesd.la -lm -lz -L/usr/local/lib /usr/local/lib/libgnomesupport.la -lm -lz -lm -lglib -L/usr/local/lib /usr/local/lib/libgnome.la -lX11 -lXext /usr/local/lib/libiconv.la -L/usr/local/lib -L/usr/ports/devel/gettext/w-gettext-0.10.40/gettext-0.10.40/intl/.libs /usr/local/lib/libintl.la /usr/local/lib/libgmodule.la -lintl -lm -lX11 -lXext -L/usr/X11R6/lib -lglib -lgmodule -L/usr/local/lib /usr/local/lib/libgdk.la -lintl -lm -lX11 -lXext -L/usr/X11R6/lib -lglib -lgmodule -L/usr/local/lib /usr/local/lib/libgtk.la -lICE -lSM -lz -lpng /usr/local/lib/libungif.la /usr/local/lib/libjpeg.la -ltiff -lm -lz -lpng /usr/local/lib/libungif.la -lz /usr/local/lib/libjpeg.la -ltiff -L/usr/local/lib -L/usr/X11R6/lib /usr/local/lib/libgdk_imlib.la -lm -L/usr/local/lib /usr/local/lib/libart_lgpl.la -lm -lz -lm -lX11 -lXext -lintl -lglib -lgmodule -lgdk -lgtk -lICE -lSM -lm -lX11 -lXext -lintl -lglib -lgmodule -lgdk -lgtk -L/usr/X11R6/lib -lm -lz -lpng -lungif -lz -ljpeg -ltiff -ljpeg -lgdk_imlib -lglib -lm -laudiofile -lm -laudiofile -lesd -L/usr/local/lib /usr/local/lib/libgnomeui.la -lz -lz /usr/local/lib/libxml.la -lz -lz -lz /usr/local/lib/libxml.la -lm -lX11 -lXext /usr/local/lib/libiconv.la -L/usr/ports/devel/gettext/w-gettext-0.10.40/gettext-0.10.40/intl/.libs /usr/local/lib/libintl.la /usr/local/lib/libglib.la /usr/local/lib/libgmodule.la -lintl -lglib -lgmodule /usr/local/lib/libgdk.la /usr/local/lib/libgtk.la -L/usr/X11R6/lib -L/usr/local/lib /usr/local/lib/libglade.la -lz -lz -lz /usr/local/lib/libxml.la /usr/local/lib/libglib.la -lm -lm /usr/local/lib/libaudiofile.la -lm -lm -laudiofile /usr/local/lib/libesd.la -lm -lz /usr/local/lib/libgnomesupport.la -lm -lz -lm -lglib /usr/local/lib/libgnome.la -lX11 -lXext /usr/local/lib/libiconv.la -L/usr/ports/devel/gettext/w-gettext-0.10.40/gettext-0.10.40/intl/.libs /usr/local/lib/libintl.la /usr/local/lib/libgmodule.la -lintl -lm -lX11 -lXext -lglib -lgmodule /usr/local/lib/libgdk.la -lintl -lm -lX11 -lXext -lglib -lgmodule /usr/local/lib/libgtk.la -lICE -lSM -lz -lpng /usr/local/lib/libungif.la /usr/local/lib/libjpeg.la -ltiff -lm -lz -lz /usr/local/lib/libgdk_imlib.la /usr/local/lib/libart_lgpl.la -lm -lz -lm -lX11 -lXext -lintl -lglib -lgmodule -lgdk -lgtk -lm -lX11 -lXext -lintl -lglib -lgmodule -lgdk -lgtk -lm -lz -lungif -lz -ljpeg -ljpeg -lgdk_imlib -lglib -lm -laudiofile -lm -laudiofile -lesd /usr/local/lib/libgnomeui.la -L/usr/X11R6/lib -L/usr/local/lib /usr/local/lib/libglade-gnome.la /usr/local/lib/libglib.la -lm -lm /usr/local/lib/libaudiofile.la -lm -lm -laudiofile -L/usr/local/lib /usr/local/lib/libesd.la -lm -lz -L/usr/local/lib /usr/local/lib/libgnomesupport.la -lm -lz -lm -lglib -L/usr/local/lib /usr/local/lib/libgnome.la -lX11 -lXext /usr/local/lib/libiconv.la -L/usr/local/lib -L/usr/ports/devel/gettext/w-gettext-0.10.40/gettext-0.10.40/intl/.libs /usr/local/lib/libintl.la /usr/local/lib/libgmodule.la -lintl -lm -lX11 -lXext -L/usr/X11R6/lib -lglib -lgmodule -L/usr/local/lib /usr/local/lib/libgdk.la -lintl -lm -lX11 -lXext -L/usr/X11R6/lib -lglib -lgmodule -L/usr/local/lib /usr/local/lib/libgtk.la -lICE -lSM -lz -lpng /usr/local/lib/libungif.la /usr/local/lib/libjpeg.la -ltiff -lm -lz -lpng /usr/local/lib/libungif.la -lz /usr/local/lib/libjpeg.la -ltiff -L/usr/local/lib -L/usr/X11R6/lib /usr/local/lib/libgdk_imlib.la -lm -L/usr/local/lib /usr/local/lib/libart_lgpl.la -lm -lz -lm -lX11 -lXext -lintl -lglib -lgmodule -lgdk -lgtk -lICE -lSM -lm -lX11 -lXext -lintl -lglib -lgmodule -lgdk -lgtk -L/usr/X11R6/lib -lm -lz -lpng -lungif -lz -ljpeg -ltiff -ljpeg -lgdk_imlib -lglib -lm -laudiofile -lm -laudiofile -lesd -L/usr/local/lib /usr/local/lib/libgnomeui.la -L/usr/X11R6/lib -L/usr/local/lib"
 	specialdeplibs="-lgnomeui -lart_lgpl -lgdk_imlib -ltiff -ljpeg -lungif -lpng -lz -lSM -lICE -lgtk -lgdk -lgmodule -lintl -lXext -lX11 -lgnome -lgnomesupport -lesd -laudiofile -lm -lglib"
 	for deplib in $deplibs; do
@@ -8553,6 +8836,99 @@ stdin:
 			;;
 		esac
 	done
+---
+name: oksh-seterror-1
+description:
+	The -e flag should be ignored when executing a compound list
+	followed by an if statement.
+stdin:
+	if true; then false && false; fi
+	true
+arguments: !-e!
+expected-exit: e == 0
+---
+name: oksh-seterror-2
+description:
+	The -e flag should be ignored when executing a compound list
+	followed by an if statement.
+stdin:
+	if true; then if true; then false && false; fi; fi
+	true
+arguments: !-e!
+expected-exit: e == 0
+---
+name: oksh-seterror-3
+description:
+	The -e flag should be ignored when executing a compound list
+	followed by an elif statement.
+stdin:
+	if true; then :; elif true; then false && false; fi
+arguments: !-e!
+expected-exit: e == 0
+---
+name: oksh-seterror-4
+description:
+	The -e flag should be ignored when executing a pipeline
+	beginning with '!'
+stdin:
+	for i in 1 2 3
+	do
+		false && false
+		true || false
+	done
+arguments: !-e!
+expected-exit: e == 0
+---
+name: oksh-seterror-5
+description:
+	The -e flag should be ignored when executing a pipeline
+	beginning with '!'
+stdin:
+	! true | false
+	true
+arguments: !-e!
+expected-exit: e == 0
+---
+name: oksh-seterror-6
+description:
+	When trapping ERR and EXIT, both traps should run in -e mode
+	when an error occurs.
+stdin:
+	trap 'echo EXIT' EXIT
+	trap 'echo ERR' ERR
+	set -e
+	false
+	echo DONE
+	exit 0
+arguments: !-e!
+expected-exit: e != 0
+expected-stdout:
+	ERR
+	EXIT
+---
+name: oksh-seterror-7
+description:
+	The -e flag within a command substitution should be honored
+stdin:
+	echo $( set -e; false; echo foo )
+arguments: !-e!
+expected-stdout:
+	
+---
+name: oksh-input-comsub
+description:
+	A command substitution using input redirection should exit with
+	failure if the input file does not exist.
+stdin:
+	var=$(< non-existent)
+expected-exit: e != 0
+expected-stderr-pattern: /non-existent/
+---
+name: oksh-empty-for-list
+description:
+	A for list which expands to zero items should not execute the body.
+stdin:
+	set foo bar baz ; for out in ; do echo $out ; done
 ---
 name: oksh-varfunction-mod1
 description:
@@ -8846,8 +9222,8 @@ stdin:
 	EOFI
 	#IORDWR_IODUP
 	sh  1<>/dev/console  0<&1  2>&1
-	#COMSUB_EXPRSUB
-	echo $(true) $((1+ 2))
+	#COMSUB_EXPRSUB_FUNSUB_VALSUB
+	echo $(true) $((1+ 2)) ${  :;} ${| REPLY=x;}
 	#QCHAR_OQUOTE_CQUOTE
 	echo fo\ob\"a\`r\'b\$az
 	echo "fo\ob\"a\`r\'b\$az"
@@ -9041,7 +9417,7 @@ expected-stdout:
 	}
 	inline_TWHILE() {
 		i=1 
-		while let " i < 10 " 
+		while let] " i < 10 " 
 		do
 			echo $i 
 			let ++i 
@@ -9051,20 +9427,20 @@ expected-stdout:
 		i=1; while (( i < 10 )); do echo $i; let ++i; done
 	); }
 	function comsub_TWHILE {
-		x=$(i=1 ; while let " i < 10 " ; do echo $i ; let ++i ; done ) 
+		x=$(i=1 ; while let] " i < 10 " ; do echo $i ; let ++i ; done ) 
 	} 
 	function reread_TWHILE { x=$((
 		i=1; while (( i < 10 )); do echo $i; let ++i; done
 	)|tr u x); }
 	function reread_TWHILE {
-		x=$(( i=1 ; while let " i < 10 " ; do echo $i ; let ++i ; done ) | tr u x ) 
+		x=$(( i=1 ; while let] " i < 10 " ; do echo $i ; let ++i ; done ) | tr u x ) 
 	} 
 	inline_TUNTIL() {
 		i=10; until  (( !--i )) ; do echo $i; done
 	}
 	inline_TUNTIL() {
 		i=10 
-		until let " !--i " 
+		until let] " !--i " 
 		do
 			echo $i 
 		done 
@@ -9073,13 +9449,13 @@ expected-stdout:
 		i=10; until  (( !--i )) ; do echo $i; done
 	); }
 	function comsub_TUNTIL {
-		x=$(i=10 ; until let " !--i " ; do echo $i ; done ) 
+		x=$(i=10 ; until let] " !--i " ; do echo $i ; done ) 
 	} 
 	function reread_TUNTIL { x=$((
 		i=10; until  (( !--i )) ; do echo $i; done
 	)|tr u x); }
 	function reread_TUNTIL {
-		x=$(( i=10 ; until let " !--i " ; do echo $i ; done ) | tr u x ) 
+		x=$(( i=10 ; until let] " !--i " ; do echo $i ; done ) | tr u x ) 
 	} 
 	inline_TCOPROC() {
 		cat  *  |&  ls
@@ -9229,23 +9605,23 @@ expected-stdout:
 	function reread_IORDWR_IODUP {
 		x=$(( sh 1<>/dev/console <&1 2>&1 ) | tr u x ) 
 	} 
-	inline_COMSUB_EXPRSUB() {
-		echo $(true) $((1+ 2))
+	inline_COMSUB_EXPRSUB_FUNSUB_VALSUB() {
+		echo $(true) $((1+ 2)) ${  :;} ${| REPLY=x;}
 	}
-	inline_COMSUB_EXPRSUB() {
-		echo $(true ) $((1+ 2)) 
+	inline_COMSUB_EXPRSUB_FUNSUB_VALSUB() {
+		echo $(true ) $((1+ 2)) ${ : ;} ${|REPLY=x ;} 
 	} 
-	function comsub_COMSUB_EXPRSUB { x=$(
-		echo $(true) $((1+ 2))
+	function comsub_COMSUB_EXPRSUB_FUNSUB_VALSUB { x=$(
+		echo $(true) $((1+ 2)) ${  :;} ${| REPLY=x;}
 	); }
-	function comsub_COMSUB_EXPRSUB {
-		x=$(echo $(true ) $((1+ 2)) ) 
+	function comsub_COMSUB_EXPRSUB_FUNSUB_VALSUB {
+		x=$(echo $(true ) $((1+ 2)) ${ : ;} ${|REPLY=x ;} ) 
 	} 
-	function reread_COMSUB_EXPRSUB { x=$((
-		echo $(true) $((1+ 2))
+	function reread_COMSUB_EXPRSUB_FUNSUB_VALSUB { x=$((
+		echo $(true) $((1+ 2)) ${  :;} ${| REPLY=x;}
 	)|tr u x); }
-	function reread_COMSUB_EXPRSUB {
-		x=$(( echo $(true ) $((1+ 2)) ) | tr u x ) 
+	function reread_COMSUB_EXPRSUB_FUNSUB_VALSUB {
+		x=$(( echo $(true ) $((1+ 2)) ${ : ;} ${|REPLY=x ;} ) | tr u x ) 
 	} 
 	inline_QCHAR_OQUOTE_CQUOTE() {
 		echo fo\ob\"a\`r\'b\$az
@@ -9693,7 +10069,7 @@ expected-stdout:
 	}
 	inline_TWHILE() {
 		i=1 
-		while let " i < 10 " >&3 
+		while let] " i < 10 " >&3 
 		do
 			echo $i 
 			let ++i 
@@ -9703,20 +10079,20 @@ expected-stdout:
 		i=1; while (( i < 10 )) >&3; do echo $i; let ++i; done >&3
 	); }
 	function comsub_TWHILE {
-		x=$(i=1 ; while let " i < 10 " >&3 ; do echo $i ; let ++i ; done >&3 ) 
+		x=$(i=1 ; while let] " i < 10 " >&3 ; do echo $i ; let ++i ; done >&3 ) 
 	} 
 	function reread_TWHILE { x=$((
 		i=1; while (( i < 10 )) >&3; do echo $i; let ++i; done >&3
 	)|tr u x); }
 	function reread_TWHILE {
-		x=$(( i=1 ; while let " i < 10 " >&3 ; do echo $i ; let ++i ; done >&3 ) | tr u x ) 
+		x=$(( i=1 ; while let] " i < 10 " >&3 ; do echo $i ; let ++i ; done >&3 ) | tr u x ) 
 	} 
 	inline_TUNTIL() {
 		i=10; until  (( !--i )) >&3 ; do echo $i; done >&3
 	}
 	inline_TUNTIL() {
 		i=10 
-		until let " !--i " >&3 
+		until let] " !--i " >&3 
 		do
 			echo $i 
 		done >&3 
@@ -9725,13 +10101,13 @@ expected-stdout:
 		i=10; until  (( !--i )) >&3 ; do echo $i; done >&3
 	); }
 	function comsub_TUNTIL {
-		x=$(i=10 ; until let " !--i " >&3 ; do echo $i ; done >&3 ) 
+		x=$(i=10 ; until let] " !--i " >&3 ; do echo $i ; done >&3 ) 
 	} 
 	function reread_TUNTIL { x=$((
 		i=10; until  (( !--i )) >&3 ; do echo $i; done >&3
 	)|tr u x); }
 	function reread_TUNTIL {
-		x=$(( i=10 ; until let " !--i " >&3 ; do echo $i ; done >&3 ) | tr u x ) 
+		x=$(( i=10 ; until let] " !--i " >&3 ; do echo $i ; done >&3 ) | tr u x ) 
 	} 
 	inline_TCOPROC() {
 		cat  *  >&3 |&  >&3 ls
@@ -9830,6 +10206,38 @@ expected-stdout:
 	1:ya x2,2,0.
 	2:ya x2,1,0.
 	3:ya,1,3.
+---
+name: valsub-1
+description:
+	Check that "value substitutions" work as advertised
+stdin:
+	x=1
+	y=2
+	z=3
+	REPLY=4
+	echo "before:	x<$x> y<$y> z<$z> R<$REPLY>"
+	x=${|
+		local y
+		echo "begin:	x<$x> y<$y> z<$z> R<$REPLY>"
+		x=5
+		y=6
+		z=7
+		REPLY=8
+		echo "end:	x<$x> y<$y> z<$z> R<$REPLY>"
+	}
+	echo "after:	x<$x> y<$y> z<$z> R<$REPLY>"
+	# ensure trailing newlines are kept
+	t=${|REPLY=$'foo\n\n';}
+	typeset -p t
+	echo -n this used to segfault
+	echo ${|true;}$(true).
+expected-stdout:
+	before:	x<1> y<2> z<3> R<4>
+	begin:	x<1> y<> z<3> R<>
+	end:	x<5> y<6> z<7> R<8>
+	after:	x<8> y<2> z<7> R<4>
+	typeset t=$'foo\n\n'
+	this used to segfault.
 ---
 name: test-stnze-1
 description:
@@ -10156,7 +10564,7 @@ description:
 time-limit: 3
 stdin:
 	baz() {
-		typeset -n foo=foo
+		typeset -n foo=fnord fnord=foo
 		foo[0]=bar
 	}
 	set -A foo bad
@@ -10165,7 +10573,9 @@ stdin:
 	echo blah $foo .
 expected-stdout:
 	sind bad .
-	blah bar .
+	blah bad .
+expected-stderr-pattern:
+	/fnord: expression recurses on parameter/
 ---
 name: better-parens-1a
 description:
@@ -10742,4 +11152,20 @@ stdin:
 		s+=a
 	done
 	Lb64decode $s >/dev/null
+---
+name: xtrace-1
+description:
+	Check that "set -x" doesn't redirect too quickly
+stdin:
+	print '#!'"$__progname" >bash
+	cat >>bash <<'EOF'
+	echo 'GNU bash, version 2.05b.0(1)-release (i386-ecce-mirbsd10)
+	Copyright (C) 2002 Free Software Foundation, Inc.'
+	EOF
+	chmod +x bash
+	"$__progname" -xc 'foo=$(./bash --version 2>&1 | head -1); echo "=$foo="'
+expected-stdout:
+	=GNU bash, version 2.05b.0(1)-release (i386-ecce-mirbsd10)=
+expected-stderr-pattern:
+	/.*/
 ---

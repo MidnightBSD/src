@@ -1,7 +1,8 @@
-/*	$OpenBSD: shf.c,v 1.15 2006/04/02 00:48:33 deraadt Exp $	*/
+/*	$OpenBSD: shf.c,v 1.16 2013/04/19 17:36:09 millert Exp $	*/
 
 /*-
- * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2011, 2012
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2011,
+ *		 2012, 2013
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -24,7 +25,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/shf.c,v 1.56 2013/01/01 03:32:44 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/shf.c,v 1.61 2013/07/21 18:36:03 tg Exp $");
 
 /* flags to shf_emptybuf() */
 #define EB_READSW	0x01	/* about to switch to reading */
@@ -51,7 +52,7 @@ shf_open(const char *name, int oflags, int mode, int sflags)
 	ssize_t bsize =
 	    /* at most 512 */
 	    sflags & SHF_UNBUF ? (sflags & SHF_RD ? 1 : 0) : SHF_BSIZE;
-	int fd;
+	int fd, eno;
 
 	/* Done before open so if alloca fails, fd won't be lost. */
 	shf = alloc(sizeof(struct shf) + bsize, ATEMP);
@@ -63,16 +64,20 @@ shf_open(const char *name, int oflags, int mode, int sflags)
 
 	fd = open(name, oflags, mode);
 	if (fd < 0) {
+		eno = errno;
 		afree(shf, shf->areap);
+		errno = eno;
 		return (NULL);
 	}
 	if ((sflags & SHF_MAPHI) && fd < FDBASE) {
 		int nfd;
 
 		nfd = fcntl(fd, F_DUPFD, FDBASE);
+		eno = errno;
 		close(fd);
 		if (nfd < 0) {
 			afree(shf, shf->areap);
+			errno = eno;
 			return (NULL);
 		}
 		fd = nfd;
@@ -740,8 +745,6 @@ shf_smprintf(const char *fmt, ...)
 	return (shf_sclose(&shf));
 }
 
-#define BUF_SIZE	128
-
 #define	FL_HASH		0x001	/* '#' seen */
 #define FL_PLUS		0x002	/* '+' seen */
 #define FL_RIGHT	0x004	/* '-' seen */
@@ -985,6 +988,10 @@ shf_vfprintf(struct shf *shf, const char *fmt, va_list args)
 		case 's':
 			if ((s = VA(const char *)) == NULL)
 				s = "(null)";
+			else if (flags & FL_HASH) {
+				print_value_quoted(shf, s);
+				continue;
+			}
 			len = utf_mbswidth(s);
 			break;
 

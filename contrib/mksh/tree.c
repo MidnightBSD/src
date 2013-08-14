@@ -2,7 +2,7 @@
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
- *		 2011, 2012
+ *		 2011, 2012, 2013
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -23,12 +23,12 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/tree.c,v 1.67 2012/12/04 01:10:35 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/tree.c,v 1.71 2013/07/26 20:33:24 tg Exp $");
 
 #define INDENT	8
 
 static void ptree(struct op *, int, struct shf *);
-static void pioact(struct shf *, int, struct ioword *);
+static void pioact(struct shf *, struct ioword *);
 static const char *wdvarput(struct shf *, const char *, int, int);
 static void vfptreef(struct shf *, int, const char *, va_list);
 static struct ioword **iocopy(struct ioword **, Area *);
@@ -214,7 +214,7 @@ ptree(struct op *t, int indent, struct shf *shf)
 		bool need_nl = false;
 
 		while (*ioact != NULL)
-			pioact(shf, indent, *ioact++);
+			pioact(shf, *ioact++);
 		/* Print here documents after everything else... */
 		ioact = t->ioact;
 		while (*ioact != NULL) {
@@ -244,7 +244,7 @@ ptree(struct op *t, int indent, struct shf *shf)
 }
 
 static void
-pioact(struct shf *shf, int indent, struct ioword *iop)
+pioact(struct shf *shf, struct ioword *iop)
 {
 	int flag = iop->flag;
 	int type = flag & IOTYPE;
@@ -259,16 +259,20 @@ pioact(struct shf *shf, int indent, struct ioword *iop)
 
 	switch (type) {
 	case IOREAD:
-		shf_puts("<", shf);
+		shf_putc('<', shf);
 		break;
 	case IOHERE:
-		shf_puts(flag & IOSKIP ? "<<-" : "<<", shf);
+		shf_puts("<<", shf);
+		if (flag & IOSKIP)
+			shf_putc('-', shf);
 		break;
 	case IOCAT:
 		shf_puts(">>", shf);
 		break;
 	case IOWRITE:
-		shf_puts(flag & IOCLOB ? ">|" : ">", shf);
+		shf_putc('>', shf);
+		if (flag & IOCLOB)
+			shf_putc('|', shf);
 		break;
 	case IORDWR:
 		shf_puts("<>", shf);
@@ -283,9 +287,13 @@ pioact(struct shf *shf, int indent, struct ioword *iop)
 			wdvarput(shf, iop->delim, 0, WDS_TPUTS);
 		if (iop->flag & IOHERESTR)
 			shf_putc(' ', shf);
-	} else if (iop->name)
-		fptreef(shf, indent, (iop->flag & IONAMEXP) ? "%s " : "%S ",
-		    iop->name);
+	} else if (iop->name) {
+		if (iop->flag & IONAMEXP)
+			print_value_quoted(shf, iop->name);
+		else
+			wdvarput(shf, iop->name, 0, WDS_TPUTS);
+		shf_putc(' ', shf);
+	}
 	prevent_semicolon = false;
 }
 
@@ -345,7 +353,14 @@ wdvarput(struct shf *shf, const char *wp, int quotelevel, int opmode)
 			shf_puts(cs, shf);
 			break;
 		case FUNSUB:
-			shf_puts("${ ", shf);
+			c = ' ';
+			if (0)
+				/* FALLTHROUGH */
+		case VALSUB:
+			  c = '|';
+			shf_putc('$', shf);
+			shf_putc('{', shf);
+			shf_putc(c, shf);
 			cs = ";}";
 			goto pSUB;
 		case EXPRSUB:
@@ -485,7 +500,7 @@ vfptreef(struct shf *shf, int indent, const char *fmt, va_list va)
 				break;
 			case 'R':
 				/* I/O redirection */
-				pioact(shf, indent, va_arg(va, struct ioword *));
+				pioact(shf, va_arg(va, struct ioword *));
 				break;
 			default:
 				shf_putc(c, shf);
@@ -588,6 +603,7 @@ wdscan(const char *wp, int c)
 			break;
 		case COMSUB:
 		case FUNSUB:
+		case VALSUB:
 		case EXPRSUB:
 			while (*wp++ != 0)
 				;
@@ -745,8 +761,8 @@ vistree(char *dst, size_t sz, struct op *t)
 	char *cp, *buf;
 	size_t n;
 
-	buf = alloc(sz + 8, ATEMP);
-	snptreef(buf, sz + 8, "%T", t);
+	buf = alloc(sz + 16, ATEMP);
+	snptreef(buf, sz + 16, "%T", t);
 	cp = buf;
  vist_loop:
 	if (UTFMODE && (n = utf_mbtowc(&c, cp)) != (size_t)-1) {
@@ -829,6 +845,9 @@ dumpwdvar_i(struct shf *shf, const char *wp, int quotelevel)
 			break;
 		case FUNSUB:
 			shf_puts("FUNSUB<", shf);
+			goto dumpsub;
+		case VALSUB:
+			shf_puts("VALSUB<", shf);
 			goto dumpsub;
 		case EXPRSUB:
 			shf_puts("EXPRSUB<", shf);

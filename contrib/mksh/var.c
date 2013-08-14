@@ -1,4 +1,4 @@
-/*	$OpenBSD: var.c,v 1.34 2007/10/15 02:16:35 deraadt Exp $	*/
+/*	$OpenBSD: var.c,v 1.35 2013/04/05 01:31:30 tedu Exp $	*/
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
@@ -27,7 +27,7 @@
 #include <sys/sysctl.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/var.c,v 1.166 2013/02/18 22:24:52 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/var.c,v 1.173 2013/05/31 22:47:14 tg Exp $");
 
 /*-
  * Variables
@@ -49,7 +49,7 @@ static void unspecial(const char *);
 static void getspec(struct tbl *);
 static void setspec(struct tbl *);
 static void unsetspec(struct tbl *);
-static int getint(struct tbl *, mksh_ari_t *, bool);
+static int getint(struct tbl *, mksh_ari_u *, bool);
 static const char *array_index_calc(const char *, bool *, uint32_t *);
 
 /*
@@ -347,7 +347,7 @@ str_val(struct tbl *vp)
 	else {
 		/* integer source */
 		mksh_uari_t n;
-		int base;
+		unsigned int base;
 		/**
 		 * worst case number length is when base == 2:
 		 *	1 (minus) + 2 (base, up to 36) + 1 ('#') +
@@ -361,8 +361,8 @@ str_val(struct tbl *vp)
 		if (vp->flag & INT_U)
 			n = vp->val.u;
 		else
-			n = (vp->val.i < 0) ? -vp->val.i : vp->val.i;
-		base = (vp->type == 0) ? 10 : vp->type;
+			n = (vp->val.i < 0) ? -vp->val.u : vp->val.u;
+		base = (vp->type == 0) ? 10U : (unsigned int)vp->type;
 
 		if (base == 1 && n == 0)
 			base = 2;
@@ -471,48 +471,43 @@ setint(struct tbl *vq, mksh_ari_t n)
 }
 
 static int
-getint(struct tbl *vp, mksh_ari_t *nump, bool arith)
+getint(struct tbl *vp, mksh_ari_u *nump, bool arith)
 {
-	int c, base, neg;
-	mksh_uari_t num;
+	mksh_uari_t c, num, base;
 	const char *s;
-	bool have_base = false;
+	bool have_base = false, neg = false;
 
 	if (vp->flag&SPECIAL)
 		getspec(vp);
-	/* XXX is it possible for ISSET to be set and val.s to be 0? */
+	/* XXX is it possible for ISSET to be set and val.s to be NULL? */
 	if (!(vp->flag&ISSET) || (!(vp->flag&INTEGER) && vp->val.s == NULL))
 		return (-1);
 	if (vp->flag&INTEGER) {
-		*nump = vp->val.i;
+		nump->i = vp->val.i;
 		return (vp->type);
 	}
 	s = vp->val.s + vp->type;
 	base = 10;
 	num = 0;
-	neg = 0;
 	if (arith && s[0] == '0' && (s[1] | 0x20) == 'x') {
 		s += 2;
 		base = 16;
 		have_base = true;
 	}
-#ifdef MKSH_LEGACY_MODE
-	if (arith && s[0] == '0' && ksh_isdigit(s[1]) &&
+	if (Flag(FPOSIX) && arith && s[0] == '0' && ksh_isdigit(s[1]) &&
 	    !(vp->flag & ZEROFIL)) {
 		/* interpret as octal (deprecated) */
 		base = 8;
 		have_base = true;
 	}
-#endif
 	while ((c = *s++)) {
 		if (c == '-') {
-			neg++;
+			neg = true;
 			continue;
 		} else if (c == '#') {
 			if (have_base || num < 1 || num > 36)
 				return (-1);
-			base = (int)num;
-			if (base == 1) {
+			if ((base = num) == 1) {
 				unsigned int wc;
 
 				if (!UTFMODE)
@@ -525,7 +520,7 @@ getint(struct tbl *vp, mksh_ari_t *nump, bool arith)
 					 * not round-tripping correctly XXX)
 					 */
 					wc = 0xEF00 + *(const unsigned char *)s;
-				*nump = (mksh_ari_t)wc;
+				nump->u = (mksh_uari_t)wc;
 				return (1);
 			}
 			num = 0;
@@ -539,11 +534,13 @@ getint(struct tbl *vp, mksh_ari_t *nump, bool arith)
 			c -= 'A' - 10;
 		else
 			return (-1);
-		if (c < 0 || c >= base)
+		if (c >= base)
 			return (-1);
 		num = num * base + c;
 	}
-	*nump = neg ? -((mksh_ari_t)num) : (mksh_ari_t)num;
+	if (neg)
+		num = -num;
+	nump->u = num;
 	return (base);
 }
 
@@ -555,11 +552,11 @@ struct tbl *
 setint_v(struct tbl *vq, struct tbl *vp, bool arith)
 {
 	int base;
-	mksh_ari_t num;
+	mksh_ari_u num;
 
 	if ((base = getint(vp, &num, arith)) == -1)
 		return (NULL);
-	setint_n(vq, num, 0);
+	setint_n(vq, num.i, 0);
 	if (vq->type == 0)
 		/* default base */
 		vq->type = base;
@@ -708,6 +705,10 @@ typeset(const char *var, uint32_t set, uint32_t clr, int field, int base)
 
 	/* check for valid variable name, search for value */
 	val = skip_varname(var, false);
+	if (val == var) {
+		/* no variable name given */
+		return (NULL);
+	}
 	if (*val == '[') {
 		if (set_refflag != SRF_NOP)
 			errorf("%s: %s", var,
@@ -742,7 +743,6 @@ typeset(const char *var, uint32_t set, uint32_t clr, int field, int base)
 		 * must have a = when setting a variable by importing
 		 * the original environment, otherwise be empty; we
 		 * also end up here when a variable name was invalid
-		 * or none given
 		 */
 		return (NULL);
 	} else {
@@ -768,10 +768,15 @@ typeset(const char *var, uint32_t set, uint32_t clr, int field, int base)
 			if (vp != NULL)
 				qval = str_val(vp);
 		}
-		/* silently ignore 'nameref foo=foo' */
-		if (qval != NULL && !strcmp(qval, tvar)) {
-			afree(tvar, ATEMP);
-			return (&vtemp);
+		/* prevent nameref loops */
+		while (qval) {
+			if (!strcmp(qval, tvar))
+				errorf("%s: %s", qval,
+				    "expression recurses on parameter");
+			varsearch(e->loc, &vp, qval, hash(qval));
+			qval = NULL;
+			if (vp && ((vp->flag & (ARRAY|ASSOC)) == ASSOC))
+				qval = str_val(vp);
 		}
 	}
 
@@ -1094,7 +1099,7 @@ static int user_lineno;		/* what user set $LINENO to */
 static void
 getspec(struct tbl *vp)
 {
-	register mksh_ari_t i;
+	mksh_ari_u num;
 	int st;
 	struct timeval tv;
 
@@ -1114,19 +1119,19 @@ getspec(struct tbl *vp)
 	}
 	switch (st) {
 	case V_BASHPID:
-		i = (mksh_ari_t)procpid;
+		num.u = (mksh_uari_t)procpid;
 		break;
 	case V_COLUMNS:
-		i = x_cols;
+		num.i = x_cols;
 		break;
 	case V_HISTSIZE:
-		i = histsize;
+		num.i = histsize;
 		break;
 	case V_LINENO:
-		i = current_lineno + user_lineno;
+		num.i = current_lineno + user_lineno;
 		break;
 	case V_LINES:
-		i = x_lins;
+		num.i = x_lins;
 		break;
 	case V_EPOCHREALTIME: {
 		/* 10(%u) + 1(.) + 6 + NUL */
@@ -1141,10 +1146,10 @@ getspec(struct tbl *vp)
 		return;
 	}
 	case V_OPTIND:
-		i = user_opt.uoptind;
+		num.i = user_opt.uoptind;
 		break;
 	case V_RANDOM:
-		i = rndget();
+		num.i = rndget();
 		break;
 	case V_SECONDS:
 		/*
@@ -1154,7 +1159,7 @@ getspec(struct tbl *vp)
 		 */
 		if (vp->flag & ISSET) {
 			mksh_TIME(tv);
-			i = tv.tv_sec - seconds;
+			num.i = tv.tv_sec - seconds;
 		} else
 			return;
 		break;
@@ -1163,14 +1168,14 @@ getspec(struct tbl *vp)
 		return;
 	}
 	vp->flag &= ~SPECIAL;
-	setint_n(vp, i, 0);
+	setint_n(vp, num.i, 0);
 	vp->flag |= SPECIAL;
 }
 
 static void
 setspec(struct tbl *vp)
 {
-	mksh_ari_t i;
+	mksh_ari_u num;
 	char *s;
 	int st;
 
@@ -1228,11 +1233,11 @@ setspec(struct tbl *vp)
 	case V_SECONDS:
 	case V_TMOUT:
 		vp->flag &= ~SPECIAL;
-		if (getint(vp, &i, false) == -1) {
+		if (getint(vp, &num, false) == -1) {
 			s = str_val(vp);
 			if (st != V_RANDOM)
 				errorf("%s: %s: %s", vp->name, "bad number", s);
-			i = hash(s);
+			num.u = hash(s);
 		}
 		vp->flag |= SPECIAL;
 		break;
@@ -1245,40 +1250,40 @@ setspec(struct tbl *vp)
 
 	switch (st) {
 	case V_COLUMNS:
-		if (i >= MIN_COLS)
-			x_cols = i;
+		if (num.i >= MIN_COLS)
+			x_cols = num.i;
 		break;
 	case V_HISTSIZE:
-		sethistsize(i);
+		sethistsize(num.i);
 		break;
 	case V_LINENO:
 		/* The -1 is because line numbering starts at 1. */
-		user_lineno = (unsigned int)i - current_lineno - 1;
+		user_lineno = num.u - current_lineno - 1;
 		break;
 	case V_LINES:
-		if (i >= MIN_LINS)
-			x_lins = i;
+		if (num.i >= MIN_LINS)
+			x_lins = num.i;
 		break;
 	case V_OPTIND:
-		getopts_reset((int)i);
+		getopts_reset((int)num.i);
 		break;
 	case V_RANDOM:
 		/*
 		 * mksh R39d+ no longer has the traditional repeatability
 		 * of $RANDOM sequences, but always retains state
 		 */
-		rndset((long)i);
+		rndset((unsigned long)num.u);
 		break;
 	case V_SECONDS:
 		{
 			struct timeval tv;
 
 			mksh_TIME(tv);
-			seconds = tv.tv_sec - i;
+			seconds = tv.tv_sec - num.i;
 		}
 		break;
 	case V_TMOUT:
-		ksh_tmout = i >= 0 ? i : 0;
+		ksh_tmout = num.i >= 0 ? num.i : 0;
 		break;
 	}
 }
@@ -1534,7 +1539,7 @@ rndget(void)
 }
 
 void
-rndset(long v)
+rndset(unsigned long v)
 {
 	register uint32_t h;
 

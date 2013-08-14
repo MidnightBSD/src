@@ -1,11 +1,22 @@
 #if defined(SHFLAGS_DEFNS)
-__RCSID("$MirOS: src/bin/mksh/sh_flags.h,v 1.12 2012/06/28 20:14:17 tg Exp $");
-#define FN(sname,cname,ochar,flags)	/* nothing */
+__RCSID("$MirOS: src/bin/mksh/sh_flags.h,v 1.16 2013/08/11 14:57:11 tg Exp $");
+#define FN(sname,cname,ochar,flags)		\
+	static const struct {			\
+		/* character flag (if any) */	\
+		char c;				\
+		/* OF_* */			\
+		unsigned char optflags;		\
+		/* long name of option */	\
+		char name[sizeof(sname)];	\
+	} shoptione_ ## cname = {		\
+		ochar, flags, sname		\
+	};
 #elif defined(SHFLAGS_ENUMS)
 #define FN(sname,cname,ochar,flags)	cname,
 #define F0(sname,cname,ochar,flags)	cname = 0,
 #elif defined(SHFLAGS_ITEMS)
-#define FN(sname,cname,ochar,flags)	{ sname, ochar, flags },
+#define FN(sname,cname,ochar,flags)	\
+	((const char *)(&shoptione_ ## cname)) + 2,
 #endif
 
 #ifndef F0
@@ -44,6 +55,9 @@ FN("gmacs", FGMACS, 0, OF_ANY)
 
 /* ./.	reading EOF does not exit */
 FN("ignoreeof", FIGNOREEOF, 0, OF_ANY)
+
+/* ./.	inherit -x flag */
+FN("inherit-xtrace", FXTRACEREC, 0, OF_ANY)
 
 /* -i	interactive shell */
 FN("interactive", FTALKING, 'i', OF_CMDLINE)
@@ -88,7 +102,10 @@ FN("nounset", FNOUNSET, 'u', OF_ANY)
 /* ./.	don't do logical cds/pwds (non-standard) */
 FN("physical", FPHYSICAL, 0, OF_ANY)
 
-/* ./.	pdksh compat: somewhat more POSIXish mode (non-standard) */
+/* ./.	errorlevel of a pipeline is the rightmost nonzero value */
+FN("pipefail", FPIPEFAIL, 0, OF_ANY)
+
+/* ./.	adhere more closely to POSIX even when undesirable */
 FN("posix", FPOSIX, 0, OF_ANY)
 
 /* -p	use suid_profile; privileged shell */
@@ -97,7 +114,7 @@ FN("privileged", FPRIVILEGED, 'p', OF_ANY)
 /* -r	restricted shell */
 FN("restricted", FRESTRICTED, 'r', OF_CMDLINE)
 
-/* ./.	pdksh compat: called as sh not mksh; kludge mode (non-standard) */
+/* ./.	kludge mode for better compat with traditional sh (OS-specific) */
 FN("sh", FSH, 0, OF_ANY)
 
 /* -s	(invocation) parse stdin (pseudo non-standard) */
@@ -130,17 +147,17 @@ FN("viraw", FVIRAW, 0, OF_ANY)
 FN("xtrace", FXTRACE, 'x', OF_ANY)
 
 /* -c	(invocation) execute specified command */
-FN(NULL, FCOMMAND, 'c', OF_CMDLINE)
+FN("", FCOMMAND, 'c', OF_CMDLINE)
 
 /*
  * anonymous flags: used internally by shell only (not visible to user)
  */
 
 /* ./.	direct builtin call (divined from argv[0] multi-call binary) */
-FN(NULL, FAS_BUILTIN, 0, OF_INTERNAL)
+FN("", FAS_BUILTIN, 0, OF_INTERNAL)
 
 /* ./.	(internal) initial shell was interactive */
-FN(NULL, FTALKING_I, 0, OF_INTERNAL)
+FN("", FTALKING_I, 0, OF_INTERNAL)
 
 #undef FN
 #undef F0

@@ -1,5 +1,5 @@
 /*	$OpenBSD: c_ksh.c,v 1.33 2009/02/07 14:03:24 kili Exp $	*/
-/*	$OpenBSD: c_sh.c,v 1.41 2010/03/27 09:10:01 jmc Exp $	*/
+/*	$OpenBSD: c_sh.c,v 1.43 2013/04/19 17:39:45 deraadt Exp $	*/
 /*	$OpenBSD: c_test.c,v 1.18 2009/03/01 20:11:06 otto Exp $	*/
 /*	$OpenBSD: c_ulimit.c,v 1.17 2008/03/21 12:51:19 millert Exp $	*/
 
@@ -38,7 +38,7 @@
 #endif
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.238 2013/02/18 22:47:32 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.244 2013/06/03 22:28:32 tg Exp $");
 
 #if HAVE_KILLPG
 /*
@@ -84,70 +84,69 @@ c_false(const char **wp MKSH_A_UNUSED)
 }
 
 /*
- * A leading = means assignments before command are kept;
- * a leading * means a POSIX special builtin;
- * a leading + means a POSIX regular builtin
- * (* and + should not be combined).
+ * A leading = means assignments before command are kept.
+ * A leading * means a POSIX special builtin.
  */
 const struct builtin mkshbuiltins[] = {
 	{"*=.", c_dot},
 	{"*=:", c_true},
 	{"[", c_test},
+	/* no =: AT&T manual wrong */
+	{Talias, c_alias},
 	{"*=break", c_brkcont},
 	{Tgbuiltin, c_builtin},
+	{"cat", c_cat},
+	{"cd", c_cd},
+	/* dash compatibility hack */
+	{"chdir", c_cd},
+	{"command", c_command},
 	{"*=continue", c_brkcont},
+	{"echo", c_print},
 	{"*=eval", c_eval},
 	{"*=exec", c_exec},
 	{"*=exit", c_exitreturn},
-	{"+false", c_false},
+	{Tsgexport, c_typeset},
+	{"false", c_false},
+	{"fc", c_fc},
+	{"getopts", c_getopts},
+	{"=global", c_typeset},
+	{"jobs", c_jobs},
+	{"kill", c_kill},
+	{"let", c_let},
+	{"let]", c_let},
+	{"print", c_print},
+	{"pwd", c_pwd},
+	{"read", c_read},
+	{Tsgreadonly, c_typeset},
+	{"realpath", c_realpath},
+	{"rename", c_rename},
 	{"*=return", c_exitreturn},
 	{Tsgset, c_set},
 	{"*=shift", c_shift},
-	{"=times", c_times},
-	{"*=trap", c_trap},
-	{"+=wait", c_wait},
-	{"+read", c_read},
 	{"test", c_test},
-	{"+true", c_true},
-	{"ulimit", c_ulimit},
-	{"+umask", c_umask},
-	{Tsgunset, c_unset},
-	/* no =: AT&T manual wrong */
-	{Tpalias, c_alias},
-	{"+cd", c_cd},
-	/* dash compatibility hack */
-	{"chdir", c_cd},
-	{"+command", c_command},
-	{"echo", c_print},
-	{Tsgexport, c_typeset},
-	{"+fc", c_fc},
-	{"+getopts", c_getopts},
-	{"=global", c_typeset},
-	{"+jobs", c_jobs},
-	{"+kill", c_kill},
-	{"let", c_let},
-	{"print", c_print},
-#ifdef MKSH_PRINTF_BUILTIN
-	{"printf", c_printf},
-#endif
-	{"pwd", c_pwd},
-	{Tsgreadonly, c_typeset},
+	{"*=times", c_times},
+	{"*=trap", c_trap},
+	{"true", c_true},
 	{T_typeset, c_typeset},
-	{Tpunalias, c_unalias},
+	{"ulimit", c_ulimit},
+	{"umask", c_umask},
+	{Tunalias, c_unalias},
+	{Tsgunset, c_unset},
+	{"=wait", c_wait},
 	{"whence", c_whence},
 #ifndef MKSH_UNEMPLOYED
-	{"+bg", c_fgbg},
-	{"+fg", c_fgbg},
+	{"bg", c_fgbg},
+	{"fg", c_fgbg},
 #endif
 #ifndef MKSH_NO_CMDLINE_EDITING
 	{"bind", c_bind},
 #endif
-	{"cat", c_cat},
 #if HAVE_MKNOD
 	{"mknod", c_mknod},
 #endif
-	{"realpath", c_realpath},
-	{"rename", c_rename},
+#ifdef MKSH_PRINTF_BUILTIN
+	{"printf", c_printf},
+#endif
 #if HAVE_SELECT
 	{"sleep", c_sleep},
 #endif
@@ -836,7 +835,7 @@ c_typeset(const char **wp)
 					shf_putc('\n', shl_stdout);
 				}
 			} else if (!typeset(wp[i], fset, fclr, field, base)) {
-				bi_errorf("%s: %s", wp[i], "not identifier");
+				bi_errorf("%s: %s", wp[i], "is not an identifier");
 				goto errout;
 			}
 		}
@@ -2253,7 +2252,7 @@ c_trap(const char **wp)
 	wp += builtin_opt.optind;
 
 	if (*wp == NULL) {
-		for (p = sigtraps, i = NSIG+1; --i >= 0; p++)
+		for (p = sigtraps, i = NSIG + 1; --i >= 0; p++)
 			if (p->trap != NULL) {
 				shf_puts("trap -- ", shl_stdout);
 				print_value_quoted(shl_stdout, p->trap);
@@ -2427,12 +2426,13 @@ c_set(const char **wp)
 	 * which assumes the exit value set will be that of the $()
 	 * (subst_exstat is cleared in execute() so that it will be 0
 	 * if there are no command substitutions).
-	 * Switched ksh (!posix !sh) to POSIX in mksh R39b.
 	 */
 #ifdef MKSH_LEGACY_MODE
-	return (subst_exstat);
+	/* traditional behaviour, unless set -o posix */
+	return (Flag(FPOSIX) ? 0 : subst_exstat);
 #else
-	return (Flag(FSH) ? subst_exstat : 0);
+	/* conformant behaviour, unless set -o sh +o posix */
+	return (Flag(FSH) && !Flag(FPOSIX) ? subst_exstat : 0);
 #endif
 }
 
@@ -3726,7 +3726,7 @@ c_cat(const char **wp)
 	rv = 0;
 
 	if ((buf = malloc_osfunc(MKSH_CAT_BUFSIZ)) == NULL) {
-		bi_errorf(Toomem, (unsigned long)MKSH_CAT_BUFSIZ);
+		bi_errorf(Toomem, (size_t)MKSH_CAT_BUFSIZ);
 		return (1);
 	}
 

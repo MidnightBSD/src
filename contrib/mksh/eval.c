@@ -1,4 +1,4 @@
-/*	$OpenBSD: eval.c,v 1.37 2011/10/11 14:32:43 otto Exp $	*/
+/*	$OpenBSD: eval.c,v 1.39 2013/07/01 17:25:27 jca Exp $	*/
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
@@ -23,7 +23,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.137 2013/02/23 20:03:30 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.142 2013/07/24 18:03:57 tg Exp $");
 
 /*
  * string expansion
@@ -65,7 +65,7 @@ typedef struct {
 
 static int varsub(Expand *, const char *, const char *, int *, int *);
 static int comsub(Expand *, const char *, int);
-static void funsub(struct op *);
+static char *valsub(struct op *, Area *);
 static char *trimsub(char *, char *, int);
 static void glob(char *, XPtrV *, bool);
 static void globit(XString *, char **, char *, XPtrV *, int);
@@ -298,27 +298,26 @@ expand(
 				continue;
 			case COMSUB:
 			case FUNSUB:
+			case VALSUB:
 				tilde_ok = 0;
 				if (f & DONTRUNCOMMAND) {
 					word = IFS_WORD;
 					*dp++ = '$';
-					if (c == FUNSUB) {
-						*dp++ = '{';
-						*dp++ = ' ';
-					} else
-						*dp++ = '(';
+					*dp++ = c == COMSUB ? '(' : '{';
+					if (c != COMSUB)
+						*dp++ = c == FUNSUB ? ' ' : '|';
 					while (*sp != '\0') {
 						Xcheck(ds, dp);
 						*dp++ = *sp++;
 					}
-					if (c == FUNSUB) {
+					if (c != COMSUB) {
 						*dp++ = ';';
 						*dp++ = '}';
 					} else
 						*dp++ = ')';
 				} else {
 					type = comsub(&x, sp, c);
-					if (type == XCOM && (f&DOBLANK))
+					if (type != XBASE && (f & DOBLANK))
 						doblank++;
 					sp = strnul(sp) + 1;
 					newlines = 0;
@@ -870,7 +869,12 @@ expand(
 			break;
 
 		case XCOM:
-			if (newlines) {
+			if (x.u.shf == NULL) {
+				/* $(<...) failed */
+				subst_exstat = 1;
+				/* fake EOF */
+				c = EOF;
+			} else if (newlines) {
 				/* spit out saved NLs */
 				c = '\n';
 				--newlines;
@@ -887,7 +891,8 @@ expand(
 			}
 			if (c == EOF) {
 				newlines = 0;
-				shf_close(x.u.shf);
+				if (x.u.shf)
+					shf_close(x.u.shf);
 				if (x.split)
 					subst_exstat = waitlast();
 				type = XBASE;
@@ -1336,33 +1341,41 @@ comsub(Expand *xp, const char *cp, int fn MKSH_A_UNUSED)
 		shf = shf_open(name = evalstr(io->name, DOTILDE), O_RDONLY, 0,
 			SHF_MAPHI|SHF_CLEXEC);
 		if (shf == NULL)
-			errorf("%s: %s %s", name, "can't open", "$() input");
+			warningf(!Flag(FTALKING), "%s: %s %s: %s", name,
+			    "can't open", "$(<...) input", cstrerror(errno));
 	} else if (fn == FUNSUB) {
 		int ofd1;
 		struct temp *tf = NULL;
 
-		/* create a temporary file, open for writing */
+		/*
+		 * create a temporary file, open for reading and writing,
+		 * with an shf open for reading (buffered) but yet unused
+		 */
 		maketemp(ATEMP, TT_FUNSUB, &tf);
 		if (!tf->shf) {
 			errorf("can't %s temporary file %s: %s",
 			    "create", tf->tffn, cstrerror(errno));
 		}
-		/* save stdout and make the temporary file it */
+		/* extract shf from temporary file, unlink and free it */
+		shf = tf->shf;
+		unlink(tf->tffn);
+		afree(tf, ATEMP);
+		/* save stdout and let it point to the tempfile */
 		ofd1 = savefd(1);
-		ksh_dup2(shf_fileno(tf->shf), 1, false);
+		ksh_dup2(shf_fileno(shf), 1, false);
 		/*
 		 * run tree, with output thrown into the tempfile,
 		 * in a new function block
 		 */
-		funsub(t);
+		valsub(t, NULL);
 		subst_exstat = exstat & 0xFF;
-		/* close the tempfile and restore regular stdout */
-		shf_close(tf->shf);
+		/* rewind the tempfile and restore regular stdout */
+		lseek(shf_fileno(shf), (off_t)0, SEEK_SET);
 		restfd(1, ofd1);
-		/* now open, unlink and free the tempfile for reading */
-		shf = shf_open(tf->tffn, O_RDONLY, 0, SHF_MAPHI | SHF_CLEXEC);
-		unlink(tf->tffn);
-		afree(tf, ATEMP);
+	} else if (fn == VALSUB) {
+		xp->str = valsub(t, ATEMP);
+		subst_exstat = exstat & 0xFF;
+		return (XSUB);
 	} else {
 		int ofd1, pv[2];
 
@@ -1820,12 +1833,21 @@ alt_expand(XPtrV *wp, char *start, char *exp_start, char *end, int fdo)
 }
 
 /* helper function due to setjmp/longjmp woes */
-static void
-funsub(struct op *t)
+static char *
+valsub(struct op *t, Area *ap)
 {
+	char * volatile cp = NULL;
+	struct tbl * volatile vp = NULL;
+
+	newenv(E_FUNC);
 	newblock();
-	e->type = E_FUNC;
+	if (ap)
+		vp = local("REPLY", false);
 	if (!kshsetjmp(e->jbuf))
 		execute(t, XXCOM | XERROK, NULL);
-	popblock();
+	if (vp)
+		strdupx(cp, str_val(vp), ap);
+	quitenv(NULL);
+
+	return (cp);
 }

@@ -1,5 +1,5 @@
 #!/bin/sh
-srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.624 2013/03/05 15:41:39 tg Exp $'
+srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.645 2013/08/10 13:44:25 tg Exp $'
 #-
 # Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
 #		2011, 2012, 2013
@@ -27,6 +27,9 @@ srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.624 2013/03/05 15:41:39 tg Exp $'
 
 LC_ALL=C
 export LC_ALL
+
+echo "For the build logs, demonstrate that /dev/null and /dev/tty exist:"
+ls -l /dev/null /dev/tty
 
 case $ZSH_VERSION:$VERSION in
 :zsh*) ZSH_VERSION=2 ;;
@@ -63,7 +66,7 @@ vq() {
 rmf() {
 	for _f in "$@"; do
 		case $_f in
-		Build.sh|check.pl|check.t|dot.mkshrc|*.c|*.h|mksh.1) ;;
+		Build.sh|check.pl|check.t|dot.mkshrc|*.c|*.h|*.ico|*.1) ;;
 		*) rm -f "$_f" ;;
 		esac
 	done
@@ -190,6 +193,7 @@ ac_testn() {
 ac_ifcpp() {
 	expr=$1; shift
 	ac_testn "$@" <<-EOF
+		extern int thiswillneverbedefinedIhope(void);
 		int main(void) { return (
 		#$expr
 		    0
@@ -458,7 +462,7 @@ oswarn=
 ccpc=-Wc,
 ccpl=-Wl,
 tsts=
-ccpr='|| for _f in ${tcfn}*; do case $_f in Build.sh|check.pl|check.t|dot.mkshrc|*.c|*.h|mksh.1) ;; *) rm -f "$_f" ;; esac; done'
+ccpr='|| for _f in ${tcfn}*; do case $_f in Build.sh|check.pl|check.t|dot.mkshrc|*.c|*.h|*.ico|*.1) ;; *) rm -f "$_f" ;; esac; done'
 
 # Evil hack
 if test x"$TARGET_OS" = x"Android"; then
@@ -686,8 +690,11 @@ Plan9)
 	add_cppflags -D_SUSV2_SOURCE
 	add_cppflags -DMKSH_ASSUME_UTF8; HAVE_ISSET_MKSH_ASSUME_UTF8=1
 	add_cppflags -DMKSH_NO_CMDLINE_EDITING
+	add_cppflags -DMKSH__NO_SETEUGID
 	oswarn=' and will currently not work'
 	add_cppflags -DMKSH_UNEMPLOYED
+	# this is for detecting kencc
+	add_cppflags -DMKSH_MAYBE_KENCC
 	;;
 PW32*)
 	HAVE_SIG_T=0	# incompatible
@@ -766,7 +773,7 @@ esac
 
 : ${HAVE_MKNOD=0}
 
-: ${AWK=awk} ${CC=cc} ${NROFF=nroff}
+: ${AWK=awk} ${CC=cc} ${NROFF=nroff} ${SIZE=size}
 test 0 = $r && echo | $NROFF -v 2>&1 | grep GNU >/dev/null 2>&1 && \
     NROFF="$NROFF -c"
 
@@ -876,6 +883,9 @@ ct="ucode"
 ct="uslc"
 #elif defined(__LCC__)
 ct="lcc"
+#elif defined(MKSH_MAYBE_KENCC)
+/* and none of the above matches */
+ct="kencc"
 #else
 ct="unknown"
 #endif
@@ -951,6 +961,9 @@ iar)
 	;;
 icc)
 	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN $LIBS -V"
+	;;
+kencc)
+	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN -v conftest.c $LIBS"
 	;;
 lcc)
 	vv '|' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN -v conftest.c $LIBS"
@@ -1074,19 +1087,23 @@ if ac_ifcpp 'if 0' compiler_fails '' \
     'if the compiler does not fail correctly'; then
 	save_CFLAGS=$CFLAGS
 	: ${HAVE_CAN_DELEXE=x}
-	if test $ct = dmc; then
-		CFLAGS="$CFLAGS ${ccpl}/DELEXECUTABLE"
-		ac_testn can_delexe compiler_fails 0 'for the /DELEXECUTABLE linker option' <<-EOF
-			int main(void) { return (0); }
-		EOF
-	elif test $ct = dec; then
+	case $ct in
+	dec)
 		CFLAGS="$CFLAGS ${ccpl}-non_shared"
 		ac_testn can_delexe compiler_fails 0 'for the -non_shared linker option' <<-EOF
 			int main(void) { return (0); }
 		EOF
-	else
+		;;
+	dmc)
+		CFLAGS="$CFLAGS ${ccpl}/DELEXECUTABLE"
+		ac_testn can_delexe compiler_fails 0 'for the /DELEXECUTABLE linker option' <<-EOF
+			int main(void) { return (0); }
+		EOF
+		;;
+	*)
 		exit 1
-	fi
+		;;
+	esac
 	test 1 = $HAVE_CAN_DELEXE || CFLAGS=$save_CFLAGS
 	ac_testn compiler_still_fails '' 'if the compiler still does not fail correctly' <<-EOF
 	EOF
@@ -1099,49 +1116,65 @@ if ac_ifcpp 'ifdef __TINYC__' couldbe_tcc '!' compiler_known 0 \
 	HAVE_COMPILER_KNOWN=1
 fi
 
-if test $ct = sunpro; then
+case $ct in
+bcc)
+	save_NOWARN="${ccpc}-w"
+	DOWARN="${ccpc}-w!"
+	;;
+dec)
+	# -msg_* flags not used yet, or is -w2 correct?
+	;;
+dmc)
+	save_NOWARN="${ccpc}-w"
+	DOWARN="${ccpc}-wx"
+	;;
+hpcc)
+	save_NOWARN=
+	DOWARN=+We
+	;;
+kencc)
+	save_NOWARN=
+	DOWARN=
+	;;
+mipspro)
+	save_NOWARN=
+	DOWARN="-diag_error 1-10000"
+	;;
+msc)
+	save_NOWARN="${ccpc}/w"
+	DOWARN="${ccpc}/WX"
+	;;
+sunpro)
 	test x"$save_NOWARN" = x"" && save_NOWARN='-errwarn=%none'
 	ac_flags 0 errwarnnone "$save_NOWARN"
 	test 1 = $HAVE_CAN_ERRWARNNONE || save_NOWARN=
 	ac_flags 0 errwarnall "-errwarn=%all"
 	test 1 = $HAVE_CAN_ERRWARNALL && DOWARN="-errwarn=%all"
-elif test $ct = hpcc; then
-	save_NOWARN=
-	DOWARN=+We
-elif test $ct = mipspro; then
-	save_NOWARN=
-	DOWARN="-diag_error 1-10000"
-elif test $ct = msc; then
-	save_NOWARN="${ccpc}/w"
-	DOWARN="${ccpc}/WX"
-elif test $ct = dmc; then
-	save_NOWARN="${ccpc}-w"
-	DOWARN="${ccpc}-wx"
-elif test $ct = bcc; then
-	save_NOWARN="${ccpc}-w"
-	DOWARN="${ccpc}-w!"
-elif test $ct = dec; then
-	: -msg_* flags not used yet, or is -w2 correct?
-elif test $ct = xlc; then
-	save_NOWARN=-qflag=i:e
-	DOWARN=-qflag=i:i
-elif test $ct = tendra; then
+	;;
+tendra)
 	save_NOWARN=-w
-elif test $ct = ucode; then
+	;;
+ucode)
 	save_NOWARN=
 	DOWARN=-w2
-elif test $ct = watcom; then
+	;;
+watcom)
 	save_NOWARN=
 	DOWARN=-Wc,-we
-else
+	;;
+xlc)
+	save_NOWARN=-qflag=i:e
+	DOWARN=-qflag=i:i
+	;;
+*)
 	test x"$save_NOWARN" = x"" && save_NOWARN=-Wno-error
 	ac_flags 0 wnoerror "$save_NOWARN"
 	test 1 = $HAVE_CAN_WNOERROR || save_NOWARN=
 	ac_flags 0 werror -Werror
 	test 1 = $HAVE_CAN_WERROR && DOWARN=-Werror
-fi
-
-test $ct = icc && DOWARN="$DOWARN -wd1419"
+	test $ct = icc && DOWARN="$DOWARN -wd1419"
+	;;
+esac
 NOWARN=$save_NOWARN
 
 #
@@ -1149,7 +1182,16 @@ NOWARN=$save_NOWARN
 #
 i=`echo :"$orig_CFLAGS" | sed 's/^://' | tr -c -d $alll$allu$alln`
 # optimisation: only if orig_CFLAGS is empty
-test x"$i" = x"" && if test $ct = sunpro; then
+test x"$i" = x"" && case $ct in
+hpcc)
+	phase=u
+	ac_flags 1 otwo +O2
+	phase=x
+	;;
+kencc|tcc|tendra)
+	# no special optimisation
+	;;
+sunpro)
 	cat >x <<-'EOF'
 		int main(void) { return (0); }
 		#define __IDSTRING_CONCAT(l,p)	__LINTED__ ## l ## _ ## p
@@ -1159,25 +1201,37 @@ test x"$i" = x"" && if test $ct = sunpro; then
 	yes pad | head -n 256 >>x
 	ac_flags - 1 otwo -xO2 <x
 	rmf x
-elif test $ct = hpcc; then
-	phase=u
-	ac_flags 1 otwo +O2
-	phase=x
-elif test $ct = xlc; then
+	;;
+xlc)
 	ac_flags 1 othree "-O3 -qstrict"
 	test 1 = $HAVE_CAN_OTHREE || ac_flags 1 otwo -O2
-elif test $ct = tcc || test $ct = tendra; then
-	: no special optimisation
-else
+	;;
+*)
 	ac_flags 1 otwo -O2
 	test 1 = $HAVE_CAN_OTWO || ac_flags 1 optimise -O
-fi
+	;;
+esac
 # other flags: just add them if they are supported
 i=0
-if test $ct = gcc; then
+case $ct in
+bcc)
+	ac_flags 1 strpool "${ccpc}-d" 'if string pooling can be enabled'
+	;;
+clang)
+	i=1
+	;;
+dec)
+	ac_flags 0 verb -verbose
+	ac_flags 1 rodata -readonly_strings
+	;;
+dmc)
+	ac_flags 1 decl "${ccpc}-r" 'for strict prototype checks'
+	ac_flags 1 schk "${ccpc}-s" 'for stack overflow checking'
+	;;
+gcc)
 	# The following tests run with -Werror (gcc only) if possible
 	NOWARN=$DOWARN; phase=u
-	ac_flags 0 wnooverflow -Wno-overflow
+	ac_flags 1 wnodeprecateddecls -Wno-deprecated-declarations
 	# mksh is not written in CFrustFrust!
 	ac_flags 1 no_eh_frame -fno-asynchronous-unwind-tables
 	ac_flags 1 fnostrictaliasing -fno-strict-aliasing
@@ -1186,15 +1240,19 @@ if test $ct = gcc; then
 	*\ -fplugin=*dragonegg*) ;;
 	*) ac_flags 1 fplugin_dragonegg -fplugin=dragonegg ;;
 	esac
-	if test $cm = lto; then
-		fv=0
-		checks='1 2 3 4 5 6 7 8'
-	elif test $cm = combine; then
+	case $cm in
+	combine)
 		fv=0
 		checks='7 8'
-	else
+		;;
+	lto)
+		fv=0
+		checks='1 2 3 4 5 6 7 8'
+		;;
+	*)
 		fv=1
-	fi
+		;;
+	esac
 	test $fv = 1 || for what in $checks; do
 		test $fv = 1 && break
 		case $what in
@@ -1223,32 +1281,23 @@ if test $ct = gcc; then
 		    "if gcc supports $t_cflags $t_ldflags" "$t_ldflags"
 	done
 	i=1
-elif test $ct = icc; then
-	ac_flags 1 fnobuiltinsetmode -fno-builtin-setmode
-	ac_flags 1 fnostrictaliasing -fno-strict-aliasing
-	ac_flags 1 fstacksecuritycheck -fstack-security-check
-	i=1
-elif test $ct = sunpro; then
-	phase=u
-	ac_flags 1 v -v
-	ac_flags 1 ipo -xipo 'for cross-module optimisation'
-	phase=x
-elif test $ct = hpcc; then
+	;;
+hpcc)
 	phase=u
 	# probably not needed
 	#ac_flags 1 agcc -Agcc 'for support of GCC extensions'
 	phase=x
-elif test $ct = dec; then
-	ac_flags 0 verb -verbose
-	ac_flags 1 rodata -readonly_strings
-elif test $ct = dmc; then
-	ac_flags 1 decl "${ccpc}-r" 'for strict prototype checks'
-	ac_flags 1 schk "${ccpc}-s" 'for stack overflow checking'
-elif test $ct = bcc; then
-	ac_flags 1 strpool "${ccpc}-d" 'if string pooling can be enabled'
-elif test $ct = mipspro; then
+	;;
+icc)
+	ac_flags 1 fnobuiltinsetmode -fno-builtin-setmode
+	ac_flags 1 fnostrictaliasing -fno-strict-aliasing
+	ac_flags 1 fstacksecuritycheck -fstack-security-check
+	i=1
+	;;
+mipspro)
 	ac_flags 1 fullwarn -fullwarn 'for remark output support'
-elif test $ct = msc; then
+	;;
+msc)
 	ac_flags 1 strpool "${ccpc}/GF" 'if string pooling can be enabled'
 	echo 'int main(void) { char test[64] = ""; return (*test); }' >x
 	ac_flags - 1 stackon "${ccpc}/GZ" 'if stack checks can be enabled' <x
@@ -1257,24 +1306,33 @@ elif test $ct = msc; then
 	rmf x
 	ac_flags 1 wall "${ccpc}/Wall" 'to enable all warnings'
 	ac_flags 1 wp64 "${ccpc}/Wp64" 'to enable 64-bit warnings'
-elif test $ct = xlc; then
+	;;
+nwcc)
+	i=1
+	#broken# ac_flags 1 ssp -stackprotect
+	;;
+sunpro)
+	phase=u
+	ac_flags 1 v -v
+	ac_flags 1 ipo -xipo 'for cross-module optimisation'
+	phase=x
+	;;
+tcc)
+	: #broken# ac_flags 1 boundschk -b
+	;;
+tendra)
+	ac_flags 0 ysystem -Ysystem
+	test 1 = $HAVE_CAN_YSYSTEM && CPPFLAGS="-Ysystem $CPPFLAGS"
+	ac_flags 1 extansi -Xa
+	;;
+xlc)
 	ac_flags 1 rodata "-qro -qroconst -qroptr"
 	ac_flags 1 rtcheck -qcheck=all
 	#ac_flags 1 rtchkc -qextchk	# reported broken
 	ac_flags 1 wformat "-qformat=all -qformat=nozln"
 	#ac_flags 1 wp64 -qwarn64	# too verbose for now
-elif test $ct = tendra; then
-	ac_flags 0 ysystem -Ysystem
-	test 1 = $HAVE_CAN_YSYSTEM && CPPFLAGS="-Ysystem $CPPFLAGS"
-	ac_flags 1 extansi -Xa
-elif test $ct = tcc; then
-	: #broken# ac_flags 1 boundschk -b
-elif test $ct = clang; then
-	i=1
-elif test $ct = nwcc; then
-	i=1
-	: #broken# ac_flags 1 ssp -stackprotect
-fi
+	;;
+esac
 # flags common to a subset of compilers (run with -Werror on gcc)
 if test 1 = $i; then
 	ac_flags 1 wall -Wall
@@ -1291,6 +1349,7 @@ test $ct = pcc && phase=u
 #
 ac_test attribute_bounded '' 'for __attribute__((__bounded__))' <<-'EOF'
 	#if defined(__TenDRA__) || (defined(__GNUC__) && (__GNUC__ < 2))
+	extern int thiswillneverbedefinedIhope(void);
 	/* force a failure: TenDRA and gcc 1.42 have false positive here */
 	int main(void) { return (thiswillneverbedefinedIhope()); }
 	#else
@@ -1311,6 +1370,7 @@ ac_test attribute_bounded '' 'for __attribute__((__bounded__))' <<-'EOF'
 EOF
 ac_test attribute_format '' 'for __attribute__((__format__))' <<-'EOF'
 	#if defined(__TenDRA__) || (defined(__GNUC__) && (__GNUC__ < 2))
+	extern int thiswillneverbedefinedIhope(void);
 	/* force a failure: TenDRA and gcc 1.42 have false positive here */
 	int main(void) { return (thiswillneverbedefinedIhope()); }
 	#else
@@ -1325,6 +1385,7 @@ ac_test attribute_format '' 'for __attribute__((__format__))' <<-'EOF'
 EOF
 ac_test attribute_noreturn '' 'for __attribute__((__noreturn__))' <<-'EOF'
 	#if defined(__TenDRA__) || (defined(__GNUC__) && (__GNUC__ < 2))
+	extern int thiswillneverbedefinedIhope(void);
 	/* force a failure: TenDRA and gcc 1.42 have false positive here */
 	int main(void) { return (thiswillneverbedefinedIhope()); }
 	#else
@@ -1337,6 +1398,7 @@ ac_test attribute_noreturn '' 'for __attribute__((__noreturn__))' <<-'EOF'
 EOF
 ac_test attribute_unused '' 'for __attribute__((__unused__))' <<-'EOF'
 	#if defined(__TenDRA__) || (defined(__GNUC__) && (__GNUC__ < 2))
+	extern int thiswillneverbedefinedIhope(void);
 	/* force a failure: TenDRA and gcc 1.42 have false positive here */
 	int main(void) { return (thiswillneverbedefinedIhope()); }
 	#else
@@ -1346,6 +1408,7 @@ ac_test attribute_unused '' 'for __attribute__((__unused__))' <<-'EOF'
 EOF
 ac_test attribute_used '' 'for __attribute__((__used__))' <<-'EOF'
 	#if defined(__TenDRA__) || (defined(__GNUC__) && (__GNUC__ < 2))
+	extern int thiswillneverbedefinedIhope(void);
 	/* force a failure: TenDRA and gcc 1.42 have false positive here */
 	int main(void) { return (thiswillneverbedefinedIhope()); }
 	#else
@@ -1368,8 +1431,8 @@ if ac_ifcpp 'ifdef MKSH_SMALL' isset_MKSH_SMALL '' \
 	check_categories="$check_categories smksh"
 	HAVE_ISSET_MKSH_CONSERVATIVE_FDS=1	# from sh.h
 fi
-ac_ifcpp 'ifdef MKSH_BINSHREDUCED' isset_MKSH_BINSHREDUCED '' \
-    "if a reduced-feature sh is requested" && \
+ac_ifcpp 'if defined(MKSH_BINSHPOSIX) || defined(MKSH_BINSHREDUCED)' \
+    isset_MKSH_BINSH '' 'if invoking as sh should be handled specially' && \
     check_categories="$check_categories binsh"
 ac_ifcpp 'ifdef MKSH_UNEMPLOYED' isset_MKSH_UNEMPLOYED '' \
     "if mksh will be built without job control" && \
@@ -1491,14 +1554,16 @@ ac_testn sig_t <<-'EOF'
 	#include <sys/types.h>
 	#include <signal.h>
 	#include <stddef.h>
-	int main(void) { return ((int)(ptrdiff_t)(sig_t)(ptrdiff_t)kill(0,0)); }
+	volatile sig_t foo = (sig_t)0;
+	int main(void) { return (foo == (sig_t)0); }
 EOF
 
 ac_testn sighandler_t '!' sig_t 0 <<-'EOF'
 	#include <sys/types.h>
 	#include <signal.h>
 	#include <stddef.h>
-	int main(void) { return ((int)(ptrdiff_t)(sighandler_t)(ptrdiff_t)kill(0,0)); }
+	volatile sighandler_t foo = (sighandler_t)0;
+	int main(void) { return (foo == (sighandler_t)0); }
 EOF
 if test 1 = $HAVE_SIGHANDLER_T; then
 	add_cppflags -Dsig_t=sighandler_t
@@ -1509,7 +1574,8 @@ ac_testn __sighandler_t '!' sig_t 0 <<-'EOF'
 	#include <sys/types.h>
 	#include <signal.h>
 	#include <stddef.h>
-	int main(void) { return ((int)(ptrdiff_t)(__sighandler_t)(ptrdiff_t)kill(0,0)); }
+	volatile __sighandler_t foo = (__sighandler_t)0;
+	int main(void) { return (foo == (__sighandler_t)0); }
 EOF
 if test 1 = $HAVE___SIGHANDLER_T; then
 	add_cppflags -Dsig_t=__sighandler_t
@@ -1532,7 +1598,7 @@ else
 		#define EXTERN
 		#define MKSH_INCLUDES_ONLY
 		#include "sh.h"
-		__RCSID("$MirOS: src/bin/mksh/Build.sh,v 1.624 2013/03/05 15:41:39 tg Exp $");
+		__RCSID("$MirOS: src/bin/mksh/Build.sh,v 1.645 2013/08/10 13:44:25 tg Exp $");
 		int main(void) { printf("Hello, World!\n"); return (0); }
 EOF
 	case $cm in
@@ -1748,7 +1814,7 @@ EOF
 ac_test setresugid <<-'EOF'
 	#include <sys/types.h>
 	#include <unistd.h>
-	int main(void) { setresuid(0,0,0); return (setresgid(0,0,0)); }
+	int main(void) { return (setresuid(0,0,0) + setresgid(0,0,0)); }
 EOF
 
 ac_test setgroups setresugid 0 <<-'EOF'
@@ -1848,7 +1914,6 @@ ac_testdone
 ac_cppflags
 
 save_CFLAGS=$CFLAGS
-test x1 = x$HAVE_CAN_WNOOVERFLOW && CFLAGS="$CFLAGS -Wno-overflow"
 ac_testn compile_time_asserts_$$ '' 'whether compile-time assertions pass' <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
@@ -1875,13 +1940,8 @@ cta(long_size_no_matter_of_signedness, sizeof(long) == sizeof(unsigned long));
 #ifndef MKSH_LEGACY_MODE
 /* the next assertion is probably not really needed */
 cta(ari_is_4_char, sizeof(mksh_ari_t) == 4);
-/* but the next two are; we REQUIRE signed integer wraparound */
+/* but this is */
 cta(ari_has_31_bit, 0 < (mksh_ari_t)(((((mksh_ari_t)1 << 15) << 15) - 1) * 2 + 1));
-#ifndef MKSH_GCC55009
-cta(ari_sign_32_bit_and_wrap,
-    (mksh_ari_t)(((((mksh_ari_t)1 << 15) << 15) - 1) * 2 + 1) >
-    (mksh_ari_t)(((((mksh_ari_t)1 << 15) << 15) - 1) * 2 + 2));
-#endif
 /* the next assertion is probably not really needed */
 cta(uari_is_4_char, sizeof(mksh_uari_t) == 4);
 /* but the next three are; we REQUIRE unsigned integer wraparound */
@@ -1890,10 +1950,15 @@ cta(uari_has_32_bit, 0 < (mksh_uari_t)(((((mksh_uari_t)1 << 15) << 15) - 1) * 4 
 cta(uari_wrap_32_bit,
     (mksh_uari_t)(((((mksh_uari_t)1 << 15) << 15) - 1) * 4 + 3) >
     (mksh_uari_t)(((((mksh_uari_t)1 << 15) << 15) - 1) * 4 + 4));
+#define NUM 22
+#else
+#define NUM 16
 #endif
 /* these are always required */
 cta(ari_is_signed, (mksh_ari_t)-1 < (mksh_ari_t)0);
 cta(uari_is_unsigned, (mksh_uari_t)-1 > (mksh_uari_t)0);
+/* we require these to have the precisely same size and assume 2s complement */
+cta(ari_size_no_matter_of_signedness, sizeof(mksh_ari_t) == sizeof(mksh_uari_t));
 
 cta(sizet_size_no_matter_of_signedness, sizeof(ssize_t) == sizeof(size_t));
 cta(ptrdifft_sizet_same_size, sizeof(ptrdiff_t) == sizeof(size_t));
@@ -1901,17 +1966,10 @@ cta(ptrdifft_voidptr_same_size, sizeof(ptrdiff_t) == sizeof(void *));
 cta(ptrdifft_funcptr_same_size, sizeof(ptrdiff_t) == sizeof(void (*)(void)));
 /* our formatting routines assume this */
 cta(ptr_fits_in_long, sizeof(ptrdiff_t) <= sizeof(long));
+/* for struct alignment people */
+		char padding[64 - NUM];
 	};
-#ifndef MKSH_LEGACY_MODE
-#ifndef MKSH_GCC55009
-#define NUM 22
-#else
-#define NUM 21
-#endif
-#else
-#define NUM 15
-#endif
-char ctasserts_dblcheck[sizeof(struct ctasserts) == NUM ? 1 : -1];
+char ctasserts_dblcheck[sizeof(struct ctasserts) == 64 ? 1 : -1];
 	int main(void) { return (sizeof(ctasserts_dblcheck)); }
 EOF
 CFLAGS=$save_CFLAGS
@@ -1955,71 +2013,6 @@ EOF
 	*) check_categories="$check_categories int:u" ;;
 	esac
 fi
-
-#
-# runtime checks
-# once this is more than one, check if we can do runtime
-# checks (not cross-compiling) first to save on warnings
-#
-$e "${bi}run-time checks follow$ao, please ignore any weird errors"
-
-if ac_testnnd silent_idivwrapv '' '(run-time) whether signed integer division overflows wrap silently' <<-'EOF'
-	#define MKSH_INCLUDES_ONLY
-	#include "sh.h"
-	#if !defined(MKSH_LEGACY_MODE) || HAVE_LONG_32BIT
-	#define IDIVWRAPV_VL	(mksh_uari_t)0x80000000UL
-	#elif HAVE_LONG_64BIT
-	#define IDIVWRAPV_VL	(mksh_uari_t)0x8000000000000000UL
-	#else
-	# error "cannot check this"
-	#endif
-	#ifdef SIGFPE
-	static void fpe_catcher(int) MKSH_A_NORETURN;
-	#endif
-	int main(int ac, char **av) {
-		mksh_ari_t o1, o2, r1, r2;
-
-	#ifdef SIGFPE
-		signal(SIGFPE, fpe_catcher);
-	#endif
-		o1 = (mksh_ari_t)IDIVWRAPV_VL;
-		o2 = -ac;
-		r1 = o1 / o2;
-		r2 = o1 % o2;
-		if (r1 == o1 && r2 == 0) {
-			printf("si");
-			return (0);
-		}
-		printf("no %d %d %d %d %s", (int)o1, (int)o2, (int)r1,
-		    (int)r2, av[0]);
-		return (1);
-	}
-	#ifdef SIGFPE
-	static const char fpe_msg[] = "no, got SIGFPE, what were they smoking?";
-	#define fpe_msglen (sizeof(fpe_msg) - 1)
-	static void fpe_catcher(int sig MKSH_A_UNUSED) {
-		_exit(write(1, fpe_msg, fpe_msglen) == fpe_msglen ? 2 : 3);
-	}
-	#endif
-EOF
-then
-	if test $fv = 0; then
-		echo "| hrm, compiling this failed, but we will just failback"
-	else
-		echo "| running test programme; this will fail if cross-compiling"
-		echo "| in which case we will gracefully degrade to the default"
-		./$tcfn >vv.out 2>&1
-		rv=$?
-		echo "| result: `cat vv.out`"
-		fv=0
-		test $rv = 0 && test x"`cat vv.out`" = x"si" && fv=1
-	fi
-	rmf conftest.c conftest.o ${tcfn}* vv.out
-	ac_testdone
-fi
-ac_cppflags
-
-$e "${bi}end of run-time checks$ao"
 
 #
 # Compiler: Praeprocessor (only if needed)
@@ -2120,7 +2113,7 @@ addsrcs USE_PRINTF_BUILTIN printf.c
 test 1 = "$USE_PRINTF_BUILTIN" && add_cppflags -DMKSH_PRINTF_BUILTIN
 test 1 = "$HAVE_CAN_VERB" && CFLAGS="$CFLAGS -verbose"
 test -n "$LDSTATIC" && add_cppflags -DMKSH_OPTSTATIC
-add_cppflags -DMKSH_BUILD_R=441
+add_cppflags -DMKSH_BUILD_R=481
 
 $e $bi$me: Finished configuration testing, now producing output.$ao
 
@@ -2219,13 +2212,17 @@ cat >test.sh <<-EOF
 	exit \$rv
 EOF
 chmod 755 test.sh
-if test $cm = llvm; then
-	emitbc="-emit-llvm -c"
-elif test $cm = dragonegg; then
+case $cm in
+dragonegg)
 	emitbc="-S -flto"
-else
+	;;
+llvm)
+	emitbc="-emit-llvm -c"
+	;;
+*)
 	emitbc=-c
-fi
+	;;
+esac
 echo ": # work around NeXTstep bug" >Rebuild.sh
 echo set -x >>Rebuild.sh
 for file in $SRCS; do
@@ -2254,7 +2251,7 @@ dragonegg|llvm)
 esac
 echo tcfn=$mkshexe >>Rebuild.sh
 echo "$CC $CFLAGS $LDFLAGS -o \$tcfn $lobjs $LIBS $ccpr" >>Rebuild.sh
-echo 'test -f $tcfn || exit 1; size $tcfn' >>Rebuild.sh
+echo "test -f \$tcfn || exit 1; $SIZE \$tcfn" >>Rebuild.sh
 if test $cm = makefile; then
 	extras='emacsfn.h sh.h sh_flags.h var_spec.h'
 	test 0 = $HAVE_SYS_SIGNAME && extras="$extras signames.inc"
@@ -2335,15 +2332,17 @@ test $cm = combine || v "$CC $CFLAGS $LDFLAGS -o $tcfn $lobjs $LIBS $ccpr"
 test -f $tcfn || exit 1
 test 1 = $r || v "$NROFF -mdoc <'$srcdir/mksh.1' >$tfn.cat1" || \
     rmf $tfn.cat1
-test 0 = $eq && v size $tcfn
+test 0 = $eq && v $SIZE $tcfn
 i=install
 test -f /usr/ucb/$i && i=/usr/ucb/$i
 test 1 = $eq && e=:
 $e
 $e Installing the shell:
 $e "# $i -c -s -o root -g bin -m 555 $tfn /bin/$tfn"
-$e "# grep -x /bin/$tfn /etc/shells >/dev/null || echo /bin/$tfn >>/etc/shells"
-$e "# $i -c -o root -g bin -m 444 dot.mkshrc /usr/share/doc/mksh/examples/"
+if test $legacy = 0; then
+	$e "# grep -x /bin/$tfn /etc/shells >/dev/null || echo /bin/$tfn >>/etc/shells"
+	$e "# $i -c -o root -g bin -m 444 dot.mkshrc /usr/share/doc/mksh/examples/"
+fi
 $e
 $e Installing the manual:
 if test -f $tfn.cat1; then
@@ -2351,7 +2350,7 @@ if test -f $tfn.cat1; then
 	    "/usr/share/man/cat1/$tfn.0"
 	$e or
 fi
-$e "# $i -c -o root -g bin -m 444 mksh.1 /usr/share/man/man1/$tfn.1"
+$e "# $i -c -o root -g bin -m 444 $tfn.1 /usr/share/man/man1/$tfn.1"
 $e
 $e Run the regression test suite: ./test.sh
 $e Please also read the sample file dot.mkshrc and the fine manual.
@@ -2389,6 +2388,7 @@ DEBUG_LEAKS			enable freeing resources before exiting
 MKSHRC_PATH			"~/.mkshrc" (do not change)
 MKSH_A4PB			force use of arc4random_pushb
 MKSH_ASSUME_UTF8		(0=disabled, 1=enabled; default: unset)
+MKSH_BINSHPOSIX			if */sh or */-sh, enable set -o posix
 MKSH_BINSHREDUCED		if */sh or */-sh, enable set -o sh
 MKSH_CLRTOEOL_STRING		"\033[K"
 MKSH_CLS_STRING			"\033[;H\033[J"
@@ -2400,7 +2400,6 @@ MKSH_DISABLE_DEPRECATED		disable code paths scheduled for later removal
 MKSH_DISABLE_EXPERIMENTAL	disable code not yet comfy for (LTS) snapshots
 MKSH_DISABLE_TTY_WARNING	shut up warning about ctty if OS cant be fixed
 MKSH_DONT_EMIT_IDSTRING		omit RCS IDs from binary
-MKSH_GCC55009			DANGER! see http://www.mirbsd.org/mksh.htm#p41
 MKSH_MIDNIGHTBSD01ASH_COMPAT	set -o sh: additional compatibility quirk
 MKSH_NOPROSPECTOFWORK		disable jobs, co-processes, etc. (do not use)
 MKSH_NOPWNAM			skip PAM calls, for -static on eglibc, Solaris

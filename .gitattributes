@@ -17482,6 +17482,7 @@ contrib/mksh/histrap.c -text
 contrib/mksh/jobs.c -text
 contrib/mksh/lalloc.c -text
 contrib/mksh/lex.c -text
+contrib/mksh/lksh.1 -text
 contrib/mksh/main.c -text
 contrib/mksh/misc.c -text
 contrib/mksh/mksh.1 -text
