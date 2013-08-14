@@ -1,9 +1,10 @@
-$MidnightBSD: src/contrib/mksh/MIDNIGHTBSD-upgrade,v 1.5 2011/11/23 12:33:32 laffer1 Exp $
+$MidnightBSD: src/contrib/mksh/MIDNIGHTBSD-upgrade,v 1.6 2011/11/23 13:00:08 laffer1 Exp $
 
 Directions for updating mksh (work in progress)
 
 1) Obtain the latest sources
 2) Unpack sources.
+2a) delete ico files
 3) Perform a test import (change version number as needed)
 cvs -q -n import -m "Virgin import of mksh R40c" src/contrib/mksh MIROS vR40c
 
