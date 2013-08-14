@@ -10,7 +10,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: control.c,v 1.1.1.3 2007-11-23 22:10:30 laffer1 Exp $")
+SM_RCSID("@(#)$Id: control.c,v 1.1.1.4 2013-08-14 22:35:48 laffer1 Exp $")
 
 #include <sm/fdset.h>
 
@@ -301,7 +301,7 @@ control_command(sock, e)
 	(void) sm_io_setvbuf(s, SM_TIME_DEFAULT, NULL,
 			     SM_IO_NBF, SM_IO_BUFSIZ);
 
-	if (sm_io_fgets(s, SM_TIME_DEFAULT, inp, sizeof(inp)) == NULL)
+	if (sm_io_fgets(s, SM_TIME_DEFAULT, inp, sizeof(inp)) < 0)
 	{
 		(void) sm_io_close(s, SM_TIME_DEFAULT);
 		exit(EX_IOERR);

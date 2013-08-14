@@ -2,7 +2,7 @@
 <HEAD><TITLE>Milter API</TITLE></HEAD>
 <BODY>
 <!--
-$Id: api.html,v 1.1.1.4 2010-01-10 20:14:37 laffer1 Exp $
+$Id: api.html,v 1.1.1.5 2013-08-14 22:35:47 laffer1 Exp $
 -->
 <H1>Milter API</H1>
 
@@ -214,7 +214,6 @@ other callbacks are message-oriented.
      <TD>SMFIS_REJECT</TD>
      <TD>For a connection-oriented routine, reject this connection; call <A HREF="xxfi_close.html">xxfi_close</A>.<BR>
         For a message-oriented routine (except 
-	<A HREF="xxfi_eom.html">xxfi_eom</A> or
         <A HREF="xxfi_abort.html">xxfi_abort</A>), reject this message.<BR>
 	For a recipient-oriented routine, reject the current recipient (but continue processing the current message).
      </TD>

@@ -13,7 +13,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: collect.c,v 1.1.1.6 2010-01-10 20:14:37 laffer1 Exp $")
+SM_RCSID("@(#)$Id: collect.c,v 1.1.1.7 2013-08-14 22:35:47 laffer1 Exp $")
 
 static void	eatfrom __P((char *volatile, ENVELOPE *));
 static void	collect_doheader __P((ENVELOPE *));
@@ -300,6 +300,9 @@ collect(fp, smtpmode, hdrp, e, rsetsize)
 	unsigned char *pbp;
 	unsigned char peekbuf[8];
 	char bufbuf[MAXLINE];
+#if _FFR_REJECT_NUL_BYTE
+	bool hasNUL;		/* has at least one NUL input byte */
+#endif /* _FFR_REJECT_NUL_BYTE */
 
 	df = NULL;
 	ignrdot = smtpmode ? false : IgnrDot;
@@ -315,6 +318,9 @@ collect(fp, smtpmode, hdrp, e, rsetsize)
 	hdrslen = 0;
 	numhdrs = 0;
 	HasEightBits = false;
+#if _FFR_REJECT_NUL_BYTE
+	hasNUL = false;
+#endif /* _FFR_REJECT_NUL_BYTE */
 	buf = bp = bufbuf;
 	buflen = sizeof(bufbuf);
 	pbp = peekbuf;
@@ -403,6 +409,10 @@ collect(fp, smtpmode, hdrp, e, rsetsize)
 							SM_TIME_DEFAULT,
 							c);
 				}
+#if _FFR_REJECT_NUL_BYTE
+				if (c == '\0')
+					hasNUL = true;
+#endif /* _FFR_REJECT_NUL_BYTE */
 				if (c == SM_IO_EOF)
 					goto readerr;
 				if (SevenBitInput)
@@ -869,7 +879,8 @@ readerr:
 			if (LogLevel > 6)
 				sm_syslog(LOG_NOTICE, e->e_id,
 					"message size (%ld) exceeds maximum (%ld)",
-					e->e_msgsize, MaxMessageSize);
+					PRT_NONNEGL(e->e_msgsize),
+					MaxMessageSize);
 		}
 	}
 
@@ -891,6 +902,14 @@ readerr:
 		    sm_strcasecmp(e->e_bodytype, "8BITMIME") == 0)
 			e->e_bodytype = "7BIT";
 	}
+
+#if _FFR_REJECT_NUL_BYTE
+	if (hasNUL && RejectNUL)
+	{
+		e->e_status = "5.6.1";
+		usrerrenh(e->e_status, "554 NUL byte not allowed");
+	}
+#endif /* _FFR_REJECT_NUL_BYTE */
 
 	if (SuperSafe == SAFE_REALLY && !bitset(EF_FATALERRS, e->e_flags))
 	{

@@ -18,7 +18,7 @@ SM_IDSTR(copyright,
      Copyright (c) 1988, 1993\n\
 	The Regents of the University of California.  All rights reserved.\n")
 
-SM_IDSTR(id, "@(#)$Id: rmail.c,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $")
+SM_IDSTR(id, "@(#)$Id: rmail.c,v 1.1.1.4 2013-08-14 22:35:47 laffer1 Exp $")
 
 /*
  * RMAIL -- UUCP mail server.
@@ -134,7 +134,7 @@ main(argc, argv)
 	{
 		/* Get and nul-terminate the line. */
 		if (sm_io_fgets(smioin, SM_TIME_DEFAULT, lbuf,
-				sizeof(lbuf)) == NULL)
+				sizeof(lbuf)) < 0)
 			err(EX_DATAERR, "no data");
 		if ((p = strchr(lbuf, '\n')) == NULL)
 			err(EX_DATAERR, "line too long");
@@ -379,7 +379,7 @@ main(argc, argv)
 	{
 		(void) sm_io_fprintf(fp, SM_TIME_DEFAULT, "%s", lbuf);
 	} while (sm_io_fgets(smioin, SM_TIME_DEFAULT, lbuf,
-			     sizeof(lbuf)) != NULL);
+			     sizeof(lbuf)) >= 0);
 
 	if (sm_io_error(smioin))
 		err(EX_TEMPFAIL, "stdin: %s", sm_errstring(errno));

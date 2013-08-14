@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 1999-2001, 2004, 2010 Sendmail, Inc. and its suppliers.
+ *  Copyright (c) 1999-2001, 2004, 2010, 2013 Sendmail, Inc. and its suppliers.
  *	All rights reserved.
  *
  * By using this file, you agree to the terms and conditions set
@@ -9,7 +9,7 @@
  */
 
 #include <sm/gen.h>
-SM_RCSID("@(#)$Id: sm_gethost.c,v 1.1.1.3 2011-05-17 22:19:51 laffer1 Exp $")
+SM_RCSID("@(#)$Id: sm_gethost.c,v 1.1.1.4 2013-08-14 22:35:47 laffer1 Exp $")
 
 #include <sendmail.h>
 #if NETINET || NETINET6
@@ -101,7 +101,12 @@ mi_gethostbyname(name, family)
 # endif /* SOLARIS == 20300 || SOLARIS == 203 */
 #else /* (SOLARIS > 10000 && SOLARIS < 20400) || (defined(SOLARIS) && SOLARIS < 204) || (defined(sony_news) && defined(__svr4)) */
 # if NETINET6
-	int flags = AI_DEFAULT|AI_ALL;
+#  ifndef SM_IPNODEBYNAME_FLAGS
+    /* For IPv4-mapped addresses, use: AI_DEFAULT|AI_ALL */
+#   define SM_IPNODEBYNAME_FLAGS	AI_ADDRCONFIG
+#  endif /* SM_IPNODEBYNAME_FLAGS */
+
+	int flags = SM_IPNODEBYNAME_FLAGS;
 	int err;
 # endif /* NETINET6 */
 

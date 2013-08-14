@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2002 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 1998-2002, 2013 Sendmail, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1983 Eric P. Allman.  All rights reserved.
  * Copyright (c) 1988, 1993
@@ -20,7 +20,7 @@ SM_IDSTR(copyright,
      Copyright (c) 1988, 1993\n\
 	The Regents of the University of California.  All rights reserved.\n")
 
-SM_IDSTR(id, "@(#)$Id: mailstats.c,v 1.1.1.2 2006-02-25 02:33:57 laffer1 Exp $")
+SM_IDSTR(id, "@(#)$Id: mailstats.c,v 1.1.1.3 2013-08-14 22:35:47 laffer1 Exp $")
 
 #include <unistd.h>
 #include <stddef.h>
@@ -68,13 +68,14 @@ main(argc, argv)
 	extern char *ctime();
 	extern char *optarg;
 	extern int optind;
+# define MSOPTS "cC:f:opP"
 
 	cfile = getcfname(0, 0, SM_GET_SENDMAIL_CF, NULL);
 	sfile = NULL;
 	mnames = true;
 	progmode = false;
 	trunc = false;
-	while ((ch = getopt(argc, argv, "cC:f:opP")) != -1)
+	while ((ch = getopt(argc, argv, MSOPTS)) != -1)
 	{
 		switch (ch)
 		{
@@ -90,6 +91,7 @@ main(argc, argv)
 			sfile = optarg;
 			break;
 
+
 		  case 'o':
 			mnames = false;
 			break;
@@ -101,6 +103,7 @@ main(argc, argv)
 		  case 'P':
 			progmode = true;
 			break;
+
 
 		  case '?':
 		  default:
@@ -131,7 +134,7 @@ main(argc, argv)
 	(void) sm_strlcpy(mtable[mno++], "*file*", MNAMELEN + 1);
 	(void) sm_strlcpy(mtable[mno++], "*include*", MNAMELEN + 1);
 
-	while (sm_io_fgets(cfp, SM_TIME_DEFAULT, buf, sizeof(buf)) != NULL)
+	while (sm_io_fgets(cfp, SM_TIME_DEFAULT, buf, sizeof(buf)) >= 0)
 	{
 		register char *b;
 		char *s;
@@ -269,6 +272,7 @@ main(argc, argv)
 			exit(EX_OSERR);
 		}
 	}
+
 
 	if (progmode)
 	{

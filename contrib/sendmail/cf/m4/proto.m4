@@ -13,7 +13,7 @@ divert(-1)
 #
 divert(0)
 
-VERSIONID(`$Id: proto.m4,v 1.1.1.7 2011-05-17 22:19:51 laffer1 Exp $')
+VERSIONID(`$Id: proto.m4,v 1.1.1.8 2013-08-14 22:35:47 laffer1 Exp $')
 
 # level CF_LEVEL config file format
 V`'CF_LEVEL`'ifdef(`NO_VENDOR',`', `/ifdef(`VENDOR_NAME', `VENDOR_NAME', `Berkeley')')
@@ -1532,8 +1532,9 @@ R<?> <e s> <$+>			$#error $@ nouser $: "550 User unknown"')
 R<?> <$*> <$+>			$@ $2',
 `dnl
 # return the original address
-R<> <> <$+> <@ $+> <$*>		$@ $1')',
-`dnl')
+R<> <> <$+> <@ $+> <$*>		$@ $1')
+')
+
 
 ifelse(substr(confDELIVERY_MODE,0,1), `d', `errprint(`WARNING: Antispam rules not available in deferred delivery mode.
 ')')

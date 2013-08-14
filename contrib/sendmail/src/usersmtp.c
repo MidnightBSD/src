@@ -13,7 +13,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: usersmtp.c,v 1.1.1.7 2011-05-17 22:19:51 laffer1 Exp $")
+SM_RCSID("@(#)$Id: usersmtp.c,v 1.1.1.8 2013-08-14 22:35:48 laffer1 Exp $")
 
 #include <sysexits.h>
 
@@ -801,7 +801,7 @@ readauth(filename, safe, sai, rpool)
 
 	lc = 0;
 	while (lc <= SASL_MECHLIST &&
-		sm_io_fgets(f, SM_TIME_DEFAULT, buf, sizeof(buf)) != NULL)
+		sm_io_fgets(f, SM_TIME_DEFAULT, buf, sizeof(buf)) >= 0)
 	{
 		if (buf[0] != '#')
 		{

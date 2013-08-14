@@ -13,7 +13,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: recipient.c,v 1.1.1.3 2007-11-23 22:10:30 laffer1 Exp $")
+SM_RCSID("@(#)$Id: recipient.c,v 1.1.1.4 2013-08-14 22:35:48 laffer1 Exp $")
 
 static void	includetimeout __P((int));
 static ADDRESS	*self_reference __P((ADDRESS *));
@@ -1824,7 +1824,7 @@ resetuid:
 	LineNumber = 0;
 	ctladdr->q_flags &= ~QSELFREF;
 	nincludes = 0;
-	while (sm_io_fgets(fp, SM_TIME_DEFAULT, buf, sizeof(buf)) != NULL &&
+	while (sm_io_fgets(fp, SM_TIME_DEFAULT, buf, sizeof(buf)) >= 0 &&
 	       !maxreached)
 	{
 		fixcrlf(buf, true);

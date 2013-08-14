@@ -26,7 +26,7 @@ SM_UNUSED(static char copyright[]) =
 	The Regents of the University of California.  All rights reserved.\n";
 #endif /* ! lint */
 
-SM_RCSID("@(#)$Id: main.c,v 1.1.1.8 2011-05-17 22:19:51 laffer1 Exp $")
+SM_RCSID("@(#)$Id: main.c,v 1.1.1.9 2013-08-14 22:35:48 laffer1 Exp $")
 
 
 #if NETINET || NETINET6
@@ -2103,7 +2103,7 @@ main(argc, argv, envp)
 							     "> ");
 				(void) sm_io_flush(smioout, SM_TIME_DEFAULT);
 				if (sm_io_fgets(smioin, SM_TIME_DEFAULT, buf,
-						sizeof(buf)) == NULL)
+						sizeof(buf)) < 0)
 					testmodeline("/quit", &MainEnvelope);
 				p = strchr(buf, '\n');
 				if (p != NULL)
@@ -2153,7 +2153,13 @@ main(argc, argv, envp)
 	if (tls_ok)
 	{
 		/* basic TLS initialization */
-		tls_ok = init_tls_library();
+		tls_ok = init_tls_library(FipsMode);
+		if (!tls_ok && FipsMode)
+		{
+			(void) sm_io_fprintf(smioout, SM_TIME_DEFAULT,
+				     "ERROR: FIPSMode failed to initialize\n");
+			exit(EX_USAGE);
+		}
 	}
 
 	if (!tls_ok && (OpMode == MD_QUEUERUN || OpMode == MD_DELIVER))
@@ -2561,6 +2567,10 @@ main(argc, argv, envp)
 		authinfo = getauthinfo(sm_io_getinfo(InChannel, SM_IO_WHAT_FD,
 						     NULL), &forged);
 		macdefine(&BlankEnvelope.e_macro, A_TEMP, '_', authinfo);
+		if (tTd(75, 9))
+			sm_syslog(LOG_INFO, NOQID,
+				"main: where=after_getauthinfo, RealHostAddr=%s",
+				anynet_ntoa(&RealHostAddr));
 
 		/* at this point we are in a child: reset state */
 		sm_rpool_free(MainEnvelope.e_rpool);
@@ -2827,7 +2837,7 @@ main(argc, argv, envp)
 
 		/* set message size */
 		(void) sm_snprintf(buf, sizeof(buf), "%ld",
-				   MainEnvelope.e_msgsize);
+				   PRT_NONNEGL(MainEnvelope.e_msgsize));
 		macdefine(&MainEnvelope.e_macro, A_TEMP,
 			  macid("{msg_size}"), buf);
 

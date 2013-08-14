@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2011 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 1998-2013 Sendmail, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1983, 1995-1997 Eric P. Allman.  All rights reserved.
  * Copyright (c) 1988, 1993
@@ -52,7 +52,7 @@
 
 #ifdef _DEFINE
 # ifndef lint
-SM_UNUSED(static char SmailId[]) = "@(#)$Id: sendmail.h,v 1.1.1.7 2011-05-17 22:19:51 laffer1 Exp $";
+SM_UNUSED(static char SmailId[]) = "@(#)$Id: sendmail.h,v 1.1.1.8 2013-08-14 22:35:48 laffer1 Exp $";
 # endif /* ! lint */
 #endif /* _DEFINE */
 
@@ -124,7 +124,11 @@ SM_UNUSED(static char SmailId[]) = "@(#)$Id: sendmail.h,v 1.1.1.7 2011-05-17 22:
 #if STARTTLS
 #  include <openssl/ssl.h>
 # if !TLS_NO_RSA
-#  define RSA_KEYLENGTH	512
+#  if _FFR_FIPSMODE
+#   define RSA_KEYLENGTH	1024
+#  else /* _FFR_FIPSMODE  */
+#   define RSA_KEYLENGTH	512
+#  endif /* _FFR_FIPSMODE  */
 # endif /* !TLS_NO_RSA */
 #endif /* STARTTLS */
 
@@ -721,9 +725,9 @@ MCI
 #if STARTTLS
 #define MCIF_TLS	0x00100000	/* STARTTLS supported */
 #define MCIF_TLSACT	0x00200000	/* STARTTLS active */
-#define MCIF_EXTENS	(MCIF_EXPN | MCIF_SIZE | MCIF_8BITMIME | MCIF_DSN | MCIF_8BITOK | MCIF_AUTH | MCIF_ENHSTAT | MCIF_TLS)
 #else /* STARTTLS */
-#define MCIF_EXTENS	(MCIF_EXPN | MCIF_SIZE | MCIF_8BITMIME | MCIF_DSN | MCIF_8BITOK | MCIF_AUTH | MCIF_ENHSTAT)
+#define MCIF_TLS	0
+#define MCIF_TLSACT	0
 #endif /* STARTTLS */
 #define MCIF_DLVR_BY	0x00400000	/* DELIVERBY */
 #if _FFR_IGNORE_EXT_ON_HELO
@@ -732,6 +736,8 @@ MCI
 #define MCIF_INLONGLINE 0x01000000	/* in the middle of a long line */
 #define MCIF_AUTH2	0x02000000	/* got 2 AUTH lines */
 #define MCIF_ONLY_EHLO	0x10000000	/* use only EHLO in smtpinit */
+
+#define MCIF_EXTENS	(MCIF_EXPN | MCIF_SIZE | MCIF_8BITMIME | MCIF_DSN | MCIF_8BITOK | MCIF_AUTH | MCIF_ENHSTAT | MCIF_TLS | MCIF_AUTH2)
 
 /* states */
 #define MCIS_CLOSED	0		/* no traffic on this connection */
@@ -938,6 +944,8 @@ struct envelope
 	char		e_enhsc[ENHSC_LEN];	/* enhanced status code */
 #endif /* _FFR_MILTER_ENHSC */
 };
+
+#define PRT_NONNEGL(v)	((v) < 0 ? LONG_MAX : (v))
 
 /* values for e_flags */
 #define EF_OLDSTYLE	0x00000001L	/* use spaces (not commas) in hdrs */
@@ -1479,7 +1487,6 @@ struct symtab
 	union
 	{
 		BITMAP256	sv_class;	/* bit-map of word classes */
-		ADDRESS		*sv_addr;	/* pointer to address header */
 		MAILER		*sv_mailer;	/* pointer to mailer */
 		char		*sv_alias;	/* alias */
 		MAPCLASS	sv_mapclass;	/* mapping function class */
@@ -1509,7 +1516,7 @@ typedef struct symtab	STAB;
 /* symbol types */
 #define ST_UNDEF	0	/* undefined type */
 #define ST_CLASS	1	/* class map */
-#define ST_ADDRESS	2	/* an address in parsed format */
+/* #define ST_unused	2	UNUSED */
 #define ST_MAILER	3	/* a mailer header */
 #define ST_ALIAS	4	/* an alias */
 #define ST_MAPCLASS	5	/* mapping function class */
@@ -1536,7 +1543,6 @@ typedef struct symtab	STAB;
 #define ST_MCI		17	/* mailer connection info (offset) */
 
 #define s_class		s_value.sv_class
-#define s_address	s_value.sv_addr
 #define s_mailer	s_value.sv_mailer
 #define s_alias		s_value.sv_alias
 #define s_mci		s_value.sv_mci
@@ -1778,6 +1784,8 @@ struct milter
 	char		*mf_conn;	/* connection info */
 	int		mf_sock;	/* connected socket */
 	char		mf_state;	/* state of filter */
+	char		mf_lflags;	/* "local" flags */
+	int		mf_idx;		/* milter number (index) */
 	time_t		mf_timeout[SMFTO_NUM_TO]; /* timeouts */
 #if _FFR_MILTER_CHECK
 	/* for testing only */
@@ -1786,6 +1794,9 @@ struct milter
 	mi_int32	mf_mta_actions;
 #endif /* _FFR_MILTER_CHECK */
 };
+
+#define MI_LFL_NONE	0x00000000
+#define MI_LFLAGS_SYM(st) (1 << (st))	/* has its own symlist for stage st */
 
 struct milters
 {
@@ -1929,14 +1940,14 @@ struct termescape
 #define TLS_AUTH_FAIL	(-1)
 
 /* functions */
-extern bool	init_tls_library __P((void));
+extern bool	init_tls_library __P((bool _fipsmode));
 extern bool	inittls __P((SSL_CTX **, unsigned long, long, bool, char *, char *, char *, char *, char *));
 extern bool	initclttls __P((bool));
 extern void	setclttls __P((bool));
 extern bool	initsrvtls __P((bool));
 extern int	tls_get_info __P((SSL *, bool, char *, MACROS_T *, bool));
 extern int	endtls __P((SSL *, char *));
-extern void	tlslogerr __P((const char *));
+extern void	tlslogerr __P((int, const char *));
 
 
 EXTERN char	*CACertPath;	/* path to CA certificates (dir. with hashes) */
@@ -2234,6 +2245,19 @@ extern unsigned char	tTdvect[100];	/* trace vector */
 
 # define CHECK_RESTART _CHECK_RESTART
 
+#define CHK_CUR_RUNNERS(fct, idx, count)	\
+	do	\
+	{	\
+		if (CurRunners < 0)	\
+		{	\
+			if (LogLevel > 3)	\
+				sm_syslog(LOG_ERR, NOQID,	\
+					"%s: CurRunners=%d, i=%d, count=%d, status=should not happen",	\
+					fct, CurRunners, idx, count);	\
+			CurRunners = 0;	\
+		}	\
+	} while (0)
+
 /* reply types (text in SmtpMsgBuffer) */
 #define XS_DEFAULT	0
 #define XS_STARTTLS	1
@@ -2271,6 +2295,7 @@ EXTERN bool	DontLockReadFiles;	/* don't read lock support files */
 EXTERN bool	DontPruneRoutes;	/* don't prune source routes */
 EXTERN bool	ForkQueueRuns;	/* fork for each job when running the queue */
 EXTERN bool	FromFlag;	/* if set, "From" person is explicit */
+EXTERN bool	FipsMode;
 EXTERN bool	GrabTo;		/* if set, get recipients from msg */
 EXTERN bool	EightBitAddrOK;	/* we'll let 8-bit addresses through */
 EXTERN bool	HasEightBits;	/* has at least one eight bit input byte */
@@ -2285,6 +2310,9 @@ EXTERN bool	NoAlias;	/* suppress aliasing */
 EXTERN bool	NoConnect;	/* don't connect to non-local mailers */
 EXTERN bool	OnlyOneError;	/*  .... or only want to give one SMTP reply */
 EXTERN bool	QuickAbort;	/*  .... but only if we want a quick abort */
+#if _FFR_REJECT_NUL_BYTE
+EXTERN bool	RejectNUL;	/* reject NUL input byte? */
+#endif /* _FFR_REJECT_NUL_BYTE */
 #if REQUIRES_DIR_FSYNC
 EXTERN bool	RequiresDirfsync;	/* requires fsync() for directory */
 #endif /* REQUIRES_DIR_FSYNC */
@@ -2630,6 +2658,7 @@ extern void	initmacros __P((ENVELOPE *));
 extern void	initsetproctitle __P((int, char **, char **));
 extern void	init_vendor_macros __P((ENVELOPE *));
 extern SIGFUNC_DECL	intsig __P((int));
+extern bool	isatom __P((const char *));
 extern bool	isloopback __P((SOCKADDR sa));
 extern void	load_if_names __P((void));
 extern bool	lockfile __P((int, char *, char *, int));

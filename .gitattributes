@@ -24794,6 +24794,7 @@ contrib/sendmail/libsm/syslogio.c -text
 contrib/sendmail/libsm/t-cf.c -text
 contrib/sendmail/libsm/t-event.c -text
 contrib/sendmail/libsm/t-exc.c -text
+contrib/sendmail/libsm/t-fget.c -text
 contrib/sendmail/libsm/t-float.c -text
 contrib/sendmail/libsm/t-fopen.c -text
 contrib/sendmail/libsm/t-heap.c -text
@@ -24849,6 +24850,7 @@ contrib/sendmail/makemap/Makefile -text
 contrib/sendmail/makemap/Makefile.m4 -text
 contrib/sendmail/makemap/makemap.8 -text
 contrib/sendmail/makemap/makemap.c -text
+contrib/sendmail/pkg-message -text
 contrib/sendmail/praliases/Makefile -text
 contrib/sendmail/praliases/Makefile.m4 -text
 contrib/sendmail/praliases/praliases.8 -text

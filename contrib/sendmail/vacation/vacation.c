@@ -20,7 +20,7 @@ SM_IDSTR(copyright,
 	The Regents of the University of California.  All rights reserved.\n\
      Copyright (c) 1983 Eric P. Allman.  All rights reserved.\n")
 
-SM_IDSTR(id, "@(#)$Id: vacation.c,v 1.1.1.4 2010-01-10 20:14:37 laffer1 Exp $")
+SM_IDSTR(id, "@(#)$Id: vacation.c,v 1.1.1.5 2013-08-14 22:35:47 laffer1 Exp $")
 
 
 #include <ctype.h>
@@ -509,7 +509,7 @@ readheaders(alwaysrespond)
 
 	cont = false;
 	tome = alwaysrespond;
-	while (sm_io_fgets(smioin, SM_TIME_DEFAULT, buf, sizeof(buf)) &&
+	while (sm_io_fgets(smioin, SM_TIME_DEFAULT, buf, sizeof(buf)) >= 0 &&
 	       *buf != '\n')
 	{
 		switch(*buf)
@@ -954,7 +954,7 @@ xclude(f)
 
 	if (f == NULL)
 		return;
-	while (sm_io_fgets(f, SM_TIME_DEFAULT, buf, sizeof buf))
+	while (sm_io_fgets(f, SM_TIME_DEFAULT, buf, sizeof buf) >= 0)
 	{
 		if ((p = strchr(buf, '\n')) != NULL)
 			*p = '\0';
@@ -1049,7 +1049,7 @@ sendmessage(myname, msgfn, sender)
 		(void) sm_io_fprintf(sfp, SM_TIME_DEFAULT, "To: %s\n", From);
 		(void) sm_io_fprintf(sfp, SM_TIME_DEFAULT,
 				     "Auto-Submitted: auto-replied\n");
-		while (sm_io_fgets(mfp, SM_TIME_DEFAULT, buf, sizeof buf))
+		while (sm_io_fgets(mfp, SM_TIME_DEFAULT, buf, sizeof buf) >= 0)
 			(void) sm_io_fputs(sfp, SM_TIME_DEFAULT, buf);
 		(void) sm_io_close(mfp, SM_TIME_DEFAULT);
 		(void) sm_io_close(sfp, SM_TIME_DEFAULT);

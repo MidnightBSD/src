@@ -14,7 +14,7 @@
 #include <sendmail.h>
 #include <sm/sendmail.h>
 
-SM_RCSID("@(#)$Id: headers.c,v 1.1.1.5 2010-01-10 20:14:37 laffer1 Exp $")
+SM_RCSID("@(#)$Id: headers.c,v 1.1.1.6 2013-08-14 22:35:48 laffer1 Exp $")
 
 static HDR	*allocheader __P((char *, char *, int, SM_RPOOL_T *, bool));
 static size_t	fix_mime_header __P((HDR *, ENVELOPE *));
@@ -1152,7 +1152,7 @@ logsender(e, msgid)
 	(void) sm_snprintf(sbp, SPACELEFT(sbuf, sbp),
 		"from=%.200s, size=%ld, class=%d, nrcpts=%d",
 		e->e_from.q_paddr == NULL ? "<NONE>" : e->e_from.q_paddr,
-		e->e_msgsize, e->e_class, e->e_nrcpts);
+		PRT_NONNEGL(e->e_msgsize), e->e_class, e->e_nrcpts);
 	sbp += strlen(sbp);
 	if (msgid != NULL)
 	{
@@ -1191,7 +1191,7 @@ logsender(e, msgid)
 							    83));
 	sm_syslog(LOG_INFO, e->e_id,
 		  "size=%ld, class=%ld, nrcpts=%d",
-		  e->e_msgsize, e->e_class, e->e_nrcpts);
+		  PRT_NONNEGL(e->e_msgsize), e->e_class, e->e_nrcpts);
 	if (msgid != NULL)
 		sm_syslog(LOG_INFO, e->e_id,
 			  "msgid=%s",

@@ -36,7 +36,7 @@
 #define	SM_TAILQ_H_
 
 /*
- * $Id: tailq.h,v 1.1.1.1 2007-11-23 22:10:30 laffer1 Exp $
+ * $Id: tailq.h,v 1.1.1.2 2013-08-14 22:35:47 laffer1 Exp $
  *
  * This file is a modified copy of queue.h from a BSD system:
  * we only need tail queues here.
@@ -69,8 +69,8 @@ struct {								\
 	struct type **tqe_prev;	/* address of previous next element */	\
 }
 
-/* 
- * tail queue access methods 
+/*
+ * tail queue access methods
  */
 #define	SM_TAILQ_FIRST(head)		((head)->tqh_first)
 #define	SM_TAILQ_END(head)		NULL

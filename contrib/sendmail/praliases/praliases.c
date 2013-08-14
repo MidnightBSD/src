@@ -20,7 +20,7 @@ SM_IDSTR(copyright,
      Copyright (c) 1988, 1993\n\
 	The Regents of the University of California.  All rights reserved.\n")
 
-SM_IDSTR(id, "@(#)$Id: praliases.c,v 1.1.1.4 2010-01-10 20:14:37 laffer1 Exp $")
+SM_IDSTR(id, "@(#)$Id: praliases.c,v 1.1.1.5 2013-08-14 22:35:47 laffer1 Exp $")
 
 #include <sys/types.h>
 #include <ctype.h>
@@ -122,7 +122,7 @@ main(argc, argv)
 		exit(EX_NOINPUT);
 	}
 
-	while (sm_io_fgets(cfp, SM_TIME_DEFAULT, buf, sizeof(buf)) != NULL)
+	while (sm_io_fgets(cfp, SM_TIME_DEFAULT, buf, sizeof(buf)) >= 0)
 	{
 		register char *b, *p;
 
