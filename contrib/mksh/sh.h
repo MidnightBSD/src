@@ -3,7 +3,7 @@
 /*	$OpenBSD: table.h,v 1.8 2012/02/19 07:52:30 otto Exp $	*/
 /*	$OpenBSD: tree.h,v 1.10 2005/03/28 21:28:22 deraadt Exp $	*/
 /*	$OpenBSD: expand.h,v 1.6 2005/03/30 17:16:37 deraadt Exp $	*/
-/*	$OpenBSD: lex.h,v 1.12 2013/01/20 14:47:46 stsp Exp $	*/
+/*	$OpenBSD: lex.h,v 1.13 2013/03/03 19:11:34 guenther Exp $	*/
 /*	$OpenBSD: proto.h,v 1.34 2012/06/27 07:17:19 otto Exp $	*/
 /*	$OpenBSD: c_test.h,v 1.4 2004/12/20 11:34:26 otto Exp $	*/
 /*	$OpenBSD: tty.h,v 1.5 2004/12/20 11:34:26 otto Exp $	*/
@@ -164,9 +164,9 @@
 #endif
 
 #ifdef EXTERN
-__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.642 2013/03/05 15:41:41 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.667 2013/08/14 20:26:19 tg Exp $");
 #endif
-#define MKSH_VERSION "R44 2013/02/24"
+#define MKSH_VERSION "R48 2013/08/14"
 
 /* arithmetic types: C implementation */
 #if !HAVE_CAN_INTTYPES
@@ -370,6 +370,7 @@ extern int revoke(const char *);
 #endif
 
 #if defined(DEBUG) || !HAVE_STRERROR
+#undef strerror
 #define strerror		/* poisoned */ dontuse_strerror
 #define cstrerror		/* replaced */ cstrerror
 extern const char *cstrerror(int);
@@ -415,7 +416,7 @@ extern int __cdecl setegid(gid_t);
 
 /* remove redundancies */
 
-#if defined(MirBSD) && (MirBSD >= 0x08A8) && !defined(MKSH_OPTSTATIC)
+#if defined(MirBSD) && (MirBSD >= 0x0AB3) && !defined(MKSH_OPTSTATIC)
 #define MKSH_mirbsd_wcwidth
 #define utf_wcwidth(i) wcwidth((__WCHAR_TYPE__)i)
 extern int wcwidth(__WCHAR_TYPE__);
@@ -443,8 +444,6 @@ extern int wcwidth(__WCHAR_TYPE__);
 #define MAGIC		(7)	/* prefix for *?[!{,} during expand */
 #define ISMAGIC(c)	((unsigned char)(c) == MAGIC)
 
-#define LINE		4096	/* input line size */
-
 EXTERN const char *safe_prompt; /* safe prompt if PS1 substitution fails */
 
 #ifdef MKSH_LEGACY_MODE
@@ -470,6 +469,14 @@ union mksh_ccphack {
 	char **rw;
 	const char **ro;
 };
+
+/*
+ * Evil hack since casting uint to sint is implementation-defined
+ */
+typedef union {
+	mksh_ari_t i;
+	mksh_uari_t u;
+} mksh_ari_u;
 
 /* for const debugging */
 #if defined(DEBUG) && defined(__GNUC__) && !defined(__ICC) && \
@@ -511,8 +518,9 @@ char *ucstrstr(char *, const char *);
 #define mkssert(e)	do { } while (/* CONSTCOND */ 0)
 #endif
 
-#if (!defined(MKSH_BUILDMAKEFILE4BSD) && !defined(MKSH_BUILDSH)) || (MKSH_BUILD_R != 441)
+#if (!defined(MKSH_BUILDMAKEFILE4BSD) && !defined(MKSH_BUILDSH)) || (MKSH_BUILD_R != 481)
 #error Must run Build.sh to compile this.
+extern void thiswillneverbedefinedIhope(void);
 int
 im_sorry_dave(void)
 {
@@ -763,18 +771,11 @@ EXTERN struct {
 #define OF_FIRSTTIME	0x10	/* as early as possible, once */
 #define OF_ANY		(OF_CMDLINE | OF_SET | OF_SPECIAL | OF_INTERNAL)
 
-struct shoption {
-	const char *name;	/* long name of option */
-	char c;			/* character flag (if any) */
-	unsigned char flags;	/* OF_* */
-};
-extern const struct shoption options[];
-
 /* null value for variable; comparison pointer for unset */
 EXTERN char null[] E_INIT("");
 /* helpers for string pooling */
 EXTERN const char Tintovfl[] E_INIT("integer overflow %zu %c %zu prevented");
-EXTERN const char Toomem[] E_INIT("can't allocate %lu data bytes");
+EXTERN const char Toomem[] E_INIT("can't allocate %zu data bytes");
 #if defined(__GNUC__)
 /* trust this to have string pooling; -Wformat bitches otherwise */
 #define Tsynerr		"syntax error"
@@ -788,10 +789,8 @@ EXTERN const char Tr_fc_e_dash[] E_INIT("r=fc -e -");
 EXTERN const char Tlocal_typeset[] E_INIT("local=typeset");
 #define T_typeset	(Tlocal_typeset + 5)	/* "=typeset" */
 #define Ttypeset	(Tlocal_typeset + 6)	/* "typeset" */
-EXTERN const char Tpalias[] E_INIT("+alias");
-#define Talias		(Tpalias + 1)		/* "alias" */
-EXTERN const char Tpunalias[] E_INIT("+unalias");
-#define Tunalias	(Tpunalias + 1)		/* "unalias" */
+EXTERN const char Talias[] E_INIT("alias");
+EXTERN const char Tunalias[] E_INIT("unalias");
 EXTERN const char Tsgset[] E_INIT("*=set");
 #define Tset		(Tsgset + 2)		/* "set" */
 EXTERN const char Tsgunset[] E_INIT("*=unset");
@@ -830,7 +829,7 @@ struct temp {
  * stdio and our IO routines
  */
 
-#define shl_spare	(&shf_iob[0])	/* for c_read()/c_print() */
+#define shl_xtrace	(&shf_iob[0])	/* for set -x */
 #define shl_stdout	(&shf_iob[1])
 #define shl_out		(&shf_iob[2])
 #ifdef DF
@@ -984,6 +983,8 @@ EXTERN uint32_t builtin_flag;
 /* current working directory */
 EXTERN char	*current_wd;
 
+/* input line size */
+#define LINE		(4096 - ALLOC_SIZE)
 /*
  * Minimum required space to work with on a line - if the prompt leaves
  * less space than this on a line, the prompt is truncated.
@@ -1151,7 +1152,6 @@ EXTERN struct tbl vtemp;
 #define FDELETE		BIT(10)	/* function deleted while it was executing */
 #define FKSH		BIT(11)	/* function defined with function x (vs x()) */
 #define SPEC_BI		BIT(12)	/* a POSIX special builtin */
-#define REG_BI		BIT(13)	/* a POSIX regular builtin */
 /*
  * Attributes that can be set by the user (used to decide if an unset
  * param should be repoted by set/typeset). Does not include ARRAY or
@@ -1180,12 +1180,11 @@ EXTERN enum {
 
 /* Flags for findcom()/comexec() */
 #define FC_SPECBI	BIT(0)	/* special builtin */
-#define FC_FUNC		BIT(1)	/* function builtin */
-#define FC_REGBI	BIT(2)	/* regular builtin */
-#define FC_UNREGBI	BIT(3)	/* un-regular builtin (!special,!regular) */
-#define FC_BI		(FC_SPECBI|FC_REGBI|FC_UNREGBI)
-#define FC_PATH		BIT(4)	/* do path search */
-#define FC_DEFPATH	BIT(5)	/* use default path in path search */
+#define FC_FUNC		BIT(1)	/* function */
+#define FC_NORMBI	BIT(2)	/* not special builtin */
+#define FC_BI		(FC_SPECBI | FC_NORMBI)
+#define FC_PATH		BIT(3)	/* do path search */
+#define FC_DEFPATH	BIT(4)	/* use default path in path search */
 
 
 #define AF_ARGV_ALLOC	0x1	/* argv[] array allocated */
@@ -1253,10 +1252,6 @@ EXTERN char *tmpdir;		/* TMPDIR value */
 EXTERN const char *prompt;
 EXTERN int cur_prompt;		/* PS1 or PS2 */
 EXTERN int current_lineno;	/* LINENO value */
-
-#define NOBLOCK	((struct op *)NULL)
-#define NOWORD	((char *)NULL)
-#define NOWORDS	((char **)NULL)
 
 /*
  * Description of a command or an operation on commands.
@@ -1326,6 +1321,7 @@ struct op {
 #define CPAT	11	/* close pattern: ) */
 #define ADELIM	12	/* arbitrary delimiter: ${foo:2:3} ${foo/bar/baz} */
 #define FUNSUB	14	/* ${ foo;} substitution (NUL terminated) */
+#define VALSUB	15	/* ${|foo;} substitution (NUL terminated) */
 
 /*
  * IO redirection
@@ -1680,7 +1676,7 @@ void x_init(void);
 #ifdef DEBUG_LEAKS
 void x_done(void);
 #endif
-int x_read(char *, size_t);
+int x_read(char *);
 #endif
 void x_mkraw(int, mksh_ttyst *, bool);
 /* eval.c */
@@ -1834,8 +1830,7 @@ void yyerror(const char *, ...)
     MKSH_A_FORMAT(__printf__, 1, 2);
 Source *pushs(int, Area *);
 void set_prompt(int, Source *);
-void pprompt(const char *, int);
-int promptlen(const char *);
+int pprompt(const char *, int);
 /* main.c */
 int include(const char *, int, const char **, bool);
 int command(const char *, int);
@@ -1903,6 +1898,7 @@ void initctypes(void);
 size_t option(const char *);
 char *getoptions(void);
 void change_flag(enum sh_flag, int, bool);
+void change_xtrace(unsigned char, bool);
 int parse_args(const char **, int, bool *);
 int getn(const char *, int *);
 int gmatchx(const char *, const char *, bool);
@@ -2011,7 +2007,7 @@ char *arrayname(const char *);
 mksh_uari_t set_array(const char *, bool, const char **);
 uint32_t hash(const void *);
 mksh_ari_t rndget(void);
-void rndset(long);
+void rndset(unsigned long);
 
 enum Test_op {
 	/* non-operator */
