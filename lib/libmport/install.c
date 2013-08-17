@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/install.c,v 1.8 2013/03/17 22:49:33 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/install.c,v 1.9 2013/03/17 23:54:17 laffer1 Exp $");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -95,7 +95,7 @@ MPORT_PUBLIC_API int mport_install(mportInstance *mport, const char *pkgname, co
     }
   }
 
-  if (!mport_verify_hash(filename, e[e_loc]->hash)) {
+  if (mport_verify_hash(filename, e[e_loc]->hash) == 0) {
     free(filename);
     mport_index_entry_free_vec(e);
     /* XXX should we unlink the bad file here? */
