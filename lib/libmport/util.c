@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.33 2013/01/22 02:26:09 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.34.2.1 2013/08/17 19:26:06 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -100,16 +100,17 @@ MPORT_PUBLIC_API int mport_verify_hash(const char *filename, const char *hash)
   char *filehash;
 
   filehash = mport_hash_file(filename);
-  if (strcmp(filehash, hash) == 0)
+#ifdef DEBUG
+  printf("gen: '%s'\nsql: '%s'\n", filehash, hash);
+#endif
+  if (strncmp(filehash, hash, 65) == 0)
   {
     free(filehash);
     return 1;
   }
-  else
-  {
-    free(filehash);
-    return 0;
-  }
+
+  free(filehash);
+  return 0;
 }
 
 /* mport_hash_file(const char * filename)
