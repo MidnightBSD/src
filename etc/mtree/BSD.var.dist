@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/mtree/BSD.var.dist,v 1.9 2011/08/07 15:44:51 laffer1 Exp $
+# $MidnightBSD: src/etc/mtree/BSD.var.dist,v 1.10 2012/08/06 01:56:52 laffer1 Exp $
 # $FreeBSD: src/etc/mtree/BSD.var.dist,v 1.71.2.1 2005/08/15 20:24:07 cperciva Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
@@ -45,8 +45,6 @@
         ..
 	msearch         uname=nobody
 	..
-        pkg
-        ..
         ports
         ..
     ..
