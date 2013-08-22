@@ -1,4 +1,4 @@
-sqlite 3.6.23 - A simple, high-performance, self-contained, public domain,
+sqlite 3.7.17 - A simple, high-performance, self-contained, public domain,
 SQL database.
 
 Originals can be found at http://www.sqlite.org/
@@ -7,7 +7,8 @@ Originals can be found at http://www.sqlite.org/
 
 2) Unpack with the xlist:
 	tar xf sqlite-amalgamation-3.6.23.tar.gz -X MIDNIGHTBSD-Xlist
+	We also deleted the tea directory
 
 3) Imported with:
 
-	cvs import -m "import sqlite 3.6.23 (very trimmed)" src/contrib/sqlite3 SQLite v3_6_23
+	cvs import -m "import sqlite 3.7.17 (trimmed)" src/contrib/sqlite3 SQLite v3_7_17
