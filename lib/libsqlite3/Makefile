@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.2 (Berkeley) 12/15/93
-# $MidnightBSD: src/lib/libsqlite3/Makefile,v 1.9 2011/08/03 02:49:31 laffer1 Exp $
+# $MidnightBSD: src/lib/libsqlite3/Makefile,v 1.10 2011/08/06 02:22:58 laffer1 Exp $
 
 SQLITEDIR=	${.CURDIR}/../../contrib/sqlite3
 .PATH:		${SQLITEDIR}
@@ -8,7 +8,10 @@ LIB=		sqlite3
 SHLIB_MAJOR=	1
 
 SRCS=		sqlite3.c
-CFLAGS+=	-I${SQLITEDIR} -DSQLITE_ENABLE_FTS3 
+CFLAGS+=	-I${SQLITEDIR} -DSQLITE_ENABLE_FTS3 -DSQLITE_OS_UNIX=1 \
+		-DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 \
+		-DHAVE_STDLIB_H=1 -DHAVE_INTTYPES_H=1 -DREENTRANT=1 \
+		-DSQLITE_THREADSAFE=1 -DSQLITE_ENABLE_RTREE=1
 
 WARNS?=		0
 
