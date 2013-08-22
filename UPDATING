@@ -12,10 +12,12 @@ Updating Information for MidnightBSD users.
 20130814:
 	mksh R48 imported.
 
+	Sendmail 8.14.7 imported.
+
 20130717:
 	libmport bug was fixed causing hash verification to fail.
 
-	virtio(4) imported from FreeBSD 9-stable. scsi support not
+	virtio(4) imported from FreeBSD 9-stable. SCSI support not
 	included.
 
 20130612:
@@ -1259,4 +1261,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.173 2013/08/14 22:32:16 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.174 2013/08/22 11:51:54 laffer1 Exp $
