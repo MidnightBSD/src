@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/altq/altq/altq_subr.c,v 1.10 2007/07/12 17:00:51 njl Exp $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: altq_subr.c,v 1.21 2003/11/06 06:32:53 kjc Exp $	*/
 
 /*
@@ -29,11 +29,9 @@
 
 #if defined(__FreeBSD__) || defined(__NetBSD__)
 #include "opt_altq.h"
-#if (__FreeBSD__ != 2)
 #include "opt_inet.h"
 #ifdef __FreeBSD__
 #include "opt_inet6.h"
-#endif
 #endif
 #endif /* __FreeBSD__ || __NetBSD__ */
 
@@ -53,6 +51,9 @@
 #include <net/if.h>
 #include <net/if_dl.h>
 #include <net/if_types.h>
+#ifdef __FreeBSD__
+#include <net/vnet.h>
+#endif
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
@@ -71,15 +72,12 @@
 
 /* machine dependent clock related includes */
 #ifdef __FreeBSD__
-#if __FreeBSD__ < 3
-#include "opt_cpu.h"	/* for FreeBSD-2.2.8 to get i586_ctr_freq */
-#endif
 #include <sys/bus.h>
 #include <sys/cpu.h>
 #include <sys/eventhandler.h>
 #include <machine/clock.h>
 #endif
-#if defined(__i386__)
+#if defined(__amd64__) || defined(__i386__)
 #include <machine/cpufunc.h>		/* for pentium tsc */
 #include <machine/specialreg.h>		/* for CPUID_TSC */
 #ifdef __FreeBSD__
@@ -87,7 +85,7 @@
 #elif defined(__NetBSD__) || defined(__OpenBSD__)
 #include <machine/cpu.h>		/* for cpu_feature */
 #endif
-#endif /* __i386__ */
+#endif /* __amd64 || __i386__ */
 
 /*
  * internal function prototypes
@@ -398,13 +396,13 @@ tbr_set(ifq, profile)
 			return (ENOENT);
 		}
 		ifq->altq_tbr = NULL;
-		FREE(tbr, M_DEVBUF);
+		free(tbr, M_DEVBUF);
 		IFQ_UNLOCK(ifq);
 		return (0);
 	}
 
 	IFQ_UNLOCK(ifq);
-	MALLOC(tbr, struct tb_regulator *, sizeof(struct tb_regulator),
+	tbr = malloc(sizeof(struct tb_regulator),
 	       M_DEVBUF, M_WAITOK);
 	if (tbr == NULL) {		/* can not happen */
 		IFQ_UNLOCK(ifq);
@@ -427,7 +425,7 @@ tbr_set(ifq, profile)
 	ifq->altq_tbr = tbr;	/* set the new tbr */
 
 	if (otbr != NULL)
-		FREE(otbr, M_DEVBUF);
+		free(otbr, M_DEVBUF);
 	else {
 		if (tbr_timer == 0) {
 			CALLOUT_RESET(&tbr_callout, 1, tbr_timeout, (void *)0);
@@ -448,6 +446,9 @@ static void
 tbr_timeout(arg)
 	void *arg;
 {
+#ifdef __FreeBSD__
+	VNET_ITERATOR_DECL(vnet_iter);
+#endif
 	struct ifnet *ifp;
 	int active, s;
 
@@ -457,39 +458,33 @@ tbr_timeout(arg)
 #else
 	s = splimp();
 #endif
-#if defined(__FreeBSD__) && (__FreeBSD_version >= 500000)
-	IFNET_RLOCK();
+#ifdef __FreeBSD__
+	IFNET_RLOCK_NOSLEEP();
+	VNET_LIST_RLOCK_NOSLEEP();
+	VNET_FOREACH(vnet_iter) {
+		CURVNET_SET(vnet_iter);
 #endif
-	for (ifp = TAILQ_FIRST(&ifnet); ifp; ifp = TAILQ_NEXT(ifp, if_list)) {
-		/* read from if_snd unlocked */
-		if (!TBR_IS_ENABLED(&ifp->if_snd))
-			continue;
-		active++;
-		if (!IFQ_IS_EMPTY(&ifp->if_snd) && ifp->if_start != NULL)
-			(*ifp->if_start)(ifp);
+		for (ifp = TAILQ_FIRST(&V_ifnet); ifp;
+		    ifp = TAILQ_NEXT(ifp, if_list)) {
+			/* read from if_snd unlocked */
+			if (!TBR_IS_ENABLED(&ifp->if_snd))
+				continue;
+			active++;
+			if (!IFQ_IS_EMPTY(&ifp->if_snd) &&
+			    ifp->if_start != NULL)
+				(*ifp->if_start)(ifp);
+		}
+#ifdef __FreeBSD__
+		CURVNET_RESTORE();
 	}
-#if defined(__FreeBSD__) && (__FreeBSD_version >= 500000)
-	IFNET_RUNLOCK();
+	VNET_LIST_RUNLOCK_NOSLEEP();
+	IFNET_RUNLOCK_NOSLEEP();
 #endif
 	splx(s);
 	if (active > 0)
 		CALLOUT_RESET(&tbr_callout, 1, tbr_timeout, (void *)0);
 	else
 		tbr_timer = 0;	/* don't need tbr_timer anymore */
-#if defined(__alpha__) && !defined(ALTQ_NOPCC)
-	{
-		/*
-		 * XXX read out the machine dependent clock once a second
-		 * to detect counter wrap-around.
-		 */
-		static u_int cnt;
-
-		if (++cnt >= hz) {
-			(void)read_machclk();
-			cnt = 0;
-		}
-	}
-#endif /* __alpha__ && !ALTQ_NOPCC */
 }
 
 /*
@@ -812,10 +807,7 @@ read_dsfield(m, pktattr)
 }
 
 void
-write_dsfield(m, pktattr, dsfield)
-	struct mbuf *m;
-	struct altq_pktattr *pktattr;
-	u_int8_t dsfield;
+write_dsfield(struct mbuf *m, struct altq_pktattr *pktattr, u_int8_t dsfield)
 {
 	struct mbuf *m0;
 
@@ -890,16 +882,9 @@ int machclk_usepcc;
 u_int32_t machclk_freq;
 u_int32_t machclk_per_tick;
 
-#ifdef __alpha__
-#ifdef __FreeBSD__
-extern u_int32_t cycles_per_sec;	/* alpha cpu clock frequency */
-#elif defined(__NetBSD__) || defined(__OpenBSD__)
-extern u_int64_t cycles_per_usec;	/* alpha cpu clock frequency */
-#endif
-#endif /* __alpha__ */
 #if defined(__i386__) && defined(__NetBSD__)
 extern u_int64_t cpu_tsc_freq;
-#endif /* __alpha__ */
+#endif
 
 #if (__FreeBSD_version >= 700035)
 /* Update TSC freq with the value indicated by the caller. */
@@ -909,6 +894,12 @@ tsc_freq_changed(void *arg, const struct cf_level *level, int status)
 	/* If there was an error during the transition, don't do anything. */
 	if (status != 0)
 		return;
+
+#if (__FreeBSD_version >= 701102) && (defined(__amd64__) || defined(__i386__))
+	/* If TSC is P-state invariant, don't do anything. */
+	if (tsc_is_invariant)
+		return;
+#endif
 
 	/* Total setting for this level gives the new frequency in MHz. */
 	init_machclk();
@@ -926,7 +917,7 @@ init_machclk_setup(void)
 
 	machclk_usepcc = 1;
 
-#if (!defined(__i386__) && !defined(__alpha__)) || defined(ALTQ_NOPCC)
+#if (!defined(__amd64__) && !defined(__i386__)) || defined(ALTQ_NOPCC)
 	machclk_usepcc = 0;
 #endif
 #if defined(__FreeBSD__) && defined(SMP)
@@ -935,10 +926,14 @@ init_machclk_setup(void)
 #if defined(__NetBSD__) && defined(MULTIPROCESSOR)
 	machclk_usepcc = 0;
 #endif
-#ifdef __i386__
+#if defined(__amd64__) || defined(__i386__)
 	/* check if TSC is available */
-	if (machclk_usepcc == 1 && ((cpu_feature & CPUID_TSC) == 0 ||
-	    tsc_is_broken))
+#ifdef __FreeBSD__
+	if ((cpu_feature & CPUID_TSC) == 0 ||
+	    atomic_load_acq_64(&tsc_freq) == 0)
+#else
+	if ((cpu_feature & CPUID_TSC) == 0)
+#endif
 		machclk_usepcc = 0;
 #endif
 }
@@ -968,25 +963,15 @@ init_machclk(void)
 	 * if the clock frequency (of Pentium TSC or Alpha PCC) is
 	 * accessible, just use it.
 	 */
-#ifdef __i386__
+#if defined(__amd64__) || defined(__i386__)
 #ifdef __FreeBSD__
-#if (__FreeBSD_version > 300000)
-	machclk_freq = tsc_freq;
-#else
-	machclk_freq = i586_ctr_freq;
-#endif
+	machclk_freq = atomic_load_acq_64(&tsc_freq);
 #elif defined(__NetBSD__)
 	machclk_freq = (u_int32_t)cpu_tsc_freq;
 #elif defined(__OpenBSD__) && (defined(I586_CPU) || defined(I686_CPU))
 	machclk_freq = pentium_mhz * 1000000;
 #endif
-#elif defined(__alpha__)
-#ifdef __FreeBSD__
-	machclk_freq = cycles_per_sec;
-#elif defined(__NetBSD__) || defined(__OpenBSD__)
-	machclk_freq = (u_int32_t)(cycles_per_usec * 1000000);
 #endif
-#endif /* __alpha__ */
 
 	/*
 	 * if we don't know the clock frequency, measure it.
@@ -1032,25 +1017,8 @@ read_machclk(void)
 	u_int64_t val;
 
 	if (machclk_usepcc) {
-#if defined(__i386__)
+#if defined(__amd64__) || defined(__i386__)
 		val = rdtsc();
-#elif defined(__alpha__)
-		static u_int32_t last_pcc, upper;
-		u_int32_t pcc;
-
-		/*
-		 * for alpha, make a 64bit counter value out of the 32bit
-		 * alpha processor cycle counter.
-		 * read_machclk must be called within a half of its
-		 * wrap-around cycle (about 5 sec for 400MHz cpu) to properly
-		 * detect a counter wrap-around.
-		 * tbr_timeout calls read_machclk once a second.
-		 */
-		pcc = (u_int32_t)alpha_rpcc();
-		if (pcc <= last_pcc)
-			upper++;
-		last_pcc = pcc;
-		val = ((u_int64_t)upper << 32) + pcc;
 #else
 		panic("read_machclk");
 #endif
@@ -1397,7 +1365,7 @@ acc_add_filter(classifier, filter, class, phandle)
 		return (EINVAL);
 #endif
 
-	MALLOC(afp, struct acc_filter *, sizeof(struct acc_filter),
+	afp = malloc(sizeof(struct acc_filter),
 	       M_DEVBUF, M_WAITOK);
 	if (afp == NULL)
 		return (ENOMEM);
@@ -1524,7 +1492,7 @@ acc_delete_filter(classifier, handle)
 	LIST_REMOVE(afp, f_chain);
 	splx(s);
 
-	FREE(afp, M_DEVBUF);
+	free(afp, M_DEVBUF);
 
 	/* todo: update filt_bmask */
 
@@ -1554,7 +1522,7 @@ acc_discard_filters(classifier, class, all)
 			LIST_FOREACH(afp, &classifier->acc_filters[i], f_chain)
 				if (all || afp->f_class == class) {
 					LIST_REMOVE(afp, f_chain);
-					FREE(afp, M_DEVBUF);
+					free(afp, M_DEVBUF);
 					/* start again from the head */
 					break;
 				}
@@ -1976,7 +1944,7 @@ ip4f_init(void)
 
 	TAILQ_INIT(&ip4f_list);
 	for (i=0; i<IP4F_TABSIZE; i++) {
-		MALLOC(fp, struct ip4_frag *, sizeof(struct ip4_frag),
+		fp = malloc(sizeof(struct ip4_frag),
 		       M_DEVBUF, M_NOWAIT);
 		if (fp == NULL) {
 			printf("ip4f_init: can't alloc %dth entry!\n", i);
