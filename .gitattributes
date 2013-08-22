@@ -2710,9 +2710,7 @@ contrib/bind98/bin/pkcs11/OLD-PKCS11-NOTES -text
 contrib/bind98/bin/pkcs11/include/pkcs11.h -text
 contrib/bind98/bin/pkcs11/include/pkcs11f.h -text
 contrib/bind98/bin/pkcs11/include/pkcs11t.h -text
-contrib/bind98/bin/pkcs11/openssl-0.9.8s-patch -text
 contrib/bind98/bin/pkcs11/openssl-0.9.8x-patch -text
-contrib/bind98/bin/pkcs11/openssl-1.0.0f-patch -text
 contrib/bind98/bin/pkcs11/openssl-1.0.0j-patch -text
 contrib/bind98/bin/pkcs11/openssl-1.0.1c-patch -text
 contrib/bind98/bin/pkcs11/pkcs11-destroy.8 -text
@@ -5358,7 +5356,6 @@ contrib/bind98/lib/win32/bindevt/bindevt.dsp -text
 contrib/bind98/lib/win32/bindevt/bindevt.dsw -text
 contrib/bind98/lib/win32/bindevt/bindevt.mak -text
 contrib/bind98/lib/win32/bindevt/bindevt.mc -text
-contrib/bind98/libtool.m4 -text
 contrib/bind98/ltmain.sh -text
 contrib/bind98/make/Makefile.in -text
 contrib/bind98/make/includes.in -text
