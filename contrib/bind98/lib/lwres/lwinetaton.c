@@ -1,5 +1,5 @@
 /*
- * Portions Copyright (C) 2004, 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (C) 2004, 2005, 2007, 2012  Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (C) 1996-2001, 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -72,7 +72,7 @@
  */
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)inet_addr.c	8.1 (Berkeley) 6/17/93";
-static char rcsid[] = "$Id: lwinetaton.c,v 1.1.1.1 2013-01-30 01:45:01 laffer1 Exp $";
+static char rcsid[] = "$Id: lwinetaton.c,v 1.1.1.2 2013-08-22 22:52:01 laffer1 Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <config.h>
@@ -95,7 +95,7 @@ static char rcsid[] = "$Id: lwinetaton.c,v 1.1.1.1 2013-01-30 01:45:01 laffer1 E
  */
 int
 lwres_net_aton(const char *cp, struct in_addr *addr) {
-	unsigned long val;
+	lwres_uint32_t val;
 	int base, n;
 	unsigned char c;
 	lwres_uint8_t parts[4];
@@ -120,7 +120,7 @@ lwres_net_aton(const char *cp, struct in_addr *addr) {
 			c = *++cp;
 			if (c == 'x' || c == 'X') {
 				base = 16;
-			       	c = *++cp;
+				c = *++cp;
 			} else {
 				base = 8;
 				digit = 1;

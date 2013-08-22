@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007, 2009-2011  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2009-2013  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: named-checkconf.c,v 1.1.1.1 2013-01-30 01:44:56 laffer1 Exp $ */
+/* $Id: named-checkconf.c,v 1.1.1.2 2013-08-22 22:51:51 laffer1 Exp $ */
 
 /*! \file */
 
@@ -295,6 +295,18 @@ configure_zone(const char *vclass, const char *view,
 	}
 
 	obj = NULL;
+	if (get_maps(maps, "check-spf", &obj)) {
+		if (strcasecmp(cfg_obj_asstring(obj), "warn") == 0) {
+			zone_options |= DNS_ZONEOPT_CHECKSPF;
+		} else if (strcasecmp(cfg_obj_asstring(obj), "ignore") == 0) {
+			zone_options &= ~DNS_ZONEOPT_CHECKSPF;
+		} else
+			INSIST(0);
+	} else {
+		zone_options |= DNS_ZONEOPT_CHECKSPF;
+	}
+
+	obj = NULL;
 	if (get_checknames(maps, &obj)) {
 		if (strcasecmp(cfg_obj_asstring(obj), "warn") == 0) {
 			zone_options |= DNS_ZONEOPT_CHECKNAMES;
@@ -471,6 +483,7 @@ main(int argc, char **argv) {
 			if (isc_commandline_option != '?')
 				fprintf(stderr, "%s: invalid argument -%c\n",
 					program, isc_commandline_option);
+			/* FALLTHROUGH */
 		case 'h':
 			usage();
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2007-2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2007-2009, 2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: txt_16.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: txt_16.c,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
 
 /* Reviewed: Thu Mar 16 15:40:00 PST 2000 by bwelling */
 
@@ -38,6 +38,13 @@ fromtext_txt(ARGS_FROMTEXT) {
 	UNUSED(callbacks);
 
 	strings = 0;
+	if ((options & DNS_RDATA_UNKNOWNESCAPE) != 0) {
+		isc_textregion_t r;
+		DE_CONST("#", r.base);
+		r.length = 1;
+		RETERR(txt_fromtext(&r, target));
+		strings++;
+	}
 	for (;;) {
 		RETERR(isc_lex_getmastertoken(lexer, &token,
 					      isc_tokentype_qstring,

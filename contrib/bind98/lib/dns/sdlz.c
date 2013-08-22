@@ -50,7 +50,7 @@
  * USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: sdlz.c,v 1.1.1.1 2013-01-30 01:44:59 laffer1 Exp $ */
+/* $Id: sdlz.c,v 1.1.1.2 2013-08-22 22:51:59 laffer1 Exp $ */
 
 /*! \file */
 
@@ -1817,7 +1817,7 @@ dns_sdlz_putrr(dns_sdlzlookup_t *lookup, const char *type, dns_ttl_t ttl,
 
 	size = initial_size(data);
 	do {
-		isc_buffer_init(&b, data, strlen(data));
+		isc_buffer_constinit(&b, data, strlen(data));
 		isc_buffer_add(&b, strlen(data));
 
 		result = isc_lex_openbuffer(lex, &b);
@@ -1883,7 +1883,7 @@ dns_sdlz_putnamedrr(dns_sdlzallnodes_t *allnodes, const char *name,
 		origin = &sdlz->common.origin;
 	else
 		origin = dns_rootname;
-	isc_buffer_init(&b, name, strlen(name));
+	isc_buffer_constinit(&b, name, strlen(name));
 	isc_buffer_add(&b, strlen(name));
 
 	result = dns_name_fromtext(newname, &b, origin, 0, NULL);

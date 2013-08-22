@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: net.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: net.c,v 1.1.1.2 2013-08-22 22:52:01 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -301,8 +301,6 @@ try_ipv6only(void) {
 		goto close;
 	}
 
-	close(s);
-
 	ipv6only_result = ISC_R_SUCCESS;
 
 close:
@@ -358,7 +356,6 @@ try_ipv6pktinfo(void) {
 		goto close;
 	}
 
-	close(s);
 	ipv6pktinfo_result = ISC_R_SUCCESS;
 
 close:

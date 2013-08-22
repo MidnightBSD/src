@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2009-2012  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,13 +14,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dnssec-revoke.c,v 1.1.1.1 2013-01-30 01:44:56 laffer1 Exp $ */
+/* $Id: dnssec-revoke.c,v 1.1.1.2 2013-08-22 22:51:51 laffer1 Exp $ */
 
 /*! \file */
 
 #include <config.h>
 
-#include <libgen.h>
 #include <stdlib.h>
 #include <unistd.h>
 

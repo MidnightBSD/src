@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: nsec3.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: nsec3.h,v 1.1.1.2 2013-08-22 22:51:59 laffer1 Exp $ */
 
 #ifndef DNS_NSEC3_H
 #define DNS_NSEC3_H 1
@@ -247,6 +247,14 @@ dns_nsec3param_deletechains(dns_db_t *db, dns_dbversion_t *ver,
  * Mark NSEC3PARAM for deletion.
  */
 
+isc_result_t
+dns_nsec3_noexistnodata(dns_rdatatype_t type, dns_name_t* name,
+			dns_name_t *nsec3name, dns_rdataset_t *nsec3set,
+			dns_name_t *zonename, isc_boolean_t *exists,
+			isc_boolean_t *data, isc_boolean_t *optout,
+			isc_boolean_t *unknown, isc_boolean_t *setclosest,
+			isc_boolean_t *setnearest, dns_name_t *closest,
+			dns_name_t *nearest, dns_nseclog_t logit, void *arg);
 
 ISC_LANG_ENDDECLS
 

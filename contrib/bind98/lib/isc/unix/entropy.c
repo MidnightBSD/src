@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2008  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2008, 2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: entropy.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: entropy.c,v 1.1.1.2 2013-08-22 22:52:01 laffer1 Exp $ */
 
 /* \file unix/entropy.c
  * \brief
@@ -536,8 +536,7 @@ isc_entropy_createfilesource(isc_entropy_t *ent, const char *fname) {
 
 		memset(&sname, 0, sizeof(sname));
 		sname.sun_family = AF_UNIX;
-		strncpy(sname.sun_path, fname, sizeof(sname.sun_path));
-		sname.sun_path[sizeof(sname.sun_path)-1] = '0';
+		strlcpy(sname.sun_path, fname, sizeof(sname.sun_path));
 #ifdef ISC_PLATFORM_HAVESALEN
 #if !defined(SUN_LEN)
 #define SUN_LEN(su) \

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2013  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: nsupdate.c,v 1.1.1.1 2013-01-30 01:44:57 laffer1 Exp $ */
+/* $Id: nsupdate.c,v 1.1.1.2 2013-08-22 22:51:52 laffer1 Exp $ */
 
 /*! \file */
 
@@ -930,7 +930,7 @@ get_address(char *host, in_port_t port, isc_sockaddr_t *sockaddr) {
 	INSIST(count == 1);
 }
 
-#define PARSE_ARGS_FMT "dDML:y:ghlovk:p:rR::t:u:"
+#define PARSE_ARGS_FMT "dDML:y:ghlovk:p:r:R::t:u:"
 
 static void
 pre_parse_args(int argc, char **argv) {

@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dnssec-keyfromlabel.c,v 1.1.1.1 2013-01-30 01:44:56 laffer1 Exp $ */
+/* $Id: dnssec-keyfromlabel.c,v 1.1.1.2 2013-08-22 22:51:51 laffer1 Exp $ */
 
 /*! \file */
 
@@ -356,6 +356,8 @@ main(int argc, char **argv) {
 		fprintf(stderr, "The use of RSA (RSAMD5) is not recommended.\n"
 				"If you still wish to use RSA (RSAMD5) please "
 				"specify \"-a RSAMD5\"\n");
+		if (freeit != NULL)
+			free(freeit);
 		return (1);
 	} else {
 		r.base = algname;

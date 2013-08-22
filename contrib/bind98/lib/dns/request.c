@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2013  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: request.c,v 1.1.1.1 2013-01-30 01:44:59 laffer1 Exp $ */
+/* $Id: request.c,v 1.1.1.2 2013-08-22 22:51:59 laffer1 Exp $ */
 
 /*! \file */
 
@@ -894,12 +894,14 @@ dns_request_createvia3(dns_requestmgr_t *requestmgr, dns_message_t *message,
 	REQUIRE(action != NULL);
 	REQUIRE(requestp != NULL && *requestp == NULL);
 	REQUIRE(timeout > 0);
-	if (srcaddr != NULL)
-		REQUIRE(isc_sockaddr_pf(srcaddr) == isc_sockaddr_pf(destaddr));
 
 	mctx = requestmgr->mctx;
 
 	req_log(ISC_LOG_DEBUG(3), "dns_request_createvia");
+
+	if (srcaddr != NULL &&
+	    isc_sockaddr_pf(srcaddr) != isc_sockaddr_pf(destaddr))
+		return (ISC_R_FAMILYMISMATCH);
 
 	if (isblackholed(requestmgr->dispatchmgr, destaddr))
 		return (DNS_R_BLACKHOLED);

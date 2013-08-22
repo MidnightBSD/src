@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dbiterator_test.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: dbiterator_test.c,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
 
 /*! \file */
 
@@ -82,7 +82,7 @@ setup_db(const char *testfile, dns_dbtype_t dbtype, dns_db_t **db) {
 static isc_result_t
 make_name(const char *src, dns_name_t *name) {
 	isc_buffer_t b;
-	isc_buffer_init(&b, src, strlen(src));
+	isc_buffer_constinit(&b, src, strlen(src));
 	isc_buffer_add(&b, strlen(src));
 	return (dns_name_fromtext(name, &b, dns_rootname, 0, NULL));
 }

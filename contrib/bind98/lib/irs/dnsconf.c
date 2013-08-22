@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2009, 2012  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dnsconf.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: dnsconf.c,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
 
 /*! \file */
 
@@ -144,8 +144,8 @@ configure_dnsseckeys(irs_dnsconf_t *conf, cfg_obj_t *cfgobj,
 			/* Configure key name */
 			dns_fixedname_init(&fkeyname);
 			keyname_base = dns_fixedname_name(&fkeyname);
-			isc_buffer_init(&namebuf, keynamestr,
-					strlen(keynamestr));
+			isc_buffer_constinit(&namebuf, keynamestr,
+					     strlen(keynamestr));
 			isc_buffer_add(&namebuf, strlen(keynamestr));
 			result = dns_name_fromtext(keyname_base, &namebuf,
 						   dns_rootname, 0, NULL);

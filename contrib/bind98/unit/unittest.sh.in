@@ -14,13 +14,13 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: unittest.sh.in,v 1.1.1.1 2013-01-30 01:45:01 laffer1 Exp $
+# $Id: unittest.sh.in,v 1.1.1.2 2013-08-22 22:52:01 laffer1 Exp $
 
 PATH=${PATH}:@ATFBIN@
 export PATH
 
 status=0
-if [ -n "@ATFBIN@" ]
+if [ -n "@ATFBIN@" -a -f Atffile ]
 then
 	echo "I: unit tests"
 	atf-run > atf.out

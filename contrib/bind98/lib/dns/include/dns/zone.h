@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2013  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: zone.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: zone.h,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
 
 #ifndef DNS_ZONE_H
 #define DNS_ZONE_H 1
@@ -34,6 +34,7 @@
 
 #include <dns/masterdump.h>
 #include <dns/rdatastruct.h>
+#include <dns/rpz.h>
 #include <dns/types.h>
 
 typedef enum {
@@ -77,6 +78,7 @@ typedef enum {
 #define DNS_ZONEOPT_DNSKEYKSKONLY 0x10000000U	/*%< dnssec-dnskey-kskonly */
 #define DNS_ZONEOPT_CHECKDUPRR	  0x20000000U   /*%< check-dup-records */
 #define DNS_ZONEOPT_CHECKDUPRRFAIL 0x40000000U	/*%< fatal check-dup-records failures */
+#define DNS_ZONEOPT_CHECKSPF	  0x80000000U	/*%< check SPF records */
 
 #ifndef NOMINUM_PUBLIC
 /*
@@ -1897,6 +1899,15 @@ dns_zone_synckeyzone(dns_zone_t *zone);
  * Force the managed key zone to synchronize, and start the key
  * maintenance timer.
  */
+
+isc_result_t
+dns_zone_rpz_enable(dns_zone_t *zone);
+/*%
+ * Set the response policy associated with a zone.
+ */
+
+isc_boolean_t
+dns_zone_get_rpz(dns_zone_t *zone);
 
 ISC_LANG_ENDDECLS
 

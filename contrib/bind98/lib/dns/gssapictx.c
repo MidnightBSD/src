@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: gssapictx.c,v 1.1.1.1 2013-01-30 01:44:59 laffer1 Exp $ */
+/* $Id: gssapictx.c,v 1.1.1.2 2013-08-22 22:51:58 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -541,7 +541,7 @@ gss_err_message(isc_mem_t *mctx, isc_uint32_t major, isc_uint32_t minor,
 	}
 
 	estr = gss_error_tostring(major, minor, buf, sizeof(buf));
-	if (estr)
+	if (estr != NULL)
 		(*err_message) = isc_mem_strdup(mctx, estr);
 }
 #endif
@@ -597,8 +597,12 @@ dst_gssapi_initctx(dns_name_t *name, isc_buffer_t *intoken,
 
 	if (gret != GSS_S_COMPLETE && gret != GSS_S_CONTINUE_NEEDED) {
 		gss_err_message(mctx, gret, minor, err_message);
-		gss_log(3, "Failure initiating security context: %s",
-			*err_message);
+		if (err_message != NULL && *err_message != NULL)
+			gss_log(3, "Failure initiating security context: %s",
+				*err_message);
+		else
+			gss_log(3, "Failure initiating security context");
+
 		result = ISC_R_FAILURE;
 		goto out;
 	}

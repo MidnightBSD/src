@@ -12,15 +12,17 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: Makefile.in,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $
+# $Id: Makefile.in,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $
 
 top_srcdir =	@top_srcdir@
 srcdir =	@top_srcdir@/lib/isc/unix
+export_srcdir = @top_srcdir@/lib/export
 
 @BIND9_MAKE_INCLUDES@
 
 CINCLUDES =	-I${srcdir}/include \
 		-I${srcdir}/../@ISC_THREAD_DIR@/include \
+		-I${export_srcdir}/isc/include \
 		-I../include \
 		-I${srcdir}/../include \
 		-I${srcdir}/..

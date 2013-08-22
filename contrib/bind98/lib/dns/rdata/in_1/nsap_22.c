@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007, 2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2009, 2013  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: nsap_22.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: nsap_22.c,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
 
 /* Reviewed: Fri Mar 17 10:41:07 PST 2000 by gson */
 
@@ -53,7 +53,6 @@ fromtext_in_nsap(ARGS_FROMTEXT) {
 		RETTOK(DNS_R_SYNTAX);
 	isc_textregion_consume(sr, 2);
 	digits = 0;
-	n = 0;
 	while (sr->length > 0) {
 		if (sr->base[0] == '.') {
 			isc_textregion_consume(sr, 1);

@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: task.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: task.h,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
 
 #ifndef ISC_TASK_H
 #define ISC_TASK_H 1
@@ -726,7 +726,7 @@ isc_taskmgr_excltask(isc_taskmgr_t *mgr, isc_task_t **taskp);
 
 #ifdef HAVE_LIBXML2
 
-void
+int
 isc_taskmgr_renderxml(isc_taskmgr_t *mgr, xmlTextWriterPtr writer);
 
 #endif

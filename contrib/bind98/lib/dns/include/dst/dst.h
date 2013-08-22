@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dst.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: dst.h,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
 
 #ifndef DST_DST_H
 #define DST_DST_H 1
@@ -26,6 +26,7 @@
 #include <isc/stdtime.h>
 
 #include <dns/types.h>
+#include <dns/log.h>
 #include <dns/name.h>
 #include <dns/secalg.h>
 
@@ -169,6 +170,11 @@ dst_algorithm_supported(unsigned int alg);
 
 isc_result_t
 dst_context_create(dst_key_t *key, isc_mem_t *mctx, dst_context_t **dctxp);
+
+isc_result_t
+dst_context_create2(dst_key_t *key, isc_mem_t *mctx,
+		    isc_logcategory_t *category, dst_context_t **dctxp);
+
 /*%<
  * Creates a context to be used for a sign or verify operation.
  *

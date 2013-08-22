@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2006, 2007, 2009, 2010, 2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2006, 2007, 2009, 2010, 2012, 2013  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dlv_32769.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: dlv_32769.c,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
 
 /* draft-ietf-dnsext-delegation-signer-05.txt */
 
@@ -91,7 +91,7 @@ fromtext_dlv(ARGS_FROMTEXT) {
 		length = -1;
 		break;
 	}
-	return (isc_hex_tobuffer(lexer, target, -1));
+	return (isc_hex_tobuffer(lexer, target, length));
 }
 
 static inline isc_result_t

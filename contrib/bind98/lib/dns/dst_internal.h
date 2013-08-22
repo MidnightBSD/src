@@ -29,7 +29,7 @@
  * IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dst_internal.h,v 1.1.1.1 2013-01-30 01:44:59 laffer1 Exp $ */
+/* $Id: dst_internal.h,v 1.1.1.2 2013-08-22 22:51:58 laffer1 Exp $ */
 
 #ifndef DST_DST_INTERNAL_H
 #define DST_DST_INTERNAL_H 1
@@ -137,6 +137,7 @@ struct dst_context {
 	unsigned int magic;
 	dst_key_t *key;
 	isc_mem_t *mctx;
+	isc_logcategory_t *category;
 	union {
 		void *generic;
 		dst_gssapi_signverifyctx_t *gssctx;

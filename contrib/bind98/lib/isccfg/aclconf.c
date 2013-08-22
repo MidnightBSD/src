@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: aclconf.c,v 1.1.1.1 2013-01-30 01:45:01 laffer1 Exp $ */
+/* $Id: aclconf.c,v 1.1.1.2 2013-08-22 22:52:01 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -192,7 +192,7 @@ convert_keyname(const cfg_obj_t *keyobj, isc_log_t *lctx, isc_mem_t *mctx,
 	const char *txtname = cfg_obj_asstring(keyobj);
 
 	keylen = strlen(txtname);
-	isc_buffer_init(&buf, txtname, keylen);
+	isc_buffer_constinit(&buf, txtname, keylen);
 	isc_buffer_add(&buf, keylen);
 	dns_fixedname_init(&fixname);
 	result = dns_name_fromtext(dns_fixedname_name(&fixname), &buf,

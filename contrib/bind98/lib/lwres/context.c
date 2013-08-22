@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007-2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007-2009, 2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001, 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: context.c,v 1.1.1.1 2013-01-30 01:45:01 laffer1 Exp $ */
+/* $Id: context.c,v 1.1.1.2 2013-08-22 22:52:01 laffer1 Exp $ */
 
 /*! \file context.c
    lwres_context_create() creates a #lwres_context_t structure for use in
@@ -377,6 +377,7 @@ lwres_context_send(lwres_context_t *ctx,
 		lwresult = context_connect(ctx);
 		if (lwresult != LWRES_R_SUCCESS)
 			return (lwresult);
+		INSIST(ctx->sock >= 0);
 	}
 
 	ret = sendto(ctx->sock, sendbase, sendlen, 0, NULL, 0);

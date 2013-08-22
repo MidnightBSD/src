@@ -15,12 +15,13 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dst_openssl.h,v 1.1.1.1 2013-01-30 01:44:59 laffer1 Exp $ */
+/* $Id: dst_openssl.h,v 1.1.1.2 2013-08-22 22:51:58 laffer1 Exp $ */
 
 #ifndef DST_OPENSSL_H
 #define DST_OPENSSL_H 1
 
 #include <isc/lang.h>
+#include <isc/log.h>
 #include <isc/result.h>
 
 #include <openssl/err.h>
@@ -41,6 +42,10 @@ dst__openssl_toresult(isc_result_t fallback);
 
 isc_result_t
 dst__openssl_toresult2(const char *funcname, isc_result_t fallback);
+
+isc_result_t
+dst__openssl_toresult3(isc_logcategory_t *category,
+		       const char *funcname, isc_result_t fallback);
 
 #ifdef USE_ENGINE
 ENGINE *

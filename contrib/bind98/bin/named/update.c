@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2011  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: update.c,v 1.1.1.1 2013-01-30 01:44:57 laffer1 Exp $ */
+/* $Id: update.c,v 1.1.1.2 2013-08-22 22:51:52 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -3500,7 +3500,8 @@ add_signing_records(dns_db_t *db, dns_rdatatype_t privatetype,
 		ISC_LIST_UNLINK(temp_diff.tuples, tuple, link);
 		ISC_LIST_APPEND(diff->tuples, tuple, link);
 
-		dns_rdata_tostruct(&tuple->rdata, &dnskey, NULL);
+		result = dns_rdata_tostruct(&tuple->rdata, &dnskey, NULL);
+		RUNTIME_CHECK(result == ISC_R_SUCCESS);
 		if ((dnskey.flags &
 		     (DNS_KEYFLAG_OWNERMASK|DNS_KEYTYPE_NOAUTH))
 			 != DNS_KEYOWNER_ZONE)

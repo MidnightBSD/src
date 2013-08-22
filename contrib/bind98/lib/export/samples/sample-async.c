@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2009, 2013  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: sample-async.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: sample-async.c,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -398,5 +398,5 @@ main(int argc, char *argv[]) {
 	isc_app_ctxfinish(query_actx);
 	ctxs_destroy(&mctx, &query_actx, &taskmgr, &socketmgr, &timermgr);
 
-	exit(0);
+	return (0);
 }

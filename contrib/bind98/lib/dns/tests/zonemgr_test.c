@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: zonemgr_test.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: zonemgr_test.c,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
 
 /*! \file */
 
@@ -46,7 +46,7 @@ make_zone(const char *name, dns_zone_t **zonep) {
 	CHECK(dns_view_create(mctx, dns_rdataclass_in, "view", &view));
 	CHECK(dns_zone_create(&zone, mctx));
 
-	isc_buffer_init(&buffer, name, strlen(name));
+	isc_buffer_constinit(&buffer, name, strlen(name));
 	isc_buffer_add(&buffer, strlen(name));
 	dns_fixedname_init(&fixorigin);
 	origin = dns_fixedname_name(&fixorigin);

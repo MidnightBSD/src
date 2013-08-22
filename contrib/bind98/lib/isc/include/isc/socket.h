@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: socket.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: socket.h,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
 
 #ifndef ISC_SOCKET_H
 #define ISC_SOCKET_H 1
@@ -1116,7 +1116,7 @@ isc__socketmgr_maxudp(isc_socketmgr_t *mgr, int maxudp);
 
 #ifdef HAVE_LIBXML2
 
-void
+int
 isc_socketmgr_renderxml(isc_socketmgr_t *mgr, xmlTextWriterPtr writer);
 /*%<
  * Render internal statistics and other state into the XML document.

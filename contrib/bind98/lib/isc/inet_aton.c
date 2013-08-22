@@ -1,5 +1,5 @@
 /*
- * Portions Copyright (C) 2004, 2005, 2007, 2008  Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (C) 2004, 2005, 2007, 2008, 2012  Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (C) 1996-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -71,7 +71,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)inet_addr.c	8.1 (Berkeley) 6/17/93";
-static char rcsid[] = "$Id: inet_aton.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $";
+static char rcsid[] = "$Id: inet_aton.c,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <config.h>
@@ -91,7 +91,7 @@ static char rcsid[] = "$Id: inet_aton.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Ex
  */
 int
 isc_net_aton(const char *cp, struct in_addr *addr) {
-	unsigned long val;
+	isc_uint32_t val;
 	int base, n;
 	unsigned char c;
 	isc_uint8_t parts[4];

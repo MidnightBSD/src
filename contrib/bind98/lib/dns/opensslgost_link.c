@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: opensslgost_link.c,v 1.1.1.1 2013-01-30 01:44:59 laffer1 Exp $ */
+/* $Id: opensslgost_link.c,v 1.1.1.2 2013-08-22 22:51:59 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -127,7 +127,8 @@ opensslgost_verify(dst_context_t *dctx, const isc_region_t *sig) {
 	case 0:
 		return (dst__openssl_toresult(DST_R_VERIFYFAILURE));
 	default:
-		return (dst__openssl_toresult2("EVP_VerifyFinal",
+		return (dst__openssl_toresult3(dctx->category,
+					       "EVP_VerifyFinal",
 					       DST_R_VERIFYFAILURE));
 	}
 }

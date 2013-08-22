@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2013  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001, 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: thread.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: thread.c,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
 
 /*! \file */
 
@@ -25,7 +25,7 @@
 #include <isc/util.h>
 
 #ifndef THREAD_MINSTACKSIZE
-#define THREAD_MINSTACKSIZE		(64U * 1024)
+#define THREAD_MINSTACKSIZE		(1024U * 1024)
 #endif
 
 isc_result_t

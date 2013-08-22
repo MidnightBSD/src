@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dnstest.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: dnstest.c,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
 
 /*! \file */
 
@@ -214,7 +214,7 @@ dns_test_makezone(const char *name, dns_zone_t **zonep, dns_view_t *view,
 
 	CHECK(dns_zone_create(&zone, mctx));
 
-	isc_buffer_init(&buffer, name, strlen(name));
+	isc_buffer_constinit(&buffer, name, strlen(name));
 	isc_buffer_add(&buffer, strlen(name));
 	dns_fixedname_init(&fixorigin);
 	origin = dns_fixedname_name(&fixorigin);

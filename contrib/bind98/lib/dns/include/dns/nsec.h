@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: nsec.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: nsec.h,v 1.1.1.2 2013-08-22 22:51:59 laffer1 Exp $ */
 
 #ifndef DNS_NSEC_H
 #define DNS_NSEC_H 1
@@ -73,6 +73,19 @@ dns_nsec_nseconly(dns_db_t *db, dns_dbversion_t *version,
  *
  * Requires:
  * 	'answer' to be non NULL.
+ */
+
+isc_result_t
+dns_nsec_noexistnodata(dns_rdatatype_t type, dns_name_t *name,
+		       dns_name_t *nsecname, dns_rdataset_t *nsecset,
+		       isc_boolean_t *exists, isc_boolean_t *data,
+		       dns_name_t *wild, dns_nseclog_t log, void *arg);
+/*%
+ * Return ISC_R_SUCCESS if we can determine that the name doesn't exist
+ * or we can determine whether there is data or not at the name.
+ * If the name does not exist return the wildcard name.
+ *
+ * Return ISC_R_IGNORE when the NSEC is not the appropriate one.
  */
 
 ISC_LANG_ENDDECLS

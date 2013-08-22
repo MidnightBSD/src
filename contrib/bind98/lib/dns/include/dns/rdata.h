@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdata.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: rdata.h,v 1.1.1.2 2013-08-22 22:51:59 laffer1 Exp $ */
 
 #ifndef DNS_RDATA_H
 #define DNS_RDATA_H 1
@@ -176,6 +176,7 @@ struct dns_rdata {
 #define DNS_RDATA_CHECKREVERSE		DNS_NAME_CHECKREVERSE
 #define DNS_RDATA_CHECKMX		DNS_NAME_CHECKMX
 #define DNS_RDATA_CHECKMXFAIL		DNS_NAME_CHECKMXFAIL
+#define DNS_RDATA_UNKNOWNESCAPE		0x80000000
 
 /***
  *** Initialization

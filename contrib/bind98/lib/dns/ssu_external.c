@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: ssu_external.c,v 1.1.1.1 2013-01-30 01:44:59 laffer1 Exp $ */
+/* $Id: ssu_external.c,v 1.1.1.2 2013-08-22 22:51:59 laffer1 Exp $ */
 
 /*
  * This implements external update-policy rules.  This allows permission
@@ -79,7 +79,7 @@ ux_socket_connect(const char *path) {
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path, path, sizeof(addr.sun_path));
+	strlcpy(addr.sun_path, path, sizeof(addr.sun_path));
 
 	fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (fd == -1) {

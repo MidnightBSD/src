@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007-2009, 2011, 2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007-2009, 2011-2013  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001, 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: db.c,v 1.1.1.1 2013-01-30 01:44:59 laffer1 Exp $ */
+/* $Id: db.c,v 1.1.1.2 2013-08-22 22:51:58 laffer1 Exp $ */
 
 /*! \file */
 
@@ -945,11 +945,12 @@ dns_db_resigned(dns_db_t *db, dns_rdataset_t *rdataset,
 		(db->methods->resigned)(db, rdataset, version);
 }
 
-void
+isc_result_t
 dns_db_rpz_enabled(dns_db_t *db, dns_rpz_st_t *st)
 {
 	if (db->methods->rpz_enabled != NULL)
-		(db->methods->rpz_enabled)(db, st);
+		return ((db->methods->rpz_enabled)(db, st));
+	return (ISC_R_SUCCESS);
 }
 
 void

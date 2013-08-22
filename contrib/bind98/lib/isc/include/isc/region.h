@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2013  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: region.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: region.h,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
 
 #ifndef ISC_REGION_H
 #define ISC_REGION_H 1
@@ -23,6 +23,7 @@
 /*! \file isc/region.h */
 
 #include <isc/types.h>
+#include <isc/lang.h>
 
 struct isc_region {
 	unsigned char *	base;
@@ -81,12 +82,14 @@ struct isc_consttextregion {
 	} while (0)
 /*@}*/
 
+ISC_LANG_BEGINDECLS
+
 int
 isc_region_compare(isc_region_t *r1, isc_region_t *r2);
 /*%<
- * Compares the contents of two regions 
+ * Compares the contents of two regions
  *
- * Requires: 
+ * Requires:
  *\li	'r1' is a valid region
  *\li	'r2' is a valid region
  *
@@ -95,5 +98,7 @@ isc_region_compare(isc_region_t *r1, isc_region_t *r2);
  *\li	 = 0 if r1 is lexicographically identical to r2
  *\li	 > 0 if r1 is lexicographically greater than r2
  */
+
+ISC_LANG_ENDDECLS
 
 #endif /* ISC_REGION_H */

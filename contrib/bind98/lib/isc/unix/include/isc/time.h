@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2009, 2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: time.h,v 1.1.1.1 2013-01-30 01:45:01 laffer1 Exp $ */
+/* $Id: time.h,v 1.1.1.2 2013-08-22 22:52:01 laffer1 Exp $ */
 
 #ifndef ISC_TIME_H
 #define ISC_TIME_H 1
@@ -41,7 +41,7 @@ struct isc_interval {
 	unsigned int nanoseconds;
 };
 
-extern isc_interval_t *isc_interval_zero;
+extern const isc_interval_t * const isc_interval_zero;
 
 ISC_LANG_BEGINDECLS
 
@@ -85,7 +85,7 @@ struct isc_time {
 	unsigned int	nanoseconds;
 };
 
-extern isc_time_t *isc_time_epoch;
+extern const isc_time_t * const isc_time_epoch;
 
 void
 isc_time_set(isc_time_t *t, unsigned int seconds, unsigned int nanoseconds);

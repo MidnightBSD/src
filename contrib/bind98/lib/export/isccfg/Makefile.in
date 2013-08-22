@@ -1,4 +1,4 @@
-# Copyright (C) 2009, 2011, 2012  Internet Systems Consortium, Inc. ("ISC")
+# Copyright (C) 2009, 2011-2013  Internet Systems Consortium, Inc. ("ISC")
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -12,7 +12,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: Makefile.in,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $
+# $Id: Makefile.in,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $
 
 top_srcdir =	@top_srcdir@
 srcdir =	@top_srcdir@/lib/isccfg
@@ -31,7 +31,7 @@ CDEFINES =
 CWARNINGS =
 
 ISCLIBS =	../isc/libisc.@A@
-DNSLIBS =	../dns/libdns.@A@
+DNSLIBS =	../dns/libdns.@A@ @DNS_CRYPTO_LIBS@
 
 ISCDEPLIBS =	../../lib/isc/libisc.@A@
 ISCCFGDEPLIBS =	libisccfg.@A@
