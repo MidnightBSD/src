@@ -1,4 +1,4 @@
-$MIdnightBSD$
+$MidnightBSD$
 
 xz utils is a file compression package with high compression ratios. It
 compresses 15% smaller than bzip2.
@@ -7,6 +7,14 @@ website:
 http://tukaani.org/xz/
 
 Steps to update xz
+
+5.0.4 was imported from xz tarball using the Xlist
+
+tar -xzvf xz-5.0.4.tbz2 -X/path/to/MidnightBSD-Xlist
+cvs -n -q import src/contrib/xz TUKAANI v5_0_4
+...
+
+Old versions were taken fro git as follows:
 
 1. Pull from git repository
 git clone git://ctrl.tukaani.org/xz.git xz
