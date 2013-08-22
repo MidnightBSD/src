@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/netinet/sctp_output.c,v 1.5 2013/01/17 23:29:40 laffer1 Exp $");
 
 #include <netinet/sctp_os.h>
 #include <sys/proc.h>
@@ -5458,6 +5458,14 @@ do_a_abort:
 		return;
 	}
 	SCTP_BUF_LEN(m) = sizeof(struct sctp_init_chunk);
+
+	/*
+	 * We might not overwrite the identification[] completely and on
+	 * some platforms time_entered will contain some padding. Therefore
+	 * zero out the cookie to avoid putting uninitialized memory on the
+	 * wire.
+	 */
+	memset(&stc, 0, sizeof(struct sctp_state_cookie));
 
 	/* the time I built cookie */
 	(void)SCTP_GETTIME_TIMEVAL(&stc.time_entered);
