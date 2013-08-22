@@ -1,5 +1,14 @@
 Updating Information for MidnightBSD users.
 
+20130822:
+	Fix two security vulnerabilities.
+
+	Fix an integer overflow in IP_MSFILTER (IP MULTICAST). 
+	This could be exploited to read memory by a user process.
+
+	When initializing the SCTP state cookie being sent in INIT-ACK chunks,
+	a buffer allocated from the kernel stack is not completely initialized.
+
 20130814:
 	mksh R48 imported.
 
@@ -1250,4 +1259,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.172 2013/07/18 01:58:36 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.173 2013/08/14 22:32:16 laffer1 Exp $
