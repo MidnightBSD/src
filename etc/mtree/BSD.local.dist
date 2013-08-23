@@ -1,5 +1,4 @@
-# $MidnightBSD: src/etc/mtree/BSD.local.dist,v 1.3 2007/10/13 01:59:24 laffer1 Exp $
-# $FreeBSD: src/etc/mtree/BSD.local.dist,v 1.117.2.1 2006/01/17 06:53:17 dougb Exp $
+# $MidnightBSD: src/etc/mtree/BSD.local.dist,v 1.4 2007/10/13 02:00:02 laffer1 Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -9,6 +8,8 @@
     bin
     ..
     etc
+        libmap.d
+        ..
         pam.d
         ..
         rc.d
