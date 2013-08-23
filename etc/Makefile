@@ -1,5 +1,5 @@
 #	from: @(#)Makefile	5.11 (Berkeley) 5/21/91
-# $MidnightBSD: src/etc/Makefile,v 1.25 2012/01/14 15:16:53 laffer1 Exp $
+# $MidnightBSD: src/etc/Makefile,v 1.26 2013/01/09 04:14:06 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -23,6 +23,7 @@ BIN1=	crontab \
 	hosts.equiv \
 	inetd.conf \
 	libalias.conf \
+	libmap.conf \
 	login.access \
 	login.conf \
 	mac.conf \
