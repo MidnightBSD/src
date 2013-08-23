@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/lib/bind/isc/Makefile,v 1.7 2013/01/30 01:55:40 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -15,7 +15,7 @@ LIB=		isc
 SRCS+=		app.c dir.c entropy.c \
 		errno2result.c file.c fsaccess.c \
 		interfaceiter.c keyboard.c net.c \
-		os.c resource.c socket.c stdio.c \
+		os.c regex.c resource.c socket.c stdio.c \
 		stdtime.c strerror.c syslog.c time.c \
 
 .PATH:		${SRCDIR}/nls
