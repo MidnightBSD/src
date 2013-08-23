@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/usr.sbin/named/Makefile,v 1.6 2013/01/30 01:56:43 laffer1 Exp $
 
 BIND_DIR=	${.CURDIR}/../../contrib/bind98
 LIB_BIND_REL=	../../lib/bind
@@ -42,7 +42,8 @@ SRCS+=		builtin.c client.c config.c control.c \
 		lwaddr.c lwresd.c lwdclient.c lwderror.c lwdgabn.c \
 		lwdgnba.c lwdgrbn.c lwdnoop.c lwsearch.c
 
-CFLAGS+=	-DCONFIGARGS="\"${CONFIGARGS}\""
+CFLAGS+=	-DCONFIGARGS="\"${CONFIGARGS}\"" -DSRCID=\"${SRCID}\"
+CFLAGS+=	-DPRODUCT=\"${PRODUCT}\" -DDESCRIPTION=\"${DESCRIPTION}\"
 
 CFLAGS+=	-I${SRCDIR}/unix/include -I${SRCDIR}/include -I${LIB_BIND_DIR}
 CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
