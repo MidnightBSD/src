@@ -13,6 +13,8 @@ Updating Information for MidnightBSD users.
 
 	Import sqlite 3.7.17
 
+	Import BIND 9.8.5-P2
+
 20130814:
 	mksh R48 imported.
 
@@ -1265,4 +1267,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.176 2013/08/22 12:27:41 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.177 2013/08/22 12:54:37 laffer1 Exp $
