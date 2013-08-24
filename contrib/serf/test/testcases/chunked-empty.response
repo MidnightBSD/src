@@ -1,0 +1,11 @@
+HTTP/1.1 200 OK
+Date: Sat, 04 Sep 2004 07:57:30 GMT
+Server: Apache/2.0.49-dev
+Last-Modified: Fri, 20 Sep 2002 01:33:12 GMT
+ETag: "19f5cb-240-48f26600"
+Accept-Ranges: bytes
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=ISO-8859-1
+
+0
+

@@ -1,0 +1,32 @@
+HTTP/1.1 200 OK
+Date: Sat, 04 Sep 2004 07:57:30 GMT
+Server: Apache/2.0.49-dev
+Last-Modified: Fri, 20 Sep 2002 01:33:12 GMT
+ETag: "19f5cb-240-48f26600"
+Accept-Ranges: bytes
+Content-Length: 599
+Content-Type: text/html; charset=ISO-8859-1
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<title>scotch.ics.uci.edu</title>
+<!--base href="http://scotch.ics.uci.edu/" /-->
+<link href="default.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+
+<p>More to come!</p>
+
+<p><a href="manual/">Apache httpd 2.0 manual</a></p>
+
+<p><a href="CA.cert.pem">Trust our CA!</a></p>
+
+<p><img src="apache_pb.gif" alt="Powered by Apache!" /></p>
+
+</body>
+
+</html>
