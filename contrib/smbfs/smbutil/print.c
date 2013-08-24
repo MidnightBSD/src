@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000, Boris Popov
  * All rights reserved.
@@ -29,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: print.c,v 1.1.1.3 2008-11-22 17:34:20 laffer1 Exp $
+ * $Id: print.c,v 1.2 2013-08-24 12:01:07 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>

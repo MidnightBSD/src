@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000-2002, Boris Popov
  * All rights reserved.
@@ -29,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: view.c,v 1.1.1.3 2008-11-22 17:34:20 laffer1 Exp $
+ * $Id: view.c,v 1.2 2013-08-24 12:01:07 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>
@@ -69,6 +70,7 @@ cmd_view(int argc, char *argv[])
 	struct smb_ctx sctx, *ctx = &sctx;
 	struct smb_share_info_1 *rpbuf, *ep;
 	char *cp;
+	u_int32_t remark;
 	u_int16_t type;
 	int error, opt, bufsize, i, entries, total;
 	
@@ -117,11 +119,13 @@ cmd_view(int argc, char *argv[])
 	}
 	for (ep = rpbuf, i = 0; i < entries; i++, ep++) {
 		type = le16toh(ep->shi1_type);
+		remark = le32toh(ep->shi1_remark);
+		remark &= 0xFFFF;
 
-		cp = (char*)rpbuf + ep->shi1_remark;
+		cp = (char*)rpbuf + remark;
 		printf("%-12s %-10s %s\n", ep->shi1_netname,
 		    shtype[min(type, sizeof shtype / sizeof(char *) - 1)],
-		    ep->shi1_remark ? nls_str_toloc(cp, cp) : "");
+		    remark ? nls_str_toloc(cp, cp) : "");
 	}
 	printf("\n%d shares listed from %d available\n", entries, total);
 	free(rpbuf);
