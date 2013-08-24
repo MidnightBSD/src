@@ -26700,9 +26700,9 @@ contrib/sendmail/vacation/vacation.1 -text
 contrib/sendmail/vacation/vacation.c -text
 contrib/smbfs/COPYRIGHT -text
 contrib/smbfs/CREDITS -text
-contrib/smbfs/FREEBSD-upgrade -text
 contrib/smbfs/HISTORY -text
 contrib/smbfs/INSTALL -text
+contrib/smbfs/MIDNIGHTBSD-upgrade -text
 contrib/smbfs/Makefile -text
 contrib/smbfs/Makefile.inc -text
 contrib/smbfs/README -text

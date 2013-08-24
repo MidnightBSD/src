@@ -29,8 +29,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: nb_lib.h,v 1.1.1.3 2008-11-22 17:34:20 laffer1 Exp $
+ * $Id: nb_lib.h,v 1.2 2013-08-24 12:08:36 laffer1 Exp $
  * $FreeBSD: src/contrib/smbfs/include/netsmb/nb_lib.h,v 1.2 2005/10/02 08:32:48 bp Exp $
+ * $MidnightBSD$
  */
 #ifndef _NETSMB_NB_LIB_H_
 #define	_NETSMB_NB_LIB_H_

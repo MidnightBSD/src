@@ -29,11 +29,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: nb_name.c,v 1.1.1.3 2008-11-22 17:34:20 laffer1 Exp $
+ * $Id: nb_name.c,v 1.2 2013-08-24 12:08:36 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/contrib/smbfs/lib/smb/nb_name.c,v 1.2 2005/09/19 08:07:18 imura Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -169,7 +169,7 @@ nb_name_encode(struct nb_name *np, u_char *dst)
 		memsetw(cp + 2, NB_NAMELEN - 1, NBENCODE(' '));
 		cp += NB_ENCNAMELEN;
 	} else {
-		for (i = 0; *name && i < NB_NAMELEN; i++, cp += 2, name++)
+		for (i = 0; *name && i < NB_NAMELEN - 1; i++, cp += 2, name++)
 			*(u_short*)cp = NBENCODE(toupper(*name));
 		i = NB_NAMELEN - i - 1;
 		if (i > 0) {

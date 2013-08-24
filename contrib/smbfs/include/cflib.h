@@ -29,7 +29,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: cflib.h,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $
+ * $Id: cflib.h,v 1.2 2013-08-24 12:08:36 laffer1 Exp $
+ * $MidnightBSD$
  */
 #ifndef _zzzzzz_RCFILE_H_
 #define _zzzzzz_RCFILE_H_
