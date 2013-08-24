@@ -6,6 +6,10 @@ Updating Information for MidnightBSD users.
 	FreeBSD has already reported this to Sendmail and a fix
 	will be included in the next release.
 
+	Subversion 1.8.1 is now in the base system as a static
+	binary.  It has limited functionality, but can be used to
+	checkout/commit code.  It is named svnlite.
+
 20130822:
 	Fix two security vulnerabilities.
 
@@ -1273,4 +1277,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.178 2013/08/23 00:52:37 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.179 2013/08/24 13:51:51 laffer1 Exp $
