@@ -29,8 +29,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: mount_smbfs.c,v 1.1.1.3 2008-11-22 17:34:20 laffer1 Exp $
- * $FreeBSD: src/contrib/smbfs/mount_smbfs/mount_smbfs.c,v 1.7 2005/11/16 12:33:04 ru Exp $
+ * $Id: mount_smbfs.c,v 1.2 2013-08-24 12:03:40 laffer1 Exp $
+ * $MidnightBSD$
  */
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -295,7 +295,7 @@ usage(void)
 	"usage: mount_smbfs [-E cs1:cs2] [-I host] [-L locale] [-M crights:srights]",
 	"                   [-N] [-O cowner:cgroup/sowner:sgroup] [-R retrycount]",
 	"                   [-T timeout] [-W workgroup] [-c case] [-d mode] [-f mode]",
-	"                   [-g gid] [-n opt] [-u uid] //user@server/share node");
+	"                   [-g gid] [-n opt] [-u uid] [-U username] //user@server/share node");
 
 	exit (1);
 }

@@ -1,6 +1,6 @@
-.\" $Id: mount_smbfs.8,v 1.1.1.3 2008-11-22 17:34:20 laffer1 Exp $
-.\" $FreeBSD: src/contrib/smbfs/mount_smbfs/mount_smbfs.8,v 1.6 2007/06/16 07:01:15 danfe Exp $
-.Dd March 10, 2000
+.\" $Id: mount_smbfs.8,v 1.2 2013-08-24 12:03:40 laffer1 Exp $
+.\" $MidnightBSD$
+.Dd September 17, 2011
 .Dt MOUNT_SMBFS 8
 .Os
 .Sh NAME
@@ -16,6 +16,7 @@
 .Op Fl O Ar cowner : Ns Ar cgroup Ns / Ns Ar sowner : Ns Ar sgroup
 .Op Fl R Ar retrycount
 .Op Fl T Ar timeout
+.Op Fl U Ar username
 .Op Fl W Ar workgroup
 .Op Fl c Ar case
 .Op Fl d Ar mode
@@ -77,6 +78,8 @@ Default is 4.
 .It Fl T Ar timeout
 Timeout in seconds for each request.
 Default is 15.
+.It Fl U Ar username
+Username to authenticate with.
 .It Fl W Ar workgroup
 This option specifies the workgroup to be used in the authentication request.
 .It Fl c Ar case
@@ -154,11 +157,11 @@ mount_smbfs -I samba.mydomain.com //guest@samba/public /smb/public
 mount_smbfs -I 192.168.20.3 -E koi8-r:cp866 //guest@samba/tmp /smb/tmp
 .Ed
 .Pp
-It is possible to use
+It is also possible to use
 .Xr fstab 5
-for smbfs mounts:
+for smbfs mounts (the example below doesn't prompt for a password):
 .Pp
-.Dl "//guest@samba/public    /smb/public     smbfs  rw,noauto 0   0"
+.Dl "//guest@samba/public    /smb/public     smbfs  rw,noauto,-N 0   0"
 .Sh AUTHORS
 .An Boris Popov Aq bp@butya.kz ,
 .Aq bp@FreeBSD.org
