@@ -6,7 +6,7 @@
  * forth in the LICENSE file which can be found at the top level of
  * the sendmail distribution.
  *
- *	$Id: sm_os_freebsd.h,v 1.1.1.2 2006-02-25 02:33:56 laffer1 Exp $
+ *	$Id: sm_os_freebsd.h,v 1.2 2013-08-24 11:55:38 laffer1 Exp $
  */
 
 /*
@@ -39,3 +39,7 @@
 #ifndef SM_CONF_MSG
 # define SM_CONF_MSG	1
 #endif /* SM_CONF_MSG */
+
+#ifndef SM_IPNODEBYNAME_FLAGS
+# define SM_IPNODEBYNAME_FLAGS  AI_DEFAULT|AI_ALL
+#endif /* SM_IPNODEBYNAME_FLAGS */
