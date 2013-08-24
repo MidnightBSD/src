@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/mk/bsd.own.mk,v 1.17 2012/08/19 13:54:04 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.own.mk,v 1.18 2013/01/09 04:16:27 laffer1 Exp $
 # $FreeBSD: src/share/mk/bsd.own.mk,v 1.67.2.2.2.2 2008/01/28 08:57:11 dougb Exp $
 #
 # The include file <bsd.own.mk> set common variables for owner,
@@ -396,6 +396,7 @@ __DEFAULT_YES_OPTIONS = \
     SETUID_LOGIN \
     SHAREDOCS \
     SSP \
+    SVNLITE \
     SYSINSTALL \
     SYMVER \
     SYSCONS \
@@ -423,7 +424,8 @@ __DEFAULT_NO_OPTIONS = \
     IDEA \
     LIBCPLUSPLUS \
     OFED \
-    SHARED_TOOLCHAIN
+    SHARED_TOOLCHAIN \
+    SVN
 
 #
 # Default behaviour of some options depends on the architecture.  Unfortunately
