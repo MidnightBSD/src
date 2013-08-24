@@ -33383,7 +33383,6 @@ gnu/lib/libgcc/Makefile -text
 gnu/lib/libgcov/Makefile -text
 gnu/lib/libgomp/Makefile -text
 gnu/lib/libgomp/config.h -text
-gnu/lib/libobjc/Makefile -text
 gnu/lib/libodialog/CHANGES -text
 gnu/lib/libodialog/COPYING -text
 gnu/lib/libodialog/Makefile -text
