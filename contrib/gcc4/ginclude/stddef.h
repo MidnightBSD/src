@@ -58,7 +58,7 @@ Boston, MA 02110-1301, USA.  */
 #include <machine/ansi.h>
 #endif
 /* On FreeBSD 5, machine/ansi.h does not exist anymore... */
-#if defined (__FreeBSD__) && (__FreeBSD__ >= 5)
+#if defined (__FreeBSD__) && (__FreeBSD__ >= 5) || defined(__MidnightBSD__)
 #include <sys/_types.h>
 #endif
 
@@ -202,7 +202,7 @@ typedef __PTRDIFF_TYPE__ ptrdiff_t;
 #define ___int_size_t_h
 #define _GCC_SIZE_T
 #define _SIZET_
-#if defined (__FreeBSD__) && (__FreeBSD__ >= 5)
+#if defined (__FreeBSD__) && (__FreeBSD__ >= 5) || defined(__MidnightBSD__)
 /* __size_t is a typedef on FreeBSD 5!, must not trash it. */
 #else
 #define __size_t
@@ -295,7 +295,7 @@ typedef long ssize_t;
 typedef _BSD_RUNE_T_ rune_t;
 #define _BSD_WCHAR_T_DEFINED_
 #define _BSD_RUNE_T_DEFINED_	/* Darwin */
-#if defined (__FreeBSD__) && (__FreeBSD__ < 5)
+#if defined (__FreeBSD__) && (__FreeBSD__ < 5) || defined(__MidnightBSD__)
 /* Why is this file so hard to maintain properly?  In contrast to
    the comment above regarding BSD/386 1.1, on FreeBSD for as long
    as the symbol has existed, _BSD_RUNE_T_ must not stay defined or
@@ -308,7 +308,7 @@ typedef _BSD_RUNE_T_ rune_t;
 /* FreeBSD 5 can't be handled well using "traditional" logic above
    since it no longer defines _BSD_RUNE_T_ yet still desires to export
    rune_t in some cases... */
-#if defined (__FreeBSD__) && (__FreeBSD__ >= 5)
+#if defined (__FreeBSD__) && (__FreeBSD__ >= 5) || defined(__MidnightBSD__)
 #if !defined (_ANSI_SOURCE) && !defined (_POSIX_SOURCE)
 #if __BSD_VISIBLE
 #ifndef _RUNE_T_DECLARED

@@ -157,7 +157,7 @@ __gthrw(pthread_setschedparam)
    to 9 does.  FreeBSD >= 700014 even provides a pthread_cancel stub in libc,
    which means the alternate __gthread_active_p below cannot be used there.  */
 
-#if defined(__FreeBSD__) || (defined(__sun) && defined(__svr4__))
+#if defined(__FreeBSD__) || defined(__MidnightBSD__) || (defined(__sun) && defined(__svr4__))
 
 static volatile int __gthread_active = -1;
 
