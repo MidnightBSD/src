@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20130824:
+	Fix a bug in sendmail 8.14.7 that interferes with how it
+	handles AAAA records interoperating with Microsoft DNS servers.
+	FreeBSD has already reported this to Sendmail and a fix
+	will be included in the next release.
+
 20130822:
 	Fix two security vulnerabilities.
 
@@ -1267,4 +1273,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.177 2013/08/22 12:54:37 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.178 2013/08/23 00:52:37 laffer1 Exp $
