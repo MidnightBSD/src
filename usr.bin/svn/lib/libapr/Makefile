@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 .include "${.CURDIR}/../Makefile.inc"
 

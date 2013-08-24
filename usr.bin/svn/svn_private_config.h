@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $MidnightSD$ */
 
 /* subversion/svn_private_config.h.tmp.  Generated from svn_private_config.h.in by configure.  */
 /* subversion/svn_private_config.h.in.  Generated from configure.ac by autoheader.  */
@@ -129,10 +129,10 @@
 #define SVN_BINDIR "/usr/bin"
 
 /* Defined to the config.guess name of the build system */
-#define SVN_BUILD_HOST "bikeshed-green-indigo-orange-freebsd"
+#define SVN_BUILD_HOST "the-cats-meow-midnightbsd"
 
 /* Defined to the config.guess name of the build target */
-#define SVN_BUILD_TARGET "bikeshed-green-indigo-orange-freebsd"
+#define SVN_BUILD_TARGET "the-cats-meow-midnightbsd"
 
 /* The path of a default editor for the client. */
 /* #undef SVN_CLIENT_EDITOR */

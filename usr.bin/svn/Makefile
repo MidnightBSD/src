@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 SUBDIR = lib svn svnadmin svndumpfilter svnlook svnserve svnsync svnversion svnmucc svnrdump
 

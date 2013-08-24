@@ -84,7 +84,7 @@
 /* #undef GETSERVBYNAME_R_SOLARIS */
 
 /* Define if accept4 function is supported */
-#define HAVE_ACCEPT4 1
+#undef HAVE_ACCEPT4
 
 /* Define to 1 if you have `alloca', as a function or macro. */
 #define HAVE_ALLOCA 1
@@ -473,7 +473,7 @@
 #define HAVE_SOCKLEN_T 1
 
 /* Define if the SOCK_CLOEXEC flag is supported */
-#define HAVE_SOCK_CLOEXEC 1
+#undef HAVE_SOCK_CLOEXEC
 
 /* Define if SO_ACCEPTFILTER is defined in sys/socket.h */
 #define HAVE_SO_ACCEPTFILTER 1

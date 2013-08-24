@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
-# $MidnightBSD: src/usr.bin/Makefile,v 1.47 2013/01/25 03:30:48 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/Makefile,v 1.48 2013/02/08 02:41:06 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -350,6 +350,10 @@ SUBDIR+=	last
 SUBDIR+=	users
 SUBDIR+=	who
 SUBDIR+=	wtmpcvt
+.endif
+
+.if ${MK_SVN} == "yes" || ${MK_SVNLITE} == "yes"
+SUBDIR+=	svn
 .endif
 
 .include <bsd.arch.inc.mk>
