@@ -49865,6 +49865,8 @@ sys/i386/conf/Makefile -text
 sys/i386/conf/NOTES -text
 sys/i386/conf/PAE -text
 sys/i386/conf/XBOX -text
+sys/i386/conf/XEN -text
+sys/i386/conf/XENHVM -text
 sys/i386/conf/ZFS -text
 sys/i386/i386/apic_vector.s -text
 sys/i386/i386/atomic.c -text
