@@ -1,6 +1,6 @@
-/* $MidnightBSD: src/lib/libmport/mport_private.h,v 1.10 2011/08/25 18:10:19 laffer1 Exp $
+/* $MidnightBSD: src/lib/libmport/mport_private.h,v 1.11 2012/01/25 03:56:56 laffer1 Exp $
  *
- * Copyright (c) 2011 Lucas Holt
+ * Copyright (c) 2011, 2013 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -42,8 +42,8 @@
 
 #define MPORT_PUBLIC_API 
 
-#define MPORT_BUNDLE_VERSION 1
-#define MPORT_BUNDLE_VERSION_STR "1"
+#define MPORT_BUNDLE_VERSION 2
+#define MPORT_BUNDLE_VERSION_STR "2"
 
 /* callback syntaxtic sugar */
 void mport_call_msg_cb(mportInstance *, const char *, ...);
@@ -72,7 +72,7 @@ int mport_pkgmeta_get_assetlist(mportInstance *, mportPackageMeta *, mportAssetL
 int mport_pkgmeta_logevent(mportInstance *, mportPackageMeta *, const char *);
 
 /* Utils */
-char * mport_hash_file(const char *);
+char* mport_hash_file(const char *);
 int mport_copy_file(const char *, const char *);
 int mport_rmtree(const char *);
 int mport_mkdir(const char *);
@@ -82,6 +82,7 @@ int mport_xsystem(mportInstance *, const char *, ...);
 int mport_run_asset_exec(mportInstance *, const char *, const char *, const char *);
 void mport_free_vec(void *);
 int mport_decompress_bzip2(const char *, const char *);
+char* mport_get_osrelease(void);
 
 
 /* Mport Bundle (a file containing packages) */
@@ -160,7 +161,9 @@ int mport_set_errx(int , const char *, ...);
 #error "Unable to detect arch!"
 #endif
 
-#if __MidnightBSD_version >= 4000
+#if __MidnightBSD_version >= 5000
+#define MPORT_OSVERSION "0.5"
+#elif __MidnightBSD_version >= 4000
 #define MPORT_OSVERSION "0.4"
 #elif _MidnightBSD_version < 4000 && __MidnightBSD_version >= 3000
 #define MPORT_OSVERSION "0.3"

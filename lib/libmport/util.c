@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2011 Lucas Holt
+ * Copyright (c) 2011, 2013 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.34.2.1 2013/08/17 19:26:06 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.35 2013/08/17 19:35:00 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -484,4 +484,46 @@ int mport_decompress_bzip2(const char *input, const char *output)
   fclose(fout);
 
   return MPORT_OK;
+}
+
+char *
+mport_get_osrelease(void)
+{
+	char osrelease[128];
+        size_t len;
+        char *version;
+
+        len = sizeof(osrelease);
+        if (sysctlbyname("kern.osrelease", &osrelease, &len, NULL, 0) < 0)
+		return NULL;
+
+	if (osrelease == NULL)
+		return NULL;
+
+	version = malloc(10 * sizeof(char));
+	if (version == NULL)	
+		return NULL;
+
+	version[0] = '\0';
+	for (int i = 0; i < 10; i++) {
+		if (osrelease[i] == '\0' || osrelease[i] == '-')
+			break;
+		
+		version[i] = osrelease[i];
+	}	
+
+	return version;
+}
+
+
+MPORT_PUBLIC_API char *
+mport_version(void)
+{
+	char *version;
+	char *osrel = mport_get_osrelease();
+	asprintf(&version, "mport for MidnightBSD %s, Bundle Version %s\n",
+		 osrel, MPORT_BUNDLE_VERSION_STR);
+	free(osrel);
+
+	return version;
 }
