@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.49 2013/03/18 02:24:40 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.50 2013/03/18 03:01:53 laffer1 Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -147,7 +147,8 @@ main(int argc, char *argv[]) {
 
 void
 usage(void) {
-	fprintf( stderr, 
+	fprintf(stderr, mport_version());
+	fprintf(stderr, 
 		"usage: mport <command> args:\n"
 		"       mport clean\n"
 		"       mport delete [package name]\n"
