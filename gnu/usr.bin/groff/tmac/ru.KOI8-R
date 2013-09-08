@@ -23,6 +23,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $FreeBSD: src/gnu/usr.bin/groff/tmac/ru.KOI8-R,v 1.14 2003/09/20 21:30:33 ru Exp $
+.\" $MidnightBSD$
 .\"
 .\"     %beginstrip%
 .

@@ -23,7 +23,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $FreeBSD: src/gnu/usr.bin/groff/tmac/mdoc.local,v 1.48.2.4 2006/01/12 15:44:42 ru Exp $
-.\" $MidnightBSD: src/gnu/usr.bin/groff/tmac/mdoc.local,v 1.13 2012/06/13 04:10:29 laffer1 Exp $
+.\" $MidnightBSD: src/gnu/usr.bin/groff/tmac/mdoc.local,v 1.14 2013/06/12 21:38:34 laffer1 Exp $
 .\"
 .\"     %beginstrip%
 .
@@ -38,47 +38,14 @@
 .\" MidnightBSD .Lb values
 .ds doc-str-Lb-libarchive  Streaming Archive Library (libarchive, \-larchive)
 .ds doc-str-Lb-libbluetooth Bluetooth User Library (libbluetooth, \-lbluetooth)
-.ds doc-str-Lb-libc_r      Reentrant C\~Library (libc_r, \-lc_r)
-.ds doc-str-Lb-libcalendar Calendar Arithmetic Library (libcalendar, \-lcalendar)
-.ds doc-str-Lb-libcam      Common Access Method User Library (libcam, \-lcam)
-.ds doc-str-Lb-libcipher   FreeSec Crypt Library (libcipher, \-lcipher)
-.ds doc-str-Lb-libdevinfo  Device and Resource Information Utility Library (libdevinfo, \-ldevinfo)
-.ds doc-str-Lb-libdevstat  Device Statistics Library (libdevstat, \-ldevstat)
-.ds doc-str-Lb-libdisk     Interface to Slice and Partition Labels Library (libdisk, \-ldisk)
 .ds doc-str-Lb-libedit     Line Editor and History Library (libedit, \-ledit)
+.ds doc-str-Lb-libefi      EFI Runtime Services Library (libefi, \-lefi)
+.ds doc-str-Lb-libelf      ELF Parsing Library (libelf, \-lelf)
 .ds doc-str-Lb-libfetch    File Transfer Library (libfetch, \-lfetch)
-.ds doc-str-Lb-libgeom     Userland API Library for kernel GEOM subsystem (libgeom, \-lgeom)
-.ds doc-str-Lb-libipx      IPX Address Conversion Support Library (libipx, \-lipx)
-.ds doc-str-Lb-libkiconv   Kernel side iconv library (libkiconv, \-lkiconv)
-.ds doc-str-Lb-libmd       Message Digest (MD4, MD5, etc.) Support Library (libmd, \-lmd)
-.ds doc-str-Lb-libmemstat  Kernel Memory Allocator Statistics Library (libmemstat, \-lmemstat)
-.ds doc-str-Lb-libnetgraph Netgraph User Library (libnetgraph, \-lnetgraph)
-.ds doc-str-Lb-libpmc      Performance Monitoring Counters API (libpmc, \-lpmc)
-.ds doc-str-Lb-librpcsvc   RPC Service Library (librpcsvc, \-lrpcsvc)
-.ds doc-str-Lb-libsdp      Bluetooth Service Discovery Protocol User Library (libsdp, \-lsdp)
-.ds doc-str-Lb-libthr      1:1 Threading Library (libthr, \-lthr)
-.ds doc-str-Lb-libufs      UFS File System Access Library (libufs, \-lufs)
-.ds doc-str-Lb-libugidfw   File System Firewall Interface Library (libugidfw, \-lugidfw)
-.ds doc-str-Lb-libvgl      Video Graphics Library (libvgl, \-lvgl)
-.
-.
-.\" Standards names not in groff.
-.ds doc-str-St--isoC-amd1       \*[doc-Tn-font-size]ISO/IEC\*[doc-str-St] 9899/AMD1:1995
-.as doc-str-St--isoC-amd1       " (\*[Lq]\*[doc-Tn-font-size]ISO\~C\^90\*[doc-str-St], Amendment 1\*[Rq])
-.ds doc-str-St--isoC-tcor1      \*[doc-Tn-font-size]ISO/IEC\*[doc-str-St] 9899/TCOR1:1994
-.as doc-str-St--isoC-tcor1      " (\*[Lq]\*[doc-Tn-font-size]ISO\~C\^90\*[doc-str-St], Technical Corrigendum 1\*[Rq])
-.ds doc-str-St--isoC-tcor2      \*[doc-Tn-font-size]ISO/IEC\*[doc-str-St] 9899/TCOR2:1995
-.as doc-str-St--isoC-tcor2      " (\*[Lq]\*[doc-Tn-font-size]ISO\~C\^90\*[doc-str-St], Technical Corrigendum 2\*[Rq])
-.ds doc-str-St--xns5.2d2.0      \*[doc-Tn-font-size]X/Open\*[doc-str-St] Networking Services Issue\~5.2 Draft\~2.0
-.as doc-str-St--xns5.2d2.0      " (\*[Lq]\*[doc-Tn-font-size]XNS\*[doc-str-St]\^5.2D2.0\*[Rq])
-.ds doc-str-St--ieee1275-94     \*[doc-Tn-font-size]\%IEEE\*[doc-str-St] Std 1275-1994
-.as doc-str-St--ieee1275-94     " (\*[Lq]\*[doc-Tn-font-size]Open Firmware\*[doc-str-St]\*[Rq])
-.ds doc-str-St--susv3           Version\~3 of the Single \*[doc-Tn-font-size]UNIX\*[doc-str-St] Specification
-.as doc-str-St--susv3           " (\*[Lq]\*[doc-Tn-font-size]SUSv3\*[doc-str-St]\*[Rq])
-.\" These will be in next groff release (after 1.19.1).
-.ds doc-str-St--p1003.1-2004    \*[doc-Tn-font-size]\%IEEE\*[doc-str-St] Std 1003.1-2004
-.as doc-str-St--p1003.1-2004    " (\*[Lq]\)\*[Px]\*[doc-str-St].1\*[Rq])
-.
+.ds doc-str-Lb-libpmc      Performance Monitoring Counters Interface Library (libpmc, \-lpmc)
+.ds doc-str-Lb-libproc     Processor Monitoring and Analysis Library (libproc, \-lproc)
+.ds doc-str-Lb-libprocstat Process and Files Information Retrieval (libprocstat, \-lprocstat)
+.ds doc-str-Lb-librtld_db  Run-time Linker Debugging Library (librtld_db, \-lrtld_db)
 .
 .\" Default .Os value
 .ds doc-default-operating-system MidnightBSD\~0.5
