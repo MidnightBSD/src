@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/sparc64/sparc64/pmap.c,v 1.3 2013/01/17 23:29:42 laffer1 Exp $");
 
 /*
  * Manages physical address maps.
@@ -135,9 +135,11 @@ vm_offset_t vm_max_kernel_address;
 struct pmap kernel_pmap_store;
 
 /*
- * Global tte list lock
+ * Isolate the global TTE list lock from data and other locks to prevent
+ * false sharing within the cache (see also the declaration of struct
+ * tte_list_lock).
  */
-struct rwlock tte_list_global_lock;
+struct tte_list_lock tte_list_global __aligned(CACHE_LINE_SIZE);
 
 /*
  * Allocate physical memory for use in pmap_bootstrap.
@@ -672,7 +674,7 @@ pmap_bootstrap(u_int cpu_impl)
 		pm->pm_context[i] = TLB_CTX_KERNEL;
 	CPU_FILL(&pm->pm_active);
 
- 	/*
+	/*
 	 * Initialize the global tte list lock.
 	 */
 	rw_init(&tte_list_global_lock, "tte list global");

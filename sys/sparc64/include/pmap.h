@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991 Regents of the University of California.
  * All rights reserved.
@@ -34,15 +33,17 @@
  *	from: hp300: @(#)pmap.h 7.2 (Berkeley) 12/16/90
  *	from: @(#)pmap.h        7.4 (Berkeley) 5/12/91
  *	from: FreeBSD: src/sys/i386/include/pmap.h,v 1.70 2000/11/30
- * $FreeBSD: src/sys/sparc64/include/pmap.h,v 1.47.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_PMAP_H_
 #define	_MACHINE_PMAP_H_
 
 #include <sys/queue.h>
+#include <sys/_cpuset.h>
 #include <sys/_lock.h>
 #include <sys/_mutex.h>
+#include <sys/_rwlock.h>
 #include <machine/cache.h>
 #include <machine/tte.h>
 
@@ -62,23 +63,31 @@ struct pmap {
 	struct	mtx pm_mtx;
 	struct	tte *pm_tsb;
 	vm_object_t pm_tsb_obj;
-	u_int	pm_active;
+	cpuset_t pm_active;
 	u_int	pm_context[MAXCPU];
 	struct	pmap_statistics pm_stats;
 };
 
+struct tte_list_lock {
+	struct rwlock lock;
+	char padding[CACHE_LINE_SIZE - sizeof(struct rwlock)];
+};
+
 #define	PMAP_LOCK(pmap)		mtx_lock(&(pmap)->pm_mtx)
-#define	PMAP_LOCK_ASSERT(pmap, type) \
+#define	PMAP_LOCK_ASSERT(pmap, type)					\
 				mtx_assert(&(pmap)->pm_mtx, (type))
 #define	PMAP_LOCK_DESTROY(pmap)	mtx_destroy(&(pmap)->pm_mtx)
-#define	PMAP_LOCK_INIT(pmap)	mtx_init(&(pmap)->pm_mtx, "pmap", \
+#define	PMAP_LOCK_INIT(pmap)	mtx_init(&(pmap)->pm_mtx, "pmap",	\
 				    NULL, MTX_DEF | MTX_DUPOK)
 #define	PMAP_LOCKED(pmap)	mtx_owned(&(pmap)->pm_mtx)
 #define	PMAP_MTX(pmap)		(&(pmap)->pm_mtx)
 #define	PMAP_TRYLOCK(pmap)	mtx_trylock(&(pmap)->pm_mtx)
 #define	PMAP_UNLOCK(pmap)	mtx_unlock(&(pmap)->pm_mtx)
 
-void	pmap_bootstrap(vm_offset_t ekva);
+#define	pmap_page_get_memattr(m)	VM_MEMATTR_DEFAULT
+#define	pmap_page_set_memattr(m, ma)	(void)0
+
+void	pmap_bootstrap(u_int cpu_impl);
 vm_paddr_t pmap_kextract(vm_offset_t va);
 void	pmap_kenter(vm_offset_t va, vm_page_t m);
 void	pmap_kremove(vm_offset_t);
@@ -87,24 +96,22 @@ void	pmap_kremove_flags(vm_offset_t va);
 boolean_t pmap_page_is_mapped(vm_page_t m);
 
 int	pmap_cache_enter(vm_page_t m, vm_offset_t va);
-void	pmap_cache_remove(vm_page_t m, vm_offset_t va);
 
 int	pmap_remove_tte(struct pmap *pm1, struct pmap *pm2, struct tte *tp,
 			vm_offset_t va);
-int	pmap_protect_tte(struct pmap *pm1, struct pmap *pm2, struct tte *tp,
-			 vm_offset_t va);
 
 void	pmap_map_tsb(void);
+void	pmap_set_kctx(void);
 
 #define	vtophys(va)	pmap_kextract((vm_offset_t)(va))
 
 extern	struct pmap kernel_pmap_store;
 #define	kernel_pmap	(&kernel_pmap_store)
+extern	struct tte_list_lock tte_list_global;
+#define	tte_list_global_lock	tte_list_global.lock
 extern	vm_paddr_t phys_avail[];
 extern	vm_offset_t virtual_avail;
 extern	vm_offset_t virtual_end;
-
-extern	vm_paddr_t msgbuf_phys;
 
 #ifdef PMAP_STATS
 
@@ -112,7 +119,7 @@ SYSCTL_DECL(_debug_pmap_stats);
 
 #define	PMAP_STATS_VAR(name) \
 	static long name; \
-	SYSCTL_LONG(_debug_pmap_stats, OID_AUTO, name, CTLFLAG_RW, \
+	SYSCTL_LONG(_debug_pmap_stats, OID_AUTO, name, CTLFLAG_RW,	\
 	    &name, 0, "")
 
 #define	PMAP_STATS_INC(var) \
