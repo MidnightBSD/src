@@ -1,11 +1,35 @@
 Updating Information for MidnightBSD users.
 
+20130910:
+	0.4-RELEASE-p4
+
+	nullfs(5)
+
+	The nullfs(5) implementation of the VOP_LINK(9) VFS operation does not
+	check whether the source and target of the link are both in the same
+	nullfs instance.  It is therefore possible to create a hardlink from a
+	location in one nullfs instance to a file in another, as long as the
+	underlying (source) filesystem is the same.
+
+	ifioctl
+
+	As is commonly the case, the IPv6 and ATM network layer ioctl request
+	handlers are written in such a way that an unrecognized request is
+	passed on unmodified to the link layer, which will either handle it or
+	return an error code.
+
+	Network interface drivers, however, assume that the SIOCSIFADDR,
+	SIOCSIFBRDADDR, SIOCSIFDSTADDR and SIOCSIFNETMASK requests have been
+	handled at the network layer, and therefore do not perform input
+	validation or verify the caller's credentials.  Typical link-layer
+	actions for these requests may include marking the interface as "up"
+	and resetting the underlying hardware.
+
 20130825:
 	0.4-RELEASE-p3
 
 	0.4-RELEASE included a broken version of altq. Bring in a
 	patch from CURRENT to resolve this issue.
-	
 
 20130822:
 	0.4-RELEASE-p2
@@ -1266,4 +1290,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.170.2.4 2013/08/22 11:53:49 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.170.2.5 2013/08/25 13:34:35 laffer1 Exp $
