@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: src/usr.sbin/tzsetup/Makefile,v 1.19 2011/01/12 14:55:02 nwhitehorn Exp $
+# $MidnightBSD: src/usr.sbin/tzsetup/Makefile,v 1.2 2011/12/18 03:45:57 laffer1 Exp $
 
 PROG=	tzsetup
 MAN=	tzsetup.8

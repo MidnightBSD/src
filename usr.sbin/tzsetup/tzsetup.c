@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$FreeBSD: src/usr.sbin/tzsetup/tzsetup.c,v 1.39 2011/11/02 04:21:20 dougb Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <dialog.h>
 #include <err.h>
