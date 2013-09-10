@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/sbin/geom/class/part/gpart.8,v 1.4 2012/11/04 01:55:18 laffer1 Exp $
 .\"
 .Dd March 19, 2012
 .Dt GPART 8
@@ -35,14 +35,12 @@ To add support for the disk partitioning GEOM class,
 place one or more of the following
 lines in the kernel configuration file:
 .Bd -ragged -offset indent
-.Cd "options GEOM_PART_APM"
 .Cd "options GEOM_PART_BSD"
 .Cd "options GEOM_PART_GPT"
 .Cd "options GEOM_PART_LDM"
 .Cd "options GEOM_PART_MBR"
 .Cd "options GEOM_PART_EBR"
 .Cd "options GEOM_PART_EBR_COMPAT"
-.Cd "options GEOM_PART_PC98"
 .Cd "options GEOM_PART_VTOC8"
 .Ed
 .Pp
@@ -580,7 +578,7 @@ actual partition type for the system partition can also be specified as
 .Qq Li "!c12a7328-f81f-11d2-ba4b-00a0c93ec93ab" .
 .It Cm freebsd
 A
-.Fx
+.Mx
 partition subdivided into filesystems with a
 .Bx
 disklabel.
@@ -593,9 +591,9 @@ for MBR,
 for APM, and
 .Qq Li "!516e7cb4-6ecf-11d6-8ff8-00022d09712b"
 for GPT.
-.It Cm freebsd-boot
+.It Cm midnightbsd-boot
 A
-.Fx
+.Mx
 partition dedicated to bootstrap code.
 The scheme-specific type is
 .Qq Li "!83bd6b9d-7f41-11dc-be0b-001560b84f0f"
@@ -609,7 +607,7 @@ The scheme-specific types are
 for APM,
 .Qq Li "!516e7cb5-6ecf-11d6-8ff8-00022d09712b"
 for GPT, and tag 0x0901 for VTOC8.
-.It Cm freebsd-ufs
+.It Cm midnightbsd-ufs
 A
 .Fx
 partition that contains a UFS or UFS2 filesystem.
@@ -1006,11 +1004,12 @@ or
 but smaller than 545 kB since the first-stage loader will load the
 entire partition into memory during boot, regardless of how much data
 it actually contains.
-This example uses 94 blocks (47 kB) so the next partition will be
+This example uses 88 blocks (44 kB) so the next partition will be
 aligned on a 64 kB boundary without the need to specify an explicit
 offset or alignment.
+The boot partition itself is aligned on a 4 kB boundary.
 .Bd -literal -offset indent
-/sbin/gpart add -b 34 -s 94 -t freebsd-boot ad0
+/sbin/gpart add -b 40 -s 88 -t midnightbsd-boot ad0
 /sbin/gpart bootcode -p /boot/gptboot -i 1 ad0
 .Ed
 .Pp
