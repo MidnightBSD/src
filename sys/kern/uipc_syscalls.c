@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$MidnightBSD: src/sys/kern/uipc_syscalls.c,v 1.7 2012/10/09 04:08:16 laffer1 Exp $");
 
 #include "opt_capsicum.h"
 #include "opt_inet.h"
@@ -2052,7 +2052,7 @@ retry_space:
 			xfsize = omin(PAGE_SIZE - pgoff,
 			    obj->un_pager.vnp.vnp_size - uap->offset -
 			    fsbytes - loopbytes);
-			if (uap->nbytes)
+			if (uap->nbytes != 0)
 				rem = (uap->nbytes - fsbytes - loopbytes);
 			else
 				rem = obj->un_pager.vnp.vnp_size -
