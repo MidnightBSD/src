@@ -1,4 +1,4 @@
-# $MidnightBSD: src/sys/conf/NOTES,v 1.11 2012/03/31 17:05:09 laffer1 Exp $
+# $MidnightBSD: src/sys/conf/NOTES,v 1.12 2012/09/14 01:54:57 laffer1 Exp $
 # $FreeBSD: src/sys/conf/NOTES,v 1.1454 2007/09/26 21:14:17 marius Exp $
 #
 # NOTES -- Lines that can be cut/pasted into kernel and hints configs.
@@ -543,7 +543,8 @@ options 	HWPMC_HOOKS		# Other necessary kernel hooks
 options 	INET			#Internet communications protocols
 options 	INET6			#IPv6 communications protocols
 
-options 	ROUTETABLES=2		# max 16. 1 is back compatible.
+options 	ROUTETABLES=2		# allocated fibs up to 65536. default is 1.
+					# but that would be a bad idea as they are large.
 
 # In order to enable IPSEC you MUST also add device crypto to 
 # your kernel configuration

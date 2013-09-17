@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mbuf.h	8.5 (Berkeley) 2/19/95
- * $MidnightBSD$
+ * $MidnightBSD: src/sys/sys/mbuf.h,v 1.8 2012/10/09 04:05:36 laffer1 Exp $
  */
 
 #ifndef _SYS_MBUF_H_
@@ -126,6 +126,8 @@ struct pkthdr {
 		u_int16_t vt_vtag;	/* Ethernet 802.1p+q vlan tag */
 		u_int16_t vt_nrecs;	/* # of IGMPv3 records in this chain */
 	} PH_vt;
+	u_int16_t	 fibnum;	/* this packet should use this fib */
+	u_int16_t	 pad2;		/* align to 32 bits */
 	SLIST_HEAD(packet_tags, m_tag) tags; /* list of packet tags */
 };
 #define ether_vtag	PH_vt.vt_vtag
@@ -168,6 +170,7 @@ struct mbuf {
 #define	m_type		m_hdr.mh_type
 #define	m_flags		m_hdr.mh_flags
 #define	m_nextpkt	m_hdr.mh_nextpkt
+#define	m_fibnum	m_hdr.mh_nextpkt
 #define	m_act		m_nextpkt
 #define	m_pkthdr	M_dat.MH.MH_pkthdr
 #define	m_ext		M_dat.MH.MH_dat.MH_ext
@@ -201,12 +204,6 @@ struct mbuf {
 #define	M_PROTO8	0x00200000 /* protocol-specific */
 #define	M_FLOWID	0x00400000 /* deprecated: flowid is valid */
 #define	M_HASHTYPEBITS	0x0F000000 /* mask of bits holding flowid hash type */
-
-/*
- * For RELENG_{6,7} steal these flags for limited multiple routing table
- * support. In RELENG_8 and beyond, use just one flag and a tag.
- */
-#define	M_FIB		0xF0000000 /* steal some bits to store fib number. */
 
 #define	M_NOTIFICATION	M_PROTO5    /* SCTP notification */
 
@@ -255,7 +252,7 @@ struct mbuf {
  */
 #define	M_COPYFLAGS \
     (M_PKTHDR|M_EOR|M_RDONLY|M_PROTOFLAGS|M_SKIP_FIREWALL|M_BCAST|M_MCAST|\
-     M_FRAG|M_FIRSTFRAG|M_LASTFRAG|M_VLANTAG|M_PROMISC|M_FIB|M_HASHTYPEBITS)
+     M_FRAG|M_FIRSTFRAG|M_LASTFRAG|M_VLANTAG|M_PROMISC|M_HASHTYPEBITS)
 
 /*
  * External buffer types: identify ext_buf type.
@@ -1063,17 +1060,18 @@ m_tag_find(struct mbuf *m, int type, struct m_tag *start)
 	    m_tag_locate(m, MTAG_ABI_COMPAT, type, start));
 }
 
-/* XXX temporary FIB methods probably eventually use tags.*/
-#define M_FIBSHIFT    28
-#define M_FIBMASK	0x0F
+static int inline
+rt_m_getfib(struct mbuf *m)
+{
+	KASSERT(m->m_flags & M_EXT , ("attempt to set FIB on non header mbuf"));
+	return (m->m_pkthdr.fibnum);
+}
 
-/* get the fib from an mbuf and if it is not set, return the default */
-#define M_GETFIB(_m) \
-    ((((_m)->m_flags & M_FIB) >> M_FIBSHIFT) & M_FIBMASK)
+#define M_GETFIB(_m)   rt_m_getfib(_m)
 
 #define M_SETFIB(_m, _fib) do {						\
-	_m->m_flags &= ~M_FIB;					   	\
-	_m->m_flags |= (((_fib) << M_FIBSHIFT) & M_FIB);  \
+        KASSERT((_m)->m_flags & M_EXT, ("No FIB on non header mbuf"));	\
+	((_m)->m_pkthdr.fibnum) = (_fib);				\
 } while (0)
 
 #endif /* _KERNEL */
