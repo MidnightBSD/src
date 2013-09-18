@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/create_primative.c,v 1.8 2011/07/24 15:59:08 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/create_primative.c,v 1.9 2013/03/10 03:25:35 laffer1 Exp $");
 
 #include <sys/cdefs.h>
 #include <sys/stat.h>
@@ -189,8 +189,11 @@ static int insert_meta(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *e
 {
   sqlite3_stmt *stmnt = NULL;
   const char *rest  = 0;
-  
-  char sql[]  = "INSERT INTO packages (pkg, version, origin, lang, prefix, comment) VALUES (?,?,?,?,?,?)";
+  char *os_release;
+
+  char sql[]  = "INSERT INTO packages (pkg, version, origin, lang, prefix, comment, os_release) VALUES (?,?,?,?,?,?,?)";
+
+  os_release = mport_get_osrelease();
   
   if (sqlite3_prepare_v2(db, sql, -1, &stmnt, &rest) != SQLITE_OK) {
     RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
@@ -213,12 +216,18 @@ static int insert_meta(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *e
   if (sqlite3_bind_text(stmnt, 6, pack->comment, -1, SQLITE_STATIC) != SQLITE_OK) {
     RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
   }
-    
+
+  if (sqlite3_bind_text(stmnt, 7, os_release, -1, SQLITE_STATIC) != SQLITE_OK) {
+    free(os_release);
+    RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+  }
+
   if (sqlite3_step(stmnt) != SQLITE_DONE) {
     RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
   }
   
-  sqlite3_finalize(stmnt);  
+  sqlite3_finalize(stmnt); 
+  free(os_release); 
 
   if (insert_depends(db, pack, extra) != MPORT_OK)
     RETURN_CURRENT_ERROR;

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport.h,v 1.26 2013/03/17 23:54:17 laffer1 Exp $
+/* $MidnightBSD: src/lib/libmport/mport.h,v 1.27 2013/09/07 19:49:51 laffer1 Exp $
  *
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
@@ -110,6 +110,7 @@ typedef struct {
   char *prefix;
   char *origin;
   char **categories;
+  char *os_release;
 } mportPackageMeta;  
 
 

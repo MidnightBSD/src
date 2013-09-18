@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/db.c,v 1.9 2011/07/24 15:59:08 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/db.c,v 1.10 2013/09/07 19:49:51 laffer1 Exp $");
 
 #include <sqlite3.h>
 #include <stdlib.h>
@@ -166,7 +166,7 @@ mport_generate_stub_schema(sqlite3 *db)
 	RUN_SQL(db, "INSERT INTO meta VALUES (\"bundle_format_version\", " MPORT_BUNDLE_VERSION_STR ")");
 	RUN_SQL(db, sql);
 	RUN_SQL(db, "CREATE TABLE assets (pkg text not NULL, type int NOT NULL, data text, checksum text)");
-	RUN_SQL(db, "CREATE TABLE packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, lang text, options text, prefix text NOT NULL, comment text)");
+	RUN_SQL(db, "CREATE TABLE packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, lang text, options text, prefix text NOT NULL, comment text, os_release text NOT NULL)");
 	RUN_SQL(db, "CREATE TABLE conflicts (pkg text NOT NULL, conflict_pkg text NOT NULL, conflict_version text NOT NULL)");
 	RUN_SQL(db, "CREATE TABLE depends (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
 	RUN_SQL(db, "CREATE TABLE categories (pkg text NOT NULL, category text NOT NULL)");

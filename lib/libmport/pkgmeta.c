@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/pkgmeta.c,v 1.8 2011/07/24 15:59:08 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/pkgmeta.c,v 1.9 2012/04/10 22:11:33 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <string.h>
@@ -40,14 +40,16 @@ static int populate_vec_from_stmt(mportPackageMeta ***, int, sqlite3 *, sqlite3_
 
 
 /* Package meta-data creation and destruction */
-MPORT_PUBLIC_API mportPackageMeta* mport_pkgmeta_new(void) 
+MPORT_PUBLIC_API mportPackageMeta* 
+mport_pkgmeta_new(void) 
 {
   /* we use calloc so any pointers that aren't set are NULL.
      (calloc zero's out the memory region. */
   return (mportPackageMeta *)calloc(1, sizeof(mportPackageMeta));
 }
 
-MPORT_PUBLIC_API void mport_pkgmeta_free(mportPackageMeta *pack)
+MPORT_PUBLIC_API void
+mport_pkgmeta_free(mportPackageMeta *pack)
 {
   int i;
   
@@ -65,7 +67,9 @@ MPORT_PUBLIC_API void mport_pkgmeta_free(mportPackageMeta *pack)
   pack->prefix = NULL;
   free(pack->origin);
   pack->origin = NULL;
-  
+  free(pack->os_release);
+  pack->os_release = NULL;
+ 
 
   i = 0;
   if (pack->categories != NULL) {
@@ -83,7 +87,8 @@ MPORT_PUBLIC_API void mport_pkgmeta_free(mportPackageMeta *pack)
 }
 
 /* free a vector of mportPackageMeta pointers */
-MPORT_PUBLIC_API void mport_pkgmeta_vec_free(mportPackageMeta **vec)
+MPORT_PUBLIC_API void
+mport_pkgmeta_vec_free(mportPackageMeta **vec)
 {
   int i;
   for (i=0; *(vec + i) != NULL; i++) {
@@ -100,7 +105,8 @@ MPORT_PUBLIC_API void mport_pkgmeta_vec_free(mportPackageMeta **vec)
  * connected to db. These structs represent all the packages in the stub database.
  * This does not populate the conflicts and depends fields.
  */
-int mport_pkgmeta_read_stub(mportInstance *mport, mportPackageMeta ***ref)
+int
+mport_pkgmeta_read_stub(mportInstance *mport, mportPackageMeta ***ref)
 {
   sqlite3_stmt *stmt;
   sqlite3 *db = mport->db;
@@ -122,7 +128,7 @@ int mport_pkgmeta_read_stub(mportInstance *mport, mportPackageMeta ***ref)
     RETURN_ERROR(MPORT_ERR_FATAL, "stub database contains no packages.");
   }
     
-  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment FROM stub.packages") != MPORT_OK) {
+  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment, os_release FROM stub.packages") != MPORT_OK) {
     sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
   }
@@ -155,7 +161,8 @@ int mport_pkgmeta_read_stub(mportInstance *mport, mportPackageMeta ***ref)
  *
  * pack is set to NULL and MPORT_OK is returned if no packages where found.
  */
-MPORT_PUBLIC_API int mport_pkgmeta_search_master(mportInstance *mport, mportPackageMeta ***ref, const char *fmt, ...)
+MPORT_PUBLIC_API int
+mport_pkgmeta_search_master(mportInstance *mport, mportPackageMeta ***ref, const char *fmt, ...)
 {
   va_list args;
   sqlite3_stmt *stmt;
@@ -169,7 +176,6 @@ MPORT_PUBLIC_API int mport_pkgmeta_search_master(mportInstance *mport, mportPack
     
   if (where == NULL) 
     RETURN_ERROR(MPORT_ERR_FATAL, "Could not build where clause");
-  
   
   if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM packages WHERE %s", where) != MPORT_OK) {
     sqlite3_finalize(stmt);
@@ -191,7 +197,7 @@ MPORT_PUBLIC_API int mport_pkgmeta_search_master(mportInstance *mport, mportPack
     return MPORT_OK;
   }
 
-  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment FROM packages WHERE %s", where) != MPORT_OK) {
+  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment, os_release FROM packages WHERE %s", where) != MPORT_OK) {
     sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
   }
@@ -211,7 +217,8 @@ MPORT_PUBLIC_API int mport_pkgmeta_search_master(mportInstance *mport, mportPack
  * 
  * pack is set to NULL and MPORT_OK is returned if no packages where found.
  */
-MPORT_PUBLIC_API int mport_pkgmeta_list(mportInstance *mport, mportPackageMeta ***ref)
+MPORT_PUBLIC_API int
+mport_pkgmeta_list(mportInstance *mport, mportPackageMeta ***ref)
 {
   sqlite3_stmt *stmt;
   int ret, len;
@@ -235,7 +242,7 @@ MPORT_PUBLIC_API int mport_pkgmeta_list(mportInstance *mport, mportPackageMeta *
     return MPORT_OK;
   }
 
-  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment FROM packages ORDER BY pkg, version") != MPORT_OK) {
+  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment, os_release FROM packages ORDER BY pkg, version") != MPORT_OK) {
     sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
   }
@@ -253,7 +260,8 @@ MPORT_PUBLIC_API int mport_pkgmeta_list(mportInstance *mport, mportPackageMeta *
  * 
  * Populate the depends of a pkg using the data in the master database.  
  */
-MPORT_PUBLIC_API int mport_pkgmeta_get_downdepends(mportInstance *mport, mportPackageMeta *pkg, mportPackageMeta ***pkg_vec_p)
+MPORT_PUBLIC_API int
+mport_pkgmeta_get_downdepends(mportInstance *mport, mportPackageMeta *pkg, mportPackageMeta ***pkg_vec_p)
 {
   int count = 0;
   int ret;
@@ -279,7 +287,7 @@ MPORT_PUBLIC_API int mport_pkgmeta_get_downdepends(mportInstance *mport, mportPa
   }
 
   if (mport_db_prepare(mport->db, &stmt, 
-      "SELECT packages.pkg, packages.version, packages.origin, packages.lang, packages.prefix, packages.comment FROM packages,depends WHERE packages.pkg=depends.depend_pkgname AND depends.pkg=%Q", 
+      "SELECT packages.pkg, packages.version, packages.origin, packages.lang, packages.prefix, packages.comment, packages.os_release FROM packages,depends WHERE packages.pkg=depends.depend_pkgname AND depends.pkg=%Q", 
       pkg->name) != MPORT_OK) {
     sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
@@ -485,6 +493,14 @@ static int populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_
     if ((pack->comment = strdup(tmp)) == NULL)
       RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
   }
+
+  if ((tmp = sqlite3_column_text(stmt, 6)) == NULL) 
+    return MPORT_OK; /*  XXX: new field..
+    RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+    */
+
+  if ((pack->os_release = strdup(tmp)) == NULL)
+    RETURN_ERROR(MPORT_ERR_FATAL,"Out of memory.");
   
   return MPORT_OK;
 }

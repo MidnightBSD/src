@@ -25,14 +25,15 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/lib/libmport/install_primative.c,v 1.6 2011/07/24 15:59:08 laffer1 Exp $");
 
 #include "mport.h"
 #include "mport_private.h"
 #include <stdlib.h>
 #include <string.h>
 
-MPORT_PUBLIC_API int mport_install_primative(mportInstance *mport, const char *filename, const char *prefix) 
+MPORT_PUBLIC_API int
+mport_install_primative(mportInstance *mport, const char *filename, const char *prefix) 
 {
   mportBundleRead *bundle;
   mportPackageMeta **pkgs, *pkg;
