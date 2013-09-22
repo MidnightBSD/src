@@ -55533,9 +55533,6 @@ usr.bin/sdiff/sdiff.1 -text
 usr.bin/sdiff/sdiff.c -text
 usr.bin/sed/Makefile -text
 usr.bin/sed/POSIX -text
-usr.bin/sed/TEST/hanoi.sed -text
-usr.bin/sed/TEST/math.sed -text
-usr.bin/sed/TEST/sed.test -text
 usr.bin/sed/compile.c -text
 usr.bin/sed/defs.h -text
 usr.bin/sed/extern.h -text
