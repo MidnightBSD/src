@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20131004:
+	rarpd supports vlan(4) and has a pid flag. (from FreeBSD)
+
 20130917:
 	Support for 65,536 routing tables was added.  A new fib specific
 	field has been added to mbuf.  This is an increase from 16.
@@ -1306,4 +1309,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.181 2013/09/10 23:03:58 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.182 2013/09/17 12:54:09 laffer1 Exp $
