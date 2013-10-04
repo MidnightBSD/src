@@ -1,8 +1,12 @@
 #	from: @(#)Makefile	5.8 (Berkeley) 7/28/90
-# $FreeBSD: src/usr.sbin/rarpd/Makefile,v 1.14 2003/07/11 17:15:19 mux Exp $
+# $FreeBSD: release/9.2.0/usr.sbin/rarpd/Makefile 245076 2013-01-05 22:55:08Z markj $
+# $MidnightBSD$
 
 PROG=	rarpd
 MAN=	rarpd.8
+
+DPADD=	${LIBUTIL}
+LDADD=	-lutil
 
 WARNS?=	3
 # This breaks with format strings returned by expand_syslog_m().. argh!
