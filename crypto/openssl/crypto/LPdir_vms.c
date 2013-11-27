@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $LP: LPlib/source/LPdir_vms.c,v 1.20 2004/08/26 13:36:05 _cvs_levitte Exp $ */
 /*
  * Copyright (c) 2004, Richard Levitte <richard@levitte.org>

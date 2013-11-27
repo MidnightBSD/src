@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* crypto/ebcdic.c */
 
 #ifndef CHARSET_EBCDIC

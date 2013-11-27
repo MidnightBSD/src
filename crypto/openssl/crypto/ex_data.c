@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* crypto/ex_data.c */
 
 /*

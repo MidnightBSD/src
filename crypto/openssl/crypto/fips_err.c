@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #include <openssl/opensslconf.h>
 
 #ifdef OPENSSL_FIPS

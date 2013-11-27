@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* apps/rand.c */
 /* ====================================================================
  * Copyright (c) 1998-2001 The OpenSSL Project.  All rights reserved.

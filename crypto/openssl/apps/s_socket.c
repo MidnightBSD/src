@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* apps/s_socket.c -  socket-related functions used by s_client and s_server */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.

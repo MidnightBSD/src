@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* crypto/uid.c */
 /* ====================================================================
  * Copyright (c) 2001 The OpenSSL Project.  All rights reserved.
