@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_sppp.c Netgraph to Sppp module.
  */
@@ -17,7 +18,7 @@
  * Cronyx Id: ng_sppp.c,v 1.1.2.10 2004/03/01 15:17:21 rik Exp $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netgraph/ng_sppp.c,v 1.11.6.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -108,7 +109,7 @@ static unsigned char	ng_units_in_use = 0;
  * Find the first free unit number for a new interface.
  * Increase the size of the unit bitmap as necessary.
  */
-static __inline int
+static __inline void
 ng_sppp_get_unit (int *unit)
 {
 	int index, bit;
@@ -121,16 +122,14 @@ ng_sppp_get_unit (int *unit)
 		int newlen;
 		
 		newlen = (2 * ng_sppp_units_len) + sizeof (*ng_sppp_units);
-		MALLOC (newarray, unsigned char *,
-		    newlen * sizeof (*ng_sppp_units), M_NETGRAPH_SPPP, M_NOWAIT);
-		if (newarray == NULL)
-			return (ENOMEM);
+		newarray = malloc (newlen * sizeof (*ng_sppp_units),
+		    M_NETGRAPH_SPPP, M_WAITOK);
 		bcopy (ng_sppp_units, newarray,
 		    ng_sppp_units_len * sizeof (*ng_sppp_units));
 		bzero (newarray + ng_sppp_units_len,
 		    newlen - ng_sppp_units_len);
 		if (ng_sppp_units != NULL)
-			FREE (ng_sppp_units, M_NETGRAPH_SPPP);
+			free (ng_sppp_units, M_NETGRAPH_SPPP);
 		ng_sppp_units = newarray;
 		ng_sppp_units_len = newlen;
 	}
@@ -142,7 +141,6 @@ ng_sppp_get_unit (int *unit)
 	ng_sppp_units[index] |= (1 << bit);
 	*unit = (index * NBBY) + bit;
 	ng_units_in_use++;
-	return (0);
 }
 
 /*
@@ -163,7 +161,7 @@ ng_sppp_free_unit (int unit)
 
 	ng_units_in_use--;
 	if (ng_units_in_use == 0) {
-		FREE (ng_sppp_units, M_NETGRAPH_SPPP);
+		free (ng_sppp_units, M_NETGRAPH_SPPP);
 		ng_sppp_units_len = 0;
 		ng_sppp_units = NULL;
 	}
@@ -245,16 +243,13 @@ ng_sppp_constructor (node_p node)
 	struct sppp *pp;
 	struct ifnet *ifp;
 	priv_p priv;
-	int error = 0;
 
 	/* Allocate node and interface private structures */
-	MALLOC (priv, priv_p, sizeof(*priv), M_NETGRAPH_SPPP, M_NOWAIT|M_ZERO);
-	if (priv == NULL)
-		return (ENOMEM);
+	priv = malloc(sizeof(*priv), M_NETGRAPH_SPPP, M_WAITOK | M_ZERO);
 
 	ifp = if_alloc(IFT_PPP);
 	if (ifp == NULL) {
-		FREE (priv, M_NETGRAPH_SPPP);
+		free (priv, M_NETGRAPH_SPPP);
 		return (ENOSPC);
 	}
 	pp = IFP2SP(ifp);
@@ -264,12 +259,7 @@ ng_sppp_constructor (node_p node)
 	priv->ifp = ifp;
 
 	/* Get an interface unit number */
-	if ((error = ng_sppp_get_unit(&priv->unit)) != 0) {
-		FREE (pp, M_NETGRAPH_SPPP);
-		FREE (priv, M_NETGRAPH_SPPP);
-		return (error);
-	}
-
+	ng_sppp_get_unit(&priv->unit);
 
 	/* Link together node and private info */
 	NG_NODE_SET_PRIVATE (node, priv);
@@ -279,7 +269,6 @@ ng_sppp_constructor (node_p node)
 	if_initname (SP2IFP(pp), NG_SPPP_IFACE_NAME, priv->unit);
 	ifp->if_start = ng_sppp_start;
 	ifp->if_ioctl = ng_sppp_ioctl;
-	ifp->if_watchdog = NULL;
 	ifp->if_flags = (IFF_POINTOPOINT|IFF_MULTICAST);
 
 	/* Give this node the same name as the interface (if possible) */
@@ -401,7 +390,7 @@ ng_sppp_shutdown (node_p node)
 	if_detach (priv->ifp);
 	if_free(priv->ifp);
 	ng_sppp_free_unit (priv->unit);
-	FREE (priv, M_NETGRAPH_SPPP);
+	free (priv, M_NETGRAPH_SPPP);
 	NG_NODE_SET_PRIVATE (node, NULL);
 	NG_NODE_UNREF (node);
 	return (0);

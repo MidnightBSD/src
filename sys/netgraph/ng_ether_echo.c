@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_ether_echo.c
  */

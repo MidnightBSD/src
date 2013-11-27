@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: sbbc.c,v 1.7 2009/11/09 17:53:39 nicm Exp $	*/
 /*-
  * Copyright (c) 2008 Mark Kettenis

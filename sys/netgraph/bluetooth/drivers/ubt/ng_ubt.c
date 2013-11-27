@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_ubt.c
  */
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_ubt.c,v 1.1.1.4 2012-07-21 15:17:19 laffer1 Exp $
+ * $Id: ng_ubt.c,v 1.2 2013-11-27 03:41:35 laffer1 Exp $
  * $FreeBSD$
  */
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_message.h
  */
@@ -37,7 +38,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_message.h,v 1.29.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  * $Whistle: ng_message.h,v 1.12 1999/01/25 01:17:44 archie Exp $
  */
 
@@ -50,15 +51,6 @@
 #define	NG_NODESIZ	32	/* max node name len (including null) */
 #define	NG_PATHSIZ	512	/* max path len (including null) */
 #define	NG_CMDSTRSIZ	32	/* max command string (including null) */
-
-#ifndef BURN_BRIDGES
-/* don't use these - they will go away */
-#define NG_TYPELEN	(NG_TYPESIZ - 1)
-#define NG_HOOKLEN	(NG_HOOKSIZ - 1)
-#define NG_NODELEN	(NG_NODESIZ - 1)
-#define NG_PATHLEN	(NG_PATHSIZ - 1)
-#define NG_CMDSTRLEN	(NG_CMDSTRSIZ - 1)
-#endif
 
 #define NG_TEXTRESPONSE 1024	/* allow this length for a text response */
 
@@ -388,7 +380,7 @@ struct flow_manager {
  */
 #define NG_MKMESSAGE(msg, cookie, cmdid, len, how)			\
 	do {								\
-	  MALLOC((msg), struct ng_mesg *, sizeof(struct ng_mesg)	\
+	  (msg) = malloc(sizeof(struct ng_mesg)				\
 	    + (len), M_NETGRAPH_MSG, (how) | M_ZERO);			\
 	  if ((msg) == NULL)						\
 	    break;							\
@@ -406,7 +398,7 @@ struct flow_manager {
  */
 #define NG_MKRESPONSE(rsp, msg, len, how)				\
 	do {								\
-	  MALLOC((rsp), struct ng_mesg *, sizeof(struct ng_mesg)	\
+	  (rsp) = malloc(sizeof(struct ng_mesg)				\
 	    + (len), M_NETGRAPH_MSG, (how) | M_ZERO);			\
 	  if ((rsp) == NULL)						\
 	    break;							\
@@ -425,8 +417,8 @@ struct flow_manager {
  */
 #define	NG_COPYMESSAGE(copy, msg, how)					\
 	do {								\
-	  MALLOC((copy), struct ng_mesg *, sizeof(struct ng_mesg) +	\
-	    (msg)->header.arglen, M_NETGRAPH_MSG, (how) | M_ZERO);	\
+	  (copy) = malloc(sizeof(struct ng_mesg)			\
+	    + (msg)->header.arglen, M_NETGRAPH_MSG, (how) | M_ZERO);	\
 	  if ((copy) == NULL)						\
 	    break;							\
 	  (copy)->header.version = NG_VERSION;				\

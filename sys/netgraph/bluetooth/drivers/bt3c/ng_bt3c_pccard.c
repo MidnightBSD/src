@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_bt3c_pccard.c
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_bt3c_pccard.c,v 1.3 2008-11-28 16:32:32 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/drivers/bt3c/ng_bt3c_pccard.c,v 1.20 2007/02/23 12:19:02 piso Exp $
+ * $Id: ng_bt3c_pccard.c,v 1.4 2013-11-27 03:41:16 laffer1 Exp $
+ * $FreeBSD$
  *
  * XXX XXX XX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX 
  *

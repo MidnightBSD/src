@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_source.h
  */
@@ -34,9 +35,9 @@
  * THIS SOFTWARE, EVEN IF SANDVINE IS ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * Author: Dave Chapeskie <dchapeskie@sandvine.com>
+ * Author: Dave Chapeskie
  *
- * $FreeBSD: src/sys/netgraph/ng_source.h,v 1.9.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_NG_SOURCE_H_

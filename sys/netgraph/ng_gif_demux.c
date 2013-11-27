@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_gif_demux.c
  */
@@ -62,7 +63,7 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netgraph/ng_gif_demux.c,v 1.10.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -233,10 +234,7 @@ ng_gif_demux_constructor(node_p node)
 	priv_p priv;
 
 	/* Allocate and initialize private info */
-	MALLOC(priv, priv_p, sizeof(*priv), M_NETGRAPH_GIF_DEMUX,
-	    M_NOWAIT | M_ZERO);
-	if (priv == NULL)
-		return (ENOMEM);
+	priv = malloc(sizeof(*priv), M_NETGRAPH_GIF_DEMUX, M_WAITOK | M_ZERO);
 	priv->node = node;
 
 	NG_NODE_SET_PRIVATE(node, priv);
@@ -371,7 +369,7 @@ ng_gif_demux_shutdown(node_p node)
 {
 	const priv_p priv = NG_NODE_PRIVATE(node);
 
-	FREE(priv, M_NETGRAPH_GIF_DEMUX);
+	free(priv, M_NETGRAPH_GIF_DEMUX);
 	NG_NODE_SET_PRIVATE(node, NULL);
 	NG_NODE_UNREF(node);
 	return (0);
@@ -391,7 +389,7 @@ ng_gif_demux_disconnect(hook_p hook)
 	else {
 		iffam = get_iffam_from_hook(priv, hook);
 		if (iffam == NULL)
-			panic(__func__);
+			panic("%s", __func__);
 		*get_hook_from_iffam(priv, iffam) = NULL;
 	}
 

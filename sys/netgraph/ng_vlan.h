@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 IPNET Internet Communication Company
  * All rights reserved.
@@ -25,7 +26,7 @@
  *
  * Author: Ruslan Ermilov <ru@FreeBSD.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_vlan.h,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_NG_VLAN_H_

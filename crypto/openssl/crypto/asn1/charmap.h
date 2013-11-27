@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* Auto generated with chartype.pl script.
  * Mask of various character properties
  */

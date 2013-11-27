@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Alexander Motin <mav@alkar.net>
  * All rights reserved.
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netgraph/ng_pred1.c,v 1.2.8.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -400,10 +401,15 @@ ng_pred1_compress(node_p node, struct mbuf *m, struct mbuf **resultp)
 		return (ENOMEM);
 	}
 
+	/* We must own the mbuf chain exclusively to modify it. */
+	m = m_unshare(m, M_DONTWAIT);
+	if (m == NULL) {
+		priv->stats.Errors++;
+		return (ENOMEM);
+	}
+
 	/* Work with contiguous regions of memory. */
 	m_copydata(m, 0, inlen, (caddr_t)(priv->inbuf + 2));
-
-	NG_FREE_M(m);
 
 	lenn = htons(inlen & 0x7FFF);
 
@@ -437,12 +443,14 @@ ng_pred1_compress(node_p node, struct mbuf *m, struct mbuf **resultp)
 	outlen += 2;
 
 	/* Return packet in an mbuf. */
-	*resultp = m_devget((caddr_t)out, outlen, 0, NULL, NULL);
-	if (*resultp == NULL) {
-	    priv->stats.Errors++;
-	    return (ENOMEM);
-	};
-
+	m_copyback(m, 0, outlen, (caddr_t)out);
+	if (m->m_pkthdr.len < outlen) {
+		m_freem(m);
+		priv->stats.Errors++;
+		return (ENOMEM);
+	} else if (outlen < m->m_pkthdr.len)
+		m_adj(m, outlen - m->m_pkthdr.len);
+	*resultp = m;
 	priv->stats.OutOctets += outlen;
 
 	return (0);
@@ -471,6 +479,13 @@ ng_pred1_decompress(node_p node, struct mbuf *m, struct mbuf **resultp)
 		return (ENOMEM);
 	}
 
+	/* We must own the mbuf chain exclusively to modify it. */
+	m = m_unshare(m, M_DONTWAIT);
+	if (m == NULL) {
+		priv->stats.Errors++;
+		return (ENOMEM);
+	}
+
 	/* Work with contiguous regions of memory. */
 	m_copydata(m, 0, inlen, (caddr_t)priv->inbuf);
 
@@ -485,13 +500,12 @@ ng_pred1_decompress(node_p node, struct mbuf *m, struct mbuf **resultp)
 
 	/* Is data compressed or not really? */
 	if (cf) {
-		NG_FREE_M(m);
-
 		priv->stats.FramesComp++;
 		len1 = Pred1Decompress(node, priv->inbuf + 2, priv->outbuf,
 		    inlen - 4, PRED1_BUF_SIZE);
 		if (len != len1) {
 			/* Error is detected. Send reset request */
+			m_freem(m);
 			priv->stats.Errors++;
 			log(LOG_NOTICE, "ng_pred1: Comp length error (%d) "
 			    "--> len (%d)\n", len, len1);
@@ -510,17 +524,21 @@ ng_pred1_decompress(node_p node, struct mbuf *m, struct mbuf **resultp)
 		fcs = Crc16(fcs, priv->inbuf + inlen - 2, 2);
 
 		if (fcs != PPP_GOODFCS) {
+			m_freem(m);
 			priv->stats.Errors++;
 	    		log(LOG_NOTICE, "ng_pred1: Pred1: Bad CRC-16\n");
 			return (EIO);
 		}
 
 		/* Return packet in an mbuf. */
-		*resultp = m_devget((caddr_t)priv->outbuf, len, 0, NULL, NULL);
-		if (*resultp == NULL) {
+		m_copyback(m, 0, len, (caddr_t)priv->outbuf);
+		if (m->m_pkthdr.len < len) {
+			m_freem(m);
 			priv->stats.Errors++;
 			return (ENOMEM);
-		};
+		} else if (len < m->m_pkthdr.len)
+			m_adj(m, len - m->m_pkthdr.len);
+		*resultp = m;
 
 	} else {
 		priv->stats.FramesUncomp++;
@@ -565,7 +583,7 @@ static int
 Pred1Compress(node_p node, u_char *source, u_char *dest, int len)
 {
 	const priv_p 	priv = NG_NODE_PRIVATE(node);
-	int		i, bitmask;
+	int		i;
 	u_char		flags;
 	u_char		*flagdest, *orgdest;
 
@@ -573,10 +591,10 @@ Pred1Compress(node_p node, u_char *source, u_char *dest, int len)
 	while (len) {
 		flagdest = dest++;
 		flags = 0;	/* All guesses are wrong initially. */
-		for (bitmask = 1, i = 0; i < 8 && len; i++, bitmask <<= 1) {
+		for (i = 0; i < 8 && len; i++) {
     			if (priv->GuessTable[priv->Hash] == *source)
 				/* Guess was right - don't output. */
-				flags |= bitmask;
+				flags |= (1 << i);
     			else {
 				/* Guess wrong, output char. */
 				priv->GuessTable[priv->Hash] = *source;
@@ -600,17 +618,17 @@ static int
 Pred1Decompress(node_p node, u_char *source, u_char *dest, int slen, int dlen)
 {
 	const priv_p 	priv = NG_NODE_PRIVATE(node);
-	int		i, bitmask;
+	int		i;
 	u_char		flags, *orgdest;
 
 	orgdest = dest;
 	while (slen) {
 		flags = *source++;
 		slen--;
-		for (i = 0, bitmask = 1; i < 8; i++, bitmask <<= 1) {
+		for (i = 0; i < 8; i++, flags >>= 1) {
 			if (dlen <= 0)
 				return(-1);
-			if (flags & bitmask)
+			if (flags & 0x01)
 				/* Guess correct */
 				*dest = priv->GuessTable[priv->Hash];
 			else {

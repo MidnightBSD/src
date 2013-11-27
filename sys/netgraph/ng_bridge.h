@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_bridge.h
  */
@@ -37,7 +38,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_bridge.h,v 1.4.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_NG_BRIDGE_H_
@@ -149,6 +150,7 @@ enum {
 	NGM_BRIDGE_CLR_STATS,		/* clear link stats */
 	NGM_BRIDGE_GETCLR_STATS,	/* atomically get & clear link stats */
 	NGM_BRIDGE_GET_TABLE,		/* get link table */
+	NGM_BRIDGE_SET_PERSISTENT,	/* set persistent mode */
 };
 
 #endif /* _NETGRAPH_NG_BRIDGE_H_ */

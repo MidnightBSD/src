@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_async.c
  */
@@ -37,7 +38,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_async.c,v 1.22.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  * $Whistle: ng_async.c,v 1.17 1999/11/01 09:24:51 julian Exp $
  */
 
@@ -183,25 +184,15 @@ nga_constructor(node_p node)
 {
 	sc_p sc;
 
-	MALLOC(sc, sc_p, sizeof(*sc), M_NETGRAPH_ASYNC, M_NOWAIT | M_ZERO);
-	if (sc == NULL)
-		return (ENOMEM);
+	sc = malloc(sizeof(*sc), M_NETGRAPH_ASYNC, M_WAITOK | M_ZERO);
 	sc->amode = MODE_HUNT;
 	sc->cfg.accm = ~0;
 	sc->cfg.amru = NG_ASYNC_DEFAULT_MRU;
 	sc->cfg.smru = NG_ASYNC_DEFAULT_MRU;
-	MALLOC(sc->abuf, u_char *,
-	    ASYNC_BUF_SIZE(sc->cfg.smru), M_NETGRAPH_ASYNC, M_NOWAIT);
-	if (sc->abuf == NULL)
-		goto fail;
-	MALLOC(sc->sbuf, u_char *,
-	    SYNC_BUF_SIZE(sc->cfg.amru), M_NETGRAPH_ASYNC, M_NOWAIT);
-	if (sc->sbuf == NULL) {
-		FREE(sc->abuf, M_NETGRAPH_ASYNC);
-fail:
-		FREE(sc, M_NETGRAPH_ASYNC);
-		return (ENOMEM);
-	}
+	sc->abuf = malloc(ASYNC_BUF_SIZE(sc->cfg.smru),
+	    M_NETGRAPH_ASYNC, M_WAITOK);
+	sc->sbuf = malloc(SYNC_BUF_SIZE(sc->cfg.amru),
+	    M_NETGRAPH_ASYNC, M_WAITOK);
 	NG_NODE_SET_PRIVATE(node, sc);
 	sc->node = node;
 	return (0);
@@ -256,7 +247,7 @@ nga_rcvdata(hook_p hook, item_p item)
 		return (nga_rcv_sync(sc, item));
 	if (hook == sc->async)
 		return (nga_rcv_async(sc, item));
-	panic(__func__);
+	panic("%s", __func__);
 }
 
 /*
@@ -298,19 +289,19 @@ nga_rcvmsg(node_p node, item_p item, hook_p lasthook)
 				ERROUT(EINVAL);
 			cfg->enabled = !!cfg->enabled;	/* normalize */
 			if (cfg->smru > sc->cfg.smru) {	/* reallocate buffer */
-				MALLOC(buf, u_char *, ASYNC_BUF_SIZE(cfg->smru),
+				buf = malloc(ASYNC_BUF_SIZE(cfg->smru),
 				    M_NETGRAPH_ASYNC, M_NOWAIT);
 				if (!buf)
 					ERROUT(ENOMEM);
-				FREE(sc->abuf, M_NETGRAPH_ASYNC);
+				free(sc->abuf, M_NETGRAPH_ASYNC);
 				sc->abuf = buf;
 			}
 			if (cfg->amru > sc->cfg.amru) {	/* reallocate buffer */
-				MALLOC(buf, u_char *, SYNC_BUF_SIZE(cfg->amru),
+				buf = malloc(SYNC_BUF_SIZE(cfg->amru),
 				    M_NETGRAPH_ASYNC, M_NOWAIT);
 				if (!buf)
 					ERROUT(ENOMEM);
-				FREE(sc->sbuf, M_NETGRAPH_ASYNC);
+				free(sc->sbuf, M_NETGRAPH_ASYNC);
 				sc->sbuf = buf;
 				sc->amode = MODE_HUNT;
 				sc->slen = 0;
@@ -349,10 +340,10 @@ nga_shutdown(node_p node)
 {
 	const sc_p sc = NG_NODE_PRIVATE(node);
 
-	FREE(sc->abuf, M_NETGRAPH_ASYNC);
-	FREE(sc->sbuf, M_NETGRAPH_ASYNC);
+	free(sc->abuf, M_NETGRAPH_ASYNC);
+	free(sc->sbuf, M_NETGRAPH_ASYNC);
 	bzero(sc, sizeof(*sc));
-	FREE(sc, M_NETGRAPH_ASYNC);
+	free(sc, M_NETGRAPH_ASYNC);
 	NG_NODE_SET_PRIVATE(node, NULL);
 	NG_NODE_UNREF(node);
 	return (0);
@@ -372,7 +363,7 @@ nga_disconnect(hook_p hook)
 	else if (hook == sc->sync)
 		hookp = &sc->sync;
 	else
-		panic(__func__);
+		panic("%s", __func__);
 	if (!*hookp)
 		panic("%s 2", __func__);
 	*hookp = NULL;

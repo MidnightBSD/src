@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Jason L. Wright (jason@thought.net)
  * Copyright (c) 2005 by Marius Strobl <marius@FreeBSD.org>

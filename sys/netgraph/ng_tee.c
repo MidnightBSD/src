@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /*
  * ng_tee.c
@@ -38,7 +39,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_tee.c,v 1.33.10.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  * $Whistle: ng_tee.c,v 1.18 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -153,9 +154,7 @@ ng_tee_constructor(node_p node)
 {
 	sc_p privdata;
 
-	MALLOC(privdata, sc_p, sizeof(*privdata), M_NETGRAPH, M_NOWAIT|M_ZERO);
-	if (privdata == NULL)
-		return (ENOMEM);
+	privdata = malloc(sizeof(*privdata), M_NETGRAPH, M_WAITOK | M_ZERO);
 
 	NG_NODE_SET_PRIVATE(node, privdata);
 	return (0);
@@ -356,7 +355,7 @@ ng_tee_shutdown(node_p node)
 	const sc_p privdata = NG_NODE_PRIVATE(node);
 
 	NG_NODE_SET_PRIVATE(node, NULL);
-	FREE(privdata, M_NETGRAPH);
+	free(privdata, M_NETGRAPH);
 	NG_NODE_UNREF(node);
 	return (0);
 }

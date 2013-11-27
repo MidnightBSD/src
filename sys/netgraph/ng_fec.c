@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_fec.c
  */
@@ -34,7 +35,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netgraph/ng_fec.c,v 1.30.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 /*-
  * Copyright (c) 1996-1999 Whistle Communications, Inc.
@@ -107,6 +108,7 @@
 #include <net/if_media.h>
 #include <net/bpf.h>
 #include <net/ethernet.h>
+#include <net/route.h>
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -165,7 +167,7 @@ struct ng_fec_bundle {
 	int			(*fec_if_output) (struct ifnet *,
 						  struct mbuf *,
 						  struct sockaddr *,
-						  struct rtentry *);
+						  struct route *);
 };
 
 #define FEC_BTYPE_MAC		0x01
@@ -197,7 +199,7 @@ static int	ng_fec_ifmedia_upd(struct ifnet *ifp);
 static void	ng_fec_ifmedia_sts(struct ifnet *ifp, struct ifmediareq *ifmr);
 static int	ng_fec_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data);
 static int	ng_fec_output(struct ifnet *ifp, struct mbuf *m0,
-			struct sockaddr *dst, struct rtentry *rt0);
+			struct sockaddr *dst, struct route *ro);
 static void	ng_fec_tick(void *arg);
 static int	ng_fec_addport(struct ng_fec_private *priv, char *iface);
 static int	ng_fec_delport(struct ng_fec_private *priv, char *iface);
@@ -284,7 +286,7 @@ ng_fec_get_unit(int *unit)
 		int i, *newarray, newlen;
 
 		newlen = (2 * ng_fec_units_len) + 4;
-		MALLOC(newarray, int *, newlen * sizeof(*ng_fec_units),
+		newarray = malloc(newlen * sizeof(*ng_fec_units),
 		    M_NETGRAPH, M_NOWAIT);
 		if (newarray == NULL) {
 			mtx_unlock(&ng_fec_mtx);
@@ -295,7 +297,7 @@ ng_fec_get_unit(int *unit)
 		for (i = ng_fec_units_len; i < newlen; i++)
 			newarray[i] = ~0;
 		if (ng_fec_units != NULL)
-			FREE(ng_fec_units, M_NETGRAPH);
+			free(ng_fec_units, M_NETGRAPH);
 		ng_fec_units = newarray;
 		ng_fec_units_len = newlen;
 	}
@@ -333,7 +335,7 @@ ng_fec_free_unit(int unit)
 	 */
 	ng_units_in_use--;
 	if (ng_units_in_use == 0) { /* XXX make SMP safe */
-		FREE(ng_fec_units, M_NETGRAPH);
+		free(ng_fec_units, M_NETGRAPH);
 		ng_fec_units_len = 0;
 		ng_fec_units = NULL;
 	}
@@ -403,8 +405,7 @@ ng_fec_addport(struct ng_fec_private *priv, char *iface)
 	}
 
 	/* Allocate new list entry. */
-	MALLOC(new, struct ng_fec_portlist *,
-	    sizeof(struct ng_fec_portlist), M_NETGRAPH, M_NOWAIT);
+	new = malloc(sizeof(struct ng_fec_portlist), M_NETGRAPH, M_NOWAIT);
 	if (new == NULL)
 		return(ENOMEM);
 
@@ -433,6 +434,7 @@ ng_fec_addport(struct ng_fec_private *priv, char *iface)
 
 	/* Set up phony MAC address. */
 	if_setlladdr(bifp, IF_LLADDR(ifp), ETHER_ADDR_LEN);
+	EVENTHANDLER_INVOKE(iflladdr_event, bifp);
 
 	/* Save original input vector */
 	new->fec_if_input = bifp->if_input;
@@ -511,7 +513,7 @@ ng_fec_delport(struct ng_fec_private *priv, char *iface)
 
 	/* Delete port */
 	TAILQ_REMOVE(&b->ng_fec_ports, p, fec_list);
-	FREE(p, M_NETGRAPH);
+	free(p, M_NETGRAPH);
 	b->fec_ifcnt--;
 
 	if (b->fec_ifcnt == 0)
@@ -924,7 +926,7 @@ ng_fec_input(struct ifnet *ifp, struct mbuf *m0)
 
 static int
 ng_fec_output(struct ifnet *ifp, struct mbuf *m,
-		struct sockaddr *dst, struct rtentry *rt0)
+		struct sockaddr *dst, struct route *ro)
 {
 	const priv_p priv = (priv_p) ifp->if_softc;
 	struct ng_fec_bundle *b;
@@ -978,7 +980,7 @@ ng_fec_output(struct ifnet *ifp, struct mbuf *m,
 	 * for us.
 	 */
 	priv->if_error = 0;
-	error = (*b->fec_if_output)(ifp, m, dst, rt0);
+	error = (*b->fec_if_output)(ifp, m, dst, ro);
 	if (priv->if_error && !error)
 		error = priv->if_error;
 
@@ -1196,13 +1198,11 @@ ng_fec_constructor(node_p node)
 	int error = 0;
 
 	/* Allocate node and interface private structures */
-	MALLOC(priv, priv_p, sizeof(*priv), M_NETGRAPH, M_NOWAIT | M_ZERO);
-	if (priv == NULL)
-		return (ENOMEM);
+	priv = malloc(sizeof(*priv), M_NETGRAPH, M_WAITOK | M_ZERO);
 
 	ifp = priv->ifp = if_alloc(IFT_ETHER);
 	if (ifp == NULL) {
-		FREE(priv, M_NETGRAPH);
+		free(priv, M_NETGRAPH);
 		return (ENOSPC);
 	}
 	b = &priv->fec_bundle;
@@ -1213,7 +1213,7 @@ ng_fec_constructor(node_p node)
 	/* Get an interface unit number */
 	if ((error = ng_fec_get_unit(&priv->unit)) != 0) {
 		if_free(ifp);
-		FREE(priv, M_NETGRAPH);
+		free(priv, M_NETGRAPH);
 		return (error);
 	}
 
@@ -1226,8 +1226,7 @@ ng_fec_constructor(node_p node)
 	ifp->if_start = ng_fec_start;
 	ifp->if_ioctl = ng_fec_ioctl;
 	ifp->if_init = ng_fec_init;
-	ifp->if_watchdog = NULL;
-	ifp->if_snd.ifq_maxlen = IFQ_MAXLEN;
+	ifp->if_snd.ifq_maxlen = ifqmaxlen;
 	ifp->if_mtu = NG_FEC_MTU_DEFAULT;
 	ifp->if_flags = (IFF_SIMPLEX|IFF_BROADCAST|IFF_MULTICAST);
 	ifp->if_addrlen = 0;			/* XXX */
@@ -1337,7 +1336,7 @@ ng_fec_shutdown(node_p node)
 	if_free_type(priv->ifp, IFT_ETHER);
 	ifmedia_removeall(&priv->ifmedia);
 	ng_fec_free_unit(priv->unit);
-	FREE(priv, M_NETGRAPH);
+	free(priv, M_NETGRAPH);
 	NG_NODE_SET_PRIVATE(node, NULL);
 	NG_NODE_UNREF(node);
 	return (0);

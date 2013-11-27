@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_frame_relay.c
  */
@@ -37,7 +38,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_frame_relay.c,v 1.25.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  * $Whistle: ng_frame_relay.c,v 1.20 1999/11/01 09:24:51 julian Exp $
  */
 
@@ -212,9 +213,7 @@ ngfrm_constructor(node_p node)
 {
 	sc_p sc;
 
-	MALLOC(sc, sc_p, sizeof(*sc), M_NETGRAPH, M_NOWAIT | M_ZERO);
-	if (!sc)
-		return (ENOMEM);
+	sc = malloc(sizeof(*sc), M_NETGRAPH, M_WAITOK | M_ZERO);
 	sc->addrlen = 2;	/* default */
 
 	/* Link the node and our private info */
@@ -396,7 +395,7 @@ ngfrm_rcvdata(hook_p hook, item_p item)
 		data[3] |= BYTEX_EA;
 		break;
 	default:
-		panic(__func__);
+		panic("%s", __func__);
 	}
 
 	/* Send it */
@@ -481,7 +480,7 @@ ngfrm_shutdown(node_p node)
 	const sc_p sc = NG_NODE_PRIVATE(node);
 
 	NG_NODE_SET_PRIVATE(node, NULL);
-	FREE(sc, M_NETGRAPH);
+	free(sc, M_NETGRAPH);
 	NG_NODE_UNREF(node);
 	return (0);
 }

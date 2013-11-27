@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996-2000 Whistle Communications, Inc.
  * All rights reserved.
@@ -58,7 +59,7 @@
  *
  * Authors: Archie Cobbs <archie@freebsd.org>, Alexander Motin <mav@alkar.net>
  *
- * $FreeBSD: src/sys/netgraph/ng_ppp.c,v 1.70.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  * $Whistle: ng_ppp.c,v 1.24 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -97,6 +98,7 @@
 #include <sys/time.h>
 #include <sys/mbuf.h>
 #include <sys/malloc.h>
+#include <sys/endian.h>
 #include <sys/errno.h>
 #include <sys/ctype.h>
 
@@ -128,7 +130,6 @@ MALLOC_DEFINE(M_NETGRAPH_PPP, "netgraph_ppp", "netgraph ppp node");
 #define PROT_VJUNCOMP		0x002f
 
 /* Multilink PPP definitions */
-#define MP_MIN_MRRU		1500		/* per RFC 1990 */
 #define MP_INITIAL_SEQ		0		/* per RFC 1990 */
 #define MP_MIN_LINK_MRU		32
 
@@ -490,9 +491,7 @@ ng_ppp_constructor(node_p node)
 	int i;
 
 	/* Allocate private structure */
-	MALLOC(priv, priv_p, sizeof(*priv), M_NETGRAPH_PPP, M_NOWAIT | M_ZERO);
-	if (priv == NULL)
-		return (ENOMEM);
+	priv = malloc(sizeof(*priv), M_NETGRAPH_PPP, M_WAITOK | M_ZERO);
 
 	NG_NODE_SET_PRIVATE(node, priv);
 
@@ -743,7 +742,7 @@ ng_ppp_shutdown(node_p node)
 	mtx_destroy(&priv->rmtx);
 	mtx_destroy(&priv->xmtx);
 	bzero(priv, sizeof(*priv));
-	FREE(priv, M_NETGRAPH_PPP);
+	free(priv, M_NETGRAPH_PPP);
 	NG_NODE_SET_PRIVATE(node, NULL);
 	NG_NODE_UNREF(node);		/* let the node escape */
 	return (0);
@@ -861,8 +860,8 @@ ng_ppp_rcvdata_bypass(hook_p hook, item_p item)
 		NG_FREE_ITEM(item);
 		return (ENOBUFS);
 	}
-	linkNum = ntohs(mtod(m, uint16_t *)[0]);
-	proto = ntohs(mtod(m, uint16_t *)[1]);
+	linkNum = be16dec(mtod(m, uint8_t *));
+	proto = be16dec(mtod(m, uint8_t *) + 2);
 	m_adj(m, 4);
 	NGI_M(item) = m;
 
@@ -908,7 +907,21 @@ ng_ppp_proto_recv(node_p node, item_p item, uint16_t proto, uint16_t linkNum)
 	const priv_p priv = NG_NODE_PRIVATE(node);
 	hook_p outHook = NULL;
 	int error;
+#ifdef ALIGNED_POINTER
+	struct mbuf *m, *n;
 
+	NGI_GET_M(item, m);
+	if (!ALIGNED_POINTER(mtod(m, caddr_t), uint32_t)) {
+		n = m_defrag(m, M_NOWAIT);
+		if (n == NULL) {
+			m_freem(m);
+			NG_FREE_ITEM(item);
+			return (ENOBUFS);
+		}
+		m = n;
+	}
+	NGI_M(item) = m;
+#endif /* ALIGNED_POINTER */
 	switch (proto) {
 	    case PROT_IP:
 		if (priv->conf.enableIP)
@@ -1531,7 +1544,7 @@ ng_ppp_mp_recv(node_p node, item_p item, uint16_t proto, uint16_t linkNum)
 		if (m->m_len < 2 && (m = m_pullup(m, 2)) == NULL)
 			ERROUT(ENOBUFS);
 
-		shdr = ntohs(*mtod(m, uint16_t *));
+		shdr = be16dec(mtod(m, void *));
 		frag->seq = MP_SHORT_EXTEND(shdr);
 		frag->first = (shdr & MP_SHORT_FIRST_FLAG) != 0;
 		frag->last = (shdr & MP_SHORT_LAST_FLAG) != 0;
@@ -1548,7 +1561,7 @@ ng_ppp_mp_recv(node_p node, item_p item, uint16_t proto, uint16_t linkNum)
 		if (m->m_len < 4 && (m = m_pullup(m, 4)) == NULL)
 			ERROUT(ENOBUFS);
 
-		lhdr = ntohl(*mtod(m, uint32_t *));
+		lhdr = be32dec(mtod(m, void *));
 		frag->seq = MP_LONG_EXTEND(lhdr);
 		frag->first = (lhdr & MP_LONG_FIRST_FLAG) != 0;
 		frag->last = (lhdr & MP_LONG_LAST_FLAG) != 0;
@@ -1983,6 +1996,12 @@ ng_ppp_mp_xmit(node_p node, item_p item, uint16_t proto)
 	if (!priv->conf.enableMultilink) {
 		return (ng_ppp_link_xmit(node, item, proto,
 		    priv->activeLinks[0], plen));
+	}
+
+	/* Check peer's MRRU for this bundle. */
+	if (plen > priv->conf.mrru) {
+		NG_FREE_ITEM(item);
+		return (EMSGSIZE);
 	}
 
 	/* Extract mbuf. */
@@ -2539,10 +2558,6 @@ ng_ppp_config_valid(node_p node, const struct ng_ppp_node_conf *newConf)
 		if (newConf->links[i].latency > NG_PPP_MAX_LATENCY)
 			return (0);
 	}
-
-	/* Check bundle parameters */
-	if (newConf->bund.enableMultilink && newConf->bund.mrru < MP_MIN_MRRU)
-		return (0);
 
 	/* Disallow changes to multi-link configuration while MP is active */
 	if (priv->numActiveLinks > 0 && newNumLinksActive > 0) {

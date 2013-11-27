@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_one2many.c
  */
@@ -37,7 +38,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_one2many.c,v 1.21.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -187,9 +188,7 @@ ng_one2many_constructor(node_p node)
 	priv_p priv;
 
 	/* Allocate and initialize private info */
-	MALLOC(priv, priv_p, sizeof(*priv), M_NETGRAPH, M_NOWAIT | M_ZERO);
-	if (priv == NULL)
-		return (ENOMEM);
+	priv = malloc(sizeof(*priv), M_NETGRAPH, M_WAITOK | M_ZERO);
 	priv->conf.xmitAlg = NG_ONE2MANY_XMIT_ROUNDROBIN;
 	priv->conf.failAlg = NG_ONE2MANY_FAIL_MANUAL;
 
@@ -278,6 +277,7 @@ ng_one2many_rcvmsg(node_p node, item_p item, hook_p lasthook)
 			switch (conf->xmitAlg) {
 			case NG_ONE2MANY_XMIT_ROUNDROBIN:
 			case NG_ONE2MANY_XMIT_ALL:
+			case NG_ONE2MANY_XMIT_FAILOVER:
 				break;
 			default:
 				error = EINVAL;
@@ -473,6 +473,9 @@ ng_one2many_rcvdata(hook_p hook, item_p item)
 				NG_SEND_DATA_ONLY(error, mdst->hook, m2);
 			}
 			break;
+		case NG_ONE2MANY_XMIT_FAILOVER:
+			dst = &priv->many[priv->activeMany[0]];
+			break;
 #ifdef INVARIANTS
 		default:
 			panic("%s: invalid xmitAlg", __func__);
@@ -501,7 +504,7 @@ ng_one2many_shutdown(node_p node)
 
 	KASSERT(priv->numActiveMany == 0,
 	    ("%s: numActiveMany=%d", __func__, priv->numActiveMany));
-	FREE(priv, M_NETGRAPH);
+	free(priv, M_NETGRAPH);
 	NG_NODE_SET_PRIVATE(node, NULL);
 	NG_NODE_UNREF(node);
 	return (0);
@@ -583,6 +586,7 @@ ng_one2many_update_many(priv_p priv)
 			priv->nextMany %= priv->numActiveMany;
 		break;
 	case NG_ONE2MANY_XMIT_ALL:
+	case NG_ONE2MANY_XMIT_FAILOVER:
 		break;
 #ifdef INVARIANTS
 	default:

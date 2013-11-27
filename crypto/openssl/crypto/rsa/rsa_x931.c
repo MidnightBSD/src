@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* rsa_x931.c */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 2005.

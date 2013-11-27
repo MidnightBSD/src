@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  *
  * Copyright (c) 1999-2001, Vitaly V Belekhov
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netgraph/ng_eiface.c,v 1.39.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -35,13 +36,17 @@
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/errno.h>
+#include <sys/proc.h>
 #include <sys/sockio.h>
 #include <sys/socket.h>
 #include <sys/syslog.h>
 
 #include <net/if.h>
+#include <net/if_media.h>
 #include <net/if_types.h>
 #include <net/netisr.h>
+#include <net/route.h>
+#include <net/vnet.h>
 
 #include <netgraph/ng_message.h>
 #include <netgraph/netgraph.h>
@@ -73,6 +78,8 @@ static const struct ng_cmdlist ng_eiface_cmdlist[] = {
 /* Node private data */
 struct ng_eiface_private {
 	struct ifnet	*ifp;		/* per-interface network data */
+	struct ifmedia	media;		/* (fake) media information */
+	int		link_status;	/* fake */
 	int		unit;		/* Interface unit number */
 	node_p		node;		/* Our netgraph node */
 	hook_p		ether;		/* Hook for ethernet stream */
@@ -111,7 +118,8 @@ static struct ng_type typestruct = {
 };
 NETGRAPH_INIT(eiface, &typestruct);
 
-static struct unrhdr	*ng_eiface_unit;
+static VNET_DEFINE(struct unrhdr *, ng_eiface_unit);
+#define	V_ng_eiface_unit		VNET(ng_eiface_unit)
 
 /************************************************************************
 			INTERFACE STUFF
@@ -123,6 +131,7 @@ static struct unrhdr	*ng_eiface_unit;
 static int
 ng_eiface_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 {
+	const priv_p priv = (priv_p)ifp->if_softc;
 	struct ifreq *const ifr = (struct ifreq *)data;
 	int s, error = 0;
 
@@ -164,6 +173,12 @@ ng_eiface_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 			error = EINVAL;
 		else
 			ifp->if_mtu = ifr->ifr_mtu;
+		break;
+
+	/* (Fake) media type manipulation */
+	case SIOCSIFMEDIA:
+	case SIOCGIFMEDIA:
+		error = ifmedia_ioctl(ifp, ifr, &priv->media, command);
 		break;
 
 	/* Stuff that's not supported */
@@ -244,7 +259,9 @@ ng_eiface_start2(node_p node, hook_p hook, void *arg1, int arg2)
 		 * Send packet; if hook is not connected, mbuf will get
 		 * freed.
 		 */
+		NG_OUTBOUND_THREAD_REF();
 		NG_SEND_DATA_ONLY(error, priv->ether, m);
+		NG_OUTBOUND_THREAD_UNREF();
 
 		/* Update stats */
 		if (error == 0)
@@ -274,7 +291,6 @@ ng_eiface_start2(node_p node, hook_p hook, void *arg1, int arg2)
 static void
 ng_eiface_start(struct ifnet *ifp)
 {
-
 	const priv_p priv = (priv_p)ifp->if_softc;
 
 	/* Don't do anything if output is active */
@@ -322,6 +338,41 @@ ng_eiface_print_ioctl(struct ifnet *ifp, int command, caddr_t data)
 }
 #endif /* DEBUG */
 
+/*
+ * ifmedia stuff
+ */
+static int
+ng_eiface_mediachange(struct ifnet *ifp)
+{
+	const priv_p priv = (priv_p)ifp->if_softc;
+	struct ifmedia *ifm = &priv->media;
+
+	if (IFM_TYPE(ifm->ifm_media) != IFM_ETHER)
+		return (EINVAL);
+	if (IFM_SUBTYPE(ifm->ifm_media) == IFM_AUTO)
+		ifp->if_baudrate = ifmedia_baudrate(IFM_ETHER | IFM_1000_T);
+	else
+		ifp->if_baudrate = ifmedia_baudrate(ifm->ifm_media);
+
+	return (0);
+}
+
+static void
+ng_eiface_mediastatus(struct ifnet *ifp, struct ifmediareq *ifmr)
+{
+	const priv_p priv = (priv_p)ifp->if_softc;
+	struct ifmedia *ifm = &priv->media;
+
+	if (ifm->ifm_cur->ifm_media == (IFM_ETHER | IFM_AUTO) &&
+	    (priv->link_status & IFM_ACTIVE))
+		ifmr->ifm_active = IFM_ETHER | IFM_1000_T | IFM_FDX;
+	else
+		ifmr->ifm_active = ifm->ifm_cur->ifm_media;
+	ifmr->ifm_status = priv->link_status;
+
+	return;
+}
+
 /************************************************************************
 			NETGRAPH NODE STUFF
  ************************************************************************/
@@ -337,9 +388,7 @@ ng_eiface_constructor(node_p node)
 	u_char eaddr[6] = {0,0,0,0,0,0};
 
 	/* Allocate node and interface private structures */
-	MALLOC(priv, priv_p, sizeof(*priv), M_NETGRAPH, M_NOWAIT | M_ZERO);
-	if (priv == NULL)
-		return (ENOMEM);
+	priv = malloc(sizeof(*priv), M_NETGRAPH, M_WAITOK | M_ZERO);
 
 	ifp = priv->ifp = if_alloc(IFT_ETHER);
 	if (ifp == NULL) {
@@ -351,7 +400,7 @@ ng_eiface_constructor(node_p node)
 	ifp->if_softc = priv;
 
 	/* Get an interface unit number */
-	priv->unit = alloc_unr(ng_eiface_unit);
+	priv->unit = alloc_unr(V_ng_eiface_unit);
 
 	/* Link together node and private info */
 	NG_NODE_SET_PRIVATE(node, priv);
@@ -363,19 +412,31 @@ ng_eiface_constructor(node_p node)
 	ifp->if_output = ether_output;
 	ifp->if_start = ng_eiface_start;
 	ifp->if_ioctl = ng_eiface_ioctl;
-	ifp->if_watchdog = NULL;
-	ifp->if_snd.ifq_maxlen = IFQ_MAXLEN;
+	ifp->if_snd.ifq_maxlen = ifqmaxlen;
 	ifp->if_flags = (IFF_SIMPLEX | IFF_BROADCAST | IFF_MULTICAST);
+	ifp->if_capabilities = IFCAP_VLAN_MTU | IFCAP_JUMBO_MTU;
+	ifp->if_capenable = IFCAP_VLAN_MTU | IFCAP_JUMBO_MTU;
+	ifmedia_init(&priv->media, 0, ng_eiface_mediachange,
+	    ng_eiface_mediastatus);
+	ifmedia_add(&priv->media, IFM_ETHER | IFM_10_T, 0, NULL);
+	ifmedia_add(&priv->media, IFM_ETHER | IFM_10_T | IFM_FDX, 0, NULL);
+	ifmedia_add(&priv->media, IFM_ETHER | IFM_100_TX, 0, NULL);
+	ifmedia_add(&priv->media, IFM_ETHER | IFM_100_TX | IFM_FDX, 0, NULL);
+	ifmedia_add(&priv->media, IFM_ETHER | IFM_1000_T, 0, NULL);
+	ifmedia_add(&priv->media, IFM_ETHER | IFM_1000_T | IFM_FDX, 0, NULL);
+	ifmedia_add(&priv->media, IFM_ETHER | IFM_10G_T | IFM_FDX, 0, NULL);
+	ifmedia_add(&priv->media, IFM_ETHER | IFM_AUTO, 0, NULL);
+	ifmedia_set(&priv->media, IFM_ETHER | IFM_AUTO);
+	priv->link_status = IFM_AVALID;
 
-#if 0
-	/* Give this node name */
-	bzero(ifname, sizeof(ifname));
-	sprintf(ifname, "if%s", ifp->if_xname);
-	(void)ng_name_node(node, ifname);
-#endif
+	/* Give this node the same name as the interface (if possible) */
+	if (ng_name_node(node, ifp->if_xname) != 0)
+		log(LOG_WARNING, "%s: can't acquire netgraph name\n",
+		    ifp->if_xname);
 
 	/* Attach the interface */
 	ether_ifattach(ifp, eaddr);
+	ifp->if_baudrate = ifmedia_baudrate(IFM_ETHER | IFM_1000_T);
 
 	/* Done */
 	return (0);
@@ -396,8 +457,12 @@ ng_eiface_newhook(node_p node, hook_p hook, const char *name)
 		return (EISCONN);
 	priv->ether = hook;
 	NG_HOOK_SET_PRIVATE(hook, &priv->ether);
+	NG_HOOK_SET_TO_INBOUND(hook);
 
+	priv->link_status |= IFM_ACTIVE;
+	CURVNET_SET_QUIET(ifp->if_vnet);
 	if_link_state_change(ifp, LINK_STATE_UP);
+	CURVNET_RESTORE();
 
 	return (0);
 }
@@ -427,6 +492,7 @@ ng_eiface_rcvmsg(node_p node, item_p item, hook_p lasthook)
 			}
 			error = if_setlladdr(priv->ifp,
 			    (u_char *)msg->data, ETHER_ADDR_LEN);
+			EVENTHANDLER_INVOKE(iflladdr_event, priv->ifp);
 			break;
 		    }
 
@@ -445,14 +511,14 @@ ng_eiface_rcvmsg(node_p node, item_p item, hook_p lasthook)
 			caddr_t ptr;
 			int buflen;
 
-#define SA_SIZE(s)	((s)->sa_len<sizeof(*(s))? sizeof(*(s)):(s)->sa_len)
-
 			/* Determine size of response and allocate it */
 			buflen = 0;
+			if_addr_rlock(ifp);
 			TAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link)
 				buflen += SA_SIZE(ifa->ifa_addr);
 			NG_MKRESPONSE(resp, msg, buflen, M_NOWAIT);
 			if (resp == NULL) {
+				if_addr_runlock(ifp);
 				error = ENOMEM;
 				break;
 			}
@@ -471,8 +537,8 @@ ng_eiface_rcvmsg(node_p node, item_p item, hook_p lasthook)
 				ptr += len;
 				buflen -= len;
 			}
+			if_addr_runlock(ifp);
 			break;
-#undef SA_SIZE
 		    }
 
 		default:
@@ -481,16 +547,20 @@ ng_eiface_rcvmsg(node_p node, item_p item, hook_p lasthook)
 		} /* end of inner switch() */
 		break;
 	case NGM_FLOW_COOKIE:
+		CURVNET_SET_QUIET(ifp->if_vnet);
 		switch (msg->header.cmd) {
 		case NGM_LINK_IS_UP:
+			priv->link_status |= IFM_ACTIVE;
 			if_link_state_change(ifp, LINK_STATE_UP);
 			break;
 		case NGM_LINK_IS_DOWN:
+			priv->link_status &= ~IFM_ACTIVE;
 			if_link_state_change(ifp, LINK_STATE_DOWN);
 			break;
 		default:
 			break;
 		}
+		CURVNET_RESTORE();
 		break;
 	default:
 		error = EINVAL;
@@ -547,10 +617,17 @@ ng_eiface_rmnode(node_p node)
 	const priv_p priv = NG_NODE_PRIVATE(node);
 	struct ifnet *const ifp = priv->ifp;
 
+	/*
+	 * the ifnet may be in a different vnet than the netgraph node, 
+	 * hence we have to change the current vnet context here.
+	 */
+	CURVNET_SET_QUIET(ifp->if_vnet);
+	ifmedia_removeall(&priv->media);
 	ether_ifdetach(ifp);
 	if_free(ifp);
-	free_unr(ng_eiface_unit, priv->unit);
-	FREE(priv, M_NETGRAPH);
+	CURVNET_RESTORE();
+	free_unr(V_ng_eiface_unit, priv->unit);
+	free(priv, M_NETGRAPH);
 	NG_NODE_SET_PRIVATE(node, NULL);
 	NG_NODE_UNREF(node);
 	return (0);
@@ -565,6 +642,10 @@ ng_eiface_disconnect(hook_p hook)
 	const priv_p priv = NG_NODE_PRIVATE(NG_HOOK_NODE(hook));
 
 	priv->ether = NULL;
+	priv->link_status &= ~IFM_ACTIVE;
+	CURVNET_SET_QUIET(priv->ifp->if_vnet);
+	if_link_state_change(priv->ifp, LINK_STATE_DOWN);
+	CURVNET_RESTORE();
 	return (0);
 }
 
@@ -578,10 +659,7 @@ ng_eiface_mod_event(module_t mod, int event, void *data)
 
 	switch (event) {
 	case MOD_LOAD:
-		ng_eiface_unit = new_unrhdr(0, 0xffff, NULL);
-		break;
 	case MOD_UNLOAD:
-		delete_unrhdr(ng_eiface_unit);
 		break;
 	default:
 		error = EOPNOTSUPP;
@@ -589,3 +667,21 @@ ng_eiface_mod_event(module_t mod, int event, void *data)
 	}
 	return (error);
 }
+
+static void
+vnet_ng_eiface_init(const void *unused)
+{
+
+	V_ng_eiface_unit = new_unrhdr(0, 0xffff, NULL);
+}
+VNET_SYSINIT(vnet_ng_eiface_init, SI_SUB_PSEUDO, SI_ORDER_ANY,
+    vnet_ng_eiface_init, NULL);
+
+static void
+vnet_ng_eiface_uninit(const void *unused)
+{
+
+	delete_unrhdr(V_ng_eiface_unit);
+}
+VNET_SYSUNINIT(vnet_ng_eiface_uninit, SI_SUB_PSEUDO, SI_ORDER_ANY,
+   vnet_ng_eiface_uninit, NULL);

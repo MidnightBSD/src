@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_ip_input.c
  */
@@ -64,7 +65,7 @@
  * Author:		Brooks Davis <brooks@FreeBSD.org>
  * Derived from:	ng_hole.c
  *
- * $FreeBSD: src/sys/netgraph/ng_ip_input.c,v 1.4.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -77,6 +78,7 @@
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/socket.h>
+#include <sys/proc.h>
 #include <net/if.h>
 #include <net/if_types.h>
 #include <net/if_var.h>
@@ -120,7 +122,10 @@ ngipi_rcvdata(hook_p hook, item_p item)
 
 	NGI_GET_M(item, m);
 	NG_FREE_ITEM(item);
-	netisr_dispatch(NETISR_IP, m);
+	if (curthread->td_ng_outbound)
+		netisr_queue(NETISR_IP, m);
+	else
+		netisr_dispatch(NETISR_IP, m);
 	return 0;
 }
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_ksocket.c
  */
@@ -37,7 +38,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_ksocket.c,v 1.60.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  * $Whistle: ng_ksocket.c,v 1.1 1999/11/16 20:04:40 archie Exp $
  */
 
@@ -158,7 +159,7 @@ static const struct ng_ksocket_alias ng_ksocket_protos[] = {
 /* Helper functions */
 static int	ng_ksocket_check_accept(priv_p);
 static void	ng_ksocket_finish_accept(priv_p);
-static void	ng_ksocket_incoming(struct socket *so, void *arg, int waitflag);
+static int	ng_ksocket_incoming(struct socket *so, void *arg, int waitflag);
 static int	ng_ksocket_parse(const struct ng_ksocket_alias *aliases,
 			const char *s, int family);
 static void	ng_ksocket_incoming2(node_p node, hook_p hook,
@@ -250,17 +251,17 @@ ng_ksocket_sockaddr_parse(const struct ng_parse_type *type,
 			return (EINVAL);
 		pathlen = strlen(path);
 		if (pathlen > SOCK_MAXADDRLEN) {
-			FREE(path, M_NETGRAPH_KSOCKET);
+			free(path, M_NETGRAPH_KSOCKET);
 			return (E2BIG);
 		}
 		if (*buflen < pathoff + pathlen) {
-			FREE(path, M_NETGRAPH_KSOCKET);
+			free(path, M_NETGRAPH_KSOCKET);
 			return (ERANGE);
 		}
 		*off += toklen;
 		bcopy(path, sun->sun_path, pathlen);
 		sun->sun_len = pathoff + pathlen;
-		FREE(path, M_NETGRAPH_KSOCKET);
+		free(path, M_NETGRAPH_KSOCKET);
 		break;
 	    }
 
@@ -335,7 +336,7 @@ ng_ksocket_sockaddr_unparse(const struct ng_parse_type *type,
 		if ((pathtoken = ng_encode_string(pathbuf, pathlen)) == NULL)
 			return (ENOMEM);
 		slen += snprintf(cbuf, cbuflen, "local/%s", pathtoken);
-		FREE(pathtoken, M_NETGRAPH_KSOCKET);
+		free(pathtoken, M_NETGRAPH_KSOCKET);
 		if (slen >= cbuflen)
 			return (ERANGE);
 		*off += sun->sun_len;
@@ -523,10 +524,7 @@ ng_ksocket_constructor(node_p node)
 	priv_p priv;
 
 	/* Allocate private structure */
-	MALLOC(priv, priv_p, sizeof(*priv),
-	    M_NETGRAPH_KSOCKET, M_NOWAIT | M_ZERO);
-	if (priv == NULL)
-		return (ENOMEM);
+	priv = malloc(sizeof(*priv), M_NETGRAPH_KSOCKET, M_WAITOK | M_ZERO);
 
 	LIST_INIT(&priv->embryos);
 	/* cross link them */
@@ -616,13 +614,11 @@ ng_ksocket_connect(hook_p hook)
 	struct socket *const so = priv->so;
 
 	/* Add our hook for incoming data and other events */
-	priv->so->so_upcallarg = (caddr_t)node;
-	priv->so->so_upcall = ng_ksocket_incoming;
 	SOCKBUF_LOCK(&priv->so->so_rcv);
-	priv->so->so_rcv.sb_flags |= SB_UPCALL;
+	soupcall_set(priv->so, SO_RCV, ng_ksocket_incoming, node);
 	SOCKBUF_UNLOCK(&priv->so->so_rcv);
 	SOCKBUF_LOCK(&priv->so->so_snd);
-	priv->so->so_snd.sb_flags |= SB_UPCALL;
+	soupcall_set(priv->so, SO_SND, ng_ksocket_incoming, node);
 	SOCKBUF_UNLOCK(&priv->so->so_snd);
 	SOCK_LOCK(priv->so);
 	priv->so->so_state |= SS_NBIO;
@@ -811,7 +807,7 @@ ng_ksocket_rcvmsg(node_p node, item_p item, hook_p lasthook)
 		bail:
 			/* Cleanup */
 			if (sa != NULL)
-				FREE(sa, M_SONAME);
+				free(sa, M_SONAME);
 			break;
 		    }
 
@@ -904,12 +900,24 @@ ng_ksocket_rcvdata(hook_p hook, item_p item)
 	struct sockaddr *sa = NULL;
 	int error;
 	struct mbuf *m;
+#ifdef ALIGNED_POINTER
+	struct mbuf *n;
+#endif /* ALIGNED_POINTER */
 	struct sa_tag *stag;
 
 	/* Extract data */
 	NGI_GET_M(item, m);
 	NG_FREE_ITEM(item);
-
+#ifdef ALIGNED_POINTER
+	if (!ALIGNED_POINTER(mtod(m, caddr_t), uint32_t)) {
+		n = m_defrag(m, M_NOWAIT);
+		if (n == NULL) {
+			m_freem(m);
+			return (ENOBUFS);
+		}
+		m = n;
+	}
+#endif /* ALIGNED_POINTER */
 	/*
 	 * Look if socket address is stored in packet tags.
 	 * If sockaddr is ours, or provided by a third party (zero id),
@@ -941,12 +949,11 @@ ng_ksocket_shutdown(node_p node)
 	/* Close our socket (if any) */
 	if (priv->so != NULL) {
 		SOCKBUF_LOCK(&priv->so->so_rcv);
-		priv->so->so_rcv.sb_flags &= ~SB_UPCALL;
+		soupcall_clear(priv->so, SO_RCV);
 		SOCKBUF_UNLOCK(&priv->so->so_rcv);
 		SOCKBUF_LOCK(&priv->so->so_snd);
-		priv->so->so_snd.sb_flags &= ~SB_UPCALL;
+		soupcall_clear(priv->so, SO_SND);
 		SOCKBUF_UNLOCK(&priv->so->so_snd);
-		priv->so->so_upcall = NULL;
 		soclose(priv->so);
 		priv->so = NULL;
 	}
@@ -965,7 +972,7 @@ ng_ksocket_shutdown(node_p node)
 
 	/* Take down netgraph node */
 	bzero(priv, sizeof(*priv));
-	FREE(priv, M_NETGRAPH_KSOCKET);
+	free(priv, M_NETGRAPH_KSOCKET);
 	NG_NODE_SET_PRIVATE(node, NULL);
 	NG_NODE_UNREF(node);		/* let the node escape */
 	return (0);
@@ -1000,7 +1007,7 @@ ng_ksocket_disconnect(hook_p hook)
  * To decouple stack, we use queue version of ng_send_fn().
  */
 
-static void
+static int
 ng_ksocket_incoming(struct socket *so, void *arg, int waitflag)
 {
 	const node_p node = arg;
@@ -1017,6 +1024,7 @@ ng_ksocket_incoming(struct socket *so, void *arg, int waitflag)
 	    ng_send_fn1(node, NULL, &ng_ksocket_incoming2, so, 0, wait)) {
 		atomic_store_rel_int(&priv->fn_sent, 0);
 	}
+	return (SU_OK);
 }
 
 
@@ -1105,7 +1113,7 @@ ng_ksocket_incoming2(node_p node, hook_p hook, void *arg1, int arg2)
 		/* See if we got anything */
 		if (m == NULL) {
 			if (sa != NULL)
-				FREE(sa, M_SONAME);
+				free(sa, M_SONAME);
 			break;
 		}
 
@@ -1130,11 +1138,11 @@ ng_ksocket_incoming2(node_p node, hook_p hook, void *arg1, int arg2)
 			    NG_KSOCKET_TAG_SOCKADDR, sizeof(ng_ID_t) +
 			    sa->sa_len, M_NOWAIT);
 			if (stag == NULL) {
-				FREE(sa, M_SONAME);
+				free(sa, M_SONAME);
 				goto sendit;
 			}
 			bcopy(sa, &stag->sa, sa->sa_len);
-			FREE(sa, M_SONAME);
+			free(sa, M_SONAME);
 			stag->id = NG_NODE_ID(node);
 			m_tag_prepend(m, &stag->tag);
 		}
@@ -1214,7 +1222,7 @@ ng_ksocket_finish_accept(priv_p priv)
 	SOCK_UNLOCK(so);
 	ACCEPT_UNLOCK();
 
-	/* XXX KNOTE(&head->so_rcv.sb_sel.si_note, 0); */
+	/* XXX KNOTE_UNLOCKED(&head->so_rcv.sb_sel.si_note, 0); */
 
 	soaccept(so, &sa);
 
@@ -1234,14 +1242,14 @@ ng_ksocket_finish_accept(priv_p priv)
 	/* Clone a ksocket node to wrap the new socket */
         error = ng_make_node_common(&ng_ksocket_typestruct, &node);
         if (error) {
-		FREE(resp, M_NETGRAPH);
+		free(resp, M_NETGRAPH);
 		soclose(so);
 		goto out;
 	}
 
 	if (ng_ksocket_constructor(node) != 0) {
 		NG_NODE_UNREF(node);
-		FREE(resp, M_NETGRAPH);
+		free(resp, M_NETGRAPH);
 		soclose(so);
 		goto out;
 	}
@@ -1258,13 +1266,11 @@ ng_ksocket_finish_accept(priv_p priv)
 	 */
 	LIST_INSERT_HEAD(&priv->embryos, priv2, siblings);
 
-	so->so_upcallarg = (caddr_t)node;
-	so->so_upcall = ng_ksocket_incoming;
 	SOCKBUF_LOCK(&so->so_rcv);
-	so->so_rcv.sb_flags |= SB_UPCALL;
+	soupcall_set(so, SO_RCV, ng_ksocket_incoming, node);
 	SOCKBUF_UNLOCK(&so->so_rcv);
 	SOCKBUF_LOCK(&so->so_snd);
-	so->so_snd.sb_flags |= SB_UPCALL;
+	soupcall_set(so, SO_SND, ng_ksocket_incoming, node);
 	SOCKBUF_UNLOCK(&so->so_snd);
 
 	/* Fill in the response data and send it or return it to the caller */
@@ -1276,7 +1282,7 @@ ng_ksocket_finish_accept(priv_p priv)
 
 out:
 	if (sa != NULL)
-		FREE(sa, M_SONAME);
+		free(sa, M_SONAME);
 }
 
 /*

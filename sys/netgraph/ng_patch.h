@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2010 by Maxim Ignatenko <gelraen.ua@gmail.com>
  * All rights reserved.

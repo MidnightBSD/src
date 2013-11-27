@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* crypto/dh/dh_key.c */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
@@ -61,6 +62,8 @@
 #include <openssl/bn.h>
 #include <openssl/rand.h>
 #include <openssl/dh.h>
+
+#ifndef OPENSSL_FIPS
 
 static int generate_key(DH *dh);
 static int compute_key(unsigned char *key, const BIGNUM *pub_key, DH *dh);
@@ -150,7 +153,7 @@ static int generate_key(DH *dh)
 			{
 			BN_init(&local_prk);
 			prk = &local_prk;
-			BN_with_flags(prk, priv_key, BN_FLG_EXP_CONSTTIME);
+			BN_with_flags(prk, priv_key, BN_FLG_CONSTTIME);
 			}
 		else
 			prk = priv_key;
@@ -203,7 +206,7 @@ static int compute_key(unsigned char *key, const BIGNUM *pub_key, DH *dh)
 		if ((dh->flags & DH_FLAG_NO_EXP_CONSTTIME) == 0)
 			{
 			/* XXX */
-			BN_set_flags(dh->priv_key, BN_FLG_EXP_CONSTTIME);
+			BN_set_flags(dh->priv_key, BN_FLG_CONSTTIME);
 			}
 		if (!mont)
 			goto err;
@@ -261,3 +264,5 @@ static int dh_finish(DH *dh)
 		BN_MONT_CTX_free(dh->method_mont_p);
 	return(1);
 	}
+
+#endif

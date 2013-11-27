@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2004 Benno Rice <benno@eloquent.com.au>
  * All Rights Reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netgraph/ng_atmllc.c,v 1.3.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -80,12 +81,7 @@ ng_atmllc_constructor(node_p node)
 {
 	struct	ng_atmllc_priv *priv;
 
-	MALLOC(priv, struct ng_atmllc_priv *, sizeof(*priv), M_NETGRAPH,
-	    M_NOWAIT | M_ZERO);
-	if (priv == NULL) {
-		return (ENOMEM);
-	}
-
+	priv = malloc(sizeof(*priv), M_NETGRAPH, M_WAITOK | M_ZERO);
 	NG_NODE_SET_PRIVATE(node, priv);
 
 	return (0);
@@ -111,7 +107,7 @@ ng_atmllc_shutdown(node_p node)
 
 	priv = NG_NODE_PRIVATE(node);
 
-	FREE(priv, M_NETGRAPH);
+	free(priv, M_NETGRAPH);
 
 	NG_NODE_UNREF(node);
 

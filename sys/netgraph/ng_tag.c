@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Vadim Goncharov <vadimnuclight@tpu.ru>
  * All rights reserved.
@@ -27,7 +28,7 @@
  * Portions Copyright (c) 1999 Whistle Communications, Inc.
  * (ng_bpf by Archie Cobbs <archie@freebsd.org>)
  *
- * $FreeBSD: src/sys/netgraph/ng_tag.c,v 1.1.8.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -303,7 +304,7 @@ ng_tag_newhook(node_p node, hook_p hook, const char *name)
 	int error;
 
 	/* Create hook private structure. */
-	MALLOC(hip, hinfo_p, sizeof(*hip), M_NETGRAPH_TAG, M_WAITOK | M_ZERO);
+	hip = malloc(sizeof(*hip), M_NETGRAPH_TAG, M_WAITOK | M_ZERO);
 	/* M_WAITOK can't return NULL. */
 	NG_HOOK_SET_PRIVATE(hook, hip);
 
@@ -316,13 +317,13 @@ ng_tag_newhook(node_p node, hook_p hook, const char *name)
 
 	/* Attach the default IN data. */
 	if ((error = ng_tag_setdata_in(hook, &ng_tag_default_in)) != 0) {
-		FREE(hip, M_NETGRAPH_TAG);
+		free(hip, M_NETGRAPH_TAG);
 		return (error);
 	}
 
 	/* Attach the default OUT data. */
 	if ((error = ng_tag_setdata_out(hook, &ng_tag_default_out)) != 0) {
-		FREE(hip, M_NETGRAPH_TAG);
+		free(hip, M_NETGRAPH_TAG);
 		return (error);
 	}
 
@@ -621,9 +622,9 @@ ng_tag_disconnect(hook_p hook)
 			priv->hi_nonmatch = NULL;
 	}
 
-	FREE(hip->in, M_NETGRAPH_TAG);
-	FREE(hip->out, M_NETGRAPH_TAG);
-	FREE(hip, M_NETGRAPH_TAG);
+	free(hip->in, M_NETGRAPH_TAG);
+	free(hip->out, M_NETGRAPH_TAG);
+	free(hip, M_NETGRAPH_TAG);
 	NG_HOOK_SET_PRIVATE(hook, NULL);			/* for good measure */
 	if ((NG_NODE_NUMHOOKS(NG_HOOK_NODE(hook)) == 0) &&
 	    (NG_NODE_IS_VALID(NG_HOOK_NODE(hook)))) {
@@ -648,13 +649,13 @@ ng_tag_setdata_in(hook_p hook, const struct ng_tag_hookin *hp0)
 
 	/* Make a copy of the tag values and data. */
 	size = NG_TAG_HOOKIN_SIZE(hp0->tag_len);
-	MALLOC(hp, struct ng_tag_hookin *, size, M_NETGRAPH_TAG, M_WAITOK);
+	hp = malloc(size, M_NETGRAPH_TAG, M_WAITOK);
 	/* M_WAITOK can't return NULL. */
 	bcopy(hp0, hp, size);
 
 	/* Free previous tag, if any, and assign new one. */
 	if (hip->in != NULL)
-		FREE(hip->in, M_NETGRAPH_TAG);
+		free(hip->in, M_NETGRAPH_TAG);
 	hip->in = hp;
 
 	/*
@@ -698,13 +699,13 @@ ng_tag_setdata_out(hook_p hook, const struct ng_tag_hookout *hp0)
 
 	/* Make a copy of the tag values and data. */
 	size = NG_TAG_HOOKOUT_SIZE(hp0->tag_len);
-	MALLOC(hp, struct ng_tag_hookout *, size, M_NETGRAPH_TAG, M_WAITOK);
+	hp = malloc(size, M_NETGRAPH_TAG, M_WAITOK);
 	/* M_WAITOK can't return NULL. */
 	bcopy(hp0, hp, size);
 
 	/* Free previous tag, if any, and assign new one. */
 	if (hip->out != NULL)
-		FREE(hip->out, M_NETGRAPH_TAG);
+		free(hip->out, M_NETGRAPH_TAG);
 	hip->out = hp;
 
 	/* Fill internal values from API structures. */

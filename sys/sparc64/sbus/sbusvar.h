@@ -14,13 +14,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -72,13 +65,13 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)sbusvar.h	8.1 (Berkeley) 6/11/93
- *	from: NetBSD: sbusvar.h,v 1.7 1999/06/05 05:30:43 mrg Exp
+ *	from: NetBSD: sbusvar.h,v 1.15 2008/04/28 20:23:36 martin Exp
  *
- * $FreeBSD: src/sys/sparc64/sbus/sbusvar.h,v 1.6.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _SPARC64_SBUS_SBUSVAR_H_
-#define _SPARC64_SBUS_SBUSVAR_H_
+#define	_SPARC64_SBUS_SBUSVAR_H_
 
 /*
  * Macros for probe order
@@ -89,18 +82,24 @@
 /*
  * PROM-reported DMA burst sizes for the SBus
  */
-#define SBUS_BURST_1	0x1
-#define SBUS_BURST_2	0x2
-#define SBUS_BURST_4	0x4
-#define SBUS_BURST_8	0x8
-#define SBUS_BURST_16	0x10
-#define SBUS_BURST_32	0x20
-#define SBUS_BURST_64	0x40
+#define	SBUS_BURST_1		(1 << 0)
+#define	SBUS_BURST_2		(1 << 1)
+#define	SBUS_BURST_4		(1 << 2)
+#define	SBUS_BURST_8		(1 << 3)
+#define	SBUS_BURST_16		(1 << 4)
+#define	SBUS_BURST_32		(1 << 5)
+#define	SBUS_BURST_64		(1 << 6)
+#define	SBUS_BURST_MASK		((1 << SBUS_BURST_SIZE) - 1)
+#define	SBUS_BURST_SIZE		16
+#define	SBUS_BURST64_MASK	(SBUS_BURST_MASK << SBUS_BURST64_SHIFT)
+#define	SBUS_BURST64_SHIFT	16
 
 /* Used if no burst sizes are specified for the bus. */
 #define	SBUS_BURST_DEF \
 	(SBUS_BURST_1 | SBUS_BURST_2 | SBUS_BURST_4 | SBUS_BURST_8 | 	\
-	SBUS_BURST_16)
+	SBUS_BURST_16 | SBUS_BURST_32 | SBUS_BURST_64)
+#define	SBUS_BURST64_DEF \
+	(SBUS_BURST_8 | SBUS_BURST_16 | SBUS_BURST_32 | SBUS_BURST_64)
 
 enum sbus_device_ivars {
 	SBUS_IVAR_BURSTSZ,
@@ -112,7 +111,7 @@ enum sbus_device_ivars {
 /*
  * Simplified accessors for sbus devices
  */
-#define SBUS_ACCESSOR(var, ivar, type) \
+#define	SBUS_ACCESSOR(var, ivar, type) \
 	__BUS_ACCESSOR(sbus, var, SBUS, ivar, type)
 
 SBUS_ACCESSOR(burstsz,		BURSTSZ,	int)

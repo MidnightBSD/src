@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2005, Gleb Smirnoff <glebius@FreeBSD.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netgraph/ng_nat.c,v 1.10.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -43,6 +44,7 @@
 #include <machine/in_cksum.h>
 
 #include <netinet/libalias/alias.h>
+#include <netinet/libalias/alias_local.h>
 
 #include <netgraph/ng_message.h>
 #include <netgraph/ng_parse.h>
@@ -272,17 +274,10 @@ ng_nat_constructor(node_p node)
 	priv_p priv;
 
 	/* Initialize private descriptor. */
-	MALLOC(priv, priv_p, sizeof(*priv), M_NETGRAPH,
-		M_NOWAIT | M_ZERO);
-	if (priv == NULL)
-		return (ENOMEM);
+	priv = malloc(sizeof(*priv), M_NETGRAPH, M_WAITOK | M_ZERO);
 
 	/* Init aliasing engine. */
 	priv->lib = LibAliasInit(NULL);
-	if (priv->lib == NULL) {
-		FREE(priv, M_NETGRAPH);
-		return (ENOMEM);
-	}
 
 	/* Set same ports on. */
 	(void )LibAliasSetMode(priv->lib, PKT_ALIAS_SAME_PORTS,
@@ -408,7 +403,7 @@ ng_nat_rcvmsg(node_p node, item_p item, hook_p lasthook)
 
 			if (entry->lnk == NULL) {
 				error = ENOMEM;
-				FREE(entry, M_NETGRAPH);
+				free(entry, M_NETGRAPH);
 				break;
 			}
 
@@ -464,7 +459,7 @@ ng_nat_rcvmsg(node_p node, item_p item, hook_p lasthook)
 
 			if (entry->lnk == NULL) {
 				error = ENOMEM;
-				FREE(entry, M_NETGRAPH);
+				free(entry, M_NETGRAPH);
 				break;
 			}
 
@@ -517,7 +512,7 @@ ng_nat_rcvmsg(node_p node, item_p item, hook_p lasthook)
 
 			if (entry->lnk == NULL) {
 				error = ENOMEM;
-				FREE(entry, M_NETGRAPH);
+				free(entry, M_NETGRAPH);
 				break;
 			}
 
@@ -583,7 +578,7 @@ ng_nat_rcvmsg(node_p node, item_p item, hook_p lasthook)
 			/* Delete entry from our internal list. */
 			priv->rdrcount--;
 			STAILQ_REMOVE(&priv->redirhead, entry, ng_nat_rdr_lst, entries);
-			FREE(entry, M_NETGRAPH);
+			free(entry, M_NETGRAPH);
 		    }
 			break;
 		case NGM_NAT_ADD_SERVER:
@@ -703,22 +698,35 @@ ng_nat_rcvdata(hook_p hook, item_p item )
 	KASSERT(m->m_pkthdr.len == ntohs(ip->ip_len),
 	    ("ng_nat: ip_len != m_pkthdr.len"));
 
+	/*
+	 * We drop packet when:
+	 * 1. libalias returns PKT_ALIAS_ERROR;
+	 * 2. For incoming packets:
+	 *	a) for unresolved fragments;
+	 *	b) libalias returns PKT_ALIAS_IGNORED and
+	 *		PKT_ALIAS_DENY_INCOMING flag is set.
+	 */
 	if (hook == priv->in) {
 		rval = LibAliasIn(priv->lib, c, m->m_len + M_TRAILINGSPACE(m));
-		if (rval != PKT_ALIAS_OK &&
-		    rval != PKT_ALIAS_FOUND_HEADER_FRAGMENT) {
+		if (rval == PKT_ALIAS_ERROR ||
+		    rval == PKT_ALIAS_UNRESOLVED_FRAGMENT ||
+		    (rval == PKT_ALIAS_IGNORED &&
+		     (priv->lib->packetAliasMode &
+		      PKT_ALIAS_DENY_INCOMING) != 0)) {
 			NG_FREE_ITEM(item);
 			return (EINVAL);
 		}
 	} else if (hook == priv->out) {
 		rval = LibAliasOut(priv->lib, c, m->m_len + M_TRAILINGSPACE(m));
-		if (rval != PKT_ALIAS_OK) {
+		if (rval == PKT_ALIAS_ERROR) {
 			NG_FREE_ITEM(item);
 			return (EINVAL);
 		}
 	} else
 		panic("ng_nat: unknown hook!\n");
 
+	if (rval == PKT_ALIAS_RESPOND)
+		m->m_flags |= M_SKIP_FIREWALL;
 	m->m_pkthdr.len = m->m_len = ntohs(ip->ip_len);
 
 	if ((ip->ip_off & htons(IP_OFFMASK)) == 0 &&
@@ -785,12 +793,12 @@ ng_nat_shutdown(node_p node)
 	while (!STAILQ_EMPTY(&priv->redirhead)) {
 		struct ng_nat_rdr_lst *entry = STAILQ_FIRST(&priv->redirhead);
 		STAILQ_REMOVE_HEAD(&priv->redirhead, entries);
-		FREE(entry, M_NETGRAPH);
+		free(entry, M_NETGRAPH);
 	};
 
 	/* Final free. */
 	LibAliasUninit(priv->lib);
-	FREE(priv, M_NETGRAPH);
+	free(priv, M_NETGRAPH);
 
 	return (0);
 }

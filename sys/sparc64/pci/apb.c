@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/pci/apb.c,v 1.14.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Support for the Sun APB (Advanced PCI Bridge) PCI-PCI bridge.
@@ -49,12 +49,13 @@ __FBSDID("$FreeBSD: src/sys/sparc64/pci/apb.c,v 1.14.2.1.2.1 2008/11/25 02:59:29
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/bus.h>
+#include <sys/rman.h>
+#include <sys/sysctl.h>
 
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/openfirm.h>
 
 #include <machine/bus.h>
-#include <machine/ofw_bus.h>
 #include <machine/resource.h>
 
 #include <dev/pci/pcireg.h>
@@ -78,42 +79,33 @@ struct apb_softc {
 static device_probe_t apb_probe;
 static device_attach_t apb_attach;
 static bus_alloc_resource_t apb_alloc_resource;
+static bus_adjust_resource_t apb_adjust_resource;
 
 static device_method_t apb_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		apb_probe),
 	DEVMETHOD(device_attach,	apb_attach),
-	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
-	DEVMETHOD(device_suspend,	bus_generic_suspend),
-	DEVMETHOD(device_resume,	bus_generic_resume),
 
 	/* Bus interface */
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
-	DEVMETHOD(bus_read_ivar,	pcib_read_ivar),
-	DEVMETHOD(bus_write_ivar,	pcib_write_ivar),
 	DEVMETHOD(bus_alloc_resource,	apb_alloc_resource),
+	DEVMETHOD(bus_adjust_resource,	apb_adjust_resource),
 	DEVMETHOD(bus_release_resource,	bus_generic_release_resource),
-	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
-	DEVMETHOD(bus_deactivate_resource, bus_generic_deactivate_resource),
-	DEVMETHOD(bus_setup_intr,	bus_generic_setup_intr),
-	DEVMETHOD(bus_teardown_intr,	bus_generic_teardown_intr),
 
 	/* pcib interface */
-	DEVMETHOD(pcib_maxslots,	pcib_maxslots),
-	DEVMETHOD(pcib_read_config,	pcib_read_config),
-	DEVMETHOD(pcib_write_config,	pcib_write_config),
 	DEVMETHOD(pcib_route_interrupt,	ofw_pcib_gen_route_interrupt),
 
 	/* ofw_bus interface */
 	DEVMETHOD(ofw_bus_get_node,	ofw_pcib_gen_get_node),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static devclass_t pcib_devclass;
 
-DEFINE_CLASS_0(pcib, apb_driver, apb_methods, sizeof(struct apb_softc));
-DRIVER_MODULE(apb, pci, apb_driver, pcib_devclass, 0, 0);
+DEFINE_CLASS_1(pcib, apb_driver, apb_methods, sizeof(struct apb_softc),
+    pcib_driver);
+EARLY_DRIVER_MODULE(apb, pci, apb_driver, pcib_devclass, 0, 0, BUS_PASS_BUS);
+MODULE_DEPEND(apb, pci, 1, 1, 1);
 
 /* APB specific registers */
 #define	APBR_IOMAP	0xde
@@ -171,6 +163,8 @@ static int
 apb_attach(device_t dev)
 {
 	struct apb_softc *sc;
+	struct sysctl_ctx_list *sctx;
+	struct sysctl_oid *soid;
 
 	sc = device_get_softc(dev);
 
@@ -178,12 +172,41 @@ apb_attach(device_t dev)
 	 * Get current bridge configuration.
 	 */
 	sc->sc_bsc.ops_pcib_sc.domain = pci_get_domain(dev);
+	sc->sc_bsc.ops_pcib_sc.secstat =
+	    pci_read_config(dev, PCIR_SECSTAT_1, 2);
+	sc->sc_bsc.ops_pcib_sc.command =
+	    pci_read_config(dev, PCIR_COMMAND, 2);
+	sc->sc_bsc.ops_pcib_sc.pribus =
+	    pci_read_config(dev, PCIR_PRIBUS_1, 1);
 	sc->sc_bsc.ops_pcib_sc.secbus =
 	    pci_read_config(dev, PCIR_SECBUS_1, 1);
 	sc->sc_bsc.ops_pcib_sc.subbus =
 	    pci_read_config(dev, PCIR_SUBBUS_1, 1);
+	sc->sc_bsc.ops_pcib_sc.bridgectl =
+	    pci_read_config(dev, PCIR_BRIDGECTL_1, 2);
+	sc->sc_bsc.ops_pcib_sc.seclat =
+	    pci_read_config(dev, PCIR_SECLAT_1, 1);
 	sc->sc_iomap = pci_read_config(dev, APBR_IOMAP, 1);
 	sc->sc_memmap = pci_read_config(dev, APBR_MEMMAP, 1);
+
+	/*
+	 * Setup SYSCTL reporting nodes.
+	 */
+	sctx = device_get_sysctl_ctx(dev);
+	soid = device_get_sysctl_tree(dev);
+	SYSCTL_ADD_UINT(sctx, SYSCTL_CHILDREN(soid), OID_AUTO, "domain",
+	    CTLFLAG_RD, &sc->sc_bsc.ops_pcib_sc.domain, 0,
+	    "Domain number");
+	SYSCTL_ADD_UINT(sctx, SYSCTL_CHILDREN(soid), OID_AUTO, "pribus",
+	    CTLFLAG_RD, &sc->sc_bsc.ops_pcib_sc.pribus, 0,
+	    "Primary bus number");
+	SYSCTL_ADD_UINT(sctx, SYSCTL_CHILDREN(soid), OID_AUTO, "secbus",
+	    CTLFLAG_RD, &sc->sc_bsc.ops_pcib_sc.secbus, 0,
+	    "Secondary bus number");
+	SYSCTL_ADD_UINT(sctx, SYSCTL_CHILDREN(soid), OID_AUTO, "subbus",
+	    CTLFLAG_RD, &sc->sc_bsc.ops_pcib_sc.subbus, 0,
+	    "Subordinate bus number");
+
 	ofw_pcib_gen_setup(dev);
 
 	if (bootverbose) {
@@ -224,8 +247,7 @@ apb_alloc_resource(device_t dev, device_t child, int type, int *rid,
 	 */
 	if (start == 0 && end == ~0) {
 		device_printf(dev, "can't decode default resource id %d for "
-		    "%s%d, bypassing\n", *rid, device_get_name(child),
-		    device_get_unit(child));
+		    "%s, bypassing\n", *rid, device_get_nameunit(child));
 		goto passup;
 	}
 
@@ -237,34 +259,28 @@ apb_alloc_resource(device_t dev, device_t child, int type, int *rid,
 	switch (type) {
 	case SYS_RES_IOPORT:
 		if (!apb_checkrange(sc->sc_iomap, APB_IO_SCALE, start, end)) {
-			device_printf(dev, "device %s%d requested unsupported "
-			    "I/O range 0x%lx-0x%lx\n", device_get_name(child),
-			    device_get_unit(child), start, end);
+			device_printf(dev, "device %s requested unsupported "
+			    "I/O range 0x%lx-0x%lx\n",
+			    device_get_nameunit(child), start, end);
 			return (NULL);
 		}
 		if (bootverbose)
 			device_printf(sc->sc_bsc.ops_pcib_sc.dev, "device "
-			    "%s%d requested decoded I/O range 0x%lx-0x%lx\n",
-			    device_get_name(child), device_get_unit(child),
-			    start, end);
+			    "%s requested decoded I/O range 0x%lx-0x%lx\n",
+			    device_get_nameunit(child), start, end);
 		break;
-
 	case SYS_RES_MEMORY:
-		if (!apb_checkrange(sc->sc_memmap, APB_MEM_SCALE, start, end)) {
-			device_printf(dev, "device %s%d requested unsupported "
+		if (!apb_checkrange(sc->sc_memmap, APB_MEM_SCALE, start,
+		    end)) {
+			device_printf(dev, "device %s requested unsupported "
 			    "memory range 0x%lx-0x%lx\n",
-			    device_get_name(child), device_get_unit(child),
-			    start, end);
+			    device_get_nameunit(child), start, end);
 			return (NULL);
 		}
 		if (bootverbose)
 			device_printf(sc->sc_bsc.ops_pcib_sc.dev, "device "
-			    "%s%d requested decoded memory range 0x%lx-0x%lx\n",
-			    device_get_name(child), device_get_unit(child),
-			    start, end);
-		break;
-
-	default:
+			    "%s requested decoded memory range 0x%lx-0x%lx\n",
+			    device_get_nameunit(child), start, end);
 		break;
 	}
 
@@ -274,4 +290,24 @@ apb_alloc_resource(device_t dev, device_t child, int type, int *rid,
 	 */
 	return (bus_generic_alloc_resource(dev, child, type, rid, start, end,
 	    count, flags));
+}
+
+static int
+apb_adjust_resource(device_t dev, device_t child, int type,
+    struct resource *r, u_long start, u_long end)
+{
+	struct apb_softc *sc;
+
+	sc = device_get_softc(dev);
+	switch (type) {
+	case SYS_RES_IOPORT:
+		if (!apb_checkrange(sc->sc_iomap, APB_IO_SCALE, start, end))
+			return (ENXIO);
+		break;
+	case SYS_RES_MEMORY:
+		if (!apb_checkrange(sc->sc_memmap, APB_MEM_SCALE, start, end))
+			return (ENXIO);
+		break;
+	}
+	return (bus_generic_adjust_resource(dev, child, type, r, start, end));
 }

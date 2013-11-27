@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* crypto/dsa/dsa_ossl.c */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
@@ -64,6 +65,8 @@
 #include <openssl/dsa.h>
 #include <openssl/rand.h>
 #include <openssl/asn1.h>
+
+#ifndef OPENSSL_FIPS
 
 static DSA_SIG *dsa_do_sign(const unsigned char *dgst, int dlen, DSA *dsa);
 static int dsa_sign_setup(DSA *dsa, BN_CTX *ctx_in, BIGNUM **kinvp, BIGNUM **rp);
@@ -176,7 +179,8 @@ static DSA_SIG *dsa_do_sign(const unsigned char *dgst, int dlen, DSA *dsa)
 	if (!BN_mod_mul(&xr,dsa->priv_key,r,dsa->q,ctx)) goto err;/* s = xr */
 	if (!BN_add(s, &xr, &m)) goto err;		/* s = m + xr */
 	if (BN_cmp(s,dsa->q) > 0)
-		BN_sub(s,s,dsa->q);
+		if (!BN_sub(s,s,dsa->q))
+			goto err;
 	if (!BN_mod_mul(s,s,kinv,dsa->q,ctx)) goto err;
 
 	ret=DSA_SIG_new();
@@ -229,7 +233,7 @@ static int dsa_sign_setup(DSA *dsa, BN_CTX *ctx_in, BIGNUM **kinvp, BIGNUM **rp)
 	while (BN_is_zero(&k));
 	if ((dsa->flags & DSA_FLAG_NO_EXP_CONSTTIME) == 0)
 		{
-		BN_set_flags(&k, BN_FLG_EXP_CONSTTIME);
+		BN_set_flags(&k, BN_FLG_CONSTTIME);
 		}
 
 	if (dsa->flags & DSA_FLAG_CACHE_MONT_P)
@@ -391,3 +395,4 @@ static int dsa_finish(DSA *dsa)
 	return(1);
 }
 
+#endif

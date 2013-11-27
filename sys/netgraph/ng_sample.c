@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_sample.c
  */
@@ -37,7 +38,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_sample.c,v 1.30.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  * $Whistle: ng_sample.c,v 1.13 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -154,10 +155,7 @@ ng_xxx_constructor(node_p node)
 	int i;
 
 	/* Initialize private descriptor */
-	MALLOC(privdata, xxx_p, sizeof(*privdata), M_NETGRAPH,
-		M_NOWAIT | M_ZERO);
-	if (privdata == NULL)
-		return (ENOMEM);
+	privdata = malloc(sizeof(*privdata), M_NETGRAPH, M_WAITOK | M_ZERO);
 	for (i = 0; i < XXX_NUM_DLCIS; i++) {
 		privdata->channel[i].dlci = -2;
 		privdata->channel[i].channel = i;
@@ -424,7 +422,7 @@ ng_xxx_shutdown(node_p node)
 #ifndef PERSISTANT_NODE
 	NG_NODE_SET_PRIVATE(node, NULL);
 	NG_NODE_UNREF(node);
-	FREE(privdata, M_NETGRAPH);
+	free(privdata, M_NETGRAPH);
 #else
 	if (node->nd_flags & NGF_REALLY_DIE) {
 		/*
@@ -434,7 +432,7 @@ ng_xxx_shutdown(node_p node)
 		 */
 		NG_NODE_SET_PRIVATE(node, NULL);
 		NG_NODE_UNREF(privdata->node);
-		FREE(privdata, M_NETGRAPH);
+		free(privdata, M_NETGRAPH);
 		return (0);
 	}
 	NG_NODE_REVIVE(node);		/* tell ng_rmnode() we will persist */

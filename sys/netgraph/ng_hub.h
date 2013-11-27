@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Ruslan Ermilov
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netgraph/ng_hub.h,v 1.1.28.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_NG_HUB_H_
@@ -32,5 +33,10 @@
 /* Node type name and magic cookie. */
 #define	NG_HUB_NODE_TYPE	"hub"
 #define	NGM_HUB_COOKIE		1082189597
+
+/* Netgraph control messages */
+enum {
+	NGM_HUB_SET_PERSISTENT = 1,	/* set persistent mode */
+};
 
 #endif /* _NETGRAPH_NG_HUB_H_ */

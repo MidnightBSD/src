@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2005, Gleb Smirnoff <glebius@FreeBSD.org>
  * All rights reserved.
@@ -23,16 +24,21 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netgraph/ng_ipfw.c,v 1.9.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
+
+#include "opt_inet.h"
+#include "opt_inet6.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/mbuf.h>
 #include <sys/malloc.h>
 #include <sys/ctype.h>
 #include <sys/errno.h>
+#include <sys/rwlock.h>
 #include <sys/socket.h>
 #include <sys/syslog.h>
 
@@ -41,9 +47,12 @@
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
 #include <netinet/in_var.h>
-#include <netinet/ip_fw.h>
-#include <netinet/ip.h>
 #include <netinet/ip_var.h>
+#include <netinet/ip_fw.h>
+#include <netinet/ipfw/ip_fw_private.h>
+#include <netinet/ip.h>
+#include <netinet/ip6.h>
+#include <netinet6/ip6_var.h>
 
 #include <netgraph/ng_message.h>
 #include <netgraph/ng_parse.h>
@@ -162,7 +171,7 @@ ng_ipfw_newhook(node_p node, hook_p hook, const char *name)
 		return (EINVAL);
 
 	/* Allocate memory for this hook's private data */
-	MALLOC(hpriv, hpriv_p, sizeof(*hpriv), M_NETGRAPH, M_NOWAIT | M_ZERO);
+	hpriv = malloc(sizeof(*hpriv), M_NETGRAPH, M_NOWAIT | M_ZERO);
 	if (hpriv== NULL)
 		return (ENOMEM);
 
@@ -218,50 +227,67 @@ ng_ipfw_findhook1(node_p node, u_int16_t rulenum)
 static int
 ng_ipfw_rcvdata(hook_p hook, item_p item)
 {
-	struct ng_ipfw_tag	*ngit;
+	struct m_tag *tag;
+	struct ipfw_rule_ref *r;
 	struct mbuf *m;
+	struct ip *ip;
 
 	NGI_GET_M(item, m);
 	NG_FREE_ITEM(item);
 
-	if ((ngit = (struct ng_ipfw_tag *)m_tag_locate(m, NGM_IPFW_COOKIE, 0,
-	    NULL)) == NULL) {
+	tag = m_tag_locate(m, MTAG_IPFW_RULE, 0, NULL);
+	if (tag == NULL) {
 		NG_FREE_M(m);
 		return (EINVAL);	/* XXX: find smth better */
 	};
 
-	switch (ngit->dir) {
-	case NG_IPFW_OUT:
-	    {
-		struct ip *ip;
+	if (m->m_len < sizeof(struct ip) &&
+	    (m = m_pullup(m, sizeof(struct ip))) == NULL)
+		return (EINVAL);
 
-		if (m->m_len < sizeof(struct ip) &&
-		    (m = m_pullup(m, sizeof(struct ip))) == NULL)
+	ip = mtod(m, struct ip *);
+
+	r = (struct ipfw_rule_ref *)(tag + 1);
+	if (r->info & IPFW_INFO_IN) {
+		switch (ip->ip_v) {
+#ifdef INET
+		case IPVERSION:
+			ip_input(m);
+			break;
+#endif
+#ifdef INET6
+		case IPV6_VERSION >> 4:
+			ip6_input(m);
+			break;
+#endif
+		default:
+			NG_FREE_M(m);
 			return (EINVAL);
-
-		ip = mtod(m, struct ip *);
-
-		ip->ip_len = ntohs(ip->ip_len);
-		ip->ip_off = ntohs(ip->ip_off);
-
-		return ip_output(m, NULL, NULL, IP_FORWARDING, NULL, NULL);
-	    }
-	case NG_IPFW_IN:
-		ip_input(m);
+		}
 		return (0);
-	default:
-		panic("ng_ipfw_rcvdata: bad dir %u", ngit->dir);
-	}	
-
-	/* not reached */
-	return (0);
+	} else {
+		switch (ip->ip_v) {
+#ifdef INET
+		case IPVERSION:
+			SET_HOST_IPLEN(ip);
+			return (ip_output(m, NULL, NULL, IP_FORWARDING,
+			    NULL, NULL));
+#endif
+#ifdef INET6
+		case IPV6_VERSION >> 4:
+			return (ip6_output(m, NULL, NULL, 0, NULL,
+			    NULL, NULL));
+#endif
+		default:
+			return (EINVAL);
+		}
+	}
 }
 
 static int
 ng_ipfw_input(struct mbuf **m0, int dir, struct ip_fw_args *fwa, int tee)
 {
 	struct mbuf *m;
-	struct ng_ipfw_tag *ngit;
 	struct ip *ip;
 	hook_p	hook;
 	int error = 0;
@@ -270,11 +296,8 @@ ng_ipfw_input(struct mbuf **m0, int dir, struct ip_fw_args *fwa, int tee)
 	 * Node must be loaded and corresponding hook must be present.
 	 */
 	if (fw_node == NULL || 
-	   (hook = ng_ipfw_findhook1(fw_node, fwa->cookie)) == NULL) {
-		if (tee == 0)
-			m_freem(*m0);
+	   (hook = ng_ipfw_findhook1(fw_node, fwa->rule.info)) == NULL)
 		return (ESRCH);		/* no hook associated with this rule */
-	}
 
 	/*
 	 * We have two modes: in normal mode we add a tag to packet, which is
@@ -282,18 +305,22 @@ ng_ipfw_input(struct mbuf **m0, int dir, struct ip_fw_args *fwa, int tee)
 	 * a copy of a packet and forward it into netgraph without a tag.
 	 */
 	if (tee == 0) {
+		struct m_tag *tag;
+		struct ipfw_rule_ref *r;
 		m = *m0;
 		*m0 = NULL;	/* it belongs now to netgraph */
 
-		if ((ngit = (struct ng_ipfw_tag *)m_tag_alloc(NGM_IPFW_COOKIE,
-		    0, TAGSIZ, M_NOWAIT|M_ZERO)) == NULL) {
+		tag = m_tag_alloc(MTAG_IPFW_RULE, 0, sizeof(*r),
+			M_NOWAIT|M_ZERO);
+		if (tag == NULL) {
 			m_freem(m);
 			return (ENOMEM);
 		}
-		ngit->rule = fwa->rule;
-		ngit->dir = dir;
-		ngit->ifp = fwa->oif;
-		m_tag_prepend(m, &ngit->mt);
+		r = (struct ipfw_rule_ref *)(tag + 1);
+		*r = fwa->rule;
+		r->info &= IPFW_ONEPASS;  /* keep this info */
+		r->info |= dir ? IPFW_INFO_IN : IPFW_INFO_OUT;
+		m_tag_prepend(m, tag);
 
 	} else
 		if ((m = m_dup(*m0, M_DONTWAIT)) == NULL)
@@ -304,8 +331,6 @@ ng_ipfw_input(struct mbuf **m0, int dir, struct ip_fw_args *fwa, int tee)
 		return (EINVAL);
 
 	ip = mtod(m, struct ip *);
-	ip->ip_len = htons(ip->ip_len);
-	ip->ip_off = htons(ip->ip_off);
 
 	NG_SEND_DATA_ONLY(error, hook, m);
 
@@ -331,7 +356,7 @@ ng_ipfw_disconnect(hook_p hook)
 {
 	const hpriv_p hpriv = NG_HOOK_PRIVATE(hook);
 
-	FREE(hpriv, M_NETGRAPH);
+	free(hpriv, M_NETGRAPH);
 	NG_HOOK_SET_PRIVATE(hook, NULL);
 
 	return (0);

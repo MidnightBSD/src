@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* ssl/kssl.c -*- mode: C; c-file-style: "eay" -*- */
 /* Written by Vern Staats <staatsvr@asc.hpc.mil> for the OpenSSL project 2000.
  */

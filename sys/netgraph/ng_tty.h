@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /*
  * ng_tty.h
@@ -38,7 +39,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_tty.h,v 1.4.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  * $Whistle: ng_tty.h,v 1.7 1999/01/20 00:22:15 archie Exp $
  */
 
@@ -47,7 +48,7 @@
 
 /* Node type name and magic cookie */
 #define NG_TTY_NODE_TYPE	"tty"
-#define NGM_TTY_COOKIE		886279262
+#define NGM_TTY_COOKIE		1226109660
 
 /* Default hot char */
 #define NG_TTY_DFL_HOTCHAR	0x7e	/* PPP flag byte */
@@ -59,6 +60,7 @@
 enum {
 	NGM_TTY_GET_HOTCHAR = 1,
 	NGM_TTY_SET_HOTCHAR,
+	NGM_TTY_SET_TTY,
 };
 
 #endif /* _NETGRAPH_NG_TTY_H_ */

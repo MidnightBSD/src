@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /*
  * ng_ether.c
@@ -39,7 +40,7 @@
  * Authors: Archie Cobbs <archie@freebsd.org>
  *	    Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_ether.c,v 1.62.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 /*
@@ -52,8 +53,10 @@
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/errno.h>
+#include <sys/proc.h>
 #include <sys/syslog.h>
 #include <sys/socket.h>
+#include <sys/taskqueue.h>
 
 #include <net/if.h>
 #include <net/if_dl.h>
@@ -62,6 +65,7 @@
 #include <net/if_var.h>
 #include <net/ethernet.h>
 #include <net/if_bridgevar.h>
+#include <net/vnet.h>
 
 #include <netgraph/ng_message.h>
 #include <netgraph/netgraph.h>
@@ -100,8 +104,8 @@ static void	ng_ether_detach(struct ifnet *ifp);
 static void	ng_ether_link_state(struct ifnet *ifp, int state); 
 
 /* Other functions */
-static int	ng_ether_rcv_lower(node_p node, struct mbuf *m);
-static int	ng_ether_rcv_upper(node_p node, struct mbuf *m);
+static int	ng_ether_rcv_lower(hook_p node, item_p item);
+static int	ng_ether_rcv_upper(hook_p node, item_p item);
 
 /* Netgraph node methods */
 static ng_constructor_t	ng_ether_constructor;
@@ -268,7 +272,9 @@ ng_ether_output(struct ifnet *ifp, struct mbuf **mp)
 		return (0);
 
 	/* Send it out "upper" hook */
+	NG_OUTBOUND_THREAD_REF();
 	NG_SEND_DATA_ONLY(error, priv->upper, *mp);
+	NG_OUTBOUND_THREAD_UNREF();
 	return (error);
 }
 
@@ -282,6 +288,18 @@ ng_ether_attach(struct ifnet *ifp)
 	priv_p priv;
 	node_p node;
 
+	/*
+	 * Do not create / attach an ether node to this ifnet if
+	 * a netgraph node with the same name already exists.
+	 * This should prevent ether nodes to become attached to
+	 * eiface nodes, which may be problematic due to naming
+	 * clashes.
+	 */
+	if ((node = ng_name2noderef(NULL, ifp->if_xname)) != NULL) {
+		NG_NODE_UNREF(node);
+		return;
+	}
+
 	/* Create node */
 	KASSERT(!IFP2NG(ifp), ("%s: node already exists?", __func__));
 	if (ng_make_node_common(&ng_ether_typestruct, &node) != 0) {
@@ -291,7 +309,7 @@ ng_ether_attach(struct ifnet *ifp)
 	}
 
 	/* Allocate private data */
-	MALLOC(priv, priv_p, sizeof(*priv), M_NETGRAPH, M_NOWAIT | M_ZERO);
+	priv = malloc(sizeof(*priv), M_NETGRAPH, M_NOWAIT | M_ZERO);
 	if (priv == NULL) {
 		log(LOG_ERR, "%s: can't %s for %s\n",
 		    __func__, "allocate memory", ifp->if_xname);
@@ -320,6 +338,7 @@ ng_ether_detach(struct ifnet *ifp)
 	const node_p node = IFP2NG(ifp);
 	const priv_p priv = NG_NODE_PRIVATE(node);
 
+	taskqueue_drain(taskqueue_swi, &ifp->if_linktask);
 	NG_NODE_REALLY_DIE(node);	/* Force real removal of node */
 	/*
 	 * We can't assume the ifnet is still around when we run shutdown
@@ -343,9 +362,6 @@ ng_ether_link_state(struct ifnet *ifp, int state)
 	struct ng_mesg *msg;
 	int cmd, dummy_error = 0;
 
-	if (priv->lower == NULL)
-                return;
-
 	if (state == LINK_STATE_UP)
 		cmd = NGM_LINK_IS_UP;
 	else if (state == LINK_STATE_DOWN)
@@ -353,9 +369,16 @@ ng_ether_link_state(struct ifnet *ifp, int state)
 	else
 		return;
 
-	NG_MKMESSAGE(msg, NGM_FLOW_COOKIE, cmd, 0, M_NOWAIT);
-	if (msg != NULL)
-		NG_SEND_MSG_HOOK(dummy_error, node, msg, priv->lower, 0);
+	if (priv->lower != NULL) {
+		NG_MKMESSAGE(msg, NGM_FLOW_COOKIE, cmd, 0, M_NOWAIT);
+		if (msg != NULL)
+			NG_SEND_MSG_HOOK(dummy_error, node, msg, priv->lower, 0);
+	}
+	if (priv->orphan != NULL) {
+		NG_MKMESSAGE(msg, NGM_FLOW_COOKIE, cmd, 0, M_NOWAIT);
+		if (msg != NULL)
+			NG_SEND_MSG_HOOK(dummy_error, node, msg, priv->orphan, 0);
+	}
 }
 
 /******************************************************************
@@ -387,13 +410,17 @@ ng_ether_newhook(node_p node, hook_p hook, const char *name)
 		name = NG_ETHER_HOOK_LOWER;
 
 	/* Which hook? */
-	if (strcmp(name, NG_ETHER_HOOK_UPPER) == 0)
+	if (strcmp(name, NG_ETHER_HOOK_UPPER) == 0) {
 		hookptr = &priv->upper;
-	else if (strcmp(name, NG_ETHER_HOOK_LOWER) == 0)
+		NG_HOOK_SET_RCVDATA(hook, ng_ether_rcv_upper);
+		NG_HOOK_SET_TO_INBOUND(hook);
+	} else if (strcmp(name, NG_ETHER_HOOK_LOWER) == 0) {
 		hookptr = &priv->lower;
-	else if (strcmp(name, NG_ETHER_HOOK_ORPHAN) == 0)
+		NG_HOOK_SET_RCVDATA(hook, ng_ether_rcv_lower);
+	} else if (strcmp(name, NG_ETHER_HOOK_ORPHAN) == 0) {
 		hookptr = &priv->orphan;
-	else
+		NG_HOOK_SET_RCVDATA(hook, ng_ether_rcv_lower);
+	} else
 		return (EINVAL);
 
 	/* Check if already connected (shouldn't be, but doesn't hurt) */
@@ -403,7 +430,7 @@ ng_ether_newhook(node_p node, hook_p hook, const char *name)
 	/* Disable hardware checksums while 'upper' hook is connected */
 	if (hookptr == &priv->upper)
 		priv->ifp->if_hwassist = 0;
-
+	NG_HOOK_HI_STACK(hook);
 	/* OK */
 	*hookptr = hook;
 	return (0);
@@ -457,6 +484,7 @@ ng_ether_rcvmsg(node_p node, item_p item, hook_p lasthook)
 			}
 			error = if_setlladdr(priv->ifp,
 			    (u_char *)msg->data, ETHER_ADDR_LEN);
+			EVENTHANDLER_INVOKE(iflladdr_event, priv->ifp);
 			break;
 		    }
 		case NGM_ETHER_GET_PROMISC:
@@ -520,10 +548,10 @@ ng_ether_rcvmsg(node_p node, item_p item, hook_p lasthook)
 			 * lose a race while we check if the membership
 			 * already exists.
 			 */
-			IF_ADDR_LOCK(priv->ifp);
+			if_maddr_rlock(priv->ifp);
 			ifma = if_findmulti(priv->ifp,
 			    (struct sockaddr *)&sa_dl);
-			IF_ADDR_UNLOCK(priv->ifp);
+			if_maddr_runlock(priv->ifp);
 			if (ifma != NULL) {
 				error = EADDRINUSE;
 			} else {
@@ -569,37 +597,32 @@ ng_ether_rcvmsg(node_p node, item_p item, hook_p lasthook)
 
 /*
  * Receive data on a hook.
+ * Since we use per-hook recveive methods this should never be called.
  */
 static int
 ng_ether_rcvdata(hook_p hook, item_p item)
 {
-	const node_p node = NG_HOOK_NODE(hook);
-	const priv_p priv = NG_NODE_PRIVATE(node);
-	struct mbuf *m;
-
-	NGI_GET_M(item, m);
 	NG_FREE_ITEM(item);
 
-	if (hook == priv->lower || hook == priv->orphan)
-		return ng_ether_rcv_lower(node, m);
-	if (hook == priv->upper)
-		return ng_ether_rcv_upper(node, m);
 	panic("%s: weird hook", __func__);
-#ifdef RESTARTABLE_PANICS /* so we don't get an error msg in LINT */
-	return (0);
-#endif
 }
 
 /*
  * Handle an mbuf received on the "lower" or "orphan" hook.
  */
 static int
-ng_ether_rcv_lower(node_p node, struct mbuf *m)
+ng_ether_rcv_lower(hook_p hook, item_p item)
 {
+	struct mbuf *m;
+	const node_p node = NG_HOOK_NODE(hook);
 	const priv_p priv = NG_NODE_PRIVATE(node);
  	struct ifnet *const ifp = priv->ifp;
 
+	NGI_GET_M(item, m);
+	NG_FREE_ITEM(item);
+
 	/* Check whether interface is ready for packets */
+
 	if (!((ifp->if_flags & IFF_UP) &&
 	    (ifp->if_drv_flags & IFF_DRV_RUNNING))) {
 		NG_FREE_M(m);
@@ -637,10 +660,15 @@ ng_ether_rcv_lower(node_p node, struct mbuf *m)
  * Handle an mbuf received on the "upper" hook.
  */
 static int
-ng_ether_rcv_upper(node_p node, struct mbuf *m)
+ng_ether_rcv_upper(hook_p hook, item_p item)
 {
+	struct mbuf *m;
+	const node_p node = NG_HOOK_NODE(hook);
 	const priv_p priv = NG_NODE_PRIVATE(node);
 	struct ifnet *ifp = priv->ifp;
+
+	NGI_GET_M(item, m);
+	NG_FREE_ITEM(item);
 
 	/* Check length and pull off header */
 	if (m->m_pkthdr.len < sizeof(struct ether_header)) {
@@ -682,7 +710,7 @@ ng_ether_shutdown(node_p node)
 		 * Assume the ifp has already been freed.
 		 */
 		NG_NODE_SET_PRIVATE(node, NULL);
-		FREE(priv, M_NETGRAPH);		
+		free(priv, M_NETGRAPH);		
 		NG_NODE_UNREF(node);	/* free node itself */
 		return (0);
 	}
@@ -690,7 +718,6 @@ ng_ether_shutdown(node_p node)
 		(void)ifpromisc(priv->ifp, 0);
 		priv->promisc = 0;
 	}
-	priv->autoSrcAddr = 1;		/* reset auto-src-addr flag */
 	NG_NODE_REVIVE(node);		/* Signal ng_rmnode we are persisant */
 
 	return (0);
@@ -730,7 +757,6 @@ ng_ether_disconnect(hook_p hook)
 static int
 ng_ether_mod_event(module_t mod, int event, void *data)
 {
-	struct ifnet *ifp;
 	int error = 0;
 	int s;
 
@@ -750,14 +776,6 @@ ng_ether_mod_event(module_t mod, int event, void *data)
 		ng_ether_input_orphan_p = ng_ether_input_orphan;
 		ng_ether_link_state_p = ng_ether_link_state;
 
-		/* Create nodes for any already-existing Ethernet interfaces */
-		IFNET_RLOCK();
-		TAILQ_FOREACH(ifp, &ifnet, if_link) {
-			if (ifp->if_type == IFT_ETHER
-			    || ifp->if_type == IFT_L2VLAN)
-				ng_ether_attach(ifp);
-		}
-		IFNET_RUNLOCK();
 		break;
 
 	case MOD_UNLOAD:
@@ -787,3 +805,23 @@ ng_ether_mod_event(module_t mod, int event, void *data)
 	return (error);
 }
 
+static void
+vnet_ng_ether_init(const void *unused)
+{
+	struct ifnet *ifp;
+
+	/* If module load was rejected, don't attach to vnets. */
+	if (ng_ether_attach_p != ng_ether_attach)
+		return;
+
+	/* Create nodes for any already-existing Ethernet interfaces. */
+	IFNET_RLOCK();
+	TAILQ_FOREACH(ifp, &V_ifnet, if_link) {
+		if (ifp->if_type == IFT_ETHER
+		    || ifp->if_type == IFT_L2VLAN)
+			ng_ether_attach(ifp);
+	}
+	IFNET_RUNLOCK();
+}
+VNET_SYSINIT(vnet_ng_ether_init, SI_SUB_PSEUDO, SI_ORDER_ANY,
+    vnet_ng_ether_init, NULL);

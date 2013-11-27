@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ng_cisco.h
  */
@@ -37,7 +38,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_cisco.h,v 1.8.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  * $Whistle: ng_cisco.h,v 1.6 1999/01/25 01:21:48 archie Exp $
  */
 
@@ -76,8 +77,8 @@ struct ng_cisco_ipaddr {
 }
 
 struct ng_cisco_stats {
-	u_int32_t   seqRetries;		/* # unack'd retries */
-	u_int32_t   keepAlivePeriod;	/* in seconds */
+	uint32_t   seqRetries;		/* # unack'd retries */
+	uint32_t   keepAlivePeriod;	/* in seconds */
 };
 
 /* Keep this in sync with the above structure definition */

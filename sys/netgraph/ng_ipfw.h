@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2005, Gleb Smirnoff <glebius@FreeBSD.org>
  * All rights reserved.
@@ -23,27 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netgraph/ng_ipfw.h,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
+#ifndef _NG_IPFW_H
+#define _NG_IPFW_H
 #define NG_IPFW_NODE_TYPE    "ipfw"
 #define NGM_IPFW_COOKIE      1105988990
-
-#ifdef _KERNEL
-
-typedef int ng_ipfw_input_t(struct mbuf **, int, struct ip_fw_args *, int);
-extern	ng_ipfw_input_t	*ng_ipfw_input_p;
-#define	NG_IPFW_LOADED	(ng_ipfw_input_p != NULL)
-
-struct ng_ipfw_tag {
-	struct m_tag	mt;		/* tag header */
-	struct ip_fw	*rule;		/* matching rule */
-	struct ifnet	*ifp;		/* interface, for ip_output */
-	int		dir;
-#define	NG_IPFW_OUT	0
-#define	NG_IPFW_IN	1
-};
-
-#define	TAGSIZ	(sizeof(struct ng_ipfw_tag) - sizeof(struct m_tag))
-
-#endif /* _KERNEL */
+#endif /* _NG_IPFW_H */
