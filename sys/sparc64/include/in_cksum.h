@@ -56,7 +56,7 @@
  *	from: Id: in_cksum.c,v 1.8 1995/12/03 18:35:19 bde Exp
  *	from: FreeBSD: src/sys/alpha/include/in_cksum.h,v 1.5 2000/05/06
  *
- * $FreeBSD: src/sys/sparc64/include/in_cksum.h,v 1.3.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_IN_CKSUM_H_
@@ -66,6 +66,7 @@
 
 #define	in_cksum(m, len)	in_cksum_skip(m, len, 0)
 
+#if defined(IPVERSION) && (IPVERSION == 4)
 static __inline void
 in_cksum_update(struct ip *ip)
 {
@@ -74,6 +75,7 @@ in_cksum_update(struct ip *ip)
 	__tmp = (int)ip->ip_sum + 1;
 	ip->ip_sum = __tmp + (__tmp >> 16);
 }
+#endif
 
 static __inline u_short
 in_addword(u_short sum, u_short b)
@@ -107,6 +109,7 @@ in_pseudo(u_int sum, u_int b, u_int c)
 	return (sum);
 }
 
+#if defined(IPVERSION) && (IPVERSION == 4)
 static __inline u_int
 in_cksum_hdr(struct ip *ip)
 {
@@ -164,7 +167,10 @@ in_cksum_hdr(struct ip *ip)
 #undef __LD_ADD
 	return (__ret);
 }
+#endif
 
+#ifdef _KERNEL
 u_short	in_cksum_skip(struct mbuf *m, int len, int skip);
+#endif
 
 #endif /* _MACHINE_IN_CKSUM_H_ */

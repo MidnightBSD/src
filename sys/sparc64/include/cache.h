@@ -40,21 +40,17 @@
  *	from: @(#)cache.h	8.1 (Berkeley) 6/11/93
  *	from: NetBSD: cache.h,v 1.3 2000/08/01 00:28:02 eeh Exp
  *
- * $FreeBSD: src/sys/sparc64/include/cache.h,v 1.13.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_CACHE_H_
 #define	_MACHINE_CACHE_H_
 
-#ifndef LOCORE
-#include <dev/ofw/openfirm.h>
-#endif
-
 #define	DCACHE_COLOR_BITS	(1)
 #define	DCACHE_COLORS		(1 << DCACHE_COLOR_BITS)
 #define	DCACHE_COLOR_MASK	(DCACHE_COLORS - 1)
 #define	DCACHE_COLOR(va)	(((va) >> PAGE_SHIFT) & DCACHE_COLOR_MASK)
-#define	DCACHE_OTHER_COLOR(color) \
+#define	DCACHE_OTHER_COLOR(color)					\
 	((color) ^ DCACHE_COLOR_BITS)
 
 #define	DC_TAG_SHIFT	2
@@ -81,31 +77,29 @@
  * Cache control information
  */
 struct cacheinfo {
-	u_int	c_enabled;		/* true => cache is enabled */
 	u_int	ic_size;		/* instruction cache */
-	u_int	ic_set;
-	u_int	ic_l2set;
 	u_int	ic_assoc;
 	u_int	ic_linesize;
 	u_int	dc_size;		/* data cache */
-	u_int	dc_l2size;
 	u_int	dc_assoc;
 	u_int	dc_linesize;
 	u_int	ec_size;		/* external cache info */
 	u_int	ec_assoc;
-	u_int	ec_l2set;
 	u_int	ec_linesize;
-	u_int	ec_l2linesize;
 };
 
 #ifdef _KERNEL
 
-typedef void cache_enable_t(void);
+extern u_int dcache_color_ignore;
+
+struct pcpu;
+
+typedef void cache_enable_t(u_int cpu_impl);
 typedef void cache_flush_t(void);
 typedef void dcache_page_inval_t(vm_paddr_t pa);
 typedef void icache_page_inval_t(vm_paddr_t pa);
 
-void	cache_init(phandle_t node);
+void cache_init(struct pcpu *pcpu);
 
 cache_enable_t cheetah_cache_enable;
 cache_flush_t cheetah_cache_flush;
@@ -117,12 +111,15 @@ cache_flush_t spitfire_cache_flush;
 dcache_page_inval_t spitfire_dcache_page_inval;
 icache_page_inval_t spitfire_icache_page_inval;
 
+cache_enable_t zeus_cache_enable;
+cache_flush_t zeus_cache_flush;
+dcache_page_inval_t zeus_dcache_page_inval;
+icache_page_inval_t zeus_icache_page_inval;
+
 extern cache_enable_t *cache_enable;
 extern cache_flush_t *cache_flush;
 extern dcache_page_inval_t *dcache_page_inval;
 extern icache_page_inval_t *icache_page_inval;
-
-extern struct cacheinfo cache;
 
 #endif /* KERNEL */
 

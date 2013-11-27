@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/pcb.h,v 1.18.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_PCB_H_
@@ -50,12 +50,13 @@ struct pcb {
 	uint64_t pcb_nsaved;
 	uint64_t pcb_pc;
 	uint64_t pcb_sp;
-	uint64_t pcb_pad[4];
+	uint64_t pcb_tpc;
+	uint64_t pcb_pad[3];
 } __aligned(64);
 
 #ifdef _KERNEL
 void	makectx(struct trapframe *tf, struct pcb *pcb);
-int	savectx(struct pcb *pcb);
+int	savectx(struct pcb *pcb) __returns_twice;
 #endif
 
 #endif /* !LOCORE */

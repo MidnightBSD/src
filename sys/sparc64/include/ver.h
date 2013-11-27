@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/ver.h,v 1.6.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_VER_H_
@@ -42,28 +42,43 @@
 #define	VER_MAXTL_SIZE		(8)
 #define	VER_MAXWIN_SIZE		(5)
 
-#define	VER_MANUF_MASK		(((1L<<VER_MANUF_SIZE)-1)<<VER_MANUF_SHIFT)
-#define	VER_IMPL_MASK		(((1L<<VER_IMPL_SIZE)-1)<<VER_IMPL_SHIFT)
-#define	VER_MASK_MASK		(((1L<<VER_MASK_SIZE)-1)<<VER_MASK_SHIFT)
-#define	VER_MAXTL_MASK		(((1L<<VER_MAXTL_SIZE)-1)<<VER_MAXTL_SHIFT)
-#define	VER_MAXWIN_MASK		(((1L<<VER_MAXWIN_SIZE)-1)<<VER_MAXWIN_SHIFT)
+#ifndef LOCORE
 
-#define	VER_MANUF(ver) \
+#define	VER_MANUF_MASK							\
+	(((1UL << VER_MANUF_SIZE) - 1) << VER_MANUF_SHIFT)
+#define	VER_IMPL_MASK							\
+	(((1UL << VER_IMPL_SIZE) - 1) << VER_IMPL_SHIFT)
+#define	VER_MASK_MASK							\
+	(((1UL << VER_MASK_SIZE) - 1) << VER_MASK_SHIFT)
+#define	VER_MAXTL_MASK							\
+	(((1UL << VER_MAXTL_SIZE) - 1) << VER_MAXTL_SHIFT)
+#define	VER_MAXWIN_MASK							\
+	(((1UL << VER_MAXWIN_SIZE) - 1) << VER_MAXWIN_SHIFT)
+
+#define	VER_MANUF(ver)							\
 	(((ver) & VER_MANUF_MASK) >> VER_MANUF_SHIFT)
-#define	VER_IMPL(ver) \
+#define	VER_IMPL(ver)							\
 	(((ver) & VER_IMPL_MASK) >> VER_IMPL_SHIFT)
-#define	VER_MASK(ver) \
+#define	VER_MASK(ver)							\
 	(((ver) & VER_MASK_MASK) >> VER_MASK_SHIFT)
-#define	VER_MAXTL(ver) \
+#define	VER_MAXTL(ver)							\
 	(((ver) & VER_MAXTL_MASK) >> VER_MAXTL_SHIFT)
-#define	VER_MAXWIN(ver) \
+#define	VER_MAXWIN(ver)							\
 	(((ver) & VER_MAXWIN_MASK) >> VER_MAXWIN_SHIFT)
 
-extern int cpu_impl;
 extern char sparc64_model[];
 
-/* Known implementations. */
+#endif /* !LOCORE */
+
+/* Known implementations */
 #define	CPU_IMPL_SPARC64		0x01
+#define	CPU_IMPL_SPARC64II		0x02
+#define	CPU_IMPL_SPARC64III		0x03
+#define	CPU_IMPL_SPARC64IV		0x04
+#define	CPU_IMPL_SPARC64V		0x05
+#define	CPU_IMPL_SPARC64VI		0x06
+#define	CPU_IMPL_SPARC64VII		0x07
+#define	CPU_IMPL_SPARC64VIIIfx		0x08
 #define	CPU_IMPL_ULTRASPARCI		0x10
 #define	CPU_IMPL_ULTRASPARCII		0x11
 #define	CPU_IMPL_ULTRASPARCIIi		0x12

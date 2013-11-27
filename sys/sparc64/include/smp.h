@@ -1,6 +1,7 @@
 /* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jake Burkholder.
+ * Copyright (c) 2007 - 2011 Marius Strobl <marius@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,17 +25,24 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/smp.h,v 1.22.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_SMP_H_
 #define	_MACHINE_SMP_H_
 
-#define	CPU_CLKSYNC		1
-#define	CPU_INIT		2
-#define	CPU_BOOTSTRAP		3
+#ifdef SMP
+
+#define	CPU_TICKSYNC		1
+#define	CPU_STICKSYNC		2
+#define	CPU_INIT		3
+#define	CPU_BOOTSTRAP		4
 
 #ifndef	LOCORE
+
+#include <sys/cpuset.h>
+#include <sys/proc.h>
+#include <sys/sched.h>
 
 #include <machine/intr_machdep.h>
 #include <machine/pcb.h>
@@ -53,7 +61,9 @@
 #define	IPI_AST		PIL_AST
 #define	IPI_RENDEZVOUS	PIL_RENDEZVOUS
 #define	IPI_PREEMPT	PIL_PREEMPT
+#define	IPI_HARDCLOCK	PIL_HARDCLOCK
 #define	IPI_STOP	PIL_STOP
+#define	IPI_STOP_HARD	PIL_STOP
 
 #define	IPI_RETRIES	5000
 
@@ -63,17 +73,23 @@ struct cpu_start_args {
 	u_int	csa_state;
 	vm_offset_t csa_pcpu;
 	u_long	csa_tick;
+	u_long	csa_stick;
 	u_long	csa_ver;
 	struct	tte csa_ttes[PCPU_PAGES];
 };
 
 struct ipi_cache_args {
-	u_int	ica_mask;
+	cpuset_t ica_mask;
 	vm_paddr_t ica_pa;
 };
 
+struct ipi_rd_args {
+	cpuset_t ira_mask;
+	register_t *ira_val;
+};
+
 struct ipi_tlb_args {
-	u_int	ita_mask;
+	cpuset_t ita_mask;
 	struct	pmap *ita_pmap;
 	u_long	ita_start;
 	u_long	ita_end;
@@ -87,17 +103,16 @@ extern struct pcb stoppcbs[];
 void	cpu_mp_bootstrap(struct pcpu *pc);
 void	cpu_mp_shutdown(void);
 
-typedef	void cpu_ipi_selected_t(u_int, u_long, u_long, u_long);
+typedef	void cpu_ipi_selected_t(cpuset_t, u_long, u_long, u_long);
 extern	cpu_ipi_selected_t *cpu_ipi_selected;
+typedef	void cpu_ipi_single_t(u_int, u_long, u_long, u_long);
+extern	cpu_ipi_single_t *cpu_ipi_single;
 
-void	ipi_selected(u_int cpus, u_int ipi);
-void	ipi_all(u_int ipi);
-void	ipi_all_but_self(u_int ipi);
-
-void	mp_init(void);
+void	mp_init(u_int cpu_impl);
 
 extern	struct mtx ipi_mtx;
 extern	struct ipi_cache_args ipi_cache_args;
+extern	struct ipi_rd_args ipi_rd_args;
 extern	struct ipi_tlb_args ipi_tlb_args;
 
 extern	char *mp_tramp_code;
@@ -112,11 +127,37 @@ extern	char tl_ipi_spitfire_dcache_page_inval[];
 extern	char tl_ipi_spitfire_icache_page_inval[];
 
 extern	char tl_ipi_level[];
+
+extern	char tl_ipi_stick_rd[];
+extern	char tl_ipi_tick_rd[];
+
 extern	char tl_ipi_tlb_context_demap[];
 extern	char tl_ipi_tlb_page_demap[];
 extern	char tl_ipi_tlb_range_demap[];
 
-#ifdef SMP
+static __inline void
+ipi_all_but_self(u_int ipi)
+{
+	cpuset_t cpus;
+
+	cpus = all_cpus;
+	CPU_CLR(PCPU_GET(cpuid), &cpus);
+	cpu_ipi_selected(cpus, 0, (u_long)tl_ipi_level, ipi);
+}
+
+static __inline void
+ipi_selected(cpuset_t cpus, u_int ipi)
+{
+
+	cpu_ipi_selected(cpus, 0, (u_long)tl_ipi_level, ipi);
+}
+
+static __inline void
+ipi_cpu(int cpu, u_int ipi)
+{
+
+	cpu_ipi_single(cpu, 0, (u_long)tl_ipi_level, ipi);
+}
 
 #if defined(_MACHINE_PMAP_H_) && defined(_SYS_MUTEX_H_)
 
@@ -127,11 +168,13 @@ ipi_dcache_page_inval(void *func, vm_paddr_t pa)
 
 	if (smp_cpus == 1)
 		return (NULL);
+	sched_pin();
 	ica = &ipi_cache_args;
 	mtx_lock_spin(&ipi_mtx);
 	ica->ica_mask = all_cpus;
+	CPU_CLR(PCPU_GET(cpuid), &ica->ica_mask);
 	ica->ica_pa = pa;
-	cpu_ipi_selected(PCPU_GET(other_cpus), 0, (u_long)func, (u_long)ica);
+	cpu_ipi_selected(ica->ica_mask, 0, (u_long)func, (u_long)ica);
 	return (&ica->ica_mask);
 }
 
@@ -142,27 +185,51 @@ ipi_icache_page_inval(void *func, vm_paddr_t pa)
 
 	if (smp_cpus == 1)
 		return (NULL);
+	sched_pin();
 	ica = &ipi_cache_args;
 	mtx_lock_spin(&ipi_mtx);
 	ica->ica_mask = all_cpus;
+	CPU_CLR(PCPU_GET(cpuid), &ica->ica_mask);
 	ica->ica_pa = pa;
-	cpu_ipi_selected(PCPU_GET(other_cpus), 0, (u_long)func, (u_long)ica);
+	cpu_ipi_selected(ica->ica_mask, 0, (u_long)func, (u_long)ica);
 	return (&ica->ica_mask);
+}
+
+static __inline void *
+ipi_rd(u_int cpu, void *func, u_long *val)
+{
+	struct ipi_rd_args *ira;
+
+	if (smp_cpus == 1)
+		return (NULL);
+	sched_pin();
+	ira = &ipi_rd_args;
+	mtx_lock_spin(&ipi_mtx);
+	CPU_SETOF(cpu, &ira->ira_mask);
+	ira->ira_val = val;
+	cpu_ipi_single(cpu, 0, (u_long)func, (u_long)ira);
+	return (&ira->ira_mask);
 }
 
 static __inline void *
 ipi_tlb_context_demap(struct pmap *pm)
 {
 	struct ipi_tlb_args *ita;
-	u_int cpus;
+	cpuset_t cpus;
 
 	if (smp_cpus == 1)
 		return (NULL);
-	if ((cpus = (pm->pm_active & PCPU_GET(other_cpus))) == 0)
+	sched_pin();
+	cpus = pm->pm_active;
+	CPU_AND(&cpus, &all_cpus);
+	CPU_CLR(PCPU_GET(cpuid), &cpus);
+	if (CPU_EMPTY(&cpus)) {
+		sched_unpin();
 		return (NULL);
+	}
 	ita = &ipi_tlb_args;
 	mtx_lock_spin(&ipi_mtx);
-	ita->ita_mask = cpus | PCPU_GET(cpumask);
+	ita->ita_mask = cpus;
 	ita->ita_pmap = pm;
 	cpu_ipi_selected(cpus, 0, (u_long)tl_ipi_tlb_context_demap,
 	    (u_long)ita);
@@ -173,15 +240,21 @@ static __inline void *
 ipi_tlb_page_demap(struct pmap *pm, vm_offset_t va)
 {
 	struct ipi_tlb_args *ita;
-	u_int cpus;
+	cpuset_t cpus;
 
 	if (smp_cpus == 1)
 		return (NULL);
-	if ((cpus = (pm->pm_active & PCPU_GET(other_cpus))) == 0)
+	sched_pin();
+	cpus = pm->pm_active;
+	CPU_AND(&cpus, &all_cpus);
+	CPU_CLR(PCPU_GET(cpuid), &cpus);
+	if (CPU_EMPTY(&cpus)) {
+		sched_unpin();
 		return (NULL);
+	}
 	ita = &ipi_tlb_args;
 	mtx_lock_spin(&ipi_mtx);
-	ita->ita_mask = cpus | PCPU_GET(cpumask);
+	ita->ita_mask = cpus;
 	ita->ita_pmap = pm;
 	ita->ita_va = va;
 	cpu_ipi_selected(cpus, 0, (u_long)tl_ipi_tlb_page_demap, (u_long)ita);
@@ -192,69 +265,88 @@ static __inline void *
 ipi_tlb_range_demap(struct pmap *pm, vm_offset_t start, vm_offset_t end)
 {
 	struct ipi_tlb_args *ita;
-	u_int cpus;
+	cpuset_t cpus;
 
 	if (smp_cpus == 1)
 		return (NULL);
-	if ((cpus = (pm->pm_active & PCPU_GET(other_cpus))) == 0)
+	sched_pin();
+	cpus = pm->pm_active;
+	CPU_AND(&cpus, &all_cpus);
+	CPU_CLR(PCPU_GET(cpuid), &cpus);
+	if (CPU_EMPTY(&cpus)) {
+		sched_unpin();
 		return (NULL);
+	}
 	ita = &ipi_tlb_args;
 	mtx_lock_spin(&ipi_mtx);
-	ita->ita_mask = cpus | PCPU_GET(cpumask);
+	ita->ita_mask = cpus;
 	ita->ita_pmap = pm;
 	ita->ita_start = start;
 	ita->ita_end = end;
-	cpu_ipi_selected(cpus, 0, (u_long)tl_ipi_tlb_range_demap, (u_long)ita);
+	cpu_ipi_selected(cpus, 0, (u_long)tl_ipi_tlb_range_demap,
+	    (u_long)ita);
 	return (&ita->ita_mask);
 }
 
 static __inline void
 ipi_wait(void *cookie)
 {
-	volatile u_int *mask;
+	volatile cpuset_t *mask;
 
 	if ((mask = cookie) != NULL) {
-		atomic_clear_int(mask, PCPU_GET(cpumask));
-		while (*mask != 0)
+		while (!CPU_EMPTY(mask))
 			;
 		mtx_unlock_spin(&ipi_mtx);
+		sched_unpin();
 	}
 }
 
 #endif /* _MACHINE_PMAP_H_ && _SYS_MUTEX_H_ */
 
+#endif /* !LOCORE */
+
 #else
 
+#ifndef	LOCORE
+
 static __inline void *
-ipi_dcache_page_inval(void *func, vm_paddr_t pa)
+ipi_dcache_page_inval(void *func __unused, vm_paddr_t pa __unused)
 {
 
 	return (NULL);
 }
 
 static __inline void *
-ipi_icache_page_inval(void *func, vm_paddr_t pa)
+ipi_icache_page_inval(void *func __unused, vm_paddr_t pa __unused)
 {
 
 	return (NULL);
 }
 
 static __inline void *
-ipi_tlb_context_demap(struct pmap *pm)
+ipi_rd(u_int cpu __unused, void *func __unused, u_long *val __unused)
 {
 
 	return (NULL);
 }
 
 static __inline void *
-ipi_tlb_page_demap(struct pmap *pm, vm_offset_t va)
+ipi_tlb_context_demap(struct pmap *pm __unused)
 {
 
 	return (NULL);
 }
 
 static __inline void *
-ipi_tlb_range_demap(struct pmap *pm, vm_offset_t start, vm_offset_t end)
+ipi_tlb_page_demap(struct pmap *pm __unused, vm_offset_t va __unused)
+{
+
+	return (NULL);
+}
+
+static __inline void *
+ipi_tlb_range_demap(struct pmap *pm __unused, vm_offset_t start __unused,
+    __unused vm_offset_t end)
 {
 
 	return (NULL);
@@ -266,8 +358,26 @@ ipi_wait(void *cookie)
 
 }
 
-#endif /* SMP */
+static __inline void
+tl_ipi_cheetah_dcache_page_inval(void)
+{
+
+}
+
+static __inline void
+tl_ipi_spitfire_dcache_page_inval(void)
+{
+
+}
+
+static __inline void
+tl_ipi_spitfire_icache_page_inval(void)
+{
+
+}
 
 #endif /* !LOCORE */
+
+#endif /* SMP */
 
 #endif /* !_MACHINE_SMP_H_ */

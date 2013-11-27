@@ -28,29 +28,19 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD: src/sys/sparc64/include/param.h,v 1.22.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
+
+#ifndef _SPARC64_INCLUDE_PARAM_H_
+#define	_SPARC64_INCLUDE_PARAM_H_
 
 /*
  * Machine dependent constants for sparc64.
  */
 
-/*
- * Round p (pointer or byte index) up to a correctly-aligned value
- * for all data types (int, long, ...).   The result is unsigned int
- * and must be cast to any desired pointer type.
- */
-#ifndef _ALIGNBYTES
-#define _ALIGNBYTES	0xf
-#endif
-#ifndef _ALIGN
-#define _ALIGN(p)	(((u_long)(p) + _ALIGNBYTES) & ~_ALIGNBYTES)
-#endif
+#include <machine/_align.h>
 
-#ifndef _NO_NAMESPACE_POLLUTION
-
-#ifndef _MACHINE_PARAM_H_
-#define	_MACHINE_PARAM_H_
+#define __PCI_BAR_ZERO_VALID
 
 #ifndef MACHINE
 #define MACHINE		"sparc64"
@@ -61,16 +51,32 @@
 #define MID_MACHINE	MID_SPARC64
 
 #if defined(SMP) || defined(KLD_MODULE)
-#define MAXCPU		16
+#ifndef MAXCPU
+#define MAXCPU		64
+#endif
 #else
 #define MAXCPU		1
-#endif /* SMP */
+#endif /* SMP || KLD_MODULE */
 
 #define	INT_SHIFT	2
 #define	PTR_SHIFT	3
 
 #define ALIGNBYTES	_ALIGNBYTES
 #define ALIGN(p)	_ALIGN(p)
+/*
+ * ALIGNED_POINTER is a boolean macro that checks whether an address
+ * is valid to fetch data elements of type t from on this architecture.
+ * This does not reflect the optimal alignment, just the possibility
+ * (within reasonable limits). 
+ */
+#define	ALIGNED_POINTER(p, t)	((((u_long)(p)) & (sizeof (t) - 1)) == 0)
+
+/*
+ * CACHE_LINE_SIZE is the compile-time maximum cache line size for an
+ * architecture.  It should be used with appropriate caution.
+ */
+#define	CACHE_LINE_SHIFT	7
+#define	CACHE_LINE_SIZE		(1 << CACHE_LINE_SHIFT)
 
 #define	PAGE_SHIFT_8K	13
 #define	PAGE_SIZE_8K	(1L<<PAGE_SHIFT_8K)
@@ -106,6 +112,8 @@
 #define PAGE_SIZE_MAX	PAGE_SIZE_4M
 #define PAGE_MASK_MAX	PAGE_MASK_4M
 
+#define	MAXPAGESIZES	1		/* maximum number of supported page sizes */
+
 #ifndef KSTACK_PAGES
 #define KSTACK_PAGES		4	/* pages of kernel stack (with pcb) */
 #endif
@@ -135,5 +143,4 @@
 
 #define	pgtok(x)		((unsigned long)(x) * (PAGE_SIZE / 1024))
 
-#endif /* !_MACHINE_PARAM_H_ */
-#endif /* !_NO_NAMESPACE_POLLUTION */
+#endif /* !_SPARC64_INCLUDE_PARAM_H_ */

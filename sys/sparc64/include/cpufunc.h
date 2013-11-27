@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/cpufunc.h,v 1.21.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_CPUFUNC_H_
@@ -158,9 +158,9 @@ int fasword32(u_long asi, void *addr, uint32_t *val);
 	__sr;								\
 })
 
-#define	wr(name, val, xor) do {						\
+#define	wr(name, val, xorval) do {					\
 	__asm __volatile("wr %0, %1, %%" #name				\
-	    : : "r" (val), "rI" (xor));					\
+	    : : "r" (val), "rI" (xorval));				\
 } while (0)
 
 #define	rdpr(name) ({							\
@@ -169,28 +169,39 @@ int fasword32(u_long asi, void *addr, uint32_t *val);
 	__pr;								\
 })
 
-#define	wrpr(name, val, xor) do {					\
+#define	wrpr(name, val, xorval) do {					\
 	__asm __volatile("wrpr %0, %1, %%" #name			\
-	    : : "r" (val), "rI" (xor));					\
+	    : : "r" (val), "rI" (xorval));				\
 } while (0)
 
 /*
- * Macro intended to be used instead of wr(asr23, val, xor) for writing to
+ * Trick GAS/GCC into compiling access to TICK/(S)TICK_COMPARE independently
+ * of the selected instruction set.
+ */
+#define	rdtickcmpr()			rd(asr23)
+#define	rdstick()			rd(asr24)
+#define	rdstickcmpr()			rd(asr25)
+#define	wrtickcmpr(val, xorval)		wr(asr23, (val), (xorval))
+#define	wrstick(val, xorval)		wr(asr24, (val), (xorval))
+#define	wrstickcmpr(val, xorval)	wr(asr25, (val), (xorval))
+
+/*
+ * Macro intended to be used instead of wr(asr23, val, xorval) for writing to
  * the TICK_COMPARE register in order to avoid a bug in BlackBird CPUs that
- * can cause these writes to fail under certain condidtions which in turn
+ * can cause these writes to fail under certain conditions which in turn
  * causes the hardclock to stop.  The workaround is to read the TICK_COMPARE
  * register back immediately after writing to it with these two instructions
  * aligned to a quadword boundary in order to ensure that I$ misses won't
  * split them up.
  */
-#define	wrtickcmpr(val, xor) ({						\
+#define	wrtickcmpr_bbwar(val, xorval) ({				\
 	__asm __volatile(						\
 	"	ba,pt	%%xcc, 1f ;		"			\
 	"	 nop	 ;			"			\
 	"	.align	128 ;			"			\
 	"1:	wr	%0, %1, %%asr23 ;	"			\
 	"	rd	%%asr23, %%g0 ;		"			\
-	: : "r" (val), "rI" (xor));					\
+	: : "r" (val), "rI" (xorval));					\
 })
 
 static __inline void

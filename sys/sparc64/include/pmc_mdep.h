@@ -2,7 +2,7 @@
 /*-
  * This file is in the public domain.
  *
- * $FreeBSD: src/sys/sparc64/include/pmc_mdep.h,v 1.2.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PMC_MDEP_H_
@@ -19,6 +19,10 @@ union pmc_md_op_pmcallocate {
 #if	_KERNEL
 union pmc_md_pmc {
 };
+
+#define	PMC_TRAPFRAME_TO_PC(TF)	(0)	/* Stubs */
+#define	PMC_TRAPFRAME_TO_FP(TF)	(0)
+#define	PMC_TRAPFRAME_TO_SP(TF)	(0)
 
 #endif
 

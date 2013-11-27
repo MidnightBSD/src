@@ -25,13 +25,14 @@
  * SUCH DAMAGE.
  *
  *	from: FreeBSD: src/sys/i386/include/globaldata.h,v 1.27 2001/04/27
- * $FreeBSD: src/sys/sparc64/include/pcpu.h,v 1.22.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_PCPU_H_
 #define	_MACHINE_PCPU_H_
 
 #include <machine/asmacros.h>
+#include <machine/cache.h>
 #include <machine/frame.h>
 #include <machine/intr_machdep.h>
 
@@ -44,6 +45,7 @@ struct pmap;
  * point at the globaldata structure.
  */
 #define	PCPU_MD_FIELDS							\
+	struct	cacheinfo pc_cache;					\
 	struct	intr_request pc_irpool[IR_FREE];			\
 	struct	intr_request *pc_irhead;				\
 	struct	intr_request **pc_irtail;				\
@@ -52,6 +54,9 @@ struct pmap;
 	vm_offset_t pc_addr;						\
 	u_long	pc_tickref;						\
 	u_long	pc_tickadj;						\
+	u_long	pc_tickincrement;					\
+	u_int	pc_clock;						\
+	u_int	pc_impl;						\
 	u_int	pc_mid;							\
 	u_int	pc_node;						\
 	u_int	pc_tlb_ctx;						\
@@ -60,6 +65,8 @@ struct pmap;
 
 #ifdef _KERNEL
 
+extern void *dpcpu0;
+
 struct pcb;
 struct pcpu;
 
@@ -67,6 +74,16 @@ register struct pcb *curpcb __asm__(__XSTRING(PCB_REG));
 register struct pcpu *pcpup __asm__(__XSTRING(PCPU_REG));
 
 #define	PCPU_GET(member)	(pcpup->pc_ ## member)
+
+static __inline __pure2 struct thread *
+__curthread(void)
+{
+	struct thread *td;
+
+	__asm("ldx [%" __XSTRING(PCPU_REG) "], %0" : "=r" (td));
+	return (td);
+}
+#define	curthread	(__curthread())
 
 /*
  * XXX The implementation of this operation should be made atomic

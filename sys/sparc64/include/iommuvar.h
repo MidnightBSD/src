@@ -11,8 +11,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -26,9 +24,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from: NetBSD: iommuvar.h,v 1.9 2001/07/20 00:07:13 eeh Exp
+ *	from: NetBSD: iommuvar.h,v 1.6 2008/05/29 14:51:26 mrg Exp
  *
- * $FreeBSD: src/sys/sparc64/include/iommuvar.h,v 1.16.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_IOMMUVAR_H_
@@ -46,12 +44,12 @@
 TAILQ_HEAD(iommu_maplruq_head, bus_dmamap);
 
 /*
- * Per-IOMMU state. The parenthesized comments indicate the locking strategy:
+ * Per-IOMMU state; the parenthesized comments indicate the locking strategy:
  *	i - protected by is_mtx.
  *	r - read-only after initialization.
  *	* - comment refers to pointer target / target hardware registers
  *	    (for bus_addr_t).
- * is_maplruq is also locked by is_mtx. Elements of is_tsb may only be
+ * is_maplruq is also locked by is_mtx.  Elements of is_tsb may only be
  * accessed from functions operating on the map owning the corresponding
  * resource, so the locking the user is required to do to protect the
  * map is sufficient.
@@ -67,10 +65,10 @@ struct iommu_state {
 	int			is_tsbsize;	/* (r) 0 = 8K, ... */
 	uint64_t		is_pmaxaddr;	/* (r) max. physical address */
 	uint64_t		is_dvmabase;	/* (r) */
-	int64_t			is_cr;		/* (r) Control reg value */
+	uint64_t		is_cr;		/* (r) Control reg value */
 
 	vm_paddr_t		is_flushpa[2];	/* (r) */
-	volatile int64_t	*is_flushva[2];	/* (r, *i) */
+	volatile uint64_t	*is_flushva[2];	/* (r, *i) */
 	/*
 	 * (i)
 	 * When a flush is completed, 64 bytes will be stored at the given
@@ -82,7 +80,7 @@ struct iommu_state {
 	 */
 	volatile char		is_flush[STRBUF_FLUSHSYNC_NBYTES * 3 - 1];
 
-	/* copies of our parents state, to allow us to be self contained */
+	/* copies of our parent's state, to allow us to be self contained */
 	bus_space_tag_t		is_bustag;	/* (r) Our bus tag */
 	bus_space_handle_t	is_bushandle;	/* (r) */
 	bus_addr_t		is_iommu;	/* (r, *i) IOMMU registers */
@@ -97,11 +95,17 @@ struct iommu_state {
 	bus_addr_t		is_dva;		/* (r, *r) */
 	/* Tag compare diagnostics access */
 	bus_addr_t		is_dtcmp;	/* (r, *r) */
+	/* behavior flags */
+	u_int			is_flags;	/* (r) */
+#define	IOMMU_RERUN_DISABLE	(1 << 0)
+#define	IOMMU_FIRE		(1 << 1)
+#define	IOMMU_FLUSH_CACHE	(1 << 2)
+#define	IOMMU_PRESERVE_PROM	(1 << 3)
 };
 
 /* interfaces for PCI/SBus code */
-void iommu_init(const char *name, struct iommu_state *is, int tsbsize,
-    uint32_t iovabase, int resvpg);
+void iommu_init(const char *name, struct iommu_state *is, u_int tsbsize,
+    uint32_t iovabase, u_int resvpg);
 void iommu_reset(struct iommu_state *is);
 void iommu_decode_fault(struct iommu_state *is, vm_offset_t phys);
 

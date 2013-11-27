@@ -26,7 +26,7 @@
  *
  *	from: FreeBSD: src/sys/i386/i386/busdma_machdep.c,v 1.25 2002/01/05
  *
- * $FreeBSD: src/sys/sparc64/include/bus_private.h,v 1.8.6.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_BUS_PRIVATE_H_
@@ -37,10 +37,14 @@
 /*
  * Helpers
  */
-int sparc64_bus_mem_map(bus_space_tag_t, bus_space_handle_t, bus_size_t,
-    int, vm_offset_t, void **);
-int sparc64_bus_mem_unmap(void *, bus_size_t);
-bus_space_handle_t sparc64_fake_bustag(int, bus_addr_t, struct bus_space_tag *);
+int sparc64_bus_mem_map(bus_space_tag_t tag, bus_addr_t addr, bus_size_t size,
+    int flags, vm_offset_t vaddr, bus_space_handle_t *hp);
+int sparc64_bus_mem_unmap(bus_space_tag_t tag, bus_space_handle_t handle,
+    bus_size_t size);
+bus_space_tag_t sparc64_alloc_bus_tag(void *cookie,
+    struct bus_space_tag *ptag, int type, void *barrier);
+bus_space_handle_t sparc64_fake_bustag(int space, bus_addr_t addr,
+    struct bus_space_tag *ptag);
 
 struct bus_dmamap_res {
 	struct resource		*dr_res;
@@ -67,9 +71,10 @@ struct bus_dmamap {
 	int			dm_flags;		/* (p) */
 };
 
-/* Flag values. */
-#define	DMF_LOADED	1	/* Map is loaded */
-#define	DMF_COHERENT	2	/* Coherent mapping requested */
+/* Flag values */
+#define	DMF_LOADED	(1 << 0)	/* Map is loaded. */
+#define	DMF_COHERENT	(1 << 1)	/* Coherent mapping requested. */
+#define	DMF_STREAMED	(1 << 2)	/* Streaming cache used. */
 
 int sparc64_dma_alloc_map(bus_dma_tag_t dmat, bus_dmamap_t *mapp);
 void sparc64_dma_free_map(bus_dma_tag_t dmat, bus_dmamap_t map);

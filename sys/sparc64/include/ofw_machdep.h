@@ -23,17 +23,24 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/ofw_machdep.h,v 1.6.18.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_OFW_MACHDEP_H_
 #define _MACHINE_OFW_MACHDEP_H_
 
 #include <sys/bus.h>
+#include <machine/bus.h>
+#include <dev/ofw/openfirm.h>
+
+typedef uint64_t cell_t;
 
 int  OF_decode_addr(phandle_t, int, int *, bus_addr_t *);
 void OF_getetheraddr(device_t, u_char *);
-void cpu_shutdown(void *);
-void openfirmware_exit(void *);
+u_int OF_getscsinitid(device_t);
+void OF_panic(const char *fmt, ...) __dead2 __printflike(1, 2);
+void cpu_shutdown(void *) __dead2;
+int  ofw_entry(void *);
+void ofw_exit(void *) __dead2;
 
 #endif /* _MACHINE_OFW_MACHDEP_H_ */
