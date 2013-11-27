@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /****************************************************************
 Copyright (C) Lucent Technologies 1997
 All Rights Reserved
@@ -411,7 +412,7 @@ int string(void)
 				}
 				*px = 0;
 				unput(c);
-	  			sscanf(xbuf, "%x", &n);
+	  			sscanf(xbuf, "%x", (unsigned int *) &n);
 				*bp++ = n;
 				break;
 			    }

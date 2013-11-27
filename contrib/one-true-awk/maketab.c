@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /****************************************************************
 Copyright (C) Lucent Technologies 1997
 All Rights Reserved
@@ -102,7 +103,7 @@ struct xx
 	{ CALL, "call", "call" },
 	{ ARG, "arg", "arg" },
 	{ VARNF, "getnf", "NF" },
-	{ GETLINE, "getline", "getline" },
+	{ GETLINE, "awkgetline", "getline" },
 	{ 0, "", "" },
 };
 
