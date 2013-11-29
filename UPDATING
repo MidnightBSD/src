@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20131129:
+	0.4-RELEASE-p5
+
+	libc's iconv support includes an optimization that is imcompatible with
+	gettext's msgfmt command. By turning off this optimization, we
+	gain compatiblity with several GNU packages.
+
 20130910:
 	0.4-RELEASE-p4
 
@@ -1290,4 +1297,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.170.2.5 2013/08/25 13:34:35 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.170.2.6 2013/09/10 23:12:51 laffer1 Exp $
