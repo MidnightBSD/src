@@ -1,0 +1,9 @@
+#
+# RELENG_0_1 tinderbox setup
+#
+# $MidnightBSD$
+#
+
+branches	= RELENG_0_1
+platforms	= amd64, i386/i386, sparc64
+recipient	= %%SENDER%%,<luke@midnightbsd.org>

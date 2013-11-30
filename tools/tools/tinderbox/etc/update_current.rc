@@ -1,0 +1,5 @@
+# $MidnightBSD$
+# $FreeBSD: src/tools/tools/tinderbox/etc/update_current.rc,v 1.1 2004/06/14 11:36:00 des Exp $
+branches	= CURRENT
+platforms	= amd64, i386/i386, sparc64
+targets		= update
