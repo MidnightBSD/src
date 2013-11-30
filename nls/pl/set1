@@ -1,0 +1,140 @@
+$ $tcsh: set1,v 1.5 1998/06/27 12:27:55 christos Exp $
+$ Error messages
+$set 1 
+1 Błąd składni
+2 %s jest niedozwolone
+3 Zbyt długie słowo
+4 $< zbyt długa linia
+5 Brak pliku dla $0
+6 Niekompletny modyfikator []
+7 ekspansja $ musi zakończyć się przed ]
+8 Błąd : modyfikator w $ (%c)
+9 Błąd subskrypcji
+10 Źle stworzona liczba
+11 Brak słów
+12 Brakuje nazwy pliku
+13 Wewnętrzny błąd podczas dopasowywania
+14 Nie znaleziono polecenia
+15 Zbyt mało argumentów
+16 Zbyt dużo argumentów
+17 Zbyt niebezpiecznie aliasować
+18 Pusty if
+19 Nieprawidłowy then
+20 Słowa nie są w nawiasach
+21 %s nie został znaleziony
+22 Nieprawidłowa maska
+23 Nie ma takiego limitu
+24 Zbyt duży argument
+25 Nieprawidłowy, lub nieznany współczynnik skali
+26 Niezdefiniowana zmienna
+27 Stos katalogów nie jest aż tak głęboki
+28 Zły numer sygnału
+29 Nieznany sygnał; kill -l pokaże znane sygnały
+30 Nazwa zmiennej musi zaczynać się od litery
+31 Nazwa zmiennej jest zbyt długa
+32 Nazwa zmiennej musi zawierać znaki alfanumeryczne
+33 Brak kontroli pracami w tej powłoce
+34 Błąd składni wyrażenia
+35 Brak katalogu domowego
+36 Nie mogę przejść do katalogu domowego
+37 Nieprawidłowe puste polecenie
+38 Wyrażenie pozbawione przyporządkowania
+39 Nieznany operator
+40 Niejasne
+41 %s: Plik istnieje
+42 Argument dla -c zakończony jest backslashem
+43 Przerwano
+44 Za duża wartość przyporządkowania
+45 Przepełnienie linii
+46 Brak takiej pracy
+47 Z terminala nie mogę
+48 Nie w while/foreach
+49 Brak innych procesów
+50 Brak pasujących
+51 Brakuje %c
+52 Niedopasowany %c
+53 Brak pamięci
+54 Nie mogę stworzyć potoku
+55 %s: %s
+56 %s
+57 Użycie: jobs [ -l ]
+58 Argumentami powinny być identyfikatory prac lub procesów
+59 Nie ma aktualnej pracy
+60 Brak poprzednich prac
+61 Brak prac pasujących do wzorca
+62 Zagnieżdżenie fork > %d; prawdopodobnie pętla `...`
+63 Brak kontroli pracami w podpowłokach
+64 Błąd synchronizacji: Proces %d nie został znaleziony
+65 %sIstnieją uśpione prace
+66 %sIstnieją zatrzymane prace
+67 Brak innych katalogów
+68 Stos katalogów jest pusty
+69 Zły katalog
+70 Użycie: %s [-%s]%s
+71 Brak operandu dla flagi -h
+72 To nie jest powłoka logowania
+73 Dzielenie przez 0
+74 Modula przez 0
+75 Zła skala; czy myślałeś o "%s"?
+76 Nie można zatrzymać powłoki logowania (na razie)
+77 Nieznany użytkownik: %s
+78 Zmienna $home nie jest ustawiona
+79 Użycie: history [-%s] [# liczba zdarzeń]
+80 $, ! i < są niedozwolone z $#, lub $?
+81 Znak nowej linii w nazwie zmiennej
+82 * jest zabronione z $# i $?
+83 $?<cyfra> lub $#<cyfra> są zabronione
+84 Nielegalna nazwa zmiennej
+85 Znak nowej linii w indeksie zmiennych
+86 Przepełnienie bufora ekspansji
+87 Sładnia zmiennej
+88 Zła forma !
+89 Brak poprzedniego dopasowania
+90 Złe dopasowanie
+91 No previous left hand side
+92 Right hand side too long
+93 Zły modyfikator ! : %c
+94 Modyfikator zawiódł
+95 Przepełnienie bufora dopasowania
+96 Zły ! selektor argumentów
+97 Brak poprzedniego wyszukiwania
+98 %s: Zdarzenie nie zostało znalezione
+99 Zbyt wiele )
+100 Zbyt wiele (
+101 Źle wstawiony (
+102 Brakuje nazwy dla przekierowania
+103 Niejasne przekierowanie wyjścia
+104 Nie można << wewnątrz ()
+105 Niejasne przekierowanie wejścia
+106 Źle wstawione ()
+107 Zapętlenie się aliasów
+108 Zmienna $watch nie została ustawiona
+109 Brak zaplanowanych prac
+110 Użycie: sched -<item#>.\nUżycie: sched [+]hh:mm <polecenie>
+111 Nie ma aż tylu zaplanowanych prac
+112 Brak programu do uruchomienia
+113 Nieprawidłowy czas dla pracy
+114 Czas relatywny jest sprzeczny z am/pm
+115 Brak miejsc w łańcuchu termcap
+116 Użycie: settc %s [yes|no]
+117 Nieznana zdolność `%s'
+118 Nieznany parametr termcap `%%%c'
+119 Zbyt wiele argumentów dla `%s' (%d)
+120 `%s' requires %d arguments
+121 Użycie: echotc [-v|-s] [<zdolność> [<argumenty>]]
+122 %s: %s. Nieprawidłowa architektura
+123 !# Zapętlenie się historii
+124 Zniekształcony zapytanie na temat pliku
+125 Przepełnienie selektora
+126 Nieznana opcja: `-%s'\nUżycie: %s [ -bcdefilmnqstvVxX -Dnazwa[=wartość] ] [ argument ... ]
+127 Nieznana opcja: `-%s'\nUżycie: %s [ -bcdefFilmnqstvVxX ] [ argument ... ]
+128 Nieznana opcja: `-%s'\nUżycie: %s [ -bcdefilmnqstvVxX ] [ argument ... ]
+129 \nNieprawidłowe dopełnienie: "%s"
+130 \nNieprawidłowe %s: '%c'
+131 \nBrakuje separatora '%c' po %s "%s"
+132 \nNiekompletne %s: "%s"
+133 Brak operandu dla flagi -m
+134 Użycie: unlimit [-fh] [limity]
+135 $%S jest tylko-do-odczytu
+136 Brak takiej pracy
+137 Nieznana zmienna colorls `%c%c'
