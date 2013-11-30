@@ -1,0 +1,23 @@
+# $Id: report-tempfile,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+# Report results in a temporary-file.
+# vile:shmode
+
+case $retval in
+  $DIALOG_OK)
+    echo "Result: `cat $tempfile`";;
+  $DIALOG_CANCEL)
+    echo "Cancel pressed.";;
+  $DIALOG_HELP)
+    echo "Help pressed.";;
+  $DIALOG_EXTRA)
+    echo "Extra button pressed.";;
+  $DIALOG_ITEM_HELP)
+    echo "Item-help button pressed.";;
+  $DIALOG_ESC)
+    if test -s $tempfile ; then
+      cat $tempfile
+    else
+      echo "ESC pressed."
+    fi
+    ;;
+esac

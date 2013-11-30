@@ -1,0 +1,8 @@
+#!/bin/sh
+# $Id: listing,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+while true
+do
+ls -lrt
+date
+sleep 1
+done

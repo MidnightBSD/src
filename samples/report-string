@@ -1,0 +1,23 @@
+# $Id: report-string,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+# Report result passed in a string $RESULT
+# vile:shmode
+
+case $retval in
+  $DIALOG_OK)
+    echo "Result is $RESULT";;
+  $DIALOG_CANCEL)
+    echo "Cancel pressed.";;
+  $DIALOG_HELP)
+    echo "Help pressed ($RESULT).";;
+  $DIALOG_EXTRA)
+    echo "Extra button pressed.";;
+  $DIALOG_ITEM_HELP)
+    echo "Item-help button pressed.";;
+  $DIALOG_ESC)
+    if test -n "$RESULT" ; then
+      echo "$RESULT"
+    else
+      echo "ESC pressed."
+    fi
+    ;;
+esac

@@ -1,0 +1,12 @@
+#!/bin/sh
+# $Id: pause-help,v 1.1.1.1 2011-12-18 03:01:46 laffer1 Exp $
+
+. ./setup-vars
+
+$DIALOG --title "PAUSE" \
+	--help-button "$@" \
+	--pause "Hi, this is a pause widget" 20 70 10
+
+retval=$?
+
+. ./report-button
