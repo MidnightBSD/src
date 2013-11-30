@@ -1,0 +1,16 @@
+#$FreeBSD: src/contrib/bsnmp/FREEBSD-Xlist,v 1.3.2.1 2006/03/31 12:43:37 glebius Exp $
+*/Makefile.in
+*/acinclude.m4
+*/aclocal.m4
+*/config
+*/config/*
+*/configure
+*/configure.ac
+*/gensnmpdef/Makefile.in
+*/gensnmptree/Makefile.in
+*/lib/Makefile.in
+*/snmp_mibII/Makefile.in
+*/snmp_mibII/tree.h
+*/snmp_ntp/Makefile.in
+*/snmpd/Makefile.in
+*/snmpd/.gdbinit
