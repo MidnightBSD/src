@@ -1,0 +1,4 @@
+.\"$MidnightBSD$
+Set to not build and install
+.Pa /bin/sh
+as mksh and use ash instead.

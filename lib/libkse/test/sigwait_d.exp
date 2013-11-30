@@ -1,0 +1,11 @@
+# $FreeBSD: src/lib/libkse/test/sigwait_d.exp,v 1.2 2007/10/09 13:42:26 obrien Exp $
+Sigwait caught signal 16
+Sigwait caught signal 16
+Sigwait caught signal 30
+Sigwait caught signal 30
+Sigwait caught signal 1
+Sigwait caught signal 1
+Sigwait caught signal 1
+  -> Signal handler caught signal 1
+Sigwait caught signal 30
+Sigwait caught signal 30

@@ -1,0 +1,11 @@
+tar -xvjf gcc-3.0.2.tar.bz2 -X MIDNIGHTBSD-Xlist
+
+cd gcc-3.0.2/gcc
+sh MIDNIGHTBSD-libiberty
+
+cvs import src/contrib/gcc FSF gcc_3_0_2
+
+If you decide to bring in more of the files, import them -- don't
+use ``cvs add''.  And please remember to adjust the contents of
+"MIDNIGHTBSD-Xlist" so that it reflects what is really imported from
+the vendor.

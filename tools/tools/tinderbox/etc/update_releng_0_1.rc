@@ -1,0 +1,4 @@
+# $MidnightBSD: src/tools/tools/tinderbox/etc/update_releng_0_1.rc,v 1.1.2.1 2008/03/04 03:06:59 laffer1 Exp $
+branches	= RELENG_0_1
+platforms	= amd64, i386/i386, sparc64
+targets		= update

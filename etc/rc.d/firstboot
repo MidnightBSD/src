@@ -1,0 +1,90 @@
+#!/bin/sh
+#
+# $MidnightBSD: src/etc/rc.d/firstboot,v 1.4.2.1 2011/01/26 03:09:09 laffer1 Exp $
+
+# PROVIDE: firstboot
+# REQUIRE: NETWORKING cleanvar
+# KEYWORD: nojail
+
+. /etc/rc.subr
+
+name="firstboot"
+rcvar=
+start_cmd="firstboot_start"
+
+firstboot_start()
+{
+	local lsuffix
+	local red
+	local yellow
+	local receipt
+
+	lsuffix="\e[0m"
+	red="\e[1;31;40m"
+	yellow="\e[1;33;40m"
+	receipt="/etc/fbreceipt"
+
+	if [ ! -f ${receipt} ]; then
+		echo -e "\r${red}MidnightBSD FirstBoot Configuration${lsuffix}"
+		echo "This utility requires an active Internet connection."
+
+		echo -e "\r${yellow}Would you like to report your install via bsdstats? (yes or no)${lsuffix}"
+		read installbstat
+		if [ ${installbstat} = "yes" ]; then
+			if [ ! -f /usr/local/etc/rc.d/bsdstats.sh ]; then
+				/sbin/ipfw disable firewall
+				/usr/sbin/pkg_add -r bsdstats
+				/sbin/ipfw enable firewall
+			fi
+			echo "bsdstats_enable=\"YES\"" >> /etc/rc.conf
+		fi
+
+		echo -e "\r${yellow}Do you wish to enable a graphical environment? (yes or no)${lsuffix}"
+		read installgui
+
+		if [ ${installgui} = "yes" ]; then
+			echo -e "\r${yellow}Which environment? (kde, windowmaker, xfce)${lsuffix}"
+			read guienv
+			echo -e "\r${red}Installing Graphical User Interface${lsuffix}"
+			/sbin/ipfw disable firewall
+			/usr/sbin/pkg_add -r xorg
+			echo "hald_enable=\"YES\"" >> /etc/rc.conf
+			echo "dbus_enable=\"YES\"" >> /etc/rc.conf
+#			KDE CASE
+			if [ ${guienv} = "kde" ]; then
+				if [ -f /usr/local/bin/kdm ]; then
+					echo "KDE detected"
+				else
+					echo "Downloading KDE"
+					/usr/sbin/pkg_add -r kde-lite
+				fi
+				echo "ttyv8 \"/usr/local/bin/kdm -nodaemon\" xterm on secure" >> /etc/ttys
+			fi
+			if [ ${guienv} = "windowmaker" ]; then
+#			GNUSTEP/WindowMaker/Slim
+				/usr/sbin/pkg_add -r gnustep
+				/usr/sbin/pkg_add -r slim
+				/usr/sbin/pkg_add -r windowmaker
+				echo "slim_enable=\"YES\"" >> /etc/rc.conf
+				echo "exec wmaker" >> /root/.xinitrc
+			fi
+			if [ ${guienv} = "xfce" ]; then
+#			XFCE
+				/usr/sbin/pkg_add -r gtk
+				/usr/sbin/pkg_add -r xfce4
+				/usr/sbin/pkg_add -r libxfce4menu
+				echo "slim_enable=\"YES\"" >> /etc/rc.conf
+				echo "exec xfce4-session" >> /root/.xinitrc
+			fi
+			/sbin/ipfw enable firewall
+			echo "Please restart to enable graphical login. It is recommeded that you create .xinitrc files like the one in /root/.xinitrc for each user that will login graphically."
+			echo -e "\r${yellow}Done.${lsuffix}"
+		else
+			echo "To run this utility again, rm ${receipt} and restart."
+		fi
+		touch ${receipt}
+	fi
+}
+
+load_rc_config $name
+run_rc_command "$1"
