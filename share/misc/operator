@@ -1,0 +1,19 @@
+Operator				Associativity
+-----------------------------------------------------
+() [] -> .				left to right
+! ~ ++ -- - (type) * & sizeof		right to left
+* / %					left to right
++ -					left to right
+<< >>					left to right
+< <= > >=				left to right
+== !=					left to right
+&					left to right
+^					left to right
+|					left to right
+&&					left to right
+||					left to right
+?:					right to left
+= += -= *= /= %= <<= >>= &= ^= |=	right to left
+,					left to right
+
+$FreeBSD: src/share/misc/operator,v 1.2 2003/01/22 15:19:07 fanf Exp $

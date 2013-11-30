@@ -1,0 +1,15 @@
+# $FreeBSD: src/sys/conf/options.sun4v,v 1.2 2007/01/19 12:22:50 marius Exp $
+
+SUN4V			opt_global.h
+
+OFW_PCI_DEBUG		opt_ofw_pci.h
+OFWCONS_POLL_HZ		opt_ofw.h
+# Debug IOMMU inserts/removes using diagnostic accesses. Very loud.
+IOMMU_DIAG		opt_iommu.h
+PMAP_STATS		opt_pmap.h
+SIMULATOR		opt_simulator.h
+
+DTRACE			opt_global.h
+
+TRAP_TRACING		opt_trap_trace.h
+TRAP_TRACE_ENTRIES	opt_trap_trace.h

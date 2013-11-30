@@ -1,0 +1,7 @@
+mDNSResponder is Apple's Multicast DNS implementation.
+
+This version was imported with:
+
+cvs import -m "Vendor import of mDNSResponder" src/contrib/mDNSResponder APPLE v216
+
+$MidnightBSD$

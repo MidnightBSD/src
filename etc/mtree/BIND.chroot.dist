@@ -1,0 +1,36 @@
+# $MidnightBSD: src/etc/mtree/BIND.chroot.dist,v 1.3 2010/12/30 03:11:18 laffer1 Exp $
+# $FreeBSD: src/etc/mtree/BIND.chroot.dist,v 1.6.10.1 2009/12/29 07:13:17 dougb Exp $
+#
+# Please see the file src/etc/mtree/README before making changes to this file.
+#
+
+/set type=dir uname=root gname=wheel mode=0755
+.
+    dev             mode=0555
+    ..
+    etc
+        namedb
+            dynamic uname=bind
+            ..
+            master
+            ..
+            slave   uname=bind
+            ..
+            working uname=bind
+            ..
+        ..
+    ..
+/set type=dir uname=bind gname=wheel mode=0755
+    var             uname=root
+        dump
+        ..
+        log
+        ..
+        run
+            named
+            ..
+        ..
+        stats
+        ..
+    ..
+..
