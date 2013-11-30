@@ -1,0 +1,17 @@
+* text=auto !eol
+/FIXES -text
+/README -text
+/awk.1 -text
+/awk.h -text
+/awkgram.y -text
+/b.c -text
+/lex.c -text
+/lib.c -text
+/main.c -text
+/makefile -text
+/maketab.c -text
+/parse.c -text
+/proctab.c -text
+/proto.h -text
+/run.c -text
+/tran.c -text
