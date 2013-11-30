@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/mk/bsd.own.mk,v 1.18 2013/01/09 04:16:27 laffer1 Exp $
+# $MidnightBSD$
 # $FreeBSD: src/share/mk/bsd.own.mk,v 1.67.2.2.2.2 2008/01/28 08:57:11 dougb Exp $
 #
 # The include file <bsd.own.mk> set common variables for owner,
@@ -223,11 +223,9 @@ WITHOUT_${var}=
     AUDIT \
     AUTHPF \
     BIND \
-    BIND_DNSSEC \
     BIND_ETC \
     BIND_LIBS_LWRES \
     BIND_MTREE \
-    BIND_NAMED \
     BIND_UTILS \
     BLUETOOTH \
     BOOT \
@@ -310,11 +308,9 @@ __DEFAULT_YES_OPTIONS = \
     AUDIT \
     AUTHPF \
     BIND \
-    BIND_DNSSEC \
     BIND_ETC \
     BIND_LIBS_LWRES \
     BIND_MTREE \
-    BIND_NAMED \
     BIND_UTILS \
     BINUTILS \
     BLUETOOTH \
@@ -498,12 +494,10 @@ MK_BIND:=	no
 .endif
 
 .if ${MK_BIND} == "no"
-MK_BIND_DNSSEC:= no
 MK_BIND_ETC:=	no
 MK_BIND_LIBS:=	no
 MK_BIND_LIBS_LWRES:= no
 MK_BIND_MTREE:=	no
-MK_BIND_NAMED:=	no
 MK_BIND_UTILS:=	no
 .endif
 

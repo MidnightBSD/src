@@ -56120,7 +56120,6 @@ usr.sbin/arp/Makefile -text
 usr.sbin/arp/arp.4 -text
 usr.sbin/arp/arp.8 -text
 usr.sbin/arp/arp.c -text
-usr.sbin/arpaname/Makefile -text
 usr.sbin/asf/Makefile -text
 usr.sbin/asf/asf.8 -text
 usr.sbin/asf/asf.c -text
@@ -56536,7 +56535,6 @@ usr.sbin/daemon/daemon.c -text
 usr.sbin/dconschat/Makefile -text
 usr.sbin/dconschat/dconschat.8 -text
 usr.sbin/dconschat/dconschat.c -text
-usr.sbin/ddns-confgen/Makefile -text
 usr.sbin/devinfo/Makefile -text
 usr.sbin/devinfo/devinfo.8 -text
 usr.sbin/devinfo/devinfo.c -text
@@ -56546,12 +56544,6 @@ usr.sbin/digictl/digictl.c -text
 usr.sbin/diskinfo/Makefile -text
 usr.sbin/diskinfo/diskinfo.8 -text
 usr.sbin/diskinfo/diskinfo.c -text
-usr.sbin/dnssec-dsfromkey/Makefile -text
-usr.sbin/dnssec-keyfromlabel/Makefile -text
-usr.sbin/dnssec-keygen/Makefile -text
-usr.sbin/dnssec-revoke/Makefile -text
-usr.sbin/dnssec-settime/Makefile -text
-usr.sbin/dnssec-signzone/Makefile -text
 usr.sbin/dumpcis/Makefile -text
 usr.sbin/dumpcis/cardinfo.h -text
 usr.sbin/dumpcis/cis.h -text
@@ -56634,7 +56626,6 @@ usr.sbin/fwcontrol/fwcontrol.c -text
 usr.sbin/fwcontrol/fwdv.c -text
 usr.sbin/fwcontrol/fwmethods.h -text
 usr.sbin/fwcontrol/fwmpegts.c -text
-usr.sbin/genrandom/Makefile -text
 usr.sbin/getfmac/Makefile -text
 usr.sbin/getfmac/getfmac.8 -text
 usr.sbin/getfmac/getfmac.c -text
@@ -56673,7 +56664,6 @@ usr.sbin/ip6addrctl/ip6addrctl.conf.sample -text
 usr.sbin/ipfwpcap/Makefile -text
 usr.sbin/ipfwpcap/ipfwpcap.8 -text
 usr.sbin/ipfwpcap/ipfwpcap.c -text
-usr.sbin/isc-hmac-fixup/Makefile -text
 usr.sbin/jail/Makefile -text
 usr.sbin/jail/command.c -text
 usr.sbin/jail/config.c -text
@@ -56999,10 +56989,6 @@ usr.sbin/mtree/test/test03.sh -text
 usr.sbin/mtree/test/test04.sh -text
 usr.sbin/mtree/test/test05.sh -text
 usr.sbin/mtree/verify.c -text
-usr.sbin/named-checkconf/Makefile -text
-usr.sbin/named-checkzone/Makefile -text
-usr.sbin/named-journalprint/Makefile -text
-usr.sbin/named/Makefile -text
 usr.sbin/ndiscvt/Makefile -text
 usr.sbin/ndiscvt/inf-parse.y -text
 usr.sbin/ndiscvt/inf-token.l -text
@@ -57104,7 +57090,6 @@ usr.sbin/nscd/query.c -text
 usr.sbin/nscd/query.h -text
 usr.sbin/nscd/singletons.c -text
 usr.sbin/nscd/singletons.h -text
-usr.sbin/nsec3hash/Makefile -text
 usr.sbin/ntpd/Makefile -text
 usr.sbin/ofwdump/Makefile -text
 usr.sbin/ofwdump/ofw_util.c -text
@@ -57335,8 +57320,6 @@ usr.sbin/rip6query/rip6query.c -text
 usr.sbin/rmt/Makefile -text
 usr.sbin/rmt/rmt.8 -text
 usr.sbin/rmt/rmt.c -text
-usr.sbin/rndc-confgen/Makefile -text
-usr.sbin/rndc/Makefile -text
 usr.sbin/route6d/Makefile -text
 usr.sbin/route6d/misc/chkrt -text
 usr.sbin/route6d/misc/cksum.c -text

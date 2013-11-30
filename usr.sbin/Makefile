@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
-# $MidnightBSD: src/usr.sbin/Makefile,v 1.40 2013/01/30 12:40:24 laffer1 Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
@@ -120,28 +120,6 @@ SUBDIR+=	praudit
 
 .if ${MK_AUTHPF} != "no"
 SUBDIR+=	authpf
-.endif
-
-.if ${MK_BIND_DNSSEC} != "no" && ${MK_OPENSSL} != "no"
-SUBDIR+=	dnssec-dsfromkey
-SUBDIR+=	dnssec-keyfromlabel
-SUBDIR+=	dnssec-keygen
-SUBDIR+=	dnssec-revoke
-SUBDIR+=	dnssec-settime
-SUBDIR+=	dnssec-signzone
-.endif
-.if ${MK_BIND_NAMED} != "no"
-SUBDIR+=	arpaname
-SUBDIR+=	ddns-confgen
-SUBDIR+=	genrandom
-SUBDIR+=	isc-hmac-fixup
-SUBDIR+=	named
-SUBDIR+=	named-checkconf
-SUBDIR+=	named-checkzone
-SUBDIR+=	named-journalprint
-SUBDIR+=	nsec3hash
-SUBDIR+=	rndc
-SUBDIR+=	rndc-confgen
 .endif
 
 .if ${MK_BLUETOOTH} != "no"

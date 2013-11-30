@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20131130:
+	Remove named from base. We still include the client utilities for
+	now until replacements can be found.
+
 20131004:
 	rarpd supports vlan(4) and has a pid flag. (from FreeBSD)
 
