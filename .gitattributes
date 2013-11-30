@@ -1,4 +1,27 @@
 * text=auto !eol
+R39/Build.sh -text
+R39/check.pl -text
+R39/check.t -text
+R39/dot.mkshrc -text
+R39/edit.c -text
+R39/eval.c -text
+R39/exec.c -text
+R39/expr.c -text
+R39/funcs.c -text
+R39/histrap.c -text
+R39/jobs.c -text
+R39/lalloc.c -text
+R39/lex.c -text
+R39/main.c -text
+R39/misc.c -text
+R39/mksh.1 -text
+R39/setmode.c -text
+R39/sh.h -text
+R39/shf.c -text
+R39/strlcpy.c -text
+R39/syn.c -text
+R39/tree.c -text
+R39/var.c -text
 R39b/Build.sh -text
 R39b/check.pl -text
 R39b/check.t -text
