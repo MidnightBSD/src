@@ -1,0 +1,9 @@
+Add --include option (opposite of --exclude).
+
+Look into sdiff improvement here:
+http://www.pkix.net/~chuck/sdiff2.diff
+
+Propagate stderr from subprocess so that diff3 does
+a better job of explaining _why_:
+  > $ diff3 /bin/sh /bin/false /bin/mv
+  > diff3: subsidiary program `diff' failed (exit status 2)
