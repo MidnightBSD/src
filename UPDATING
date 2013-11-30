@@ -1,0 +1,421 @@
+Updating Information for MidnightBSD users
+
+Items affecting the mports and packages system can be found in
+/usr/mports/UPDATING. 
+
+20071104:
+	0.1.1-RELEASE
+
+20071006:
+	Version bumped in param.h.  We've recently fixed a security issue in 
+	openssl.
+
+20070911:
+	libpthread output intended as an error is now written to
+	stderr instead of stdout.
+
+	bzip2 updated to 1.0.4
+
+	find:
+	Add -Btime, -Bnewer, -Bmin, -newerB[Bacmt], -newer[acmt]B options to
+	work with the st_birthtime field of struct stat.
+  
+	'B' has been chosen to match the format specifier from stat(1).
+
+20070810:
+	src/usr.sbin/pkg_install was updated to work with
+	mports properly.  If you get errors with plists
+	with lines about dirrmtry, this will fix it.
+
+20070806:
+	/usr/share/mk/bsd.port.mk was not merged from current 
+	before 0.1 was released.  This caused the wrong
+	file in /usr/mport/mk to be sourced when a port's 
+	makefile sourced bsd.port.mk.  Many ports where broken as
+	a result.
+
+
+20070804:
+	0.1-RELEASE
+	
+	BIND 9.3.4-p1 security patch.  
+
+	Tcpdump was patched.
+
+20070406:
+	Back out propolice.  propolice caused several problems
+	with our threading libraries libthr and libpthread.  
+	curthread was often NULL after the patch and many
+	multithreaded applications would crash.  We plan to 
+	work on either bringing in gcc 4.1 or developing a new
+	patch which also corrects our threading issues later.
+
+	It is more important to have a stable system for our
+	mport work and other projects at this time.
+
+	This is not a clean removal.  It is recommended that you
+	have a recently SNAP CD handy.  You can either reinstall
+	or perform a make buildworld and make buildkernel and 
+	make installkernel.  Reboot on the cd and copy the contents
+	of /bin, /sbin, /lib, /libexec, and /usr/bin, /usr/sbin,
+	/usr/lib, and /usr/libexec to the respective directories on
+	your disk.  Then you should be able to boot into single user
+	mode and run make installworld.  You will need to run
+	chflags noschg on some of the files if you can't overwrite
+	them. 
+
+	You will get __guard missing errors since we had to remove
+	this from libc.
+
+	You will need to rebuild any ports built while propolice was
+	installed.
+
+20070401:
+	Importing propolice into MidnightBSD. Propolice is going to
+	provide us with much greater security and stability in the
+	long run. If upgrading from a pre-propolice system, please
+	follow the these instructions:
+
+	cd /usr/src/lib/libc && make obj && make && make install
+	cd /usr/src/gnu/usr.bin/cc && make obj && make && make install
+	cd /usr/src/lib/libpthread && make obj && make && make install
+	cd /usr/src/lib/libthr && make obj && make && make install
+	buildworld and kernel
+
+	It is adviced that any mports which were installed and/or built
+	prior to the propolice update also be updated. If any errors
+	or issue are encounted, please contact security@midnightbsd.org
+	and we will be sure to investigate and come up with an expeditious
+	fix.
+
+20070314:
+	Remove send-pr from src.
+
+	Switch to NetBSD's gzip.
+
+	Bump MBSD minor revision.
+
+20070313:
+	Imported OpenSSH 4.6p1.
+
+	Imported FreeBSD's libarchive and updated tar to work with it.
+
+	Disabled debug statements cluttering up /var/log/messages for
+	the tcp autobuf patch applied previously.
+
+20070312:
+	Synced several audio changes from FreeBSD 6.1. Removed the 
+	BSD Daemon files from src/share.  
+
+20070308:
+	Added mfi which supports LSI Logic MegaRAID SAS devices including
+	the Dell perc5i.
+
+20070206:
+	Imported OpenBSD's sudo into source. Please install
+	/usr/src/usr.bin/sudo/lib first before building.
+
+	Those who install from a snapshot after this date
+	will not be effected.
+
+20070119:
+	Added audit group.  Be sure to add audit to your /etc/group file
+	before installing world.
+
+	hostapd was updated to 0.4.8.
+
+	An accidental commit in usr.sbin/bluetooth/hccontrol was fixed to
+	unbreak world.
+
+	wpa_supplicant was updated.
+
+	For stability and compatibility reasons, it was decided that MidnightBSD
+	sync with FreeBSD 6.1 Release.  Nearly every change between the original
+	fork date of February 24, 2006 and the release of FreeBSD 6.1 in May
+	2006 will be merged.  Beyond this, MidnightBSD will be a "real" fork and
+	will not sync every little change with FreeBSD.
+
+20061231:
+	Updated COPYRIGHT for 2007.
+
+	Updated and bumped libutil after importing NetBSD efun(3) functions.
+
+	Added MidnightBSD_version and bumped the FreeBSD version as we've
+	synced all commits between the fork and that version.  It is now safe
+	to assume MidnightBSD is compatible with FreeBSD RELENG_6 from
+	Feb 26, 2006.
+
+	Added spell(1) and deroff(1) from NetBSD.  Also added additional
+	dict files to work with it. /usr/share/dict/american, 
+	/usr/share/dict/british and /usr/share/dict/special/math
+
+	Numerous man page and bug fixes.
+
+20061226:
+	Setup /usr/share/examples/cvsup SUPfiles for the new
+	MidnightBSD CVSup server. 
+
+	Fix a bug in burncd where it would continue forever while
+	erasing CDRW media.
+
+	Add csup to /usr/bin.  csup is a CVSup replacement written
+	in C. 
+
+	Fixed a bug with bsnmpd build from Oct 30.  
+
+	Corrected some race conditions and fixed a few bugs in
+	geom.  Imported changes from FreeBSD RELENG_6.
+
+20061225:
+	Fixed a typo in src/lib/libc/sparc64/fpu/fpu_implode.c
+	that caused long double to long and long long 
+	conversion of negative numbers to always result in -1.
+
+20061221:
+	Fixed acpi_battery.c to not report an ERROR if no
+	batteries are present.
+
+	Performed some minor updates on the RL and RE NIC drivers.
+	RL should no longer panic when trying to print errors.
+
+	Corrected a bug with TTY.
+
+20061218:
+	Corrected a bug with libpthread where newly created suspended
+	threads don't get scheduled.
+
+20061206:
+	Fixed a typo with the firewire security patch.
+
+20061129:
+	Minor cleanups to utilities in bin.
+
+	Fixed msdos file system short file name behavior to match
+	FreeBSD.
+
+20061031:
+	Updated man pages in section 7.
+
+20061030:
+ 	Updated sys/dev/drm to support intel 915 and radeon 
+	r300 cards properly.  
+
+	Synced snmpd with FreeBSD-stable.
+
+	Fixed a bug in rm which could cause data loss.	
+
+20061027:
+	Added Intel ICH8 and nForce 5 support to ATA. cam, mpt,
+	random, kbdmux, atkbd, and usb were updated.  Changes
+	to clearing registers on SSE enabled processors (i386)
+	commited.  
+
+	lukemftpd updated.  
+
+	openssh rc script was altered which effects initial
+	seeding.  
+
+20061014:
+	Workaround for em driver problem on shared IRQ.
+
+	Started removal of alpha support.
+
+20061013:
+	ATA driver was updated.  USB/USB1/USB2 types added.
+
+20061010: 
+	OpenSSH was updated to 4.4p1.   
+
+20060909:
+	OpenNTPD was added to MidnightBSD.  Run make delete-old to remove
+	the old ntpd daemon.
+
+	cat has a new option -D which allows you to timestamp output
+	on a per line basis.
+
+	The kernel has a keyboard mux which allows you to have multiple
+	keyboard connected simultaneously.  USB keyboard support was also
+	improved with this patch.
+
+	The Intel em driver was updated.  Network performance was greatly
+	increased on many systems.  Additional models are supported.
+
+	The ATA driver was patched to fix a potential deadlock.
+
+	Bind was patched to fix a potential denial of service condition.
+
+20060817:
+	ksh has been added to the base system.  If you previously had
+	the port installed, it will be overwritten on the next buildworld.
+
+
+
+	To build a kernel
+	-----------------
+	If you are updating from a prior version of MidnightBSD (even one just
+	a few days old), you should follow this procedure. With a
+	/usr/obj tree with a fresh buildworld,
+	make -DALWAYS_CHECK_MAKE buildkernel KERNCONF=YOUR_KERNEL_HERE
+	make -DALWAYS_CHECK_MAKE installkernel KERNCONF=YOUR_KERNEL_HERE
+
+	To test a kernel once
+	---------------------
+	If you just want to boot a kernel once (because you are not sure
+	if it works, or if you want to boot a known bad kernel to provide
+	debugging information) run
+	make installkernel KERNCONF=YOUR_KERNEL_HERE KODIR=/boot/testkernel
+	nextboot -k testkernel
+
+	To just build a kernel when you know that it won't mess you up
+	--------------------------------------------------------------
+	This assumes you are already running a 6.X system.  Replace
+	${arch} with the architecture of your machine (e.g. "i386",
+	"amd64", "ia64", "pc98", "sparc64", etc).
+
+	cd src/sys/${arch}/conf
+	config KERNEL_NAME_HERE
+	cd ../compile/KERNEL_NAME_HERE
+	make depend
+	make
+	make install
+
+	If this fails, go to the "To build a kernel" section.
+
+	To rebuild everything and install it on the current system.
+	-----------------------------------------------------------
+	# Note: sometimes if you are running current you gotta do more than
+	# is listed here if you are upgrading from a really old current.
+
+	<make sure you have good level 0 dumps>
+	make buildworld
+	make kernel KERNCONF=YOUR_KERNEL_HERE
+							[1]
+	<reboot in single user>				[3]
+	mergemaster -p					[5]
+	make installworld
+	make delete-old
+	mergemaster					[4]
+	<reboot>
+
+
+	To cross-install current onto a separate partition
+	--------------------------------------------------
+	# In this approach we use a separate partition to hold
+	# current's root, 'usr', and 'var' directories.   A partition
+	# holding "/", "/usr" and "/var" should be about 2GB in
+	# size.
+
+	<make sure you have good level 0 dumps>
+	<boot into -stable>
+	make buildworld
+	make buildkernel KERNCONF=YOUR_KERNEL_HERE
+	<maybe newfs current's root partition>
+	<mount current's root partition on directory ${CURRENT_ROOT}>
+	make installworld DESTDIR=${CURRENT_ROOT}
+	cd src/etc; make distribution DESTDIR=${CURRENT_ROOT} # if newfs'd
+	make installkernel KERNCONF=YOUR_KERNEL_HERE DESTDIR=${CURRENT_ROOT}
+	cp /etc/fstab ${CURRENT_ROOT}/etc/fstab 		   # if newfs'd
+	<edit ${CURRENT_ROOT}/etc/fstab to mount "/" from the correct partition>
+	<reboot into current>
+	<do a "native" rebuild/install as described in the previous section>
+	<maybe install compatibility libraries from src/lib/compat>
+ 	<reboot>
+
+
+	To upgrade in-place from 5.x-stable or higher to 6.x-stable
+	-----------------------------------------------------------
+	<make sure you have good level 0 dumps>
+	make buildworld					[9]
+	make kernel KERNCONF=YOUR_KERNEL_HERE		[8]
+							[1]
+	<reboot in single user>				[3]
+	mergemaster -p					[5]
+	make installworld
+	make delete-old
+	mergemaster -i					[4]
+	<reboot>
+
+	Make sure that you've read the UPDATING file to understand the
+	tweaks to various things you need.  At this point in the life
+	cycle of current, things change often and you are on your own
+	to cope.  The defaults can also change, so please read ALL of
+	the UPDATING entries.
+
+	Also, if you are tracking -current, you must be subscribed to
+	freebsd-current@freebsd.org.  Make sure that before you update
+	your sources that you have read and understood all the recent
+	messages there.  If in doubt, please track -stable which has
+	much fewer pitfalls.
+
+	[1] If you have third party modules, such as vmware, you
+	should disable them at this point so they don't crash your
+	system on reboot.
+
+	[3] From the bootblocks, boot -s, and then do
+		fsck -p
+		mount -u /
+		mount -a
+		cd src
+		adjkerntz -i		# if CMOS is wall time
+	Also, when doing a major release upgrade, it is required that
+	you boot into single user mode to do the installworld.
+
+	[4] Note: This step is non-optional.  Failure to do this step
+	can result in a significant reduction in the functionality of the
+	system.  Attempting to do it by hand is not recommended and those
+	that pursue this avenue should read this file carefully, as well
+	as the archives of freebsd-current and freebsd-hackers mailing lists
+	for potential gotchas.
+
+	[5] Usually this step is a noop.  However, from time to time
+	you may need to do this if you get unknown user in the following
+	step.  It never hurts to do it all the time.
+
+	[8] In order to have a kernel that can run the 5.x binaries
+	needed to do an installworld, you must include the COMPAT_FREEBSD5
+	option in your kernel.  Failure to do so may leave you with a system
+	that is hard to boot to recover. A similar kernel option COMPAT_FREEBSD5
+	is required to run the 5.x binaries on more recent kernels.
+
+	Make sure that you merge any new devices from GENERIC since the
+	last time you updated your kernel config file.
+
+	[9] When checking out sources, you must include the -P flag to have
+	cvs prune empty directories.
+
+	If CPUTYPE is defined in your /etc/make.conf, make sure to use the
+	"?=" instead of the "=" assignment operator, so that buildworld can
+	override the CPUTYPE if it needs to.
+
+	MAKEOBJDIRPREFIX must be defined in an environment variable, and
+	not on the command line, or in /etc/make.conf.  buildworld will
+	warn if it is improperly defined.
+
+Copyright information:
+
+Copyright 1998-2005 M. Warner Losh.  All Rights Reserved.
+
+Redistribution, publication, translation and use, with or without
+modification, in full or in part, in any form or format of this
+document are permitted without further permission from the author.
+
+THIS DOCUMENT IS PROVIDED BY WARNER LOSH ``AS IS'' AND ANY EXPRESS OR
+IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED.  IN NO EVENT SHALL WARNER LOSH BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
+If you find this document useful, and you want to, you may buy the
+author a beer.
+
+Contact Warner Losh if you have any questions about your use of
+this document.
+
+$FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
+$MidnightBSD: src/UPDATING,v 1.20.2.6 2007/10/06 14:39:38 laffer1 Exp $
