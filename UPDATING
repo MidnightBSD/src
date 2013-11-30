@@ -1,0 +1,708 @@
+Updating Information for MidnightBSD users
+
+Items affecting the mports and packages system can be found in
+/usr/mports/UPDATING. 
+
+20100920:
+	MidnightBSD 0.2.1-RELEASE-p12
+
+	Security update for bzip2 integer overflow. This only affects
+	decompression.
+
+20090729:
+	MidnightBSD 0.2.1-RELEASE-p11
+
+	Patch for Bind 9 security vulnerability. a dynmaic update packet
+	can trigger an assertion and cause named to exit
+
+20090610:
+	MidnightBSD 0.2.1-RELEASE-p10
+	
+	This should be applied to all systems running 0.2.1. Users on
+	p9 simply should update their kernels. No world update is required.
+
+	ipv6:
+	The SIOCSIFINFO_IN6 ioctl is missing a necessary permissions check.
+	Don't let everyone on the planet (with local access) change the 
+	properties on the ipv6 interfaces.
+
+	anonymous pipes:
+	Stop unprivileged processes from reading pages of memory belonging 
+	to other processes with anonymous pipes.
+
+20090521:
+	MidnightBSD 0.2.1-RELEASE-p9
+
+	This fix is only in configuration files for ssh and sshd.  Users on
+	p8 should simply add 
+
+	Ciphers aes128-ctr,aes256-ctr,arcfour256,arcfour,aes128-cbc,aes256-cbc
+
+	to their configuration files for sshd_config and ssh_config in etc/ssh
+
+20090422:
+	MindightBSD 0.2.1-RELEASE-p8
+
+	The function ASN1_STRING_print_ex does not properly validate the lengths
+	of BMPString or UniversalString objects before attempting to print them.
+
+20090326:
+        MidnightBSD 0.2.1-RELEASE-p7
+
+        Fix several security problems with sudo.  It is now 1.6.9-p20
+
+20090115:
+	MidnightBSD 0.2.1-RELEASE-p6
+
+	Correct an issue with BIND that allows for DNSSEC spoofing
+	attacks.
+
+20090110:
+	MidnightBSD 0.2.1-RELEASE-p5
+
+	For applications using OpenSSL for SSL connections, an invalid SSL
+	certificate may be interpreted as valid.  This could for example be
+	used by an attacker to perform a man-in-the-middle attack.
+
+	Other applications which use the OpenSSL EVP API may similarly be
+	affected.
+
+	Stop cross site request forgery attacks in lukemftpd
+
+20081231:
+	MidnightBSD 0.2.1-RELEASE-p4
+
+	Correct a problem where function pointers for netgraph
+	and bluetooth sockets are not initialized properly.
+
+20081124:
+	MidnightBSD 0.2.1-RELEASE-p3
+
+	Correct a problem in arc4random which causes the device
+	not get get enough entropy for system services.  Geom
+	classes initialized at startup will still have problems.
+
+20081002:
+	MidnightBSD 0.2.1-RELEASE-p2
+
+	IPv6 Neighbor Discovery Protocol routing vulnerability
+
+	http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2008-2476
+	http://www.kb.cert.org/vuls/id/472363
+
+	This fix causes IPv6 Neighbor Discovery Neighbor Solicitation 
+	messages to be ignored from non-neighbors.
+
+	This can be re-enabled, if needed, by setting the newly added
+	net.inet6.icmp6.nd6_onlink_ns_rfc4861 sysctl to 1.
+
+20080929:
+	MidnightBSD 0.2.1-RELEASE-p1
+
+	Fix a defect in ftpd.  The command buffer was split which allowed
+	attackers to send arbritrary commands over the network.
+
+20080905:
+	Update nve(4) to support newer hardware.
+
+20080903:
+	Correct two defects in MidnightBSD.  AMD64/EMT64 systems had a 
+	privledge escalation issue.  CVE-2008-3890
+
+	In case of an incoming ICMPv6 'Packet Too Big Message', there is an
+	insufficient check on the proposed new MTU for a path to the 
+	destination.
+	CVE-2008-3530
+
+20080830:
+	MidnightBSD 0.2.1-RELEASE
+
+	Oops, fix some bugs with sysinstall's handling of packages found 
+	on the release ISOs.  Tweak etc/firstboot while where here.
+
+20080829:
+	MidnightBSD 0.2-RELEASE
+
+20080703:
+	Correct problem with pcc and DESTDIR that affected creating live cds
+	and jails. 
+
+        sysinstall would incorrectly truncate DHCP info when configuring
+        ipv4 networking.  This was the result of a bad patch several months
+        ago.  Fix this error.  Found via testing a snapshot.
+
+20080627:
+	Add firmware(9), WEP, CCMP, TKIP to GENERIC.
+
+	Add glabel to GENERIC.
+
+	Intel ICH8 mobile chipset used on some iMacs included with ata.
+
+	pcc connected to the build on i386. (alternative compiler)
+
+20080613:
+	Begin work for MidnightBSD 0.2-PRERELEASE
+
+20080528:
+	Sendmail 8.14.3
+
+20080516:
+	ssh-vulnkey allows you to look for vulnerable ssh keys that
+	were generated on Debian and Ubuntu hosts over the last
+	few years.  sshd can block offending keys with a configuration
+	option.
+
+	The elf note on binaries is now set to MidnightBSD.
+
+20080514:
+	Fixed a number of problems with pcc.  It is not yet connected
+	to the build, but usable on i386 hosts.  You may use it 
+	by make; make install in /usr/src/usr.bin/pcc.  It will
+	install in /usr/local as some of the files conflict with
+	GCC versions. __MidnightBSD__ is defined in PCC as well.
+
+	System headers were fixed to allow pcc to compile many binaries
+	on MidnightBSD.  bin/cp will work now for instance.
+
+20080430:
+	__MidnightBSD__ is now defined via gcc.  This can be tested
+	to determine we're running on MidnightBSD in the preprocessor.
+
+20080429:
+	Import bind 9.4.2 with threading
+
+	libpthread (KSE) and libthr are built earlier
+	
+	pcvt(4) removed!
+
+	Alias added for core2 cpus.
+
+	Alpha and PC98 only utilities removed from usr/sbin
+
+	syslogd, adduser, rmuser, mergemaster and mailwrapper have been
+	improved.  See the man pages for info.
+
+	periodic scripts will not send emails with empty message bodies.
+	See mailwrapper fix.
+
+20080410:
+	Sync cpdup with DragonFly.  Add parallel transaction support and
+	-l flag to line-buffer stdout and stderr.
+
+20080406:
+	Import bzip2 1.05
+	Import OpenSSH 4.9p1
+
+20080322:
+	The default umask was changed to 022.
+	
+	/usr/X11R6 paths were removed from several config files.
+
+	.mkshrc files are now installed for root.
+
+20080316:
+	FIx a problem with gif0 tunnels and neighbors with IPV6.
+
+20080312:
+	Add lndir from X.org.  This aides in the porting of MirPorts.
+
+	New OS versions were added to the mapage code (groff)
+
+20080310:
+	Correct a buffer overflow in ppp.
+
+20080308:
+	Remove /usr/X11R6 from manpath config.
+
+20080307:
+	Atheros driver no longer has several options set
+	which corrects building in tinderbox on all three platforms.
+
+	Added a new macro to sx.h which returns true if the current
+	thread holds an exclusive lock on a specifix sx.
+
+	Removed OS/2's HPFS file system.   It's not maintained and
+	I don't know anyone using OS/2 or ecomstation these days.
+	My copy is in the closet collecting dust.
+
+20080306:
+	Synced tinderbox with FreeBSD.  Modified it for MidnightBSD.
+	Developers can now use it to check src builds.
+
+20080303:
+	Add mksh to /etc/shells, made some adjustments to options
+	for mksh builds per suggestion upstream.
+
+	USB HID table updated with modern hardware list.
+
+	Updated BSD family true (we're not in there yet)
+
+	iso3166 file updated and import of tzdata2007k for 
+	new time zones.
+
+	Updated mksh to latest version R33.
+
+20080228:
+	Remplaced the random IP id generation code with a new
+	version by Amit Klein.
+
+20080221:
+	Sendfile write only permissions fix.
+
+	Removed some HPFS and PC98 code.
+
+	iso639 file sycned with DragonFly.
+
+20080128:
+	Changed NTP configuration so that ips aren't cached
+	so multiple servers are used.
+
+	Fix an issue with fork() in libpthread.
+
+20080121:
+	Add virtualization detection to set the HZ rate
+	according to a VM present.  VMWare and Parallels
+	should work better like this.
+
+	Change to full x11 install in sysinstall.  Add
+	xorg 7 support.
+
+20080115:
+	Fix the handling of PTY's.  CVE-2008-0216
+
+20080105:
+	mport delete code added, USE_MPORT_TOOLS knob aded.
+
+20080101:
+	Happy New Year
+
+20071123:
+	Update sendmail to 8.14.2
+
+20071120:
+	Update system compiler to gcc 3.4.6.
+
+20071023:
+	Updated mksh to R31d.
+
+20070911:
+	Updated mksh to version R31b.
+
+	Fixed stderr output in libpthread.  Previously it was
+	written to stdout.
+
+20070831:
+	Added dot.mkshrc file to support the recent change to 
+	mksh from OpenBSD's ksh derived from pdksh.  
+
+	Added new firewall configuration.  ipfw is enabled by default
+	with a "desktop" configuration.  Consult /etc/rc.firewall
+	or ipfw show to see the ruleset used.  You can disable
+	ipfw by setting firewall_enable="NO" in /etc/rc.conf This
+	change only effects IPv4.  IPv6 does not have a firewall
+	enabled by default.
+
+20070814:
+	Removed GNU tar source.  We've been using BSD tar 
+	for awhile.
+
+20070806:
+	Finished removing umapfs and autofs from the tree.
+
+20070804:
+	BIND and Tcpdump have been patched for recent vulnerabilities.
+
+	We switched to BSD cpio (pax).
+
+20070719:
+	Imported cpdup from DragonFly as /bin/cpdup
+
+20070716:
+	Update GNU cpio to 2.8. 
+
+20070410:
+	cvs was updated to 1.12.13.  cvsbug was removed.
+	cvs now behaves similarly to DragonFly's cvs with
+	most of their local changes.  
+
+20070409:
+	RELENG_0_1 was created. More aggresive changes will
+	continue here.
+
+20070406:
+	Back out propolice.  propolice caused several problems
+	with our threading libraries libthr and libpthread.  
+	curthread was often NULL after the patch and many
+	multithreaded applications would crash.  We plan to 
+	work on either bringing in gcc 4.1 or developing a new
+	patch which also corrects our threading issues later.
+
+	It is more important to have a stable system for our
+	mport work and other projects at this time.
+
+	This is not a clean removal.  It is recommended that you
+	have a recently SNAP CD handy.  You can either reinstall
+	or perform a make buildworld and make buildkernel and 
+	make installkernel.  Reboot on the cd and copy the contents
+	of /bin, /sbin, /lib, /libexec, and /usr/bin, /usr/sbin,
+	/usr/lib, and /usr/libexec to the respective directories on
+	your disk.  Then you should be able to boot into single user
+	mode and run make installworld.  You will need to run
+	chflags noschg on some of the files if you can't overwrite
+	them. 
+
+	You will get __guard missing errors since we had to remove
+	this from libc.
+
+	You will need to rebuild any ports built while propolice was
+	installed.
+
+20070401:
+	Importing propolice into MidnightBSD. Propolice is going to
+	provide us with much greater security and stability in the
+	long run. If upgrading from a pre-propolice system, please
+	follow the these instructions:
+
+	cd /usr/src/lib/libc && make obj && make && make install
+	cd /usr/src/gnu/usr.bin/cc && make obj && make && make install
+	cd /usr/src/lib/libpthread && make obj && make && make install
+	cd /usr/src/lib/libthr && make obj && make && make install
+	buildworld and kernel
+
+	It is adviced that any mports which were installed and/or built
+	prior to the propolice update also be updated. If any errors
+	or issue are encounted, please contact security@midnightbsd.org
+	and we will be sure to investigate and come up with an expeditious
+	fix.
+
+20070314:
+	Remove send-pr from src.
+
+	Switch to NetBSD's gzip.
+
+	Bump MBSD minor revision.
+
+20070313:
+	Imported OpenSSH 4.6p1.
+
+	Imported FreeBSD's libarchive and updated tar to work with it.
+
+	Disabled debug statements cluttering up /var/log/messages for
+	the tcp autobuf patch applied previously.
+
+20070312:
+	Synced several audio changes from FreeBSD 6.1. Removed the 
+	BSD Daemon files from src/share.  
+
+20070308:
+	Added mfi which supports LSI Logic MegaRAID SAS devices including
+	the Dell perc5i.
+
+20070206:
+	Imported OpenBSD's sudo into source. Please install
+	/usr/src/usr.bin/sudo/lib first before building.
+
+	Those who install from a snapshot after this date
+	will not be effected.
+
+20070119:
+	Added audit group.  Be sure to add audit to your /etc/group file
+	before installing world.
+
+	hostapd was updated to 0.4.8.
+
+	An accidental commit in usr.sbin/bluetooth/hccontrol was fixed to
+	unbreak world.
+
+	wpa_supplicant was updated.
+
+	For stability and compatibility reasons, it was decided that MidnightBSD
+	sync with FreeBSD 6.1 Release.  Nearly every change between the original
+	fork date of February 24, 2006 and the release of FreeBSD 6.1 in May
+	2006 will be merged.  Beyond this, MidnightBSD will be a "real" fork and
+	will not sync every little change with FreeBSD.
+
+20061231:
+	Updated COPYRIGHT for 2007.
+
+	Updated and bumped libutil after importing NetBSD efun(3) functions.
+
+	Added MidnightBSD_version and bumped the FreeBSD version as we've
+	synced all commits between the fork and that version.  It is now safe
+	to assume MidnightBSD is compatible with FreeBSD RELENG_6 from
+	Feb 26, 2006.
+
+	Added spell(1) and deroff(1) from NetBSD.  Also added additional
+	dict files to work with it. /usr/share/dict/american, 
+	/usr/share/dict/british and /usr/share/dict/special/math
+
+	Numerous man page and bug fixes.
+
+20061226:
+	Setup /usr/share/examples/cvsup SUPfiles for the new
+	MidnightBSD CVSup server. 
+
+	Fix a bug in burncd where it would continue forever while
+	erasing CDRW media.
+
+	Add csup to /usr/bin.  csup is a CVSup replacement written
+	in C. 
+
+	Fixed a bug with bsnmpd build from Oct 30.  
+
+	Corrected some race conditions and fixed a few bugs in
+	geom.  Imported changes from FreeBSD RELENG_6.
+
+20061225:
+	Fixed a typo in src/lib/libc/sparc64/fpu/fpu_implode.c
+	that caused long double to long and long long 
+	conversion of negative numbers to always result in -1.
+
+20061221:
+	Fixed acpi_battery.c to not report an ERROR if no
+	batteries are present.
+
+	Performed some minor updates on the RL and RE NIC drivers.
+	RL should no longer panic when trying to print errors.
+
+	Corrected a bug with TTY.
+
+20061218:
+	Corrected a bug with libpthread where newly created suspended
+	threads don't get scheduled.
+
+20061206:
+	Fixed a typo with the firewire security patch.
+
+20061129:
+	Minor cleanups to utilities in bin.
+
+	Fixed msdos file system short file name behavior to match
+	FreeBSD.
+
+20061031:
+	Updated man pages in section 7.
+
+20061030:
+ 	Updated sys/dev/drm to support intel 915 and radeon 
+	r300 cards properly.  
+
+	Synced snmpd with FreeBSD-stable.
+
+	Fixed a bug in rm which could cause data loss.	
+
+20061027:
+	Added Intel ICH8 and nForce 5 support to ATA. cam, mpt,
+	random, kbdmux, atkbd, and usb were updated.  Changes
+	to clearing registers on SSE enabled processors (i386)
+	commited.  
+
+	lukemftpd updated.  
+
+	openssh rc script was altered which effects initial
+	seeding.  
+
+20061014:
+	Workaround for em driver problem on shared IRQ.
+
+	Started removal of alpha support.
+
+20061013:
+	ATA driver was updated.  USB/USB1/USB2 types added.
+
+20061010: 
+	OpenSSH was updated to 4.4p1.   
+
+20060909:
+	OpenNTPD was added to MidnightBSD.  Run make delete-old to remove
+	the old ntpd daemon.
+
+	cat has a new option -D which allows you to timestamp output
+	on a per line basis.
+
+	The kernel has a keyboard mux which allows you to have multiple
+	keyboard connected simultaneously.  USB keyboard support was also
+	improved with this patch.
+
+	The Intel em driver was updated.  Network performance was greatly
+	increased on many systems.  Additional models are supported.
+
+	The ATA driver was patched to fix a potential deadlock.
+
+	Bind was patched to fix a potential denial of service condition.
+
+20060817:
+	ksh has been added to the base system.  If you previously had
+	the port installed, it will be overwritten on the next buildworld.
+
+
+
+	To build a kernel
+	-----------------
+	If you are updating from a prior version of MidnightBSD (even one just
+	a few days old), you should follow this procedure. With a
+	/usr/obj tree with a fresh buildworld,
+	make -DALWAYS_CHECK_MAKE buildkernel KERNCONF=YOUR_KERNEL_HERE
+	make -DALWAYS_CHECK_MAKE installkernel KERNCONF=YOUR_KERNEL_HERE
+
+	To test a kernel once
+	---------------------
+	If you just want to boot a kernel once (because you are not sure
+	if it works, or if you want to boot a known bad kernel to provide
+	debugging information) run
+	make installkernel KERNCONF=YOUR_KERNEL_HERE KODIR=/boot/testkernel
+	nextboot -k testkernel
+
+	To just build a kernel when you know that it won't mess you up
+	--------------------------------------------------------------
+	This assumes you are already running a 6.X system.  Replace
+	${arch} with the architecture of your machine (e.g. "i386",
+	"amd64", "ia64", "pc98", "sparc64", etc).
+
+	cd src/sys/${arch}/conf
+	config KERNEL_NAME_HERE
+	cd ../compile/KERNEL_NAME_HERE
+	make depend
+	make
+	make install
+
+	If this fails, go to the "To build a kernel" section.
+
+	To rebuild everything and install it on the current system.
+	-----------------------------------------------------------
+	# Note: sometimes if you are running current you gotta do more than
+	# is listed here if you are upgrading from a really old current.
+
+	<make sure you have good level 0 dumps>
+	make buildworld
+	make kernel KERNCONF=YOUR_KERNEL_HERE
+							[1]
+	<reboot in single user>				[3]
+	mergemaster -p					[5]
+	make installworld
+	make delete-old
+	mergemaster					[4]
+	<reboot>
+
+
+	To cross-install current onto a separate partition
+	--------------------------------------------------
+	# In this approach we use a separate partition to hold
+	# current's root, 'usr', and 'var' directories.   A partition
+	# holding "/", "/usr" and "/var" should be about 2GB in
+	# size.
+
+	<make sure you have good level 0 dumps>
+	<boot into -stable>
+	make buildworld
+	make buildkernel KERNCONF=YOUR_KERNEL_HERE
+	<maybe newfs current's root partition>
+	<mount current's root partition on directory ${CURRENT_ROOT}>
+	make installworld DESTDIR=${CURRENT_ROOT}
+	cd src/etc; make distribution DESTDIR=${CURRENT_ROOT} # if newfs'd
+	make installkernel KERNCONF=YOUR_KERNEL_HERE DESTDIR=${CURRENT_ROOT}
+	cp /etc/fstab ${CURRENT_ROOT}/etc/fstab 		   # if newfs'd
+	<edit ${CURRENT_ROOT}/etc/fstab to mount "/" from the correct partition>
+	<reboot into current>
+	<do a "native" rebuild/install as described in the previous section>
+	<maybe install compatibility libraries from src/lib/compat>
+ 	<reboot>
+
+
+	To upgrade in-place from 5.x-stable or higher to 6.x-stable
+	-----------------------------------------------------------
+	<make sure you have good level 0 dumps>
+	make buildworld					[9]
+	make kernel KERNCONF=YOUR_KERNEL_HERE		[8]
+							[1]
+	<reboot in single user>				[3]
+	mergemaster -p					[5]
+	make installworld
+	make delete-old
+	mergemaster -i					[4]
+	<reboot>
+
+	Make sure that you've read the UPDATING file to understand the
+	tweaks to various things you need.  At this point in the life
+	cycle of current, things change often and you are on your own
+	to cope.  The defaults can also change, so please read ALL of
+	the UPDATING entries.
+
+	Also, if you are tracking -current, you must be subscribed to
+	freebsd-current@freebsd.org.  Make sure that before you update
+	your sources that you have read and understood all the recent
+	messages there.  If in doubt, please track -stable which has
+	much fewer pitfalls.
+
+	[1] If you have third party modules, such as vmware, you
+	should disable them at this point so they don't crash your
+	system on reboot.
+
+	[3] From the bootblocks, boot -s, and then do
+		fsck -p
+		mount -u /
+		mount -a
+		cd src
+		adjkerntz -i		# if CMOS is wall time
+	Also, when doing a major release upgrade, it is required that
+	you boot into single user mode to do the installworld.
+
+	[4] Note: This step is non-optional.  Failure to do this step
+	can result in a significant reduction in the functionality of the
+	system.  Attempting to do it by hand is not recommended and those
+	that pursue this avenue should read this file carefully, as well
+	as the archives of freebsd-current and freebsd-hackers mailing lists
+	for potential gotchas.
+
+	[5] Usually this step is a noop.  However, from time to time
+	you may need to do this if you get unknown user in the following
+	step.  It never hurts to do it all the time.
+
+	[8] In order to have a kernel that can run the 5.x binaries
+	needed to do an installworld, you must include the COMPAT_FREEBSD5
+	option in your kernel.  Failure to do so may leave you with a system
+	that is hard to boot to recover. A similar kernel option COMPAT_FREEBSD5
+	is required to run the 5.x binaries on more recent kernels.
+
+	Make sure that you merge any new devices from GENERIC since the
+	last time you updated your kernel config file.
+
+	[9] When checking out sources, you must include the -P flag to have
+	cvs prune empty directories.
+
+	If CPUTYPE is defined in your /etc/make.conf, make sure to use the
+	"?=" instead of the "=" assignment operator, so that buildworld can
+	override the CPUTYPE if it needs to.
+
+	MAKEOBJDIRPREFIX must be defined in an environment variable, and
+	not on the command line, or in /etc/make.conf.  buildworld will
+	warn if it is improperly defined.
+
+Copyright information:
+
+Copyright 1998-2005 M. Warner Losh.  All Rights Reserved.
+
+Redistribution, publication, translation and use, with or without
+modification, in full or in part, in any form or format of this
+document are permitted without further permission from the author.
+
+THIS DOCUMENT IS PROVIDED BY WARNER LOSH ``AS IS'' AND ANY EXPRESS OR
+IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED.  IN NO EVENT SHALL WARNER LOSH BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
+If you find this document useful, and you want to, you may buy the
+author a beer.
+
+Contact Warner Losh if you have any questions about your use of
+this document.
+
+$FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
+$MidnightBSD: src/UPDATING,v 1.38.2.20 2009/07/29 15:39:27 laffer1 Exp $
