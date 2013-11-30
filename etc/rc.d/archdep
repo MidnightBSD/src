@@ -1,0 +1,48 @@
+#!/bin/sh
+#
+# $FreeBSD: src/etc/rc.d/archdep,v 1.7.2.2 2006/01/17 07:12:38 dougb Exp $
+# $MidnightBSD: src/etc/rc.d/archdep,v 1.2 2006/08/28 02:13:44 laffer1 Exp $
+
+# PROVIDE: archdep
+# REQUIRE: mountcritremote
+# KEYWORD: nojail
+
+. /etc/rc.subr
+
+name=archdep
+start_cmd="archdep_start"
+stop_cmd=":"
+
+# SCO binary emulation
+#
+ibcs2_compat()
+{
+	if checkyesno ibcs2_enable; then
+		echo -n ' ibcs2'
+		kldload ibcs2 > /dev/null 2>&1
+		case ${ibcs2_loaders} in
+		[Nn][Oo])
+			;;
+		*)
+			for i in ${ibcs2_loaders}; do
+				kldload ibcs2_$i > /dev/null 2>&1
+			done
+			;;
+		esac
+	fi
+}
+
+archdep_start()
+{
+	_arch=`${SYSCTL_N} hw.machine_arch`
+	echo -n "Initial $_arch initialization:"
+	case $_arch in
+	i386)
+		ibcs2_compat
+		;;
+	esac
+	echo '.'
+}
+
+load_rc_config $name
+run_rc_command "$1"

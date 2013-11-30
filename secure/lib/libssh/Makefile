@@ -1,0 +1,49 @@
+# $MidnightBSD: src/secure/lib/libssh/Makefile,v 1.6 2008/04/06 06:24:01 laffer1 Exp $
+# $FreeBSD: src/secure/lib/libssh/Makefile,v 1.34.2.2 2005/09/11 16:50:33 des Exp $
+
+LIB=	ssh
+SHLIB_MAJOR=	3
+SRCS=	acss.c authfd.c authfile.c bufaux.c bufbn.c buffer.c \
+	canohost.c channels.c cipher.c cipher-acss.c cipher-aes.c \
+	cipher-bf1.c cipher-ctr.c cipher-3des1.c cleanup.c \
+	compat.c compress.c crc32.c deattack.c fatal.c hostfile.c \
+	log.c match.c md-sha256.c moduli.c nchan.c packet.c \
+	readpass.c rsa.c ttymodes.c xmalloc.c \
+	atomicio.c key.c dispatch.c kex.c mac.c uidswap.c uuencode.c misc.c \
+	monitor_fdpass.c rijndael.c ssh-dss.c ssh-rsa.c dh.c kexdh.c \
+	kexgex.c kexdhc.c kexgexc.c scard.c msg.c progressmeter.c dns.c \
+	entropy.c scard-opensc.c umac.c
+
+# gss-genr.c should be in $SRCS but causes linking problems, so it is
+# compiled directly into sshd instead.
+
+# Portability layer
+SRCS+=	bsd-closefrom.c bsd-misc.c getrrsetbyname.c openssl-compat.c \
+	port-tun.c vis.c xcrypt.c xmmap.c
+# MidnightBSD additions
+SRCS+=	version.c
+
+.if defined(COMPAT_GETADDRINFO)
+SRCS+=	getaddrinfo.c getnameinfo.c name6.c rcmd.c bindresvport.c
+.endif
+
+CFLAGS+= -I${SSHDIR} -include ssh_namespace.h
+DPADD=	${LIBZ}
+LDADD=	-lz
+
+.if !defined(NO_KERBEROS)
+CFLAGS+= -DGSSAPI -DHAVE_GSSAPI_H=1 -DKRB5 -DHEIMDAL
+DPADD+=	${LIBGSSAPI} ${LIBKRB5} ${LIBASN1} ${LIBCOM_ERR} ${LIBMD} ${LIBROKEN}
+LDADD+=	-lgssapi -lkrb5 -lasn1 -lcom_err -lmd -lroken
+.endif
+
+NO_LINT=
+
+DPADD+=	${LIBCRYPTO} ${LIBCRYPT}
+LDADD+=	-lcrypto -lcrypt
+
+.include <bsd.lib.mk>
+
+.PATH: ${SSHDIR} ${SSHDIR}/openbsd-compat
+
+${OBJS} ${POBJS} ${SOBJS}: ssh_namespace.h
