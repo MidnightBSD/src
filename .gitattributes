@@ -1,4 +1,510 @@
 * text=auto !eol
+258.14/Clients/BonjourExample/BonjourExample.cpp -text
+258.14/Clients/BonjourExample/BonjourExample.sln -text
+258.14/Clients/BonjourExample/BonjourExample.vcproj -text
+258.14/Clients/BonjourExample/stdafx.cpp -text
+258.14/Clients/BonjourExample/stdafx.h -text
+258.14/Clients/ClientCommon.c -text
+258.14/Clients/ClientCommon.h -text
+258.14/Clients/DNS-SD.VisualStudio/DNS-SD.manifest -text
+258.14/Clients/DNS-SD.VisualStudio/DNS-SD64.manifest -text
+258.14/Clients/DNS-SD.VisualStudio/dns-sd.rc -text
+258.14/Clients/DNS-SD.VisualStudio/dns-sd.sdk.rc -text
+258.14/Clients/DNS-SD.VisualStudio/dns-sd.sdk.vcproj -text
+258.14/Clients/DNS-SD.VisualStudio/dns-sd.vcproj -text
+258.14/Clients/DNS-SD.VisualStudio/resource.h -text
+258.14/Clients/DNS-SD.xcodeproj/project.pbxproj -text
+258.14/Clients/DNSServiceBrowser-Info.plist -text
+258.14/Clients/DNSServiceBrowser.NET/App.ico -text svneol=unset#unset
+258.14/Clients/DNSServiceBrowser.NET/AssemblyInfo.cs -text
+258.14/Clients/DNSServiceBrowser.NET/DNSServiceBrowser.NET.csproj -text
+258.14/Clients/DNSServiceBrowser.NET/DNSServiceBrowser.cs -text
+258.14/Clients/DNSServiceBrowser.NET/DNSServiceBrowser.resx -text
+258.14/Clients/DNSServiceBrowser.VB/DNSServiceBrowser.Designer.vb -text
+258.14/Clients/DNSServiceBrowser.VB/DNSServiceBrowser.VB.vbproj -text
+258.14/Clients/DNSServiceBrowser.VB/DNSServiceBrowser.resx -text
+258.14/Clients/DNSServiceBrowser.VB/DNSServiceBrowser.vb -text
+258.14/Clients/DNSServiceBrowser.VB/My[!!-~]Project/Application.Designer.vb -text
+258.14/Clients/DNSServiceBrowser.VB/My[!!-~]Project/Application.myapp -text
+258.14/Clients/DNSServiceBrowser.VB/My[!!-~]Project/AssemblyInfo.vb -text
+258.14/Clients/DNSServiceBrowser.VB/My[!!-~]Project/Resources.Designer.vb -text
+258.14/Clients/DNSServiceBrowser.VB/My[!!-~]Project/Resources.resx -text
+258.14/Clients/DNSServiceBrowser.VB/My[!!-~]Project/Settings.Designer.vb -text
+258.14/Clients/DNSServiceBrowser.VB/My[!!-~]Project/Settings.settings -text
+258.14/Clients/DNSServiceBrowser.m -text
+258.14/Clients/DNSServiceBrowser.nib/classes.nib -text
+258.14/Clients/DNSServiceBrowser.nib/info.nib -text
+258.14/Clients/DNSServiceBrowser.nib/objects.nib -text svneol=unset#unset
+258.14/Clients/DNSServiceReg-Info.plist -text
+258.14/Clients/DNSServiceReg.m -text
+258.14/Clients/DNSServiceReg.nib/classes.nib -text
+258.14/Clients/DNSServiceReg.nib/info.nib -text
+258.14/Clients/DNSServiceReg.nib/objects.nib -text svneol=unset#unset
+258.14/Clients/ExplorerPlugin/About.cpp -text
+258.14/Clients/ExplorerPlugin/About.h -text
+258.14/Clients/ExplorerPlugin/ClassFactory.cpp -text
+258.14/Clients/ExplorerPlugin/ClassFactory.h -text
+258.14/Clients/ExplorerPlugin/ExplorerBar.cpp -text
+258.14/Clients/ExplorerPlugin/ExplorerBar.h -text
+258.14/Clients/ExplorerPlugin/ExplorerBarWindow.cpp -text
+258.14/Clients/ExplorerPlugin/ExplorerBarWindow.h -text
+258.14/Clients/ExplorerPlugin/ExplorerPlugin.cpp -text
+258.14/Clients/ExplorerPlugin/ExplorerPlugin.def -text
+258.14/Clients/ExplorerPlugin/ExplorerPlugin.h -text
+258.14/Clients/ExplorerPlugin/ExplorerPlugin.rc -text
+258.14/Clients/ExplorerPlugin/ExplorerPlugin.vcproj -text
+258.14/Clients/ExplorerPlugin/ExplorerPluginLocRes.rc -text
+258.14/Clients/ExplorerPlugin/ExplorerPluginLocRes.vcproj -text
+258.14/Clients/ExplorerPlugin/ExplorerPluginRes.rc -text
+258.14/Clients/ExplorerPlugin/ExplorerPluginRes.vcproj -text
+258.14/Clients/ExplorerPlugin/LoginDialog.cpp -text
+258.14/Clients/ExplorerPlugin/LoginDialog.h -text
+258.14/Clients/ExplorerPlugin/ReadMe.txt -text
+258.14/Clients/ExplorerPlugin/Resource.h -text
+258.14/Clients/ExplorerPlugin/StdAfx.cpp -text
+258.14/Clients/ExplorerPlugin/StdAfx.h -text
+258.14/Clients/ExplorerPlugin/res/ExplorerPlugin.manifest -text
+258.14/Clients/ExplorerPlugin/res/ExplorerPlugin64.manifest -text
+258.14/Clients/ExplorerPlugin/res/about.bmp -text svneol=unset#unset
+258.14/Clients/ExplorerPlugin/res/button-2k.ico -text svneol=unset#unset
+258.14/Clients/ExplorerPlugin/res/button-xp.ico -text svneol=unset#unset
+258.14/Clients/ExplorerPlugin/res/cold.ico -text svneol=unset#unset
+258.14/Clients/ExplorerPlugin/res/hot.ico -text svneol=unset#unset
+258.14/Clients/ExplorerPlugin/res/logo.bmp -text svneol=unset#unset
+258.14/Clients/ExplorerPlugin/resource_dll.h -text
+258.14/Clients/ExplorerPlugin/resource_loc_res.h -text
+258.14/Clients/ExplorerPlugin/resource_res.h -text
+258.14/Clients/FirefoxExtension/CDNSSDService.cpp -text
+258.14/Clients/FirefoxExtension/CDNSSDService.h -text
+258.14/Clients/FirefoxExtension/CDNSSDServiceModule.cpp -text
+258.14/Clients/FirefoxExtension/DNSSDService.sln -text
+258.14/Clients/FirefoxExtension/FirefoxExtension.rc -text
+258.14/Clients/FirefoxExtension/FirefoxExtension.vcproj -text
+258.14/Clients/FirefoxExtension/IDNSSDService.h -text
+258.14/Clients/FirefoxExtension/IDNSSDService.idl -text
+258.14/Clients/FirefoxExtension/extension/chrome.manifest -text
+258.14/Clients/FirefoxExtension/extension/components/IDNSSDService.xpt -text svneol=unset#unset
+258.14/Clients/FirefoxExtension/extension/content/bonjour4firefox.css -text
+258.14/Clients/FirefoxExtension/extension/content/bonjour4firefox.png -text svneol=unset#unset
+258.14/Clients/FirefoxExtension/extension/content/bonjour4firefox.xul -text
+258.14/Clients/FirefoxExtension/extension/content/browserOverlay.xul -text
+258.14/Clients/FirefoxExtension/extension/content/listImage.png -text svneol=unset#unset
+258.14/Clients/FirefoxExtension/extension/content/overlay.js -text
+258.14/Clients/FirefoxExtension/extension/defaults/preferences/bonjour4firefox.js -text
+258.14/Clients/FirefoxExtension/extension/install.rdf -text
+258.14/Clients/FirefoxExtension/extension/locale/en-US/bonjour4firefox.dtd -text
+258.14/Clients/FirefoxExtension/extension/locale/en-US/bonjour4firefox.properties -text
+258.14/Clients/FirefoxExtension/extension/readme.txt -text
+258.14/Clients/FirefoxExtension/extension/skin-darwin/overlay.css -text
+258.14/Clients/FirefoxExtension/extension/skin-darwin/toolbar-button.png -text svneol=unset#unset
+258.14/Clients/FirefoxExtension/extension/skin/overlay.css -text
+258.14/Clients/FirefoxExtension/extension/skin/toolbar-button.png -text svneol=unset#unset
+258.14/Clients/FirefoxExtension/readme.txt -text
+258.14/Clients/FirefoxExtension/resource.h -text
+258.14/Clients/Java/BrowserApp.java -text
+258.14/Clients/Java/BrowserApp.manifest -text
+258.14/Clients/Java/DNSSDUnitTest.java -text
+258.14/Clients/Java/JavaSamples.vcproj -text
+258.14/Clients/Java/SimpleChat.java -text
+258.14/Clients/Java/SimpleChat.manifest -text
+258.14/Clients/Java/SwingBrowseListener.java -text
+258.14/Clients/Java/SwingDomainListener.java -text
+258.14/Clients/Java/SwingQueryListener.java -text
+258.14/Clients/Java/nmakefile -text
+258.14/Clients/Makefile -text
+258.14/Clients/PrinterSetupWizard/About.cpp -text
+258.14/Clients/PrinterSetupWizard/About.h -text
+258.14/Clients/PrinterSetupWizard/FirstPage.cpp -text
+258.14/Clients/PrinterSetupWizard/FirstPage.h -text
+258.14/Clients/PrinterSetupWizard/FourthPage.cpp -text
+258.14/Clients/PrinterSetupWizard/FourthPage.h -text
+258.14/Clients/PrinterSetupWizard/Logger.cpp -text
+258.14/Clients/PrinterSetupWizard/Logger.h -text
+258.14/Clients/PrinterSetupWizard/PrinterSetupWizard.ncb -text
+258.14/Clients/PrinterSetupWizard/PrinterSetupWizard.rc -text
+258.14/Clients/PrinterSetupWizard/PrinterSetupWizard.vcproj -text
+258.14/Clients/PrinterSetupWizard/PrinterSetupWizardApp.cpp -text
+258.14/Clients/PrinterSetupWizard/PrinterSetupWizardApp.h -text
+258.14/Clients/PrinterSetupWizard/PrinterSetupWizardLocRes.rc -text
+258.14/Clients/PrinterSetupWizard/PrinterSetupWizardLocRes.vcproj -text
+258.14/Clients/PrinterSetupWizard/PrinterSetupWizardRes.rc -text
+258.14/Clients/PrinterSetupWizard/PrinterSetupWizardRes.vcproj -text
+258.14/Clients/PrinterSetupWizard/PrinterSetupWizardSheet.cpp -text
+258.14/Clients/PrinterSetupWizard/PrinterSetupWizardSheet.h -text
+258.14/Clients/PrinterSetupWizard/ReadMe.txt -text
+258.14/Clients/PrinterSetupWizard/SecondPage.cpp -text
+258.14/Clients/PrinterSetupWizard/SecondPage.h -text
+258.14/Clients/PrinterSetupWizard/ThirdPage.cpp -text
+258.14/Clients/PrinterSetupWizard/ThirdPage.h -text
+258.14/Clients/PrinterSetupWizard/UtilTypes.h -text
+258.14/Clients/PrinterSetupWizard/res/Info.ico -text svneol=unset#unset
+258.14/Clients/PrinterSetupWizard/res/NetworkPrinter.ico -text svneol=unset#unset
+258.14/Clients/PrinterSetupWizard/res/Print.ico -text svneol=unset#unset
+258.14/Clients/PrinterSetupWizard/res/PrinterSetupWizard.ico -text svneol=unset#unset
+258.14/Clients/PrinterSetupWizard/res/PrinterSetupWizard.manifest -text
+258.14/Clients/PrinterSetupWizard/res/PrinterSetupWizard.rc2 -text
+258.14/Clients/PrinterSetupWizard/res/PrinterSetupWizard64.manifest -text
+258.14/Clients/PrinterSetupWizard/res/PrinterSetupWizardLocRes.rc2 -text
+258.14/Clients/PrinterSetupWizard/res/PrinterSetupWizardRes.rc2 -text
+258.14/Clients/PrinterSetupWizard/res/Thumbs.db -text svneol=unset#unset
+258.14/Clients/PrinterSetupWizard/res/about.bmp -text svneol=unset#unset
+258.14/Clients/PrinterSetupWizard/res/banner_icon.bmp -text svneol=unset#unset
+258.14/Clients/PrinterSetupWizard/res/watermark.bmp -text svneol=unset#unset
+258.14/Clients/PrinterSetupWizard/resource.h -text
+258.14/Clients/PrinterSetupWizard/resource_exe.h -text
+258.14/Clients/PrinterSetupWizard/resource_loc_res.h -text
+258.14/Clients/PrinterSetupWizard/resource_res.h -text
+258.14/Clients/PrinterSetupWizard/stdafx.cpp -text
+258.14/Clients/PrinterSetupWizard/stdafx.h -text
+258.14/Clients/ReadMe.txt -text
+258.14/Clients/SimpleChat.NET/App.ico -text svneol=unset#unset
+258.14/Clients/SimpleChat.NET/AssemblyInfo.cs -text
+258.14/Clients/SimpleChat.NET/SimpleChat.NET.csproj -text
+258.14/Clients/SimpleChat.NET/SimpleChat.cs -text
+258.14/Clients/SimpleChat.NET/SimpleChat.resx -text
+258.14/Clients/SimpleChat.VB/My[!!-~]Project/Application.Designer.vb -text
+258.14/Clients/SimpleChat.VB/My[!!-~]Project/Application.myapp -text
+258.14/Clients/SimpleChat.VB/My[!!-~]Project/AssemblyInfo.vb -text
+258.14/Clients/SimpleChat.VB/My[!!-~]Project/Resources.Designer.vb -text
+258.14/Clients/SimpleChat.VB/My[!!-~]Project/Resources.resx -text
+258.14/Clients/SimpleChat.VB/My[!!-~]Project/Settings.Designer.vb -text
+258.14/Clients/SimpleChat.VB/My[!!-~]Project/Settings.settings -text
+258.14/Clients/SimpleChat.VB/SimpleChat.Designer.vb -text
+258.14/Clients/SimpleChat.VB/SimpleChat.VB.vbproj -text
+258.14/Clients/SimpleChat.VB/SimpleChat.resx -text
+258.14/Clients/SimpleChat.VB/SimpleChat.vb -text
+258.14/Clients/dns-sd.c -text
+258.14/Clients/mDNSNetMonitor.VisualStudio/mDNSNetMonitor.manifest -text
+258.14/Clients/mDNSNetMonitor.VisualStudio/mDNSNetMonitor.rc -text
+258.14/Clients/mDNSNetMonitor.VisualStudio/mDNSNetMonitor.vcproj -text
+258.14/Clients/mDNSNetMonitor.VisualStudio/resource.h -text
+258.14/LICENSE -text
+258.14/Makefile -text
+258.14/PrivateDNS.txt -text
+258.14/README.txt -text
+258.14/mDNSCore/DNSCommon.c -text
+258.14/mDNSCore/DNSCommon.h -text
+258.14/mDNSCore/DNSDigest.c -text
+258.14/mDNSCore/Implementer[!!-~]Notes.txt -text
+258.14/mDNSCore/mDNS.c -text
+258.14/mDNSCore/mDNSDebug.h -text
+258.14/mDNSCore/mDNSEmbeddedAPI.h -text
+258.14/mDNSCore/uDNS.c -text
+258.14/mDNSCore/uDNS.h -text
+258.14/mDNSMacOS9/CarbonResource.r -text
+258.14/mDNSMacOS9/Mac[!!-~]OS[!!-~]Test[!!-~]Responder.c -text
+258.14/mDNSMacOS9/Mac[!!-~]OS[!!-~]Test[!!-~]Searcher.c -text
+258.14/mDNSMacOS9/README.txt -text
+258.14/mDNSMacOS9/Responder.c -text
+258.14/mDNSMacOS9/Searcher.c -text
+258.14/mDNSMacOS9/ShowInitIcon.c -text
+258.14/mDNSMacOS9/ShowInitIcon.h -text
+258.14/mDNSMacOS9/SubTypeTester.c -text
+258.14/mDNSMacOS9/mDNS.mcp -text svneol=unset#unset
+258.14/mDNSMacOS9/mDNSLibrary.c -text
+258.14/mDNSMacOS9/mDNSLibraryLoader.c -text
+258.14/mDNSMacOS9/mDNSLibraryResources.r -text
+258.14/mDNSMacOS9/mDNSMacOS9.c -text
+258.14/mDNSMacOS9/mDNSMacOS9.h -text
+258.14/mDNSMacOS9/mDNSPrefix.h -text
+258.14/mDNSMacOSX/DNSServiceDiscovery.c -text
+258.14/mDNSMacOSX/DNSServiceDiscovery.h -text
+258.14/mDNSMacOSX/DNSServiceDiscoveryDefines.h -text
+258.14/mDNSMacOSX/DNSServiceDiscoveryReply.defs -text
+258.14/mDNSMacOSX/DNSServiceDiscoveryRequest.defs -text
+258.14/mDNSMacOSX/LaunchDaemonInfo-Tiger.helper.plist -text
+258.14/mDNSMacOSX/LaunchDaemonInfo-Tiger.plist -text
+258.14/mDNSMacOSX/LaunchDaemonInfo.dnsextd.plist -text
+258.14/mDNSMacOSX/LaunchDaemonInfo.helper.plist -text
+258.14/mDNSMacOSX/LaunchDaemonInfo.plist -text
+258.14/mDNSMacOSX/LegacyNATTraversal.c -text
+258.14/mDNSMacOSX/PreferencePane/Artwork/add_idle.tiff -text svneol=unset#unset
+258.14/mDNSMacOSX/PreferencePane/Artwork/add_pressed.tiff -text svneol=unset#unset
+258.14/mDNSMacOSX/PreferencePane/Artwork/failure.tiff -text svneol=unset#unset
+258.14/mDNSMacOSX/PreferencePane/Artwork/inprogress.tiff -text svneol=unset#unset
+258.14/mDNSMacOSX/PreferencePane/Artwork/remove_disabled.tiff -text svneol=unset#unset
+258.14/mDNSMacOSX/PreferencePane/Artwork/remove_idle.tiff -text svneol=unset#unset
+258.14/mDNSMacOSX/PreferencePane/Artwork/remove_pressed.tiff -text svneol=unset#unset
+258.14/mDNSMacOSX/PreferencePane/Artwork/success.tiff -text svneol=unset#unset
+258.14/mDNSMacOSX/PreferencePane/BonjourPref.icns -text svneol=unset#unset
+258.14/mDNSMacOSX/PreferencePane/BonjourPref.tiff -text svneol=unset#unset
+258.14/mDNSMacOSX/PreferencePane/ConfigurationAuthority.c -text
+258.14/mDNSMacOSX/PreferencePane/ConfigurationAuthority.h -text
+258.14/mDNSMacOSX/PreferencePane/ConfigurationRights.h -text
+258.14/mDNSMacOSX/PreferencePane/DNSServiceDiscoveryPref.h -text
+258.14/mDNSMacOSX/PreferencePane/DNSServiceDiscoveryPref.m -text
+258.14/mDNSMacOSX/PreferencePane/English.lproj/DNSServiceDiscoveryPref.nib/classes.nib -text
+258.14/mDNSMacOSX/PreferencePane/English.lproj/DNSServiceDiscoveryPref.nib/info.nib -text
+258.14/mDNSMacOSX/PreferencePane/English.lproj/DNSServiceDiscoveryPref.nib/keyedobjects.nib -text svneol=unset#unset
+258.14/mDNSMacOSX/PreferencePane/English.lproj/InfoPlist.strings -text svneol=unset#unset
+258.14/mDNSMacOSX/PreferencePane/Info-PreferencePane.plist -text
+258.14/mDNSMacOSX/PreferencePane/PrivilegedOperations.c -text
+258.14/mDNSMacOSX/PreferencePane/PrivilegedOperations.h -text
+258.14/mDNSMacOSX/PreferencePane/ddnswriteconfig.m -text
+258.14/mDNSMacOSX/PreferencePane/installtool -text
+258.14/mDNSMacOSX/README.privsep -text
+258.14/mDNSMacOSX/SamplemDNSClient.c -text
+258.14/mDNSMacOSX/daemon.c -text
+258.14/mDNSMacOSX/helper-entitlements.plist -text
+258.14/mDNSMacOSX/helper-error.h -text
+258.14/mDNSMacOSX/helper-main.c -text
+258.14/mDNSMacOSX/helper-server.h -text
+258.14/mDNSMacOSX/helper-stubs.c -text
+258.14/mDNSMacOSX/helper.c -text
+258.14/mDNSMacOSX/helper.h -text
+258.14/mDNSMacOSX/helpermsg-types.h -text
+258.14/mDNSMacOSX/helpermsg.defs -text
+258.14/mDNSMacOSX/ipsec_strerror.h -text
+258.14/mDNSMacOSX/libpfkey.h -text
+258.14/mDNSMacOSX/mDNSMacOSX.c -text
+258.14/mDNSMacOSX/mDNSMacOSX.h -text
+258.14/mDNSMacOSX/mDNSResponder-bundle/Resources/English.lproj/Localizable.strings -text
+258.14/mDNSMacOSX/mDNSResponder-bundle/Resources/French.lproj/Localizable.strings -text
+258.14/mDNSMacOSX/mDNSResponder.order -text
+258.14/mDNSMacOSX/mDNSResponder.pbproj/project.pbxproj -text
+258.14/mDNSMacOSX/mDNSResponder.sb -text
+258.14/mDNSMacOSX/mDNSResponder.xcodeproj/project.pbxproj -text
+258.14/mDNSMacOSX/mDNSResponderHelper.8 -text
+258.14/mDNSMacOSX/mDNSResponderHelper.plist -text
+258.14/mDNSMacOSX/pfkey.c -text
+258.14/mDNSMacOSX/safe_vproc.c -text
+258.14/mDNSMacOSX/safe_vproc.h -text
+258.14/mDNSPosix/Client.c -text
+258.14/mDNSPosix/ExampleClientApp.c -text
+258.14/mDNSPosix/ExampleClientApp.h -text
+258.14/mDNSPosix/Identify.c -text
+258.14/mDNSPosix/Makefile -text
+258.14/mDNSPosix/NetMonitor.c -text
+258.14/mDNSPosix/PosixDaemon.c -text
+258.14/mDNSPosix/ProxyResponder.c -text
+258.14/mDNSPosix/ReadMe.txt -text
+258.14/mDNSPosix/Responder.c -text
+258.14/mDNSPosix/Services.txt -text
+258.14/mDNSPosix/libnss_mdns.8 -text
+258.14/mDNSPosix/mDNSPosix.c -text
+258.14/mDNSPosix/mDNSPosix.h -text
+258.14/mDNSPosix/mDNSUNP.c -text
+258.14/mDNSPosix/mDNSUNP.h -text
+258.14/mDNSPosix/mdnsd.sh -text
+258.14/mDNSPosix/nss_ReadMe.txt -text
+258.14/mDNSPosix/nss_mdns.c -text
+258.14/mDNSPosix/nss_mdns.conf -text
+258.14/mDNSPosix/nss_mdns.conf.5 -text
+258.14/mDNSPosix/parselog.py -text
+258.14/mDNSResponder.sln -text
+258.14/mDNSShared/CommonServices.h -text
+258.14/mDNSShared/DebugServices.c -text
+258.14/mDNSShared/DebugServices.h -text
+258.14/mDNSShared/GenLinkedList.c -text
+258.14/mDNSShared/GenLinkedList.h -text
+258.14/mDNSShared/Java/BaseListener.java -text
+258.14/mDNSShared/Java/BrowseListener.java -text
+258.14/mDNSShared/Java/DNSRecord.java -text
+258.14/mDNSShared/Java/DNSSD.java -text
+258.14/mDNSShared/Java/DNSSDException.java -text
+258.14/mDNSShared/Java/DNSSDRecordRegistrar.java -text
+258.14/mDNSShared/Java/DNSSDRegistration.java -text
+258.14/mDNSShared/Java/DNSSDService.java -text
+258.14/mDNSShared/Java/DomainListener.java -text
+258.14/mDNSShared/Java/JNISupport.c -text
+258.14/mDNSShared/Java/QueryListener.java -text
+258.14/mDNSShared/Java/RegisterListener.java -text
+258.14/mDNSShared/Java/RegisterRecordListener.java -text
+258.14/mDNSShared/Java/ResolveListener.java -text
+258.14/mDNSShared/Java/TXTRecord.java -text
+258.14/mDNSShared/PlatformCommon.c -text
+258.14/mDNSShared/PlatformCommon.h -text
+258.14/mDNSShared/dns-sd.1 -text
+258.14/mDNSShared/dns_sd.h -text
+258.14/mDNSShared/dnsextd.8 -text
+258.14/mDNSShared/dnsextd.c -text
+258.14/mDNSShared/dnsextd.conf -text
+258.14/mDNSShared/dnsextd.h -text
+258.14/mDNSShared/dnsextd_lexer.l -text
+258.14/mDNSShared/dnsextd_parser.y -text
+258.14/mDNSShared/dnssd_clientlib.c -text
+258.14/mDNSShared/dnssd_clientshim.c -text
+258.14/mDNSShared/dnssd_clientstub.c -text
+258.14/mDNSShared/dnssd_ipc.c -text
+258.14/mDNSShared/dnssd_ipc.h -text
+258.14/mDNSShared/mDNS.1 -text
+258.14/mDNSShared/mDNSDebug.c -text
+258.14/mDNSShared/mDNSResponder.8 -text
+258.14/mDNSShared/uds_daemon.c -text
+258.14/mDNSShared/uds_daemon.h -text
+258.14/mDNSVxWorks/README.txt -text
+258.14/mDNSVxWorks/mDNSVxWorks.c -text
+258.14/mDNSVxWorks/mDNSVxWorks.h -text
+258.14/mDNSVxWorks/mDNSVxWorksIPv4Only.c -text
+258.14/mDNSVxWorks/mDNSVxWorksIPv4Only.h -text
+258.14/mDNSWindows/ControlPanel/BrowsingPage.cpp -text
+258.14/mDNSWindows/ControlPanel/BrowsingPage.h -text
+258.14/mDNSWindows/ControlPanel/ConfigDialog.cpp -text
+258.14/mDNSWindows/ControlPanel/ConfigDialog.h -text
+258.14/mDNSWindows/ControlPanel/ConfigPropertySheet.cpp -text
+258.14/mDNSWindows/ControlPanel/ConfigPropertySheet.h -text
+258.14/mDNSWindows/ControlPanel/ControlPanel.cpp -text
+258.14/mDNSWindows/ControlPanel/ControlPanel.def -text
+258.14/mDNSWindows/ControlPanel/ControlPanel.h -text
+258.14/mDNSWindows/ControlPanel/ControlPanel.rc -text
+258.14/mDNSWindows/ControlPanel/ControlPanel.vcproj -text
+258.14/mDNSWindows/ControlPanel/ControlPanelDll.rc -text
+258.14/mDNSWindows/ControlPanel/ControlPanelExe.cpp -text
+258.14/mDNSWindows/ControlPanel/ControlPanelExe.h -text
+258.14/mDNSWindows/ControlPanel/ControlPanelExe.rc -text
+258.14/mDNSWindows/ControlPanel/ControlPanelExe.vcproj -text
+258.14/mDNSWindows/ControlPanel/ControlPanelLocRes.rc -text
+258.14/mDNSWindows/ControlPanel/ControlPanelLocRes.vcproj -text
+258.14/mDNSWindows/ControlPanel/ControlPanelRes.rc -text
+258.14/mDNSWindows/ControlPanel/ControlPanelRes.vcproj -text
+258.14/mDNSWindows/ControlPanel/FourthPage.cpp -text
+258.14/mDNSWindows/ControlPanel/FourthPage.h -text
+258.14/mDNSWindows/ControlPanel/RegistrationPage.cpp -text
+258.14/mDNSWindows/ControlPanel/RegistrationPage.h -text
+258.14/mDNSWindows/ControlPanel/SecondPage.cpp -text
+258.14/mDNSWindows/ControlPanel/SecondPage.h -text
+258.14/mDNSWindows/ControlPanel/ServicesPage.cpp -text
+258.14/mDNSWindows/ControlPanel/ServicesPage.h -text
+258.14/mDNSWindows/ControlPanel/SharedSecret.cpp -text
+258.14/mDNSWindows/ControlPanel/SharedSecret.h -text
+258.14/mDNSWindows/ControlPanel/res/ControlPanel.dll.manifest -text
+258.14/mDNSWindows/ControlPanel/res/ControlPanel.exe.manifest -text
+258.14/mDNSWindows/ControlPanel/res/ControlPanel.manifest -text
+258.14/mDNSWindows/ControlPanel/res/ControlPanel.rc2 -text
+258.14/mDNSWindows/ControlPanel/res/ControlPanel64.manifest -text
+258.14/mDNSWindows/ControlPanel/res/EnergySaver.ico -text svneol=unset#unset
+258.14/mDNSWindows/ControlPanel/res/controlpanel.ico -text svneol=unset#unset
+258.14/mDNSWindows/ControlPanel/res/failure.ico -text svneol=unset#unset
+258.14/mDNSWindows/ControlPanel/res/success.ico -text svneol=unset#unset
+258.14/mDNSWindows/ControlPanel/resource.h -text
+258.14/mDNSWindows/ControlPanel/stdafx.cpp -text
+258.14/mDNSWindows/ControlPanel/stdafx.h -text
+258.14/mDNSWindows/DLL.NET/AssemblyInfo.cpp -text
+258.14/mDNSWindows/DLL.NET/PString.h -text
+258.14/mDNSWindows/DLL.NET/Stdafx.cpp -text
+258.14/mDNSWindows/DLL.NET/Stdafx.h -text
+258.14/mDNSWindows/DLL.NET/dnssd_NET.cpp -text
+258.14/mDNSWindows/DLL.NET/dnssd_NET.h -text
+258.14/mDNSWindows/DLL.NET/dnssd_NET.ico -text svneol=unset#unset
+258.14/mDNSWindows/DLL.NET/dnssd_NET.rc -text
+258.14/mDNSWindows/DLL.NET/dnssd_NET.vcproj -text
+258.14/mDNSWindows/DLL.NET/resource.h -text
+258.14/mDNSWindows/DLL/dll.aps -text svneol=unset#unset
+258.14/mDNSWindows/DLL/dll.rc -text
+258.14/mDNSWindows/DLL/dllmain.c -text
+258.14/mDNSWindows/DLL/dnssd.def -text
+258.14/mDNSWindows/DLL/dnssd.vcproj -text
+258.14/mDNSWindows/DLL/resource.h -text
+258.14/mDNSWindows/DLLStub/DLLStub.cpp -text
+258.14/mDNSWindows/DLLStub/DLLStub.h -text
+258.14/mDNSWindows/DLLStub/DLLStub.vcproj -text
+258.14/mDNSWindows/DLLX/DLLX.cpp -text
+258.14/mDNSWindows/DLLX/DLLX.def -text
+258.14/mDNSWindows/DLLX/DLLX.idl -text
+258.14/mDNSWindows/DLLX/DLLX.rc -text
+258.14/mDNSWindows/DLLX/DLLX.rgs -text
+258.14/mDNSWindows/DLLX/DLLX.vcproj -text
+258.14/mDNSWindows/DLLX/DNSSD.cpp -text
+258.14/mDNSWindows/DLLX/DNSSDEventManager.cpp -text
+258.14/mDNSWindows/DLLX/DNSSDEventManager.h -text
+258.14/mDNSWindows/DLLX/DNSSDEventManager.rgs -text
+258.14/mDNSWindows/DLLX/DNSSDRecord.cpp -text
+258.14/mDNSWindows/DLLX/DNSSDRecord.h -text
+258.14/mDNSWindows/DLLX/DNSSDRecord.rgs -text
+258.14/mDNSWindows/DLLX/DNSSDService.cpp -text
+258.14/mDNSWindows/DLLX/DNSSDService.h -text
+258.14/mDNSWindows/DLLX/DNSSDService.rgs -text
+258.14/mDNSWindows/DLLX/StringServices.cpp -text
+258.14/mDNSWindows/DLLX/StringServices.h -text
+258.14/mDNSWindows/DLLX/TXTRecord.cpp -text
+258.14/mDNSWindows/DLLX/TXTRecord.h -text
+258.14/mDNSWindows/DLLX/TXTRecord.rgs -text
+258.14/mDNSWindows/DLLX/_IDNSSDEvents_CP.h -text
+258.14/mDNSWindows/DLLX/dlldatax.c -text
+258.14/mDNSWindows/DLLX/dlldatax.h -text
+258.14/mDNSWindows/DLLX/resource.h -text
+258.14/mDNSWindows/DLLX/stdafx.h -text
+258.14/mDNSWindows/DNSServiceBrowser/Windows/ApplicationVS2002.sln -text
+258.14/mDNSWindows/DNSServiceBrowser/Windows/ApplicationVS2002.vcproj -text
+258.14/mDNSWindows/DNSServiceBrowser/Windows/ApplicationVS2003.sln -text
+258.14/mDNSWindows/DNSServiceBrowser/Windows/ApplicationVS2003.vcproj -text
+258.14/mDNSWindows/DNSServiceBrowser/Windows/Resources/Application.ico -text svneol=unset#unset
+258.14/mDNSWindows/DNSServiceBrowser/Windows/Resources/Application.rc -text
+258.14/mDNSWindows/DNSServiceBrowser/Windows/Resources/Application.rc2 -text
+258.14/mDNSWindows/DNSServiceBrowser/Windows/Resources/Resource.h -text
+258.14/mDNSWindows/DNSServiceBrowser/Windows/Sources/AboutDialog.cpp -text
+258.14/mDNSWindows/DNSServiceBrowser/Windows/Sources/AboutDialog.h -text
+258.14/mDNSWindows/DNSServiceBrowser/Windows/Sources/Application.cpp -text
+258.14/mDNSWindows/DNSServiceBrowser/Windows/Sources/Application.h -text
+258.14/mDNSWindows/DNSServiceBrowser/Windows/Sources/ChooserDialog.cpp -text
+258.14/mDNSWindows/DNSServiceBrowser/Windows/Sources/ChooserDialog.h -text
+258.14/mDNSWindows/DNSServiceBrowser/Windows/Sources/LoginDialog.cpp -text
+258.14/mDNSWindows/DNSServiceBrowser/Windows/Sources/LoginDialog.h -text
+258.14/mDNSWindows/DNSServiceBrowser/Windows/Sources/StdAfx.cpp -text
+258.14/mDNSWindows/DNSServiceBrowser/Windows/Sources/StdAfx.h -text
+258.14/mDNSWindows/DNSServiceBrowser/WindowsCE/Application.vcc -text
+258.14/mDNSWindows/DNSServiceBrowser/WindowsCE/Application.vcp -text
+258.14/mDNSWindows/DNSServiceBrowser/WindowsCE/Application.vcw -text
+258.14/mDNSWindows/DNSServiceBrowser/WindowsCE/Resources/Application.ico -text svneol=unset#unset
+258.14/mDNSWindows/DNSServiceBrowser/WindowsCE/Resources/Application.rc -text
+258.14/mDNSWindows/DNSServiceBrowser/WindowsCE/Resources/Application.rc2 -text
+258.14/mDNSWindows/DNSServiceBrowser/WindowsCE/Resources/newres.h -text
+258.14/mDNSWindows/DNSServiceBrowser/WindowsCE/Resources/resource.h -text
+258.14/mDNSWindows/DNSServiceBrowser/WindowsCE/Sources/Application.cpp -text
+258.14/mDNSWindows/DNSServiceBrowser/WindowsCE/Sources/Application.h -text
+258.14/mDNSWindows/DNSServiceBrowser/WindowsCE/Sources/BrowserDialog.cpp -text
+258.14/mDNSWindows/DNSServiceBrowser/WindowsCE/Sources/BrowserDialog.h -text
+258.14/mDNSWindows/DNSServiceBrowser/WindowsCE/Sources/StdAfx.cpp -text
+258.14/mDNSWindows/DNSServiceBrowser/WindowsCE/Sources/StdAfx.h -text
+258.14/mDNSWindows/Java/Java.vcproj -text
+258.14/mDNSWindows/Java/jdns_sd.rc -text
+258.14/mDNSWindows/Java/makefile -text
+258.14/mDNSWindows/Java/makefile64 -text
+258.14/mDNSWindows/NSPTool/NSPTool.aps -text svneol=unset#unset
+258.14/mDNSWindows/NSPTool/NSPTool.c -text
+258.14/mDNSWindows/NSPTool/NSPTool.rc -text
+258.14/mDNSWindows/NSPTool/NSPTool.vcproj -text
+258.14/mDNSWindows/NSPTool/Prefix.h -text
+258.14/mDNSWindows/NSPTool/resource.h -text
+258.14/mDNSWindows/PosixCompat.c -text
+258.14/mDNSWindows/PosixCompat.h -text
+258.14/mDNSWindows/README.txt -text
+258.14/mDNSWindows/RegNames.h -text
+258.14/mDNSWindows/Secret.c -text
+258.14/mDNSWindows/Secret.h -text
+258.14/mDNSWindows/SystemService/EventLog.mc -text
+258.14/mDNSWindows/SystemService/EventLogMessages.bin -text svneol=unset#unset
+258.14/mDNSWindows/SystemService/Firewall.cpp -text
+258.14/mDNSWindows/SystemService/Firewall.h -text
+258.14/mDNSWindows/SystemService/Prefix.h -text
+258.14/mDNSWindows/SystemService/Service.aps -text svneol=unset#unset
+258.14/mDNSWindows/SystemService/Service.c -text
+258.14/mDNSWindows/SystemService/Service.h -text
+258.14/mDNSWindows/SystemService/Service.mcp -text svneol=unset#unset
+258.14/mDNSWindows/SystemService/Service.rc -text
+258.14/mDNSWindows/SystemService/Service.vcproj -text
+258.14/mDNSWindows/SystemService/main.c -text
+258.14/mDNSWindows/SystemService/res/mDNSResponder.manifest -text
+258.14/mDNSWindows/SystemService/res/mDNSResponder64.manifest -text
+258.14/mDNSWindows/SystemService/resource.h -text
+258.14/mDNSWindows/SystemService/resrc1.h -text
+258.14/mDNSWindows/VPCDetect.cpp -text
+258.14/mDNSWindows/VPCDetect.h -text
+258.14/mDNSWindows/WinServices.cpp -text
+258.14/mDNSWindows/WinServices.h -text
+258.14/mDNSWindows/WinVersRes.h -text
+258.14/mDNSWindows/isocode.h -text
+258.14/mDNSWindows/loclibrary.c -text
+258.14/mDNSWindows/loclibrary.h -text
+258.14/mDNSWindows/mDNSWin32.c -text
+258.14/mDNSWindows/mDNSWin32.h -text
+258.14/mDNSWindows/mdnsNSP/ReadMe.txt -text
+258.14/mDNSWindows/mdnsNSP/mdnsNSP.aps -text svneol=unset#unset
+258.14/mDNSWindows/mdnsNSP/mdnsNSP.c -text
+258.14/mDNSWindows/mdnsNSP/mdnsNSP.def -text
+258.14/mDNSWindows/mdnsNSP/mdnsNSP.rc -text
+258.14/mDNSWindows/mdnsNSP/mdnsNSP.vcproj -text
+258.14/mDNSWindows/mdnsNSP/resource.h -text
 320/Clients/BonjourExample/BonjourExample.cpp -text
 320/Clients/BonjourExample/BonjourExample.sln -text
 320/Clients/BonjourExample/BonjourExample.vcproj -text
