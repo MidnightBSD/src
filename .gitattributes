@@ -1,0 +1,21 @@
+* text=auto !eol
+/Makefile -text
+/africa -text
+/antarctica -text
+/asia -text
+/australasia -text
+/backward -text
+/etcetera -text
+/europe -text
+/factory -text
+/iso3166.tab -text
+/leapseconds -text
+/northamerica -text
+/pacificnew -text
+/solar87 -text
+/solar88 -text
+/solar89 -text
+/southamerica -text
+/systemv -text
+/yearistype.sh -text
+/zone.tab -text
