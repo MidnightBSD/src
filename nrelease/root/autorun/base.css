@@ -1,0 +1,215 @@
+/* CSS Document for Live CD
+   $MidnightBSD$
+*/
+
+@import "font-normal.css";
+
+body {
+	color: black; 
+	background: white;
+	margin: 0;
+	font: 12px Helvetica, Arial, sans-serif;
+	letter-spacing: 1px;
+	line-height: 1.3em;
+}
+
+h2 { 
+    color: #6dcff6;
+}
+
+h3 {
+	color: #6dcff6;
+	background-color: transparent;
+}
+
+a:link {
+	color: blue;
+	background-color: transparent;
+	text-decoration: underline;
+}
+
+a:visited {
+	color: navy;
+	background-color: transparent;
+	text-decoration: underline;
+}
+
+a:active {
+	color: #6dcff6;
+	background-color: transparent;
+	text-decoration: underline;
+}
+
+a:hover { 
+	color: #6dcff6;
+	background-color: transparent;
+	text-decoration: underline;
+}
+
+img { 
+	border: none;
+}
+
+#header {
+	width: 100%; 
+	height: 90px; 
+	background-color: #6dcff6; 
+	color: white;
+    margin: 0; 
+	padding-bottom: 0;
+}
+
+#content {
+    background: white; 
+	width: 700px; 
+	margin: 0;
+	margin-left: 160px; 
+	padding: 20px;
+}
+
+#logo {
+	margin-top: 20px; 
+	margin-left: 100px;
+}
+
+#rnav {
+	float: right; 
+	top: 0; 
+	left: 0;
+}
+
+#topnav {
+  text-align: left;
+  color: white;
+  background: black;
+  font-size: 0.9em;
+  margin: 0;
+  padding: 0;
+  height: 2em;
+  overflow: visible;
+  margin-top: 7px;
+}
+
+#topnavlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  padding-left: 140px;
+  padding-top: 1px;
+  height: 2em;
+}
+
+#topnavlist li {
+  padding: 0 1em 0 1.2em;
+  display: inline;
+  border-left: 1px solid #B4B4B4;
+}
+
+#topnavlist li a {
+  color: white;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+#topnavlist li:first-child {
+  border-left: 0;
+  padding-left: 0;
+}
+
+/* Category Navigation */
+/*
+#sidenav, #sidenav ul, #sidenav ul ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 1.0em;
+}
+
+#sidenav {
+  width: 150px;
+  background-color: #eee;
+  border: 1px solid #D4D4D4;
+}
+
+#sidenav ul {
+  padding: 8px 4px 12px 4px;
+}
+
+#sidenav ul ul {
+  background: none;
+  background-color: #eee;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+#sidenav ul ul li {
+  background: none;
+  border: none;
+}
+
+#sidenav ul li {
+  border-bottom: 1px solid #eee;
+  margin: 0;
+  padding-left: 12px;
+  background-image: url(../images/blt_red_arrow.png);
+  background-repeat: no-repeat;
+  background-position: 12px 0.65em;
+}
+
+#sidenav ul li.active {
+  font-weight: bold;
+}
+
+#sidenav ul li.active span {
+  display: none;
+}
+
+#sidenav ul li a {
+  display: block;
+  color: #990000;
+  text-decoration: underline;
+  padding: 3px 5px 3px 12px;
+  margin: 0;
+}
+
+#sidenav ul ul li a.active {
+  font-weight: bold;
+}
+
+#sidenav ul ul li a {
+  display: block;
+  padding-left: 12px;
+  margin: 0;
+}
+
+#sidenav ul li a:hover {
+  color: #000;
+}
+
+
+#sidewrap {
+  float: left;
+  width: 166px;
+  margin-top: 15px;
+  margin-right: -170px;
+}
+
+#contentwrap {
+  margin-left: 170px;
+  padding-top: 15px;
+}
+*/
+
+#footer {
+    border-top: thin dotted silver;
+	width: 700px; 
+	/*background-color: #6dcff6; */
+	color: black;
+    margin: 0; 
+    margin-left: 175px;
+    margin-top; 10px;
+	padding: 5px; 
+	left: 0;
+}
+

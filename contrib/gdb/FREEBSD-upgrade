@@ -1,0 +1,9 @@
+$FreeBSD: src/contrib/gdb/FREEBSD-upgrade,v 1.3 2004/06/25 05:04:09 marcel Exp $
+
+To strip down a new version of gdb for import, extract the files like this:
+
+    tar xzf gdb-6.1.1.tar.gz -X FREEBSD-Xlist
+
+After importing, remove files on the vendor branch that are not part of the
+new gdb version (if any).  Then remove files from HEAD that are not part of
+the new version (if applicable).
