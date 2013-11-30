@@ -1,1 +1,18 @@
 * text=auto !eol
+4.4/Makefile -text
+4.4/buffer.c -text
+4.4/client.c -text
+4.4/config.c -text
+4.4/imsg.c -text
+4.4/log.c -text
+4.4/ntp.c -text
+4.4/ntp.h -text
+4.4/ntp_msg.c -text
+4.4/ntpd.8 -text
+4.4/ntpd.c -text
+4.4/ntpd.conf.5 -text
+4.4/ntpd.h -text
+4.4/parse.y -text
+4.4/sensors.c -text
+4.4/server.c -text
+4.4/util.c -text
