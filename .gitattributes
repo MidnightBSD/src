@@ -1,1 +1,27 @@
 * text=auto !eol
+R48/Build.sh -text
+R48/check.pl -text
+R48/check.t -text
+R48/dot.mkshrc -text
+R48/edit.c -text
+R48/emacsfn.h -text
+R48/eval.c -text
+R48/exec.c -text
+R48/expr.c -text
+R48/funcs.c -text
+R48/histrap.c -text
+R48/jobs.c -text
+R48/lalloc.c -text
+R48/lex.c -text
+R48/lksh.1 -text
+R48/main.c -text
+R48/misc.c -text
+R48/mksh.1 -text
+R48/sh.h -text
+R48/sh_flags.h -text
+R48/shf.c -text
+R48/strlcpy.c -text
+R48/syn.c -text
+R48/tree.c -text
+R48/var.c -text
+R48/var_spec.h -text
