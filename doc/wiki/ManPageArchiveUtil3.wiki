@@ -1,0 +1,216 @@
+#summary ARCHIVE_UTIL 3 manual page
+== NAME ==
+*archive_clear_error*,
+*archive_compression*,
+*archive_compression_name*,
+*archive_copy_error*,
+*archive_errno*,
+*archive_error_string*,
+*archive_file_count*,
+*archive_filter_code*,
+*archive_filter_count*,
+*archive_filter_name*,
+*archive_format*,
+*archive_format_name*,
+*archive_position*,
+*archive_set_error*
+- libarchive utility functions
+== SYNOPSIS ==
+*#include <archive.h>*
+<br>
+*void*
+<br>
+*archive_clear_error*(_struct archive `*`_);
+<br>
+*int*
+<br>
+*archive_compression*(_struct archive `*`_);
+<br>
+*const char `*`*
+<br>
+*archive_compression_name*(_struct archive `*`_);
+<br>
+*void*
+<br>
+*archive_copy_error*(_struct archive `*`_, _struct archive `*`_);
+<br>
+*int*
+<br>
+*archive_errno*(_struct archive `*`_);
+<br>
+*const char `*`*
+<br>
+*archive_error_string*(_struct archive `*`_);
+<br>
+*int*
+<br>
+*archive_file_count*(_struct archive `*`_);
+<br>
+*int*
+<br>
+*archive_filter_code*(_struct archive `*`_, _int_);
+<br>
+*int*
+<br>
+*archive_filter_count*(_struct archive `*`_, _int_);
+<br>
+*const char `*`*
+<br>
+*archive_filter_name*(_struct archive `*`_, _int_);
+<br>
+*int*
+<br>
+*archive_format*(_struct archive `*`_);
+<br>
+*const char `*`*
+<br>
+*archive_format_name*(_struct archive `*`_);
+<br>
+*int64_t*
+<br>
+*archive_position*(_struct archive `*`_, _int_);
+<br>
+*void*
+<br>
+*archive_set_error*(_struct archive `*`_, _int error_code_, _const char `*`fmt_, _..._);
+== DESCRIPTION ==
+These functions provide access to various information about the
+*struct archive*
+object used in the
+*libarchive*(3)
+library.
+<dl>
+<dt>*archive_clear_error*()</dt><dd>
+Clears any error information left over from a previous call.
+Not generally used in client code.
+</dd><dt>*archive_compression*()</dt><dd>
+Synonym for
+*archive_filter_code(a,*(_0)_).
+</dd><dt>*archive_compression_name*()</dt><dd>
+Synonym for
+*archive_filter_name(a,*(_0)_).
+</dd><dt>*archive_copy_error*()</dt><dd>
+Copies error information from one archive to another.
+</dd><dt>*archive_errno*()</dt><dd>
+Returns a numeric error code (see
+*errno*(2))
+indicating the reason for the most recent error return.
+Note that this can not be reliably used to detect whether an
+error has occurred.
+It should be used only after another libarchive function
+has returned an error status.
+</dd><dt>*archive_error_string*()</dt><dd>
+Returns a textual error message suitable for display.
+The error message here is usually more specific than that
+obtained from passing the result of
+*archive_errno*()
+to
+*strerror*(3).
+</dd><dt>*archive_file_count*()</dt><dd>
+Returns a count of the number of files processed by this archive object.
+The count is incremented by calls to
+*archive_write_header*(3)
+or
+*archive_read_next_header*(3).
+</dd><dt>*archive_filter_code*()</dt><dd>
+Returns a numeric code identifying the indicated filter.
+See
+*archive_filter_count*()
+for details of the numbering.
+</dd><dt>*archive_filter_count*()</dt><dd>
+Returns the number of filters in the current pipeline.
+For read archive handles, these filters are added automatically
+by the automatic format detection.
+For write archive handles, these filters are added by calls to the various
+*archive_write_add_filter_XXX*()
+functions.
+Filters in the resulting pipeline are numbered so that filter 0
+is the filter closest to the format handler.
+As a convenience, functions that expect a filter number will
+accept -1 as a synonym for the highest-numbered filter.
+
+For example, when reading a uuencoded gzipped tar archive, there
+are three filters:
+filter 0 is the gunzip filter,
+filter 1 is the uudecode filter,
+and filter 2 is the pseudo-filter that wraps the archive read functions.
+In this case, requesting
+*archive_position(a,*(_-1)_)
+would be a synonym for
+*archive_position(a,*(_2)_)
+which would return the number of bytes currently read from the archive, while
+*archive_position(a,*(_1)_)
+would return the number of bytes after uudecoding, and
+*archive_position(a,*(_0)_)
+would return the number of bytes after decompression.
+</dd><dt>*archive_filter_name*()</dt><dd>
+Returns a textual name identifying the indicated filter.
+See
+*archive_filter_count*()
+for details of the numbering.
+</dd><dt>*archive_format*()</dt><dd>
+Returns a numeric code indicating the format of the current
+archive entry.
+This value is set by a successful call to
+*archive_read_next_header*().
+Note that it is common for this value to change from
+entry to entry.
+For example, a tar archive might have several entries that
+utilize GNU tar extensions and several entries that do not.
+These entries will have different format codes.
+</dd><dt>*archive_format_name*()</dt><dd>
+A textual description of the format of the current entry.
+</dd><dt>*archive_position*()</dt><dd>
+Returns the number of bytes read from or written to the indicated filter.
+In particular,
+*archive_position(a,*(_0)_)
+returns the number of bytes read or written by the format handler, while
+*archive_position(a,*(_-1)_)
+returns the number of bytes read or written to the archive.
+See
+*archive_filter_count*()
+for details of the numbering here.
+</dd><dt>*archive_set_error*()</dt><dd>
+Sets the numeric error code and error description that will be returned
+by
+*archive_errno*()
+and
+*archive_error_string*().
+This function should be used within I/O callbacks to set system-specific
+error codes and error descriptions.
+This function accepts a printf-like format string and arguments.
+However, you should be careful to use only the following printf
+format specifiers:
+"%c",
+"%d",
+"%jd",
+"%jo",
+"%ju",
+"%jx",
+"%ld",
+"%lo",
+"%lu",
+"%lx",
+"%o",
+"%u",
+"%s",
+"%x",
+"%%".
+Field-width specifiers and other printf features are
+not uniformly supported and should not be used.
+</dd></dl>
+== SEE ALSO ==
+*archive_read*(3),
+*archive_write*(3),
+*libarchive*(3),
+*printf*(3)
+== HISTORY ==
+The
+*libarchive*
+library first appeared in
+FreeBSD 5.3.
+== AUTHORS ==
+The
+*libarchive*
+library was written by
+Tim Kientzle  <kientzle@acm.org.>

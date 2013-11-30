@@ -1,0 +1,122 @@
+#summary ARCHIVE_ENTRY 3 manual page
+== NAME ==
+*archive_entry_clear*,
+*archive_entry_clone*,
+*archive_entry_free*,
+*archive_entry_new*,
+- functions for managing archive entry descriptions
+== SYNOPSIS ==
+*#include <archive_entry.h>*
+<br>
+*struct archive_entry `*`*
+<br>
+*archive_entry_clear*(_struct archive_entry `*`_);
+<br>
+*struct archive_entry `*`*
+<br>
+*archive_entry_clone*(_struct archive_entry `*`_);
+<br>
+*void*
+<br>
+*archive_entry_free*(_struct archive_entry `*`_);
+<br>
+*struct archive_entry `*`*
+<br>
+*archive_entry_new*(_void_);
+== DESCRIPTION ==
+These functions create and manipulate data objects that
+represent entries within an archive.
+You can think of a
+*struct archive_entry*
+as a heavy-duty version of
+*struct stat :*
+it includes everything from
+*struct stat*
+plus associated pathname, textual group and user names, etc.
+These objects are used by
+*libarchive*(3)
+to represent the metadata associated with a particular
+entry in an archive.
+=== Create and Destroy===
+There are functions to allocate, destroy, clear, and copy
+_archive_entry_
+objects:
+<dl>
+<dt>*archive_entry_clear*()</dt><dd>
+Erases the object, resetting all internal fields to the
+same state as a newly-created object.
+This is provided to allow you to quickly recycle objects
+without thrashing the heap.
+</dd><dt>*archive_entry_clone*()</dt><dd>
+A deep copy operation; all text fields are duplicated.
+</dd><dt>*archive_entry_free*()</dt><dd>
+Releases the
+*struct archive_entry*
+object.
+</dd><dt>*archive_entry_new*()</dt><dd>
+Allocate and return a blank
+*struct archive_entry*
+object.
+</dd></dl>
+=== Function groups===
+Due to high number of functions, the accessor functions can be found in
+man pages grouped by the purpose.
+<dl>
+<dt>*archive_entry_acl*(3)</dt><dd>
+Access Control List manipulation
+</dd><dt>*archive_entry_paths*(3)</dt><dd>
+Path name manipulation
+</dd><dt>*archive_entry_perms*(3)</dt><dd>
+User, group and mode manipulation
+</dd><dt>*archive_entry_stat*(3)</dt><dd>
+Functions not in the other groups and copying to/from
+_struct_ stat.
+</dd><dt>*archive_entry_time*(3)</dt><dd>
+Time field manipulation
+</dd></dl>
+
+Most of the functions set or read entries in an object.
+Such functions have one of the following forms:
+<dl>
+<dt>*archive_entry_set_XXXX*()</dt><dd>
+Stores the provided data in the object.
+In particular, for strings, the pointer is stored,
+not the referenced string.
+</dd><dt>*archive_entry_copy_XXXX*()</dt><dd>
+As above, except that the referenced data is copied
+into the object.
+</dd><dt>*archive_entry_XXXX*()</dt><dd>
+Returns the specified data.
+In the case of strings, a const-qualified pointer to
+the string is returned.
+</dd></dl>
+String data can be set or accessed as wide character strings
+or normal
+_char_
+strings.
+The functions that use wide character strings are suffixed with
+*`_`w*.
+Note that these are different representations of the same data:
+For example, if you store a narrow string and read the corresponding
+wide string, the object will transparently convert formats
+using the current locale.
+Similarly, if you store a wide string and then store a
+narrow string for the same data, the previously-set wide string will
+be discarded in favor of the new data.
+
+== SEE ALSO ==
+*archive*(3),
+*archive_entry_acl*(3),
+*archive_entry_paths*(3),
+*archive_entry_perms*(3),
+*archive_entry_time*(3)
+== HISTORY ==
+The
+*libarchive*
+library first appeared in
+FreeBSD 5.3.
+== AUTHORS ==
+The
+*libarchive*
+library was written by
+Tim Kientzle  <kientzle@acm.org.>
