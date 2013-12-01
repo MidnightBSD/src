@@ -31,7 +31,7 @@ For example, to trap an interrupt signal, set up a handler like this:
     $SIG{INT} = __PACKAGE__ . "::catch_zap";  
     $SIG{INT} = \&catch_zap;  # best strategy
 
-Prior to Perl 5.7.3 it was necessary to do as little as you possibly
+Prior to Perl 5.8.0 it was necessary to do as little as you possibly
 could in your handler; notice how all we do is set a global variable
 and then raise an exception.  That's because on most systems,
 libraries are not re-entrant; particularly, memory allocation and I/O
@@ -40,24 +40,7 @@ handler could in theory trigger a memory fault and subsequent core
 dump - see L</Deferred Signals (Safe Signals)> below.
 
 The names of the signals are the ones listed out by C<kill -l> on your
-system, or you can retrieve them from the Config module.  Set up an
-@signame list indexed by number to get the name and a %signo hash table
-indexed by name to get the number:
-
-    use Config;
-    defined($Config{sig_name})  || die "No sigs?";
-    foreach $name (split(" ", $Config{sig_name})) {
-        $signo{$name} = $i;
-        $signame[$i]  = $name;
-        $i++;
-    }
-
-So to check whether signal 17 and SIGALRM were the same, do just this:
-
-    print "signal #17 = $signame[17]\n";
-    if ($signo{ALRM}) {
-        print "SIGALRM is $signo{ALRM}\n";
-    }
+system, or you can retrieve them using the CPAN module L<IPC::Signal>.
 
 You may also choose to assign the strings C<"IGNORE"> or C<"DEFAULT"> as
 the handler, in which case Perl will try to discard the signal or do the
@@ -72,19 +55,9 @@ Calling C<wait()> with C<$SIG{CHLD}> set to C<"IGNORE"> usually returns
 C<-1> on such platforms.
 
 Some signals can be neither trapped nor ignored, such as the KILL and STOP
-(but not the TSTP) signals.  One strategy for temporarily ignoring signals
-is to use a local() on that hash element, automatically restoring a
-previous value once your block is exited.  Remember that values created by
-the dynamically-scoped local() are "inherited" by functions called from
-within their caller's scope.
-
-    sub precious {
-        local $SIG{INT} = "IGNORE";
-        more_functions();
-    }
-    sub more_functions {
-        # interrupts still ignored, for now...
-    }
+(but not the TSTP) signals. Note that ignoring signals makes them disappear.
+If you only want them blocked temporarily without them getting lost you'll
+have to use POSIX' sigprocmask.
 
 Sending a signal to a negative process ID means that you send the signal
 to the entire Unix process group.  This code sends a hang-up signal to all
@@ -100,16 +73,17 @@ so it doesn't kill itself:
 
 Another interesting signal to send is signal number zero.  This doesn't
 actually affect a child process, but instead checks whether it's alive
-or has changed its UID.
+or has changed its UIDs.
 
     unless (kill 0 => $kid_pid) {
         warn "something wicked happened to $kid_pid";
     }
 
-When directed at a process whose UID is not identical to that
-of the sending process, signal number zero may fail because
-you lack permission to send the signal, even though the process is alive.
-You may be able to determine the cause of failure using C<%!>.
+Signal number zero may fail because you lack permission to send the
+signal when directed at a process whose real or saved UID is not
+identical to the real or effective UID of the sending process, even
+though the process is alive.  You may be able to determine the cause of
+failure using C<$!> or C<%!>.
 
     unless (kill(0 => $pid) || $!{EPERM}) {
         warn "$pid looks dead";
@@ -120,45 +94,25 @@ handlers:
 
     $SIG{INT} = sub { die "\nOutta here!\n" };
 
-But that will be problematic for the more complicated handlers that need
-to reinstall themselves.  Because Perl's signal mechanism is currently
-based on the signal(3) function from the C library, you may sometimes be so
-unfortunate as to run on systems where that function is "broken"; that
-is, it behaves in the old unreliable SysV way rather than the newer, more
-reasonable BSD and POSIX fashion.  So you'll see defensive people writing
-signal handlers like this:
-
-    sub REAPER {
-        $waitedpid = wait;
-        # loathe SysV: it makes us not only reinstate
-        # the handler, but place it after the wait
-        $SIG{CHLD} = \&REAPER;
-    }
-    $SIG{CHLD} = \&REAPER;
-    # now do something that forks...
-
-or better still:
+SIGCHLD handlers require some special care.  If a second child dies
+while in the signal handler caused by the first death, we won't get
+another signal. So must loop here else we will leave the unreaped child
+as a zombie. And the next time two children die we get another zombie.
+And so on.
 
     use POSIX ":sys_wait_h";
-    sub REAPER {
-        my $child;
-        # If a second child dies while in the signal handler caused by the
-        # first death, we won't get another signal. So must loop here else
-        # we will leave the unreaped child as a zombie. And the next time
-        # two children die we get another zombie. And so on.
-        while (($child = waitpid(-1, WNOHANG)) > 0) {
+    $SIG{CHLD} = sub {
+        while ((my $child = waitpid(-1, WNOHANG)) > 0) {
             $Kid_Status{$child} = $?;
         }
-        $SIG{CHLD} = \&REAPER;  # still loathe SysV
-    }
-    $SIG{CHLD} = \&REAPER;
+    };
     # do something that forks...
 
 Be careful: qx(), system(), and some modules for calling external commands
 do a fork(), then wait() for the result. Thus, your signal handler
-(C<&REAPER> in the example) will be called. Because wait() was already
-called by system() or qx(), the wait() in the signal handler will see no
-more zombies and will therefore block.
+will be called. Because wait() was already called by system() or qx(),
+the wait() in the signal handler will see no more zombies and will
+therefore block.
 
 The best way to prevent this issue is to use waitpid(), as in the following
 example:
@@ -196,8 +150,7 @@ protected within an C<eval{}> block, you set a signal handler to trap
 alarm signals and then schedule to have one delivered to you in some
 number of seconds.  Then try your blocking operation, clearing the alarm
 when it's done but not before you've exited your C<eval{}> block.  If it
-goes off, you'll use die() to jump out of the block, much as you might
-using longjmp() or throw() in other languages.
+goes off, you'll use die() to jump out of the block.
 
 Here's an example:
 
@@ -231,12 +184,6 @@ the process. Many daemons provide this mechanism using a C<SIGHUP>
 signal handler. When you want to tell the daemon to reread the file,
 simply send it the C<SIGHUP> signal.
 
-Not all platforms automatically reinstall their (native) signal
-handlers after a signal delivery.  This means that the handler works
-the first time the signal is sent, only. The solution to this problem
-is to use C<POSIX> signal handlers if available; their behavior
-is well-defined.
-
 The following example implements a simple daemon, which restarts
 itself every time the C<SIGHUP> signal is received. The actual code is
 located in the subroutine C<code()>, which just prints some debugging
@@ -257,16 +204,10 @@ info to show that it works; it should be replaced with the real code.
   my $SELF  = catfile($FindBin::Bin, $script);
 
   # POSIX unmasks the sigprocmask properly
-  my $sigset = POSIX::SigSet->new();
-  my $action = POSIX::SigAction->new("sigHUP_handler",
-                                     $sigset,
-                                     &POSIX::SA_NODEFER);
-  POSIX::sigaction(&POSIX::SIGHUP, $action);
-
-  sub sigHUP_handler {
+  $SIG{HUP} = sub {
       print "got SIGHUP\n";
       exec($SELF, @ARGV)        || die "$0: couldn't restart: $!";
-  }
+  };
 
   code();
 
@@ -283,7 +224,7 @@ info to show that it works; it should be replaced with the real code.
 
 =head2 Deferred Signals (Safe Signals)
 
-Before Perl 5.7.3, installing Perl code to deal with signals exposed you to
+Before Perl 5.8.0, installing Perl code to deal with signals exposed you to
 danger from two things.  First, few system library functions are
 re-entrant.  If the signal interrupts while Perl is executing one function
 (like malloc(3) or printf(3)), and your signal handler then calls the same
@@ -303,14 +244,15 @@ The pragmatic approach was to say "I know the risks, but prefer the
 convenience", and to do anything you wanted in your signal handler,
 and be prepared to clean up core dumps now and again.
 
-Perl 5.7.3 and later avoid these problems by "deferring" signals.  That is,
+Perl 5.8.0 and later avoid these problems by "deferring" signals.  That is,
 when the signal is delivered to the process by the system (to the C code
 that implements Perl) a flag is set, and the handler returns immediately.
 Then at strategic "safe" points in the Perl interpreter (e.g. when it is
 about to execute a new opcode) the flags are checked and the Perl level
 handler from %SIG is executed. The "deferred" scheme allows much more
 flexibility in the coding of signal handlers as we know the Perl
-interpreter is in a safe state, and that we are not in a system library function when the handler is called.  However the implementation does
+interpreter is in a safe state, and that we are not in a system library
+function when the handler is called.  However the implementation does
 differ from previous Perls in the following ways:
 
 =over 4
@@ -351,7 +293,7 @@ that you want to be able to break into with signals. (The C<:perlio> layer
 checks the signal flags and calls %SIG handlers before resuming IO
 operation.)
 
-The default in Perl 5.7.3 and later is to automatically use
+The default in Perl 5.8.0 and later is to automatically use
 the C<:perlio> layer.
 
 Note that it is not advisable to access a file handle within a signal
@@ -372,10 +314,9 @@ Instead of setting C<$SIG{ALRM}>:
 
 try something like the following:
 
-    use POSIX qw(SIGALRM);
-    POSIX::sigaction(SIGALRM,
-                     POSIX::SigAction->new(sub { die "alarm" }))
-            || die "Error setting SIGALRM handler: $!\n";
+  use POSIX qw(SIGALRM);
+  POSIX::sigaction(SIGALRM, POSIX::SigAction->new(sub { die "alarm" }))
+          || die "Error setting SIGALRM handler: $!\n";
 
 Another way to disable the safe signal behavior locally is to use
 the C<Perl::Unsafe::Signals> module from CPAN, which affects
@@ -387,7 +328,7 @@ On systems that supported it, older versions of Perl used the
 SA_RESTART flag when installing %SIG handlers.  This meant that
 restartable system calls would continue rather than returning when
 a signal arrived.  In order to deliver deferred signals promptly,
-Perl 5.7.3 and later do I<not> use SA_RESTART.  Consequently, 
+Perl 5.8.0 and later do I<not> use SA_RESTART.  Consequently, 
 restartable system calls can fail (with $! set to C<EINTR>) in places
 where they previously would have succeeded.
 
@@ -399,7 +340,7 @@ C<waitpid> calls will always be retried.
 
 Certain signals like SEGV, ILL, and BUS are generated by virtual memory
 addressing errors and similar "faults". These are normally fatal: there is
-little a Perl-level handler can do with them.  So Perl now delivers them
+little a Perl-level handler can do with them.  So Perl delivers them
 immediately rather than attempting to defer them.
 
 =item Signals triggered by operating system state
@@ -580,7 +521,7 @@ output doesn't wind up on the user's terminal.
         open(STDOUT, "> /dev/null")     || die "can't write to /dev/null: $!";
         defined(my $pid = fork())       || die "can't fork: $!";
         exit if $pid;                   # non-zero now means I am the parent
-        (setsid() != -1)                || die "Can't start a new session: $!" 
+        (setsid() != -1)                || die "Can't start a new session: $!";
         open(STDERR, ">&STDOUT")        || die "can't dup stdout: $!";
     }
 
@@ -885,7 +826,7 @@ reopen the appropriate handles to STDIN and STDOUT and call other processes.
         close PARENT_WTR;
         print CHILD_WTR "Parent Pid $$ is sending this\n";
         chomp($line = <CHILD_RDR>);
-        print "Parent Pid $$ just read this: `$line'\n";
+        print "Parent Pid $$ just read this: '$line'\n";
         close CHILD_RDR; close CHILD_WTR;
         waitpid($pid, 0);
     } else {
@@ -893,7 +834,7 @@ reopen the appropriate handles to STDIN and STDOUT and call other processes.
         close CHILD_RDR; 
         close CHILD_WTR;
         chomp($line = <PARENT_RDR>);
-        print "Child Pid $$ just read this: `$line'\n";
+        print "Child Pid $$ just read this: '$line'\n";
         print PARENT_WTR "Child Pid $$ is sending this\n";
         close PARENT_RDR; 
         close PARENT_WTR;
@@ -923,7 +864,7 @@ have the socketpair() system call, it will do this all for you.
         close PARENT;
         print CHILD "Parent Pid $$ is sending this\n";
         chomp($line = <CHILD>);
-        print "Parent Pid $$ just read this: `$line'\n";
+        print "Parent Pid $$ just read this: '$line'\n";
         close CHILD;
         waitpid($pid, 0);
     } else {
@@ -1155,7 +1096,7 @@ living dead.
 Within the while loop we call accept() and check to see if it returns
 a false value.  This would normally indicate a system error needs
 to be reported.  However, the introduction of safe signals (see
-L</Deferred Signals (Safe Signals)> above) in Perl 5.7.3 means that
+L</Deferred Signals (Safe Signals)> above) in Perl 5.8.0 means that
 accept() might also be interrupted when the process receives a signal.
 This typically happens when one of the forked subprocesses exits and
 notifies the parent process with a CHLD signal.  
@@ -1336,10 +1277,8 @@ as a Unix-domain client and connects to your private server.
 =head1 TCP Clients with IO::Socket
 
 For those preferring a higher-level interface to socket programming, the
-IO::Socket module provides an object-oriented approach.  IO::Socket has
-been included in the standard Perl distribution ever since Perl 5.004.  If
-you're running an earlier version of Perl (in which case, how are you
-reading this manpage?), just fetch IO::Socket from CPAN, where you'll also
+IO::Socket module provides an object-oriented approach.  If for some reason
+you lack this module, you can just fetch IO::Socket from CPAN, where you'll also
 find modules providing easy interfaces to the following systems: DNS, FTP,
 Ident (RFC 931), NIS and NISPlus, NNTP, Ping, POP3, SMTP, SNMP, SSLeay,
 Telnet, and Time--to name just a few.
@@ -1746,7 +1685,7 @@ Here's a small example showing shared memory usage.
     print "read : '$buff'\n";
 
     # the buffer of shmread is zero-character end-padded.
-    substr($buff, index($buff, "\0")) = "":
+    substr($buff, index($buff, "\0")) = "";
     print "un" unless $buff eq $message;
     print "swell\n";
 
@@ -1759,8 +1698,8 @@ Here's an example of a semaphore:
 
     $IPC_KEY = 1234;
     $id = semget($IPC_KEY, 10, 0666 | IPC_CREAT);
-    defined($id)                    || die "shmget: $!";
-    print "shm key $id\n";
+    defined($id)                    || die "semget: $!";
+    print "sem id $id\n";
 
 Put this code in a separate file to be run in more than one process.
 Call the file F<take>:
@@ -1769,7 +1708,7 @@ Call the file F<take>:
 
     $IPC_KEY = 1234;
     $id = semget($IPC_KEY, 0, 0);
-    defined($id)                    || die "shmget: $!";
+    defined($id)                    || die "semget: $!";
 
     $semnum  = 0;
     $semflag = 0;
@@ -1807,8 +1746,7 @@ Call this file F<give>:
     semop($id, $opstring)   || die "semop: $!";
 
 The SysV IPC code above was written long ago, and it's definitely
-clunky looking.  For a more modern look, see the IPC::SysV module
-which is included with Perl starting from Perl 5.005.
+clunky looking.  For a more modern look, see the IPC::SysV module.
 
 A small example demonstrating SysV message queues:
 

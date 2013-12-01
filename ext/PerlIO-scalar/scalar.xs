@@ -6,6 +6,9 @@
 
 #include "perliol.h"
 
+static const char code_point_warning[] =
+ "Strings with code points over 0xFF may not be mapped into in-memory file handles\n";
+
 typedef struct {
     struct _PerlIO base;	/* Base "class" info */
     SV *var;
@@ -52,6 +55,14 @@ PerlIOScalar_pushed(pTHX_ PerlIO * f, const char *mode, SV * arg,
 	sv_force_normal(s->var);
 	SvCUR_set(s->var, 0);
     }
+    if (SvUTF8(s->var) && !sv_utf8_downgrade(s->var, TRUE)) {
+	if (ckWARN(WARN_UTF8))
+	    Perl_warner(aTHX_ packWARN(WARN_UTF8), code_point_warning);
+	SETERRNO(EINVAL, SS_IVCHAN);
+	SvREFCNT_dec(s->var);
+	s->var = Nullsv;
+	return -1;
+    }
     if ((PerlIOBase(f)->flags) & PERLIO_F_APPEND)
     {
 	sv_force_normal(s->var);
@@ -93,11 +104,6 @@ IV
 PerlIOScalar_seek(pTHX_ PerlIO * f, Off_t offset, int whence)
 {
     PerlIOScalar *s = PerlIOSelf(f, PerlIOScalar);
-    STRLEN oldcur;
-    STRLEN newlen;
-
-    SvGETMAGIC(s->var);
-    oldcur = SvCUR(s->var);
 
     switch (whence) {
     case SEEK_SET:
@@ -107,8 +113,12 @@ PerlIOScalar_seek(pTHX_ PerlIO * f, Off_t offset, int whence)
 	s->posn = offset + s->posn;
 	break;
     case SEEK_END:
-	s->posn = offset + SvCUR(s->var);
+      {
+	STRLEN oldcur;
+	(void)SvPV(s->var, oldcur);
+	s->posn = offset + oldcur;
 	break;
+      }
     }
     if (s->posn < 0) {
         if (ckWARN(WARN_LAYER))
@@ -116,17 +126,6 @@ PerlIOScalar_seek(pTHX_ PerlIO * f, Off_t offset, int whence)
 	SETERRNO(EINVAL, SS_IVCHAN);
 	return -1;
     }
-    newlen = (STRLEN) s->posn;
-    if (newlen > oldcur) {
-	(void) SvGROW(s->var, newlen);
-	Zero(SvPVX(s->var) + oldcur, newlen - oldcur, char);
-	/* No SvCUR_set(), though.  This is just a seek, not a write. */
-    }
-    else if (!SvPVX(s->var)) {
-	/* ensure there's always a character buffer */
-	(void)SvGROW(s->var,1);
-    }
-    SvPOK_on(s->var);
     return 0;
 }
 
@@ -155,6 +154,17 @@ PerlIOScalar_read(pTHX_ PerlIO *f, void *vbuf, Size_t count)
 	STRLEN len;
 	I32 got;
 	p = SvPV(sv, len);
+	if (SvUTF8(sv)) {
+	    if (sv_utf8_downgrade(sv, TRUE)) {
+	        p = SvPV_nomg(sv, len);
+	    }
+	    else {
+	        if (ckWARN(WARN_UTF8))
+		    Perl_warner(aTHX_ packWARN(WARN_UTF8), code_point_warning);
+	        SETERRNO(EINVAL, SS_IVCHAN);
+	        return -1;
+	    }
+	}
 	got = len - (STRLEN)(s->posn);
 	if (got <= 0)
 	    return 0;
@@ -175,23 +185,37 @@ PerlIOScalar_write(pTHX_ PerlIO * f, const void *vbuf, Size_t count)
 	SV *sv = s->var;
 	char *dst;
 	SvGETMAGIC(sv);
-	sv_force_normal(sv);
+	if (!SvROK(sv)) sv_force_normal(sv);
+	if (SvOK(sv)) SvPV_force_nomg_nolen(sv);
+	if (SvUTF8(sv) && !sv_utf8_downgrade(sv, TRUE)) {
+	    if (ckWARN(WARN_UTF8))
+	        Perl_warner(aTHX_ packWARN(WARN_UTF8), code_point_warning);
+	    SETERRNO(EINVAL, SS_IVCHAN);
+	    return 0;
+	}
 	if ((PerlIOBase(f)->flags) & PERLIO_F_APPEND) {
-	    dst = SvGROW(sv, SvCUR(sv) + count);
+	    dst = SvGROW(sv, SvCUR(sv) + count + 1);
 	    offset = SvCUR(sv);
 	    s->posn = offset + count;
 	}
 	else {
-	    if ((s->posn + count) > SvCUR(sv))
-		dst = SvGROW(sv, (STRLEN)s->posn + count);
+	    STRLEN const cur = SvCUR(sv);
+	    if (s->posn > cur) {
+		dst = SvGROW(sv, (STRLEN)s->posn + count + 1);
+		Zero(SvPVX(sv) + cur, (STRLEN)s->posn - cur, char);
+	    }
+	    else if ((s->posn + count) >= cur)
+		dst = SvGROW(sv, (STRLEN)s->posn + count + 1);
 	    else
 		dst = SvPVX(sv);
 	    offset = s->posn;
 	    s->posn += count;
 	}
 	Move(vbuf, dst + offset, count, char);
-	if ((STRLEN) s->posn > SvCUR(sv))
+	if ((STRLEN) s->posn > SvCUR(sv)) {
 	    SvCUR_set(sv, (STRLEN)s->posn);
+	    dst[(STRLEN) s->posn] = 0;
+	}
 	SvPOK_on(sv);
 	SvSETMAGIC(sv);
 	return count;
@@ -240,9 +264,13 @@ PerlIOScalar_get_cnt(pTHX_ PerlIO * f)
 {
     if (PerlIOBase(f)->flags & PERLIO_F_CANREAD) {
 	PerlIOScalar *s = PerlIOSelf(f, PerlIOScalar);
+	STRLEN len;
 	SvGETMAGIC(s->var);
-	if (SvCUR(s->var) > (STRLEN) s->posn)
-	    return SvCUR(s->var) - (STRLEN)s->posn;
+	if (isGV_with_GP(s->var))
+	    (void)SvPV(s->var,len);
+	else len = SvCUR(s->var);
+	if (len > (STRLEN) s->posn)
+	    return len - (STRLEN)s->posn;
 	else
 	    return 0;
     }
@@ -264,9 +292,12 @@ void
 PerlIOScalar_set_ptrcnt(pTHX_ PerlIO * f, STDCHAR * ptr, SSize_t cnt)
 {
     PerlIOScalar *s = PerlIOSelf(f, PerlIOScalar);
+    STRLEN len;
     PERL_UNUSED_ARG(ptr);
     SvGETMAGIC(s->var);
-    s->posn = SvCUR(s->var) - cnt;
+    if (isGV_with_GP(s->var)) (void)SvPV(s->var,len);
+    else len = SvCUR(s->var);
+    s->posn = len - cnt;
 }
 
 PerlIO *
@@ -311,10 +342,24 @@ PerlIO *
 PerlIOScalar_dup(pTHX_ PerlIO * f, PerlIO * o, CLONE_PARAMS * param,
 		 int flags)
 {
+    /* Duplication causes the scalar layer to be pushed on to clone, caus-
+       ing the cloned scalar to be set to the empty string by
+       PerlIOScalar_pushed.  So set aside our scalar temporarily. */
+    PerlIOScalar * const os = PerlIOSelf(o, PerlIOScalar);
+    PerlIOScalar *fs;
+    SV * const var = os->var;
+    os->var = newSVpvs("");
     if ((f = PerlIOBase_dup(aTHX_ f, o, param, flags))) {
-	PerlIOScalar *fs = PerlIOSelf(f, PerlIOScalar);
-	PerlIOScalar *os = PerlIOSelf(o, PerlIOScalar);
-	/* var has been set by implicit push */
+	fs = PerlIOSelf(f, PerlIOScalar);
+	/* var has been set by implicit push, so replace it */
+	SvREFCNT_dec(fs->var);
+    }
+    SvREFCNT_dec(os->var);
+    os->var = var;
+    if (f) {
+	SV * const rv = PerlIOScalar_arg(aTHX_ o, param, flags);
+	fs->var = SvREFCNT_inc(SvRV(rv));
+	SvREFCNT_dec(rv);
 	fs->posn = os->posn;
     }
     return f;

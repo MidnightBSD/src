@@ -10,9 +10,9 @@
 
 /*
  *      A Elbereth Gilthoniel,
- *      silivren penna míriel
+ *      silivren penna mÃ­riel
  *      o menel aglar elenath!
- *      Na-chaered palan-díriel
+ *      Na-chaered palan-dÃ­riel
  *      o galadhremmin ennorath,
  *      Fanuilos, le linnathon
  *      nef aear, si nef aearon!
@@ -27,10 +27,6 @@
 #include "EXTERN.h"
 #define PERL_IN_LOCALE_C
 #include "perl.h"
-
-#ifdef I_LOCALE
-#  include <locale.h>
-#endif
 
 #ifdef I_LANGINFO
 #   include <langinfo.h>
@@ -231,8 +227,9 @@ Perl_new_collate(pTHX_ const char *newcoll)
 	  const Size_t fa = strxfrm(xbuf, "a",  XFRMBUFSIZE);
 	  const Size_t fb = strxfrm(xbuf, "ab", XFRMBUFSIZE);
 	  const SSize_t mult = fb - fa;
-	  if (mult < 1)
-	      Perl_croak(aTHX_ "strxfrm() gets absurd");
+	  if (mult < 1 && !(fa == 0 && fb == 0))
+	      Perl_croak(aTHX_ "panic: strxfrm() gets absurd - a => %"UVuf", ab => %"UVuf,
+			 (UV) fa, (UV) fb);
 	  PL_collxfrm_base = (fa > (Size_t)mult) ? (fa - mult) : 0;
 	  PL_collxfrm_mult = mult;
 	}
@@ -634,8 +631,8 @@ Perl_mem_collxfrm(pTHX_ const char *s, STRLEN len, STRLEN *xlen)
  * Local variables:
  * c-indentation-style: bsd
  * c-basic-offset: 4
- * indent-tabs-mode: t
+ * indent-tabs-mode: nil
  * End:
  *
- * ex: set ts=8 sts=4 sw=4 noet:
+ * ex: set ts=8 sts=4 sw=4 et:
  */

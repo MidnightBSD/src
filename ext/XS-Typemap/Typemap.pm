@@ -36,20 +36,26 @@ require XSLoader;
 
 use vars qw/ $VERSION @EXPORT /;
 
-$VERSION = '0.05';
+$VERSION = '0.10';
 
 @EXPORT = (qw/
 	   T_SV
 	   T_SVREF
+	   T_SVREF_REFCOUNT_FIXED
 	   T_AVREF
+	   T_AVREF_REFCOUNT_FIXED
 	   T_HVREF
+	   T_HVREF_REFCOUNT_FIXED
 	   T_CVREF
+	   T_CVREF_REFCOUNT_FIXED
 	   T_SYSRET_fail T_SYSRET_pass
 	   T_UV
 	   T_IV
 	   T_INT
            T_ENUM
            T_BOOL
+           T_BOOL_2
+           T_BOOL_OUT
            T_U_INT
            T_SHORT
            T_U_SHORT
@@ -71,6 +77,9 @@ $VERSION = '0.05';
            T_OPAQUEPTR_IN_struct T_OPAQUEPTR_OUT_struct
 	   T_ARRAY
 	   T_STDIO_open T_STDIO_close T_STDIO_print
+           T_PACKED_in T_PACKED_out
+           T_PACKEDARRAY_in T_PACKEDARRAY_out
+           T_INOUT T_IN T_OUT
 	   /);
 
 XSLoader::load();

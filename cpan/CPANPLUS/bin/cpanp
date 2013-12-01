@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 # $File: //depot/cpanplus/dist/bin/cpanp $
-# $Revision: 1.1.1.1 $ $Change: 8345 $ $DateTime: 2003/10/05 19:25:48 $
+# $Revision: #8 $ $Change: 8345 $ $DateTime: 2003/10/05 19:25:48 $
 
 use strict;
 use vars '$VERSION';

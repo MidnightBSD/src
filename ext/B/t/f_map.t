@@ -25,7 +25,7 @@ Due to a bleadperl optimization (Dave Mitchell, circa may 04), the
 private flags /1, /2 are gone in blead (for the cases covered)
 
 When the optree stuff was integrated into 5.8.6, these tests failed,
-and were todo'd.  Theyre now done, by version-specific tweaking in
+and were todo'd.  They're now done, by version-specific tweaking in
 mkCheckRex(), therefore the skip is removed too.
 
 =for gentest
@@ -95,7 +95,8 @@ checkOptree(note   => q{},
 # 3  <0> pushmark s
 # 4  <#> gv[*array] s
 # 5  <1> rv2av[t8] lKM/1
-# 6  <@> mapstart lK*
+# 6  <@> mapstart lK*              < 5.017002
+# 6  <@> mapstart lK               >=5.017002
 # 7  <|> mapwhile(other->8)[t9] lK
 # 8      <0> enter l
 # 9      <;> nextstate(main 475 (eval 10):1) v:{
@@ -103,7 +104,7 @@ checkOptree(note   => q{},
 # b      <0> pushmark s
 # c      <#> gvsv[*_] s
 # d      <#> gv[*getkey] s/EARLYCV
-# e      <1> entersub[t5] lKS/TARG,1
+# e      <1> entersub[t5] lKS/TARG
 # f      <#> gvsv[*_] s
 # g      <@> list lK
 # h      <@> leave lKP
@@ -119,7 +120,8 @@ EOT_EOT
 # 3  <0> pushmark s
 # 4  <$> gv(*array) s
 # 5  <1> rv2av[t3] lKM/1
-# 6  <@> mapstart lK*
+# 6  <@> mapstart lK*              < 5.017002
+# 6  <@> mapstart lK               >=5.017002
 # 7  <|> mapwhile(other->8)[t4] lK
 # 8      <0> enter l
 # 9      <;> nextstate(main 559 (eval 15):1) v:{
@@ -127,7 +129,7 @@ EOT_EOT
 # b      <0> pushmark s
 # c      <$> gvsv(*_) s
 # d      <$> gv(*getkey) s/EARLYCV
-# e      <1> entersub[t2] lKS/TARG,1
+# e      <1> entersub[t2] lKS/TARG
 # f      <$> gvsv(*_) s
 # g      <@> list lK
 # h      <@> leave lKP
@@ -179,7 +181,7 @@ checkOptree(note   => q{},
 # k      <0> pushmark s
 # l      <#> gvsv[*_] s
 # m      <#> gv[*getkey] s/EARLYCV
-# n      <1> entersub[t10] sKS/TARG,1
+# n      <1> entersub[t10] sKS/TARG
 # o      <2> helem sKRM*/2
 # p      <2> sassign vKS/2
 # q      <0> unstack s
@@ -212,7 +214,7 @@ EOT_EOT
 # k      <0> pushmark s
 # l      <$> gvsv(*_) s
 # m      <$> gv(*getkey) s/EARLYCV
-# n      <1> entersub[t4] sKS/TARG,1
+# n      <1> entersub[t4] sKS/TARG
 # o      <2> helem sKRM*/2
 # p      <2> sassign vKS/2
 # q      <0> unstack s
@@ -239,7 +241,8 @@ checkOptree(note   => q{},
 # 3  <0> pushmark s
 # 4  <#> gv[*array] s
 # 5  <1> rv2av[t7] lKM/1
-# 6  <@> mapstart lK*
+# 6  <@> mapstart lK*              < 5.017002
+# 6  <@> mapstart lK               >=5.017002
 # 7  <|> mapwhile(other->8)[t9] lK
 # 8      <0> pushmark s
 # 9      <#> gvsv[*_] s
@@ -247,7 +250,7 @@ checkOptree(note   => q{},
 # b      <@> stringify[t5] sK/1
 # c      <$> const[IV 1] s
 # d      <@> list lK
-# -      <@> scope lK
+# -      <@> scope lK              < 5.017002
 #            goto 7
 # e  <0> pushmark s
 # f  <#> gv[*hash] s
@@ -260,7 +263,8 @@ EOT_EOT
 # 3  <0> pushmark s
 # 4  <$> gv(*array) s
 # 5  <1> rv2av[t4] lKM/1
-# 6  <@> mapstart lK*
+# 6  <@> mapstart lK*              < 5.017002
+# 6  <@> mapstart lK               >=5.017002
 # 7  <|> mapwhile(other->8)[t5] lK
 # 8      <0> pushmark s
 # 9      <$> gvsv(*_) s
@@ -268,7 +272,7 @@ EOT_EOT
 # b      <@> stringify[t3] sK/1
 # c      <$> const(IV 1) s
 # d      <@> list lK
-# -      <@> scope lK
+# -      <@> scope lK              < 5.017002
 #            goto 7
 # e  <0> pushmark s
 # f  <$> gv(*hash) s
@@ -293,7 +297,8 @@ checkOptree(note   => q{},
 # 3  <0> pushmark s
 # 4  <#> gv[*array] s
 # 5  <1> rv2av[t7] lKM/1
-# 6  <@> mapstart lK*
+# 6  <@> mapstart lK*              < 5.017002
+# 6  <@> mapstart lK               >=5.017002
 # 7  <|> mapwhile(other->8)[t9] lK
 # 8      <0> pushmark s
 # 9      <#> gvsv[*_] s
@@ -301,7 +306,7 @@ checkOptree(note   => q{},
 # b      <@> stringify[t5] sK/1
 # c      <$> const[IV 1] s
 # d      <@> list lKP
-# -      <@> scope lK
+# -      <@> scope lK              < 5.017002
 #            goto 7
 # e  <0> pushmark s
 # f  <#> gv[*hash] s
@@ -314,7 +319,8 @@ EOT_EOT
 # 3  <0> pushmark s
 # 4  <$> gv(*array) s
 # 5  <1> rv2av[t4] lKM/1
-# 6  <@> mapstart lK*
+# 6  <@> mapstart lK*              < 5.017002
+# 6  <@> mapstart lK               >=5.017002
 # 7  <|> mapwhile(other->8)[t5] lK
 # 8      <0> pushmark s
 # 9      <$> gvsv(*_) s
@@ -322,7 +328,7 @@ EOT_EOT
 # b      <@> stringify[t3] sK/1
 # c      <$> const(IV 1) s
 # d      <@> list lKP
-# -      <@> scope lK
+# -      <@> scope lK              < 5.017002
 #            goto 7
 # e  <0> pushmark s
 # f  <$> gv(*hash) s
@@ -347,14 +353,15 @@ checkOptree(note   => q{},
 # 3  <0> pushmark s
 # 4  <#> gv[*array] s
 # 5  <1> rv2av[t6] lKM/1
-# 6  <@> mapstart lK*
+# 6  <@> mapstart lK*              < 5.017002
+# 6  <@> mapstart lK               >=5.017002
 # 7  <|> mapwhile(other->8)[t8] lK
 # 8      <0> pushmark s
 # 9      <#> gvsv[*_] s
 # a      <1> lc[t4] sK/1
 # b      <$> const[IV 1] s
 # c      <@> list lK
-# -      <@> scope lK
+# -      <@> scope lK              < 5.017002
 #            goto 7
 # d  <0> pushmark s
 # e  <#> gv[*hash] s
@@ -367,14 +374,15 @@ EOT_EOT
 # 3  <0> pushmark s
 # 4  <$> gv(*array) s
 # 5  <1> rv2av[t3] lKM/1
-# 6  <@> mapstart lK*
+# 6  <@> mapstart lK*              < 5.017002
+# 6  <@> mapstart lK               >=5.017002
 # 7  <|> mapwhile(other->8)[t4] lK
 # 8      <0> pushmark s
 # 9      <$> gvsv(*_) s
 # a      <1> lc[t2] sK/1
 # b      <$> const(IV 1) s
 # c      <@> list lK
-# -      <@> scope lK
+# -      <@> scope lK              < 5.017002
 #            goto 7
 # d  <0> pushmark s
 # e  <$> gv(*hash) s

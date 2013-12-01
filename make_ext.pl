@@ -2,15 +2,6 @@
 use strict;
 use warnings;
 use Config;
-BEGIN {
-    if ($^O eq 'MSWin32') {
-	unshift @INC, '../dist/Cwd';
-	require FindExt;
-    } else {
-	unshift @INC, 'dist/Cwd';
-    }
-}
-use Cwd;
 
 my $is_Win32 = $^O eq 'MSWin32';
 my $is_VMS = $^O eq 'VMS';
@@ -147,7 +138,9 @@ my $perl;
 my %extra_passthrough;
 
 if ($is_Win32) {
-    my $build = getcwd();
+    require Cwd;
+    require FindExt;
+    my $build = Cwd::getcwd();
     $perl = $^X;
     if ($perl =~ m#^\.\.#) {
 	my $here = $build;
@@ -167,7 +160,7 @@ if ($is_Win32) {
     print "In $build";
     foreach my $dir (@dirs) {
 	chdir($dir) or die "Cannot cd to $dir: $!\n";
-	(my $ext = getcwd()) =~ s{/}{\\}g;
+	(my $ext = Cwd::getcwd()) =~ s{/}{\\}g;
 	FindExt::scan_ext($ext);
 	FindExt::set_static_extensions(split ' ', $Config{static_ext});
 	chdir $build
@@ -211,10 +204,11 @@ elsif ($is_VMS) {
 
 {
     # Cwd needs to be built before Encode recurses into subdirectories.
+    # Pod::Simple needs to be built before Pod::Functions
     # This seems to be the simplest way to ensure this ordering:
     my (@first, @other);
     foreach (@extspec) {
-	if ($_ eq 'Cwd') {
+	if ($_ eq 'Cwd' || $_ eq 'Pod/Simple') {
 	    push @first, $_;
 	} else {
 	    push @other, $_;
@@ -287,6 +281,28 @@ sub build_extension {
 	$makefile = 'Makefile';
     }
     
+    if (-f $makefile) {
+	open my $mfh, $makefile or die "Cannot open $makefile: $!";
+	while (<$mfh>) {
+	    # Plagiarised from CPAN::Distribution
+	    last if /MakeMaker post_initialize section/;
+	    next unless /^#\s+VERSION_FROM\s+=>\s+(.+)/;
+	    my $vmod = eval $1;
+	    my $oldv;
+	    while (<$mfh>) {
+		next unless /^XS_VERSION = (\S+)/;
+		$oldv = $1;
+		last;
+	    }
+	    last unless defined $oldv;
+	    require ExtUtils::MM_Unix;
+	    defined (my $newv = parse_version MM $vmod) or last;
+	    if ($newv ne $oldv) {
+		1 while unlink $makefile
+	    }
+	}
+    }
+
     if (!-f $makefile) {
 	if (!-f 'Makefile.PL') {
 	    print "\nCreating Makefile.PL in $ext_dir for $mname\n";
@@ -376,6 +392,16 @@ WriteMakefile(
 # ex: set ro:
 EOM
 	    close $fh or die "Can't close Makefile.PL: $!";
+	    # As described in commit 23525070d6c0e51f:
+	    # Push the atime and mtime of generated Makefile.PLs back 4
+	    # seconds. In certain circumstances ( on virtual machines ) the
+	    # generated Makefile.PL can produce a Makefile that is older than
+	    # the Makefile.PL. Altering the atime and mtime backwards by 4
+	    # seconds seems to resolve the issue.
+	    eval {
+		my $ftime = time - 4;
+		utime $ftime, $ftime, 'Makefile.PL';
+	    };
 	}
 	print "\nRunning Makefile.PL in $ext_dir\n";
 
@@ -388,7 +414,7 @@ EOM
 	    # Inherited from make_ext.pl
 	    @cross = '-MCross';
 	}
-	    
+
 	my @args = ("-I$lib_dir", @cross, 'Makefile.PL');
 	if ($is_VMS) {
 	    my $libd = VMS::Filespec::vmspath($lib_dir);
@@ -445,19 +471,20 @@ EOS
     }
 
     if ($is_VMS) {
-	_macroify_passthrough($pass_through);
-	unshift @$pass_through, "/DESCRIPTION=$makefile";
+	_quote_args($pass_through);
+	@$pass_through = (
+			  "/DESCRIPTION=$makefile",
+			  '/MACRO=(' . join(',',@$pass_through) . ')'
+			 );
     }
 
     if (!$target or $target !~ /clean$/) {
 	# Give makefile an opportunity to rewrite itself.
 	# reassure users that life goes on...
 	my @args = ('config', @$pass_through);
-	_quote_args(\@args) if $is_VMS;
 	system(@run, @make, @args) and print "@run @make @args failed, continuing anyway...\n";
     }
     my @targ = ($target, @$pass_through);
-    _quote_args(\@targ) if $is_VMS;
     print "Making $target in $ext_dir\n@run @make @targ\n";
     my $code = system(@run, @make, @targ);
     die "Unsuccessful make($ext_dir): code=$code" if $code != 0;
@@ -475,12 +502,4 @@ sub _quote_args {
         }
     } @{$args}
     ;
-}
-
-sub _macroify_passthrough {
-    my $passthrough = shift;
-    _quote_args($passthrough);
-    my $macro = '/MACRO=(' . join(',',@$passthrough) . ')';
-    @$passthrough = ();
-    @$passthrough[0] = $macro;  
 }

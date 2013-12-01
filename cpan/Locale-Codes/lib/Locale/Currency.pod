@@ -27,11 +27,19 @@ specifies the code set to use. If not specified, the default ISO
 =head1 SUPPORTED CODE SETS
 
 There are several different code sets you can use for identifying
-currencies. The ones currently supported are:
+currencies. A code set may be specified using either a name, or a
+constant that is automatically exported by this module.
+
+For example, the two are equivalent:
+
+   $curr = code2currency('usd','alpha');
+   $curr = code2currency('usd',LOCALE_CURR_ALPHA);
+
+The codesets currently supported are:
 
 =over 4
 
-=item B<alpha>
+=item B<alpha, LOCALE_CURR_ALPHA>
 
 This is a set of three-letter (uppercase) codes from ISO 4217 such
 as EUR for Euro.
@@ -40,15 +48,11 @@ Two of the codes specified by the standard (XTS which is reserved
 for testing purposes and XXX which is for transactions where no
 currency is involved) are omitted.
 
-This code set is identified with the symbol C<LOCALE_CURR_ALPHA>.
-
 This is the default code set.
 
-=item B<num>
+=item B<num, LOCALE_CURR_NUMERIC>
 
 This is the set of three-digit numeric codes from ISO 4217.
-
-This code set is identified with the symbol C<LOCALE_CURR_NUMERIC>.
 
 =back
 
@@ -82,7 +86,7 @@ This code set is identified with the symbol C<LOCALE_CURR_NUMERIC>.
 
 =item B<Locale::Currency::delete_currency_code_alias  ( CODE [,CODESET] )>
 
-These routines are all documented in the Locale::Codes man page.
+These routines are all documented in the Locale::Codes::API man page.
 
 =back
 
@@ -92,7 +96,11 @@ These routines are all documented in the Locale::Codes man page.
 
 =item B<Locale::Codes>
 
-=item B<Locale::Constants>
+The Locale-Codes distribution.
+
+=item B<Locale::Codes::API>
+
+The list of functions supported by this module.
 
 =item B<http://www.iso.org/iso/support/currency_codes_list-1.htm>
 
@@ -111,7 +119,7 @@ Currently maintained by Sullivan Beck (sbeck@cpan.org).
    Copyright (c) 1997-2001 Canon Research Centre Europe (CRE).
    Copyright (c) 2001      Michael Hennecke
    Copyright (c) 2001-2010 Neil Bowers
-   Copyright (c) 2010-2011 Sullivan Beck
+   Copyright (c) 2010-2013 Sullivan Beck
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.

@@ -12,7 +12,7 @@
  * 'Perilous to us all are the devices of an art deeper than we possess
  *  ourselves.'                                            --Gandalf
  *
- *     [p.597 of _The Lord of the Rings_, III/xi: "The Palantír"]
+ *     [p.597 of _The Lord of the Rings_, III/xi: "The PalantÃ­r"]
  */
 
 #define PERL_NO_GET_CONTEXT
@@ -48,10 +48,15 @@ modify_SV_attributes(pTHX_ SV *sv, SV **retlist, SV **attrlist, int numattrs)
 		switch (name[3]) {
 		case 'l':
 		    if (memEQ(name, "lvalue", 6)) {
+			bool warn =
+			    !CvISXSUB(MUTABLE_CV(sv))
+			 && CvROOT(MUTABLE_CV(sv))
+			 && !CvLVALUE(MUTABLE_CV(sv)) != negated;
 			if (negated)
 			    CvFLAGS(MUTABLE_CV(sv)) &= ~CVf_LVALUE;
 			else
 			    CvFLAGS(MUTABLE_CV(sv)) |= CVf_LVALUE;
+			if (warn) break;
 			continue;
 		    }
 		    break;
@@ -157,7 +162,7 @@ usage:
     sv = SvRV(rv);
 
     if (SvOBJECT(sv))
-	sv_setpvn(TARG, HvNAME_get(SvSTASH(sv)), HvNAMELEN_get(SvSTASH(sv)));
+	Perl_sv_sethek(aTHX_ TARG, HvNAME_HEK(SvSTASH(sv)));
 #if 0	/* this was probably a bad idea */
     else if (SvPADMY(sv))
 	sv_setsv(TARG, &PL_sv_no);	/* unblessed lexical */
@@ -179,7 +184,7 @@ usage:
 	    break;
 	}
 	if (stash)
-	    sv_setpvn(TARG, HvNAME_get(stash), HvNAMELEN_get(stash));
+	    Perl_sv_sethek(aTHX_ TARG, HvNAME_HEK(stash));
     }
 
     SvSETMAGIC(TARG);
@@ -211,8 +216,8 @@ usage:
  * Local variables:
  * c-indentation-style: bsd
  * c-basic-offset: 4
- * indent-tabs-mode: t
+ * indent-tabs-mode: nil
  * End:
  *
- * ex: set ts=8 sts=4 sw=4 noet:
+ * ex: set ts=8 sts=4 sw=4 et:
  */

@@ -1,5 +1,7 @@
 package CPANPLUS::Dist::Build;
 
+use if $] > 5.017, 'deprecate';
+
 use strict;
 use warnings;
 use vars    qw[@ISA $STATUS $VERSION];
@@ -10,7 +12,7 @@ use CPANPLUS::Internals::Constants;
 ### these constants were exported by CPANPLUS::Internals::Constants
 ### in previous versions.. they do the same though. If we want to have
 ### a normal 'use' here, up the dependency to CPANPLUS 0.056 or higher
-BEGIN { 
+BEGIN {
     require CPANPLUS::Dist::Build::Constants;
     CPANPLUS::Dist::Build::Constants->import()
         if not __PACKAGE__->can('BUILD') && __PACKAGE__->can('BUILD_DIR');
@@ -30,7 +32,7 @@ use Locale::Maketext::Simple    Class => 'CPANPLUS', Style => 'gettext';
 
 local $Params::Check::VERBOSE = 1;
 
-$VERSION = '0.54';
+$VERSION = '0.70';
 
 =pod
 
@@ -44,8 +46,8 @@ CPANPLUS::Dist::Build - CPANPLUS plugin to install packages that use Build.PL
                                 format  => 'CPANPLUS::Dist::Build',
                                 module  => $modobj,
                             );
-                            
-    $build->prepare;    # runs Build.PL                            
+
+    $build->prepare;    # runs Build.PL
     $build->create;     # runs build && build test
     $build->install;    # runs build install
 
@@ -58,7 +60,7 @@ Using this package, you can create, install and uninstall perl
 modules. It inherits from C<CPANPLUS::Dist>.
 
 Normal users won't have to worry about the interface to this module,
-as it functions transparently as a plug-in to C<CPANPLUS> and will 
+as it functions transparently as a plug-in to C<CPANPLUS> and will
 just C<Do The Right Thing> when it's loaded.
 
 =head1 ACCESSORS
@@ -104,7 +106,7 @@ This gets set after C<perl Build.PL>
 =item C<distdir ()>
 
 Full path to the directory in which the C<prepare> call took place,
-set after a call to C<prepare>. 
+set after a call to C<prepare>.
 
 =item C<created ()>
 
@@ -184,11 +186,11 @@ sub init {
 
 =head2 $bool = $dist->prepare([perl => '/path/to/perl', buildflags => 'EXTRA=FLAGS', force => BOOL, verbose => BOOL])
 
-C<prepare> prepares a distribution, running C<Build.PL> 
+C<prepare> prepares a distribution, running C<Build.PL>
 and establishing any prerequisites this
 distribution has.
 
-The variable C<PERL5_CPANPLUS_IS_EXECUTING> will be set to the full path 
+The variable C<PERL5_CPANPLUS_IS_EXECUTING> will be set to the full path
 of the C<Build.PL> that is being executed. This enables any code inside
 the C<Build.PL> to know that it is being installed via CPANPLUS.
 
@@ -232,9 +234,9 @@ sub prepare {
             perl            => {    default => $^X, store => \$perl },
             buildflags      => {    default => $conf->get_conf('buildflags'),
                                     store   => \$buildflags },
-            prereq_target   => {    default => '', store => \$prereq_target }, 
+            prereq_target   => {    default => '', store => \$prereq_target },
             prereq_format   => {    default => '',
-                                    store   => \$prereq_format },   
+                                    store   => \$prereq_format },
             prereq_build    => {    default => 0, store => \$prereq_build },
         };
 
@@ -269,7 +271,8 @@ sub prepare {
     my @buildflags = $dist->_buildflags_as_list( $buildflags );
     $dist->status->_buildflags( $buildflags );
 
-    my $fail;
+    my $fail; my $prereq_fail;
+    my $status = { };
     RUN: {
         # 0.85_01
         ### we resolve 'configure requires' here, so we can run the 'perl
@@ -281,7 +284,7 @@ sub prepare {
         ### containing a makefile.pl/build.pl for test purposes?
         my $safe_ver = version->new('0.85_01');
         if ( version->new($CPANPLUS::Internals::VERSION) >= $safe_ver )
-        {   my $configure_requires = $dist->find_configure_requires;     
+        {   my $configure_requires = $dist->find_configure_requires;
             my $ok = $dist->_resolve_prereqs(
                             format          => $prereq_format,
                             verbose         => $verbose,
@@ -289,18 +292,19 @@ sub prepare {
                             target          => $prereq_target,
                             force           => $force,
                             prereq_build    => $prereq_build,
-                    );    
-    
+                    );
+
             unless( $ok ) {
-           
+
                 #### use $dist->flush to reset the cache ###
                 error( loc( "Unable to satisfy '%1' for '%2' " .
-                            "-- aborting install", 
-                            'configure_requires', $self->module ) );    
+                            "-- aborting install",
+                            'configure_requires', $self->module ) );
                 $dist->status->prepared(0);
-                $fail++; 
+                $prereq_fail++;
+                $fail++;
                 last RUN;
-            } 
+            }
             ### end of prereq resolving ###
         }
 
@@ -310,14 +314,27 @@ sub prepare {
 
         my $env = ENV_CPANPLUS_IS_EXECUTING;
         local $ENV{$env} = BUILD_PL->( $dir );
-        my $run_perl    = $conf->get_program('perlwrapper');
-        my $cmd = [$perl, $run_perl, BUILD_PL->($dir), @buildflags];
+        my @run_perl    = ( '-e', CPDB_PERL_WRAPPER );
+        my $cmd = [$perl, @run_perl, BUILD_PL->($dir), @buildflags];
 
         unless ( scalar run(    command => $cmd,
                                 buffer  => \$prep_output,
-                                verbose => $verbose ) 
+                                verbose => $verbose )
         ) {
             error( loc( "Build.PL failed: %1", $prep_output ) );
+            if ( $conf->get_conf('cpantest') ) {
+               $status->{stage} = 'prepare';
+               $status->{capture} = $prep_output;
+            }
+            $fail++; last RUN;
+        }
+
+        unless ( BUILD->( $dir ) ) {
+            error( loc( "Build.PL failed to generate a Build script: %1", $prep_output ) );
+            if ( $conf->get_conf('cpantest') ) {
+               $status->{stage} = 'prepare';
+               $status->{capture} = $prep_output;
+            }
             $fail++; last RUN;
         }
 
@@ -325,19 +342,20 @@ sub prepare {
 
         my $prereqs = $self->status->prereqs;
 
-        $prereqs ||= $dist->_find_prereqs( verbose => $verbose, 
-                                           dir => $dir, 
+        $prereqs ||= $dist->_find_prereqs( verbose => $verbose,
+                                           dir => $dir,
                                            perl => $perl,
                                            buildflags => $buildflags );
 
     }
-    
+
     ### send out test report? ###
-    if( $fail and $conf->get_conf('cpantest') ) {
-           $cb->_send_report( 
+    if( $fail and $conf->get_conf('cpantest') and not $prereq_fail ) {
+           $cb->_send_report(
             module  => $self,
             failed  => $fail,
             buffer  => CPANPLUS::Error->stack_as_string,
+            status  => $status,
             verbose => $verbose,
             force   => $force,
         ) or error(loc("Failed to send test report for '%1'",
@@ -370,7 +388,7 @@ sub _find_prereqs {
         buildflags => { default => $conf->get_conf('buildflags'),
                         store   => \$buildflags },
     };
-    
+
     my $args = check( $tmpl, \%hash ) or return;
 
     my $prereqs = {};
@@ -389,11 +407,11 @@ sub _find_prereqs {
           my @buildflags = $dist->_buildflags_as_list( $buildflags );
 
           # Use the new Build action 'prereq_data'
-          my $run_perl    = $conf->get_program('perlwrapper');
+          my @run_perl    = ( '-e', CPDB_PERL_WRAPPER );
 
-          unless ( scalar run(    command => [$perl, $run_perl, BUILD->($dir), 'prereq_data', @buildflags],
+          unless ( scalar run(    command => [$perl, @run_perl, BUILD->($dir), 'prereq_data', @buildflags],
                                 buffer  => \$content,
-                                verbose => 0 ) 
+                                verbose => 0 )
           ) {
             error( loc( "Build 'prereq_data' failed: %1 %2", $!, $content ) );
             #return;
@@ -413,7 +431,7 @@ sub _find_prereqs {
           error( loc( "Cannot open '%1': %2", $file, $! ) );
           return;
         }
-        
+
         $content = do { local $/; <$fh> };
 
       }
@@ -511,7 +529,7 @@ sub create {
             prereq_format   => {    #default => $self->status->installer_type,
                                     default => '',
                                     store   => \$prereq_format },
-            prereq_build    => {    default => 0, store => \$prereq_build },                                    
+            prereq_build    => {    default => 0, store => \$prereq_build },
         };
 
         $args = check( $tmpl, \%hash ) or return;
@@ -567,9 +585,10 @@ sub create {
     $dist->status->_buildflags( $buildflags );
 
     my $fail; my $prereq_fail; my $test_fail;
+    my $status = { };
     RUN: {
 
-        my $run_perl    = $conf->get_program('perlwrapper');
+        my @run_perl    = ( '-e', CPDB_PERL_WRAPPER );
 
         ### this will set the directory back to the start
         ### dir, so we must chdir /again/
@@ -601,15 +620,19 @@ sub create {
             $cmd = [$perl, BUILD->($dir), @buildflags];
         }
         else {
-            $cmd = [$perl, $run_perl, BUILD->($dir), @buildflags];
+            $cmd = [$perl, @run_perl, BUILD->($dir), @buildflags];
         }
 
         unless ( scalar run(    command => $cmd,
                                 buffer  => \$captured,
-                                verbose => $verbose ) 
+                                verbose => $verbose )
         ) {
             error( loc( "MAKE failed:\n%1", $captured ) );
             $dist->status->build(0);
+            if ( $conf->get_conf('cpantest') ) {
+               $status->{stage} = 'build';
+               $status->{capture} = $captured;
+            }
             $fail++; last RUN;
         }
 
@@ -620,8 +643,8 @@ sub create {
         ### add this directory to your lib ###
         $self->add_to_includepath();
 
-        ### this buffer will not include what tests failed due to a 
-        ### M::B/Test::Harness bug. Reported as #9793 with patch 
+        ### this buffer will not include what tests failed due to a
+        ### M::B/Test::Harness bug. Reported as #9793 with patch
         ### against 0.2607 on 26/1/2005
         unless( $skiptest ) {
             my $test_output;
@@ -629,13 +652,13 @@ sub create {
                 $cmd     = [$perl, BUILD->($dir), "test", @buildflags];
             }
             else {
-                $cmd     = [$perl, $run_perl, BUILD->($dir), "test", @buildflags];
+                $cmd     = [$perl, @run_perl, BUILD->($dir), "test", @buildflags];
             }
             unless ( scalar run(    command => $cmd,
                                     buffer  => \$test_output,
-                                    verbose => $verbose ) 
+                                    verbose => $verbose )
             ) {
-                error( loc( "MAKE TEST failed:\n%1 ", $test_output ) );
+                error( loc( "MAKE TEST failed:\n%1 ", $test_output ), ( $verbose ? 0 : 1 ) );
 
                 ### mark specifically *test* failure.. so we dont
                 ### send success on force...
@@ -645,16 +668,23 @@ sub create {
                                       $self, $@ )
                 ) {
                     $dist->status->test(0);
+                    if ( $conf->get_conf('cpantest') ) {
+                      $status->{stage} = 'test';
+                      $status->{capture} = $test_output;
+                    }
                     $fail++; last RUN;
                 }
 
-            } 
+            }
             else {
                 msg( loc( "MAKE TEST passed:\n%1", $test_output ), 0 );
-                #msg( $test_output, 0 );
                 $dist->status->test(1);
+                if ( $conf->get_conf('cpantest') ) {
+                   $status->{stage} = 'test';
+                   $status->{capture} = $test_output;
+                }
             }
-        } 
+        }
         else {
             msg(loc("Tests skipped"), $verbose);
         }
@@ -670,6 +700,7 @@ sub create {
             module          => $self,
             failed          => $test_fail || $fail,
             buffer          => CPANPLUS::Error->stack_as_string,
+            status          => $status,
             verbose         => $verbose,
             force           => $force,
             tests_skipped   => $skiptest,
@@ -702,7 +733,7 @@ sub install {
     my $conf = $cb->configure_object;
     my %hash = @_;
 
-    
+
     my $verbose; my $perl; my $force; my $buildflags;
     {   local $Params::Check::ALLOW_UNKNOWN = 1;
         my $tmpl = {
@@ -714,7 +745,7 @@ sub install {
                             store   => \$buildflags },
             perl    => { default => $^X, store   => \$perl },
         };
-    
+
         my $args = check( $tmpl, \%hash ) or return;
         $dist->status->_install_args( $args );
     }
@@ -733,7 +764,7 @@ sub install {
     }
 
     ### value set and false -- means failure ###
-    if( defined $self->status->installed && 
+    if( defined $self->status->installed &&
         !$self->status->installed && !$force
     ) {
         error( loc( "Module '%1' has failed to install before this session " .
@@ -743,7 +774,7 @@ sub install {
 
     my $fail;
     my @buildflags = $dist->_buildflags_as_list( $buildflags );
-    my $run_perl    = $conf->get_program('perlwrapper');
+    my @run_perl    = ( '-e', CPDB_PERL_WRAPPER );
 
     ### hmm, how is this going to deal with sudo?
     ### for now, check effective uid, if it's not root,
@@ -758,11 +789,19 @@ sub install {
             $cmd     = [$perl, BUILD->($dir), "install", @buildflags];
         }
         else {
-            $cmd     = [$perl, $run_perl, BUILD->($dir), "install", @buildflags];
+            $cmd     = [$perl, @run_perl, BUILD->($dir), "install", @buildflags];
         }
-        my $sudo    = $conf->get_program('sudo');
-        unshift @$cmd, $sudo if $sudo;
 
+        ### Detect local::lib type behaviour. Do not use 'sudo' in these cases
+        my $sudo    = $conf->get_program('sudo');
+        SUDO: {
+          ### Actual local::lib in use
+          last SUDO if defined $ENV{PERL_MB_OPT} and $ENV{PERL_MB_OPT} =~ m!install_base!;
+          ### 'buildflags' is configured with '--install_base'
+          last SUDO if scalar grep { m!install_base! } @buildflags;
+          ### oh well 'sudo make me a sandwich'
+          unshift @$cmd, $sudo;
+        }
 
         my $buffer;
         unless( scalar run( command => $cmd,
@@ -778,7 +817,7 @@ sub install {
             $cmd     = [$perl, BUILD->($dir), "install", @buildflags];
         }
         else {
-            $cmd     = [$perl, $run_perl, BUILD->($dir), "install", @buildflags];
+            $cmd     = [$perl, @run_perl, BUILD->($dir), "install", @buildflags];
         }
         unless( scalar run( command => $cmd,
                             buffer  => \$install_output,

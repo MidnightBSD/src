@@ -1,5 +1,5 @@
 #
-# $Id: Makefile.PL,v 1.1.1.1 2011-05-18 13:33:27 laffer1 Exp $
+# $Id: Makefile.PL,v 2.10 2013/02/18 02:23:56 dankogai Exp $
 #
 use 5.007003;
 use strict;
@@ -43,8 +43,9 @@ WriteMakefile(
         DIST_DEFAULT => 'all tardist',
     },
     INC         => '-I' . File::Spec->catfile( '.', 'Encode' ),
+    LICENSE     => 'perl',
     PMLIBDIRS   => \@pmlibdirs,
-    INSTALLDIRS => 'perl',
+    INSTALLDIRS => ($] < 5.011 ? 'perl' : 'site'),
 );
 
 package MY;

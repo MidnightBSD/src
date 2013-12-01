@@ -1,3 +1,253 @@
+6.66 Fri Apr 19 17:53:13 BST 2013
+    No changes from 6.65_03
+
+6.65_03 Mon Apr 15 13:44:24 BST 2013
+    Test Fixes
+    * Use File::Temp in parse_* tests to resolve race conditions
+      on 64bit Windows
+      (bingos)
+
+6.65_02 Sun Apr 14 10:56:41 BST 2013
+    Test Fixes
+    * t/xs.t is now running tests against the XS build.
+      (Michael G Schwern) (Leon Timmermans)
+
+
+6.65_01 Tue Mar 19 00:06:17 CET 2013
+    New Features
+    * Improvements perlcritic support. (M. Schwern)
+    * Improvements to dynamic linking for gcc (Tobias Leich)
+      [github #43]
+    * Change $(PERL_HDRS) from a hard coded list of headers to
+      reading install directory for available header files. Allows
+      us to work with any version of Perl properly.
+      (Yves Orton, Craig A. Berry) [github #47]
+
+    Doc Fixes
+    * Numerous typo fixes. (Ben Bullock)
+      [github #33] [github #34] [github #35]
+    * Various FAQ and doc improvements (M. Schwern, Ivan Bessarabov)
+      [github #44]
+
+    Bug Fixes
+    * fixes relating to hash ordering (Yves Orton)
+      [github #46] [rt.cpan.org #83441] [rt.perl.org #116857]
+    * fixes to Mksymlists (Ben Bullock, Yves Orton)
+      [github #48] [github #49] [github #51]
+
+
+6.64  Sun Dec 16 18:27:40 PST 2012
+    Build Fixes
+    * Update the home page in the meta file.  makemaker.org has been
+      unmaintained for a while.
+
+
+6.63_04  Thu Nov 22 13:18:06 PST 2012
+    Test Fixes
+    * Eliminated the problematic and not very useful PASTHRU test
+      on Windows.  A better test will come after stable. [github 41]
+      (Michael G Schwern)
+    * Avoid a new regex warning in 5.17.x in t/MM_OS2.t. (Craig A. Berry)
+
+    VMS Fixes
+    * Better ignore files due to non-case-preserving filesystems.
+      (Craig A. Berry)
+
+
+6.63_03  Thu Nov  1 19:52:30 PDT 2012
+    New Features
+    * Added TEST_REQUIRES keyword to specify prerequisites only needed
+      for testing.  [github 29] (Ricardo Signes)
+
+    Bug Fixes
+    * Update bundled modules: ExtUtils::Install to 1.54, ExtUtils::Manifest
+      to 1.60.
+    * Update CPAN::Meta::YAML to 0.08 for compatibility with older versions
+      of Scalar::Util.
+
+    Misc
+    * Change 'Note' to 'Warning' when libraries aren't found since people
+      often fail to realise that this is the cause of a build failure.
+      [github 20] (Matt Trout)
+
+    Test Fixes
+    * Added an early test to check for a common 5.6 bug where 0.01 is
+      incorrectly stringified to 1.e-02.  [rt.cpan.org 74095]
+
+    Doc Fixes
+    * Clarified NAME. [rt.cpan.org 73361]
+    * SYNOPSIS is a bit more useful.
+
+
+6.63_02  Tue Nov  1 17:02:40 PDT 2011
+    Test Fixes
+    * Inform BSDPAN (on FreeBSD) to not register modules installed while
+      testing. [rt.cpan.org 70232]
+    * Fix t/echo.t test on Win32. [rt.cpan.org 72097]
+    * Fix t/echo.t test on VMS. (Craig A. Berry)
+    * Fix t/Win32.t to handle the change to init_others(). [rt.cpan.org 72096]
+
+    Bug Fixes
+    * Fix VMS's echo() for the interface changes. (Craig A. Berry)
+    * Fix VMS's dollar sign escaping. (Craig A. Berry)
+
+    Misc
+    * my::bundle::copy_bundles() will only load File::Copy::Recursive if
+      it needs it, allowing vendors packaging MakeMaker to just delete
+      bundled/*
+    * Bundling can be overridden by setting the BUILDING_AS_PACKAGE
+      environment variable.  This makes life easier for vendor packagers.
+    * Stripped the Windows newlines off Parse::CPAN::Meta to avoid
+      confusing old versions of Module::Signature.
+
+    Docs
+    * README.packaging explains how to package MakeMaker
+    * bundled/README explains what the bundled directory is about.
+    
+
+6.63_01  Sun Oct 23 16:57:24 PDT 2011
+    Bug Fixes
+    * Stray $ in the PPD and meta files (for example, from the ABSTRACT)
+      are now escaped.  [rt.cpan.org 71847]
+
+    Possibly incompatible changes
+    * echo() now escapes all dollar signs by default
+
+    New Features
+    * echo() has an option to allow make variable expansion.
+    * echo() is now passed a hash of options (old style $appending flag
+      still works for compatibility).
+    * quote_literal() now escapes dollar signs, but allows make variables.
+    * quote_literal() has an option to escape make variables.
+    * escape_dollarsigns() to escape dollar signs but allow variables
+    * escape_all_dollarsigns() to escape all dollar signs
+
+    Improvements
+    * The PPD VERSION is now derived from the VERSION variable in the Makefile
+      rather than hard coded.
+
+    Bundled Modules
+    * Updated CPAN::Meta to 2.112621
+    * Updated CPAN::Meta::YAML to 0.004
+    * Updated JSON::PP to 2.27200
+
+
+6.62  Sun Oct 23 16:43:36 PDT 2011
+    No changes from 6.61_01
+
+
+6.61_01  Sat Sep 24 22:16:13 PDT 2011
+    Win32
+    * Liblist::Kid now checks the ActiveState MinGW library path environment
+      variable [MITHALDU]
+    * Further fixes to the Win32 quoting rules.  Fixes failures on VC8+.
+      [rt.cpan.org #69528] [SHAY]
+
+
+6.59  Fri Aug  5 12:09:00 BST
+    No changes since 6.58_01
+
+
+6.58_01  Wed Aug  3 21:12:00 BST
+    Doc Fixes
+    * Corrected the repository location [chorny]
+
+    Bug Fixes
+    * Removed the %INC check from _has_cpan_meta and updated the CPAN::Meta
+      bundled with EUMM to one that doesn't set $VERSION in a begin block
+      so it can't appear to be loaded, thus causing us to mistakenly try
+      and call methods on CPAN::Meta modules - this is due to older versions
+      in site_perl shadowing our installation of other bundled modules.
+      [rt.cpan.org 69465] [rt.cpan.org 69900] [MSTROUT]
+
+
+6.58  Wed Jul  6 14:17:06 PDT 2011
+    No changes since 6.57_11
+
+
+6.57_11  Thu May 19 17:26:31 PDT 2011
+    Bug Fixes
+    * Changed CPAN::Meta to accept version objects. [github #16]
+    * Massage bad versions and warn the user about them. [github #15]
+    * Protect against CPAN::Meta dying during metafile validation
+      and generation.
+
+    VMS
+    * Fix prereq.t to work around "local %ENV = %ENV" bug
+
+    Win32
+    * Liblist::Kid can now recognize long compiler paths
+      (Christian Walde) [github #11]
+
+
+6.57_10  Sun, 03 Apr 2011 19:36:38 +1000
+    Bug Fixes
+    * Relaxed strictures on prerequisite versions.  Invalid versions now
+      issue a warning and are set to 0 rather than dying. [github #7]
+    * Upgraded CPAN::Meta to 2.110930 which fixes a glitch in writing
+      MYMETA.yml if your module's version number was 1.4. [github #9]
+    * Convert LICENSE entries which are unknown to CPAN::Meta to
+      "unknown" rather than dying. [github #10]
+
+
+6.57_09  Mon, 28 Mar 2011 11:13:39 +1100
+    Misc
+    * Make CPAN ignore bundled modules
+    * Accidentally rolled Version::Requirements into the version bundle
+    * Deleted now unused ExtUtils::MakeMaker::YAML
+
+
+6.57_08  Sun, 27 Mar 2011 21:52:47 +1100
+    VMS
+    * Removed dependency on cc_runtime.h for VMS as well.
+
+    Misc
+    * Changed how modules are bundled to avoid replacing XS version of
+      Scalar::Util with a pure Perl version [github #4]
+
+
+6.57_07  Fri, 25 Mar 2011 14:31:31 +1100
+    Enhancements
+    * Generates META.json and MYMETA.json in addition to
+      META.yml and MYMETA.yml (David Golden)
+    * MYMETA has the runtime requirements made priority over META_*
+      keys to allow generation of a correct META.* into the dist while
+      still generating an accurate MYMETA.* locally (Matt S Trout)
+    * Distributions should not depend on cc_runtime.h from core as it is
+      only needed for B::CC
+    * Now uses CPAN::Meta to generate META files.
+
+    Bug Fixes
+    * MYMETA.yml generation from META.yml actually works (Matt S Trout)
+    * All required META fields are generated, even if they must be filled
+      with "unknown" in place of real data (David Golden)
+
+    Test Fixes
+    * miniperl.t is no longer run outside of the perl core.  Its only relevant
+      to bleadperl and requires no backwards compatibility [rt.cpan.org 61868]
+
+    Cygwin
+    * Rebase behaviour was improved (Reini Urban)
+    * Build man pages (Reini Urban)
+
+    Win32
+    * Spot valid lib files on Win32 when .a and .lib are mixed.
+      (Christian Walde) [github #3]
+    * Extensive testing of ExtUtils::Liblist::Kid for Win32
+      (Christian Walde)
+    * Implemented proper emulation of DOS escaping rules in ExtUtils::MM_Win32
+      (Christian Walde)
+
+
+6.57_06  Wed Oct 06 13:49:00 EEST 2010
+    Win32
+    * Work around dmake's limitations on how long a "line" can be.
+      [rt.cpan.org 61286]
+    * ActivePerl 1007 can now see gcc. [rt.cpan.org 55752] (Christian Walde)
+
+    Bug Fixes
+    * Fix for AUTHOR and undocumented usage of MM->new() (Alexandr Ciornii)
+
 6.57_05  Sat Sep 11 23:24:00 EEST 2010
     Bug Fixes
     * AUTHOR compatibility code should also be called after CONFIGURE callback
@@ -14,7 +264,7 @@
 6.57_02  Wed Sep 08 02:40:00 EEST 2010
     Bug Fixes
     * Don't do MANIFEST checks in PERL_CORE (Robin Barker)
-
+    
     New Features
     * Accept several values (arrayref) in AUTHOR (Alexandr Ciornii)
     * Add MYMETA.yml support (Adam Kennedy, Alexandr Ciornii)
@@ -499,7 +749,7 @@
 
     Doc Improvements
     - Typo fixes.  $(TOUNIX) -> $(TO_UNIX).  [rt.cpan.org 23495]
-    - The example for setting $VERSION from $Revision: 1.1.1.1 $ in SVN was
+    - The example for setting $VERSION from $Revision$ in SVN was
       incorrect. (Thanks to ROBERTMAY@cpan.org) [rt.cpan.org 26995]
     - Document what's wrong with PREFIX and what to use instead.
       [rt.cpan.org 12919]
@@ -580,10 +830,10 @@
       Unix).  Looks like a very old bug.  [bugs.perl.org 36128]
     - $ExtUtils::MakeMaker::Revision accidentally left in a stray "Revision".
       [thanks pdx.pm for noticing this]
-    - Fixed the $VERSION = $Revision: 1.1.1.1 $ example in the MakeMaker docs and the
+    - Fixed the $VERSION = $Revision$ example in the MakeMaker docs and the
       FAQ. [thanks again, pdx.pm]
     - Elaborated on the differences between CVS, SVN and others when using
-      $Revision: 1.1.1.1 $ based $VERSIONs.
+      $Revision$ based $VERSIONs.
     * ExtUtils::Command, ExtUtils::Install, ExtUtils::Manifest,
       ExtUtils::Mkbootstrap, ExtUtils::Mksymlists and ExtUtils::Packlist
       are all now considered to be separate distributions.  To avoid a 

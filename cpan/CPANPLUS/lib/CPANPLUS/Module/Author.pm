@@ -1,4 +1,5 @@
 package CPANPLUS::Module::Author;
+use deprecate;
 
 use strict;
 
@@ -6,6 +7,8 @@ use CPANPLUS::Error;
 use CPANPLUS::Internals::Constants;
 use Params::Check               qw[check];
 use Locale::Maketext::Simple    Class => 'CPANPLUS', Style => 'gettext';
+use vars qw[$VERSION];
+$VERSION = "0.9135";
 
 local $Params::Check::VERBOSE = 1;
 
@@ -13,7 +16,7 @@ local $Params::Check::VERBOSE = 1;
 
 =head1 NAME
 
-CPANPLUS::Module::Author
+CPANPLUS::Module::Author - CPAN author object for CPANPLUS
 
 =head1 SYNOPSIS
 
@@ -195,7 +198,7 @@ sub distributions {
         my $dist = CPANPLUS::Module::Fake->new(
                         module  =>  do { my $m = $mod->package_name( $name );
                                          $m =~ s/-/::/g; $m;
-                                    },      
+                                    },
                         version =>  $mod->package_version(  $name ),
                         package =>  $name,
                         path    =>  $mod->path,     # same author after all

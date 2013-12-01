@@ -1,12 +1,4 @@
 #!perl
-#
-# This file is part of HTTP-Tiny
-#
-# This software is copyright (c) 2011 by Christian Hansen.
-#
-# This is free software; you can redistribute it and/or modify it under
-# the same terms as the Perl 5 programming language system itself.
-#
 
 use strict;
 use warnings;
@@ -73,6 +65,11 @@ for my $file ( dir_list("t/cases", qr/^redirect/ ) ) {
                   ? join("$CRLF", @{$case->{expected}}) : '';
 
   is ( $response->{content}, $exp_content, "$label content" );
+
+  if ( $case->{expected_url} ) {
+    is ( $response->{url}, $case->{expected_url}[0], "$label response URL" );
+  }
+
 }
 
 done_testing;

@@ -1,12 +1,14 @@
 # tr.t
 
+use utf8;
+
 BEGIN {
     chdir 't' if -d 't';
     @INC = '../lib';
     require './test.pl';
 }
 
-plan tests => 128;
+plan tests => 132;
 
 my $Is_EBCDIC = (ord('i') == 0x89 & ord('J') == 0xd1);
 
@@ -483,11 +485,13 @@ is($s, "AxBC", "utf8, DELETE");
 }
 
 ($s) = keys %{{pie => 3}};
-my $wasro = Internals::SvREADONLY($s);
-{
-    $wasro or local $TODO = "didn't have a COW";
+SKIP: {
+    if (!eval { require XS::APItest }) { skip "no XS::APItest", 2 }
+    my $wasro = XS::APItest::SvIsCOW($s);
+    ok $wasro, "have a COW";
     $s =~ tr/i//;
-    ok( Internals::SvREADONLY($s), "count-only tr doesn't deCOW COWs" );
+    ok( XS::APItest::SvIsCOW($s),
+       "count-only tr doesn't deCOW COWs" );
 }
 
 # [ RT #61520 ]
@@ -504,4 +508,22 @@ my $wasro = Internals::SvREADONLY($s);
     is($x,"\x{143}", "utf8 + closure");
 }
 
+# Freeing of trans ops prior to pmtrans() [perl #102858].
+eval q{ $a ~= tr/a/b/; };
+ok 1;
+SKIP: {
+    no warnings "deprecated";
+    skip "no encoding", 1 unless eval { require encoding; 1 };
+    eval q{ use encoding "utf8"; $a ~= tr/a/b/; };
+    ok 1;
+}
 
+{ # [perl #113584]
+
+    my $x = "Perlα";
+    $x =~ tr/αα/βγ/;
+    note $x;
+    is($x, "Perlβ", "Only first of multiple transliterations is used");
+}
+
+1;

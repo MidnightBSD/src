@@ -685,7 +685,7 @@ Returns 0 on end-of-file, 1 if not end-of-file, -1 on error.
 
 Return error indicator. C<PerlIOBase_error()> is normally sufficient.
 
-Returns 1 if there is an error (usually when C<PERLIO_F_ERROR> is set,
+Returns 1 if there is an error (usually when C<PERLIO_F_ERROR> is set),
 0 otherwise.
 
 =item  Clearerr
@@ -923,7 +923,7 @@ which do not need to do anything special for a particular method.
 
 =head2 Extension Layers
 
-Layers can made available by extension modules. When an unknown layer
+Layers can be made available by extension modules. When an unknown layer
 is encountered the PerlIO code will perform the equivalent of :
 
    use PerlIO 'layer';

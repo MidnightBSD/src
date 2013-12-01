@@ -6,45 +6,23 @@ use strict ;
 use warnings;
 use bytes;
 
-
-use IO::Compress::Base 2.033 ;
-use IO::Compress::Base::Common  2.033 qw(:Status createSelfTiedObject);
-use IO::Compress::Adapter::Deflate  2.033 ;
+use IO::Compress::Base 2.060 ;
+use IO::Compress::Base::Common  2.060 qw(:Status );
+use IO::Compress::Adapter::Deflate 2.060 ;
 
 require Exporter ;
 
-
 our ($VERSION, @ISA, @EXPORT_OK, %DEFLATE_CONSTANTS, %EXPORT_TAGS, $RawDeflateError);
 
-$VERSION = '2.033';
+$VERSION = '2.060';
 $RawDeflateError = '';
 
 @ISA = qw(Exporter IO::Compress::Base);
 @EXPORT_OK = qw( $RawDeflateError rawdeflate ) ;
+push @EXPORT_OK, @IO::Compress::Adapter::Deflate::EXPORT_OK ;
 
-%EXPORT_TAGS = ( flush     => [qw{  
-                                    Z_NO_FLUSH
-                                    Z_PARTIAL_FLUSH
-                                    Z_SYNC_FLUSH
-                                    Z_FULL_FLUSH
-                                    Z_FINISH
-                                    Z_BLOCK
-                              }],
-                 level     => [qw{  
-                                    Z_NO_COMPRESSION
-                                    Z_BEST_SPEED
-                                    Z_BEST_COMPRESSION
-                                    Z_DEFAULT_COMPRESSION
-                              }],
-                 strategy  => [qw{  
-                                    Z_FILTERED
-                                    Z_HUFFMAN_ONLY
-                                    Z_RLE
-                                    Z_FIXED
-                                    Z_DEFAULT_STRATEGY
-                              }],
+%EXPORT_TAGS = %IO::Compress::Adapter::Deflate::DEFLATE_CONSTANTS;
 
-              );
 
 {
     my %seen;
@@ -60,7 +38,7 @@ $RawDeflateError = '';
 
 %DEFLATE_CONSTANTS = %EXPORT_TAGS;
 
-push @{ $EXPORT_TAGS{all} }, @EXPORT_OK ;
+#push @{ $EXPORT_TAGS{all} }, @EXPORT_OK ;
 
 Exporter::export_ok_tags('all');
               
@@ -70,14 +48,14 @@ sub new
 {
     my $class = shift ;
 
-    my $obj = createSelfTiedObject($class, \$RawDeflateError);
+    my $obj = IO::Compress::Base::Common::createSelfTiedObject($class, \$RawDeflateError);
 
     return $obj->_create(undef, @_);
 }
 
 sub rawdeflate
 {
-    my $obj = createSelfTiedObject(undef, \$RawDeflateError);
+    my $obj = IO::Compress::Base::Common::createSelfTiedObject(undef, \$RawDeflateError);
     return $obj->_def(@_);
 }
 
@@ -95,10 +73,10 @@ sub mkComp
     my $got = shift ;
 
     my ($obj, $errstr, $errno) = IO::Compress::Adapter::Deflate::mkCompObject(
-                                                 $got->value('CRC32'),
-                                                 $got->value('Adler32'),
-                                                 $got->value('Level'),
-                                                 $got->value('Strategy')
+                                                 $got->getValue('crc32'),
+                                                 $got->getValue('adler32'),
+                                                 $got->getValue('level'),
+                                                 $got->getValue('strategy')
                                                  );
 
    return $self->saveErrorString(undef, $errstr, $errno)
@@ -135,30 +113,24 @@ sub mkFinalTrailer
 sub getExtraParams
 {
     my $self = shift ;
-    return $self->getZlibParams();
+    return getZlibParams();
 }
 
+use IO::Compress::Base::Common  2.060 qw(:Parse);
+use Compress::Raw::Zlib  2.060 qw(Z_DEFLATED Z_DEFAULT_COMPRESSION Z_DEFAULT_STRATEGY);
+our %PARAMS = (
+            #'method'   => [IO::Compress::Base::Common::Parse_unsigned,  Z_DEFLATED],
+            'level'     => [IO::Compress::Base::Common::Parse_signed,    Z_DEFAULT_COMPRESSION],
+            'strategy'  => [IO::Compress::Base::Common::Parse_signed,    Z_DEFAULT_STRATEGY],
+
+            'crc32'     => [IO::Compress::Base::Common::Parse_boolean,   0],
+            'adler32'   => [IO::Compress::Base::Common::Parse_boolean,   0],
+            'merge'     => [IO::Compress::Base::Common::Parse_boolean,   0], 
+        );
+        
 sub getZlibParams
 {
-    my $self = shift ;
-
-    use IO::Compress::Base::Common  2.033 qw(:Parse);
-    use Compress::Raw::Zlib  2.033 qw(Z_DEFLATED Z_DEFAULT_COMPRESSION Z_DEFAULT_STRATEGY);
-
-    
-    return (
-        
-            # zlib behaviour
-            #'Method'   => [0, 1, Parse_unsigned,  Z_DEFLATED],
-            'Level'     => [0, 1, Parse_signed,    Z_DEFAULT_COMPRESSION],
-            'Strategy'  => [0, 1, Parse_signed,    Z_DEFAULT_STRATEGY],
-
-            'CRC32'     => [0, 1, Parse_boolean,   0],
-            'ADLER32'   => [0, 1, Parse_boolean,   0],
-            'Merge'     => [1, 1, Parse_boolean,   0],
-        );
-    
-    
+    return %PARAMS;    
 }
 
 sub getInverseClass
@@ -317,19 +289,20 @@ section.
 
     use IO::Compress::RawDeflate qw(rawdeflate $RawDeflateError) ;
 
-    rawdeflate $input => $output [,OPTS] 
+    rawdeflate $input_filename_or_reference => $output_filename_or_reference [,OPTS] 
         or die "rawdeflate failed: $RawDeflateError\n";
 
 The functional interface needs Perl5.005 or better.
 
 =head2 rawdeflate $input => $output [, OPTS]
 
-C<rawdeflate> expects at least two parameters, C<$input> and C<$output>.
+C<rawdeflate> expects at least two parameters,
+C<$input_filename_or_reference> and C<$output_filename_or_reference>.
 
-=head3 The C<$input> parameter
+=head3 The C<$input_filename_or_reference> parameter
 
-The parameter, C<$input>, is used to define the source of
-the uncompressed data. 
+The parameter, C<$input_filename_or_reference>, is used to define the
+source of the uncompressed data. 
 
 It can take one of the following forms:
 
@@ -337,25 +310,25 @@ It can take one of the following forms:
 
 =item A filename
 
-If the C<$input> parameter is a simple scalar, it is assumed to be a
-filename. This file will be opened for reading and the input data
-will be read from it.
+If the <$input_filename_or_reference> parameter is a simple scalar, it is
+assumed to be a filename. This file will be opened for reading and the
+input data will be read from it.
 
 =item A filehandle
 
-If the C<$input> parameter is a filehandle, the input data will be
-read from it.
-The string '-' can be used as an alias for standard input.
+If the C<$input_filename_or_reference> parameter is a filehandle, the input
+data will be read from it.  The string '-' can be used as an alias for
+standard input.
 
 =item A scalar reference 
 
-If C<$input> is a scalar reference, the input data will be read
-from C<$$input>.
+If C<$input_filename_or_reference> is a scalar reference, the input data
+will be read from C<$$input_filename_or_reference>.
 
 =item An array reference 
 
-If C<$input> is an array reference, each element in the array must be a
-filename.
+If C<$input_filename_or_reference> is an array reference, each element in
+the array must be a filename.
 
 The input data will be read from each file in turn. 
 
@@ -364,65 +337,72 @@ contains valid filenames before any data is compressed.
 
 =item An Input FileGlob string
 
-If C<$input> is a string that is delimited by the characters "<" and ">"
-C<rawdeflate> will assume that it is an I<input fileglob string>. The
-input is the list of files that match the fileglob.
+If C<$input_filename_or_reference> is a string that is delimited by the
+characters "<" and ">" C<rawdeflate> will assume that it is an 
+I<input fileglob string>. The input is the list of files that match the 
+fileglob.
 
 See L<File::GlobMapper|File::GlobMapper> for more details.
 
 =back
 
-If the C<$input> parameter is any other type, C<undef> will be returned.
+If the C<$input_filename_or_reference> parameter is any other type,
+C<undef> will be returned.
 
-=head3 The C<$output> parameter
+=head3 The C<$output_filename_or_reference> parameter
 
-The parameter C<$output> is used to control the destination of the
-compressed data. This parameter can take one of these forms.
+The parameter C<$output_filename_or_reference> is used to control the
+destination of the compressed data. This parameter can take one of
+these forms.
 
 =over 5
 
 =item A filename
 
-If the C<$output> parameter is a simple scalar, it is assumed to be a
-filename.  This file will be opened for writing and the compressed
-data will be written to it.
+If the C<$output_filename_or_reference> parameter is a simple scalar, it is
+assumed to be a filename.  This file will be opened for writing and the 
+compressed data will be written to it.
 
 =item A filehandle
 
-If the C<$output> parameter is a filehandle, the compressed data
-will be written to it.
-The string '-' can be used as an alias for standard output.
+If the C<$output_filename_or_reference> parameter is a filehandle, the
+compressed data will be written to it.  The string '-' can be used as
+an alias for standard output.
 
 =item A scalar reference 
 
-If C<$output> is a scalar reference, the compressed data will be
-stored in C<$$output>.
+If C<$output_filename_or_reference> is a scalar reference, the
+compressed data will be stored in C<$$output_filename_or_reference>.
 
 =item An Array Reference
 
-If C<$output> is an array reference, the compressed data will be
-pushed onto the array.
+If C<$output_filename_or_reference> is an array reference, 
+the compressed data will be pushed onto the array.
 
 =item An Output FileGlob
 
-If C<$output> is a string that is delimited by the characters "<" and ">"
-C<rawdeflate> will assume that it is an I<output fileglob string>. The
-output is the list of files that match the fileglob.
+If C<$output_filename_or_reference> is a string that is delimited by the
+characters "<" and ">" C<rawdeflate> will assume that it is an
+I<output fileglob string>. The output is the list of files that match the
+fileglob.
 
-When C<$output> is an fileglob string, C<$input> must also be a fileglob
-string. Anything else is an error.
+When C<$output_filename_or_reference> is an fileglob string,
+C<$input_filename_or_reference> must also be a fileglob string. Anything
+else is an error.
 
 See L<File::GlobMapper|File::GlobMapper> for more details.
 
 =back
 
-If the C<$output> parameter is any other type, C<undef> will be returned.
+If the C<$output_filename_or_reference> parameter is any other type,
+C<undef> will be returned.
 
 =head2 Notes
 
-When C<$input> maps to multiple files/buffers and C<$output> is a single
+When C<$input_filename_or_reference> maps to multiple files/buffers and
+C<$output_filename_or_reference> is a single
 file/buffer the input files/buffers will be stored
-in C<$output> as a concatenated series of compressed data streams.
+in C<$output_filename_or_reference> as a concatenated series of compressed data streams.
 
 =head2 Optional Parameters
 
@@ -861,7 +841,7 @@ If the C<$z> object is associated with a file or a filehandle, C<fileno>
 will return the underlying file descriptor. Once the C<close> method is
 called C<fileno> will return C<undef>.
 
-If the C<$z> object is is associated with a buffer, this method will return
+If the C<$z> object is associated with a buffer, this method will return
 C<undef>.
 
 =head2 close
@@ -971,8 +951,6 @@ These symbolic constants are used by the C<Strategy> option in the constructor.
 
 See L<IO::Compress::FAQ|IO::Compress::FAQ/"Apache::GZip Revisited">
 
-    
-
 =head2 Working with Net::FTP
 
 See L<IO::Compress::FAQ|IO::Compress::FAQ/"Compressed files and Net::FTP">
@@ -981,7 +959,7 @@ See L<IO::Compress::FAQ|IO::Compress::FAQ/"Compressed files and Net::FTP">
 
 L<Compress::Zlib>, L<IO::Compress::Gzip>, L<IO::Uncompress::Gunzip>, L<IO::Compress::Deflate>, L<IO::Uncompress::Inflate>, L<IO::Uncompress::RawInflate>, L<IO::Compress::Bzip2>, L<IO::Uncompress::Bunzip2>, L<IO::Compress::Lzma>, L<IO::Uncompress::UnLzma>, L<IO::Compress::Xz>, L<IO::Uncompress::UnXz>, L<IO::Compress::Lzop>, L<IO::Uncompress::UnLzop>, L<IO::Compress::Lzf>, L<IO::Uncompress::UnLzf>, L<IO::Uncompress::AnyInflate>, L<IO::Uncompress::AnyUncompress>
 
-L<Compress::Zlib::FAQ|Compress::Zlib::FAQ>
+L<IO::Compress::FAQ|IO::Compress::FAQ>
 
 L<File::GlobMapper|File::GlobMapper>, L<Archive::Zip|Archive::Zip>,
 L<Archive::Tar|Archive::Tar>,
@@ -1010,7 +988,7 @@ See the Changes file.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2005-2011 Paul Marquess. All rights reserved.
+Copyright (c) 2005-2013 Paul Marquess. All rights reserved.
 
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.

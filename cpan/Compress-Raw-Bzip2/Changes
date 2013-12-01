@@ -1,6 +1,88 @@
 CHANGES
 -------
 
+  2.060 7 January 2013
+
+      * No Changes
+
+  2.059 24 November 2012
+
+      * Copy-on-write support
+        [#81352]
+
+  2.058 12 November 2012
+
+      * No Changes
+
+  2.057 10 November 2012
+
+      * Compress::Raw::Bzip2 needs to use PERL_NO_GET_CONTEXT
+        [#80318]
+
+      * Install to 'site' instead of 'perl' when perl version is 5.11+
+        [#79811]
+
+      * update to ppport.h that includes SvPV_nomg_nolen
+        [#78080] 
+
+  2.055 4 August 2012
+
+      * Fix misuse of magic in API
+        [#78080] 
+
+  2.052 29 April 2012
+
+      * No Changes
+
+  2.049 18 February 2012
+
+      * No Changes
+
+  2.048 29 January 2012
+
+      * No Changes
+
+  2.047 28 January 2012
+
+      * Set minimum Perl version to 5.6
+
+  2.045 3 December 2011
+
+      * Moved FAQ.pod to IO::Compress
+
+  2.044 2 December 2011
+
+      * Moved FAQ.pod under the lib directory so it can get installed
+
+  2.043 20 November 2011
+
+      * No Changes
+
+  2.042 17 November 2011
+
+      * No Changes
+
+  2.040 28 October 2011
+
+      * No Changes
+
+  2.039 28 October 2011
+
+      * croak if attempt to freeze/thaw compression object
+        [RT #69985]
+
+  2.037 22 June 2011
+
+      * No Changes
+
+  2.036 18 June 2011
+
+      * No Changes
+
+  2.035 6 May 2011
+
+      * No Changes
+
   2.033 11 Jan 2011
       * Fixed typos & spelling errors.
         [perl# 81782]

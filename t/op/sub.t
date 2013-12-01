@@ -6,7 +6,7 @@ BEGIN {
     require './test.pl';
 }
 
-plan( tests => 8 );
+plan( tests => 16 );
 
 sub empty_sub {}
 
@@ -40,3 +40,48 @@ is(scalar(@test), 0, 'Didnt return anything');
     push @a, 34, 35, &{$x == $x};
     ok(eq_array(\@a, [34,35]), "yes without args");
 }
+
+# [perl #81944] return should always copy
+{
+    $foo{bar} = 7;
+    for my $x ($foo{bar}) {
+	# Pity test.pl doesnt have isn't.
+	isnt \sub { delete $foo{bar} }->(), \$x,
+	   'result of delete(helem) is copied when returned';
+    }
+    $foo{bar} = 7;
+    for my $x ($foo{bar}) {
+	isnt \sub { return delete $foo{bar} }->(), \$x,
+	   'result of delete(helem) is copied when explicitly returned';
+    }
+    my $x;
+    isnt \sub { delete $_[0] }->($x), \$x,
+      'result of delete(aelem) is copied when returned';
+    isnt \sub { return delete $_[0] }->($x), \$x,
+      'result of delete(aelem) is copied when explicitly returned';
+    isnt \sub { ()=\@_; shift }->($x), \$x,
+      'result of shift is copied when returned';
+    isnt \sub { ()=\@_; return shift }->($x), \$x,
+      'result of shift is copied when explicitly returned';
+}
+
+fresh_perl_is
+  <<'end', "main::foo\n", {}, 'sub redefinition sets CvGV';
+*foo = \&baz;
+*bar = *foo;
+eval 'sub bar { print +(caller 0)[3], "\n" }';
+bar();
+end
+
+fresh_perl_is
+  <<'end', "main::foo\nok\n", {}, 'no double free redefining anon stub';
+my $sub = sub { 4 };
+*foo = $sub;
+*bar = *foo;
+undef &$sub;
+eval 'sub bar { print +(caller 0)[3], "\n" }';
+&$sub;
+undef *foo;
+undef *bar;
+print "ok\n";
+end

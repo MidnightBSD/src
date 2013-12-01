@@ -22,6 +22,7 @@ Cross/warp -text
 /INSTALL -text
 /INTERN.h -text
 /MANIFEST -text
+/META.json -text
 /META.yml -text
 /Makefile.SH -text
 /Makefile.micro -text
@@ -144,56 +145,47 @@ Porting/timecheck.c -text
 Porting/timecheck2.c -text
 Porting/valgrindpp.pl -text
 /README -text
-/README.aix -text
-/README.amiga -text
-/README.beos -text
-/README.bs2000 -text
-/README.ce -text
-/README.cn -text
-/README.cygwin -text
-/README.dgux -text
-/README.dos -text
-/README.epoc -text
-/README.freebsd -text
-/README.haiku -text
-/README.hpux -text
-/README.hurd -text
-/README.irix -text
-/README.jp -text
-/README.ko -text
-/README.linux -text
-/README.macos -text
-/README.macosx -text
-/README.micro -text
-/README.mpeix -text
-/README.netware -text
-/README.openbsd -text
-/README.os2 -text
-/README.os390 -text
-/README.os400 -text
-/README.plan9 -text
-/README.qnx -text
-/README.riscos -text
-/README.solaris -text
-/README.symbian -text
-/README.tru64 -text
-/README.tw -text
-/README.uts -text
-/README.vmesa -text
-/README.vms -text
-/README.vos -text
-/README.win32 -text
+/README.aix -text svneol=unset#text/plain
+/README.amiga -text svneol=unset#text/plain
+/README.bs2000 -text svneol=unset#text/plain
+/README.ce -text svneol=unset#text/plain
+/README.cn -text svneol=unset#application/octet-stream
+/README.cygwin -text svneol=unset#text/plain
+/README.dgux -text svneol=unset#text/plain
+/README.dos -text svneol=unset#text/plain
+/README.freebsd -text svneol=unset#text/plain
+/README.haiku -text svneol=unset#text/plain
+/README.hpux -text svneol=unset#text/plain
+/README.hurd -text svneol=unset#text/plain
+/README.irix -text svneol=unset#text/plain
+/README.jp -text svneol=unset#application/octet-stream
+/README.ko -text svneol=unset#application/octet-stream
+/README.linux -text svneol=unset#text/plain
+/README.macos -text svneol=unset#text/plain
+/README.macosx -text svneol=unset#text/plain
+/README.micro -text svneol=unset#text/plain
+/README.netware -text svneol=unset#text/plain
+/README.openbsd -text svneol=unset#text/plain
+/README.os2 -text svneol=unset#text/plain
+/README.os390 -text svneol=unset#text/plain
+/README.os400 -text svneol=unset#text/plain
+/README.plan9 -text svneol=unset#text/plain
+/README.qnx -text svneol=unset#text/plain
+/README.riscos -text svneol=unset#text/plain
+/README.solaris -text svneol=unset#text/plain
+/README.symbian -text svneol=unset#text/plain
+/README.tru64 -text svneol=unset#text/plain
+/README.tw -text svneol=unset#application/octet-stream
+/README.vms -text svneol=unset#text/plain
+/README.vos -text svneol=unset#text/plain
+/README.win32 -text svneol=unset#text/plain
 /TestInit.pm -text
-/Todo.micro -text
 /XSUB.h -text
 /autodoc.pl -text
 /av.c -text
 /av.h -text
-beos/beos.c -text
-beos/beosish.h -text
-beos/nm.c -text
-/cc_runtime.h -text
 /cflags.SH -text
+/charclass_invlists.h -text
 /config_h.SH -text
 /configpm -text
 /configure.com -text
@@ -3484,20 +3476,9 @@ djgpp/fixpmain -text
 /dosish.h -text
 /dquote_static.c -text
 /dump.c -text
-emacs/cperl-mode.el -text
-emacs/e2ctags.pl -text
-emacs/ptags -text
 /embed.fnc -text
 /embed.h -text
-/embed.pl -text
 /embedvar.h -text
-epoc/config.sh -text
-epoc/createpkg.pl -text
-epoc/epoc.c -text
-epoc/epoc_stubs.c -text
-epoc/epocish.c -text
-epoc/epocish.h -text
-epoc/link.pl -text
 ext/Attribute-Handlers/README -text
 ext/Attribute-Handlers/demo/Demo.pm -text
 ext/Attribute-Handlers/demo/Descriptions.pm -text
@@ -5698,10 +5679,10 @@ ext/util/make_ext -text
 ext/util/make_ext_cross -text
 /fakesdio.h -text
 /fakethr.h -text
+/feature.h -text
 /form.h -text
 /generate_uudmap.c -text
 /genpacksizetables.pl -text
-/global.sym -text
 /globals.c -text
 /globvar.sym -text
 /gv.c -text
@@ -5822,6 +5803,9 @@ hints/vmesa.sh -text
 hints/vos.sh -text
 /hv.c -text
 /hv.h -text
+/hv_func.h -text
+/inline.h -text
+/inline_invlist.c -text
 /install_lib.pl -text
 /installhtml -text
 /installman -text
@@ -5830,7 +5814,6 @@ hints/vos.sh -text
 /iperlsys.h -text
 /keywords.c -text
 /keywords.h -text
-/keywords.pl -text
 /l1_char_class_tab.h -text
 lib/AnyDBM_File.pm -text
 lib/AnyDBM_File.t -text
@@ -7620,10 +7603,8 @@ mad/t/p55.t -text
 /madly.c -text
 /make_ext.pl -text
 /make_patchnum.pl -text
-/makeaperl.SH -text
 /makedef.pl -text
 /makedepend.SH -text
-/makedir.SH -text
 /malloc.c -text
 /malloc_ctl.h -text
 /mathoms.c -text
@@ -7631,15 +7612,13 @@ mad/t/p55.t -text
 /metaconfig.h -text
 /mg.c -text
 /mg.h -text
+/mg_names.c -text
+/mg_raw.h -text
+/mg_vtable.h -text
 /minimod.pl -text
 /miniperlmain.c -text
 /mkppport -text
 /mkppport.lst -text
-mpeix/mpeix.c -text
-mpeix/mpeix_setjmp.c -text
-mpeix/mpeixish.h -text
-mpeix/nm -text
-mpeix/relink -text
 /mro.c -text
 /myconfig.SH -text
 /mydtrace.h -text
@@ -7649,7 +7628,6 @@ mpeix/relink -text
 /op.h -text
 /op_reg_common.h -text
 /opcode.h -text
-/opcode.pl -text
 /opnames.h -text
 os2/Changes -text
 os2/Makefile.SHs -text
@@ -7712,14 +7690,12 @@ os2/perlrexx.c -text
 os2/perlrexx.cmd -text
 /overload.c -text
 /overload.h -text
-/overload.pl -text
 /pad.c -text
 /pad.h -text
 /parser.h -text
 /patchlevel.h -text
 /perl.c -text
 /perl.h -text
-/perl_keyword.pl -text
 /perlapi.c -text
 /perlapi.h -text
 /perldtrace.d -text
@@ -7751,7 +7727,6 @@ plan9/plan9.c -text
 plan9/plan9ish.h -text
 plan9/setup.rc -text
 plan9/versnum -text
-/pod.lst -text
 pod/Makefile.SH -text
 pod/buildtoc -text
 pod/checkpods.PL -text
@@ -7924,7 +7899,6 @@ pod/splitman -text
 pod/splitpod -text
 /pp.c -text
 /pp.h -text
-/pp.sym -text
 /pp_ctl.c -text
 /pp_hot.c -text
 /pp_pack.c -text
@@ -7937,11 +7911,9 @@ qnx/cpp -text
 qnx/qnx.c -text
 /reentr.c -text
 /reentr.h -text
-/reentr.pl -text
 /regcharclass.h -text
 /regcomp.c -text
 /regcomp.h -text
-/regcomp.pl -text
 /regcomp.sym -text
 /regen.pl -text
 regen/embed.pl -text
@@ -7956,7 +7928,6 @@ regen/regcomp.pl -text
 regen/regen_lib.pl -text
 regen/uconfig_h.pl -text
 regen/warnings.pl -text
-/regen_lib.pl -text
 /regen_perly.pl -text
 /regexec.c -text
 /regexp.h -text
@@ -8737,6 +8708,7 @@ t/x2p/s2p.t -text
 /uconfig.h -text
 /uconfig.sh -text
 /uconfig64.sh -text
+/unicode_constants.h -text
 /universal.c -text
 /unixish.h -text
 /utf8.c -text
@@ -8773,12 +8745,6 @@ utils/ptargrep.PL -text
 utils/shasum.PL -text
 utils/splain.PL -text
 utils/xsubpp.PL -text
-uts/sprintf_wrap.c -text
-uts/strtol_wrap.c -text
-/uupacktool.pl -text
-vmesa/Makefile -text
-vmesa/vmesa.c -text
-vmesa/vmesaish.h -text
 vms/descrip_mms.template -text
 vms/ext/Filespec.pm -text
 vms/ext/filespec.t -text
@@ -8802,7 +8768,6 @@ vos/syslog.h -text
 vos/vos.c -text
 vos/vosish.h -text
 /warnings.h -text
-/warnings.pl -text
 win32/FindExt.pm -text
 win32/Makefile -text
 win32/Makefile.ce -text
@@ -8870,7 +8835,6 @@ win32/wince.c -text
 win32/wince.h -text
 win32/wincesck.c -text
 /write_buildcustomize.pl -text
-/writemain.SH -text
 x2p/EXTERN.h -text
 x2p/INTERN.h -text
 x2p/Makefile.SH -text
@@ -8889,4 +8853,3 @@ x2p/str.h -text
 x2p/util.c -text
 x2p/util.h -text
 x2p/walk.c -text
-/xsutils.c -text

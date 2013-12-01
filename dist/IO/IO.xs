@@ -57,6 +57,10 @@ typedef FILE * OutputStream;
 # define NORETURN_FUNCTION_END /* NOT REACHED */ return 0
 #endif
 
+#ifndef dVAR
+#  define dVAR dNOOP
+#endif
+
 static int not_here(const char *s) __attribute__noreturn__;
 static int
 not_here(const char *s)
@@ -122,13 +126,46 @@ io_blocking(pTHX_ InputStream f, int block)
     return RETVAL;
 #else
 #   ifdef WIN32
-    char flags = (char)block;
-    return ioctl(PerlIO_fileno(f), FIONBIO, &flags);
+    if (block >= 0) {
+	unsigned long flags = !block;
+	/* ioctl claims to take char* but really needs a u_long sized buffer */
+	const int ret = ioctl(PerlIO_fileno(f), FIONBIO, (char*)&flags);
+	if (ret != 0)
+	    return -1;
+	/* Win32 has no way to get the current blocking status of a socket.
+	 * However, we don't want to just return undef, because there's no way
+	 * to tell that the ioctl succeeded.
+	 */
+	return flags;
+    }
+    /* TODO: Perhaps set $! to ENOTSUP? */
+    return -1;
 #   else
     return -1;
 #   endif
 #endif
 }
+
+static OP *
+io_pp_nextstate(pTHX)
+{
+    dVAR;
+    COP *old_curcop = PL_curcop;
+    OP *next = PL_ppaddr[PL_op->op_type](aTHX);
+    PL_curcop = old_curcop;
+    return next;
+}
+
+static OP *
+io_ck_lineseq(pTHX_ OP *o)
+{
+    OP *kid = cBINOPo->op_first;
+    for (; kid; kid = kid->op_sibling)
+	if (kid->op_type == OP_NEXTSTATE || kid->op_type == OP_DBSTATE)
+	    kid->op_ppaddr = io_pp_nextstate;
+    return o;
+}
+
 
 MODULE = IO	PACKAGE = IO::Seekable	PREFIX = f
 
@@ -290,14 +327,38 @@ MODULE = IO	PACKAGE = IO::Handle	PREFIX = f
 int
 ungetc(handle, c)
 	InputStream	handle
-	int		c
+	SV *	        c
     CODE:
-	if (handle)
+	if (handle) {
 #ifdef PerlIO
-	    RETVAL = PerlIO_ungetc(handle, c);
+            UV v;
+
+            if ((SvIOK_notUV(c) && SvIV(c) < 0) || (SvNOK(c) && SvNV(c) < 0.0))
+                croak("Negative character number in ungetc()");
+
+            v = SvUV(c);
+            if (NATIVE_IS_INVARIANT(v) || (v <= 0xFF && !PerlIO_isutf8(handle)))
+                RETVAL = PerlIO_ungetc(handle, (int)v);
+            else {
+                U8 buf[UTF8_MAXBYTES + 1], *end;
+                Size_t len;
+
+                if (!PerlIO_isutf8(handle))
+                    croak("Wide character number in ungetc()");
+
+                /* This doesn't warn for non-chars, surrogate, and
+                 * above-Unicodes */
+                end = uvchr_to_utf8_flags(buf, v, 0);
+                len = end - buf;
+                if (PerlIO_unread(handle, &buf, len) == len)
+                    XSRETURN_UV(v);
+                else
+                    RETVAL = EOF;
+            }
 #else
-	    RETVAL = ungetc(c, handle);
+            RETVAL = ungetc((int)SvIV(c), handle);
 #endif
+        }
 	else {
 	    RETVAL = -1;
 	    errno = EINVAL;
@@ -429,10 +490,15 @@ setvbuf(...)
 
 
 SysRet
-fsync(handle)
-	OutputStream handle
+fsync(arg)
+	SV * arg
+    PREINIT:
+	OutputStream handle = NULL;
     CODE:
 #ifdef HAS_FSYNC
+	handle = IoOFP(sv_2io(arg));
+	if (!handle)
+	    handle = IoIFP(sv_2io(arg));
 	if(handle)
 	    RETVAL = fsync(PerlIO_fileno(handle));
 	else {
@@ -442,6 +508,16 @@ fsync(handle)
 #else
 	RETVAL = (SysRet) not_here("IO::Handle::sync");
 #endif
+    OUTPUT:
+	RETVAL
+
+SV *
+_create_getline_subs(const char *code)
+    CODE:
+	OP *(*io_old_ck_lineseq)(pTHX_ OP *) = PL_check[OP_LINESEQ];
+	PL_check[OP_LINESEQ] = io_ck_lineseq;
+	RETVAL = SvREFCNT_inc(eval_pv(code,FALSE));
+	PL_check[OP_LINESEQ] = io_old_ck_lineseq;
     OUTPUT:
 	RETVAL
 

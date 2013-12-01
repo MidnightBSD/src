@@ -1,6 +1,7 @@
-# $Id: Mod_EUCJP.pm,v 1.1.1.1 2011-05-18 13:33:28 laffer1 Exp $
+# $Id: Mod_EUCJP.pm,v 2.1 2013/02/18 02:23:56 dankogai Exp $
 # This file is in euc-jp
 package Mod_EUCJP;
+no warnings "deprecated";
 use encoding "euc-jp";
 sub new {
   my $class = shift;

@@ -48,7 +48,15 @@ Used to access elements on the XSUB's stack.
 
 =for apidoc AmU||XS
 Macro to declare an XSUB and its C parameter list.  This is handled by
-C<xsubpp>.
+C<xsubpp>. It is the same as using the more explicit XS_EXTERNAL macro.
+
+=for apidoc AmU||XS_INTERNAL
+Macro to declare an XSUB and its C parameter list without exporting the symbols.
+This is handled by C<xsubpp> and generally preferable over exporting the XSUB
+symbols unnecessarily.
+
+=for apidoc AmU||XS_EXTERNAL
+Macro to declare an XSUB and its C parameter list explicitly exporting the symbols.
 
 =for apidoc Ams||dAX
 Sets up the C<ax> variable.
@@ -107,32 +115,51 @@ is a lexical $_ in scope.
  * Don't forget to change the __attribute__unused__ version of XS()
  * below too if you change XSPROTO() here.
  */
+
+/* XS_INTERNAL is the explicit static-linkage variant of the default
+ * XS macro.
+ *
+ * XS_EXTERNAL is the same as XS_INTERNAL except it does not include
+ * "STATIC", ie. it exports XSUB symbols. You probably don't want that.
+ */
+
 #define XSPROTO(name) void name(pTHX_ CV* cv)
 
 #undef XS
+#undef XS_EXTERNAL
+#undef XS_INTERNAL
 #if defined(__CYGWIN__) && defined(USE_DYNAMIC_LOADING)
-#  define XS(name) __declspec(dllexport) XSPROTO(name)
+#  define XS_EXTERNAL(name) __declspec(dllexport) XSPROTO(name)
+#  define XS_INTERNAL(name) STATIC XSPROTO(name)
 #endif
 #if defined(__SYMBIAN32__)
-#  define XS(name) EXPORT_C XSPROTO(name)
+#  define XS_EXTERNAL(name) EXPORT_C XSPROTO(name)
+#  define XS_INTERNAL(name) EXPORT_C STATIC XSPROTO(name)
 #endif
-#ifndef XS
+#ifndef XS_EXTERNAL
 #  if defined(HASATTRIBUTE_UNUSED) && !defined(__cplusplus)
-#    define XS(name) void name(pTHX_ CV* cv __attribute__unused__)
+#    define XS_EXTERNAL(name) void name(pTHX_ CV* cv __attribute__unused__)
+#    define XS_INTERNAL(name) STATIC void name(pTHX_ CV* cv __attribute__unused__)
 #  else
 #    ifdef __cplusplus
-#      define XS(name) extern "C" XSPROTO(name)
+#      define XS_EXTERNAL(name) extern "C" XSPROTO(name)
+#      define XS_INTERNAL(name) static XSPROTO(name)
 #    else
-#      define XS(name) XSPROTO(name)
+#      define XS_EXTERNAL(name) XSPROTO(name)
+#      define XS_INTERNAL(name) STATIC XSPROTO(name)
 #    endif
 #  endif
 #endif
+
+/* We do export xsub symbols by default for the public XS macro.
+ * Try explicitly using XS_INTERNAL/XS_EXTERNAL instead, please. */
+#define XS(name) XS_EXTERNAL(name)
 
 #define dAX const I32 ax = (I32)(MARK - PL_stack_base + 1)
 
 #define dAXMARK				\
 	I32 ax = POPMARK;	\
-	register SV **mark = PL_stack_base + ax++
+	SV **mark = PL_stack_base + ax++
 
 #define dITEMS I32 items = (I32)(SP - MARK)
 
@@ -367,7 +394,6 @@ Rethrows a previously caught exception.  See L<perlguts/"Exception Handling">.
 #  define VTBL_sv		&PL_vtbl_sv
 #  define VTBL_env		&PL_vtbl_env
 #  define VTBL_envelem		&PL_vtbl_envelem
-#  define VTBL_sig		&PL_vtbl_sig
 #  define VTBL_sigelem		&PL_vtbl_sigelem
 #  define VTBL_pack		&PL_vtbl_pack
 #  define VTBL_packelem		&PL_vtbl_packelem
@@ -609,18 +635,16 @@ Rethrows a previously caught exception.  See L<perlguts/"Exception Handling">.
 #    define socketpair		PerlSock_socketpair
 #	endif	/* NETWARE && USE_STDIO */
 
-#    ifdef USE_SOCKETS_AS_HANDLES
-#      undef fd_set
-#      undef FD_SET
-#      undef FD_CLR
-#      undef FD_ISSET
-#      undef FD_ZERO
-#      define fd_set		Perl_fd_set
-#      define FD_SET(n,p)	PERL_FD_SET(n,p)
-#      define FD_CLR(n,p)	PERL_FD_CLR(n,p)
-#      define FD_ISSET(n,p)	PERL_FD_ISSET(n,p)
-#      define FD_ZERO(p)	PERL_FD_ZERO(p)
-#    endif	/* USE_SOCKETS_AS_HANDLES */
+#    undef fd_set
+#    undef FD_SET
+#    undef FD_CLR
+#    undef FD_ISSET
+#    undef FD_ZERO
+#    define fd_set		Perl_fd_set
+#    define FD_SET(n,p)		PERL_FD_SET(n,p)
+#    define FD_CLR(n,p)		PERL_FD_CLR(n,p)
+#    define FD_ISSET(n,p)	PERL_FD_ISSET(n,p)
+#    define FD_ZERO(p)		PERL_FD_ZERO(p)
 
 #  endif  /* NO_XSLOCKS */
 #endif  /* PERL_IMPLICIT_SYS && !PERL_CORE */
@@ -631,8 +655,8 @@ Rethrows a previously caught exception.  See L<perlguts/"Exception Handling">.
  * Local variables:
  * c-indentation-style: bsd
  * c-basic-offset: 4
- * indent-tabs-mode: t
+ * indent-tabs-mode: nil
  * End:
  *
- * ex: set ts=8 sts=4 sw=4 noet:
+ * ex: set ts=8 sts=4 sw=4 et:
  */

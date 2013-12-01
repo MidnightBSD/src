@@ -4,7 +4,7 @@ use Text::Balanced ':ALL';
 
 use vars qw{ $VERSION @EXPORT };
 
-$VERSION = '0.86';
+$VERSION = '0.89';
 
 use Filter::Util::Call;
 use Carp;
@@ -36,22 +36,31 @@ my $CUT = qr/\n=cut.*$EOP/;
 my $pod_or_DATA = qr/
               ^=(?:head[1-4]|item) .*? $CUT
             | ^=pod .*? $CUT
-            | ^=for .*? $EOP
-            | ^=begin \s* (\S+) .*? \n=end \s* \1 .*? $EOP
+            | ^=for .*? $CUT
+            | ^=begin .*? $CUT
             | ^__(DATA|END)__\r?\n.*
             /smx;
+my $variable = qr{
+        [\$*\@%]\s*
+            \{\s*(?!::)(?:\d+|[][&`'#+*./|,";%=~:?!\@<>()-]|\^[A-Z]?)\}
+      | (?:\$#?|[*\@\%]|\\&)\$*\s*
+               (?:  \{\s*(?:\^(?=[A-Z_]))?(?:\w|::|'\w)*\s*\}
+                  |      (?:\^(?=[A-Z_]))?(?:\w|::|'\w)*
+                  | (?=\{)  # ${ block }
+               )
+        )
+      | \$\s*(?!::)(?:\d+|[][&`'#+*./|,";%=~:?!\@<>()-]|\^[A-Z]?)
+   }x;
 
 my %extractor_for = (
-    quotelike  => [ $ws,  \&extract_variable, $id, { MATCH  => \&extract_quotelike } ],
+    quotelike  => [ $ws,  $variable, $id, { MATCH  => \&extract_quotelike } ],
     regex      => [ $ws,  $pod_or_DATA, $id, $exql           ],
     string     => [ $ws,  $pod_or_DATA, $id, $exql           ],
-    code       => [ $ws, { DONT_MATCH => $pod_or_DATA },
-    		        \&extract_variable,
+    code       => [ $ws, { DONT_MATCH => $pod_or_DATA }, $variable,
                     $id, { DONT_MATCH => \&extract_quotelike }   ],
     code_no_comments
                => [ { DONT_MATCH => $comment },
-                    $ncws, { DONT_MATCH => $pod_or_DATA },
-    		        \&extract_variable,
+                    $ncws, { DONT_MATCH => $pod_or_DATA }, $variable,
                     $id, { DONT_MATCH => \&extract_quotelike }   ],
     executable => [ $ws, { DONT_MATCH => $pod_or_DATA }      ],
     executable_no_comments
@@ -242,7 +251,7 @@ Filter::Simple - Simplified source filtering
      package MyFilter;
 
      use Filter::Simple;
-     
+
      FILTER { ... };
 
      # or just:
@@ -329,7 +338,7 @@ to the sequence C<die 'BANG' if $BANG> in any piece of code following a
 C<use BANG;> statement (until the next C<no BANG;> statement, if any):
 
     package BANG;
- 
+
     use Filter::Util::Call ;
 
     sub import {
@@ -394,7 +403,7 @@ In other words, the previous example, would become:
 
     package BANG;
     use Filter::Simple;
-    
+
     FILTER {
         s/BANG\s+BANG/die 'BANG' if \$BANG/g;
     };
@@ -438,7 +447,7 @@ you would write:
 
     package BANG;
     use Filter::Simple;
-    
+
     FILTER {
         s/BANG\s+BANG/die 'BANG' if \$BANG/g;
     }
@@ -455,7 +464,7 @@ and to prevent the filter's being turned off in any way:
 
     package BANG;
     use Filter::Simple;
-    
+
     FILTER {
         s/BANG\s+BANG/die 'BANG' if \$BANG/g;
     }
@@ -752,9 +761,9 @@ list to the filtering subroutine, so the BANG.pm filter could easily
 be made parametric:
 
     package BANG;
- 
+
     use Filter::Simple;
-    
+
     FILTER {
         my ($die_msg, $var_name) = @_;
         s/BANG\s+BANG/die '$die_msg' if \${$var_name}/g;

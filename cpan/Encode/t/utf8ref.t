@@ -1,5 +1,5 @@
 #
-# $Id: utf8ref.t,v 1.1.1.1 2011-05-18 13:33:28 laffer1 Exp $
+# $Id: utf8ref.t,v 1.1 2010/09/18 18:39:51 dankogai Exp $
 #
 
 use strict;

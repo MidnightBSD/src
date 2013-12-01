@@ -9,10 +9,6 @@
  * eay@psych.psy.uq.oz.au
  */
 
-#if defined(__BORLANDC__)
-#pragma warn -8004	/* "'foo' is assigned a value that is never used" */
-#endif
-
 typedef unsigned char des_cblock[8];
 
 typedef struct des_ks_struct
@@ -340,10 +336,10 @@ static int body(
 static int
 des_set_key(des_cblock *key, des_key_schedule schedule)
 	{
-	register unsigned long c,d,t,s;
-	register unsigned char *in;
-	register unsigned long *k;
-	register int i;
+	unsigned long c,d,t,s;
+	unsigned char *in;
+	unsigned long *k;
+	int i;
 
 	k=(unsigned long *)schedule;
 	in=(unsigned char *)key;
@@ -537,13 +533,13 @@ body(	unsigned long *out0,
 	unsigned long Eswap0,
 	unsigned long Eswap1)
 	{
-	register unsigned long l,r,t,u,v;
+	unsigned long l,r,t,u,v;
 #ifdef ALT_ECB
-	register unsigned char *des_SP=(unsigned char *)SPtrans;
+	unsigned char *des_SP=(unsigned char *)SPtrans;
 #endif
-	register unsigned long *s;
-	register int i,j;
-	register unsigned long E0,E1;
+	unsigned long *s;
+	int i,j;
+	unsigned long E0,E1;
 
 	l=0;
 	r=0;

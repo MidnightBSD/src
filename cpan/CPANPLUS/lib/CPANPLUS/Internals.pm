@@ -1,4 +1,5 @@
 package CPANPLUS::Internals;
+use deprecate;
 
 ### we /need/ perl5.6.1 or higher -- we use coderefs in @INC,
 ### and 5.6.0 is just too buggy
@@ -6,7 +7,6 @@ use 5.006001;
 
 use strict;
 use Config;
-
 
 use CPANPLUS::Error;
 
@@ -19,7 +19,6 @@ use CPANPLUS::Internals::Constants;
 use CPANPLUS::Internals::Search;
 use CPANPLUS::Internals::Report;
 
-
 require base;
 use Cwd                         qw[cwd];
 use Module::Load                qw[load];
@@ -28,7 +27,6 @@ use Locale::Maketext::Simple    Class => 'CPANPLUS', Style => 'gettext';
 use Module::Load::Conditional   qw[can_load];
 
 use Object::Accessor;
-
 
 local $Params::Check::VERBOSE = 1;
 
@@ -42,13 +40,13 @@ use vars qw[@ISA $VERSION];
             CPANPLUS::Internals::Report
         ];
 
-$VERSION = "0.9103";
+$VERSION = "0.9135";
 
 =pod
 
 =head1 NAME
 
-CPANPLUS::Internals
+CPANPLUS::Internals - CPANPLUS internals
 
 =head1 SYNOPSIS
 
@@ -79,7 +77,7 @@ Get/set the id
 =cut
 
 ### autogenerate accessors ###
-for my $key ( qw[_conf _id _modules _hosts _methods _status
+for my $key ( qw[_conf _id _modules _hosts _methods _status _path
                  _callbacks _selfupdate _mtree _atree]
 ) {
     no strict 'refs';
@@ -109,7 +107,7 @@ Returns the object on success, or dies on failure.
     ### if extra callbacks are added, don't forget to update the
     ### 02-internals.t test script with them!
     my $callback_map = {
-        ### name                default value    
+        ### name                default value
         install_prerequisite    => 1,   # install prereqs when 'ask' is set?
         edit_test_report        => 0,   # edit the prepared test report?
         send_test_report        => 1,   # send the test report?
@@ -121,7 +119,7 @@ Returns the object on success, or dies on failure.
         proceed_on_test_failure => sub { return 0 },
         munge_dist_metafile     => sub { return $_[1] },
     };
-    
+
     my $status = Object::Accessor->new;
     $status->mk_accessors(qw[pending_prereqs]);
 
@@ -139,6 +137,7 @@ Returns the object on success, or dies on failure.
         _methods    => { default => {},                 no_override => 1 },
         _status     => { default => '<empty>',          no_override => 1 },
         _callbacks  => { default => '<empty>',          no_override => 1 },
+        _path       => { default => $ENV{PATH} || '',   no_override => 1 },
     };
 
     sub _init {
@@ -169,14 +168,14 @@ Returns the object on success, or dies on failure.
         for my $name ( $callback->ls_accessors ) {
             my $rv = ref $callback_map->{$name} ? 'sub return value' :
                          $callback_map->{$name} ? 'true' : 'false';
-        
+
             $args->_callbacks->$name(
                 sub { msg(loc("DEFAULT '%1' HANDLER RETURNING '%2'",
-                              $name, $rv), $args->_conf->get_conf('debug')); 
-                      return ref $callback_map->{$name} 
+                              $name, $rv), $args->_conf->get_conf('debug'));
+                      return ref $callback_map->{$name}
                                 ? $callback_map->{$name}->( @_ )
                                 : $callback_map->{$name};
-                } 
+                }
             );
         }
 
@@ -199,24 +198,24 @@ Returns the object on success, or dies on failure.
         }
 
         ### different source engines available now, so set them here
-        {   my $store = $conf->get_conf( 'source_engine' ) 
+        {   my $store = $conf->get_conf( 'source_engine' )
                             || DEFAULT_SOURCE_ENGINE;
 
             unless( can_load( modules => { $store => '0.0' }, verbose => 1 ) ) {
                 error( loc( "Could not load source engine '%1'", $store ) );
-            
+
                 if( $store ne DEFAULT_SOURCE_ENGINE ) {
                     msg( loc("Falling back to %1", DEFAULT_SOURCE_ENGINE), 1 );
-                   
+
                     load DEFAULT_SOURCE_ENGINE;
-                    
+
                     base->import( DEFAULT_SOURCE_ENGINE );
                 } else {
                     return;
-                }     
+                }
             } else {
                  base->import( $store );
-            }                
+            }
         }
 
         return $args;
@@ -254,6 +253,7 @@ be flushed.
             if( $what eq 'lib' ) {
                 $ENV{PERL5LIB}  = $conf->_perl5lib || '';
                 @INC            = @{$conf->_lib};
+                $ENV{PATH}      = $self->_path || '';
 
             ### give all modules a new status object -- this is slightly
             ### costly, but the best way to make sure all statuses are
@@ -268,7 +268,7 @@ be flushed.
             ### File::Fetch's method fail list
             } elsif ( $what eq 'methods' ) {
 
-                ### still fucking p4 :( ###
+                ### still unbelievably p4 :( ###
                 $File'Fetch::METHOD_FAIL = $File'Fetch::METHOD_FAIL = {};
 
             ### blow away the m::l::c cache, so modules can be (re)loaded
@@ -293,7 +293,7 @@ be flushed.
 ### if extra callbacks are added, don't forget to update the
 ### 02-internals.t test script with them!
 
-=pod 
+=pod
 
 =head2 $bool = $internals->_register_callback( name => CALLBACK_NAME, code => CODEREF );
 
@@ -312,20 +312,20 @@ the prerequisite and false to skip it.
 =item send_test_report
 
 Is called when the user should be prompted if he wishes to send the
-test report. Should return a boolean indicating true to send the 
+test report. Should return a boolean indicating true to send the
 test report and false to skip it.
 
 =item munge_test_report
 
 Is called when the test report message has been composed, giving
-the user a chance to programatically alter it. Should return the 
+the user a chance to programatically alter it. Should return the
 (munged) message to be sent.
 
 =item edit_test_report
 
 Is called when the user should be prompted to edit test reports
-about to be sent out by Test::Reporter. Should return a boolean 
-indicating true to edit the test report in an editor and false 
+about to be sent out by Test::Reporter. Should return a boolean
+indicating true to edit the test report in an editor and false
 to skip it.
 
 =item proceed_on_test_failure
@@ -365,36 +365,36 @@ written to the metafile.
     }
 
 # =head2 $bool = $internals->_add_callback( name => CALLBACK_NAME, code => CODEREF );
-# 
+#
 # Adds a new callback to be used from anywhere in the system. If the callback
 # is already known, an error is raised and false is returned. If the callback
 # is not yet known, it is added, and the corresponding coderef is registered
 # using the
-# 
+#
 # =cut
-# 
+#
 #     sub _add_callback {
 #         my $self = shift or return;
 #         my %hash = @_;
-#         
+#
 #         my ($name,$code);
 #         my $tmpl = {
 #             name    => { required => 1, store => \$name, },
 #             code    => { required => 1, allow => IS_CODEREF,
 #                          store => \$code },
 #         };
-# 
+#
 #         check( $tmpl, \%hash ) or return;
-# 
+#
 #         if( $callback->can( $name ) ) {
 #             error(loc("Callback '%1' is already registered"));
 #             return;
 #         }
-# 
+#
 #         $callback->mk_accessor( $name );
-# 
+#
 #         $self->_register_callback( name => $name, code => $code ) or return;
-# 
+#
 #         return 1;
 #     }
 
@@ -424,15 +424,54 @@ sub _add_to_includepath {
     check( $tmpl, \%hash ) or return;
 
     my $s = $Config{'path_sep'};
-    
+
     ### only add if it's not added yet
     for my $lib (@$dirs) {
         push @INC, $lib unless grep { $_ eq $lib } @INC;
         #
-        ### it will be complaining if $ENV{PERL5LIB] is not defined (yet).   
-        local $^W;  
-        $ENV{'PERL5LIB'} .= $s . $lib 
+        ### it will be complaining if $ENV{PERL5LIB] is not defined (yet).
+        local $^W;
+        $ENV{'PERL5LIB'} .= $s . $lib
             unless $ENV{'PERL5LIB'} =~ qr|\Q$s$lib\E|;
+    }
+
+    return 1;
+}
+
+=pod
+
+=head2 $bool = $internals->_add_to_path( directories => \@dirs )
+
+Adds a list of directories to the PATH, but only if they actually
+contain anything.
+
+Returns true on success, false on failure.
+
+=cut
+
+sub _add_to_path {
+    my $self = shift;
+    my %hash = @_;
+
+    my $dirs;
+    my $tmpl = {
+        directories => { required => 1, default => [], store => \$dirs,
+                         strict_type => 1 },
+    };
+
+    check( $tmpl, \%hash ) or return;
+
+    my $s = $Config{'path_sep'};
+
+    require File::Glob;
+
+    ### only add if it's not added yet
+    for my $dir (@$dirs) {
+        $dir =~ s![\\/]*$!!g;
+        next if $ENV{PATH} =~ qr|\Q$dir\E|;
+        next unless -d $dir;
+        next unless File::Glob::bsd_glob( $dir . q{/*} );
+        $ENV{PATH} = join $s, $dir, $ENV{PATH};
     }
 
     return 1;

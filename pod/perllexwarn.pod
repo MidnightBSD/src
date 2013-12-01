@@ -158,7 +158,7 @@ Does the exact opposite to the B<-W> flag, i.e. it disables all warnings.
 
 =head2 Backward Compatibility
 
-If you are used with working with a version of Perl prior to the
+If you are used to working with a version of Perl prior to the
 introduction of lexically scoped warnings, or have code that uses both
 lexical warnings and C<$^W>, this section will describe how they interact.
 
@@ -169,7 +169,7 @@ How Lexical Warnings interact with B<-w>/C<$^W>:
 =item 1.
 
 If none of the three command line flags (B<-w>, B<-W> or B<-X>) that
-control warnings is used and neither C<$^W> or the C<warnings> pragma
+control warnings is used and neither C<$^W> nor the C<warnings> pragma
 are used, then default warnings will be enabled and optional warnings
 disabled.
 This means that legacy code that doesn't attempt to control the warnings
@@ -212,107 +212,111 @@ to be enabled/disabled in isolation.
 
 The current hierarchy is:
 
-  all -+
-       |
-       +- closure
-       |
-       +- deprecated
-       |
-       +- exiting
-       |
-       +- glob
-       |
-       +- io -----------+
-       |                |
-       |                +- closed
-       |                |
-       |                +- exec
-       |                |
-       |                +- layer
-       |                |
-       |                +- newline
-       |                |
-       |                +- pipe
-       |                |
-       |                +- unopened
-       |
-       +- imprecision
-       |
-       +- misc
-       |
-       +- numeric
-       |
-       +- once
-       |
-       +- overflow
-       |
-       +- pack
-       |
-       +- portable
-       |
-       +- recursion
-       |
-       +- redefine
-       |
-       +- regexp
-       |
-       +- severe -------+
-       |                |
-       |                +- debugging
-       |                |
-       |                +- inplace
-       |                |
-       |                +- internal
-       |                |
-       |                +- malloc
-       |
-       +- signal
-       |
-       +- substr
-       |
-       +- syntax -------+
-       |                |
-       |                +- ambiguous
-       |                |
-       |                +- bareword
-       |                |
-       |                +- digit
-       |                |
-       |                +- illegalproto
-       |                |
-       |                +- parenthesis
-       |                |
-       |                +- precedence
-       |                |
-       |                +- printf
-       |                |
-       |                +- prototype
-       |                |
-       |                +- qw
-       |                |
-       |                +- reserved
-       |                |
-       |                +- semicolon
-       |
-       +- taint
-       |
-       +- threads
-       |
-       +- uninitialized
-       |
-       +- unpack
-       |
-       +- untie
-       |
-       +- utf8----------+
-       |                |
-       |                +- surrogate
-       |                |
-       |                +- non_unicode
-       |                |
-       |                +- nonchar
-       |
-       +- void
+    all -+
+         |
+         +- closure
+         |
+         +- deprecated
+         |
+         +- exiting
+         |
+         +- experimental --+
+         |                 |
+         |                 +- experimental::lexical_subs
+         |
+         +- glob
+         |
+         +- imprecision
+         |
+         +- io ------------+
+         |                 |
+         |                 +- closed
+         |                 |
+         |                 +- exec
+         |                 |
+         |                 +- layer
+         |                 |
+         |                 +- newline
+         |                 |
+         |                 +- pipe
+         |                 |
+         |                 +- unopened
+         |
+         +- misc
+         |
+         +- numeric
+         |
+         +- once
+         |
+         +- overflow
+         |
+         +- pack
+         |
+         +- portable
+         |
+         +- recursion
+         |
+         +- redefine
+         |
+         +- regexp
+         |
+         +- severe --------+
+         |                 |
+         |                 +- debugging
+         |                 |
+         |                 +- inplace
+         |                 |
+         |                 +- internal
+         |                 |
+         |                 +- malloc
+         |
+         +- signal
+         |
+         +- substr
+         |
+         +- syntax --------+
+         |                 |
+         |                 +- ambiguous
+         |                 |
+         |                 +- bareword
+         |                 |
+         |                 +- digit
+         |                 |
+         |                 +- illegalproto
+         |                 |
+         |                 +- parenthesis
+         |                 |
+         |                 +- precedence
+         |                 |
+         |                 +- printf
+         |                 |
+         |                 +- prototype
+         |                 |
+         |                 +- qw
+         |                 |
+         |                 +- reserved
+         |                 |
+         |                 +- semicolon
+         |
+         +- taint
+         |
+         +- threads
+         |
+         +- uninitialized
+         |
+         +- unpack
+         |
+         +- untie
+         |
+         +- utf8 ----------+
+         |                 |
+         |                 +- non_unicode
+         |                 |
+         |                 +- nonchar
+         |                 |
+         |                 +- surrogate
+         |
+         +- void
 
 Just like the "strict" pragma any of these categories can be combined
 
@@ -334,7 +338,6 @@ L<perldiag>.
 Note: In Perl 5.6.1, the lexical warnings category "deprecated" was a
 sub-category of the "syntax" category. It is now a top-level category
 in its own right.
-
 
 =head2 Fatal Warnings
 X<warning, fatal>

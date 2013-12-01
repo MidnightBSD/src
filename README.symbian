@@ -4,7 +4,7 @@ designed to be readable as is.
 
 =head1 NAME
 
-README.symbian - Perl version 5 on Symbian OS
+perlsymbian - Perl version 5 on Symbian OS
 
 =head1 DESCRIPTION
 
@@ -301,7 +301,7 @@ the Perl definitions and redefines them as PerlNew() and PerlCopy().
 
 =head1 TO DO
 
-Lots.  See F<symbian\TODO>.
+Lots.  See F<symbian/TODO>.
 
 =head1 WARNING
 

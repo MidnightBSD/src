@@ -133,7 +133,8 @@
 
 #ifndef PERL_SYS_TERM_BODY
 #  define PERL_SYS_TERM_BODY() \
-    HINTS_REFCNT_TERM; OP_REFCNT_TERM; PERLIO_TERM; MALLOC_TERM;
+    HINTS_REFCNT_TERM; OP_CHECK_MUTEX_TERM; \
+    OP_REFCNT_TERM; PERLIO_TERM; MALLOC_TERM;
 
 #endif
 
@@ -149,8 +150,8 @@
  * Local variables:
  * c-indentation-style: bsd
  * c-basic-offset: 4
- * indent-tabs-mode: t
+ * indent-tabs-mode: nil
  * End:
  *
- * ex: set ts=8 sts=4 sw=4 noet:
+ * ex: set ts=8 sts=4 sw=4 et:
  */

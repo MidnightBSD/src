@@ -27,6 +27,29 @@ Can't use string ("A::Really::Big::Package::Name::T"...) as a HASH ref while "st
 
 # strict refs - error
 use strict ;
+"A::Really::Big::Package::Name::To::Use" =~ /(.*)/; 
+${$1};
+EXPECT
+Can't use string ("A::Really::Big::Package::Name::T"...) as a SCALAR ref while "strict refs" in use at - line 5.
+########
+
+# strict refs - error
+use strict ;
+*{"A::Really::Big::Package::Name::To::Use"; }
+EXPECT
+Can't use string ("A::Really::Big::Package::Name::T"...) as a symbol ref while "strict refs" in use at - line 4.
+########
+
+# strict refs - error
+use strict ;
+"A::Really::Big::Package::Name::To::Use" =~ /(.*)/;
+*{$1}
+EXPECT
+Can't use string ("A::Really::Big::Package::Name::T"...) as a symbol ref while "strict refs" in use at - line 5.
+########
+
+# strict refs - error
+use strict ;
 my $fred ;
 my $a = ${"fred"} ;
 EXPECT
@@ -308,7 +331,7 @@ Can't use string ("Fred") as a SCALAR ref while "strict refs" in use at - line 8
 use strict 'refs';
 /(?{${"foo"}++})/;
 EXPECT
-Can't use string ("foo") as a SCALAR ref while "strict refs" in use at (re_eval 1) line 1.
+Can't use string ("foo") as a SCALAR ref while "strict refs" in use at - line 3.
 ########
 # [perl #37886] strict 'refs' doesn't apply inside defined
 use strict 'refs';
@@ -322,6 +345,8 @@ use strict 'refs';
 my $x = "foo";
 defined @$x;
 EXPECT
+defined(@array) is deprecated at - line 4.
+	(Maybe you should just omit the defined()?)
 Can't use string ("foo") as an ARRAY ref while "strict refs" in use at - line 4.
 ########
 # [perl #37886] strict 'refs' doesn't apply inside defined
@@ -338,3 +363,11 @@ use strict 'refs';
 my $o = 1 ; $o->{1} ;
 EXPECT
 Can't use string ("1") as a HASH ref while "strict refs" in use at - line 3.
+########
+# pp_hot.c [pp_entersub]
+use strict 'refs';
+use utf8;
+use open qw( :utf8 :std );
+&{"Ｆ"};
+EXPECT
+Can't use string ("Ｆ") as a subroutine ref while "strict refs" in use at - line 5.

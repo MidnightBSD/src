@@ -23,7 +23,7 @@ is($x // 1, 1, 		'	// : left-hand operand undef');
 $x='';
 is($x // 0, '',		'	// : left-hand operand defined but empty');
 
-like([] // 0, qr/^ARRAY/,	'	// : left-hand operand a referece');
+like([] // 0, qr/^ARRAY/,	'	// : left-hand operand a reference');
 
 $x=undef;
 $x //= 1;
@@ -56,15 +56,18 @@ for (qw(getc pos readline readlink undef umask <> <FOO> <$foo> -f)) {
 # Test for some ambiguous syntaxes
 
 eval q# sub f ($) { } f $x / 2; #;
-is( $@, '' );
+is( $@, '', "'/' correctly parsed as arithmetic operator" );
 eval q# sub f ($):lvalue { $y } f $x /= 2; #;
-is( $@, '' );
+is( $@, '', "'/=' correctly parsed as assigment operator" );
 eval q# sub f ($) { } f $x /2; #;
-like( $@, qr/^Search pattern not terminated/ );
+like( $@, qr/^Search pattern not terminated/,
+    "Caught unterminated search pattern error message: empty subroutine" );
 eval q# sub { print $fh / 2 } #;
-is( $@, '' );
+is( $@, '',
+    "'/' correctly parsed as arithmetic operator in sub with built-in function" );
 eval q# sub { print $fh /2 } #;
-like( $@, qr/^Search pattern not terminated/ );
+like( $@, qr/^Search pattern not terminated/,
+    "Caught unterminated search pattern error message: sub with built-in function" );
 
 # [perl #28123] Perl optimizes // away incorrectly
 

@@ -1,3 +1,5 @@
+#!/bin/sh
+
 case $PERL_CONFIG_SH in
 '')
 	if test -f config.sh; then TOP=.;
@@ -35,16 +37,13 @@ case "$usedl" in
 esac
 
 cat >Makefile <<!GROK!THIS!
-# $RCSfile: Makefile.SH,v $$Revision: 1.1.1.3 $$Date: 2011-05-18 13:33:34 $
+# $RCSfile: Makefile.SH,v $$Revision: 4.1 $$Date: 92/08/07 18:29:07 $
 #
-# $Log: not supported by cvs2svn $
+# $Log:	Makefile.SH,v $
 
 CC = $cc
 BYACC = $byacc
 LDFLAGS = $ldflags
-# XXX Perl malloc temporarily unusable (declaration collisions with stdlib.h)
-#mallocsrc = $mallocsrc
-#mallocobj = $mallocobj
 shellflags = $shellflags
 
 libs = $perllibs
@@ -101,9 +100,9 @@ addedbyconf = $(shextract) $(plextract)
 
 h = EXTERN.h INTERN.h ../config.h ../handy.h hash.h a2p.h str.h util.h
 
-c = hash.c $(mallocsrc) str.c util.c walk.c
+c = hash.c str.c util.c walk.c
 
-obj = hash$(OBJ_EXT) $(mallocobj) str$(OBJ_EXT) util$(OBJ_EXT) walk$(OBJ_EXT)
+obj = hash$(OBJ_EXT) str$(OBJ_EXT) util$(OBJ_EXT) walk$(OBJ_EXT)
 
 lintflags = -phbvxac
 
@@ -156,7 +155,7 @@ distclean: veryclean
 
 realclean: clean
 	-rmdir .depending
-	rm -f core $(addedbyconf) all malloc.c
+	rm -f core $(addedbyconf) all
 	rm -f $(FIRSTMAKEFILE) $(FIRSTMAKEFILE).old makefile.old
 
 veryclean: realclean
@@ -170,7 +169,7 @@ veryclean: realclean
 lint:
 	lint $(lintflags) $(defs) $(c) > a2p.fuzz
 
-depend: $(mallocsrc) ../makedepend
+depend: ../makedepend
 	sh ../makedepend MAKE=$(MAKE)
 
 clist:
@@ -185,17 +184,9 @@ shlist:
 $(plextract):
 	$(RUN) $(PERL) -I../lib $@.PL
 
-find2perl: find2perl.PL
+find2perl: find2perl.PL ../config.sh
 
-s2p: s2p.PL
-
-malloc.c: ../malloc.c
-	rm -f malloc.c
-	sed <../malloc.c >malloc.c \
-	    -e 's/"EXTERN.h"/"..\/EXTERN.h"/' \
-	    -e 's/"perl.h"/"..\/perl.h"/' \
-	    -e 's/my_exit/exit/' \
-	    -e 's/MUTEX_[A-Z_]*(&PL_malloc_mutex);//'
+s2p: s2p.PL ../config.sh
 
 # AUTOMATICALLY GENERATED MAKE DEPENDENCIES--PUT NOTHING BELOW THIS LINE
 $(obj):

@@ -363,7 +363,7 @@ Let's take an example of manipulating a PV, from C<sv_catpvn>, in
 F<sv.c>
 
      1  void
-     2  Perl_sv_catpvn(pTHX_ register SV *sv, register const char *ptr, register STRLEN len)
+     2  Perl_sv_catpvn(pTHX_ SV *sv, const char *ptr, STRLEN len)
      3  {
      4      STRLEN tlen;
      5      char *junk;
@@ -696,7 +696,7 @@ stack implements the C equivalent of, for example:
         ...
     }
 
-See L<perlguts/"Localizing Changes"> for how to use the save stack.
+See L<perlguts/"Localizing changes"> for how to use the save stack.
 
 =head1 MILLIONS OF MACROS
 

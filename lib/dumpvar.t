@@ -49,6 +49,16 @@ sub new { my $class = shift; bless [ @_ ], $class }
 
 use overload '""' => sub { "Bar<@{$_[0]}>" };
 
+package Tyre;
+
+sub TIESCALAR{bless[]}
+# other methods intentionally omitted
+
+package Kerb;
+
+sub TIEHASH{bless{}}
+# other methods intentionally omitted
+
 package main;
 
 my $foo = Foo->new(1..5);
@@ -314,3 +324,19 @@ EXPECT
 my %x=(a=>1, b=>2); dumpvalue(\%x);
 EXPECT
 /0  HASH\(0x[0-9a-f]+\)\n   'a' => 1\n   'b' => 2\n/i
+########
+dumpvalue(bless[1,2,3,4],"a=b=c");
+EXPECT
+/0  a=b=c=ARRAY\(0x[0-9a-f]+\)\n   0  1\n   1  2\n   2  3\n   3  4\n/i
+########
+local *_; tie $_, 'Tyre'; stringify('');
+EXPECT
+''
+########
+local *_; tie $_, 'Tyre'; unctrl('abc');
+EXPECT
+abc
+########
+tie my %h, 'Kerb'; my $v = { a => 1, b => \%h, c => 2 }; dumpvalue($v);
+EXPECT
+/'a' => 1\n.+Can't locate object method.+'c' => 2/s

@@ -20,8 +20,14 @@ BEGIN {
     require 'regen/regen_lib.pl';
 }
 
-my $oc = safer_open('opcode.h-new', 'opcode.h');
-my $on = safer_open('opnames.h-new', 'opnames.h');
+my $oc = open_new('opcode.h', '>',
+		  {by => 'regen/opcode.pl', from => 'its data',
+		   file => 'opcode.h', style => '*',
+		   copyright => [1993 .. 2007]});
+
+my $on = open_new('opnames.h', '>',
+		  { by => 'regen/opcode.pl', from => 'its data', style => '*',
+		    file => 'opnames.h', copyright => [1999 .. 2008] });
 
 # Read data.
 
@@ -38,8 +44,10 @@ while (<OPS>) {
     $args = '' unless defined $args;
 
     warn qq[Description "$desc" duplicates $seen{$desc}\n]
-     if $seen{$desc} and $key ne "transr";
+     if $seen{$desc} and $key !~ "transr|(?:intro|clone)cv";
     die qq[Opcode "$key" duplicates $seen{$key}\n] if $seen{$key};
+    die qq[Opcode "freed" is reserved for the slab allocator\n]
+	if $key eq 'freed';
     $seen{$desc} = qq[description of opcode "$key"];
     $seen{$key} = qq[opcode "$key"];
 
@@ -110,13 +118,12 @@ my @raw_alias = (
 		 Perl_pp_chop => [qw(chop chomp)],
 		 Perl_pp_schop => [qw(schop schomp)],
 		 Perl_pp_bind => {connect => '#ifdef HAS_SOCKET'},
-		 Perl_pp_preinc => ['i_preinc'],
-		 Perl_pp_predec => ['i_predec'],
-		 Perl_pp_postinc => ['i_postinc'],
-		 Perl_pp_postdec => ['i_postdec'],
+		 Perl_pp_preinc => ['i_preinc', 'predec', 'i_predec'],
+		 Perl_pp_postinc => ['i_postinc', 'postdec', 'i_postdec'],
 		 Perl_pp_ehostent => [qw(enetent eprotoent eservent
 					 spwent epwent sgrent egrent)],
 		 Perl_pp_shostent => [qw(snetent sprotoent sservent)],
+		 Perl_pp_aelemfast => ['aelemfast_lex'],
 		);
 
 while (my ($func, $names) = splice @raw_alias, 0, 2) {
@@ -138,10 +145,7 @@ foreach my $sock_func (qw(socket bind listen accept shutdown
 
 # Emit defines.
 
-print $oc read_only_top(lang => 'C', by => 'regen/opcode.pl', from => 'its data',
-			file => 'opcode.h', style => '*',
-			copyright => [1993 .. 2007]),
-    "#ifndef PERL_GLOBAL_STRUCT_INIT\n\n";
+print $oc    "#ifndef PERL_GLOBAL_STRUCT_INIT\n\n";
 
 {
     my $last_cond = '';
@@ -178,10 +182,7 @@ print $oc read_only_top(lang => 'C', by => 'regen/opcode.pl', from => 'its data'
     unimplemented();
 }
 
-print $on read_only_top(lang => 'C', by => 'regen/opcode.pl',
-			from => 'its data', style => '*',
-			file => 'opnames.h', copyright => [1999 .. 2008]),
-    "typedef enum opcode {\n";
+print $on "typedef enum opcode {\n";
 
 my $i = 0;
 for (@ops) {
@@ -190,6 +191,7 @@ for (@ops) {
 print $on "\t", tab(3,"OP_max"), "\n";
 print $on "} opcode;\n";
 print $on "\n#define MAXO ", scalar @ops, "\n";
+print $on "#define OP_FREED MAXO\n";
 
 # Emit op names and descriptions.
 
@@ -207,6 +209,7 @@ for (@ops) {
 }
 
 print $oc <<'END';
+	"freed",
 };
 #endif
 
@@ -226,6 +229,7 @@ for (@ops) {
 }
 
 print $oc <<'END';
+	"freed op",
 };
 #endif
 
@@ -348,9 +352,12 @@ my %opflags = (
     'u' => 128,		# defaults to $_
 );
 
-my %OP_IS_SOCKET;
-my %OP_IS_FILETEST;
-my %OP_IS_FT_ACCESS;
+my %OP_IS_SOCKET;	# /Fs/
+my %OP_IS_FILETEST;	# /F-/
+my %OP_IS_FT_ACCESS;	# /F-+/
+my %OP_IS_NUMCOMPARE;	# /S</
+my %OP_IS_DIRHOP;	# /Fd/
+
 my $OCSHIFT = 8;
 my $OASHIFT = 12;
 
@@ -369,12 +376,19 @@ for my $op (@ops) {
     $argsum |= $opclass{$flags} << $OCSHIFT;
     my $argshift = $OASHIFT;
     for my $arg (split(' ',$args{$op})) {
+	if ($arg =~ s/^D//) {
+	    # handle 1st, just to put D 1st.
+	    $OP_IS_DIRHOP{$op}   = $opnum{$op};
+	}
 	if ($arg =~ /^F/) {
 	    # record opnums of these opnames
 	    $OP_IS_SOCKET{$op}   = $opnum{$op} if $arg =~ s/s//;
 	    $OP_IS_FILETEST{$op} = $opnum{$op} if $arg =~ s/-//;
 	    $OP_IS_FT_ACCESS{$op} = $opnum{$op} if $arg =~ s/\+//;
         }
+	elsif ($arg =~ /^S</) {
+	    $OP_IS_NUMCOMPARE{$op} = $opnum{$op} if $arg =~ s/<//;
+	}
 	my $argnum = ($arg =~ s/\?//) ? 8 : 0;
         die "op = $op, arg = $arg\n"
 	    unless exists $argnum{$arg};
@@ -402,14 +416,17 @@ END
 
 print $on <<'EO_OP_IS_COMMENT';
 
-/* the OP_IS_(SOCKET|FILETEST) macros are optimized to a simple range
-    check because all the member OPs are contiguous in opcode.pl
-    <OPS> table.  opcode.pl verifies the range contiguity.  */
+/* the OP_IS_* macros are optimized to a simple range check because
+    all the member OPs are contiguous in regen/opcodes table.
+    opcode.pl verifies the range contiguity, or generates an OR-equals
+    expression */
 EO_OP_IS_COMMENT
 
 gen_op_is_macro( \%OP_IS_SOCKET, 'OP_IS_SOCKET');
 gen_op_is_macro( \%OP_IS_FILETEST, 'OP_IS_FILETEST');
 gen_op_is_macro( \%OP_IS_FT_ACCESS, 'OP_IS_FILETEST_ACCESS');
+gen_op_is_macro( \%OP_IS_NUMCOMPARE, 'OP_IS_NUMCOMPARE');
+gen_op_is_macro( \%OP_IS_DIRHOP, 'OP_IS_DIRHOP');
 
 sub gen_op_is_macro {
     my ($op_is, $macname) = @_;
@@ -430,20 +447,19 @@ sub gen_op_is_macro {
 	if ( $op_is->{$last} - $op_is->{$first} == scalar @rest + 1) {
 	    
 	    # contiguous ops -> optimized version
-	    print $on "(op) >= OP_" . uc($first) . " && (op) <= OP_" . uc($last);
-	    print $on ")\n";
+	    print $on "(op) >= OP_" . uc($first)
+		. " && (op) <= OP_" . uc($last);
 	}
 	else {
 	    print $on join(" || \\\n\t ",
-			  map { "(op) == OP_" . uc() } sort keys %$op_is);
-	    print $on ")\n";
+			   map { "(op) == OP_" . uc() } sort keys %$op_is);
 	}
+	print $on ")\n";
     }
 }
 
-my $pp = safer_open('pp_proto.h-new', 'pp_proto.h');
-
-print $pp read_only_top(lang => 'C', by => 'opcode.pl', from => 'its data');
+my $pp = open_new('pp_proto.h', '>',
+		  { by => 'opcode.pl', from => 'its data' });
 
 {
     my %funcs;

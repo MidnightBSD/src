@@ -35,8 +35,8 @@ sub BEGIN {
 
 
 use Storable qw(dclone freeze thaw);
-use Hash::Util qw(lock_hash unlock_value);
-use Test::More tests => 100;
+use Hash::Util qw(lock_hash unlock_value lock_keys);
+use Test::More tests => 304;
 
 my %hash = (question => '?', answer => 42, extra => 'junk', undef => undef);
 lock_hash %hash;
@@ -110,5 +110,32 @@ for $Storable::canonical (0, 1) {
       eval { $copy->{$k} = undef } ;
       is($@, '', "Can assign to reserved key '$k'?");
     }
+
+    my %hv;
+    $hv{a} = __PACKAGE__;
+    lock_keys %hv;
+    my $hv2 = &$cloner(\%hv);
+    ok eval { $$hv2{a} = 70 }, 'COWs do not become read-only';
   }
+}
+
+# [perl #73972]
+{
+    for my $n (1..100) {
+        my @keys = map { "FOO$_" } (1..$n);
+
+        my $hash1 = {};
+        lock_keys(%$hash1, @keys);
+        my $hash2 = dclone($hash1);
+
+        my $success;
+
+        $success = eval { $hash2->{$_} = 'test' for @keys; 1 };
+        my $err = $@;
+        ok($success, "can store in all of the $n restricted slots")
+            || diag("failed with $@");
+
+        $success = !eval { $hash2->{a} = 'test'; 1 };
+        ok($success, "the hash is still restricted");
+    }
 }

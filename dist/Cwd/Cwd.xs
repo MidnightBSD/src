@@ -1,3 +1,5 @@
+#define PERL_NO_GET_CONTEXT
+
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
@@ -34,7 +36,7 @@
  *    products derived from this software without specific prior written
  *    permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
@@ -53,6 +55,7 @@
 #define MAXSYMLINKS 8
 #endif
 
+#ifndef VMS
 /*
  * char *realpath(const char *path, char resolved[MAXPATHLEN]);
  *
@@ -64,15 +67,11 @@ static
 char *
 bsd_realpath(const char *path, char resolved[MAXPATHLEN])
 {
-#ifdef VMS
-       dTHX;
-       return Perl_rmsexpand(aTHX_ (char*)path, resolved, NULL, 0);
-#else
 	char *p, *q, *s;
 	size_t left_len, resolved_len;
 	unsigned symlinks;
 	int serrno;
-	char left[MAXPATHLEN], next_token[MAXPATHLEN], symlink[MAXPATHLEN];
+	char left[MAXPATHLEN], next_token[MAXPATHLEN];
 
 	serrno = errno;
 	symlinks = 0;
@@ -97,11 +96,11 @@ bsd_realpath(const char *path, char resolved[MAXPATHLEN])
 	}
 
 	/*
-	 * Iterate over path components in `left'.
+	 * Iterate over path components in 'left'.
 	 */
 	while (left_len != 0) {
 		/*
-		 * Extract the next path component and adjust `left'
+		 * Extract the next path component and adjust 'left'
 		 * and its length.
 		 */
 		p = strchr(left, '/');
@@ -151,7 +150,7 @@ bsd_realpath(const char *path, char resolved[MAXPATHLEN])
 			errno = ENAMETOOLONG;
 			return (NULL);
 		}
-	#if defined(HAS_LSTAT) && defined(HAS_READLINK) && defined(HAS_SYMLINK)
+#if defined(HAS_LSTAT) && defined(HAS_READLINK) && defined(HAS_SYMLINK)
 		{
 			struct stat sb;
 			if (lstat(resolved, &sb) != 0) {
@@ -163,6 +162,7 @@ bsd_realpath(const char *path, char resolved[MAXPATHLEN])
 			}
 			if (S_ISLNK(sb.st_mode)) {
 				int slen;
+				char symlink[MAXPATHLEN];
 				
 				if (symlinks++ > MAXSYMLINKS) {
 					errno = ELOOP;
@@ -186,27 +186,27 @@ bsd_realpath(const char *path, char resolved[MAXPATHLEN])
 	/*
 				 * If there are any path components left, then
 				 * append them to symlink. The result is placed
-				 * in `left'.
+				 * in 'left'.
 	 */
 				if (p != NULL) {
 					if (symlink[slen - 1] != '/') {
 						if ((STRLEN)(slen + 1) >= (STRLEN)sizeof(symlink)) {
-			errno = ENAMETOOLONG;
+							errno = ENAMETOOLONG;
 							return (NULL);
-		}
+						}
 						symlink[slen] = '/';
 						symlink[slen + 1] = 0;
-	}
+					}
 					left_len = my_strlcat(symlink, left, sizeof(left));
 					if (left_len >= sizeof(left)) {
 						errno = ENAMETOOLONG;
 						return (NULL);
-	}
-	}
+					}
+				}
 				left_len = my_strlcpy(left, symlink, sizeof(left));
 			}
 		}
-	#endif
+#endif
 	}
 
 	/*
@@ -216,8 +216,8 @@ bsd_realpath(const char *path, char resolved[MAXPATHLEN])
 	if (resolved_len > 1 && resolved[resolved_len - 1] == '/')
 		resolved[resolved_len - 1] = '\0';
 	return (resolved);
-#endif
 }
+#endif
 
 #ifndef SV_CWD_RETURN_UNDEF
 #define SV_CWD_RETURN_UNDEF \
@@ -247,7 +247,7 @@ return FALSE
 #ifndef getcwd_sv
 /* Taken from perl 5.8's util.c */
 #define getcwd_sv(a) Perl_getcwd_sv(aTHX_ a)
-int Perl_getcwd_sv(pTHX_ register SV *sv)
+int Perl_getcwd_sv(pTHX_ SV *sv)
 {
 #ifndef PERL_MICRO
 
@@ -399,27 +399,18 @@ int Perl_getcwd_sv(pTHX_ register SV *sv)
 
 MODULE = Cwd		PACKAGE = Cwd
 
-PROTOTYPES: ENABLE
-
-void
-fastcwd()
-PROTOTYPE: DISABLE
-PPCODE:
-{
-    dXSTARG;
-    getcwd_sv(TARG);
-    XSprePUSH; PUSHTARG;
-#ifndef INCOMPLETE_TAINTS
-    SvTAINTED_on(TARG);
-#endif
-}
+PROTOTYPES: DISABLE
 
 void
 getcwd(...)
-PROTOTYPE: DISABLE
+ALIAS:
+    fastcwd=1
 PPCODE:
 {
     dXSTARG;
+    /* fastcwd takes zero parameters:  */
+    if (ix == 1 && items != 0)
+	croak_xs_usage(cv,  "");
     getcwd_sv(TARG);
     XSprePUSH; PUSHTARG;
 #ifndef INCOMPLETE_TAINTS
@@ -430,24 +421,27 @@ PPCODE:
 void
 abs_path(pathsv=Nullsv)
     SV *pathsv
-PROTOTYPE: DISABLE
 PPCODE:
 {
     dXSTARG;
-    char *path;
+    char *const path = pathsv ? SvPV_nolen(pathsv) : (char *)".";
     char buf[MAXPATHLEN];
 
-    path = pathsv ? SvPV_nolen(pathsv) : (char *)".";
-
-    if (bsd_realpath(path, buf)) {
-        sv_setpvn(TARG, buf, strlen(buf));
+    if (
+#ifdef VMS
+	Perl_rmsexpand(aTHX_ path, buf, NULL, 0)
+#else
+	bsd_realpath(path, buf)
+#endif
+    ) {
+	sv_setpv_mg(TARG, buf);
         SvPOK_only(TARG);
 	SvTAINTED_on(TARG);
     }
     else
         sv_setsv(TARG, &PL_sv_undef);
 
-    XSprePUSH; PUSHTARG;
+    XSprePUSH; PUSHs(TARG);
 #ifndef INCOMPLETE_TAINTS
     SvTAINTED_on(TARG);
 #endif
@@ -457,6 +451,7 @@ PPCODE:
 
 void
 getdcwd(...)
+PROTOTYPE: ENABLE
 PPCODE:
 {
     dXSTARG;
@@ -475,7 +470,7 @@ PPCODE:
 
     New(0,dir,MAXPATHLEN,char);
     if (_getdcwd(drive, dir, MAXPATHLEN)) {
-        sv_setpvn(TARG, dir, strlen(dir));
+        sv_setpv_mg(TARG, dir);
         SvPOK_only(TARG);
     }
     else
@@ -483,7 +478,7 @@ PPCODE:
 
     Safefree(dir);
 
-    XSprePUSH; PUSHTARG;
+    XSprePUSH; PUSHs(TARG);
 #ifndef INCOMPLETE_TAINTS
     SvTAINTED_on(TARG);
 #endif

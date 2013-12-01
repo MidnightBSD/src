@@ -10,7 +10,7 @@ BEGIN {
     require "./test.pl";
 }
 
-plan tests => 125;
+plan tests => 139;
 
 $a = {};
 bless $a, "Bob";
@@ -59,6 +59,8 @@ ok $a->isa("main::Bob");
 
 ok $a->isa("Female");
 
+ok ! $a->isa("Female\0NOT REALLY!"), "->isa is nul-clean.";
+
 ok $a->isa("Human");
 
 ok ! $a->isa("Male");
@@ -68,6 +70,7 @@ ok ! $a->isa('Programmer');
 ok $a->isa("HASH");
 
 ok $a->can("eat");
+ok ! $a->can("eat\0Except not!"), "->can is nul-clean.";
 ok ! $a->can("sleep");
 ok my $ref = $a->can("drink");        # returns a coderef
 is $a->$ref("tea"), "drinking tea"; # ... which works
@@ -104,7 +107,10 @@ for ($p=0; $p < @refs; $p++) {
     };
 };
 
-ok ! UNIVERSAL::can(23, "can");
+ok UNIVERSAL::can(23, "can");
+++${"23::foo"};
+ok UNIVERSAL::can("23", "can"), '"23" can can when the pack exists';
+ok UNIVERSAL::can(23, "can"), '23 can can when the pack exists';
 
 ok $a->can("VERSION");
 
@@ -118,6 +124,13 @@ like $@, qr/^Alice version 2.719 required--this is only version 2.718 at /;
 
 ok (eval { $a->VERSION(2.718) });
 is $@, '';
+
+ok ! (eval { $a->VERSION("version") });
+like $@, qr/^Invalid version format/;
+
+$aversion::VERSION = "version";
+ok ! (eval { aversion->VERSION(2.719) });
+like $@, qr/^Invalid version format/;
 
 my $subs = join ' ', sort grep { defined &{"UNIVERSAL::$_"} } keys %UNIVERSAL::;
 ## The test for import here is *not* because we want to ensure that UNIVERSAL
@@ -154,7 +167,7 @@ if ('a' lt 'A') {
 eval 'sub UNIVERSAL::sleep {}';
 ok $a->can("sleep");
 
-ok ! UNIVERSAL::can($b, "can");
+ok UNIVERSAL::can($b, "can");
 
 ok ! $a->can("export_tags");	# a method in Exporter
 
@@ -162,6 +175,7 @@ ok ! UNIVERSAL::isa("\xff\xff\xff\0", 'HASH');
 
 {
     package Pickup;
+    no warnings "deprecated";
     use UNIVERSAL qw( isa can VERSION );
 
     ::ok isa "Pickup", UNIVERSAL;
@@ -219,6 +233,9 @@ ok( Bar->DOES( 'Bar' ), '... and should fall back to isa()' );
 ok( Bar->DOES( 'Foo' ), '... even when inherited' );
 ok( Baz->DOES( 'Baz' ), '... even without inheriting any other DOES()' );
 ok( ! Baz->DOES( 'Foo' ), '... returning true or false appropriately' );
+
+ok( ! "T"->DOES( "T\0" ), 'DOES() is nul-clean' );
+ok( ! Baz->DOES( "Baz\0Boy howdy" ), 'DOES() is nul-clean' );
 
 package Pig;
 package Bodine;
@@ -315,3 +332,10 @@ use warnings "deprecated";
     @RT66112::T6::ISA = qw/RT66112::E/;
     ok(RT66112::T6->isa('RT66112::A'), "modify \@ISA in isa (RT66112::T6 isa RT66112::A)");
 }
+
+ok(Undeclared->can("can"));
+sub Undeclared::foo { }
+ok(Undeclared->can("foo"));
+ok(!Undeclared->can("something_else"));
+
+ok(Undeclared->isa("UNIVERSAL"));

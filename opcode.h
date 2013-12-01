@@ -18,12 +18,15 @@
 #define Perl_pp_scalar Perl_pp_null
 #define Perl_pp_padany Perl_unimplemented_op
 #define Perl_pp_regcmaybe Perl_pp_null
+#define Perl_pp_transr Perl_pp_trans
 #define Perl_pp_chomp Perl_pp_chop
 #define Perl_pp_schomp Perl_pp_schop
 #define Perl_pp_i_preinc Perl_pp_preinc
-#define Perl_pp_i_predec Perl_pp_predec
+#define Perl_pp_predec Perl_pp_preinc
+#define Perl_pp_i_predec Perl_pp_preinc
 #define Perl_pp_i_postinc Perl_pp_postinc
-#define Perl_pp_i_postdec Perl_pp_postdec
+#define Perl_pp_postdec Perl_pp_postinc
+#define Perl_pp_i_postdec Perl_pp_postinc
 #define Perl_pp_slt Perl_pp_sle
 #define Perl_pp_sgt Perl_pp_sle
 #define Perl_pp_sge Perl_pp_sle
@@ -35,6 +38,7 @@
 #define Perl_pp_hex Perl_pp_oct
 #define Perl_pp_rindex Perl_pp_index
 #define Perl_pp_lcfirst Perl_pp_ucfirst
+#define Perl_pp_aelemfast_lex Perl_pp_aelemfast
 #define Perl_pp_avalues Perl_pp_akeys
 #define Perl_pp_values Perl_do_kv
 #define Perl_pp_keys Perl_do_kv
@@ -138,7 +142,6 @@
 #define Perl_pp_custom Perl_unimplemented_op
 #define Perl_pp_reach Perl_pp_rkeys
 #define Perl_pp_rvalues Perl_pp_rkeys
-#define Perl_pp_transr Perl_pp_trans
 START_EXTERN_C
 
 #ifndef DOINIT
@@ -181,6 +184,7 @@ EXTCONST char* const PL_op_name[] = {
 	"subst",
 	"substcont",
 	"trans",
+	"transr",
 	"sassign",
 	"aassign",
 	"chop",
@@ -273,6 +277,7 @@ EXTCONST char* const PL_op_name[] = {
 	"quotemeta",
 	"rv2av",
 	"aelemfast",
+	"aelemfast_lex",
 	"aelem",
 	"aslice",
 	"aeach",
@@ -286,7 +291,6 @@ EXTCONST char* const PL_op_name[] = {
 	"rv2hv",
 	"helem",
 	"hslice",
-	"boolkeys",
 	"unpack",
 	"pack",
 	"split",
@@ -514,7 +518,14 @@ EXTCONST char* const PL_op_name[] = {
 	"reach",
 	"rkeys",
 	"rvalues",
-	"transr",
+	"coreargs",
+	"runcv",
+	"fc",
+	"padcv",
+	"introcv",
+	"clonecv",
+	"padrange",
+	"freed",
 };
 #endif
 
@@ -557,6 +568,7 @@ EXTCONST char* const PL_op_desc[] = {
 	"pattern quote (qr//)",
 	"substitution (s///)",
 	"substitution iterator",
+	"transliteration (tr///)",
 	"transliteration (tr///)",
 	"scalar assignment",
 	"list assignment",
@@ -650,6 +662,7 @@ EXTCONST char* const PL_op_desc[] = {
 	"quotemeta",
 	"array dereference",
 	"constant array element",
+	"constant lexical array element",
 	"array element",
 	"array slice",
 	"each on array",
@@ -663,7 +676,6 @@ EXTCONST char* const PL_op_desc[] = {
 	"hash dereference",
 	"hash element",
 	"hash slice",
-	"boolkeys",
 	"unpack",
 	"pack",
 	"split",
@@ -891,7 +903,14 @@ EXTCONST char* const PL_op_desc[] = {
 	"each on reference",
 	"keys on reference",
 	"values on reference",
-	"transliteration (tr///)",
+	"CORE:: subroutine",
+	"__SUB__",
+	"fc",
+	"private subroutine",
+	"private subroutine",
+	"private subroutine",
+	"list of private variables",
+	"freed op",
 };
 #endif
 
@@ -949,6 +968,7 @@ EXT Perl_ppaddr_t PL_ppaddr[] /* or perlvars.h */
 	Perl_pp_subst,
 	Perl_pp_substcont,
 	Perl_pp_trans,
+	Perl_pp_transr,	/* implemented by Perl_pp_trans */
 	Perl_pp_sassign,
 	Perl_pp_aassign,
 	Perl_pp_chop,
@@ -961,12 +981,12 @@ EXT Perl_ppaddr_t PL_ppaddr[] /* or perlvars.h */
 	Perl_pp_pos,
 	Perl_pp_preinc,
 	Perl_pp_i_preinc,	/* implemented by Perl_pp_preinc */
-	Perl_pp_predec,
-	Perl_pp_i_predec,	/* implemented by Perl_pp_predec */
+	Perl_pp_predec,	/* implemented by Perl_pp_preinc */
+	Perl_pp_i_predec,	/* implemented by Perl_pp_preinc */
 	Perl_pp_postinc,
 	Perl_pp_i_postinc,	/* implemented by Perl_pp_postinc */
-	Perl_pp_postdec,
-	Perl_pp_i_postdec,	/* implemented by Perl_pp_postdec */
+	Perl_pp_postdec,	/* implemented by Perl_pp_postinc */
+	Perl_pp_i_postdec,	/* implemented by Perl_pp_postinc */
 	Perl_pp_pow,
 	Perl_pp_multiply,
 	Perl_pp_i_multiply,
@@ -1041,6 +1061,7 @@ EXT Perl_ppaddr_t PL_ppaddr[] /* or perlvars.h */
 	Perl_pp_quotemeta,
 	Perl_pp_rv2av,
 	Perl_pp_aelemfast,
+	Perl_pp_aelemfast_lex,	/* implemented by Perl_pp_aelemfast */
 	Perl_pp_aelem,
 	Perl_pp_aslice,
 	Perl_pp_aeach,
@@ -1054,7 +1075,6 @@ EXT Perl_ppaddr_t PL_ppaddr[] /* or perlvars.h */
 	Perl_pp_rv2hv,	/* implemented by Perl_pp_rv2av */
 	Perl_pp_helem,
 	Perl_pp_hslice,
-	Perl_pp_boolkeys,
 	Perl_pp_unpack,
 	Perl_pp_pack,
 	Perl_pp_split,
@@ -1282,7 +1302,13 @@ EXT Perl_ppaddr_t PL_ppaddr[] /* or perlvars.h */
 	Perl_pp_reach,	/* implemented by Perl_pp_rkeys */
 	Perl_pp_rkeys,
 	Perl_pp_rvalues,	/* implemented by Perl_pp_rkeys */
-	Perl_pp_transr,	/* implemented by Perl_pp_trans */
+	Perl_pp_coreargs,
+	Perl_pp_runcv,
+	Perl_pp_fc,
+	Perl_pp_padcv,
+	Perl_pp_introcv,
+	Perl_pp_clonecv,
+	Perl_pp_padrange,
 }
 #endif
 #ifdef PERL_PPADDR_INITED
@@ -1337,6 +1363,7 @@ EXT Perl_check_t PL_check[] /* or perlvars.h */
 	Perl_ck_match,		/* subst */
 	Perl_ck_null,		/* substcont */
 	Perl_ck_match,		/* trans */
+	Perl_ck_match,		/* transr */
 	Perl_ck_sassign,	/* sassign */
 	Perl_ck_null,		/* aassign */
 	Perl_ck_spair,		/* chop */
@@ -1344,9 +1371,9 @@ EXT Perl_check_t PL_check[] /* or perlvars.h */
 	Perl_ck_spair,		/* chomp */
 	Perl_ck_null,		/* schomp */
 	Perl_ck_defined,	/* defined */
-	Perl_ck_lfun,		/* undef */
+	Perl_ck_fun,		/* undef */
 	Perl_ck_fun,		/* study */
-	Perl_ck_lfun,		/* pos */
+	Perl_ck_fun,		/* pos */
 	Perl_ck_lfun,		/* preinc */
 	Perl_ck_lfun,		/* i_preinc */
 	Perl_ck_lfun,		/* predec */
@@ -1371,14 +1398,14 @@ EXT Perl_check_t PL_check[] /* or perlvars.h */
 	Perl_ck_fun,		/* stringify */
 	Perl_ck_bitop,		/* left_shift */
 	Perl_ck_bitop,		/* right_shift */
-	Perl_ck_null,		/* lt */
-	Perl_ck_null,		/* i_lt */
-	Perl_ck_null,		/* gt */
-	Perl_ck_null,		/* i_gt */
-	Perl_ck_null,		/* le */
-	Perl_ck_null,		/* i_le */
-	Perl_ck_null,		/* ge */
-	Perl_ck_null,		/* i_ge */
+	Perl_ck_cmp,		/* lt */
+	Perl_ck_cmp,		/* i_lt */
+	Perl_ck_cmp,		/* gt */
+	Perl_ck_cmp,		/* i_gt */
+	Perl_ck_cmp,		/* le */
+	Perl_ck_cmp,		/* i_le */
+	Perl_ck_cmp,		/* ge */
+	Perl_ck_cmp,		/* i_ge */
 	Perl_ck_null,		/* eq */
 	Perl_ck_null,		/* i_eq */
 	Perl_ck_null,		/* ne */
@@ -1412,12 +1439,12 @@ EXT Perl_check_t PL_check[] /* or perlvars.h */
 	Perl_ck_fun,		/* hex */
 	Perl_ck_fun,		/* oct */
 	Perl_ck_fun,		/* abs */
-	Perl_ck_fun,		/* length */
+	Perl_ck_length,		/* length */
 	Perl_ck_substr,		/* substr */
 	Perl_ck_fun,		/* vec */
 	Perl_ck_index,		/* index */
 	Perl_ck_index,		/* rindex */
-	Perl_ck_fun,		/* sprintf */
+	Perl_ck_lfun,		/* sprintf */
 	Perl_ck_fun,		/* formline */
 	Perl_ck_fun,		/* ord */
 	Perl_ck_fun,		/* chr */
@@ -1429,6 +1456,7 @@ EXT Perl_check_t PL_check[] /* or perlvars.h */
 	Perl_ck_fun,		/* quotemeta */
 	Perl_ck_rvconst,	/* rv2av */
 	Perl_ck_null,		/* aelemfast */
+	Perl_ck_null,		/* aelemfast_lex */
 	Perl_ck_null,		/* aelem */
 	Perl_ck_null,		/* aslice */
 	Perl_ck_each,		/* aeach */
@@ -1442,8 +1470,7 @@ EXT Perl_check_t PL_check[] /* or perlvars.h */
 	Perl_ck_rvconst,	/* rv2hv */
 	Perl_ck_null,		/* helem */
 	Perl_ck_null,		/* hslice */
-	Perl_ck_fun,		/* boolkeys */
-	Perl_ck_unpack,		/* unpack */
+	Perl_ck_fun,		/* unpack */
 	Perl_ck_fun,		/* pack */
 	Perl_ck_split,		/* split */
 	Perl_ck_join,		/* join */
@@ -1531,8 +1558,8 @@ EXT Perl_check_t PL_check[] /* or perlvars.h */
 	Perl_ck_fun,		/* sysread */
 	Perl_ck_fun,		/* syswrite */
 	Perl_ck_eof,		/* eof */
-	Perl_ck_fun,		/* tell */
-	Perl_ck_fun,		/* seek */
+	Perl_ck_tell,		/* tell */
+	Perl_ck_tell,		/* seek */
 	Perl_ck_trunc,		/* truncate */
 	Perl_ck_fun,		/* fcntl */
 	Perl_ck_fun,		/* ioctl */
@@ -1579,7 +1606,7 @@ EXT Perl_check_t PL_check[] /* or perlvars.h */
 	Perl_ck_ftst,		/* fttty */
 	Perl_ck_ftst,		/* fttext */
 	Perl_ck_ftst,		/* ftbinary */
-	Perl_ck_chdir,		/* chdir */
+	Perl_ck_trunc,		/* chdir */
 	Perl_ck_fun,		/* chown */
 	Perl_ck_fun,		/* chroot */
 	Perl_ck_fun,		/* unlink */
@@ -1670,7 +1697,13 @@ EXT Perl_check_t PL_check[] /* or perlvars.h */
 	Perl_ck_each,		/* reach */
 	Perl_ck_each,		/* rkeys */
 	Perl_ck_each,		/* rvalues */
-	Perl_ck_match,		/* transr */
+	Perl_ck_null,		/* coreargs */
+	Perl_ck_null,		/* runcv */
+	Perl_ck_fun,		/* fc */
+	Perl_ck_null,		/* padcv */
+	Perl_ck_null,		/* introcv */
+	Perl_ck_null,		/* clonecv */
+	Perl_ck_null,		/* padrange */
 }
 #endif
 #ifdef PERL_CHECK_INITED
@@ -1719,6 +1752,7 @@ EXTCONST U32 PL_opargs[] = {
 	0x00001544,	/* subst */
 	0x00000344,	/* substcont */
 	0x00001804,	/* trans */
+	0x00001804,	/* transr */
 	0x00000004,	/* sassign */
 	0x00022208,	/* aassign */
 	0x00002b0d,	/* chop */
@@ -1726,9 +1760,9 @@ EXTCONST U32 PL_opargs[] = {
 	0x00002b1d,	/* chomp */
 	0x00009b9c,	/* schomp */
 	0x00009b84,	/* defined */
-	0x00009b04,	/* undef */
+	0x0000fb04,	/* undef */
 	0x00009b84,	/* study */
-	0x00009b8c,	/* pos */
+	0x0000fb8c,	/* pos */
 	0x00001164,	/* preinc */
 	0x00001144,	/* i_preinc */
 	0x00001164,	/* predec */
@@ -1744,7 +1778,7 @@ EXTCONST U32 PL_opargs[] = {
 	0x0001121e,	/* i_divide */
 	0x0001123e,	/* modulo */
 	0x0001121e,	/* i_modulo */
-	0x00012209,	/* repeat */
+	0x0001220b,	/* repeat */
 	0x0001123e,	/* add */
 	0x0001121e,	/* i_add */
 	0x0001123e,	/* subtract */
@@ -1811,6 +1845,7 @@ EXTCONST U32 PL_opargs[] = {
 	0x00009b8e,	/* quotemeta */
 	0x00000148,	/* rv2av */
 	0x00013604,	/* aelemfast */
+	0x00013040,	/* aelemfast_lex */
 	0x00013204,	/* aelem */
 	0x00023401,	/* aslice */
 	0x00003b00,	/* aeach */
@@ -1824,9 +1859,8 @@ EXTCONST U32 PL_opargs[] = {
 	0x00000148,	/* rv2hv */
 	0x00014204,	/* helem */
 	0x00024401,	/* hslice */
-	0x00004b00,	/* boolkeys */
-	0x00091400,	/* unpack */
-	0x0002140d,	/* pack */
+	0x00091480,	/* unpack */
+	0x0002140f,	/* pack */
 	0x00111408,	/* split */
 	0x0002140d,	/* join */
 	0x00002401,	/* list */
@@ -1932,8 +1966,8 @@ EXTCONST U32 PL_opargs[] = {
 	0x01116404,	/* ssockopt */
 	0x00006b04,	/* getsockname */
 	0x00006b04,	/* getpeername */
-	0x00006c80,	/* lstat */
-	0x00006c80,	/* stat */
+	0x0000ec80,	/* lstat */
+	0x0000ec80,	/* stat */
 	0x00006c84,	/* ftrread */
 	0x00006c84,	/* ftrwrite */
 	0x00006c84,	/* ftrexec */
@@ -2010,7 +2044,7 @@ EXTCONST U32 PL_opargs[] = {
 	0x00009bc0,	/* require */
 	0x00001140,	/* dofile */
 	0x00000604,	/* hintseval */
-	0x00001b40,	/* entereval */
+	0x00009bc0,	/* entereval */
 	0x00001100,	/* leaveeval */
 	0x00000340,	/* entertry */
 	0x00000400,	/* leavetry */
@@ -2052,7 +2086,13 @@ EXTCONST U32 PL_opargs[] = {
 	0x00001b00,	/* reach */
 	0x00001b08,	/* rkeys */
 	0x00001b08,	/* rvalues */
-	0x00001804,	/* transr */
+	0x00000600,	/* coreargs */
+	0x00000004,	/* runcv */
+	0x00009b8e,	/* fc */
+	0x00000040,	/* padcv */
+	0x00000040,	/* introcv */
+	0x00000040,	/* clonecv */
+	0x00000040,	/* padrange */
 };
 #endif
 

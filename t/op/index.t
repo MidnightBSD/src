@@ -7,7 +7,7 @@ BEGIN {
 }
 
 use strict;
-plan( tests => 120 );
+plan( tests => 114 );
 
 run_tests() unless caller;
 
@@ -128,19 +128,6 @@ is(rindex($a, "foo",    ), 0);
     is (rindex($text, $search_octets), -1);
 }
 
-foreach my $utf8 ('', ', utf-8') {
-    foreach my $arraybase (0, 1, -1, -2) {
-	my $expect_pos = 2 + $arraybase;
-
-	my $prog = "no warnings 'deprecated';\n";
-	$prog .= "\$[ = $arraybase; \$big = \"N\\xabN\\xab\"; ";
-	$prog .= '$big .= chr 256; chop $big; ' if $utf8;
-	$prog .= 'print rindex $big, "N", 2 + $[';
-
-	fresh_perl_is($prog, $expect_pos, {}, "\$[ = $arraybase$utf8");
-    }
-}
-
 SKIP: {
     skip "UTF-EBCDIC is limited to 0x7fffffff", 3 if ord("A") == 193;
 
@@ -223,5 +210,11 @@ is($^A, '', '$^A is empty');
 formline PVBM2;
 is($^A, 'bang', "formline isn't confused by index compilation");
 is(index('bang', PVBM2), 0, "index isn't confused by format compilation");
+
+{
+    use constant perl => "rules";
+    is(index("perl rules", perl), 5, 'first index of a constant works');
+    is(index("rules 1 & 2", perl), 0, 'second index of the same constant works');
+}
 
 }

@@ -22,9 +22,6 @@ safer_unlink($uconfig_h_new);
 my $command = 'sh ./config_h.SH';
 system $command and die "`$command` failed, \$?=$?";
 
-open FH, ">>$uconfig_h_new" or die "Can't append to $uconfig_h_new: $!";
+my $fh = open_new($uconfig_h, '>>');
 
-print FH "\n", read_only_bottom([$ENV{CONFIG_SH}, 'config_h.SH']);
-
-safer_close(*FH);
-rename_if_different($uconfig_h_new, $uconfig_h);
+read_only_bottom_close_and_rename($fh, [$ENV{CONFIG_SH}, 'config_h.SH']);

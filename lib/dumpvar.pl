@@ -1,4 +1,4 @@
-require 5.002;			# For (defined ref)
+require 5.014;			# For more reliable $@ after eval
 package dumpvar;
 
 # Needed for PrettyPrinter only:
@@ -37,7 +37,7 @@ sub main::dumpValue {
 # This one is good for variable names:
 
 sub unctrl {
-	local($_) = @_;
+    for (my($dummy) = shift) {
 	local($v) ; 
 
 	return \$_ if ref \$_ eq "GLOB";
@@ -47,7 +47,8 @@ sub unctrl {
 	} else {
 	    s/([\001-\037\177])/'^'.pack('c',ord($1)^64)/eg;
 	}
-	$_;
+	return $_;
+    }
 }
 
 sub uniescape {
@@ -57,7 +58,17 @@ sub uniescape {
 }
 
 sub stringify {
-	local($_,$noticks) = @_;
+  my $string;
+  if (eval { $string = _stringify(@_); 1 }) {
+    return $string;
+  }
+
+  return "<< value could not be dumped: $@ >>";
+}
+
+sub _stringify {
+    (my $__, local $noticks) = @_;
+    for ($__) {
 	local($v) ; 
 	my $tick = $tick;
 
@@ -101,9 +112,10 @@ sub stringify {
 	}
 	$_ = uniescape($_);
 	s/([\200-\377])/'\\'.sprintf('%3o',ord($1))/eg if $quoteHighBit;
-	($noticks || /^\d+(\.\d*)?\Z/) 
+	return ($noticks || /^\d+(\.\d*)?\Z/) 
 	  ? $_ 
 	  : $tick . $_ . $tick;
+    }
 }
 
 # Ensure a resulting \ is escaped to be \\
@@ -157,6 +169,7 @@ sub unwrap {
     $sp = " " x $s ;
     $s += 3 ; 
 
+    eval {
     # Check for reused addresses
     if (ref $v) { 
       my $val = $v;
@@ -165,8 +178,7 @@ sub unwrap {
       # Match type and address.                      
       # Unblessed references will look like TYPE(0x...)
       # Blessed references will look like Class=TYPE(0x...)
-      ($start_part, $val) = split /=/,$val;
-      $val = $start_part unless defined $val;
+      $val =~ s/^.*=//; # suppress the Class part, just keep TYPE(0x...)
       ($item_type, $address) = 
         $val =~ /([^\(]+)        # Keep stuff that's     
                                  # not an open paren
@@ -310,6 +322,12 @@ sub unwrap {
 	print( (' ' x $s) .  "FileHandle({$v}) => fileno($fileno)\n" );
       }
     }
+    };
+    if ($@) {
+      print( (' ' x $s) .  "<< value could not be dumped: $@ >>\n");
+    }
+
+    return;
 }
 
 sub matchlex {
@@ -343,7 +361,7 @@ sub unctrlSet {
     if ($in eq 'unctrl' or $in eq 'quote') {
       $unctrl = $in;
     } else {
-      print "Unknown value for `unctrl'.\n";
+      print "Unknown value for 'unctrl'.\n";
     }
   }
   $unctrl;

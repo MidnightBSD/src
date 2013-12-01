@@ -56,15 +56,16 @@ sentence. For example, "Fixed spelling errors in perlhack.pod".
 The next step is to submit your patch to the Perl core ticket system
 via email.
 
-Assuming your patch consists of a single git commit, you can send it to
-perlbug with this command line:
+Assuming your patch consists of a single git commit, the following
+writes the file as a MIME attachment, and sends it with a meaningful
+subject:
 
-  % git format-patch HEAD^1..HEAD
-  % perlbug -s '[PATCH] `git log --pretty=format:%s HEAD^1..HEAD`' -f 0001-*.patch
+  % git format-patch -1 --attach
+  % perlbug -s "[PATCH] $(git log -1 --oneline HEAD)" -f 0001-*.patch
 
 The perlbug program will ask you a few questions about your email
-address and the patch you're submitting. Once you've answered them you
-can submit your patch.
+address and the patch you're submitting. Once you've answered them it
+will submit your patch via email.
 
 =item * Thank you
 
@@ -75,9 +76,9 @@ Thank you!
 
 =head1 BUG REPORTING
 
-If you want to report a bug in Perl, you must use the F<perlbug> command
-line tool. This tool will ensure that your bug report includes all the
-relevant system and configuration information.
+If you want to report a bug in Perl, you must use the F<perlbug>
+command line tool. This tool will ensure that your bug report includes
+all the relevant system and configuration information.
 
 To browse existing Perl bugs and patches, you can use the web interface
 at L<http://rt.perl.org/>.
@@ -94,7 +95,8 @@ please add it. This will help the porters fix the bug.
 
 The perl5-porters (p5p) mailing list is where the Perl standard
 distribution is maintained and developed. The people who maintain Perl
-are also referred to as the "Perl 5 Porters", or just the "porters".
+are also referred to as the "Perl 5 Porters", "p5p" or just the
+"porters".
 
 A searchable archive of the list is available at
 L<http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/>. There is
@@ -107,6 +109,12 @@ The perl5-changes mailing list receives a copy of each patch that gets
 submitted to the maintenance and development branches of the perl
 repository. See L<http://lists.perl.org/list/perl5-changes.html> for
 subscription and archive information.
+
+=head2 #p5p on IRC
+
+Many porters are also active on the L<irc://irc.perl.org/#p5p> channel.
+Feel free to join the channel and ask questions about hacking on the
+Perl core.
 
 =head1 GETTING THE PERL SOURCE
 
@@ -215,7 +223,7 @@ C<format-patch> command produces one patch file for each commit you
 made. If you prefer to send a single patch for all commits, you can use
 C<git diff>.
 
-  % git co blead
+  % git checkout blead
   % git pull
   % git diff blead my-branch-name
 
@@ -373,6 +381,21 @@ extra paren, e.g. "if (a && (b = c)) ..."
 
 "if (!foo) ..." rather than "if (foo == FALSE) ..." etc.
 
+=item *
+
+Do not declare variables using "register".  It may be counterproductive
+with modern compilers, and is deprecated in C++, under which the Perl
+source is regularly compiled.
+
+=item *
+
+In-line functions that are in headers that are accessible to XS code
+need to be able to compile without warnings with commonly used extra
+compilation flags, such as gcc's C<-Wswitch-default> which warns
+whenever a switch statement does not have a "default" case.  The use of
+these extra flags is to catch potential problems in legal C code, and is
+often used by Perl aggregators, such as Linux distributors.
+
 =back
 
 =head3 Test suite
@@ -464,14 +487,19 @@ Don't forget the exceptional, pathological cases.
 This works just like patching anything else, with one extra
 consideration.
 
-Some core modules also live on CPAN and are maintained outside of the
-Perl core. When the author updates the module, the updates are simply
-copied into the core.
-
 Modules in the F<cpan/> directory of the source tree are maintained
-outside of the Perl core. See that module's listing on documentation or
-its listing on L<http://search.cpan.org/> for more information on
-reporting bugs and submitting patches.
+outside of the Perl core. When the author updates the module, the
+updates are simply copied into the core.  See that module's
+documentation or its listing on L<http://search.cpan.org/> for more
+information on reporting bugs and submitting patches.
+
+In most cases, patches to modules in F<cpan/> should be sent upstream
+and should not be applied to the Perl core individually.  If a patch to
+a file in F<cpan/> absolutely cannot wait for the fix to be made
+upstream, released to CPAN and copied to blead, you must add (or
+update) a C<CUSTOMIZED> entry in the F<"Porting/Maintainers.pl"> file
+to flag that a local modification has been made.  See
+F<"Porting/Maintainers.pl"> for more details.
 
 In contrast, modules in the F<dist/> directory are maintained in the
 core.
@@ -684,15 +712,18 @@ The F<t/test.pl> library provides some of the features of
 L<Test::More>, but avoids loading most modules and uses as few core
 features as possible.
 
-If you write your own test, use the L<Test Anything Protocol|TAP>.
+If you write your own test, use the L<Test Anything
+Protocol|http://testanything.org>.
 
 =over 4
 
-=item * F<t/base> and F<t/comp>
+=item * F<t/base>, F<t/comp> and F<t/opbasic>
 
 Since we don't know if require works, or even subroutines, use ad hoc
-tests for these two. Step carefully to avoid using the feature being
-tested.
+tests for these three. Step carefully to avoid using the feature being
+tested.  Tests in F<t/opbasic>, for instance, have been placed there rather
+than in F<t/op> because they test functionality which F<t/test.pl> presumes
+has already been demonstrated to work.
 
 =item * F<t/cmd>, F<t/run>, F<t/io> and F<t/op>
 
@@ -766,8 +797,8 @@ F<testname.valgrind>.
 
 =item * test.torture torturetest
 
-Run all the usual tests and some extra tests. As of Perl 5.8.0, the only
-extra tests are Abigail's JAPHs, F<t/japh/abigail.t>.
+Run all the usual tests and some extra tests. As of Perl 5.8.0, the
+only extra tests are Abigail's JAPHs, F<t/japh/abigail.t>.
 
 You can also run the torture test with F<t/harness> by giving
 C<-torture> argument to F<t/harness>.
@@ -827,14 +858,14 @@ because L<TAP::Harness> needs to be able to schedule individual
 non-conflicting test scripts itself, and there is no standard interface
 to C<make> utilities to interact with their job schedulers.
 
-Note that currently some test scripts may fail when run in parallel (most
-notably C<ext/IO/t/io_dir.t>). If necessary, run just the failing scripts
-again sequentially and see if the failures go away.
+Note that currently some test scripts may fail when run in parallel
+(most notably F<ext/IO/t/io_dir.t>). If necessary, run just the failing
+scripts again sequentially and see if the failures go away.
 
 =head2 Running tests by hand
 
-You can run part of the test suite by hand by using one of the following
-commands from the F<t/> directory:
+You can run part of the test suite by hand by using one of the
+following commands from the F<t/> directory:
 
     ./perl -I../lib TEST list-of-.t-files
 
@@ -846,9 +877,9 @@ or
 
 =head2 Using F<t/harness> for testing
 
-If you use C<harness> for testing, you have several command line options
-available to you. The arguments are as follows, and are in the order
-that they must appear if used together.
+If you use C<harness> for testing, you have several command line
+options available to you. The arguments are as follows, and are in the
+order that they must appear if used together.
 
     harness -v -torture -re=pattern LIST OF FILES TO TEST
     harness -v -torture -re LIST OF PATTERNS TO MATCH
@@ -934,6 +965,13 @@ Setting this variable skips the vrexx.t tests for OS2::REXX.
 
 This sets a variable in op/numconvert.t.
 
+=item * PERL_TEST_MEMORY
+
+Setting this variable includes the tests in F<t/bigmem/>.  This should
+be set to the number of gigabytes of memory available for testing,
+eg. C<PERL_TEST_MEMORY=4> indicates that tests that require 4GiB of
+available memory can be run safely.
+
 =back
 
 See also the documentation for the Test and Test::Harness modules, for
@@ -1001,13 +1039,6 @@ This is a collection of words of wisdom for a Perl porter; some of it
 is only useful to the pumpkin holder, but most of it applies to anyone
 wanting to go about Perl development.
 
-=item * The perl5-porters FAQ
-
-This should be available from
-http://dev.perl.org/perl5/docs/p5p-faq.html . It contains hints on
-reading perl5-porters, information on how perl5-porters works and how
-Perl development in general works.
-
 =back
 
 =head1 CPAN TESTERS AND PERL SMOKERS
@@ -1074,9 +1105,9 @@ each file's purpose. Perl instead begins each with a literary allusion
 to that file's purpose.
 
 Like chapters in many books, all top-level Perl source files (along
-with a few others here and there) begin with an epigramic inscription
-that alludes, indirectly and metaphorically, to the material you're
-about to read.
+with a few others here and there) begin with an epigrammatic
+inscription that alludes, indirectly and metaphorically, to the
+material you're about to read.
 
 Quotations are taken from writings of J.R.R. Tolkien pertaining to his
 Legendarium, almost always from I<The Lord of the Rings>. Chapters and

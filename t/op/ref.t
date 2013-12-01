@@ -8,7 +8,7 @@ BEGIN {
 
 use strict qw(refs subs);
 
-plan(217);
+plan(230);
 
 # Test glob operations.
 
@@ -119,6 +119,7 @@ is (join(':',@{$spring2{"foo"}}), "1:2:3:4");
     &$subref;
     is ($called, 1);
 }
+is ref eval {\&{""}}, "CODE", 'reference to &{""} [perl #94476]';
 
 # Test references to return values of operators (TARGs/PADTMPs)
 {
@@ -174,7 +175,6 @@ my $x;
 #   tied lvalue => SCALAR, as we haven't tested tie yet
 #   BIND, 'cos we can't create them yet
 #   REGEXP, 'cos that requires overload or Scalar::Util
-#   LVALUE ref, 'cos I can't work out how to create one :)
 
 for (
     [ 'undef',          SCALAR  => \undef               ],
@@ -186,9 +186,13 @@ for (
     [ 'PVNV',           SCALAR  => \$pvnv               ],
     [ 'PVMG',           SCALAR  => \$0                  ],
     [ 'PVBM',           SCALAR  => \PVBM                ],
+    [ 'scalar @array',  SCALAR  => \scalar @array       ],
+    [ 'scalar %hash',   SCALAR  => \scalar %hash        ],
     [ 'vstring',        VSTRING => \v1                  ],
     [ 'ref',            REF     => \\1                  ],
-    [ 'lvalue',         LVALUE  => \substr($x, 0, 0)    ],
+    [ 'substr lvalue',  LVALUE  => \substr($x, 0, 0)    ],
+    [ 'pos lvalue',     LVALUE  => \pos                 ],
+    [ 'vec lvalue',     LVALUE  => \vec($x,0,1)         ],     
     [ 'named array',    ARRAY   => \@ary                ],
     [ 'anon array',     ARRAY   => [ 1 ]                ],
     [ 'named hash',     HASH    => \%whatever           ],
@@ -206,6 +210,15 @@ for (
 is (ref *STDOUT{IO}, 'IO::File', 'IO refs are blessed into IO::File');
 like (*STDOUT{IO}, qr/^IO::File=IO\(0x[0-9a-f]+\)$/,
     'stringify for IO refs');
+
+{ # Test re-use of ref's TARG [perl #101738]
+  my $obj = bless [], '____';
+  my $uniobj = bless [], chr 256;
+  my $get_ref = sub { ref shift };
+  my $dummy = &$get_ref($uniobj);
+     $dummy = &$get_ref($obj);
+  ok exists { ____ => undef }->{$dummy}, 'ref sets UTF8 flag correctly';
+}
 
 # Test anonymous hash syntax.
 
@@ -380,7 +393,6 @@ curr_test($test + 2);
 # test that DESTROY is called on all objects during global destruction,
 # even those without hard references [perl #36347]
 
-$TODO = 'bug #36347';
 is(
   runperl(
    stderr => 1, prog => 'sub DESTROY { print qq-aaa\n- } bless \$a[0]'
@@ -395,7 +407,14 @@ is(
  "aaa\n",
  'DESTROY called on closure variable'
 );
-$TODO = undef;
+
+# But cursing objects must not result in double frees
+# This caused "Attempt to free unreferenced scalar" in 5.16.
+fresh_perl_is(
+  'bless \%foo::, bar::; bless \%bar::, foo::; print "ok\n"', "ok\n",
+   { stderr => 1 },
+  'no double free when stashes are blessed into each other');
+
 
 # test if refgen behaves with autoviv magic
 {
@@ -478,7 +497,7 @@ TODO: {
           ), qr/^(ok)+$/, 'STDOUT destructor');
 }
 
-TODO: {
+{
     no strict 'refs';
     $name8 = chr 163;
     $name_utf8 = $name8 . chr 256;
@@ -488,11 +507,10 @@ TODO: {
     is ($$name_utf8, undef, 'Nothing before we start');
     $$name8 = "Pound";
     is ($$name8, "Pound", 'Accessing via 8 bit symref works');
-    local $TODO = "UTF8 mangled in symrefs";
     is ($$name_utf8, "Pound", 'Accessing via UTF8 symref works');
 }
 
-TODO: {
+{
     no strict 'refs';
     $name_utf8 = $name = chr 9787;
     utf8::encode $name_utf8;
@@ -504,7 +522,6 @@ TODO: {
     is ($$name_utf8, undef, 'Nothing before we start');
     $$name = "Face";
     is ($$name, "Face", 'Accessing via Unicode symref works');
-    local $TODO = "UTF8 mangled in symrefs";
     is ($$name_utf8, undef,
 	'Accessing via the UTF8 byte sequence gives nothing');
 }
@@ -746,6 +763,29 @@ print "ok";
 EOF
 
 }
+
+SKIP:{
+    skip_if_miniperl "no Scalar::Util on miniperl", 1;
+    my $error;
+    *hassgropper::DESTROY = sub {
+        require Scalar::Util;
+        eval { Scalar::Util::weaken($_[0]) };
+        $error = $@;
+        # This line caused a crash before weaken refused to weaken a
+        # read-only reference:
+        $do::not::overwrite::this = $_[0];
+    };
+    my $xs = bless [], "hassgropper";
+    undef $xs;
+    like $error, qr/^Modification of a read-only/,
+       'weaken refuses to weaken a read-only ref';
+    # Now that the test has passed, avoid sabotaging global destruction:
+    undef *hassgropper::DESTROY;
+    undef $do::not::overwrite::this;
+}
+
+
+is ref( bless {}, "nul\0clean" ), "nul\0clean", "ref() is nul-clean";
 
 # Bit of a hack to make test.pl happy. There are 3 more tests after it leaves.
 $test = curr_test();

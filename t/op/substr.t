@@ -1,4 +1,4 @@
-#!./perl -w
+#!./perl
 
 #P = start of string  Q = start of substr  R = end of substr  S = end of string
 
@@ -21,9 +21,9 @@ $SIG{__WARN__} = sub {
      }
 };
 
-require './test.pl';
+BEGIN { require './test.pl'; }
 
-plan(334);
+plan(387);
 
 run_tests() unless caller;
 
@@ -42,20 +42,8 @@ eval{substr($a,999,999) = "" ; };# P R Q S
 like ($@, $FATAL_MSG);
 is(substr($a,0,-6), 'abc');  # P=Q R S
 is(substr($a,-3,1), 'x');    # P Q R S
-
-$[ = 1;
-
-is(substr($a,1,3), 'abc' );  # P=Q R S
-is(substr($a,4,3), 'def' );  # P Q R S
-is(substr($a,7,999), 'xyz');# P Q S R
-$b = substr($a,999,999) ; # warn # P R Q S
-is($w--, 1);
-eval{substr($a,999,999) = "" ; } ; # P R Q S
-like ($@, $FATAL_MSG);
-is(substr($a,1,-6), 'abc' );# P=Q R S
-is(substr($a,-3,1), 'x' );  # P Q R S
-
-$[ = 0;
+sub{$b = shift}->(substr($a,999,999));
+is ($w--, 1, 'boundless lvalue substr only warns on fetch');
 
 substr($a,3,3) = 'XYZ';
 is($a, 'abcXYZxyz' );
@@ -198,6 +186,11 @@ like($@, $FATAL_MSG);
 $b = substr($a,1) ; # warning   # P=R=S Q
 is($w--, 1);
 eval{substr($a,1) = "" ; };     # P=R=S Q
+like($@, $FATAL_MSG);
+
+$b = substr($a,-7,-6) ; # warn  # Q R P S
+is($w--, 1);
+eval{substr($a,-7,-6) = "" ; }; # Q R P S
 like($@, $FATAL_MSG);
 
 my $a = 'zxcvbnm';
@@ -644,6 +637,51 @@ is($x, "\x{100}\x{200}\xFFb");
 	is($_, 'YYYY'); 
 	is($x, 'aYYYYef');
     }
+    $x = "abcdef";
+    for (substr($x,1)) {
+	is($_, 'bcdef');
+	$_ = 'XX';
+	is($_, 'XX');
+	is($x, 'aXX');
+	$x .= "frompswiggle";
+	is $_, "XXfrompswiggle";
+    }
+    $x = "abcdef";
+    for (substr($x,1,-1)) {
+	is($_, 'bcde');
+	$_ = 'XX';
+	is($_, 'XX');
+	is($x, 'aXXf');
+	$x .= "frompswiggle";
+	is $_, "XXffrompswiggl";
+    }
+    $x = "abcdef";
+    for (substr($x,-5,3)) {
+	is($_, 'bcd');
+	$_ = 'XX';   # now $_ is substr($x, -4, 2)
+	is($_, 'XX');
+	is($x, 'aXXef');
+	$x .= "frompswiggle";
+	is $_, "gg";
+    }
+    $x = "abcdef";
+    for (substr($x,-5)) {
+	is($_, 'bcdef');
+	$_ = 'XX';  # now substr($x, -2)
+	is($_, 'XX');
+	is($x, 'aXX');
+	$x .= "frompswiggle";
+	is $_, "le";
+    }
+    $x = "abcdef";
+    for (substr($x,-5,-1)) {
+	is($_, 'bcde');
+	$_ = 'XX';  # now substr($x, -3, -1)
+	is($_, 'XX');
+	is($x, 'aXXf');
+	$x .= "frompswiggle";
+	is $_, "gl";
+    }
 }
 
 # [perl #24200] string corruption with lvalue sub
@@ -681,4 +719,146 @@ is($x, "\x{100}\x{200}\xFFb");
     is(substr($a,1,1), 'b');
 }
 
+# [perl #62646] offsets exceeding 32 bits on 64-bit system
+SKIP: {
+    skip("32-bit system", 24) unless ~0 > 0xffffffff;
+    my $a = "abc";
+    my $s;
+    my $r;
+
+    utf8::downgrade($a);
+    for (1..2) {
+	$w = 0;
+	$r = substr($a, 0xffffffff, 1);
+	is($r, undef);
+	is($w, 1);
+
+	$w = 0;
+	$r = substr($a, 0xffffffff+1, 1);
+	is($r, undef);
+	is($w, 1);
+
+	$w = 0;
+	ok( !eval { $r = substr($s=$a, 0xffffffff, 1, "_"); 1 } );
+	is($r, undef);
+	is($s, $a);
+	is($w, 0);
+
+	$w = 0;
+	ok( !eval { $r = substr($s=$a, 0xffffffff+1, 1, "_"); 1 } );
+	is($r, undef);
+	is($s, $a);
+	is($w, 0);
+
+	utf8::upgrade($a);
+    }
+}
+
+# [perl #77692] UTF8 cache not being reset when TARG is reused
+ok eval {
+ local ${^UTF8CACHE} = -1;
+ for my $i (0..1)
+ {
+   my $dummy = length(substr("\x{100}",0,$i));
+ }
+ 1
+}, 'UTF8 cache is reset when TARG is reused [perl #77692]';
+
+{
+    use utf8;
+    use open qw( :utf8 :std );
+    no warnings 'once';
+
+    my $t = "";
+    substr $t, 0, 0, *ワルド;
+    is($t, "*main::ワルド", "substr works on UTF-8 globs");
+
+    $t = "The World!";
+    substr $t, 0, 9, *ザ::ワルド;
+    is($t, "*ザ::ワルド!", "substr works on a UTF-8 glob + stash");
+}
+
+{
+    my $x = *foo;
+    my $y = \substr *foo, 0, 0;
+    is ref \$x, 'GLOB', '\substr does not coerce its glob arg just yet';
+    $x = \"foo";
+    $y = \substr *foo, 0, 0;
+    is ref \$x, 'REF', '\substr does not coerce its ref arg just yet';
+}
+
+# Test that UTF8-ness of magic var changing does not confuse substr lvalue
+# assignment.
+# We use overloading for our magic var, but a typeglob would work, too.
+package o {
+    use overload '""' => sub { ++our $count; $_[0][0] }
+}
+my $refee = bless ["\x{100}a"], o::;
+my $substr = \substr $refee, -2;	# UTF8 flag still off for $$substr.
+$$substr = "b";				# UTF8 flag turns on when setsubstr
+is $refee, "b",				# magic stringifies $$substr.
+     'substr lvalue assignment when stringification turns on UTF8ness';
+
+# Test that changing UTF8-ness does not confuse 4-arg substr.
+$refee = bless [], "\x{100}a";
+# stringify without returning on UTF8 flag on $refee:
+my $string = $refee; $string = "$string";
+substr $refee, 0, 0, "\xff";
+is $refee, "\xff$string",
+  '4-arg substr with target UTF8ness turning on when stringified';
+$refee = bless [], "\x{100}";
+() = "$refee"; # UTF8 flag now on
+bless $refee, "\xff";
+$string = $refee; $string = "$string";
+substr $refee, 0, 0, "\xff";
+is $refee, "\xff$string",
+  '4-arg substr with target UTF8ness turning off when stringified';
+
+# Overload count
+$refee = bless ["foo"], o::;
+$o::count = 0;
+substr $refee, 0, 0, "";
+is $o::count, 1, '4-arg substr calls overloading once on the target';
+$refee = bless ["\x{100}"], o::;
+() = "$refee"; # turn UTF8 flag on
+$o::count = 0;
+() = substr $refee, 0;
+is $o::count, 1, 'rvalue substr calls overloading once on utf8 target';
+$o::count = 0;
+$refee = "";
+${\substr $refee, 0} = bless ["\x{100}"], o::;
+is $o::count, 1, 'assigning utf8 overload to substr lvalue calls ovld 1ce';
+
+# [perl #7678] core dump with substr reference and localisation
+{$b="abcde"; local $k; *k=\substr($b, 2, 1);}
+
+} # sub run_tests - put tests above this line that can run in threads
+
+
+my $destroyed;
+{ package Class; DESTROY { ++$destroyed; } }
+
+$destroyed = 0;
+{
+    my $x = '';
+    substr($x,0,1) = "";
+    $x = bless({}, 'Class');
+}
+is($destroyed, 1, 'Timely scalar destruction with lvalue substr');
+
+{
+    my $result_3363;
+    sub a_3363 {
+        my ($word, $replace) = @_;
+        my $ref = \substr($word, 0, 1);
+        $$ref = $replace;
+        if ($replace eq "b") {
+            $result_3363 = $word;
+        } else {
+            a_3363($word, "b");
+        }
+    }
+    a_3363($_, "v") for "test";
+
+    is($result_3363, "best", "ref-to-substr retains lvalue-ness under recursion [perl #3363]");
 }

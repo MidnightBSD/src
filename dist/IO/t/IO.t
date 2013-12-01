@@ -21,8 +21,10 @@ plan(tests => 18);
 
 	my @load;
 	local $^W;
+	my $xsl = \&XSLoader::load;
 	local *XSLoader::load = sub {
 		push @load, \@_;
+		&$xsl(@_);
 	};
 
 	# use_ok() calls import, which we do not want to do
@@ -47,6 +49,7 @@ local $SIG{__WARN__} = sub { $warn = "@_" } ;
 
 {
     local $^W = 0;
+    no if $^V >= 5.17.4, warnings => "deprecated";
     IO->import();
     is( $warn, '', "... import default, should not warn");
     $warn = '' ;

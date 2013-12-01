@@ -582,7 +582,7 @@ line 8
 ### s ###
 's' => {
   script => <<'[TheEnd]',
-# enclose any `(a)'.. `(c)' in `-'
+# enclose any '(a)'.. '(c)' in '-'
 s/([a-z])/-\1-/g
 
 s/\([abc]\)/-\1-/g
@@ -624,6 +624,19 @@ s/a\{3\}/a rep 3/
 @1ine 6
 @1ine 7
 @1ine 8
+[TheEnd]
+},
+
+### s2 ### RT #115156
+'s2' => {
+  todo   => 'RT #115156',
+  script => 's/1*$/x/g',
+  input  => 'bins',
+  expect => <<'[TheEnd]',
+0x
+x
+1000x
+1000x
 [TheEnd]
 },
 
@@ -814,6 +827,8 @@ push( @aux, $psed );
 my $indat = '';
 for my $tc ( sort keys %testcase ){
     my( $psedres, $s2pres );
+
+    local $TODO = $testcase{$tc}{todo};
 
     # 1st test: run psed
     # prepare the script 

@@ -30,13 +30,16 @@ while (<DATA>) {
   push @names, $name;
 }
 
-my $c = safer_open('overload.c-new', 'overload.c');
-my $h = safer_open('overload.h-new', 'overload.h');
-mkdir("lib/overload", 0777) unless -d 'lib/overload';
-my $p = safer_open('lib/overload/numbers.pm-new', 'lib/overload/numbers.pm');
+my ($c, $h) = map {
+    open_new($_, '>',
+	     { by => 'regen/overload.pl', file => $_, style => '*',
+	       copyright => [1997, 1998, 2000, 2001, 2005 .. 2007, 2011] });
+} 'overload.c', 'overload.h';
 
-print $p read_only_top(lang => 'Perl', by => 'regen/overload.pl',
-		       file => 'lib/overload/numbers.pm', copyright => [2008]);
+mkdir("lib/overload", 0777) unless -d 'lib/overload';
+my $p = open_new('lib/overload/numbers.pm', '>',
+		 { by => 'regen/overload.pl',
+		   file => 'lib/overload/numbers.pm', copyright => [2008] });
 
 {
 local $" = "\n    ";
@@ -55,14 +58,6 @@ our \@enums = qw#
 
 { my \$i = 0; our %enums = map { \$_ => \$i++ } \@enums }
 EOF
-}
-
-for ([$c, 'overload.c'], [$h, 'overload.h']) {
-    my ($handle, $file) = @$_;
-    print $handle read_only_top(lang => 'C', by => 'regen/overload.pl',
-				file => $file, style => '*',
-				copyright => [1997, 1998, 2000, 2001,
-					     2005 .. 2007, 2011]);
 }
 
 print $h "enum {\n";
@@ -203,5 +198,3 @@ concat_ass	(.=
 smart		(~~
 ftest           (-X
 regexp          (qr
-# Note: Perl_Gv_AMupdate() assumes that DESTROY is the last entry
-DESTROY		DESTROY

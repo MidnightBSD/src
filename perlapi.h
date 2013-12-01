@@ -28,14 +28,11 @@ START_EXTERN_C
 #undef PERLVARA
 #undef PERLVARI
 #undef PERLVARIC
-#undef PERLVARISC
-#define PERLVAR(v,t)	EXTERN_C t* Perl_##v##_ptr(pTHX);
-#define PERLVARA(v,n,t)	typedef t PL_##v##_t[n];			\
-			EXTERN_C PL_##v##_t* Perl_##v##_ptr(pTHX);
-#define PERLVARI(v,t,i)	PERLVAR(v,t)
-#define PERLVARIC(v,t,i) PERLVAR(v, const t)
-#define PERLVARISC(v,i)	typedef const char PL_##v##_t[sizeof(i)];	\
-			EXTERN_C PL_##v##_t* Perl_##v##_ptr(pTHX);
+#define PERLVAR(p,v,t)	EXTERN_C t* Perl_##p##v##_ptr(pTHX);
+#define PERLVARA(p,v,n,t)	typedef t PL_##v##_t[n];		\
+			EXTERN_C PL_##v##_t* Perl_##p##v##_ptr(pTHX);
+#define PERLVARI(p,v,t,i)	PERLVAR(p,v,t)
+#define PERLVARIC(p,v,t,i) PERLVAR(p,v, const t)
 
 #include "perlvars.h"
 
@@ -43,7 +40,6 @@ START_EXTERN_C
 #undef PERLVARA
 #undef PERLVARI
 #undef PERLVARIC
-#undef PERLVARISC
 
 END_EXTERN_C
 
@@ -66,11 +62,10 @@ EXTCONST void * const PL_force_link_funcs[] = {
 #undef PERLVARA
 #undef PERLVARI
 #undef PERLVARIC
-#define PERLVAR(v,t)	(void*)Perl_##v##_ptr,
-#define PERLVARA(v,n,t)	PERLVAR(v,t)
-#define PERLVARI(v,t,i)	PERLVAR(v,t)
-#define PERLVARIC(v,t,i) PERLVAR(v,t)
-#define PERLVARISC(v,i) PERLVAR(v,char)
+#define PERLVAR(p,v,t)		(void*)Perl_##p##v##_ptr,
+#define PERLVARA(p,v,n,t)	PERLVAR(p,v,t)
+#define PERLVARI(p,v,t,i)	PERLVAR(p,v,t)
+#define PERLVARIC(p,v,t,i)	PERLVAR(p,v,t)
 
 /* In Tru64 (__DEC && __osf__) the cc option -std1 causes that one
  * cannot cast between void pointers and function pointers without
@@ -95,7 +90,6 @@ EXTCONST void * const PL_force_link_funcs[] = {
 #undef PERLVARA
 #undef PERLVARI
 #undef PERLVARIC
-#undef PERLVARISC
 };
 #endif	/* DOINIT */
 
@@ -105,16 +99,12 @@ END_EXTERN_C
 
 #else	/* !PERL_CORE */
 
-#undef  PL_No
-#define PL_No			(*Perl_GNo_ptr(NULL))
-#undef  PL_Yes
-#define PL_Yes			(*Perl_GYes_ptr(NULL))
 #undef  PL_appctx
 #define PL_appctx		(*Perl_Gappctx_ptr(NULL))
-#undef  PL_charclass
-#define PL_charclass		(*Perl_Gcharclass_ptr(NULL))
 #undef  PL_check
 #define PL_check		(*Perl_Gcheck_ptr(NULL))
+#undef  PL_check_mutex
+#define PL_check_mutex		(*Perl_Gcheck_mutex_ptr(NULL))
 #undef  PL_csighandlerp
 #define PL_csighandlerp		(*Perl_Gcsighandlerp_ptr(NULL))
 #undef  PL_curinterp
@@ -125,16 +115,12 @@ END_EXTERN_C
 #define PL_dollarzero_mutex	(*Perl_Gdollarzero_mutex_ptr(NULL))
 #undef  PL_fold_locale
 #define PL_fold_locale		(*Perl_Gfold_locale_ptr(NULL))
-#undef  PL_global_struct_size
-#define PL_global_struct_size	(*Perl_Gglobal_struct_size_ptr(NULL))
-#undef  PL_hexdigit
-#define PL_hexdigit		(*Perl_Ghexdigit_ptr(NULL))
+#undef  PL_hash_seed
+#define PL_hash_seed		(*Perl_Ghash_seed_ptr(NULL))
+#undef  PL_hash_seed_set
+#define PL_hash_seed_set	(*Perl_Ghash_seed_set_ptr(NULL))
 #undef  PL_hints_mutex
 #define PL_hints_mutex		(*Perl_Ghints_mutex_ptr(NULL))
-#undef  PL_interp_size
-#define PL_interp_size		(*Perl_Ginterp_size_ptr(NULL))
-#undef  PL_interp_size_5_10_0
-#define PL_interp_size_5_10_0	(*Perl_Ginterp_size_5_10_0_ptr(NULL))
 #undef  PL_keyword_plugin
 #define PL_keyword_plugin	(*Perl_Gkeyword_plugin_ptr(NULL))
 #undef  PL_malloc_mutex
@@ -151,8 +137,6 @@ END_EXTERN_C
 #define PL_op_seq		(*Perl_Gop_seq_ptr(NULL))
 #undef  PL_op_sequence
 #define PL_op_sequence		(*Perl_Gop_sequence_ptr(NULL))
-#undef  PL_patleave
-#define PL_patleave		(*Perl_Gpatleave_ptr(NULL))
 #undef  PL_perlio_debug_fd
 #define PL_perlio_debug_fd	(*Perl_Gperlio_debug_fd_ptr(NULL))
 #undef  PL_perlio_fd_refcnt
@@ -163,12 +147,6 @@ END_EXTERN_C
 #define PL_perlio_mutex		(*Perl_Gperlio_mutex_ptr(NULL))
 #undef  PL_ppaddr
 #define PL_ppaddr		(*Perl_Gppaddr_ptr(NULL))
-#undef  PL_revision
-#define PL_revision		(*Perl_Grevision_ptr(NULL))
-#undef  PL_runops_dbg
-#define PL_runops_dbg		(*Perl_Grunops_dbg_ptr(NULL))
-#undef  PL_runops_std
-#define PL_runops_std		(*Perl_Grunops_std_ptr(NULL))
 #undef  PL_sh_path
 #define PL_sh_path		(*Perl_Gsh_path_ptr(NULL))
 #undef  PL_sig_defaulting
@@ -181,8 +159,6 @@ END_EXTERN_C
 #define PL_sig_trapped		(*Perl_Gsig_trapped_ptr(NULL))
 #undef  PL_sigfpe_saved
 #define PL_sigfpe_saved		(*Perl_Gsigfpe_saved_ptr(NULL))
-#undef  PL_subversion
-#define PL_subversion		(*Perl_Gsubversion_ptr(NULL))
 #undef  PL_sv_placeholder
 #define PL_sv_placeholder	(*Perl_Gsv_placeholder_ptr(NULL))
 #undef  PL_thr_key
@@ -191,8 +167,6 @@ END_EXTERN_C
 #define PL_timesbase		(*Perl_Gtimesbase_ptr(NULL))
 #undef  PL_use_safe_putenv
 #define PL_use_safe_putenv	(*Perl_Guse_safe_putenv_ptr(NULL))
-#undef  PL_version
-#define PL_version		(*Perl_Gversion_ptr(NULL))
 #undef  PL_veto_cleanup
 #define PL_veto_cleanup		(*Perl_Gveto_cleanup_ptr(NULL))
 #undef  PL_watch_pvx

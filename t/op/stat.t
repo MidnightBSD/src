@@ -20,15 +20,17 @@ if(eval {require File::Spec; 1}) {
 }
 
 
-plan tests => 107;
+plan tests => 113;
 
 my $Perl = which_perl();
+
+$ENV{LC_ALL}   = 'C';		# Forge English error messages.
+$ENV{LANGUAGE} = 'C';		# Ditto in GNU.
 
 $Is_Amiga   = $^O eq 'amigaos';
 $Is_Cygwin  = $^O eq 'cygwin';
 $Is_Darwin  = $^O eq 'darwin';
 $Is_Dos     = $^O eq 'dos';
-$Is_MPE     = $^O eq 'mpeix';
 $Is_MSWin32 = $^O eq 'MSWin32';
 $Is_NetWare = $^O eq 'NetWare';
 $Is_OS2     = $^O eq 'os2';
@@ -36,7 +38,6 @@ $Is_Solaris = $^O eq 'solaris';
 $Is_VMS     = $^O eq 'VMS';
 $Is_DGUX    = $^O eq 'dgux';
 $Is_MPRAS   = $^O =~ /svr4/ && -f '/etc/.relid';
-$Is_Rhapsody= $^O eq 'rhapsody';
 
 $Is_Dosish  = $Is_Dos || $Is_OS2 || $Is_MSWin32 || $Is_NetWare;
 
@@ -249,6 +250,7 @@ SKIP: {
     skip "ls command not available to Perl in OpenVMS right now.", 6
       if $Is_VMS;
 
+    delete $ENV{CLICOLOR_FORCE};
     my $LS  = $Config{d_readlink} ? "ls -lL" : "ls -l";
     my $CMD = "$LS /dev 2>/dev/null";
     my $DEV = qx($CMD);
@@ -341,7 +343,7 @@ SKIP: {
 SKIP: {
     skip "These tests require a TTY", 4 if $ENV{PERL_SKIP_TTY_TEST};
 
-    my $TTY = $Is_Rhapsody ? "/dev/ttyp0" : "/dev/tty";
+    my $TTY = "/dev/tty";
 
     SKIP: {
         skip "Test uses unixisms", 2 if $Is_MSWin32 || $Is_NetWare;
@@ -441,6 +443,12 @@ stat $0;
 eval { lstat _ };
 like( $@, qr/^The stat preceding lstat\(\) wasn't an lstat/,
     'lstat _ croaks after stat' );
+eval { lstat *_ };
+like( $@, qr/^The stat preceding lstat\(\) wasn't an lstat/,
+    'lstat *_ croaks after stat' );
+eval { lstat \*_ };
+like( $@, qr/^The stat preceding lstat\(\) wasn't an lstat/,
+    'lstat \*_ croaks after stat' );
 eval { -l _ };
 like( $@, qr/^The stat preceding -l _ wasn't an lstat/,
     '-l _ croaks after stat' );
@@ -450,14 +458,32 @@ eval { lstat _ };
 is( "$@", "", "lstat _ ok after lstat" );
 eval { -l _ };
 is( "$@", "", "-l _ ok after lstat" );
+
+eval { lstat "test.pl" };
+{
+    open my $fh, "test.pl";
+    stat *$fh{IO};
+    eval { lstat _ }
+}
+like $@, qr/^The stat preceding lstat\(\) wasn't an lstat at /,
+'stat $ioref resets stat type';
+
+{
+    my @statbuf = stat STDOUT;
+    stat "test.pl";
+    my @lstatbuf = lstat *STDOUT{IO};
+    is "@lstatbuf", "@statbuf", 'lstat $ioref reverts to regular fstat';
+}
   
 SKIP: {
     skip "No lstat", 2 unless $Config{d_lstat};
 
     # bug id 20020124.004
     # If we have d_lstat, we should have symlink()
-    my $linkname = 'dolzero';
-    symlink $0, $linkname or die "# Can't symlink $0: $!";
+    my $linkname = 'stat-' . rand =~ y/.//dr;
+    my $target = $Perl;
+    $target =~ s/;\d+\z// if $Is_VMS; # symlinks don't like version numbers
+    symlink $target, $linkname or die "# Can't symlink $0: $!";
     lstat $linkname;
     -T _;
     eval { lstat _ };
@@ -488,6 +514,7 @@ SKIP: {
     ok(unlink($f), 'unlink tmp file');
 }
 
+# [perl #4253]
 {
     ok(open(F, ">", $tmpfile), 'can create temp file');
     close F;
@@ -497,6 +524,15 @@ SKIP: {
     -T _;
     my $s2 = -s _;
     is($s1, $s2, q(-T _ doesn't break the statbuffer));
+    SKIP: {
+	skip "No lstat", 1 unless $Config{d_lstat};
+	skip "uid=0", 1 unless $<&&$>;
+	skip "Readable by group/other means readable by me", 1 if $^O eq 'VMS';
+	lstat($tmpfile);
+	-T _;
+	ok(eval { lstat _ },
+	   q(-T _ doesn't break lstat for unreadable file));
+    }
     unlink $tmpfile;
 }
 
@@ -555,6 +591,16 @@ SKIP: {
 	closedir DIR or die $!;
 	close DIR or die $!;
     }
+}
+
+# [perl #71002]
+{
+    local $^W = 1;
+    my $w;
+    local $SIG{__WARN__} = sub { warn shift; ++$w };
+    stat 'prepeinamehyparcheiarcheiometoonomaavto';
+    stat _;
+    is $w, undef, 'no unopened warning from stat _';
 }
 
 END {

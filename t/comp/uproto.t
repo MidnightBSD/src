@@ -1,6 +1,6 @@
 #!perl
 
-print "1..39\n";
+print "1..43\n";
 my $test = 0;
 
 sub failed {
@@ -19,10 +19,10 @@ sub failed {
 }
 
 sub like {
-    my ($got, $pattern) = @_;
+    my ($got, $pattern, $name) = @_;
     $test = $test + 1;
     if (defined $got && $got =~ $pattern) {
-	print "ok $test\n";
+	print "ok $test - $name\n";
 	# Principle of least surprise - maintain the expected interface, even
 	# though we aren't using it here (yet).
 	return 1;
@@ -31,17 +31,17 @@ sub like {
 }
 
 sub is {
-    my ($got, $expect) = @_;
+    my ($got, $expect, $name) = @_;
     $test = $test + 1;
     if (defined $expect) {
 	if (defined $got && $got eq $expect) {
-	    print "ok $test\n";
+	    print "ok $test - $name\n";
 	    return 1;
 	}
 	failed($got, "'$expect'", $name);
     } else {
 	if (!defined $got) {
-	    print "ok $test\n";
+	    print "ok $test - $name\n";
 	    return 1;
 	}
 	failed($got, 'undef', $name);
@@ -72,7 +72,11 @@ eval q{ f(1,2,3,4) };
 like( $@, qr/Too many arguments for main::f at/ );
 
 {
+    # We have not tested require/use/no yet, so we must avoid this:
+    #    no warnings 'deprecated';
+    BEGIN { $SIG{__WARN__} = sub {} }
     my $_ = "quarante-deux";
+    BEGIN { $SIG{__WARN__} = undef }
     $foo = "FOO";
     $bar = "BAR";
     f("FOO quarante-deux", $foo);
@@ -97,7 +101,9 @@ $_ = $expected;
 g();
 g;
 undef $expected; &g; # $_ not passed
+BEGIN { $SIG{__WARN__} = sub {} }
 { $expected = my $_ = "bar"; g() }
+BEGIN { $SIG{__WARN__} = undef }
 
 eval q{ sub wrong1 (_$); wrong1(1,2) };
 like( $@, qr/Malformed prototype for main::wrong1/, 'wrong1' );
@@ -120,6 +126,21 @@ $expected = $_ = "mydir"; mymkdir();
 mymkdir($expected = "foo");
 $expected = "foo 493"; mymkdir foo => 0755;
 
+sub mylist (_@) { is("@_", $expected, "mylist") }
+$expected = "foo";
+$_ = "foo";
+mylist();
+$expected = "10 11 12 13";
+mylist(10, 11 .. 13);
+
+sub mylist2 (_%) { is("@_", $expected, "mylist2") }
+$expected = "foo";
+$_ = "foo";
+mylist2();
+$expected = "10 a 1";
+my %hash = (a => 1);
+mylist2(10, %hash);
+
 # $_ says modifiable, it's not passed by copy
 
 sub double(_) { $_[0] *= 2 }
@@ -127,7 +148,9 @@ $_ = 21;
 double();
 is( $_, 42, '$_ is modifiable' );
 {
+    BEGIN { $SIG{__WARN__} = sub {} }
     my $_ = 22;
+    BEGIN { $SIG{__WARN__} = undef }
     double();
     is( $_, 44, 'my $_ is modifiable' );
 }

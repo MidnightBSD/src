@@ -67,7 +67,7 @@ Refetch the stack pointer.  Used after a callback.  See L<perlcall>.
 
 #define dSP		SV **sp = PL_stack_sp
 #define djSP		dSP
-#define dMARK		register SV **mark = PL_stack_base + POPMARK
+#define dMARK		SV **mark = PL_stack_base + POPMARK
 #define dORIGMARK	const I32 origmark = (I32)(mark - PL_stack_base)
 #define ORIGMARK	(PL_stack_base + origmark)
 
@@ -97,10 +97,11 @@ See C<PUSHMARK> and L<perlcall> for other uses.
 Pops an SV off the stack.
 
 =for apidoc Amn|char*|POPp
-Pops a string off the stack. Deprecated. New code should use POPpx.
+Pops a string off the stack.
 
 =for apidoc Amn|char*|POPpx
-Pops a string off the stack.
+Pops a string off the stack.  Identical to POPp.  There are two names for
+historical reasons.
 
 =for apidoc Amn|char*|POPpbytex
 Pops a string off the stack which must consist of bytes i.e. characters < 256.
@@ -123,7 +124,7 @@ Pops a long off the stack.
 #define RETURNX(x)	return (x, PUTBACK, NORMAL)
 
 #define POPs		(*sp--)
-#define POPp		(SvPVx(POPs, PL_na))		/* deprecated */
+#define POPp		POPpx
 #define POPpx		(SvPVx_nolen(POPs))
 #define POPpconstx	(SvPVx_nolen_const(POPs))
 #define POPpbytex	(SvPVbytex_nolen(POPs))
@@ -140,7 +141,7 @@ Pops a long off the stack.
 #define TOPs		(*sp)
 #define TOPm1s		(*(sp-1))
 #define TOPp1s		(*(sp+1))
-#define TOPp		(SvPV(TOPs, PL_na))		/* deprecated */
+#define TOPp		TOPpx
 #define TOPpx		(SvPV_nolen(TOPs))
 #define TOPn		(SvNV(TOPs))
 #define TOPi		((IV)SvIV(TOPs))
@@ -277,16 +278,15 @@ Does not use C<TARG>.  See also C<XPUSHu>, C<mPUSHu> and C<PUSHu>.
 =cut
 */
 
-#define EXTEND(p,n)	STMT_START { if (PL_stack_max - p < (int)(n)) {		\
-			    sp = stack_grow(sp,p, (int) (n));		\
-			} } STMT_END
+#define EXTEND(p,n)    (void)(UNLIKELY(PL_stack_max - p < (int)(n)) &&         \
+			    (sp = stack_grow(sp,p, (int) (n))))
 
 /* Same thing, but update mark register too. */
-#define MEXTEND(p,n)	STMT_START {if (PL_stack_max - p < (int)(n)) {	\
-			    const int markoff = mark - PL_stack_base;	\
-			    sp = stack_grow(sp,p,(int) (n));		\
-			    mark = PL_stack_base + markoff;		\
-			} } STMT_END
+#define MEXTEND(p,n)   STMT_START {if (UNLIKELY(PL_stack_max - p < (int)(n))) {\
+                           const int markoff = mark - PL_stack_base;           \
+                           sp = stack_grow(sp,p,(int) (n));                    \
+                           mark = PL_stack_base + markoff;                     \
+                       } } STMT_END
 
 #define PUSHs(s)	(*++sp = (s))
 #define PUSHTARG	STMT_START { SvSETMAGIC(TARG); PUSHs(TARG); } STMT_END
@@ -295,7 +295,7 @@ Does not use C<TARG>.  See also C<XPUSHu>, C<mPUSHu> and C<PUSHu>.
 #define PUSHi(i)	STMT_START { sv_setiv(TARG, (IV)(i)); PUSHTARG; } STMT_END
 #define PUSHu(u)	STMT_START { sv_setuv(TARG, (UV)(u)); PUSHTARG; } STMT_END
 
-#define XPUSHs(s)	STMT_START { EXTEND(sp,1); (*++sp = (s)); } STMT_END
+#define XPUSHs(s)	(EXTEND(sp,1), *++sp = (s))
 #define XPUSHTARG	STMT_START { SvSETMAGIC(TARG); XPUSHs(TARG); } STMT_END
 #define XPUSHp(p,l)	STMT_START { sv_setpvn(TARG, (p), (l)); XPUSHTARG; } STMT_END
 #define XPUSHn(n)	STMT_START { sv_setnv(TARG, (NV)(n)); XPUSHTARG; } STMT_END
@@ -345,15 +345,7 @@ Does not use C<TARG>.  See also C<XPUSHu>, C<mPUSHu> and C<PUSHu>.
 #define dPOPXiirl(X)	IV right = POPi; IV left = CAT2(X,i)
 
 #define USE_LEFT(sv) \
-	(SvOK(sv) || SvGMAGICAL(sv) || !(PL_op->op_flags & OPf_STACKED))
-#define dPOPXnnrl_ul(X)	\
-    NV right = POPn;				\
-    SV *leftsv = CAT2(X,s);				\
-    NV left = USE_LEFT(leftsv) ? SvNV(leftsv) : 0.0
-#define dPOPXiirl_ul(X) \
-    IV right = POPi;					\
-    SV *leftsv = CAT2(X,s);				\
-    IV left = USE_LEFT(leftsv) ? SvIV(leftsv) : 0
+	(SvOK(sv) || !(PL_op->op_flags & OPf_STACKED))
 #define dPOPXiirl_ul_nomg(X) \
     IV right = (sp--, SvIV_nomg(TOPp1s));		\
     SV *leftsv = CAT2(X,s);				\
@@ -361,17 +353,13 @@ Does not use C<TARG>.  See also C<XPUSHu>, C<mPUSHu> and C<PUSHu>.
 
 #define dPOPPOPssrl	dPOPXssrl(POP)
 #define dPOPPOPnnrl	dPOPXnnrl(POP)
-#define dPOPPOPnnrl_ul	dPOPXnnrl_ul(POP)
 #define dPOPPOPiirl	dPOPXiirl(POP)
-#define dPOPPOPiirl_ul	dPOPXiirl_ul(POP)
 
 #define dPOPTOPssrl	dPOPXssrl(TOP)
 #define dPOPTOPnnrl	dPOPXnnrl(TOP)
-#define dPOPTOPnnrl_ul	dPOPXnnrl_ul(TOP)
 #define dPOPTOPnnrl_nomg \
     NV right = SvNV_nomg(TOPs); NV left = (sp--, SvNV_nomg(TOPs))
 #define dPOPTOPiirl	dPOPXiirl(TOP)
-#define dPOPTOPiirl_ul	dPOPXiirl_ul(TOP)
 #define dPOPTOPiirl_ul_nomg dPOPXiirl_ul_nomg(TOP)
 #define dPOPTOPiirl_nomg \
     IV right = SvIV_nomg(TOPs); IV left = (sp--, SvIV_nomg(TOPs))
@@ -400,7 +388,7 @@ Does not use C<TARG>.  See also C<XPUSHu>, C<mPUSHu> and C<PUSHu>.
 
 #define EXTEND_MORTAL(n) \
     STMT_START {							\
-	if (PL_tmps_ix + (n) >= PL_tmps_max)				\
+	if (UNLIKELY(PL_tmps_ix + (n) >= PL_tmps_max))			\
 	    tmps_grow(n);						\
     } STMT_END
 
@@ -410,6 +398,7 @@ Does not use C<TARG>.  See also C<XPUSHu>, C<mPUSHu> and C<PUSHu>.
 #define AMGf_unary	8
 #define AMGf_numeric	0x10	/* for Perl_try_amagic_bin */
 #define AMGf_set	0x20	/* for Perl_try_amagic_bin */
+#define AMGf_want_list	0x40
 
 
 /* do SvGETMAGIC on the stack args before checking for overload */
@@ -431,25 +420,45 @@ Does not use C<TARG>.  See also C<XPUSHu>, C<mPUSHu> and C<PUSHu>.
 /* No longer used in core. Use AMG_CALLunary instead */
 #define AMG_CALLun(sv,meth) AMG_CALLunary(sv, CAT2(meth,_amg))
 
-#define tryAMAGICunTARGET(meth, shift, jump)			\
+#define tryAMAGICunTARGETlist(meth, jump)			\
     STMT_START {						\
-	dATARGET;						\
 	dSP;							\
 	SV *tmpsv;						\
-	SV *arg= sp[shift];					\
+	SV *arg= *sp;						\
+        int gimme = GIMME_V;                                    \
 	if (SvAMAGIC(arg) &&					\
 	    (tmpsv = amagic_call(arg, &PL_sv_undef, meth,	\
-				 AMGf_noright | AMGf_unary))) {	\
+				 AMGf_want_list | AMGf_noright	\
+				|AMGf_unary))) {		\
 	    SPAGAIN;						\
-	    sp += shift;					\
-	    sv_setsv(TARG, tmpsv);				\
-	    if (opASSIGN)					\
-		sp--;						\
-	    SETTARG;						\
+            if (gimme == G_VOID) {                              \
+                (void)POPs; /* XXX ??? */                       \
+            }                                                   \
+            else if (gimme == G_ARRAY) {			\
+                int i;                                          \
+                I32 len;                                        \
+                assert(SvTYPE(tmpsv) == SVt_PVAV);              \
+                len = av_len((AV *)tmpsv) + 1;                  \
+                (void)POPs; /* get rid of the arg */            \
+                EXTEND(sp, len);                                \
+                for (i = 0; i < len; ++i)                       \
+                    PUSHs(av_shift((AV *)tmpsv));               \
+            }                                                   \
+            else { /* AMGf_want_scalar */                       \
+                dATARGET; /* just use the arg's location */     \
+                sv_setsv(TARG, tmpsv);                          \
+                if (opASSIGN)                                   \
+                    sp--;                                       \
+                SETTARG;                                        \
+            }                                                   \
 	    PUTBACK;						\
 	    if (jump) {						\
+	        OP *jump_o = NORMAL->op_next;                   \
+		while (jump_o->op_type == OP_NULL)		\
+		    jump_o = jump_o->op_next;			\
+		assert(jump_o->op_type == OP_ENTERSUB);		\
 		PL_markstack_ptr--;				\
-		return NORMAL->op_next->op_next;		\
+		return jump_o->op_next;				\
 	    }							\
 	    return NORMAL;					\
 	}							\
@@ -484,28 +493,47 @@ True if this op will be the return value of an lvalue subroutine
 
 #define SvCANEXISTDELETE(sv) \
  (!SvRMAGICAL(sv)            \
-  || ((mg = mg_find((const SV *) sv, PERL_MAGIC_tied))           \
-      && (stash = SvSTASH(SvRV(SvTIED_obj(MUTABLE_SV(sv), mg)))) \
+  || !(mg = mg_find((const SV *) sv, PERL_MAGIC_tied))           \
+  || (   (stash = SvSTASH(SvRV(SvTIED_obj(MUTABLE_SV(sv), mg)))) \
       && gv_fetchmethod_autoload(stash, "EXISTS", TRUE)          \
       && gv_fetchmethod_autoload(stash, "DELETE", TRUE)          \
      )                       \
   )
 
 #ifdef PERL_CORE
+
 /* These are just for Perl_tied_method(), which is not part of the public API.
    Use 0x04 rather than the next available bit, to help the compiler if the
    architecture can generate more efficient instructions.  */
 #  define TIED_METHOD_MORTALIZE_NOT_NEEDED	0x04
 #  define TIED_METHOD_ARGUMENTS_ON_STACK	0x08
 #  define TIED_METHOD_SAY			0x10
+
+/* Used in various places that need to dereference a glob or globref */
+#  define MAYBE_DEREF_GV_flags(sv,phlags)                          \
+    (                                                               \
+	(void)(phlags & SV_GMAGIC && (SvGETMAGIC(sv),0)),            \
+	isGV_with_GP(sv)                                              \
+	  ? (GV *)(sv)                                                \
+	  : SvROK(sv) && SvTYPE(SvRV(sv)) <= SVt_PVLV &&               \
+	    (SvGETMAGIC(SvRV(sv)), isGV_with_GP(SvRV(sv)))              \
+	     ? (GV *)SvRV(sv)                                            \
+	     : NULL                                                       \
+    )
+#  define MAYBE_DEREF_GV(sv)      MAYBE_DEREF_GV_flags(sv,SV_GMAGIC)
+#  define MAYBE_DEREF_GV_nomg(sv) MAYBE_DEREF_GV_flags(sv,0)
+
+#  define FIND_RUNCV_padid_eq	1
+#  define FIND_RUNCV_level_eq	2
+
 #endif
 
 /*
  * Local variables:
  * c-indentation-style: bsd
  * c-basic-offset: 4
- * indent-tabs-mode: t
+ * indent-tabs-mode: nil
  * End:
  *
- * ex: set ts=8 sts=4 sw=4 noet:
+ * ex: set ts=8 sts=4 sw=4 et:
  */

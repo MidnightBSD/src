@@ -4,6 +4,8 @@
  * 
  * Copyright (c) 2002-2010 Jarkko Hietaniemi.
  * All rights reserved.
+ *
+ * Copyright (C) 2011, 2012 Andrew Main (Zefram) <zefram@fysh.org>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the same terms as Perl itself.
@@ -716,39 +718,34 @@ myNVtime()
 #endif /* #ifdef HAS_GETTIMEOFDAY */
 
 static void
-hrstatns(UV atime, UV mtime, UV ctime, UV *atime_nsec, UV *mtime_nsec, UV *ctime_nsec)
+hrstatns(UV *atime_nsec, UV *mtime_nsec, UV *ctime_nsec)
 {
   dTHXR;
-  *atime_nsec = 0;
-  *mtime_nsec = 0;
-  *ctime_nsec = 0;
-#ifdef TIME_HIRES_STAT
 #if TIME_HIRES_STAT == 1
   *atime_nsec = PL_statcache.st_atimespec.tv_nsec;
   *mtime_nsec = PL_statcache.st_mtimespec.tv_nsec;
   *ctime_nsec = PL_statcache.st_ctimespec.tv_nsec;
-#endif
-#if TIME_HIRES_STAT == 2
+#elif TIME_HIRES_STAT == 2
   *atime_nsec = PL_statcache.st_atimensec;
   *mtime_nsec = PL_statcache.st_mtimensec;
   *ctime_nsec = PL_statcache.st_ctimensec;
-#endif
-#if TIME_HIRES_STAT == 3
+#elif TIME_HIRES_STAT == 3
   *atime_nsec = PL_statcache.st_atime_n;
   *mtime_nsec = PL_statcache.st_mtime_n;
   *ctime_nsec = PL_statcache.st_ctime_n;
-#endif
-#if TIME_HIRES_STAT == 4
+#elif TIME_HIRES_STAT == 4
   *atime_nsec = PL_statcache.st_atim.tv_nsec;
   *mtime_nsec = PL_statcache.st_mtim.tv_nsec;
   *ctime_nsec = PL_statcache.st_ctim.tv_nsec;
-#endif
-#if TIME_HIRES_STAT == 5
+#elif TIME_HIRES_STAT == 5
   *atime_nsec = PL_statcache.st_uatime * 1000;
   *mtime_nsec = PL_statcache.st_umtime * 1000;
   *ctime_nsec = PL_statcache.st_uctime * 1000;
-#endif
-#endif
+#else /* !TIME_HIRES_STAT */
+  *atime_nsec = 0;
+  *mtime_nsec = 0;
+  *ctime_nsec = 0;
+#endif /* !TIME_HIRES_STAT */
 }
 
 #include "const-c.inc"
@@ -765,8 +762,10 @@ BOOT:
 #ifdef ATLEASTFIVEOHOHFIVE
 #   ifdef HAS_GETTIMEOFDAY
   {
-    hv_store(PL_modglobal, "Time::NVtime", 12, newSViv(PTR2IV(myNVtime)), 0);
-    hv_store(PL_modglobal, "Time::U2time", 12, newSViv(PTR2IV(myU2time)), 0);
+    (void) hv_store(PL_modglobal, "Time::NVtime", 12,
+		newSViv(PTR2IV(myNVtime)), 0);
+    (void) hv_store(PL_modglobal, "Time::U2time", 12,
+		newSViv(PTR2IV(myU2time)), 0);
   }
 #   endif
 #endif
@@ -850,6 +849,8 @@ nanosleep(nsec)
     CODE:
         croak("Time::HiRes::nanosleep(): unimplemented in this platform");
         RETVAL = 0.0;
+    OUTPUT:
+	RETVAL
 
 #endif /* #if defined(TIME_HIRES_NANOSLEEP) */
 
@@ -898,6 +899,8 @@ usleep(useconds)
     CODE:
         croak("Time::HiRes::usleep(): unimplemented in this platform");
         RETVAL = 0.0;
+    OUTPUT:
+	RETVAL
 
 #endif /* #if defined(HAS_USLEEP) && defined(HAS_GETTIMEOFDAY) */
 
@@ -970,6 +973,8 @@ ualarm(useconds,interval=0)
     CODE:
         croak("Time::HiRes::ualarm(): unimplemented in this platform");
 	RETVAL = -1;
+    OUTPUT:
+	RETVAL
 
 NV
 alarm(seconds,interval=0)
@@ -978,6 +983,8 @@ alarm(seconds,interval=0)
     CODE:
         croak("Time::HiRes::alarm(): unimplemented in this platform");
 	RETVAL = 0.0;
+    OUTPUT:
+	RETVAL
 
 #endif /* #ifdef HAS_UALARM */
 
@@ -1133,6 +1140,8 @@ clock_gettime(clock_id = 0)
     CODE:
         croak("Time::HiRes::clock_gettime(): unimplemented in this platform");
         RETVAL = 0.0;
+    OUTPUT:
+	RETVAL
 
 #endif /*  #if defined(TIME_HIRES_CLOCK_GETTIME) */
 
@@ -1163,6 +1172,8 @@ clock_getres(clock_id = 0)
     CODE:
         croak("Time::HiRes::clock_getres(): unimplemented in this platform");
         RETVAL = 0.0;
+    OUTPUT:
+	RETVAL
 
 #endif /*  #if defined(TIME_HIRES_CLOCK_GETRES) */
 
@@ -1197,10 +1208,12 @@ clock_nanosleep(clock_id, nsec, flags = 0)
 #else  /* if defined(TIME_HIRES_CLOCK_NANOSLEEP) && defined(TIMER_ABSTIME) */
 
 NV
-clock_nanosleep()
+clock_nanosleep(clock_id, nsec, flags = 0)
     CODE:
         croak("Time::HiRes::clock_nanosleep(): unimplemented in this platform");
         RETVAL = 0.0;
+    OUTPUT:
+	RETVAL
 
 #endif /*  #if defined(TIME_HIRES_CLOCK_NANOSLEEP) && defined(TIMER_ABSTIME) */
 
@@ -1224,6 +1237,8 @@ clock()
     CODE:
         croak("Time::HiRes::clock(): unimplemented in this platform");
         RETVAL = 0.0;
+    OUTPUT:
+	RETVAL
 
 #endif /*  #if defined(TIME_HIRES_CLOCK) && defined(CLOCKS_PER_SEC) */
 
@@ -1231,7 +1246,6 @@ void
 stat(...)
 PROTOTYPE: ;$
     PPCODE:
-	PUSHMARK(SP);
 	XPUSHs(sv_2mortal(newSVsv(items == 1 ? ST(0) : DEFSV)));
 	PUTBACK;
 	ENTER;
@@ -1248,8 +1262,7 @@ PROTOTYPE: ;$
 	  UV atime_nsec;
 	  UV mtime_nsec;
 	  UV ctime_nsec;
-	  hrstatns(atime, mtime, ctime,
-		   &atime_nsec, &mtime_nsec, &ctime_nsec);
+	  hrstatns(&atime_nsec, &mtime_nsec, &ctime_nsec);
 	  if (atime_nsec)
 	    ST( 8) = sv_2mortal(newSVnv(atime + 1e-9 * (NV) atime_nsec));
 	  if (mtime_nsec)

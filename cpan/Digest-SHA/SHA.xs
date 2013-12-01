@@ -2,8 +2,17 @@
 #include "perl.h"
 #include "XSUB.h"
 
+#ifdef SvPVbyte
+	#if PERL_REVISION == 5 && PERL_VERSION < 8
+		#undef SvPVbyte
+		#define SvPVbyte(sv, lp) \
+			(sv_utf8_downgrade((sv), 0), SvPV((sv), (lp)))
+	#endif
+#else
+	#define SvPVbyte SvPV
+#endif
+
 #include "src/sha.c"
-#include "src/hmac.c"
 
 static int ix2alg[] =
 	{1,1,1,224,224,224,256,256,256,384,384,384,512,512,512,
@@ -13,16 +22,18 @@ MODULE = Digest::SHA		PACKAGE = Digest::SHA
 
 PROTOTYPES: ENABLE
 
-#include "src/sha.h"
-#include "src/hmac.h"
-
 #ifndef INT2PTR
 #define INT2PTR(p, i) (p) (i)
 #endif
 
+#define MAX_WRITE_SIZE 16384
+
 int
 shaclose(s)
 	SHA *	s
+CODE:
+       RETVAL = shaclose(s);
+       sv_setiv(SvRV(ST(0)), 0);
 
 int
 shadump(file, s)
@@ -85,7 +96,12 @@ PPCODE:
 	if ((state = shaopen(ix2alg[ix])) == NULL)
 		XSRETURN_UNDEF;
 	for (i = 0; i < items; i++) {
-		data = (unsigned char *) (SvPV(ST(i), len));
+		data = (unsigned char *) (SvPVbyte(ST(i), len));
+		while (len > MAX_WRITE_SIZE) {
+			shawrite(data, MAX_WRITE_SIZE << 3, state);
+			data += MAX_WRITE_SIZE;
+			len  -= MAX_WRITE_SIZE;
+		}
 		shawrite(data, len << 3, state);
 	}
 	shafinish(state);
@@ -134,11 +150,16 @@ PREINIT:
 	HMAC *state;
 	char *result;
 PPCODE:
-	key = (unsigned char *) (SvPV(ST(items-1), len));
+	key = (unsigned char *) (SvPVbyte(ST(items-1), len));
 	if ((state = hmacopen(ix2alg[ix], key, len)) == NULL)
 		XSRETURN_UNDEF;
 	for (i = 0; i < items - 1; i++) {
-		data = (unsigned char *) (SvPV(ST(i), len));
+		data = (unsigned char *) (SvPVbyte(ST(i), len));
+		while (len > MAX_WRITE_SIZE) {
+			hmacwrite(data, MAX_WRITE_SIZE << 3, state);
+			data += MAX_WRITE_SIZE;
+			len  -= MAX_WRITE_SIZE;
+		}
 		hmacwrite(data, len << 3, state);
 	}
 	hmacfinish(state);
@@ -181,7 +202,12 @@ PREINIT:
 PPCODE:
 	state = INT2PTR(SHA *, SvIV(SvRV(SvRV(self))));
 	for (i = 1; i < items; i++) {
-		data = (unsigned char *) (SvPV(ST(i), len));
+		data = (unsigned char *) (SvPVbyte(ST(i), len));
+		while (len > MAX_WRITE_SIZE) {
+			shawrite(data, MAX_WRITE_SIZE << 3, state);
+			data += MAX_WRITE_SIZE;
+			len  -= MAX_WRITE_SIZE;
+		}
 		shawrite(data, len << 3, state);
 	}
 	XSRETURN(1);

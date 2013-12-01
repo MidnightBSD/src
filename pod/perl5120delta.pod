@@ -116,7 +116,7 @@ it is interpolated into a regexp. See L<overload>.
 Extension modules can now cleanly hook into the Perl parser to define
 new kinds of keyword-headed expression and compound statement. The
 syntax following the keyword is defined entirely by the extension. This
-allow a completely non-Perl sublanguage to be parsed inline, with the
+allows a completely non-Perl sublanguage to be parsed inline, with the
 correct ops cleanly generated.
 
 See L<perlapi/PL_keyword_plugin> for the mechanism. The Perl core
@@ -456,7 +456,6 @@ have been removed from this distribution.
 
 C<Module::CoreList> no longer contains the C<%:patchlevel> hash.
 
-
 =item *
 
 C<length undef> now returns undef.
@@ -529,7 +528,6 @@ The following items are now deprecated:
 C<suidperl> is no longer part of Perl. It used to provide a mechanism to
 emulate setuid permission bits on systems that don't support it properly.
 
-
 =item Use of C<:=> to mean an empty attribute list
 
 An accident of Perl's parser meant that these constructions were all
@@ -560,7 +558,6 @@ before the C<=>.
 The method C<< UNIVERSAL->import() >> is now deprecated. Attempting to
 pass import arguments to a C<use UNIVERSAL> statement will result in a
 deprecation warning.
-
 
 =item Use of "goto" to jump into a construct
 
@@ -1433,7 +1430,6 @@ the beginnings of a document on Perl porting policies.
 
 =over
 
-
 =item *
 
 The various large F<Changes*> files (which listed every change made
@@ -1447,14 +1443,12 @@ F<Porting/patching.pod> has been deleted, as it mainly described
 interacting with the old Perforce-based repository, which is now obsolete.
 Information still relevant has been moved to L<perlrepository>.
 
-
 =item *
 
 The syntax C<unless (EXPR) BLOCK else BLOCK> is now documented as valid,
 as is the syntax C<unless (EXPR) BLOCK elsif (EXPR) BLOCK ... else
 BLOCK>, although actually using the latter may not be the best idea for
 the readability of your source code.
-
 
 =item *
 
@@ -2105,7 +2099,6 @@ This new fatal error occurs when the C routine C<Perl_sv_chop()> was
 passed a position that is not within the scalar's string buffer. This
 could be caused by buggy XS code, and at this point recovery is not
 possible.
-
 
 =item *
 
@@ -3176,7 +3169,8 @@ analyzed by the Perl porting team.
 If the bug you are reporting has security implications, which make it
 inappropriate to send to a publicly archived mailing list, then please send
 it to perl5-security-report@perl.org. This points to a closed subscription
-unarchived mailing list, which includes all the core committers, who be able
+unarchived mailing list, which includes
+all the core committers, who will be able
 to help assess the impact of issues, figure out a resolution, and help
 co-ordinate the release of patches to mitigate or fix the problem across all
 platforms on which Perl is supported. Please only use this address for

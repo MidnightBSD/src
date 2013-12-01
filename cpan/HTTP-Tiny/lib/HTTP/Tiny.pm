@@ -1,26 +1,16 @@
 # vim: ts=4 sts=4 sw=4 et:
-#
-# This file is part of HTTP-Tiny
-#
-# This software is copyright (c) 2011 by Christian Hansen.
-#
-# This is free software; you can redistribute it and/or modify it under
-# the same terms as the Perl 5 programming language system itself.
-#
 package HTTP::Tiny;
-BEGIN {
-  $HTTP::Tiny::VERSION = '0.012';
-}
 use strict;
 use warnings;
 # ABSTRACT: A small, simple, correct HTTP/1.1 client
+our $VERSION = '0.025'; # VERSION
 
 use Carp ();
 
 
 my @attributes;
 BEGIN {
-    @attributes = qw(agent default_headers max_redirect max_size proxy timeout);
+    @attributes = qw(agent default_headers local_address max_redirect max_size proxy timeout SSL_options verify_SSL);
     no strict 'refs';
     for my $accessor ( @attributes ) {
         *{$accessor} = sub {
@@ -31,45 +21,93 @@ BEGIN {
 
 sub new {
     my($class, %args) = @_;
-    (my $agent = $class) =~ s{::}{-}g;
+
+    (my $default_agent = $class) =~ s{::}{-}g;
+    $default_agent .= "/" . ($class->VERSION || 0);
+
     my $self = {
-        agent        => $agent . "/" . ($class->VERSION || 0),
+        agent        => $default_agent,
         max_redirect => 5,
         timeout      => 60,
+        verify_SSL   => $args{verify_SSL} || $args{verify_ssl} || 0, # no verification by default
     };
+
+    $args{agent} .= $default_agent
+        if defined $args{agent} && $args{agent} =~ / $/;
+
     for my $key ( @attributes ) {
         $self->{$key} = $args{$key} if exists $args{$key}
     }
+
+    # Never override proxy argument as this breaks backwards compat.
+    if (!exists $self->{proxy} && (my $http_proxy = $ENV{http_proxy})) {
+        if ($http_proxy =~ m{\Ahttp://[^/?#:@]+:\d+/?\z}) {
+            $self->{proxy} = $http_proxy;
+        }
+        else {
+            Carp::croak(qq{Environment 'http_proxy' must be in format http://<host>:<port>/\n});
+        }
+    }
+
     return bless $self, $class;
 }
 
 
-sub get {
-    my ($self, $url, $args) = @_;
-    @_ == 2 || (@_ == 3 && ref $args eq 'HASH')
-      or Carp::croak(q/Usage: $http->get(URL, [HASHREF])/);
-    return $self->request('GET', $url, $args || {});
+for my $sub_name ( qw/get head put post delete/ ) {
+    my $req_method = uc $sub_name;
+    no strict 'refs';
+    eval <<"HERE"; ## no critic
+    sub $sub_name {
+        my (\$self, \$url, \$args) = \@_;
+        \@_ == 2 || (\@_ == 3 && ref \$args eq 'HASH')
+        or Carp::croak(q/Usage: \$http->$sub_name(URL, [HASHREF])/ . "\n");
+        return \$self->request('$req_method', \$url, \$args || {});
+    }
+HERE
+}
+
+
+sub post_form {
+    my ($self, $url, $data, $args) = @_;
+    (@_ == 3 || @_ == 4 && ref $args eq 'HASH')
+        or Carp::croak(q/Usage: $http->post_form(URL, DATAREF, [HASHREF])/ . "\n");
+
+    my $headers = {};
+    while ( my ($key, $value) = each %{$args->{headers} || {}} ) {
+        $headers->{lc $key} = $value;
+    }
+    delete $args->{headers};
+
+    return $self->request('POST', $url, {
+            %$args,
+            content => $self->www_form_urlencode($data),
+            headers => {
+                %$headers,
+                'content-type' => 'application/x-www-form-urlencoded'
+            },
+        }
+    );
 }
 
 
 sub mirror {
     my ($self, $url, $file, $args) = @_;
     @_ == 3 || (@_ == 4 && ref $args eq 'HASH')
-      or Carp::croak(q/Usage: $http->mirror(URL, FILE, [HASHREF])/);
+      or Carp::croak(q/Usage: $http->mirror(URL, FILE, [HASHREF])/ . "\n");
     if ( -e $file and my $mtime = (stat($file))[9] ) {
         $args->{headers}{'if-modified-since'} ||= $self->_http_date($mtime);
     }
     my $tempfile = $file . int(rand(2**31));
     open my $fh, ">", $tempfile
-        or Carp::croak(qq/Error: Could not open temporary file $tempfile for downloading: $!/);
+        or Carp::croak(qq/Error: Could not open temporary file $tempfile for downloading: $!\n/);
     binmode $fh;
     $args->{data_callback} = sub { print {$fh} $_[0] };
     my $response = $self->request('GET', $url, $args);
     close $fh
-        or Carp::croak(qq/Error: Could not close temporary file $tempfile: $!/);
+        or Carp::croak(qq/Error: Could not close temporary file $tempfile: $!\n/);
     if ( $response->{success} ) {
         rename $tempfile, $file
-            or Carp::croak "Error replacing $file with $tempfile: $!\n";
+            or Carp::croak(qq/Error replacing $file with $tempfile: $!\n/);
         my $lm = $response->{headers}{'last-modified'};
         if ( $lm and my $mtime = $self->_parse_http_date($lm) ) {
             utime $mtime, $mtime, $file;
@@ -86,7 +124,7 @@ my %idempotent = map { $_ => 1 } qw/GET HEAD PUT DELETE OPTIONS TRACE/;
 sub request {
     my ($self, $method, $url, $args) = @_;
     @_ == 3 || (@_ == 4 && ref $args eq 'HASH')
-      or Carp::croak(q/Usage: $http->request(METHOD, URL, [HASHREF])/);
+      or Carp::croak(q/Usage: $http->request(METHOD, URL, [HASHREF])/ . "\n");
     $args ||= {}; # we keep some state in this during _request
 
     # RFC 2616 Section 8.1.4 mandates a single retry on broken socket
@@ -99,6 +137,7 @@ sub request {
 
     if (my $e = "$@") {
         $response = {
+            url     => $url,
             success => q{},
             status  => 599,
             reason  => 'Internal Exception',
@@ -111,6 +150,36 @@ sub request {
     }
     return $response;
 }
+
+
+sub www_form_urlencode {
+    my ($self, $data) = @_;
+    (@_ == 2 && ref $data)
+        or Carp::croak(q/Usage: $http->www_form_urlencode(DATAREF)/ . "\n");
+    (ref $data eq 'HASH' || ref $data eq 'ARRAY')
+        or Carp::croak("form data must be a hash or array reference");
+
+    my @params = ref $data eq 'HASH' ? %$data : @$data;
+    @params % 2 == 0
+        or Carp::croak("form data reference must have an even number of terms\n");
+
+    my @terms;
+    while( @params ) {
+        my ($key, $value) = splice(@params, 0, 2);
+        if ( ref $value eq 'ARRAY' ) {
+            unshift @params, map { $key => $_ } @$value;
+        }
+        else {
+            push @terms, join("=", map { $self->_uri_escape($_) } $key, $value);
+        }
+    }
+
+    return join("&", sort @terms);
+}
+
+#--------------------------------------------------------------------------#
+# private methods
+#--------------------------------------------------------------------------#
 
 my %DefaultPort = (
     http => 80,
@@ -130,11 +199,16 @@ sub _request {
         headers   => {},
     };
 
-    my $handle  = HTTP::Tiny::Handle->new(timeout => $self->{timeout});
+    my $handle  = HTTP::Tiny::Handle->new(
+        timeout         => $self->{timeout},
+        SSL_options     => $self->{SSL_options},
+        verify_SSL      => $self->{verify_SSL},
+        local_address   => $self->{local_address},
+    );
 
     if ($self->{proxy}) {
         $request->{uri} = "$scheme://$request->{host_port}$path_query";
-        croak(qq/HTTPS via proxy is not supported/)
+        die(qq/HTTPS via proxy is not supported\n/)
             if $request->{scheme} eq 'https';
         $handle->connect(($self->_split_url($self->{proxy}))[0..2]);
     }
@@ -164,6 +238,7 @@ sub _request {
 
     $handle->close;
     $response->{success} = substr($response->{status},0,1) eq '2';
+    $response->{url} = $url;
     return $response;
 }
 
@@ -192,7 +267,7 @@ sub _prepare_headers_and_cb {
             my $content = $args->{content};
             if ( $] ge '5.008' ) {
                 utf8::downgrade($content, 1)
-                    or Carp::croak(q/Wide character in request message body/);
+                    or die(qq/Wide character in request message body\n/);
             }
             $request->{headers}{'content-length'} = length $content
               unless $request->{headers}{'content-length'}
@@ -246,7 +321,7 @@ sub _split_url {
 
     # URI regex adapted from the URI module
     my ($scheme, $authority, $path_query) = $url =~ m<\A([^:/?#]+)://([^/?#]*)([^#]*)>
-      or Carp::croak(qq/Cannot parse URL: '$url'/);
+      or die(qq/Cannot parse URL: '$url'\n/);
 
     $scheme     = lc $scheme;
     $path_query = "/$path_query" unless $path_query =~ m<\A/>;
@@ -293,16 +368,36 @@ sub _parse_http_date {
     };
 }
 
+# URI escaping adapted from URI::Escape
+# c.f. http://www.w3.org/TR/html4/interact/forms.html#h-17.13.4.1
+# perl 5.6 ready UTF-8 encoding adapted from JSON::PP
+my %escapes = map { chr($_) => sprintf("%%%02X", $_) } 0..255;
+$escapes{' '}="+";
+my $unsafe_char = qr/[^A-Za-z0-9\-\._~]/;
+
+sub _uri_escape {
+    my ($self, $str) = @_;
+    if ( $] ge '5.008' ) {
+        utf8::encode($str);
+    }
+    else {
+        $str = pack("U*", unpack("C*", $str)) # UTF-8 encode a byte string
+            if ( length $str == do { use bytes; length $str } );
+        $str = pack("C*", unpack("C*", $str)); # clear UTF-8 flag
+    }
+    $str =~ s/($unsafe_char)/$escapes{$1}/ge;
+    return $str;
+}
+
 package
     HTTP::Tiny::Handle; # hide from PAUSE/indexers
 use strict;
 use warnings;
 
-use Carp       qw[croak];
 use Errno      qw[EINTR EPIPE];
 use IO::Socket qw[SOCK_STREAM];
 
-sub BUFSIZE () { 32768 }
+sub BUFSIZE () { 32768 } ## no critic
 
 my $Printable = sub {
     local $_ = shift;
@@ -322,47 +417,53 @@ sub new {
         timeout          => 60,
         max_line_size    => 16384,
         max_header_lines => 64,
+        verify_SSL       => 0,
+        SSL_options      => {},
         %args
     }, $class;
 }
 
-my $ssl_verify_args = {
-    check_cn => "when_only",
-    wildcards_in_alt => "anywhere",
-    wildcards_in_cn => "anywhere"
-};
-
 sub connect {
-    @_ == 4 || croak(q/Usage: $handle->connect(scheme, host, port)/);
+    @_ == 4 || die(q/Usage: $handle->connect(scheme, host, port)/ . "\n");
     my ($self, $scheme, $host, $port) = @_;
 
     if ( $scheme eq 'https' ) {
-        eval "require IO::Socket::SSL"
-            unless exists $INC{'IO/Socket/SSL.pm'};
-        croak(qq/IO::Socket::SSL must be installed for https support\n/)
-            unless $INC{'IO/Socket/SSL.pm'};
+        die(qq/IO::Socket::SSL 1.56 must be installed for https support\n/)
+            unless eval {require IO::Socket::SSL; IO::Socket::SSL->VERSION(1.56)};
+        die(qq/Net::SSLeay 1.49 must be installed for https support\n/)
+            unless eval {require Net::SSLeay; Net::SSLeay->VERSION(1.49)};
     }
     elsif ( $scheme ne 'http' ) {
-      croak(qq/Unsupported URL scheme '$scheme'/);
+      die(qq/Unsupported URL scheme '$scheme'\n/);
     }
-
     $self->{fh} = 'IO::Socket::INET'->new(
         PeerHost  => $host,
         PeerPort  => $port,
+        $self->{local_address} ?
+            ( LocalAddr => $self->{local_address} ) : (),
         Proto     => 'tcp',
         Type      => SOCK_STREAM,
         Timeout   => $self->{timeout}
-    ) or croak(qq/Could not connect to '$host:$port': $@/);
+    ) or die(qq/Could not connect to '$host:$port': $@\n/);
 
     binmode($self->{fh})
-      or croak(qq/Could not binmode() socket: '$!'/);
+      or die(qq/Could not binmode() socket: '$!'\n/);
 
     if ( $scheme eq 'https') {
-        IO::Socket::SSL->start_SSL($self->{fh});
-        ref($self->{fh}) eq 'IO::Socket::SSL'
-            or die(qq/SSL connection failed for $host\n/);
-        $self->{fh}->verify_hostname( $host, $ssl_verify_args )
-            or die(qq/SSL certificate not valid for $host\n/);
+        my $ssl_args = $self->_ssl_args($host);
+        IO::Socket::SSL->start_SSL(
+            $self->{fh},
+            %$ssl_args,
+            SSL_create_ctx_callback => sub {
+                my $ctx = shift;
+                Net::SSLeay::CTX_set_mode($ctx, Net::SSLeay::MODE_AUTO_RETRY());
+            },
+        );
+
+        unless ( ref($self->{fh}) eq 'IO::Socket::SSL' ) {
+            my $ssl_err = IO::Socket::SSL->errstr;
+            die(qq/SSL connection failed for $host: $ssl_err\n/);
+        }
     }
 
     $self->{host} = $host;
@@ -372,19 +473,19 @@ sub connect {
 }
 
 sub close {
-    @_ == 1 || croak(q/Usage: $handle->close()/);
+    @_ == 1 || die(q/Usage: $handle->close()/ . "\n");
     my ($self) = @_;
     CORE::close($self->{fh})
-      or croak(qq/Could not close socket: '$!'/);
+      or die(qq/Could not close socket: '$!'\n/);
 }
 
 sub write {
-    @_ == 2 || croak(q/Usage: $handle->write(buf)/);
+    @_ == 2 || die(q/Usage: $handle->write(buf)/ . "\n");
     my ($self, $buf) = @_;
 
     if ( $] ge '5.008' ) {
         utf8::downgrade($buf, 1)
-            or croak(q/Wide character in write()/);
+            or die(qq/Wide character in write()\n/);
     }
 
     my $len = length $buf;
@@ -394,7 +495,7 @@ sub write {
 
     while () {
         $self->can_write
-          or croak(q/Timed out while waiting for socket to become ready for writing/);
+          or die(qq/Timed out while waiting for socket to become ready for writing\n/);
         my $r = syswrite($self->{fh}, $buf, $len, $off);
         if (defined $r) {
             $len -= $r;
@@ -402,17 +503,24 @@ sub write {
             last unless $len > 0;
         }
         elsif ($! == EPIPE) {
-            croak(qq/Socket closed by remote server: $!/);
+            die(qq/Socket closed by remote server: $!\n/);
         }
         elsif ($! != EINTR) {
-            croak(qq/Could not write to socket: '$!'/);
+            if ($self->{fh}->can('errstr')){
+                my $err = $self->{fh}->errstr();
+                die (qq/Could not write to SSL socket: '$err'\n /);
+            }
+            else {
+                die(qq/Could not write to socket: '$!'\n/);
+            }
+
         }
     }
     return $off;
 }
 
 sub read {
-    @_ == 2 || @_ == 3 || croak(q/Usage: $handle->read(len [, allow_partial])/);
+    @_ == 2 || @_ == 3 || die(q/Usage: $handle->read(len [, allow_partial])/ . "\n");
     my ($self, $len, $allow_partial) = @_;
 
     my $buf  = '';
@@ -426,24 +534,30 @@ sub read {
 
     while ($len > 0) {
         $self->can_read
-          or croak(q/Timed out while waiting for socket to become ready for reading/);
+          or die(q/Timed out while waiting for socket to become ready for reading/ . "\n");
         my $r = sysread($self->{fh}, $buf, $len, length $buf);
         if (defined $r) {
             last unless $r;
             $len -= $r;
         }
         elsif ($! != EINTR) {
-            croak(qq/Could not read from socket: '$!'/);
+            if ($self->{fh}->can('errstr')){
+                my $err = $self->{fh}->errstr();
+                die (qq/Could not read from SSL socket: '$err'\n /);
+            }
+            else {
+                die(qq/Could not read from socket: '$!'\n/);
+            }
         }
     }
     if ($len && !$allow_partial) {
-        croak(q/Unexpected end of stream/);
+        die(qq/Unexpected end of stream\n/);
     }
     return $buf;
 }
 
 sub readline {
-    @_ == 1 || croak(q/Usage: $handle->readline()/);
+    @_ == 1 || die(q/Usage: $handle->readline()/ . "\n");
     my ($self) = @_;
 
     while () {
@@ -451,23 +565,29 @@ sub readline {
             return $1;
         }
         if (length $self->{rbuf} >= $self->{max_line_size}) {
-            croak(qq/Line size exceeds the maximum allowed size of $self->{max_line_size}/);
+            die(qq/Line size exceeds the maximum allowed size of $self->{max_line_size}\n/);
         }
         $self->can_read
-          or croak(q/Timed out while waiting for socket to become ready for reading/);
+          or die(qq/Timed out while waiting for socket to become ready for reading\n/);
         my $r = sysread($self->{fh}, $self->{rbuf}, BUFSIZE, length $self->{rbuf});
         if (defined $r) {
             last unless $r;
         }
         elsif ($! != EINTR) {
-            croak(qq/Could not read from socket: '$!'/);
+            if ($self->{fh}->can('errstr')){
+                my $err = $self->{fh}->errstr();
+                die (qq/Could not read from SSL socket: '$err'\n /);
+            }
+            else {
+                die(qq/Could not read from socket: '$!'\n/);
+            }
         }
     }
-    croak(q/Unexpected end of stream while looking for line/);
+    die(qq/Unexpected end of stream while looking for line\n/);
 }
 
 sub read_header_lines {
-    @_ == 1 || @_ == 2 || croak(q/Usage: $handle->read_header_lines([headers])/);
+    @_ == 1 || @_ == 2 || die(q/Usage: $handle->read_header_lines([headers])/ . "\n");
     my ($self, $headers) = @_;
     $headers ||= {};
     my $lines   = 0;
@@ -477,7 +597,7 @@ sub read_header_lines {
          my $line = $self->readline;
 
          if (++$lines >= $self->{max_header_lines}) {
-             croak(qq/Header lines exceeds maximum number allowed of $self->{max_header_lines}/);
+             die(qq/Header lines exceeds maximum number allowed of $self->{max_header_lines}\n/);
          }
          elsif ($line =~ /\A ([^\x00-\x1F\x7F:]+) : [\x09\x20]* ([^\x0D\x0A]*)/x) {
              my ($field_name) = lc $1;
@@ -494,7 +614,7 @@ sub read_header_lines {
          }
          elsif ($line =~ /\A [\x09\x20]+ ([^\x0D\x0A]*)/x) {
              $val
-               or croak(q/Unexpected header continuation line/);
+               or die(qq/Unexpected header continuation line\n/);
              next unless length $1;
              $$val .= ' ' if length $$val;
              $$val .= $1;
@@ -503,14 +623,14 @@ sub read_header_lines {
             last;
          }
          else {
-            croak(q/Malformed header line: / . $Printable->($line));
+            die(q/Malformed header line: / . $Printable->($line) . "\n");
          }
     }
     return $headers;
 }
 
 sub write_request {
-    @_ == 2 || croak(q/Usage: $handle->write_request(request)/);
+    @_ == 2 || die(q/Usage: $handle->write_request(request)/ . "\n");
     my($self, $request) = @_;
     $self->write_request_header(@{$request}{qw/method uri headers/});
     $self->write_body($request) if $request->{cb};
@@ -526,7 +646,7 @@ my %HeaderCase = (
 );
 
 sub write_header_lines {
-    (@_ == 2 && ref $_[1] eq 'HASH') || croak(q/Usage: $handle->write_header_lines(headers)/);
+    (@_ == 2 && ref $_[1] eq 'HASH') || die(q/Usage: $handle->write_header_lines(headers)/ . "\n");
     my($self, $headers) = @_;
 
     my $buf = '';
@@ -537,13 +657,13 @@ sub write_header_lines {
         }
         else {
             $field_name =~ /\A $Token+ \z/xo
-              or croak(q/Invalid HTTP header field name: / . $Printable->($field_name));
+              or die(q/Invalid HTTP header field name: / . $Printable->($field_name) . "\n");
             $field_name =~ s/\b(\w)/\u$1/g;
             $HeaderCase{lc $field_name} = $field_name;
         }
         for (ref $v eq 'ARRAY' ? @$v : $v) {
             /[^\x0D\x0A]/
-              or croak(qq/Invalid HTTP header field value ($field_name): / . $Printable->($_));
+              or die(qq/Invalid HTTP header field value ($field_name): / . $Printable->($_). "\n");
             $buf .= "$field_name: $_\x0D\x0A";
         }
     }
@@ -552,7 +672,7 @@ sub write_header_lines {
 }
 
 sub read_body {
-    @_ == 3 || croak(q/Usage: $handle->read_body(callback, response)/);
+    @_ == 3 || die(q/Usage: $handle->read_body(callback, response)/ . "\n");
     my ($self, $cb, $response) = @_;
     my $te = $response->{headers}{'transfer-encoding'} || '';
     if ( grep { /chunked/i } ( ref $te eq 'ARRAY' ? @$te : $te ) ) {
@@ -565,7 +685,7 @@ sub read_body {
 }
 
 sub write_body {
-    @_ == 2 || croak(q/Usage: $handle->write_body(request)/);
+    @_ == 2 || die(q/Usage: $handle->write_body(request)/ . "\n");
     my ($self, $request) = @_;
     if ($request->{headers}{'content-length'}) {
         return $self->write_content_body($request);
@@ -576,7 +696,7 @@ sub write_body {
 }
 
 sub read_content_body {
-    @_ == 3 || @_ == 4 || croak(q/Usage: $handle->read_content_body(callback, response, [read_length])/);
+    @_ == 3 || @_ == 4 || die(q/Usage: $handle->read_content_body(callback, response, [read_length])/ . "\n");
     my ($self, $cb, $response, $content_length) = @_;
     $content_length ||= $response->{headers}{'content-length'};
 
@@ -597,7 +717,7 @@ sub read_content_body {
 }
 
 sub write_content_body {
-    @_ == 2 || croak(q/Usage: $handle->write_content_body(request)/);
+    @_ == 2 || die(q/Usage: $handle->write_content_body(request)/ . "\n");
     my ($self, $request) = @_;
 
     my ($len, $content_length) = (0, $request->{headers}{'content-length'});
@@ -609,27 +729,27 @@ sub write_content_body {
 
         if ( $] ge '5.008' ) {
             utf8::downgrade($data, 1)
-                or croak(q/Wide character in write_content()/);
+                or die(qq/Wide character in write_content()\n/);
         }
 
         $len += $self->write($data);
     }
 
     $len == $content_length
-      or croak(qq/Content-Length missmatch (got: $len expected: $content_length)/);
+      or die(qq/Content-Length missmatch (got: $len expected: $content_length)\n/);
 
     return $len;
 }
 
 sub read_chunked_body {
-    @_ == 3 || croak(q/Usage: $handle->read_chunked_body(callback, $response)/);
+    @_ == 3 || die(q/Usage: $handle->read_chunked_body(callback, $response)/ . "\n");
     my ($self, $cb, $response) = @_;
 
     while () {
         my $head = $self->readline;
 
         $head =~ /\A ([A-Fa-f0-9]+)/x
-          or croak(q/Malformed chunk head: / . $Printable->($head));
+          or die(q/Malformed chunk head: / . $Printable->($head) . "\n");
 
         my $len = hex($1)
           or last;
@@ -637,14 +757,14 @@ sub read_chunked_body {
         $self->read_content_body($cb, $response, $len);
 
         $self->read(2) eq "\x0D\x0A"
-          or croak(q/Malformed chunk: missing CRLF after chunk data/);
+          or die(qq/Malformed chunk: missing CRLF after chunk data\n/);
     }
     $self->read_header_lines($response->{headers});
     return;
 }
 
 sub write_chunked_body {
-    @_ == 2 || croak(q/Usage: $handle->write_chunked_body(request)/);
+    @_ == 2 || die(q/Usage: $handle->write_chunked_body(request)/ . "\n");
     my ($self, $request) = @_;
 
     my $len = 0;
@@ -656,7 +776,7 @@ sub write_chunked_body {
 
         if ( $] ge '5.008' ) {
             utf8::downgrade($data, 1)
-                or croak(q/Wide character in write_chunked_body()/);
+                or die(qq/Wide character in write_chunked_body()\n/);
         }
 
         $len += length $data;
@@ -675,17 +795,17 @@ sub write_chunked_body {
 }
 
 sub read_response_header {
-    @_ == 1 || croak(q/Usage: $handle->read_response_header()/);
+    @_ == 1 || die(q/Usage: $handle->read_response_header()/ . "\n");
     my ($self) = @_;
 
     my $line = $self->readline;
 
     $line =~ /\A (HTTP\/(0*\d+\.0*\d+)) [\x09\x20]+ ([0-9]{3}) [\x09\x20]+ ([^\x0D\x0A]*) \x0D?\x0A/x
-      or croak(q/Malformed Status-Line: / . $Printable->($line));
+      or die(q/Malformed Status-Line: / . $Printable->($line). "\n");
 
     my ($protocol, $version, $status, $reason) = ($1, $2, $3, $4);
 
-    croak (qq/Unsupported HTTP protocol: $protocol/)
+    die (qq/Unsupported HTTP protocol: $protocol\n/)
         unless $version =~ /0*1\.0*[01]/;
 
     return {
@@ -697,7 +817,7 @@ sub read_response_header {
 }
 
 sub write_request_header {
-    @_ == 4 || croak(q/Usage: $handle->write_request_header(method, request_uri, headers)/);
+    @_ == 4 || die(q/Usage: $handle->write_request_header(method, request_uri, headers)/ . "\n");
     my ($self, $method, $request_uri, $headers) = @_;
 
     return $self->write("$method $request_uri HTTP/1.1\x0D\x0A")
@@ -711,7 +831,7 @@ sub _do_timeout {
 
     my $fd = fileno $self->{fh};
     defined $fd && $fd >= 0
-      or croak(q/select(2): 'Bad file descriptor'/);
+      or die(qq/select(2): 'Bad file descriptor'\n/);
 
     my $initial = time;
     my $pending = $timeout;
@@ -725,7 +845,7 @@ sub _do_timeout {
             : select(undef, $fdset, undef, $pending) ;
         if ($nfound == -1) {
             $! == EINTR
-              or croak(qq/select(2): '$!'/);
+              or die(qq/select(2): '$!'\n/);
             redo if !$timeout || ($pending = $timeout - (time - $initial)) > 0;
             $nfound = 0;
         }
@@ -736,22 +856,71 @@ sub _do_timeout {
 }
 
 sub can_read {
-    @_ == 1 || @_ == 2 || croak(q/Usage: $handle->can_read([timeout])/);
+    @_ == 1 || @_ == 2 || die(q/Usage: $handle->can_read([timeout])/ . "\n");
     my $self = shift;
     return $self->_do_timeout('read', @_)
 }
 
 sub can_write {
-    @_ == 1 || @_ == 2 || croak(q/Usage: $handle->can_write([timeout])/);
+    @_ == 1 || @_ == 2 || die(q/Usage: $handle->can_write([timeout])/ . "\n");
     my $self = shift;
     return $self->_do_timeout('write', @_)
 }
 
+# Try to find a CA bundle to validate the SSL cert,
+# prefer Mozilla::CA or fallback to a system file
+sub _find_CA_file {
+    my $self = shift();
+
+    return $self->{SSL_options}->{SSL_ca_file}
+        if $self->{SSL_options}->{SSL_ca_file} and -e $self->{SSL_options}->{SSL_ca_file};
+
+    return Mozilla::CA::SSL_ca_file()
+        if eval { require Mozilla::CA };
+
+    foreach my $ca_bundle (qw{
+        /etc/ssl/certs/ca-certificates.crt
+        /etc/pki/tls/certs/ca-bundle.crt
+        /etc/ssl/ca-bundle.pem
+        }
+    ) {
+        return $ca_bundle if -e $ca_bundle;
+    }
+
+    die qq/Couldn't find a CA bundle with which to verify the SSL certificate.\n/
+      . qq/Try installing Mozilla::CA from CPAN\n/;
+}
+
+sub _ssl_args {
+    my ($self, $host) = @_;
+
+    my %ssl_args = (
+        SSL_hostname        => $host,  # SNI
+    );
+
+    if ($self->{verify_SSL}) {
+        $ssl_args{SSL_verifycn_scheme}  = 'http'; # enable CN validation
+        $ssl_args{SSL_verifycn_name}    = $host;  # set validation hostname
+        $ssl_args{SSL_verify_mode}      = 0x01;   # enable cert validation
+        $ssl_args{SSL_ca_file}          = $self->_find_CA_file;
+    }
+    else {
+        $ssl_args{SSL_verifycn_scheme}  = 'none'; # disable CN validation
+        $ssl_args{SSL_verify_mode}      = 0x00;   # disable cert validation
+    }
+
+    # user options override settings from verify_SSL
+    for my $k ( keys %{$self->{SSL_options}} ) {
+        $ssl_args{$k} = $self->{SSL_options}{$k} if $k =~ m/^SSL_/;
+    }
+
+    return \%ssl_args;
+}
+
 1;
 
-
-
 __END__
+
 =pod
 
 =head1 NAME
@@ -760,7 +929,7 @@ HTTP::Tiny - A small, simple, correct HTTP/1.1 client
 
 =head1 VERSION
 
-version 0.012
+version 0.025
 
 =head1 SYNOPSIS
 
@@ -782,7 +951,7 @@ version 0.012
 
 =head1 DESCRIPTION
 
-This is a very simple HTTP/1.1 client, designed primarily for doing simple GET
+This is a very simple HTTP/1.1 client, designed for doing simple GET
 requests without the overhead of a large framework like L<LWP::UserAgent>.
 
 It is more correct and more complete than L<HTTP::Lite>.  It supports
@@ -801,52 +970,95 @@ This constructor returns a new HTTP::Tiny object.  Valid attributes include:
 
 =item *
 
-agent
+C<agent>
 
-A user-agent string (defaults to 'HTTP::Tiny/$VERSION')
+A user-agent string (defaults to 'HTTP-Tiny/$VERSION'). If C<agent> ends in a space character, the default user-agent string is appended.
 
 =item *
 
-default_headers
+C<default_headers>
 
 A hashref of default headers to apply to requests
 
 =item *
 
-max_redirect
+C<local_address>
+
+The local IP address to bind to
+
+=item *
+
+C<max_redirect>
 
 Maximum number of redirects allowed (defaults to 5)
 
 =item *
 
-max_size
+C<max_size>
 
 Maximum response size (only when not using a data callback).  If defined,
-responses larger than this will die with an error message
+responses larger than this will return an exception.
 
 =item *
 
-proxy
+C<proxy>
 
-URL of a proxy server to use.
+URL of a proxy server to use (default is C<$ENV{http_proxy}> if set)
 
 =item *
 
-timeout
+C<timeout>
 
 Request timeout in seconds (default is 60)
 
+=item *
+
+C<verify_SSL>
+
+A boolean that indicates whether to validate the SSL certificate of an C<https>
+connection (default is false)
+
+=item *
+
+C<SSL_options>
+
+A hashref of C<SSL_*> options to pass through to L<IO::Socket::SSL>
+
 =back
 
-=head2 get
+Exceptions from C<max_size>, C<timeout> or other errors will result in a
+pseudo-HTTP status code of 599 and a reason of "Internal Exception". The
+content field in the response will contain the text of the exception.
+
+See L</SSL SUPPORT> for more on the C<verify_SSL> and C<SSL_options> attributes.
+
+=head2 get|head|put|post|delete
 
     $response = $http->get($url);
     $response = $http->get($url, \%options);
+    $response = $http->head($url);
 
-Executes a C<GET> request for the given URL.  The URL must have unsafe
-characters escaped and international domain names encoded.  Internally, it just
-calls C<request()> with 'GET' as the method.  See C<request()> for valid
-options and a description of the response.
+These methods are shorthand for calling C<request()> for the given method.  The
+URL must have unsafe characters escaped and international domain names encoded.
+See C<request()> for valid options and a description of the response.
+
+The C<success> field of the response will be true if the status code is 2XX.
+
+=head2 post_form
+
+    $response = $http->post_form($url, $form_data);
+    $response = $http->post_form($url, $form_data, \%options);
+
+This method executes a C<POST> request and sends the key/value pairs from a
+form data hash or array reference to the given URL with a C<content-type> of
+C<application/x-www-form-urlencoded>.  See documentation for the
+C<www_form_urlencode> method for details on the encoding.
+
+The URL must have unsafe characters escaped and international domain names
+encoded.  See C<request()> for valid options and a description of the response.
+Any C<content-type> header or content in the options hashref will be ignored.
+
+The C<success> field of the response will be true if the status code is 2XX.
 
 =head2 mirror
 
@@ -859,11 +1071,11 @@ Executes a C<GET> request for the URL and saves the response body to the file
 name provided.  The URL must have unsafe characters escaped and international
 domain names encoded.  If the file already exists, the request will includes an
 C<If-Modified-Since> header with the modification timestamp of the file.  You
-may specificy a different C<If-Modified-Since> header yourself in the C<<
+may specify a different C<If-Modified-Since> header yourself in the C<<
 $options->{headers} >> hash.
 
 The C<success> field of the response will be true if the status code is 2XX
-or 304 (unmodified).
+or if the status code is 304 (unmodified).
 
 If the file was modified and the server response includes a properly
 formatted C<Last-Modified> header, the file modification time will
@@ -885,7 +1097,7 @@ Valid options are:
 
 =item *
 
-headers
+C<headers>
 
 A hashref containing headers to include with the request.  If the value for
 a header is an array reference, the header will be output multiple times with
@@ -893,21 +1105,21 @@ each value in the array.  These headers over-write any default headers.
 
 =item *
 
-content
+C<content>
 
 A scalar to include as the body of the request OR a code reference
-that will be called iteratively to produce the body of the response
+that will be called iteratively to produce the body of the request
 
 =item *
 
-trailer_callback
+C<trailer_callback>
 
 A code reference that will be called if it exists to provide a hashref
 of trailing headers (only used with chunked transfer-encoding)
 
 =item *
 
-data_callback
+C<data_callback>
 
 A code reference that will be called for each chunks of the response
 body received.
@@ -932,25 +1144,33 @@ will have the following keys:
 
 =item *
 
-success
+C<success>
 
 Boolean indicating whether the operation returned a 2XX status code
 
 =item *
 
-status
+C<url>
+
+URL that provided the response. This is the URL of the request unless
+there were redirections, in which case it is the last URL queried
+in a redirection chain
+
+=item *
+
+C<status>
 
 The HTTP status code of the response
 
 =item *
 
-reason
+C<reason>
 
 The response phrase returned by the server
 
 =item *
 
-content
+C<content>
 
 The body of the response.  If the response does not have any content
 or if a data callback is provided to consume the response body,
@@ -958,7 +1178,7 @@ this will be the empty string
 
 =item *
 
-headers
+C<headers>
 
 A hashref of header fields.  All header field names will be normalized
 to be lower case. If a header is repeated, the value will be an arrayref;
@@ -969,12 +1189,110 @@ it will otherwise be a scalar string containing the value
 On an exception during the execution of the request, the C<status> field will
 contain 599, and the C<content> field will contain the text of the exception.
 
+=head2 www_form_urlencode
+
+    $params = $http->www_form_urlencode( $data );
+    $response = $http->get("http://example.com/query?$params");
+
+This method converts the key/value pairs from a data hash or array reference
+into a C<x-www-form-urlencoded> string.  The keys and values from the data
+reference will be UTF-8 encoded and escaped per RFC 3986.  If a value is an
+array reference, the key will be repeated with each of the values of the array
+reference.  The key/value pairs in the resulting string will be sorted by key
+and value.
+
 =for Pod::Coverage agent
 default_headers
+local_address
 max_redirect
 max_size
 proxy
 timeout
+verify_SSL
+SSL_options
+
+=head1 SSL SUPPORT
+
+Direct C<https> connections are supported only if L<IO::Socket::SSL> 1.56 or
+greater and L<Net::SSLeay> 1.49 or greater are installed. An exception will be
+thrown if a new enough versions of these modules not installed or if the SSL
+encryption fails. There is no support for C<https> connections via proxy (i.e.
+RFC 2817).
+
+SSL provides two distinct capabilities:
+
+=over 4
+
+=item *
+
+Encrypted communication channel
+
+=item *
+
+Verification of server identity
+
+=back
+
+B<By default, HTTP::Tiny does not verify server identity>.
+
+Server identity verification is controversial and potentially tricky because it
+depends on a (usually paid) third-party Certificate Authority (CA) trust model
+to validate a certificate as legitimate.  This discriminates against servers
+with self-signed certificates or certificates signed by free, community-driven
+CA's such as L<CAcert.org|http://cacert.org>.
+
+By default, HTTP::Tiny does not make any assumptions about your trust model,
+threat level or risk tolerance.  It just aims to give you an encrypted channel
+when you need one.
+
+Setting the C<verify_SSL> attribute to a true value will make HTTP::Tiny verify
+that an SSL connection has a valid SSL certificate corresponding to the host
+name of the connection and that the SSL certificate has been verified by a CA.
+Assuming you trust the CA, this will protect against a L<man-in-the-middle
+attack|http://en.wikipedia.org/wiki/Man-in-the-middle_attack>.  If you are
+concerned about security, you should enable this option.
+
+Certificate verification requires a file containing trusted CA certificates.
+If the L<Mozilla::CA> module is installed, HTTP::Tiny will use the CA file
+included with it as a source of trusted CA's.  (This means you trust Mozilla,
+the author of Mozilla::CA, the CPAN mirror where you got Mozilla::CA, the
+toolchain used to install it, and your operating system security, right?)
+
+If that module is not available, then HTTP::Tiny will search several
+system-specific default locations for a CA certificate file:
+
+=over 4
+
+=item *
+
+/etc/ssl/certs/ca-certificates.crt
+
+=item *
+
+/etc/pki/tls/certs/ca-bundle.crt
+
+=item *
+
+/etc/ssl/ca-bundle.pem
+
+=back
+
+An exception will be raised if C<verify_SSL> is true and no CA certificate file
+is available.
+
+If you desire complete control over SSL connections, the C<SSL_options> attribute
+lets you provide a hash reference that will be passed through to
+C<IO::Socket::SSL::start_SSL()>, overriding any options set by HTTP::Tiny. For
+example, to provide your own trusted CA file:
+
+    SSL_options => {
+        SSL_ca_file => $file_path,
+    }
+
+The C<SSL_options> attribute could also be used for such things as providing a
+client certificate for authentication to a server or controlling the choice of
+cipher used for the SSL connection. See L<IO::Socket::SSL> documentation for
+details.
 
 =head1 LIMITATIONS
 
@@ -1009,15 +1327,8 @@ mandated by the specification.  There is no automatic support for status 305
 
 =item *
 
-Persistant connections are not supported.  The C<Connection> header will
+Persistent connections are not supported.  The C<Connection> header will
 always be set to C<close>.
-
-=item *
-
-Direct C<https> connections are supported only if L<IO::Socket::SSL> is
-installed.  There is no support for C<https> connections via proxy.
-Any SSL certificate that matches the host is accepted -- SSL certificates
-are not verified against certificate authorities.
 
 =item *
 
@@ -1027,7 +1338,9 @@ inappropriately re-transmitted.
 
 =item *
 
-Proxy environment variables are not supported.
+Only the C<http_proxy> environment variable is supported in the format
+C<http://HOST:PORT/>.  If a C<proxy> argument is passed to C<new> (including
+undef), then the C<http_proxy> environment variable is ignored.
 
 =item *
 
@@ -1042,6 +1355,10 @@ Only 'chunked' C<Transfer-Encoding> is supported.
 
 There is no support for a Request-URI of '*' for the 'OPTIONS' request.
 
+=item *
+
+There is no support for IPv6 of any kind.
+
 =back
 
 =head1 SEE ALSO
@@ -1052,26 +1369,38 @@ There is no support for a Request-URI of '*' for the 'OPTIONS' request.
 
 L<LWP::UserAgent>
 
+=item *
+
+L<IO::Socket::SSL>
+
+=item *
+
+L<Mozilla::CA>
+
+=item *
+
+L<Net::SSLeay>
+
 =back
 
-=for :stopwords cpan testmatrix url annocpan anno bugtracker rt cpants kwalitee diff irc mailto metadata placeholders
+=for :stopwords cpan testmatrix url annocpan anno bugtracker rt cpants kwalitee diff irc mailto metadata placeholders metacpan
 
 =head1 SUPPORT
 
 =head2 Bugs / Feature Requests
 
-Please report any bugs or feature requests by email to C<bug-http-tiny at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/Public/Dist/Display.html?Name=HTTP-Tiny>. You will be automatically notified of any
-progress on the request by the system.
+Please report any bugs or feature requests through the issue tracker
+at L<https://rt.cpan.org/Public/Dist/Display.html?Name=HTTP-Tiny>.
+You will be notified automatically of any progress on your issue.
 
 =head2 Source Code
 
 This is open source software.  The code repository is available for
 public review and contribution under the terms of the license.
 
-L<http://github.com/dagolden/p5-http-tiny/tree>
+L<https://github.com/dagolden/http-tiny>
 
-  git clone git://github.com/dagolden/p5-http-tiny.git
+  git clone git://github.com/dagolden/http-tiny.git
 
 =head1 AUTHORS
 
@@ -1085,14 +1414,17 @@ Christian Hansen <chansen@cpan.org>
 
 David Golden <dagolden@cpan.org>
 
+=item *
+
+Mike Doherty <doherty@cpan.org>
+
 =back
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2011 by Christian Hansen.
+This software is copyright (c) 2012 by Christian Hansen.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-

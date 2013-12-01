@@ -6,11 +6,39 @@ use lib 'Porting';
 use Maintainers qw/%Modules/;
 use Module::CoreList;
 use Getopt::Long;
-use Algorithm::Diff;
+
+=head1 USAGE
+
+  # generate the module changes for the Perl you are currently building
+  ./perl Porting/corelist-perldelta.pl
+  
+  # generate a diff between the corelist sections of two perldelta* files:
+  perl Porting/corelist-perldelta.pl --mode=check 5.017001 5.017002 <perl5172delta.pod
+
+=head1 ABOUT
+
+corelist-perldelta.pl is a bit schizophrenic. The part to generate the
+new Perldelta text does not need Algorithm::Diff, but wants to be
+run with the freshly built Perl.
+
+The part to check the diff wants to be run with a Perl that has an up-to-date
+L<Module::CoreList>, but needs the outside L<Algorithm::Diff>.
+
+Ideally, the program will be split into two separate programs, one
+to generate the text and one to show the diff between the 
+corelist sections of the last perldelta and the next perldelta.
+
+=cut
 
 my %sections = (
+  new     => qr/New Modules and Pragma(ta)?/,
+  updated => qr/Updated Modules and Pragma(ta)?/,
+  removed => qr/Removed Modules and Pragma(ta)?/,
+);
+
+my %titles = (
   new     => 'New Modules and Pragmata',
-  updated => 'Updated Modules and Pragma',
+  updated => 'Updated Modules and Pragmata',
   removed => 'Removed Modules and Pragmata',
 );
 
@@ -21,15 +49,15 @@ my $deprecated;
 sub added {
   my ($mod, $old_v, $new_v) = @_;
   say "=item *\n";
-  say "C<$mod> $new_v has been added to the Perl core.\n";
+  say "L<$mod> $new_v has been added to the Perl core.\n";
 }
 
 sub updated {
   my ($mod, $old_v, $new_v) = @_;
   say "=item *\n";
-  say "C<$mod> has been upgraded from version $old_v to $new_v.\n";
+  say "L<$mod> has been upgraded from version $old_v to $new_v.\n";
   if ( $deprecated->{$mod} ) {
-    say "NOTE: C<$mod> is deprecated and may be removed from a future version of Perl.\n";
+    say "NOTE: L<$mod> is deprecated and may be removed from a future version of Perl.\n";
   }
 }
 
@@ -133,9 +161,9 @@ sub do_generate {
   my ($old, $new) = @_;
   my ($added, $removed, $pragmas, $modules) = corelist_delta($old => $new);
 
-  generate_section($sections{new}, \&added, @{ $added });
-  generate_section($sections{updated}, \&updated, @{ $pragmas }, @{ $modules });
-  generate_section($sections{removed}, \&removed, @{ $removed });
+  generate_section($titles{new}, \&added, @{ $added });
+  generate_section($titles{updated}, \&updated, @{ $pragmas }, @{ $modules });
+  generate_section($titles{removed}, \&removed, @{ $removed });
 }
 
 sub do_check {
@@ -152,6 +180,7 @@ sub do_check {
 
     printf $ck->[0] . ":\n";
 
+    require Algorithm::Diff;
     my $diff = Algorithm::Diff->new(map {
       [map { join q{ } => grep defined, @{ $_ } } @{ $_ }]
     } \@delta, \@corelist);
@@ -187,7 +216,7 @@ sub do_check {
 
     my $parsed_pod = Pod::Simple::SimpleTree->new->parse_file($input)->root;
     splice @{ $parsed_pod }, 0, 2; # we don't care about the document structure,
-                                   # just the nods within it
+                                   # just the nodes within it
 
     $self->_parse_delta($parsed_pod);
 
@@ -205,10 +234,19 @@ sub do_check {
 
     map {
         my ($t, $s) = @{ $_ };
+        
+        # Keep the section title if it has one:
+        if( $s->[0]->[0] eq 'head2' ) {
+          #warn "Keeping section title '$s->[0]->[2]'";
+          $titles{ $t } = $s->[0]->[2]
+              if $s->[0]->[2];
+        };
+
         $self->${\"_parse_${t}_section"}($s)
     } map {
-        my $s = $self->_look_for_section($pod => $sections{$_});
-        $s ? [$_, $s] : $s
+        my $s = $self->_look_for_section($pod => $sections{$_})
+            or die "failed to parse $_ section";
+        [$_, $s];
     } keys %sections;
 
     for my $s (keys %sections) {
@@ -310,8 +348,9 @@ sub do_check {
     $self->_look_for_range($pod,
       sub {
         my ($el) = @_;
-        my $f = $el->[0] =~ /^head(\d)$/ && $el->[2] eq $section;
-        $level = $1 if $f && !$level;
+        my ($heading) = $el->[0] =~ /^head(\d)$/;
+        my $f = $heading && $el->[2] =~ /^$section/;        
+        $level = $heading if $f && !$level;
         return $f;
       },
       sub {

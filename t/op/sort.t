@@ -6,7 +6,7 @@ BEGIN {
     require 'test.pl';
 }
 use warnings;
-plan( tests => 162 );
+plan( tests => 176 );
 
 # these shouldn't hang
 {
@@ -770,7 +770,8 @@ cmp_ok($answer,'eq','good','sort subr called from other package');
 
 {
     local $TODO = "sort should make sure elements are not freed in the sort block";
-    eval { @nomodify_x=(1..8); our @copy = sort { @nomodify_x = (0) } (@nomodify_x, 3); };
+    eval { @nomodify_x=(1..8);
+	   our @copy = sort { undef @nomodify_x; 1 } (@nomodify_x, 3); };
     is($@, "");
 }
 
@@ -938,3 +939,59 @@ fresh_perl_is
   like $output, qr/^(?:Win)+\z/,
    'Match vars do not leak from one $$ sort sub to the next';
 }
+
+# [perl #30661] autoloading
+AUTOLOAD { $b <=> $a }
+sub stubbedsub;
+is join("", sort stubbedsub split//, '04381091'), '98431100',
+    'stubborn AUTOLOAD';
+is join("", sort hopefullynonexistent split//, '04381091'), '98431100',
+    'AUTOLOAD without stub';
+my $stubref = \&givemeastub;
+is join("", sort $stubref split//, '04381091'), '98431100',
+    'AUTOLOAD with stubref';
+
+# [perl #90030] sort without arguments
+eval '@x = (sort); 1';
+is $@, '', '(sort) does not die';
+is @x, 0, '(sort) returns empty list';
+eval '@x = sort; 1';
+is $@, '', 'sort; does not die';
+is @x, 0, 'sort; returns empty list';
+eval '{@x = sort} 1';
+is $@, '', '{sort} does not die';
+is @x, 0, '{sort} returns empty list';
+
+# this happened while the padrange op was being added. Sort blocks
+# are executed in void context, and the padrange op was skipping pushing
+# the item in void cx. The net result was that the return value was
+# whatever was on the stack last.
+
+{
+    my @a = sort {
+	my $r = $a <=> $b;
+	if ($r) {
+	    undef; # this got returned by mistake
+	    return $r
+	}
+	return 0;
+    } 5,1,3,6,0;
+    is "@a", "0 1 3 5 6", "padrange and void context";
+}
+
+# Fatal warnings an sort sub returning a non-number
+# We need two evals, because the panic used to happen on scope exit.
+eval { eval { use warnings FATAL => 'all'; () = sort { undef } 1,2 } };
+is $@, "",
+  'no panic/crash with fatal warnings when sort sub returns undef';
+eval { eval { use warnings FATAL => 'all'; () = sort { "no thin" } 1,2 } };
+is $@, "",
+  'no panic/crash with fatal warnings when sort sub returns string';
+sub notdef($$) { undef }
+eval { eval { use warnings FATAL => 'all'; () = sort notdef 1,2 } };
+is $@, "",
+  'no panic/crash with fatal warnings when sort sub($$) returns undef';
+sub yarn($$) { "no thinking aloud" }
+eval { eval { use warnings FATAL => 'all'; () = sort yarn 1,2 } };
+is $@, "",
+  'no panic/crash with fatal warnings when sort sub($$) returns string';

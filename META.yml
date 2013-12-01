@@ -1,23 +1,23 @@
-name: perl
-version: 5.014000
-abstract: The Perl 5 language interpreter
-author: perl5-porters@perl.org
+---
+abstract: 'The Perl 5 language interpreter'
+author:
+  - perl5-porters@perl.org
+build_requires: {}
+dynamic_config: 1
+generated_by: 'CPAN::Meta version 2.120921, CPAN::Meta::Converter version 2.120921'
 license: perl
-resources:
-  homepage: http://www.perl.org/
-  bugtracker: http://rt.perl.org/perlbug/
-  license: http://dev.perl.org/licenses/
-  repository: http://perl5.git.perl.org/
-distribution_type: core
-generated_by: Porting/makemeta
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: perl
 no_index:
   directory:
     - cpan
     - dist/Attribute-Handlers
     - dist/autouse
-    - dist/B-Lint
     - dist/base
     - dist/bignum
+    - dist/Carp
     - dist/constant
     - dist/Cwd
     - dist/Data-Dumper
@@ -29,7 +29,6 @@ no_index:
     - dist/ExtUtils-Install
     - dist/ExtUtils-Manifest
     - dist/ExtUtils-ParseXS
-    - dist/File-CheckTree
     - dist/Filter-Simple
     - dist/I18N-Collate
     - dist/I18N-LangTags
@@ -42,18 +41,24 @@ no_index:
     - dist/Math-BigRat
     - dist/Module-CoreList
     - dist/Net-Ping
-    - dist/Pod-Perldoc
     - dist/Safe
+    - dist/Search-Dict
     - dist/SelfLoader
     - dist/Storable
+    - dist/Term-Complete
+    - dist/Term-ReadLine
+    - dist/Text-Abbrev
     - dist/Thread-Queue
     - dist/Thread-Semaphore
     - dist/threads
     - dist/threads-shared
+    - dist/Tie-File
     - dist/XSLoader
     - lib/version
+    - mad
     - win32
   file:
+    - autodoc.pl
     - dist/IO/ChangeLog
     - dist/IO/hints/sco.pl
     - dist/IO/IO.pm
@@ -72,6 +77,9 @@ no_index:
     - dist/IO/poll.c
     - dist/IO/poll.h
     - dist/IO/README
+    - dist/IO/t/cachepropagate-tcp.t
+    - dist/IO/t/cachepropagate-udp.t
+    - dist/IO/t/cachepropagate-unix.t
     - dist/IO/t/IO.t
     - dist/IO/t/io_const.t
     - dist/IO/t/io_dir.t
@@ -89,6 +97,7 @@ no_index:
     - dist/IO/t/io_udp.t
     - dist/IO/t/io_unix.t
     - dist/IO/t/io_utf8.t
+    - dist/IO/t/io_utf8argv.t
     - dist/IO/t/io_xs.t
     - dist/lib/lib_pm.PL
     - dist/lib/Makefile.PL
@@ -96,12 +105,17 @@ no_index:
     - lib/Exporter.pm
     - lib/Exporter.t
     - lib/Exporter/Heavy.pm
-    - lib/newgetopt.pl
     - lib/unicore/mktables
     - lib/version.pm
     - lib/version.pod
-    - lib/version.t
     - pod/perlfilter.pod
+    - pod/perlpodstyle.pod
     - Porting/Maintainers.pm
     - Porting/perldelta_template.pod
     - TestInit.pm
+resources:
+  bugtracker: http://rt.perl.org/perlbug/
+  homepage: http://www.perl.org/
+  license: http://dev.perl.org/licenses/
+  repository: http://perl5.git.perl.org/
+version: 5.018001

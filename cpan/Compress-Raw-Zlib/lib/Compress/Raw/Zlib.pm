@@ -1,33 +1,66 @@
 
 package Compress::Raw::Zlib;
 
-require 5.004 ;
+require 5.006 ;
 require Exporter;
 use AutoLoader;
 use Carp ;
 
-#use Parse::Parameters;
-
 use strict ;
 use warnings ;
 use bytes ;
-our ($VERSION, $XS_VERSION, @ISA, @EXPORT, $AUTOLOAD);
+our ($VERSION, $XS_VERSION, @ISA, @EXPORT, %EXPORT_TAGS, @EXPORT_OK, $AUTOLOAD, %DEFLATE_CONSTANTS, @DEFLATE_CONSTANTS );
 
-$VERSION = '2.033';
+$VERSION = '2.060';
 $XS_VERSION = $VERSION; 
 $VERSION = eval $VERSION;
 
 @ISA = qw(Exporter);
+%EXPORT_TAGS = ( flush     => [qw{  
+                                    Z_NO_FLUSH
+                                    Z_PARTIAL_FLUSH
+                                    Z_SYNC_FLUSH
+                                    Z_FULL_FLUSH
+                                    Z_FINISH
+                                    Z_BLOCK
+                              }],
+                 level     => [qw{  
+                                    Z_NO_COMPRESSION
+                                    Z_BEST_SPEED
+                                    Z_BEST_COMPRESSION
+                                    Z_DEFAULT_COMPRESSION
+                              }],
+                 strategy  => [qw{  
+                                    Z_FILTERED
+                                    Z_HUFFMAN_ONLY
+                                    Z_RLE
+                                    Z_FIXED
+                                    Z_DEFAULT_STRATEGY
+                              }],
+                 status   => [qw{  
+                                    Z_OK
+                                    Z_STREAM_END
+                                    Z_NEED_DICT
+                                    Z_ERRNO
+                                    Z_STREAM_ERROR
+                                    Z_DATA_ERROR  
+                                    Z_MEM_ERROR   
+                                    Z_BUF_ERROR 
+                                    Z_VERSION_ERROR 
+                              }],                              
+              );
+
+%DEFLATE_CONSTANTS = %EXPORT_TAGS;
+
 # Items to export into callers namespace by default. Note: do not export
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
+@DEFLATE_CONSTANTS = 
 @EXPORT = qw(
-        adler32 crc32
-
         ZLIB_VERSION
         ZLIB_VERNUM
 
-        DEF_WBITS
+        
         OS_CODE
 
         MAX_MEM_LEVEL
@@ -68,6 +101,8 @@ $VERSION = eval $VERSION;
         WANT_GZIP_OR_ZLIB
 );
 
+push @EXPORT, qw(crc32 adler32 DEF_WBITS);
+
 use constant WANT_GZIP           => 16;
 use constant WANT_GZIP_OR_ZLIB   => 32;
 
@@ -103,10 +138,10 @@ use constant Parse_any      => 0x01;
 use constant Parse_unsigned => 0x02;
 use constant Parse_signed   => 0x04;
 use constant Parse_boolean  => 0x08;
-use constant Parse_string   => 0x10;
-use constant Parse_custom   => 0x12;
+#use constant Parse_string   => 0x10;
+#use constant Parse_custom   => 0x12;
 
-use constant Parse_store_ref => 0x100 ;
+#use constant Parse_store_ref => 0x100 ;
 
 use constant OFF_PARSED     => 0 ;
 use constant OFF_TYPE       => 1 ;
@@ -262,14 +297,14 @@ sub Compress::Raw::Zlib::Parameters::_checkType
 
     #local $Carp::CarpLevel = $level ;
     #print "PARSE $type $key $value $validate $sub\n" ;
-    if ( $type & Parse_store_ref)
-    {
-        #$value = $$value
-        #    if ref ${ $value } ;
-
-        $$output = $value ;
-        return 1;
-    }
+#    if ( $type & Parse_store_ref)
+#    {
+#        #$value = $$value
+#        #    if ref ${ $value } ;
+#
+#        $$output = $value ;
+#        return 1;
+#    }
 
     $value = $$value ;
 
@@ -305,11 +340,11 @@ sub Compress::Raw::Zlib::Parameters::_checkType
         $$output =  defined $value ? $value != 0 : 0 ;    
         return 1;
     }
-    elsif ($type & Parse_string)
-    {
-        $$output = defined $value ? $value : "" ;    
-        return 1;
-    }
+#    elsif ($type & Parse_string)
+#    {
+#        $$output = defined $value ? $value : "" ;    
+#        return 1;
+#    }
 
     $$output = $value ;
     return 1;
@@ -340,24 +375,25 @@ sub Compress::Raw::Zlib::Parameters::value
     return $self->{Got}{lc $name}[OFF_FIXED] ;
 }
 
+our $OPTIONS_deflate =   
+    {
+        'AppendOutput'  => [1, 1, Parse_boolean,  0],
+        'CRC32'         => [1, 1, Parse_boolean,  0],
+        'ADLER32'       => [1, 1, Parse_boolean,  0],
+        'Bufsize'       => [1, 1, Parse_unsigned, 4096],
+
+        'Level'         => [1, 1, Parse_signed,   Z_DEFAULT_COMPRESSION()],
+        'Method'        => [1, 1, Parse_unsigned, Z_DEFLATED()],
+        'WindowBits'    => [1, 1, Parse_signed,   MAX_WBITS()],
+        'MemLevel'      => [1, 1, Parse_unsigned, MAX_MEM_LEVEL()],
+        'Strategy'      => [1, 1, Parse_unsigned, Z_DEFAULT_STRATEGY()],
+        'Dictionary'    => [1, 1, Parse_any,      ""],
+    };
+
 sub Compress::Raw::Zlib::Deflate::new
 {
     my $pkg = shift ;
-    my ($got) = ParseParameters(0,
-            {
-                'AppendOutput'  => [1, 1, Parse_boolean,  0],
-                'CRC32'         => [1, 1, Parse_boolean,  0],
-                'ADLER32'       => [1, 1, Parse_boolean,  0],
-                'Bufsize'       => [1, 1, Parse_unsigned, 4096],
- 
-                'Level'         => [1, 1, Parse_signed,   Z_DEFAULT_COMPRESSION()],
-                'Method'        => [1, 1, Parse_unsigned, Z_DEFLATED()],
-                'WindowBits'    => [1, 1, Parse_signed,   MAX_WBITS()],
-                'MemLevel'      => [1, 1, Parse_unsigned, MAX_MEM_LEVEL()],
-                'Strategy'      => [1, 1, Parse_unsigned, Z_DEFAULT_STRATEGY()],
-                'Dictionary'    => [1, 1, Parse_any,      ""],
-            }, @_) ;
-
+    my ($got) = ParseParameters(0, $OPTIONS_deflate, @_);
 
     croak "Compress::Raw::Zlib::Deflate::new: Bufsize must be >= 1, you specified " . 
             $got->value('Bufsize')
@@ -383,22 +419,36 @@ sub Compress::Raw::Zlib::Deflate::new
 
 }
 
+sub Compress::Raw::Zlib::deflateStream::STORABLE_freeze
+{
+    my $type = ref shift;
+    croak "Cannot freeze $type object\n";
+}
+
+sub Compress::Raw::Zlib::deflateStream::STORABLE_thaw
+{
+    my $type = ref shift;
+    croak "Cannot thaw $type object\n";
+}
+
+
+our $OPTIONS_inflate = 
+    {
+        'AppendOutput'  => [1, 1, Parse_boolean,  0],
+        'LimitOutput'   => [1, 1, Parse_boolean,  0],
+        'CRC32'         => [1, 1, Parse_boolean,  0],
+        'ADLER32'       => [1, 1, Parse_boolean,  0],
+        'ConsumeInput'  => [1, 1, Parse_boolean,  1],
+        'Bufsize'       => [1, 1, Parse_unsigned, 4096],
+ 
+        'WindowBits'    => [1, 1, Parse_signed,   MAX_WBITS()],
+        'Dictionary'    => [1, 1, Parse_any,      ""],
+    } ;
+
 sub Compress::Raw::Zlib::Inflate::new
 {
     my $pkg = shift ;
-    my ($got) = ParseParameters(0,
-                    {
-                        'AppendOutput'  => [1, 1, Parse_boolean,  0],
-                        'LimitOutput'   => [1, 1, Parse_boolean,  0],
-                        'CRC32'         => [1, 1, Parse_boolean,  0],
-                        'ADLER32'       => [1, 1, Parse_boolean,  0],
-                        'ConsumeInput'  => [1, 1, Parse_boolean,  1],
-                        'Bufsize'       => [1, 1, Parse_unsigned, 4096],
-                 
-                        'WindowBits'    => [1, 1, Parse_signed,   MAX_WBITS()],
-                        'Dictionary'    => [1, 1, Parse_any,      ""],
-            }, @_) ;
-
+    my ($got) = ParseParameters(0, $OPTIONS_inflate, @_);
 
     croak "Compress::Raw::Zlib::Inflate::new: Bufsize must be >= 1, you specified " . 
             $got->value('Bufsize')
@@ -418,6 +468,18 @@ sub Compress::Raw::Zlib::Inflate::new
 
     _inflateInit($flags, $windowBits, $got->value('Bufsize'), 
                  $got->value('Dictionary')) ;
+}
+
+sub Compress::Raw::Zlib::inflateStream::STORABLE_freeze
+{
+    my $type = ref shift;
+    croak "Cannot freeze $type object\n";
+}
+
+sub Compress::Raw::Zlib::inflateStream::STORABLE_thaw
+{
+    my $type = ref shift;
+    croak "Cannot thaw $type object\n";
 }
 
 sub Compress::Raw::Zlib::InflateScan::new
@@ -580,6 +642,7 @@ Compress::Raw::Zlib - Low-Level Interface to zlib compression library
     $crc = crc32_combine($adler1, $adler2, $len2)
 
     my $version = Compress::Raw::Zlib::zlib_version();
+    my $flags = Compress::Raw::Zlib::zlibCompileFlags();
 
 =head1 DESCRIPTION
 
@@ -1241,6 +1304,17 @@ These functions allow checksums to be merged.
 
 Returns the version of the zlib library.
 
+=head2  my $flags = Compress::Raw::Zlib::zlibCompileFlags();
+
+Returns the flags indicating compile-time options that were used to build 
+the zlib library. See the zlib documentation for a description of the flags
+returned by C<zlibCompileFlags>.
+
+Note that when the zlib sources are built along with this module the
+C<sprintf> flags (bits 24, 25 and 26) should be ignored.
+
+If you are using zlib 1.2.0 or older, C<zlibCompileFlags> will return 0. 
+
 =head1 The LimitOutput option.
 
 By default C<< $i->inflate($input, $output) >> will uncompress I<all> data
@@ -1380,9 +1454,105 @@ C<$input>.
 =head1 ACCESSING ZIP FILES
 
 Although it is possible (with some effort on your part) to use this module
-to access .zip files, there are other perl modules available that will
-do all the hard work for you. Check out C<Archive::Zip>,
-C<IO::Compress::Zip> and C<IO::Uncompress::Unzip>.
+to access .zip files, there are other perl modules available that will do
+all the hard work for you. Check out C<Archive::Zip>,
+C<Archive::Zip::SimpleZip>, C<IO::Compress::Zip> and
+C<IO::Uncompress::Unzip>.
+
+=head1 FAQ
+
+=head2 Compatibility with Unix compress/uncompress.
+
+This module is not compatible with Unix C<compress>.
+
+If you have the C<uncompress> program available, you can use this to read
+compressed files
+
+    open F, "uncompress -c $filename |";
+    while (<F>)
+    {
+        ...
+
+Alternatively, if you have the C<gunzip> program available, you can use
+this to read compressed files
+
+    open F, "gunzip -c $filename |";
+    while (<F>)
+    {
+        ...
+
+and this to write compress files, if you have the C<compress> program
+available
+
+    open F, "| compress -c $filename ";
+    print F "data";
+    ...
+    close F ;
+
+=head2 Accessing .tar.Z files
+
+See previous FAQ item.
+
+If the C<Archive::Tar> module is installed and either the C<uncompress> or
+C<gunzip> programs are available, you can use one of these workarounds to
+read C<.tar.Z> files.
+
+Firstly with C<uncompress>
+
+    use strict;
+    use warnings;
+    use Archive::Tar;
+
+    open F, "uncompress -c $filename |";
+    my $tar = Archive::Tar->new(*F);
+    ...
+
+and this with C<gunzip>
+
+    use strict;
+    use warnings;
+    use Archive::Tar;
+
+    open F, "gunzip -c $filename |";
+    my $tar = Archive::Tar->new(*F);
+    ...
+
+Similarly, if the C<compress> program is available, you can use this to
+write a C<.tar.Z> file
+
+    use strict;
+    use warnings;
+    use Archive::Tar;
+    use IO::File;
+
+    my $fh = new IO::File "| compress -c >$filename";
+    my $tar = Archive::Tar->new();
+    ...
+    $tar->write($fh);
+    $fh->close ;
+
+=head2 Zlib Library Version Support
+
+By default C<Compress::Raw::Zlib> will build with a private copy of version
+1.2.5 of the zlib library. (See the F<README> file for details of
+how to override this behaviour)
+
+If you decide to use a different version of the zlib library, you need to be
+aware of the following issues
+
+=over 5
+
+=item *
+
+First off, you must have zlib 1.0.5 or better.
+
+=item *
+
+You need to have zlib 1.2.1 or better if you want to use the C<-Merge>
+option with C<IO::Compress::Gzip>, C<IO::Compress::Deflate> and
+C<IO::Compress::RawDeflate>.
+
+=back
 
 =head1 CONSTANTS
 
@@ -1393,7 +1563,7 @@ of I<Compress::Raw::Zlib>.
 
 L<Compress::Zlib>, L<IO::Compress::Gzip>, L<IO::Uncompress::Gunzip>, L<IO::Compress::Deflate>, L<IO::Uncompress::Inflate>, L<IO::Compress::RawDeflate>, L<IO::Uncompress::RawInflate>, L<IO::Compress::Bzip2>, L<IO::Uncompress::Bunzip2>, L<IO::Compress::Lzma>, L<IO::Uncompress::UnLzma>, L<IO::Compress::Xz>, L<IO::Uncompress::UnXz>, L<IO::Compress::Lzop>, L<IO::Uncompress::UnLzop>, L<IO::Compress::Lzf>, L<IO::Uncompress::UnLzf>, L<IO::Uncompress::AnyInflate>, L<IO::Uncompress::AnyUncompress>
 
-L<Compress::Zlib::FAQ|Compress::Zlib::FAQ>
+L<IO::Compress::FAQ|IO::Compress::FAQ>
 
 L<File::GlobMapper|File::GlobMapper>, L<Archive::Zip|Archive::Zip>,
 L<Archive::Tar|Archive::Tar>,
@@ -1422,7 +1592,7 @@ See the Changes file.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2005-2011 Paul Marquess. All rights reserved.
+Copyright (c) 2005-2013 Paul Marquess. All rights reserved.
 
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.

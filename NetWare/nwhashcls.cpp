@@ -1,5 +1,5 @@
 /*
- * Copyright © 2001 Novell, Inc. All Rights Reserved.
+ * Copyright Â© 2001 Novell, Inc. All Rights Reserved.
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Artistic License, as specified in the README file.
@@ -97,7 +97,7 @@ NWPerlHashList::remove(void *ldata)
 }
 
 
-void NWPerlHashList::forAll( register void (*user_fn)(void *, void*), void *data ) const 
+void NWPerlHashList::forAll( void (*user_fn)(void *, void*), void *data ) const
 {
 
 	for(int i=0; i<BUCKET_SIZE; i++) 
@@ -210,7 +210,7 @@ NWPerlKeyHashList::remove(void *key)
 }
 
 
-void NWPerlKeyHashList::forAll( register void (*user_fn)(void *, void*), void *data ) const 
+void NWPerlKeyHashList::forAll( void (*user_fn)(void *, void*), void *data ) const
 {
 
 	for(int i=0; i<BUCKET_SIZE; i++) 

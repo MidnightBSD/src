@@ -12,7 +12,7 @@ use strict;
 
 ## These "variables" are used as local "glob aliases" for performance
 use vars qw($VERSION @ISA %myData %myOpts @input_stack);
-$VERSION = '1.37';  ## Current version of this package
+$VERSION = '1.60';  ## Current version of this package
 require  5.005;    ## requires this Perl version or later
 
 #############################################################################
@@ -89,6 +89,10 @@ performing the actual translation of text.
 B<Pod::Parser> parses PODs, and makes method calls to handle the various
 components of the POD. Subclasses of B<Pod::Parser> override these methods
 to translate the POD into whatever output format they desire.
+
+Note: This module is considered as legacy; modern Perl releases (5.18 and
+higher) are going to remove Pod::Parser from core and use L<Pod::Simple>
+for all things POD.
 
 =head1 QUICK OVERVIEW
 
@@ -778,11 +782,11 @@ sub parse_text {
     ## Iterate over all sequence starts text (NOTE: split with
     ## capturing parens keeps the delimiters)
     $_ = $text;
-    my @tokens = split /([A-Z]<(?:<+\s)?)/;
+    my @tokens = split /([A-Z]<(?:<+(?:\r?\n|[ \t]))?)/;
     while ( @tokens ) {
         $_ = shift @tokens;
         ## Look for the beginning of a sequence
-        if ( /^([A-Z])(<(?:<+\s)?)$/ ) {
+        if ( /^([A-Z])(<(?:<+(?:\r?\n|[ \t]))?)$/ ) {
             ## Push a new sequence onto the stack of those "in-progress"
             my $ldelim_orig;
             ($cmd, $ldelim_orig) = ($1, $2);
@@ -840,7 +844,7 @@ sub parse_text {
             $seq->append($expand_text ? &$xtext_sub($self,$_,$seq) : $_);
         }
         ## Keep track of line count
-        $line += s/\r*\n//;
+        $line += /\n/;
         ## Remember the "current" sequence
         $seq = $seq_stack[-1];
     }
@@ -963,6 +967,8 @@ sub parse_paragraph {
         $pfx = $1;
         $_ = substr($text, length $pfx);
         ($cmd, $sep, $text) = split /(\s+)/, $_, 2;
+        $sep = '' unless defined $sep;
+        $text = '' unless defined $text;
         ## If this is a "cut" directive then we dont need to do anything
         ## except return to "cutting" mode.
         if ($cmd eq 'cut') {
@@ -1016,7 +1022,8 @@ sub parse_paragraph {
     }
 
     # Update the whitespace for the next time around
-    $myData{_WHITESPACE} = $text =~ /^[^\S\r\n]+\Z/m ? 1 : 0;
+    #$myData{_WHITESPACE} = $text =~ /^[^\S\r\n]+\Z/m ? 1 : 0;
+    $myData{_WHITESPACE} = $text =~ /^[^\S\r\n]+\r*\Z/m ? 1 : 0;
 
     return  1;
 }
@@ -1096,7 +1103,7 @@ sub parse_from_filehandle {
 
         ## See if this line is blank and ends the current paragraph.
         ## If it isnt, then keep iterating until it is.
-        next unless (($textline =~ /^([^\S\r\n]*)[\r\n]*$/)
+        next unless (($textline =~ /^[^\S\r\n]*[\r\n]*$/)
                                      && (length $paragraph));
 
         ## Now process the paragraph

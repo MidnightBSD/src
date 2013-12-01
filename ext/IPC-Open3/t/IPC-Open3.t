@@ -3,8 +3,8 @@
 BEGIN {
     require Config; import Config;
     if (!$Config{'d_fork'}
-       # open2/3 supported on win32 (but not Borland due to CRT bugs)
-       && (($^O ne 'MSWin32' && $^O ne 'NetWare') || $Config{'cc'} =~ /^bcc/i))
+       # open2/3 supported on win32
+       && $^O ne 'MSWin32' && $^O ne 'NetWare')
     {
 	print "1..0\n";
 	exit 0;
@@ -14,7 +14,7 @@ BEGIN {
 }
 
 use strict;
-use Test::More tests => 23;
+use Test::More tests => 37;
 
 use IO::Handle;
 use IPC::Open3;
@@ -96,6 +96,16 @@ $pid = open3 'WRITE', '>&STDOUT', 'ERROR',
 print WRITE "ok $test\n";
 waitpid $pid, 0;
 
+{
+    package YAAH;
+    $pid = IPC::Open3::open3('QWACK_WAAK_WAAK', '>&STDOUT', 'ERROR',
+			     $perl, '-e', main::cmd_line('print scalar <STDIN>'));
+    ++$test;
+    no warnings 'once';
+    print QWACK_WAAK_WAAK "ok $test # filenames qualified to their package\n";
+    waitpid $pid, 0;
+}
+
 # dup error:  This particular case, duping stderr onto the existing
 # stdout but putting stdout somewhere else, is a good case because it
 # used not to work.
@@ -105,35 +115,25 @@ $pid = open3 'WRITE', 'READ', '>&STDOUT',
 print WRITE "ok $test\n";
 waitpid $pid, 0;
 
-# dup reader and error together, both named
-$pid = open3 'WRITE', '>&STDOUT', '>&STDOUT', $perl, '-e', cmd_line(<<'EOF');
+foreach (['>&STDOUT', 'both named'],
+	 ['', 'error empty'],
+	) {
+    my ($err, $desc) = @$_;
+    $pid = open3 'WRITE', '>&STDOUT', $err, $perl, '-e', cmd_line(<<'EOF');
     $| = 1;
     print STDOUT scalar <STDIN>;
     print STDERR scalar <STDIN>;
 EOF
-++$test;
-print WRITE "ok $test\n";
-++$test;
-print WRITE "ok $test\n";
-waitpid $pid, 0;
-
-# dup reader and error together, error empty
-$pid = open3 'WRITE', '>&STDOUT', '', $perl, '-e', cmd_line(<<'EOF');
-    $| = 1;
-    print STDOUT scalar <STDIN>;
-    print STDERR scalar <STDIN>;
-EOF
-++$test;
-print WRITE "ok $test\n";
-++$test;
-print WRITE "ok $test\n";
-waitpid $pid, 0;
+    printf WRITE "ok %d # dup reader and error together, $desc\n", ++$test
+	for 0, 1;
+    waitpid $pid, 0;
+}
 
 # command line in single parameter variant of open3
 # for understanding of Config{'sh'} test see exec description in camel book
 my $cmd = 'print(scalar(<STDIN>))';
 $cmd = $Config{'sh'} =~ /sh/ ? "'$cmd'" : cmd_line($cmd);
-eval{$pid = open3 'WRITE', '>&STDOUT', 'ERROR', "$perl -e " . $cmd; };
+$pid = eval { open3 'WRITE', '>&STDOUT', 'ERROR', "$perl -e " . $cmd; };
 if ($@) {
 	print "error $@\n";
 	++$test;
@@ -147,13 +147,38 @@ else {
 $TB->current_test($test);
 
 # RT 72016
-eval{$pid = open3 'WRITE', 'READ', 'ERROR', '/non/existent/program'; };
-if (IPC::Open3::DO_SPAWN) {
-    if ($@) {
-	cmp_ok(waitpid($pid, 0), '>', 0);
+{
+    local $::TODO = "$^O returns a pid and doesn't throw an exception"
+	if $^O eq 'MSWin32';
+    $pid = eval { open3 'WRITE', 'READ', 'ERROR', '/non/existent/program'; };
+    isnt($@, '',
+	 'open3 of a non existent program fails with an exception in the parent')
+	or do {waitpid $pid, 0};
+}
+
+$pid = eval { open3 'WRITE', '', 'ERROR', '/non/existent/program'; };
+like($@, qr/^open3: Modification of a read-only value attempted at /,
+     'open3 faults read-only parameters correctly') or do {waitpid $pid, 0};
+
+foreach my $handle (qw (DUMMY STDIN STDOUT STDERR)) {
+    local $::{$handle};
+    my $out = IO::Handle->new();
+    my $pid = eval {
+	local $SIG{__WARN__} = sub {
+	    open my $fh, '>/dev/tty';
+	    return if "@_" =~ m!^Use of uninitialized value \$fd.*IO/Handle\.pm!;
+	    print $fh "@_";
+	    die @_
+	};
+	open3 undef, $out, undef, $perl, '-le', "print q _# ${handle}_"
+    };
+    is($@, '', "No errors with localised $handle");
+    cmp_ok($pid, '>', 0, "Got a pid with localised $handle");
+    if ($handle eq 'STDOUT') {
+	is(<$out>, undef, "Expected no output with localised $handle");
     } else {
-	pass();
+	like(<$out>, qr/\A# $handle\r?\n\z/,
+	     "Expected output with localised $handle");
     }
-} else {
-    isnt($@, '') or do {waitpid $pid, 0};
+    waitpid $pid, 0;
 }

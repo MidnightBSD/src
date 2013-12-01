@@ -24,8 +24,11 @@
  * ADDRCONSTEXT,NEEDCONSTEXT: initialization of data with non-constant values
  *                            (e.g. pointer fields of descriptors)
  */
-#if defined(__DECC) || defined(__DECCXX)
+#ifdef __DECC
 #  pragma message disable (ADDRCONSTEXT,NEEDCONSTEXT)
+#endif
+#ifdef __DECCXX
+#  pragma message informational (INTSIGNCHANGE,CASTQUALTYP,ASSCOMMEA,NOCTOBUTCONREFM)
 #endif
 
 /* DEC's C compilers and gcc use incompatible definitions of _to(upp|low)er() */
@@ -37,14 +40,6 @@
 #  undef _tolower
 #endif
 #define _tolower(c) (((c) < 'A' || (c) > 'Z') ? (c) : (c) | 040)
-/* DECC 1.3 has a funny definition of abs; it's fixed in DECC 4.0, so this
- * can go away once DECC 1.3 isn't in use any more. */
-#if defined(__ALPHA) && (defined(__DECC) || defined(__DECCXX))
-#undef abs
-#define abs(__x)        __ABS(__x)
-#undef labs
-#define labs(__x)        __LABS(__x)
-#endif /* __ALPHA && __DECC */
 
 /* Assorted things to look like Unix */
 #ifdef __GNUC__
@@ -93,18 +88,8 @@
 #define HAS_GETENV_SV
 #define HAS_GETENV_LEN
 
-/* All this stiff is for the x2P programs. Hopefully they'll still work */
-#if defined(PERL_FOR_X2P)
-#ifndef aTHX_
-#define aTHX_
-#endif
-#ifndef pTHX_
-#define pTHX_
-#endif
-#ifndef pTHX
-#define pTHX
-#endif
-#endif
+
+#ifndef PERL_FOR_X2P
 
 #ifndef DONT_MASK_RTL_CALLS
 #  ifdef getenv
@@ -229,6 +214,7 @@
 #define vms_realpath(a,b,c)		Perl_vms_realpath(aTHX_ a,b,c)
 #define vmssetenv(a,b,c)		Perl_vmssetenv(aTHX_ a,b,c)
 #define vmstrnenv(a,b,c,d,e)		Perl_vmstrnenv(a,b,c,d,e)
+#define vmssetuserlnm(a,b)		Perl_vmssetuserlnm(a,b)
 
 /* Delete if at all possible, changing protections if necessary. */
 #define unlink(a) kill_file(a)
@@ -252,6 +238,7 @@
  */
 #ifndef DONT_MASK_RTL_CALLS
 #  define tmpfile Perl_my_tmpfile
+#endif
 #endif
 
 
@@ -278,16 +265,6 @@
  *	shebang sequence that might be legal Perl code.)
  */
 #define ALTERNATE_SHEBANG "$"
-
-/* Lower case entry points for these are missing in some earlier RTLs 
- * so we borrow the defines and declares from errno.h and upcase them.
- */
-#if defined(VMS_WE_ARE_CASE_SENSITIVE) && (__DECC_VER < 50500000)
-#  define errno      (*CMA$TIS_ERRNO_GET_ADDR())
-#  define vaxc$errno (*CMA$TIS_VMSERRNO_GET_ADDR())
-   int *CMA$TIS_ERRNO_GET_ADDR     (void);   /* UNIX style error code        */
-   int *CMA$TIS_VMSERRNO_GET_ADDR  (void);   /* VMS error (errno == EVMSERR) */
-#endif
 
 /* Macros to set errno using the VAX thread-safe calls, if present */
 #if (defined(__DECC) || defined(__DECCXX)) && !defined(__ALPHA)
@@ -333,7 +310,7 @@ struct interp_intern {
 #define PERL__TRNENV_JOIN_SEARCHLIST 0x02
 
 /* Handy way to vet calls to VMS system services and RTL routines. */
-#define _ckvmssts(call) STMT_START { register unsigned long int __ckvms_sts; \
+#define _ckvmssts(call) STMT_START { unsigned long int __ckvms_sts; \
   if (!((__ckvms_sts=(call))&1)) { \
   set_errno(EVMSERR); set_vaxc_errno(__ckvms_sts); \
   Perl_croak(aTHX_ "Fatal VMS error (status=%d) at %s, line %d", \
@@ -341,23 +318,18 @@ struct interp_intern {
 
 /* Same thing, but don't call back to Perl's croak(); useful for errors
  * occurring during startup, before Perl's state is initialized */
-#define _ckvmssts_noperl(call) STMT_START { register unsigned long int __ckvms_sts; \
+#define _ckvmssts_noperl(call) STMT_START { unsigned long int __ckvms_sts; \
   if (!((__ckvms_sts=(call))&1)) { \
   set_errno(EVMSERR); set_vaxc_errno(__ckvms_sts); \
-  fprintf(stderr,"Fatal VMS error (status=%d) at %s, line %d", \
-  __ckvms_sts,__FILE__,__LINE__); lib$signal(__ckvms_sts); } } STMT_END
+  (void)fprintf(stderr,"Fatal VMS error (status=%d) at %s, line %d", \
+  __ckvms_sts,__FILE__,__LINE__); (void)lib$signal(__ckvms_sts); } } STMT_END
 
 #ifdef VMS_DO_SOCKETS
-#include "sockadapt.h"
 #define PERL_SOCK_SYSREAD_IS_RECV
 #define PERL_SOCK_SYSWRITE_IS_SEND
 #endif
 
-#if __CRTL_VER < 70000000
-#define BIT_BUCKET "_NLA0:"
-#else
 #define BIT_BUCKET "/dev/null"
-#endif
 #define PERL_SYS_INIT_BODY(c,v)	MALLOC_CHECK_TAINT2(*c,*v) vms_image_init((c),(v)); PERLIO_INIT; MALLOC_INIT
 #define PERL_SYS_TERM_BODY()		HINTS_REFCNT_TERM; OP_REFCNT_TERM; PERLIO_TERM; MALLOC_TERM
 #define dXSUB_SYS
@@ -388,11 +360,7 @@ struct interp_intern {
  *	This symbol, if defined, indicates that the ioctl() routine is
  *	available to set I/O characteristics
  */
-#if defined(__CRTL_VER) && __CRTL_VER >= 70000000
 #define	HAS_IOCTL		/**/
-#else
-#undef	HAS_IOCTL		/**/
-#endif
  
 /* HAS_UTIME:
  *	This symbol, if defined, indicates that the routine utime() is
@@ -530,46 +498,12 @@ struct utimbuf {
 #define localtime(t) my_localtime(t)
 #define time(t) my_time(t)
 
-/* If we're using an older version of VMS whose Unix signal emulation
- * isn't very POSIXish, then roll our own.
- */
-#if __VMS_VER < 70000000 || __DECC_VER < 50200000
-#  define HOMEGROWN_POSIX_SIGNALS
-#endif
-#ifdef HOMEGROWN_POSIX_SIGNALS
-#  define sigemptyset(t) my_sigemptyset(t)
-#  define sigfillset(t) my_sigfillset(t)
-#  define sigaddset(t, u) my_sigaddset(t, u)
-#  define sigdelset(t, u) my_sigdelset(t, u)
-#  define sigismember(t, u) my_sigismember(t, u)
-#  define sigprocmask(t, u, v) my_sigprocmask(t, u, v)
-#  ifndef _SIGSET_T
-   typedef int sigset_t;
-#  endif
-   /* The tools for sigprocmask() are there, just not the routine itself */
-#  ifndef SIG_UNBLOCK
-#    define SIG_UNBLOCK 1
-#  endif
-#  ifndef SIG_BLOCK
-#    define SIG_BLOCK 2
-#  endif
-#  ifndef SIG_SETMASK
-#    define SIG_SETMASK 3
-#  endif
-#  define sigaction sigvec
-#  define sa_flags sv_onstack
-#  define sa_handler sv_handler
-#  define sa_mask sv_mask
-#  define sigsuspend(set) sigpause(*set)
-#  define sigpending(a) (not_here("sigpending"),0)
-#else
 /*
  * The C RTL's sigaction fails to check for invalid signal numbers so we 
  * help it out a bit.
  */
-#  ifndef DONT_MASK_RTL_CALLS
+#ifndef DONT_MASK_RTL_CALLS
 #    define sigaction(a,b,c) Perl_my_sigaction(aTHX_ a,b,c)
-#  endif
 #endif
 #ifdef KILL_BY_SIGPRC
 #  define kill  Perl_my_kill
@@ -732,24 +666,6 @@ struct mystat
 #  pragma __member_alignment __restore
 #endif
 
-/*
- * DEC C previous to 6.0 corrupts the behavior of the /prefix
- * qualifier with the extern prefix pragma.  This provisional
- * hack circumvents this prefix pragma problem in previous 
- * precompilers.
- */
-#if defined(__VMS_VER) && __VMS_VER >= 70000000
-#  if defined(VMS_WE_ARE_CASE_SENSITIVE) && (__DECC_VER < 60000000)
-#    pragma __extern_prefix save
-#    pragma __extern_prefix ""  /* set to empty to prevent prefixing */
-#    define geteuid decc$__unix_geteuid
-#    define getuid decc$__unix_getuid
-#    define stat(__p1,__p2)   decc$__utc_stat(__p1,__p2)
-#    define fstat(__p1,__p2)  decc$__utc_fstat(__p1,__p2)
-#    pragma __extern_prefix restore
-#  endif
-#endif
-
 #ifndef DONT_MASK_RTL_CALLS  /* defined for vms.c so we can see RTL calls */
 #  ifdef stat
 #    undef stat
@@ -764,41 +680,20 @@ struct mystat
 #define S_IDOTH (S_IWOTH | S_IXOTH)
 
 
+#ifndef PERL_FOR_X2P
 /* Prototypes for functions unique to vms.c.  Don't include replacements
  * for routines in the mainline source files excluded by #ifndef VMS;
  * their prototypes are already in proto.h.
- *
- * In order to keep Gen_ShrFls.Pl happy, functions which are to be made
- * available to images linked to PerlShr.Exe must be declared between the
- * __VMS_PROTOTYPES__ and __VMS_SEPYTOTORP__ lines, and must be in the form
- *    <data type><TAB>name<WHITESPACE>(<prototype args>);
  */
 
-#ifdef NO_PERL_TYPEDEFS
-  /* We don't have Perl typedefs available (e.g. when building a2p), so
-     we fake them here.  N.B.  There is *no* guarantee that the faked
-     prototypes will actually match the real routines.  If you want to
-     call Perl routines, include perl.h to get the real typedefs.  */
-#  ifndef bool
-#    define bool int
-#    define __MY_BOOL_TYPE_FAKE
-#  endif
-#  ifndef I32
-#    define I32  int
-#    define __MY_I32_TYPE_FAKE
-#  endif
-#  ifndef SV
-#    define SV   void   /* Since we only see SV * in prototypes */
-#    define __MY_SV_TYPE_FAKE
-#  endif
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 void	prime_env_iter (void);
 void	init_os_extras (void);
 int	Perl_vms_status_to_unix(int vms_status, int child_flag);
 int	Perl_unix_status_to_vms(int unix_status);
-/* prototype section start marker; `typedef' passes through cpp */
-typedef char  __VMS_PROTOTYPES__;
 int	Perl_vmstrnenv (const char *, char *, unsigned long int, struct dsc$descriptor_s **, unsigned long int);
 char *	Perl_vms_realpath (pTHX_ const char *, char *, int *);
 char *	Perl_my_getenv (pTHX_ const char *, bool);
@@ -841,7 +736,7 @@ bool	Perl_vms_do_aexec (pTHX_ SV *, SV **, SV **);
 int	Perl_vms_case_tolerant(void);
 char *	Perl_my_getenv_len (pTHX_ const char *, unsigned long *, bool);
 int	Perl_vmssetenv (pTHX_ const char *, const char *, struct dsc$descriptor_s **);
-void	Perl_vmssetuserlnm(pTHX_ const char *name, const char *eqv);
+void	Perl_vmssetuserlnm(const char *name, const char *eqv);
 char *	Perl_my_crypt (pTHX_ const char *, const char *);
 Pid_t	Perl_my_waitpid (pTHX_ Pid_t, int *, int);
 char *	my_gconvert (double, int, int, char *);
@@ -849,9 +744,7 @@ int	Perl_kill_file (pTHX_ const char *);
 int	Perl_my_chdir (pTHX_ const char *);
 int	Perl_my_chmod(pTHX_ const char *, mode_t);
 FILE *	Perl_my_tmpfile (void);
-#ifndef HOMEGROWN_POSIX_SIGNALS
 int	Perl_my_sigaction (pTHX_ int, const struct sigaction*, struct sigaction*);
-#endif
 #ifdef KILL_BY_SIGPRC
 unsigned int	Perl_sig_to_vmscondition (int);
 int	Perl_my_kill (int, int);
@@ -868,14 +761,6 @@ void	vmsreaddirversions (DIR *, int);
 struct tm *	Perl_my_gmtime (pTHX_ const time_t *);
 struct tm *	Perl_my_localtime (pTHX_ const time_t *);
 time_t	Perl_my_time (pTHX_ time_t *);
-#ifdef HOMEGROWN_POSIX_SIGNALS
-int     my_sigemptyset (sigset_t *);
-int     my_sigfillset  (sigset_t *);
-int     my_sigaddset   (sigset_t *, int);
-int     my_sigdelset   (sigset_t *, int);
-int     my_sigismember (sigset_t *, int);
-int     my_sigprocmask (int, sigset_t *, sigset_t *);
-#endif
 I32	Perl_cando_by_name (pTHX_ I32, bool, const char *);
 int	Perl_flex_fstat (pTHX_ int, Stat_t *);
 int	Perl_flex_lstat (pTHX_ const char *, Stat_t *);
@@ -894,22 +779,11 @@ struct passwd *	Perl_my_getpwnam (pTHX_ const char *name);
 struct passwd *	Perl_my_getpwuid (pTHX_ Uid_t uid);
 void	Perl_my_endpwent (pTHX);
 char *	my_getlogin (void);
-typedef char __VMS_SEPYTOTORP__;
-/* prototype section end marker; `typedef' passes through cpp */
 
-#ifdef NO_PERL_TYPEDEFS  /* We'll try not to scramble later files */
-#  ifdef __MY_BOOL_TYPE_FAKE
-#    undef bool
-#    undef __MY_BOOL_TYPE_FAKE
-#  endif
-#  ifdef __MY_I32_TYPE_FAKE
-#    undef I32
-#    undef __MY_I32_TYPE_FAKE
-#  endif
-#  ifdef __MY_SV_TYPE_FAKE
-#    undef SV
-#    undef __MY_SV_TYPE_FAKE
-#  endif
+#ifdef __cplusplus
+}
+#endif
+
 #endif
 
 #ifndef VMS_DO_SOCKETS

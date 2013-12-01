@@ -78,7 +78,7 @@ bool sv_setsv_cow_hashkey_notcore(void);
 /* A routine to test hv_delayfree_ent
    (which itself is tested by testing on hv_free_ent  */
 
-typedef void (freeent_function)(pTHX_ HV *, register HE *);
+typedef void (freeent_function)(pTHX_ HV *, HE *);
 
 void
 test_freeent(freeent_function *f) {
@@ -148,7 +148,7 @@ bitflip_key(pTHX_ IV action, SV *field) {
 		const char *const end = p + len;
 		while (p < end) {
 		    STRLEN len;
-		    UV chr = utf8_to_uvuni((U8 *)p, &len);
+		    UV chr = utf8_to_uvuni_buf((U8 *)p, (U8 *) end, &len);
 		    new_p = (char *)uvuni_to_utf8((U8 *)new_p, chr ^ 32);
 		    p += len;
 		}
@@ -587,6 +587,58 @@ THX_ck_entersub_postinc(pTHX_ OP *entersubop, GV *namegv, SV *ckobj)
 	op_lvalue(op_contextualize(argop, G_SCALAR), OP_POSTINC));
 }
 
+STATIC OP *
+THX_ck_entersub_pad_scalar(pTHX_ OP *entersubop, GV *namegv, SV *ckobj)
+{
+    OP *pushop, *argop;
+    PADOFFSET padoff = NOT_IN_PAD;
+    SV *a0, *a1;
+    ck_entersub_args_proto(entersubop, namegv, ckobj);
+    pushop = cUNOPx(entersubop)->op_first;
+    if(!pushop->op_sibling) pushop = cUNOPx(pushop)->op_first;
+    argop = pushop->op_sibling;
+    if(argop->op_type != OP_CONST || argop->op_sibling->op_type != OP_CONST)
+	croak("bad argument expression type for pad_scalar()");
+    a0 = cSVOPx_sv(argop);
+    a1 = cSVOPx_sv(argop->op_sibling);
+    switch(SvIV(a0)) {
+	case 1: {
+	    SV *namesv = sv_2mortal(newSVpvs("$"));
+	    sv_catsv(namesv, a1);
+	    padoff = pad_findmy_sv(namesv, 0);
+	} break;
+	case 2: {
+	    char *namepv;
+	    STRLEN namelen;
+	    SV *namesv = sv_2mortal(newSVpvs("$"));
+	    sv_catsv(namesv, a1);
+	    namepv = SvPV(namesv, namelen);
+	    padoff = pad_findmy_pvn(namepv, namelen, SvUTF8(namesv));
+	} break;
+	case 3: {
+	    char *namepv;
+	    SV *namesv = sv_2mortal(newSVpvs("$"));
+	    sv_catsv(namesv, a1);
+	    namepv = SvPV_nolen(namesv);
+	    padoff = pad_findmy_pv(namepv, SvUTF8(namesv));
+	} break;
+	case 4: {
+	    padoff = pad_findmy_pvs("$foo", 0);
+	} break;
+	default: croak("bad type value for pad_scalar()");
+    }
+    op_free(entersubop);
+    if(padoff == NOT_IN_PAD) {
+	return newSVOP(OP_CONST, 0, newSVpvs("NOT_IN_PAD"));
+    } else if(PAD_COMPNAME_FLAGS_isOUR(padoff)) {
+	return newSVOP(OP_CONST, 0, newSVpvs("NOT_MY"));
+    } else {
+	OP *padop = newOP(OP_PADSV, 0);
+	padop->op_targ = padoff;
+	return padop;
+    }
+}
+
 /** RPN keyword parser **/
 
 #define sv_is_glob(sv) (SvTYPE(sv) == SVt_PVGV)
@@ -627,11 +679,7 @@ static OP *THX_parse_var(pTHX)
     }
     if(s-start < 2) croak("RPN syntax error");
     lex_read_to(s);
-    {
-	/* because pad_findmy() doesn't really use length yet */
-	SV *namesv = sv_2mortal(newSVpvn(start, s-start));
-	varpos = pad_findmy(SvPVX(namesv), s-start, 0);
-    }
+    varpos = pad_findmy_pvn(start, s-start, 0);
     if(varpos == NOT_IN_PAD || PAD_COMPNAME_FLAGS_isOUR(varpos))
 	croak("RPN only supports \"my\" variables");
     padop = newOP(OP_PADSV, 0);
@@ -843,7 +891,9 @@ static OP *THX_parse_keyword_swaplabel(pTHX)
     OP *sop = parse_barestmt(0);
     SV *label = parse_label(PARSE_OPTIONAL);
     if (label) sv_2mortal(label);
-    return newSTATEOP(0, label ? savepv(SvPVX(label)) : NULL, sop);
+    return newSTATEOP(label ? SvUTF8(label) : 0,
+                      label ? savepv(SvPVX(label)) : NULL,
+                      sop);
 }
 
 #define parse_keyword_labelconst() THX_parse_keyword_labelconst(aTHX)
@@ -1015,10 +1065,64 @@ filter_call(pTHX_ int idx, SV *buf_sv, int maxlen)
     return SvCUR(buf_sv);
 }
 
+static AV *
+myget_linear_isa(pTHX_ HV *stash, U32 level) {
+    GV **gvp = (GV **)hv_fetchs(stash, "ISA", 0);
+    PERL_UNUSED_ARG(level);
+    return gvp && *gvp && GvAV(*gvp)
+	 ? GvAV(*gvp)
+	 : (AV *)sv_2mortal((SV *)newAV());
+}
 
-XS(XS_XS__APItest__XSUB_XS_VERSION_undef);
-XS(XS_XS__APItest__XSUB_XS_VERSION_empty);
-XS(XS_XS__APItest__XSUB_XS_APIVERSION_invalid);
+
+XS_EXTERNAL(XS_XS__APItest__XSUB_XS_VERSION_undef);
+XS_EXTERNAL(XS_XS__APItest__XSUB_XS_VERSION_empty);
+XS_EXTERNAL(XS_XS__APItest__XSUB_XS_APIVERSION_invalid);
+
+static struct mro_alg mymro;
+
+static Perl_check_t addissub_nxck_add;
+
+static OP *
+addissub_myck_add(pTHX_ OP *op)
+{
+    SV **flag_svp = hv_fetchs(GvHV(PL_hintgv), "XS::APItest/addissub", 0);
+    OP *aop, *bop;
+    U8 flags;
+    if (!(flag_svp && SvTRUE(*flag_svp) && (op->op_flags & OPf_KIDS) &&
+	    (aop = cBINOPx(op)->op_first) && (bop = aop->op_sibling) &&
+	    !bop->op_sibling))
+	return addissub_nxck_add(aTHX_ op);
+    aop->op_sibling = NULL;
+    cBINOPx(op)->op_first = NULL;
+    op->op_flags &= ~OPf_KIDS;
+    flags = op->op_flags;
+    op_free(op);
+    return newBINOP(OP_SUBTRACT, flags, aop, bop);
+}
+
+static Perl_check_t old_ck_rv2cv;
+
+static OP *
+my_ck_rv2cv(pTHX_ OP *o)
+{
+    SV *ref;
+    SV **flag_svp = hv_fetchs(GvHV(PL_hintgv), "XS::APItest/addunder", 0);
+    OP *aop;
+
+    if (flag_svp && SvTRUE(*flag_svp) && (o->op_flags & OPf_KIDS)
+     && (aop = cUNOPx(o)->op_first) && aop->op_type == OP_CONST
+     && aop->op_private & (OPpCONST_ENTERED|OPpCONST_BARE)
+     && (ref = cSVOPx(aop)->op_sv) && SvPOK(ref) && SvCUR(ref)
+     && *(SvEND(ref)-1) == 'o')
+    {
+	SvGROW(ref, SvCUR(ref)+2);
+	*SvEND(ref) = '_';
+	SvCUR(ref)++;
+	*SvEND(ref) = '\0';
+    }
+    return old_ck_rv2cv(aTHX_ o);
+}
 
 #include "const-c.inc"
 
@@ -1045,6 +1149,41 @@ bytes_cmp_utf8(bytes, utf8)
 	RETVAL = bytes_cmp_utf8(b, blen, u, ulen);
     OUTPUT:
 	RETVAL
+
+AV *
+test_utf8n_to_uvuni(s, len, flags)
+
+        SV *s
+        SV *len
+        SV *flags
+    PREINIT:
+        STRLEN retlen;
+        UV ret;
+        STRLEN slen;
+
+    CODE:
+        /* Call utf8n_to_uvuni() with the inputs.  It always asks for the
+         * actual length to be returned
+         *
+         * Length to assume <s> is; not checked, so could have buffer overflow
+         */
+        RETVAL = newAV();
+        sv_2mortal((SV*)RETVAL);
+
+        ret
+         = utf8n_to_uvuni((U8*) SvPV(s, slen), SvUV(len), &retlen, SvUV(flags));
+
+        /* Returns the return value in [0]; <retlen> in [1] */
+        av_push(RETVAL, newSVuv(ret));
+        if (retlen == (STRLEN) -1) {
+            av_push(RETVAL, newSViv(-1));
+        }
+        else {
+            av_push(RETVAL, newSVuv(retlen));
+        }
+
+    OUTPUT:
+        RETVAL
 
 MODULE = XS::APItest:Overload	PACKAGE = XS::APItest::Overload
 
@@ -1469,9 +1608,35 @@ void
 ptr_table_clear(table)
 XS::APItest::PtrTable table
 
+MODULE = XS::APItest::AutoLoader	PACKAGE = XS::APItest::AutoLoader
+
+SV *
+AUTOLOAD()
+    CODE:
+	RETVAL = newSVpvn_flags(SvPVX(cv), SvCUR(cv), SvUTF8(cv));
+    OUTPUT:
+	RETVAL
+
+SV *
+AUTOLOADp(...)
+    PROTOTYPE: *$
+    CODE:
+	RETVAL = newSVpvn_flags(SvPVX(cv), SvCUR(cv), SvUTF8(cv));
+    OUTPUT:
+	RETVAL
+
+
 MODULE = XS::APItest		PACKAGE = XS::APItest
 
 PROTOTYPES: DISABLE
+
+BOOT:
+    mymro.resolve = myget_linear_isa;
+    mymro.name    = "justisa";
+    mymro.length  = 7;
+    mymro.kflags  = 0;
+    mymro.hash    = 0;
+    Perl_mro_register(aTHX_ &mymro);
 
 HV *
 xop_custom_ops ()
@@ -1792,6 +1957,200 @@ call_method(methname, flags, ...)
 	PUSHs(sv_2mortal(newSViv(i)));
 
 void
+newCONSTSUB(stash, name, flags, sv)
+    HV* stash
+    SV* name
+    I32 flags
+    SV* sv
+    ALIAS:
+	newCONSTSUB_flags = 1
+    PREINIT:
+	CV* mycv;
+	STRLEN len;
+	const char *pv = SvPV(name, len);
+    PPCODE:
+        switch (ix) {
+           case 0:
+               mycv = newCONSTSUB(stash, pv, SvOK(sv) ? SvREFCNT_inc(sv) : NULL);
+               break;
+           case 1:
+               mycv = newCONSTSUB_flags(
+                 stash, pv, len, flags | SvUTF8(name), SvOK(sv) ? SvREFCNT_inc(sv) : NULL
+               );
+               break;
+        }
+        EXTEND(SP, 2);
+        PUSHs( CvCONST(mycv) ? &PL_sv_yes : &PL_sv_no );
+        PUSHs((SV*)CvGV(mycv));
+
+void
+gv_init_type(namesv, multi, flags, type)
+    SV* namesv
+    int multi
+    I32 flags
+    int type
+    PREINIT:
+        STRLEN len;
+        const char * const name = SvPV_const(namesv, len);
+        GV *gv = *(GV**)hv_fetch(PL_defstash, name, len, TRUE);
+    PPCODE:
+        if (SvTYPE(gv) == SVt_PVGV)
+            Perl_croak(aTHX_ "GV is already a PVGV");
+        if (multi) flags |= GV_ADDMULTI;
+        switch (type) {
+           case 0:
+	       gv_init(gv, PL_defstash, name, len, multi);
+               break;
+           case 1:
+               gv_init_sv(gv, PL_defstash, namesv, flags);
+               break;
+           case 2:
+               gv_init_pv(gv, PL_defstash, name, flags | SvUTF8(namesv));
+               break;
+           case 3:
+               gv_init_pvn(gv, PL_defstash, name, len, flags | SvUTF8(namesv));
+               break;
+        }
+	XPUSHs( gv ? (SV*)gv : &PL_sv_undef);
+
+void
+gv_fetchmeth_type(stash, methname, type, level, flags)
+    HV* stash
+    SV* methname
+    int type
+    I32 level
+    I32 flags
+    PREINIT:
+        STRLEN len;
+        const char * const name = SvPV_const(methname, len);
+	GV* gv;
+    PPCODE:
+        switch (type) {
+           case 0:
+	       gv = gv_fetchmeth(stash, name, len, level);
+               break;
+           case 1:
+               gv = gv_fetchmeth_sv(stash, methname, level, flags);
+               break;
+           case 2:
+               gv = gv_fetchmeth_pv(stash, name, level, flags | SvUTF8(methname));
+               break;
+           case 3:
+               gv = gv_fetchmeth_pvn(stash, name, len, level, flags | SvUTF8(methname));
+               break;
+        }
+	XPUSHs( gv ? MUTABLE_SV(gv) : &PL_sv_undef );
+
+void
+gv_fetchmeth_autoload_type(stash, methname, type, level, flags)
+    HV* stash
+    SV* methname
+    int type
+    I32 level
+    I32 flags
+    PREINIT:
+        STRLEN len;
+        const char * const name = SvPV_const(methname, len);
+	GV* gv;
+    PPCODE:
+        switch (type) {
+           case 0:
+	       gv = gv_fetchmeth_autoload(stash, name, len, level);
+               break;
+           case 1:
+               gv = gv_fetchmeth_sv_autoload(stash, methname, level, flags);
+               break;
+           case 2:
+               gv = gv_fetchmeth_pv_autoload(stash, name, level, flags | SvUTF8(methname));
+               break;
+           case 3:
+               gv = gv_fetchmeth_pvn_autoload(stash, name, len, level, flags | SvUTF8(methname));
+               break;
+        }
+	XPUSHs( gv ? MUTABLE_SV(gv) : &PL_sv_undef );
+
+void
+gv_fetchmethod_flags_type(stash, methname, type, flags)
+    HV* stash
+    SV* methname
+    int type
+    I32 flags
+    PREINIT:
+	GV* gv;
+    PPCODE:
+        switch (type) {
+           case 0:
+	       gv = gv_fetchmethod_flags(stash, SvPVX_const(methname), flags);
+               break;
+           case 1:
+               gv = gv_fetchmethod_sv_flags(stash, methname, flags);
+               break;
+           case 2:
+               gv = gv_fetchmethod_pv_flags(stash, SvPV_nolen(methname), flags | SvUTF8(methname));
+               break;
+           case 3: {
+               STRLEN len;
+               const char * const name = SvPV_const(methname, len);
+               gv = gv_fetchmethod_pvn_flags(stash, name, len, flags | SvUTF8(methname));
+               break;
+            }
+        }
+	XPUSHs( gv ? (SV*)gv : &PL_sv_undef);
+
+void
+gv_autoload_type(stash, methname, type, method)
+    HV* stash
+    SV* methname
+    int type
+    I32 method
+    PREINIT:
+        STRLEN len;
+        const char * const name = SvPV_const(methname, len);
+	GV* gv;
+	I32 flags = method ? GV_AUTOLOAD_ISMETHOD : 0;
+    PPCODE:
+        switch (type) {
+           case 0:
+	       gv = gv_autoload4(stash, name, len, method);
+               break;
+           case 1:
+               gv = gv_autoload_sv(stash, methname, flags);
+               break;
+           case 2:
+               gv = gv_autoload_pv(stash, name, flags | SvUTF8(methname));
+               break;
+           case 3:
+               gv = gv_autoload_pvn(stash, name, len, flags | SvUTF8(methname));
+               break;
+        }
+	XPUSHs( gv ? (SV*)gv : &PL_sv_undef);
+
+void
+whichsig_type(namesv, type)
+    SV* namesv
+    int type
+    PREINIT:
+        STRLEN len;
+        const char * const name = SvPV_const(namesv, len);
+        I32 i;
+    PPCODE:
+        switch (type) {
+           case 0:
+              i = whichsig(name);
+               break;
+           case 1:
+               i = whichsig_sv(namesv);
+               break;
+           case 2:
+               i = whichsig_pv(name);
+               break;
+           case 3:
+               i = whichsig_pvn(name, len);
+               break;
+        }
+        XPUSHs(sv_2mortal(newSViv(i)));
+
+void
 eval_sv(sv, flags)
     SV* sv
     I32 flags
@@ -1881,6 +2240,21 @@ sv_setsv_cow_hashkey_core()
 
 bool
 sv_setsv_cow_hashkey_notcore()
+
+void
+sv_set_deref(SV *sv, SV *sv2, int which)
+    CODE:
+    {
+	STRLEN len;
+	const char *pv = SvPV(sv2,len);
+	if (!SvROK(sv)) croak("Not a ref");
+	sv = SvRV(sv);
+	switch (which) {
+	    case 0: sv_setsv(sv,sv2); break;
+	    case 1: sv_setpv(sv,pv); break;
+	    case 2: sv_setpvn(sv,pv,len); break;
+	}
+    }
 
 void
 rmagical_cast(sv, type)
@@ -2348,6 +2722,28 @@ test_cophh()
 #undef msvpvs
 #undef msviv
 
+void
+test_coplabel()
+    PREINIT:
+        COP *cop;
+        const char *label;
+        STRLEN len;
+        U32 utf8;
+    CODE:
+        cop = &PL_compiling;
+        Perl_cop_store_label(aTHX_ cop, "foo", 3, 0);
+        label = Perl_cop_fetch_label(aTHX_ cop, &len, &utf8);
+        if (strcmp(label,"foo")) croak("fail # cop_fetch_label label");
+        if (len != 3) croak("fail # cop_fetch_label len");
+        if (utf8) croak("fail # cop_fetch_label utf8");
+        /* SMALL GERMAN UMLAUT A */
+        Perl_cop_store_label(aTHX_ cop, "fo\xc3\xa4", 4, SVf_UTF8);
+        label = Perl_cop_fetch_label(aTHX_ cop, &len, &utf8);
+        if (strcmp(label,"fo\xc3\xa4")) croak("fail # cop_fetch_label label");
+        if (len != 4) croak("fail # cop_fetch_label len");
+        if (!utf8) croak("fail # cop_fetch_label utf8");
+
+
 HV *
 example_cophh_2hv()
     PREINIT:
@@ -2682,6 +3078,62 @@ CODE:
     XSRETURN_UNDEF;
 }
 
+#ifdef USE_ITHREADS
+
+void
+clone_with_stack()
+CODE:
+{
+    PerlInterpreter *interp = aTHX; /* The original interpreter */
+    PerlInterpreter *interp_dup;    /* The duplicate interpreter */
+    int oldscope = 1; /* We are responsible for all scopes */
+
+    interp_dup = perl_clone(interp, CLONEf_COPY_STACKS | CLONEf_CLONE_HOST );
+
+    /* destroy old perl */
+    PERL_SET_CONTEXT(interp);
+
+    POPSTACK_TO(PL_mainstack);
+    dounwind(-1);
+    LEAVE_SCOPE(0);
+
+    while (interp->Iscopestack_ix > 1)
+        LEAVE;
+    FREETMPS;
+
+    perl_destruct(interp);
+    perl_free(interp);
+
+    /* switch to new perl */
+    PERL_SET_CONTEXT(interp_dup);
+
+    /* continue after 'clone_with_stack' */
+    if (interp_dup->Iop)
+	interp_dup->Iop = interp_dup->Iop->op_next;
+
+    /* run with new perl */
+    Perl_runops_standard(interp_dup);
+
+    /* We may have additional unclosed scopes if fork() was called
+     * from within a BEGIN block.  See perlfork.pod for more details.
+     * We cannot clean up these other scopes because they belong to a
+     * different interpreter, but we also cannot leave PL_scopestack_ix
+     * dangling because that can trigger an assertion in perl_destruct().
+     */
+    if (PL_scopestack_ix > oldscope) {
+        PL_scopestack[oldscope-1] = PL_scopestack[PL_scopestack_ix-1];
+        PL_scopestack_ix = oldscope;
+    }
+
+    perl_destruct(interp_dup);
+    perl_free(interp_dup);
+
+    /* call the real 'exit' not PerlProc_exit */
+#undef exit
+    exit(0);
+}
+
+#endif /* USE_ITHREDS */
 
 SV*
 take_svref(SVREF sv)
@@ -2781,6 +3233,255 @@ BOOT:
     cv_set_call_checker(asscv, THX_ck_entersub_postinc, (SV*)asscv);
 }
 
+SV *
+lv_temp_object()
+CODE:
+    RETVAL =
+	  sv_bless(
+	    newRV_noinc(newSV(0)),
+	    gv_stashpvs("XS::APItest::TempObj",GV_ADD)
+	  );             /* Package defined in test script */
+OUTPUT:
+    RETVAL
+
+void
+fill_hash_with_nulls(HV *hv)
+PREINIT:
+    UV i = 0;
+CODE:
+    for(; i < 1000; ++i) {
+	HE *entry = hv_fetch_ent(hv, sv_2mortal(newSVuv(i)), 1, 0);
+	SvREFCNT_dec(HeVAL(entry));
+	HeVAL(entry) = NULL;
+    }
+
+HV *
+newHVhv(HV *hv)
+CODE:
+    RETVAL = newHVhv(hv);
+OUTPUT:
+    RETVAL
+
+U32
+SvIsCOW(SV *sv)
+CODE:
+    RETVAL = SvIsCOW(sv);
+OUTPUT:
+    RETVAL
+
+void
+pad_scalar(...)
+PROTOTYPE: $$
+CODE:
+    PERL_UNUSED_VAR(items);
+    croak("pad_scalar called as a function");
+
+BOOT:
+{
+    CV *pscv = get_cv("XS::APItest::pad_scalar", 0);
+    cv_set_call_checker(pscv, THX_ck_entersub_pad_scalar, (SV*)pscv);
+}
+
+SV*
+fetch_pad_names( cv )
+CV* cv
+ PREINIT:
+  I32 i;
+  PADNAMELIST *pad_namelist;
+  AV *retav = newAV();
+ CODE:
+  pad_namelist = PadlistNAMES(CvPADLIST(cv));
+
+  for ( i = PadnamelistMAX(pad_namelist); i >= 0; i-- ) {
+    PADNAME* name = PadnamelistARRAY(pad_namelist)[i];
+
+    if (SvPOKp(name)) {
+        av_push(retav, newSVpadname(name));
+    }
+  }
+  RETVAL = newRV_noinc((SV*)retav);
+ OUTPUT:
+  RETVAL
+
+STRLEN
+underscore_length()
+PROTOTYPE:
+PREINIT:
+    SV *u;
+    U8 *pv;
+    STRLEN bytelen;
+CODE:
+    u = find_rundefsv();
+    pv = (U8*)SvPV(u, bytelen);
+    RETVAL = SvUTF8(u) ? utf8_length(pv, pv+bytelen) : bytelen;
+OUTPUT:
+    RETVAL
+
+void
+stringify(SV *sv)
+PREINIT:
+    const char *pv;
+CODE:
+    pv = SvPV_nolen(sv);
+
+SV *
+HvENAME(HV *hv)
+CODE:
+    RETVAL = hv && HvENAME(hv)
+	      ? newSVpvn_flags(
+		  HvENAME(hv),HvENAMELEN(hv),
+		  (HvENAMEUTF8(hv) ? SVf_UTF8 : 0)
+		)
+	      : NULL;
+OUTPUT:
+    RETVAL
+
+int
+xs_cmp(int a, int b)
+CODE:
+    /* Odd sorting (odd numbers first), to make sure we are actually
+       being called */
+    RETVAL = a % 2 != b % 2
+	       ? a % 2 ? -1 : 1
+	       : a < b ? -1 : a == b ? 0 : 1;
+OUTPUT:
+    RETVAL
+
+SV *
+xs_cmp_undef(SV *a, SV *b)
+CODE:
+    RETVAL = &PL_sv_undef;
+OUTPUT:
+    RETVAL
+
+char *
+SvPVbyte(SV *sv)
+CODE:
+    RETVAL = SvPVbyte_nolen(sv);
+OUTPUT:
+    RETVAL
+
+char *
+SvPVutf8(SV *sv)
+CODE:
+    RETVAL = SvPVutf8_nolen(sv);
+OUTPUT:
+    RETVAL
+
+void
+setup_addissub()
+CODE:
+    wrap_op_checker(OP_ADD, addissub_myck_add, &addissub_nxck_add);
+
+void
+setup_rv2cv_addunderbar()
+CODE:
+    wrap_op_checker(OP_RV2CV, my_ck_rv2cv, &old_ck_rv2cv);
+
+#ifdef USE_ITHREADS
+
+bool
+test_alloccopstash()
+CODE:
+    RETVAL = PL_stashpad[alloccopstash(PL_defstash)] == PL_defstash;
+OUTPUT:
+    RETVAL
+
+#endif
+
+bool
+test_newFOROP_without_slab()
+CODE:
+    {
+	const I32 floor = start_subparse(0,0);
+	CV * const cv = PL_compcv;
+	/* The slab allocator does not like CvROOT being set. */
+	CvROOT(PL_compcv) = (OP *)1;
+	op_free(newFOROP(0, 0, newOP(OP_PUSHMARK, 0), 0, 0));
+	CvROOT(PL_compcv) = NULL;
+	SvREFCNT_dec(PL_compcv);
+	LEAVE_SCOPE(floor);
+	/* If we have not crashed yet, then the test passes. */
+	RETVAL = TRUE;
+    }
+OUTPUT:
+    RETVAL
+
+ # provide access to CALLREGEXEC, except replace pointers within the
+ # string with offsets from the start of the string
+
+I32
+callregexec(SV *prog, STRLEN stringarg, STRLEN strend, I32 minend, SV *sv, U32 nosave)
+CODE:
+    {
+	STRLEN len;
+	char *strbeg;
+	if (SvROK(prog))
+	    prog = SvRV(prog);
+	strbeg = SvPV_force(sv, len);
+	RETVAL = CALLREGEXEC((REGEXP *)prog,
+			    strbeg + stringarg,
+			    strbeg + strend,
+			    strbeg,
+			    minend,
+			    sv,
+			    NULL, /* data */
+			    nosave);
+    }
+OUTPUT:
+    RETVAL
+
+void
+lexical_import(SV *name, CV *cv)
+    CODE:
+    {
+	PADLIST *pl;
+	PADOFFSET off;
+	if (!PL_compcv)
+	    Perl_croak(aTHX_
+		      "lexical_import can only be called at compile time");
+	pl = CvPADLIST(PL_compcv);
+	ENTER;
+	SAVESPTR(PL_comppad_name); PL_comppad_name = PadlistNAMES(pl);
+	SAVESPTR(PL_comppad);	   PL_comppad	   = PadlistARRAY(pl)[1];
+	SAVESPTR(PL_curpad);	   PL_curpad	   = PadARRAY(PL_comppad);
+	off = pad_add_name_sv(sv_2mortal(newSVpvf("&%"SVf,name)),
+			      padadd_STATE, 0, 0);
+	SvREFCNT_dec(PL_curpad[off]);
+	PL_curpad[off] = SvREFCNT_inc(cv);
+	LEAVE;
+    }
+
+SV *
+sv_mortalcopy(SV *sv)
+    CODE:
+	RETVAL = SvREFCNT_inc(sv_mortalcopy(sv));
+    OUTPUT:
+	RETVAL
+
+MODULE = XS::APItest PACKAGE = XS::APItest::AUTOLOADtest
+
+int
+AUTOLOAD(...)
+  INIT:
+    SV* comms;
+    SV* class_and_method;
+  CODE:
+    class_and_method = GvSV(CvGV(cv));
+    comms = get_sv("main::the_method", 1);
+    if (class_and_method == NULL) {
+      RETVAL = 1;
+    } else if (!SvOK(class_and_method)) {
+      RETVAL = 2;
+    } else if (!SvPOK(class_and_method)) {
+      RETVAL = 3;
+    } else {
+      sv_setsv(comms, class_and_method);
+      RETVAL = 0;
+    }
+  OUTPUT: RETVAL
+
+
 MODULE = XS::APItest		PACKAGE = XS::APItest::Magic
 
 PROTOTYPES: DISABLE
@@ -2808,3 +3509,937 @@ ALIAS:
     sv_unmagic_bar = 1
 CODE:
     sv_unmagicext(SvRV(sv), PERL_MAGIC_ext, ix ? &vtbl_bar : &vtbl_foo);
+
+UV
+test_get_vtbl()
+    PREINIT:
+	MGVTBL *have;
+	MGVTBL *want;
+    CODE:
+#define test_get_this_vtable(name) \
+	want = CAT2(&PL_vtbl_, name); \
+	have = get_vtbl(CAT2(want_vtbl_, name)); \
+	if (have != want) \
+	    croak("fail %p!=%p for get_vtbl(want_vtbl_" STRINGIFY(name) ") at " __FILE__ " line %d", have, want, __LINE__)
+
+	test_get_this_vtable(sv);
+	test_get_this_vtable(env);
+	test_get_this_vtable(envelem);
+	test_get_this_vtable(sigelem);
+	test_get_this_vtable(pack);
+	test_get_this_vtable(packelem);
+	test_get_this_vtable(dbline);
+	test_get_this_vtable(isa);
+	test_get_this_vtable(isaelem);
+	test_get_this_vtable(arylen);
+	test_get_this_vtable(mglob);
+	test_get_this_vtable(nkeys);
+	test_get_this_vtable(taint);
+	test_get_this_vtable(substr);
+	test_get_this_vtable(vec);
+	test_get_this_vtable(pos);
+	test_get_this_vtable(bm);
+	test_get_this_vtable(fm);
+	test_get_this_vtable(uvar);
+	test_get_this_vtable(defelem);
+	test_get_this_vtable(regexp);
+	test_get_this_vtable(regdata);
+	test_get_this_vtable(regdatum);
+#ifdef USE_LOCALE_COLLATE
+	test_get_this_vtable(collxfrm);
+#endif
+	test_get_this_vtable(backref);
+	test_get_this_vtable(utf8);
+
+	RETVAL = PTR2UV(get_vtbl(-1));
+    OUTPUT:
+	RETVAL
+
+bool
+test_isBLANK_uni(UV ord)
+    CODE:
+        RETVAL = isBLANK_uni(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isBLANK_LC_uvchr(UV ord)
+    CODE:
+        RETVAL = isBLANK_LC_uvchr(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isBLANK_A(UV ord)
+    CODE:
+        RETVAL = isBLANK_A(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isBLANK_L1(UV ord)
+    CODE:
+        RETVAL = isBLANK_L1(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isBLANK_LC(UV ord)
+    CODE:
+        RETVAL = isBLANK_LC(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isBLANK_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isBLANK_utf8(p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isBLANK_LC_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isBLANK_LC_utf8(p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isVERTWS_uni(UV ord)
+    CODE:
+        RETVAL = isVERTWS_uni(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isVERTWS_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isVERTWS_utf8(p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isUPPER_uni(UV ord)
+    CODE:
+        RETVAL = isUPPER_uni(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isUPPER_LC_uvchr(UV ord)
+    CODE:
+        RETVAL = isUPPER_LC_uvchr(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isUPPER_A(UV ord)
+    CODE:
+        RETVAL = isUPPER_A(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isUPPER_L1(UV ord)
+    CODE:
+        RETVAL = isUPPER_L1(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isUPPER_LC(UV ord)
+    CODE:
+        RETVAL = isUPPER_LC(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isUPPER_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isUPPER_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isUPPER_LC_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isUPPER_LC_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isLOWER_uni(UV ord)
+    CODE:
+        RETVAL = isLOWER_uni(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isLOWER_LC_uvchr(UV ord)
+    CODE:
+        RETVAL = isLOWER_LC_uvchr(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isLOWER_A(UV ord)
+    CODE:
+        RETVAL = isLOWER_A(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isLOWER_L1(UV ord)
+    CODE:
+        RETVAL = isLOWER_L1(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isLOWER_LC(UV ord)
+    CODE:
+        RETVAL = isLOWER_LC(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isLOWER_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isLOWER_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isLOWER_LC_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isLOWER_LC_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isALPHA_uni(UV ord)
+    CODE:
+        RETVAL = isALPHA_uni(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isALPHA_LC_uvchr(UV ord)
+    CODE:
+        RETVAL = isALPHA_LC_uvchr(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isALPHA_A(UV ord)
+    CODE:
+        RETVAL = isALPHA_A(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isALPHA_L1(UV ord)
+    CODE:
+        RETVAL = isALPHA_L1(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isALPHA_LC(UV ord)
+    CODE:
+        RETVAL = isALPHA_LC(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isALPHA_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isALPHA_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isALPHA_LC_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isALPHA_LC_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isWORDCHAR_uni(UV ord)
+    CODE:
+        RETVAL = isWORDCHAR_uni(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isWORDCHAR_LC_uvchr(UV ord)
+    CODE:
+        RETVAL = isWORDCHAR_LC_uvchr(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isWORDCHAR_A(UV ord)
+    CODE:
+        RETVAL = isWORDCHAR_A(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isWORDCHAR_L1(UV ord)
+    CODE:
+        RETVAL = isWORDCHAR_L1(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isWORDCHAR_LC(UV ord)
+    CODE:
+        RETVAL = isWORDCHAR_LC(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isWORDCHAR_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isWORDCHAR_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isWORDCHAR_LC_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isWORDCHAR_LC_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isALPHANUMERIC_uni(UV ord)
+    CODE:
+        RETVAL = isALPHANUMERIC_uni(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isALPHANUMERIC_LC_uvchr(UV ord)
+    CODE:
+        RETVAL = isALPHANUMERIC_LC_uvchr(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isALPHANUMERIC_A(UV ord)
+    CODE:
+        RETVAL = isALPHANUMERIC_A(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isALPHANUMERIC_L1(UV ord)
+    CODE:
+        RETVAL = isALPHANUMERIC_L1(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isALPHANUMERIC_LC(UV ord)
+    CODE:
+        RETVAL = isALPHANUMERIC_LC(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isALPHANUMERIC_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isALPHANUMERIC_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isALPHANUMERIC_LC_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isALPHANUMERIC_LC_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isALNUM_uni(UV ord)
+    CODE:
+        RETVAL = isALNUM_uni(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isALNUM_LC_uvchr(UV ord)
+    CODE:
+        RETVAL = isALNUM_LC_uvchr(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isALNUM_LC(UV ord)
+    CODE:
+        RETVAL = isALNUM_LC(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isALNUM_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isALNUM_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isALNUM_LC_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isALNUM_LC_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isDIGIT_uni(UV ord)
+    CODE:
+        RETVAL = isDIGIT_uni(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isDIGIT_LC_uvchr(UV ord)
+    CODE:
+        RETVAL = isDIGIT_LC_uvchr(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isDIGIT_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isDIGIT_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isDIGIT_LC_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isDIGIT_LC_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isDIGIT_A(UV ord)
+    CODE:
+        RETVAL = isDIGIT_A(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isDIGIT_L1(UV ord)
+    CODE:
+        RETVAL = isDIGIT_L1(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isDIGIT_LC(UV ord)
+    CODE:
+        RETVAL = isDIGIT_LC(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isIDFIRST_uni(UV ord)
+    CODE:
+        RETVAL = isIDFIRST_uni(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isIDFIRST_LC_uvchr(UV ord)
+    CODE:
+        RETVAL = isIDFIRST_LC_uvchr(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isIDFIRST_A(UV ord)
+    CODE:
+        RETVAL = isIDFIRST_A(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isIDFIRST_L1(UV ord)
+    CODE:
+        RETVAL = isIDFIRST_L1(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isIDFIRST_LC(UV ord)
+    CODE:
+        RETVAL = isIDFIRST_LC(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isIDFIRST_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isIDFIRST_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isIDFIRST_LC_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isIDFIRST_LC_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isIDCONT_uni(UV ord)
+    CODE:
+        RETVAL = isIDCONT_uni(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isIDCONT_LC_uvchr(UV ord)
+    CODE:
+        RETVAL = isIDCONT_LC_uvchr(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isIDCONT_A(UV ord)
+    CODE:
+        RETVAL = isIDCONT_A(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isIDCONT_L1(UV ord)
+    CODE:
+        RETVAL = isIDCONT_L1(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isIDCONT_LC(UV ord)
+    CODE:
+        RETVAL = isIDCONT_LC(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isIDCONT_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isIDCONT_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isIDCONT_LC_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isIDCONT_LC_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isSPACE_uni(UV ord)
+    CODE:
+        RETVAL = isSPACE_uni(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isSPACE_LC_uvchr(UV ord)
+    CODE:
+        RETVAL = isSPACE_LC_uvchr(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isSPACE_A(UV ord)
+    CODE:
+        RETVAL = isSPACE_A(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isSPACE_L1(UV ord)
+    CODE:
+        RETVAL = isSPACE_L1(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isSPACE_LC(UV ord)
+    CODE:
+        RETVAL = isSPACE_LC(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isSPACE_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isSPACE_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isSPACE_LC_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isSPACE_LC_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isASCII_uni(UV ord)
+    CODE:
+        RETVAL = isASCII_uni(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isASCII_LC_uvchr(UV ord)
+    CODE:
+        RETVAL = isASCII_LC_uvchr(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isASCII_A(UV ord)
+    CODE:
+        RETVAL = isASCII_A(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isASCII_L1(UV ord)
+    CODE:
+        RETVAL = isASCII_L1(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isASCII_LC(UV ord)
+    CODE:
+        RETVAL = isASCII_LC(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isASCII_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isASCII_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isASCII_LC_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isASCII_LC_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isCNTRL_uni(UV ord)
+    CODE:
+        RETVAL = isCNTRL_uni(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isCNTRL_LC_uvchr(UV ord)
+    CODE:
+        RETVAL = isCNTRL_LC_uvchr(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isCNTRL_A(UV ord)
+    CODE:
+        RETVAL = isCNTRL_A(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isCNTRL_L1(UV ord)
+    CODE:
+        RETVAL = isCNTRL_L1(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isCNTRL_LC(UV ord)
+    CODE:
+        RETVAL = isCNTRL_LC(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isCNTRL_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isCNTRL_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isCNTRL_LC_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isCNTRL_LC_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isPRINT_uni(UV ord)
+    CODE:
+        RETVAL = isPRINT_uni(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isPRINT_LC_uvchr(UV ord)
+    CODE:
+        RETVAL = isPRINT_LC_uvchr(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isPRINT_A(UV ord)
+    CODE:
+        RETVAL = isPRINT_A(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isPRINT_L1(UV ord)
+    CODE:
+        RETVAL = isPRINT_L1(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isPRINT_LC(UV ord)
+    CODE:
+        RETVAL = isPRINT_LC(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isPRINT_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isPRINT_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isPRINT_LC_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isPRINT_LC_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isGRAPH_uni(UV ord)
+    CODE:
+        RETVAL = isGRAPH_uni(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isGRAPH_LC_uvchr(UV ord)
+    CODE:
+        RETVAL = isGRAPH_LC_uvchr(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isGRAPH_A(UV ord)
+    CODE:
+        RETVAL = isGRAPH_A(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isGRAPH_L1(UV ord)
+    CODE:
+        RETVAL = isGRAPH_L1(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isGRAPH_LC(UV ord)
+    CODE:
+        RETVAL = isGRAPH_LC(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isGRAPH_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isGRAPH_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isGRAPH_LC_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isGRAPH_LC_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isPUNCT_uni(UV ord)
+    CODE:
+        RETVAL = isPUNCT_uni(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isPUNCT_LC_uvchr(UV ord)
+    CODE:
+        RETVAL = isPUNCT_LC_uvchr(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isPUNCT_A(UV ord)
+    CODE:
+        RETVAL = isPUNCT_A(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isPUNCT_L1(UV ord)
+    CODE:
+        RETVAL = isPUNCT_L1(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isPUNCT_LC(UV ord)
+    CODE:
+        RETVAL = isPUNCT_LC(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isPUNCT_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isPUNCT_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isPUNCT_LC_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isPUNCT_LC_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isXDIGIT_uni(UV ord)
+    CODE:
+        RETVAL = isXDIGIT_uni(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isXDIGIT_LC_uvchr(UV ord)
+    CODE:
+        RETVAL = isXDIGIT_LC_uvchr(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isXDIGIT_A(UV ord)
+    CODE:
+        RETVAL = isXDIGIT_A(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isXDIGIT_L1(UV ord)
+    CODE:
+        RETVAL = isXDIGIT_L1(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isXDIGIT_LC(UV ord)
+    CODE:
+        RETVAL = isXDIGIT_LC(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isXDIGIT_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isXDIGIT_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isXDIGIT_LC_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isXDIGIT_LC_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isPSXSPC_uni(UV ord)
+    CODE:
+        RETVAL = isPSXSPC_uni(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isPSXSPC_LC_uvchr(UV ord)
+    CODE:
+        RETVAL = isPSXSPC_LC_uvchr(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isPSXSPC_A(UV ord)
+    CODE:
+        RETVAL = isPSXSPC_A(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isPSXSPC_L1(UV ord)
+    CODE:
+        RETVAL = isPSXSPC_L1(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isPSXSPC_LC(UV ord)
+    CODE:
+        RETVAL = isPSXSPC_LC(ord);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isPSXSPC_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isPSXSPC_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isPSXSPC_LC_utf8(unsigned char * p)
+    CODE:
+        RETVAL = isPSXSPC_LC_utf8( p);
+    OUTPUT:
+        RETVAL
+
+bool
+test_isQUOTEMETA(UV ord)
+    CODE:
+        RETVAL = _isQUOTEMETA(ord);
+    OUTPUT:
+        RETVAL

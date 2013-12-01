@@ -5,11 +5,11 @@ BEGIN {
     @INC = qw(. ../lib);
     require './test.pl';
 }
-plan tests => 306;
+plan tests => 310;
 
 my $list_assignment_supported = 1;
 
-#mg.c says list assignment not supported on VMS, EPOC, and SYMBIAN.
+#mg.c says list assignment not supported on VMS and SYMBIAN.
 $list_assignment_supported = 0 if ($^O eq 'VMS');
 
 
@@ -618,8 +618,6 @@ while (/(o.+?),/gc) {
 	"Chop"        => sub { chop },				0,
 	"Filetest"    => sub { -x },				0,
 	"Assignment"  => sub { $_ = "Bad" },			0,
-	# XXX whether next one should fail is debatable
-	"Local \$_"   => sub { local $_  = 'ok?'; print },	0,
 	"for local"   => sub { for("#ok?\n"){ print } },	1,
     );
     while ( ($name, $code, $ok) = splice(@tests, 0, 3) ) {
@@ -649,10 +647,10 @@ eval { for ($1) { local $_ = 1 } };
 is($@, "");
 
 {
-    my $STORE = 0;
+    my $STORE = my $FETCH = 0;
     package TieHash;
     sub TIEHASH { bless $_[1], $_[0] }
-    sub FETCH   { 42 }
+    sub FETCH   { ++$FETCH; 42 }
     sub STORE   { ++$STORE }
 
     package main;
@@ -660,21 +658,12 @@ is($@, "");
 
     eval { for ($hash{key}) {local $_ = 2} };
     is($STORE, 0);
+    is($FETCH, 0);
 }
 
 # The s/// adds 'g' magic to $_, but it should remain non-readonly
 eval { for("a") { for $x (1,2) { local $_="b"; s/(.*)/+$1/ } } };
 is($@, "");
-
-# RT #4342 Special local() behavior for $[
-{
-    no warnings 'deprecated';
-    local $[ = 1;
-    ok(1 == $[, 'lexcical scope of local $[');
-    f();
-}
-
-sub f { ok(0 == $[); }
 
 # sub localisation
 {
@@ -792,11 +781,47 @@ like( runperl(stderr => 1,
                       'index(q(a), foo);' .
                       'local *g=${::}{foo};print q(ok);'), "ok", "[perl #52740]");
 
-# Keep this test last, as it can SEGV
+# related to perl #112966
+# Magic should not cause elements not to be deleted after scope unwinding
+# when they did not exist before local()
+() = \$#squinch; # $#foo in lvalue context makes array magical
+{
+    local $squinch[0];
+    local @squinch[1..2];
+    package Flibbert;
+    m??; # makes stash magical
+    local $Flibbert::{foo};
+    local @Flibbert::{<bar baz>};
+}
+ok !exists $Flibbert::{foo},
+  'local helem on magic hash does not leave elems on scope exit';
+ok !exists $Flibbert::{bar},
+  'local hslice on magic hash does not leave elems on scope exit';
+ok !exists $squinch[0],
+  'local aelem on magic hash does not leave elems on scope exit';
+ok !exists $squinch[1],
+  'local aslice on magic hash does not leave elems on scope exit';
+
+# Keep these tests last, as they can SEGV
 {
     local *@;
     pass("Localised *@");
     eval {1};
     pass("Can eval with *@ localised");
-}
 
+    local @{"nugguton"};
+    local %{"netgonch"};
+    delete $::{$_} for 'nugguton','netgonch';
+}
+pass ('localised arrays and hashes do not crash if glob is deleted');
+
+# [perl #112966] Rmagic can cause delete local to crash
+package Grompits {
+local $SIG{__WARN__};
+    delete local $ISA[0];
+    delete local @ISA[1..10];
+    m??; # makes stash magical
+    delete local $Grompits::{foo};
+    delete local @Grompits::{<foo bar>};
+}
+pass 'rmagic does not cause delete local to crash on nonexistent elems';

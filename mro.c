@@ -1,7 +1,7 @@
 /*    mro.c
  *
  *    Copyright (c) 2007 Brandon L Black
- *    Copyright (c) 2007, 2008 Larry Wall and others
+ *    Copyright (c) 2007, 2008, 2009, 2010, 2011 Larry Wall and others
  *
  *    You may distribute under the terms of either the GNU General Public
  *    License or the Artistic License, as specified in the README file.
@@ -114,6 +114,13 @@ Perl_mro_get_from_name(pTHX_ SV *name) {
     return INT2PTR(const struct mro_alg *, SvUVX(*data));
 }
 
+/*
+=for apidoc mro_register
+Registers a custom mro plugin.  See L<perlmroapi> for details.
+
+=cut
+*/
+
 void
 Perl_mro_register(pTHX_ const struct mro_alg *mro) {
     SV *wrapper = newSVuv(PTR2UV(mro));
@@ -224,8 +231,9 @@ S_mro_get_linear_isa_dfs(pTHX_ HV *stash, U32 level)
       Perl_croak(aTHX_ "Can't linearize anonymous symbol table");
 
     if (level > 100)
-        Perl_croak(aTHX_ "Recursive inheritance detected in package '%s'",
-		   HEK_KEY(stashhek));
+        Perl_croak(aTHX_
+		  "Recursive inheritance detected in package '%"HEKf"'",
+		   HEKfARG(stashhek));
 
     meta = HvMROMETA(stash);
 
@@ -304,8 +312,7 @@ S_mro_get_linear_isa_dfs(pTHX_ HV *stash, U32 level)
 			sv_upgrade(val, SVt_PV);
 			SvPV_set(val, HEK_KEY(share_hek_hek(key)));
 			SvCUR_set(val, HEK_LEN(key));
-			SvREADONLY_on(val);
-			SvFAKE_on(val);
+			SvIsCOW_on(val);
 			SvPOK_on(val);
 			if (HEK_UTF8(key))
 			    SvUTF8_on(val);
@@ -379,10 +386,9 @@ S_mro_get_linear_isa_dfs(pTHX_ HV *stash, U32 level)
 /*
 =for apidoc mro_get_linear_isa
 
-Returns either C<mro_get_linear_isa_c3> or
-C<mro_get_linear_isa_dfs> for the given stash,
-dependant upon which MRO is in effect
-for that stash.  The return value is a
+Returns the mro linearisation for the given stash.  By default, this
+will be whatever C<mro_get_linear_isa_dfs> returns unless some
+other MRO is in effect for the stash.  The return value is a
 read-only AV*.
 
 You are responsible for C<SvREFCNT_inc()> on the
@@ -407,6 +413,29 @@ Perl_mro_get_linear_isa(pTHX_ HV *stash)
     if (!meta->mro_which)
         Perl_croak(aTHX_ "panic: invalid MRO!");
     isa = meta->mro_which->resolve(aTHX_ stash, 0);
+
+    if (meta->mro_which != &dfs_alg) { /* skip for dfs, for speed */
+	SV * const namesv =
+	    (HvENAME(stash)||HvNAME(stash))
+	      ? newSVhek(HvENAME_HEK(stash)
+			  ? HvENAME_HEK(stash)
+			  : HvNAME_HEK(stash))
+	      : NULL;
+
+	if(namesv && (AvFILLp(isa) == -1 || !sv_eq(*AvARRAY(isa), namesv)))
+	{
+	    AV * const old = isa;
+	    SV **svp;
+	    SV **ovp = AvARRAY(old);
+	    SV * const * const oend = ovp + AvFILLp(old) + 1;
+	    isa = (AV *)sv_2mortal((SV *)newAV());
+	    av_extend(isa, AvFILLp(isa) = AvFILLp(old)+1);
+	    *AvARRAY(isa) = namesv;
+	    svp = AvARRAY(isa)+1;
+	    while (ovp < oend) *svp++ = SvREFCNT_inc(*ovp++);
+	}
+	else SvREFCNT_dec(namesv);
+    }
 
     if (!meta->isa) {
 	    HV *const isa_hash = newHV();
@@ -472,6 +501,7 @@ Perl_mro_isa_changed_in(pTHX_ HV* stash)
 
     const char * const stashname = HvENAME_get(stash);
     const STRLEN stashname_len = HvENAMELEN_get(stash);
+    const bool stashname_utf8  = HvENAMEUTF8(stash) ? 1 : 0;
 
     PERL_ARGS_ASSERT_MRO_ISA_CHANGED_IN;
 
@@ -494,7 +524,8 @@ Perl_mro_isa_changed_in(pTHX_ HV* stash)
     /* Wipe the global method cache if this package
        is UNIVERSAL or one of its parents */
 
-    svp = hv_fetch(PL_isarev, stashname, stashname_len, 0);
+    svp = hv_fetch(PL_isarev, stashname,
+                        stashname_utf8 ? -(I32)stashname_len : (I32)stashname_len, 0);
     isarev = svp ? MUTABLE_HV(*svp) : NULL;
 
     if((stashname_len == 9 && strEQ(stashname, "UNIVERSAL"))
@@ -510,6 +541,12 @@ Perl_mro_isa_changed_in(pTHX_ HV* stash)
     /* wipe next::method cache too */
     if(meta->mro_nextmethod) hv_clear(meta->mro_nextmethod);
 
+    /* Changes to @ISA might turn overloading on */
+    HvAMAGIC_on(stash);
+
+    /* DESTROY can be cached in SvSTASH. */
+    if (!SvOBJECT(stash)) SvSTASH(stash) = NULL;
+
     /* Iterate the isarev (classes that are our children),
        wiping out their linearization, method and isa caches
        and upating PL_isarev. */
@@ -518,7 +555,7 @@ Perl_mro_isa_changed_in(pTHX_ HV* stash)
 
        /* We have to iterate through isarev twice to avoid a chicken and
         * egg problem: if A inherits from B and both are in isarev, A might
-        * be processed before B and use B’s previous linearisation.
+        * be processed before B and use B's previous linearisation.
         */
 
        /* First iteration: Wipe everything, but stash away the isa hashes
@@ -531,9 +568,7 @@ Perl_mro_isa_changed_in(pTHX_ HV* stash)
             isa_hashes = (HV *)sv_2mortal((SV *)newHV());
         }
         while((iter = hv_iternext(isarev))) {
-	    I32 len;
-            const char* const revkey = hv_iterkey(iter, &len);
-            HV* revstash = gv_stashpvn(revkey, len, 0);
+            HV* revstash = gv_stashsv(hv_iterkeysv(iter), 0);
             struct mro_meta* revmeta;
 
             if(!revstash) continue;
@@ -543,6 +578,7 @@ Perl_mro_isa_changed_in(pTHX_ HV* stash)
                 revmeta->cache_gen++;
             if(revmeta->mro_nextmethod)
                 hv_clear(revmeta->mro_nextmethod);
+	    if (!SvOBJECT(revstash)) SvSTASH(revstash) = NULL;
 
 	    (void)
 	      hv_store(
@@ -596,7 +632,8 @@ Perl_mro_isa_changed_in(pTHX_ HV* stash)
 	   
                     (void)
                       hv_store(
-                       mroisarev, HEK_KEY(namehek), HEK_LEN(namehek),
+                       mroisarev, HEK_KEY(namehek),
+                       HEK_UTF8(namehek) ? -HEK_LEN(namehek) : HEK_LEN(namehek),
                        &PL_sv_yes, 0
                       );
                 }
@@ -604,7 +641,7 @@ Perl_mro_isa_changed_in(pTHX_ HV* stash)
                 if((SV *)isa != &PL_sv_undef)
                     mro_clean_isarev(
                      isa, HEK_KEY(namehek), HEK_LEN(namehek),
-                     HvMROMETA(revstash)->isa
+                     HvMROMETA(revstash)->isa, (HEK_UTF8(namehek) ? SVf_UTF8 : 0)
                     );
             }
         }
@@ -638,36 +675,40 @@ Perl_mro_isa_changed_in(pTHX_ HV* stash)
 	   save time by not making two calls to the common HV code for the
 	   case where it doesn't exist.  */
 	   
-	(void)hv_store(mroisarev, stashname, stashname_len, &PL_sv_yes, 0);
+	(void)hv_store(mroisarev, stashname,
+                stashname_utf8 ? -(I32)stashname_len : (I32)stashname_len, &PL_sv_yes, 0);
     }
 
-    /* Delete our name from our former parents’ isarevs. */
+    /* Delete our name from our former parents' isarevs. */
     if(isa && HvARRAY(isa))
-        mro_clean_isarev(isa, stashname, stashname_len, meta->isa);
+        mro_clean_isarev(isa, stashname, stashname_len, meta->isa,
+                                (stashname_utf8 ? SVf_UTF8 : 0) );
 }
 
 /* Deletes name from all the isarev entries listed in isa */
 STATIC void
 S_mro_clean_isarev(pTHX_ HV * const isa, const char * const name,
-                         const STRLEN len, HV * const exceptions)
+                         const STRLEN len, HV * const exceptions, U32 flags)
 {
     HE* iter;
 
     PERL_ARGS_ASSERT_MRO_CLEAN_ISAREV;
 
-    /* Delete our name from our former parents’ isarevs. */
+    /* Delete our name from our former parents' isarevs. */
     if(isa && HvARRAY(isa) && hv_iterinit(isa)) {
         SV **svp;
         while((iter = hv_iternext(isa))) {
             I32 klen;
             const char * const key = hv_iterkey(iter, &klen);
-            if(exceptions && hv_exists(exceptions, key, klen)) continue;
-            svp = hv_fetch(PL_isarev, key, klen, 0);
+            if(exceptions && hv_exists(exceptions, key, HeKUTF8(iter) ? -klen : klen))
+                continue;
+            svp = hv_fetch(PL_isarev, key, HeKUTF8(iter) ? -klen : klen, 0);
             if(svp) {
                 HV * const isarev = (HV *)*svp;
-                (void)hv_delete(isarev, name, len, G_DISCARD);
-                if(!HvARRAY(isarev) || !HvKEYS(isarev))
-                    (void)hv_delete(PL_isarev, key, klen, G_DISCARD);
+                (void)hv_delete(isarev, name, (flags & SVf_UTF8) ? -(I32)len : (I32)len, G_DISCARD);
+                if(!HvARRAY(isarev) || !HvUSEDKEYS(isarev))
+                    (void)hv_delete(PL_isarev, key,
+                                        HeKUTF8(iter) ? -klen : klen, G_DISCARD);
             }
         }
     }
@@ -677,8 +718,8 @@ S_mro_clean_isarev(pTHX_ HV * const isa, const char * const name,
 =for apidoc mro_package_moved
 
 Call this function to signal to a stash that it has been assigned to
-another spot in the stash hierarchy. C<stash> is the stash that has been
-assigned. C<oldstash> is the stash it replaces, if any. C<gv> is the glob
+another spot in the stash hierarchy.  C<stash> is the stash that has been
+assigned. C<oldstash> is the stash it replaces, if any.  C<gv> is the glob
 that is actually being assigned to.
 
 This can also be called with a null first argument to
@@ -692,7 +733,7 @@ It also sets the effective names (C<HvENAME>) on all the stashes as
 appropriate.
 
 If the C<gv> is present and is not in the symbol table, then this function
-simply returns. This checked will be skipped if C<flags & 1>.
+simply returns.  This checked will be skipped if C<flags & 1>.
 
 =cut
 */
@@ -733,7 +774,8 @@ Perl_mro_package_moved(pTHX_ HV * const stash, HV * const oldstash,
 	SV **svp;
 	if(
 	 !GvSTASH(gv) || !HvENAME(GvSTASH(gv)) ||
-	 !(svp = hv_fetch(GvSTASH(gv), GvNAME(gv), GvNAMELEN(gv), 0)) ||
+	 !(svp = hv_fetch(GvSTASH(gv), GvNAME(gv),
+                            GvNAMEUTF8(gv) ? -GvNAMELEN(gv) : GvNAMELEN(gv), 0)) ||
 	 *svp != (SV *)gv
 	) return;
     }
@@ -761,9 +803,13 @@ Perl_mro_package_moved(pTHX_ HV * const stash, HV * const oldstash,
 	    if (GvNAMELEN(gv) == 1) sv_catpvs(namesv, ":");
 	    else                    sv_catpvs(namesv, "::");
 	}
-	if (GvNAMELEN(gv) != 1)
-	    sv_catpvn(namesv, GvNAME(gv), GvNAMELEN(gv) - 2);
+	if (GvNAMELEN(gv) != 1) {
+	    sv_catpvn_flags(
+		namesv, GvNAME(gv), GvNAMELEN(gv) - 2,
 	                                  /* skip trailing :: */
+		GvNAMEUTF8(gv) ? SV_CATUTF8 : SV_CATBYTES
+	    );
+        }
     }
     else {
 	SV *aname;
@@ -780,9 +826,13 @@ Perl_mro_package_moved(pTHX_ HV * const stash, HV * const oldstash,
 		if (GvNAMELEN(gv) == 1) sv_catpvs(aname, ":");
 		else                    sv_catpvs(aname, "::");
 	    }
-	    if (GvNAMELEN(gv) != 1)
-		sv_catpvn(aname, GvNAME(gv), GvNAMELEN(gv) - 2);
+	    if (GvNAMELEN(gv) != 1) {
+		sv_catpvn_flags(
+		    aname, GvNAME(gv), GvNAMELEN(gv) - 2,
 	                                  /* skip trailing :: */
+		    GvNAMEUTF8(gv) ? SV_CATUTF8 : SV_CATBYTES
+		);
+            }
 	    av_push((AV *)namesv, aname);
 	}
     }
@@ -832,12 +882,12 @@ Perl_mro_package_moved(pTHX_ HV * const stash, HV * const oldstash,
     }
 }
 
-void
+STATIC void
 S_mro_gather_and_rename(pTHX_ HV * const stashes, HV * const seen_stashes,
                               HV *stash, HV *oldstash, SV *namesv)
 {
-    register XPVHV* xhv;
-    register HE *entry;
+    XPVHV* xhv;
+    HE *entry;
     I32 riter = -1;
     I32 items = 0;
     const bool stash_had_name = stash && HvENAME(stash);
@@ -903,25 +953,31 @@ S_mro_gather_and_rename(pTHX_ HV * const stashes, HV * const seen_stashes,
 		svp = &namesv;
 	    }
 	    while (items--) {
+                const U32 name_utf8 = SvUTF8(*svp);
 		STRLEN len;
-		const char *name = SvPVx_const(*svp++, len);
-		if(PL_stashcache)
-		    (void)hv_delete(PL_stashcache, name, len, G_DISCARD);
-	        hv_ename_delete(oldstash, name, len, 0);
+		const char *name = SvPVx_const(*svp, len);
+		if(PL_stashcache) {
+                    DEBUG_o(Perl_deb(aTHX_ "mro_gather_and_rename clearing PL_stashcache for '%"SVf"'\n",
+                                     *svp));
+		   (void)hv_delete(PL_stashcache, name, name_utf8 ? -(I32)len : (I32)len, G_DISCARD);
+                }
+                ++svp;
+	        hv_ename_delete(oldstash, name, len, name_utf8);
 
 		if (!fetched_isarev) {
 		    /* If the name deletion caused a name change, then we
 		     * are not going to call mro_isa_changed_in with this
 		     * name (and not at all if it has become anonymous) so
 		     * we need to delete old isarev entries here, both
-		     * those in the superclasses and this class’s own list
+		     * those in the superclasses and this class's own list
 		     * of subclasses. We simply delete the latter from
 		     * PL_isarev, since we still need it. hv_delete morti-
 		     * fies it for us, so sv_2mortal is not necessary. */
 		    if(HvENAME_HEK(oldstash) != enamehek) {
 			if(meta->isa && HvARRAY(meta->isa))
-			    mro_clean_isarev(meta->isa, name, len, NULL);
-			isarev = (HV *)hv_delete(PL_isarev, name, len, 0);
+			    mro_clean_isarev(meta->isa, name, len, 0, name_utf8);
+			isarev = (HV *)hv_delete(PL_isarev, name,
+                                                    name_utf8 ? -(I32)len : (I32)len, 0);
 			fetched_isarev=TRUE;
 		    }
 		}
@@ -939,15 +995,16 @@ S_mro_gather_and_rename(pTHX_ HV * const stashes, HV * const seen_stashes,
 	    svp = &namesv;
 	}
 	while (items--) {
+            const U32 name_utf8 = SvUTF8(*svp);
 	    STRLEN len;
 	    const char *name = SvPVx_const(*svp++, len);
-	    hv_ename_add(stash, name, len, 0);
+	    hv_ename_add(stash, name, len, name_utf8);
 	}
 
        /* Add it to the big list if it needs
 	* mro_isa_changed_in called on it. That happens if it was
 	* detached from the symbol table (so it had no HvENAME) before
-	* being assigned to the spot named by the ‘name’ variable, because
+	* being assigned to the spot named by the 'name' variable, because
 	* its cached isa linearisation is now stale (the effective name
 	* having changed), and subclasses will then use that cache when
 	* mro_package_moved calls mro_isa_changed_in. (See
@@ -1006,7 +1063,10 @@ S_mro_gather_and_rename(pTHX_ HV * const stashes, HV * const seen_stashes,
 	    /* Extra variable to avoid a compiler warning */
 	    char * const hvename = HvENAME(oldstash);
 	    fetched_isarev = TRUE;
-	    svp = hv_fetch(PL_isarev, hvename, HvENAMELEN_get(oldstash), 0);
+	    svp = hv_fetch(PL_isarev, hvename,
+                            HvENAMEUTF8(oldstash)
+                                ? -HvENAMELEN_get(oldstash)
+                                : HvENAMELEN_get(oldstash), 0);
 	    if (svp) isarev = MUTABLE_HV(*svp);
 	}
 	else if(SvTYPE(namesv) == SVt_PVAV) {
@@ -1031,9 +1091,7 @@ S_mro_gather_and_rename(pTHX_ HV * const stashes, HV * const seen_stashes,
 
 	hv_iterinit(isarev);
 	while((iter = hv_iternext(isarev))) {
-	    I32 len;
-	    const char* const revkey = hv_iterkey(iter, &len);
-	    HV* revstash = gv_stashpvn(revkey, len, 0);
+	    HV* revstash = gv_stashsv(hv_iterkeysv(iter), 0);
 	    struct mro_meta * meta;
 
 	    if(!revstash) continue;
@@ -1082,7 +1140,7 @@ S_mro_gather_and_rename(pTHX_ HV * const stashes, HV * const seen_stashes,
 		 || (len == 1 && key[0] == ':')) {
 		    HV * const oldsubstash = GvHV(HeVAL(entry));
 		    SV ** const stashentry
-		     = stash ? hv_fetch(stash, key, len, 0) : NULL;
+		     = stash ? hv_fetch(stash, key, HeUTF8(entry) ? -(I32)len : (I32)len, 0) : NULL;
 		    HV *substash = NULL;
 
 		    /* Avoid main::main::main::... */
@@ -1110,7 +1168,11 @@ S_mro_gather_and_rename(pTHX_ HV * const stashes, HV * const seen_stashes,
 				    sv_catpvs(aname, ":");
 				else {
 				    sv_catpvs(aname, "::");
-				    sv_catpvn(aname, key, len-2);
+				    sv_catpvn_flags(
+					aname, key, len-2,
+					HeUTF8(entry)
+					   ? SV_CATUTF8 : SV_CATBYTES
+				    );
 				}
 				av_push((AV *)subname, aname);
 			    }
@@ -1120,7 +1182,10 @@ S_mro_gather_and_rename(pTHX_ HV * const stashes, HV * const seen_stashes,
 			    if (len == 1) sv_catpvs(subname, ":");
 			    else {
 				sv_catpvs(subname, "::");
-				sv_catpvn(subname, key, len-2);
+				sv_catpvn_flags(
+				   subname, key, len-2,
+				   HeUTF8(entry) ? SV_CATUTF8 : SV_CATBYTES
+				);
 			    }
 			}
 			mro_gather_and_rename(
@@ -1129,7 +1194,7 @@ S_mro_gather_and_rename(pTHX_ HV * const stashes, HV * const seen_stashes,
 			);
 		    }
 
-		    (void)hv_store(seen, key, len, &PL_sv_yes, 0);
+		    (void)hv_store(seen, key, HeUTF8(entry) ? -(I32)len : (I32)len, &PL_sv_yes, 0);
 		}
 	    }
 	}
@@ -1161,7 +1226,7 @@ S_mro_gather_and_rename(pTHX_ HV * const stashes, HV * const seen_stashes,
 
 		    /* If this entry was seen when we iterated through the
 		       oldstash, skip it. */
-		    if(seen && hv_exists(seen, key, len)) continue;
+		    if(seen && hv_exists(seen, key, HeUTF8(entry) ? -(I32)len : (I32)len)) continue;
 
 		    /* We get here only if this stash has no corresponding
 		       entry in the stash being replaced. */
@@ -1186,7 +1251,11 @@ S_mro_gather_and_rename(pTHX_ HV * const stashes, HV * const seen_stashes,
 				    sv_catpvs(aname, ":");
 				else {
 				    sv_catpvs(aname, "::");
-				    sv_catpvn(aname, key, len-2);
+				    sv_catpvn_flags(
+					aname, key, len-2,
+					HeUTF8(entry)
+					   ? SV_CATUTF8 : SV_CATBYTES
+				    );
 				}
 				av_push((AV *)subname, aname);
 			    }
@@ -1196,7 +1265,10 @@ S_mro_gather_and_rename(pTHX_ HV * const stashes, HV * const seen_stashes,
 			    if (len == 1) sv_catpvs(subname, ":");
 			    else {
 				sv_catpvs(subname, "::");
-				sv_catpvn(subname, key, len-2);
+				sv_catpvn_flags(
+				   subname, key, len-2,
+				   HeUTF8(entry) ? SV_CATUTF8 : SV_CATBYTES
+				);
 			    }
 			}
 			mro_gather_and_rename(
@@ -1218,7 +1290,7 @@ of the given stash, so that they might notice
 the changes in this one.
 
 Ideally, all instances of C<PL_sub_generation++> in
-perl source outside of C<mro.c> should be
+perl source outside of F<mro.c> should be
 replaced by calls to this.
 
 Perl automatically handles most of the common
@@ -1245,8 +1317,10 @@ Perl_mro_method_changed_in(pTHX_ HV *stash)
 {
     const char * const stashname = HvENAME_get(stash);
     const STRLEN stashname_len = HvENAMELEN_get(stash);
+    const bool stashname_utf8 = HvENAMEUTF8(stash) ? 1 : 0;
 
-    SV ** const svp = hv_fetch(PL_isarev, stashname, stashname_len, 0);
+    SV ** const svp = hv_fetch(PL_isarev, stashname,
+                                    stashname_utf8 ? -(I32)stashname_len : (I32)stashname_len, 0);
     HV * const isarev = svp ? MUTABLE_HV(*svp) : NULL;
 
     PERL_ARGS_ASSERT_MRO_METHOD_CHANGED_IN;
@@ -1256,6 +1330,9 @@ Perl_mro_method_changed_in(pTHX_ HV *stash)
 
     /* Inc the package generation, since a local method changed */
     HvMROMETA(stash)->pkg_gen++;
+
+    /* DESTROY can be cached in SvSTASH. */
+    if (!SvOBJECT(stash)) SvSTASH(stash) = NULL;
 
     /* If stash is UNIVERSAL, or one of UNIVERSAL's parents,
        invalidate all method caches globally */
@@ -1272,9 +1349,7 @@ Perl_mro_method_changed_in(pTHX_ HV *stash)
 
         hv_iterinit(isarev);
         while((iter = hv_iternext(isarev))) {
-	    I32 len;
-            const char* const revkey = hv_iterkey(iter, &len);
-            HV* const revstash = gv_stashpvn(revkey, len, 0);
+            HV* const revstash = gv_stashsv(hv_iterkeysv(iter), 0);
             struct mro_meta* mrometa;
 
             if(!revstash) continue;
@@ -1282,8 +1357,13 @@ Perl_mro_method_changed_in(pTHX_ HV *stash)
             mrometa->cache_gen++;
             if(mrometa->mro_nextmethod)
                 hv_clear(mrometa->mro_nextmethod);
+            if (!SvOBJECT(revstash)) SvSTASH(revstash) = NULL;
         }
     }
+
+    /* The method change may be due to *{$package . "::()"} = \&nil; in
+       overload.pm. */
+    HvAMAGIC_on(stash);
 }
 
 void
@@ -1353,8 +1433,8 @@ XS(XS_mro_method_changed_in)
  * Local variables:
  * c-indentation-style: bsd
  * c-basic-offset: 4
- * indent-tabs-mode: t
+ * indent-tabs-mode: nil
  * End:
  *
- * ex: set ts=8 sts=4 sw=4 noet:
+ * ex: set ts=8 sts=4 sw=4 et:
  */

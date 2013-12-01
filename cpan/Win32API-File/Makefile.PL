@@ -9,7 +9,7 @@ unless ($^O eq "MSWin32" || $^O eq "cygwin" || $^O eq "interix") { #not tested o
     die "OS unsupported\n";
 }
 
-WriteMakefile(
+WriteMakefile1(
     'NAME'	=> 'Win32API::File',
     'VERSION_FROM' => 'File.pm', # finds $VERSION
     (  $Config{archname} =~ /-object\b/i  ?  ( 'CAPI' => 'TRUE' )  :  ()  ),
@@ -19,21 +19,37 @@ WriteMakefile(
 		     IFDEF => "!/[a-z\\d]/",
 		     CPLUSPLUS => 1,
 		     WRITE_PERL => 1,
+		     #PERL_FILE_LIST => ['File.pm'], #added by Chorny
+		     #C_FILE_LIST => ['File.xs'], #added by Chorny
 		     # Comment out next line to rebuild constants defs:
 		     NO_REBUILD => 1,
 		   },
     (  ! $Config{libperl}  ?  ()  :  ( LIBPERL_A => $Config{libperl} )  ),
-    'INSTALLDIRS'   => ($] >= 5.008009 ? 'perl' : 'site'),
-    ($ExtUtils::MakeMaker::VERSION ge '6.31'? 
-     ('LICENSE'	=> 'perl', ) : ()),
-    ($ExtUtils::MakeMaker::VERSION ge '6.48'? 
-     ('MIN_PERL_VERSION' => 5.001,) : ()),
+    'INSTALLDIRS' => (($] >= 5.008009 and $] < 5.012) ? 'perl' : 'site'),
+    'LICENSE'	=> 'perl',
+    'MIN_PERL_VERSION' => 5.001,
     'PREREQ_PM'	=> {
-        'IO::File' => 0, #build
-        'File::Spec' => 0, #build
         'Math::BigInt' => 0,
         'Win32' => 0,
-    }
+        'Carp' => 0,
+        'IO::File' => 0,
+    },
+    TEST_REQUIRES => {
+        'File::Spec' => 0,
+        'Test::More' => 0,
+    },
+
+    META_MERGE => {
+        resources => {
+            repository => 'http://github.com/chorny/Win32API-File',
+        },
+    },
+    $^O =~/win/i ? (
+        dist => {
+            TAR      => 'ptar',
+            TARFLAGS => '-c -C -f',
+        },
+    ) : (),
 );
 
 # Replacement for MakeMaker's "const2perl section" for versions
@@ -79,7 +95,7 @@ $outfile:	@perlfiles  @cfiles  Makefile" . '
 	$m[-1] =~ s/^/##/gm   if  $noreb;
 	my( $key, $value );
 	while(  ( $key, $value )= each %{$hvAttr->{$module}}  ) {
-	    push @m, '-e "$$attribs{' . $key . '}= '
+	    push @m, '-e "$$attribs{' . $key . '}= ' # try {{ }} for dmake
 	      . neatvalue($value) . qq[;" \\\n\t  ];
 	    $m[-1] =~ s/^/##/gm   if  $noreb;
 	}
@@ -142,3 +158,36 @@ realclean ::
 	$self->{RM_F} @realclean\n"   if  @realclean;
     return join('',@m);
 }
+
+
+sub WriteMakefile1 {  #Compatibility code for old versions of EU::MM. Written by Alexandr Ciornii, version 0.23. Added by eumm-upgrade.
+	my %params=@_;
+	my $eumm_version=$ExtUtils::MakeMaker::VERSION;
+	$eumm_version=eval $eumm_version;
+	die "EXTRA_META is deprecated" if exists $params{EXTRA_META};
+	die "License not specified" if not exists $params{LICENSE};
+	if ($params{AUTHOR} and ref($params{AUTHOR}) eq 'ARRAY' and $eumm_version < 6.5705) {
+		$params{META_ADD}->{author}=$params{AUTHOR};
+		$params{AUTHOR}=join(', ',@{$params{AUTHOR}});
+	}
+	if ($params{TEST_REQUIRES} and $eumm_version < 6.64) {
+		$params{BUILD_REQUIRES}={ %{$params{BUILD_REQUIRES} || {}} , %{$params{TEST_REQUIRES}} };
+		delete $params{TEST_REQUIRES};
+	}
+	if ($params{BUILD_REQUIRES} and $eumm_version < 6.5503) {
+		#EUMM 6.5502 has problems with BUILD_REQUIRES
+		$params{PREREQ_PM}={ %{$params{PREREQ_PM} || {}} , %{$params{BUILD_REQUIRES}} };
+		delete $params{BUILD_REQUIRES};
+	}
+	delete $params{CONFIGURE_REQUIRES} if $eumm_version < 6.52;
+	delete $params{MIN_PERL_VERSION} if $eumm_version < 6.48;
+	delete $params{META_MERGE} if $eumm_version < 6.46;
+	delete $params{META_ADD} if $eumm_version < 6.46;
+	delete $params{LICENSE} if $eumm_version < 6.31;
+	delete $params{AUTHOR} if $] < 5.005;
+	delete $params{ABSTRACT_FROM} if $] < 5.005;
+	delete $params{BINARY_LOCATION} if $] < 5.005;
+
+	WriteMakefile(%params);
+}
+

@@ -1,5 +1,5 @@
 # Pod::PlainText -- Convert POD data to formatted ASCII text.
-# $Id: PlainText.pm,v 1.1.1.1 2011-05-18 13:33:29 laffer1 Exp $
+# $Id: Text.pm,v 2.1 1999/09/20 11:53:33 eagle Exp $
 #
 # Copyright 1999-2000 by Russ Allbery <rra@stanford.edu>
 #
@@ -29,7 +29,7 @@ use vars qw(@ISA %ESCAPES $VERSION);
 # by Pod::Usage.
 @ISA = qw(Pod::Select);
 
-$VERSION = '2.04';
+$VERSION = '2.06';
 
 BEGIN {
    if ($] < 5.006) {
@@ -390,10 +390,14 @@ sub cmd_for {
     my $self = shift;
     local $_ = shift;
     my $line = shift;
-    return unless s/^text\b[ \t]*\n?//;
+    return unless s/^text\b[ \t]*\r?\n?//;
     $self->verbatim ($_, $line);
 }
 
+# just a dummy method for the time being
+sub cmd_encoding {
+  return;
+}
 
 ############################################################################
 # Interior sequences
@@ -485,7 +489,7 @@ sub item {
         my $margin = $$self{MARGIN};
         $$self{MARGIN} = $indent;
         my $output = $self->reformat ($tag);
-        $output =~ s/\n*$/\n/;
+        $output =~ s/[\r\n]*$/\n/;
         $self->output ($output);
         $$self{MARGIN} = $margin;
         $self->output ($self->reformat ($_)) if /\S/;
@@ -514,7 +518,7 @@ sub wrap {
     my $spaces = ' ' x $$self{MARGIN};
     my $width = $$self{width} - $$self{MARGIN};
     while (length > $width) {
-        if (s/^([^\n]{0,$width})\s+// || s/^([^\n]{$width})//) {
+        if (s/^([^\r\n]{0,$width})\s+// || s/^([^\r\n]{$width})//) {
             $output .= $spaces . $1 . "\n";
         } else {
             last;
@@ -535,8 +539,8 @@ sub reformat {
     # munging to support that.  Otherwise, smash all repeated whitespace.
     if ($$self{sentence}) {
         s/ +$//mg;
-        s/\.\n/. \n/g;
-        s/\n/ /g;
+        s/\.\r?\n/. \n/g;
+        s/[\r\n]+/ /g;
         s/   +/  /g;
     } else {
         s/\s+/ /g;
@@ -722,6 +726,8 @@ get it to work at all.  This rewrite doesn't even try to do that, but a
 subclass of it does.  Look for L<Pod::Text::Termcap|Pod::Text::Termcap>.
 
 =head1 SEE ALSO
+
+B<Pod::PlainText> is part of the L<Pod::Parser> distribution.
 
 L<Pod::Parser|Pod::Parser>, L<Pod::Text::Termcap|Pod::Text::Termcap>,
 pod2text(1)

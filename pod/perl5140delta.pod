@@ -1108,7 +1108,7 @@ and penalised well-behaved code.  It has been removed.
 =head2 Freeing weak references
 
 When there are many weak references to an object, freeing that object
-can under some circumstances take O(I<NE<0xB2>>) time to free, where 
+can under some circumstances take O(I<N*N>) time to free, where
 I<N> is the number of references.  The circumstances in which this can happen
 have been reduced [perl #75254]
 
@@ -1210,7 +1210,7 @@ generation task.
 
 L<CPAN::Meta> version 2.110440 has been added as a dual-life module.  It
 provides a standard library to read, interpret and write CPAN distribution
-metadata files (like F<META.json> and F<META.yml)> that describe a
+metadata files (like F<META.json> and F<META.yml>) that describe a
 distribution, its contents, and the requirements for building it and
 installing it.  The latest CPAN distribution metadata specification is
 included as L<CPAN::Meta::Spec> and notes on changes in the specification
@@ -1547,9 +1547,9 @@ It is now safe to use this module in combination with threads.
 
 L<Digest::SHA> has been upgraded from version 5.47 to 5.61.
 
-L<shasum> now more closely mimics L<sha1sum(1)>/L<md5sum(1)>.
+C<shasum> now more closely mimics L<sha1sum(1)>/L<md5sum(1)>.
 
-L<Addfile> accepts all POSIX filenames.
+C<addfile> accepts all POSIX filenames.
 
 New SHA-512/224 and SHA-512/256 transforms (ref. NIST Draft FIPS 180-4
 [February 2011])
@@ -2125,7 +2125,7 @@ L<Unicode::UCD> has been upgraded from version 0.27 to 0.32.
 A new function, Unicode::UCD::num(), has been added.  This function
 returns the numeric value of the string passed it or C<undef> if the string
 in its entirety has no "safe" numeric value.  (For more detail, and for the
-definition of "safe", see L<Unicode::UCD/num>.)
+definition of "safe", see L<Unicode::UCD/num()>.)
 
 This upgrade also includes several bug fixes:
 
@@ -2888,7 +2888,7 @@ When C<perlio> became the default and C<unix> became the default bottom layer,
 the most common path for creating files from Perl became C<PerlIOUnix_open>,
 which has always explicitly used C<0666> as the permission mask.  This prevents
 inheriting permissions from RMS defaults and ACLs, so to avoid that problem,
-we now pass C<0777> to open().  In theVMS CRTL, C<0777> has a special
+we now pass C<0777> to open().  In the VMS CRTL, C<0777> has a special
 meaning over and above intersecting with the current umask; specifically, it
 allows Unix syscalls to preserve native default permissions (5.12.3).
 
@@ -4445,8 +4445,8 @@ See also: L<http://rt.perl.org/rt3/Public/Bug/Display.html?id=67694>
 
 =item *
 
-readline() returns an empty string instead of undef when it is
-interrupted by a signal.
+readline() returns an empty string instead of a cached previous value
+when it is interrupted by a signal
 
 =item *
 
@@ -4569,7 +4569,7 @@ analysed by the Perl porting team.
 If the bug you are reporting has security implications, which make it
 inappropriate to send to a publicly archived mailing list, then please send
 it to perl5-security-report@perl.org.  This points to a closed subscription
-unarchived mailing list, which includes all the core committers, who be able
+unarchived mailing list, which includes all the core committers, who are able
 to help assess the impact of issues, figure out a resolution, and help
 co-ordinate the release of patches to mitigate or fix the problem across all
 platforms on which Perl is supported.  Please use this address for

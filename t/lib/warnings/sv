@@ -34,6 +34,8 @@
 
   Reference is already weak			[Perl_sv_rvweaken] <<TODO
 
+  vector argument not supported with alpha versions
+
   Mandatory Warnings
   ------------------
   Malformed UTF-8 character [sv_pos_b2u] (not tested: difficult to produce
@@ -209,13 +211,6 @@ Use of uninitialized value $a in join or string at - line 4.
 Use of uninitialized value $a in concatenation (.) or string at - line 5.
 Use of uninitialized value $a in concatenation (.) or string at - line 6.
 ########
-# [perl #72090]
-use warnings 'uninitialized';
-$a = @$a > 0;
-EXPECT
-Use of uninitialized value $a in array dereference at - line 3.
-Use of uninitialized value in numeric gt (>) at - line 3.
-########
 # sv.c 
 use warnings 'numeric' ;
 sub TIESCALAR{bless[]} ; 
@@ -366,3 +361,39 @@ no warnings 'numeric' ;
 $a = "\x{100}\x{200}"; $a = -$a;
 EXPECT
 Argument "\x{100}\x{200}" isn't numeric in negation (-) at - line 3.
+########
+# sv.c
+use warnings 'redefine' ;
+use utf8;
+use open qw( :utf8 :std );
+sub frèd {}  
+sub jòè {} 
+*frèd = \&jòè;
+no warnings 'redefine' ;
+sub jìm {} 
+*jìm = \&jòè ;
+EXPECT
+Subroutine main::frèd redefined at - line 7.
+########
+# sv.c
+use warnings 'redefine' ;
+use utf8;
+use open qw( :utf8 :std );
+sub ｆ렏 {}  
+sub 조Ȩ {} 
+*ｆ렏 = \&조Ȩ ;
+no warnings 'redefine' ;
+sub 짐 {} 
+*짐 = \&조Ȩ ;
+EXPECT
+Subroutine main::ｆ렏 redefined at - line 7.
+########
+# sv.c
+sprintf "%vd", new version v1.1_0;
+use warnings 'printf' ;
+sprintf "%vd", new version v1.1_0;
+no warnings 'printf' ;
+sprintf "%vd", new version v1.1_0;
+EXPECT
+vector argument not supported with alpha versions at - line 2.
+vector argument not supported with alpha versions at - line 4.

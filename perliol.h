@@ -113,9 +113,6 @@ EXTPERLIO PerlIO_funcs PerlIO_utf8;
 EXTPERLIO PerlIO_funcs PerlIO_byte;
 EXTPERLIO PerlIO_funcs PerlIO_raw;
 EXTPERLIO PerlIO_funcs PerlIO_pending;
-#ifdef HAS_MMAP
-EXTPERLIO PerlIO_funcs PerlIO_mmap;
-#endif
 #ifdef WIN32
 EXTPERLIO PerlIO_funcs PerlIO_win32;
 #endif
@@ -223,17 +220,6 @@ PERL_EXPORT_C SSize_t   PerlIOCrlf_unread(pTHX_ PerlIO *f, const void *vbuf, Siz
 PERL_EXPORT_C SSize_t   PerlIOCrlf_unread(pTHX_ PerlIO *f, const void *vbuf, Size_t count);
 PERL_EXPORT_C SSize_t   PerlIOCrlf_write(pTHX_ PerlIO *f, const void *vbuf, Size_t count);
 
-/* Mmap */
-PERL_EXPORT_C IV        PerlIOMmap_close(pTHX_ PerlIO *f);
-PERL_EXPORT_C PerlIO *  PerlIOMmap_dup(pTHX_ PerlIO *f, PerlIO *o, CLONE_PARAMS *param, int flags);
-PERL_EXPORT_C IV        PerlIOMmap_fill(pTHX_ PerlIO *f);
-PERL_EXPORT_C IV        PerlIOMmap_flush(pTHX_ PerlIO *f);
-PERL_EXPORT_C STDCHAR * PerlIOMmap_get_base(pTHX_ PerlIO *f);
-PERL_EXPORT_C IV        PerlIOMmap_map(pTHX_ PerlIO *f);
-PERL_EXPORT_C IV        PerlIOMmap_unmap(pTHX_ PerlIO *f);
-PERL_EXPORT_C SSize_t   PerlIOMmap_unread(pTHX_ PerlIO *f, const void *vbuf, Size_t count);
-PERL_EXPORT_C SSize_t   PerlIOMmap_write(pTHX_ PerlIO *f, const void *vbuf, Size_t count);
-
 /* Pending */
 PERL_EXPORT_C IV        PerlIOPending_close(pTHX_ PerlIO *f);
 PERL_EXPORT_C IV        PerlIOPending_fill(pTHX_ PerlIO *f);
@@ -293,8 +279,8 @@ PERL_EXPORT_C IV        PerlIOUtf8_pushed(pTHX_ PerlIO *f, const char *mode, SV 
  * Local variables:
  * c-indentation-style: bsd
  * c-basic-offset: 4
- * indent-tabs-mode: t
+ * indent-tabs-mode: nil
  * End:
  *
- * ex: set ts=8 sts=4 sw=4 noet:
+ * ex: set ts=8 sts=4 sw=4 et:
  */

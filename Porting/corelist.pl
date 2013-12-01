@@ -7,6 +7,7 @@
 # With an optional arg specifying the root of a CPAN mirror, outputs the
 # %upstream and %bug_tracker hashes too.
 
+use autodie;
 use strict;
 use warnings;
 use File::Find;
@@ -17,8 +18,11 @@ use Maintainers qw(%Modules files_to_modules);
 use File::Spec;
 use Parse::CPAN::Meta;
 use IPC::Cmd 'can_run';
+use HTTP::Tiny;
+use IO::Uncompress::Gunzip;
 
 my $corelist_file = 'dist/Module-CoreList/lib/Module/CoreList.pm';
+my $pod_file = 'dist/Module-CoreList/lib/Module/CoreList.pod';
 
 my %lines;
 my %module_to_file;
@@ -36,7 +40,7 @@ if ( !-f 'MANIFEST' ) {
     die "Must be run from the root of a clean perl tree\n";
 }
 
-open( my $corelist_fh, '<', $corelist_file ) || die "Could not open $corelist_file: $!";
+open( my $corelist_fh, '<', $corelist_file );
 my $corelist = join( '', <$corelist_fh> );
 
 if ($cpan) {
@@ -46,17 +50,19 @@ if ($cpan) {
     my $fh;
     if ( -e $modlistfile ) {
         warn "Reading the module list from $modlistfile";
-        open $fh, '<', $modlistfile or die "Couldn't open $modlistfile: $!";
+        open $fh, '<', $modlistfile;
     } elsif ( -e $modlistfile . ".gz" ) {
         my $zcat = can_run('gzcat') || can_run('zcat') or die "Can't find gzcat or zcat";
         warn "Reading the module list from $modlistfile.gz";
-        open $fh, '-|', "$zcat $modlistfile.gz" or die "Couldn't zcat $modlistfile.gz: $!";
+        open $fh, '-|', "$zcat $modlistfile.gz";
     } else {
         warn "About to fetch 02packages from ftp.funet.fi. This may take a few minutes\n";
-        $content = fetch_url('http://ftp.funet.fi/pub/CPAN/modules/02packages.details.txt');
-        unless ($content) {
+	my $gzipped_content = fetch_url('http://ftp.funet.fi/pub/CPAN/modules/02packages.details.txt.gz');
+	unless ($gzipped_content) {
             die "Unable to read 02packages.details.txt from either your CPAN mirror or ftp.funet.fi";
         }
+	IO::Uncompress::Gunzip::gunzip(\$gzipped_content, \$content, Transparent => 0)
+	    or die "Can't gunzip content: $IO::Uncompress::Gunzip::GunzipError";
     }
 
     if ( $fh and !$content ) {
@@ -96,9 +102,10 @@ find(
             $module =~ s{^Encode/encoding}{encoding},
             $module =~ s{^IPC-SysV/}{IPC/},
             $module =~ s{^MIME-Base64/QuotedPrint}{MIME/QuotedPrint},
-            $module =~ s{^(?:DynaLoader|Errno|Opcode)/}{},
+            $module =~ s{^(?:DynaLoader|Errno|Opcode|XSLoader)/}{},
+            $module =~ s{^Sys-Syslog/win32}{Sys-Syslog},
+            $module =~ s{^Time-Piece/Seconds}{Time/Seconds},
             );
-        $module =~ s{^vms/ext}{VMS};
 		$module =~ s{^lib/}{}g;
         $module =~ s{/}{::}g;
         $module =~ s{-}{::}g;
@@ -107,7 +114,6 @@ find(
         $lines{$module}          = $version;
         $module_to_file{$module} = $File::Find::name;
     },
-    'vms/ext',
     'symbian/ext',
     'lib',
     'ext',
@@ -123,19 +129,47 @@ if ( open my $ucdv, "<", "lib/unicore/version" ) {
     close $ucdv;
 }
 
+my $delta_data = make_corelist_delta(
+  $perl_vnum,
+  \%lines,
+  \%Module::CoreList::version
+);
+
 my $versions_in_release = "    " . $perl_vnum . " => {\n";
-foreach my $key ( sort keys %lines ) {
-    $versions_in_release .= sprintf "\t%-24s=> %s,\n", "'$key'", $lines{$key};
+$versions_in_release .= "        delta_from => $delta_data->{delta_from},\n";
+$versions_in_release .= "        changed => {\n";
+foreach my $key (sort keys $delta_data->{changed}) {
+  $versions_in_release .= sprintf "            %-24s=> %s,\n", "'$key'",
+      defined $delta_data->{changed}{$key} ? "'"
+        . $delta_data->{changed}{$key} . "'" : "undef";
 }
+$versions_in_release .= "        },\n";
+$versions_in_release .= "        removed => {\n";
+for my $key (sort keys($delta_data->{removed} || {})) {
+  $versions_in_release .= sprintf "           %-24s=> %s,\n", "'$key'", 1;
+}
+$versions_in_release .= "        }\n";
 $versions_in_release .= "    },\n";
 
-$corelist =~ s/^(%version\s*=\s*.*?)(^\);)$/$1$versions_in_release$2/xism;
+$corelist =~ s/^(my %delta\s*=\s*.*?)(^\);)$/$1$versions_in_release$2/ism;
 
 exit unless %modlist;
 
 # We have to go through this two stage lookup, given how Maintainers.pl keys its
 # data by "Module", which is really a dist.
 my $file_to_M = files_to_modules( values %module_to_file );
+
+sub slurp_utf8($) {
+    open my $fh, "<:utf8", "$_[0]"
+	or die "can't open $_[0] for reading: $!";
+    return do { local $/; <$fh> };
+}
+
+sub parse_cpan_meta($) {
+    return Parse::CPAN::Meta->${
+	$_[0] =~ /\A\x7b/ ? \"load_json_string" : \"load_yaml_string"
+    }($_[0]);
+}
 
 my %module_to_upstream;
 my %module_to_dist;
@@ -144,7 +178,7 @@ my %module_to_deprecated;
 while ( my ( $module, $file ) = each %module_to_file ) {
     my $M = $file_to_M->{$file};
     next unless $M;
-    next if $Modules{$M}{MAINTAINER} eq 'p5p';
+    next if $Modules{$M}{MAINTAINER} && $Modules{$M}{MAINTAINER} eq 'p5p';
     $module_to_upstream{$module} = $Modules{$M}{UPSTREAM};
     $module_to_deprecated{$module} = 1 if $Modules{$M}{DEPRECATED};
     next
@@ -163,17 +197,18 @@ while ( my ( $module, $file ) = each %module_to_file ) {
 
     # Like it or lump it, this has to be Unix format.
     my $meta_YAML_path = "authors/id/$dist";
-    $meta_YAML_path =~ s/(?:tar\.gz|tar\.bz2|zip)$/meta/ or die "$meta_YAML_path";
+    $meta_YAML_path =~ s/(?:tar\.gz|tar\.bz2|zip|tgz)$/meta/
+	or die "ERROR: bad meta YAML path: '$meta_YAML_path'";
     my $meta_YAML_url = 'http://ftp.funet.fi/pub/CPAN/' . $meta_YAML_path;
 
     if ( -e "$cpan/$meta_YAML_path" ) {
-        $dist_to_meta_YAML{$dist} = Parse::CPAN::Meta::LoadFile( $cpan . "/" . $meta_YAML_path );
+        $dist_to_meta_YAML{$dist} = parse_cpan_meta(slurp_utf8( $cpan . "/" . $meta_YAML_path ));
     } elsif ( my $content = fetch_url($meta_YAML_url) ) {
         unless ($content) {
             warn "Failed to fetch $meta_YAML_url\n";
             next;
         }
-        eval { $dist_to_meta_YAML{$dist} = Parse::CPAN::Meta::Load($content); };
+        eval { $dist_to_meta_YAML{$dist} = parse_cpan_meta($content); };
         if ( my $err = $@ ) {
             warn "$meta_YAML_path: ".$err;
             next;
@@ -198,13 +233,31 @@ $upstream_stanza .= ");";
 $corelist =~ s/^%upstream .*? ;$/$upstream_stanza/ismx;
 
 # Deprecation generation
-my $deprecated_stanza = "    " . $perl_vnum . " => {\n";
-foreach my $module ( sort keys %module_to_deprecated ) {
-    my $deprecated = defined $module_to_deprecated{$module} ? "'$module_to_deprecated{$module}'" : 'undef';
-    $deprecated_stanza .= sprintf "\t%-24s=> %s,\n", "'$module'", $deprecated;
+{
+  my $delta_data = make_corelist_delta(
+    $perl_vnum,
+    \%module_to_deprecated,
+    do { no warnings 'once'; \%Module::CoreList::deprecated },
+  );
+
+  my $deprecated_stanza = "    " . $perl_vnum . " => {\n";
+  $deprecated_stanza .= "        delta_from => $delta_data->{delta_from},\n";
+  $deprecated_stanza .= "        changed => {\n";
+  foreach my $key (sort keys $delta_data->{changed}) {
+    $deprecated_stanza .= sprintf "            %-24s=> %s,\n", "'$key'",
+        defined $delta_data->{changed}{$key} ? "'"
+          . $delta_data->{changed}{$key} . "'" : "undef";
+  }
+  $deprecated_stanza .= "        },\n";
+  $deprecated_stanza .= "        removed => {\n";
+  for my $key (sort keys($delta_data->{removed} || {})) {
+    $deprecated_stanza .= sprintf "           %-24s=> %s,\n", "'$key'", 1;
+  }
+  $deprecated_stanza .= "        }\n";
+  $deprecated_stanza .= "    },\n";
+
+  $corelist =~ s/^(%deprecated\s*=\s*.*?)(^\);)$/$1$deprecated_stanza$2/xism;
 }
-$deprecated_stanza .= "    },\n";
-$corelist =~ s/^(%deprecated\s*=\s*.*?)(^\);)$/$1$deprecated_stanza$2/xism;
 
 my $tracker = "%bug_tracker = (\n";
 foreach my $module ( sort keys %module_to_upstream ) {
@@ -218,19 +271,15 @@ foreach my $module ( sort keys %module_to_upstream ) {
     my $dist = $module_to_dist{$module};
     $bug_tracker = $dist_to_meta_YAML{$dist}->{resources}{bugtracker}
         if $dist;
+    $bug_tracker = $bug_tracker->{web} if ref($bug_tracker) eq "HASH";
 
-    $bug_tracker = defined $bug_tracker ? "'$bug_tracker'" : 'undef';
+    $bug_tracker = defined $bug_tracker ? quote($bug_tracker) : 'undef';
 	next if $bug_tracker eq "'http://rt.perl.org/perlbug/'";
     $tracker .= sprintf "    %-24s=> %s,\n", "'$module'", $bug_tracker;
 }
 $tracker .= ");";
 
 $corelist =~ s/^%bug_tracker .*? ;/$tracker/eismx;
-
-unless ( $corelist =~ /and $perl_vstring releases of perl/ ) {
-    warn "Adding $perl_vstring to the list of perl versions covered by Module::CoreList\n";
-    $corelist =~ s/(currently covers (?:.*?))\s*and (.*?) releases of perl/$1, $2 and $perl_vstring releases of perl/ism;
-}
 
 unless (
     $corelist =~ /^%released \s* = \s* \(
@@ -244,26 +293,104 @@ unless (
                 /$1  $perl_vnum => '????-??-??',\n  $2/ismx;
 }
 
-write_corelist($corelist);
+write_corelist($corelist,$corelist_file);
 
-warn "All done. Please check over $corelist_file carefully before committing. Thanks!\n";
+open( my $pod_fh, '<', $pod_file );
+my $pod = join( '', <$pod_fh> );
+
+unless ( $pod =~ /and $perl_vstring releases of perl/ ) {
+    warn "Adding $perl_vstring to the list of perl versions covered by Module::CoreList\n";
+    $pod =~ s/(currently\s+covers\s+(?:.*?))\s*and\s+(.*?)\s+releases\s+of\s+perl/$1, $2 and $perl_vstring releases of perl/ism;
+}
+
+write_corelist($pod,$pod_file);
+
+warn "All done. Please check over $corelist_file and $pod_file carefully before committing. Thanks!\n";
 
 
 sub write_corelist {
     my $content = shift;
-    open (my $clfh, ">", $corelist_file) || die "Failed to open $corelist_file for writing: $!";
-    print $clfh $content || die "Failed to write the new CoreList.pm: $!";
+    my $filename = shift;
+    open (my $clfh, ">", $filename);
+    binmode $clfh;
+    print $clfh $content;
     close($clfh);
 }
 
 sub fetch_url {
     my $url = shift;
-    eval { require LWP::Simple };
-    if ( LWP::Simple->can('get') ) {
-        return LWP::Simple::get($url);
-    } elsif (`which curl`) {
-        return `curl -s $url`;
-    } elsif (`which wget`) {
-        return `wget -q -O - $url`;
+    my $http = HTTP::Tiny->new;
+    my $response = $http->get($url);
+    if ($response->{success}) {
+	return $response->{content};
+    } else {
+	warn "Error fetching $url: $response->{status} $response->{reason}\n";
+        return;
     }
+}
+
+sub make_corelist_delta {
+  my($version, $lines, $existing) = @_;
+  # Trust core perl, if someone does use a weird version number the worst that
+  # can happen is an extra delta entry for a module.
+  my %versions = map { $_ => eval $lines->{$_} } keys %$lines;
+
+  # Ensure we have the corelist data loaded from this perl checkout, not the system one.
+  require $corelist_file;
+
+  my %deltas;
+  # Search for the release with the least amount of changes (this avoids having
+  # to ask for where this perl was branched from).
+  for my $previous(reverse sort keys %$existing) {
+    # Shouldn't happen, but ensure we don't load weird data...
+    next if $previous > $version || $previous == $version && $previous eq $version;
+
+    my $delta = $deltas{$previous} = {};
+    ($delta->{changed}, $delta->{removed}) = calculate_delta(
+      $existing->{$previous}, \%versions);
+  }
+
+  my $smallest = (sort {
+      (keys($deltas{$a}->{changed}) + keys($deltas{$a}->{removed})) <=>
+      (keys($deltas{$b}->{changed})+ keys($deltas{$b}->{removed}))
+    } keys %deltas)[0];
+
+  return {
+    delta_from => $smallest,
+    changed => $deltas{$smallest}{changed},
+    removed => $deltas{$smallest}{removed},
+  }
+}
+
+# Calculate (changed, removed) modules between two versions.
+sub calculate_delta {
+  my($from, $to) = @_;
+  my(%changed, %removed);
+
+  for my $package(keys $from) {
+    if(not exists $to->{$package}) {
+      $removed{$package} = 1;
+    }
+  }
+
+  for my $package(keys $to) {
+    if(!exists $from->{$package}
+        || (defined $from->{$package} && !defined $to->{$package})
+        || (!defined $from->{$package} && defined $to->{$package})
+        || (defined $from->{$package} && defined $to->{$package}
+            && $from->{$package} ne $to->{$package})) {
+      $changed{$package} = $to->{$package};
+    }
+  }
+
+  return \%changed, \%removed;
+}
+
+sub quote {
+    my ($str) = @_;
+    # There's gotta be something already doing this properly that we could just
+    # reuse, but I can't quite thing of where to look for it, so I'm gonna do
+    # the simplest possible thing that'll allow me to release 5.17.7.  --rafl
+    $str =~ s/'/\\'/g;
+    "'${str}'";
 }

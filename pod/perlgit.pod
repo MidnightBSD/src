@@ -51,7 +51,7 @@ branches in the repository:
 
 The branches that begin with "origin" correspond to the "git remote"
 that you cloned from (which is named "origin"). Each branch on the
-remote will be exactly tracked by theses branches. You should NEVER do
+remote will be exactly tracked by these branches. You should NEVER do
 work on these remote tracking branches. You only ever do work in a
 local branch. Local branches can be configured to automerge (on pull)
 from a designated remote tracking branch. This is the case with the
@@ -258,7 +258,7 @@ Now you should create a patch file for all your local changes:
   % git format-patch -M origin..
   0001-Rename-Leon-Brocard-to-Orange-Brocard.patch
 
-You should now send an email to to
+You should now send an email to
 L<perlbug@perl.org|mailto:perlbug@perl.org> with a description of your
 changes, and include this patch file as an attachment. In addition to
 being tracked by RT, mail to perlbug will automatically be forwarded to
@@ -385,45 +385,59 @@ If you want to cancel one or several commits, you can use C<git reset>.
 
 =head2 Bisecting
 
-C<git> provides a built-in way to determine, with a binary search in
-the history, which commit should be blamed for introducing a given bug.
+C<git> provides a built-in way to determine which commit should be blamed
+for introducing a given bug. C<git bisect> performs a binary search of
+history to locate the first failing commit. It is fast, powerful and
+flexible, but requires some setup and to automate the process an auxiliary
+shell script is needed.
 
-Suppose that we have a script F<~/testcase.pl> that exits with C<0>
-when some behaviour is correct, and with C<1> when it's faulty. You
-need an helper script that automates building C<perl> and running the
-testcase:
+The core provides a wrapper program, F<Porting/bisect.pl>, which attempts to
+simplify as much as possible, making bisecting as simple as running a Perl
+one-liner. For example, if you want to know when this became an error:
 
-  % cat ~/run
-  #!/bin/sh
-  git clean -dxf
+    perl -e 'my $a := 2'
 
-  # If you get './makedepend: 1: Syntax error: Unterminated quoted
-  # string' when bisecting versions of perl older than 5.9.5 this hack
-  # will work around the bug in makedepend.SH which was fixed in
-  # version 96a8704c. Make sure to comment out `git checkout makedepend.SH'
-  # below too.
-  git show blead:makedepend.SH > makedepend.SH
+you simply run this:
 
-  # If you can use ccache, add -Dcc=ccache\ gcc -Dld=gcc to the Configure line
-  # if Encode is not needed for the test, you can speed up the bisect by
-  # excluding it from the runs with -Dnoextensions=Encode
-  sh Configure -des -Dusedevel -Doptimize="-g"
-  test -f config.sh || exit 125
-  # Correct makefile for newer GNU gcc
-  perl -ni -we 'print unless /<(?:built-in|command)/' makefile x2p/makefile
-  # if you just need miniperl, replace test_prep with miniperl
-  make test_prep
-  [ -x ./perl ] || exit 125
-  ./perl -Ilib ~/testcase.pl
-  ret=$?
-  [ $ret -gt 127 ] && ret=127
-  # git checkout makedepend.SH
-  git clean -dxf
-  exit $ret
+    .../Porting/bisect.pl -e 'my $a := 2;'
 
-This script may return C<125> to indicate that the corresponding commit
-should be skipped. Otherwise, it returns the status of
-F<~/testcase.pl>.
+Using C<bisect.pl>, with one command (and no other files) it's easy to find
+out
+
+=over 4
+
+=item *
+
+Which commit caused this example code to break?
+
+=item *
+
+Which commit caused this example code to start working?
+
+=item *
+
+Which commit added the first file to match this regex?
+
+=item *
+
+Which commit removed the last file to match this regex?
+
+=back
+
+usually without needing to know which versions of perl to use as start and
+end revisions, as F<bisect.pl> automatically searches to find the earliest
+stable version for which the test case passes. Run
+C<Porting/bisect.pl --help> for the full documentation, including how to
+set the C<Configure> and build time options.
+
+If you require more flexibility than F<Porting/bisect.pl> has to offer, you'll
+need to run C<git bisect> yourself. It's most useful to use C<git bisect run>
+to automate the building and testing of perl revisions. For this you'll need
+a shell script for C<git> to call to test a particular revision. An example
+script is F<Porting/bisect-example.sh>, which you should copy B<outside> of
+the repository, as the bisect process will reset the state to a clean checkout
+as it runs. The instructions below assume that you copied it as F<~/run> and
+then edited it as appropriate.
 
 You first enter in bisect mode with:
 
@@ -466,96 +480,6 @@ the "first commit where the bug is solved".
 
 C<git help bisect> has much more information on how you can tweak your
 binary searches.
-=head1 Topic branches and rewriting history
-
-Individual committers should create topic branches under
-B<yourname>/B<some_descriptive_name>. Other committers should check
-with a topic branch's creator before making any change to it.
-
-The simplest way to create a remote topic branch that works on all
-versions of git is to push the current head as a new branch on the
-remote, then check it out locally:
-
-  $ branch="$yourname/$some_descriptive_name"
-  $ git push origin HEAD:$branch
-  $ git checkout -b $branch origin/$branch
-
-Users of git 1.7 or newer can do it in a more obvious manner:
-
-  $ branch="$yourname/$some_descriptive_name"
-  $ git checkout -b $branch
-  $ git push origin -u $branch
-
-If you are not the creator of B<yourname>/B<some_descriptive_name>, you
-might sometimes find that the original author has edited the branch's
-history. There are lots of good reasons for this. Sometimes, an author
-might simply be rebasing the branch onto a newer source point.
-Sometimes, an author might have found an error in an early commit which
-they wanted to fix before merging the branch to blead.
-
-Currently the master repository is configured to forbid
-non-fast-forward merges. This means that the branches within can not be
-rebased and pushed as a single step.
-
-The only way you will ever be allowed to rebase or modify the history
-of a pushed branch is to delete it and push it as a new branch under
-the same name. Please think carefully about doing this. It may be
-better to sequentially rename your branches so that it is easier for
-others working with you to cherry-pick their local changes onto the new
-version. (XXX: needs explanation).
-
-If you want to rebase a personal topic branch, you will have to delete
-your existing topic branch and push as a new version of it. You can do
-this via the following formula (see the explanation about C<refspec>'s
-in the git push documentation for details) after you have rebased your
-branch:
-
-   # first rebase
-   $ git checkout $user/$topic
-   $ git fetch
-   $ git rebase origin/blead
-
-   # then "delete-and-push"
-   $ git push origin :$user/$topic
-   $ git push origin $user/$topic
-
-B<NOTE:> it is forbidden at the repository level to delete any of the
-"primary" branches. That is any branch matching
-C<m!^(blead|maint|perl)!>. Any attempt to do so will result in git
-producing an error like this:
-
-    $ git push origin :blead
-    *** It is forbidden to delete blead/maint branches in this repository
-    error: hooks/update exited with error code 1
-    error: hook declined to update refs/heads/blead
-    To ssh://perl5.git.perl.org/perl
-     ! [remote rejected] blead (hook declined)
-     error: failed to push some refs to 'ssh://perl5.git.perl.org/perl'
-
-As a matter of policy we do B<not> edit the history of the blead and
-maint-* branches. If a typo (or worse) sneaks into a commit to blead or
-maint-*, we'll fix it in another commit. The only types of updates
-allowed on these branches are "fast-forward's", where all history is
-preserved.
-
-Annotated tags in the canonical perl.git repository will never be
-deleted or modified. Think long and hard about whether you want to push
-a local tag to perl.git before doing so. (Pushing unannotated tags is
-not allowed.)
-
-=head3 Grafts
-
-The perl history contains one mistake which was not caught in the
-conversion: a merge was recorded in the history between blead and
-maint-5.10 where no merge actually occurred. Due to the nature of git,
-this is now impossible to fix in the public repository. You can remove
-this mis-merge locally by adding the following line to your
-C<.git/info/grafts> file:
-
-  296f12bbbbaa06de9be9d09d3dcf8f4528898a49 434946e0cb7a32589ed92d18008aaa1d88515930
-
-It is particularly important to have this graft line if any bisecting
-is done in the area of the "merge" in question.
 
 =head2 Topic branches and rewriting history
 
@@ -634,6 +558,20 @@ deleted or modified. Think long and hard about whether you want to push
 a local tag to perl.git before doing so. (Pushing unannotated tags is
 not allowed.)
 
+=head2 Grafts
+
+The perl history contains one mistake which was not caught in the
+conversion: a merge was recorded in the history between blead and
+maint-5.10 where no merge actually occurred. Due to the nature of git,
+this is now impossible to fix in the public repository. You can remove
+this mis-merge locally by adding the following line to your
+C<.git/info/grafts> file:
+
+  296f12bbbbaa06de9be9d09d3dcf8f4528898a49 434946e0cb7a32589ed92d18008aaa1d88515930
+
+It is particularly important to have this graft line if any bisecting
+is done in the area of the "merge" in question.
+
 =head1 WRITE ACCESS TO THE GIT REPOSITORY
 
 Once you have write access, you will need to modify the URL for the
@@ -648,7 +586,7 @@ this once globally in their F<~/.gitconfig> by doing something like:
   % git config --global user.name "Ævar Arnfjörð Bjarmason"
   % git config --global user.email avarab@gmail.com
 
-However if you'd like to override that just for perl then execute then
+However, if you'd like to override that just for perl, 
 execute something like the following in F<perl>:
 
   % git config user.email avar@cpan.org
@@ -667,7 +605,8 @@ to push your changes back with the C<camel> remote:
 
 The C<fetch> command just updates the C<camel> refs, as the objects
 themselves should have been fetched when pulling from C<origin>.
-=head1 Accepting a patch
+
+=head2 Accepting a patch
 
 If you have received a patch file generated using the above section,
 you should try out the patch.
@@ -717,7 +656,7 @@ then merge it into blead then push it out to the main repository:
 
   % git checkout blead
   % git merge experimental
-  % git push
+  % git push origin blead
 
 If you want to delete your temporary branch, you may do so with:
 
@@ -763,11 +702,78 @@ look in F<t/porting>.
 =item *
 
 If you make any changes that affect miniperl or core routines that have
-different code paths for miniperl, be sure to run C<make minitest>. 
+different code paths for miniperl, be sure to run C<make minitest>.
 This will catch problems that even the full test suite will not catch
 because it runs a subset of tests under miniperl rather than perl.
 
 =back
+
+=head2 On merging and rebasing
+
+Simple, one-off commits pushed to the 'blead' branch should be simple
+commits that apply cleanly.  In other words, you should make sure your
+work is committed against the current position of blead, so that you can
+push back to the master repository without merging.
+
+Sometimes, blead will move while you're building or testing your
+changes.  When this happens, your push will be rejected with a message
+like this:
+
+  To ssh://perl5.git.perl.org/perl.git
+   ! [rejected]        blead -> blead (non-fast-forward)
+  error: failed to push some refs to 'ssh://perl5.git.perl.org/perl.git'
+  To prevent you from losing history, non-fast-forward updates were rejected
+  Merge the remote changes (e.g. 'git pull') before pushing again.  See the
+  'Note about fast-forwards' section of 'git push --help' for details.
+
+When this happens, you can just I<rebase> your work against the new
+position of blead, like this (assuming your remote for the master
+repository is "p5p"):
+
+  $ git fetch p5p
+  $ git rebase p5p/blead
+
+You will see your commits being re-applied, and you will then be able to
+push safely.  More information about rebasing can be found in the
+documentation for the git-rebase(1) command.
+
+For larger sets of commits that only make sense together, or that would
+benefit from a summary of the set's purpose, you should use a merge
+commit.  You should perform your work on a L<topic branch|/Topic
+branches and rewriting history>, which you should regularly rebase
+against blead to ensure that your code is not broken by blead moving.
+When you have finished your work, please perform a final rebase and
+test.  Linear history is something that gets lost with every
+commit on blead, but a final rebase makes the history linear
+again, making it easier for future maintainers to see what has
+happened.  Rebase as follows (assuming your work was on the
+branch C<< committer/somework >>):
+
+  $ git checkout committer/somework
+  $ git rebase blead
+
+Then you can merge it into master like this:
+
+  $ git checkout blead
+  $ git merge --no-ff --no-commit committer/somework
+  $ git commit -a
+
+The switches above deserve explanation.  C<--no-ff> indicates that even
+if all your work can be applied linearly against blead, a merge commit
+should still be prepared.  This ensures that all your work will be shown
+as a side branch, with all its commits merged into the mainstream blead
+by the merge commit.
+
+C<--no-commit> means that the merge commit will be I<prepared> but not
+I<committed>.  The commit is then actually performed when you run the
+next command, which will bring up your editor to describe the commit.
+Without C<--no-commit>, the commit would be made with nearly no useful
+message, which would greatly diminish the value of the merge commit as a
+placeholder for the work's description.
+
+When describing the merge commit, explain the purpose of the branch, and
+keep in mind that this description will probably be used by the
+eventual release engineer when reviewing the next perldelta document.
 
 =head2 Committing to maintenance versions
 
@@ -790,20 +796,6 @@ original commit in the new commit message.
 
 Before pushing any change to a maint version, make sure you've
 satisfied the steps in L</Committing to blead> above.
-
-=head2 Grafts
-
-The perl history contains one mistake which was not caught in the
-conversion: a merge was recorded in the history between blead and
-maint-5.10 where no merge actually occurred. Due to the nature of git,
-this is now impossible to fix in the public repository. You can remove
-this mis-merge locally by adding the following line to your
-C<.git/info/grafts> file:
-
-  296f12bbbbaa06de9be9d09d3dcf8f4528898a49 434946e0cb7a32589ed92d18008aaa1d88515930
-
-It is particularly important to have this graft line if any bisecting
-is done in the area of the "merge" in question.
 
 =head2 Merging from a branch via GitHub
 
@@ -832,7 +824,77 @@ Or you could just merge the whole branch if you like it all:
 
 And then push back to the repository:
 
-  % git push
+  % git push origin blead
+
+=head2 Using a smoke-me branch to test changes
+
+Sometimes a change affects code paths which you cannot test on the OSes
+which are directly available to you and it would be wise to have users
+on other OSes test the change before you commit it to blead.
+
+Fortunately, there is a way to get your change smoke-tested on various
+OSes: push it to a "smoke-me" branch and wait for certain automated
+smoke-testers to report the results from their OSes.
+
+The procedure for doing this is roughly as follows (using the example of
+of tonyc's smoke-me branch called win32stat):
+
+First, make a local branch and switch to it:
+
+  % git checkout -b win32stat
+
+Make some changes, build perl and test your changes, then commit them to
+your local branch. Then push your local branch to a remote smoke-me
+branch:
+
+  % git push origin win32stat:smoke-me/tonyc/win32stat
+
+Now you can switch back to blead locally:
+
+  % git checkout blead
+
+and continue working on other things while you wait a day or two,
+keeping an eye on the results reported for your smoke-me branch at
+L<http://perl.develop-help.com/?b=smoke-me/tonyc/win32state>.
+
+If all is well then update your blead branch:
+
+  % git pull
+
+then checkout your smoke-me branch once more and rebase it on blead:
+
+  % git rebase blead win32stat
+
+Now switch back to blead and merge your smoke-me branch into it:
+
+  % git checkout blead
+  % git merge win32stat
+
+As described earlier, if there are many changes on your smoke-me branch
+then you should prepare a merge commit in which to give an overview of
+those changes by using the following command instead of the last
+command above:
+
+  % git merge win32stat --no-ff --no-commit
+
+You should now build perl and test your (merged) changes one last time
+(ideally run the whole test suite, but failing that at least run the
+F<t/porting/*.t> tests) before pushing your changes as usual:
+
+  % git push origin blead
+
+Finally, you should then delete the remote smoke-me branch:
+
+  % git push origin :smoke-me/tonyc/win32stat
+
+(which is likely to produce a warning like this, which can be ignored:
+
+  remote: fatal: ambiguous argument 'refs/heads/smoke-me/tonyc/win32stat': unknown revision or path not in the working tree.
+  remote: Use '--' to separate paths from revisions
+
+) and then delete your local branch:
+
+  % git branch -d win32stat
 
 =head2 A note on camel and dromedary
 

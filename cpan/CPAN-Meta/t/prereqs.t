@@ -4,6 +4,8 @@ use Test::More 0.88;
 
 use CPAN::Meta::Prereqs;
 
+delete $ENV{$_} for qw/PERL_JSON_BACKEND PERL_YAML_BACKEND/; # use defaults
+
 my $prereq_struct = {
   runtime => {
     requires => {
@@ -83,6 +85,7 @@ is_deeply($prereq->as_string_hash, $prereq_struct, "round-trip okay");
     (! grep { 'Test' eq $_ } @req_mod),
     "...but not the build requirements",
   );
+
 }
 
 {

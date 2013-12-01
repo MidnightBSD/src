@@ -1,6 +1,6 @@
 #!/usr/bin/perl
-# $File: /member/local/autrijus/encoding-warnings/t/2-fatal.t $ $Author: laffer1 $
-# $Revision: 1.1.1.1 $ $Change: 1626 $ $DateTime: 2004-03-14T16:53:19.351256Z $
+# $File: /member/local/autrijus/encoding-warnings/t/2-fatal.t $ $Author: autrijus $
+# $Revision: #4 $ $Change: 1626 $ $DateTime: 2004-03-14T16:53:19.351256Z $
 
 BEGIN {
     unless (eval { require Encode } ) {

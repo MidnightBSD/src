@@ -8,10 +8,10 @@ BEGIN {
     }
 }
 
-use Test::More tests => 66;
+use Test::More tests => 109;
 
 use POSIX qw(fcntl_h signal_h limits_h _exit getcwd open read strftime write
-	     errno);
+	     errno localeconv dup dup2 lseek access);
 use strict 'subs';
 
 sub next_test {
@@ -23,7 +23,6 @@ $| = 1;
 
 $Is_W32     = $^O eq 'MSWin32';
 $Is_Dos     = $^O eq 'dos';
-$Is_MPE     = $^O eq 'mpeix';
 $Is_MacOS   = $^O eq 'MacOS';
 $Is_VMS     = $^O eq 'VMS';
 $Is_OS2     = $^O eq 'os2';
@@ -51,8 +50,8 @@ if ($Is_VMS) {
 
 }
 
-
-ok( $testfd = open("Makefile.PL", O_RDONLY, 0),        'O_RDONLY with open' );
+my $testfd = open("Makefile.PL", O_RDONLY, 0);
+like($testfd, qr/\A\d+\z/, 'O_RDONLY with open');
 read($testfd, $buffer, 4) if $testfd > 2;
 is( $buffer, "# Ex",                      '    with read' );
 
@@ -64,22 +63,22 @@ TODO:
     is( $buffer[1], "perl\n",	               '    read to array element' );
 }
 
-write(1,"ok 4\nnot ok 4\n", 5);
-next_test();
+my $test = next_test();
+write(1,"ok $test\nnot ok $test\n", 5);
 
 SKIP: {
     skip("no pipe() support on DOS", 2) if $Is_Dos;
 
     @fds = POSIX::pipe();
-    ok( $fds[0] > $testfd,      'POSIX::pipe' );
+    cmp_ok($fds[0], '>', $testfd, 'POSIX::pipe');
 
     CORE::open($reader = \*READER, "<&=".$fds[0]);
     CORE::open($writer = \*WRITER, ">&=".$fds[1]);
-    print $writer "ok 6\n";
+    my $test = next_test();
+    print $writer "ok $test\n";
     close $writer;
     print <$reader>;
     close $reader;
-    next_test();
 }
 
 SKIP: {
@@ -105,6 +104,7 @@ SKIP: {
 	# So the kill() must not be done with this config in order to
 	# finish the test.
 	# For others (darwin & freebsd), let the test fail without crashing.
+	# the test passes at least from freebsd 8.1
 	my $todo = $^O eq 'netbsd' && $Config{osvers}=~/^1\.6/;
 	my $why_todo = "# TODO $^O $Config{osvers} seems to lose blocked signals";
 	if (!$todo) { 
@@ -115,8 +115,8 @@ SKIP: {
 	}
 	sleep 1;
 
-	$todo = 1 if ($^O eq 'freebsd')
-		  || ($^O eq 'darwin' && $Config{osvers} lt '6.6');
+	$todo = 1 if ($^O eq 'freebsd' && $Config{osvers} < 8)
+		  || ($^O eq 'darwin' && $Config{osvers} < '6.6');
 	printf "%s 11 - masked SIGINT received %s\n",
 	    $sigint_called ? "ok" : "not ok",
 	    $todo ? $why_todo : '';
@@ -141,10 +141,10 @@ SKIP: {
 }
 
 SKIP: {
-    skip("_POSIX_OPEN_MAX is inaccurate on MPE", 1) if $Is_MPE;
     skip("_POSIX_OPEN_MAX undefined ($fds[1])",  1) unless &_POSIX_OPEN_MAX;
 
-    ok( &_POSIX_OPEN_MAX >= 16, "The minimum allowed values according to susv2" );
+    cmp_ok(&_POSIX_OPEN_MAX, '>=', 16,
+	   "The minimum allowed values according to susv2" );
 
 }
 
@@ -160,13 +160,14 @@ like( getcwd(), qr/$pat/, 'getcwd' );
 # Check string conversion functions.
 
 SKIP: { 
-    skip("strtod() not present", 1) unless $Config{d_strtod};
+    skip("strtod() not present", 2) unless $Config{d_strtod};
 
     $lc = &POSIX::setlocale(&POSIX::LC_NUMERIC, 'C') if $Config{d_setlocale};
 
     # we're just checking that strtod works, not how accurate it is
     ($n, $x) = &POSIX::strtod('3.14159_OR_SO');
-    ok((abs("3.14159" - $n) < 1e-6) && ($x == 6), 'strtod works');
+    cmp_ok(abs("3.14159" - $n), '<', 1e-6, 'strtod works');
+    is($x, 6, 'strtod works');
 
     &POSIX::setlocale(&POSIX::LC_NUMERIC, $lc) if $Config{d_setlocale};
 }
@@ -188,14 +189,14 @@ SKIP: {
 }
 
 # Pick up whether we're really able to dynamically load everything.
-ok( &POSIX::acos(1.0) == 0.0,   'dynamic loading' );
+cmp_ok(&POSIX::acos(1.0), '==', 0.0, 'dynamic loading');
 
 # This can coredump if struct tm has a timezone field and we
 # didn't detect it.  If this fails, try adding
 # -DSTRUCT_TM_HASZONE to your cflags when compiling ext/POSIX/POSIX.c.
 # See ext/POSIX/hints/sunos_4.pl and ext/POSIX/hints/linux.pl 
-print POSIX::strftime("ok 21 # %H:%M, on %m/%d/%y\n", localtime());
-next_test();
+$test = next_test();
+print POSIX::strftime("ok $test # %H:%M, on %m/%d/%y\n", localtime());
 
 # If that worked, validate the mini_mktime() routine's normalisation of
 # input fields to strftime().
@@ -222,6 +223,21 @@ try_strftime("Mon Feb 28 00:00:00 2000 059", 0,0,0, 28,1,100);
 try_strftime("Tue Feb 29 00:00:00 2000 060", 0,0,0, 0,2,100);
 try_strftime("Wed Mar 01 00:00:00 2000 061", 0,0,0, 1,2,100);
 try_strftime("Fri Mar 31 00:00:00 2000 091", 0,0,0, 31,2,100);
+
+{ # rt 72232
+
+  # Std C/POSIX allows day/month to be negative and requires that
+  # wday/yday be adjusted as needed
+  # previously mini_mktime() would allow yday to dominate if mday and
+  # month were both non-positive
+  # check that yday doesn't dominate
+  try_strftime("Thu Dec 30 00:00:00 1999 364", 0,0,0, -1,0,100);
+  try_strftime("Thu Dec 30 00:00:00 1999 364", 0,0,0, -1,0,100,-1,10);
+  # it would also allow a positive wday to override the calculated value
+  # check that wday is recalculated too
+  try_strftime("Thu Dec 30 00:00:00 1999 364", 0,0,0, -1,0,100,0,10);
+}
+
 &POSIX::setlocale(&POSIX::LC_TIME, $lc) if $Config{d_setlocale};
 
 {
@@ -297,7 +313,81 @@ ok( POSIX::isprint([]),   'isprint []' );
 
 eval { use strict; POSIX->import("S_ISBLK"); my $x = S_ISBLK };
 unlike( $@, qr/Can't use string .* as a symbol ref/, "Can import autoloaded constants" );
- 
+
+SKIP: {
+    skip("localeconv() not present", 20) unless $Config{d_locconv};
+    my $conv = localeconv;
+    is(ref $conv, 'HASH', 'localconv returns a hash reference');
+
+    foreach (qw(decimal_point thousands_sep grouping int_curr_symbol
+		currency_symbol mon_decimal_point mon_thousands_sep
+		mon_grouping positive_sign negative_sign)) {
+    SKIP: {
+	    skip("localeconv has no result for $_", 1)
+		unless exists $conv->{$_};
+	    unlike(delete $conv->{$_}, qr/\A\z/,
+		   "localeconv returned a non-empty string for $_");
+	}
+    }
+
+    foreach (qw(int_frac_digits frac_digits p_cs_precedes p_sep_by_space
+		n_cs_precedes n_sep_by_space p_sign_posn n_sign_posn)) {
+    SKIP: {
+	    skip("localeconv has no result for $_", 1)
+		unless exists $conv->{$_};
+	    like(delete $conv->{$_}, qr/\A-?\d+\z/,
+		 "localeconv returned an integer for $_");
+	}
+    }
+    is_deeply([%$conv], [], 'no unexpected keys returned by localeconv');
+}
+
+my $fd1 = open("Makefile.PL", O_RDONLY, 0);
+like($fd1, qr/\A\d+\z/, 'O_RDONLY with open');
+cmp_ok($fd1, '>', $testfd);
+my $fd2 = dup($fd1);
+like($fd2, qr/\A\d+\z/, 'dup');
+cmp_ok($fd2, '>', $fd1);
+is(POSIX::close($fd1), '0 but true', 'close');
+is(POSIX::close($testfd), '0 but true', 'close');
+$! = 0;
+undef $buffer;
+is(read($fd1, $buffer, 4), undef, 'read on closed file handle fails');
+cmp_ok($!, '==', POSIX::EBADF);
+undef $buffer;
+read($fd2, $buffer, 4) if $fd2 > 2;
+is($buffer, "# Ex", 'read');
+# The descriptor $testfd was using is now free, and is lower than that which
+# $fd1 was using. Hence if dup2() behaves as dup(), we'll know :-)
+{
+    $testfd = dup2($fd2, $fd1);
+    is($testfd, $fd1, 'dup2');
+    undef $buffer;
+    read($testfd, $buffer, 4) if $testfd > 2;
+    is($buffer, 'pect', 'read');
+    is(lseek($testfd, 0, 0), 0, 'lseek back');
+    # The two should share file position:
+    undef $buffer;
+    read($fd2, $buffer, 4) if $fd2 > 2;
+    is($buffer, "# Ex", 'read');
+}
+
+# The FreeBSD man page warns:
+# The access() system call is a potential security hole due to race
+# conditions and should never be used.
+is(access('Makefile.PL', POSIX::F_OK), '0 but true', 'access');
+is(access('Makefile.PL', POSIX::R_OK), '0 but true', 'access');
+$! = 0;
+is(access('no such file', POSIX::F_OK), undef, 'access on missing file');
+cmp_ok($!, '==', POSIX::ENOENT);
+is(access('Makefile.PL/nonsense', POSIX::F_OK), undef,
+   'access on not-a-directory');
+SKIP: {
+    skip("$^O is insufficiently POSIX", 1)
+	if $Is_W32 || $Is_VMS;
+    cmp_ok($!, '==', POSIX::ENOTDIR);
+}
+
 # Check that output is not flushed by _exit. This test should be last
 # in the file, and is not counted in the total number of tests.
 if ($^O eq 'vos') {

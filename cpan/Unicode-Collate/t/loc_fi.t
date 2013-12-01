@@ -11,11 +11,19 @@ BEGIN {
     }
 }
 
-use Test;
-BEGIN { plan tests => 82 };
-
 use strict;
 use warnings;
+BEGIN { $| = 1; print "1..83\n"; }
+my $count = 0;
+sub ok ($;$) {
+    my $p = my $r = shift;
+    if (@_) {
+	my $x = shift;
+	$p = !defined $x ? !defined $r : !defined $r ? 0 : $r eq $x;
+    }
+    print $p ? "ok" : "not ok", ' ', ++$count, "\n";
+}
+
 use Unicode::Collate::Locale;
 
 ok(1);
@@ -42,11 +50,12 @@ ok($objFi->getlocale, 'fi');
 
 $objFi->change(level => 1);
 
-ok($objFi->lt('z',   $arng));
+ok($objFi->lt('z', $arng));
 ok($objFi->lt($arng, $auml));
 ok($objFi->lt($auml, $ouml));
+ok($objFi->lt($ouml, "\x{1C0}"));
 
-# 5
+# 6
 
 ok($objFi->eq("d\x{335}", "\x{111}"));
 ok($objFi->eq("g\x{335}", "\x{1E5}"));
@@ -58,7 +67,7 @@ ok($objFi->eq('y', $uuml));
 ok($objFi->eq($auml, $ae));
 ok($objFi->eq($ouml, $ostk));
 
-# 14
+# 15
 
 $objFi->change(level => 2);
 
@@ -72,7 +81,7 @@ ok($objFi->lt('y', $uuml));
 ok($objFi->lt($auml, $ae));
 ok($objFi->lt($ouml, $ostk));
 
-# 23
+# 24
 
 ok($objFi->eq("\x{111}", "\x{110}"));
 ok($objFi->eq("\x{1E5}", "\x{1E4}"));
@@ -88,7 +97,7 @@ ok($objFi->eq($AE, "\x{1D2D}"));
 ok($objFi->eq($ouml, $Ouml));
 ok($objFi->eq($ostk, $Ostk));
 
-# 36
+# 37
 
 $objFi->change(level => 3);
 
@@ -106,7 +115,7 @@ ok($objFi->lt($AE, "\x{1D2D}"));
 ok($objFi->lt($ouml, $Ouml));
 ok($objFi->lt($ostk, $Ostk));
 
-# 49
+# 50
 
 ok($objFi->eq("u\x{308}", $uuml));
 ok($objFi->eq("U\x{308}", $Uuml));
@@ -121,7 +130,7 @@ ok($objFi->eq("O\x{308}", $Ouml));
 ok($objFi->eq("o\x{338}", $ostk));
 ok($objFi->eq("O\x{338}", $Ostk));
 
-# 61
+# 62
 
 ok($objFi->eq("u\x{308}\x{300}", "\x{1DC}"));
 ok($objFi->eq("U\x{308}\x{300}", "\x{1DB}"));
@@ -145,4 +154,4 @@ ok($objFi->eq("O\x{308}\x{304}", "\x{22A}"));
 ok($objFi->eq("o\x{338}\x{301}", "\x{1FF}"));
 ok($objFi->eq("O\x{338}\x{301}", "\x{1FE}"));
 
-# 82
+# 83
