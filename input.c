@@ -1,11 +1,10 @@
 /*
- * Copyright (C) 1984-2009  Mark Nudelman
+ * Copyright (C) 1984-2012  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
  *
- * For more information about less, or for information on how to 
- * contact the author, see the README file.
+ * For more information, see the README file.
  */
 
 
@@ -181,6 +180,11 @@ get_forw_line:
 			{
 				do
 				{
+					if (ABORT_SIGS())
+					{
+						null_line();
+						return (NULL_POSITION);
+					}
 					c = ch_forw_get();
 				} while (c != '\n' && c != EOI);
 				new_pos = ch_tell();
@@ -411,7 +415,7 @@ get_back_line:
 		goto get_back_line;
 	}
 
-	if (status_col && is_hilited(base_pos, ch_tell()-1, 1, NULL))
+	if (status_col && curr_pos > 0 && is_hilited(base_pos, curr_pos-1, 1, NULL))
 		set_status_col('*');
 #endif
 
