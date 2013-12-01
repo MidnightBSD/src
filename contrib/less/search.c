@@ -1,12 +1,11 @@
 /* $FreeBSD: src/contrib/less/search.c,v 1.5.8.3.2.1 2007/12/04 22:41:44 delphij Exp $ */
 /*
- * Copyright (C) 1984-2009  Mark Nudelman
+ * Copyright (C) 1984-2012  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
  *
- * For more information about less, or for information on how to 
- * contact the author, see the README file.
+ * For more information, see the README file.
  */
 
 
@@ -68,9 +67,34 @@ struct pattern_info {
 	char* text;
 	int search_type;
 };
+
+#if NO_REGEX
+#define info_compiled(info) ((void*)0)
+#else
+#define info_compiled(info) ((info)->compiled)
+#endif
 	
 static struct pattern_info search_info;
 static struct pattern_info filter_info;
+
+/*
+ * Are there any uppercase letters in this string?
+ */
+	static int
+is_ucase(str)
+	char *str;
+{
+	char *str_end = str + strlen(str);
+	LWCHAR ch;
+
+	while (str < str_end)
+	{
+		ch = step_char(&str, +1, str_end);
+		if (IS_UPPER(ch))
+			return (1);
+	}
+	return (0);
+}
 
 /*
  * Compile and save a search pattern.
@@ -81,10 +105,12 @@ set_pattern(info, pattern, search_type)
 	char *pattern;
 	int search_type;
 {
+#if !NO_REGEX
 	if (pattern == NULL)
-		CLEAR_PATTERN(search_info.compiled);
+		CLEAR_PATTERN(info->compiled);
 	else if (compile_pattern(pattern, search_type, &info->compiled) < 0)
 		return -1;
+#endif
 	/* Pattern compiled successfully; save the text too. */
 	if (info->text != NULL)
 		free(info->text);
@@ -95,6 +121,16 @@ set_pattern(info, pattern, search_type)
 		strcpy(info->text, pattern);
 	}
 	info->search_type = search_type;
+
+	/*
+	 * Ignore case if -I is set OR
+	 * -i is set AND the pattern is all lowercase.
+	 */
+	is_ucase_pattern = is_ucase(pattern);
+	if (is_ucase_pattern && caseless != OPT_ONPLUS)
+		is_caseless = 0;
+	else
+		is_caseless = caseless;
 	return 0;
 }
 
@@ -108,7 +144,9 @@ clear_pattern(info)
 	if (info->text != NULL)
 		free(info->text);
 	info->text = NULL;
+#if !NO_REGEX
 	uncompile_pattern(&info->compiled);
+#endif
 }
 
 /*
@@ -158,34 +196,17 @@ get_cvt_ops()
 }
 
 /*
- * Are there any uppercase letters in this string?
- */
-	static int
-is_ucase(str)
-	char *str;
-{
-	char *str_end = str + strlen(str);
-	LWCHAR ch;
-
-	while (str < str_end)
-	{
-		ch = step_char(&str, +1, str_end);
-		if (IS_UPPER(ch))
-			return (1);
-	}
-	return (0);
-}
-
-/*
  * Is there a previous (remembered) search pattern?
  */
 	static int
 prev_pattern(info)
 	struct pattern_info *info;
 {
-	if (info->search_type & SRCH_NO_REGEX)
-		return (info->text != NULL);
-	return (!is_null_pattern(info->compiled));
+#if !NO_REGEX
+	if ((info->search_type & SRCH_NO_REGEX) == 0)
+		return (!is_null_pattern(info->compiled));
+#endif
+	return (info->text != NULL);
 }
 
 #if HILITE_SEARCH
@@ -231,7 +252,7 @@ repaint_hilite(on)
 		goto_line(slinenum);
 		put_line();
 	}
-	lower_left(); // if !oldbot
+	lower_left();
 	hide_hilite = save_hide_hilite;
 }
 
@@ -468,6 +489,47 @@ add_hilite(anchor, hl)
 }
 
 /*
+ * Hilight every character in a range of displayed characters.
+ */
+	static void
+create_hilites(linepos, start_index, end_index, chpos)
+	POSITION linepos;
+	int start_index;
+	int end_index;
+	int *chpos;
+{
+	struct hilite *hl;
+	int i;
+
+	/* Start the first hilite. */
+	hl = (struct hilite *) ecalloc(1, sizeof(struct hilite));
+	hl->hl_startpos = linepos + chpos[start_index];
+
+	/*
+	 * Step through the displayed chars.
+	 * If the source position (before cvt) of the char is one more
+	 * than the source pos of the previous char (the usual case),
+	 * just increase the size of the current hilite by one.
+	 * Otherwise (there are backspaces or something involved),
+	 * finish the current hilite and start a new one.
+	 */
+	for (i = start_index+1;  i <= end_index;  i++)
+	{
+		if (chpos[i] != chpos[i-1] + 1 || i == end_index)
+		{
+			hl->hl_endpos = linepos + chpos[i-1] + 1;
+			add_hilite(&hilite_anchor, hl);
+			/* Start new hilite unless this is the last char. */
+			if (i < end_index)
+			{
+				hl = (struct hilite *) ecalloc(1, sizeof(struct hilite));
+				hl->hl_startpos = linepos + chpos[i];
+			}
+		}
+	}
+}
+
+/*
  * Make a hilite for each string in a physical line which matches 
  * the current pattern.
  * sp,ep delimit the first match already found.
@@ -484,7 +546,6 @@ hilite_line(linepos, line, line_len, chpos, sp, ep, cvt_ops)
 {
 	char *searchp;
 	char *line_end = line + line_len;
-	struct hilite *hl;
 
 	if (sp == NULL || ep == NULL)
 		return;
@@ -500,13 +561,7 @@ hilite_line(linepos, line, line_len, chpos, sp, ep, cvt_ops)
 	 */
 	searchp = line;
 	do {
-		if (ep > sp)
-		{
-			hl = (struct hilite *) ecalloc(1, sizeof(struct hilite));
-			hl->hl_startpos = linepos + chpos[sp-line];
-			hl->hl_endpos = linepos + chpos[ep-line];
-			add_hilite(&hilite_anchor, hl);
-		}
+		create_hilites(linepos, sp-line, ep-line, chpos);
 		/*
 		 * If we matched more than zero characters,
 		 * move to the first char after the string we matched.
@@ -518,7 +573,7 @@ hilite_line(linepos, line, line_len, chpos, sp, ep, cvt_ops)
 			searchp++;
 		else /* end of line */
 			break;
-	} while (match_pattern(search_info.compiled, search_info.text,
+	} while (match_pattern(info_compiled(&search_info), search_info.text,
 			searchp, line_end - searchp, &sp, &ep, 1, search_info.search_type));
 }
 #endif
@@ -601,7 +656,7 @@ search_pos(search_type)
 		 */
 		if (search_type & SRCH_FORW)
 		{
-			return (ch_zero());
+			pos = ch_zero();
 		} else
 		{
 			pos = ch_length();
@@ -610,46 +665,66 @@ search_pos(search_type)
 				(void) ch_end_seek();
 				pos = ch_length();
 			}
-			return (pos);
 		}
-	}
-	if (how_search)
+		linenum = 0;
+	} else 
 	{
-		/*
-		 * Search does not include current screen.
-		 */
-		if (search_type & SRCH_FORW)
-			linenum = BOTTOM_PLUS_ONE;
-		else
-			linenum = TOP;
-		pos = position(linenum);
-	} else
-	{
-		/*
-		 * Search includes current screen.
-		 * It starts at the jump target (if searching backwards),
-		 * or at the jump target plus one (if forwards).
-		 */
-		linenum = adjsline(jump_sline);
-		pos = position(linenum);
-		if (search_type & SRCH_FORW)
+		int add_one = 0;
+
+		if (how_search == OPT_ON)
 		{
-			pos = forw_raw_line(pos, (char **)NULL, (int *)NULL);
-			while (pos == NULL_POSITION)
-			{
-				if (++linenum >= sc_height)
-					break;
-				pos = position(linenum);
-			}
+			/*
+			 * Search does not include current screen.
+			 */
+			if (search_type & SRCH_FORW)
+				linenum = BOTTOM_PLUS_ONE;
+			else
+				linenum = TOP;
+		} else if (how_search == OPT_ONPLUS && !(search_type & SRCH_AFTER_TARGET))
+		{
+			/*
+			 * Search includes all of displayed screen.
+			 */
+			if (search_type & SRCH_FORW)
+				linenum = TOP;
+			else
+				linenum = BOTTOM_PLUS_ONE;
 		} else 
 		{
-			while (pos == NULL_POSITION)
-			{
-				if (--linenum < 0)
-					break;
-				pos = position(linenum);
-			}
+			/*
+			 * Search includes the part of current screen beyond the jump target.
+			 * It starts at the jump target (if searching backwards),
+			 * or at the jump target plus one (if forwards).
+			 */
+			linenum = jump_sline;
+			if (search_type & SRCH_FORW) 
+			    add_one = 1;
 		}
+		linenum = adjsline(linenum);
+		pos = position(linenum);
+		if (add_one)
+			pos = forw_raw_line(pos, (char **)NULL, (int *)NULL);
+	}
+
+	/*
+	 * If the line is empty, look around for a plausible starting place.
+	 */
+	if (search_type & SRCH_FORW) 
+	{
+	    while (pos == NULL_POSITION)
+	    {
+	        if (++linenum >= sc_height)
+	            break;
+	        pos = position(linenum);
+	    }
+	} else 
+	{
+	    while (pos == NULL_POSITION)
+	    {
+	        if (--linenum < 0)
+	            break;
+	        pos = position(linenum);
+	    }
 	}
 	return (pos);
 }
@@ -770,7 +845,7 @@ search_range(pos, endpos, search_type, matches, maxlines, plinepos, pendpos)
 		 * If so, add an entry to the filter list.
 		 */
 		if ((search_type & SRCH_FIND_ALL) && prev_pattern(&filter_info)) {
-			int line_filter = match_pattern(filter_info.compiled, filter_info.text,
+			int line_filter = match_pattern(info_compiled(&filter_info), filter_info.text,
 				cline, line_len, &sp, &ep, 0, filter_info.search_type);
 			if (line_filter)
 			{
@@ -790,8 +865,8 @@ search_range(pos, endpos, search_type, matches, maxlines, plinepos, pendpos)
 		 */
 		if (prev_pattern(&search_info))
 		{
-			line_match = match_pattern(search_info.compiled, search_info.text,
-				cline, line_len, &sp, &ep, 0, search_type); //FIXME search_info.search_type
+			line_match = match_pattern(info_compiled(&search_info), search_info.text,
+				cline, line_len, &sp, &ep, 0, search_type);
 			if (line_match)
 			{
 				/*
@@ -855,12 +930,6 @@ hist_pattern(search_type)
 	if (set_pattern(&search_info, pattern, search_type) < 0)
 		return (0);
 
-	is_ucase_pattern = is_ucase(pattern);
-	if (is_ucase_pattern && caseless != OPT_ONPLUS)
-		is_caseless = 0;
-	else
-		is_caseless = caseless;
-
 #if HILITE_SEARCH
 	if (hilite_search == OPT_ONPLUS && !hide_hilite)
 		hilite_screen();
@@ -894,6 +963,7 @@ search(search_type, pattern, n)
 		/*
 		 * A null pattern means use the previously compiled pattern.
 		 */
+		search_type |= SRCH_AFTER_TARGET;
 		if (!prev_pattern(&search_info) && !hist_pattern(search_type))
 		{
 			error("No previous regular expression", NULL_PARG);
@@ -932,15 +1002,6 @@ search(search_type, pattern, n)
 		 */
 		if (set_pattern(&search_info, pattern, search_type) < 0)
 			return (-1);
-		/*
-		 * Ignore case if -I is set OR
-		 * -i is set AND the pattern is all lowercase.
-		 */
-		is_ucase_pattern = is_ucase(pattern);
-		if (is_ucase_pattern && caseless != OPT_ONPLUS)
-			is_caseless = 0;
-		else
-			is_caseless = caseless;
 #if HILITE_SEARCH
 		if (hilite_search)
 		{

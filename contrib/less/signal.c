@@ -1,11 +1,10 @@
 /*
- * Copyright (C) 1984-2009  Mark Nudelman
+ * Copyright (C) 1984-2012  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
  *
- * For more information about less, or for information on how to 
- * contact the author, see the README file.
+ * For more information, see the README file.
  */
 
 /* $FreeBSD: src/contrib/less/signal.c,v 1.3.8.3 2007/10/11 18:51:44 delphij Exp $ */
@@ -256,6 +255,6 @@ psignals()
 	if (tsignals & S_INTERRUPT)
 	{
 		if (quit_on_intr)
-			quit(QUIT_OK);
+			quit(QUIT_INTERRUPT);
 	}
 }

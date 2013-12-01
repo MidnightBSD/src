@@ -1,11 +1,10 @@
 /*
- * Copyright (C) 1984-2009  Mark Nudelman
+ * Copyright (C) 1984-2012  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
  *
- * For more information about less, or for information on how to 
- * contact the author, see the README file.
+ * For more information, see the README file.
  */
 
 
@@ -130,34 +129,6 @@ opt__O(type, s)
 	opt_o(type, s);
 }
 #endif
-
-/*
- * Handlers for -l option.
- */
-	public void
-opt_l(type, s)
-	int type;
-	char *s;
-{
-	int err;
-	int n;
-	char *t;
-	
-	switch (type)
-	{
-	case INIT:
-		t = s;
-		n = getnum(&t, "l", &err);
-		if (err || n <= 0)
-		{
-			error("Line number is required after -l", NULL_PARG);
-			return;
-		}
-		plusoption = TRUE;
-		ungetsc(s);
-		break;
-	}
-}
 
 /*
  * Handlers for -j option.
@@ -509,7 +480,30 @@ opt__V(type, s)
 		any_display = 1;
 		putstr("less ");
 		putstr(version);
-		putstr("\nCopyright (C) 1984-2009 Mark Nudelman\n\n");
+		putstr(" (");
+#if HAVE_GNU_REGEX
+		putstr("GNU ");
+#endif
+#if HAVE_POSIX_REGCOMP
+		putstr("POSIX ");
+#endif
+#if HAVE_PCRE
+		putstr("PCRE ");
+#endif
+#if HAVE_RE_COMP
+		putstr("BSD ");
+#endif
+#if HAVE_REGCMP
+		putstr("V8 ");
+#endif
+#if HAVE_V8_REGCOMP
+		putstr("Spencer V8 ");
+#endif
+#if !HAVE_GNU_REGEX && !HAVE_POSIX_REGCOMP && !HAVE_PCRE && !HAVE_RE_COMP && !HAVE_REGCMP && !HAVE_V8_REGCOMP
+		putstr("no ");
+#endif
+		putstr("regular expressions)\n");
+		putstr("Copyright (C) 1984-2012 Mark Nudelman\n\n");
 		putstr("less comes with NO WARRANTY, to the extent permitted by law.\n");
 		putstr("For information about the terms of redistribution,\n");
 		putstr("see the file named README in the less distribution.\n");

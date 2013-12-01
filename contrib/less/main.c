@@ -1,12 +1,11 @@
 /* $FreeBSD: src/contrib/less/main.c,v 1.4.8.3 2007/09/05 15:47:07 delphij Exp $ */
 /*
- * Copyright (C) 1984-2009  Mark Nudelman
+ * Copyright (C) 1984-2012  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
  *
- * For more information about less, or for information on how to 
- * contact the author, see the README file.
+ * For more information, see the README file.
  */
 
 
@@ -33,7 +32,6 @@ public char *	progname;
 public int	quitting;
 public int	secure;
 public int	dohelp;
-public int	less_is_more;
 
 #if LOGFILE
 public int	logfile = -1;
@@ -56,6 +54,7 @@ extern int	jump_sline;
 static char consoleTitle[256];
 #endif
 
+extern int	less_is_more;
 extern int	missing_cap;
 extern int	know_dumb;
 extern int	quit_if_one_screen;
@@ -220,6 +219,7 @@ main(argc, argv)
 		argv++;
 		(void) get_ifile(filename, ifile);
 		ifile = prev_ifile(NULL_IFILE);
+		free(filename);
 #endif
 	}
 	/*
@@ -415,7 +415,7 @@ quit(status)
 	 */
 	close(2);
 #endif
-#if WIN32
+#ifdef WIN32
 	SetConsoleTitle(consoleTitle);
 #endif
 	close_getchr();
