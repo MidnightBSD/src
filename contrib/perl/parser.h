@@ -1,12 +1,12 @@
 /*    parser.h
  *
- *    Copyright (c) 2006, 2007, Larry Wall and others
+ *    Copyright (c) 2006, 2007, 2009, 2010, 2011 Larry Wall and others
  *
  *    You may distribute under the terms of either the GNU General Public
  *    License or the Artistic License, as specified in the README file.
  * 
  * This file defines the layout of the parser object used by the parser
- * and lexer (perly.c, toke,c).
+ * and lexer (perly.c, toke.c).
  */
 
 #define YYEMPTY		(-2)
@@ -20,6 +20,17 @@ typedef struct {
     const char  *name; /* token/rule name for -Dpv */
 #endif
 } yy_stack_frame;
+
+/* Fields that need to be shared with (i.e., visible to) inner lex-
+   ing scopes. */
+typedef struct yy_lexshared {
+    struct yy_lexshared	*ls_prev;
+    SV			*ls_linestr;	/* mirrors PL_parser->linestr */
+    char		*ls_bufptr;	/* mirrors PL_parser->bufptr */
+    char		*re_eval_start;	/* start of "(?{..." text */
+    SV			*re_eval_str;	/* "(?{...})" text */
+    line_t		herelines;	/* number of lines in here-doc */
+} LEXSHARED;
 
 typedef struct yy_parser {
 
@@ -52,32 +63,40 @@ typedef struct yy_parser {
     OP		*lex_op;	/* extra info to pass back on op */
     SV		*lex_repl;	/* runtime replacement from s/// */
     U16		lex_inwhat;	/* what kind of quoting are we in */
-    OPCODE	last_lop_op;	/* last list operator */
+    OPCODE	last_lop_op;	/* last named list or unary operator */
     I32		lex_starts;	/* how many interps done on level */
     SV		*lex_stuff;	/* runtime pattern from m// or s/// */
     I32		multi_start;	/* 1st line of multi-line string */
     I32		multi_end;	/* last line of multi-line string */
     char	multi_open;	/* delimiter of said string */
     char	multi_close;	/* delimiter of said string */
-    char	pending_ident;	/* pending identifier lookup */
     bool	preambled;
+    bool        lex_re_reparsing; /* we're doing G_RE_REPARSING */
     I32		lex_allbrackets;/* (), [], {}, ?: bracket count */
     SUBLEXINFO	sublex_info;
+    LEXSHARED	*lex_shared;
     SV		*linestr;	/* current chunk of src text */
-    char	*bufptr;	
-    char	*oldbufptr;	
-    char	*oldoldbufptr;	
+    char	*bufptr;	/* carries the cursor (current parsing
+				   position) from one invocation of yylex
+				   to the next */
+    char	*oldbufptr;	/* in yylex, beginning of current token */
+    char	*oldoldbufptr;	/* in yylex, beginning of previous token */
     char	*bufend;	
     char	*linestart;	/* beginning of most recently read line */
     char	*last_uni;	/* position of last named-unary op */
     char	*last_lop;	/* position of last list operator */
-    line_t	copline;	/* current line number */
+    /* copline is used to pass a specific line number to newSTATEOP.  It
+       is a one-time line number, as newSTATEOP invalidates it (sets it to
+       NOLINE) after using it.  The purpose of this is to report line num-
+       bers in multiline constructs using the number of the first line. */
+    line_t	copline;
     U16		in_my;		/* we're compiling a "my"/"our" declaration */
     U8		lex_state;	/* next token is determined */
     U8		error_count;	/* how many compile errors so far, max 10 */
     HV		*in_my_stash;	/* declared class of this "my" declaration */
     PerlIO	*rsfp;		/* current source file pointer */
     AV		*rsfp_filters;	/* holds chain of active source filters */
+    U8		form_lex_state;	/* remember lex_state when parsing fmt */
 
 #ifdef PERL_MAD
     SV		*endwhite;
@@ -105,15 +124,25 @@ typedef struct yy_parser {
     COP		*saved_curcop;	/* the previous PL_curcop */
     char	tokenbuf[256];
 
-    bool	in_pod;		/* lexer is within a =pod section */
     U8		lex_fakeeof;	/* precedence at which to fake EOF */
+    U8		lex_flags;
+    PERL_BITFIELD16	in_pod:1;      /* lexer is within a =pod section */
+    PERL_BITFIELD16	filtered:1;    /* source filters in evalbytes */
 } yy_parser;
 
 /* flags for lexer API */
 #define LEX_STUFF_UTF8		0x00000001
 #define LEX_KEEP_PREVIOUS	0x00000002
+
 #ifdef PERL_CORE
 # define LEX_START_SAME_FILTER	0x00000001
+# define LEX_IGNORE_UTF8_HINTS	0x00000002
+# define LEX_EVALBYTES		0x00000004
+# define LEX_START_COPIED	0x00000008
+# define LEX_DONT_CLOSE_RSFP	0x00000010
+# define LEX_START_FLAGS \
+	(LEX_START_SAME_FILTER|LEX_START_COPIED \
+	|LEX_IGNORE_UTF8_HINTS|LEX_EVALBYTES|LEX_DONT_CLOSE_RSFP)
 #endif
 
 /* flags for parser API */
@@ -139,8 +168,8 @@ enum {
  * Local variables:
  * c-indentation-style: bsd
  * c-basic-offset: 4
- * indent-tabs-mode: t
+ * indent-tabs-mode: nil
  * End:
  *
- * ex: set ts=8 sts=4 sw=4 noet:
+ * ex: set ts=8 sts=4 sw=4 et:
  */

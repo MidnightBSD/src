@@ -2,7 +2,7 @@
 #
 # regen_perly.pl, DAPM 12-Feb-04
 #
-# Copyright (c) 2004, 2005 Larry Wall
+# Copyright (c) 2004, 2005, 2006, 2009, 2010, 2011 Larry Wall
 #
 # Given an input file perly.y, run bison on it and produce
 # the following output files:
@@ -73,15 +73,20 @@ unless ($version) { die <<EOF; }
 Could not find a version of bison in your path. Please install bison.
 EOF
 
-unless ($version =~ /\b(1\.875[a-z]?|2\.[0134])\b/) { die <<EOF; }
+# Don't change this to add new bison versions without testing that the generated
+# files actually work :-) Win32 in particular may not like them. :-(
+unless ($version =~ /\b(1\.875[a-z]?|2\.[0134567])\b/) { die <<EOF; }
 
 You have the wrong version of bison in your path; currently 1.875
-2.0, 2.1, 2.3 or 2.4 is required.  Try installing
-    http://ftp.gnu.org/gnu/bison/bison-2.4.1.tar.gz
+2.0, 2.1, 2.3, 2.4, 2.5, 2.6 or 2.7 is required.  Try installing
+    http://ftp.gnu.org/gnu/bison/bison-2.5.1.tar.gz
 or similar.  Your bison identifies itself as:
 
 $version
 EOF
+
+# bison's version number, not the entire string, is most useful later on.
+$version = $1;
 
 # creates $tmpc_file and $tmph_file
 my_system("$bison -d -o $tmpc_file $y_file");
@@ -95,15 +100,16 @@ close $ctmp_fh;
 
 my ($actlines, $tablines) = extract($clines);
 
+our %tokens;
 $tablines .= make_type_tab($y_file, $tablines);
 
-my $read_only = read_only_top(lang => 'C', by => $0, from => $y_file);
+my ($act_fh, $tab_fh, $h_fh) = map {
+    open_new($_, '>', { by => $0, from => $y_file });
+} $act_file, $tab_file, $h_file;
 
-my $act_fh = safer_open("$act_file-new", $act_file);
-print $act_fh $read_only, $actlines;
+print $act_fh $actlines;
 
-my $tab_fh = safer_open("$tab_file-new", $tab_file);
-print $tab_fh $read_only, $tablines;
+print $tab_fh $tablines;
 
 unlink $tmpc_file;
 
@@ -112,18 +118,35 @@ unlink $tmpc_file;
 # C<#line 188 "perlytmp.h"> gets picked up by make depend, so remove them.
 
 open my $tmph_fh, '<', $tmph_file or die "Can't open $tmph_file: $!\n";
-my $h_fh = safer_open("$h_file-new", $h_file);
-
-print $h_fh $read_only;
 
 my $endcore_done = 0;
-# Token macros need to be generated manually on bison 2.4
-my $gather_tokens = ($version =~ /\b2\.4\b/ ? undef : 0);
+# Token macros need to be generated manually from bison 2.4 on
+my $gather_tokens = $version >= 2.4 ? undef : 0;
 my $tokens;
 while (<$tmph_fh>) {
+    # bison 2.6 adds header guards, which break things because of where we
+    # insert #ifdef PERL_CORE, so strip them because they aren't important
+    next if /YY_PERLYTMP_H/;
+
     print $h_fh "#ifdef PERL_CORE\n" if $. == 1;
     if (!$endcore_done and /YYSTYPE_IS_DECLARED/) {
-	print $h_fh "#endif /* PERL_CORE */\n";
+	print $h_fh <<h;
+#ifdef PERL_IN_TOKE_C
+static bool
+S_is_opval_token(int type) {
+    switch (type) {
+h
+	print $h_fh <<i for sort grep $tokens{$_} eq 'opval', keys %tokens;
+    case $_:
+i
+	print $h_fh <<j;
+	return 1;
+    }
+    return 0;
+}
+#endif /* PERL_IN_TOKE_C */
+#endif /* PERL_CORE */
+j
 	$endcore_done = 1;
     }
     next if /^#line \d+ ".*"/;
@@ -243,6 +266,7 @@ sub extract {
 
 sub make_type_tab {
     my ($y_file, $tablines) = @_;
+    my %just_tokens;
     my %tokens;
     my %types;
     my $default_token;
@@ -262,16 +286,22 @@ sub make_type_tab {
 	}
 
 	next unless /^%(token|type)/;
-	s/^%(token|type)\s+<(\w+)>\s+//
+	s/^%((token)|type)\s+<(\w+)>\s+//
 	    or die "$y_file: unparseable token/type line: $_";
-	$tokens{$_} = $2 for (split ' ', $_);
-	$types{$2} = 1;
+	for (split ' ', $_) {
+	    $tokens{$_} = $3;
+	    if ($2) {
+		$just_tokens{$_} = $3;
+	    }
+	}
+	$types{$3} = 1;
     }
+    *tokens = \%just_tokens; # perly.h needs this
     die "$y_file: no __DEFAULT__ token defined\n" unless $default_token;
     $types{$default_token} = 1;
 
     $tablines =~ /^\Qstatic const char *const yytname[] =\E\n
-	    {\n
+	    \{\n
 	    (.*?)
 	    ^};
 	    /xsm
@@ -281,7 +311,7 @@ sub make_type_tab {
 		{ "toketype_" .
 		    (defined $tokens{$1} ? $tokens{$1} : $default_token)
 		}ge;
-    $fields =~ s/, \s* 0 \s* $//x
+    $fields =~ s/, \s* (?:0|YY_NULL) \s* $//x
 	or die "make_type_tab: couldn't delete trailing ',0'\n";
 
     return 

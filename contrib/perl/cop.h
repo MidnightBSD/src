@@ -138,7 +138,7 @@ typedef struct jmpenv JMPENV;
 	    PerlProc_longjmp(PL_top_env->je_buf, (v));		\
 	if ((v) == 2)						\
 	    PerlProc_exit(STATUS_EXIT);		                \
-	PerlIO_printf(PerlIO_stderr(), "panic: top_env\n");	\
+	PerlIO_printf(PerlIO_stderr(), "panic: top_env, v=%d\n", (int)v); \
 	PerlProc_exit(1);					\
     } STMT_END
 
@@ -387,7 +387,8 @@ struct cop {
     line_t      cop_line;       /* line # of this command */
     /* label for this construct is now stored in cop_hints_hash */
 #ifdef USE_ITHREADS
-    char *	cop_stashpv;	/* package line was compiled in */
+    PADOFFSET	cop_stashoff;	/* offset into PL_stashpad, for the
+				   package the line was compiled in */
     char *	cop_file;	/* file name the following line # is from */
 #else
     HV *	cop_stash;	/* package line was compiled in */
@@ -419,29 +420,16 @@ struct cop {
 				 ? GvSV(gv_fetchfile(CopFILE(c))) : NULL)
 #  define CopFILEAV(c)		(CopFILE(c) \
 				 ? GvAV(gv_fetchfile(CopFILE(c))) : NULL)
-#  ifdef DEBUGGING
-#    define CopFILEAVx(c)	(assert(CopFILE(c)), \
+#  define CopFILEAVx(c)		(assert_(CopFILE(c)) \
 				   GvAV(gv_fetchfile(CopFILE(c))))
-#  else
-#    define CopFILEAVx(c)	(GvAV(gv_fetchfile(CopFILE(c))))
-#  endif
-#  define CopSTASHPV(c)		((c)->cop_stashpv)
 
+#  define CopSTASH(c)           PL_stashpad[(c)->cop_stashoff]
+#  define CopSTASH_set(c,hv)	((c)->cop_stashoff = (hv)		\
+				    ? alloccopstash(hv)			\
+				    : 0)
 #  ifdef NETWARE
-#    define CopSTASHPV_set(c,pv)	((c)->cop_stashpv = ((pv) ? savepv(pv) : NULL))
-#  else
-#    define CopSTASHPV_set(c,pv)	((c)->cop_stashpv = savesharedpv(pv))
-#  endif
-
-#  define CopSTASH(c)		(CopSTASHPV(c) \
-				 ? gv_stashpv(CopSTASHPV(c),GV_ADD) : NULL)
-#  define CopSTASH_set(c,hv)	CopSTASHPV_set(c, (hv) ? HvNAME_get(hv) : NULL)
-#  define CopSTASH_eq(c,hv)	((hv) && stashpv_hvname_match(c,hv))
-#  ifdef NETWARE
-#    define CopSTASH_free(c) SAVECOPSTASH_FREE(c)
 #    define CopFILE_free(c) SAVECOPFILE_FREE(c)
 #  else
-#    define CopSTASH_free(c)	PerlMemShared_free(CopSTASHPV(c))
 #    define CopFILE_free(c)	(PerlMemShared_free(CopFILE(c)),(CopFILE(c) = NULL))
 #  endif
 #else
@@ -460,14 +448,14 @@ struct cop {
 				    ? SvPVX(GvSV(CopFILEGV(c))) : NULL)
 #  define CopSTASH(c)		((c)->cop_stash)
 #  define CopSTASH_set(c,hv)	((c)->cop_stash = (hv))
-#  define CopSTASHPV(c)		(CopSTASH(c) ? HvNAME_get(CopSTASH(c)) : NULL)
-   /* cop_stash is not refcounted */
-#  define CopSTASHPV_set(c,pv)	CopSTASH_set((c), gv_stashpv(pv,GV_ADD))
-#  define CopSTASH_eq(c,hv)	(CopSTASH(c) == (hv))
-#  define CopSTASH_free(c)	
 #  define CopFILE_free(c)	(SvREFCNT_dec(CopFILEGV(c)),(CopFILEGV(c) = NULL))
 
 #endif /* USE_ITHREADS */
+
+#define CopSTASHPV(c)		(CopSTASH(c) ? HvNAME_get(CopSTASH(c)) : NULL)
+   /* cop_stash is not refcounted */
+#define CopSTASHPV_set(c,pv)	CopSTASH_set((c), gv_stashpv(pv,GV_ADD))
+#define CopSTASH_eq(c,hv)	(CopSTASH(c) == (hv))
 
 #define CopHINTHASH_get(c)	((COPHH*)((c)->cop_hints_hash))
 #define CopHINTHASH_set(c,h)	((c)->cop_hints_hash = (h))
@@ -542,7 +530,9 @@ be zero.
 #define cop_hints_2hv(cop, flags) \
     cophh_2hv(CopHINTHASH_get(cop), flags)
 
-#define CopLABEL(c)  Perl_fetch_cop_label(aTHX_ (c), NULL, NULL)
+#define CopLABEL(c)  Perl_cop_fetch_label(aTHX_ (c), NULL, NULL)
+#define CopLABEL_len(c,len)  Perl_cop_fetch_label(aTHX_ (c), len, NULL)
+#define CopLABEL_len_flags(c,len,flags)  Perl_cop_fetch_label(aTHX_ (c), len, flags)
 #define CopLABEL_alloc(pv)	((pv)?savepv(pv):NULL)
 
 #define CopSTASH_ne(c,hv)	(!CopSTASH_eq(c,hv))
@@ -554,31 +544,6 @@ be zero.
 /* OutCopFILE() is CopFILE for output (caller, die, warn, etc.) */
 #define OutCopFILE(c) CopFILE(c)
 
-/* If $[ is non-zero, it's stored in cop_hints under the key "$[", and
-   HINT_ARYBASE is set to indicate this.
-   Setting it is inefficient due to the need to create 2 mortal SVs, but as
-   using $[ is highly discouraged, no sane Perl code will be using it.  */
-#define CopARYBASE_get(c)	\
-	((CopHINTS_get(c) & HINT_ARYBASE)				\
-	 ? SvIV(cop_hints_fetch_pvs((c), "$[", 0))			\
-	 : 0)
-#define CopARYBASE_set(c, b) STMT_START { \
-	if (b || ((c)->cop_hints & HINT_ARYBASE)) {			\
-	    (c)->cop_hints |= HINT_ARYBASE;				\
-	    if ((c) == &PL_compiling) {					\
-		SV *val = newSViv(b);					\
-		(void)hv_stores(GvHV(PL_hintgv), "$[", val);		\
-		mg_set(val);						\
-		PL_hints |= HINT_ARYBASE;				\
-	    } else {							\
-		CopHINTHASH_set((c),					\
-		    cophh_store_pvs(CopHINTHASH_get((c)), "$[",		\
-			sv_2mortal(newSViv(b)), 0));			\
-	    }								\
-	}								\
-    } STMT_END
-
-/* FIXME NATIVE_HINTS if this is changed from op_private (see perl.h)  */
 #define CopHINTS_get(c)		((c)->cop_hints + 0)
 #define CopHINTS_set(c, h)	STMT_START {				\
 				    (c)->cop_hints = (h);		\
@@ -616,7 +581,9 @@ struct block_format {
  * decremented by LEAVESUB, the other by LEAVE. */
 
 #define PUSHSUB_BASE(cx)						\
-	ENTRY_PROBE(GvENAME(CvGV(cv)),		       			\
+	ENTRY_PROBE(CvNAMED(cv)						\
+			? HEK_KEY(CvNAME_HEK(cv))			\
+			: GvENAME(CvGV(cv)),	       			\
 		CopFILE((const COP *)CvSTART(cv)),			\
 		CopLINE((const COP *)CvSTART(cv)),			\
 		CopSTASHPV((const COP *)CvSTART(cv)));			\
@@ -631,11 +598,23 @@ struct block_format {
 	    SAVEFREESV(cv);						\
 	}
 
+#define PUSHSUB_GET_LVALUE_MASK(func) \
+	/* If the context is indeterminate, then only the lvalue */	\
+	/* flags that the caller also has are applicable.        */	\
+	(								\
+	   (PL_op->op_flags & OPf_WANT)					\
+	       ? OPpENTERSUB_LVAL_MASK					\
+	       : !(PL_op->op_private & OPpENTERSUB_LVAL_MASK)		\
+	           ? 0 : (U8)func(aTHX)					\
+	)
 
 #define PUSHSUB(cx)							\
+    {									\
+	U8 phlags = PUSHSUB_GET_LVALUE_MASK(Perl_was_lvalue_sub);	\
 	PUSHSUB_BASE(cx)						\
 	cx->blk_u16 = PL_op->op_private &				\
-	                      (OPpLVAL_INTRO|OPpENTERSUB_INARGS);
+	                  (phlags|OPpDEREF);				\
+    }
 
 /* variant for use by OP_DBSTATE, where op_private holds hint bits */
 #define PUSHSUB_DB(cx)							\
@@ -648,6 +627,8 @@ struct block_format {
 	cx->blk_format.gv = gv;						\
 	cx->blk_format.retop = (retop);					\
 	cx->blk_format.dfoutgv = PL_defoutgv;				\
+	if (!CvDEPTH(cv)) SvREFCNT_inc_simple_void_NN(cv);		\
+	CvDEPTH(cv)++;							\
 	SvREFCNT_inc_void(cx->blk_format.dfoutgv)
 
 #define POP_SAVEARRAY()						\
@@ -667,7 +648,9 @@ struct block_format {
 
 #define POPSUB(cx,sv)							\
     STMT_START {							\
-	RETURN_PROBE(GvENAME(CvGV((const CV*)cx->blk_sub.cv)),		\
+	RETURN_PROBE(CvNAMED(cx->blk_sub.cv)				\
+			? HEK_KEY(CvNAME_HEK(cx->blk_sub.cv))		\
+			: GvENAME(CvGV(cx->blk_sub.cv)),		\
 		CopFILE((COP*)CvSTART((const CV*)cx->blk_sub.cv)),	\
 		CopLINE((COP*)CvSTART((const CV*)cx->blk_sub.cv)),	\
 		CopSTASHPV((COP*)CvSTART((const CV*)cx->blk_sub.cv)));	\
@@ -677,7 +660,7 @@ struct block_format {
 	    /* abandon @_ if it got reified */				\
 	    if (AvREAL(cx->blk_sub.argarray)) {				\
 		const SSize_t fill = AvFILLp(cx->blk_sub.argarray);	\
-		SvREFCNT_dec(cx->blk_sub.argarray);			\
+		SvREFCNT_dec_NN(cx->blk_sub.argarray);			\
 		cx->blk_sub.argarray = newAV();				\
 		av_extend(cx->blk_sub.argarray, fill);			\
 		AvREIFY_only(cx->blk_sub.argarray);			\
@@ -694,13 +677,15 @@ struct block_format {
 
 #define LEAVESUB(sv)							\
     STMT_START {							\
-	if (sv)								\
-	    SvREFCNT_dec(sv);						\
+	SvREFCNT_dec(sv);						\
     } STMT_END
 
 #define POPFORMAT(cx)							\
 	setdefout(cx->blk_format.dfoutgv);				\
-	SvREFCNT_dec(cx->blk_format.dfoutgv);
+	CvDEPTH(cx->blk_format.cv)--;					\
+	if (!CvDEPTH(cx->blk_format.cv))				\
+	    SvREFCNT_dec_NN(cx->blk_format.cv);				\
+	SvREFCNT_dec_NN(cx->blk_format.dfoutgv);
 
 /* eval context */
 struct block_eval {
@@ -738,6 +723,8 @@ struct block_eval {
 	PL_in_eval = CxOLD_IN_EVAL(cx);					\
 	optype = CxOLD_OP_TYPE(cx);					\
 	PL_eval_root = cx->blk_eval.old_eval_root;			\
+	if (cx->blk_eval.cur_text && SvSCREAM(cx->blk_eval.cur_text))	\
+	    SvREFCNT_dec_NN(cx->blk_eval.cur_text);			\
 	if (cx->blk_eval.old_namesv)					\
 	    sv_2mortal(cx->blk_eval.old_namesv);			\
     } STMT_END
@@ -782,6 +769,8 @@ struct block_loop {
 	 : (SV**)NULL)
 
 #define CxLABEL(c)	(0 + CopLABEL((c)->blk_oldcop))
+#define CxLABEL_len(c,len)	(0 + CopLABEL_len((c)->blk_oldcop, len))
+#define CxLABEL_len_flags(c,len,flags)	(0 + CopLABEL_len_flags((c)->blk_oldcop, len, flags))
 #define CxHASARGS(c)	(((c)->cx_type & CXp_HASARGS) == CXp_HASARGS)
 #define CxLVAL(c)	(0 + (c)->blk_u16)
 
@@ -801,8 +790,8 @@ struct block_loop {
 
 #define POPLOOP(cx)							\
 	if (CxTYPE(cx) == CXt_LOOP_LAZYSV) {				\
-	    SvREFCNT_dec(cx->blk_loop.state_u.lazysv.cur);		\
-	    SvREFCNT_dec(cx->blk_loop.state_u.lazysv.end);		\
+	    SvREFCNT_dec_NN(cx->blk_loop.state_u.lazysv.cur);		\
+	    SvREFCNT_dec_NN(cx->blk_loop.state_u.lazysv.end);		\
 	}								\
 	if (CxTYPE(cx) == CXt_LOOP_FOR)					\
 	    SvREFCNT_dec(cx->blk_loop.state_u.ary.ary);
@@ -986,6 +975,8 @@ struct context {
 
 /* private flags for CXt_SUB and CXt_FORMAT */
 #define CXp_HASARGS	0x20
+#define CXp_SUB_RE	0x40    /* code called within regex, i.e. (?{}) */
+#define CXp_SUB_RE_FAKE	0x80    /* fake sub CX for (?{}) in current scope */
 
 /* private flags for CXt_EVAL */
 #define CXp_REAL	0x20	/* truly eval'', not a lookalike */
@@ -1066,6 +1057,7 @@ L<perlcall>.
 				   Perl_magic_methcall().  */
 #define G_WRITING_TO_STDERR 1024 /* Perl_write_to_stderr() is calling
 				    Perl_magic_methcall().  */
+#define G_RE_REPARSING 0x800     /* compiling a run-time /(?{..})/ */
 
 /* flag bits for PL_in_eval */
 #define EVAL_NULL	0	/* not in an eval */
@@ -1073,6 +1065,7 @@ L<perlcall>.
 #define EVAL_WARNONLY	2	/* used by yywarn() when calling yyerror() */
 #define EVAL_KEEPERR	4	/* set by Perl_call_sv if G_KEEPERR */
 #define EVAL_INREQUIRE	8	/* The code is being required. */
+#define EVAL_RE_REPARSING 0x10	/* eval_sv() called with G_RE_REPARSING */
 
 /* Support for switching (stack and block) contexts.
  * This ensures magic doesn't invalidate local stack and cx pointers.
@@ -1151,8 +1144,7 @@ typedef struct stackinfo PERL_SI;
 	    Perl_deb(aTHX_ "pop  STACKINFO %d at %s:%d\n",		\
 		         i, __FILE__, __LINE__);})			\
 	if (!prev) {							\
-	    PerlIO_printf(Perl_error_log, "panic: POPSTACK\n");		\
-	    my_exit(1);							\
+	    Perl_croak_popstack();					\
 	}								\
 	SWITCHSTACK(PL_curstack,prev->si_stack);			\
 	/* don't free prev here, free them all at the END{} */		\
@@ -1174,18 +1166,18 @@ typedef struct stackinfo PERL_SI;
 =head1 Multicall Functions
 
 =for apidoc Ams||dMULTICALL
-Declare local variables for a multicall. See L<perlcall/Lightweight Callbacks>.
+Declare local variables for a multicall. See L<perlcall/LIGHTWEIGHT CALLBACKS>.
 
 =for apidoc Ams||PUSH_MULTICALL
 Opening bracket for a lightweight callback.
-See L<perlcall/Lightweight Callbacks>.
+See L<perlcall/LIGHTWEIGHT CALLBACKS>.
 
 =for apidoc Ams||MULTICALL
-Make a lightweight callback. See L<perlcall/Lightweight Callbacks>.
+Make a lightweight callback. See L<perlcall/LIGHTWEIGHT CALLBACKS>.
 
 =for apidoc Ams||POP_MULTICALL
 Closing bracket for a lightweight callback.
-See L<perlcall/Lightweight Callbacks>.
+See L<perlcall/LIGHTWEIGHT CALLBACKS>.
 
 =cut
 */
@@ -1199,18 +1191,26 @@ See L<perlcall/Lightweight Callbacks>.
     U8 hasargs = 0		/* used by PUSHSUB */
 
 #define PUSH_MULTICALL(the_cv) \
+    PUSH_MULTICALL_FLAGS(the_cv, 0)
+
+/* Like PUSH_MULTICALL, but allows you to specify extra flags
+ * for the CX stack entry (this isn't part of the public API) */
+
+#define PUSH_MULTICALL_FLAGS(the_cv, flags) \
     STMT_START {							\
 	CV * const _nOnclAshIngNamE_ = the_cv;				\
 	CV * const cv = _nOnclAshIngNamE_;				\
-	AV * const padlist = CvPADLIST(cv);				\
+	PADLIST * const padlist = CvPADLIST(cv);			\
 	ENTER;								\
  	multicall_oldcatch = CATCH_GET;					\
 	SAVETMPS; SAVEVPTR(PL_op);					\
 	CATCH_SET(TRUE);						\
 	PUSHSTACKi(PERLSI_SORT);					\
-	PUSHBLOCK(cx, CXt_SUB|CXp_MULTICALL, PL_stack_sp);		\
+	PUSHBLOCK(cx, (CXt_SUB|CXp_MULTICALL|flags), PL_stack_sp);	\
 	PUSHSUB(cx);							\
-	if (++CvDEPTH(cv) >= 2) {					\
+        if (!(flags & CXp_SUB_RE_FAKE))                                 \
+            CvDEPTH(cv)++;						\
+	if (CvDEPTH(cv) >= 2) {						\
 	    PERL_STACK_OVERFLOW_CHECK();				\
 	    Perl_pad_push(aTHX_ padlist, CvDEPTH(cv));			\
 	}								\
@@ -1228,8 +1228,10 @@ See L<perlcall/Lightweight Callbacks>.
 
 #define POP_MULTICALL \
     STMT_START {							\
-	if (! --CvDEPTH(multicall_cv))					\
-	    LEAVESUB(multicall_cv);					\
+	cx = &cxstack[cxstack_ix];					\
+        if (! ((CvDEPTH(multicall_cv) = cx->blk_sub.olddepth)) ) {	\
+		LEAVESUB(multicall_cv);					\
+	}								\
 	POPBLOCK(cx,PL_curpm);						\
 	POPSTACK;							\
 	CATCH_SET(multicall_oldcatch);					\
@@ -1237,12 +1239,38 @@ See L<perlcall/Lightweight Callbacks>.
 	SPAGAIN;							\
     } STMT_END
 
+/* Change the CV of an already-pushed MULTICALL CxSUB block.
+ * (this isn't part of the public API) */
+
+#define CHANGE_MULTICALL_FLAGS(the_cv, flags) \
+    STMT_START {							\
+	CV * const _nOnclAshIngNamE_ = the_cv;				\
+	CV * const cv = _nOnclAshIngNamE_;				\
+	PADLIST * const padlist = CvPADLIST(cv);			\
+	cx = &cxstack[cxstack_ix];					\
+	assert(cx->cx_type & CXp_MULTICALL);				\
+	if (! ((CvDEPTH(multicall_cv) = cx->blk_sub.olddepth)) ) {	\
+		LEAVESUB(multicall_cv);					\
+	}								\
+	cx->cx_type = (CXt_SUB|CXp_MULTICALL|flags);                    \
+	PUSHSUB(cx);							\
+        if (!(flags & CXp_SUB_RE_FAKE))                                 \
+            CvDEPTH(cv)++;						\
+	if (CvDEPTH(cv) >= 2) {						\
+	    PERL_STACK_OVERFLOW_CHECK();				\
+	    Perl_pad_push(aTHX_ padlist, CvDEPTH(cv));			\
+	}								\
+	SAVECOMPPAD();							\
+	PAD_SET_CUR_NOSAVE(padlist, CvDEPTH(cv));			\
+	multicall_cv = cv;						\
+	multicall_cop = CvSTART(cv);					\
+    } STMT_END
 /*
  * Local variables:
  * c-indentation-style: bsd
  * c-basic-offset: 4
- * indent-tabs-mode: t
+ * indent-tabs-mode: nil
  * End:
  *
- * ex: set ts=8 sts=4 sw=4 noet:
+ * ex: set ts=8 sts=4 sw=4 et:
  */

@@ -21677,6 +21677,7 @@ contrib/perl/beos/beos.c -text
 contrib/perl/beos/beosish.h -text
 contrib/perl/beos/nm.c -text
 contrib/perl/cflags.SH -text
+contrib/perl/charclass_invlists.h -text
 contrib/perl/config_h.SH -text
 contrib/perl/configpm -text
 contrib/perl/configure.com -text
@@ -25344,6 +25345,7 @@ contrib/perl/ext/re/t/regop.pl -text
 contrib/perl/ext/re/t/regop.t -text
 contrib/perl/fakesdio.h -text
 contrib/perl/fakethr.h -text
+contrib/perl/feature.h -text
 contrib/perl/form.h -text
 contrib/perl/generate_uudmap.c -text
 contrib/perl/genpacksizetables.pl -text
@@ -25466,6 +25468,9 @@ contrib/perl/hints/vmesa.sh -text
 contrib/perl/hints/vos.sh -text
 contrib/perl/hv.c -text
 contrib/perl/hv.h -text
+contrib/perl/hv_func.h -text
+contrib/perl/inline.h -text
+contrib/perl/inline_invlist.c -text
 contrib/perl/install_lib.pl -text
 contrib/perl/installhtml -text
 contrib/perl/installman -text
@@ -25762,6 +25767,9 @@ contrib/perl/metaconfig.SH -text
 contrib/perl/metaconfig.h -text
 contrib/perl/mg.c -text
 contrib/perl/mg.h -text
+contrib/perl/mg_names.c -text
+contrib/perl/mg_raw.h -text
+contrib/perl/mg_vtable.h -text
 contrib/perl/minimod.pl -text
 contrib/perl/miniperlmain.c -text
 contrib/perl/mkppport -text
@@ -26613,6 +26621,7 @@ contrib/perl/toke.c -text
 contrib/perl/uconfig.h -text
 contrib/perl/uconfig.sh -text
 contrib/perl/uconfig64.sh -text
+contrib/perl/unicode_constants.h -text
 contrib/perl/universal.c -text
 contrib/perl/unixish.h -text
 contrib/perl/utf8.c -text

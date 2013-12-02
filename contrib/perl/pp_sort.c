@@ -185,8 +185,8 @@ static IV
 dynprep(pTHX_ gptr *list1, gptr *list2, size_t nmemb, const SVCOMPARE_t cmp)
 {
     I32 sense;
-    register gptr *b, *p, *q, *t, *p2;
-    register gptr *last, *r;
+    gptr *b, *p, *q, *t, *p2;
+    gptr *last, *r;
     IV runs = 0;
 
     b = list1;
@@ -354,7 +354,7 @@ S_mergesortsv(pTHX_ gptr *base, size_t nmemb, SVCOMPARE_t cmp, U32 flags)
     dVAR;
     IV i, run, offset;
     I32 sense, level;
-    register gptr *f1, *f2, *t, *b, *p;
+    gptr *f1, *f2, *t, *b, *p;
     int iwhich;
     gptr *aux;
     gptr *p1;
@@ -392,7 +392,7 @@ S_mergesortsv(pTHX_ gptr *base, size_t nmemb, SVCOMPARE_t cmp, U32 flags)
 	    list1 = which[iwhich];		/* area where runs are now */
 	    list2 = which[++iwhich];		/* area for merged runs */
 	    do {
-		register gptr *l1, *l2, *tp2;
+		gptr *l1, *l2, *tp2;
 		offset = stackp->offset;
 		f1 = p1 = list1 + offset;		/* start of first run */
 		p = tp2 = list2 + offset;	/* where merged run will go */
@@ -422,7 +422,7 @@ S_mergesortsv(pTHX_ gptr *base, size_t nmemb, SVCOMPARE_t cmp, U32 flags)
 		    ** and -1 when equality should look high.
 		    */
 
-		    register gptr *q;
+		    gptr *q;
 		    if (cmp(aTHX_ *f1, *f2) <= 0) {
 			q = f2; b = f1; t = l1;
 			sense = -1;
@@ -763,7 +763,7 @@ doqsort_all_asserts(
 STATIC void /* the standard unstable (u) quicksort (qsort) */
 S_qsortsvu(pTHX_ SV ** array, size_t num_elts, SVCOMPARE_t compare)
 {
-   register SV * temp;
+   SV * temp;
    struct partition_stack_entry partition_stack[QSORT_MAX_STACK];
    int next_stack_entry = 0;
    int part_left;
@@ -783,10 +783,10 @@ S_qsortsvu(pTHX_ SV ** array, size_t num_elts, SVCOMPARE_t compare)
 
    /* Inoculate large partitions against quadratic behavior */
    if (num_elts > QSORT_PLAY_SAFE) {
-      register size_t n;
-      register SV ** const q = array;
+      size_t n;
+      SV ** const q = array;
       for (n = num_elts; n > 1; ) {
-         register const size_t j = (size_t)(n-- * Drand01());
+         const size_t j = (size_t)(n-- * Drand01());
          temp = q[j];
          q[j] = q[n];
          q[n] = temp;
@@ -1350,8 +1350,8 @@ S_qsortsv(pTHX_ gptr *list1, size_t nmemb, SVCOMPARE_t cmp, U32 flags)
 {
     dVAR;
     if ((flags & SORTf_STABLE) != 0) {
-	 register gptr **pp, *q;
-	 register size_t n, j, i;
+	 gptr **pp, *q;
+	 size_t n, j, i;
 	 gptr *small[SMALLSORT], **indir, tmp;
 	 SVCOMPARE_t savecmp;
 	 if (nmemb <= 1) return;     /* sorted trivially */
@@ -1432,7 +1432,7 @@ S_qsortsv(pTHX_ gptr *list1, size_t nmemb, SVCOMPARE_t cmp, U32 flags)
 
 Sort an array. Here is an example:
 
-    sortsv(AvARRAY(av), av_len(av)+1, Perl_sv_cmp_locale);
+    sortsv(AvARRAY(av), av_top_index(av)+1, Perl_sv_cmp_locale);
 
 Currently this always uses mergesort. See sortsv_flags for a more
 flexible routine.
@@ -1473,8 +1473,8 @@ Perl_sortsv_flags(pTHX_ SV **array, size_t nmemb, SVCOMPARE_t cmp, U32 flags)
 PP(pp_sort)
 {
     dVAR; dSP; dMARK; dORIGMARK;
-    register SV **p1 = ORIGMARK+1, **p2;
-    register I32 max, i;
+    SV **p1 = ORIGMARK+1, **p2;
+    I32 max, i;
     AV* av = NULL;
     HV *stash;
     GV *gv;
@@ -1516,22 +1516,40 @@ PP(pp_sort)
 	    stash = CopSTASH(PL_curcop);
 	}
 	else {
-	    cv = sv_2cv(*++MARK, &stash, &gv, 0);
+	    GV *autogv = NULL;
+	    cv = sv_2cv(*++MARK, &stash, &gv, GV_ADD);
+	  check_cv:
 	    if (cv && SvPOK(cv)) {
 		const char * const proto = SvPV_nolen_const(MUTABLE_SV(cv));
 		if (proto && strEQ(proto, "$$")) {
 		    hasargs = TRUE;
 		}
 	    }
-	    if (!(cv && CvROOT(cv))) {
-		if (cv && CvISXSUB(cv)) {
-		    is_xsub = 1;
+	    if (cv && CvISXSUB(cv) && CvXSUB(cv)) {
+		is_xsub = 1;
+	    }
+	    else if (!(cv && CvROOT(cv))) {
+		if (gv) {
+		    goto autoload;
 		}
-		else if (gv) {
+		else if (!CvANON(cv) && (gv = CvGV(cv))) {
+		  if (cv != GvCV(gv)) cv = GvCV(gv);
+		 autoload:
+		  if (!autogv && (
+			autogv = gv_autoload_pvn(
+			    GvSTASH(gv), GvNAME(gv), GvNAMELEN(gv),
+			    GvNAMEUTF8(gv) ? SVf_UTF8 : 0
+			)
+		     )) {
+		    cv = GvCVu(autogv);
+		    goto check_cv;
+		  }
+		  else {
 		    SV *tmpstr = sv_newmortal();
 		    gv_efullname3(tmpstr, gv, NULL);
 		    DIE(aTHX_ "Undefined sort subroutine \"%"SVf"\" called",
 			SVfARG(tmpstr));
+		  }
 		}
 		else {
 		    DIE(aTHX_ "Undefined subroutine in sort");
@@ -1568,7 +1586,7 @@ PP(pp_sort)
 	}
 	else {
 	    if (SvREADONLY(av))
-		Perl_croak_no_modify(aTHX);
+		Perl_croak_no_modify();
 	    else
 		SvREADONLY_on(av);
 	    p1 = p2 = AvARRAY(av);
@@ -1649,7 +1667,7 @@ PP(pp_sort)
 		if (CvDEPTH(cv)) SvREFCNT_inc_simple_void_NN(cv);
 		PUSHSUB(cx);
 		if (!is_xsub) {
-		    AV* const padlist = CvPADLIST(cv);
+		    PADLIST * const padlist = CvPADLIST(cv);
 
 		    if (++CvDEPTH(cv) >= 2) {
 			PERL_STACK_OVERFLOW_CHECK();
@@ -1745,7 +1763,10 @@ S_sortcv(pTHX_ SV *const a, SV *const b)
     const I32 oldsaveix = PL_savestack_ix;
     const I32 oldscopeix = PL_scopestack_ix;
     I32 result;
+    SV *resultsv;
     PMOP * const pm = PL_curpm;
+    OP * const sortop = PL_op;
+    COP * const cop = PL_curcop;
  
     PERL_ARGS_ASSERT_SORTCV;
 
@@ -1754,9 +1775,21 @@ S_sortcv(pTHX_ SV *const a, SV *const b)
     PL_stack_sp = PL_stack_base;
     PL_op = PL_sortcop;
     CALLRUNOPS(aTHX);
-    if (PL_stack_sp != PL_stack_base + 1)
-	Perl_croak(aTHX_ "Sort subroutine didn't return single value");
-    result = SvIV(*PL_stack_sp);
+    PL_op = sortop;
+    PL_curcop = cop;
+    if (PL_stack_sp != PL_stack_base + 1) {
+	assert(PL_stack_sp == PL_stack_base);
+	resultsv = &PL_sv_undef;
+    }
+    else resultsv = *PL_stack_sp;
+    if (SvNIOK_nog(resultsv)) result = SvIV(resultsv);
+    else {
+	ENTER;
+	SAVEVPTR(PL_curpad);
+	PL_curpad = 0;
+	result = SvIV(resultsv);
+	LEAVE;
+    }
     while (PL_scopestack_ix > oldscopeix) {
 	LEAVE;
     }
@@ -1774,6 +1807,9 @@ S_sortcv_stacked(pTHX_ SV *const a, SV *const b)
     I32 result;
     AV * const av = GvAV(PL_defgv);
     PMOP * const pm = PL_curpm;
+    OP * const sortop = PL_op;
+    COP * const cop = PL_curcop;
+    SV **pad;
 
     PERL_ARGS_ASSERT_SORTCV_STACKED;
 
@@ -1802,9 +1838,15 @@ S_sortcv_stacked(pTHX_ SV *const a, SV *const b)
     PL_stack_sp = PL_stack_base;
     PL_op = PL_sortcop;
     CALLRUNOPS(aTHX);
-    if (PL_stack_sp != PL_stack_base + 1)
-	Perl_croak(aTHX_ "Sort subroutine didn't return single value");
-    result = SvIV(*PL_stack_sp);
+    PL_op = sortop;
+    PL_curcop = cop;
+    pad = PL_curpad; PL_curpad = 0;
+    if (PL_stack_sp != PL_stack_base + 1) {
+	assert(PL_stack_sp == PL_stack_base);
+	result = SvIV(&PL_sv_undef);
+    }
+    else result = SvIV(*PL_stack_sp);
+    PL_curpad = pad;
     while (PL_scopestack_ix > oldscopeix) {
 	LEAVE;
     }
@@ -1852,6 +1894,14 @@ S_sv_ncmp(pTHX_ SV *const a, SV *const b)
 
     PERL_ARGS_ASSERT_SV_NCMP;
 
+#if defined(NAN_COMPARE_BROKEN) && defined(Perl_isnan)
+    if (Perl_isnan(nv1) || Perl_isnan(nv2)) {
+#else
+    if (nv1 != nv1 || nv2 != nv2) {
+#endif
+	if (ckWARN(WARN_UNINITIALIZED)) report_uninit(NULL);
+	return 0;
+    }
     return nv1 < nv2 ? -1 : nv1 > nv2 ? 1 : 0;
 }
 
@@ -1874,7 +1924,7 @@ S_sv_i_ncmp(pTHX_ SV *const a, SV *const b)
 #define SORT_NORMAL_RETURN_VALUE(val)  (((val) > 0) ? 1 : ((val) ? -1 : 0))
 
 static I32
-S_amagic_ncmp(pTHX_ register SV *const a, register SV *const b)
+S_amagic_ncmp(pTHX_ SV *const a, SV *const b)
 {
     dVAR;
     SV * const tmpsv = tryCALL_AMAGICbin(a,b,ncmp_amg);
@@ -1895,7 +1945,7 @@ S_amagic_ncmp(pTHX_ register SV *const a, register SV *const b)
 }
 
 static I32
-S_amagic_i_ncmp(pTHX_ register SV *const a, register SV *const b)
+S_amagic_i_ncmp(pTHX_ SV *const a, SV *const b)
 {
     dVAR;
     SV * const tmpsv = tryCALL_AMAGICbin(a,b,ncmp_amg);
@@ -1916,7 +1966,7 @@ S_amagic_i_ncmp(pTHX_ register SV *const a, register SV *const b)
 }
 
 static I32
-S_amagic_cmp(pTHX_ register SV *const str1, register SV *const str2)
+S_amagic_cmp(pTHX_ SV *const str1, SV *const str2)
 {
     dVAR;
     SV * const tmpsv = tryCALL_AMAGICbin(str1,str2,scmp_amg);
@@ -1937,7 +1987,7 @@ S_amagic_cmp(pTHX_ register SV *const str1, register SV *const str2)
 }
 
 static I32
-S_amagic_cmp_locale(pTHX_ register SV *const str1, register SV *const str2)
+S_amagic_cmp_locale(pTHX_ SV *const str1, SV *const str2)
 {
     dVAR;
     SV * const tmpsv = tryCALL_AMAGICbin(str1,str2,scmp_amg);
@@ -1961,8 +2011,8 @@ S_amagic_cmp_locale(pTHX_ register SV *const str1, register SV *const str2)
  * Local variables:
  * c-indentation-style: bsd
  * c-basic-offset: 4
- * indent-tabs-mode: t
+ * indent-tabs-mode: nil
  * End:
  *
- * ex: set ts=8 sts=4 sw=4 noet:
+ * ex: set ts=8 sts=4 sw=4 et:
  */

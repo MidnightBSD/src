@@ -16,12 +16,14 @@ use strict;
 # Which scripts to run.
 
 my @scripts = qw(
+mg_vtable.pl
 opcode.pl
 overload.pl
 reentr.pl
 regcomp.pl
 warnings.pl
 embed.pl
+feature.pl
 );
 
 my $tap = $ARGV[0] && $ARGV[0] eq '--tap' ? '# ' : '';
