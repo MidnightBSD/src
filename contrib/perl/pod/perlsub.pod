@@ -217,8 +217,23 @@ X<recursion>
 Not only does the C<&> form make the argument list optional, it also
 disables any prototype checking on arguments you do provide.  This
 is partly for historical reasons, and partly for having a convenient way
-to cheat if you know what you're doing.  See L<Prototypes> below.
+to cheat if you know what you're doing.  See L</Prototypes> below.
 X<&>
+
+Since Perl 5.16.0, the C<__SUB__> token is available under C<use feature
+'current_sub'> and C<use 5.16.0>.  It will evaluate to a reference to the
+currently-running sub, which allows for recursive calls without knowing
+your subroutine's name.
+
+    use 5.16.0;
+    my $factorial = sub {
+      my ($x) = @_;
+      return 1 if $x == 1;
+      return($x * __SUB__->( $x - 1 ) );
+    };
+
+The behaviour of C<__SUB__> within a regex code block (such as C</(?{...})/>)
+is subject to change.
 
 Subroutines whose names are in all upper case are reserved to the Perl
 core, as are modules whose names are in all lower case.  A subroutine in
@@ -439,16 +454,33 @@ if you want to stay compatible with releases older than 5.10.
 
 =head3 Persistent variables via state()
 
-Beginning with perl 5.9.4, you can declare variables with the C<state>
-keyword in place of C<my>. For that to work, though, you must have
+Beginning with Perl 5.10.0, you can declare variables with the C<state>
+keyword in place of C<my>.  For that to work, though, you must have
 enabled that feature beforehand, either by using the C<feature> pragma, or
-by using C<-E> on one-liners. (see L<feature>)
+by using C<-E> on one-liners (see L<feature>).  Beginning with Perl 5.16,
+the C<CORE::state> form does not require the
+C<feature> pragma.
+
+The C<state> keyword creates a lexical variable (following the same scoping
+rules as C<my>) that persists from one subroutine call to the next.  If a
+state variable resides inside an anonymous subroutine, then each copy of
+the subroutine has its own copy of the state variable.  However, the value
+of the state variable will still persist between calls to the same copy of
+the anonymous subroutine.  (Don't forget that C<sub { ... }> creates a new
+subroutine each time it is executed.)
 
 For example, the following code maintains a private counter, incremented
 each time the gimme_another() function is called:
 
     use feature 'state';
     sub gimme_another { state $x; return ++$x }
+
+And this example uses anonymous subroutines to create separate counters:
+
+    use feature 'state';
+    sub create_counter {
+	return sub { state $x; return ++$x }
+    }
 
 Also, since C<$x> is lexical, it can't be reached or modified by any Perl
 code outside.
@@ -554,7 +586,7 @@ values to global (meaning package) variables.  It does I<not> create
 a local variable.  This is known as dynamic scoping.  Lexical scoping
 is done with C<my>, which works more like C's auto declarations.
 
-Some types of lvalues can be localized as well : hash and array elements
+Some types of lvalues can be localized as well: hash and array elements
 and slices, conditionals (provided that their result is always
 localizable), and symbolic references.  As for simple variables, this
 creates new, dynamically scoped values.
@@ -602,7 +634,7 @@ This feature allows code like this to work :
     { local $/ = undef; $slurp = <FILE>; }
 
 Note, however, that this restricts localization of some values ; for
-example, the following statement dies, as of perl 5.9.0, with an error
+example, the following statement dies, as of perl 5.10.0, with an error
 I<Modification of a read-only value attempted>, because the $1 variable is
 magical and read-only :
 
@@ -740,8 +772,7 @@ To do this, you have to declare the subroutine to return an lvalue.
 
     my $val;
     sub canmod : lvalue {
-	# return $val; this doesn't work, don't say "return"
-	$val;
+	$val;  # or:  return $val;
     }
     sub nomod {
 	$val;
@@ -770,13 +801,8 @@ all the subroutines are called in a list context.
 
 =item Lvalue subroutines are EXPERIMENTAL
 
-They appear to be convenient, but there are several reasons to be
+They appear to be convenient, but there is at least one reason to be
 circumspect.
-
-You can't use the return keyword, you must pass out the value before
-falling out of subroutine scope. (see comment in example above).  This
-is usually not a problem, but it disallows an explicit return out of a
-deeply nested loop, which is sometimes a nice way out.
 
 They violate encapsulation.  A normal mutator can check the supplied
 argument before setting the attribute it is protecting, an lvalue
@@ -798,6 +824,107 @@ subroutine never gets that chance.  Consider;
     set_arr_lv() = { a => 1 };
 
 =back
+
+=head2 Lexical Subroutines
+X<my sub> X<state sub> X<our sub> X<subroutine, lexical>
+
+B<WARNING>: Lexical subroutines are still experimental.  The feature may be
+modified or removed in future versions of Perl.
+
+Lexical subroutines are only available under the C<use feature
+'lexical_subs'> pragma, which produces a warning unless the
+"experimental::lexical_subs" warnings category is disabled.
+
+Beginning with Perl 5.18, you can declare a private subroutine with C<my>
+or C<state>.  As with state variables, the C<state> keyword is only
+available under C<use feature 'state'> or C<use 5.010> or higher.
+
+These subroutines are only visible within the block in which they are
+declared, and only after that declaration:
+
+    no warnings "experimental::lexical_subs";
+    use feature 'lexical_subs';
+
+    foo();		# calls the package/global subroutine
+    state sub foo {
+	foo();		# also calls the package subroutine
+    }
+    foo();		# calls "state" sub
+    my $ref = \&foo;	# take a reference to "state" sub
+
+    my sub bar { ... }
+    bar();		# calls "my" sub
+
+To use a lexical subroutine from inside the subroutine itself, you must
+predeclare it.  The C<sub foo {...}> subroutine definition syntax respects
+any previous C<my sub;> or C<state sub;> declaration.
+
+    my sub baz;		# predeclaration
+    sub baz {		# define the "my" sub
+	baz();		# recursive call
+    }
+
+=head3 C<state sub> vs C<my sub>
+
+What is the difference between "state" subs and "my" subs?  Each time that
+execution enters a block when "my" subs are declared, a new copy of each
+sub is created.  "State" subroutines persist from one execution of the
+containing block to the next.
+
+So, in general, "state" subroutines are faster.  But "my" subs are
+necessary if you want to create closures:
+
+    no warnings "experimental::lexical_subs";
+    use feature 'lexical_subs';
+
+    sub whatever {
+	my $x = shift;
+	my sub inner {
+	    ... do something with $x ...
+	}
+	inner();
+    }
+
+In this example, a new C<$x> is created when C<whatever> is called, and
+also a new C<inner>, which can see the new C<$x>.  A "state" sub will only
+see the C<$x> from the first call to C<whatever>.
+
+=head3 C<our> subroutines
+
+Like C<our $variable>, C<our sub> creates a lexical alias to the package
+subroutine of the same name.
+
+The two main uses for this are to switch back to using the package sub
+inside an inner scope:
+
+    no warnings "experimental::lexical_subs";
+    use feature 'lexical_subs';
+
+    sub foo { ... }
+
+    sub bar {
+	my sub foo { ... }
+	{
+	    # need to use the outer foo here
+	    our sub foo;
+	    foo();
+	}
+    }
+
+and to make a subroutine visible to other packages in the same scope:
+
+    package MySneakyModule;
+
+    no warnings "experimental::lexical_subs";
+    use feature 'lexical_subs';
+
+    our sub do_something { ... }
+
+    sub do_something_with_caller {
+	package DB;
+	() = caller 1;		# sets @DB::args
+	do_something(@args);	# uses MySneakyModule::do_something
+    }
 
 =head2 Passing Symbol Table Entries (typeglobs)
 X<typeglob> X<*>
@@ -893,7 +1020,7 @@ can be used to create what is effectively a local function, or at least,
 a local alias.
 
     {
-        local *grow = \&shrink; # only until this block exists
+        local *grow = \&shrink; # only until this block exits
         grow();                 # really calls shrink()
 	move();			# if move() grow()s, it shrink()s too
     }
@@ -915,8 +1042,7 @@ is done on dynamics:
     } 
     # interruptibility automatically restored here
 
-But it also works on lexically declared aggregates.  Prior to 5.005,
-this operation could on occasion misbehave.
+But it also works on lexically declared aggregates.
 
 =back
 
@@ -1081,8 +1207,8 @@ corresponding built-in.
 
 Any backslashed prototype character represents an actual argument
 that must start with that character (optionally preceded by C<my>,
-C<our> or C<local>), with the exception of C<$>, which will accept a
-hash or array element even without a dollar sign, such as
+C<our> or C<local>), with the exception of C<$>, which will
+accept any scalar lvalue expression, such as C<$foo = 7> or
 C<< my_function()->[0] >>. The value passed as part of C<@_> will be a
 reference to the actual argument given in the subroutine call,
 obtained by applying C<\> to that argument.
@@ -1140,9 +1266,9 @@ is of an acceptable type.
 A semicolon (C<;>) separates mandatory arguments from optional arguments.
 It is redundant before C<@> or C<%>, which gobble up everything else.
 
-As the last character of a prototype, or just before a semicolon, you can
-use C<_> in place of C<$>: if this argument is not provided, C<$_> will be
-used instead.
+As the last character of a prototype, or just before a semicolon, a C<@>
+or a C<%>, you can use C<_> in place of C<$>: if this argument is not
+provided, C<$_> will be used instead.
 
 Note how the last three examples in the table above are treated
 specially by the parser.  C<mygrep()> is parsed as a true list
@@ -1153,7 +1279,11 @@ arguments, just like C<time()>.  That is, if you say
     mytime +2;
 
 you'll get C<mytime() + 2>, not C<mytime(2)>, which is how it would be parsed
-without a prototype.
+without a prototype.  If you want to force a unary function to have the
+same precedence as a list operator, add C<;> to the end of the prototype:
+
+    sub mygetprotobynumber($;);
+    mygetprotobynumber $a > $b; # parsed as mygetprotobynumber($a > $b)
 
 The interesting thing about C<&> is that you can generate new syntax with it,
 provided it's in the initial position:
@@ -1278,9 +1408,10 @@ the constant folding doesn't reduce them to a single constant:
     }
 
 If you redefine a subroutine that was eligible for inlining, you'll get
-a mandatory warning.  (You can use this warning to tell whether or not a
+a warning by default.  (You can use this warning to tell whether or not a
 particular subroutine is considered constant.)  The warning is
-considered severe enough not to be optional because previously compiled
+considered severe enough not to be affected by the B<-w>
+switch (or its absence) because previously compiled
 invocations of the function will still be using the old value of the
 function.  If you need to be able to redefine the subroutine, you need to
 ensure that it isn't inlined, either by dropping the C<()> prototype
@@ -1313,8 +1444,10 @@ built-in name with the special package qualifier C<CORE::>.  For example,
 saying C<CORE::open()> always refers to the built-in C<open()>, even
 if the current package has imported some other subroutine called
 C<&open()> from elsewhere.  Even though it looks like a regular
-function call, it isn't: you can't take a reference to it, such as
-the incorrect C<\&CORE::open> might appear to produce.
+function call, it isn't: the CORE:: prefix in that case is part of Perl's
+syntax, and works for any keyword, regardless of what is in the CORE
+package.  Taking a reference to it, that is, C<\&CORE::open>, only works
+for some keywords.  See L<CORE>.
 
 Library modules should not in general export built-in names like C<open>
 or C<chdir> as part of their default C<@EXPORT> list, because these may
@@ -1430,9 +1563,8 @@ variable of the same package as the C<AUTOLOAD> routine.  The name
 is not passed as an ordinary argument because, er, well, just
 because, that's why.  (As an exception, a method call to a nonexistent
 C<import> or C<unimport> method is just skipped instead.  Also, if
-the AUTOLOAD subroutine is an XSUB, C<$AUTOLOAD> is not populated;
-instead, you should call L<< C<SvPVX>E<sol>C<SvCUR>|perlapi >> on the
-C<CV> for C<AUTOLOAD> to retrieve the method name.)
+the AUTOLOAD subroutine is an XSUB, there are other ways to retrieve the
+subroutine name.  See L<perlguts/Autoloading with XSUBs> for details.)
 
 
 Many C<AUTOLOAD> routines load in a definition for the requested
@@ -1461,7 +1593,7 @@ even need parentheses:
     who "am", "i";
     ls '-l';
 
-A more complete example of this is the standard Shell module, which
+A more complete example of this is the Shell module on CPAN, which
 can treat undefined subroutine calls as calls to external programs.
 
 Mechanisms are available to help modules writers split their modules
@@ -1518,4 +1650,4 @@ See L<perlxs> if you'd like to learn about calling C subroutines from Perl.
 See L<perlembed> if you'd like to learn about calling Perl subroutines from C.  
 See L<perlmod> to learn about bundling up your functions in separate files.
 See L<perlmodlib> to learn what library modules come standard on your system.
-See L<perltoot> to learn how to make object method calls.
+See L<perlootut> to learn how to make object method calls.

@@ -22,9 +22,10 @@ I<Programming Perl>:
 
 =item I<Programming Perl> (the "Camel Book"):
 
-	by Larry Wall, Tom Christiansen, and Jon Orwant
-	ISBN 978-0-596-00027-1  [3rd edition July 2000]
-	http://oreilly.com/catalog/9780596000271/
+	by Tom Christiansen, brian d foy, Larry Wall with Jon Orwant
+	ISBN 978-0-596-00492-7 [4th edition February 2012]
+	ISBN 978-1-4493-9890-3 [ebook]
+	http://oreilly.com/catalog/9780596004927
 
 =back
 
@@ -51,8 +52,8 @@ programming:
 =item I<Learning Perl>  (the "Llama Book")
 
 	by Randal L. Schwartz, Tom Phoenix, and brian d foy
-	ISBN 978-0-596-52011-3 [5th edition June 2008]
-	http://oreilly.com/catalog/9780596520113
+	ISBN 978-1-4493-0358-7 [6th edition June 2011]
+	http://oreilly.com/catalog/0636920018452
 
 =back
 
@@ -66,8 +67,8 @@ object-oriented programming, and modules:
 
 	by Randal L. Schwartz and brian d foy, with Tom Phoenix
 		foreword by Damian Conway
-	ISBN 978-0-596-00478-1 [1st edition March 2006]
-	http://oreilly.com/catalog/9780596004781/
+	ISBN 978-1-4493-9309-0 [2nd edition August 2012]
+	http://oreilly.com/catalog/0636920012689/
 
 =back
 
@@ -80,8 +81,9 @@ You might want to keep these desktop references close by your keyboard:
 =item I<Perl 5 Pocket Reference>
 
 	by Johan Vromans
-	ISBN 978-0-596-00374-6 [4th edition July 2002]
-	http://oreilly.com/catalog/9780596003746/
+	ISBN 978-1-4493-0370-9 [5th edition July 2011]
+	ISBN 978-1-4493-0813-1 [ebook]
+	http://oreilly.com/catalog/0636920018476/
 
 =item I<Perl Debugger Pocket Reference>
 
@@ -105,7 +107,7 @@ You might want to keep these desktop references close by your keyboard:
 
 	by James Lee
 	ISBN 1-59059-391-X [3rd edition April 2010]
-	http://www.apress.com/book/view/1430227931
+	http://www.apress.com/9781430227939
 
 =item I<Learning Perl>
 
@@ -142,7 +144,7 @@ You might want to keep these desktop references close by your keyboard:
 
 	by Sam Tregar
 	ISBN 1-59059-018-X [1st edition August 2002]
-	http://www.apress.com/book/view/159059018X
+	http://www.apress.com/9781590590188
 
 =item I<The Perl Cookbook>
 
@@ -150,7 +152,6 @@ You might want to keep these desktop references close by your keyboard:
 	    with foreword by Larry Wall
 	ISBN 1-56592-243-3 [2nd edition August 2003]
 	http://oreilly.com/catalog/9780596003135
-
 
 =item I<Automating System Administration with Perl>
 
@@ -162,7 +163,7 @@ You might want to keep these desktop references close by your keyboard:
 
 	by Linchi Shea
 	ISBN 1-59059-097-X [1st edition July 2003]
-	http://www.apress.com/book/view/159059097X
+	http://www.apress.com/9781590590973
 
 =back
 
@@ -241,7 +242,7 @@ You might want to keep these desktop references close by your keyboard:
 
 	by Richard Foley with Andy Lester
 	ISBN 1-59059-454-1 [1st edition July 2005]
-	http://www.apress.com/book/view/1590594541
+	http://www.apress.com/9781590594544
 
 =back
 
@@ -250,8 +251,6 @@ You might want to keep these desktop references close by your keyboard:
 Some of these books are available as free downloads.
 
 I<Higher-Order Perl>: http://hop.perl.plover.com/
-
-I<Writing Perl Modules for CPAN>: http://www.apress.com/resource/freeebook/9781590590188
 
 =head2 Other interesting, non-Perl books
 

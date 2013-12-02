@@ -105,7 +105,6 @@ that it's run through your pager, as in
 
 You may change the pager which is used via C<o pager=...> command.
 
-
 =item p expr
 X<debugger command, p>
 
@@ -270,15 +269,19 @@ X<debugger command, S>
 
 List subroutine names [not] matching the regex.
 
-=item t
+=item t [n]
 X<debugger command, t>
 
 Toggle trace mode (see also the C<AutoTrace> option).
+Optional argument is the maximum number of levels to trace below
+the current one; anything deeper than that will be silent.
 
-=item t expr
+=item t [n] expr
 X<debugger command, t>
 
 Trace through execution of C<expr>.
+Optional first argument is the maximum number of levels to trace below
+the current one; anything deeper than that will be silent.
 See L<perldebguts/"Frame Listing Output Examples"> for examples.
 
 =item b
@@ -300,6 +303,22 @@ don't use C<if>:
     b 237 $x > 30
     b 237 ++$count237 < 11
     b 33 /pattern/i
+
+If the line number is C<.>, sets a breakpoint on the current line:
+
+    b . $n > 100
+
+=item b [file]:[line] [condition]
+X<breakpoint>
+X<debugger command, b>
+
+Set a breakpoint before the given line in a (possibly different) file.  If a
+condition is specified, it's evaluated each time the statement is reached: a
+breakpoint is taken only if the condition is true.  Breakpoints may only be set
+on lines that begin an executable statement.  Conditions don't use C<if>:
+
+    b lib/MyModule.pm:237 $x > 30
+    b /usr/lib/perl5/site_perl/CGI.pm:100 ++$count100 < 11
 
 =item b subname [condition]
 X<breakpoint>
@@ -340,6 +359,42 @@ X<breakpoint>
 X<debugger command, B>
 
 Delete all installed breakpoints.
+
+=item disable [file]:[line]
+X<breakpoint>
+X<debugger command, disable>
+X<disable>
+
+Disable the breakpoint so it won't stop the execution of the program. 
+Breakpoints are enabled by default and can be re-enabled using the C<enable>
+command.
+
+=item disable [line]
+X<breakpoint>
+X<debugger command, disable>
+X<disable>
+
+Disable the breakpoint so it won't stop the execution of the program. 
+Breakpoints are enabled by default and can be re-enabled using the C<enable>
+command.
+
+This is done for a breakpoint in the current file.
+
+=item enable [file]:[line]
+X<breakpoint>
+X<debugger command, disable>
+X<disable>
+
+Enable the breakpoint so it will stop the execution of the program. 
+
+=item enable [line]
+X<breakpoint>
+X<debugger command, disable>
+X<disable>
+
+Enable the breakpoint so it will stop the execution of the program. 
+
+This is done for a breakpoint in the current file.
 
 =item a [line] command
 X<debugger command, a>
@@ -591,7 +646,6 @@ X<debugger command, M>
 
 Display all loaded modules and their versions.
 
-
 =item man [manpage]
 X<debugger command, man>
 
@@ -629,7 +683,7 @@ either interactively or from the environment or an rc file.
 X<debugger option, recallCommand>
 X<debugger option, ShellBang>
 
-The characters used to recall command or spawn shell.  By
+The characters used to recall a command or spawn a shell.  By
 default, both are set to C<!>, which is unfortunate.
 
 =item C<pager>
@@ -788,6 +842,19 @@ Rudimentary per-package memory usage dump.  Calculates total
 size of strings found in variables in the package.  This does not
 include lexicals in a module's file scope, or lost in closures.
 
+=item C<HistFile>
+X<debugger option, history, HistFile>
+
+The path of the file from which the history (assuming a usable
+Term::ReadLine backend) will be read on the debugger's startup, and to which
+it will be saved on shutdown (for persistence across sessions). Similar in
+concept to Bash's C<.bash_history> file.
+
+=item C<HistSize>
+X<debugger option, history, HistSize>
+
+The count of the saved lines in the history (assuming C<HistFile> above).
+
 =back
 
 After the rc file is read, the debugger reads the C<$ENV{PERLDB_OPTS}>
@@ -923,9 +990,9 @@ X<backtrace> X<stack, backtrace>
 Here's an example of what a stack backtrace via C<T> command might
 look like:
 
-    $ = main::infested called from file `Ambulation.pm' line 10
-    @ = Ambulation::legs(1, 2, 3, 4) called from file `camel_flea' line 7
-    $ = main::pests('bactrian', 4) called from file `camel_flea' line 4
+    $ = main::infested called from file 'Ambulation.pm' line 10
+    @ = Ambulation::legs(1, 2, 3, 4) called from file 'camel_flea' line 7
+    $ = main::pests('bactrian', 4) called from file 'camel_flea' line 4
 
 The left-hand character up there indicates the context in which the
 function was called, with C<$> and C<@> meaning scalar or list
@@ -998,7 +1065,7 @@ Another way to debug compile-time code is to start the debugger, set a
 breakpoint on the I<load> of some module:
 
     DB<7> b load f:/perllib/lib/Carp.pm
-  Will stop on load of `f:/perllib/lib/Carp.pm'.
+  Will stop on load of 'f:/perllib/lib/Carp.pm'.
 
 and then restart the debugger using the C<R> command (if possible).  One can use C<b
 compile subname> for the same purpose.
@@ -1104,19 +1171,16 @@ X<profile> X<profiling> X<profiler>
 
 If you wish to supply an alternative debugger for Perl to run,
 invoke your script with a colon and a package argument given to the
-B<-d> flag.  Perl's alternative debuggers include the Perl profiler,
-L<Devel::DProf>, which is included with the standard Perl
+B<-d> flag.  Perl's alternative debuggers include a Perl profiler,
+L<Devel::NYTProf>, which is available separately as a CPAN
 distribution.  To profile your Perl program in the file F<mycode.pl>,
 just type:
 
-    $ perl -d:DProf mycode.pl
+    $ perl -d:NYTProf mycode.pl
 
-When the script terminates the profiler will dump the profile
-information to a file called F<tmon.out>.  A tool like B<dprofpp>,
-also supplied with the standard Perl distribution, can be used to
-interpret the information in that profile.  More powerful profilers,
-such as C<Devel::NYTProf> are available from the CPAN:  see L<perlperf>
-for details.
+When the script terminates the profiler will create a database of the
+profile information that you can turn into reports using the profiler's
+tools. See <perlperf> for details.
 
 =head1 Debugging Regular Expressions
 X<regular expression, debugging>
@@ -1146,8 +1210,7 @@ L<perldebtut>,
 L<perldebguts>,
 L<re>,
 L<DB>,
-L<Devel::DProf>,
-L<dprofpp>,
+L<Devel::NYTProf>,
 L<Dumpvalue>,
 and
 L<perlrun>.

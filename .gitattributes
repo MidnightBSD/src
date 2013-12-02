@@ -27598,6 +27598,7 @@ contrib/perl/plan9/versnum -text
 contrib/perl/pod.lst -text
 contrib/perl/pod/Makefile.SH -text
 contrib/perl/pod/buildtoc -text
+contrib/perl/pod/checkpods.PL -text
 contrib/perl/pod/perl.pod -text
 contrib/perl/pod/perl5004delta.pod -text
 contrib/perl/pod/perl5005delta.pod -text
@@ -27613,6 +27614,8 @@ contrib/perl/pod/perl5120delta.pod -text
 contrib/perl/pod/perl5121delta.pod -text
 contrib/perl/pod/perl5122delta.pod -text
 contrib/perl/pod/perl5123delta.pod -text
+contrib/perl/pod/perl5124delta.pod -text
+contrib/perl/pod/perl5125delta.pod -text
 contrib/perl/pod/perl5130delta.pod -text
 contrib/perl/pod/perl51310delta.pod -text
 contrib/perl/pod/perl51311delta.pod -text
@@ -27627,6 +27630,14 @@ contrib/perl/pod/perl5138delta.pod -text
 contrib/perl/pod/perl5139delta.pod -text
 contrib/perl/pod/perl5140delta.pod -text
 contrib/perl/pod/perl5141delta.pod -text
+contrib/perl/pod/perl5142delta.pod -text
+contrib/perl/pod/perl5143delta.pod -text
+contrib/perl/pod/perl5144delta.pod -text
+contrib/perl/pod/perl5160delta.pod -text
+contrib/perl/pod/perl5161delta.pod -text
+contrib/perl/pod/perl5162delta.pod -text
+contrib/perl/pod/perl5163delta.pod -text
+contrib/perl/pod/perl5180delta.pod -text
 contrib/perl/pod/perl561delta.pod -text
 contrib/perl/pod/perl56delta.pod -text
 contrib/perl/pod/perl570delta.pod -text
@@ -27649,6 +27660,7 @@ contrib/perl/pod/perl592delta.pod -text
 contrib/perl/pod/perl593delta.pod -text
 contrib/perl/pod/perl594delta.pod -text
 contrib/perl/pod/perl595delta.pod -text
+contrib/perl/pod/perlapi.pod -text
 contrib/perl/pod/perlapio.pod -text
 contrib/perl/pod/perlartistic.pod -text
 contrib/perl/pod/perlbook.pod -text
@@ -27668,8 +27680,10 @@ contrib/perl/pod/perldelta.pod -text
 contrib/perl/pod/perldiag.pod -text
 contrib/perl/pod/perldoc.pod -text
 contrib/perl/pod/perldsc.pod -text
+contrib/perl/pod/perldtrace.pod -text
 contrib/perl/pod/perlebcdic.pod -text
 contrib/perl/pod/perlembed.pod -text
+contrib/perl/pod/perlexperiment.pod -text
 contrib/perl/pod/perlfaq.pod -text
 contrib/perl/pod/perlfaq1.pod -text
 contrib/perl/pod/perlfaq2.pod -text
@@ -27692,6 +27706,7 @@ contrib/perl/pod/perlhack.pod -text
 contrib/perl/pod/perlhacktips.pod -text
 contrib/perl/pod/perlhacktut.pod -text
 contrib/perl/pod/perlhist.pod -text
+contrib/perl/pod/perlintern.pod -text
 contrib/perl/pod/perlinterp.pod -text
 contrib/perl/pod/perlintro.pod -text
 contrib/perl/pod/perliol.pod -text
@@ -27702,13 +27717,16 @@ contrib/perl/pod/perllol.pod -text
 contrib/perl/pod/perlmod.pod -text
 contrib/perl/pod/perlmodinstall.pod -text
 contrib/perl/pod/perlmodlib.PL -text
+contrib/perl/pod/perlmodlib.pod -text
 contrib/perl/pod/perlmodstyle.pod -text
 contrib/perl/pod/perlmroapi.pod -text
 contrib/perl/pod/perlnewmod.pod -text
 contrib/perl/pod/perlnumber.pod -text
 contrib/perl/pod/perlobj.pod -text
+contrib/perl/pod/perlootut.pod -text
 contrib/perl/pod/perlop.pod -text
 contrib/perl/pod/perlopentut.pod -text
+contrib/perl/pod/perlothrtut.pod -text
 contrib/perl/pod/perlpacktut.pod -text
 contrib/perl/pod/perlperf.pod -text
 contrib/perl/pod/perlpod.pod -text
@@ -27724,6 +27742,7 @@ contrib/perl/pod/perlrecharclass.pod -text
 contrib/perl/pod/perlref.pod -text
 contrib/perl/pod/perlreftut.pod -text
 contrib/perl/pod/perlreguts.pod -text
+contrib/perl/pod/perlrepository.pod -text
 contrib/perl/pod/perlrequick.pod -text
 contrib/perl/pod/perlreref.pod -text
 contrib/perl/pod/perlretut.pod -text
@@ -27735,6 +27754,7 @@ contrib/perl/pod/perlsub.pod -text
 contrib/perl/pod/perlsyn.pod -text
 contrib/perl/pod/perlthrtut.pod -text
 contrib/perl/pod/perltie.pod -text
+contrib/perl/pod/perltoc.pod -text
 contrib/perl/pod/perltodo.pod -text
 contrib/perl/pod/perltooc.pod -text
 contrib/perl/pod/perltoot.pod -text
@@ -27748,6 +27768,13 @@ contrib/perl/pod/perlvar.pod -text
 contrib/perl/pod/perlvms.pod -text
 contrib/perl/pod/perlxs.pod -text
 contrib/perl/pod/perlxstut.pod -text
+contrib/perl/pod/pod2html.PL -text
+contrib/perl/pod/pod2latex.PL -text
+contrib/perl/pod/pod2man.PL -text
+contrib/perl/pod/pod2text.PL -text
+contrib/perl/pod/pod2usage.PL -text
+contrib/perl/pod/podchecker.PL -text
+contrib/perl/pod/podselect.PL -text
 contrib/perl/pod/roffitall -text
 contrib/perl/pod/rofftoc -text
 contrib/perl/pod/splitman -text
