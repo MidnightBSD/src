@@ -8,15 +8,35 @@ print OUT <<'EOT';
 
 package XSLoader;
 
-$VERSION = "0.13";
+$VERSION = "0.16";
 
 #use strict;
 
-# enable debug/trace messages from DynaLoader perl code
-# $dl_debug = $ENV{PERL_DL_DEBUG} || 0 unless defined $dl_debug;
-
 package DynaLoader;
 
+EOT
+
+# dlutils.c before 5.006 has this:
+#
+#    #ifdef DEBUGGING
+#        dl_debug = SvIV( perl_get_sv("DynaLoader::dl_debug", 0x04) );
+#    #endif
+#
+# where 0x04 is GV_ADDWARN, which causes a warning to be issued by the call
+# into XS below, if DynaLoader.pm hasn't been loaded.
+# It was changed to 0 in the commit(s) that added XSLoader to the core
+# (9cf41c4d23a47c8b and its parent 9426adcd48655815)
+# Hence to backport XSLoader to work silently with earlier DynaLoaders we need
+# to ensure that the variable exists:
+
+print OUT <<'EOT' if $] < 5.006;
+
+# enable debug/trace messages from DynaLoader perl code
+$dl_debug = $ENV{PERL_DL_DEBUG} || 0 unless defined $dl_debug;
+
+EOT
+
+print OUT <<'EOT';
 # No prizes for guessing why we don't say 'bootstrap DynaLoader;' here.
 # NOTE: All dl_*.xs (including dl_none.xs) define a dl_error() XSUB
 boot_DynaLoader('DynaLoader') if defined(&boot_DynaLoader) &&
@@ -29,9 +49,9 @@ sub load {
     my ($module, $modlibname) = caller();
 
     if (@_) {
-	$module = $_[0];
+        $module = $_[0];
     } else {
-	$_[0] = $module;
+        $_[0] = $module;
     }
 
     # work with static linking too
@@ -63,7 +83,7 @@ EOT
 print OUT <<'EOT';
     my $modpname = join('/',@modparts);
     my $c = @modparts;
-    $modlibname =~ s,[\\/][^\\/]+$,, while $c--;	# Q&D basename
+    $modlibname =~ s,[\\/][^\\/]+$,, while $c--;    # Q&D basename
 EOT
 
 my $dl_dlext = quotemeta($Config::Config{'dlext'});
@@ -139,7 +159,7 @@ print OUT <<'EOT';
 }
 EOT
 
-# Can't test with DynaLoader->can('bootstrap_inherit' when building in the
+# Can't test with DynaLoader->can('bootstrap_inherit') when building in the
 # core, as XSLoader gets built before DynaLoader.
 
 if ($] >= 5.006) {
@@ -181,7 +201,7 @@ XSLoader - Dynamically load C libraries into Perl code
 
 =head1 VERSION
 
-Version 0.13
+Version 0.16
 
 =head1 SYNOPSIS
 
@@ -237,7 +257,7 @@ If no C<$VERSION> was specified on the C<bootstrap> line, the last line becomes
 
     XSLoader::load 'YourPackage';
 
-If the call to C<load> is from the YourPackage, then that can be further
+If the call to C<load> is from C<YourPackage>, then that can be further
 simplified to
 
     XSLoader::load();
@@ -269,7 +289,7 @@ C<use XSLoader> by C<require>, so the compiler does not know that a function
 C<XSLoader::load()> is present.
 
 This boilerplate uses the low-overhead C<XSLoader> if present; if used with
-an antic Perl which has no C<XSLoader>, it falls back to using C<DynaLoader>.
+an antique Perl which has no C<XSLoader>, it falls back to using C<DynaLoader>.
 
 =head1 Order of initialization: early load()
 
@@ -392,6 +412,12 @@ may have much more overhead than running the same extensions after
 C<make install>.
 
 
+=head1 KNOWN BUGS
+
+The new simpler way to call C<XSLoader::load()> with no arguments at all
+does not work on Perl 5.8.4 and 5.8.5.
+
+
 =head1 BUGS
 
 Please report any bugs or feature requests via the perlbug(1) utility.
@@ -414,7 +440,7 @@ Previous maintainer was Michael G Schwern <schwern@pobox.com>.
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright (C) 1990-2007 by Larry Wall and others.
+Copyright (C) 1990-2011 by Larry Wall and others.
 
 This program is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

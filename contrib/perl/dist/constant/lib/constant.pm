@@ -1,10 +1,10 @@
 package constant;
-use 5.005;
+use 5.008;
 use strict;
 use warnings::register;
 
 use vars qw($VERSION %declared);
-$VERSION = '1.21';
+$VERSION = '1.27';
 
 #=======================================================================
 
@@ -17,10 +17,9 @@ my %forced_into_main = map +($_, 1),
 
 my %forbidden = (%keywords, %forced_into_main);
 
-my $str_end = $] >= 5.006 ? "\\z" : "\\Z";
-my $normal_constant_name = qr/^_?[^\W_0-9]\w*$str_end/;
-my $tolerable = qr/^[A-Za-z_]\w*$str_end/;
-my $boolean = qr/^[01]?$str_end/;
+my $normal_constant_name = qr/^_?[^\W_0-9]\w*\z/;
+my $tolerable = qr/^[A-Za-z_]\w*\z/;
+my $boolean = qr/^[01]?\z/;
 
 BEGIN {
     # We'd like to do use constant _CAN_PCS => $] > 5.009002
@@ -29,6 +28,9 @@ BEGIN {
     no strict 'refs';
     my $const = $] > 5.009002;
     *_CAN_PCS = sub () {$const};
+
+    my $downgrade = $] < 5.015004; # && $] >= 5.008
+    *_DOWNGRADE = sub () { $downgrade };
 }
 
 #=======================================================================
@@ -117,10 +119,12 @@ sub import {
 	    if ($multiple || @_ == 1) {
 		my $scalar = $multiple ? $constants->{$name} : $_[0];
 
-		# Work around perl bug #xxxxx: Sub names (actually glob
-		# names in general) ignore the UTF8 flag. So we have to
-		# turn it off to get the "right" symbol table entry.
-		utf8::is_utf8 $name and utf8::encode $name;
+		if (_DOWNGRADE) { # for 5.8 to 5.14
+		    # Work around perl bug #31991: Sub names (actually glob
+		    # names in general) ignore the UTF8 flag. So we have to
+		    # turn it off to get the "right" symbol table entry.
+		    utf8::is_utf8 $name and utf8::encode $name;
+		}
 
 		# The constant serves to optimise this entire block out on
 		# 5.8 and earlier.
@@ -357,9 +361,6 @@ C<< CONSTANT => 'value' >>.
 =head1 SEE ALSO
 
 L<Readonly> - Facility for creating read-only scalars, arrays, hashes.
-
-L<Const> - Facility for creating read-only variables. Similar to C<Readonly>,
-but uses C<SvREADONLY> instead of C<tie>.
 
 L<Attribute::Constant> - Make read-only variables via attribute
 

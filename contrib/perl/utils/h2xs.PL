@@ -498,7 +498,7 @@ See L<perlxs> and L<perlxstut> for additional details.
 use strict;
 
 
-my( $H2XS_VERSION ) = ' $Revision: 1.1.1.3 $ ' =~ /\$Revision:\s+([^\s]+)/;
+my( $H2XS_VERSION ) = ' $Revision: 1.23 $ ' =~ /\$Revision:\s+([^\s]+)/;
 my $TEMPLATE_VERSION = '0.01';
 my @ARGS = @ARGV;
 my $compat_version = $];
@@ -789,7 +789,7 @@ if( @path_h ){
     }
     else {
       @paths = (File::Spec->curdir(), $Config{usrinc},
-		(split ' ', $Config{locincpth}), '/usr/include');
+		(split / +/, $Config{locincpth} // ""), '/usr/include');
     }
     foreach my $path_h (@path_h) {
         $name ||= $path_h;
@@ -862,6 +862,10 @@ if( @path_h ){
 	    $rest =~ s!/\*.*?(\*/|\n)|//.*!!g; # Remove comments
 	    $rest =~ s/^\s+//;
 	    $rest =~ s/\s+$//;
+	    if ($rest eq '') {
+	      print("Skip empty $def\n") if $opt_d;
+	      next defines;
+	    }
 	    # Cannot do: (-1) and ((LHANDLE)3) are OK:
 	    #print("Skip non-wordy $def => $rest\n"),
 	    #  next defines if $rest =~ /[^\w\$]/;
@@ -893,7 +897,7 @@ if( @path_h ){
       }
       else {
 	# Work from miniperl too - on "normal" systems
-        my $SEEK_SET = eval 'use Fcntl qw/SEEK_SET/; SEEK_SET' or 0;
+        my $SEEK_SET = eval 'use Fcntl qw/SEEK_SET/; SEEK_SET' || 0;
         seek CH, 0, $SEEK_SET;
         my $src = do { local $/; <CH> };
         close CH;
@@ -1382,6 +1386,7 @@ if( ! $opt_X ){ # print XS, unless it is disabled
 warn "Writing $ext$modpname/$modfname.xs\n";
 
 print XS <<"END";
+#define PERL_NO_GET_CONTEXT
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
@@ -2093,8 +2098,8 @@ my $tests = @const_names ? 2 : 1;
 open EX, ">$testfile" or die "Can't create $ext$modpname/$testfile: $!\n";
 
 print EX <<_END_;
-# Before `make install' is performed this script should be runnable with
-# `make test'. After `make install' it should work as `perl $modpname.t'
+# Before 'make install' is performed this script should be runnable with
+# 'make test'. After 'make install' it should work as 'perl $modpname.t'
 
 #########################
 

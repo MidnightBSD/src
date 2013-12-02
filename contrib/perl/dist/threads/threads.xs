@@ -14,6 +14,9 @@
 #  if defined(USE_NO_MINGW_SETJMP_TWO_ARGS) || (!defined(__BORLANDC__) && !defined(__MINGW64__))
 #    define setjmp(x) _setjmp(x)
 #  endif
+#  if defined(__MINGW64__)
+#    define setjmp(x) _setjmpex((x), mingw_getsp())
+#  endif
 #endif
 #ifdef HAS_PPPORT_H
 #  define NEED_PL_signals
@@ -982,7 +985,6 @@ ithread_create(...)
         SV *thread_exit_only;
         char *str;
         int idx;
-        unsigned int num_args;
         dMY_POOL;
     CODE:
         if ((items >= 2) && SvROK(ST(1)) && SvTYPE(SvRV(ST(1)))==SVt_PVHV) {

@@ -5,7 +5,7 @@ use 5.008;
 use strict;
 use warnings;
 
-our $VERSION = '1.83';
+our $VERSION = '1.86';
 my $XS_VERSION = $VERSION;
 $VERSION = eval $VERSION;
 
@@ -134,7 +134,7 @@ threads - Perl interpreter-based threads
 
 =head1 VERSION
 
-This document describes threads version 1.83
+This document describes threads version 1.86
 
 =head1 SYNOPSIS
 
@@ -939,6 +939,36 @@ For example:
 
 On MSWin32, each thread maintains its own set of environment variables.
 
+=item Catching signals
+
+Signals are I<caught> by the main thread (thread ID = 0) of a script.
+Therefore, setting up signal handlers in threads for purposes other than
+L</"THREAD SIGNALLING"> as documented above will not accomplish what is
+intended.
+
+This is especially true if trying to catch C<SIGALRM> in a thread.  To handle
+alarms in threads, set up a signal handler in the main thread, and then use
+L</"THREAD SIGNALLING"> to relay the signal to the thread:
+
+  # Create thread with a task that may time out
+  my $thr->create(sub {
+      threads->yield();
+      eval {
+          $SIG{ALRM} = sub { die("Timeout\n"); };
+          alarm(10);
+          ...  # Do work here
+          alarm(0);
+      };
+      if ($@ =~ /Timeout/) {
+          warn("Task in thread timed out\n");
+      }
+  };
+
+  # Set signal handler to relay SIGALRM to thread
+  $SIG{ALRM} = sub { $thr->kill('ALRM') };
+
+  ... # Main thread continues working
+
 =item Parent-child threads
 
 On some platforms, it might not be possible to destroy I<parent> threads while
@@ -1051,7 +1081,7 @@ L<http://www.perl.com/pub/a/2002/06/11/threads.html> and
 L<http://www.perl.com/pub/a/2002/09/04/threads.html>
 
 Perl threads mailing list:
-L<http://lists.cpan.org/showlist.cgi?name=iThreads>
+L<http://lists.perl.org/list/ithreads.html>
 
 Stack size discussion:
 L<http://www.perlmonks.org/?node_id=532956>

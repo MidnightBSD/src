@@ -32,54 +32,54 @@ sub safer_unlink {
   return $cnt;
 }
 
-sub safer_rename_silent {
-  my ($from, $to) = @_;
-
-  # Some dosish systems can't rename over an existing file:
-  safer_unlink $to;
-  chmod 0600, $from if $Needs_Write;
-  rename $from, $to;
-}
-
-sub rename_if_different {
-  my ($from, $to) = @_;
-
-  if ($TAP) {
-      my $not = compare($from, $to) ? 'not ' : '';
-      print STDOUT $not . "ok - $0 $to\n";
-      safer_unlink($from);
-      return;
-  }
-  if (compare($from, $to) == 0) {
-      warn "no changes between '$from' & '$to'\n" if $Verbose > 0;
-      safer_unlink($from);
-      return;
-  }
-  warn "changed '$from' to '$to'\n" if $Verbose > 0;
-  push @Changed, $to unless $Verbose < 0;
-  safer_rename_silent($from, $to) or die "renaming $from to $to: $!";
-}
-
-# Saf*er*, but not totally safe. And assumes always open for output.
-sub safer_open {
-    my ($name, $final_name) = @_;
-    if (-f $name) {
-	unlink $name or die "$name exists but can't unlink: $!";
-    }
+# Open a new file.
+sub open_new {
+    my ($final_name, $mode, $header) = @_;
+    my $name = $final_name . '-new';
+    my $lang = $final_name =~ /\.(?:c|h|tab|act)$/ ? 'C' : 'Perl';
     my $fh = gensym;
-    open $fh, ">$name" or die "Can't create $name: $!";
-    *{$fh}->{name} = $name;
-    if (defined $final_name) {
-	*{$fh}->{final_name} = $final_name;
-	*{$fh}->{lang} = ($final_name =~ /\.(?:c|h|tab|act)$/ ? 'C' : 'Perl');
+    if (!defined $mode or $mode eq '>') {
+	if (-f $name) {
+	    unlink $name or die "$name exists but can't unlink: $!";
+	}
+	open $fh, ">$name" or die "Can't create $name: $!";
+    } elsif ($mode eq '>>') {
+	open $fh, ">>$name" or die "Can't append to $name: $!";
+    } else {
+	die "Unhandled open mode '$mode#";
     }
+    *{$fh}->{name} = $name;
+    *{$fh}->{final_name} = $final_name;
+    *{$fh}->{lang} = $lang;
     binmode $fh;
+    print {$fh} read_only_top(lang => $lang, %$header) if $header;
     $fh;
 }
 
-sub safer_close {
+sub close_and_rename {
     my $fh = shift;
-    close $fh or die 'Error closing ' . *{$fh}->{name} . ": $!";
+    my $name = *{$fh}->{name};
+    close $fh or die "Error closing $name: $!";
+    my $final_name = *{$fh}->{final_name};
+
+    if ($TAP) {
+	my $not = compare($name, $final_name) ? 'not ' : '';
+	print STDOUT $not . "ok - $0 $final_name\n";
+	safer_unlink($name);
+	return;
+    }
+    if (compare($name, $final_name) == 0) {
+	warn "no changes between '$name' & '$final_name'\n" if $Verbose > 0;
+	safer_unlink($name);
+	return;
+    }
+    warn "changed '$name' to '$final_name'\n" if $Verbose > 0;
+    push @Changed, $final_name unless $Verbose < 0;
+
+    # Some dosish systems can't rename over an existing file:
+    safer_unlink $final_name;
+    chmod 0600, $name if $Needs_Write;
+    rename $name, $final_name or die "renaming $name to $final_name: $!";
 }
 
 sub read_only_top {
@@ -129,11 +129,16 @@ EOM
 	? wrap('# ', '# ', $raw) . "\n" : wrap('/* ', $style, $raw) . " */\n\n";
     $cooked =~ tr/\0/ /; # Don't break Larry's name etc
     $cooked =~ s/ +$//mg; # Remove all trailing spaces
+    $cooked =~ s! \*/\n!$args{quote}!s if $args{quote};
     return $cooked;
 }
 
-sub read_only_bottom {
-    my ($sources, $lang) = @_;
+sub read_only_bottom_close_and_rename {
+    my ($fh, $sources) = @_;
+    my $name = *{$fh}->{name};
+    my $lang = *{$fh}->{lang};
+    die "No final name specified at open time for $name"
+	unless *{$fh}->{final_name};
 
     my $comment;
     if ($sources) {
@@ -152,20 +157,9 @@ sub read_only_bottom {
 	$comment =~ s! \* !/* !;
 	$comment .= " */";
     }
-    return "$comment\n";
-}
+    print $fh "\n$comment\n";
 
-sub read_only_bottom_close_and_rename {
-    my ($fh, $sources) = @_;
-    my $name = *{$fh}->{name};
-    my $lang = *{$fh}->{lang};
-    die "No final name specified at open time for $name"
-	unless *{$fh}->{final_name};
-
-    print $fh "\n", read_only_bottom($sources, $lang);
-
-    safer_close($fh);
-    rename_if_different($name, *{$fh}->{final_name});
+    close_and_rename($fh);
 }
 
 sub tab {

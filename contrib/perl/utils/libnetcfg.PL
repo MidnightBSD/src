@@ -85,7 +85,7 @@ specified using the -o option, C<-o newfile>.
 
 =head1 SEE ALSO
 
-L<Net::Config>, L<Net::libnetFAQ>
+L<Net::Config>, L<libnetFAQ>
 
 =head1 AUTHORS
 
@@ -95,7 +95,7 @@ Jarkko Hietaniemi, conversion into libnetcfg for inclusion into Perl 5.8.
 
 =cut
 
-# $Id: libnetcfg.PL,v 1.1.1.1 2009-03-15 19:20:09 ctriv Exp $
+# $Id: Configure,v 1.8 1997/03/04 09:22:32 gbarr Exp $
 
 use strict;
 use IO::File;
@@ -218,7 +218,7 @@ sub get_hostname
    print <<"EDQ";
 
 *** ERROR:
-    Hostname `$host' does not seem to exist, please enter again
+    Hostname '$host' does not seem to exist, please enter again
     or a single space to clear any default
 
 EDQ
@@ -684,9 +684,9 @@ $cfg{'inet_domain'} = ($ans =~ /(\S+)/)[0];
 $msg = <<EDQ;
 
 If you specified some default hosts above, it is possible for me to
-do some basic tests when you run `make test'
+do some basic tests when you run 'make test'
 
-This will cause `make test' to be quite a bit slower and, if your
+This will cause 'make test' to be quite a bit slower and, if your
 internet connection is via dialup, will require you to be on-line
 unless the hosts are local.
 
@@ -714,7 +714,7 @@ print "\n";
 #---------------------------------------------------------------------------
 
 my $fh = IO::File->new($libnet_cfg_out, "w") or
-	die "Cannot create `$libnet_cfg_out': $!";
+	die "Cannot create '$libnet_cfg_out': $!";
 
 print "Writing $libnet_cfg_out\n";
 

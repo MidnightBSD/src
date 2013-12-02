@@ -1,5 +1,191 @@
 Revision history for Perl extension ExtUtils::ParseXS.
 
+3.18 - Mon Nov 19 07:35:00 CET 2012
+  - Restore portability to Perl 5.6, which was lost at EU-PXS 3.00.
+  - [perl #112776] avoid warning on an initialized non-parameter
+  - Only increment PL_amagic_generation before 5.9
+
+3.15 - Thu Feb  2 08:12:00 CET 2012
+  - Fix version for PAUSE indexer.
+
+3.14 - Wed Feb  1 18:22:00 CET 2012
+  - Promote to stable release.
+  - Proper repository and bugtracker info in META.json.
+
+3.13_01 - Sat Jan 29 12:45:00 CET 2012
+  - ExtUtils::Typemaps:
+    => Embedded typemap dumping: A method which will produce the
+       verbatim string for inclusion in XS.
+    => Introducing ExtUtils::Typemaps::Cmd, a helper module which
+       can produce embedded typemap strings via simple one-liners.
+       Useful for including typemaps from other modules in XS code
+       with INCLUDE_COMMAND. See "perldoc ExtUtils::Typemaps::Cmd".
+
+  - ExtUtils::ParseXS:
+    => Bugfix: Used to have parsing problems with embedded typemaps
+       occasionally.
+    => Better error messages on typemap-related issues. If a no
+       typemap was found for a given C type, list all mapped C types
+       so that the user hopefully spots his mistake easily.
+
+3.11 - Thu Dec 29 17:55:00 CET 2011
+  - Version/distribution fixes.
+
+3.09 - Wed Dec 28 18:48:00 CET 2011
+  - Escape double quotes of file names/commands in #line directives.
+
+3.08 - Mon Dec 19 18:03:00 CET 2011
+  - Silence undefined-value-in-addition warning
+    (Nothing serious, just happened sometimes when reporting line numbers for
+    errors. But warning during build process.)
+
+3.07 - Wed Dec  7 14:10:00 CET 2011
+  - Fix inconsistent versioning in 3.06.
+
+3.06 - Fri Dec  2 08:10:00 CET 2011
+
+  - Fix Cygwin issues [Tony Cook]
+    avoid conflicting static / dllexport on legacy perls too
+    This probably fixes rt.cpan.org 72313 and 71964.
+    (3928a66ad4bd8aee704eda1942b7877c0ff1ab2c in core)
+
+  - Convert ` to ' [James Keenan]
+    55bee391aeff3c3b8d22fa4ce5491ee9440028aa and
+    6dfee1ec62c64d7afe8ced4650596dd9e7f71a63 in core
+
+  - Avoid some test-time warnings [Zefram]
+    97bae9c59cd181b3b54061213ec1fdce0ccb30d4 in core
+
+3.05 - Wed Oct  5 08:14:00 CET 2011
+
+  - No functional changes, promoted to stable release.
+
+3.04_04 - Mon Sep 12 08:12:00 CET 2011
+
+  - Simplify generated XS code by emitting a compatibility version
+    of dVAR. [Nicholas Clark]
+
+  - Fixed "INCLUDE: $cmd |", CPAN RT #70213
+
+3.04_03 - Sun Sep  4 18:49:00 CET 2011
+
+  - By #defining PERL_EUPXS_ALWAYS_EXPORT or
+    PERL_EUPXS_NEVER_EXPORT early in your XS code, you can
+    force ExtUtils::ParseXS to always or never export
+    XSUB symbols. This has no effect on boot_* symbols since
+    those must be exported.
+
+3.04_02 - Sat Sep  3 15:28:00 CET 2011
+
+  - Don't put null characters into the generated source
+    file when -except is used; write the '\0' escape sequence
+    properly instead. [Stephen Bennett]
+
+3.04_01 - Sun Aug 28 17:50:00 CET 2011
+
+  - The XSUB.h changes to make XS(name) use XS_INTERNAL(name)
+    by default (which were in the 5.15.2 dev release of perl)
+    have been reverted since too many CPAN modules expect to
+    be able to refer to XSUBs declared with XS(name).
+    Instead, ExtUtils::ParseXS will define a copy of the
+    XS_INTERNAL/XS_EXTERNAL macros as necessary going back to
+    perl 5.10.0 (which is the oldest perl I had for testing).
+    By default, ExtUtils::ParseXS will use XS_INTERNAL(name)
+    instead of XS(name).
+
+3.04 - Thu Aug 25 08:20:00 CET 2011
+
+  - Stable release based on 3.03_03, no functional changes.
+
+3.03_03 - Wed Aug 24 19:43:00 CET 2011
+
+  - Try to fix regression for input-typemap override in XS argument
+    list. (CPAN RT #70448)
+
+  - Explicit versions in submodules to fail early if something
+    goes wrong.
+
+3.03_02 - Sun Aug 21 13:19:00 CET 2011
+
+  - Properly strip trailing semicolons form inputmaps. These could
+    trigger warnings (errors in strict C89 compilers) due to
+    additional semicolons being interpreted as empty statements.
+    [Torsten Schoenfeld, Jan Dubois, Steffen Mueller]
+
+  - Now detects and throws a warning if there is a CODE section using
+    RETVAL, but no OUTPUT section. [CPAN RT #69536]
+
+  - Uses the explicit XS_EXTERNAL macro (from perl 5.15.2 and newer)
+    for XSUBs that need to be exported. Defines XS_EXTERNAL to fall
+    back to XS where that is not available.
+
+  - Introduces new EXPORT_XSUB_SYMBOLS XS keyword that forces exported
+    XSUB symbols. It's a no-op on perls before 5.15.2.
+
+3.03 - Thu Aug 11 08:24:00 CET 2011
+
+  - Test fix: Try all @INC-derived typemap locations. (CPAN RT #70047)
+    [Mike Sheldrake]
+
+3.02 - Thu Aug  4 18:19:00 CET 2011
+
+  - Test fix: Use File::Spec->catfile instead of catdir where appropriate.
+
+3.01 - Thu Aug  4 17:51:00 CET 2011
+
+  - No significant changes from 3.00_05.
+
+3.00_05 - Wed Jul 27 22:54:00 CET 2011
+
+  - Define PERL_UNUSED_ARG for pre-3.8.9 perls.
+    This should fix the tests on those perls.
+
+3.00_04 - Wed Jul 27 22:22:00 CET 2011
+
+  - Require perl 5.8.1.
+
+  - Patches from CPAN RT #53938, #61908
+    Both of these are attempts to fix win32 problems:
+    Bug #61908 for ExtUtils-ParseXS: MSWin compilers and back-slashed paths
+    Bug #53938 for ExtUtils-ParseXS: MinGW Broken after 2.21
+
+3.00_03 - Fri Jul 22 20:13:00 CET 2011
+
+  - Add some diagnostics when xsubpp fails to load a current-enough
+    version of ExtUtils::ParseXS. [Steffen Mueller]
+
+  - Add a check to Makefile.PL that scans @INC to determine whether
+    the new xsubpp will be shadowed by another, existing xsubpp
+    and warn the user vehemently. [Steffen Mueller]
+
+3.00_02 - Thu Jul 14 18:00:00 CET 2011
+
+  - Move script/xsubpp back to lib/ExtUtils/xsubpp
+    The original move caused old xsubpp's to be used.
+
+3.00_01 - Tue Jul 12 22:00:00 CET 2011
+
+  - Major refactoring of the whole code base.
+    It finally runs under 'use strict' for the first time!
+    [James Keenan, Steffen Mueller]
+
+  - Typemaps can now be embedded into XS code using a here-doc
+    like syntax and the new "TYPEMAP:" XS keyword.
+    [Steffen Mueller]
+
+  - Move typemap handling code to ExtUtils::Typemaps
+    with full object-oriented goodness. [Steffen Mueller]
+
+  - Check API compatibility when loading xs modules.
+    If on a new-enough perl, add the XS_APIVERSION_BOOTCHECK macro to
+    the _boot function of every XS module to compare it against the API
+    version the module has been compiled against. If the versions do
+    not match, an exception is thrown. [Florian Ragwitz]
+
+  - Fixed compiler warnings in XS. [Zefram]
+
+  - Spell-check [Peter J. Acklam]
+
 2.2206 - Sun Jul  4 15:43:21 EDT 2010
 
  Bug fixes:

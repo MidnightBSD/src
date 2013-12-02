@@ -50,13 +50,17 @@ my %map = (
 # Example #2: S_SBIE  means type func_r(type, char*, int, int*)
 # Example #3: S_CBI   means type func_r(const char*, char*, int)
 
+sub open_print_header {
+    my ($file, $quote) = @_;
+    return open_new($file, '>',
+		    { by => 'regen/reentr.pl',
+		      from => 'data in regen/reentr.pl',
+		      file => $file, style => '*',
+		      copyright => [2002, 2003, 2005 .. 2007],
+		      quote => $quote });
+}
 
-my $h = safer_open('reentr.h-new', 'reentr.h');
-print $h read_only_top(lang => 'C', by => 'regen/reentr.pl',
-		       from => 'data in regen/reentr.pl',
-		       file => 'reentr.h', style => '*',
-		       copyright => [2002, 2003, 2005 .. 2007]);
-
+my $h = open_print_header('reentr.h');
 print $h <<EOF;
 #ifndef REENTR_H
 #define REENTR_H
@@ -222,7 +226,7 @@ while (<DATA>) { # Read in the protypes.
 	}
 	# Output the metaconfig unit header.
 	print U <<"EOF";
-?RCS: \$Id: reentr.pl,v 1.1.1.1 2011-05-18 13:33:26 laffer1 Exp ${func}_r.U,v $
+?RCS: \$Id: d_${func}_r.U,v $
 ?RCS:
 ?RCS: Copyright (c) 2002,2003 Jarkko Hietaniemi
 ?RCS:
@@ -782,15 +786,10 @@ read_only_bottom_close_and_rename($h);
 
 # Prepare to write the reentr.c.
 
-my $c = safer_open('reentr.c-new', 'reentr.c');
-my $top = read_only_top(lang => 'C', by => 'regen/reentr.pl',
-			from => 'data in regen/reentr.pl',
-			file => 'reentr.c', style => '*',
-			copyright => [2002, 2003, 2005 .. 2007]);
-
-$top =~ s! \*/\n! *
+my $c = open_print_header('reentr.c', <<'EOQ');
+ *
  * "Saruman," I said, standing away from him, "only one hand at a time can
- *  wield the One, and you know that well, so do not trouble to say we\!"
+ *  wield the One, and you know that well, so do not trouble to say we!"
  *
  * This file contains a collection of automatically created wrappers
  * (created by running reentr.pl) for reentrant (thread-safe) versions of
@@ -799,9 +798,9 @@ $top =~ s! \*/\n! *
  * care about the differences between various platforms' idiosyncrasies
  * regarding these reentrant interfaces.  
  */
-!s;
+EOQ
 
-print $c $top, <<"EOF";
+print $c <<"EOF";
 #include "EXTERN.h"
 #define PERL_IN_REENTR_C
 #include "perl.h"
@@ -836,10 +835,10 @@ Perl_reentrant_free(pTHX) {
 void*
 Perl_reentrant_retry(const char *f, ...)
 {
-    dTHX;
     void *retptr = NULL;
     va_list ap;
 #ifdef USE_REENTRANT_API
+    dTHX;
     /* Easier to special case this here than in embed.pl. (Look at what it
        generates for proto.h) */
     PERL_ARGS_ASSERT_REENTRANT_RETRY;

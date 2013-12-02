@@ -1,3 +1,158 @@
+2.95 Mon Jun 22 2013
+  - Updated for v5.19.3
+
+2.94 Sun Jun 21 2013
+  - Updated for v5.19.2
+
+2.93 Thu 20 Jun 2013
+  - Updated for v5.19.1
+
+2.92 Thu Jun 21 2013
+  - Make switches case-sensitive (keep -d and -D distinct)
+  - correct omission of Text::Soundex and File::CheckTree from deprecations
+  - switch %deprecated to a delta hash
+
+2.91 Mon May 20 2013
+  - Updated for v5.19.0
+
+2.90 Mon May 18 2013
+  - Updated for v5.18.0
+
+2.88 Tue Apr 23 2013
+  - Include deprecations for v5.17.10 and v5.17.11
+
+2.87 Sat Apr 20 2013
+  - Updated for v5.17.11
+2.85 Thu Mar 19 2013
+  - Updated for v5.17.10
+
+2.84 Mon Mar 11 2013
+  - Updated for v5.16.3
+
+2.83 Sun Mar 10 2013
+  - Updated for v5.14.4
+
+2.82 Wed Feb 20 2013
+  - --feature switch added
+  - --upstream switch added
+  - Updated for v5.17.9
+
+2.81 Sun Jan 27 2013
+  - Add modules deprecated with v5.17.9
+
+2.80 Sun Jan 20 2013
+  - Updated for v5.17.8
+
+  - v5.17.7 contained Module::CoreList::TieHashDelta 2.79, not 2.78
+
+2.79 Tue Dec 18 2012
+  - Updated for v5.17.7
+
+  - Errno was added in 5.5, not in 5.5.4
+
+2.78 Sat Nov 12 2012
+  - Updated for v5.17.6
+
+  - Fix hash order dependency bug in deprecated_in().
+    Tests would would fail or succeed depending on what order keys()
+    would return the version list in. List::Utils::min() considers
+    '5.011' and '5.011000' to be equivalent, and returns the first
+    whichever it encounters. Changing to List::Utils::minstr() fixes
+    this.
+
+2.77 Sat Nov 10 2012
+  - Updated for v5.12.5
+  - deprecated_in() function added
+  - corelist reports deprecated data
+
+2.76 Fri Nov  1 2012
+  - Updated for v5.16.2
+
+2.75 Fri Oct 20 2012
+  - Updated for v5.17.5
+
+2.74 Fri Oct 12 2012
+  - Updated for v5.14.3
+
+2.73 Thu Sep 20 2012
+  - Updated for v.5.17.4
+
+2.72 Tue aug 21 2012
+  - Fix for older perls
+
+2.71 Mon Aug 20 2012
+  - Updated for v5.17.3
+
+2.70 Thu Aug 9 2012
+  - Updated for v5.16.1
+
+2.69 Fri Jul 20 2012
+  - Updated for v5.17.2
+
+2.68 Tue Jun 19 2012
+  - Updated for v5.17.1
+
+2.67 Sat May 26 2012
+  - Updated for v5.17.0
+
+2.66 ??
+  - Add the --diff option to compare two perl core modlibs
+
+2.65 Tue Mar 20 2012
+  - Update of lib/charnames
+
+2.64 Tue Mar 20 2012
+  - Update of Data::Dumper and XS::APItest
+
+2.63 Tue Mar 20 2012
+  - Update for v5.15.9
+
+2.62 Thu Mar 15 2012
+  - Separate the POD (bingos)
+
+2.61 Fri Feb 20 2012
+  - Updated for v5.15.8
+
+2.60 Fri Jan 20 2012
+  - Updated for v5.15.7
+
+2.59 Sun Dec 20 2011
+  - Updated for v5.15.6
+
+2.58 Sun Nov 20 2011
+  - Updated for v5.15.5
+
+2.57 Thu Oct 20 2011
+  - Updated for v5.15.4
+
+2.56 Tues Sept 20 2011
+  - Updated for v5.15.3
+  - Corrected version of Module::CoreList shipped
+    with v5.10.0
+  - Corrected Errno being shipped with v5.6.0 and v5.6.1
+  - Corrected VMS::Filespec being shipped with v5.12.3
+  - Corrected DB_File being shipped with v5.8.2
+  - Added http://perlpunks.de/corelist to SEE ALSO
+
+2.55 Sat Aug 20 2011
+  - Updated for v5.15.2
+
+2.54 Wed Jul 20 2011
+  - Updated for v5.15.1
+
+2.53 Thu Jul 14 2011
+  - Added release date option '-r' to corelist
+
+2.52 Mon Jul 4  2011
+  - [rt.cpan.org #69108] Extraneous modules listed
+    reported by Dee Newcum
+
+2.51
+  - Updated for v5.15.0
+
+2.50
+  - Updated for v5.12.4
+
 2.49
   - Updated for v5.14.0
 

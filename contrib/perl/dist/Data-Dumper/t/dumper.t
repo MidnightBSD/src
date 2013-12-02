@@ -83,11 +83,11 @@ sub SKIP_TEST {
 $Data::Dumper::Useperl = 1;
 if (defined &Data::Dumper::Dumpxs) {
   print "### XS extension loaded, will run XS tests\n";
-  $TMAX = 378; $XS = 1;
+  $TMAX = 402; $XS = 1;
 }
 else {
   print "### XS extensions not loaded, will NOT run XS tests\n";
-  $TMAX = 189; $XS = 0;
+  $TMAX = 201; $XS = 0;
 }
 
 print "1..$TMAX\n";
@@ -125,6 +125,11 @@ EOT
 TEST q(Data::Dumper->Dump([$a,$b,$c], [qw(a b), 6]));
 TEST q(Data::Dumper->Dumpxs([$a,$b,$c], [qw(a b), 6])) if $XS;
 
+SCOPE: {
+  local $Data::Dumper::Sparseseen = 1;
+  TEST q(Data::Dumper->Dump([$a,$b,$c], [qw(a b), 6]));
+  TEST q(Data::Dumper->Dumpxs([$a,$b,$c], [qw(a b), 6])) if $XS;
+}
 
 ############# 7
 ##
@@ -149,6 +154,12 @@ EOT
 $Data::Dumper::Purity = 1;         # fill in the holes for eval
 TEST q(Data::Dumper->Dump([$a, $b], [qw(*a b)])); # print as @a
 TEST q(Data::Dumper->Dumpxs([$a, $b], [qw(*a b)])) if $XS;
+
+SCOPE: {
+  local $Data::Dumper::Sparseseen = 1;
+  TEST q(Data::Dumper->Dump([$a, $b], [qw(*a b)])); # print as @a
+  TEST q(Data::Dumper->Dumpxs([$a, $b], [qw(*a b)])) if $XS;
+}
 
 ############# 13
 ##
@@ -494,7 +505,7 @@ EOT
   $dogs[2] = \%kennel;
   $mutts = \%kennel;
   $mutts = $mutts;         # avoid warning
-  
+
 ############# 85
 ##
   $WANT = <<'EOT';
@@ -522,7 +533,7 @@ EOT
 	   $d->Dumpxs;
 	  );
   }
-  
+
 ############# 91
 ##
   $WANT = <<'EOT';
@@ -533,7 +544,7 @@ EOT
 
   TEST q($d->Dump);
   TEST q($d->Dumpxs) if $XS;
-  
+
 ############# 97
 ##
   $WANT = <<'EOT';
@@ -549,7 +560,7 @@ EOT
 #%mutts = %kennels;
 EOT
 
-  
+
   TEST q($d->Reset; $d->Dump);
   if ($XS) {
     TEST q($d->Reset; $d->Dumpxs);
@@ -582,7 +593,7 @@ EOT
 	   $d->Dumpxs;
 	  );
   }
-  
+
 ############# 109
 ##
   TEST q($d->Reset->Dump);
@@ -614,7 +625,7 @@ EOT
   if ($XS) {
     TEST q($d->Reset->Dumpxs);
   }
-  
+
 }
 
 {
@@ -914,7 +925,7 @@ TEST q(Data::Dumper->new([$c])->Dumpxs;)
   local $Data::Dumper::Sortkeys = \&sort205;
   sub sort205 {
     my $hash = shift;
-    return [ 
+    return [
       $hash eq $c ? (sort { $a <=> $b } keys %$hash)
 		  : (reverse sort keys %$hash)
     ];
@@ -1463,6 +1474,66 @@ EOT
 
   $foo = [ join "", map chr, 0..255, 0x20ac ];
   local $Data::Dumper::Useqq = 1;
-  TEST q(Dumper($foo)), 'All latin1 characters with utf8 flag including a wide character';
+  if ($] < 5.007) {
+    print "not ok " . (++$TNUM) . " # TODO - fails under 5.6\n" for 1..3;
+  }
+  else {
+    TEST q(Dumper($foo)),
+	 'All latin1 characters with utf8 flag including a wide character';
+  }
   for (1..3) { print "not ok " . (++$TNUM) . " # TODO NYI\n" if $XS } # TEST q(Data::Dumper::DumperX($foo)) if $XS;
+}
+
+############# 378
+{
+  # If XS cannot load, the pure-Perl version cannot deparse vstrings with
+  # underscores properly.  In 5.8.0, vstrings are just strings.
+  my $no_vstrings = <<'NOVSTRINGS';
+#$a = \'ABC';
+#$b = \'ABC';
+#$c = \'ABC';
+#$d = \'ABC';
+NOVSTRINGS
+  my $vstrings_corr = <<'VSTRINGS_CORRECT';
+#$a = \v65.66.67;
+#$b = \v65.66.067;
+#$c = \v65.66.6_7;
+#$d = \'ABC';
+VSTRINGS_CORRECT
+  $WANT = $] <= 5.0080001
+          ? $no_vstrings
+          : $vstrings_corr;
+
+  @::_v = (
+    \v65.66.67,
+    \($] < 5.007 ? v65.66.67 : eval 'v65.66.067'),
+    \v65.66.6_7,
+    \~v190.189.188
+  );
+  if ($] >= 5.010) {
+    TEST q(Data::Dumper->Dump(\@::_v, [qw(a b c d)])), 'vstrings';
+    TEST q(Data::Dumper->Dumpxs(\@::_v, [qw(a b c d)])), 'xs vstrings'
+      if $XS;
+  }
+  else { # Skip tests before 5.10. vstrings considered funny before
+    SKIP_TEST "vstrings considered funny before 5.10.0";
+    SKIP_TEST "vstrings considered funny before 5.10.0 (XS)"
+      if $XS;
+  }
+}
+
+############# 384
+{
+  # [perl #107372] blessed overloaded globs
+  $WANT = <<'EOW';
+#$VAR1 = bless( \*::finkle, 'overtest' );
+EOW
+  {
+    package overtest;
+    use overload fallback=>1, q\""\=>sub{"oaoaa"};
+  }
+  TEST q(Data::Dumper->Dump([bless \*finkle, "overtest"])),
+    'blessed overloaded globs';
+  TEST q(Data::Dumper->Dumpxs([\*finkle])), 'blessed overloaded globs (xs)'
+    if $XS;
 }

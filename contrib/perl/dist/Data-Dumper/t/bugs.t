@@ -1,6 +1,6 @@
 #!perl
 #
-# regression tests for old bugs that don't fit other categories
+# regression tests for old bugs that do not fit other categories
 
 BEGIN {
     require Config; import Config;
@@ -12,7 +12,7 @@ BEGIN {
 }
 
 use strict;
-use Test::More tests => 7;
+use Test::More tests => 15;
 use Data::Dumper;
 
 {
@@ -81,7 +81,7 @@ doh('fixed');
 ok(1, "[perl #56766]"); # Still no core dump? We are fine.
 
 SKIP: {
- skip "perl 5.10.1 crashes and DD cannot help it" if $] < 5.0119999;
+ skip "perl 5.10.1 crashes and DD cannot help it", 1 if $] < 5.0119999;
  # [perl #72332] Segfault on empty-string glob
  Data::Dumper->Dump([*{*STDERR{IO}}]);
  ok("ok", #ok
@@ -98,6 +98,50 @@ SKIP: {
     Encode::_utf8_on($a);
     Dumper $a;
     ok("ok", "no crash dumping malformed utf8 with the utf8 flag on");
+}
+
+{
+  # We have to test reference equivalence, rather than actual output, as
+  # Perl itself is buggy prior to 5.15.6.  Output from DD should at least
+  # evaluate to the same typeglob, regardless of perl bugs.
+  my $tests = sub {
+    my $VAR1;
+    no strict 'refs';
+    is eval(Dumper \*{"foo::b\0ar"}), \*{"foo::b\0ar"},
+      'GVs with nulls';
+    # There is a strange 5.6 bug that causes the eval to fail a supposed
+    # strict vars test (involving $VAR1).  Mentioning the glob beforehand
+    # somehow makes it go away.
+    () = \*{chr 256};
+    is eval Dumper(\*{chr 256})||die ($@), \*{chr 256},
+      'GVs with UTF8 names (or not, depending on perl version)';
+    () = \*{"\0".chr 256}; # same bug
+    is eval Dumper(\*{"\0".chr 256}), \*{"\0".chr 256},
+      'GVs with UTF8 and nulls';
+  };
+  SKIP: {
+    skip "no XS", 3 if not defined &Data::Dumper::Dumpxs;
+    local $Data::Dumper::Useperl = 0;
+    &$tests;
+  }
+  local $Data::Dumper::Useperl = 1;
+  &$tests;
+}
+
+{
+  # Test reference equivalence of dumping *{""}.
+  my $tests = sub {
+    my $VAR1;
+    no strict 'refs';
+    is eval(Dumper \*{""}), \*{""}, 'dumping \*{""}';
+  };
+  SKIP: {
+    skip "no XS", 1 if not defined &Data::Dumper::Dumpxs;
+    local $Data::Dumper::Useperl = 0;
+    &$tests;
+  }
+  local $Data::Dumper::Useperl = 1;
+  &$tests;
 }
 
 # EOF

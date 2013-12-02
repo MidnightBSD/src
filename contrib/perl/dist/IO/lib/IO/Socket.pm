@@ -1,3 +1,4 @@
+
 # IO::Socket.pm
 #
 # Copyright (c) 1997-8 Graham Barr <gbarr@pobox.com>. All rights reserved.
@@ -23,7 +24,7 @@ require IO::Socket::UNIX if ($^O ne 'epoc' && $^O ne 'symbian');
 
 @ISA = qw(IO::Handle);
 
-$VERSION = "1.32";
+$VERSION = "1.36";
 
 @EXPORT_OK = qw(sockatmark);
 
@@ -118,7 +119,18 @@ sub connect {
 	    my $sel = new IO::Select $sock;
 
 	    undef $!;
-	    if (!$sel->can_write($timeout)) {
+	    my($r,$w,$e) = IO::Select::select(undef,$sel,$sel,$timeout);
+	    if(@$e[0]) {
+		# Windows return from select after the timeout in case of
+		# WSAECONNREFUSED(10061) if exception set is not used.
+		# This behavior is different from Linux.
+		# Using the exception
+		# set we now emulate the behavior in Linux
+		#    - Karthik Rajagopalan
+		$err = $sock->getsockopt(SOL_SOCKET,SO_ERROR);
+		$@ = "connect: $err";
+	    }
+	    elsif(!@$w[0]) {
 		$err = $! || (exists &Errno::ETIMEDOUT ? &Errno::ETIMEDOUT : 1);
 		$@ = "connect: timeout";
 	    }
@@ -155,7 +167,7 @@ sub blocking {
     my $sock = shift;
 
     return $sock->SUPER::blocking(@_)
-        if $^O ne 'MSWin32';
+        if $^O ne 'MSWin32' && $^O ne 'VMS';
 
     # Windows handles blocking differently
     #
@@ -236,6 +248,8 @@ sub accept {
 
     $peer = accept($new,$sock)
 	or return;
+
+    ${*$new}{$_} = ${*$sock}{$_} for qw( io_socket_domain io_socket_type io_socket_proto );
 
     return wantarray ? ($new, $peer)
     	      	     : $new;
@@ -337,18 +351,27 @@ sub timeout {
 sub sockdomain {
     @_ == 1 or croak 'usage: $sock->sockdomain()';
     my $sock = shift;
+    if (!defined(${*$sock}{'io_socket_domain'})) {
+	my $addr = $sock->sockname();
+	${*$sock}{'io_socket_domain'} = sockaddr_family($addr)
+	    if (defined($addr));
+    }
     ${*$sock}{'io_socket_domain'};
 }
 
 sub socktype {
     @_ == 1 or croak 'usage: $sock->socktype()';
     my $sock = shift;
+    ${*$sock}{'io_socket_type'} = $sock->sockopt(Socket::SO_TYPE)
+	if (!defined(${*$sock}{'io_socket_type'}) && defined(eval{Socket::SO_TYPE}));
     ${*$sock}{'io_socket_type'}
 }
 
 sub protocol {
     @_ == 1 or croak 'usage: $sock->protocol()';
     my($sock) = @_;
+    ${*$sock}{'io_socket_proto'} = $sock->sockopt(Socket::SO_PROTOCOL)
+	if (!defined(${*$sock}{'io_socket_proto'}) && defined(eval{Socket::SO_PROTOCOL}));
     ${*$sock}{'io_socket_proto'};
 }
 
@@ -517,6 +540,12 @@ value returned.
 
 =back
 
+=head1 LIMITATIONS
+
+On some systems, for an IO::Socket object created with new_from_fd(),
+or created with accept() from such an object, the protocol(),
+sockdomain() and socktype() methods may return undef.
+
 =head1 SEE ALSO
 
 L<Socket>, L<IO::Handle>, L<IO::Socket::INET>, L<IO::Socket::UNIX>
@@ -524,7 +553,7 @@ L<Socket>, L<IO::Handle>, L<IO::Socket::INET>, L<IO::Socket::UNIX>
 =head1 AUTHOR
 
 Graham Barr.  atmark() by Lincoln Stein.  Currently maintained by the
-Perl Porters.  Please report all bugs to <perl5-porters@perl.org>.
+Perl Porters.  Please report all bugs to <perlbug@perl.org>.
 
 =head1 COPYRIGHT
 

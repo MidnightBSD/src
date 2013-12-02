@@ -42,7 +42,7 @@ available.
 
     my $cwd = cwd();
 
-The cwd() is the most natural form for the current architecture. For
+The cwd() is the most natural form for the current architecture.  For
 most systems it is identical to `pwd` (but without the trailing line
 terminator).
 
@@ -57,9 +57,9 @@ chdir() you back into.  If fastcwd encounters a problem it will return
 undef but will probably leave you in a different directory.  For a
 measure of extra security, if everything appears to have worked, the
 fastcwd() function will check that it leaves you in the same directory
-that it started in. If it has changed it will C<die> with the message
+that it started in.  If it has changed it will C<die> with the message
 "Unstable directory path, current directory changed
-unexpectedly". That should never happen.
+unexpectedly".  That should never happen.
 
 =item fastgetcwd
 
@@ -136,8 +136,8 @@ modules wherever portability is a concern.
 =item *
 
 Actually, on Mac OS, the C<getcwd()>, C<fastgetcwd()> and C<fastcwd()>
-functions  are all aliases for the C<cwd()> function, which, on Mac OS,
-calls `pwd`. Likewise, the C<abs_path()> function is an alias for
+functions are all aliases for the C<cwd()> function, which, on Mac OS,
+calls `pwd`.  Likewise, the C<abs_path()> function is an alias for
 C<fast_abs_path()>.
 
 =back
@@ -171,9 +171,9 @@ use strict;
 use Exporter;
 use vars qw(@ISA @EXPORT @EXPORT_OK $VERSION);
 
-$VERSION = '3.36';
+$VERSION = '3.40';
 my $xs_version = $VERSION;
-$VERSION = eval $VERSION;
+$VERSION =~ tr/_//;
 
 @ISA = qw/ Exporter /;
 @EXPORT = qw(cwd getcwd fastcwd fastgetcwd);
@@ -252,9 +252,6 @@ eval {
     __PACKAGE__->bootstrap( $xs_version );
   }
 };
-
-# Must be after the DynaLoader stuff:
-$VERSION = eval $VERSION;
 
 # Big nasty table of function aliases
 my %METHOD_MAP =
@@ -582,6 +579,7 @@ sub _perl_abs_path
 	unless (opendir(PARENT, $dotdots))
 	{
 	    # probably a permissions issue.  Try the native command.
+	    require File::Spec;
 	    return File::Spec->rel2abs( $start, _backtick_pwd() );
 	}
 	unless (@cst = stat($dotdots))
@@ -626,8 +624,8 @@ sub fast_abs_path {
 
     # Detaint else we'll explode in taint mode.  This is safe because
     # we're not doing anything dangerous with it.
-    ($path) = $path =~ /(.*)/;
-    ($cwd)  = $cwd  =~ /(.*)/;
+    ($path) = $path =~ /(.*)/s;
+    ($cwd)  = $cwd  =~ /(.*)/s;
 
     unless (-e $path) {
  	_croak("$path: No such file or directory");
@@ -755,7 +753,14 @@ sub _win32_cwd_simple {
 }
 
 sub _win32_cwd {
-    if (eval 'defined &DynaLoader::boot_DynaLoader') {
+    # Need to avoid taking any sort of reference to the typeglob or the code in
+    # the optree, so that this tests the runtime state of things, as the
+    # ExtUtils::MakeMaker tests for "miniperl" need to be able to fake things at
+    # runtime by deleting the subroutine. *foo{THING} syntax on a symbol table
+    # lookup avoids needing a string eval, which has been reported to cause
+    # problems (for reasons that we haven't been able to get to the bottom of -
+    # rt.cpan.org #56225)
+    if (*{$DynaLoader::{boot_DynaLoader}}{CODE}) {
 	$ENV{'PWD'} = Win32::GetCwd();
     }
     else { # miniperl

@@ -1,5 +1,34 @@
 Revision history for Perl suite Locale::Maketext
 
+2012-12-04
+    * Fix misparsing of maketext strings.
+
+2012-11-22
+    * Fix hash order dependency bug in tests
+
+2012-01-14
+    * Minor POD documentation update to sync with upstream blead.
+
+2011-12-23
+    * No changes. Production release after CPAN testers cleared.
+
+2011-12-14
+    * Update to 1.19_01 from upstream blead for release testing
+
+    Fix broken URLs in dist/Locale-Maketext/lib/Locale/Maketext/TPJ13.pod for RFCs
+
+    Keep verbatim pod in various dist/* pods within 79 cols
+
+2011-05-25
+    * Update to 1.19 from upstream blead
+
+    [perl #89896] Locale::Maketext test failure
+    when environment has variable containing unbalanced brackets
+
+    Suppress "Name used only once" warnings.
+
+    [perl #81888] Fix typos (spelling errors) in dist/*
+
 2010-10-20
     * Release 1.17
 

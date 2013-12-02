@@ -131,13 +131,12 @@ use Carp;
 use Symbol;
 use SelectSaver;
 use IO::Seekable;
-use File::Spec;
 
 require Exporter;
 
 @ISA = qw(IO::Handle IO::Seekable Exporter);
 
-$VERSION = "1.15";
+$VERSION = "1.16";
 
 @EXPORT = @IO::Seekable::EXPORT;
 
