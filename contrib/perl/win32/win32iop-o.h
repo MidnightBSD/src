@@ -16,11 +16,7 @@
 #endif
 
 #ifndef UNDER_CE
-#if defined(_MSC_VER) || defined(__MINGW32__)
-#  include <sys/utime.h>
-#else
-#  include <utime.h>
-#endif
+#include <sys/utime.h>
 #endif
 
 /*
@@ -177,15 +173,6 @@ END_EXTERN_C
 #undef utime
 #undef uname
 #undef wait
-
-#ifdef __BORLANDC__
-#undef ungetc
-#undef getc
-#undef putc
-#undef getchar
-#undef putchar
-#undef fileno
-#endif
 
 #define stderr				win32_stderr()
 #define stdout				win32_stdout()

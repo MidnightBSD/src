@@ -8,12 +8,21 @@ BEGIN {
 
 use strict;
 use warnings;
+no warnings 'experimental::smartmatch';
 
-plan tests => 164;
+plan tests => 201;
 
-# The behaviour of the feature pragma should be tested by lib/switch.t
-# using the tests in t/lib/switch/*. This file tests the behaviour of
+# The behaviour of the feature pragma should be tested by lib/feature.t
+# using the tests in t/lib/feature/*. This file tests the behaviour of
 # the switch ops themselves.
+
+
+# Before loading feature, test the switch ops with CORE::
+CORE::given(3) {
+    CORE::when(3) { pass "CORE::given and CORE::when"; continue }
+    CORE::default { pass "continue (without feature) and CORE::default" }
+}
+
 
 use feature 'switch';
 
@@ -44,9 +53,10 @@ given(my $x = "foo") {
 
 $_ = "outside";
 given("inside") { check_outside1() }
-sub check_outside1 { is($_, "outside", "\$_ lexically scoped") }
+sub check_outside1 { is($_, "inside", "\$_ is not lexically scoped") }
 
 {
+    no warnings 'experimental::lexical_topic';
     my $_ = "outside";
     given("inside") { check_outside2() }
     sub check_outside2 {
@@ -389,6 +399,7 @@ sub check_outside1 { is($_, "outside", "\$_ lexically scoped") }
 
 # Make sure it still works with a lexical $_:
 {
+    no warnings 'experimental::lexical_topic';
     my $_;
     my $test = "explicit comparison with lexical \$_";
     my $twenty_five = 25;
@@ -590,7 +601,7 @@ sub notfoo {"bar"}
 
 my $f = tie my $v, "FetchCounter";
 
-{   my $test_name = "Only one FETCH (in given)";
+{   my $test_name = "Multiple FETCHes in given, due to aliasing";
     my $ok;
     given($v = 23) {
     	when(undef) {}
@@ -601,7 +612,7 @@ my $f = tie my $v, "FetchCounter";
 	when(/24/) {$ok = 0}
     }
     is($ok, 1, "precheck: $test_name");
-    is($f->count(), 1, $test_name);
+    is($f->count(), 4, $test_name);
 }
 
 {   my $test_name = "Only one FETCH (numeric when)";
@@ -689,6 +700,7 @@ my $f = tie my $v, "FetchCounter";
 
 {
     my $first = 1;
+    no warnings 'experimental::lexical_topic';
     my $_;
     for (1, "two") {
 	when ("two") {
@@ -707,6 +719,7 @@ my $f = tie my $v, "FetchCounter";
 
 {
     my $first = 1;
+    no warnings 'experimental::lexical_topic';
     my $_;
     for $_ (1, "two") {
 	when ("two") {
@@ -725,6 +738,7 @@ my $f = tie my $v, "FetchCounter";
 
 {
     my $first = 1;
+    no warnings 'experimental::lexical_topic';
     for my $_ (1, "two") {
 	when ("two") {
 	    is($first, 0, "Lexical loop: second");
@@ -1200,6 +1214,192 @@ unreified_check(undef,"");
     is("@in_slice", "a", "when(hash slice)");
 }
 
+{ # RT#84526 - Handle magical TARG
+    my $x = my $y = "aaa";
+    for ($x, $y) {
+	given ($_) {
+	    is(pos, undef, "handle magical TARG");
+            pos = 1;
+	}
+    }
+}
+
+# Test that returned values are correctly propagated through several context
+# levels (see RT #93548).
+{
+    my $tester = sub {
+	my $id = shift;
+
+	package fmurrr;
+
+	our ($when_loc, $given_loc, $ext_loc);
+
+	my $ext_lex    = 7;
+	our $ext_glob  = 8;
+	local $ext_loc = 9;
+
+	given ($id) {
+	    my $given_lex    = 4;
+	    our $given_glob  = 5;
+	    local $given_loc = 6;
+
+	    when (0) { 0 }
+
+	    when (1) { my $when_lex    = 1 }
+	    when (2) { our $when_glob  = 2 }
+	    when (3) { local $when_loc = 3 }
+
+	    when (4) { $given_lex }
+	    when (5) { $given_glob }
+	    when (6) { $given_loc }
+
+	    when (7) { $ext_lex }
+	    when (8) { $ext_glob }
+	    when (9) { $ext_loc }
+
+	    'fallback';
+	}
+    };
+
+    my @descriptions = qw<
+	constant
+
+	when-lexical
+	when-global
+	when-local
+
+	given-lexical
+	given-global
+	given-local
+
+	extern-lexical
+	extern-global
+	extern-local
+    >;
+
+    for my $id (0 .. 9) {
+	my $desc = $descriptions[$id];
+
+	my $res = $tester->($id);
+	is $res, $id, "plain call - $desc";
+
+	$res = do {
+	    my $id_plus_1 = $id + 1;
+	    given ($id_plus_1) {
+		do {
+		    when (/\d/) {
+			--$id_plus_1;
+			continue;
+			456;
+		    }
+		};
+		default {
+		    $tester->($id_plus_1);
+		}
+		'XXX';
+	    }
+	};
+	is $res, $id, "across continue and default - $desc";
+    }
+}
+
+# Check that values returned from given/when are destroyed at the right time.
+{
+    {
+	package Fmurrr;
+
+	sub new {
+	    bless {
+		flag => \($_[1]),
+		id   => $_[2],
+	    }, $_[0]
+	}
+
+	sub DESTROY {
+	    ${$_[0]->{flag}}++;
+	}
+    }
+
+    my @descriptions = qw<
+	when
+	break
+	continue
+	default
+    >;
+
+    for my $id (0 .. 3) {
+	my $desc = $descriptions[$id];
+
+	my $destroyed = 0;
+	my $res_id;
+
+	{
+	    my $res = do {
+		given ($id) {
+		    my $x;
+		    when (0) { Fmurrr->new($destroyed, 0) }
+		    when (1) { my $y = Fmurrr->new($destroyed, 1); break }
+		    when (2) { $x = Fmurrr->new($destroyed, 2); continue }
+		    when (2) { $x }
+		    default  { Fmurrr->new($destroyed, 3) }
+		}
+	    };
+	    $res_id = $res->{id};
+	}
+	$res_id = $id if $id == 1; # break doesn't return anything
+
+	is $res_id,    $id, "given/when returns the right object - $desc";
+	is $destroyed, 1,   "given/when does not leak - $desc";
+    };
+}
+
+# break() must reset the stack
+{
+    my @res = (1, do {
+	given ("x") {
+	    2, 3, do {
+		when (/[a-z]/) {
+		    4, 5, 6, break
+		}
+	    }
+	}
+    });
+    is "@res", "1", "break resets the stack";
+}
+
+# RT #94682:
+# must ensure $_ is initialised and cleared at start/end of given block
+
+{
+    sub f1 {
+	no warnings 'experimental::lexical_topic';
+	my $_;
+	given(3) {
+	    return sub { $_ } # close over lexical $_
+	}
+    }
+    is(f1()->(), 3, 'closed over $_');
+
+    package RT94682;
+
+    my $d = 0;
+    sub DESTROY { $d++ };
+
+    sub f2 {
+	no warnings 'experimental::lexical_topic';
+	my $_ = 5;
+	given(bless [7]) {
+	    ::is($_->[0], 7, "is [7]");
+	}
+	::is($_, 5, "is 5");
+	::is($d, 1, "DESTROY called once");
+    }
+    f2();
+}
+
+
+
 # Okay, that'll do for now. The intricacies of the smartmatch
-# semantics are tested in t/op/smartmatch.t
+# semantics are tested in t/op/smartmatch.t. Taintedness of
+# returned values is checked in t/op/taint.t.
 __END__

@@ -7,7 +7,7 @@ BEGIN {
 }
 
 BEGIN { require './test.pl'; }
-plan tests => 237;
+plan tests => 254;
 
 while (<DATA>) {
     chomp;
@@ -20,21 +20,38 @@ while (<DATA>) {
 	like( $@, qr/Can't find an opnumber for/, $keyword );
     }
     else {
-	is( "(".prototype("CORE::".$keyword).")", $proto, $keyword );
+	is(
+	    "(".(prototype("CORE::".$keyword) // 'undef').")", $proto,
+	    $keyword
+	);
     }
 }
 
 # the keyword list :
 
 __DATA__
+__FILE__ ()
+__LINE__ ()
+__PACKAGE__ ()
+__DATA__ undef
+__END__ undef
+__SUB__ ()
+AUTOLOAD undef
+BEGIN undef
+CORE unknown
+DESTROY undef
+END undef
+INIT undef
+CHECK undef
 abs (_)
 accept (**)
 alarm (_)
-and ()
+and undef
 atan2 ($$)
 bind (*$)
 binmode (*;$)
 bless ($;$)
+break ()
 caller (;$)
 chdir (;$)
 chmod (@)
@@ -45,13 +62,14 @@ chr (_)
 chroot (_)
 close (;*)
 closedir (*)
-cmp unknown
+cmp undef
 connect (*$)
 continue ()
 cos (_)
 crypt ($$)
 dbmclose (\%)
 dbmopen (\%$$)
+default undef
 defined undef
 delete undef
 die (@)
@@ -67,12 +85,14 @@ endprotoent ()
 endpwent ()
 endservent ()
 eof (;*)
-eq ($$)
+eq undef
 eval undef
+evalbytes (_)
 exec undef
 exists undef
 exit (;$)
 exp (_)
+fc (_)
 fcntl (*$$)
 fileno (*)
 flock (*$)
@@ -81,7 +101,7 @@ foreach undef
 fork ()
 format undef
 formline ($@)
-ge ($$)
+ge undef
 getc (;*)
 getgrent ()
 getgrgid ($)
@@ -98,7 +118,7 @@ getpgrp (;$)
 getppid ()
 getpriority ($$)
 getprotobyname ($)
-getprotobynumber ($)
+getprotobynumber ($;)
 getprotoent ()
 getpwent ()
 getpwnam ($)
@@ -109,11 +129,11 @@ getservent ()
 getsockname (*)
 getsockopt (*$$)
 given undef
-glob undef
+glob (_;)
 gmtime (;$)
 goto undef
 grep undef
-gt ($$)
+gt undef
 hex (_)
 if undef
 index ($$;$)
@@ -125,16 +145,16 @@ kill (@)
 last undef
 lc (_)
 lcfirst (_)
-le ($$)
+le undef
 length (_)
 link ($$)
 listen (*$)
 local undef
 localtime (;$)
-lock (\$)
+lock (\[$@%&*])
 log (_)
-lstat (*)
-lt ($$)
+lstat (;*)
+lt undef
 m undef
 map undef
 mkdir (_;$)
@@ -143,24 +163,24 @@ msgget ($$)
 msgrcv ($$$$$)
 msgsnd ($$$)
 my undef
-ne ($$)
+ne undef
 next undef
 no undef
-not ($)
+not ($;)
 oct (_)
 open (*;$@)
 opendir (*$)
-or ()
+or undef
 ord (_)
 our undef
 pack ($@)
 package undef
 pipe (**)
 pop (;+)
-pos undef
+pos (;\[$*])
 print undef
 printf undef
-prototype undef
+prototype ($)
 push (+@)
 q undef
 qq undef
@@ -187,10 +207,10 @@ rindex ($$;$)
 rmdir (_)
 s undef
 say undef
-scalar undef
+scalar ($)
 seek (*$$)
 seekdir (*$)
-select (;*)
+select undef
 semctl ($$$$)
 semget ($$$)
 semop ($$)
@@ -220,9 +240,9 @@ split undef
 sprintf ($@)
 sqrt (_)
 srand (;$)
-stat (*)
+stat (;*)
 state undef
-study undef
+study (_)
 sub undef
 substr ($$;$$)
 symlink ($$)
@@ -243,10 +263,10 @@ truncate ($$)
 uc (_)
 ucfirst (_)
 umask (;$)
-undef undef
+undef (;\[$@%&*])
 unless undef
 unlink (@)
-unpack ($;$)
+unpack ($_)
 unshift (+@)
 untie (\[$@%*])
 until undef
@@ -261,6 +281,6 @@ warn (@)
 when undef
 while undef
 write (;*)
-x unknown
-xor ($$)
+x undef
+xor undef
 y undef

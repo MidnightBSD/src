@@ -1,5 +1,5 @@
-# This code is used by lib/charnames.t, lib/feature.t, lib/subs.t,
-# lib/strict.t and lib/warnings.t
+# This code is used by lib/charnames.t, lib/croak.t, lib/feature.t,
+# lib/subs.t, lib/strict.t and lib/warnings.t
 #
 # On input, $::local_tests is the number of tests in the caller; or
 # 'no_plan' if unknown, in which case it is the caller's responsibility
@@ -54,11 +54,11 @@ foreach my $file (@w_files) {
 }
 
 $^X = rel2abs($^X);
+@INC = map { rel2abs($_) } @INC;
 my $tempdir = tempfile;
 
 mkdir $tempdir, 0700 or die "Can't mkdir '$tempdir': $!";
 chdir $tempdir or die die "Can't chdir '$tempdir': $!";
-unshift @INC, '../../lib';
 my $cleanup = 1;
 
 END {

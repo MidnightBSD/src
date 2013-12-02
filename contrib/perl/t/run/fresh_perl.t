@@ -81,7 +81,7 @@ $array[128]=1
 ########
 $x=0x0eabcd; print $x->ref;
 EXPECT
-Can't call method "ref" without a package or object reference at - line 1.
+Can't locate object method "ref" via package "961485" (perhaps you forgot to load "961485"?) at - line 1.
 ########
 chop ($str .= <DATA>);
 ########
@@ -349,15 +349,12 @@ sub foo { local $_ = shift; @_ = split; @_ }
 @x = foo(' x  y  z ');
 print "you die joe!\n" unless "@x" eq 'x y z';
 ########
-/(?{"{"})/	# Check it outside of eval too
+"A" =~ /(?{"{"})/	# Check it outside of eval too
 EXPECT
-Sequence (?{...}) not terminated or not {}-balanced in regex; marked by <-- HERE in m/(?{ <-- HERE "{"})/ at - line 1.
 ########
 /(?{"{"}})/	# Check it outside of eval too
 EXPECT
-Unmatched right curly bracket at (re_eval 1) line 1, at end of line
-syntax error at (re_eval 1) line 1, near ""{"}"
-Compilation failed in regexp at - line 1.
+Sequence (?{...}) not terminated with ')' at - line 1.
 ########
 BEGIN { @ARGV = qw(a b c d e) }
 BEGIN { print "argv <@ARGV>\nbegin <",shift,">\n" }
@@ -761,49 +758,30 @@ EXPECT
 foo at - line 1.
 ######## glob() bug Mon, 01 Sep 2003 02:25:41 -0700 <200309010925.h819Pf0X011457@smtp3.ActiveState.com>
 -lw
-BEGIN {
-  if ($^O eq 'os390') {
-    require File::Glob;
-    import File::Glob ':glob';
-  }
+# Make sure the presence of the CORE::GLOBAL::glob typeglob does not affect
+# whether File::Glob::csh_glob is called.
+if ($^O eq 'VMS') {
+    # A pattern with a double quote in it is a syntax error to LIB$FIND_FILE
+    # Should we strip quotes in Perl_vms_start_glob the way csh_glob() does?
+    print "ok1\nok2\n";
 }
-BEGIN {
-  eval 'require Fcntl';
-  if ($@) { print qq[./"TEST"\n./"TEST"\n]; exit 0 } # running minitest?
-}
-if ($^O eq 'VMS') { # VMS is not *that* kind of a glob.
-print qq[./"TEST"\n./"TEST"\n];
-} else {
-print glob(q(./"TEST"));
-use File::Glob;
-print glob(q(./"TEST"));
-}
-EXPECT
-./"TEST"
-./"TEST"
-######## glob() bug Mon, 01 Sep 2003 02:25:41 -0700 <200309010925.h819Pf0X011457@smtp3.ActiveState.com>
--lw
-BEGIN {
-  if ($^O eq 'os390') {
-    require File::Glob;
-    import File::Glob ':glob';
-  }
-}
-BEGIN {
-  eval 'require Fcntl';
-  if ($@) { print qq[./"TEST"\n./"TEST"\n]; exit 0 } # running minitest?
-}
-if ($^O eq 'VMS') { # VMS is not *that* kind of a glob.
-print qq[./"TEST"\n./"TEST"\n];
-} else {
-use File::Glob;
-print glob(q(./"TEST"));
-use File::Glob;
-print glob(q(./"TEST"));
+else {
+    ++$INC{"File/Glob.pm"}; # prevent it from loading
+    my $called1 =
+    my $called2 = 0;
+    *File::Glob::csh_glob = sub { ++$called1 };
+    my $output1 = eval q{ glob(q(./"TEST")) };
+    undef *CORE::GLOBAL::glob; # but leave the typeglob itself there
+    ++$CORE::GLOBAL::glob if 0; # "used only once"
+    undef *File::Glob::csh_glob; # avoid redefinition warnings
+    *File::Glob::csh_glob = sub { ++$called2 };
+    my $output2 = eval q{ glob(q(./"TEST")) };
+    print "ok1" if $called1 eq $called2;
+    print "ok2" if $output1 eq $output2;
 }
 EXPECT
-./"TEST"
-./"TEST"
+ok1
+ok2
 ######## "#75146: 27e904532594b7fb (fix for #23810) introduces a #regression"
 use strict;
 
@@ -844,3 +822,55 @@ eval {
 print "If you get here, you didn't crash\n";
 EXPECT
 If you get here, you didn't crash
+######## [perl #112312] crash on syntax error
+# SKIP: !defined &DynaLoader::boot_DynaLoader # miniperl
+#!/usr/bin/perl
+use strict;
+use warnings;
+sub meow (&);
+my %h;
+my $k;
+meow {
+	my $t : need_this;
+	$t = {
+		size =>  $h{$k}{size};
+		used =>  $h{$k}(used}
+	};
+};
+EXPECT
+syntax error at - line 12, near "used"
+syntax error at - line 12, near "used}"
+Unmatched right curly bracket at - line 14, at end of line
+Execution of - aborted due to compilation errors.
+######## [perl #112312] crash on syntax error - another test
+# SKIP: !defined &DynaLoader::boot_DynaLoader # miniperl
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+sub meow (&);
+
+my %h;
+my $k;
+
+meow {
+        my $t : need_this;
+        $t = {
+                size => $h{$k}{size};
+                used => $h{$k}(used}
+        };
+};
+
+sub testo {
+        my $value = shift;
+        print;
+        print;
+        print;
+        1;
+}
+
+EXPECT
+syntax error at - line 15, near "used"
+syntax error at - line 15, near "used}"
+Unmatched right curly bracket at - line 17, at end of line
+Execution of - aborted due to compilation errors.

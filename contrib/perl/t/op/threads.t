@@ -9,7 +9,7 @@ BEGIN {
      skip_all_without_config('useithreads');
      skip_all_if_miniperl("no dynamic loading on miniperl, no threads");
 
-     plan(24);
+     plan(26);
 }
 
 use strict;
@@ -135,6 +135,7 @@ EOI
 #
 # run-time usage of newCONSTSUB (as done by the IO boot code) wasn't
 # thread-safe - got occasional coredumps or malloc corruption
+watchdog(60, "process");
 {
     local $SIG{__WARN__} = sub {};   # Ignore any thread creation failure warnings
     my @t;
@@ -160,7 +161,7 @@ curr_test(curr_test() + 2);
 
 # the seen_evals field of a regexp was getting zeroed on clone, so
 # within a thread it didn't  know that a regex object contained a 'safe'
-# re_eval expression, so it later died with 'Eval-group not allowed' when
+# code expression, so it later died with 'Eval-group not allowed' when
 # you tried to interpolate the object
 
 sub safe_re {
@@ -342,14 +343,52 @@ threads->create(
 
 EOI
 
+# make sure peephole optimiser doesn't recurse heavily.
+# (We run this inside a thread to get a small stack)
+
+{
+    # lots of constructs that have o->op_other etc
+    my $code = <<'EOF';
+	$r = $x || $y;
+	$x ||= $y;
+	$r = $x // $y;
+	$x //= $y;
+	$r = $x && $y;
+	$x &&= $y;
+	$r = $x ? $y : $z;
+	@a = map $x+1, @a;
+	@a = grep $x+1, @a;
+	$r = /$x/../$y/;
+
+	# this one will fail since we removed tail recursion optimisation
+	# with f11ca51e41e8
+	#while (1) { $x = 0 };
+
+	while (0) { $x = 0 };
+	for ($x=0; $y; $z=0) { $r = 0 };
+	for (1) { $x = 0 };
+	{ $x = 0 };
+	$x =~ s/a/$x + 1/e;
+EOF
+    $code = 'my ($r, $x,$y,$z,@a); return 5; ' . ($code x 1000);
+    my $res = threads->create(sub { eval $code})->join;
+    is($res, 5, "avoid peephole recursion");
+}
+
+
 # [perl #78494] Pipes shared between threads block when closed
-watchdog 10;
 {
   my $perl = which_perl;
   $perl = qq'"$perl"' if $perl =~ /\s/;
   open(my $OUT, "|$perl") || die("ERROR: $!");
   threads->create(sub { })->join;
   ok(1, "Pipes shared between threads do not block when closed");
+}
+
+# [perl #105208] Typeglob clones should not be cloned again during a join
+{
+  threads->create(sub { sub { $::hypogamma = 3 } })->join->();
+  is $::hypogamma, 3, 'globs cloned and joined are not recloned';
 }
 
 # EOF

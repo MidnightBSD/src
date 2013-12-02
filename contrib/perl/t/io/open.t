@@ -10,7 +10,7 @@ $|  = 1;
 use warnings;
 use Config;
 
-plan tests => 114;
+plan tests => 121;
 
 my $Perl = which_perl();
 
@@ -105,6 +105,15 @@ EOC
 ok( !eval { open my $f, '<&', $afile; 1; },    '<& on a non-filehandle' );
 like( $@, qr/Bad filehandle:\s+$afile/,          '       right error' );
 
+ok( !eval { *some_glob = 1; open my $f, '<&', *some_glob; 1; },    '<& on a non-filehandle glob' );
+like( $@, qr/Bad filehandle:\s+some_glob/,          '       right error' );
+
+{
+    use utf8;
+    use open qw( :utf8 :std );
+    ok( !eval { use utf8; *ǡﬁlḛ = 1; open my $f, '<&', *ǡﬁlḛ; 1; },    '<& on a non-filehandle glob' );
+    like( $@, qr/Bad filehandle:\s+ǡﬁlḛ/u,          '       right error' );
+}
 
 # local $file tests
 {
@@ -224,6 +233,10 @@ like( $@, qr/Bad filehandle:\s+$afile/,          '       right error' );
 
     # used to try to open a file [perl #17830]
     ok( open(my $stdin,  "<&", fileno STDIN),   'dup fileno(STDIN) into lexical fh') or _diag $!;
+
+    fileno(STDIN) =~ /(.)/;
+    ok open($stdin, "<&", $1), 'open ... "<&", $magical_fileno',
+	||  _diag $!;
 }
 
 SKIP: {
@@ -258,7 +271,7 @@ SKIP: {
 
     open($fh1{k}, "TEST");
     gimme($fh1{k});
-    like($@, qr/<\$fh1{...}> line 1\./, "autoviv fh package helem");
+    like($@, qr/<\$fh1\{...}> line 1\./, "autoviv fh package helem");
 
     my @fh2;
     open($fh2[0], "TEST");
@@ -268,7 +281,12 @@ SKIP: {
     my %fh3;
     open($fh3{k}, "TEST");
     gimme($fh3{k});
-    like($@, qr/<\$fh3{...}> line 1\./, "autoviv fh lexical helem");
+    like($@, qr/<\$fh3\{...}> line 1\./, "autoviv fh lexical helem");
+
+    local $/ = *F;  # used to cause an assertion failure
+    gimme($fh3{k});
+    like($@, qr/<\$fh3\{...}> chunk 2\./,
+	'<...> line 1 when $/ is set to a glob');
 }
     
 SKIP: {
@@ -309,6 +327,15 @@ fresh_perl_is(
 
 eval { open $99, "foo" };
 like($@, qr/Modification of a read-only value attempted/, "readonly fh");
+# But we do not want that exception applying to close(), since it does not
+# modify the fh.
+eval {
+   no warnings "uninitialized";
+   # make sure $+ is undefined
+   "a" =~ /(b)?/;
+   close $+
+};
+is($@, '', 'no "Modification of a read-only value" when closing');
 
 # [perl#73626] mg_get wasn't run on the pipe arg
 

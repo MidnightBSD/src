@@ -1,6 +1,10 @@
 #!./perl -w
 
-require './test.pl';
+BEGIN {
+    chdir 't';
+    @INC = '../lib';
+    require './test.pl';
+}
 use strict;
 no warnings 'void';
 
@@ -159,6 +163,73 @@ is($x, 4, 'return do { do { ; } } receives caller scalar context');
 @x = sub { do { return do { 1; do { 2; @a } } }; 5 }->();
 is("@x", "7 8 9 10", 'return do { do { ; } } receives caller list context');
 
+# More tests about context propagation below return()
+@a = (11, 12);
+@b = (21, 22, 23);
+
+my $test_code = sub {
+    my ($x, $y) = @_;
+    if ($x) {
+	return $y ? do { my $z; @a } : do { my $z; @b };
+    } else {
+	return (
+	    do { my $z; @a },
+	    (do { my$z; @b }) x $y
+	);
+    }
+    'xxx';
+};
+
+$x = $test_code->(1, 1);
+is($x, 2, 'return $y ? do { } : do { } - scalar context 1');
+$x = $test_code->(1, 0);
+is($x, 3, 'return $y ? do { } : do { } - scalar context 2');
+@x = $test_code->(1, 1);
+is("@x", '11 12', 'return $y ? do { } : do { } - list context 1');
+@x = $test_code->(1, 0);
+is("@x", '21 22 23', 'return $y ? do { } : do { } - list context 2');
+
+$x = $test_code->(0, 0);
+is($x, "", 'return (do { }, (do { }) x ...) - scalar context 1');
+$x = $test_code->(0, 1);
+is($x, 3, 'return (do { }, (do { }) x ...) - scalar context 2');
+@x = $test_code->(0, 0);
+is("@x", '11 12', 'return (do { }, (do { }) x ...) - list context 1');
+@x = $test_code->(0, 1);
+is("@x", '11 12 21 22 23', 'return (do { }, (do { }) x ...) - list context 2');
+
+$test_code = sub {
+    my ($x, $y) = @_;
+    if ($x) {
+	return do {
+	    if ($y == 0) {
+		my $z;
+		@a;
+	    } elsif ($y == 1) {
+		my $z;
+		@b;
+	    } else {
+		my $z;
+		(wantarray ? reverse(@a) : '99');
+	    }
+	};
+    }
+    'xxx';
+};
+
+$x = $test_code->(1, 0);
+is($x, 2, 'return do { if () { } elsif () { } else { } } - scalar 1');
+$x = $test_code->(1, 1);
+is($x, 3, 'return do { if () { } elsif () { } else { } } - scalar 2');
+$x = $test_code->(1, 2);
+is($x, 99, 'return do { if () { } elsif () { } else { } } - scalar 3');
+@x = $test_code->(1, 0);
+is("@x", '11 12', 'return do { if () { } elsif () { } else { } } - list 1');
+@x = $test_code->(1, 1);
+is("@x", '21 22 23', 'return do { if () { } elsif () { } else { } } - list 2');
+@x = $test_code->(1, 2);
+is("@x", '12 11', 'return do { if () { } elsif () { } else { } } - list 3');
+
 # Do blocks created by constant folding
 # [perl #68108]
 $x = sub { if (1) { 20 } }->();
@@ -196,5 +267,49 @@ $x = sub { if (0){} else { 0; @a } }->();
 is($x, 4, 'if (0){} else { ...; @a } receives caller scalar context');
 @x = sub { if (0){} else { 0; @a } }->();
 is("@x", "24 25 26 27", 'if (0){} else { ...; @a } receives caller list context');
+
+# [rt.cpan.org #72767] do "string" should not propagate warning hints
+SKIP: {
+  skip_if_miniperl("no in-memory files under miniperl", 1);
+
+  my $code = '42; 1';
+  # Based on Eval::WithLexicals::_eval_do
+  local @INC = (sub {
+    if ($_[1] eq '/eval_do') {
+      open my $fh, '<', \$code;
+      $fh;
+    } else {
+      ();
+    }
+  }, @INC);
+  local $^W;
+  use warnings;
+  my $w;
+  local $SIG{__WARN__} = sub { warn shift; ++$w };
+  do '/eval_do' or die $@;
+  is($w, undef, 'do STRING does not propagate warning hints');
+}
+
+# RT#113730 - $@ should be cleared on IO error.
+{
+    $@ = "should not see";
+    $! = 0;
+    my $rv = do("some nonexistent file");
+    my $saved_error = $@;
+    my $saved_errno = $!;
+    ok(!$rv,          "do returns false on io errror");
+    ok(!$saved_error, "\$\@ not set on io error");
+    ok($saved_errno,  "\$! set on io error");
+}
+
+# do subname should not be do "subname"
+{
+    my $called;
+    sub fungi { $called .= "fungible" }
+    $@ = "scrimptious scrobblings";
+    do fungi;
+    is $called, "fungible", "do-file does not force bareword";
+    isnt $@, "scrimptious scrobblings", "It was interpreted as do-file";
+}
 
 done_testing();

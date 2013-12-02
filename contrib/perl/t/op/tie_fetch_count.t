@@ -7,7 +7,7 @@ BEGIN {
     chdir 't' if -d 't';
     @INC = '../lib';
     require './test.pl';
-    plan (tests => 210);
+    plan (tests => 312);
 }
 
 use strict;
@@ -28,6 +28,7 @@ sub STORE { unshift @{$_[0]}, $_[1] }
 sub check_count {
     my $op = shift;
     my $expected = shift() // 1;
+    local $::Level = $::Level + 1;
     is $count, $expected,
         "FETCH called " . (
           $expected == 1 ? "just once" : 
@@ -43,6 +44,7 @@ tie my $var => 'main', 1;
 
 # Assignment.
 $dummy  =  $var         ; check_count "=";
+*dummy  =  $var         ; check_count '*glob = $tied';
 
 # Unary +/-
 $dummy  = +$var         ; check_count "unary +";
@@ -60,6 +62,11 @@ $dummy  =  $var  >>   1 ; check_count '>>';
 $dummy  =  $var   x   1 ; check_count 'x';
 @dummy  = ($var)  x   1 ; check_count 'x';
 $dummy  =  $var   .   1 ; check_count '.';
+@dummy  =  $var  ..   1 ; check_count '$tied..1';
+@dummy  =   1    .. $var; check_count '1..$tied';
+tie my $v42 => 'main', "z";
+@dummy  =  $v42  ..  "a"; check_count '$tied.."a"';
+@dummy  =  "a"   .. $v42; check_count '"a"..$tied';
  
 # Pre/post in/decrement
            $var ++      ; check_count 'post ++';
@@ -114,43 +121,43 @@ $dummy  = atan2 $var, 1 ; check_count 'atan2';
 # Readline/glob
 tie my $var0, "main", \*DATA;
 $dummy  = <$var0>       ; check_count '<readline>';
-$dummy  = <${var}>      ; check_count '<glob>';
+$var    = \1;
+$var   .= <DATA>        ; check_count '$tiedref .= <rcatline>';
+$var    = "tied";
+$var   .= <DATA>        ; check_count '$tiedstr .= <rcatline>';
+$var    = *foo;
+$var   .= <DATA>        ; check_count '$tiedglob .= <rcatline>';
+{   no warnings "glob";
+    $dummy  = <${var}>      ; check_count '<glob>';
+}
 
 # File operators
-$dummy  = -r $var       ; check_count '-r';
-$dummy  = -w $var       ; check_count '-w';
-$dummy  = -x $var       ; check_count '-x';
-$dummy  = -o $var       ; check_count '-o';
-$dummy  = -R $var       ; check_count '-R';
-$dummy  = -W $var       ; check_count '-W';
-$dummy  = -X $var       ; check_count '-X';
-$dummy  = -O $var       ; check_count '-O';
-$dummy  = -e $var       ; check_count '-e';
-$dummy  = -z $var       ; check_count '-z';
-$dummy  = -s $var       ; check_count '-s';
-$dummy  = -f $var       ; check_count '-f';
-$dummy  = -d $var       ; check_count '-d';
+for (split //, 'rwxoRWXOezsfdpSbctugkTBMAC') {
+    no warnings 'unopened';
+    $dummy  = eval "-$_ \$var"; check_count "-$_";
+    # Make $var hold a glob:
+    $var = *dummy; $dummy = $var; $count = 0;
+    $dummy  = eval "-$_ \$var"; check_count "-$_ \$tied_glob";
+    next if /[guk]/;
+    $var = *dummy; $dummy = $var; $count = 0;
+    eval "\$dummy = -$_ \\\$var";
+    check_count "-$_ \\\$tied_glob";
+}
 $dummy  = -l $var       ; check_count '-l';
-$dummy  = -p $var       ; check_count '-p';
-$dummy  = -S $var       ; check_count '-S';
-$dummy  = -b $var       ; check_count '-b';
-$dummy  = -c $var       ; check_count '-c';
-$dummy  = -t $var       ; check_count '-t';
-$dummy  = -u $var       ; check_count '-u';
-$dummy  = -g $var       ; check_count '-g';
-$dummy  = -k $var       ; check_count '-k';
-$dummy  = -T $var       ; check_count '-T';
-$dummy  = -B $var       ; check_count '-B';
-$dummy  = -M $var       ; check_count '-M';
-$dummy  = -A $var       ; check_count '-A';
-$dummy  = -C $var       ; check_count '-C';
+$var = "test.pl";
+$dummy  = -e -e -e $var ; check_count '-e -e';
 
 # Matching
 $_ = "foo";
 $dummy  =  $var =~ m/ / ; check_count 'm//';
 $dummy  =  $var =~ s/ //; check_count 's///';
-$dummy  =  $var ~~    1 ; check_count '~~';
+{
+    no warnings 'experimental::smartmatch';
+    $dummy  =  $var ~~    1 ; check_count '~~';
+}
 $dummy  =  $var =~ y/ //; check_count 'y///';
+           $var = \1;
+$dummy  =  $var =~y/ /-/; check_count '$ref =~ y///';
            /$var/       ; check_count 'm/pattern/';
            /$var foo/   ; check_count 'm/$tied foo/';
           s/$var//      ; check_count 's/pattern//';
@@ -168,13 +175,110 @@ $dummy  = %$var3        ; check_count '%{}';
 $dummy  = keys $var3    ; check_count 'keys hashref';
 {
     no strict 'refs';
-    tie my $var4 => 'main', **;
+    tie my $var4 => 'main', *];
     $dummy  = *$var4        ; check_count '*{}';
 }
 
 tie my $var5 => 'main', sub {1};
 $dummy  = &$var5        ; check_count '&{}';
 
+{
+    no strict 'refs';
+    tie my $var1 => 'main', 1;
+    $dummy  = $$var1        ; check_count 'symbolic ${}';
+    $dummy  = @$var1        ; check_count 'symbolic @{}';
+    $dummy  = %$var1        ; check_count 'symbolic %{}';
+    $dummy  = *$var1        ; check_count 'symbolic *{}';
+    local *1 = sub{};
+    $dummy  = &$var1        ; check_count 'symbolic &{}';
+
+    # This test will not be a complete test if *988 has been created
+    # already.  If this dies, change it to use another built-in variable.
+    # In 5.10-14, rv2gv calls get-magic more times for built-in vars, which
+    # is why we need the test this way.
+    if (exists $::{988}) {
+	die "*988 already exists. Please adjust this test"
+    }
+    tie my $var6 => main => 988;
+    no warnings;
+    readdir $var6           ; check_count 'symbolic readdir';
+    if (exists $::{973}) { # Need a different variable here
+	die "*973 already exists. Please adjust this test"
+    }
+    tie my $var7 => main => 973;
+    defined $$var7          ; check_count 'symbolic defined ${}';
+}
+
+tie my $var8 => 'main', 'main';
+sub bolgy {}
+$var8->bolgy            ; check_count '->method';
+{
+    no warnings 'once';
+    () = *swibble;
+    # This must be the name of an existing glob to trigger the maximum
+    # number of fetches in 5.14:
+    tie my $var9 => 'main', 'swibble';
+    no strict 'refs';
+    use constant glumscrin => 'shreggleboughet';
+    *$var9 = \&{"glumscrin"}; check_count '*$tied = \&{"name of const"}';
+}
+
+# Functions that operate on filenames or filehandles
+for ([chdir=>''],[chmod=>'0,'],[chown=>'0,0,'],[utime=>'0,0,'],
+     [truncate=>'',',0'],[stat=>''],[lstat=>''],[open=>'my $fh,"<&",'],
+     ['()=sort'=>'',' 1,2,3']) {
+    my($op,$args,$postargs) = @$_; $postargs //= '';
+    # This line makes $var8 hold a glob:
+    $var8 = *dummy; $dummy = $var8; $count = 0;
+    eval "$op $args \$var8 $postargs";
+    check_count "$op $args\$tied_glob$postargs";
+    $var8 = *dummy; $dummy = $var8; $count = 0;
+    my $ref = \$var8;
+    eval "$op $args \$ref $postargs";
+    check_count "$op $args\\\$tied_glob$postargs";
+}
+
+{
+    no warnings;
+    $var = *foo;
+    $dummy  =  select $var, undef, undef, 0
+                            ; check_count 'select $tied_glob, ...';
+    $var = \1;
+    $dummy  =  select $var, undef, undef, 0
+                            ; check_count 'select $tied_ref, ...';
+    $var = undef;
+    $dummy  =  select $var, undef, undef, 0
+                            ; check_count 'select $tied_undef, ...';
+}
+
+chop(my $u = "\xff\x{100}");
+tie $var, "main", $u;
+$dummy  = pack "u", $var; check_count 'pack "u", $utf8';
+
+tie $var, "main", "\x{100}";
+pos$var = 0             ; check_count 'lvalue pos $utf8';
+$dummy=sprintf"%1s",$var; check_count 'sprintf "%1s", $utf8';
+$dummy=sprintf"%.1s",$var; check_count 'sprintf "%.1s", $utf8';
+$dummy  = substr$var,0,1; check_count 'substr $utf8';
+my $l   =\substr$var,0,1;
+$dummy  = $$l           ; check_count 'reading lvalue substr($utf8)';
+$$l     = 0             ; check_count 'setting lvalue substr($utf8)';
+tie $var, "main", "a";
+$$l     = "\x{100}"     ; check_count 'assigning $utf8 to lvalue substr';
+tie $var1, "main", "a";
+substr$var1,0,0,"\x{100}"; check_count '4-arg substr with utf8 replacement';
+
+{
+    local $SIG{__WARN__} = sub {};
+    $dummy  =  warn $var    ; check_count 'warn $tied';
+    tie $@, => 'main', 1;
+    $dummy  =  warn         ; check_count 'warn() with $@ tied (num)';
+    tie $@, => 'main', \1;
+    $dummy  =  warn         ; check_count 'warn() with $@ tied (ref)';
+    tie $@, => 'main', "foo\n";
+    $dummy  =  warn         ; check_count 'warn() with $@ tied (str)';
+    untie $@;
+}
 
 ###############################################
 #        Tests for  $foo binop $foo           #

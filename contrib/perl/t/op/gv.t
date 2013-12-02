@@ -12,16 +12,16 @@ BEGIN {
 
 use warnings;
 
-plan( tests => 234 );
+plan( tests => 245 );
 
-# type coersion on assignment
+# type coercion on assignment
 $foo = 'foo';
 $bar = *main::foo;
 $bar = $foo;
 is(ref(\$bar), 'SCALAR');
 $foo = *main::bar;
 
-# type coersion (not) on misc ops
+# type coercion (not) on misc ops
 
 ok($foo);
 is(ref(\$foo), 'GLOB');
@@ -35,7 +35,7 @@ is(ref(\$foo), 'GLOB');
 {
  no warnings;
  ${\*$foo} = undef;
- is(ref(\$foo), 'GLOB', 'no type coersion when assigning to *{} retval');
+ is(ref(\$foo), 'GLOB', 'no type coercion when assigning to *{} retval');
  $::{phake} = *bar;
  is(
    \$::{phake}, \*{"phake"},
@@ -44,7 +44,7 @@ is(ref(\$foo), 'GLOB');
  ${\*{"phake"}} = undef;
  is(
    ref(\$::{phake}), 'GLOB',
-  'no type coersion when assigning to retval of symbolic *{}'
+  'no type coercion when assigning to retval of symbolic *{}'
  );
  $::{phaque} = *bar;
  eval '
@@ -56,11 +56,11 @@ is(ref(\$foo), 'GLOB');
  ';
  is(
    ref(\$::{phaque}), 'GLOB',
-  'no type coersion when assigning to retval of compile-time *{}'
+  'no type coercion when assigning to retval of compile-time *{}'
  );
 }
 
-# type coersion on substitutions that match
+# type coercion on substitutions that match
 $a = *main::foo;
 $b = $a;
 $a =~ s/^X//;
@@ -166,6 +166,8 @@ XXX This text isn't used. Should it be?
 curr_test($test);
 
 is (ref *x{FORMAT}, "FORMAT");
+is ("@{sub { *_{ARRAY} }->(1..3)}", "1 2 3",
+    'returning *_{ARRAY} from sub');
 *x = *STDOUT;
 is (*{*x{GLOB}}, "*main::STDOUT");
 
@@ -185,6 +187,12 @@ is (*{*x{GLOB}}, "*main::STDOUT");
     curr_test(++$test);
 }
 
+is *x{NAME}, 'x', '*foo{NAME}';
+is *x{PACKAGE}, 'main', '*foo{PACKAGE}';
+{ no warnings 'once'; *x = *Foo::y; }
+is *x, '*Foo::y', 'glob stringifies as assignee after glob-to-glob assign';
+is *x{NAME}, 'x', 'but *foo{NAME} still returns the original name';
+is *x{PACKAGE}, 'main', 'and *foo{PACKAGE} the original package';
 
 {
     # test if defined() doesn't create any new symbols
@@ -192,7 +200,10 @@ is (*{*x{GLOB}}, "*main::STDOUT");
     my $a = "SYM000";
     ok(!defined *{$a});
 
-    ok(!defined @{$a});
+    {
+	no warnings 'deprecated';
+	ok(!defined @{$a});
+    }
     ok(!defined *{$a});
 
     {
@@ -219,8 +230,8 @@ is (*{*x{GLOB}}, "*main::STDOUT");
     # although it *should* if you're talking about magicals
 
     my $a = "]";
-    ok(defined ${$a});
     ok(defined *{$a});
+    ok(defined ${$a});
 
     $a = "1";
     "o" =~ /(o)/;
@@ -595,25 +606,27 @@ foreach my $type (qw(integer number string)) {
 	  "with the correct error message");
 }
 
-# RT #60954 anonymous glob should be defined, and not coredump when
+# RT #65582 anonymous glob should be defined, and not coredump when
 # stringified. The behaviours are:
 #
-#        defined($glob)    "$glob"
-# 5.8.8     false           "" with uninit warning
-# 5.10.0    true            (coredump)
-# 5.12.0    true            ""
+#        defined($glob)    "$glob"                   $glob .= ...
+# 5.8.8     false           "" with uninit warning   "" with uninit warning
+# 5.10.0    true            (coredump)               (coredump)
+# 5.1[24]   true            ""                       "" with uninit warning
+# 5.16      true            "*__ANON__::..."         "*__ANON__::..."
 
 {
     my $io_ref = *STDOUT{IO};
     my $glob = *$io_ref;
-    ok(defined $glob, "RT #60954 anon glob should be defined");
+    ok(defined $glob, "RT #65582 anon glob should be defined");
 
     my $warn = '';
     local $SIG{__WARN__} = sub { $warn = $_[0] };
     use warnings;
     my $str = "$glob";
-    is($warn, '', "RT #60954 anon glob stringification shouldn't warn");
-    is($str,  '', "RT #60954 anon glob stringification should be empty");
+    is($warn, '', "RT #65582 anon glob stringification shouldn't warn");
+    is($str,  '*__ANON__::__ANONIO__',
+	"RT #65582/#96326 anon glob stringification");
 }
 
 # [perl #71254] - Assigning a glob to a variable that has a current
@@ -830,7 +843,6 @@ pass('Can assign strings to typeglobs');
   tie my $a, "thrext";
   () = "$a"; # do a fetch; now $a holds a glob
   eval { *$a = sub{} };
-  eval { $a = undef }; # workaround for untie($handle) bug
   untie $a;
   eval { $a = "bar" };
   ::is $a, "bar",
@@ -855,13 +867,13 @@ ok eval {
   my $glob = do { no warnings "once"; \*phing::foo};
   delete $::{"phing::"};
   *$glob = *greck; 
-}, "Assigning a glob-with-sub to a glob that has lost its stash warks";
+}, "Assigning a glob-with-sub to a glob that has lost its stash works";
 ok eval {
   sub pon::foo;
   my $glob = \*pon::foo;
   delete $::{"pon::"};
   *$glob = *foo; 
-}, "Assigning a glob to a glob-with-sub that has lost its stash warks";
+}, "Assigning a glob to a glob-with-sub that has lost its stash works";
 
 {
   package Tie::Alias;
@@ -898,6 +910,46 @@ ok eval {
  ok $survived,
   'no error when gp_free calls a destructor that assigns to the gv';
 }
+
+# *{undef}
+eval { *{my $undef} = 3 };
+like $@, qr/^Can't use an undefined value as a symbol reference at /,
+  '*{ $undef } assignment';
+eval { *{;undef} = 3 };
+like $@, qr/^Can't use an undefined value as a symbol reference at /,
+  '*{ ;undef } assignment';
+
+# [perl #99142] defined &{"foo"} when there is a constant stub
+# If I break your module, you get to have it mentioned in Perl's tests. :-)
+package HTTP::MobileAttribute::Plugin::Locator {
+    use constant LOCATOR_GPS => 1;
+    ::ok defined &{__PACKAGE__."::LOCATOR_GPS"},
+        'defined &{"name of constant"}';
+    ::ok Internals::SvREFCNT(${__PACKAGE__."::"}{LOCATOR_GPS}),
+       "stash elem for slot is not freed prematurely";
+}
+
+# Check that constants promoted to CVs point to the right GVs when the name
+# contains a null.
+package lrcg {
+  use constant x => 3;
+  # These two lines abuse the optimisation that copies the scalar ref from
+  # one stash element to another, to get a constant with a null in its name
+  *{"yz\0a"} = \&{"x"};
+  my $ref = \&{"yz\0a"};
+  ::ok !exists $lrcg::{yz},
+    'constants w/nulls in their names point 2 the right GVs when promoted';
+}
+
+# Look away, please.
+# This violates perl's internal structures by fiddling with stashes in a
+# way that should never happen, but perl should not start trying to free
+# unallocated memory as a result.  There is no ok() or is() because the
+# panic that used to occur only occurred during global destruction, and
+# only with PERL_DESTRUCT_LEVEL=2.  (The panic itself was sufficient for
+# the harness to consider this test script to have failed.)
+$::{aoeuaoeuaoeaoeu} = __PACKAGE__; # cow
+() = *{"aoeuaoeuaoeaoeu"};
 
 __END__
 Perl

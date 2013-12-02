@@ -1,15 +1,21 @@
-# ScriptExtensions-6.0.0.txt
-# Date: 2010-08-30, 01:48:36 GMT [MD]
+# ScriptExtensions-6.2.0.txt
+# Date: 2012-08-13, 20:52:17 GMT [MD]
 #
 # Unicode Character Database
-# Copyright (c) 1991-2010 Unicode, Inc.
+# Copyright (c) 1991-2012 Unicode, Inc.
 # For terms of use, see http://www.unicode.org/terms_of_use.html
 # For documentation, see http://www.unicode.org/reports/tr44/
+# The Script_Extensions property indicates which characters are commonly used
+# with more than one script, but with a limited number of scripts.
+# For each code point, there is one or more property values.  Each such value is a Script property value.
+# For more information, see:
+#   UAX #24: http://www.unicode.org/reports/tr24/ and
+#   UAX #44: http://www.unicode.org/reports/tr44/
 #
-# The Script Extensions contain data about characters that belong to multiple scripts.
-# This data is provisional, and expected to change over time, as more information becomes available.
-# The script values are space-delimited short values, such as Hang for Hangul.
-# For more information, see UAX #24: http://www.unicode.org/reports/tr24/.
+#  All code points not explicitly listed for Script_Extensions
+#  have as their value the corresponding Script property value
+#
+# @missing: 0000..10FFFF; <script>
 
 # ================================================
 
@@ -17,13 +23,44 @@
 
 # ================================================
 
+# Script_Extensions=Deva
+
+1CD0..1CD2    ; Deva # Mn   [3] VEDIC TONE KARSHANA..VEDIC TONE PRENKHA
+1CD4..1CE0    ; Deva # Mn  [13] VEDIC SIGN YAJURVEDIC MIDLINE SVARITA..VEDIC TONE RIGVEDIC KASHMIRI INDEPENDENT SVARITA
+1CE1          ; Deva # Mc       VEDIC TONE ATHARVAVEDIC INDEPENDENT SVARITA
+1CE2..1CE8    ; Deva # Mn   [7] VEDIC SIGN VISARGA SVARITA..VEDIC SIGN VISARGA ANUDATTA WITH TAIL
+1CED          ; Deva # Mn       VEDIC SIGN TIRYAK
+1CF2..1CF3    ; Deva # Mc   [2] VEDIC SIGN ARDHAVISARGA..VEDIC SIGN ROTATED ARDHAVISARGA
+1CF4          ; Deva # Mn       VEDIC TONE CANDRA ABOVE
+
+# Total code points: 28
+
+# ================================================
+
+# Script_Extensions=Grek
+
+0342          ; Grek # Mn       COMBINING GREEK PERISPOMENI
+0345          ; Grek # Mn       COMBINING GREEK YPOGEGRAMMENI
+1DC0..1DC1    ; Grek # Mn   [2] COMBINING DOTTED GRAVE ACCENT..COMBINING DOTTED ACUTE ACCENT
+
+# Total code points: 4
+
+# ================================================
+
+# Script_Extensions=Latn
+
+0363..036F    ; Latn # Mn  [13] COMBINING LATIN SMALL LETTER A..COMBINING LATIN SMALL LETTER X
+
+# Total code points: 13
+
+# ================================================
+
 # Script_Extensions=Arab Syrc
 
-0640          ; Arab Syrc # Lm       ARABIC TATWEEL
 064B..0655    ; Arab Syrc # Mn  [11] ARABIC FATHATAN..ARABIC HAMZA BELOW
 0670          ; Arab Syrc # Mn       ARABIC LETTER SUPERSCRIPT ALEF
 
-# Total code points: 13
+# Total code points: 12
 
 # ================================================
 
@@ -53,6 +90,32 @@ FDFD          ; Arab Thaa # So       ARABIC LIGATURE BISMILLAH AR-RAHMAN AR-RAHE
 
 # ================================================
 
+# Script_Extensions=Cprt Linb
+
+10100..10102  ; Cprt Linb # Po   [3] AEGEAN WORD SEPARATOR LINE..AEGEAN CHECK MARK
+10107..10133  ; Cprt Linb # No  [45] AEGEAN NUMBER ONE..AEGEAN NUMBER NINETY THOUSAND
+10137..1013F  ; Cprt Linb # So   [9] AEGEAN WEIGHT BASE UNIT..AEGEAN MEASURE THIRD SUBUNIT
+
+# Total code points: 57
+
+# ================================================
+
+# Script_Extensions=Cyrl Latn
+
+0485..0486    ; Cyrl Latn # Mn   [2] COMBINING CYRILLIC DASIA PNEUMATA..COMBINING CYRILLIC PSILI PNEUMATA
+
+# Total code points: 2
+
+# ================================================
+
+# Script_Extensions=Deva Latn
+
+0951..0952    ; Deva Latn # Mn   [2] DEVANAGARI STRESS SIGN UDATTA..DEVANAGARI STRESS SIGN ANUDATTA
+
+# Total code points: 2
+
+# ================================================
+
 # Script_Extensions=Hira Kana
 
 3031..3035    ; Hira Kana # Lm   [5] VERTICAL KANA REPEAT MARK..VERTICAL KANA REPEAT MARK LOWER HALF
@@ -73,6 +136,14 @@ FF9E..FF9F    ; Hira Kana # Lm   [2] HALFWIDTH KATAKANA VOICED SOUND MARK..HALFW
 1805          ; Mong Phag # Po       MONGOLIAN FOUR DOTS
 
 # Total code points: 3
+
+# ================================================
+
+# Script_Extensions=Arab Mand Syrc
+
+0640          ; Arab Mand Syrc # Lm       ARABIC TATWEEL
+
+# Total code points: 1
 
 # ================================================
 
@@ -99,17 +170,17 @@ FF9E..FF9F    ; Hira Kana # Lm   [2] HALFWIDTH KATAKANA VOICED SOUND MARK..HALFW
 
 # ================================================
 
-# Script_Extensions=Beng Deva Guru Orya
+# Script_Extensions=Buhd Hano Tagb Tglg
 
-0964..0965    ; Beng Deva Guru Orya # Po   [2] DEVANAGARI DANDA..DEVANAGARI DOUBLE DANDA
+1735..1736    ; Buhd Hano Tagb Tglg # Po   [2] PHILIPPINE SINGLE PUNCTUATION..PHILIPPINE DOUBLE PUNCTUATION
 
 # Total code points: 2
 
 # ================================================
 
-# Script_Extensions=Buhd Hano Tagb Tglg
+# Script_Extensions=Beng Deva Guru Orya Takr
 
-1735..1736    ; Buhd Hano Tagb Tglg # Po   [2] PHILIPPINE SINGLE PUNCTUATION..PHILIPPINE DOUBLE PUNCTUATION
+0964..0965    ; Beng Deva Guru Orya Takr # Po   [2] DEVANAGARI DANDA..DEVANAGARI DOUBLE DANDA
 
 # Total code points: 2
 
@@ -137,6 +208,17 @@ FF9E..FF9F    ; Hira Kana # Lm   [2] HALFWIDTH KATAKANA VOICED SOUND MARK..HALFW
 FE45..FE46    ; Bopo Hang Hani Hira Kana # Po   [2] SESAME DOT..WHITE SESAME DOT
 
 # Total code points: 206
+
+# ================================================
+
+# Script_Extensions=Deva Gujr Guru Kthi Takr
+
+A830..A835    ; Deva Gujr Guru Kthi Takr # No   [6] NORTH INDIC FRACTION ONE QUARTER..NORTH INDIC FRACTION THREE SIXTEENTHS
+A836..A837    ; Deva Gujr Guru Kthi Takr # So   [2] NORTH INDIC QUARTER MARK..NORTH INDIC PLACEHOLDER MARK
+A838          ; Deva Gujr Guru Kthi Takr # Sc       NORTH INDIC RUPEE MARK
+A839          ; Deva Gujr Guru Kthi Takr # So       NORTH INDIC QUANTITY MARK
+
+# Total code points: 10
 
 # ================================================
 

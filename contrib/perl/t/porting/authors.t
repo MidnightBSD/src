@@ -1,20 +1,17 @@
 #!./perl -w
-
 # Test that there are no missing authors in AUTHORS
+
 BEGIN {
-    chdir '..' unless -d 't';
-    unshift @INC, 'lib';
+    @INC = '..' if -f '../TestInit.pm';
 }
-
+use TestInit qw(T); # T is chdir to the top level
 use strict;
-use warnings;
 
-if (! -d '.git' ) {
-    print "1..0 # SKIP: not being run from a git checkout\n";
-    exit 0;
-}
+require 't/test.pl';
+find_git_or_skip('all');
 
-my $dotslash = $^O eq "MSWin32" ? ".\\" : "./";
-system("git log --pretty=fuller | ${dotslash}perl -Ilib Porting/checkAUTHORS.pl --tap -");
+# This is the subset of "pretty=fuller" that checkAUTHORS.pl actually needs:
+my $quote = $^O =~ /^mswin/i ? q(") : q(');
+system("git log --pretty=format:${quote}Author: %an <%ae>%n${quote} | $^X Porting/checkAUTHORS.pl --tap -");
 
 # EOF

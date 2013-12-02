@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-BEGIN { require q(./test.pl); } plan(tests => 52);
+BEGIN { require q(./test.pl); } plan(tests => 59);
 
 require mro;
 
@@ -327,4 +327,46 @@ is(eval { MRO_N->testfunc() }, 123);
     @Thwit::ISA = "Sile";
     undef %Thwit::;
     ok !Thrext->isa('Sile'), 'undef %package:: updates subclasses';
+}
+
+{
+    # Obliterating @ISA via glob assignment
+    # Broken in 5.14.0; fixed in 5.17.2
+    @Gwythaint::ISA = "Fantastic::Creature";
+    undef *This_glob_haD_better_not_exist; # paranoia; must have no array
+    *Gwythaint::ISA = *This_glob_haD_better_not_exist;
+    ok !Gwythaint->isa("Fantastic::Creature"),
+       'obliterating @ISA via glob assignment';
+}
+
+{
+    # Autovivifying @ISA via @{*ISA}
+    no warnings;
+    undef *fednu::ISA;
+    @{*fednu::ISA} = "pyfg";
+    ok +fednu->isa("pyfg"), 'autovivifying @ISA via *{@ISA}';
+}
+
+{
+    sub Detached::method;
+    my $h = delete $::{"Detached::"};
+    eval { local *Detached::method };
+    is $@, "", 'localising gv-with-cv belonging to detached package';
+}
+
+{
+    # *ISA localisation
+    @il::ISA = "ilsuper";
+    sub ilsuper::can { "puree" }
+    sub il::tomatoes;
+    {
+        local *il::ISA;
+        is +il->can("tomatoes"), \&il::tomatoes, 'local *ISA';
+    }
+    is "il"->can("tomatoes"), "puree", 'local *ISA unwinding';
+    {
+        local *il::ISA = [];
+        is +il->can("tomatoes"), \&il::tomatoes, 'local *ISA = []';
+    }
+    is "il"->can("tomatoes"), "puree", 'local *ISA=[] unwinding';
 }

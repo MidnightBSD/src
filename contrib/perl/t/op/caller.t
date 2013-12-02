@@ -5,7 +5,7 @@ BEGIN {
     chdir 't' if -d 't';
     @INC = '../lib';
     require './test.pl';
-    plan( tests => 82 );
+    plan( tests => 91 );
 }
 
 my @c;
@@ -19,7 +19,7 @@ eval { @c = caller(0) };
 is( $c[3], "(eval)", "subroutine name in an eval {}" );
 ok( !$c[4], "hasargs false in an eval {}" );
 
-eval q{ @c = (Caller(0))[3] };
+eval q{ @c = caller(0) };
 is( $c[3], "(eval)", "subroutine name in an eval ''" );
 ok( !$c[4], "hasargs false in an eval ''" );
 
@@ -111,8 +111,8 @@ sub testwarn {
 
     # The repetition number must be set to the value of $BYTES in
     # lib/warnings.pm
-    BEGIN { check_bits( ${^WARNING_BITS}, "\0" x 13, 'all bits off via "no warnings"' ) }
-    testwarn("\0" x 13, 'no bits');
+    BEGIN { check_bits( ${^WARNING_BITS}, "\0" x 14, 'all bits off via "no warnings"' ) }
+    testwarn("\0" x 14, 'no bits');
 
     use warnings;
     BEGIN { check_bits( ${^WARNING_BITS}, $default,
@@ -223,6 +223,78 @@ EOP
     @args = bless[],'fwib';
     sub { () = caller(0) }->(); # clobber @args without initialisation
     ::is $gone, 1, 'caller does not leak @DB::args elems when AvREAL';
+}
+
+# And this crashed [perl #93320]:
+sub {
+  package DB;
+  ()=caller(0);
+  undef *DB::args;
+  ()=caller(0);
+}->();
+pass 'No crash when @DB::args is freed between caller calls';
+
+# This also crashed:
+package glelp;
+sub TIEARRAY { bless [] }
+sub EXTEND   {         }
+sub CLEAR    {        }
+sub FETCH    { $_[0][$_[1]] }
+sub STORE    { $_[0][$_[1]] = $_[2] }
+package DB;
+tie @args, 'glelp';
+eval { sub { () = caller 0; } ->(1..3) };
+::like $@, qr "^Cannot set tied \@DB::args at ",
+              'caller dies with tie @DB::args';
+::ok tied @args, '@DB::args is still tied';
+untie @args;
+package main;
+
+# [perl #113486]
+fresh_perl_is <<'END', "ok\n", {},
+  { package foo; sub bar { main::bar() } }
+  sub bar {
+    delete $::{"foo::"};
+    my $x = \($1+2);
+    my $y = \($1+2); # this is the one that reuses the mem addr, but
+    my $z = \($1+2);  # try the others just in case
+    s/2// for $$x, $$y, $$z; # now SvOOK
+    $x = caller;
+    print "ok\n";
+};
+foo::bar
+END
+    "No crash when freed stash is reused for PV with offset hack";
+
+is eval "(caller 0)[6]", "(caller 0)[6]",
+  'eval text returned by caller does not include \n;';
+
+# PL_linestr should not be modifiable
+eval '"${;BEGIN{  ${\(caller 2)[6]} = *foo  }}"';
+pass "no assertion failure after modifying eval text via caller";
+
+is eval "<<END;\nfoo\nEND\n(caller 0)[6]",
+        "<<END;\nfoo\nEND\n(caller 0)[6]",
+        'here-docs do not gut eval text';
+is eval "s//<<END/e;\nfoo\nEND\n(caller 0)[6]",
+        "s//<<END/e;\nfoo\nEND\n(caller 0)[6]",
+        'here-docs in quote-like ops do not gut eval text';
+
+# The bitmask should be assignable to ${^WARNING_BITS} without resulting in
+# different warnings settings.
+{
+ my $ bits = sub { (caller 0)[9] }->();
+ my $w;
+ local $SIG{__WARN__} = sub { $w++ };
+ eval '
+   use warnings;
+   BEGIN { ${^WARNING_BITS} = $bits }
+   local $^W = 1;
+   () = 1 + undef;
+   $^W = 0;
+   () = 1 + undef;
+ ';
+ is $w, 1, 'value from (caller 0)[9] (bitmask) works in ${^WARNING_BITS}';
 }
 
 $::testing_caller = 1;

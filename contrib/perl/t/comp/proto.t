@@ -18,7 +18,7 @@ BEGIN {
 # strict
 use strict;
 
-print "1..172\n";
+print "1..180\n";
 
 my $i = 1;
 
@@ -409,9 +409,25 @@ print "ok ", $i++, "\n";
 print "# CORE::open => ($p)\nnot " if ($p = prototype('CORE::open')) ne '*;$@';
 print "ok ", $i++, "\n";
 
-print "# CORE:Foo => ($p), \$@ => `$@'\nnot " 
+print "# CORE::Foo => ($p), \$@ => '$@'\nnot " 
     if defined ($p = eval { prototype('CORE::Foo') or 1 }) or $@ !~ /^Can't find an opnumber/;
 print "ok ", $i++, "\n";
+
+eval { prototype("CORE::a\0b") };
+print "# CORE::a\\0b: \$@ => '$@'\nnot " 
+    if $@ !~ /^Can't find an opnumber for "a\0b"/;
+print "ok ", $i++, "\n";
+
+eval { prototype("CORE::\x{100}") };
+print "# CORE::\\x{100}: => ($p), \$@ => '$@'\nnot " 
+    if $@ !~ /^Can't find an opnumber for "\x{100}"/;
+print "ok ", $i++, "\n";
+
+"CORE::Foo" =~ /(.*)/;
+print "# \$1 containing CORE::Foo => ($p), \$@ => '$@'\nnot " 
+    if defined ($p = eval { prototype($1) or 1 })
+    or $@ !~ /^Can't find an opnumber/;
+print "ok ", $i++, " - \$1 containing CORE::Foo\n";
 
 # correctly note too-short parameter lists that don't end with '$',
 #  a possible regression.
@@ -544,6 +560,10 @@ sub sreftest (\$$) {
     sreftest my $sref, $i++;
     sreftest($helem{$i}, $i++);
     sreftest $aelem[0], $i++;
+    sreftest sub { [0] }->()[0], $i++;
+    sreftest my $a = 'quidgley', $i++;
+    print "not " if eval 'return 1; sreftest(3+4)';
+    print "ok ", $i++, ' - \$ with invalid argument', "\n";
 }
 
 # test single term
@@ -587,14 +607,6 @@ for my $p ( "", qw{ () ($) ($@) ($%) ($;$) (&) (&\@) (&@) (%) (\%) (\@) } ) {
   }
 }
 
-# Not $$;$;$
-print "not " unless prototype "CORE::substr" eq '$$;$$';
-print "ok ", $i++, "\n";
-
-# recv takes a scalar reference for its second argument
-print "not " unless prototype "CORE::recv" eq '*\\$$$';
-print "ok ", $i++, "\n";
-
 {
     my $myvar;
     my @myarray;
@@ -605,6 +617,8 @@ print "ok ", $i++, "\n";
     sub myref (\[$@%&*]) { print "# $_[0]\n"; return "$_[0]" }
 
     print "not " unless myref($myvar)   =~ /^SCALAR\(/;
+    print "ok ", $i++, "\n";
+    print "not " unless myref($myvar=7) =~ /^SCALAR\(/;
     print "ok ", $i++, "\n";
     print "not " unless myref(@myarray) =~ /^ARRAY\(/;
     print "ok ", $i++, "\n";
@@ -700,6 +714,17 @@ print "not "
 print "ok ", $i++, "\n";
 print "not "
  unless eval 'sub uniproto9 (;+) {} uniproto9 $_, 1' or warn $@;
+print "ok ", $i++, "\n";
+
+# Test that a trailing semicolon makes a sub have listop precedence
+sub unilist ($;)  { $_[0]+1 }
+sub unilist2(_;)  { $_[0]+1 }
+sub unilist3(;$;) { $_[0]+1 }
+print "not " unless (unilist 0 || 5) == 6;
+print "ok ", $i++, "\n";
+print "not " unless (unilist2 0 || 5) == 6;
+print "ok ", $i++, "\n";
+print "not " unless (unilist3 0 || 5) == 6;
 print "ok ", $i++, "\n";
 
 {

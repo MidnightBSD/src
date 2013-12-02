@@ -10,7 +10,7 @@ BEGIN {
 
 use strict;
 use warnings;
-plan(tests => 52);
+plan(tests => 53);
 
 {
     package New;
@@ -30,8 +30,8 @@ plan(tests => 52);
 ok (Old->isa (New::), 'Old inherits from New');
 ok (New->isa (Old::), 'New inherits from Old');
 
-isa_ok (bless ({}, Old::), New::, 'Old object');
-isa_ok (bless ({}, New::), Old::, 'New object');
+object_ok (bless ({}, Old::), New::, 'Old object');
+object_ok (bless ({}, New::), Old::, 'New object');
 
 
 # Test that replacing a package by assigning to an existing glob
@@ -399,4 +399,12 @@ bless [], "O:";
   'isa(foo) when inheriting from "class:" after string-to-glob assignment';
 }
 
-
+@Bazo::ISA = "Fooo::bar";
+sub Fooo::bar::ber { 'baz' }
+sub UNIVERSAL::ber { "black sheep" }
+Bazo->ber;
+local *Fooo:: = \%Baro::;
+{
+    no warnings;
+    is 'Bazo'->ber, 'black sheep', 'localised *glob=$stashref assignment';
+}

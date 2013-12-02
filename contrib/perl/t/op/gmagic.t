@@ -11,11 +11,11 @@ use strict;
 tie my $c => 'Tie::Monitor';
 
 sub expected_tie_calls {
-    my ($obj, $rexp, $wexp) = @_;
+    my ($obj, $rexp, $wexp, $tn) = @_;
     local $::Level = $::Level + 1;
     my ($rgot, $wgot) = $obj->init();
-    is ($rgot, $rexp);
-    is ($wgot, $wexp);
+    is ($rgot, $rexp, $tn ? "number of fetches when $tn" : ());
+    is ($wgot, $wexp, $tn ? "number of stores when $tn" : ());
 }
 
 # Use ok() instead of is(), cmp_ok() etc, to strictly control number of accesses
@@ -50,13 +50,81 @@ $s = chop($c);
 ok($s eq '0', 'multiple magic in core functions');
 expected_tie_calls(tied $c, 1, 1);
 
-# was a glob
-my $tied_to = tied $c;
 $c = *strat;
 $s = $c;
 ok($s eq *strat,
    'Assignment should not ignore magic when the last thing assigned was a glob');
-expected_tie_calls($tied_to, 1, 1);
+expected_tie_calls(tied $c, 1, 1);
+
+package o { use overload '""' => sub { "foo\n" } }
+$c = bless [], o::;
+chomp $c;
+expected_tie_calls(tied $c, 1, 2, 'chomping a ref');
+
+{
+    my $outfile = tempfile();
+    open my $h, ">$outfile" or die  "$0 cannot close $outfile: $!";
+    print $h "bar\n";
+    close $h or die "$0 cannot close $outfile: $!";    
+
+    $c = *foo;                                         # 1 write
+    open $h, $outfile;
+    sysread $h, $c, 3, 7;                              # 1 read; 1 write
+    is $c, "*main::bar", 'what sysread wrote';         # 1 read
+    expected_tie_calls(tied $c, 2, 2, 'calling sysread with tied buf');
+    close $h or die "$0 cannot close $outfile: $!";
+
+ # Do this again, with a utf8 handle
+    $c = *foo;                                         # 1 write
+    open $h, "<:utf8", $outfile;
+    sysread $h, $c, 3, 7;                              # 1 read; 1 write
+    is $c, "*main::bar", 'what sysread wrote';         # 1 read
+    expected_tie_calls(tied $c, 2, 2, 'calling sysread with tied buf');
+    close $h or die "$0 cannot close $outfile: $!";
+
+    unlink_all $outfile;
+}
+
+# autovivication of aelem, helem, of rv2sv combined with get-magic
+{
+    my $true = 1;
+    my $s;
+    tie $$s, "Tie::Monitor";
+    $$s = undef;
+    $$s->[0] = 73;
+    is($$s->[0], 73);
+    expected_tie_calls(tied $$s, 3, 2);
+
+    my @a;
+    tie $a[0], "Tie::Monitor";
+    $a[0] = undef;
+    $a[0][0] = 73;
+    is($a[0][0], 73);
+    expected_tie_calls(tied $a[0], 3, 2);
+
+    my %h;
+    tie $h{foo}, "Tie::Monitor";
+    $h{foo} = undef;
+    $h{foo}{bar} = 73;
+    is($h{foo}{bar}, 73);
+    expected_tie_calls(tied $h{foo}, 3, 2);
+
+    # Similar tests, but with obscured autovivication by using dummy list or "?:" operator
+    $$s = undef;
+    ${ (), $$s }[0] = 73;
+    is( $$s->[0], 73);
+    expected_tie_calls(tied $$s, 3, 2);
+
+    $$s = undef;
+    ( ! $true ? undef : $$s )->[0] = 73;
+    is( $$s->[0], 73);
+    expected_tie_calls(tied $$s, 3, 2);
+
+    $$s = undef;
+    ( $true ? $$s : undef )->[0] = 73;
+    is( $$s->[0], 73);
+    expected_tie_calls(tied $$s, 3, 2);
+}
 
 # A plain *foo should not call get-magic on *foo.
 # This method of scalar-tying an immutable glob relies on details of the
@@ -68,6 +136,51 @@ eval '$tyre->init(0); () = \*gelp';
 my($rgot, $wgot) = $tyre->init(0);
 ok($rgot == 0, 'a plain *foo causes no get-magic');
 ok($wgot == 0, 'a plain *foo causes no set-magic');
+
+# get-magic when exiting a non-lvalue sub in potentially autovivify-
+# ing context
+{
+  no strict;
+
+  my $tied_to = tie $_{elem}, "Tie::Monitor";
+  () = sub { delete $_{elem} }->()->[3];
+  expected_tie_calls $tied_to, 1, 0,
+     'mortal magic var is implicitly returned in autoviv context';
+
+  $tied_to = tie $_{elem}, "Tie::Monitor";
+  () = sub { return delete $_{elem} }->()->[3];
+  expected_tie_calls $tied_to, 1, 0,
+      'mortal magic var is explicitly returned in autoviv context';
+
+  $tied_to = tie $_{elem}, "Tie::Monitor";
+  my $rsub;
+  $rsub = sub { if ($_[0]) { delete $_{elem} } else { &$rsub(1)->[3] } };
+  &$rsub;
+  expected_tie_calls $tied_to, 1, 0,
+    'mortal magic var is implicitly returned in recursive autoviv context';
+
+  $tied_to = tie $_{elem}, "Tie::Monitor";
+  $rsub = sub {
+    if ($_[0]) { return delete $_{elem} } else { &$rsub(1)->[3] }
+  };
+  &$rsub;
+  expected_tie_calls $tied_to, 1, 0,
+    'mortal magic var is explicitly returned in recursive autoviv context';
+
+  $tied_to = tie $_{elem}, "Tie::Monitor";
+  my $x = \sub { delete $_{elem} }->();
+  expected_tie_calls $tied_to, 1, 0,
+     'mortal magic var is implicitly returned to refgen';
+  is tied $$x, undef,
+     'mortal magic var is copied when implicitly returned';
+
+  $tied_to = tie $_{elem}, "Tie::Monitor";
+  $x = \sub { return delete $_{elem} }->();
+  expected_tie_calls $tied_to, 1, 0,
+     'mortal magic var is explicitly returned to refgen';
+  is tied $$x, undef,
+     'mortal magic var is copied when explicitly returned';
+}
 
 done_testing();
 

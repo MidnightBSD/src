@@ -1,14 +1,31 @@
 package utf8;
 use strict;
 use warnings;
+use re "/aa";  # So we won't even try to look at above Latin1, potentially
+               # resulting in a recursive call
 
 sub DEBUG () { 0 }
+$|=1 if DEBUG;
 
 sub DESTROY {}
 
 my %Cache;
 
 sub croak { require Carp; Carp::croak(@_) }
+
+sub _loose_name ($) {
+    # Given a lowercase property or property-value name, return its
+    # standardized version that is expected for look-up in the 'loose' hashes
+    # in Heavy.pl (hence, this depends on what mktables does).  This squeezes
+    # out blanks, underscores and dashes.  The complication stems from the
+    # grandfathered-in 'L_', which retains a single trailing underscore.
+
+    my $loose = $_[0] =~ s/[-\s_]//rg;
+
+    return $loose if $loose !~ / ^ (?: is | to )? l $/x;
+    return 'l_' if $_[0] =~ / l .* _ /x;    # If original had a trailing '_'
+    return $loose;
+}
 
 ##
 ## "SWASH" == "SWATCH HASH". A "swatch" is a swatch of the Unicode landscape.
@@ -29,6 +46,7 @@ sub croak { require Carp; Carp::croak(@_) }
 
     sub SWASHNEW {
         my ($class, $type, $list, $minbits, $none) = @_;
+        my $user_defined = 0;
         local $^D = 0 if $^D;
 
         $class = "" unless defined $class;
@@ -45,6 +63,8 @@ sub croak { require Carp; Carp::croak(@_) }
         ##     regexec.c:regclass_swash -- for /[]/, \p, and \P
         ##     utf8.c:is_utf8_common    -- for common Unicode properties
         ##     utf8.c:to_utf8_case      -- for lc, uc, ucfirst, etc. and //i
+        ##     Unicode::UCD::prop_invlist
+        ##     Unicode::UCD::prop_invmap
         ##
         ## Given a $type, our goal is to fill $list with the set of codepoint
         ## ranges. If $type is false, $list passed is used.
@@ -63,25 +83,34 @@ sub croak { require Carp; Carp::croak(@_) }
         ## $none is undocumented, so I'm (khw) trying to do some documentation
         ## of it now.  It appears to be if there is a mapping in an input file
         ## that maps to 'XXXX', then that is replaced by $none+1, expressed in
-        ## hexadecimal.  The only place I found it possibly used was in
-        ## S_pmtrans in op.c.
+        ## hexadecimal.  It is used somehow in tr///.
         ##
         ## To make the parsing of $type clear, this code takes the a rather
         ## unorthodox approach of last'ing out of the block once we have the
         ## info we need. Were this to be a subroutine, the 'last' would just
         ## be a 'return'.
         ##
+        #   If a problem is found $type is returned;
+        #   Upon success, a new (or cached) blessed object is returned with
+        #   keys TYPE, BITS, EXTRAS, LIST, and NONE with values having the
+        #   same meanings as the input parameters.
+        #   SPECIALS contains a reference to any special-treatment hash in the
+        #   INVERT_IT is non-zero if the result should be inverted before use
+        #   USER_DEFINED is non-zero if the result came from a user-defined
+        #       property.
         my $file; ## file to load data from, and also part of the %Cache key.
-        my $ListSorted = 0;
 
         # Change this to get a different set of Unicode tables
         my $unicore_dir = 'unicore';
+        my $invert_it = 0;
+        my $list_is_from_mktables = 0;  # Is $list returned from a mktables
+                                        # generated file?  If so, we know it's
+                                        # well behaved.
 
         if ($type)
         {
-
             # Verify that this isn't a recursive call for this property.
-            # Can't use croak, as it may try to recurse here itself.
+            # Can't use croak, as it may try to recurse to here itself.
             my $class_type = $class . "::$type";
             if (grep { $_ eq $class_type } @recursed) {
                 CORE::die "panic: Infinite recursion in SWASHNEW for '$type'\n";
@@ -93,7 +122,7 @@ sub croak { require Carp; Carp::croak(@_) }
 
             # regcomp.c surrounds the property name with '__" and '_i' if this
             # is to be caseless matching.
-            my $caseless = $type =~ s/^__(.*)_i$/$1/;
+            my $caseless = $type =~ s/^(.*)__(.*)_i$/$1$2/;
 
             print STDERR __LINE__, ": type=$type, caseless=$caseless\n" if DEBUG;
 
@@ -104,7 +133,10 @@ sub croak { require Carp; Carp::croak(@_) }
                 ## package if no package given
                 ##
 
-                my $caller1 = $type =~ s/(.+)::// ? $1 : caller(1);
+
+                my $caller0 = caller(0);
+                my $caller1 = $type =~ s/(.+)::// ? $1 : $caller0 eq 'main' ?
+                'main' : caller(1);
 
                 if (defined $caller1 && $type =~ /^I[ns]\w+$/) {
                     my $prop = "${caller1}::$type";
@@ -122,6 +154,7 @@ sub croak { require Carp; Carp::croak(@_) }
                             if $tainted;
                         no strict 'refs';
                         $list = &{$prop}($caseless);
+                        $user_defined = 1;
                         last GETFILE;
                     }
                 }
@@ -170,9 +203,10 @@ sub croak { require Carp; Carp::croak(@_) }
                     print STDERR __LINE__, ": $property\n" if DEBUG;
 
                     # Here it is the compound property=table form.  The property
-                    # name is always loosely matched, which means remove any of
-                    # these:
-                    $property =~ s/[_\s-]//g;
+                    # name is always loosely matched, and always can have an
+                    # optional 'is' prefix (which isn't true in the single
+                    # form).
+                    $property = _loose_name($property) =~ s/^is//r;
 
                     # And convert to canonical form.  Quit if not valid.
                     $property = $utf8::loose_property_name_of{$property};
@@ -212,7 +246,7 @@ sub croak { require Carp; Carp::croak(@_) }
                                                     # minus
 
                             # Remove underscores between digits.
-                            $part =~ s/( ?<= [0-9] ) _ (?= [0-9] ) //xg;
+                            $part =~ s/(?<= [0-9] ) _ (?= [0-9] ) //xg;
 
                             # No leading zeros (but don't make a single '0'
                             # into a null string)
@@ -364,7 +398,7 @@ sub croak { require Carp; Carp::croak(@_) }
                 # out the applicable characters on the rhs and looking up
                 # again.
                 if (! defined $file) {
-                    $table =~ s/ [_\s-] //xg;
+                    $table = _loose_name($table);
                     $property_and_table = "$prefix$table";
                     print STDERR __LINE__, ": $property_and_table\n" if DEBUG;
                     $file = $utf8::loose_to_file_of{$property_and_table};
@@ -372,6 +406,11 @@ sub croak { require Carp; Carp::croak(@_) }
 
                 # Add the constant and go fetch it in.
                 if (defined $file) {
+
+                    # A beginning ! means to invert.  The 0+ makes sure is
+                    # numeric
+                    $invert_it = 0 + $file =~ s/^!//;
+
                     if ($utf8::why_deprecated{$file}) {
                         warnings::warnif('deprecated', "Use of '$type' in \\p{} or \\P{} is deprecated because: $utf8::why_deprecated{$file};");
                     }
@@ -387,34 +426,67 @@ sub croak { require Carp; Carp::croak(@_) }
                 print STDERR __LINE__, ": didn't find $property_and_table\n" if DEBUG;
 
                 ##
-                ## See if it's a user-level "To".
-                ##
-
-                my $caller0 = caller(0);
-
-                if (defined $caller0 && $type =~ /^To(?:\w+)$/) {
-                    my $map = $caller0 . "::" . $type;
-
-                    if (exists &{$map}) {
-                        no strict 'refs';
-                        
-                        $list = &{$map};
-                        warnings::warnif('deprecated', "User-defined case-mapping '$type' is deprecated");
-                        last GETFILE;
-                    }
-                }
-
-                ##
                 ## Last attempt -- see if it's a standard "To" name
                 ## (e.g. "ToLower")  ToTitle is used by ucfirst().
                 ## The user-level way to access ToDigit() and ToFold()
                 ## is to use Unicode::UCD.
                 ##
-                if ($type =~ /^To(Digit|Fold|Lower|Title|Upper)$/) {
-                    $file = "$unicore_dir/To/$1.pl";
-                    ## would like to test to see if $file actually exists....
-                    last GETFILE;
-                }
+                # Only check if caller wants non-binary
+                my $retried = 0;
+                if ($minbits != 1 && $property_and_table =~ s/^to//) {{
+                    # Look input up in list of properties for which we have
+                    # mapping files.
+                    if (defined ($file =
+                          $utf8::loose_property_to_file_of{$property_and_table}))
+                    {
+                        $type = $utf8::file_to_swash_name{$file};
+                        print STDERR __LINE__, ": type set to $type\n" if DEBUG;
+                        $file = "$unicore_dir/$file.pl";
+                        last GETFILE;
+                    }   # If that fails see if there is a corresponding binary
+                        # property file
+                    elsif (defined ($file =
+                                   $utf8::loose_to_file_of{$property_and_table}))
+                    {
+
+                        # Here, there is no map file for the property we are
+                        # trying to get the map of, but this is a binary
+                        # property, and there is a file for it that can easily
+                        # be translated to a mapping.
+
+                        # In the case of properties that are forced to binary,
+                        # they are a combination.  We return the actual
+                        # mapping instead of the binary.  If the input is
+                        # something like 'Tocjkkiicore', it will be found in
+                        # %loose_property_to_file_of above as => 'To/kIICore'.
+                        # But the form like ToIskiicore won't be.  To fix
+                        # this, it was easiest to do it here.  These
+                        # properties are the complements of the default
+                        # property, so there is an entry in %loose_to_file_of
+                        # that is 'iskiicore' => '!kIICore/N', If we find such
+                        # an entry, strip off things and try again, which
+                        # should find the entry in %loose_property_to_file_of.
+                        # Actual binary properties that are of this form, such
+                        # as this entry: 'ishrkt' => '!Perl/Any' will also be
+                        # retried, but won't be in %loose_property_to_file_of,
+                        # and instead the next time through, it will find
+                        # 'hrkt' => '!Perl/Any' and proceed.
+                        redo if ! $retried
+                                && $file =~ /^!/
+                                && $property_and_table =~ s/^is//;
+
+                        # This is a binary property.  Setting this here causes
+                        # it to be stored as such in the cache, so if someone
+                        # comes along later looking for just a binary, they
+                        # get it.
+                        $minbits = 1;
+
+                        # The 0+ makes sure is numeric
+                        $invert_it = 0 + $file =~ s/^!//;
+                        $file = "$unicore_dir/lib/$file.pl";
+                        last GETFILE;
+                    }
+                } }
 
                 ##
                 ## If we reach this line, it's because we couldn't figure
@@ -423,7 +495,7 @@ sub croak { require Carp; Carp::croak(@_) }
 
                 pop @recursed if @recursed;
                 return $type;
-            }
+            } # end of GETFILE block
 
             if (defined $file) {
                 print STDERR __LINE__, ": found it (file='$file')\n" if DEBUG;
@@ -433,11 +505,12 @@ sub croak { require Carp; Carp::croak(@_) }
                 ## (exception: user-defined properties and mappings), so we
                 ## have a filename, so now we load it if we haven't already.
                 ## If we have, return the cached results. The cache key is the
-                ## class and file to load.
+                ## class and file to load, and whether the results need to be
+                ## inverted.
                 ##
-                my $found = $Cache{$class, $file};
+                my $found = $Cache{$class, $file, $invert_it};
                 if ($found and ref($found) eq $class) {
-                    print STDERR __LINE__, ": Returning cached '$file' for \\p{$type}\n" if DEBUG;
+                    print STDERR __LINE__, ": Returning cached swash for '$class,$file,$invert_it' for \\p{$type}\n" if DEBUG;
                     pop @recursed if @recursed;
                     return $found;
                 }
@@ -445,25 +518,59 @@ sub croak { require Carp; Carp::croak(@_) }
                 local $@;
                 local $!;
                 $list = do $file; die $@ if $@;
+                $list_is_from_mktables = 1;
             }
+        } # End of $type is non-null
 
-            $ListSorted = 1; ## we know that these lists are sorted
-        }
+        # Here, either $type was null, or we found the requested property and
+        # read it into $list
 
-        my $extras;
+        my $extras = "";
+
         my $bits = $minbits;
 
-        if ($list) {
+        # mktables lists don't have extras, like '&utf8::prop', so don't need
+        # to separate them; also lists are already sorted, so don't need to do
+        # that.
+        if ($list && ! $list_is_from_mktables) {
             my $taint = substr($list,0,0); # maintain taint
-            my @tmp = split(/^/m, $list);
-            my %seen;
-            no warnings;
-            $extras = join '', $taint, grep /^[^0-9a-fA-F]/, @tmp;
-            $list = join '', $taint,
-                map  { $_->[1] }
-                sort { $a->[0] <=> $b->[0] }
-                map  { /^([0-9a-fA-F]+)/; [ CORE::hex($1), $_ ] }
-                grep { /^([0-9a-fA-F]+)/ and not $seen{$1}++ } @tmp; # XXX doesn't do ranges right
+
+            # Separate the extras from the code point list, and make sure
+            # user-defined properties and tr/// are well-behaved for
+            # downstream code.
+            if ($user_defined || $none) {
+                my @tmp = split(/^/m, $list);
+                my %seen;
+                no warnings;
+
+                # The extras are anything that doesn't begin with a hex digit.
+                $extras = join '', $taint, grep /^[^0-9a-fA-F]/, @tmp;
+
+                # Remove the extras, and sort the remaining entries by the
+                # numeric value of their beginning hex digits, removing any
+                # duplicates.
+                $list = join '', $taint,
+                        map  { $_->[1] }
+                        sort { $a->[0] <=> $b->[0] }
+                        map  { /^([0-9a-fA-F]+)/; [ CORE::hex($1), $_ ] }
+                        grep { /^([0-9a-fA-F]+)/ and not $seen{$1}++ } @tmp; # XXX doesn't do ranges right
+            }
+            else {
+                # mktables has gone to some trouble to make non-user defined
+                # properties well-behaved, so we can skip the effort we do for
+                # user-defined ones.  Any extras are at the very beginning of
+                # the string.
+
+                # This regex splits out the first lines of $list into $1 and
+                # strips them off from $list, until we get one that begins
+                # with a hex number, alone on the line, or followed by a tab.
+                # Either portion may be empty.
+                $list =~ s/ \A ( .*? )
+                            (?: \z | (?= ^ [0-9a-fA-F]+ (?: \t | $) ) )
+                          //msx;
+
+                $extras = "$taint$1";
+            }
         }
 
         if ($none) {
@@ -508,19 +615,22 @@ sub croak { require Carp; Carp::croak(@_) }
                         elsif ($c =~ /^([0-9a-fA-F]+)/) {
                             $subobj = utf8->SWASHNEW("", $c, $minbits, 0);
                         }
+                        print STDERR __LINE__, ": returned from getting sub object for $name\n" if DEBUG;
                         if (! ref $subobj) {
                             pop @recursed if @recursed && $type;
                             return $subobj;
                         }
                         push @extras, $name => $subobj;
                         $bits = $subobj->{BITS} if $bits < $subobj->{BITS};
+                        $user_defined = $subobj->{USER_DEFINED}
+                                              if $subobj->{USER_DEFINED};
                     }
                 }
             }
         }
 
         if (DEBUG) {
-            print STDERR __LINE__, ": CLASS = $class, TYPE => $type, BITS => $bits, NONE => $none";
+            print STDERR __LINE__, ": CLASS = $class, TYPE => $type, BITS => $bits, NONE => $none, INVERT_IT => $invert_it, USER_DEFINED => $user_defined";
             print STDERR "\nLIST =>\n$list" if defined $list;
             print STDERR "\nEXTRAS =>\n$extras" if defined $extras;
             print STDERR "\n";
@@ -532,11 +642,22 @@ sub croak { require Carp; Carp::croak(@_) }
             EXTRAS => $extras,
             LIST => $list,
             NONE => $none,
+            USER_DEFINED => $user_defined,
             @extras,
         } => $class;
 
         if ($file) {
-            $Cache{$class, $file} = $SWASH;
+            $Cache{$class, $file, $invert_it} = $SWASH;
+            if ($type
+                && exists $utf8::SwashInfo{$type}
+                && exists $utf8::SwashInfo{$type}{'specials_name'})
+            {
+                my $specials_name = $utf8::SwashInfo{$type}{'specials_name'};
+                no strict "refs";
+                print STDERR "\nspecials_name => $specials_name\n" if DEBUG;
+                $SWASH->{'SPECIALS'} = \%$specials_name;
+            }
+            $SWASH->{'INVERT_IT'} = $invert_it;
         }
 
         pop @recursed if @recursed && $type;
@@ -545,6 +666,6 @@ sub croak { require Carp; Carp::croak(@_) }
     }
 }
 
-# Now SWASHGET is recasted into a C function S_swash_get (see utf8.c).
+# Now SWASHGET is recasted into a C function S_swatch_get (see utf8.c).
 
 1;
