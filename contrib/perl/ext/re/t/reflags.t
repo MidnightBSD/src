@@ -10,26 +10,35 @@ BEGIN {
 
 use strict;
 
-use Test::More tests => 53;
+use Test::More tests => 62;
 
 my @flags = qw( a d l u );
 
 use re '/i';
 ok "Foo" =~ /foo/, 'use re "/i"';
+ok "Foo" =~ /(??{'foo'})/, 'use re "/i" (??{})';
 no re '/i';
 ok "Foo" !~ /foo/, 'no re "/i"';
+ok "Foo" !~ /(??{'foo'})/, 'no re "/i" (??{})';
 use re '/x';
 ok "foo" =~ / foo /, 'use re "/x"';
+ok "foo" =~ / (??{' foo '}) /, 'use re "/x" (??{})';
 no re '/x';
 ok "foo" !~ / foo /, 'no re "/x"';
+ok "foo" !~ /(??{' foo '})/, 'no re "/x" (??{})';
+ok "foo" !~ / (??{'foo'}) /, 'no re "/x" (??{})';
 use re '/s';
 ok "\n" =~ /./, 'use re "/s"';
+ok "\n" =~ /(??{'.'})/, 'use re "/s" (??{})';
 no re '/s';
 ok "\n" !~ /./, 'no re "/s"';
+ok "\n" !~ /(??{'.'})/, 'no re "/s" (??{})';
 use re '/m';
 ok "\nfoo" =~ /^foo/, 'use re "/m"';
+ok "\nfoo" =~ /(??{'^'})foo/, 'use re "/m" (??{})';
 no re '/m';
 ok "\nfoo" !~ /^foo/, 'no re "/m"';
+ok "\nfoo" !~ /(??{'^'})foo/, 'no re "/m" (??{})';
 
 use re '/xism';
 ok qr// =~ /(?=.*x)(?=.*i)(?=.*s)(?=.*m)/, 'use re "/multiple"';
@@ -51,7 +60,11 @@ SKIP: {
   ) {
     skip "no locale support", 7
   }
-  use locale;
+  BEGIN {
+      if($Config::Config{d_setlocale}) {
+          require locale; import locale;
+      }
+  }
   use re '/u';
   is qr//, '(?^u:)', 'use re "/u" with active locale';
   no re '/u';
@@ -107,14 +120,10 @@ is qr//, '(?^:)', 'no re "/d" is a no-op when not on';
 use re '/xi';
 ok "A\n\n" =~ / a.$/sm, 'use re "/xi" in combination with explicit /sm';
 {
-  local $::TODO = "test requires perl 5.16 syntax";
-  # (remove the evals, the quotes, and the ‘no warnings’ when removing the
-  # to-do notice)
-  no warnings;
   use re '/u';
-  is eval 'qr//d', '(?^:)', 'explicit /d in re "/u" scope';
+  is qr//d, '(?^ix:)', 'explicit /d in re "/u" scope';
   use re '/d';
-  is eval 'qr//u', '(?^u:)', 'explicit /u in re "/d" scope';
+  is qr//u, '(?^uix:)', 'explicit /u in re "/d" scope';
 }
 no re '/x';
 
