@@ -10,7 +10,7 @@ BEGIN {
     }
 }
 use strict;
-use Test::More tests => 15;
+use Test::More tests => 49;
 BEGIN {use_ok('File::Glob', ':glob')};
 use Cwd ();
 
@@ -52,7 +52,7 @@ if (GLOB_ERROR) {
 SKIP: {
     my ($name, $home);
     skip $^O, 1 if $^O eq 'MSWin32' || $^O eq 'NetWare' || $^O eq 'VMS'
-	|| $^O eq 'os2' || $^O eq 'beos';
+	|| $^O eq 'os2';
     skip "Can't find user for $>: $@", 1 unless eval {
 	($name, $home) = (getpwuid($>))[0,7];
 	1;
@@ -66,6 +66,46 @@ SKIP: {
 	fail(GLOB_ERROR);
     } else {
 	is_deeply (\@a, [$home]);
+    }
+}
+# check plain tilde expansion
+{
+    my $tilde_check = sub {
+        my @a = bsd_glob('~');
+
+        if (GLOB_ERROR) {
+            fail(GLOB_ERROR);
+        } else {
+            is_deeply (\@a, [$_[0]], join ' - ', 'tilde expansion', @_ > 1 ? $_[1] : ());
+        }
+    };
+    my $passwd_home = eval { (getpwuid($>))[7] };
+
+    TODO: {
+        local $TODO = 'directory brackets look like pattern brackets to glob' if $^O eq 'VMS';
+        local $ENV{HOME};
+        delete $ENV{HOME};
+        local $ENV{USERPROFILE};
+        delete $ENV{USERPROFILE};
+        $tilde_check->(defined $passwd_home ? $passwd_home : q{~}, 'no environment');
+    }
+
+    SKIP: {
+        skip 'MSWin32 only', 1 if $^O ne 'MSWin32';
+        local $ENV{HOME};
+        delete $ENV{HOME};
+        local $ENV{USERPROFILE};
+        $ENV{USERPROFILE} = 'sweet win32 home';
+        $tilde_check->(defined $passwd_home ? $passwd_home : $ENV{USERPROFILE}, 'USERPROFILE');
+    }
+
+    TODO: {
+        local $TODO = 'directory brackets look like pattern brackets to glob' if $^O eq 'VMS';
+        my $home = exists $ENV{HOME} ? $ENV{HOME}
+        : eval { getpwuid($>); 1 } ? (getpwuid($>))[7]
+        : $^O eq 'MSWin32' && exists $ENV{USERPROFILE} ? $ENV{USERPROFILE}
+        : q{~};
+        $tilde_check->($home);
     }
 }
 
@@ -90,7 +130,7 @@ SKIP: {
 # check bad protections
 # should return an empty list, and set ERROR
 SKIP: {
-    skip $^O, 2 if $^O eq 'mpeix' or $^O eq 'MSWin32' or $^O eq 'NetWare'
+    skip $^O, 2 if $^O eq 'MSWin32' or $^O eq 'NetWare'
 	or $^O eq 'os2' or $^O eq 'VMS' or $^O eq 'cygwin';
     skip "AFS", 2 if Cwd::cwd() =~ m#^$Config{'afsroot'}#s;
     skip "running as root", 2 if not $>;
@@ -119,14 +159,17 @@ is_deeply(\@a, ['a', 'b']);
 @a = grep !/(,v$|~$|\.(pm|ori?g|rej)$)/, @a;
 @a = (grep !/test.pl/, @a) if $^O eq 'VMS';
 
+map { $_  =~ s/test\.?/TEST/i } @a if $^O eq 'VMS';
 print "# @a\n";
 
-is_deeply(\@a, [($vms_mode ? 'test.' : 'TEST'), 'a', 'b']);
+is_deeply(\@a, ['TEST', 'a', 'b']);
 
 # "~" should expand to $ENV{HOME}
-$ENV{HOME} = "sweet home";
-@a = bsd_glob('~', GLOB_TILDE | GLOB_NOMAGIC);
-is_deeply(\@a, [$ENV{HOME}]);
+{
+    local $ENV{HOME} = "sweet home";
+    @a = bsd_glob('~', GLOB_TILDE | GLOB_NOMAGIC);
+    is_deeply(\@a, [$ENV{HOME}]);
+}
 
 # GLOB_ALPHASORT (default) should sort alphabetically regardless of case
 mkdir "pteerslo", 0777;
@@ -191,3 +234,52 @@ pass("Don't panic");
 # This used to segfault.
 my $i = bsd_glob('*', GLOB_ALTDIRFUNC);
 is(&File::Glob::GLOB_ERROR, 0, "Successfuly ignored unsupported flag");
+
+package frimpy; # get away from the glob override, so we can test csh_glob,
+use Test::More;  # which is perl's default
+
+# In case of PERL_EXTERNAL_GLOB:
+use subs 'glob';
+BEGIN { *glob = \&File::Glob::csh_glob }
+
+is +(glob "a'b'")[0], (<a'b' c>)[0], "a'b' with and without spaces";
+is <a"b">, 'ab', 'a"b" without spaces';
+is_deeply [<a"b" c>], [qw<ab c>], 'a"b" without spaces';
+is_deeply [<\\* .\\*>], [<\\*>,<.\\*>], 'backslashes with(out) spaces';
+like <\\ >, qr/^\\? \z/, 'final escaped space';
+is <a"b>, 'a"b', 'unmatched quote';
+is < a"b >, 'a"b', 'unmatched quote with surrounding spaces';
+is glob('a\"b'), 'a"b', '\ before quote *only* escapes quote';
+is glob(q"a\'b"), "a'b", '\ before single quote *only* escapes quote';
+is glob('"a\"b c\"d"'), 'a"b c"d', 'before \" within "..."';
+is glob(q"'a\'b c\'d'"), "a'b c'd", q"before \' within '...'";
+
+
+package bsdglob;  # for testing the :bsd_glob export tag
+
+use File::Glob ':bsd_glob';
+use Test::More;
+for (qw[
+        GLOB_ABEND
+	GLOB_ALPHASORT
+        GLOB_ALTDIRFUNC
+        GLOB_BRACE
+        GLOB_CSH
+        GLOB_ERR
+        GLOB_ERROR
+        GLOB_LIMIT
+        GLOB_MARK
+        GLOB_NOCASE
+        GLOB_NOCHECK
+        GLOB_NOMAGIC
+        GLOB_NOSORT
+        GLOB_NOSPACE
+        GLOB_QUOTE
+        GLOB_TILDE
+        bsd_glob
+    ]) {
+    ok (exists &$_, qq':bsd_glob exports $_');
+}
+is <a b>, 'a b', '<a b> under :bsd_glob';
+is <"a" "b">, '"a" "b"', '<"a" "b"> under :bsd_glob';
+is_deeply [<a b>], [q<a b>], '<> in list context under :bsd_glob';

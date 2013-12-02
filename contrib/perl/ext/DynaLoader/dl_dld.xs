@@ -7,12 +7,12 @@
  *    You may distribute under the terms of either the GNU General Public
  *    License or the Artistic License, as specified in the README file.
  *
- * $Date: 2011-02-17 12:49:41 $
- * $Source: /home/cvs/src/contrib/perl/ext/DynaLoader/dl_dld.xs,v $
- * $Revision: 1.1.1.2 $
+ * $Date: 1994/03/07 00:21:43 $
+ * $Source: /home/rsanders/src/perl5alpha6/RCS/dld_dl.c,v $
+ * $Revision: 1.4 $
  * $State: Exp $
  *
- * $Log: not supported by cvs2svn $
+ * $Log: dld_dl.c,v $
  * Removed implicit link against libc.  1994/09/14 William Setzer.
  *
  * Integrated other DynaLoader changes. 1994/06/08 Tim Bunce.

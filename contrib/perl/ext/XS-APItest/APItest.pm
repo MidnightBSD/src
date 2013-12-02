@@ -5,6 +5,8 @@ use strict;
 use warnings;
 use Carp;
 
+our $VERSION = '0.51';
+
 require XSLoader;
 
 # Export everything since these functions are only used by a test script
@@ -24,6 +26,8 @@ sub import {
 	    if ($sym_name =~ /::$/) {
 		# Skip any subpackages that are clearly OO
 		next if *{$glob}{HASH}{'new'};
+		# and any that have AUTOLOAD
+		next if *{$glob}{HASH}{AUTOLOAD};
 		push @stashes, "$stash_name$sym_name", *{$glob}{HASH};
 	    } elsif (ref $glob eq 'SCALAR' || *{$glob}{CODE}) {
 		if ($exports) {
@@ -49,8 +53,6 @@ sub import {
 	}
     }
 }
-
-our $VERSION = '0.28';
 
 use vars '$WARNINGS_ON_BOOTSTRAP';
 use vars map "\$${_}_called_PP", qw(BEGIN UNITCHECK CHECK INIT END);
@@ -93,6 +95,9 @@ if ($WARNINGS_ON_BOOTSTRAP) {
     local $^W;
     XSLoader::load();
 }
+
+# This XS function needs the lvalue attr applied.
+eval 'use attributes __PACKAGE__, \\&lv_temp_object, "lvalue"; 1' or die;
 
 1;
 __END__

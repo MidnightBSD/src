@@ -3,7 +3,7 @@
 
 package Devel::Peek;
 
-$VERSION = '1.07';
+$VERSION = '1.11';
 $XS_VERSION = $VERSION;
 $VERSION = eval $VERSION;
 
@@ -139,7 +139,7 @@ When perl is compiled with support for memory footprint debugging
 
 Use mstat() function to emit a memory state statistic to the terminal.
 For more information on the format of output of mstat() see
-L<perldebguts/Using C<$ENV{PERL_DEBUG_MSTATS}>>.
+L<perldebguts/Using $ENV{PERL_DEBUG_MSTATS}>.
 
 Three additional functions allow access to this statistic from Perl.
 First, use C<mstats_fillhash(%hash)> to get the information contained
@@ -152,8 +152,9 @@ Two additional fields C<free>, C<used> contain array references which
 provide per-bucket count of free and used chunks.  Two other fields
 C<mem_size>, C<available_size> contain array references which provide
 the information about the allocated size and usable size of chunks in
-each bucket.  Again, see L<perldebguts/Using C<$ENV{PERL_DEBUG_MSTATS}>>
+each bucket.  Again, see L<perldebguts/Using $ENV{PERL_DEBUG_MSTATS}>
 for details.
+
 
 Keep in mind that only the first several "odd-numbered" buckets are
 used, so the information on size of the "odd-numbered" buckets which are
@@ -410,7 +411,7 @@ The output:
 	      IV = 42
 
 This shows C<$a> is a reference pointing to an SV.  That SV is a PVHV, a
-hash. Fields RITER and EITER are used by C<L<each>>.
+hash. Fields RITER and EITER are used by C<L<perlfunc/each>>.
 
 The "quality" of a hash is defined as the total number of comparisons needed
 to access every element once, relative to the expected number needed for a

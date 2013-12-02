@@ -16,7 +16,7 @@ BEGIN {
 use OptreeCheck;	# ALSO DOES @ARGV HANDLING !!!!!!
 use Config;
 
-plan tests => 57;
+plan tests => 67;
 
 #################################
 
@@ -49,7 +49,6 @@ my $want = {	# expected types, how value renders in-line, todos (maybe)
     # these are not inlined, at least not per BC::Concise
     #myyes	=> [ $RV_class, ],
     #myno	=> [ $RV_class, ],
-    $] > 5.009 ? (
     myaref	=> [ $RV_class, '\\\\' ],
     myfl	=> [ 'NV', myfl ],
     myint	=> [ 'IV', myint ],
@@ -59,13 +58,6 @@ my $want = {	# expected types, how value renders in-line, todos (maybe)
     myrex	=> [ $RV_class, '\\\\' ],
     ),
     myundef	=> [ 'NULL', ],
-    ) : (
-    myaref	=> [ 'PVIV', '' ],
-    myfl	=> [ 'PVNV', myfl ],
-    myint	=> [ 'PVIV', myint ],
-    myrex	=> [ 'PVNV', '' ],
-    myundef	=> [ 'PVIV', ],
-    )
 };
 
 use constant WEEKDAYS
@@ -110,12 +102,14 @@ for $func (sort keys %$want) {
 3  <1> leavesub[2 refs] K/REFC,1 ->(end)
 -     <\@> lineseq KP ->3
 1        <;> dbstate(main 833 (eval 44):1) v ->2
-2        <\$> const[$want->{$func}[0] $want->{$func}[1]] s* ->3
+2        <\$> const[$want->{$func}[0] $want->{$func}[1]] s* ->3      < 5.017002
+2        <\$> const[$want->{$func}[0] $want->{$func}[1]] s*/FOLD ->3 >=5.017002
 EOT_EOT
 3  <1> leavesub[2 refs] K/REFC,1 ->(end)
 -     <\@> lineseq KP ->3
 1        <;> dbstate(main 833 (eval 44):1) v ->2
-2        <\$> const($want->{$func}[0] $want->{$func}[1]) s* ->3
+2        <\$> const($want->{$func}[0] $want->{$func}[1]) s* ->3      < 5.017002
+2        <\$> const($want->{$func}[0] $want->{$func}[1]) s*/FOLD ->3 >=5.017002
 EONT_EONT
 
 }
@@ -143,14 +137,16 @@ checkOptree ( name	=> 'myyes() as coderef',
 # 2     <;> nextstate(main 2 -e:1) v:>,<,%,{ ->3
 # 5     <@> print vK ->6
 # 3        <0> pushmark s ->4
-# 4        <$> const[SPECIAL sv_yes] s* ->5
+# 4        <$> const[SPECIAL sv_yes] s* ->5         < 5.017002
+# 4        <$> const[SPECIAL sv_yes] s*/FOLD ->5    >=5.017002
 EOT_EOT
 # 6  <@> leave[1 ref] vKP/REFC ->(end)
 # 1     <0> enter ->2
 # 2     <;> nextstate(main 2 -e:1) v:>,<,%,{ ->3
 # 5     <@> print vK ->6
 # 3        <0> pushmark s ->4
-# 4        <$> const(SPECIAL sv_yes) s* ->5
+# 4        <$> const(SPECIAL sv_yes) s* ->5         < 5.017002
+# 4        <$> const(SPECIAL sv_yes) s*/FOLD ->5    >=5.017002
 EONT_EONT
 
 
@@ -167,33 +163,31 @@ checkOptree ( name	=> 'myno() as coderef',
 # 2     <;> nextstate(main 2 -e:1) v:>,<,%,{ ->3
 # 5     <@> print vK ->6
 # 3        <0> pushmark s ->4
-# 4        <$> const[SPECIAL sv_no] s* ->5
+# 4        <$> const[SPECIAL sv_no] s* ->5         < 5.017002
+# 4        <$> const[SPECIAL sv_no] s*/FOLD ->5    >=5.017002
 EOT_EOT
 # 6  <@> leave[1 ref] vKP/REFC ->(end)
 # 1     <0> enter ->2
 # 2     <;> nextstate(main 2 -e:1) v:>,<,%,{ ->3
 # 5     <@> print vK ->6
 # 3        <0> pushmark s ->4
-# 4        <$> const(SPECIAL sv_no) s* ->5
+# 4        <$> const(SPECIAL sv_no) s* ->5         < 5.017002
+# 4        <$> const(SPECIAL sv_no) s*/FOLD ->5    >=5.017002
 EONT_EONT
 
 
 my ($expect, $expect_nt) = (<<'EOT_EOT', <<'EONT_EONT');
 # 3  <1> leavesub[2 refs] K/REFC,1 ->(end)
 # -     <@> lineseq K ->3
-# 1        <;> nextstate(constant 61 constant.pm:118) v:*,& ->2
+# 1        <;> nextstate(constant 61 constant.pm:118) v:*,&,x*,x&,x$ ->2
 # 2        <0> padav[@list:FAKE:m:96] ->3
 EOT_EOT
 # 3  <1> leavesub[2 refs] K/REFC,1 ->(end)
 # -     <@> lineseq K ->3
-# 1        <;> nextstate(constant 61 constant.pm:118) v:*,& ->2
+# 1        <;> nextstate(constant 61 constant.pm:118) v:*,&,x*,x&,x$ ->2
 # 2        <0> padav[@list:FAKE:m:71] ->3
 EONT_EONT
 
-if($] < 5.009) {
-    # 5.8.x doesn't add the m flag to padav
-    s/FAKE:m:\d+/FAKE/ foreach ($expect, $expect_nt);
-}
 
 checkOptree ( name	=> 'constant sub returning list',
 	      code	=> \&WEEKDAYS,
@@ -211,37 +205,204 @@ my ($expect, $expect_nt) = (<<'EOT_EOT', <<'EONT_EONT');
 # -     <@> lineseq KP ->9
 # 1        <;> nextstate(main 635 optree_constants.t:163) v:>,<,% ->2
 # 8        <@> prtf sK ->9
-# 2           <0> pushmark s ->3
-# 3           <$> const[PV "myint %d mystr %s myfl %f pi %f\n"] s ->4
-# 4           <$> const[IV 42] s* ->5
-# 5           <$> const[PV "hithere"] s* ->6
-# 6           <$> const[NV 1.414213] s* ->7
-# 7           <$> const[NV 3.14159] s* ->8
+# 2           <0> pushmark sM ->3
+# 3           <$> const[PV "myint %d mystr %s myfl %f pi %f\n"] sM ->4 < 5.017002
+# 4           <$> const[IV 42] sM* ->5          < 5.017002
+# 5           <$> const[PV "hithere"] sM* ->6   < 5.017002
+# 6           <$> const[NV 1.414213] sM* ->7    < 5.017002
+# 7           <$> const[NV 3.14159] sM* ->8     < 5.017002
+# 3           <$> const[PV "myint %d mystr %s myfl %f pi %f\n"] sM/FOLD ->4 >= 5.017002
+# 4           <$> const[IV 42] sM*/FOLD ->5          >=5.017002 
+# 5           <$> const[PV "hithere"] sM*/FOLD ->6   >=5.017002
+# 6           <$> const[NV 1.414213] sM*/FOLD ->7    >=5.017002
+# 7           <$> const[NV 3.14159] sM*/FOLD ->8     >=5.017002
 EOT_EOT
 # 9  <1> leavesub[1 ref] K/REFC,1 ->(end)
 # -     <@> lineseq KP ->9
 # 1        <;> nextstate(main 635 optree_constants.t:163) v:>,<,% ->2
 # 8        <@> prtf sK ->9
-# 2           <0> pushmark s ->3
-# 3           <$> const(PV "myint %d mystr %s myfl %f pi %f\n") s ->4
-# 4           <$> const(IV 42) s* ->5
-# 5           <$> const(PV "hithere") s* ->6
-# 6           <$> const(NV 1.414213) s* ->7
-# 7           <$> const(NV 3.14159) s* ->8
+# 2           <0> pushmark sM ->3
+# 3           <$> const(PV "myint %d mystr %s myfl %f pi %f\n") sM ->4 < 5.017002
+# 4           <$> const(IV 42) sM* ->5          < 5.017002
+# 5           <$> const(PV "hithere") sM* ->6   < 5.017002
+# 6           <$> const(NV 1.414213) sM* ->7    < 5.017002
+# 7           <$> const(NV 3.14159) sM* ->8     < 5.017002
+# 3           <$> const(PV "myint %d mystr %s myfl %f pi %f\n") sM/FOLD ->4 >= 5.017002
+# 4           <$> const(IV 42) sM*/FOLD ->5          >=5.017002 
+# 5           <$> const(PV "hithere") sM*/FOLD ->6   >=5.017002
+# 6           <$> const(NV 1.414213) sM*/FOLD ->7    >=5.017002
+# 7           <$> const(NV 3.14159) sM*/FOLD ->8     >=5.017002
 EONT_EONT
 
-if($] < 5.009) {
-    # 5.8.x's use constant has larger types
-    foreach ($expect, $expect_nt) {
-	s/IV 42/PV$&/;
-	s/NV 1.41/PV$&/;
-    }
+if($] < 5.015) {
+    s/M(?=\*? ->)//g for $expect, $expect_nt;
 }
 
 checkOptree ( name	=> 'call many in a print statement',
 	      code	=> \&printem,
 	      strip_open_hints => 1,
 	      expect => $expect, expect_nt => $expect_nt);
+
+# test constant expression folding
+
+checkOptree ( name	=> 'arithmetic constant folding in print',
+	      code	=> 'print 1+2+3',
+	      strip_open_hints => 1,
+	      expect => <<'EOT_EOT', expect_nt => <<'EONT_EONT');
+# 5  <1> leavesub[1 ref] K/REFC,1 ->(end)
+# -     <@> lineseq KP ->5
+# 1        <;> nextstate(main 937 (eval 53):1) v ->2
+# 4        <@> print sK ->5
+# 2           <0> pushmark s ->3
+# 3           <$> const[IV 6] s ->4      < 5.017002
+# 3           <$> const[IV 6] s/FOLD ->4 >=5.017002
+EOT_EOT
+# 5  <1> leavesub[1 ref] K/REFC,1 ->(end)
+# -     <@> lineseq KP ->5
+# 1        <;> nextstate(main 937 (eval 53):1) v ->2
+# 4        <@> print sK ->5
+# 2           <0> pushmark s ->3
+# 3           <$> const(IV 6) s ->4      < 5.017002
+# 3           <$> const(IV 6) s/FOLD ->4 >=5.017002
+EONT_EONT
+
+checkOptree ( name	=> 'string constant folding in print',
+	      code	=> 'print "foo"."bar"',
+	      strip_open_hints => 1,
+	      expect => <<'EOT_EOT', expect_nt => <<'EONT_EONT');
+# 5  <1> leavesub[1 ref] K/REFC,1 ->(end)
+# -     <@> lineseq KP ->5
+# 1        <;> nextstate(main 942 (eval 55):1) v ->2
+# 4        <@> print sK ->5
+# 2           <0> pushmark s ->3
+# 3           <$> const[PV "foobar"] s ->4      < 5.017002
+# 3           <$> const[PV "foobar"] s/FOLD ->4 >=5.017002
+EOT_EOT
+# 5  <1> leavesub[1 ref] K/REFC,1 ->(end)
+# -     <@> lineseq KP ->5
+# 1        <;> nextstate(main 942 (eval 55):1) v ->2
+# 4        <@> print sK ->5
+# 2           <0> pushmark s ->3
+# 3           <$> const(PV "foobar") s ->4      < 5.017002
+# 3           <$> const(PV "foobar") s/FOLD ->4 >=5.017002
+EONT_EONT
+
+checkOptree ( name	=> 'boolean or folding',
+	      code	=> 'print "foobar" if 1 or 0',
+	      strip_open_hints => 1,
+	      expect => <<'EOT_EOT', expect_nt => <<'EONT_EONT');
+# 5  <1> leavesub[1 ref] K/REFC,1 ->(end)
+# -     <@> lineseq KP ->5
+# 1        <;> nextstate(main 942 (eval 55):1) v ->2
+# 4        <@> print sK ->5
+# 2           <0> pushmark s ->3
+# 3           <$> const[PV "foobar"] s ->4
+EOT_EOT
+# 5  <1> leavesub[1 ref] K/REFC,1 ->(end)
+# -     <@> lineseq KP ->5
+# 1        <;> nextstate(main 942 (eval 55):1) v ->2
+# 4        <@> print sK ->5
+# 2           <0> pushmark s ->3
+# 3           <$> const(PV "foobar") s ->4
+EONT_EONT
+
+checkOptree ( name	=> 'lc*,uc*,gt,lt,ge,le,cmp',
+	      code	=> sub {
+		  $s = uc('foo.').ucfirst('bar.').lc('LOW.').lcfirst('LOW');
+		  print "a-lt-b" if "a" lt "b";
+		  print "b-gt-a" if "b" gt "a";
+		  print "a-le-b" if "a" le "b";
+		  print "b-ge-a" if "b" ge "a";
+		  print "b-cmp-a" if "b" cmp "a";
+		  print "a-gt-b" if "a" gt "b";	# should be suppressed
+	      },
+	      strip_open_hints => 1,
+	      expect => <<'EOT_EOT', expect_nt => <<'EONT_EONT');
+# r  <1> leavesub[1 ref] K/REFC,1 ->(end)
+# -     <@> lineseq KP ->r
+# 1        <;> nextstate(main 916 optree_constants.t:307) v:>,<,%,{ ->2
+# 4        <2> sassign vKS/2 ->5
+# 2           <$> const[PV "FOO.Bar.low.lOW"] s ->3      < 5.017002
+# 2           <$> const[PV "FOO.Bar.low.lOW"] s/FOLD ->3 >=5.017002
+# -           <1> ex-rv2sv sKRM*/1 ->4
+# 3              <#> gvsv[*s] s ->4
+# 5        <;> nextstate(main 916 optree_constants.t:308) v:>,<,%,{ ->6
+# 8        <@> print vK ->9
+# 6           <0> pushmark s ->7
+# 7           <$> const[PV "a-lt-b"] s ->8
+# 9        <;> nextstate(main 916 optree_constants.t:309) v:>,<,%,{ ->a
+# c        <@> print vK ->d
+# a           <0> pushmark s ->b
+# b           <$> const[PV "b-gt-a"] s ->c
+# d        <;> nextstate(main 916 optree_constants.t:310) v:>,<,%,{ ->e
+# g        <@> print vK ->h
+# e           <0> pushmark s ->f
+# f           <$> const[PV "a-le-b"] s ->g
+# h        <;> nextstate(main 916 optree_constants.t:311) v:>,<,%,{ ->i
+# k        <@> print vK ->l
+# i           <0> pushmark s ->j
+# j           <$> const[PV "b-ge-a"] s ->k
+# l        <;> nextstate(main 916 optree_constants.t:312) v:>,<,%,{ ->m
+# o        <@> print vK ->p
+# m           <0> pushmark s ->n
+# n           <$> const[PV "b-cmp-a"] s ->o
+# p        <;> nextstate(main 916 optree_constants.t:313) v:>,<,%,{ ->q
+# q        <$> const[PVNV 0] s/SHORT ->r      < 5.017002
+# q        <$> const[PVNV 0] s/FOLD,SHORT ->r >=5.017002
+EOT_EOT
+# r  <1> leavesub[1 ref] K/REFC,1 ->(end)
+# -     <@> lineseq KP ->r
+# 1        <;> nextstate(main 916 optree_constants.t:307) v:>,<,%,{ ->2
+# 4        <2> sassign vKS/2 ->5
+# 2           <$> const(PV "FOO.Bar.low.lOW") s ->3      < 5.017002
+# 2           <$> const(PV "FOO.Bar.low.lOW") s/FOLD ->3 >=5.017002
+# -           <1> ex-rv2sv sKRM*/1 ->4
+# 3              <$> gvsv(*s) s ->4
+# 5        <;> nextstate(main 916 optree_constants.t:308) v:>,<,%,{ ->6
+# 8        <@> print vK ->9
+# 6           <0> pushmark s ->7
+# 7           <$> const(PV "a-lt-b") s ->8
+# 9        <;> nextstate(main 916 optree_constants.t:309) v:>,<,%,{ ->a
+# c        <@> print vK ->d
+# a           <0> pushmark s ->b
+# b           <$> const(PV "b-gt-a") s ->c
+# d        <;> nextstate(main 916 optree_constants.t:310) v:>,<,%,{ ->e
+# g        <@> print vK ->h
+# e           <0> pushmark s ->f
+# f           <$> const(PV "a-le-b") s ->g
+# h        <;> nextstate(main 916 optree_constants.t:311) v:>,<,%,{ ->i
+# k        <@> print vK ->l
+# i           <0> pushmark s ->j
+# j           <$> const(PV "b-ge-a") s ->k
+# l        <;> nextstate(main 916 optree_constants.t:312) v:>,<,%,{ ->m
+# o        <@> print vK ->p
+# m           <0> pushmark s ->n
+# n           <$> const(PV "b-cmp-a") s ->o
+# p        <;> nextstate(main 916 optree_constants.t:313) v:>,<,%,{ ->q
+# q        <$> const(SPECIAL sv_no) s/SHORT ->r      < 5.017002
+# q        <$> const(SPECIAL sv_no) s/FOLD,SHORT ->r >=5.017002
+EONT_EONT
+
+checkOptree ( name	=> 'mixed constant folding, with explicit braces',
+	      code	=> 'print "foo"."bar".(2+3)',
+	      strip_open_hints => 1,
+	      expect => <<'EOT_EOT', expect_nt => <<'EONT_EONT');
+# 5  <1> leavesub[1 ref] K/REFC,1 ->(end)
+# -     <@> lineseq KP ->5
+# 1        <;> nextstate(main 977 (eval 28):1) v ->2
+# 4        <@> print sK ->5
+# 2           <0> pushmark s ->3
+# 3           <$> const[PV "foobar5"] s ->4      < 5.017002
+# 3           <$> const[PV "foobar5"] s/FOLD ->4 >=5.017002
+EOT_EOT
+# 5  <1> leavesub[1 ref] K/REFC,1 ->(end)
+# -     <@> lineseq KP ->5
+# 1        <;> nextstate(main 977 (eval 28):1) v ->2
+# 4        <@> print sK ->5
+# 2           <0> pushmark s ->3
+# 3           <$> const(PV "foobar5") s ->4      < 5.017002
+# 3           <$> const(PV "foobar5") s/FOLD ->4 >=5.017002
+EONT_EONT
 
 __END__
 

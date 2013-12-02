@@ -1,3 +1,5 @@
+#define PERL_NO_GET_CONTEXT
+
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
@@ -111,9 +113,9 @@ odbm_TIEHASH(dbtype, filename, flags, mode)
 	    dbp = (void*)(dbminit(filename) >= 0 ? &dbmrefcnt : 0);
 	    RETVAL = (ODBM_File)safecalloc(1, sizeof(ODBM_File_type));
 	    RETVAL->dbp = dbp ;
-	    ST(0) = sv_mortalcopy(&PL_sv_undef);
-	    sv_setptrobj(ST(0), RETVAL, dbtype);
 	}
+	OUTPUT:
+	  RETVAL
 
 void
 DESTROY(db)

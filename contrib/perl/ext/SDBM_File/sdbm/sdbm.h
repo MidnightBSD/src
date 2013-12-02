@@ -179,10 +179,19 @@ extern long sdbm_hash proto((const char *, int));
 #  define realloc Perl_realloc
 #  define free    Perl_mfree
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 Malloc_t Perl_malloc proto((MEM_SIZE nbytes));
 Malloc_t Perl_calloc proto((MEM_SIZE elements, MEM_SIZE size));
 Malloc_t Perl_realloc proto((Malloc_t where, MEM_SIZE nbytes));
 Free_t   Perl_mfree proto((Malloc_t where));
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* MYMALLOC */
 
 #ifdef I_STRING
@@ -250,11 +259,7 @@ Free_t   Perl_mfree proto((Malloc_t where));
 #else
 #   ifndef memcmp
 	/* maybe we should have included the full embedding header... */
-#	ifdef NO_EMBED
-#	    define memcmp my_memcmp
-#	else
-#	    define memcmp Perl_my_memcmp
-#	endif
+#	define memcmp Perl_my_memcmp
 #ifndef __cplusplus
 	extern int memcmp proto((char*, char*, int));
 #endif

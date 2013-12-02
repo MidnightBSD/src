@@ -16,7 +16,7 @@ use Fcntl qw(SEEK_SET SEEK_CUR SEEK_END); # Not 0, 1, 2 everywhere.
 
 $| = 1;
 
-use Test::More tests => 71;
+use Test::More tests => 108;
 
 my $fh;
 my $var = "aaa\n";
@@ -255,7 +255,7 @@ EOF
     print($fh 'DEF');
     $s .= ':P';
     ok(close($fh), 'close tied scalar - write');
-    is($s, ':F:S():O:F:S(ABC):P:F:SK:F:S(DEF):P', 'tied actions - write');
+    is($s, ':F:S():O:F:S(ABC):P:SK:F:S(DEF):P', 'tied actions - write');
     is($x, 'DEF', 'new value preserved');
 
     $x = 'GHI';
@@ -285,10 +285,180 @@ EOF
      'seek beyond end end of string followed by read';
 }
 
-# Writing to COW scalars
+# Writing to COW scalars and non-PVs
 {
     my $bovid = __PACKAGE__;
     open my $handel, ">", \$bovid;
     print $handel "the COW with the crumpled horn";
     is $bovid, "the COW with the crumpled horn", 'writing to COW scalars';
+
+    package lrcg { use overload fallback => 1, '""'=>sub { 'chin' } }
+    seek $handel, 3, 0;
+    $bovid = bless [], lrcg::;
+    print $handel 'mney';
+    is $bovid, 'chimney', 'writing to refs';
+
+    seek $handel, 1, 0;
+    $bovid = 42;  # still has a PV
+    print $handel 5;
+    is $bovid, 45, 'writing to numeric scalar';
+
+    seek $handel, 1, 0;
+    undef $bovid;
+    $bovid = 42;   # just IOK
+    print $handel 5;
+    is $bovid, 45, 'writing to numeric scalar';
+}
+
+# [perl #92706]
+{
+    open my $fh, "<", \(my $f=*f); seek $fh, 2,1;
+    pass 'seeking on a glob copy';
+    open my $fh, "<", \(my $f=*f); seek $fh, -2,2;
+    pass 'seeking on a glob copy from the end';
+}
+
+# [perl #108398]
+sub has_trailing_nul(\$) {
+    my ($ref) = @_;
+    my $sv = B::svref_2object($ref);
+    return undef if !$sv->isa('B::PV');
+
+    my $cur = $sv->CUR;
+    my $len = $sv->LEN;
+    return 0 if $cur >= $len;
+
+    my $ptrlen = length(pack('P', ''));
+    my $ptrfmt
+	= $ptrlen == length(pack('J', 0)) ? 'J'
+	: $ptrlen == length(pack('I', 0)) ? 'I'
+	: die "Can't determine pointer format";
+
+    my $pv_addr = unpack $ptrfmt, pack 'P', $$ref;
+    my $trailing = unpack 'P', pack $ptrfmt, $pv_addr+$cur;
+    return $trailing eq "\0";
+}
+SKIP: {
+    if ($Config::Config{'extensions'} !~ m!\bPerlIO/scalar\b!) {
+	skip "no B", 3;
+    }
+    require B;
+
+    open my $fh, ">", \my $memfile or die $!;
+
+    print $fh "abc";
+    ok has_trailing_nul $memfile,
+	 'write appends trailing null when growing string';
+
+    seek $fh, 0,SEEK_SET;
+    print $fh "abc";
+    ok has_trailing_nul $memfile,
+	 'write appends trailing null when not growing string';
+
+    seek $fh, 200, SEEK_SET;
+    print $fh "abc";
+    ok has_trailing_nul $memfile,
+	 'write appends null when growing string after seek past end';
+}
+
+# [perl #112780] Cloning of in-memory handles
+SKIP: {
+  skip "no threads", 2 if !$Config::Config{useithreads};
+  require threads;
+  my $str = '';
+  open my $fh, ">", \$str;
+  $str = 'a';
+  is scalar threads::async(sub { my $foo = $str; $foo })->join, "a",
+    'scalars behind in-memory handles are cloned properly';
+  print $fh "a";
+  is scalar threads::async(sub { print $fh "b"; $str })->join, "ab",
+    'printing to a cloned in-memory handle works';
+}
+
+# [perl #113764] Duping via >&= (broken by the fix for #112870)
+{
+  open FILE, '>', \my $content or die "Couldn't open scalar filehandle";
+  open my $fh, ">&=FILE" or die "Couldn't open: $!";
+  print $fh "Foo-Bar\n";
+  close $fh;
+  close FILE;
+  is $content, "Foo-Bar\n", 'duping via >&=';
+}
+
+# [perl #109828] PerlIO::scalar does not handle UTF-8
+my $byte_warning = "Strings with code points over 0xFF may not be mapped into in-memory file handles\n";
+{
+    use Errno qw(EINVAL);
+    my @warnings;
+    local $SIG{__WARN__} = sub { push @warnings, "@_" };
+    my $content = "12\x{101}";
+    $! = 0;
+    ok(!open(my $fh, "<", \$content), "non-byte open should fail");
+    is(0+$!, EINVAL, "check \$! is updated");
+    is_deeply(\@warnings, [], "should be no warnings (yet)");
+    use warnings "utf8";
+    $! = 0;
+    ok(!open(my $fh, "<", \$content), "non byte open should fail (and warn)");
+    is(0+$!, EINVAL, "check \$! is updated even when we warn");
+    is_deeply(\@warnings, [ $byte_warning ], "should have warned");
+
+    @warnings = ();
+    $content = "12\xA1";
+    utf8::upgrade($content);
+    ok(open(my $fh, "<", \$content), "open upgraded scalar");
+    binmode $fh;
+    my $tmp;
+    is(read($fh, $tmp, 4), 3, "read should get the downgraded bytes");
+    is($tmp, "12\xA1", "check we got the expected bytes");
+    close $fh;
+    is_deeply(\@warnings, [], "should be no more warnings");
+}
+{ # changes after open
+    my $content = "abc";
+    ok(open(my $fh, "+<", \$content), "open a scalar");
+    binmode $fh;
+    my $tmp;
+    is(read($fh, $tmp, 1), 1, "basic read");
+    seek($fh, 1, SEEK_SET);
+    $content = "\xA1\xA2\xA3";
+    utf8::upgrade($content);
+    is(read($fh, $tmp, 1), 1, "read from post-open upgraded scalar");
+    is($tmp, "\xA2", "check we read the correct value");
+    seek($fh, 1, SEEK_SET);
+    $content = "\x{101}\x{102}\x{103}";
+
+    my @warnings;
+    local $SIG{__WARN__} = sub { push @warnings, "@_" };
+
+    $! = 0;
+    is(read($fh, $tmp, 1), undef, "read from scalar with >0xff chars");
+    is(0+$!, EINVAL, "check errno set correctly");
+    is_deeply(\@warnings, [], "should be no warning (yet)");
+    use warnings "utf8";
+    seek($fh, 1, SEEK_SET);
+    is(read($fh, $tmp, 1), undef, "read from scalar with >0xff chars");
+    is_deeply(\@warnings, [ $byte_warning ], "check warning");
+
+    select $fh; # make sure print fails rather tha buffers
+    $| = 1;
+    select STDERR;
+    no warnings "utf8";
+    @warnings = ();
+    $content = "\xA1\xA2\xA3";
+    utf8::upgrade($content);
+    seek($fh, 1, SEEK_SET);
+    ok((print $fh "A"), "print to an upgraded byte string");
+    seek($fh, 1, SEEK_SET);
+    is($content, "\xA1A\xA3", "check result");
+
+    $content = "\x{101}\x{102}\x{103}";
+    $! = 0;
+    ok(!(print $fh "B"), "write to an non-downgradable SV");
+    is(0+$!, EINVAL, "check errno set");
+
+    is_deeply(\@warnings, [], "should be no warning");
+
+    use warnings "utf8";
+    ok(!(print $fh "B"), "write to an non-downgradable SV (and warn)");
+    is_deeply(\@warnings, [ $byte_warning ], "check warning");
 }

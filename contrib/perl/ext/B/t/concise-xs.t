@@ -127,7 +127,10 @@ my $testpkgs = {
     Digest::MD5 => { perl => [qw/ import /],
 		     dflt => 'XS' },
 
-    Data::Dumper => { XS => [qw/ bootstrap Dumpxs /],
+    Data::Dumper => { XS => [qw/ bootstrap Dumpxs /,
+			$] >= 5.015 ? qw/_vstring / : () ],
+		    $] >= 5.015
+			?  (constant => ['_bad_vsmg']) : (),
 		      dflt => 'perl' },
     B => { 
 	dflt => 'constant',		# all but 47/297
@@ -145,7 +148,7 @@ my $testpkgs = {
 		  formfeed end_av dowarn diehook defstash curstash
 		  cstring comppadlist check_av cchar cast_I32 bootstrap
 		  begin_av amagic_generation sub_generation address
-		  ), $] > 5.009 ? ('unitcheck_av') : ()],
+		  unitcheck_av) ],
     },
 
     B::Deparse => { dflt => 'perl',	# 236 functions
@@ -157,7 +160,7 @@ my $testpkgs = {
 		     CVf_METHOD LIST_CONTEXT OP_CONST OP_LIST OP_RV2SV
 		     OP_STRINGIFY OPf_KIDS OPf_MOD OPf_REF OPf_SPECIAL
 		     OPf_STACKED OPf_WANT OPf_WANT_LIST OPf_WANT_SCALAR
-		     OPf_WANT_VOID OPpCONST_ARYBASE OPpCONST_BARE OPpCONST_NOVER
+		     OPf_WANT_VOID OPpCONST_BARE OPpCONST_NOVER
 		     OPpENTERSUB_AMPER OPpEXISTS_SUB OPpITER_REVERSED
 		     OPpLVAL_INTRO OPpOUR_INTRO OPpSLICE OPpSORT_DESCEND
 		     OPpSORT_INPLACE OPpSORT_INTEGER OPpSORT_NUMERIC
@@ -168,7 +171,10 @@ my $testpkgs = {
 		     PMf_MULTILINE PMf_ONCE PMf_SINGLELINE
 		     POSTFIX SVf_FAKE SVf_IOK SVf_NOK SVf_POK SVf_ROK
 		     SVpad_OUR SVs_RMG SVs_SMG SWAP_CHILDREN OPpPAD_STATE
-		     /, $] > 5.009 ? ('RXf_SKIPWHITE') : ('PMf_SKIPWHITE'),
+		     OPpCONST_ARYBASE RXf_SKIPWHITE/,
+		     $] >= 5.015 ? qw(
+		     OP_GLOB PMf_SKIPWHITE RXf_PMf_CHARSET RXf_PMf_KEEPCOPY
+		     OPpEVAL_BYTES OPpSUBSTR_REPL_FIRST) : (),
 		    'CVf_LOCKED', # This ends up as a constant, pre or post 5.10
 		    ],
 		 },
@@ -184,7 +190,11 @@ my $testpkgs = {
 			    WSTOPSIG WTERMSIG/,
 		       'int_macro_int', # Removed in POSIX 1.16
 		       ],
-	       perl => [qw/ import croak AUTOLOAD /],
+	       perl => [qw/ import croak AUTOLOAD /,
+			$] >= 5.015
+			    ? qw/load_imports usage printf sprintf perror/
+			    : (),
+			],
 
 	       XS => [qw/ write wctomb wcstombs uname tzset tzname
 		      ttyname tmpnam times tcsetpgrp tcsendbreak
@@ -202,7 +212,7 @@ my $testpkgs = {
 		      ctermid cosh constant close clock ceil
 		      bootstrap atan asin asctime acos access abort
 		      _exit
-		      /],
+		      /, $] >= 5.015 ? ('sleep') : () ],
 	       },
 
     IO::Socket => { dflt => 'constant',		# 157/190
@@ -214,7 +224,7 @@ my $testpkgs = {
 			     new listen import getsockopt croak
 			     connected connect configure confess close
 			     carp bind atmark accept sockaddr_in6
-			     /, $] > 5.009 ? ('blocking') : () ],
+			     blocking/ ],
 
 		    XS => [qw/ unpack_sockaddr_un unpack_sockaddr_in
 			   sockatmark sockaddr_family pack_sockaddr_un
@@ -247,6 +257,7 @@ EODIE
 if (%opts) {
     require Data::Dumper;
     Data::Dumper->import('Dumper');
+    { my $x = \*Data::Dumper::Sortkeys } # shut up 'used once' warning
     $Data::Dumper::Sortkeys = 1;
 }
 my @argpkgs = @ARGV;
@@ -349,6 +360,7 @@ sub corecheck {
 	warn "Module::CoreList not available on $]\n";
 	return;
     }
+    { my $x = \*Module::CoreList::version } # shut up 'used once' warning
     my $mods = $Module::CoreList::version{'5.009002'};
     $mods = [ sort keys %$mods ];
     print Dumper($mods);
@@ -360,6 +372,7 @@ sub corecheck {
 
 END {
     if ($opts{c}) {
+	{ my $x = \*Data::Dumper::Indent } # shut up 'used once' warning
 	$Data::Dumper::Indent = 1;
 	print "Corrections: ", Dumper(\%report);
 
