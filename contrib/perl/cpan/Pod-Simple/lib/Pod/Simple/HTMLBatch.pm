@@ -5,7 +5,7 @@ use strict;
 use vars qw( $VERSION $HTML_RENDER_CLASS $HTML_EXTENSION
  $CSS $JAVASCRIPT $SLEEPY $SEARCH_CLASS @ISA
 );
-$VERSION = '3.16';
+$VERSION = '3.28';
 @ISA = ();  # Yup, we're NOT a subclass of Pod::Simple::HTML!
 
 # TODO: nocontents stylesheets. Strike some of the color variations?
@@ -1082,7 +1082,7 @@ Example:
   % mkdir out_html
   % perl -MPod::Simple::HTMLBatch -e Pod::Simple::HTMLBatch::go @INC out_html
       (to convert the pod from Perl's @INC
-       files under the directory ../htmlversion)
+       files under the directory ./out_html)
 
 (Note that the command line there contains a literal atsign-I-N-C.  This
 is handled as a special case by batch_convert, in order to save you having
@@ -1093,9 +1093,9 @@ Example:
 
   % mkdir ../seekrut
   % chmod og-rx ../seekrut
-  % perl -MPod::Simple::HTMLBatch -e Pod::Simple::HTMLBatch::go . ../htmlversion
+  % perl -MPod::Simple::HTMLBatch -e Pod::Simple::HTMLBatch::go . ../seekrut
       (to convert the pod under the current dir into HTML
-       files under the directory ../htmlversion)
+       files under the directory ./seekrut)
 
 Example:
 
@@ -1333,7 +1333,7 @@ pod-people@perl.org mail list. Send an empty email to
 pod-people-subscribe@perl.org to subscribe.
 
 This module is managed in an open GitHub repository,
-L<http://github.com/theory/pod-simple/>. Feel free to fork and contribute, or
+L<https://github.com/theory/pod-simple/>. Feel free to fork and contribute, or
 to clone L<git://github.com/theory/pod-simple.git> and send patches!
 
 Patches against Pod::Simple are welcome. Please send bug reports to

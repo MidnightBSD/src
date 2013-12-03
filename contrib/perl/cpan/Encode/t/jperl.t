@@ -1,5 +1,5 @@
 #
-# $Id: jperl.t,v 1.1.1.1 2011-05-18 13:33:28 laffer1 Exp $
+# $Id: jperl.t,v 2.2 2013/02/18 02:23:56 dankogai Exp $
 #
 # This script is written in euc-jp
 
@@ -27,6 +27,7 @@ use strict;
 use Test::More tests => 15; # black magic tests commented out
 my $Debug = shift;
 
+no warnings "deprecated";
 no encoding; # ensure
 my $Enamae = "\xbe\xae\xbb\xf4\x20\xc3\xc6"; # euc-jp, with \x escapes
 use encoding "euc-jp";

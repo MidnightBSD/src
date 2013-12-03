@@ -1,10 +1,10 @@
 #!./perl
 #
-# $Id: Soundex.t,v 1.1.1.1 2011-05-18 13:33:28 laffer1 Exp $
+# $Id: soundex.t,v 1.2 1994/03/24 00:30:27 mike Exp $
 #
 # test module for soundex.pl
 #
-# $Log: not supported by cvs2svn $
+# $Log: soundex.t,v $
 # Revision 1.2  1994/03/24  00:30:27  mike
 # Subtle bug (any excuse :-) spotted by Rich Pinder <rpinder@hsc.usc.edu>
 # in the way I handles leasing characters which were different but had

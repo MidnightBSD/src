@@ -1,6 +1,6 @@
 package CPAN::Meta::YAML;
-BEGIN {
-  $CPAN::Meta::YAML::VERSION = '0.003';
+{
+  $CPAN::Meta::YAML::VERSION = '0.008';
 }
 
 use strict;
@@ -459,7 +459,7 @@ sub _write_scalar {
 		$string =~ s/([\x00-\x1f])/\\$UNPRINTABLE[ord($1)]/g;
 		return qq|"$string"|;
 	}
-	if ( $string =~ /(?:^\W|\s)/ or $QUOTE{$string} ) {
+	if ( $string =~ /(?:^\W|\s|:\z)/ or $QUOTE{$string} ) {
 		return "'$string'";
 	}
 	return $string;
@@ -610,12 +610,14 @@ sub LoadFile {
 # Use Scalar::Util if possible, otherwise emulate it
 
 BEGIN {
+	local $@;
 	eval {
 		require Scalar::Util;
-		*refaddr = *Scalar::Util::refaddr;
 	};
-	eval <<'END_PERL' if $@;
-# Failed to load Scalar::Util	
+	my $v = eval("$Scalar::Util::VERSION") || 0;
+	if ( $@ or $v < 1.18 ) {
+		eval <<'END_PERL';
+# Scalar::Util failed to load or too old
 sub refaddr {
 	my $pkg = ref($_[0]) or return undef;
 	if ( !! UNIVERSAL::can($_[0], 'can') ) {
@@ -629,7 +631,9 @@ sub refaddr {
 	$i;
 }
 END_PERL
-
+	} else {
+		*refaddr = *Scalar::Util::refaddr;
+	}
 }
 
 1;
@@ -644,32 +648,36 @@ CPAN::Meta::YAML - Read and write a subset of YAML for CPAN Meta files
 
 =head1 VERSION
 
-version 0.003
+version 0.008
 
 =head1 SYNOPSIS
 
     use CPAN::Meta::YAML;
 
-    # methods for files
-    $yaml = CPAN::Meta::YAML->read('META.yml');
-    $yaml->write('MYMETA.yml');
-
-    # methods for strings
-    $yaml_text = $yaml->write_string;
-    $yaml = CPAN::Meta::YAML->read_string($yaml_text);
+    # reading a META file
+    open $fh, "<:utf8", "META.yml";
+    $yaml_text = do { local $/; <$fh> };
+    $yaml = CPAN::Meta::YAML->read_string($yaml_text)
+      or die CPAN::Meta::YAML->errstr;
 
     # finding the metadata
-    my $meta = $yaml->[0];
+    $meta = $yaml->[0];
 
-    # handling errors
-    $yaml->write($file)
+    # writing a META file
+    $yaml_text = $yaml->write_string
       or die CPAN::Meta::YAML->errstr;
+    open $fh, ">:utf8", "META.yml";
+    print $fh $yaml_text;
 
 =head1 DESCRIPTION
 
 This module implements a subset of the YAML specification for use in reading
 and writing CPAN metadata files like F<META.yml> and F<MYMETA.yml>.  It should
 not be used for any other general YAML parsing or generation task.
+
+NOTE: F<META.yml> (and F<MYMETA.yml>) files should be UTF-8 encoded.  Users are
+responsible for proper encoding and decoding.  In particular, the C<read> and
+C<write> methods do B<not> support UTF-8 and should not be used.
 
 =head1 SUPPORT
 
@@ -681,6 +689,25 @@ L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=YAML-Tiny>
 =head1 SEE ALSO
 
 L<YAML::Tiny>, L<YAML>, L<YAML::XS>
+
+=for :stopwords cpan testmatrix url annocpan anno bugtracker rt cpants kwalitee diff irc mailto metadata placeholders metacpan
+
+=head1 SUPPORT
+
+=head2 Bugs / Feature Requests
+
+Please report any bugs or feature requests through the issue tracker
+at L<http://rt.cpan.org/Public/Dist/Display.html?Name=CPAN-Meta-YAML>.
+You will be notified automatically of any progress on your issue.
+
+=head2 Source Code
+
+This is open source software.  The code repository is available for
+public review and contribution under the terms of the license.
+
+L<https://github.com/dagolden/cpan-meta-yaml>
+
+  git clone https://github.com/dagolden/cpan-meta-yaml.git
 
 =head1 AUTHORS
 

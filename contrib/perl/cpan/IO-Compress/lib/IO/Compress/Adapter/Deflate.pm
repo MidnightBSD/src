@@ -4,12 +4,18 @@ use strict;
 use warnings;
 use bytes;
 
-use IO::Compress::Base::Common  2.033 qw(:Status);
+use IO::Compress::Base::Common 2.060 qw(:Status);
+use Compress::Raw::Zlib  2.060 qw( !crc32 !adler32 ) ;
+                                  
+require Exporter;                                     
+our ($VERSION, @ISA, @EXPORT_OK, %EXPORT_TAGS, @EXPORT, %DEFLATE_CONSTANTS);
 
-use Compress::Raw::Zlib  2.033 qw(Z_OK Z_FINISH MAX_WBITS) ;
-our ($VERSION);
-
-$VERSION = '2.033';
+$VERSION = '2.060';
+@ISA = qw(Exporter);
+@EXPORT_OK = @Compress::Raw::Zlib::DEFLATE_CONSTANTS;
+%EXPORT_TAGS = %Compress::Raw::Zlib::DEFLATE_CONSTANTS;
+@EXPORT = @EXPORT_OK;
+%DEFLATE_CONSTANTS = %EXPORT_TAGS ;
 
 sub mkCompObject
 {
@@ -68,8 +74,7 @@ sub flush
         return STATUS_ERROR;
     }
 
-    return STATUS_OK;    
-    
+    return STATUS_OK;        
 }
 
 sub close

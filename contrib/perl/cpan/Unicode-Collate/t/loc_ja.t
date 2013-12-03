@@ -11,11 +11,19 @@ BEGIN {
     }
 }
 
-use Test;
-BEGIN { plan tests => 490 };
-
 use strict;
 use warnings;
+BEGIN { $| = 1; print "1..497\n"; }
+my $count = 0;
+sub ok ($;$) {
+    my $p = my $r = shift;
+    if (@_) {
+	my $x = shift;
+	$p = !defined $x ? !defined $r : !defined $r ? 0 : $r eq $x;
+    }
+    print $p ? "ok" : "not ok", ' ', ++$count, "\n";
+}
+
 use Unicode::Collate::Locale;
 
 ok(1);
@@ -47,8 +55,6 @@ ok($objJa->lt("\x{7464}", "\x{51DC}"));
 ok($objJa->lt("\x{51DC}", "\x{7199}"));
 ok($objJa->lt("\x{7199}", "\x{4E02}")); # 4E02: UIdeo undef in JIS X 0208
 ok($objJa->lt("\x{4E02}", "\x{3400}")); # 3400: Ext.A undef in JIS X 0208
-
-# 17
 
 # Ext.B
 ok($objJa->lt("\x{20000}", "\x{20001}"));
@@ -163,8 +169,10 @@ ok($objJa->eq("\x{3093}", "\x{30F3}"));
 ok($objJa->eq("\x{3094}", "\x{30F4}"));
 ok($objJa->eq("\x{3095}", "\x{30F5}"));
 ok($objJa->eq("\x{3096}", "\x{30F6}"));
+ok($objJa->eq("\x{309D}", "\x{30FD}"));
+ok($objJa->eq("\x{309E}", "\x{30FE}"));
 
-# 118
+# 120
 
 $objJa->change(variable => 'Non-ignorable');
 
@@ -343,7 +351,7 @@ ok($objJa->eq("\x{FFEC}", "\x{2193}"));
 ok($objJa->eq("\x{FFED}", "\x{25A0}"));
 ok($objJa->eq("\x{FFEE}", "\x{25CB}"));
 
-# 292
+# 294
 
 $objJa->change(level => 4);
 
@@ -433,8 +441,10 @@ ok($objJa->lt("\x{3093}", "\x{30F3}"));
 ok($objJa->lt("\x{3094}", "\x{30F4}"));
 ok($objJa->lt("\x{3095}", "\x{30F5}"));
 ok($objJa->lt("\x{3096}", "\x{30F6}"));
+ok($objJa->lt("\x{309D}", "\x{30FD}"));
+ok($objJa->lt("\x{309E}", "\x{30FE}"));
 
-# 378
+# 382
 
 ok($objJa->eq("\x{304C}", "\x{304B}\x{3099}"));
 ok($objJa->eq("\x{304E}", "\x{304D}\x{3099}"));
@@ -462,8 +472,9 @@ ok($objJa->eq("\x{307A}", "\x{3078}\x{309A}"));
 ok($objJa->eq("\x{307C}", "\x{307B}\x{3099}"));
 ok($objJa->eq("\x{307D}", "\x{307B}\x{309A}"));
 ok($objJa->eq("\x{3094}", "\x{3046}\x{3099}"));
+ok($objJa->eq("\x{309E}", "\x{309D}\x{3099}"));
 
-# 404
+# 409
 
 $objJa->change(katakana_before_hiragana => 1);
 
@@ -553,5 +564,7 @@ ok($objJa->lt("\x{3093}", "\x{30F3}"));
 ok($objJa->lt("\x{3094}", "\x{30F4}"));
 ok($objJa->lt("\x{3095}", "\x{30F5}"));
 ok($objJa->lt("\x{3096}", "\x{30F6}"));
+ok($objJa->lt("\x{309D}", "\x{30FD}"));
+ok($objJa->lt("\x{309E}", "\x{30FE}"));
 
-# 490
+# 497

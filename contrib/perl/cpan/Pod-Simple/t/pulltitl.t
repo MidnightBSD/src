@@ -7,7 +7,7 @@ BEGIN {
 
 use strict;
 use Test;
-BEGIN { plan tests => 114 };
+BEGIN { plan tests => 117 };
 
 #use Pod::Simple::Debug (5);
 
@@ -44,6 +44,13 @@ ok( $t = $p->get_token);
 ok( $t && $t->type, 'text');
 ok( $t && $t->type eq 'text' && $t->text, 'NAME' );
 
+DIE: {
+    # Make sure we die.
+    local $@;
+    eval { $p->set_source(\'=head1 foo') };
+    ok $@;
+    ok $@ =~ /\QCannot assign new source to pull parser; create a new instance, instead/;
+}
 }
 
 ###########################################################################
@@ -401,6 +408,14 @@ ok( $t && $t->type eq 'start' && $t->tagname, 'Document' );
 }
 
 ###########################################################################
+{
+print "# Testing a title with an X<>, at line ", __LINE__, "\n";
+my $p = Pod::Simple::PullParser->new;
+$p->set_source( \qq{\n=head1 NAME Foo Bar\nX<Some entry>\n} );
+
+ok $p->get_title(), 'NAME Foo Bar';
+}
+
 ###########################################################################
 
 

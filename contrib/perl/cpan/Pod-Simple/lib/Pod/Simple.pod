@@ -14,6 +14,8 @@ documentation") markup language that is typically used for writing
 documentation for Perl and for Perl modules. The Pod format is explained
 L<perlpod>; the most common formatter is called C<perldoc>.
 
+Be sure to read L</ENCODING> if your Pod contains non-ASCII characters.
+
 Pod formatters can use Pod::Simple to parse Pod documents and render them into
 plain text, HTML, or any number of other formats. Typically, such formatters
 will be subclasses of Pod::Simple, and so they will inherit its methods, like
@@ -85,9 +87,9 @@ the last call) ends with an C<undef> value.
 
 =item C<< $parser->content_seen >>
 
-This returns true only if there has been any real content seen
-for this document.
-
+This returns true only if there has been any real content seen for this
+document. Returns false in cases where the document contains content,
+but does not make use of any Pod markup.
 
 =item C<< I<SomeClass>->filter( I<$filename> ); >>
 
@@ -120,6 +122,14 @@ most likely to use.
 
 
 =over
+
+=item C<< $parser->parse_characters( I<SOMEVALUE> ) >>
+
+The Pod parser normally expects to read octets and to convert those octets
+to characters based on the C<=encoding> declaration in the Pod source.  Set
+this option to a true value to indicate that the Pod source is already a Perl
+character stream.  This tells the parser to ignore any C<=encoding> command
+and to skip all the code paths involving decoding octets.
 
 =item C<< $parser->no_whining( I<SOMEVALUE> ) >>
 
@@ -211,6 +221,142 @@ that you don't want I<any> lines indented. You can do something like this:
 
 =back
 
+=head1 TERTIARY METHODS
+
+=over
+
+=item C<< $parser->abandon_output_fh() >>X<abandon_output_fh>
+
+Cancel output to the file handle. Any POD read by the C<$parser> is not
+effected.
+
+=item C<< $parser->abandon_output_string() >>X<abandon_output_string>
+
+Cancel output to the output string. Any POD read by the C<$parser> is not
+effected.
+
+=item C<< $parser->accept_code( @codes ) >>X<accept_code>
+
+Alias for L<< accept_codes >>.
+
+=item C<< $parser->accept_codes( @codes ) >>X<accept_codes>
+
+Allows C<$parser> to accept a list of L<perlpod/Formatting Codes>. This can be
+used to implement user-defined codes.
+
+=item C<< $parser->accept_directive_as_data( @directives ) >>X<accept_directive_as_data>
+
+Allows C<$parser> to accept a list of directives for data paragraphs. A
+directive is the label of a L<perlpod/Command Paragraph>. A data paragraph is
+one delimited by C<< =begin/=for/=end >> directives. This can be used to
+implement user-defined directives.
+
+=item C<< $parser->accept_directive_as_processed( @directives ) >>X<accept_directive_as_processed>
+
+Allows C<$parser> to accept a list of directives for processed paragraphs. A
+directive is the label of a L<perlpod/Command Paragraph>. A processed
+paragraph is also known as L<perlpod/Ordinary Paragraph>. This can be used to
+implement user-defined directives.
+
+=item C<< $parser->accept_directive_as_verbatim( @directives ) >>X<accept_directive_as_verbatim>
+
+Allows C<$parser> to accept a list of directives for L<perlpod/Verbatim
+Paragraph>. A directive is the label of a L<perlpod/Command Paragraph>. This
+can be used to implement user-defined directives.
+
+=item C<< $parser->accept_target( @targets ) >>X<accept_target>
+
+Alias for L<< accept_targets >>.
+
+=item C<< $parser->accept_target_as_text( @targets ) >>X<accept_target_as_text>
+
+Alias for L<< accept_targets_as_text >>.
+
+=item C<< $parser->accept_targets( @targets ) >>X<accept_targets>
+
+Accepts targets for C<< =begin/=for/=end >> sections of the POD.
+
+=item C<< $parser->accept_targets_as_text( @targets ) >>X<accept_targets_as_text>
+
+Accepts targets for C<< =begin/=for/=end >> sections that should be parsed as
+POD. For details, see L<< perlpodspec/About Data Paragraphs >>.
+
+=item C<< $parser->any_errata_seen() >>X<any_errata_seen>
+
+Used to check if any errata was seen.
+
+I<Example:>
+
+  die "too many errors\n" if $parser->any_errata_seen();
+
+=item C<< $parser->detected_encoding() >>X<detected_encoding>
+
+Return the encoding corresponding to C<< =encoding >>, but only if the
+encoding was recognized and handled.
+
+=item C<< $parser->encoding() >>X<encoding>
+
+Return encoding of the document, even if the encoding is not correctly
+handled.
+
+=item C<< $parser->parse_from_file( $source, $to ) >>X<parse_from_file>
+
+Parses from C<$source> file to C<$to> file. Similar to L<<
+Pod::Parser/parse_from_file >>.
+
+=item C<< $parser->scream( @error_messages ) >>X<scream>
+
+Log an error that can't be ignored.
+
+=item C<< $parser->unaccept_code( @codes ) >>X<unaccept_code>
+
+Alias for L<< unaccept_codes >>.
+
+=item C<< $parser->unaccept_codes( @codes ) >>X<unaccept_codes>
+
+Removes C<< @codes >> as valid codes for the parse.
+
+=item C<< $parser->unaccept_directive( @directives ) >>X<unaccept_directive>
+
+Alias for L<< unaccept_directives >>.
+
+=item C<< $parser->unaccept_directives( @directives ) >>X<unaccept_directives>
+
+Removes C<< @directives >> as valid directives for the parse.
+
+=item C<< $parser->unaccept_target( @targets ) >>X<unaccept_target>
+
+Alias for L<< unaccept_targets >>.
+
+=item C<< $parser->unaccept_targets( @targets ) >>X<unaccept_targets>
+
+Removes C<< @targets >> as valid targets for the parse.
+
+=item C<< $parser->version_report() >>X<version_report>
+
+Returns a string describing the version.
+
+=item C<< $parser->whine( @error_messages ) >>X<whine>
+
+Log an error unless C<< $parser->no_whining( TRUE ); >>.
+
+=back
+
+=head1 ENCODING
+
+The Pod::Simple parser expects to read B<octets>.  The parser will decode the
+octets into Perl's internal character string representation using the value of
+the C<=encoding> declaration in the POD source.
+
+If the POD source does not include an C<=encoding> declaration, the parser will
+attempt to guess the encoding (selecting one of UTF-8 or Latin-1) by examining
+the first non-ASCII bytes and applying the heuristic described in
+L<perlpodspec>.
+
+If you set the C<parse_characters> option to a true value the parser will
+expect characters rather than octets; will ignore any C<=encoding>; and will
+make no attempt to decode the input.
+
 =head1 CAVEATS
 
 This is just a beta release -- there are a good number of things still
@@ -237,7 +383,7 @@ pod-people@perl.org mail list. Send an empty email to
 pod-people-subscribe@perl.org to subscribe.
 
 This module is managed in an open GitHub repository,
-L<http://github.com/theory/pod-simple/>. Feel free to fork and contribute, or
+L<https://github.com/theory/pod-simple/>. Feel free to fork and contribute, or
 to clone L<git://github.com/theory/pod-simple.git> and send patches!
 
 Patches against Pod::Simple are welcome. Please send bug reports to
@@ -268,6 +414,16 @@ Pod::Simple is maintained by:
 =item * Hans Dieter Pearcey C<hdp@cpan.org>
 
 =item * David E. Wheeler C<dwheeler@cpan.org>
+
+=back
+
+Documentation has been contributed by:
+
+=over
+
+=item * Gabor Szabo C<szabgab@gmail.com>
+
+=item * Shawn H Corey  C<SHCOREY at cpan.org>
 
 =back
 

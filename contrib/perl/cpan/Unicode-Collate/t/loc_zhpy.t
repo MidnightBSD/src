@@ -11,11 +11,19 @@ BEGIN {
     }
 }
 
-use Test;
-BEGIN { plan tests => 302 };
-
 use strict;
 use warnings;
+BEGIN { $| = 1; print "1..292\n"; }
+my $count = 0;
+sub ok ($;$) {
+    my $p = my $r = shift;
+    if (@_) {
+	my $x = shift;
+	$p = !defined $x ? !defined $r : !defined $r ? 0 : $r eq $x;
+    }
+    print $p ? "ok" : "not ok", ' ', ++$count, "\n";
+}
+
 use Unicode::Collate::Locale;
 
 ok(1);
@@ -220,19 +228,23 @@ ok($objZhP->eq("E\x{300}", "E\x{340}"));
 ok($objZhP->eq("e\x{302}\x{304}", pack('U*', 0xEA, 0x304)));
 ok($objZhP->eq("E\x{302}\x{304}", pack('U*', 0xCA, 0x304)));
 ok($objZhP->eq("e\x{302}\x{301}", "\x{1EBF}"));
-ok($objZhP->eq("e\x{302}\x{301}", pack('U*', 0xEA, 0x301)));
 ok($objZhP->eq("e\x{302}\x{301}", "e\x{302}\x{341}"));
 ok($objZhP->eq("E\x{302}\x{301}", "\x{1EBE}"));
-ok($objZhP->eq("E\x{302}\x{301}", pack('U*', 0xCA, 0x301)));
 ok($objZhP->eq("E\x{302}\x{301}", "E\x{302}\x{341}"));
+ok($objZhP->eq("e\x{302}\x{301}", pack('U*', 0xEA, 0x301)));
+ok($objZhP->eq("e\x{302}\x{301}", pack('U*', 0xEA, 0x341)));
+ok($objZhP->eq("E\x{302}\x{301}", pack('U*', 0xCA, 0x301)));
+ok($objZhP->eq("E\x{302}\x{301}", pack('U*', 0xCA, 0x341)));
 ok($objZhP->eq("e\x{302}\x{30C}", pack('U*', 0xEA, 0x30C)));
 ok($objZhP->eq("E\x{302}\x{30C}", pack('U*', 0xCA, 0x30C)));
 ok($objZhP->eq("e\x{302}\x{300}", "\x{1EC1}"));
-ok($objZhP->eq("e\x{302}\x{300}", pack('U*', 0xEA, 0x300)));
 ok($objZhP->eq("e\x{302}\x{300}", "e\x{302}\x{340}"));
 ok($objZhP->eq("E\x{302}\x{300}", "\x{1EC0}"));
-ok($objZhP->eq("E\x{302}\x{300}", pack('U*', 0xCA, 0x300)));
 ok($objZhP->eq("E\x{302}\x{300}", "E\x{302}\x{340}"));
+ok($objZhP->eq("e\x{302}\x{300}", pack('U*', 0xEA, 0x300)));
+ok($objZhP->eq("e\x{302}\x{300}", pack('U*', 0xEA, 0x340)));
+ok($objZhP->eq("E\x{302}\x{300}", pack('U*', 0xCA, 0x300)));
+ok($objZhP->eq("E\x{302}\x{300}", pack('U*', 0xCA, 0x340)));
 ok($objZhP->eq("e\x{302}", pack('U', 0xEA)));
 ok($objZhP->eq("E\x{302}", pack('U', 0xCA)));
 ok($objZhP->eq("i\x{304}", "\x{12B}"));
@@ -288,29 +300,33 @@ ok($objZhP->eq("u\x{300}", "u\x{340}"));
 ok($objZhP->eq("U\x{300}", pack('U', 0xD9)));
 ok($objZhP->eq("U\x{300}", "U\x{340}"));
 ok($objZhP->eq("u\x{308}\x{304}", "\x{1D6}"));
-ok($objZhP->eq("u\x{308}\x{304}", pack('U*', 0xFC, 0x304)));
 ok($objZhP->eq("U\x{308}\x{304}", "\x{1D5}"));
+ok($objZhP->eq("u\x{308}\x{304}", pack('U*', 0xFC, 0x304)));
 ok($objZhP->eq("U\x{308}\x{304}", pack('U*', 0xDC, 0x304)));
 ok($objZhP->eq("u\x{308}\x{301}", "\x{1D8}"));
-ok($objZhP->eq("u\x{308}\x{301}", pack('U*', 0xFC, 0x301)));
 ok($objZhP->eq("u\x{308}\x{301}", "u\x{308}\x{341}"));
 ok($objZhP->eq("U\x{308}\x{301}", "\x{1D7}"));
-ok($objZhP->eq("U\x{308}\x{301}", pack('U*', 0xDC, 0x301)));
 ok($objZhP->eq("U\x{308}\x{301}", "U\x{308}\x{341}"));
+ok($objZhP->eq("u\x{308}\x{301}", pack('U*', 0xFC, 0x301)));
+ok($objZhP->eq("u\x{308}\x{301}", pack('U*', 0xFC, 0x341)));
+ok($objZhP->eq("U\x{308}\x{301}", pack('U*', 0xDC, 0x301)));
+ok($objZhP->eq("U\x{308}\x{301}", pack('U*', 0xDC, 0x341)));
 ok($objZhP->eq("u\x{308}\x{30C}", "\x{1DA}"));
-ok($objZhP->eq("u\x{308}\x{30C}", pack('U*', 0xFC, 0x30C)));
 ok($objZhP->eq("U\x{308}\x{30C}", "\x{1D9}"));
+ok($objZhP->eq("u\x{308}\x{30C}", pack('U*', 0xFC, 0x30C)));
 ok($objZhP->eq("U\x{308}\x{30C}", pack('U*', 0xDC, 0x30C)));
 ok($objZhP->eq("u\x{308}\x{300}", "\x{1DC}"));
-ok($objZhP->eq("u\x{308}\x{300}", pack('U*', 0xFC, 0x300)));
 ok($objZhP->eq("u\x{308}\x{300}", "u\x{308}\x{340}"));
 ok($objZhP->eq("U\x{308}\x{300}", "\x{1DB}"));
-ok($objZhP->eq("U\x{308}\x{300}", pack('U*', 0xDC, 0x300)));
 ok($objZhP->eq("U\x{308}\x{300}", "U\x{308}\x{340}"));
+ok($objZhP->eq("u\x{308}\x{300}", pack('U*', 0xFC, 0x300)));
+ok($objZhP->eq("u\x{308}\x{300}", pack('U*', 0xFC, 0x340)));
+ok($objZhP->eq("U\x{308}\x{300}", pack('U*', 0xDC, 0x300)));
+ok($objZhP->eq("U\x{308}\x{300}", pack('U*', 0xDC, 0x340)));
 ok($objZhP->eq("u\x{308}", pack('U', 0xFC)));
 ok($objZhP->eq("U\x{308}", pack('U', 0xDC)));
 
-# 266
+# 274
 
 ok($objZhP->eq("e\x{302}\x{303}", "\x{1EC5}"));
 ok($objZhP->eq("E\x{302}\x{303}", "\x{1EC4}"));
@@ -319,44 +335,21 @@ ok($objZhP->eq("E\x{302}\x{309}", "\x{1EC2}"));
 ok($objZhP->eq("e\x{302}\x{323}", "\x{1EC7}"));
 ok($objZhP->eq("E\x{302}\x{323}", "\x{1EC6}"));
 
-# 272
+# 280
 
 $objZhP->change(level => 1);
 
-ok($objZhP->lt("\x{A000}", "\x{3105}"));
+ok($objZhP->lt("\x{A000}", "\x{963F}"));
+ok($objZhP->lt("\x{963F}", "\x{5730}"));
+ok($objZhP->lt("\x{5730}", "\x{7ACB}"));
+ok($objZhP->lt("\x{7ACB}", "\x{4EBA}"));
+ok($objZhP->lt("\x{4EBA}", "\x{65E5}"));
+ok($objZhP->lt("\x{65E5}", "\x{4E0A}"));
+ok($objZhP->lt("\x{4E0A}", "\x{5929}"));
+ok($objZhP->lt("\x{5929}", "\x{4E0B}"));
+ok($objZhP->lt("\x{4E0B}", "\x{65BC}"));
+ok($objZhP->lt("\x{65BC}", "\x{4E2D}"));
+ok($objZhP->lt("\x{4E2D}", "\x{7AFA}"));
+ok($objZhP->lt("\x{7AFA}", "\x{5750}"));
 
-ok($objZhP->lt("\x{3105}", "\x{3106}"));
-ok($objZhP->lt("\x{3106}", "\x{3128}"));
-ok($objZhP->lt("\x{3128}", "\x{3129}"));
-ok($objZhP->lt("\x{3129}", "\x{5416}"));
-ok($objZhP->lt("\x{5416}", "\x{963F}"));
-ok($objZhP->lt("\x{963F}", "\x{554A}"));
-ok($objZhP->lt("\x{554A}", "\x{9515}"));
-ok($objZhP->lt("\x{9515}", "\x{9312}"));
-ok($objZhP->lt("\x{9312}", "\x{55C4}"));
-ok($objZhP->lt("\x{55C4}", "\x{5391}"));
-ok($objZhP->lt("\x{5391}", "\x{54CE}"));
-ok($objZhP->lt("\x{54CE}", "\x{54C0}"));
-ok($objZhP->lt("\x{54C0}", "\x{5509}"));
-ok($objZhP->lt("\x{5509}", "\x{57C3}"));
-
-ok($objZhP->lt("\x{6FED}", "\x{FA1F}"));
-ok($objZhP->lt("\x{FA1F}", "\x{85F9}"));
-
-ok($objZhP->lt("\x{57C3}", "\x{4E00}"));
-ok($objZhP->lt("\x{4E00}", "\x{8331}"));
-
-ok($objZhP->lt("\x{8331}", "\x{682A}"));
-ok($objZhP->lt("\x{682A}", "\x{3231}"));
-ok($objZhP->lt("\x{3231}", "\x{73E0}"));
-ok($objZhP->lt("\x{73E0}", "\x{8BF8}"));
-
-ok($objZhP->lt("\x{5EA7}", "\x{888F}"));
-ok($objZhP->lt("\x{888F}", "\x{505A}"));
-ok($objZhP->lt("\x{505A}", "\x{8444}"));
-ok($objZhP->lt("\x{8444}", "\x{84D9}"));
-ok($objZhP->lt("\x{84D9}", "\x{98F5}"));
-ok($objZhP->lt("\x{98F5}", "\x{7CF3}"));
-ok($objZhP->lt("\x{7CF3}", "\x{5497}"));
-
-# 302
+# 292

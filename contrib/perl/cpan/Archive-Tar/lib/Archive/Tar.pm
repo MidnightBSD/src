@@ -31,7 +31,7 @@ use vars qw[$DEBUG $error $VERSION $WARN $FOLLOW_SYMLINK $CHOWN $CHMOD
 $DEBUG                  = 0;
 $WARN                   = 1;
 $FOLLOW_SYMLINK         = 0;
-$VERSION                = "1.76";
+$VERSION                = "1.90";
 $CHOWN                  = 1;
 $CHMOD                  = 1;
 $SAME_PERMISSIONS       = $> == 0 ? 1 : 0;
@@ -68,6 +68,9 @@ Archive::Tar - module for manipulations of tar archives
     $tar->add_data('file/baz.txt', 'This is the contents now');
 
     $tar->rename('oldname', 'new/file/name');
+    $tar->chown('/', 'root');
+    $tar->chown('/', 'root:root');
+    $tar->chmod('/tmp', '1777');
 
     $tar->write('files.tar');                   # plain tar
     $tar->write('files.tgz', COMPRESS_GZIP);    # gzip compressed
@@ -167,6 +170,14 @@ very big archives, and are only interested in the first few files.
 
 Can be set to a regular expression.  Only files with names that match
 the expression will be read.
+
+=item md5
+
+Set to 1 and the md5sum of files will be returned (instead of file data)
+    my $iter = Archive::Tar->iter( $file,  1, {md5 => 1} );
+    while( my $f = $iter->() ) {
+        print $f->data . "\t" . $f->full_path . $/;
+    }
 
 =item extract
 
@@ -306,6 +317,7 @@ sub _read_tar {
 
     my $count   = $opts->{limit}    || 0;
     my $filter  = $opts->{filter};
+    my $md5  = $opts->{md5} || 0;	# cdrake
     my $filter_cb = $opts->{filter_cb};
     my $extract = $opts->{extract}  || 0;
 
@@ -323,8 +335,15 @@ sub _read_tar {
     LOOP:
     while( $handle->read( $chunk, HEAD ) ) {
         ### IO::Zlib doesn't support this yet
-        my $offset = eval { tell $handle } || 'unknown';
-        $@ = '';
+        my $offset;
+        if ( ref($handle) ne 'IO::Zlib' ) {
+            local $@;
+            $offset = eval { tell $handle } || 'unknown';
+            $@ = '';
+        }
+        else {
+            $offset = 'unknown';
+        }
 
         unless( $read++ ) {
             my $gzip = GZIP_MAGIC_NUM;
@@ -332,7 +351,7 @@ sub _read_tar {
                 $self->_error( qq[Cannot read compressed format in tar-mode] );
                 return;
             }
-            
+
             ### size is < HEAD, which means a corrupted file, as the minimum
             ### length is _at least_ HEAD
             if (length $chunk != HEAD) {
@@ -399,8 +418,14 @@ sub _read_tar {
             $data = $entry->get_content_by_ref;
 
 	    my $skip = 0;
+	    my $ctx;			# cdrake
 	    ### skip this entry if we're filtering
-	    if ($filter && $entry->name !~ $filter) {
+
+	    if($md5) {			# cdrake
+	      $ctx = Digest::MD5->new;	# cdrake
+	        $skip=5;		# cdrake
+
+	    } elsif ($filter && $entry->name !~ $filter) {
 		$skip = 1;
 
 	    ### skip this entry if it's a pax header. This is a special file added
@@ -415,11 +440,12 @@ sub _read_tar {
 	    if ($skip) {
 		#
 		# Since we're skipping, do not allocate memory for the
-		# whole file.  Read it 64 BLOCKS at a time.  Do not 
+		# whole file.  Read it 64 BLOCKS at a time.  Do not
 		# complete the skip yet because maybe what we read is a
 		# longlink and it won't get skipped after all
 		#
 		my $amt = $block;
+		my $fsz=$entry->size;	# cdrake
 		while ($amt > 0) {
 		    $$data = '';
 		    my $this = 64 * BLOCK;
@@ -430,9 +456,11 @@ sub _read_tar {
 			next LOOP;
 		    }
 		    $amt -= $this;
+		    $fsz -= $this;	# cdrake
+		substr ($$data, $fsz) = "" if ($fsz<0);	# remove external junk prior to md5	# cdrake
+		$ctx->add($$data) if($skip==5);	# cdrake
 		}
-		### throw away trailing garbage ###
-		substr ($$data, $entry->size) = "" if defined $$data && $block < 64 * BLOCK;
+		$$data = $ctx->hexdigest if($skip==5 && !$entry->is_longlink && !$entry->is_unknown && !$entry->is_label ) ;	# cdrake
             } else {
 
 		### just read everything into memory
@@ -846,7 +874,7 @@ sub _extract_file {
             $self->_error( qq[Could not update timestamp] );
     }
 
-    if( $CHOWN && CAN_CHOWN->() ) {
+    if( $CHOWN && CAN_CHOWN->() and not -l $full ) {
         chown $entry->uid, $entry->gid, $full or
             $self->_error( qq[Could not set uid/gid on '$full'] );
     }
@@ -1080,6 +1108,45 @@ sub rename {
     my $entry = $self->_find_entry( $file ) or return;
 
     return $entry->rename( $new );
+}
+
+=head2 $tar->chmod( $file, $mode )
+
+Change mode of $file to $mode.
+
+Returns true on success and false on failure.
+
+=cut
+
+sub chmod {
+    my $self = shift;
+    my $file = shift; return unless defined $file;
+    my $mode = shift; return unless defined $mode && $mode =~ /^[0-7]{1,4}$/;
+    my @args = ("$mode");
+
+    my $entry = $self->_find_entry( $file ) or return;
+    my $x = $entry->chmod( @args );
+    return $x;
+}
+
+=head2 $tar->chown( $file, $uname [, $gname] )
+
+Change owner $file to $uname and $gname.
+
+Returns true on success and false on failure.
+
+=cut
+
+sub chown {
+    my $self = shift;
+    my $file = shift; return unless defined $file;
+    my $uname  = shift; return unless defined $uname;
+    my @args   = ($uname);
+    push(@args, shift);
+
+    my $entry = $self->_find_entry( $file ) or return;
+    my $x = $entry->chown( @args );
+    return $x;
 }
 
 =head2 $tar->remove (@filenamelist)
@@ -1391,6 +1458,12 @@ sub add_files {
             next;
         }
 
+        eval {
+            if( utf8::is_utf8( $file )) {
+              utf8::encode( $file );
+            }
+        };
+
         unless( -e $file || -l $file ) {
             $self->_error( qq[No such file: '$file'] );
             next;
@@ -1422,8 +1495,8 @@ The following list of properties is supported: name, size, mtime
 devmajor, devminor, prefix, type.  (On MacOS, the file's path and
 modification times are converted to Unix equivalents.)
 
-Valid values for the file type are the following constants defined in
-Archive::Tar::Constants:
+Valid values for the file type are the following constants defined by
+Archive::Tar::Constant:
 
 =over 4
 
@@ -1645,7 +1718,7 @@ Example usage:
 sub iter {
     my $class       = shift;
     my $filename    = shift or return;
-    my $compressed  = shift or 0;
+    my $compressed  = shift || 0;
     my $opts        = shift || {};
 
     ### get a handle to read from.
@@ -1683,7 +1756,7 @@ If C<list_archive()> is passed an array reference as its third
 argument it returns a list of hash references containing the requested
 properties of each file.  The following list of properties is
 supported: full_path, name, size, mtime (last modified date), mode,
-uid, gid, linkname, uname, gname, devmajor, devminor, prefix.
+uid, gid, linkname, uname, gname, devmajor, devminor, prefix, type.
 
 See C<Archive::Tar::File> for details about supported properties.
 
@@ -1930,7 +2003,7 @@ doing.
 =head2 $Archive::Tar::ZERO_PAD_NUMBERS
 
 This variable holds a boolean indicating if we will create
-zero padded numbers for C<size>, C<mtime> and C<checksum>. 
+zero padded numbers for C<size>, C<mtime> and C<checksum>.
 The default is C<0>, indicating that we will create space padded
 numbers. Added for compatibility with C<busybox> implementations.
 
@@ -2114,7 +2187,7 @@ encoded in a different way.
 
 =head1 CAVEATS
 
-The AIX tar does not fill all unused space in the tar archive with 0x00. 
+The AIX tar does not fill all unused space in the tar archive with 0x00.
 This sometimes leads to warning messages from C<Archive::Tar>.
 
   Invalid header block at offset nnn
@@ -2126,14 +2199,14 @@ of AIX, all of which should be coming out in the 4th quarter of 2009:
  AIX 5.3 TL8 SP8
  AIX 5.3 TL9 SP5
  AIX 5.3 TL10 SP2
- 
+
  AIX 6.1 TL0 SP11
  AIX 6.1 TL1 SP7
  AIX 6.1 TL2 SP6
  AIX 6.1 TL3 SP3
 
-The IBM APAR number for this problem is IZ50240 (Reported component ID: 
-5765G0300 / AIX 5.3). It is possible to get an ifix for that problem. 
+The IBM APAR number for this problem is IZ50240 (Reported component ID:
+5765G0300 / AIX 5.3). It is possible to get an ifix for that problem.
 If you need an ifix please contact your local IBM AIX support.
 
 =head1 TODO

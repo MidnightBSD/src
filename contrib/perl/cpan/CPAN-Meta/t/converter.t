@@ -1,13 +1,31 @@
 use strict;
 use warnings;
 use Test::More 0.88;
+use utf8;
 
 use CPAN::Meta;
 use CPAN::Meta::Validator;
 use CPAN::Meta::Converter;
 use File::Spec;
+use File::Basename qw/basename/;
 use IO::Dir;
 use Parse::CPAN::Meta 1.4400;
+use version;
+
+delete $ENV{$_} for qw/PERL_JSON_BACKEND PERL_YAML_BACKEND/; # use defaults
+
+# mock file object
+package
+  File::StringObject;
+
+use overload q{""} => sub { ${$_[0]} }, fallback => 1;
+
+sub new {
+  my ($class, $file) = @_;
+  bless \$file, $class;
+}
+
+package main;
 
 my $data_dir = IO::Dir->new( 't/data' );
 my @files = sort grep { /^\w/ } $data_dir->read;
@@ -110,9 +128,22 @@ for my $f ( reverse sort @files ) {
   my $original = Parse::CPAN::Meta->load_file( $path  );
   ok( $original, "loaded META-2.json" );
   my $cmc = CPAN::Meta::Converter->new( $original );
-  my $up_converted = $cmc->convert( version => 1.4 );
-  ok ( $up_converted->{x_whatever},
+  my $down_converted = $cmc->convert( version => 1.4 );
+  ok ( $down_converted->{x_whatever},
     "down converted 'x_' as 'x_'"
+  );
+}
+
+# specific test for generalization of unclear licenses
+{
+  my $path = File::Spec->catfile('t','data','gpl-1_4.yml');
+  my $original = Parse::CPAN::Meta->load_file( $path  );
+  ok( $original, "loaded gpl-1_4.yml" );
+  my $cmc = CPAN::Meta::Converter->new( $original );
+  my $up_converted = $cmc->convert( version => 2 );
+  is_deeply ( $up_converted->{license},
+    [ "open_source" ],
+    "up converted 'gpl' to 'open_source'"
   );
 }
 
@@ -135,5 +166,78 @@ for my $f ( reverse sort @files ) {
   );
 }
 
-done_testing;
+# specific test for object conversion
+{
+  my $path = File::Spec->catfile('t','data','resources.yml');
+  my $original = Parse::CPAN::Meta->load_file( $path  );
+  ok( $original, "loaded resources.yml" );
+  $original->{version} = version->new("1.64");
+  $original->{no_index}{file} = File::StringObject->new(".gitignore");
+  pass( "replaced some data fields with objects" );
+  my $cmc = CPAN::Meta::Converter->new( $original );
+  ok( my $converted = $cmc->convert( version => 2 ), "conversion successful" );
+}
 
+# specific test for UTF-8 handling
+{
+  my $path = File::Spec->catfile('t','data','unicode.yml');
+  my $original = CPAN::Meta->load_file( $path  )
+    or die "Couldn't load $path";
+  ok( $original, "unicode.yml" );
+  my @authors = $original->authors;
+  like( $authors[0], qr/Williåms/, "Unicode characters preserved in authors" );
+}
+
+# specific test for version ranges
+{
+  my @prereq_keys = qw(
+    prereqs requires build_requires configure_requires
+    recommends conflicts
+  );
+  for my $case ( qw/ 2 1_4 / ) {
+    my $suffix = $case eq 2 ? "$case.json" : "$case.yml";
+    my $version = $case;
+    $version =~ tr[_][.];
+    my $path = File::Spec->catfile('t','data','version-ranges-' . $suffix);
+    my $original = Parse::CPAN::Meta->load_file( $path  );
+    ok( $original, "loaded " . basename $path );
+    my $cmc = CPAN::Meta::Converter->new( $original );
+    my $converted = $cmc->convert( version => $version );
+    for my $h ( $original, $converted ) {
+      delete $h->{generated_by};
+      delete $h->{'meta-spec'}{url};
+      for my $k ( @prereq_keys ) {
+        _normalize_reqs($h->{$k}) if exists $h->{$k};
+      }
+    }
+    is_deeply( $converted, $original, "version ranges preserved in conversion" );
+  }
+}
+
+# specific test for version numbers
+{
+  my $path = File::Spec->catfile('t','data','version-not-normal.json');
+  my $original = Parse::CPAN::Meta->load_file( $path  );
+  ok( $original, "loaded " . basename $path );
+  my $cmc = CPAN::Meta::Converter->new( $original );
+  my $converted = $cmc->convert( version => 2 );
+  is( $converted->{prereqs}{runtime}{requires}{'File::Find'}, "v0.1.0", "normalize v0.1");
+  is( $converted->{prereqs}{runtime}{requires}{'File::Path'}, "v1.0.0", "normalize v1.0.0");
+}
+
+# CMR standardizes stuff in a way that makes it hard to test original vs final
+# so we remove spaces and >= to make them compare the same
+sub _normalize_reqs {
+  my $hr = shift;
+  for my $k ( keys %$hr ) {
+    if (ref $hr->{$k} eq 'HASH') {
+      _normalize_reqs($hr->{$k});
+    }
+    elsif ( ! ref $hr->{$k} ) {
+      $hr->{$k} =~ s{\s+}{}g;
+      $hr->{$k} =~ s{>=\s*}{}g;
+    }
+  }
+}
+
+done_testing;

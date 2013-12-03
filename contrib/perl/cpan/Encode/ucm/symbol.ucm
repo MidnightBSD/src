@@ -1,5 +1,5 @@
 #
-# $Id: symbol.ucm,v 1.1.1.1 2011-05-18 13:33:28 laffer1 Exp $
+# $Id: symbol.ucm,v 2.0 2004/05/16 20:55:28 dankogai Exp $
 #
 # compile -n symbol -o Encode/symbol.ucm Encode/symbol.enc
 <code_set_name> "symbol"

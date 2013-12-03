@@ -11,11 +11,19 @@ BEGIN {
     }
 }
 
-use Test;
-BEGIN { plan tests => 117 };
-
 use strict;
 use warnings;
+BEGIN { $| = 1; print "1..117\n"; }
+my $count = 0;
+sub ok ($;$) {
+    my $p = my $r = shift;
+    if (@_) {
+	my $x = shift;
+	$p = !defined $x ? !defined $r : !defined $r ? 0 : $r eq $x;
+    }
+    print $p ? "ok" : "not ok", ' ', ++$count, "\n";
+}
+
 use Unicode::Collate::Locale;
 
 ok(1);
@@ -49,7 +57,7 @@ $objDa->change(level => 1);
 ok($objDa->lt('z', $ae));
 ok($objDa->lt($ae, $ostk));
 ok($objDa->lt($ostk, $arng));
-ok($objDa->lt($arng, "\x{292}"));
+ok($objDa->lt($arng, "\x{1C0}"));
 
 # 6
 

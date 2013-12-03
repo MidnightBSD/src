@@ -4,7 +4,7 @@ designed to be readable as is.
 
 =head1 NAME
 
-README.aix - Perl version 5 on IBM AIX (UNIX) systems
+perlaix - Perl version 5 on IBM AIX (UNIX) systems
 
 =head1 DESCRIPTION
 
@@ -227,6 +227,15 @@ If you choose gcc to compile 64-bit Perl then you need to add the
 following option:
 
     -Dcc='gcc -maix64'
+
+
+=head2 Compiling Perl 5 on AIX 7.1.0
+
+A regression in AIX 7 causes a failure in make test in Time::Piece during
+daylight savings time.  APAR IV16514 provides the fix for this.  A quick
+test to see if it's required, assuming it is currently daylight savings
+in Eastern Time, would be to run C< TZ=EST5 date +%Z >.  This will come
+back with C<EST> normally, but nothing if you have the problem.
 
 
 =head2 Compiling Perl 5 on older AIX versions up to 4.3.3

@@ -11,11 +11,19 @@ BEGIN {
     }
 }
 
-use Test;
-BEGIN { plan tests => 126 };
-
 use strict;
 use warnings;
+BEGIN { $| = 1; print "1..126\n"; }
+my $count = 0;
+sub ok ($;$) {
+    my $p = my $r = shift;
+    if (@_) {
+	my $x = shift;
+	$p = !defined $x ? !defined $r : !defined $r ? 0 : $r eq $x;
+    }
+    print $p ? "ok" : "not ok", ' ', ++$count, "\n";
+}
+
 use Unicode::Collate::Locale;
 
 ok(1);
@@ -61,7 +69,7 @@ ok($objSq->lt("xz","xh"));
 ok($objSq->gt("y", "xh"));
 ok($objSq->lt("z", "zh"));
 ok($objSq->lt("zz","zh"));
-ok($objSq->lt("zh", "\x{1B7}"));
+ok($objSq->lt("zh","\x{1B7}"));
 
 # 35
 

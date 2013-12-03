@@ -4,11 +4,21 @@
 
 use strict;
 use lib 't/lib';
+use IO::File;
 use MBTest;
+
+my $undef;
 
 # parse various module $VERSION lines
 # these will be reversed later to create %modules
 my @modules = (
+  $undef => <<'---', # no $VERSION line
+package Simple;
+---
+  $undef => <<'---', # undefined $VERSION
+package Simple;
+our $VERSION;
+---
   '1.23' => <<'---', # declared & defined on same line with 'our'
 package Simple;
 our $VERSION = '1.23';
@@ -17,6 +27,15 @@ our $VERSION = '1.23';
 package Simple;
 our $VERSION;
 $VERSION = '1.23';
+---
+  '1.23' => <<'---', # commented & defined on same line
+package Simple;
+our $VERSION = '1.23'; # our $VERSION = '4.56';
+---
+  '1.23' => <<'---', # commented & defined on separate lines
+package Simple;
+# our $VERSION = '4.56';
+our $VERSION = '1.23';
 ---
   '1.23' => <<'---', # use vars
 package Simple;
@@ -170,10 +189,30 @@ our $VERSION = '1.23_00_00';
   our $VERSION;
   $VERSION = 'onetwothree';
 ---
+  $undef => <<'---', # package NAME BLOCK, undef $VERSION
+package Simple {
+  our $VERSION;
+}
+---
+  '1.23' => <<'---', # package NAME BLOCK, with $VERSION
+package Simple {
+  our $VERSION = '1.23';
+}
+---
+  '1.23' => <<'---', # package NAME VERSION BLOCK
+package Simple 1.23 {
+  1;
+}
+---
+  'v1.2.3_4' => <<'---', # package NAME VERSION BLOCK
+package Simple v1.2.3_4 {
+  1;
+}
+---
 );
 my %modules = reverse @modules;
 
-plan tests => 37 + 2 * keys( %modules );
+plan tests => 54 + 2 * keys( %modules );
 
 require_ok('Module::Metadata');
 
@@ -210,6 +249,14 @@ $file = File::Spec->catfile( 'lib', split( /::/, $dist->name ) ) . '.pm';
 $pm_info = Module::Metadata->new_from_file( $file );
 ok( defined( $pm_info ), 'new_from_file() succeeds' );
 
+# construct from filehandle
+my $handle = IO::File->new($file);
+$pm_info = Module::Metadata->new_from_handle( $handle, $file );
+ok( defined( $pm_info ), 'new_from_handle() succeeds' );
+$pm_info = Module::Metadata->new_from_handle( $handle );
+is( $pm_info, undef, "new_from_handle() without filename returns undef" );
+close($handle);
+
 # construct from module name, using custom include path
 $pm_info = Module::Metadata->new_from_module(
 	     $dist->name, inc => [ 'lib', @INC ] );
@@ -233,11 +280,18 @@ foreach my $module ( sort keys %modules ) {
 
     # Test::Builder will prematurely numify objects, so use this form
     my $errs;
-    ok( $pm_info->version eq $expected,
-        "correct module version (expected '$expected')" )
-        or $errs++;
+    my $got = $pm_info->version;
+    if ( defined $expected ) {
+        ok( $got eq $expected,
+            "correct module version (expected '$expected')" )
+            or $errs++;
+    } else {
+        ok( !defined($got),
+            "correct module version (expected undef)" )
+            or $errs++;
+    }
     is( $warnings, '', 'no warnings from parsing' ) or $errs++;
-    diag "Got: '@{[$pm_info->version]}'\nModule contents:\n$module" if $errs;
+    diag "Got: '$got'\nModule contents:\n$module" if $errs;
   }
 }
 
@@ -366,6 +420,7 @@ package Simple;
 $VERSION = '0.01';
 package Simple::Ex;
 $VERSION = '0.02';
+
 =head1 NAME
 
 Simple - It's easy.
@@ -373,6 +428,9 @@ Simple - It's easy.
 =head1 AUTHOR
 
 Simple Simon
+
+You can find me on the IRC channel
+#simon on irc.perl.org.
 
 =cut
 ---
@@ -413,13 +471,59 @@ is( $pm_info->pod('NAME'), undef,
 $pm_info = Module::Metadata->new_from_module(
              $dist->name, inc => [ 'lib', @INC ], collect_pod => 1 );
 
-my $name = $pm_info->pod('NAME');
-if ( $name ) {
-  $name =~ s/^\s+//;
-  $name =~ s/\s+$//;
-}
-is( $name, q|Simple - It's easy.|, 'collected pod section' );
+{
+  my %pod;
+  for my $section (qw(NAME AUTHOR)) {
+    my $content = $pm_info->pod( $section );
+    if ( $content ) {
+      $content =~ s/^\s+//;
+      $content =~ s/\s+$//;
+    }
+    $pod{$section} = $content;
+  }
+  my %expected = (
+    NAME   => q|Simple - It's easy.|,
+    AUTHOR => <<'EXPECTED'
+Simple Simon
 
+You can find me on the IRC channel
+#simon on irc.perl.org.
+EXPECTED
+  );
+  for my $text (values %expected) {
+    $text =~ s/^\s+//;
+    $text =~ s/\s+$//;
+  }
+  is( $pod{NAME},   $expected{NAME},   'collected NAME pod section' );
+  is( $pod{AUTHOR}, $expected{AUTHOR}, 'collected AUTHOR pod section' );
+}
+
+{
+  # test things that look like POD, but aren't
+$dist->change_file( 'lib/Simple.pm', <<'---' );
+package Simple;
+
+=YES THIS STARTS POD
+
+our $VERSION = '999';
+
+=cute
+
+our $VERSION = '666';
+
+=cut
+
+*foo
+=*no_this_does_not_start_pod;
+
+our $VERSION = '1.23';
+
+---
+  $dist->regen;
+  $pm_info = Module::Metadata->new_from_file('lib/Simple.pm');
+  is( $pm_info->name, 'Simple', 'found default package' );
+  is( $pm_info->version, '1.23', 'version for default package' );
+}
 
 {
   # Make sure processing stops after __DATA__
@@ -444,9 +548,9 @@ __DATA__
   # Make sure we handle version.pm $VERSIONs well
   $dist->change_file( 'lib/Simple.pm', <<'---' );
 package Simple;
-$VERSION = version->new('0.60.' . (qw$Revision: 1.1.1.1 $)[1]);
+$VERSION = version->new('0.60.' . (qw$Revision: 128 $)[1]);
 package Simple::Simon;
-$VERSION = version->new('0.61.' . (qw$Revision: 1.1.1.1 $)[1]);
+$VERSION = version->new('0.61.' . (qw$Revision: 129 $)[1]);
 ---
   $dist->regen;
 
@@ -458,3 +562,113 @@ $VERSION = version->new('0.61.' . (qw$Revision: 1.1.1.1 $)[1]);
   is( $pm_info->version('Simple::Simon'), '0.61.129', 'version for embedded package' );
 }
 
+# check that package_versions_from_directory works
+
+$dist->change_file( 'lib/Simple.pm', <<'---' );
+package Simple;
+$VERSION = '0.01';
+package Simple::Ex;
+$VERSION = '0.02';
+{
+  package main; # should ignore this
+}
+{
+  package DB; # should ignore this
+}
+{
+  package Simple::_private; # should ignore this
+}
+
+=head1 NAME
+
+Simple - It's easy.
+
+=head1 AUTHOR
+
+Simple Simon
+
+=cut
+---
+$dist->regen;
+
+my $exp_pvfd = {
+  'Simple' => {
+    'file' => 'Simple.pm',
+    'version' => '0.01'
+  },
+  'Simple::Ex' => {
+    'file' => 'Simple.pm',
+    'version' => '0.02'
+  }
+};
+
+my $got_pvfd = Module::Metadata->package_versions_from_directory('lib');
+
+is_deeply( $got_pvfd, $exp_pvfd, "package_version_from_directory()" )
+  or diag explain $got_pvfd;
+
+{
+  my $got_provides = Module::Metadata->provides(dir => 'lib', version => 2);
+  my $exp_provides = {
+    'Simple' => {
+      'file' => 'lib/Simple.pm',
+      'version' => '0.01'
+    },
+    'Simple::Ex' => {
+      'file' => 'lib/Simple.pm',
+      'version' => '0.02'
+    }
+  };
+
+  is_deeply( $got_provides, $exp_provides, "provides()" )
+    or diag explain $got_provides;
+}
+
+{
+  my $got_provides = Module::Metadata->provides(dir => 'lib', prefix => 'other', version => 1.4);
+  my $exp_provides = {
+    'Simple' => {
+      'file' => 'other/Simple.pm',
+      'version' => '0.01'
+    },
+    'Simple::Ex' => {
+      'file' => 'other/Simple.pm',
+      'version' => '0.02'
+    }
+  };
+
+  is_deeply( $got_provides, $exp_provides, "provides()" )
+    or diag explain $got_provides;
+}
+
+# Check package_versions_from_directory with regard to case-sensitivity
+{
+  $dist->change_file( 'lib/Simple.pm', <<'---' );
+package simple;
+$VERSION = '0.01';
+---
+  $dist->regen;
+
+  $pm_info = Module::Metadata->new_from_file('lib/Simple.pm');
+  is( $pm_info->name, undef, 'no default package' );
+  is( $pm_info->version, undef, 'version for default package' );
+  is( $pm_info->version('simple'), '0.01', 'version for lower-case package' );
+  is( $pm_info->version('Simple'), undef, 'version for capitalized package' );
+
+  $dist->change_file( 'lib/Simple.pm', <<'---' );
+package simple;
+$VERSION = '0.01';
+package Simple;
+$VERSION = '0.02';
+package SiMpLe;
+$VERSION = '0.03';
+---
+  $dist->regen;
+
+  $pm_info = Module::Metadata->new_from_file('lib/Simple.pm');
+  is( $pm_info->name, 'Simple', 'found default package' );
+  is( $pm_info->version, '0.02', 'version for default package' );
+  is( $pm_info->version('simple'), '0.01', 'version for lower-case package' );
+  is( $pm_info->version('Simple'), '0.02', 'version for capitalized package' );
+  is( $pm_info->version('SiMpLe'), '0.03', 'version for mixed-case package' );
+}

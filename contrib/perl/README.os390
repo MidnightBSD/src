@@ -5,7 +5,7 @@ about pod in pod/perlpod.pod or the short summary in the INSTALL file.
 
 =head1 NAME
 
-README.os390 - building and installing Perl for OS/390 and z/OS
+perlos390 - building and installing Perl for OS/390 and z/OS
 
 =head1 SYNOPSIS
 
@@ -410,13 +410,13 @@ L<INSTALL>, L<perlport>, L<perlebcdic>, L<ExtUtils::MakeMaker>.
 
 =head2 Mailing list for Perl on OS/390
 
-If you are interested in the VM/ESA, z/OS (formerly known as OS/390)
+If you are interested in the z/OS (formerly known as OS/390)
 and POSIX-BC (BS2000) ports of Perl then see the perl-mvs mailing list.
 To subscribe, send an empty message to perl-mvs-subscribe@perl.org.
 
 See also:
 
-    http://lists.perl.org/showlist.cgi?name=perl-mvs
+    http://lists.perl.org/list/perl-mvs.html
 
 There are web archives of the mailing list at:
 

@@ -45,12 +45,24 @@ BEGIN { $tests += 1 }
 can_ok( 'Sys::Syslog' => qw(openlog syslog syslog setlogmask setlogsock closelog) );
 
 
-BEGIN { $tests += 1 }
+BEGIN { $tests += 4 }
 # check the diagnostics
 # setlogsock()
 eval { setlogsock() };
-like( $@, qr/^Invalid argument passed to setlogsock/, 
+like( $@, qr/^setlogsock\(\): Invalid number of arguments/, 
     "calling setlogsock() with no argument" );
+
+eval { setlogsock(undef) };
+like( $@, qr/^setlogsock\(\): Invalid type; must be one of /, 
+    "calling setlogsock() with undef" );
+
+eval { setlogsock(\"") };
+like( $@, qr/^setlogsock\(\): Unexpected scalar reference/, 
+    "calling setlogsock() with a scalar reference" );
+
+eval { setlogsock({}) };
+like( $@, qr/^setlogsock\(\): No argument given/, 
+    "calling setlogsock() with an empty hash reference" );
 
 BEGIN { $tests += 3 }
 # syslog()
@@ -84,7 +96,9 @@ SKIP: {
     is( $@, '', "setlogsock() called with '$sock_type'" );
     TODO: {
         local $TODO = "minor bug";
+        SKIP: { skip "TODO $TODO", 1 if $] < 5.006002;
         ok( $r, "setlogsock() should return true: '$r'" );
+        }
     }
 
     # open syslog with a "local0" facility
@@ -264,3 +278,44 @@ BEGIN { $tests += 3 + 4 * 3 }
         setlogmask($oldmask);
     }
 }
+
+BEGIN { $tests += 4 }
+SKIP: {
+    # case: test the return value of setlogsock()
+
+    # setlogsock("stream") on a non-existent file must fail
+    eval { $r = setlogsock("stream", "plonk/log") };
+    is( $@, '', "setlogsock() didn't croak");
+    ok( !$r, "setlogsock() correctly failed with a non-existent stream path");
+
+    # setlogsock("tcp") must fail if the service is not declared
+    my $service = getservbyname("syslog", "tcp") || getservbyname("syslogng", "tcp");
+    skip "can't test setlogsock() tcp failure", 2 if $service;
+    eval { $r = setlogsock("tcp") };
+    is( $@, '', "setlogsock() didn't croak");
+    ok( !$r, "setlogsock() correctly failed when tcp services can't be resolved");
+}
+
+BEGIN { $tests += 3 }
+SKIP: {
+    # case: configure Sys::Syslog to use the stream mechanism on a
+    #       given file, but remove the file before openlog() is called,
+    #       so it fails.
+
+    # create the log file
+    my $log = "t/stream";
+    open my $fh, ">$log" or skip "can't write file '$log': $!", 3;
+    close $fh;
+
+    # configure Sys::Syslog to use it
+    $r = eval { setlogsock("stream", $log) };
+    is( $@, "", "setlogsock('stream', '$log') -> $r" );
+    skip "can't test openlog() failure with a missing stream", 2 if !$r;
+
+    # remove the log and check that openlog() fails
+    unlink $log;
+    $r = eval { openlog('perl', 'ndelay', 'local0') };
+    ok( !$r, "openlog() correctly failed with a non-existent stream" );
+    like( $@, '/not writable/', "openlog() correctly croaked with a non-existent stream" );
+}
+

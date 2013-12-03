@@ -7,60 +7,52 @@
 package Scalar::Util;
 
 use strict;
-use vars qw(@ISA @EXPORT_OK $VERSION @EXPORT_FAIL);
 require Exporter;
 require List::Util; # List::Util loads the XS
 
-@ISA       = qw(Exporter);
-@EXPORT_OK = qw(blessed dualvar reftype weaken isweak tainted readonly openhandle refaddr isvstring looks_like_number set_prototype);
-$VERSION    = "1.23";
+our @ISA       = qw(Exporter);
+our @EXPORT_OK = qw(
+  blessed
+  dualvar
+  isdual
+  isvstring
+  isweak
+  looks_like_number
+  openhandle
+  readonly
+  refaddr
+  reftype
+  set_prototype
+  tainted
+  weaken
+);
+our $VERSION    = "1.27";
 $VERSION   = eval $VERSION;
 
-unless (defined &dualvar) {
-  # Load Pure Perl version if XS not loaded
-  require Scalar::Util::PP;
-  Scalar::Util::PP->import;
-  push @EXPORT_FAIL, qw(weaken isweak dualvar isvstring set_prototype);
+our @EXPORT_FAIL;
+
+unless (defined &weaken) {
+  push @EXPORT_FAIL, qw(weaken);
+}
+unless (defined &isweak) {
+  push @EXPORT_FAIL, qw(isweak isvstring);
+}
+unless (defined &isvstring) {
+  push @EXPORT_FAIL, qw(isvstring);
 }
 
 sub export_fail {
-  if (grep { /dualvar/ } @EXPORT_FAIL) { # no XS loaded
-    my $pat = join("|", @EXPORT_FAIL);
-    if (my ($err) = grep { /^($pat)$/ } @_ ) {
-      require Carp;
-      Carp::croak("$err is only available with the XS version of Scalar::Util");
-    }
-  }
-
-  if (grep { /^(weaken|isweak)$/ } @_ ) {
+  if (grep { /^(?:weaken|isweak)$/ } @_ ) {
     require Carp;
     Carp::croak("Weak references are not implemented in the version of perl");
   }
 
-  if (grep { /^(isvstring)$/ } @_ ) {
+  if (grep { /^isvstring$/ } @_ ) {
     require Carp;
     Carp::croak("Vstrings are not implemented in the version of perl");
   }
 
   @_;
-}
-
-sub openhandle ($) {
-  my $fh = shift;
-  my $rt = reftype($fh) || '';
-
-  return defined(fileno($fh)) ? $fh : undef
-    if $rt eq 'IO';
-
-  if (reftype(\$fh) eq 'GLOB') { # handle  openhandle(*DATA)
-    $fh = \(my $tmp=$fh);
-  }
-  elsif ($rt ne 'GLOB') {
-    return undef;
-  }
-
-  (tied(*$fh) or defined(fileno($fh)))
-    ? $fh : undef;
 }
 
 1;
@@ -73,8 +65,9 @@ Scalar::Util - A selection of general-utility scalar subroutines
 
 =head1 SYNOPSIS
 
-    use Scalar::Util qw(blessed dualvar isweak readonly refaddr reftype tainted
-                        weaken isvstring looks_like_number set_prototype);
+    use Scalar::Util qw(blessed dualvar isdual readonly refaddr reftype
+                        tainted weaken isweak isvstring looks_like_number
+                        set_prototype);
                         # and other useful utils appearing below
 
 =head1 DESCRIPTION
@@ -112,6 +105,33 @@ value STRING in a string context.
     $num = $foo + 2;                    # 12
     $str = $foo . " world";             # Hello world
 
+=item isdual EXPR
+
+If EXPR is a scalar that is a dualvar, the result is true.
+
+    $foo = dualvar 86, "Nix";
+    $dual = isdual($foo);               # true
+
+Note that a scalar can be made to have both string and numeric content
+through numeric operations:
+
+    $foo = "10";
+    $dual = isdual($foo);               # false
+    $bar = $foo + 0;
+    $dual = isdual($foo);               # true
+
+Note that although C<$!> appears to be dual-valued variable, it is
+actually implemented using a tied scalar:
+
+    $! = 1;
+    print("$!\n");                      # "Operation not permitted"
+    $dual = isdual($!);                 # false
+
+You can capture its numeric and string content using:
+
+    $err = dualvar $!, $!;
+    $dual = isdual($err);               # true
+
 =item isvstring EXPR
 
 If EXPR is a scalar which was coded as a vstring the result is true.
@@ -119,20 +139,6 @@ If EXPR is a scalar which was coded as a vstring the result is true.
     $vs   = v49.46.48;
     $fmt  = isvstring($vs) ? "%vd" : "%s"; #true
     printf($fmt,$vs);
-
-=item isweak EXPR
-
-If EXPR is a scalar which is a weak reference the result is true.
-
-    $ref  = \$foo;
-    $weak = isweak($ref);               # false
-    weaken($ref);
-    $weak = isweak($ref);               # true
-
-B<NOTE>: Copying a weak reference creates a normal, strong, reference.
-
-    $copy = $ref;
-    $weak = isweak($copy);              # false
 
 =item looks_like_number EXPR
 
@@ -144,11 +150,11 @@ L<perlapi/looks_like_number>.
 Returns FH if FH may be used as a filehandle and is open, or FH is a tied
 handle. Otherwise C<undef> is returned.
 
-    $fh = openhandle(*STDIN);		# \*STDIN
-    $fh = openhandle(\*STDIN);		# \*STDIN
-    $fh = openhandle(*NOTOPEN);		# undef
-    $fh = openhandle("scalar");		# undef
-    
+    $fh = openhandle(*STDIN);           # \*STDIN
+    $fh = openhandle(\*STDIN);          # \*STDIN
+    $fh = openhandle(*NOTOPEN);         # undef
+    $fh = openhandle("scalar");         # undef
+
 =item readonly SCALAR
 
 Returns true if SCALAR is readonly.
@@ -230,6 +236,20 @@ This will indeed remove all references to destroyed objects, but the remaining
 references to objects will be strong, causing the remaining objects to never
 be destroyed because there is now always a strong reference to them in the
 @object array.
+
+=item isweak EXPR
+
+If EXPR is a scalar which is a weak reference the result is true.
+
+    $ref  = \$foo;
+    $weak = isweak($ref);               # false
+    weaken($ref);
+    $weak = isweak($ref);               # true
+
+B<NOTE>: Copying a weak reference creates a normal, strong, reference.
+
+    $copy = $ref;
+    $weak = isweak($copy);              # false
 
 =back
 

@@ -1,6 +1,6 @@
 =head1 NAME
 
-perlfaq3 - Programming Tools ($Revision: 1.1.1.1 $, $Date: 2011-05-18 13:33:29 $)
+perlfaq3 - Programming Tools ($Revision: 1.38 $, $Date: 1999/05/23 16:08:30 $)
 
 =head1 DESCRIPTION
 

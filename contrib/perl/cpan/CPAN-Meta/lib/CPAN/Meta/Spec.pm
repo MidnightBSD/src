@@ -3,11 +3,11 @@ use 5.006;
 use strict;
 use warnings;
 package CPAN::Meta::Spec;
-BEGIN {
-  $CPAN::Meta::Spec::VERSION = '2.110440';
-}
-# ABSTRACT: specification for CPAN distribution metadata
+our $VERSION = '2.120921'; # VERSION
+
 1;
+
+# ABSTRACT: specification for CPAN distribution metadata
 
 
 
@@ -20,7 +20,7 @@ CPAN::Meta::Spec - specification for CPAN distribution metadata
 
 =head1 VERSION
 
-version 2.110440
+version 2.120921
 
 =head1 SYNOPSIS
 
@@ -31,6 +31,7 @@ version 2.110440
       . "building, testing, and installing Perl modules. "
       . "It is meant to ... blah blah blah ...",
     version  => '0.36',
+    release_status => 'stable',
     author   => [
       'Ken Williams <kwilliams@cpan.org>',
       'Module-Build List <module-build@perl.org>', # additional contact
@@ -505,12 +506,12 @@ Valid subkeys are as follows:
 =item file
 
 A I<List> of relative paths to files.  Paths B<must be> specified with
-unix convetions.
+unix conventions.
 
 =item directory
 
 A I<List> of relative paths to directories.  Paths B<must be> specified
-with unix convetions.
+with unix conventions.
 
 [ Note: previous editions of the spec had C<dir> instead of C<directory> ]
 
@@ -565,13 +566,13 @@ This entry is required and has the same structure as that of the
 C<L</prereqs>> key.  It provides a list of package requirements
 that must be satisfied for the feature to be supported or enabled.
 
-There is one crucial restriction:  the preqreqs of an optional feature
+There is one crucial restriction:  the prereqs of an optional feature
 B<must not> include C<configure> phase prereqs.
 
 =back
 
 Consumers B<must not> include optional features as prerequisites without
-explict instruction from users (whether via interactive prompting,
+explicit instruction from users (whether via interactive prompting,
 a function parameter or a configuration value, etc. ).
 
 If an optional feature is used by a consumer to add additional
@@ -663,8 +664,9 @@ the distribution.  The values are Maps with the following valid subkeys:
 
 =item file
 
-This field is required.  The value must contain a relative file path
-from the root of the distribution to the module containing the package.
+This field is required.  The value must contain a Unix-style relative
+file path from the root of the distribution to the module containing the
+package.
 
 =item version
 
@@ -680,12 +682,12 @@ Example:
     license     => [ 'http://dev.perl.org/licenses/' ],
     homepage    => 'http://sourceforge.net/projects/module-build',
     bugtracker  => {
-      web    => 'http://github.com/dagolden/cpan-meta-spec/issues',
+      web    => 'http://rt.cpan.org/Public/Dist/Display.html?Name=CPAN-Meta',
       mailto => 'meta-bugs@example.com',
     },
     repository  => {
-      url  => 'git://github.com/dagolden/cpan-meta-spec.git',
-      web  => 'http://github.com/dagolden/cpan-meta-spec',
+      url  => 'git://github.com/dagolden/cpan-meta.git',
+      web  => 'http://github.com/dagolden/cpan-meta',
       type => 'git',
     },
     x_twitter   => 'http://twitter.com/cpan_linked/',
@@ -1027,10 +1029,10 @@ if both are found.
 =head2 Extracting Version Numbers from Perl Modules
 
 To get the version number from a Perl module, consumers should use the
-C<< MM->parse_version($file) >> method provided by L<ExtUtils::MakeMaker> or
-the L<Module::Build::ModuleInfo> module provided with L<Module::Build>.  For
-example, for the module given by C<$mod>, the version may be retrieved in one
-of the following ways:
+C<< MM->parse_version($file) >> method provided by
+L<ExtUtils::MakeMaker> or L<Module::Metadata>.  For example, for the
+module given by C<$mod>, the version may be retrieved in one of the
+following ways:
 
   # via ExtUtils::MakeMaker
   my $file = MM->_installed_file_for_module($mod);
@@ -1039,14 +1041,14 @@ of the following ways:
 The private C<_installed_file_for_module> method may be replaced with
 other methods for locating a module in C<@INC>.
 
-  # via Module::Build
-  my $info = Module::Build::ModuleInfo->new_from_module($mod);
+  # via Module::Metadata
+  my $info = Module::Metadata->new_from_module($mod);
   my $version = $info->version;
 
 If only a filename is available, the following approach may be used:
 
   # via Module::Build
-  my $info = Module::Build::ModuleInfo->new_from_file($file);
+  my $info = Module::Metadata->new_from_file($file);
   my $version = $info->version;
 
 =head2 Comparing Version Numbers

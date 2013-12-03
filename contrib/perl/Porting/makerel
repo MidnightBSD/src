@@ -8,14 +8,12 @@
 # Cygwin and ensure its 'bin' folder is on the PATH in the shell where you run
 # this script. The Cygwin 'bin' folder needs to precede the Windows 'system32'
 # folder so that Cygwin's 'find' command is found in preference to the Windows
-# 'find' command. Your Cygwin installation will need to contain at least the
-# 'cpio' command, in addition to the commands installed by default, and it will
-# also be useful to have 'curl' and 'diffstat' installed too for later stages
-# of the release process (namely, Porting\corelist.pl and generating the commit
-# statistics for the perlXYZdelta.pod file respectively). Finally, ensure that
-# the 'awk' and 'shasum' commands are copies of gawk.exe and sha1sum.exe
-# respectively, rather than the links to them that only work in a Cygwin bash
-# shell which they are by default.
+# 'find' command. In addition to the commands installed by default, your Cygwin
+# installation will need to contain at least the 'cpio' and '7z' commands.
+# Finally, ensure that the 'awk', 'shasum' (if you have it) and '7z' commands
+# are copies of 'gawk.exe', 'sha1sum.exe' and 'lib\p7zip\7z.exe' respectively,
+# rather than the links to them that only work in a Cygwin bash shell which
+# they are by default.
 #
 # No matter how automated this gets, you'll always need to read
 # and re-read pumpkin.pod and release_managers_guide.pod to
@@ -62,8 +60,9 @@ $vers = sprintf("%d.%d.%d", $revision, $patchlevel, $subversion);
 
 # fetch list of local patches
 my (@local_patches, @lpatch_tags, $lpatch_tags);
-@local_patches = grep { /^static.*local_patches/../^};/ } @patchlevel_h;
-@local_patches = grep { !/^\s*,?NULL/  } @local_patches;
+@local_patches = grep { !/^\s*,?NULL/ && ! /,"uncommitted-changes"/ }
+                 grep { /^static.*local_patches/../^};/ }
+                 @patchlevel_h;
 @lpatch_tags   = map  {  /^\s*,"(\w+)/ } @local_patches;
 $lpatch_tags   = join "-", @lpatch_tags;
 
@@ -131,6 +130,8 @@ system("chmod +x @exe") == 0
 my @writables = qw(
     NetWare/config_H.wc
     NetWare/Makefile
+    feature.h
+    lib/feature.pm
     keywords.h
     keywords.c
     opcode.h
@@ -139,9 +140,9 @@ my @writables = qw(
     proto.h
     embed.h
     embedvar.h
-    global.sym
     overload.c
     overload.h
+    mg_vtable.h
     perlapi.h
     perlapi.c
     cpan/Devel-PPPort/module2.c
@@ -155,7 +156,7 @@ my @writables = qw(
     win32/Makefile
     win32/Makefile.ce
     win32/makefile.mk
-    win32/config_H.bc
+    win32/config_H.ce
     win32/config_H.gc
     win32/config_H.vc
     utils/Makefile
@@ -170,14 +171,39 @@ exit if $opts{n};
 
 my $src = (-e $perl) ? $perl : 'perl'; # 'perl' in maint branch
 
-print "Creating and compressing the tar.gz file...\n";
-$cmd = "tar cf - $reldir | gzip --best > $reldir.tar.gz";
-system($cmd) == 0 or die "$cmd failed";
+print "Checking if you have 7z...\n";
+my $output_7z = `7z 2>&1`;
+my $have_7z = defined $output_7z && $output_7z =~ /7-Zip/;
+
+print "Checking if you have advdef...\n";
+my $output_advdef = `advdef --version 2>&1`;
+my $have_advdef = defined $output_advdef && $output_advdef =~ /advancecomp/;
+
+if ($have_7z) {
+    print "Creating and compressing the tar.gz file with 7z...\n";
+    $cmd = "tar cf - $reldir | 7z a -tgzip -mx9 -bd -si $reldir.tar.gz";
+    system($cmd) == 0 or die "$cmd failed";
+} else {
+    print "Creating and compressing the tar.gz file...\n";
+    $cmd = "tar cf - $reldir | gzip --best > $reldir.tar.gz";
+    system($cmd) == 0 or die "$cmd failed";
+    if ($have_advdef) {
+        print "Recompressing the tar.gz file with advdef...\n";
+        $cmd = "advdef -z -4 $reldir.tar.gz";
+        system($cmd) == 0 or die "$cmd failed";
+    }
+}
 
 if ($opts{b}) {
-    print "Creating and compressing the tar.bz2 file...\n";
-    $cmd = "tar cf - $reldir | bzip2 > $reldir.tar.bz2";
-    system($cmd) == 0 or die "$cmd failed";
+    if ($have_7z) {
+        print "Creating and compressing the tar.bz2 file with 7z...\n";
+        $cmd = "tar cf - $reldir | 7z a -tbzip2 -mx9 -bd -si $reldir.tar.bz2";
+        system($cmd) == 0 or die "$cmd failed";
+    } else {
+        print "Creating and compressing the tar.bz2 file...\n";
+        $cmd = "tar cf - $reldir | bzip2 > $reldir.tar.bz2";
+        system($cmd) == 0 or die "$cmd failed";
+    }
 }
 
 print "\n";

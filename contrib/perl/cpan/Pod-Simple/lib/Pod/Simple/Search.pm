@@ -4,7 +4,7 @@ package Pod::Simple::Search;
 use strict;
 
 use vars qw($VERSION $MAX_VERSION_WITHIN $SLEEPY);
-$VERSION = '3.16';   ## Current version of this package
+$VERSION = '3.28';   ## Current version of this package
 
 BEGIN { *DEBUG = sub () {0} unless defined &DEBUG; }   # set DEBUG level
 use Carp ();
@@ -25,7 +25,7 @@ use Cwd qw( cwd );
 #==========================================================================
 __PACKAGE__->_accessorize(  # Make my dumb accessor methods
  'callback', 'progress', 'dir_prefix', 'inc', 'laborious', 'limit_glob',
- 'limit_re', 'shadows', 'verbose', 'name2path', 'path2name', 
+ 'limit_re', 'shadows', 'verbose', 'name2path', 'path2name', 'recurse',
 );
 #==========================================================================
 
@@ -39,6 +39,7 @@ sub new {
 sub init {
   my $self = shift;
   $self->inc(1);
+  $self->recurse(1);
   $self->verbose(DEBUG);
   return $self;
 }
@@ -127,15 +128,22 @@ sub _make_search_callback {
   my $self = $_[0];
 
   # Put the options in variables, for easy access
-  my(  $laborious, $verbose, $shadows, $limit_re, $callback, $progress,$path2name,$name2path) =
+  my( $laborious, $verbose, $shadows, $limit_re, $callback, $progress,
+      $path2name, $name2path, $recurse) =
     map scalar($self->$_()),
-     qw(laborious   verbose   shadows   limit_re   callback   progress  path2name  name2path);
+     qw(laborious verbose shadows limit_re callback progress
+        path2name name2path recurse);
 
   my($file, $shortname, $isdir, $modname_bits);
   return sub {
     ($file, $shortname, $isdir, $modname_bits) = @_;
 
     if($isdir) { # this never gets called on the startdir itself, just subdirs
+
+      unless( $recurse ) {
+        $verbose and print "Not recursing into '$file' as per requested.\n";
+        return 'PRUNE';
+      }
 
       if( $self->{'_dirs_visited'}{$file} ) {
         $verbose and print "Directory '$file' already seen, skipping.\n";
@@ -400,15 +408,15 @@ sub run {
           $_ = "v$1"
             if m{^v?["']?([0-9_]+(\.[0-9_]+)*)["']?$}s
              # like in $VERSION = "3.14159";
-             or m{\$Revision: 1.2 $}s
-             # like in sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
+             or m{\$Revision:\s*([0-9_]+(?:\.[0-9_]+)*)\s*\$}s
+             # like in sprintf("%d.%02d", q$Revision: 4.13 $ =~ /(\d+)\.(\d+)/);
           ;
            
-          # Like in sprintf("%d.%s", map {s/_//g; $_} q$Name: not supported by cvs2svn $ =~ /-(\d+)_([\d_]+)/)
+          # Like in sprintf("%d.%s", map {s/_//g; $_} q$Name: release-0_55-public $ =~ /-(\d+)_([\d_]+)/)
           $_ = sprintf("v%d.%s",
             map {s/_//g; $_}
               $1 =~ m/-(\d+)_([\d_]+)/) # snare just the numeric part
-           if m{\$Name: not supported by cvs2svn $]+)\$}s 
+           if m{\$Name:\s*([^\$]+)\$}s 
           ;
           $version = $_;
           DEBUG and print "Noting $version as version\n";
@@ -1003,7 +1011,7 @@ pod-people@perl.org mail list. Send an empty email to
 pod-people-subscribe@perl.org to subscribe.
 
 This module is managed in an open GitHub repository,
-L<http://github.com/theory/pod-simple/>. Feel free to fork and contribute, or
+L<https://github.com/theory/pod-simple/>. Feel free to fork and contribute, or
 to clone L<git://github.com/theory/pod-simple.git> and send patches!
 
 Patches against Pod::Simple are welcome. Please send bug reports to

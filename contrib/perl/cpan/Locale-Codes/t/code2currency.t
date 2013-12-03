@@ -16,10 +16,10 @@ if ( -f "t/testfunc.pl" ) {
 }
 
 unshift(@INC,$dir);
-use Locale::Currency;
+use Locale::Codes::Currency;
 
-%type = ( "LOCALE_CODE_ALPHA"    => LOCALE_CODE_ALPHA,
-          "LOCALE_CODE_NUMERIC"  => LOCALE_CODE_NUMERIC,
+%type = ( "LOCALE_CURR_ALPHA"    => LOCALE_CURR_ALPHA,
+          "LOCALE_CURR_NUMERIC"  => LOCALE_CURR_NUMERIC,
         );
 
 sub test {
@@ -99,7 +99,7 @@ rub
    ~
    Russian Ruble
 
-zmk
+zmw
    ~
    Zambian Kwacha
 

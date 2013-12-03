@@ -11,11 +11,19 @@ BEGIN {
     }
 }
 
-use Test;
-BEGIN { plan tests => 50 };
-
 use strict;
 use warnings;
+BEGIN { $| = 1; print "1..50\n"; }
+my $count = 0;
+sub ok ($;$) {
+    my $p = my $r = shift;
+    if (@_) {
+	my $x = shift;
+	$p = !defined $x ? !defined $r : !defined $r ? 0 : $r eq $x;
+    }
+    print $p ? "ok" : "not ok", ' ', ++$count, "\n";
+}
+
 use Unicode::Collate::Locale;
 
 ok(1);
@@ -29,8 +37,8 @@ ok($objMt->getlocale, 'mt');
 
 $objMt->change(level => 1);
 
-ok($objMt->lt("c", "c\x{307}"));
-ok($objMt->gt("d", "c\x{307}"));
+ok($objMt->lt("b", "c\x{307}"));
+ok($objMt->gt("c", "c\x{307}"));
 ok($objMt->lt("f", "g\x{307}"));
 ok($objMt->gt("g", "g\x{307}"));
 ok($objMt->lt("g", "gh\x{335}"));

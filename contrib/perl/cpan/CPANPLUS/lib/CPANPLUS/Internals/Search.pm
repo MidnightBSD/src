@@ -1,4 +1,5 @@
 package CPANPLUS::Internals::Search;
+use deprecate;
 
 use strict;
 
@@ -13,13 +14,16 @@ use File::Spec;
 use Params::Check               qw[check allow];
 use Locale::Maketext::Simple    Class => 'CPANPLUS', Style => 'gettext';
 
+use vars qw[$VERSION];
+$VERSION = "0.9135";
+
 $Params::Check::VERBOSE = 1;
 
 =pod
 
 =head1 NAME
 
-CPANPLUS::Internals::Search
+CPANPLUS::Internals::Search - internals for searching for modules
 
 =head1 SYNOPSIS
 
@@ -163,7 +167,7 @@ sub _search_module_tree {
     } or return;
 
     ### a list of module objects was supplied
-    if( @$mods ) {   
+    if( @$mods ) {
         local $Params::Check::VERBOSE = 0;
 
         my @rv;
@@ -242,7 +246,7 @@ sub _search_author_tree {
 
     my $args = check( $tmpl, \%hash ) or return;
 
-    if( @$authors ) {   
+    if( @$authors ) {
         local $Params::Check::VERBOSE = 0;
 
         my @rv;
@@ -258,7 +262,7 @@ sub _search_author_tree {
         my @rv = $self->_source_search_author_tree(
             allow   => $list,
             type    => $type,
-        );            
+        );
         return \@rv;
     }
 }
@@ -302,18 +306,18 @@ sub _all_installed {
     for my $dir (@INC ) {
         next if $dir eq '.';
 
-        ### not a directory after all 
+        ### not a directory after all
         ### may be coderef or some such
         next unless -d $dir;
 
         ### make sure to clean up the directories just in case,
         ### as we're making assumptions about the length
         ### This solves rt.cpan issue #19738
-        
-        ### John M. notes: On VMS cannonpath can not currently handle 
+
+        ### John M. notes: On VMS cannonpath can not currently handle
         ### the $dir values that are in UNIX format.
         $dir = File::Spec->canonpath( $dir ) unless ON_VMS;
-        
+
         ### have to use F::S::Unix on VMS, or things will break
         my $file_spec = ON_VMS ? 'File::Spec::Unix' : 'File::Spec';
 
@@ -328,15 +332,15 @@ sub _all_installed {
 
                     ### make sure it's in Unix format, as it
                     ### may be in VMS format on VMS;
-                    $mod = VMS::Filespec::unixify( $mod ) if ON_VMS;                    
-                    
+                    $mod = VMS::Filespec::unixify( $mod ) if ON_VMS;
+
                     $mod = substr($mod, length($dir) + 1, -3);
                     $mod = join '::', $file_spec->splitdir($mod);
 
                     return if $seen{$mod}++;
 
                     my $modobj = $self->module_tree($mod);
-                    
+
                     ### separate return, a list context return with one ''
                     ### in it, is also true!
                     return unless $modobj;

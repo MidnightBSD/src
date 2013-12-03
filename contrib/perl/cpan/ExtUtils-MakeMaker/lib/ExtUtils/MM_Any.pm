@@ -1,7 +1,7 @@
 package ExtUtils::MM_Any;
 
 use strict;
-our $VERSION = '6.57_05';
+our $VERSION = '6.66';
 
 use Carp;
 use File::Spec;
@@ -206,25 +206,40 @@ sub _expand_macros {
 
     my @commands = $MM->echo($text);
     my @commands = $MM->echo($text, $file);
-    my @commands = $MM->echo($text, $file, $appending);
+    my @commands = $MM->echo($text, $file, \%opts);
 
 Generates a set of @commands which print the $text to a $file.
 
 If $file is not given, output goes to STDOUT.
 
-If $appending is true the $file will be appended to rather than
-overwritten.
+If $opts{append} is true the $file will be appended to rather than
+overwritten.  Default is to overwrite.
+
+If $opts{allow_variables} is true, make variables of the form
+C<$(...)> will not be escaped.  Other C<$> will.  Default is to escape
+all C<$>.
+
+Example of use:
+
+    my $make = map "\t$_\n", $MM->echo($text, $file);
 
 =cut
 
 sub echo {
-    my($self, $text, $file, $appending) = @_;
-    $appending ||= 0;
+    my($self, $text, $file, $opts) = @_;
 
-    my @cmds = map { '$(NOECHO) $(ECHO) '.$self->quote_literal($_) } 
+    # Compatibility with old options
+    if( !ref $opts ) {
+        my $append = $opts;
+        $opts = { append => $append || 0 };
+    }
+    $opts->{allow_variables} = 0 unless defined $opts->{allow_variables};
+
+    my $ql_opts = { allow_variables => $opts->{allow_variables} };
+    my @cmds = map { '$(NOECHO) $(ECHO) '.$self->quote_literal($_, $ql_opts) } 
                split /\n/, $text;
     if( $file ) {
-        my $redirect = $appending ? '>>' : '>';
+        my $redirect = $opts->{append} ? '>>' : '>';
         $cmds[0] .= " $redirect $file";
         $_ .= " >> $file" foreach @cmds[1..$#cmds];
     }
@@ -334,11 +349,53 @@ to include more flexible code and switches.
 =head3 quote_literal  I<Abstract>
 
     my $safe_text = $MM->quote_literal($text);
+    my $safe_text = $MM->quote_literal($text, \%options);
 
 This will quote $text so it is interpreted literally in the shell.
 
 For example, on Unix this would escape any single-quotes in $text and
 put single-quotes around the whole thing.
+
+If $options{allow_variables} is true it will leave C<'$(FOO)'> make
+variables untouched.  If false they will be escaped like any other
+C<$>.  Defaults to true.
+
+=head3 escape_dollarsigns
+
+    my $escaped_text = $MM->escape_dollarsigns($text);
+
+Escapes stray C<$> so they are not interpreted as make variables.
+
+It lets by C<$(...)>.
+
+=cut
+
+sub escape_dollarsigns {
+    my($self, $text) = @_;
+
+    # Escape dollar signs which are not starting a variable
+    $text =~ s{\$ (?!\() }{\$\$}gx;
+
+    return $text;
+}
+
+
+=head3 escape_all_dollarsigns
+
+    my $escaped_text = $MM->escape_all_dollarsigns($text);
+
+Escapes all C<$> so they are not interpreted as make variables.
+
+=cut
+
+sub escape_all_dollarsigns {
+    my($self, $text) = @_;
+
+    # Escape dollar signs
+    $text =~ s{\$}{\$\$}gx;
+
+    return $text;
+}
 
 
 =head3 escape_newlines  I<Abstract>
@@ -486,8 +543,8 @@ clean :: clean_subdirs
                         split /\s+/, $attribs{FILES}   ;
     }
 
-    push(@files, qw[$(MAKE_APERL_FILE)
-                    MYMETA.yml perlmain.c tmon.out mon.out so_locations
+    push(@files, qw[$(MAKE_APERL_FILE) 
+                    MYMETA.json MYMETA.yml perlmain.c tmon.out mon.out so_locations
                     blibdirs.ts pm_to_blib pm_to_blib.ts
                     *$(OBJ_EXT) *$(LIB_EXT) perl.exe perl perl$(EXE_EXT)
                     $(BOOTSTRAP) $(BASEEXT).bso
@@ -728,6 +785,13 @@ CMD
     return $manify;
 }
 
+sub _has_cpan_meta {
+    return eval {
+      require CPAN::Meta;
+      CPAN::Meta->VERSION(2.112150);
+      1;
+    };
+}
 
 =head3 metafile_target
 
@@ -743,26 +807,109 @@ possible.
 
 sub metafile_target {
     my $self = shift;
-
-    return <<'MAKE_FRAG' if $self->{NO_META};
+    return <<'MAKE_FRAG' if $self->{NO_META} or ! _has_cpan_meta();
 metafile :
 	$(NOECHO) $(NOOP)
 MAKE_FRAG
 
-    my @metadata   = $self->metafile_data(
+    my %metadata   = $self->metafile_data(
         $self->{META_ADD}   || {},
         $self->{META_MERGE} || {},
     );
-    my $meta       = $self->metafile_file(@metadata);
-    my @write_meta = $self->echo($meta, 'META_new.yml');
+    
+    _fix_metadata_before_conversion( \%metadata );
 
-    return sprintf <<'MAKE_FRAG', join("\n\t", @write_meta);
+    # paper over validation issues, but still complain, necessary because
+    # there's no guarantee that the above will fix ALL errors
+    my $meta = eval { CPAN::Meta->create( \%metadata, { lazy_validation => 1 } ) };
+    warn $@ if $@ and 
+               $@ !~ /encountered CODE.*, but JSON can only represent references to arrays or hashes/;
+
+    # use the original metadata straight if the conversion failed
+    # or if it can't be stringified.
+    if( !$meta                                                  ||
+        !eval { $meta->as_string( { version => "1.4" } ) }      ||
+        !eval { $meta->as_string }
+    )
+    {
+        $meta = bless \%metadata, 'CPAN::Meta';
+    }
+
+    my @write_metayml = $self->echo(
+      $meta->as_string({version => "1.4"}), 'META_new.yml'
+    );
+    my @write_metajson = $self->echo(
+      $meta->as_string(), 'META_new.json'
+    );
+
+    my $metayml = join("\n\t", @write_metayml);
+    my $metajson = join("\n\t", @write_metajson);
+    return sprintf <<'MAKE_FRAG', $metayml, $metajson;
 metafile : create_distdir
 	$(NOECHO) $(ECHO) Generating META.yml
 	%s
 	-$(NOECHO) $(MV) META_new.yml $(DISTVNAME)/META.yml
+	$(NOECHO) $(ECHO) Generating META.json
+	%s
+	-$(NOECHO) $(MV) META_new.json $(DISTVNAME)/META.json
 MAKE_FRAG
 
+}
+
+=begin private
+
+=head3 _fix_metadata_before_conversion
+
+    _fix_metadata_before_conversion( \%metadata );
+
+Fixes errors in the metadata before it's handed off to CPAN::Meta for
+conversion. This hopefully results in something that can be used further
+on, no guarantee is made though.
+
+=end private
+
+=cut
+
+sub _fix_metadata_before_conversion {
+    my ( $metadata ) = @_;
+
+    # we should never be called unless this already passed but
+    # prefer to be defensive in case somebody else calls this
+
+    return unless _has_cpan_meta;
+
+    my $bad_version = $metadata->{version} &&
+                      !CPAN::Meta::Validator->new->version( 'version', $metadata->{version} );
+
+    # just delete all invalid versions
+    if( $bad_version ) {
+        warn "Can't parse version '$metadata->{version}'\n";
+        $metadata->{version} = '';
+    }
+
+    my $validator = CPAN::Meta::Validator->new( $metadata );
+    return if $validator->is_valid;
+
+    # fix non-camelcase custom resource keys (only other trick we know)
+    for my $error ( $validator->errors ) {
+        my ( $key ) = ( $error =~ /Custom resource '(.*)' must be in CamelCase./ );
+        next if !$key;
+
+        # first try to remove all non-alphabetic chars
+        ( my $new_key = $key ) =~ s/[^_a-zA-Z]//g;
+
+        # if that doesn't work, uppercase first one
+        $new_key = ucfirst $new_key if !$validator->custom_1( $new_key );
+
+        # copy to new key if that worked
+        $metadata->{resources}{$new_key} = $metadata->{resources}{$key}
+          if $validator->custom_1( $new_key );
+
+        # and delete old one in any case
+        delete $metadata->{resources}{$key};
+    }
+
+    return;
 }
 
 
@@ -816,57 +963,16 @@ sub metafile_data {
     my $self = shift;
     my($meta_add, $meta_merge) = @_;
 
-    # The order in which standard meta keys should be written.
-    my @meta_order = qw(
-        name
-        version
-        abstract
-        author
-        license
-        distribution_type
-
-        configure_requires
-        build_requires
-        requires
-
-        resources
-
-        provides
-        no_index
-
-        generated_by
-        meta-spec
-    );
-
-    # Check the original args so we can tell between the user setting it
-    # to an empty hash and it just being initialized.
-    my $configure_requires;
-    if( $self->{ARGS}{CONFIGURE_REQUIRES} ) {
-        $configure_requires = $self->{CONFIGURE_REQUIRES};
-    } else {
-        $configure_requires = {
-            'ExtUtils::MakeMaker'       => 0,
-        };
-    }
-    my $build_requires;
-    if( $self->{ARGS}{BUILD_REQUIRES} ) {
-        $build_requires = $self->{BUILD_REQUIRES};
-    } else {
-        $build_requires = {
-            'ExtUtils::MakeMaker'       => 0,
-        };
-    }
-
     my %meta = (
+        # required
         name         => $self->{DISTNAME},
-        version      => $self->{VERSION},
-        abstract     => $self->{ABSTRACT},
+        version      => _normalize_version($self->{VERSION}),
+        abstract     => $self->{ABSTRACT} || 'unknown',
         license      => $self->{LICENSE} || 'unknown',
+        dynamic_config => 1,
+
+        # optional
         distribution_type => $self->{PM} ? 'module' : 'script',
-
-        configure_requires => $configure_requires,
-
-        build_requires => $build_requires,
 
         no_index     => {
             directory   => [qw(t inc)]
@@ -882,8 +988,18 @@ sub metafile_data {
     # The author key is required and it takes a list.
     $meta{author}   = defined $self->{AUTHOR}    ? $self->{AUTHOR} : [];
 
-    $meta{requires} = $self->{PREREQ_PM} if defined $self->{PREREQ_PM};
-    $meta{requires}{perl} = $self->{MIN_PERL_VERSION} if $self->{MIN_PERL_VERSION};
+    # Check the original args so we can tell between the user setting it
+    # to an empty hash and it just being initialized.
+    if( $self->{ARGS}{CONFIGURE_REQUIRES} ) {
+        $meta{configure_requires}
+            = _normalize_prereqs($self->{CONFIGURE_REQUIRES});
+    } else {
+        $meta{configure_requires} = {
+            'ExtUtils::MakeMaker'       => 0,
+        };
+    }
+
+    %meta = $self->_add_requirements_to_meta_v1_4( %meta );
 
     while( my($key, $val) = each %$meta_add ) {
         $meta{$key} = $val;
@@ -893,24 +1009,93 @@ sub metafile_data {
         $self->_hash_merge(\%meta, $key, $val);
     }
 
-    my @meta_pairs;
-
-    # Put the standard keys first in the proper order.
-    for my $key (@meta_order) {
-        next unless exists $meta{$key};
-
-        push @meta_pairs, $key, delete $meta{$key};
-    }
-
-    # Then tack everything else onto the end, alpha sorted.
-    for my $key (sort {lc $a cmp lc $b} keys %meta) {
-        push @meta_pairs, $key, $meta{$key};
-    }
-
-    return @meta_pairs
+    return %meta;
 }
 
+
 =begin private
+
+=cut
+
+sub _add_requirements_to_meta_v1_4 {
+    my ( $self, %meta ) = @_;
+
+    # Check the original args so we can tell between the user setting it
+    # to an empty hash and it just being initialized.
+    if( $self->{ARGS}{BUILD_REQUIRES} ) {
+        $meta{build_requires} = _normalize_prereqs($self->{BUILD_REQUIRES});
+    } else {
+        $meta{build_requires} = {
+            'ExtUtils::MakeMaker'       => 0,
+        };
+    }
+
+    if( $self->{ARGS}{TEST_REQUIRES} ) {
+        $meta{build_requires} = {
+          %{ $meta{build_requires} },
+          %{ _normalize_prereqs($self->{TEST_REQUIRES}) },
+        };
+    }
+
+    $meta{requires} = _normalize_prereqs($self->{PREREQ_PM})
+        if defined $self->{PREREQ_PM};
+    $meta{requires}{perl} = _normalize_version($self->{MIN_PERL_VERSION})
+        if $self->{MIN_PERL_VERSION};
+
+    return %meta;
+}
+
+sub _add_requirements_to_meta_v2 {
+    my ( $self, %meta ) = @_;
+
+    # Check the original args so we can tell between the user setting it
+    # to an empty hash and it just being initialized.
+    if( $self->{ARGS}{BUILD_REQUIRES} ) {
+        $meta{prereqs}{build}{requires} = _normalize_prereqs($self->{BUILD_REQUIRES});
+    } else {
+        $meta{prereqs}{build}{requires} = {
+            'ExtUtils::MakeMaker'       => 0,
+        };
+    }
+
+    if( $self->{ARGS}{TEST_REQUIRES} ) {
+        $meta{prereqs}{test}{requires} = _normalize_prereqs($self->{TEST_REQUIRES});
+    }
+
+    $meta{prereqs}{runtime}{requires} = _normalize_prereqs($self->{PREREQ_PM})
+        if defined $self->{PREREQ_PM};
+    $meta{prereqs}{runtime}{requires}{perl} = _normalize_version($self->{MIN_PERL_VERSION})
+        if $self->{MIN_PERL_VERSION};
+
+    return %meta;
+}
+
+sub _normalize_prereqs {
+  my ($hash) = @_;
+  my %prereqs;
+  while ( my ($k,$v) = each %$hash ) {
+    $prereqs{$k} = _normalize_version($v);
+  }
+  return \%prereqs;
+}
+
+# Adapted from Module::Build::Base
+sub _normalize_version {
+  my ($version) = @_;
+  $version = 0 unless defined $version;
+
+  if ( ref $version eq 'version' ) { # version objects
+    $version = $version->is_qv ? $version->normal : $version->stringify;
+  }
+  elsif ( $version =~ /^[^v][^.]*\.[^.]+\./ ) { # no leading v, multiple dots
+    # normalize string tuples without "v": "1.2.3" -> "v1.2.3"
+    $version = "v$version";
+  }
+  else {
+    # leave alone
+  }
+  return $version;
+}
 
 =head3 _dump_hash
 
@@ -1069,15 +1254,24 @@ distdir.
 sub distmeta_target {
     my $self = shift;
 
-    my $add_meta = $self->oneliner(<<'CODE', ['-MExtUtils::Manifest=maniadd']);
-eval { maniadd({q{META.yml} => q{Module meta-data (added by MakeMaker)}}) } 
+    my @add_meta = (
+      $self->oneliner(<<'CODE', ['-MExtUtils::Manifest=maniadd']),
+exit unless -e q{META.yml};
+eval { maniadd({q{META.yml} => q{Module YAML meta-data (added by MakeMaker)}}) }
     or print "Could not add META.yml to MANIFEST: $${'@'}\n"
 CODE
+      $self->oneliner(<<'CODE', ['-MExtUtils::Manifest=maniadd'])
+exit unless -f q{META.json};
+eval { maniadd({q{META.json} => q{Module JSON meta-data (added by MakeMaker)}}) }
+    or print "Could not add META.json to MANIFEST: $${'@'}\n"
+CODE
+    );
 
-    my $add_meta_to_distdir = $self->cd('$(DISTVNAME)', $add_meta);
+    my @add_meta_to_distdir = map { $self->cd('$(DISTVNAME)', $_) } @add_meta;
 
-    return sprintf <<'MAKE', $add_meta_to_distdir;
+    return sprintf <<'MAKE', @add_meta_to_distdir;
 distmeta : create_distdir metafile
+	$(NOECHO) %s
 	$(NOECHO) %s
 
 MAKE
@@ -1096,12 +1290,10 @@ or from internal data.
 
 sub mymeta {
     my $self = shift;
+    my $file = shift || ''; # for testing
 
-    my $mymeta;
-
-    if ( -e 'META.yml' ) {
-        $mymeta = $self->_mymeta_from_meta();
-    }
+    my $mymeta = $self->_mymeta_from_meta($file);
+    my $v2 = 1;
 
     unless ( $mymeta ) {
         my @metadata = $self->metafile_data(
@@ -1109,7 +1301,16 @@ sub mymeta {
             $self->{META_MERGE} || {},
         );
         $mymeta = {@metadata};
+        $v2 = 0;
     }
+
+    # Overwrite the non-configure dependency hashes
+
+    my $method = $v2
+               ? '_add_requirements_to_meta_v2'
+               : '_add_requirements_to_meta_v1_4';
+
+    $mymeta = { $self->$method( %$mymeta ) };
 
     $mymeta->{dynamic_config} = 0;
 
@@ -1119,13 +1320,19 @@ sub mymeta {
 
 sub _mymeta_from_meta {
     my $self = shift;
+    my $metafile = shift || ''; # for testing
+
+    return unless _has_cpan_meta();
 
     my $meta;
-    eval {
-        my @yaml = ExtUtils::MakeMaker::YAML::LoadFile('META.yml');
-        $meta = $yaml[0];
-    };
-    return undef unless $meta;
+    for my $file ( $metafile, "META.json", "META.yml" ) {
+      next unless -e $file;
+      eval {
+          $meta = CPAN::Meta->load_file($file)->as_struct( { version => 2 } );
+      };
+      last if $meta;
+    }
+    return unless $meta;
 
     # META.yml before 6.25_01 cannot be trusted.  META.yml lived in the source directory.
     # There was a good chance the author accidentally uploaded a stale META.yml if they
@@ -1134,23 +1341,12 @@ sub _mymeta_from_meta {
         $meta->{generated_by} =~ /ExtUtils::MakeMaker version ([\d\._]+)/) {
         my $eummv = do { local $^W = 0; $1+0; };
         if ($eummv < 6.2501) {
-            return undef;
+            return;
         }
     }
 
-    # Overwrite the non-configure dependency hashs
-    delete $meta->{requires};
-    delete $meta->{build_requires};
-    delete $meta->{recommends};
-    if ( exists $self->{PREREQ_PM} ) {
-        $meta->{requires} = $self->{PREREQ_PM} || {};
-    }
-    if ( exists $self->{BUILD_REQUIRES} ) {
-        $meta->{build_requires} = $self->{BUILD_REQUIRES} || {};
-    }
     return $meta;
 }
-
 
 =head3 write_mymeta
 
@@ -1166,17 +1362,18 @@ sub write_mymeta {
     my $self = shift;
     my $mymeta = shift;
 
-    require ExtUtils::MakeMaker::YAML;
-    my $mymeta_content = ExtUtils::MakeMaker::YAML::Dump($mymeta);
+    return unless _has_cpan_meta();
 
-    open(my $myfh, ">", "MYMETA.yml")
-      or die "Unable to open MYMETA.yml: $!";
-    print $myfh $mymeta_content;
-    close $myfh;
-
-    return;
+    _fix_metadata_before_conversion( $mymeta );
+    
+    # this can still blow up
+    # not sure if i should just eval this and skip file creation if it
+    # blows up
+    my $meta_obj = CPAN::Meta->new( $mymeta, { lazy_validation => 1 } );
+    $meta_obj->save( 'MYMETA.json' );
+    $meta_obj->save( 'MYMETA.yml', { version => "1.4" } );
+    return 1;
 }
-
 
 =head3 realclean (o)
 
@@ -1193,7 +1390,7 @@ sub realclean {
     # Special exception for the perl core where INST_* is not in blib.
     # This cleans up the files built from the ext/ directory (all XS).
     if( $self->{PERL_CORE} ) {
-	push @dirs, qw($(INST_AUTODIR) $(INST_ARCHAUTODIR));
+        push @dirs, qw($(INST_AUTODIR) $(INST_ARCHAUTODIR));
         push @files, values %{$self->{PM}};
     }
 
@@ -1398,7 +1595,7 @@ sub init_INST {
     # perl has been built and installed. Setting INST_LIB allows
     # you to build directly into, say $Config{privlibexp}.
     unless ($self->{INST_LIB}){
-	if ($self->{PERL_CORE}) {
+        if ($self->{PERL_CORE}) {
             if (defined $Cross::platform) {
                 $self->{INST_LIB} = $self->{INST_ARCHLIB} = 
                   $self->catdir($self->{PERL_LIB},"..","xlib",
@@ -1407,9 +1604,9 @@ sub init_INST {
             else {
                 $self->{INST_LIB} = $self->{INST_ARCHLIB} = $self->{PERL_LIB};
             }
-	} else {
-	    $self->{INST_LIB} = $self->catdir($Curdir,"blib","lib");
-	}
+        } else {
+            $self->{INST_LIB} = $self->catdir($Curdir,"blib","lib");
+        }
     }
 
     my @parentdir = split(/::/, $self->{PARENT_NAME});
@@ -1651,7 +1848,7 @@ sub init_INSTALL_from_PREFIX {
         my($s, $t, $d, $style) = @{$layout}{qw(s t d style)};
         my $r = '$('.$type2prefix{$t}.')';
 
-        print STDERR "Prefixing $var\n" if $Verbose >= 2;
+        warn "Prefixing $var\n" if $Verbose >= 2;
 
         my $installvar = "install$var";
         my $Installvar = uc $installvar;
@@ -1660,7 +1857,7 @@ sub init_INSTALL_from_PREFIX {
         $d = "$style/$d" if $style;
         $self->prefixify($installvar, $s, $r, $d);
 
-        print STDERR "  $Installvar == $self->{$Installvar}\n" 
+        warn "  $Installvar == $self->{$Installvar}\n" 
           if $Verbose >= 2;
     }
 
@@ -1790,15 +1987,14 @@ sub init_VERSION {
 }
 
 
-=head3 init_others
+=head3 init_tools
 
-    $MM->init_others();
+    $MM->init_tools();
 
-Initializes the macro definitions used by tools_other() and places them
-in the $MM object.
-
-If there is no description, its the same as the parameter to
-WriteMakefile() documented in ExtUtils::MakeMaker.
+Initializes the simple macro definitions used by tools_other() and
+places them in the $MM object.  These use conservative cross platform
+versions and should be overridden with platform specific versions for
+performance.
 
 Defines at least these macros.
 
@@ -1806,11 +2002,6 @@ Defines at least these macros.
 
   NOOP              Do nothing
   NOECHO            Tell make not to display the command itself
-
-  MAKEFILE
-  FIRST_MAKEFILE
-  MAKEFILE_OLD
-  MAKE_APERL_FILE   File used by MAKE_APERL
 
   SHELL             Program used to run shell commands
 
@@ -1830,7 +2021,7 @@ Defines at least these macros.
 
 =cut
 
-sub init_others {
+sub init_tools {
     my $self = shift;
 
     $self->{ECHO}     ||= $self->oneliner('print qq{@ARGV}', ['-l']);
@@ -1863,6 +2054,18 @@ CODE
     $self->{UNINST}     ||= 0;
     $self->{VERBINST}   ||= 0;
 
+    $self->{SHELL}              ||= $Config{sh};
+
+    # UMASK_NULL is not used by MakeMaker but some CPAN modules
+    # make use of it.
+    $self->{UMASK_NULL}         ||= "umask 0";
+
+    # Not the greatest default, but its something.
+    $self->{DEV_NULL}           ||= "> /dev/null 2>&1";
+
+    $self->{NOOP}               ||= '$(TRUE)';
+    $self->{NOECHO}             = '@' unless defined $self->{NOECHO};
+
     $self->{FIRST_MAKEFILE}     ||= $self->{MAKEFILE} || 'Makefile';
     $self->{MAKEFILE}           ||= $self->{FIRST_MAKEFILE};
     $self->{MAKEFILE_OLD}       ||= $self->{MAKEFILE}.'.old';
@@ -1876,17 +2079,24 @@ CODE
     $self->{MACROSTART}         ||= '';
     $self->{MACROEND}           ||= '';
 
-    $self->{SHELL}              ||= $Config{sh};
+    return;
+}
 
-    # UMASK_NULL is not used by MakeMaker but some CPAN modules
-    # make use of it.
-    $self->{UMASK_NULL}         ||= "umask 0";
 
-    # Not the greatest default, but its something.
-    $self->{DEV_NULL}           ||= "> /dev/null 2>&1";
+=head3 init_others
 
-    $self->{NOOP}               ||= '$(TRUE)';
-    $self->{NOECHO}             = '@' unless defined $self->{NOECHO};
+    $MM->init_others();
+
+Initializes the macro definitions having to do with compiling and
+linking used by tools_other() and places them in the $MM object.
+
+If there is no description, its the same as the parameter to
+WriteMakefile() documented in ExtUtils::MakeMaker.
+
+=cut
+
+sub init_others {
+    my $self = shift;
 
     $self->{LD_RUN_PATH} = "";
 
@@ -1927,7 +2137,7 @@ CODE
                         : ($Config{usedl} ? 'dynamic' : 'static');
     }
 
-    return 1;
+    return;
 }
 
 
@@ -2210,7 +2420,7 @@ sub arch_check {
 
         my $arch = (grep length, $self->splitdir($pthinks))[-1];
 
-        print STDOUT <<END unless $self->{UNINSTALLED_PERL};
+        print <<END unless $self->{UNINSTALLED_PERL};
 Your perl and your Config.pm seem to have different ideas about the 
 architecture they are running on.
 Perl thinks: [$arch]
@@ -2412,6 +2622,66 @@ sub _all_prereqs {
     my $self = shift;
 
     return { %{$self->{PREREQ_PM}}, %{$self->{BUILD_REQUIRES}} };
+}
+
+=begin private
+
+=head3 _perl_header_files
+
+  my $perl_header_files= $self->_perl_header_files;
+
+returns a sorted list of header files as found in PERL_SRC or $archlibexp/CORE.
+
+Used by perldepend() in MM_Unix and MM_VMS via _perl_header_files_fragment()
+
+=end private
+
+=cut
+
+sub _perl_header_files {
+    my $self = shift;
+
+    my $header_dir = $self->{PERL_SRC} || $self->catdir($Config{archlibexp}, 'CORE');
+    opendir my $dh, $header_dir
+        or die "Failed to opendir '$header_dir' to find header files: $!";
+
+    # we need to use a temporary here as the sort in scalar context would have undefined results.
+    my @perl_headers= sort grep { /\.h\z/ } readdir($dh);
+
+    closedir $dh;
+
+    return @perl_headers;
+}
+
+=begin private
+
+=head3 _perl_header_files_fragment ($o, $separator)
+
+  my $perl_header_files_fragment= $self->_perl_header_files_fragment("/");
+
+return a Makefile fragment which holds the list of perl header files which
+XS code depends on $(PERL_INC), and sets up the dependency for the $(OBJECT) file.
+
+The $separator argument defaults to "". MM_VMS will set it to "" and MM_UNIX to "/"
+in perldepend(). This reason child subclasses need to control this is that in
+VMS the $(PERL_INC) directory will already have delimiters in it, but in
+UNIX $(PERL_INC) will need a slash between it an the filename. Hypothetically
+win32 could use "\\" (but it doesn't need to).
+
+=end private
+
+=cut
+
+sub _perl_header_files_fragment {
+    my ($self, $separator)= @_;
+    $separator ||= "";
+    return join("\\\n",
+                "PERL_HDRS = ",
+                map {
+                    sprintf( "        \$(PERL_INC)%s%s            ", $separator, $_ )
+                } $self->_perl_header_files()
+           ) . "\n\n"
+           . "\$(OBJECT) : \$(PERL_HDRS)\n";
 }
 
 

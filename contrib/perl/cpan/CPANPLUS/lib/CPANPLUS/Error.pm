@@ -1,6 +1,9 @@
 package CPANPLUS::Error;
+use deprecate;
 
 use strict;
+use vars qw[$VERSION];
+$VERSION = "0.9135";
 
 use Log::Message private => 0;;
 
@@ -8,7 +11,7 @@ use Log::Message private => 0;;
 
 =head1 NAME
 
-CPANPLUS::Error
+CPANPLUS::Error - error handling for CPANPLUS
 
 =head1 SYNOPSIS
 
@@ -79,17 +82,17 @@ BEGIN {
 
     for my $func ( @EXPORT ) {
         no strict 'refs';
-        
+
         my $prefix  = 'cp_';
         my $name    = $func;
         $name       =~ s/^$prefix//g;
-        
+
         *$func = sub {
                         my $msg     = shift;
-                        
+
                         ### no point storing non-messages
                         return unless defined $msg;
-                        
+
                         $log->store(
                                 message => $msg,
                                 tag     => uc $name,
@@ -143,7 +146,8 @@ local $| = 1;
 $ERROR_FH   = \*STDERR;
 $MSG_FH     = \*STDOUT;
 
-package Log::Message::Handlers;
+package # Hide from Pause
+  Log::Message::Handlers;
 use Carp ();
 
 {

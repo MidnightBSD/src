@@ -1,3 +1,8 @@
+
+#define PERL_NO_GET_CONTEXT /* we want efficiency */
+
+/* I guese no private function needs pTHX_ and aTHX_ */
+
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
@@ -77,6 +82,7 @@ static const UV max_div_16 = UV_MAX / 16;
 #define CJK_UidF41    (0x9FBB)
 #define CJK_UidF51    (0x9FC3)
 #define CJK_UidF52    (0x9FCB)
+#define CJK_UidF61    (0x9FCC)
 #define CJK_ExtAIni   (0x3400) /* Unicode 3.0 */
 #define CJK_ExtAFin   (0x4DB5) /* Unicode 3.0 */
 #define CJK_ExtBIni  (0x20000) /* Unicode 3.1 */
@@ -86,6 +92,8 @@ static const UV max_div_16 = UV_MAX / 16;
 #define CJK_ExtDIni  (0x2B740) /* Unicode 6.0 */
 #define CJK_ExtDFin  (0x2B81D) /* Unicode 6.0 */
 
+#define CJK_CompIni  (0xFA0E)
+#define CJK_CompFin  (0xFA29)
 static STDCHAR UnifiedCompat[] = {
       1,1,0,1,0,1,1,0,0,0,0,0,0,0,0,0,0,1,0,1,0,1,1,0,0,1,1,1
 }; /* E F 0 1 2 3 4 5 6 7 8 9 A B C D E F 0 1 2 3 4 5 6 7 8 9 */
@@ -249,7 +257,7 @@ getHST (code, uca_vers = 0)
     UV code;
     IV uca_vers;
   PREINIT:
-    char * hangtype;
+    const char * hangtype;
     STRLEN typelen;
   CODE:
     if (codeRange(Hangul_SIni, Hangul_SFin)) {
@@ -296,6 +304,7 @@ _derivCE_9 (code)
     _derivCE_18 = 2
     _derivCE_20 = 3
     _derivCE_22 = 4
+    _derivCE_24 = 5
   PREINIT:
     UV base, aaaa, bbbb;
     U8 a[VCE_Length + 1] = "\x00\xFF\xFF\x00\x20\x00\x02\xFF\xFF";
@@ -303,10 +312,11 @@ _derivCE_9 (code)
     bool basic_unified = 0;
   PPCODE:
     if (CJK_UidIni <= code) {
-	if (codeRange(0xFA0E, 0xFA29))
-	    basic_unified = (bool)UnifiedCompat[code - 0xFA0E];
+	if (codeRange(CJK_CompIni, CJK_CompFin))
+	    basic_unified = (bool)UnifiedCompat[code - CJK_CompIni];
 	else
-	    basic_unified = (ix >= 3 ? (code <= CJK_UidF52) :
+	    basic_unified = (ix >= 5 ? (code <= CJK_UidF61) :
+			     ix >= 3 ? (code <= CJK_UidF52) :
 			     ix == 2 ? (code <= CJK_UidF51) :
 			     ix == 1 ? (code <= CJK_UidF41) :
 				       (code <= CJK_UidFin));
@@ -373,10 +383,11 @@ _isUIdeo (code, uca_vers)
   CODE:
     /* uca_vers = 0 for _uideoCE_8() */
     if (CJK_UidIni <= code) {
-	if (codeRange(0xFA0E, 0xFA29))
-	    basic_unified = (bool)UnifiedCompat[code - 0xFA0E];
+	if (codeRange(CJK_CompIni, CJK_CompFin))
+	    basic_unified = (bool)UnifiedCompat[code - CJK_CompIni];
 	else
-	    basic_unified = (uca_vers >= 20 ? (code <= CJK_UidF52) :
+	    basic_unified = (uca_vers >= 24 ? (code <= CJK_UidF61) :
+			     uca_vers >= 20 ? (code <= CJK_UidF52) :
 			     uca_vers >= 18 ? (code <= CJK_UidF51) :
 			     uca_vers >= 14 ? (code <= CJK_UidF41) :
 					      (code <= CJK_UidFin));
@@ -416,9 +427,6 @@ mk_SortKey (self, buf)
     else
 	croak("$self is not a HASHREF.");
 
-    svp = hv_fetch(selfHV, "level", 5, FALSE);
-    level = svp ? SvIV(*svp) : MaxLevel;
-
     if (SvROK(buf) && SvTYPE(SvRV(buf)) == SVt_PVAV)
 	bufAV = (AV*)SvRV(buf);
     else
@@ -433,8 +441,10 @@ mk_SortKey (self, buf)
 	d = (U8*)SvPVX(dst);
 	while (dlen--)
 	    *d++ = '\0';
-    }
-    else {
+    } else {
+	svp = hv_fetch(selfHV, "level", 5, FALSE);
+	level = svp ? SvIV(*svp) : MaxLevel;
+
 	for (lv = 0; lv < level; lv++) {
 	    New(0, eachlevel[lv], 2 * (1 + buf_len) + 1, U8);
 	    s[lv] = eachlevel[lv];
@@ -551,14 +561,27 @@ OUTPUT:
 
 
 SV*
-_varCE (vbl, vce)
-    SV* vbl
-    SV* vce
+varCE (self, vce)
+    SV* self;
+    SV* vce;
   PREINIT:
-    SV *dst;
+    SV *dst, *vbl, **svp;
+    HV *selfHV;
     U8 *a, *v, *d;
     STRLEN alen, vlen;
+    bool ig_l2;
+    UV totwt;
   CODE:
+    if (SvROK(self) && SvTYPE(SvRV(self)) == SVt_PVHV)
+	selfHV = (HV*)SvRV(self);
+    else
+	croak("$self is not a HASHREF.");
+
+    svp = hv_fetch(selfHV, "ignore_level2", 13, FALSE);
+    ig_l2 = svp ? SvTRUE(*svp) : FALSE;
+
+    svp = hv_fetch(selfHV, "variable", 8, FALSE);
+    vbl = svp ? *svp : &PL_sv_no;
     a = (U8*)SvPV(vbl, alen);
     v = (U8*)SvPV(vce, vlen);
 
@@ -569,29 +592,40 @@ _varCE (vbl, vce)
     SvCUR_set(dst, vlen);
     d[vlen] = '\0';
 
+    /* primary weight == 0 && secondary weight != 0 */
+    if (ig_l2 && !d[1] && !d[2] && (d[3] || d[4])) {
+	d[3] = d[4] = d[5] = d[6] = '\0';
+    }
+
     /* variable: checked only the first char and the length,
        trusting checkCollator() and %VariableOK in Perl ... */
 
     if (vlen < VCE_Length /* ignore short VCE (unexpected) */
 	||
-	*a == 'n') /* 'non-ignorable' */
+	*a == 'n') /* non-ignorable */
 	1;
     else if (*v) {
 	if (*a == 's') { /* shifted or shift-trimmed */
 	    d[7] = d[1]; /* wt level 1 to 4 */
 	    d[8] = d[2];
-	}
+	} /* else blanked */
+
 	d[1] = d[2] = d[3] = d[4] = d[5] = d[6] = '\0';
     }
     else if (*a == 'b') /* blanked */
 	1;
     else if (*a == 's') { /* shifted or shift-trimmed */
-	if (alen == 7 && (d[1] + d[2] + d[3] + d[4] + d[5] + d[6])) {
-	    d[7] = (U8)(Shift4Wt >> 8);
-	    d[8] = (U8)(Shift4Wt & 0xFF);
-	}
-	else {
-	    d[7] = d[8] = 0;
+	totwt = d[1] + d[2] + d[3] + d[4] + d[5] + d[6];
+	if (alen == 7 && totwt != 0) { /* shifted */
+	    if (d[1] == 0 && d[2] == 1) { /* XXX: CollationAuxiliary-6.2.0 */
+		d[7] = d[1]; /* wt level 1 to 4 */
+		d[8] = d[2];
+	    } else {
+		d[7] = (U8)(Shift4Wt >> 8);
+		d[8] = (U8)(Shift4Wt & 0xFF);
+	    }
+	} else { /* shift-trimmed or completely ignorable */
+	    d[7] = d[8] = '\0';
 	}
     }
     else
@@ -612,8 +646,8 @@ visualizeSortKey (self, key)
     U8 *s, *e, *d;
     STRLEN klen, dlen;
     UV uv;
-    IV uca_vers;
-    static char *upperhex = "0123456789ABCDEF";
+    IV uca_vers, sep = 0;
+    static const char *upperhex = "0123456789ABCDEF";
   CODE:
     if (SvROK(self) && SvTYPE(SvRV(self)) == SVt_PVHV)
 	selfHV = (HV*)SvRV(self);
@@ -628,10 +662,13 @@ visualizeSortKey (self, key)
     s = (U8*)SvPV(key, klen);
 
    /* slightly *longer* than the need, but I'm afraid of miscounting;
-      exactly: (klen / 2) * 5 + MaxLevel * 2 - 1 (excluding '\0')
-         = (klen / 2) * 5 - 1  # FFFF (16bit) and ' ' between 16bit units
-         + (MaxLevel - 1) * 2  # ' ' and '|' for level boundaries
-         + 2                   # '[' and ']'
+      = (klen / 2) * 5 - 1
+             # FFFF and ' ' for each 16bit units but ' ' is less by 1;
+             # ' ' and '|' for level boundaries including the identical level
+       + 2   # '[' and ']'
+       + 1   # '\0'
+       (a) if klen is odd (not expected), maybe more 5 bytes.
+       (b) there is not always the identical level.
    */
     dlen = (klen / 2) * 5 + MaxLevel * 2 + 2;
     dst = newSV(dlen);
@@ -641,18 +678,18 @@ visualizeSortKey (self, key)
     *d++ = '[';
     for (e = s + klen; s < e; s += 2) {
 	uv = (U16)(*s << 8 | s[1]);
-	if (uv) {
+	if (uv || sep >= MaxLevel) {
 	    if ((d[-1] != '[') && ((9 <= uca_vers) || (d[-1] != '|')))
 		*d++ = ' ';
 	    *d++ = upperhex[ (s[0] >> 4) & 0xF ];
 	    *d++ = upperhex[  s[0]       & 0xF ];
 	    *d++ = upperhex[ (s[1] >> 4) & 0xF ];
 	    *d++ = upperhex[  s[1]       & 0xF ];
-	}
-	else {
+	} else {
 	    if ((9 <= uca_vers) && (d[-1] != '['))
 		*d++ = ' ';
 	    *d++ = '|';
+	    ++sep;
 	}
     }
     *d++ = ']';

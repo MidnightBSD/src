@@ -1,35 +1,53 @@
 =encoding utf8
 
-=head1 Perl 5.14 release schedule
+=head1 STABLE RELEASE SCHEDULE
 
-=over
+This schedule lists the projected or historical development and
+release schedules for the next, current and previous stable versions
+of Perl.  Dates with all question marks will only be releases if
+deemed necessary by the Pumpking.
 
-=item December 20, 2010
+=head2 Perl 5.18
 
-Contentious Changes freeze
+Code freezes (which happen in the 5.17.X series)
 
-=item February 20, 2011
+  2013-01-20  5.17.8    Contentious changes freeze
+  2013-02-20  5.17.9    User-visible changes freeze
+  2013-03-20  5.17.10   Full code freeze
 
-User-visible Changes freeze
+Release schedule (with release manager):
 
-=item March 20, 2011
+  2013-04-??  5.18.0-RC0      Ricardo Signes
+  ...(interim RC releases)...
+  2013-05-18  5.18.0 (final)  Ricardo Signes
 
-Code Freeze
+(RC0 will be released once we think that all the blockers have been
+addressed.  This typically means some time in April or May.)
 
-=item April 1, 2011
+=head2 Perl 5.16
 
-Target date for 5.14.0 RC0
+Release schedule (with release managers):
 
-=item Seven days after the release of a 5.14.0-RCx with no showstoppers reported
+  2012-05-20  5.16.0 ✓        Ricardo Signes
+  2012-08-08  5.16.1 ✓        Ricardo Signes
+  2012-11-01  5.16.2 ✓        Ricardo Signes
+  2013-03-11  5.16.3 ✓        Ricardo Signes
+  ????-??-??  5.16.4          ??
 
-5.14.0
+=head2 Perl 5.14
 
-=back
+Release schedule (with release managers):
 
-=head1 Development Release schedule
+  2011-05-14  5.14.0 (final)  Jesse Vincent
+  2011-06-16  5.14.1 ✓        Jesse Vincent
+  2011-09-14  5.14.2 ✓        Florian Ragwitz
+  2012-10-12  5.14.3 ✓        Dominic Hargreaves
+  2013-03-10  5.14.4 ✓        David Mitchell
 
-This document lists the release engineers for at least the next
-four months of releases of bleadperl. If there are fewer than 
+=head1 DEVELOPMENT RELEASE SCHEDULE
+
+This schedule lists the release engineers for at least the next
+four months of releases of bleadperl. If there are fewer than
 four months listed as you make a release, it's important
 that you extend the schedule AND B<identify the next release engineer>.
 
@@ -40,42 +58,40 @@ When shipping a release, you should include the schedule for (at least)
 the next four releases. If a stable version of Perl is released,
 you should reset the version numbers to the next blead series.
 
-=head2 2009
+=head2 Perl 5.17
 
- October 2       -   Jesse Vincent
- October 20      -   Jesse Vincent
- November 20     -   Leon Brocard
- December 20     -   Jesse Vincent
+  2012-05-26  5.17.0  ✓       Zefram
+  2012-06-20  5.17.1  ✓       Jesse Luehrs
+  2012-07-20  5.17.2  ✓       Tony Cook
+  2012-08-20  5.17.3  ✓       Steve Hay
+  2012-09-20  5.17.4  ✓       Florian Ragwitz
+  2012-10-20  5.17.5  ✓       Florian Ragwitz
+  2012-11-20  5.17.6  ✓       Ricardo Signes
+  2012-12-18  5.17.7  ✓       Dave Rolsky
+  2013-01-20  5.17.8  ✓       Aaron Crane
+  2013-02-20  5.17.9  ✓       Chris Williams
+  2013-03-20  5.17.10         Max Maischein
+  2013-04-20  5.17.11
 
-=head2 2010
+=head2 Perl 5.19
 
- January 20      -   Ricardo Signes
- February 20     -   Steve Hay
- March 20        -   Ask Bjørn Hansen (skipped due to 5.12.0-RC1)
- April 20        -   Leon Brocard
- May 20          -   Ricardo Signes
- June 20         -   Matt Trout
- July 20         -   David Golden
- August 20       -   Florian Ragwitz
- September 20    -   Steve Hay
- October 20      -   Tatsuhiko Miyagawa
- November 20     -   Chris Williams
- December 20     -   Zefram
-
-=head2 2011
-
- January 20      -   Jesse
- February 20     -   Ævar Arnfjörð Bjarmason
- March 20        -   Florian Ragwitz
- April 20        -   Jesse (5.14.0-RC0)
- May 20          -   Ricardo Signes
- June 20         -   David Golden
+  2013-05-20  5.19.0          Ricardo Signes
+  2013-06-20  5.19.1          David Golden
+  2013-07-20  5.19.2          Aristotle Pagaltzis
+  2013-08-20  5.19.3          Steve Hay
+  2013-09-20  5.19.4
+  2013-10-20  5.19.5
+  2013-11-20  5.19.6
+  2013-12-20  5.19.7
 
 =head1 VICTIMS
 
 The following porters have all consented to do at least
 one release of bleadperl.  If you can't do a release
 and can't find a substitute amongst this list, mail p5p.
+
+(Please do not add any names to this list without prior
+consent of the Pumpking.)
 
 Jesse Vincent <jesse@cpan.org>
 Leon Brocard <acme@astray.com>
@@ -91,14 +107,13 @@ Tatsuhiko Miyagawa <miyagawa@bulknews.net>
 Chris Williams <bingos@cpan.org>
 Zefram <zefram@fysh.org>
 Ævar Arnfjörð Bjarmason <avar@cpan.org>
-
-
-=head2 Reticent victims
-
-These folks have said that they'd be willing to release Perl but would
-prefer that others have the opportunity before they pitch in:
-
-
+Stevan Little <stevan.little@iinteractive.com>
+Dave Rolsky <autarch@urth.org>
+Abigail <abigail@abigail.be>
+Max Maischein <corion@cpan.org>
+Dave Cross <dave@perlhacks.com>
+Jesse Luehrs <doy@cpan.org>
+Tony Cook <tony@develop-help.com>
 
 =head1 AUTHOR
 

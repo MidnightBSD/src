@@ -5,8 +5,6 @@ use strict;
 use Carp                        qw[carp croak];
 use Locale::Maketext::Simple    Style => 'gettext';
 
-use Data::Dumper;
-
 BEGIN {
     use Exporter    ();
     use vars        qw[ @ISA $VERSION @EXPORT_OK $VERBOSE $ALLOW_UNKNOWN
@@ -18,7 +16,7 @@ BEGIN {
     @ISA        =   qw[ Exporter ];
     @EXPORT_OK  =   qw[check allow last_error];
 
-    $VERSION                = '0.28';
+    $VERSION                = '0.36';
     $VERBOSE                = $^W ? 1 : 0;
     $NO_DUPLICATES          = 0;
     $STRIP_LEADING_DASHES   = 0;
@@ -247,14 +245,18 @@ on this.
 sub check {
     my ($utmpl, $href, $verbose) = @_;
 
+    ### clear the current error string ###
+    _clear_error();
+
     ### did we get the arguments we need? ###
-    return if !$utmpl or !$href;
+    if ( !$utmpl or !$href ) {
+      _store_error(loc('check() expects two arguments'));
+      return unless $WARNINGS_FATAL;
+      croak(__PACKAGE__->last_error);
+    }
 
     ### sensible defaults ###
     $verbose ||= $VERBOSE || 0;
-
-    ### clear the current error string ###
-    _clear_error();
 
     ### XXX what type of template is it? ###
     ### { key => { } } ?
@@ -263,31 +265,89 @@ sub check {
     #}
 
     ### clean up the template ###
-    my $args = _clean_up_args( $href ) or return;
+    my $args;
+
+    ### don't even bother to loop, if there's nothing to clean up ###
+    if( $PRESERVE_CASE and !$STRIP_LEADING_DASHES ) {
+        $args = $href;
+    } else {
+        ### keys are not aliased ###
+        for my $key (keys %$href) {
+            my $org = $key;
+            $key = lc $key unless $PRESERVE_CASE;
+            $key =~ s/^-// if $STRIP_LEADING_DASHES;
+            $args->{$key} = $href->{$org};
+        }
+    }
+
+    my %defs;
+
+    ### which template entries have a 'store' member
+    my @want_store;
 
     ### sanity check + defaults + required keys set? ###
-    my $defs = _sanity_check_and_defaults( $utmpl, $args, $verbose )
-                    or return;
+    my $fail;
+    for my $key (keys %$utmpl) {
+        my $tmpl = $utmpl->{$key};
 
-    ### deref only once ###
-    my %utmpl   = %$utmpl;
-    my %args    = %$args;
-    my %defs    = %$defs;
+        ### check if required keys are provided
+        ### keys are now lower cased, unless preserve case was enabled
+        ### at which point, the utmpl keys must match, but that's the users
+        ### problem.
+        if( $tmpl->{'required'} and not exists $args->{$key} ) {
+            _store_error(
+                loc(q|Required option '%1' is not provided for %2 by %3|,
+                    $key, _who_was_it(), _who_was_it(1)), $verbose );
+
+            ### mark the error ###
+            $fail++;
+            next;
+        }
+
+        ### next, set the default, make sure the key exists in %defs ###
+        $defs{$key} = $tmpl->{'default'}
+                        if exists $tmpl->{'default'};
+
+        if( $SANITY_CHECK_TEMPLATE ) {
+            ### last, check if they provided any weird template keys
+            ### -- do this last so we don't always execute this code.
+            ### just a small optimization.
+            map {   _store_error(
+                        loc(q|Template type '%1' not supported [at key '%2']|,
+                        $_, $key), 1, 0 );
+            } grep {
+                not $known_keys{$_}
+            } keys %$tmpl;
+
+            ### make sure you passed a ref, otherwise, complain about it!
+            if ( exists $tmpl->{'store'} ) {
+                _store_error( loc(
+                    q|Store variable for '%1' is not a reference!|, $key
+                ), 1, 0 ) unless ref $tmpl->{'store'};
+            }
+        }
+
+        push @want_store, $key if $tmpl->{'store'};
+    }
+
+    ### errors found ###
+    return if $fail;
 
     ### flag to see if anything went wrong ###
-    my $wrong; 
-    
+    my $wrong;
+
     ### flag to see if we warned for anything, needed for warnings_fatal
     my $warned;
 
-    for my $key (keys %args) {
+    for my $key (keys %$args) {
+        my $arg = $args->{$key};
 
         ### you gave us this key, but it's not in the template ###
-        unless( $utmpl{$key} ) {
+        unless( $utmpl->{$key} ) {
 
             ### but we'll allow it anyway ###
             if( $ALLOW_UNKNOWN ) {
-                $defs{$key} = $args{$key};
+                $defs{$key} = $arg;
 
             ### warn about the error ###
             } else {
@@ -299,8 +359,11 @@ sub check {
             next;
         }
 
+        ### copy of this keys template instructions, to save derefs ###
+        my %tmpl = %{$utmpl->{$key}};
+
         ### check if you're even allowed to override this key ###
-        if( $utmpl{$key}->{'no_override'} ) {
+        if( $tmpl{'no_override'} ) {
             _store_error(
                 loc(q[You are not allowed to override key '%1'].
                     q[for %2 from %3], $key, _who_was_it(), _who_was_it(1)),
@@ -310,13 +373,8 @@ sub check {
             next;
         }
 
-        ### copy of this keys template instructions, to save derefs ###
-        my %tmpl = %{$utmpl{$key}};
-
         ### check if you were supposed to provide defined() values ###
-        if( ($tmpl{'defined'} || $ONLY_ALLOW_DEFINED) and
-            not defined $args{$key}
-        ) {
+        if( ($tmpl{'defined'} || $ONLY_ALLOW_DEFINED) and not defined $arg ) {
             _store_error(loc(q|Key '%1' must be defined when passed|, $key),
                 $verbose );
             $wrong ||= 1;
@@ -325,7 +383,7 @@ sub check {
 
         ### check if they should be of a strict type, and if it is ###
         if( ($tmpl{'strict_type'} || $STRICT_TYPE) and
-            (ref $args{$key} ne ref $tmpl{'default'})
+            (ref $arg ne ref $tmpl{'default'})
         ) {
             _store_error(loc(q|Key '%1' needs to be of type '%2'|,
                         $key, ref $tmpl{'default'} || 'SCALAR'), $verbose );
@@ -337,25 +395,25 @@ sub check {
         ### allow() will report its own errors ###
         if( exists $tmpl{'allow'} and not do {
                 local $_ERROR_STRING;
-                allow( $args{$key}, $tmpl{'allow'} )
-            }         
+                allow( $arg, $tmpl{'allow'} )
+            }
         ) {
             ### stringify the value in the error report -- we don't want dumps
             ### of objects, but we do want to see *roughly* what we passed
             _store_error(loc(q|Key '%1' (%2) is of invalid type for '%3' |.
                              q|provided by %4|,
-                            $key, "$args{$key}", _who_was_it(),
+                            $key, "$arg", _who_was_it(),
                             _who_was_it(1)), $verbose);
             $wrong ||= 1;
             next;
         }
 
         ### we got here, then all must be OK ###
-        $defs{$key} = $args{$key};
+        $defs{$key} = $arg;
 
     }
 
-    ### croak with the collected errors if there were errors and 
+    ### croak with the collected errors if there were errors and
     ### we have the fatal flag toggled.
     croak(__PACKAGE__->last_error) if ($wrong || $warned) && $WARNINGS_FATAL;
 
@@ -366,10 +424,10 @@ sub check {
     ### check if we need to store any of the keys ###
     ### can't do it before, because something may go wrong later,
     ### leaving the user with a few set variables
-    for my $key (keys %defs) {
-        if( my $ref = $utmpl{$key}->{'store'} ) {
-            $$ref = $NO_DUPLICATES ? delete $defs{$key} : $defs{$key};
-        }
+    for my $key (@want_store) {
+        next unless exists $defs{$key};
+        my $ref = $utmpl->{$key}{'store'};
+        $$ref = $NO_DUPLICATES ? delete $defs{$key} : $defs{$key};
     }
 
     return \%defs;
@@ -439,7 +497,7 @@ sub allow {
         for ( @{$_[1]} ) {
             return 1 if allow( $_[0], $_ );
         }
-        
+
         return;
 
     ### fall back to a simple, but safe 'eq' ###
@@ -452,80 +510,6 @@ sub allow {
 }
 
 ### helper functions ###
-
-### clean up the template ###
-sub _clean_up_args {
-    ### don't even bother to loop, if there's nothing to clean up ###
-    return $_[0] if $PRESERVE_CASE and !$STRIP_LEADING_DASHES;
-
-    my %args = %{$_[0]};
-
-    ### keys are note aliased ###
-    for my $key (keys %args) {
-        my $org = $key;
-        $key = lc $key unless $PRESERVE_CASE;
-        $key =~ s/^-// if $STRIP_LEADING_DASHES;
-        $args{$key} = delete $args{$org} if $key ne $org;
-    }
-
-    ### return references so we always return 'true', even on empty
-    ### arguments
-    return \%args;
-}
-
-sub _sanity_check_and_defaults {
-    my %utmpl   = %{$_[0]};
-    my %args    = %{$_[1]};
-    my $verbose = $_[2];
-
-    my %defs; my $fail;
-    for my $key (keys %utmpl) {
-
-        ### check if required keys are provided
-        ### keys are now lower cased, unless preserve case was enabled
-        ### at which point, the utmpl keys must match, but that's the users
-        ### problem.
-        if( $utmpl{$key}->{'required'} and not exists $args{$key} ) {
-            _store_error(
-                loc(q|Required option '%1' is not provided for %2 by %3|,
-                    $key, _who_was_it(1), _who_was_it(2)), $verbose );
-
-            ### mark the error ###
-            $fail++;
-            next;
-        }
-
-        ### next, set the default, make sure the key exists in %defs ###
-        $defs{$key} = $utmpl{$key}->{'default'}
-                        if exists $utmpl{$key}->{'default'};
-
-        if( $SANITY_CHECK_TEMPLATE ) {
-            ### last, check if they provided any weird template keys
-            ### -- do this last so we don't always execute this code.
-            ### just a small optimization.
-            map {   _store_error(
-                        loc(q|Template type '%1' not supported [at key '%2']|,
-                        $_, $key), 1, 1 );
-            } grep {
-                not $known_keys{$_}
-            } keys %{$utmpl{$key}};
-        
-            ### make sure you passed a ref, otherwise, complain about it!
-            if ( exists $utmpl{$key}->{'store'} ) {
-                _store_error( loc(
-                    q|Store variable for '%1' is not a reference!|, $key
-                ), 1, 1 ) unless ref $utmpl{$key}->{'store'};
-            }
-        }
-    }
-
-    ### errors found ###
-    return if $fail;
-
-    ### return references so we always return 'true', even on empty
-    ### defaults
-    return \%defs;
-}
 
 sub _safe_eq {
     ### only do a straight 'eq' if they're both defined ###
@@ -654,7 +638,7 @@ Default is 1;
 
 =head2 $Params::Check::WARNINGS_FATAL
 
-If set to true, L<Params::Check> will C<croak> when an error during 
+If set to true, L<Params::Check> will C<croak> when an error during
 template validation occurs, rather than return C<false>.
 
 Default is 0;

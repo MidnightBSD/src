@@ -1,8 +1,8 @@
 package CPANPLUS::Module::Checksums;
+use deprecate;
 
 use strict;
-use vars qw[@ISA];
-
+use vars qw[@ISA $VERSION];
 
 use CPANPLUS::Error;
 use CPANPLUS::Internals::Constants;
@@ -16,10 +16,11 @@ use Module::Load::Conditional   qw[can_load];
 $Params::Check::VERBOSE = 1;
 
 @ISA = qw[ CPANPLUS::Module::Signature ];
+$VERSION = "0.9135";
 
 =head1 NAME
 
-CPANPLUS::Module::Checksums
+CPANPLUS::Module::Checksums - checking the checksum of a distribution
 
 =head1 SYNOPSIS
 
@@ -28,7 +29,7 @@ CPANPLUS::Module::Checksums
 
 =head1 DESCRIPTION
 
-This is a class that provides functions for checking the checksum 
+This is a class that provides functions for checking the checksum
 of a distribution. Should not be loaded directly, but used via the
 interface provided via C<CPANPLUS::Module>.
 
@@ -102,7 +103,7 @@ sub _validate_checksum {
     } else {
         msg(loc("Archive size is not known for '%1'",$self->package),$verbose);
     }
-    
+
     my $sha = $href->{ $self->package }->{'sha256'};
 
     unless( defined $sha ) {
@@ -142,7 +143,14 @@ sub _get_checksums_file {
     my $clone = $self->clone;
     $clone->package( CHECKSUMS );
 
-    my $file = $clone->fetch( ttl => 3600, %hash ) or return;
+    # If the user specified a fetchdir, then every CHECKSUMS file will always
+    # be stored there, not in an author-specific subdir.  Thus, in this case,
+    # we need to always re-fetch the CHECKSUMS file and hence need to set the
+    # TTL to something small.
+    my $have_fetchdir =
+        $self->parent->configure_object->get_conf('fetchdir') ne '';
+    my $ttl = $have_fetchdir ? 0.001 : 3600;
+    my $file = $clone->fetch( ttl => $ttl, %hash ) or return;
 
     return $file;
 }

@@ -1,7 +1,7 @@
 #! perl -w
 
 use strict ;
-require 5.004 ;
+require 5.006 ;
 
 use private::MakeUtil;
 use ExtUtils::MakeMaker 5.16 ;
@@ -66,7 +66,7 @@ WriteMakefile(
     NAME         => 'Compress::Raw::Zlib',
     VERSION_FROM => 'lib/Compress/Raw/Zlib.pm',
     INC          => "-I$ZLIB_INCLUDE" ,
-    DEFINE       => "-DNO_VIZ $OLD_ZLIB $WALL -DGZIP_OS_CODE=$GZIP_OS_CODE $USE_PPPORT_H" ,
+    DEFINE       => "-DNO_VIZ -DZ_SOLO $OLD_ZLIB $WALL -DGZIP_OS_CODE=$GZIP_OS_CODE $USE_PPPORT_H" ,
     XS           => { 'Zlib.xs' => 'Zlib.c'},
     'depend'     => { 'Makefile'   => 'config.in' },
     'clean'      => { FILES        => '*.c constants.h constants.xs' },
@@ -82,7 +82,13 @@ WriteMakefile(
         : (LIBS => [ "-L$ZLIB_LIB -lz " ])
     ),
       
-    INSTALLDIRS => ($] >= 5.009 ? 'perl' : 'site'),
+    INSTALLDIRS => ($] >= 5.009 && $] < 5.011 ? 'perl' : 'site'),
+
+    META_MERGE => {
+        no_index => {
+            directory => [ 't', 'private' ],
+        },
+    },    
 
     ((ExtUtils::MakeMaker->VERSION() gt '6.30') ?
         ('LICENSE'  => 'perl')         : ()),    
@@ -95,7 +101,6 @@ sub version_Macro
 
     return [ "#if ZLIB_VERNUM >= 0x$ver\n", "#endif\n" ];
 }
-
 
 my @names = qw(
 

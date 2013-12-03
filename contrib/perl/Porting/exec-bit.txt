@@ -18,6 +18,7 @@ makedepend.SH
 metaconfig.SH
 myconfig.SH
 regen/embed.pl
+regen/feature.pl
 regen/keywords.pl
 regen/opcode.pl
 regen/regcharclass.pl
@@ -29,6 +30,9 @@ x2p/Makefile.SH
 x2p/cflags.SH
 Porting/Maintainers.pl
 Porting/add-package.pl
+Porting/bisect.pl
+Porting/bisect-example.sh
+Porting/bisect-runner.pl
 Porting/check83.pl
 Porting/checkAUTHORS.pl
 Porting/checkURL.pl
@@ -41,18 +45,15 @@ Porting/config_h.pl
 Porting/corecpan.pl
 Porting/corelist-perldelta.pl
 Porting/corelist.pl
-Porting/curliff.pl
 Porting/expand-macro.pl
 Porting/findrfuncs
-Porting/genlog
 Porting/makerel
 Porting/make_dot_patch.pl
 Porting/make_snapshot.pl
 Porting/newtests-perldelta.pl
 Porting/perlhist_calculate.pl
 Porting/sort_perldiag.pl
+Porting/sync-with-cpan
 Porting/valgrindpp.pl
-mpeix/nm
-mpeix/relink
 Cross/generate_config_sh
 Cross/warp

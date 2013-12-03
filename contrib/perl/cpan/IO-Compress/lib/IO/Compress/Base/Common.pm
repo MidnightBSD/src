@@ -11,14 +11,18 @@ use File::GlobMapper;
 require Exporter;
 our ($VERSION, @ISA, @EXPORT, %EXPORT_TAGS, $HAS_ENCODE);
 @ISA = qw(Exporter);
-$VERSION = '2.033';
+$VERSION = '2.060';
 
-@EXPORT = qw( isaFilehandle isaFilename whatIsInput whatIsOutput 
+@EXPORT = qw( isaFilehandle isaFilename isaScalar
+              whatIsInput whatIsOutput 
               isaFileGlobString cleanFileGlobString oneTarget
               setBinModeInput setBinModeOutput
               ckInOutParams 
               createSelfTiedObject
-              getEncoding
+              
+              isGeMax32
+
+              MAX32
 
               WANT_CODE
               WANT_EXT
@@ -42,7 +46,16 @@ use constant STATUS_OK        => 0;
 use constant STATUS_ENDSTREAM => 1;
 use constant STATUS_EOF       => 2;
 use constant STATUS_ERROR     => -1;
+use constant MAX16            => 0xFFFF ;  
+use constant MAX32            => 0xFFFFFFFF ;  
+use constant MAX32cmp         => 0xFFFFFFFF + 1 - 1; # for 5.6.x on 32-bit need to force an non-IV value 
           
+
+sub isGeMax32
+{
+    return $_[0] >= MAX32cmp ;
+}
+
 sub hasEncode()
 {
     if (! defined $HAS_ENCODE) {
@@ -92,7 +105,7 @@ sub setBinModeOutput($)
 {
     my $handle = shift ;
 
-    binmode $handle 
+    binmode $handle
         if  $needBinmode;
 }
 
@@ -104,6 +117,11 @@ sub isaFilehandle($)
               UNIVERSAL::isa($_[0],'IO::Handle') or
               UNIVERSAL::isa(\$_[0],'GLOB')) 
           )
+}
+
+sub isaScalar
+{
+    return ( defined($_[0]) and ref($_[0]) eq 'SCALAR' and defined ${ $_[0] } ) ;
 }
 
 sub isaFilename($)
@@ -358,10 +376,10 @@ sub IO::Compress::Base::Validator::validateInputFilenames
             return $self->saveErrorString("input file '$filename' is a directory");
         }
 
-        if (! -r _ )
-        {
-            return $self->saveErrorString("cannot open file '$filename': $!");
-        }
+#        if (! -r _ )
+#        {
+#            return $self->saveErrorString("cannot open file '$filename': $!");
+#        }
     }
 
     return 1 ;
@@ -451,8 +469,9 @@ sub createSelfTiedObject
 
 $EXPORT_TAGS{Parse} = [qw( ParseParameters 
                            Parse_any Parse_unsigned Parse_signed 
-                           Parse_boolean Parse_custom Parse_string
-                           Parse_multiple Parse_writable_scalar
+                           Parse_boolean Parse_string
+                           Parse_code
+                           Parse_writable_scalar
                          )
                       ];              
 
@@ -463,10 +482,10 @@ use constant Parse_unsigned => 0x02;
 use constant Parse_signed   => 0x04;
 use constant Parse_boolean  => 0x08;
 use constant Parse_string   => 0x10;
-use constant Parse_custom   => 0x12;
+use constant Parse_code     => 0x20;
 
 #use constant Parse_store_ref        => 0x100 ;
-use constant Parse_multiple         => 0x100 ;
+#use constant Parse_multiple         => 0x100 ;
 use constant Parse_writable         => 0x200 ;
 use constant Parse_writable_scalar  => 0x400 | Parse_writable ;
 
@@ -474,10 +493,11 @@ use constant OFF_PARSED     => 0 ;
 use constant OFF_TYPE       => 1 ;
 use constant OFF_DEFAULT    => 2 ;
 use constant OFF_FIXED      => 3 ;
-use constant OFF_FIRST_ONLY => 4 ;
-use constant OFF_STICKY     => 5 ;
+#use constant OFF_FIRST_ONLY => 4 ;
+#use constant OFF_STICKY     => 5 ;
 
-
+use constant IxError => 0;
+use constant IxGot   => 1 ;
 
 sub ParseParameters
 {
@@ -491,26 +511,60 @@ sub ParseParameters
     
     my $p = new IO::Compress::Base::Parameters() ;            
     $p->parse(@_)
-        or croak "$sub: $p->{Error}" ;
+        or croak "$sub: $p->[IxError]" ;
 
     return $p;
 }
 
-#package IO::Compress::Base::Parameters;
 
 use strict;
+
 use warnings;
 use Carp;
 
+
+sub Init
+{
+    my $default = shift ;
+    my %got ;
+    
+    my $obj = IO::Compress::Base::Parameters::new();
+    while (my ($key, $v) = each %$default)
+    {
+        croak "need 2 params [@$v]"
+            if @$v != 2 ;
+
+        my ($type, $value) = @$v ;
+#        my ($first_only, $sticky, $type, $value) = @$v ;
+        my $sticky = 0;
+        my $x ;
+        $obj->_checkType($key, \$value, $type, 0, \$x) 
+            or return undef ;
+
+        $key = lc $key;
+
+#        if (! $sticky) {
+#            $x = []
+#                if $type & Parse_multiple;
+
+#            $got{$key} = [0, $type, $value, $x, $first_only, $sticky] ;
+            $got{$key} = [0, $type, $value, $x] ;            
+#        }
+#
+#        $got{$key}[OFF_PARSED] = 0 ;
+    }
+    
+    return bless \%got, "IO::Compress::Base::Parameters::Defaults" ;
+}
+
 sub IO::Compress::Base::Parameters::new
 {
-    my $class = shift ;
+    #my $class = shift ;
 
-    my $obj = { Error => '',
-                Got   => {},
-              } ;
+    my $obj;
+    $obj->[IxError] = '';
+    $obj->[IxGot] = {} ;          
 
-    #return bless $obj, ref($class) || $class || __PACKAGE__ ;
     return bless $obj, 'IO::Compress::Base::Parameters' ;
 }
 
@@ -520,25 +574,24 @@ sub IO::Compress::Base::Parameters::setError
     my $error = shift ;
     my $retval = @_ ? shift : undef ;
 
-    $self->{Error} = $error ;
+
+    $self->[IxError] = $error ;
     return $retval;
 }
           
-#sub getError
-#{
-#    my $self = shift ;
-#    return $self->{Error} ;
-#}
+sub IO::Compress::Base::Parameters::getError
+{
+    my $self = shift ;
+    return $self->[IxError] ;
+}
           
 sub IO::Compress::Base::Parameters::parse
 {
     my $self = shift ;
-
     my $default = shift ;
 
-    my $got = $self->{Got} ;
+    my $got = $self->[IxGot] ;
     my $firstTime = keys %{ $got } == 0 ;
-    my $other;
 
     my (@Bad) ;
     my @entered = () ;
@@ -560,63 +613,35 @@ sub IO::Compress::Base::Parameters::parse
         }
     }
     else {
+       
         my $count = @_;
         return $self->setError("Expected even number of parameters, got $count")
             if $count % 2 != 0 ;
         
         for my $i (0.. $count / 2 - 1) {
-            if ($_[2 * $i] eq '__xxx__') {
-                $other = $_[2 * $i + 1] ;
-            }
-            else {
-                push @entered, $_[2 * $i] ;
-                push @entered, \$_[2 * $i + 1] ;
-            }
+            push @entered, $_[2 * $i] ;
+            push @entered, \$_[2 * $i + 1] ;
         }
     }
 
-
-    while (my ($key, $v) = each %$default)
-    {
-        croak "need 4 params [@$v]"
-            if @$v != 4 ;
-
-        my ($first_only, $sticky, $type, $value) = @$v ;
-        my $x ;
-        $self->_checkType($key, \$value, $type, 0, \$x) 
-            or return undef ;
-
-        $key = lc $key;
-
-        if ($firstTime || ! $sticky) {
-            $x = []
-                if $type & Parse_multiple;
-
-            $got->{$key} = [0, $type, $value, $x, $first_only, $sticky] ;
+        foreach my $key (keys %$default)
+        {
+    
+            my ($type, $value) = @{ $default->{$key} } ;
+  
+            if ($firstTime) {   
+                $got->{$key} = [0, $type, $value, $value] ;               
+            }
+            else
+            {
+                $got->{$key}[OFF_PARSED] = 0 ;      
+            }               
         }
 
-        $got->{$key}[OFF_PARSED] = 0 ;
-    }
 
     my %parsed = ();
     
-    if ($other) 
-    {
-        for my $key (keys %$default)  
-        {
-            my $canonkey = lc $key;
-            if ($other->parsed($canonkey))
-            {
-                my $value = $other->value($canonkey);
-#print "SET '$canonkey' to $value [$$value]\n";
-                ++ $parsed{$canonkey};
-                $got->{$canonkey}[OFF_PARSED]  = 1;
-                $got->{$canonkey}[OFF_DEFAULT] = $value;
-                $got->{$canonkey}[OFF_FIXED]   = $value;
-            }
-        }
-    }
-    
+   
     for my $i (0.. @entered / 2 - 1) {
         my $key = $entered[2* $i] ;
         my $value = $entered[2* $i+1] ;
@@ -627,28 +652,22 @@ sub IO::Compress::Base::Parameters::parse
         $key =~ s/^-// ;
         my $canonkey = lc $key;
  
-        if ($got->{$canonkey} && ($firstTime ||
-                                  ! $got->{$canonkey}[OFF_FIRST_ONLY]  ))
+        if ($got->{$canonkey})                                  
         {
             my $type = $got->{$canonkey}[OFF_TYPE] ;
             my $parsed = $parsed{$canonkey};
             ++ $parsed{$canonkey};
 
             return $self->setError("Muliple instances of '$key' found") 
-                if $parsed && ($type & Parse_multiple) == 0 ;
+                if $parsed ; 
 
             my $s ;
             $self->_checkType($key, $value, $type, 1, \$s)
                 or return undef ;
 
             $value = $$value ;
-            if ($type & Parse_multiple) {
-                $got->{$canonkey}[OFF_PARSED] = 1;
-                push @{ $got->{$canonkey}[OFF_FIXED] }, $s ;
-            }
-            else {
-                $got->{$canonkey} = [1, $type, $value, $s] ;
-            }
+            $got->{$canonkey} = [1, $type, $value, $s] ;
+
         }
         else
           { push (@Bad, $key) }
@@ -678,19 +697,19 @@ sub IO::Compress::Base::Parameters::_checkType
     if ($type & Parse_writable_scalar)
     {
         return $self->setError("Parameter '$key' not writable")
-            if $validate &&  readonly $$value ;
+            if  readonly $$value ;
 
         if (ref $$value) 
         {
             return $self->setError("Parameter '$key' not a scalar reference")
-                if $validate &&  ref $$value ne 'SCALAR' ;
+                if ref $$value ne 'SCALAR' ;
 
             $$output = $$value ;
         }
         else  
         {
             return $self->setError("Parameter '$key' not a scalar")
-                if $validate &&  ref $value ne 'SCALAR' ;
+                if ref $value ne 'SCALAR' ;
 
             $$output = $value ;
         }
@@ -698,14 +717,6 @@ sub IO::Compress::Base::Parameters::_checkType
         return 1;
     }
 
-#    if ($type & Parse_store_ref)
-#    {
-#        #$value = $$value
-#        #    if ref ${ $value } ;
-#
-#        $$output = $value ;
-#        return 1;
-#    }
 
     $value = $$value ;
 
@@ -716,20 +727,21 @@ sub IO::Compress::Base::Parameters::_checkType
     }
     elsif ($type & Parse_unsigned)
     {
+     
         return $self->setError("Parameter '$key' must be an unsigned int, got 'undef'")
-            if $validate && ! defined $value ;
+            if ! defined $value ;
         return $self->setError("Parameter '$key' must be an unsigned int, got '$value'")
-            if $validate && $value !~ /^\d+$/;
-
+            if $value !~ /^\d+$/;
+    
         $$output = defined $value ? $value : 0 ;    
         return 1;
     }
     elsif ($type & Parse_signed)
     {
         return $self->setError("Parameter '$key' must be a signed int, got 'undef'")
-            if $validate && ! defined $value ;
+            if ! defined $value ;
         return $self->setError("Parameter '$key' must be a signed int, got '$value'")
-            if $validate && $value !~ /^-?\d+$/;
+            if $value !~ /^-?\d+$/;
 
         $$output = defined $value ? $value : 0 ;    
         return 1 ;
@@ -737,43 +749,50 @@ sub IO::Compress::Base::Parameters::_checkType
     elsif ($type & Parse_boolean)
     {
         return $self->setError("Parameter '$key' must be an int, got '$value'")
-            if $validate && defined $value && $value !~ /^\d*$/;
-        $$output =  defined $value ? $value != 0 : 0 ;    
+            if defined $value && $value !~ /^\d*$/;
+
+        $$output =  defined $value && $value != 0 ? 1 : 0 ;    
         return 1;
     }
+
     elsif ($type & Parse_string)
     {
         $$output = defined $value ? $value : "" ;    
         return 1;
     }
+    elsif ($type & Parse_code)
+    {
+        return $self->setError("Parameter '$key' must be a code reference, got '$value'")
+            if (! defined $value || ref $value ne 'CODE') ;
 
+        $$output = defined $value ? $value : "" ;    
+        return 1;
+    }
+    
     $$output = $value ;
     return 1;
 }
 
-
-
 sub IO::Compress::Base::Parameters::parsed
 {
-    my $self = shift ;
-    my $name = shift ;
-
-    return $self->{Got}{lc $name}[OFF_PARSED] ;
+    return $_[0]->[IxGot]{$_[1]}[OFF_PARSED] ;
 }
 
-sub IO::Compress::Base::Parameters::value
+
+sub IO::Compress::Base::Parameters::getValue
 {
-    my $self = shift ;
-    my $name = shift ;
+    return  $_[0]->[IxGot]{$_[1]}[OFF_FIXED] ;
+}
+sub IO::Compress::Base::Parameters::setValue
+{
+    $_[0]->[IxGot]{$_[1]}[OFF_PARSED]  = 1;
+    $_[0]->[IxGot]{$_[1]}[OFF_DEFAULT] = $_[2] ;
+    $_[0]->[IxGot]{$_[1]}[OFF_FIXED]   = $_[2] ;            
+}
 
-    if (@_)
-    {
-        $self->{Got}{lc $name}[OFF_PARSED]  = 1;
-        $self->{Got}{lc $name}[OFF_DEFAULT] = $_[0] ;
-        $self->{Got}{lc $name}[OFF_FIXED]   = $_[0] ;
-    }
-
-    return $self->{Got}{lc $name}[OFF_FIXED] ;
+sub IO::Compress::Base::Parameters::valueRef
+{
+    return  $_[0]->[IxGot]{$_[1]}[OFF_FIXED]  ;
 }
 
 sub IO::Compress::Base::Parameters::valueOrDefault
@@ -782,33 +801,31 @@ sub IO::Compress::Base::Parameters::valueOrDefault
     my $name = shift ;
     my $default = shift ;
 
-    my $value = $self->{Got}{lc $name}[OFF_DEFAULT] ;
-
+    my $value = $self->[IxGot]{$name}[OFF_DEFAULT] ;
+    
     return $value if defined $value ;
     return $default ;
 }
 
 sub IO::Compress::Base::Parameters::wantValue
 {
-    my $self = shift ;
-    my $name = shift ;
-
-    return defined $self->{Got}{lc $name}[OFF_DEFAULT] ;
-
+    return defined $_[0]->[IxGot]{$_[1]}[OFF_DEFAULT] ;
 }
 
 sub IO::Compress::Base::Parameters::clone
 {
     my $self = shift ;
-    my $obj = { };
+    my $obj = [] ;
     my %got ;
 
-    while (my ($k, $v) = each %{ $self->{Got} }) {
-        $got{$k} = [ @$v ];
+    my $hash = $self->[IxGot] ;
+    for my $k (keys %{ $hash })
+    {
+        $got{$k} = [ @{ $hash->{$k} } ];
     }
 
-    $obj->{Error} = $self->{Error};
-    $obj->{Got} = \%got ;
+    $obj->[IxError] = $self->[IxError];
+    $obj->[IxGot] = \%got ;
 
     return bless $obj, 'IO::Compress::Base::Parameters' ;
 }
@@ -822,27 +839,19 @@ use constant HIGH  => 1;
 
 sub new
 {
-    my $class = shift ;
-
-    my $high = 0 ;
-    my $low  = 0 ;
-
-    if (@_ == 2) {
-        $high = shift ;
-        $low  = shift ;
-    }
-    elsif (@_ == 1) {
-        $low  = shift ;
-    }
-
-    bless [$low, $high], $class;
+    return bless [ 0, 0 ], $_[0]
+        if @_ == 1 ;
+        
+    return bless [ $_[1], 0 ], $_[0]
+        if @_ == 2 ;
+        
+    return bless [ $_[2], $_[1] ], $_[0]      
+        if @_ == 3 ;  
 }
 
 sub newUnpack_V64
 {
-    my $string = shift;
-
-    my ($low, $hi) = unpack "V V", $string ;
+    my ($low, $hi) = unpack "V V", $_[0] ;
     bless [ $low, $hi ], "U64";
 }
 
@@ -856,62 +865,107 @@ sub newUnpack_V32
 
 sub reset
 {
-    my $self = shift;
-    $self->[HIGH] = $self->[LOW] = 0;
+    $_[0]->[HIGH] = $_[0]->[LOW] = 0;
 }
 
 sub clone
 {
-    my $self = shift;
-    bless [ @$self ], ref $self ;
+    bless [ @{$_[0]}  ], ref $_[0] ;    
 }
 
 sub getHigh
 {
-    my $self = shift;
-    return $self->[HIGH];
+    return $_[0]->[HIGH];
 }
 
 sub getLow
 {
-    my $self = shift;
-    return $self->[LOW];
+    return $_[0]->[LOW];
 }
 
 sub get32bit
 {
-    my $self = shift;
-    return $self->[LOW];
+    return $_[0]->[LOW];
 }
 
 sub get64bit
 {
-    my $self = shift;
     # Not using << here because the result will still be
     # a 32-bit value on systems where int size is 32-bits
-    return $self->[HIGH] * HI_1 + $self->[LOW];
+    return $_[0]->[HIGH] * HI_1 + $_[0]->[LOW];
 }
 
 sub add
+{
+#    my $self = shift;
+    my $value = $_[1];
+
+    if (ref $value eq 'U64') {
+        $_[0]->[HIGH] += $value->[HIGH] ;
+        $value = $value->[LOW];
+    }
+    elsif ($value > MAX32) {      
+        $_[0]->[HIGH] += int($value / HI_1) ;
+        $value = $value % HI_1;
+    }
+     
+    my $available = MAX32 - $_[0]->[LOW] ;
+ 
+    if ($value > $available) {
+       ++ $_[0]->[HIGH] ;
+       $_[0]->[LOW] = $value - $available - 1;
+    }
+    else {
+       $_[0]->[LOW] += $value ;
+    }
+}
+
+sub add32
+{
+#    my $self = shift;
+    my $value = $_[1];
+
+    if ($value > MAX32) {      
+        $_[0]->[HIGH] += int($value / HI_1) ;
+        $value = $value % HI_1;
+    }
+     
+    my $available = MAX32 - $_[0]->[LOW] ;
+ 
+    if ($value > $available) {
+       ++ $_[0]->[HIGH] ;
+       $_[0]->[LOW] = $value - $available - 1;
+    }
+    else {
+       $_[0]->[LOW] += $value ;
+    }
+}
+
+sub subtract
 {
     my $self = shift;
     my $value = shift;
 
     if (ref $value eq 'U64') {
-        $self->[HIGH] += $value->[HIGH] ;
-        $value = $value->[LOW];
-    }
-     
-    my $available = MAX32 - $self->[LOW] ;
 
-    if ($value > $available) {
-       ++ $self->[HIGH] ;
-       $self->[LOW] = $value - $available - 1;
+        if ($value->[HIGH]) {
+            die "bad"
+                if $self->[HIGH] == 0 ||
+                   $value->[HIGH] > $self->[HIGH] ;
+
+           $self->[HIGH] -= $value->[HIGH] ;
+        }
+
+        $value = $value->[LOW] ;
+    }
+
+    if ($value > $self->[LOW]) {
+       -- $self->[HIGH] ;
+       $self->[LOW] = MAX32 - $value + $self->[LOW] + 1 ;
     }
     else {
-       $self->[LOW] += $value ;
+       $self->[LOW] -= $value;
     }
-
 }
 
 sub equal
@@ -923,31 +977,66 @@ sub equal
            $self->[HIGH] == $other->[HIGH] ;
 }
 
-sub is64bit
+sub gt
 {
     my $self = shift;
-    return $self->[HIGH] > 0 ;
+    my $other = shift;
+
+    return $self->cmp($other) > 0 ;
+}
+
+sub cmp
+{
+    my $self = shift;
+    my $other = shift ;
+
+    if ($self->[LOW] == $other->[LOW]) {
+        return $self->[HIGH] - $other->[HIGH] ;
+    }
+    else {
+        return $self->[LOW] - $other->[LOW] ;
+    }
+}
+    
+
+sub is64bit
+{
+    return $_[0]->[HIGH] > 0 ;
+}
+
+sub isAlmost64bit
+{
+    return $_[0]->[HIGH] > 0 ||  $_[0]->[LOW] == MAX32 ;
 }
 
 sub getPacked_V64
 {
-    my $self = shift;
-
-    return pack "V V", @$self ;
+    return pack "V V", @{ $_[0] } ;
 }
 
 sub getPacked_V32
 {
-    my $self = shift;
-
-    return pack "V", $self->[LOW] ;
+    return pack "V", $_[0]->[LOW] ;
 }
 
 sub pack_V64
 {
-    my $low  = shift;
+    return pack "V V", $_[0], 0;
+}
 
-    return pack "V V", $low, 0;
+
+sub full32 
+{
+    return $_[0] == MAX32 ;
+}
+
+sub Value_VV64
+{
+    my $buffer = shift;
+
+    my ($lo, $hi) = unpack ("V V" , $buffer);
+    no warnings 'uninitialized';
+    return $hi * HI_1 + $lo;
 }
 
 

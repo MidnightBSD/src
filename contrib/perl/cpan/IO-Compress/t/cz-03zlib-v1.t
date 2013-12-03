@@ -23,10 +23,10 @@ BEGIN
 
     my $count = 0 ;
     if ($] < 5.005) {
-        $count = 445 ;
+        $count = 453 ;
     }
     else {
-        $count = 456 ;
+        $count = 471 ;
     }
 
 
@@ -336,7 +336,8 @@ title 'inflate - check remaining buffer after Z_STREAM_END';
 
 title 'memGzip & memGunzip';
 {
-    my $name = "test.gz" ;
+    my ($name, $name1, $name2, $name3);
+    my $lex = new LexFile $name, $name1, $name2, $name3 ;
     my $buffer = <<EOM;
 some sample 
 text
@@ -368,7 +369,7 @@ EOM
 
     ok $uncomp eq $buffer ;
  
-    1 while unlink $name ;
+    #1 while unlink $name ;
 
     # now check that memGunzip can deal with it.
     my $ungzip = memGunzip($dest) ;
@@ -383,13 +384,13 @@ EOM
     is $gzerrno, 0;
 
     # write it to disk
-    ok open(FH, ">$name") ;
+    ok open(FH, ">$name1") ;
     binmode(FH);
     print FH $dest ;
     close FH ;
 
     # uncompress with gzopen
-    ok $fil = gzopen($name, "rb") ;
+    ok $fil = gzopen($name1, "rb") ;
  
     ok (($x = $fil->gzread($uncomp)) == $len) ;
  
@@ -459,7 +460,7 @@ EOM
     cmp_ok $gzerrno, "==", Z_DATA_ERROR ;
 
  
-    1 while unlink $name ;
+    #1 while unlink $name ;
 
     # check corrupt header -- too short
     $dest = "x" ;
@@ -1225,4 +1226,43 @@ sub trickle
     is $status, Z_STREAM_ERROR;
     ok ! $fil->gzflush(), "flush ok" ;
     ok ! $fil->gzclose(), "Closed";
+}
+
+
+
+{
+    title "repeated calls to flush - no compression";
+
+    my ($err, $x, $X, $status, $data); 
+ 
+    ok( ($x, $err) = deflateInit ( ), "Create deflate object" );
+    isa_ok $x, "Compress::Raw::Zlib::deflateStream" ;
+    cmp_ok $err, '==', Z_OK, "status is Z_OK" ;
+
+    
+    ($data, $status) = $x->flush(Z_SYNC_FLUSH) ;
+    cmp_ok  $status, '==', Z_OK, "flush returned Z_OK" ;    
+    ($data, $status) = $x->flush(Z_SYNC_FLUSH) ;
+    cmp_ok  $status, '==', Z_OK, "second flush returned Z_OK" ;    
+    is $data, "", "no output from second flush";
+}
+
+{
+    title "repeated calls to flush - after compression";
+
+    my $hello = "I am a HAL 9000 computer" ;
+    my ($err, $x, $X, $status, $data); 
+ 
+    ok( ($x, $err) = deflateInit ( ), "Create deflate object" );
+    isa_ok $x, "Compress::Raw::Zlib::deflateStream" ;
+    cmp_ok $err, '==', Z_OK, "status is Z_OK" ;
+ 
+    ($data, $status) = $x->deflate($hello) ;
+    cmp_ok $status, '==', Z_OK, "deflate returned Z_OK" ;
+    
+    ($data, $status) = $x->flush(Z_SYNC_FLUSH) ;
+    cmp_ok  $status, '==', Z_OK, "flush returned Z_OK" ;    
+    ($data, $status) = $x->flush(Z_SYNC_FLUSH) ;
+    cmp_ok  $status, '==', Z_OK, "second flush returned Z_OK" ;    
+    is $data, "", "no output from second flush";
 }

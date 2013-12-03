@@ -11,7 +11,7 @@ use Carp ();
 use B ();
 #use Devel::Peek;
 
-$JSON::PP::VERSION = '2.27105';
+$JSON::PP::VERSION = '2.27202';
 
 @JSON::PP::EXPORT = qw(encode_json decode_json from_json to_json);
 
@@ -1459,7 +1459,7 @@ sub incr_parse {
 
     if ( defined wantarray ) {
 
-        $self->{incr_mode} = INCR_M_WS;
+        $self->{incr_mode} = INCR_M_WS unless defined $self->{incr_mode};
 
         if ( wantarray ) {
             my @ret;
@@ -1470,10 +1470,10 @@ sub incr_parse {
                 push @ret, $self->_incr_parse( $coder, $self->{incr_text} );
 
                 unless ( !$self->{incr_nest} and $self->{incr_mode} == INCR_M_JSON ) {
-                    $self->{incr_mode} = INCR_M_WS;
+                    $self->{incr_mode} = INCR_M_WS if $self->{incr_mode} != INCR_M_STR;
                 }
 
-            } until ( !$self->{incr_text} );
+            } until ( length $self->{incr_text} >= $self->{incr_p} );
 
             $self->{incr_parsing} = 0;
 
@@ -1512,6 +1512,10 @@ sub _incr_parse {
         my $s = substr( $text, $p++, 1 );
 
         if ( $s eq '"' ) {
+            if (substr( $text, $p - 2, 1 ) eq '\\' ) {
+                next;
+            }
+
             if ( $self->{incr_mode} != INCR_M_STR  ) {
                 $self->{incr_mode} = INCR_M_STR;
             }
@@ -1545,6 +1549,7 @@ sub _incr_parse {
 
     $self->{incr_p} = $p;
 
+    return if ( $self->{incr_mode} == INCR_M_STR and not $self->{incr_nest} );
     return if ( $self->{incr_mode} == INCR_M_JSON and $self->{incr_nest} > 0 );
 
     return '' unless ( length substr( $self->{incr_text}, 0, $p ) );
@@ -1625,32 +1630,14 @@ JSON::PP - JSON::XS compatible pure-Perl module.
 
 =head1 VERSION
 
-    2.27105
+    2.27202
 
-L<JSON::XS> 2.27 compatible.
+L<JSON::XS> 2.27 (~2.30) compatible.
 
 =head1 NOTE
 
-JSON::PP was inculded in JSON distribution (CPAN module).
-It comes to be a perl core module in Perl 5.14.
-
-    [STEPS]
-
-    * release this module as JSON::PPdev.
-
-    * release other PP::* modules as JSON::PP::Compat*.
-
-    * JSON distribution will inculde yet another JSON::PP modules.
-      They are JSNO::backportPP. So JSON.pm should work as it did at all!
-
-    * remove JSON::PP and JSON::PP::* modules from JSON distribution
-       and release it as developer version.
-
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    * release JSON distribution as stable version.
-
-    * rename JSON::PPdev into JSON::PP and release on CPAN. <<<< HERE
+JSON::PP had been inculded in JSON distribution (CPAN module).
+It was a perl core module in Perl 5.14.
 
 =head1 DESCRIPTION
 
@@ -1826,7 +1813,7 @@ Basically, check to L<JSON> or L<JSON::XS>.
 
 =head2 new
 
-    $json = new JSON::PP
+    $json = JSON::PP->new
 
 Rturns a new JSON::PP object that can be used to de/encode JSON
 strings.
@@ -2804,7 +2791,7 @@ Makamaka Hannyaharamitu, E<lt>makamaka[at]cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2007-2010 by Makamaka Hannyaharamitu
+Copyright 2007-2013 by Makamaka Hannyaharamitu
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 

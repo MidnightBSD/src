@@ -17,7 +17,681 @@ Consult your favorite dictionary for details.
 
 =head1 EPIGRAPHS
 
-=head2 v5.14.0 -  L<< Larry Wall, January 12, 1988 <992@devvax.JPL.NASA.GOV> | http://groups.google.com/group/comp.sources.d/msg/5d17fa68c250b9b2 >>
+=head2 v5.17.10 - Vernor Vinge, A Fire Upon The Deep
+
+L<Announced on 2013-03-22 by Max Maischein|http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2013-03/msg00908.html>
+
+The archive informed the automation. Data structures were built, recipes
+followed.  A local network was built, faster than anything on Straum, but surely
+safe. Nodes were added, modified by other recipes. The archive was a friendly
+place, with hierarchies of translation keys that led them along. Straum itself
+would be famous for this.
+
+Six months passed. A year.
+
+The omniscient view. Not self-aware really. Self-awareness is much over-rated. 
+Most automation works far better as a part of a whole, and even if human-
+powerful, it does not need to self-know. 
+
+=head2 v5.16.3 - Devo, Freedom of Choice
+
+L<Announced on 2013-03-11 by Ricardo Signes|http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2013-03/msg00414.html>
+
+  A victim of collision on the open sea
+  Nobody ever said that life was free
+  Sink, swim, go down with the ship
+  But use your freedom of choice
+
+=head2 v5.14.4 - Arthur C. Clarke, The Nine Billion Names of God
+
+L<Announced on 2013-03-11 by Dave Mitchell|http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2013-03/msg00393.html>
+
+He began to sing, but gave it up after a while. This vast arena of
+mountains, gleaming like whitely hooded ghosts on every side, did not
+encourage such ebullience. Presently George glanced at his watch.
+
+'Should be there in an hour,' he called back over his shoulder to
+Chuck.  Then he added, in an afterthought: 'Wonder if the computer's
+finished its run. It was due about now.'
+
+Chuck didn't reply, so George swung round in his saddle. He could just
+see Chuck's face, a white oval turned towards the sky.
+
+'Look,' whispered Chuck, and George lifted his eyes to heaven. (There
+is always a last time for everything.)
+
+Overhead, without any fuss, the stars were going out.
+
+
+=head2 v5.17.9 - Douglas Adams, The Hitch-Hikers Guide to the Galaxy
+
+L<Announced on 2013-02-20 by Chris 'BinGOs' Williams|http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2013-02/msg01146.html>
+
+Vogon poetry is of course, the third worst in the universe.
+The second worst is that of the Azgoths of Kria. During a
+recitation by their poet master Grunthos the Flatulent of
+his poem 'Ode To A Small Lump of Green Putty I Found In My
+Armpit One Midsummer Morning' four of his audience died
+of internal haemorrhaging and the president of the
+Mid-Galactic Arts Nobbling Council survived by gnawing one
+of his own legs off. Grunthos is reported to have been
+'disappointed' by the poem's reception, and was about to
+embark on a reading of his twelve-book epic entitled
+'My Favourite Bathtime Gurgles' when his own major intestine,
+in a desperate attempt to save life and civilisation,
+leapt straight up through his neck and throttled his brain.
+
+The very worst poetry of all perished along with its creator
+Paula Nancy Millstone Jennings of Greenbridge, Essex, England,
+in the destruction of the planet Earth.
+
+=head2 v5.17.8 - Iain Pears, An Instance of the Fingerpost
+
+L<Announced on 2013-01-20 by Aaron Crane|http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2013-01/msg00518.html>
+
+I must here declare myself as someone who does not for a moment subscribe to
+the general view that a willingness to perform oneself is detrimental to the
+dignity of experimental philosophy. There is, after all, a clear distinction
+between labour carried out for financial reward, and that done for the
+improvement of mankind: to put it another way, Lower as a philosopher was
+fully my equal even if he fell away when he became the practising physician.
+I think ridiculous of certain professors of anatomy, who find it beneath
+them to pick up the knife themselves, but merely comment while hired hands
+do the cutting. Sylvius would never have dreamt of sitting on a dais reading
+from an authority while others cut E<0x2014> when he taught, the knife was
+in his hand and the blood spattered his coat. Boyle also did not scruple to
+perform his own experiments and, on one occasion in my presence, even showed
+himself willing to anatomise a rat with his very own hands. Nor was he less
+a gentleman when he had finished. Indeed, in my opinion, his stature was all
+the greater, for in Boyle wealth, humility and curiosity mingled, and the
+world is richer for it.
+
+=head2 v5.17.7 - R. Scott Bakker, The Darkness That Comes Before
+
+L<Announced on 2012-12-18 by Dave Rolsky|http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2012-12/msg00679.html>
+
+No thought.
+  The boy extinguished. Only a place.
+  This place.
+  Motionless, the Pragma sat facing him, the bare soles of his feet flat against each other, his dark frock scored by the shadows of deep folds, his eyes as empty as the child they watched.
+  A place without breath or sound. A place of sight alone. A place without before or after . . . almost.
+  For the first lances of sunlight careered over the glacier, as ponderous as great tree limbs in the wind. Shadows hardened and light gleamed across the Pragma’s ancient skull.
+  The old man’s left hand forsook his right sleeve, bearing a watery knife. And like a rope in water, his arm pitched outward, fingertips trailing across the blade as the knife swung languidly into the air, the sun skating and the dark shrine plunging across its mirror back . . .
+  And the place where Kellhus had once existed extended an open hand—the blond hairs like luminous filaments against tanned skin—and grasped the knife from stunned space.
+  The slap of pommel against palm triggered the collapse of place into little boy. The pale stench of his body. Breath, sound, and lurching thoughts.
+  I have been legion . . .
+  In his periphery, he could see the spike of the sun ease from the mountain. He felt drunk with exhaustion. In the recoil of his trance, it seemed all he could hear were the twigs arching and bobbing in the wind, pulled by leaves like a million sails no bigger than his hand. Cause everywhere, but amid countless minute happenings—diffuse, useless.
+  Now I understand.
+
+=head2 v5.17.6 - Kurt Vonnegut, The Sirens of Titan
+
+L<Announced on 2012-11-20 by Ricardo Signes|http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2012-11/msg00760.html>
+
+Beatrice, looking like a gypsy queen, smoldered at the foot of a statue
+of a young physical student. At first glance, the laboratory-gowned
+scientist seemed to be a perfect servant of nothing but truth. At first
+glance, one was convinced that nothing but truth could please him as he
+beamed at his test tube. At first glance, one thought that he was as
+much above the beastly concerns of mankind as the harmoniums in the
+caves of Mercury. There, at first glance, was a young man without
+vanity, without lust — and one accepted at its face value the title Salo
+had engraved on the statue, "Discovery of Atomic Power."
+
+=head2 v5.12.5 - William Shakespeare, Measure for Measure
+
+Announced on 2012-11-10 by Dominic Hargreaves
+
+  Music oft hath such a charm
+  To make bad good, and good provoke to harm.
+
+=head2 v5.16.2 - Stanislaw Lem, The Cyberiad, Trurl's Machine
+
+L<Announced on 2012-11-01 by Ricardo Signes|http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2012-11/msg00017.html>
+
+Once upon a time Trurl the constructor built an eight-story thinking
+machine.  When it was finished, he gave it a coat of white paint,
+trimmed the edges in lavender, stepped back, squinted, then added a
+little curlicue on the front and, where one might imagine the forehead
+to be, a few pale orange polkadots.  Extremely pleased with himself,
+he whistled an air and, as is always done on such occasions, asked it
+the ritual question of how much is two plus two.
+
+The machine stirred.  Its tubes began to glow, its coils warmed up,
+current coursed through all its circuits like a waterfall,
+transformers hummed and throbbed, there was a clanging, and a
+chugging, and such an ungodly racket that Trurl began to think of
+adding a special mentation muffler.  Meanwhile the machine labored on,
+as if it had been given the most difficult problem in the Universe to
+solve; the ground shook, the sand slid underfoot from the vibration,
+valves popped like champagne corks, the relays nearly gave way under
+the strain.  At last, when Trurl had grown extremely impatient, the
+machine ground to a halt and said in a voice like thunder: SEVEN!
+
+=head2 v5.17.5 - Charles Stross, "Singularity Sky"
+
+L<Announced on 2012-10-20 by Florian Ragwitz|http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2012-10/msg01007.html>
+
+Neither of them noticed the pair of polka-dotted knickers hiding
+behind the ventilation duct overhead, listening patiently and
+recording everything.
+
+=head2 v5.17.4 - Roald Dahl, "Little Red Riding Hood and the Wolf"
+
+L<Announced on 2012-09-20 by Florian Ragwitz|http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2012-09/msg01226.html>
+
+  The small girl smiles. One eyelid flickers.
+  She whips a pistol from her knickers.
+  She aims it at the creature's head,
+  And bang bang bang, she shoots him dead.
+
+  A few weeks later, in the wood,
+  I came across Miss Riding Hood.
+  But what a change! No cloak of red,
+  No silly hood upon her head.
+  She said, "Hello, and do please note
+  My lovely furry wolfskin coat."
+
+=head2 v5.17.3 - Kris Ta-belle, "Smoked Perl Onion Soup"
+
+L<Announced on 2012-08-20 by Steve Hay|http://www.nntp.perl.org/group/perl.perl5.porters/2012/08/msg190775.html>
+
+Preparation:
+
+Cut 16 Perl Onions into quarters and put them in a grill smoker rack
+or a perforated pan over a BBQ using hickory wood chips or Special
+Blend Smoker Bisquettes.  Smoke them for an hour and remove once they
+look golden brown.
+Let them cool and put them in the fridge (or freezer) until you are
+ready to create the soup.
+
+Ingredients:
+
+  16 diced, pre-smoked, Perl Onions
+  3 tbsp butter
+  1/4 cup olive oil
+  2 small garlic cloves, finely minced
+  1 tsp salt
+  1 tsp sugar
+  black pepper to taste
+  1 cup red wine
+  1/4 cup all purpose flour
+  6 cups of beef or vegetable stock
+  1 cup of thick cream (milk can be used as a substitute)
+
+Method:
+
+  Melt the butter in a pan and then add olive oil.
+  Heat and add the onions to caramelize over a medium-high heat for up
+    to half an hour.
+  Add the garlic, turn down the heat and cook for a further 5 minutes.
+  Add the salt, pepper and sugar.
+  Now add the red wine and reduce to a jam like consistency.
+  Add the flour, stir well and add the stock a cup at a time.
+  Simmer for 30 minutes, add the cream and heat to almost boiling.
+
+Enjoy.
+
+=head2 v5.17.2 - Terry Pratchet, "The Colour of Magic"
+
+L<Announced on 2012-07-21 by TonyC|http://www.nntp.perl.org/group/perl.perl5.porters/2012/07/msg189828.html>
+
+‘I knew it,’ said Rincewind. ‘We're in a strong magical field.’
+
+Twoflower and Hrun looked around the little hollow where they had made
+their noonday halt. Then they looked at each other.
+
+The horses were quietly cropping the rich grass by the stream.  Yellow
+butterflies skittered among the bushes.  There was a smell of thyme
+and a buzzing of bees. The wild pigs on the spit sizzled gently.
+
+Hrun shrugged and went back to oiling his biceps. They gleamed.
+
+‘Looks alright to me,’ he said.
+
+‘Try tossing a coin,’ said Rincewind.
+
+‘What?’
+
+‘Go on.  Toss a coin.’
+
+‘Hokay,’ said Hrun. 'If that gives you any pleasure.’ He reached into
+his pouch and withdrew a handful of loose change plundered from a
+dozen realms. With some care he selected a Zchloty leaden
+quarter-iotum and balanced it on a purple thumbnail.
+
+‘You call,’ he said. ‘Heads or—’ he inspected the obverse with
+an air of intense concentration, ‘some sort of a fish with legs.’
+
+‘When it's in the air,’ said Rincewind.  Hrun grinned and flicked his thumb.
+
+The iotum rose, spinning.
+
+‘Edge,’ said Rincewind, without looking at it.
+
+=head2 v5.17.1 - Rand Miller, "Myst: The Book of Ti'ana"
+
+L<Announced on 2012-06-20 by doy|http://www.nntp.perl.org/group/perl.perl5.porters/2012/06/msg188354.html>
+
+On their return from Ko'ah, Aitrus had shown her the Book, patiently
+taking her through page after page, and showing her how such an Age was
+"made." She had seen at once the differences between this archaic form
+and the ordinary written speech of the D'ni, noting how it was not
+merely more elaborate but more specific: a language of precise yet
+subtle descriptive power. Yet seeing was one thing, believing another.
+Given all the evidence, her rational mind still fought against accepting
+it.
+
+=head2 v5.17.0 - Charles Stross, "Singularity Sky"
+
+L<Announced on 2012-05-26 by Zefram|http://www.nntp.perl.org/group/perl.perl5.porters/2012/05/msg187214.html>
+
+`Welcome, comrades!'  Burya opened his arms toward the soldier.
+`Yes it is true!  With help from our allies of the Festival, the iron
+hand of the reactionary junta is about to be overthrown for all time!
+The new economy is being born; the marginal cost of production has
+been abolished, and from now on, if any item is produced once, it can
+be replicated infinitely.  From each according to his imagination,
+to each according to his needs!  Join us or better still, bring your
+fellow soldiers and workers to join us!'
+
+There was a sharp bang from the roof of the Corn Exchange, right at the
+climax of his impromptu speech; heads turned in alarm.  Something had
+broken inside the spork factory and a stream of rainbow-hued plastic
+implements fountained toward the sky and clattered to the cobblestones
+on every side, like a harbinger of the postindustrial society to come.
+Workers and peasants alike stared in open-mouthed bewilderment at this
+astounding display of productivity, then bent to scrabble in the muck
+for the brightly colored sporks of revolution.  A volley of shots rang
+out and Burya Rubenstein raised his hands, grinning wildly, to accept
+the salute of the soldiers from the Skull Hill garrison.
+
+=head2 v5.16.1 - Emerald Rose - Never Split The Party
+
+L<Announced on 2012-08-08 by Ricardo
+Signes|http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2012-08/msg00307.html>
+
+  Don't you know?  You never split the party
+  Clerics in the back to keep those fighters hale and hearty
+  The wizard in the middle, where he can shed some light
+  And you never let that damn thief out of sightâ€¦
+
+    -- Emerald Rose, Never Split The Party
+
+=head2 v5.16.1 RC1 - Tom Moldvay - Dungeons & Dragons
+
+L<Announced on 2012-08-03 by Ricardo
+Signes|http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2012-08/msg00157.html>
+
+I was busy rescuing the captured maiden when the dragon showed up.
+Fifty feed of scaled terror glared down at us with smoldering red eyes.
+Tendrils of smoke drifted out from between fangs larger than daggers.
+The dragon blocked the only exit from the cave.
+
+⋮
+
+I unwrapped the sword which the mysterious cleric had given me.  The
+sword was golden-tinted steel.  Its hilt was set with a rainbow
+collection of precious gems.  I shouted my battle cry and charged
+
+My charge caught the dragon by surprise.  Its titanic jaws snapped shut
+inches from my face.  I swung the golden sword with both arms.  The
+swordblade bit into the dragon's neck and continued through to the other
+side.  With an earth-shaking crash, the dragon dropped dead at my feet.
+The magic sword had saved my life and ended the reign of the
+dragon-tyrant.  The countryside was freed and I could return as a hero.
+
+  -- Tom Moldvay, Foreward to the Dungeons & Dragons Basic Rulebook
+
+=head2 v5.16.0 - W.H. Auden - September 1, 1939
+
+L<Announced on 2012-05-20 by Ricardo
+Signes|http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2012-05/msg00728.html>
+
+  All I have is a voice
+  To undo the folded lie,
+  The romantic lie in the brain
+  Of the sensual man-in-the-street
+  And the lie of Authority
+  Whose buildings grope the sky:
+  There is no such thing as the State
+  And no one exists alone;
+  Hunger allows no choice
+  To the citizen or the police;
+  We must love one another or die.
+
+    -- W.H. Auden, September 1, 1939
+
+=head2 v5.15.9 - Bob Dylan - Blowin' In The Wind
+
+L<Announced on 2012-03-20 by
+Abigail|http://nntp.perl.org/group/perl.perl5.porters/184824>
+
+ How many roads must a man walk down
+ Before you call him a man?
+ Yes, 'n' how many seas must a white dove sail
+ Before she sleeps in the sand?
+ Yes, 'n' how many times must the cannonballs fly
+ Before they're forever banned?
+ The answer, my friend, is blowin' in the wind
+ The answer is blowin' in the wind
+
+ How many years can a mountain exist
+ Before it's washed to the sea?
+ Yes, 'n' how many years can some people exist
+ Before they're allowed to be free?
+ Yes, 'n' how many times can a man turn his head
+ Pretending he just doesn't see?
+ The answer, my friend, is blowin' in the wind
+ The answer is blowin' in the wind
+
+ How many times must a man look up
+ Before he can see the sky?
+ Yes, 'n' how many ears must one man have
+ Before he can hear people cry?
+ Yes, 'n' how many deaths will it take till he knows
+ That too many people have died?
+ The answer, my friend, is blowin' in the wind
+ The answer is blowin' in the wind
+
+    -- Bob Dylan, Spring 1962
+
+=head2 v5.15.8 - The KLF - The Manual-How To Have A Number One The Easy Way
+
+L<Announced on 2012-02-20 by Max
+Maischein|http://www.nntp.perl.org/group/perl.perl5.porters/2012/02/msg183919.html>
+
+  "Doctor Who, hey Doctor Who
+   Doctor Who, in the Tardis
+   Doctor Who, hey Doctor Who
+   Doctor Who, Doc, Doctor Who
+   Doctor Who, Doc, Doctor Who"
+
+Gibberish of course, but every lad in the country under a certain
+age related instinctively to what it was about. The ones slightly
+older needed a couple of pints inside them to clear away the mind
+debris left by the passing years before it made sense. As for
+girls and our chorus, we think they must have seen it as pure crap.
+A fact that must have limited to zero our chances of staying at The
+Top for more than one week.
+
+Stock, Aitkin and Waterman, however, are kings of writing chorus
+lyrics that go straight to the emotional heart of the 7" single
+buying girls in this country. Their most successful records will kick
+into the chorus with a line which encapsulates the entire emotional
+meaning of the song. This will obviously be used as the title. As
+soon as Rick Astley hit the first line of the chorus on his debut
+single it was all over - the Number One position was guaranteed:
+
+  "I'm never going to give you up"
+
+=head2 v5.15.7 - Penelope Lively, The Voyage of QV66
+
+L<Announced on 2012-01-20 by Chris 'BinGOs' Williams
+|http://www.nntp.perl.org/group/perl.perl5.porters/2012/01/msg182230.html>
+
+"Laboratories," announced Henry. "Kindly don't touch anything."
+
+He led us into a long low brick shed. Outside there was a
+notice on a piece of board, crudely printed in red paint,
+which said GRATE SIENCE DISCOVERYS DONE HERE SSSH! BRING YOUR
+OWN BUKKIT NO PINCHING ANYWUN ELSE'S EXPERRYMENTS CANTEEN OPEN
+ALL DAY CHIMPS ONLY.
+
+There were a lot of large black monkeys inside, all intently
+busy on what they were doing. Some of them were pouring stuff
+out of bottles into buckets and carefully stirring the ensuing
+mixture; others were at work with glass tubes and jars, blowing
+and measuring and mixing; others were crouched over long benches
+with tools and heaps of bits and pieces of metal, cutting and
+bending and constructing. There was a great deal of noise and
+chatter. Every now and then one of them would give a whoop of
+excitement and all the others would gather round and jump up and
+down cheering and applauding.
+
+"Chimps," said Henry. "They're awfully clever."
+
+=head2 v5.15.6 - Ursula K. Leguin, A Wizard of Earthsea
+
+L<Announced on 2011-12-20 by Dave
+Rolsky|http://www.nntp.perl.org/group/perl.perl5.porters/2011/12/msg180962.html>
+
+Ged had thought that as the prentice of a great mage he would enter at once
+into the mystery and mastery of power. He would understand the language of the
+beasts and the speech of the leaves of the forest, he thought, and sway the
+winds with his word, and learn to change himself into any shape he
+wished. Maybe he and his master would run together as stags, or fly to Re Albi
+over the mountain on the wings of eagles.
+
+But it was not so at all. They wandered, first down into the Vale and then
+gradually south and westward around the mountain, given lodging in little
+villages or spending the night out in the wilderness, like poor
+journeyman-sorcerers, or tinkers, or beggars. They entered no mysterious
+domain. Nothing happened. The mage's oaken staff that Ged had watched at first
+with eager dread was nothing but a stout staff to walk with. Three days went
+by and four days went by and still Ogion had not spoken a single charm in
+Ged's hearing, and had not taught him a single name or rune or spell.
+
+=head2 v5.15.5 - Nikolai Gogol, The Diary of a Madman
+
+L<Announced on 2011-11-20 by Steve
+Hay|http://www.nntp.perl.org/group/perl.perl5.porters/2011/11/msg179588.html>
+
+This day - is a day of the greatest solemnity!  Spain has a king.  He has
+been found.  I am that king.  Only this very day did I learn of it.  I
+confess, it came to me suddenly in a flash of lightning.  I don't understand
+how I could have thought and imagined that I was a titular councillor.  How
+could such a wild notion enter my head?  It's a good thing no one thought of
+putting me in an insane asylum.  Now everything is laid open before me.  Now
+I see everything as on the palm of my hand.  And before, I don't understand,
+before everything around me was in some sort of fog.  And all this happens, I
+think, because people imagine that the human brain is in the head.  Not at
+all: it is brought by a wind from the direction of the Caspian Sea.  First
+off, I announced to Mavra who I am.  When she heard that the king of Spain
+was standing before her, she clasped her hands and nearly died of fright.
+The stupid woman had never seen a king of Spain before.  However, I
+endeavoured to calm her down and assured her in gracious words of my
+benevolence and that I was not at all angry that she sometimes polished my
+boots poorly.  They're benighted folk.  It's impossible to tell them about
+lofty matters.  She got frightened because she's convinced that all kings of
+Spain are like Philip II.  But I explained to her that there was no
+resemblance between me and Philip II, and that I didn't have a single
+Capuchin . . . I didn't go to the office . . . To hell with it!  No friends,
+you won't lure me there now; I'm not going to copy your vile papers!
+
+  -- Nikolai Gogol, The Diary of a Madman,
+     trans. Richard Pevear and Larissa Volokhonsky
+
+=head2 v5.15.4 - Steve Jobs
+
+L<Announced on 2011-10-20 by Florian
+Ragwitz|http://www.nntp.perl.org/group/perl.perl5.porters/2011/10/msg178412.html>
+
+A lot of people in our industry haven't had very diverse experiences. So they
+don't have enough dots to connect, and they end up with very linear solutions
+without a broad perspective on the problem. The broader one's understanding of
+the human experience, the better design we will have.
+
+=head2 v5.14.3 - William Shakespeare, As You Like It
+
+L<Announced on 2012-10-12 by Dominic Hargreaves|http://www.nntp.perl.org/group/perl.perl5.porters/2012/10/msg194057.html>
+
+  The poor world is almost six thousand years old, and in all
+  this time there was not any man died in his own person,
+  videlicit, in a love-cause. Troilus had his brains dashed
+  out with a Grecian club; yet he did what he could to die
+  before, and he is one of the patterns of love. Leander, he
+  would have lived many a fair year, though Hero had turned
+  nun, if it had not been for a hot midsummer night; for, good
+  youth, he went but forth to wash him in the Hellespont and
+  being taken with the cramp was drowned and the foolish
+  coroners of that age found it was 'Hero of Sestos.' But these
+  are all lies: men have died from time to time and worms have
+  eaten them, but not for love.
+
+    -- As You Like It, William Shakespeare
+
+=head2 v5.14.2 -  L<< Larry Wall, January 12, 1988 <992@devvax.JPL.NASA.GOV>  |http://groups.google.com/group/comp.sources.d/msg/5d17fa68c250b9b2 >>
+
+L<Announced on 2011-09-26 by Florian
+Ragwitz|http://www.nntp.perl.org/group/perl.perl5.porters/2011/09/msg177618.html>
+
+
+It's not so much that people don't value the programs after they have them--they
+do value them.  But they're not the sort of thing that would ever catch on if
+they had to overcome the marketing barrier.  (I don't yet know if perl will
+catch on at all--I'm worried enough about it that I specifically included an
+awk-to-perl translator just to help it catch on.)  Maybe it's all just an
+inferiority complex.  Or maybe I don't like to be mercenary.
+
+So I guess I'd say that the reason some software comes free is that the
+mechanism for selling it is missing, either from the work environment, or from
+the heart of the programmer.
+
+
+=head2 v5.15.3 - Oscar Wilde, All Art is Quite Useless
+
+L<Announced on 2011-09-20 by Stevan
+Little|http://www.nntp.perl.org/group/perl.perl5.porters/2011/09/msg177427.html>
+
+  All art is at once surface and symbol. Those who go beneath
+  the surface do so at their peril. Those who read the symbol
+  do so at their peril.
+
+  It is the spectator, and not life, that art really mirrors.
+  Diversity of opinion about a work of art shows that the
+  work is new, complex, and vital. When critics disagree, the
+  artist is in accord with himself.
+
+  We can forgive a man for making a useful thing as long as
+  he does not admire it. The only excuse for making a useless
+  thing is that one admires it intensely.
+
+  All art is quite useless.
+
+    -- Oscar Wilde, From the preface to The Picture of Dorian Gray
+
+
+=head2 v5.15.2 - Rainer Maria Rilke, The Third Duina Elegy
+
+L<Announced on 2011-08-20 by Ricardo
+Signes|http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2011-08/msg00694.html>
+
+  True, it is strange to live no more on earth,
+  no longer follow the folkways scarecely learned;
+  not to give roses and other especially auspicious
+  things the significance of a human future;
+  to be no more what one was in infinitely anxious hands,
+  and to put aside even one's name, like a broken plaything.
+  Strange, to wish wishes no longer.  Strange, to see
+  all that was related fluttering so loosely in space.
+  And being dead is hard, full of catching-up,
+  so that finally one feels a little eternity.–
+  But the living all make the mistake of too sharp discrimination.
+  Often angels (it's said) don't know if they move
+  among the quick or the dead.  The eternal current
+  hurtles all ages along with it forever
+  through both realms and drowns their voices in both.
+
+  -- Rainer Maria Rilke, Duino, The First Elegy
+     trans., C. F. MacIntyre
+
+=head2 v5.15.1 - Greg Egan, "Permutation City"
+
+L<Announced on 2011-07-20 by Zefram|http://www.nntp.perl.org/group/perl.perl5.porters/2011/07/msg175014.html>
+
+Carter held out a hand towards the middle of the room.  `See that
+fountain?'  A ten-metre-wide marble wedding cake, topped with a
+winged cherub wrestling a serpent, duly appeared.  Water cascaded
+down from a gushing wound in the cherub's neck.  Carter said, `It's
+being computed by redundancies in the sketch of the city.  I can
+extract the results, because I know exactly where to look for them --
+but nobody else would have a hope in hell of picking them out.'
+
+Peer walked up to the fountain.  Even as he approached, he noticed
+that the spray was intangible; when he dipped his hand in the water
+around the base he felt nothing, and the motion he made with his
+fingers left the foaming surface unchanged.  They were spying on
+the calculations, not interacting with them; the fountain was a
+closed system.
+
+Carter said, `In your case, of course, nobody will need to know
+the results.  Except you -- and you'll know them because you'll
+/be/ them.'
+
+=head2 v5.15.0 - Neil Gaiman, "The Graveyard Book"
+
+L<Announced on 2011-06-20 by David Golden|http://www.nntp.perl.org/group/perl.perl5.porters/2011/06/msg173748.html>
+
+  If you dare nothing, then when the day is over, nothing is all
+  you will have gained.
+
+=head2 v5.12.4 - William Schwenck Gilbert, "Trial By Jury"
+
+L<Announced on 2011-06-20 by Leon Brocard|http://www.nntp.perl.org/group/perl.perl5.porters/2011/06/msg173725.html>
+
+  You cannot eat breakfast all day,
+  Nor is it the act of a sinner,
+  When breakfast is taken away,
+  To turn his attention to dinner;
+  And it's not in the range of belief,
+  To look upon him as a glutton,
+  Who, when he is tired of beef,
+  Determines to tackle the mutton.
+  Ah! But this I am willing to say,
+  If it will appease her sorrow,
+  I'll marry this lady today,
+  And I'll marry the other tomorrow!
+
+=head2 v5.14.1 -  L<< Larry Wall, January 12, 1988 <992@devvax.JPL.NASA.GOV>  |http://groups.google.com/group/comp.sources.d/msg/5d17fa68c250b9b2 >>
+
+L<Announced on 2011-06-16 by Jesse Vincent|http://www.nntp.perl.org/group/perl.perl5.porters/2011/06/msg173650.html>
+
+At this point I'm no longer working for a company that makes me sign
+my life away, but by now I'm in the habit.  Besides, I still harbor
+the deep-down suspicion that nobody would pay money for what I write,
+since most of it just helps you do something better that you could
+already do some other way.  How much money would you personally pay
+to upgrade from readnews to rn?  How much money would you pay for
+the patch program?  As for warp, it's a mere game.  And anything you
+can do with perl you can eventually do with an amazing and totally
+unreadable conglomeration of awk, sed, sh and C.
+
+=head2 v5.12.4-RC2 - James Russell Lowell, "Eleanor makes macaroons"
+
+L<Announced on 2011-06-15 by Leon Brocard|http://www.nntp.perl.org/group/perl.perl5.porters/2011/06/msg173609.html>
+
+  Now for sugar, -- nay, our plan
+  Tolerates no work of man.
+  Hurry, then, ye golden bees;
+  Fetch your clearest honey, please,
+  Garnered on a Yorkshire moor,
+  While the last larks sing and soar,
+  From the heather-blossoms sweet
+  Where sea-breeze and sunshine meet,
+  And the Augusts mask as Junes, --
+  Eleanor makes macaroons!
+
+=head2 v5.12.4-RC1 - Ogden Nash, "The Clean Plater"
+
+L<Announced on 2011-06-08 by Leon Brocard|http://www.nntp.perl.org/group/perl.perl5.porters/2011/06/msg173352.html>
+
+  Pheasant is pleasant, of course,
+  And terrapin, too, is tasty,
+  Lobster I freely endorse,
+  In pate or patty or pasty.
+  But there's nothing the matter with butter,
+  And nothing the matter with jam,
+  And the warmest greetings I utter
+  To the ham and the yam and the clam.
+  For they're food,
+  All food,
+  And I think very fondly of food.
+  Through I'm broody at times
+  When bothered by rhymes,
+  I brood
+  On food.
+
+=head2 v5.14.0 -  L<< Larry Wall, January 12, 1988 <992@devvax.JPL.NASA.GOV> |http://groups.google.com/group/comp.sources.d/msg/5d17fa68c250b9b2 >>
 
 L<Announced on 2011-05-14 by Jesse Vincent|http://www.nntp.perl.org/group/perl.perl5.porters/2011/05/msg172326.html>
 
@@ -75,7 +749,7 @@ reading a history of Australian politics in the twentieth century,
 wherein I encountered the startling fact that in 1967 the prime minister,
 Harold Holt, was strolling along a beach in Victoria when he plunged into
 the surf and vanished. No trace of the poor man was ever seen again.
-This seemed doubly astounding to me--first that Australia could
+This seemed doubly astounding to meE<0x2014>first that Australia could
 just I<lose> a prime minister (I mean, come on) and second that news of
 this had never reached me.
 
@@ -161,20 +835,22 @@ L<Announced on 2010-11-20 by Chris 'BinGOs' Williams|http://www.nntp.perl.org/gr
 
 [Neo sees a black cat walk by them, and then a similar black cat walk by them just like the first one]
 
-Neo:      Whoa. Deja vu.
+  Neo:      Whoa. Deja vu.
 
 [Everyone freezes right in their tracks]
 
-Trinity:  What did you just say?
-Neo:      Nothing. Just had a little deja vu.
-Trinity:  What did you see?
-Cypher:   What happened?
-Neo:      A black cat went past us, and then another that looked just like it.
-Trinity:  How much like it? Was it the same cat?
-Neo:      It might have been. I'm not sure.
-Morpheus: Switch! Apoc!
-Neo:      What is it?
-Trinity:  A deja vu is usually a glitch in the Matrix. It happens when they change something.
+  Trinity:  What did you just say?
+  Neo:      Nothing. Just had a little deja vu.
+  Trinity:  What did you see?
+  Cypher:   What happened?
+  Neo:      A black cat went past us, and then another that looked just
+            like it.
+  Trinity:  How much like it? Was it the same cat?
+  Neo:      It might have been. I'm not sure.
+  Morpheus: Switch! Apoc!
+  Neo:      What is it?
+  Trinity:  A deja vu is usually a glitch in the Matrix. It happens when
+            they change something.
 
 =head2 v5.13.6 - Haruki Murakami, "Kafka on the Shore"
 
@@ -583,7 +1259,7 @@ absorbed. Presently he said: "Say, Tom, let me whitewash a little."
 
 =head2 v5.11.2 - Michael Marshall Smith, "Only Forward"
 
-L<Announced on 2009-11-20 by |http://www.nntp.perl.org/group/perl.perl5.porters/2009/11/msg153646.html>
+L<Announced on 2009-11-20 by Léon Brocard|http://www.nntp.perl.org/group/perl.perl5.porters/2009/11/msg153646.html>
 
 The streets were pretty quiet, which was nice. They're always quiet here
 at that time: you have to be wearing a black jacket to be out on the

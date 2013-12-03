@@ -1,5 +1,5 @@
 #
-# $Id: jis0208.ucm,v 1.1.1.1 2011-05-18 13:33:27 laffer1 Exp $
+# $Id: jis0208.ucm,v 2.0 2004/05/16 20:55:25 dankogai Exp $
 #
 <code_set_name>  "jis0208-raw"
 <code_set_alias> "jis0208"

@@ -11,11 +11,19 @@ BEGIN {
     }
 }
 
-use Test;
-BEGIN { plan tests => 71 };
-
 use strict;
 use warnings;
+BEGIN { $| = 1; print "1..71\n"; }
+my $count = 0;
+sub ok ($;$) {
+    my $p = my $r = shift;
+    if (@_) {
+	my $x = shift;
+	$p = !defined $x ? !defined $r : !defined $r ? 0 : $r eq $x;
+    }
+    print $p ? "ok" : "not ok", ' ', ++$count, "\n";
+}
+
 use Unicode::Collate::Locale;
 
 ok(1);
@@ -32,7 +40,7 @@ $objRo->change(level => 1);
 ok($objRo->lt("a", "a\x{306}"));
 ok($objRo->lt("a\x{306}", "a\x{302}"));
 ok($objRo->gt("b", "a\x{302}"));
-ok($objRo->lt("d", "d\x{335}"));
+ok($objRo->eq("d", "d\x{335}")); # not tailored in CLDR 2.0
 ok($objRo->gt("e", "d\x{335}"));
 ok($objRo->lt("i", "i\x{302}"));
 ok($objRo->gt("j", "i\x{302}"));
@@ -40,7 +48,7 @@ ok($objRo->lt("s", "s\x{327}"));
 ok($objRo->gt("t", "s\x{327}"));
 ok($objRo->lt("t", "t\x{327}"));
 ok($objRo->gt("u", "t\x{327}"));
-ok($objRo->lt("z", "z\x{307}"));
+ok($objRo->eq("z", "z\x{307}")); # not tailored in CLDR 2.0
 ok($objRo->lt("z\x{307}", "\x{292}")); # U+0292 EZH
 
 # 15

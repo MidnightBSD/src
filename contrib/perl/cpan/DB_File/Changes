@@ -1,4 +1,37 @@
+1.827 25 Jan 2012
 
+   * DB_File.pm - Don't use "@_" construct
+     [RT ##79287]
+
+1.826 25 Jan 2012
+
+   * t/db-btree.t - fix use of "length @array"
+     [RT ##74336]
+
+1.825 24 Jan 2012
+
+   * t/db-btree.t - fix use of "length @array"
+     [RT ##74336]
+
+1.824 6 Aug 2011
+
+   * Amendments to tests to work in blead
+     [RT #70108]
+
+1.823 6 Aug 2011
+
+   * croak if attempt to freeze/thaw DB_File object
+     [RT #69985]
+
+1.822 12 March 2011
+
+   * Link rot
+     [rt.cpan.org #69739] 
+
+1.822 12 March 2011
+
+   * Keep DB_File's warnings in sync with perl's
+     [rt.cpan.org #66339] 
 
 1.821 10 January 2011
 
