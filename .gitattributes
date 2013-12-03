@@ -23480,6 +23480,7 @@ contrib/perl/cpan/Module-Pluggable/t/lib/Acme/MyTest/Plugin/Foo.pm -text
 contrib/perl/cpan/Module-Pluggable/t/lib/EditorJunk/Plugin/Bar.pm -text
 contrib/perl/cpan/Module-Pluggable/t/lib/EditorJunk/Plugin/Bar.pm.swo -text
 contrib/perl/cpan/Module-Pluggable/t/lib/EditorJunk/Plugin/Bar.pm.swp -text
+contrib/perl/cpan/Module-Pluggable/t/lib/EditorJunk/Plugin/Bar.pm~ -text
 contrib/perl/cpan/Module-Pluggable/t/lib/EditorJunk/Plugin/Foo.pm -text
 contrib/perl/cpan/Module-Pluggable/t/lib/ExtTest/Plugin/Bar.plugin -text
 contrib/perl/cpan/Module-Pluggable/t/lib/ExtTest/Plugin/Foo.plugin -text
