@@ -21510,7 +21510,6 @@ contrib/perl/INTERN.h -text
 contrib/perl/MANIFEST -text
 contrib/perl/META.json -text
 contrib/perl/META.yml -text
-contrib/perl/MIDNIGHTBSD-Xlist -text
 contrib/perl/MIDNIGHTBSD-upgrade -text
 contrib/perl/Makefile.SH -text
 contrib/perl/Makefile.micro -text
@@ -21585,7 +21584,6 @@ contrib/perl/Porting/bisect.pl -text
 contrib/perl/Porting/bump-perl-version -text
 contrib/perl/Porting/check-cpan-pollution -text
 contrib/perl/Porting/check83.pl -text
-contrib/perl/Porting/checkARGS_ASSERT.pl -text
 contrib/perl/Porting/checkAUTHORS.pl -text
 contrib/perl/Porting/checkURL.pl -text
 contrib/perl/Porting/checkVERSION.pl -text
@@ -21602,16 +21600,11 @@ contrib/perl/Porting/corecpan.pl -text
 contrib/perl/Porting/corelist-diff -text
 contrib/perl/Porting/corelist-perldelta.pl -text
 contrib/perl/Porting/corelist.pl -text
-contrib/perl/Porting/curliff.pl -text
 contrib/perl/Porting/epigraphs.pod -text
 contrib/perl/Porting/exec-bit.txt -text
 contrib/perl/Porting/exercise_makedef.pl -text
 contrib/perl/Porting/expand-macro.pl -text
 contrib/perl/Porting/findrfuncs -text
-contrib/perl/Porting/findvars -text
-contrib/perl/Porting/fixCORE -text
-contrib/perl/Porting/fixvars -text
-contrib/perl/Porting/genlog -text
 contrib/perl/Porting/git-deltatool -text
 contrib/perl/Porting/git-find-p4-change -text
 contrib/perl/Porting/git-make-p4-refs -text
@@ -21625,8 +21618,6 @@ contrib/perl/Porting/makemeta -text
 contrib/perl/Porting/makerel -text
 contrib/perl/Porting/manicheck -text
 contrib/perl/Porting/manisort -text
-contrib/perl/Porting/mergelog -text
-contrib/perl/Porting/mergelog-tool -text
 contrib/perl/Porting/new-perldelta.pl -text
 contrib/perl/Porting/newtests-perldelta.pl -text
 contrib/perl/Porting/perldelta_template.pod -text
