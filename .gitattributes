@@ -30991,6 +30991,7 @@ contrib/perl/t/uni/universal.t -text
 contrib/perl/t/uni/upper.t -text
 contrib/perl/t/uni/variables.t -text
 contrib/perl/t/uni/write.t -text
+contrib/perl/t/win32/fs.t -text
 contrib/perl/t/win32/runenv.t -text
 contrib/perl/t/win32/system.t -text
 contrib/perl/t/win32/system_tests -text
