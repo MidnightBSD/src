@@ -55887,7 +55887,6 @@ usr.bin/nohup/Makefile -text
 usr.bin/nohup/nohup.1 -text
 usr.bin/nohup/nohup.c -text
 usr.bin/nslookup/Makefile -text
-usr.bin/nsupdate/Makefile -text
 usr.bin/opieinfo/Makefile -text
 usr.bin/opiekey/Makefile -text
 usr.bin/opiepasswd/Makefile -text

@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
-# $MidnightBSD: src/usr.bin/Makefile,v 1.48 2013/02/08 02:41:06 laffer1 Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
@@ -227,7 +227,6 @@ SUBDIR+=	catman
 SUBDIR+=	dig
 SUBDIR+=	host
 SUBDIR+=	nslookup
-SUBDIR+=	nsupdate
 .endif
 
 .if ${MK_BLUETOOTH} != "no"
