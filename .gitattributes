@@ -26908,6 +26908,7 @@ contrib/perl/t/op/study.t -text
 contrib/perl/t/op/studytied.t -text
 contrib/perl/t/op/sub.t -text
 contrib/perl/t/op/sub_lval.t -text
+contrib/perl/t/op/substr.t -text
 contrib/perl/t/op/substr_thr.t -text
 contrib/perl/t/op/svleak.pl -text
 contrib/perl/t/op/svleak.t -text
