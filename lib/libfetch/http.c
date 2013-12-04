@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2000-2011 Dag-Erling Smørgrav
+ * Copyright (c) 2000-2011 Dag-Erling SmÃ¸rgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -196,6 +196,8 @@ http_growbuf(struct httpio *io, size_t len)
 static int
 http_fillbuf(struct httpio *io, size_t len)
 {
+	ssize_t nbytes;
+
 	if (io->error)
 		return (-1);
 	if (io->eof)
@@ -204,10 +206,11 @@ http_fillbuf(struct httpio *io, size_t len)
 	if (io->chunked == 0) {
 		if (http_growbuf(io, len) == -1)
 			return (-1);
-		if ((io->buflen = fetch_read(io->conn, io->buf, len)) == -1) {
-			io->error = 1;
+		if ((nbytes = fetch_read(io->conn, io->buf, len)) == -1) {
+			io->error = errno;
 			return (-1);
 		}
+		io->buflen = nbytes;
 		io->bufpos = 0;
 		return (io->buflen);
 	}
@@ -227,10 +230,11 @@ http_fillbuf(struct httpio *io, size_t len)
 		len = io->chunksize;
 	if (http_growbuf(io, len) == -1)
 		return (-1);
-	if ((io->buflen = fetch_read(io->conn, io->buf, len)) == -1) {
-		io->error = 1;
+	if ((nbytes = fetch_read(io->conn, io->buf, len)) == -1) {
+		io->error = errno;
 		return (-1);
 	}
+	io->buflen = nbytes;
 	io->chunksize -= io->buflen;
 
 	if (io->chunksize == 0) {
@@ -272,8 +276,11 @@ http_readfn(void *v, char *buf, int len)
 		io->bufpos += l;
 	}
 
-	if (!pos && io->error)
+	if (!pos && io->error) {
+		if (io->error == EINTR)
+			io->error = 0;
 		return (-1);
+	}
 	return (pos);
 }
 
@@ -1652,7 +1659,7 @@ http_request(struct url *URL, const char *op, struct url_stat *us,
 		if ((p = getenv("HTTP_USER_AGENT")) != NULL && *p != '\0')
 			http_cmd(conn, "User-Agent: %s", p);
 		else
-			http_cmd(conn, "User-Agent: %s (MidnightBSD) " _LIBFETCH_VER, getprogname());
+			http_cmd(conn, "User-Agent: %s " _LIBFETCH_VER, getprogname());
 		if (url->offset > 0)
 			http_cmd(conn, "Range: bytes=%lld-", (long long)url->offset);
 		http_cmd(conn, "Connection: close");
@@ -1772,7 +1779,9 @@ http_request(struct url *URL, const char *op, struct url_stat *us,
 					DEBUG(fprintf(stderr, "failed to parse new URL\n"));
 					goto ouch;
 				}
-				if (!*new->user && !*new->pwd) {
+
+				/* Only copy credentials if the host matches */
+				if (!strcmp(new->host, url->host) && !*new->user && !*new->pwd) {
 					strcpy(new->user, url->user);
 					strcpy(new->pwd, url->pwd);
 				}
