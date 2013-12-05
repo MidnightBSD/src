@@ -1,4 +1,4 @@
-/* $OpenBSD: compat.c,v 1.78 2008/09/11 14:22:37 markus Exp $ */
+/* $OpenBSD: compat.c,v 1.81 2013/05/17 00:13:13 djm Exp $ */
 /*
  * Copyright (c) 1999, 2000, 2001, 2002 Markus Friedl.  All rights reserved.
  *
@@ -45,6 +45,8 @@ int datafellows = 0;
 void
 enable_compat20(void)
 {
+	if (compat20)
+		return;
 	debug("Enabling compatibility mode for protocol 2.0");
 	compat20 = 1;
 }
@@ -92,6 +94,7 @@ compat_datafellows(const char *version)
 		{ "OpenSSH_3.*",	SSH_OLD_FORWARD_ADDR },
 		{ "Sun_SSH_1.0*",	SSH_BUG_NOREKEY|SSH_BUG_EXTEOF},
 		{ "OpenSSH_4*",		0 },
+		{ "OpenSSH_5*",		SSH_NEW_OPENSSH|SSH_BUG_DYNAMIC_RPORT},
 		{ "OpenSSH*",		SSH_NEW_OPENSSH },
 		{ "*MindTerm*",		0 },
 		{ "2.1.0*",		SSH_BUG_SIGBLOB|SSH_BUG_HMAC|
@@ -201,7 +204,7 @@ proto_spec(const char *spec)
 			break;
 		}
 	}
-	xfree(s);
+	free(s);
 	return ret;
 }
 
@@ -227,7 +230,7 @@ compat_cipher_proposal(char *cipher_prop)
 	buffer_append(&b, "\0", 1);
 	fix_ciphers = xstrdup(buffer_ptr(&b));
 	buffer_free(&b);
-	xfree(orig_prop);
+	free(orig_prop);
 	debug2("Original cipher proposal: %s", cipher_prop);
 	debug2("Compat cipher proposal: %s", fix_ciphers);
 	if (!*fix_ciphers)

@@ -1,12 +1,6 @@
-/* $OpenBSD: version.h,v 1.61 2011/02/04 00:44:43 djm Exp $ */
+/* $OpenBSD: version.h,v 1.68 2013/11/08 01:38:11 djm Exp $ */
 
-#ifndef SSH_VERSION
+#define SSH_VERSION	"OpenSSH_6.4"
 
-#define SSH_VERSION             (ssh_version_get())
-#define SSH_RELEASE             (ssh_version_get())
-#define SSH_VERSION_BASE        "OpenSSH_5.8p2"
-#define SSH_VERSION_ADDENDUM    "MidnightBSD-20130122"
-
-const char *ssh_version_get(void);
-void ssh_version_set_addendum(const char *add);
-#endif /* SSH_VERSION */
+#define SSH_PORTABLE	"p1"
+#define SSH_RELEASE	SSH_VERSION SSH_PORTABLE

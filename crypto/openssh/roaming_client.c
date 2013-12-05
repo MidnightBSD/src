@@ -1,4 +1,4 @@
-/* $OpenBSD: roaming_client.c,v 1.3 2010/01/18 01:50:27 dtucker Exp $ */
+/* $OpenBSD: roaming_client.c,v 1.5 2013/05/17 00:13:14 djm Exp $ */
 /*
  * Copyright (c) 2004-2009 AppGate Network Security AB
  *
@@ -72,7 +72,7 @@ roaming_reply(int type, u_int32_t seq, void *ctxt)
 	cookie = packet_get_int64();
 	key1 = oldkey1 = packet_get_int64();
 	key2 = oldkey2 = packet_get_int64();
-	set_out_buffer_size(packet_get_int() +  get_snd_buf_size());
+	set_out_buffer_size(packet_get_int() + get_snd_buf_size());
 	roaming_enabled = 1;
 }
 
@@ -187,10 +187,10 @@ roaming_resume(void)
 		debug("server doesn't allow resume");
 		goto fail;
 	}
-	xfree(str);
+	free(str);
 	for (i = 1; i < PROPOSAL_MAX; i++) {
 		/* kex algorithm taken care of so start with i=1 and not 0 */
-		xfree(packet_get_string(&len));
+		free(packet_get_string(&len));
 	}
 	i = packet_get_char(); /* first_kex_packet_follows */
 	if (i && (c = strchr(kexlist, ',')))
@@ -226,8 +226,7 @@ roaming_resume(void)
 	return 0;
 
 fail:
-	if (kexlist)
-		xfree(kexlist);
+	free(kexlist);
 	if (packet_get_connection_in() == packet_get_connection_out())
 		close(packet_get_connection_in());
 	else {

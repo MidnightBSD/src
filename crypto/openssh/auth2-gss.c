@@ -1,4 +1,4 @@
-/* $OpenBSD: auth2-gss.c,v 1.16 2007/10/29 00:52:45 dtucker Exp $ */
+/* $OpenBSD: auth2-gss.c,v 1.20 2013/05/17 00:13:13 djm Exp $ */
 
 /*
  * Copyright (c) 2001-2003 Simon Wilkinson. All rights reserved.
@@ -81,8 +81,7 @@ userauth_gssapi(Authctxt *authctxt)
 	do {
 		mechs--;
 
-		if (doid)
-			xfree(doid);
+		free(doid);
 
 		present = 0;
 		doid = packet_get_string(&len);
@@ -101,14 +100,16 @@ userauth_gssapi(Authctxt *authctxt)
 	gss_release_oid_set(&ms, &supported);
 
 	if (!present) {
-		xfree(doid);
+		free(doid);
+		authctxt->server_caused_failure = 1;
 		return (0);
 	}
 
 	if (GSS_ERROR(PRIVSEP(ssh_gssapi_server_ctx(&ctxt, &goid)))) {
 		if (ctxt != NULL)
 			ssh_gssapi_delete_ctx(&ctxt);
-		xfree(doid);
+		free(doid);
+		authctxt->server_caused_failure = 1;
 		return (0);
 	}
 
@@ -120,7 +121,7 @@ userauth_gssapi(Authctxt *authctxt)
 	packet_put_string(doid, len);
 
 	packet_send();
-	xfree(doid);
+	free(doid);
 
 	dispatch_set(SSH2_MSG_USERAUTH_GSSAPI_TOKEN, &input_gssapi_token);
 	dispatch_set(SSH2_MSG_USERAUTH_GSSAPI_ERRTOK, &input_gssapi_errtok);
@@ -151,7 +152,7 @@ input_gssapi_token(int type, u_int32_t plen, void *ctxt)
 	maj_status = PRIVSEP(ssh_gssapi_accept_ctx(gssctxt, &recv_tok,
 	    &send_tok, &flags));
 
-	xfree(recv_tok.value);
+	free(recv_tok.value);
 
 	if (GSS_ERROR(maj_status)) {
 		if (send_tok.length != 0) {
@@ -161,7 +162,7 @@ input_gssapi_token(int type, u_int32_t plen, void *ctxt)
 		}
 		authctxt->postponed = 0;
 		dispatch_set(SSH2_MSG_USERAUTH_GSSAPI_TOKEN, NULL);
-		userauth_finish(authctxt, 0, "gssapi-with-mic");
+		userauth_finish(authctxt, 0, "gssapi-with-mic", NULL);
 	} else {
 		if (send_tok.length != 0) {
 			packet_start(SSH2_MSG_USERAUTH_GSSAPI_TOKEN);
@@ -206,7 +207,7 @@ input_gssapi_errtok(int type, u_int32_t plen, void *ctxt)
 	maj_status = PRIVSEP(ssh_gssapi_accept_ctx(gssctxt, &recv_tok,
 	    &send_tok, NULL));
 
-	xfree(recv_tok.value);
+	free(recv_tok.value);
 
 	/* We can't return anything to the client, even if we wanted to */
 	dispatch_set(SSH2_MSG_USERAUTH_GSSAPI_TOKEN, NULL);
@@ -227,13 +228,10 @@ static void
 input_gssapi_exchange_complete(int type, u_int32_t plen, void *ctxt)
 {
 	Authctxt *authctxt = ctxt;
-	Gssctxt *gssctxt;
 	int authenticated;
 
 	if (authctxt == NULL || (authctxt->methoddata == NULL && !use_privsep))
 		fatal("No authentication or GSSAPI context");
-
-	gssctxt = authctxt->methoddata;
 
 	/*
 	 * We don't need to check the status, because we're only enabled in
@@ -249,7 +247,7 @@ input_gssapi_exchange_complete(int type, u_int32_t plen, void *ctxt)
 	dispatch_set(SSH2_MSG_USERAUTH_GSSAPI_ERRTOK, NULL);
 	dispatch_set(SSH2_MSG_USERAUTH_GSSAPI_MIC, NULL);
 	dispatch_set(SSH2_MSG_USERAUTH_GSSAPI_EXCHANGE_COMPLETE, NULL);
-	userauth_finish(authctxt, authenticated, "gssapi-with-mic");
+	userauth_finish(authctxt, authenticated, "gssapi-with-mic", NULL);
 }
 
 static void
@@ -282,14 +280,14 @@ input_gssapi_mic(int type, u_int32_t plen, void *ctxt)
 		logit("GSSAPI MIC check failed");
 
 	buffer_free(&b);
-	xfree(mic.value);
+	free(mic.value);
 
 	authctxt->postponed = 0;
 	dispatch_set(SSH2_MSG_USERAUTH_GSSAPI_TOKEN, NULL);
 	dispatch_set(SSH2_MSG_USERAUTH_GSSAPI_ERRTOK, NULL);
 	dispatch_set(SSH2_MSG_USERAUTH_GSSAPI_MIC, NULL);
 	dispatch_set(SSH2_MSG_USERAUTH_GSSAPI_EXCHANGE_COMPLETE, NULL);
-	userauth_finish(authctxt, authenticated, "gssapi-with-mic");
+	userauth_finish(authctxt, authenticated, "gssapi-with-mic", NULL);
 }
 
 Authmethod method_gssapi = {

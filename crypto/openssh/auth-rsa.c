@@ -1,4 +1,4 @@
-/* $OpenBSD: auth-rsa.c,v 1.79 2010/12/03 23:55:27 djm Exp $ */
+/* $OpenBSD: auth-rsa.c,v 1.85 2013/07/12 00:19:58 djm Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -160,44 +160,26 @@ auth_rsa_challenge_dialog(Key *key)
 	return (success);
 }
 
-/*
- * check if there's user key matching client_n,
- * return key if login is allowed, NULL otherwise
- */
-
-int
-auth_rsa_key_allowed(struct passwd *pw, BIGNUM *client_n, Key **rkey)
+static int
+rsa_key_allowed_in_file(struct passwd *pw, char *file,
+    const BIGNUM *client_n, Key **rkey)
 {
-	char line[SSH_MAX_PUBKEY_BYTES], *file;
-	int allowed = 0;
-	u_int bits;
+	char *fp, line[SSH_MAX_PUBKEY_BYTES];
+	int allowed = 0, bits;
 	FILE *f;
 	u_long linenum = 0;
 	Key *key;
 
-	/* Temporarily use the user's uid. */
-	temporarily_use_uid(pw);
-
-	/* The authorized keys. */
-	file = authorized_keys_file(pw);
 	debug("trying public RSA key file %s", file);
-	f = auth_openkeyfile(file, pw, options.strict_modes);
-	if (!f) {
-		xfree(file);
-		restore_uid();
-		return (0);
-	}
-
-	/* Flag indicating whether the key is allowed. */
-	allowed = 0;
-
-	key = key_new(KEY_RSA1);
+	if ((f = auth_openkeyfile(file, pw, options.strict_modes)) == NULL)
+		return 0;
 
 	/*
 	 * Go though the accepted keys, looking for the current key.  If
 	 * found, perform a challenge-response dialog to verify that the
 	 * user really has the corresponding private key.
 	 */
+	key = key_new(KEY_RSA1);
 	while (read_keyfile_line(f, file, line, sizeof(line), &linenum) != -1) {
 		char *cp;
 		char *key_options;
@@ -235,16 +217,24 @@ auth_rsa_key_allowed(struct passwd *pw, BIGNUM *client_n, Key **rkey)
 		}
 		/* cp now points to the comment part. */
 
-		/* Check if the we have found the desired key (identified by its modulus). */
+		/*
+		 * Check if the we have found the desired key (identified
+		 * by its modulus).
+		 */
 		if (BN_cmp(key->rsa->n, client_n) != 0)
 			continue;
 
 		/* check the real bits  */
 		keybits = BN_num_bits(key->rsa->n);
-		if (keybits < 0 || bits != (u_int)keybits)
+		if (keybits < 0 || bits != keybits)
 			logit("Warning: %s, line %lu: keysize mismatch: "
 			    "actual %d vs. announced %d.",
 			    file, linenum, BN_num_bits(key->rsa->n), bits);
+
+		fp = key_fingerprint(key, SSH_FP_MD5, SSH_FP_HEX);
+		debug("matching key found: file %s, line %lu %s %s",
+		    file, linenum, key_type(key), fp);
+		free(fp);
 
 		/* Never accept a revoked key */
 		if (auth_key_is_revoked(key))
@@ -264,11 +254,7 @@ auth_rsa_key_allowed(struct passwd *pw, BIGNUM *client_n, Key **rkey)
 		break;
 	}
 
-	/* Restore the privileged uid. */
-	restore_uid();
-
 	/* Close the file. */
-	xfree(file);
 	fclose(f);
 
 	/* return key if allowed */
@@ -276,7 +262,35 @@ auth_rsa_key_allowed(struct passwd *pw, BIGNUM *client_n, Key **rkey)
 		*rkey = key;
 	else
 		key_free(key);
-	return (allowed);
+
+	return allowed;
+}
+
+/*
+ * check if there's user key matching client_n,
+ * return key if login is allowed, NULL otherwise
+ */
+
+int
+auth_rsa_key_allowed(struct passwd *pw, BIGNUM *client_n, Key **rkey)
+{
+	char *file;
+	u_int i, allowed = 0;
+
+	temporarily_use_uid(pw);
+
+	for (i = 0; !allowed && i < options.num_authkeys_files; i++) {
+		if (strcasecmp(options.authorized_keys_files[i], "none") == 0)
+			continue;
+		file = expand_authorized_keys(
+		    options.authorized_keys_files[i], pw);
+		allowed = rsa_key_allowed_in_file(pw, file, client_n, rkey);
+		free(file);
+	}
+
+	restore_uid();
+
+	return allowed;
 }
 
 /*
@@ -288,7 +302,6 @@ int
 auth_rsa(Authctxt *authctxt, BIGNUM *client_n)
 {
 	Key *key;
-	char *fp;
 	struct passwd *pw = authctxt->pw;
 
 	/* no user given */
@@ -318,11 +331,7 @@ auth_rsa(Authctxt *authctxt, BIGNUM *client_n)
 	 * options; this will be reset if the options cause the
 	 * authentication to be rejected.
 	 */
-	fp = key_fingerprint(key, SSH_FP_MD5, SSH_FP_HEX);
-	verbose("Found matching %s key: %s",
-	    key_type(key), fp);
-	xfree(fp);
-	key_free(key);
+	pubkey_auth_info(authctxt, key, NULL);
 
 	packet_send_debug("RSA authentication accepted.");
 	return (1);

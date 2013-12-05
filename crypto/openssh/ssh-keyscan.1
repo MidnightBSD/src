@@ -1,4 +1,4 @@
-.\"	$OpenBSD: ssh-keyscan.1,v 1.29 2010/08/31 11:54:45 djm Exp $
+.\"	$OpenBSD: ssh-keyscan.1,v 1.31 2013/07/16 00:07:52 schwarze Exp $
 .\"
 .\" Copyright 1995, 1996 by David Mazieres <dm@lcs.mit.edu>.
 .\"
@@ -6,7 +6,7 @@
 .\" permitted provided that due credit is given to the author and the
 .\" OpenBSD project by leaving this copyright notice intact.
 .\"
-.Dd $Mdocdate: August 31 2010 $
+.Dd $Mdocdate: July 16 2013 $
 .Dt SSH-KEYSCAN 1
 .Os
 .Sh NAME
@@ -94,8 +94,11 @@ or
 .Dq rsa
 for protocol version 2.
 Multiple values may be specified by separating them with commas.
-The default is
-.Dq rsa .
+The default is to fetch
+.Dq rsa
+and
+.Dq ecdsa
+keys.
 .It Fl v
 Verbose mode.
 Causes
@@ -161,9 +164,9 @@ $ ssh-keyscan -t rsa,dsa,ecdsa -f ssh_hosts | \e
 .Xr sshd 8
 .Sh AUTHORS
 .An -nosplit
-.An David Mazieres Aq dm@lcs.mit.edu
+.An David Mazieres Aq Mt dm@lcs.mit.edu
 wrote the initial version, and
-.An Wayne Davison Aq wayned@users.sourceforge.net
+.An Wayne Davison Aq Mt wayned@users.sourceforge.net
 added support for protocol version 2.
 .Sh BUGS
 It generates "Connection closed by remote host" messages on the consoles

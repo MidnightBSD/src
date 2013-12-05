@@ -1,4 +1,4 @@
-/* $OpenBSD: readconf.h,v 1.88 2010/11/13 23:27:50 djm Exp $ */
+/* $OpenBSD: readconf.h,v 1.95 2013/05/16 04:27:50 djm Exp $ */
 
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
@@ -24,10 +24,12 @@ typedef struct {
 	char	 *connect_host;		/* Host to connect. */
 	int	  connect_port;		/* Port to connect on connect_host. */
 	int	  allocated_port;	/* Dynamically allocated listen port */
+	int	  handle;		/* Handle for dynamic listen ports */
 }       Forward;
 /* Data structure for representing option data. */
 
-#define MAX_SEND_ENV	256
+#define MAX_SEND_ENV		256
+#define SSH_MAX_HOSTS_FILES	256
 
 typedef struct {
 	int     forward_agent;	/* Forward authentication agent. */
@@ -83,10 +85,10 @@ typedef struct {
 	char   *user;		/* User to log in as. */
 	int     escape_char;	/* Escape character; -2 = none */
 
-	char   *system_hostfile;/* Path for /etc/ssh/ssh_known_hosts. */
-	char   *user_hostfile;	/* Path for $HOME/.ssh/known_hosts. */
-	char   *system_hostfile2;
-	char   *user_hostfile2;
+	u_int	num_system_hostfiles;	/* Paths for /etc/ssh/ssh_known_hosts */
+	char   *system_hostfiles[SSH_MAX_HOSTS_FILES];
+	u_int	num_user_hostfiles;	/* Path for $HOME/.ssh/known_hosts */
+	char   *user_hostfiles[SSH_MAX_HOSTS_FILES];
 	char   *preferred_authentications;
 	char   *bind_address;	/* local socket address for connection to sshd */
 	char   *pkcs11_provider; /* PKCS#11 provider */
@@ -94,6 +96,7 @@ typedef struct {
 
 	int     num_identity_files;	/* Number of files for RSA/DSA identities. */
 	char   *identity_files[SSH_MAX_IDENTITY_FILES];
+	int    identity_file_userprovided[SSH_MAX_IDENTITY_FILES];
 	Key    *identity_keys[SSH_MAX_IDENTITY_FILES];
 
 	/* Local TCP/IP forward requests. */
@@ -107,6 +110,7 @@ typedef struct {
 
 	int	enable_ssh_keysign;
 	int64_t rekey_limit;
+	int	rekey_interval;
 	int	no_host_authentication_for_localhost;
 	int	identities_only;
 	int	server_alive_interval;
@@ -132,6 +136,9 @@ typedef struct {
 
 	int	use_roaming;
 
+	int	request_tty;
+
+	char	*ignored_unknown; /* Pattern list of unknown tokens to ignore */
 }       Options;
 
 #define SSHCTL_MASTER_NO	0
@@ -140,15 +147,25 @@ typedef struct {
 #define SSHCTL_MASTER_ASK	3
 #define SSHCTL_MASTER_AUTO_ASK	4
 
+#define REQUEST_TTY_AUTO	0
+#define REQUEST_TTY_NO		1
+#define REQUEST_TTY_YES		2
+#define REQUEST_TTY_FORCE	3
+
+#define SSHCONF_CHECKPERM	1  /* check permissions on config file */
+#define SSHCONF_USERCONF	2  /* user provided config file not system */
+
 void     initialize_options(Options *);
 void     fill_default_options(Options *);
 int	 read_config_file(const char *, const char *, Options *, int);
 int	 parse_forward(Forward *, const char *, int, int);
 
 int
-process_config_line(Options *, const char *, char *, const char *, int, int *);
+process_config_line(Options *, const char *, char *, const char *, int, int *,
+    int);
 
 void	 add_local_forward(Options *, const Forward *);
 void	 add_remote_forward(Options *, const Forward *);
+void	 add_identity_file(Options *, const char *, const char *, int);
 
 #endif				/* READCONF_H */

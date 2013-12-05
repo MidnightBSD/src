@@ -33,8 +33,8 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $OpenBSD: ssh.1,v 1.316 2010/11/18 15:01:00 jmc Exp $
-.Dd $Mdocdate: November 18 2010 $
+.\" $OpenBSD: ssh.1,v 1.334 2013/07/18 01:12:26 djm Exp $
+.Dd $Mdocdate: July 18 2013 $
 .Dt SSH 1
 .Os
 .Sh NAME
@@ -47,6 +47,7 @@
 .Op Fl b Ar bind_address
 .Op Fl c Ar cipher_spec
 .Op Fl D Oo Ar bind_address : Oc Ns Ar port
+.Op Fl E Ar log_file
 .Op Fl e Ar escape_char
 .Op Fl F Ar configfile
 .Op Fl I Ar pkcs11
@@ -64,6 +65,8 @@
 .Oo Ar user Ns @ Oc Ns Ar hostname
 .Op Ar command
 .Ek
+.Nm
+.Fl Q Ar protocol_feature
 .Sh DESCRIPTION
 .Nm
 (SSH client) is a program for logging into a remote machine and for
@@ -217,6 +220,10 @@ indicates that the listening port be bound for local use only, while an
 empty address or
 .Sq *
 indicates that the port should be available from all interfaces.
+.It Fl E Ar log_file
+Append debug logs to
+.Ar log_file
+instead of standard error.
 .It Fl e Ar escape_char
 Sets the escape character for sessions with a pty (default:
 .Ql ~ ) .
@@ -392,9 +399,13 @@ Valid commands are:
 .Dq check
 (check that the master process is running),
 .Dq forward
-(request forwardings without command execution) and
+(request forwardings without command execution),
+.Dq cancel
+(cancel forwardings),
 .Dq exit
-(request the master to exit).
+(request the master to exit), and
+.Dq stop
+(request the master to stop accepting further multiplexing requests).
 .It Fl o Ar option
 Can be used to give options in the format used in the configuration file.
 This is useful for specifying options for which there is no separate
@@ -417,11 +428,13 @@ For full details of the options listed below, and their possible values, see
 .It ConnectTimeout
 .It ControlMaster
 .It ControlPath
+.It ControlPersist
 .It DynamicForward
 .It EscapeChar
 .It ExitOnForwardFailure
 .It ForwardAgent
 .It ForwardX11
+.It ForwardX11Timeout
 .It ForwardX11Trusted
 .It GatewayPorts
 .It GlobalKnownHostsFile
@@ -436,6 +449,7 @@ For full details of the options listed below, and their possible values, see
 .It IdentityFile
 .It IdentitiesOnly
 .It IPQoS
+.It KbdInteractiveAuthentication
 .It KbdInteractiveDevices
 .It KexAlgorithms
 .It LocalCommand
@@ -454,6 +468,7 @@ For full details of the options listed below, and their possible values, see
 .It PubkeyAuthentication
 .It RekeyLimit
 .It RemoteForward
+.It RequestTTY
 .It RhostsRSAAuthentication
 .It RSAAuthentication
 .It SendEnv
@@ -474,6 +489,21 @@ For full details of the options listed below, and their possible values, see
 Port to connect to on the remote host.
 This can be specified on a
 per-host basis in the configuration file.
+.It Fl Q Ar protocol_feature
+Queries
+.Nm
+for the algorithms supported for the specified version 2
+.Ar protocol_feature .
+The queriable features are:
+.Dq cipher
+(supported symmetric ciphers),
+.Dq MAC
+(supported message integrity codes),
+.Dq KEX
+(key exchange algorithms),
+.Dq key
+(key types).
+Protocol features are treated case-insensitively.
 .It Fl q
 Quiet mode.
 Causes most warning and diagnostic messages to be suppressed.
@@ -498,7 +528,7 @@ from the local machine.
 Port forwardings can also be specified in the configuration file.
 Privileged ports can be forwarded only when
 logging in as root on the remote machine.
-IPv6 addresses can be specified by enclosing the address in square braces.
+IPv6 addresses can be specified by enclosing the address in square brackets.
 .Pp
 By default, the listening socket on the server will be bound to the loopback
 interface only.
@@ -579,8 +609,8 @@ Implies
 .Fl T ,
 .Cm ExitOnForwardFailure
 and
-.Cm ClearAllForwardings
-and works with Protocol version 2 only.
+.Cm ClearAllForwardings .
+Works with Protocol version 2 only.
 .It Fl w Xo
 .Ar local_tun Ns Op : Ns Ar remote_tun
 .Xc
@@ -664,7 +694,9 @@ Both protocols support similar authentication methods,
 but protocol 2 is the default since
 it provides additional mechanisms for confidentiality
 (the traffic is encrypted using AES, 3DES, Blowfish, CAST128, or Arcfour)
-and integrity (hmac-md5, hmac-sha1, umac-64, hmac-ripemd160).
+and integrity (hmac-md5, hmac-sha1,
+hmac-sha2-256, hmac-sha2-512,
+umac-64, umac-128, hmac-ripemd160).
 Protocol 1 lacks a strong mechanism for ensuring the
 integrity of the connection.
 .Pp
@@ -722,9 +754,7 @@ implements public key authentication protocol automatically,
 using one of the DSA, ECDSA or RSA algorithms.
 Protocol 1 is restricted to using only RSA keys,
 but protocol 2 may use any.
-The
-.Sx HISTORY
-section of
+The HISTORY section of
 .Xr ssl 8
 contains a brief discussion of the DSA and RSA algorithms.
 .Pp
@@ -780,9 +810,7 @@ instead of a set of public/private keys,
 signed certificates are used.
 This has the advantage that a single trusted certification authority
 can be used in place of many public/private keys.
-See the
-.Sx CERTIFICATES
-section of
+See the CERTIFICATES section of
 .Xr ssh-keygen 1
 for more information.
 .Pp
@@ -891,11 +919,20 @@ Currently this allows the addition of port forwardings using the
 and
 .Fl D
 options (see above).
-It also allows the cancellation of existing remote port-forwardings
-using
+It also allows the cancellation of existing port-forwardings
+with
 .Sm off
-.Fl KR Oo Ar bind_address : Oc Ar port .
+.Fl KL Oo Ar bind_address : Oc Ar port
 .Sm on
+for local,
+.Sm off
+.Fl KR Oo Ar bind_address : Oc Ar port
+.Sm on
+for remote and
+.Sm off
+.Fl KD Oo Ar bind_address : Oc Ar port
+.Sm on
+for dynamic port-forwardings.
 .Ic !\& Ns Ar command
 allows the user to execute a local command if the
 .Ic PermitLocalCommand
@@ -907,6 +944,14 @@ option.
 .It Cm ~R
 Request rekeying of the connection
 (only useful for SSH protocol version 2 and if the peer supports it).
+.It Cm ~V
+Decrease the verbosity
+.Pq Ic LogLevel
+when errors are being written to stderr.
+.It Cm ~v
+Increase the verbosity
+.Pq Ic LogLevel
+when errors are being written to stderr.
 .El
 .Sh TCP FORWARDING
 Forwarding of arbitrary TCP connections over the secure channel can
@@ -1292,7 +1337,7 @@ This is the per-user configuration file.
 The file format and configuration options are described in
 .Xr ssh_config 5 .
 Because of the potential for abuse, this file must have strict permissions:
-read/write for the user, and not accessible by others.
+read/write for the user, and not writable by others.
 .Pp
 .It Pa ~/.ssh/environment
 Contains additional definitions for environment variables; see
@@ -1356,7 +1401,7 @@ The file format and configuration options are described in
 .It Pa /etc/ssh/ssh_host_dsa_key
 .It Pa /etc/ssh/ssh_host_ecdsa_key
 .It Pa /etc/ssh/ssh_host_rsa_key
-These three files contain the private parts of the host keys
+These files contain the private parts of the host keys
 and are used for host-based authentication.
 If protocol version 1 is used,
 .Nm
@@ -1407,77 +1452,118 @@ if an error occurred.
 .Xr ssh_config 5 ,
 .Xr ssh-keysign 8 ,
 .Xr sshd 8
+.Sh STANDARDS
 .Rs
+.%A S. Lehtinen
+.%A C. Lonvick
+.%D January 2006
 .%R RFC 4250
-.%T "The Secure Shell (SSH) Protocol Assigned Numbers"
-.%D 2006
+.%T The Secure Shell (SSH) Protocol Assigned Numbers
 .Re
+.Pp
 .Rs
+.%A T. Ylonen
+.%A C. Lonvick
+.%D January 2006
 .%R RFC 4251
-.%T "The Secure Shell (SSH) Protocol Architecture"
-.%D 2006
+.%T The Secure Shell (SSH) Protocol Architecture
 .Re
+.Pp
 .Rs
+.%A T. Ylonen
+.%A C. Lonvick
+.%D January 2006
 .%R RFC 4252
-.%T "The Secure Shell (SSH) Authentication Protocol"
-.%D 2006
+.%T The Secure Shell (SSH) Authentication Protocol
 .Re
+.Pp
 .Rs
+.%A T. Ylonen
+.%A C. Lonvick
+.%D January 2006
 .%R RFC 4253
-.%T "The Secure Shell (SSH) Transport Layer Protocol"
-.%D 2006
+.%T The Secure Shell (SSH) Transport Layer Protocol
 .Re
+.Pp
 .Rs
+.%A T. Ylonen
+.%A C. Lonvick
+.%D January 2006
 .%R RFC 4254
-.%T "The Secure Shell (SSH) Connection Protocol"
-.%D 2006
+.%T The Secure Shell (SSH) Connection Protocol
 .Re
+.Pp
 .Rs
+.%A J. Schlyter
+.%A W. Griffin
+.%D January 2006
 .%R RFC 4255
-.%T "Using DNS to Securely Publish Secure Shell (SSH) Key Fingerprints"
-.%D 2006
+.%T Using DNS to Securely Publish Secure Shell (SSH) Key Fingerprints
 .Re
+.Pp
 .Rs
+.%A F. Cusack
+.%A M. Forssen
+.%D January 2006
 .%R RFC 4256
-.%T "Generic Message Exchange Authentication for the Secure Shell Protocol (SSH)"
-.%D 2006
+.%T Generic Message Exchange Authentication for the Secure Shell Protocol (SSH)
 .Re
+.Pp
 .Rs
+.%A J. Galbraith
+.%A P. Remaker
+.%D January 2006
 .%R RFC 4335
-.%T "The Secure Shell (SSH) Session Channel Break Extension"
-.%D 2006
+.%T The Secure Shell (SSH) Session Channel Break Extension
 .Re
+.Pp
 .Rs
+.%A M. Bellare
+.%A T. Kohno
+.%A C. Namprempre
+.%D January 2006
 .%R RFC 4344
-.%T "The Secure Shell (SSH) Transport Layer Encryption Modes"
-.%D 2006
+.%T The Secure Shell (SSH) Transport Layer Encryption Modes
 .Re
+.Pp
 .Rs
+.%A B. Harris
+.%D January 2006
 .%R RFC 4345
-.%T "Improved Arcfour Modes for the Secure Shell (SSH) Transport Layer Protocol"
-.%D 2006
+.%T Improved Arcfour Modes for the Secure Shell (SSH) Transport Layer Protocol
 .Re
+.Pp
 .Rs
+.%A M. Friedl
+.%A N. Provos
+.%A W. Simpson
+.%D March 2006
 .%R RFC 4419
-.%T "Diffie-Hellman Group Exchange for the Secure Shell (SSH) Transport Layer Protocol"
-.%D 2006
+.%T Diffie-Hellman Group Exchange for the Secure Shell (SSH) Transport Layer Protocol
 .Re
+.Pp
 .Rs
+.%A J. Galbraith
+.%A R. Thayer
+.%D November 2006
 .%R RFC 4716
-.%T "The Secure Shell (SSH) Public Key File Format"
-.%D 2006
+.%T The Secure Shell (SSH) Public Key File Format
 .Re
+.Pp
 .Rs
+.%A D. Stebila
+.%A J. Green
+.%D December 2009
 .%R RFC 5656
-.%T "Elliptic Curve Algorithm Integration in the Secure Shell Transport Layer"
-.%D 2009
+.%T Elliptic Curve Algorithm Integration in the Secure Shell Transport Layer
 .Re
+.Pp
 .Rs
-.%T "Hash Visualization: a New Technique to improve Real-World Security"
 .%A A. Perrig
 .%A D. Song
 .%D 1999
-.%O "International Workshop on Cryptographic Techniques and E-Commerce (CrypTEC '99)"
+.%O International Workshop on Cryptographic Techniques and E-Commerce (CrypTEC '99)
+.%T Hash Visualization: a New Technique to improve Real-World Security
 .Re
 .Sh AUTHORS
 OpenSSH is a derivative of the original and free

@@ -1,4 +1,4 @@
-/* $OpenBSD: ssh-keysign.c,v 1.35 2010/08/31 12:33:38 djm Exp $ */
+/* $OpenBSD: ssh-keysign.c,v 1.37 2013/05/17 00:13:14 djm Exp $ */
 /*
  * Copyright (c) 2002 Markus Friedl.  All rights reserved.
  *
@@ -78,7 +78,7 @@ valid_request(struct passwd *pw, char *host, Key **ret, u_char *data,
 	p = buffer_get_string(&b, &len);
 	if (len != 20 && len != 32)
 		fail++;
-	xfree(p);
+	free(p);
 
 	if (buffer_get_char(&b) != SSH2_MSG_USERAUTH_REQUEST)
 		fail++;
@@ -90,13 +90,13 @@ valid_request(struct passwd *pw, char *host, Key **ret, u_char *data,
 	p = buffer_get_string(&b, NULL);
 	if (strcmp("ssh-connection", p) != 0)
 		fail++;
-	xfree(p);
+	free(p);
 
 	/* method */
 	p = buffer_get_string(&b, NULL);
 	if (strcmp("hostbased", p) != 0)
 		fail++;
-	xfree(p);
+	free(p);
 
 	/* pubkey */
 	pkalg = buffer_get_string(&b, NULL);
@@ -109,8 +109,8 @@ valid_request(struct passwd *pw, char *host, Key **ret, u_char *data,
 		fail++;
 	else if (key->type != pktype)
 		fail++;
-	xfree(pkalg);
-	xfree(pkblob);
+	free(pkalg);
+	free(pkblob);
 
 	/* client host name, handle trailing dot */
 	p = buffer_get_string(&b, &len);
@@ -121,14 +121,14 @@ valid_request(struct passwd *pw, char *host, Key **ret, u_char *data,
 		fail++;
 	else if (strncasecmp(host, p, len - 1) != 0)
 		fail++;
-	xfree(p);
+	free(p);
 
 	/* local user */
 	p = buffer_get_string(&b, NULL);
 
 	if (strcmp(pw->pw_name, p) != 0)
 		fail++;
-	xfree(p);
+	free(p);
 
 	/* end of message */
 	if (buffer_len(&b) != 0)
@@ -150,9 +150,10 @@ main(int argc, char **argv)
 {
 	Buffer b;
 	Options options;
-	Key *keys[2], *key = NULL;
+#define NUM_KEYTYPES 3
+	Key *keys[NUM_KEYTYPES], *key = NULL;
 	struct passwd *pw;
-	int key_fd[2], i, found, version = 2, fd;
+	int key_fd[NUM_KEYTYPES], i, found, version = 2, fd;
 	u_char *signature, *data;
 	char *host;
 	u_int slen, dlen;
@@ -165,8 +166,10 @@ main(int argc, char **argv)
 	if (fd > 2)
 		close(fd);
 
-	key_fd[0] = open(_PATH_HOST_RSA_KEY_FILE, O_RDONLY);
-	key_fd[1] = open(_PATH_HOST_DSA_KEY_FILE, O_RDONLY);
+	i = 0;
+	key_fd[i++] = open(_PATH_HOST_DSA_KEY_FILE, O_RDONLY);
+	key_fd[i++] = open(_PATH_HOST_ECDSA_KEY_FILE, O_RDONLY);
+	key_fd[i++] = open(_PATH_HOST_RSA_KEY_FILE, O_RDONLY);
 
 	original_real_uid = getuid();	/* XXX readconf.c needs this */
 	if ((pw = getpwuid(original_real_uid)) == NULL)
@@ -175,7 +178,6 @@ main(int argc, char **argv)
 
 	permanently_set_uid(pw);
 
-	init_rng();
 	seed_rng();
 	arc4random_stir();
 
@@ -191,7 +193,11 @@ main(int argc, char **argv)
 		fatal("ssh-keysign not enabled in %s",
 		    _PATH_HOST_CONFIG_FILE);
 
-	if (key_fd[0] == -1 && key_fd[1] == -1)
+	for (i = found = 0; i < NUM_KEYTYPES; i++) {
+		if (key_fd[i] != -1)
+			found = 1;
+	}
+	if (found == 0)
 		fatal("could not open any host key");
 
 	OpenSSL_add_all_algorithms();
@@ -200,7 +206,7 @@ main(int argc, char **argv)
 	RAND_seed(rnd, sizeof(rnd));
 
 	found = 0;
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < NUM_KEYTYPES; i++) {
 		keys[i] = NULL;
 		if (key_fd[i] == -1)
 			continue;
@@ -227,10 +233,10 @@ main(int argc, char **argv)
 	data = buffer_get_string(&b, &dlen);
 	if (valid_request(pw, host, &key, data, dlen) < 0)
 		fatal("not a valid request");
-	xfree(host);
+	free(host);
 
 	found = 0;
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < NUM_KEYTYPES; i++) {
 		if (keys[i] != NULL &&
 		    key_equal_public(key, keys[i])) {
 			found = 1;
@@ -242,7 +248,7 @@ main(int argc, char **argv)
 
 	if (key_sign(keys[i], &signature, &slen, data, dlen) != 0)
 		fatal("key_sign failed");
-	xfree(data);
+	free(data);
 
 	/* send reply */
 	buffer_clear(&b);

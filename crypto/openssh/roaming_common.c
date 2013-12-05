@@ -1,4 +1,4 @@
-/* $OpenBSD: roaming_common.c,v 1.8 2010/01/12 00:59:29 djm Exp $ */
+/* $OpenBSD: roaming_common.c,v 1.10 2013/07/12 00:19:59 djm Exp $ */
 /*
  * Copyright (c) 2004-2009 AppGate Network Security AB
  *
@@ -75,6 +75,8 @@ get_recv_buf_size()
 void
 set_out_buffer_size(size_t size)
 {
+	if (size == 0 || size > MAX_ROAMBUF)
+		fatal("%s: bad buffer size %lu", __func__, (u_long)size);
 	/*
 	 * The buffer size can only be set once and the buffer will live
 	 * as long as the session lives.
@@ -225,7 +227,7 @@ calculate_new_key(u_int64_t *key, u_int64_t cookie, u_int64_t challenge)
 {
 	const EVP_MD *md = EVP_sha1();
 	EVP_MD_CTX ctx;
-	char hash[EVP_MAX_MD_SIZE];
+	u_char hash[EVP_MAX_MD_SIZE];
 	Buffer b;
 
 	buffer_init(&b);

@@ -1,4 +1,4 @@
-/* $OpenBSD: ssh-ecdsa.c,v 1.4 2010/09/10 01:04:10 djm Exp $ */
+/* $OpenBSD: ssh-ecdsa.c,v 1.6 2013/05/17 00:13:14 djm Exp $ */
 /*
  * Copyright (c) 2000 Markus Friedl.  All rights reserved.
  * Copyright (c) 2010 Damien Miller.  All rights reserved.
@@ -119,16 +119,16 @@ ssh_ecdsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 	if (strcmp(key_ssh_name_plain(key), ktype) != 0) {
 		error("%s: cannot handle type %s", __func__, ktype);
 		buffer_free(&b);
-		xfree(ktype);
+		free(ktype);
 		return -1;
 	}
-	xfree(ktype);
+	free(ktype);
 	sigblob = buffer_get_string(&b, &len);
 	rlen = buffer_len(&b);
 	buffer_free(&b);
 	if (rlen != 0) {
 		error("%s: remaining bytes in signature %d", __func__, rlen);
-		xfree(sigblob);
+		free(sigblob);
 		return -1;
 	}
 
@@ -145,10 +145,11 @@ ssh_ecdsa_verify(const Key *key, const u_char *signature, u_int signaturelen,
 	buffer_get_bignum2(&bb, sig->s);
 	if (buffer_len(&bb) != 0)
 		fatal("%s: remaining bytes in inner sigblob", __func__);
+	buffer_free(&bb);
 
 	/* clean up */
 	memset(sigblob, 0, len);
-	xfree(sigblob);
+	free(sigblob);
 
 	/* hash the data */
 	EVP_DigestInit(&md, evp_md);

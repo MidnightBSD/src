@@ -1,4 +1,4 @@
-/* $OpenBSD: misc.h,v 1.47 2010/11/21 01:01:13 djm Exp $ */
+/* $OpenBSD: misc.h,v 1.49 2013/06/01 13:15:52 dtucker Exp $ */
 
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
@@ -35,6 +35,7 @@ char	*tohex(const void *, size_t);
 void	 sanitise_stdfd(void);
 void	 ms_subtract_diff(struct timeval *, int *);
 void	 ms_to_timeval(struct timeval *, int);
+time_t	 monotime(void);
 void	 sock_set_v6only(int);
 
 struct passwd *pwcopy(struct passwd *);
@@ -89,6 +90,7 @@ void bandwidth_limit_init(struct bwlimit *, u_int64_t, size_t);
 void bandwidth_limit(struct bwlimit *, size_t);
 
 int parse_ipqos(const char *);
+const char *iptos2str(int);
 void mktemp_proto(char *, size_t);
 
 /* readpass.c */

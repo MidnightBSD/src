@@ -8,9 +8,9 @@
 .\"
 .\" Created: Sun May  7 00:14:37 1995 ylo
 .\"
-.\" $OpenBSD: scp.1,v 1.56 2010/12/09 14:13:32 jmc Exp $
+.\" $OpenBSD: scp.1,v 1.59 2013/07/16 00:07:52 schwarze Exp $
 .\"
-.Dd $Mdocdate: December 9 2010 $
+.Dd $Mdocdate: July 16 2013 $
 .Dt SCP 1
 .Os
 .Sh NAME
@@ -31,7 +31,7 @@
 .Oo
 .Op Ar user No @
 .Ar host1 No :
-.Oc Ns Ar file1
+.Oc Ar file1
 .Sm on
 .Ar ...
 .Sm off
@@ -140,6 +140,7 @@ For full details of the options listed below, and their possible values, see
 .It ConnectTimeout
 .It ControlMaster
 .It ControlPath
+.It ControlPersist
 .It GlobalKnownHostsFile
 .It GSSAPIAuthentication
 .It GSSAPIDelegateCredentials
@@ -152,6 +153,7 @@ For full details of the options listed below, and their possible values, see
 .It IdentityFile
 .It IdentitiesOnly
 .It IPQoS
+.It KbdInteractiveAuthentication
 .It KbdInteractiveDevices
 .It KexAlgorithms
 .It LogLevel
@@ -233,5 +235,5 @@ is based on the
 program in BSD source code from the Regents of the University of
 California.
 .Sh AUTHORS
-.An Timo Rinne Aq tri@iki.fi
-.An Tatu Ylonen Aq ylo@cs.hut.fi
+.An Timo Rinne Aq Mt tri@iki.fi
+.An Tatu Ylonen Aq Mt ylo@cs.hut.fi
