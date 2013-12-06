@@ -1,4 +1,4 @@
-/* $Id: port-linux.h,v 1.4 2013-01-22 13:47:20 laffer1 Exp $ */
+/* $Id: port-linux.h,v 1.5 2011/01/25 01:16:18 djm Exp $ */
 
 /*
  * Copyright (c) 2006 Damien Miller <djm@openbsd.org>

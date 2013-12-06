@@ -1,4 +1,4 @@
-/* $Id: port-solaris.h,v 1.3 2011-02-04 14:36:14 laffer1 Exp $ */
+/* $Id: port-solaris.h,v 1.2 2010/11/05 01:03:05 dtucker Exp $ */
 
 /*
  * Copyright (c) 2006 Chad Mynhier.

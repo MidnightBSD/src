@@ -1,7 +1,7 @@
-/* $Id: bsd-cygwin_util.h,v 1.3 2011-02-04 14:36:14 laffer1 Exp $ */
+/* $Id: bsd-cygwin_util.h,v 1.16 2013/04/01 01:40:49 dtucker Exp $ */
 
 /*
- * Copyright (c) 2000, 2001, Corinna Vinschen <vinschen@cygnus.com>
+ * Copyright (c) 2000, 2001, 2011, 2013 Corinna Vinschen <vinschen@redhat.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,18 +36,21 @@
 
 #undef ERROR
 
-#include <windows.h>
+/* Avoid including windows headers. */
+typedef void *HANDLE;
+#define INVALID_HANDLE_VALUE ((HANDLE) -1)
+
 #include <sys/cygwin.h>
 #include <io.h>
 
 int binary_open(const char *, int , ...);
-int binary_pipe(int fd[2]);
 int check_ntsec(const char *);
 char **fetch_windows_environment(void);
 void free_windows_environment(char **);
 
+#ifndef NO_BINARY_OPEN
 #define open binary_open
-#define pipe binary_pipe
+#endif
 
 #endif /* HAVE_CYGWIN */
 

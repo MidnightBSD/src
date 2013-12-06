@@ -1,4 +1,4 @@
-# $MidnightBSD: src/secure/usr.bin/ssh/Makefile,v 1.7 2009/11/26 16:33:19 laffer1 Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
@@ -16,7 +16,7 @@ DPADD=	${LIBSSH} ${LIBUTIL} ${LIBZ}
 LDADD=	-lssh -lutil -lz
 
 .if ${MK_KERBEROS_SUPPORT} != "no"
-CFLAGS+= -DGSSAPI -DHAVE_GSSAPI_GSSAPI_H=1 -DKRB5 -DHEIMDAL
+CFLAGS+= -DGSSAPI -DHAVE_GSSAPI_GSSAPI_H=1 -DKRB5 -DHEIMDAL -DHAVE_KRB5_GET_ERROR_MESSAGE
 DPADD+=	 ${LIBGSSAPI}
 LDADD+=	 -lgssapi
 .endif

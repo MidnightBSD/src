@@ -1,4 +1,4 @@
-/* $Id: auth-pam.h,v 1.6 2011-02-05 14:07:23 laffer1 Exp $ */
+/* $Id: auth-pam.h,v 1.27 2004/09/11 12:17:26 dtucker Exp $ */
 
 /*
  * Copyright (c) 2000 Damien Miller.  All rights reserved.

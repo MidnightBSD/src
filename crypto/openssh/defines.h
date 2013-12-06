@@ -25,7 +25,7 @@
 #ifndef _DEFINES_H
 #define _DEFINES_H
 
-/* $Id: defines.h,v 1.9 2012-10-25 13:05:05 laffer1 Exp $ */
+/* $Id: defines.h,v 1.172 2013/06/01 21:18:48 dtucker Exp $ */
 
 
 /* Constants */
@@ -87,6 +87,12 @@ enum
 # define	IPTOS_DSCP_EF		0xb8
 #endif /* IPTOS_DSCP_EF */
 
+#ifndef PATH_MAX
+# ifdef _POSIX_PATH_MAX
+# define PATH_MAX _POSIX_PATH_MAX
+# endif
+#endif
+
 #ifndef MAXPATHLEN
 # ifdef PATH_MAX
 #  define MAXPATHLEN PATH_MAX
@@ -98,12 +104,6 @@ enum
 #  endif /* BROKEN_REALPATH */
 # endif /* PATH_MAX */
 #endif /* MAXPATHLEN */
-
-#ifndef PATH_MAX
-# ifdef _POSIX_PATH_MAX
-# define PATH_MAX _POSIX_PATH_MAX
-# endif
-#endif
 
 #if defined(HAVE_DECL_MAXSYMLINKS) && HAVE_DECL_MAXSYMLINKS == 0
 # define MAXSYMLINKS 5
@@ -130,6 +130,10 @@ enum
 #if defined(HAVE_DECL_O_NONBLOCK) && HAVE_DECL_O_NONBLOCK == 0
 # define O_NONBLOCK      00004	/* Non Blocking Open */
 #endif
+
+#ifndef S_IFSOCK
+# define S_IFSOCK 0
+#endif /* S_IFSOCK */
 
 #ifndef S_ISDIR
 # define S_ISDIR(mode)	(((mode) & (_S_IFMT)) == (_S_IFDIR))
@@ -167,11 +171,6 @@ enum
 # define MAP_FAILED ((void *)-1)
 #endif
 
-/* *-*-nto-qnx doesn't define this constant in the system headers */
-#ifdef MISSING_NFDBITS
-# define	NFDBITS (8 * sizeof(unsigned long))
-#endif
-
 /*
 SCO Open Server 3 has INADDR_LOOPBACK defined in rpc/rpc.h but
 including rpc/rpc.h breaks Solaris 6
@@ -190,11 +189,7 @@ typedef unsigned int u_int;
 #endif
 
 #ifndef HAVE_INTXX_T
-# if (SIZEOF_CHAR == 1)
-typedef char int8_t;
-# else
-#  error "8 bit int type not found."
-# endif
+typedef signed char int8_t;
 # if (SIZEOF_SHORT_INT == 2)
 typedef short int int16_t;
 # else
@@ -227,11 +222,7 @@ typedef uint16_t u_int16_t;
 typedef uint32_t u_int32_t;
 # define HAVE_U_INTXX_T 1
 # else
-#  if (SIZEOF_CHAR == 1)
 typedef unsigned char u_int8_t;
-#  else
-#   error "8 bit int type not found."
-#  endif
 #  if (SIZEOF_SHORT_INT == 2)
 typedef unsigned short int u_int16_t;
 #  else
@@ -282,6 +273,10 @@ typedef unsigned long long int u_int64_t;
 typedef unsigned char u_char;
 # define HAVE_U_CHAR
 #endif /* HAVE_U_CHAR */
+
+#ifndef ULLONG_MAX
+# define ULLONG_MAX ((unsigned long long)-1)
+#endif
 
 #ifndef SIZE_T_MAX
 #define SIZE_T_MAX ULONG_MAX
@@ -355,9 +350,17 @@ struct winsize {
 };
 #endif
 
-/* *-*-nto-qnx does not define this type in the system headers */
-#ifdef MISSING_FD_MASK
+/* bits needed for select that may not be in the system headers */
+#ifndef HAVE_FD_MASK
  typedef unsigned long int	fd_mask;
+#endif
+
+#if defined(HAVE_DECL_NFDBITS) && HAVE_DECL_NFDBITS == 0
+# define	NFDBITS (8 * sizeof(unsigned long))
+#endif
+
+#if defined(HAVE_DECL_HOWMANY) && HAVE_DECL_HOWMANY == 0
+# define howmany(x,y)	(((x)+((y)-1))/(y))
 #endif
 
 /* Paths */
@@ -385,17 +388,14 @@ struct winsize {
 # define _PATH_DEVNULL "/dev/null"
 #endif
 
-#ifndef MAIL_DIRECTORY
-# define MAIL_DIRECTORY "/var/spool/mail"
-#endif
+/* user may have set a different path */
+#if defined(_PATH_MAILDIR) && defined(MAIL_DIRECTORY)
+# undef _PATH_MAILDIR MAILDIR
+#endif /* defined(_PATH_MAILDIR) && defined(MAIL_DIRECTORY) */
 
-#ifndef MAILDIR
-# define MAILDIR MAIL_DIRECTORY
+#ifdef MAIL_DIRECTORY
+# define _PATH_MAILDIR MAIL_DIRECTORY
 #endif
-
-#if !defined(_PATH_MAILDIR) && defined(MAILDIR)
-# define _PATH_MAILDIR MAILDIR
-#endif /* !defined(_PATH_MAILDIR) && defined(MAILDIR) */
 
 #ifndef _PATH_NOLOGIN
 # define _PATH_NOLOGIN "/etc/nologin"
@@ -485,11 +485,6 @@ struct winsize {
 
 #if !defined(HAVE_ATTRIBUTE__NONNULL__) && !defined(__nonnull__)
 # define __nonnull__(x)
-#endif
-
-/* *-*-nto-qnx doesn't define this macro in the system headers */
-#ifdef MISSING_HOWMANY
-# define howmany(x,y)	(((x)+((y)-1))/(y))
 #endif
 
 #ifndef OSSH_ALIGNBYTES

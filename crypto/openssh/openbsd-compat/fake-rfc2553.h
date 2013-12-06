@@ -1,4 +1,4 @@
-/* $Id: fake-rfc2553.h,v 1.8 2011-02-04 14:36:14 laffer1 Exp $ */
+/* $Id: fake-rfc2553.h,v 1.16 2008/07/14 11:37:37 djm Exp $ */
 
 /*
  * Copyright (C) 2000-2003 Damien Miller.  All rights reserved.

@@ -1,4 +1,4 @@
-/* $Id: port-irix.h,v 1.3 2011-02-04 14:36:14 laffer1 Exp $ */
+/* $Id: port-irix.h,v 1.4 2003/08/29 16:59:52 mouring Exp $ */
 
 /*
  * Copyright (c) 2000 Denis Parker.  All rights reserved.

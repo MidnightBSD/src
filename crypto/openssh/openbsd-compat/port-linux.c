@@ -1,4 +1,4 @@
-/* $Id: port-linux.c,v 1.4 2013-01-22 13:47:20 laffer1 Exp $ */
+/* $Id: port-linux.c,v 1.18 2013/06/01 22:07:32 dtucker Exp $ */
 
 /*
  * Copyright (c) 2005 Daniel Walsh <dwalsh@redhat.com>
@@ -38,6 +38,10 @@
 #include <selinux/flask.h>
 #include <selinux/get_context_list.h>
 
+#ifndef SSH_SELINUX_UNCONFINED_TYPE
+# define SSH_SELINUX_UNCONFINED_TYPE ":unconfined_t:"
+#endif
+
 /* Wrapper around is_selinux_enabled() to log its return value once only */
 int
 ssh_selinux_enabled(void)
@@ -56,7 +60,7 @@ ssh_selinux_enabled(void)
 static security_context_t
 ssh_selinux_getctxbyname(char *pwname)
 {
-	security_context_t sc;
+	security_context_t sc = NULL;
 	char *sename = NULL, *lvl = NULL;
 	int r;
 
@@ -82,6 +86,7 @@ ssh_selinux_getctxbyname(char *pwname)
 		case 0:
 			error("%s: Failed to get default SELinux security "
 			    "context for %s", __func__, pwname);
+			sc = NULL;
 			break;
 		default:
 			fatal("%s: Failed to get default SELinux security "
@@ -91,13 +96,11 @@ ssh_selinux_getctxbyname(char *pwname)
 	}
 
 #ifdef HAVE_GETSEUSERBYNAME
-	if (sename != NULL)
-		xfree(sename);
-	if (lvl != NULL)
-		xfree(lvl);
+	free(sename);
+	free(lvl);
 #endif
 
-	return (sc);
+	return sc;
 }
 
 /* Set the execution context to the default for the specified user */
@@ -177,12 +180,13 @@ ssh_selinux_change_context(const char *newname)
 {
 	int len, newlen;
 	char *oldctx, *newctx, *cx;
+	void (*switchlog) (const char *fmt,...) = logit;
 
 	if (!ssh_selinux_enabled())
 		return;
 
 	if (getcon((security_context_t *)&oldctx) < 0) {
-		logit("%s: getcon failed with %s", __func__, strerror (errno));
+		logit("%s: getcon failed with %s", __func__, strerror(errno));
 		return;
 	}
 	if ((cx = index(oldctx, ':')) == NULL || (cx = index(cx + 1, ':')) ==
@@ -191,6 +195,14 @@ ssh_selinux_change_context(const char *newname)
 		return;
 	}
 
+	/*
+	 * Check whether we are attempting to switch away from an unconfined
+	 * security context.
+	 */
+	if (strncmp(cx, SSH_SELINUX_UNCONFINED_TYPE,
+	    sizeof(SSH_SELINUX_UNCONFINED_TYPE) - 1) == 0)
+		switchlog = debug3;
+
 	newlen = strlen(oldctx) + strlen(newname) + 1;
 	newctx = xmalloc(newlen);
 	len = cx - oldctx + 1;
@@ -198,12 +210,13 @@ ssh_selinux_change_context(const char *newname)
 	strlcpy(newctx + len, newname, newlen - len);
 	if ((cx = index(cx + 1, ':')))
 		strlcat(newctx, cx, newlen);
-	debug3("%s: setting context from '%s' to '%s'", __func__, oldctx,
-	    newctx);
+	debug3("%s: setting context from '%s' to '%s'", __func__,
+	    oldctx, newctx);
 	if (setcon(newctx) < 0)
-		logit("%s: setcon failed with %s", __func__, strerror (errno));
-	xfree(oldctx);
-	xfree(newctx);
+		switchlog("%s: setcon %s from %s failed with %s", __func__,
+		    newctx, oldctx, strerror(errno));
+	free(oldctx);
+	free(newctx);
 }
 
 void

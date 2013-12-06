@@ -1,4 +1,4 @@
-/* $Id: bsd-poll.c,v 1.3 2011-02-04 14:36:14 laffer1 Exp $ */
+/* $Id: bsd-poll.c,v 1.4 2008/08/29 21:32:38 dtucker Exp $ */
 
 /*
  * Copyright (c) 2004, 2005, 2007 Darren Tucker (dtucker at zip com au).

@@ -1,4 +1,4 @@
-/* $Id: platform.c,v 1.3 2011-02-05 14:07:23 laffer1 Exp $ */
+/* $Id: platform.c,v 1.19 2013/03/12 00:31:05 dtucker Exp $ */
 
 /*
  * Copyright (c) 2006 Darren Tucker.  All rights reserved.
@@ -193,4 +193,20 @@ platform_krb5_get_principal_name(const char *pw_name)
 #else
 	return NULL;
 #endif
+}
+
+/*
+ * return 1 if the specified uid is a uid that may own a system directory
+ * otherwise 0.
+ */
+int
+platform_sys_dir_uid(uid_t uid)
+{
+	if (uid == 0)
+		return 1;
+#ifdef PLATFORM_SYS_DIR_UID
+	if (uid == PLATFORM_SYS_DIR_UID)
+		return 1;
+#endif
+	return 0;
 }

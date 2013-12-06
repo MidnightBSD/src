@@ -33488,8 +33488,6 @@ crypto/openssh/README.privsep -text
 crypto/openssh/README.tun -text
 crypto/openssh/TODO -text
 crypto/openssh/aclocal.m4 -text
-crypto/openssh/acss.c -text
-crypto/openssh/acss.h -text
 crypto/openssh/addrmatch.c -text
 crypto/openssh/atomicio.c -text
 crypto/openssh/atomicio.h -text
@@ -33539,7 +33537,6 @@ crypto/openssh/canohost.h -text
 crypto/openssh/channels.c -text
 crypto/openssh/channels.h -text
 crypto/openssh/cipher-3des1.c -text
-crypto/openssh/cipher-acss.c -text
 crypto/openssh/cipher-aes.c -text
 crypto/openssh/cipher-bf1.c -text
 crypto/openssh/cipher-ctr.c -text
@@ -33696,6 +33693,8 @@ crypto/openssh/openbsd-compat/bsd-nextstep.h -text
 crypto/openssh/openbsd-compat/bsd-openpty.c -text
 crypto/openssh/openbsd-compat/bsd-poll.c -text
 crypto/openssh/openbsd-compat/bsd-poll.h -text
+crypto/openssh/openbsd-compat/bsd-setres_id.c -text
+crypto/openssh/openbsd-compat/bsd-setres_id.h -text
 crypto/openssh/openbsd-compat/bsd-snprintf.c -text
 crypto/openssh/openbsd-compat/bsd-statvfs.c -text
 crypto/openssh/openbsd-compat/bsd-statvfs.h -text
@@ -33709,7 +33708,9 @@ crypto/openssh/openbsd-compat/fake-rfc2553.h -text
 crypto/openssh/openbsd-compat/fmt_scaled.c -text
 crypto/openssh/openbsd-compat/getcwd.c -text
 crypto/openssh/openbsd-compat/getgrouplist.c -text
-crypto/openssh/openbsd-compat/getopt.c -text
+crypto/openssh/openbsd-compat/getopt.h -text
+crypto/openssh/openbsd-compat/getopt_long.c -text
+crypto/openssh/openbsd-compat/getrrsetbyname-ldns.c -text
 crypto/openssh/openbsd-compat/getrrsetbyname.c -text
 crypto/openssh/openbsd-compat/getrrsetbyname.h -text
 crypto/openssh/openbsd-compat/glob.c -text
@@ -33747,11 +33748,13 @@ crypto/openssh/openbsd-compat/sigact.h -text
 crypto/openssh/openbsd-compat/strlcat.c -text
 crypto/openssh/openbsd-compat/strlcpy.c -text
 crypto/openssh/openbsd-compat/strmode.c -text
+crypto/openssh/openbsd-compat/strnlen.c -text
 crypto/openssh/openbsd-compat/strptime.c -text
 crypto/openssh/openbsd-compat/strsep.c -text
 crypto/openssh/openbsd-compat/strtoll.c -text
 crypto/openssh/openbsd-compat/strtonum.c -text
 crypto/openssh/openbsd-compat/strtoul.c -text
+crypto/openssh/openbsd-compat/strtoull.c -text
 crypto/openssh/openbsd-compat/sys-queue.h -text
 crypto/openssh/openbsd-compat/sys-tree.h -text
 crypto/openssh/openbsd-compat/timingsafe_bcmp.c -text
@@ -33842,7 +33845,6 @@ crypto/openssh/ssh-pkcs11-helper.8 -text
 crypto/openssh/ssh-pkcs11-helper.c -text
 crypto/openssh/ssh-pkcs11.c -text
 crypto/openssh/ssh-pkcs11.h -text
-crypto/openssh/ssh-rand-helper.c -text
 crypto/openssh/ssh-rsa.c -text
 crypto/openssh/ssh-sandbox.h -text
 crypto/openssh/ssh.0 -text
@@ -33877,9 +33879,9 @@ crypto/openssh/uidswap.c -text
 crypto/openssh/uidswap.h -text
 crypto/openssh/umac.c -text
 crypto/openssh/umac.h -text
+crypto/openssh/umac128.c -text
 crypto/openssh/uuencode.c -text
 crypto/openssh/uuencode.h -text
-crypto/openssh/version.c -text
 crypto/openssh/version.h -text
 crypto/openssh/xmalloc.c -text
 crypto/openssh/xmalloc.h -text

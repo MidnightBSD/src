@@ -1,5 +1,5 @@
 /* 
- * $Id: bsd-cray.c,v 1.3 2011-02-04 14:36:14 laffer1 Exp $
+ * $Id: bsd-cray.c,v 1.17 2007/08/15 09:17:43 dtucker Exp $
  *
  * bsd-cray.c
  *

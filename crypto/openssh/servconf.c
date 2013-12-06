@@ -311,16 +311,6 @@ fill_default_server_options(ServerOptions *options)
 	}
 #endif
 
-
-#ifndef HAVE_MMAP
-	if (use_privsep && options->compression == 1) {
-		error("This platform does not support both privilege "
-		    "separation and compression");
-		error("Compression disabled");
-		options->compression = 0;
-	}
-#endif
-
 }
 
 /* Keyword tokens. */
