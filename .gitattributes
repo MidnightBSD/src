@@ -56295,7 +56295,6 @@ usr.bin/tip/tip/value.c -text
 usr.bin/tip/tip/vars.c -text
 usr.bin/top/Makefile -text
 usr.bin/top/machine.c -text
-usr.bin/top/sigdesc.h -text
 usr.bin/top/top.local.1 -text
 usr.bin/touch/Makefile -text
 usr.bin/touch/touch.1 -text
