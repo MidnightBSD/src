@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20131207:
+	Remove sparc64 architecture. It hasn't been working for awhile
+	and it's not useful for desktops anymore.
+
 20131205:
 	OpenSSH 6.4p1
 

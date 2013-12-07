@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 # $FreeBSD: src/lib/Makefile,v 1.205.2.1 2005/07/28 13:47:18 rwatson Exp $
-# $MidnightBSD: src/lib/Makefile,v 1.17 2012/07/04 16:16:24 laffer1 Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
@@ -198,10 +198,6 @@ _librtld_db=	librtld_db
 .if ${MK_NCP} != "no"
 _libncp=	libncp
 .endif
-.endif
-
-.if ${MACHINE_CPUARCH} == "sparc64"
-_libsmb=	libsmb
 .endif
 
 .if ${MK_OPENSSL} != "no"

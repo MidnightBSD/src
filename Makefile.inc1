@@ -133,7 +133,7 @@ VERSION+=	${OSRELDATE}
 .endif
 
 
-KNOWN_ARCHES?=	amd64 i386 sparc64
+KNOWN_ARCHES?=	amd64 i386
 .if ${TARGET} == ${TARGET_ARCH}
 _t=		${TARGET}
 .else

@@ -3503,10 +3503,8 @@ OLD_FILES+=usr/bin/csup
 # 20090325:
 OLD_FILES+=usr/share/man/man8/nsupdate.8.gz
 # 20090104:
-.if ${TARGET_ARCH} != "sparc64"
 OLD_FILES+=sbin/sunlabel
 OLD_FILES+=usr/share/man/man8/sunlabel.8.gz
-.endif
 OLD_FILES+=usr/share/man/man4/card.4.gz
 OLD_FILES+=usr/share/man/man4/oldcard.4.gz
 OLD_FILES+=etc/cached.conf
@@ -4745,10 +4743,8 @@ OLD_LIBS+=usr/lib/libpcap.so.2
 OLD_LIBS+=usr/lib/libisc.so.1
 # 200408XX
 OLD_LIBS+=usr/lib/snmp_netgraph.so.1
-.if ${TARGET_ARCH} != "sparc64"
 # 20040130: libkse renamed to libpthread
 OLD_LIBS+=usr/lib/libkse.so.1
-.endif
 # 200404XX
 OLD_LIBS+=usr/lib/libsnmp.so.1
 OLD_LIBS+=usr/lib/snmp_mibII.so.1

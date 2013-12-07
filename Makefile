@@ -1,5 +1,5 @@
 #
-# $MidnightBSD: src/Makefile,v 1.13 2012/08/19 14:05:10 laffer1 Exp $
+# $MidnightBSD$
 #
 # The user-driven targets are:
 #
@@ -71,7 +71,7 @@
 #
 # See src/UPDATING `COMMON ITEMS' for more complete information.
 #
-# If TARGET=machine (e.g. amd64, sparc64, ...) is specified you can
+# If TARGET=machine (e.g. amd64, ...) is specified you can
 # cross build world for other machine types using the buildworld target,
 # and once the world is built you can cross build a kernel using the
 # buildkernel target.
@@ -308,7 +308,7 @@ toolchains:
 # existing system is.
 #
 .if make(universe) || make(universe_kernels) || make(tinderbox) || make(targets)
-TARGETS?=amd64 i386 sparc64
+TARGETS?=amd64 i386
 .for target in ${TARGETS}
 TARGET_ARCHES_${target}?= ${target}
 .endfor
