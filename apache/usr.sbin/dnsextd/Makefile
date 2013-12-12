@@ -24,7 +24,7 @@ MAN=	dnsextd.8
 CFLAGS+= -I. -I${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix
 CFLAGS+= -I${.CURDIR}/../../../contrib/mDNSResponder/mDNSCore
 CFLAGS+= -I${.CURDIR}/../../../contrib/mDNSResponder/mDNSShared
-CFLAGS+= -DTARGET_OS_FREEBSD -DMDNS_VERSIONSTR_NODTS
+CFLAGS+= -DTARGET_OS_FREEBSD -DMDNS_VERSIONSTR_NODTS -D_REENTRANT
 
 .if ${MK_INET6_SUPPORT} == "no"
 CFLAGS+=	-DHAVE_IPV6=0
