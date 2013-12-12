@@ -1,4 +1,6 @@
-# $MidnightBSD: src/apache/lib/libdns_sd/Makefile,v 1.3 2010/08/30 17:10:34 laffer1 Exp $
+# $MidnightBSD$
+
+.include <bsd.own.mk>
 
 .PATH: ${.CURDIR}/../../../contrib/mDNSResponder/mDNSShared
 SRCDIR=	${.CURDIR}/../../../contrib/mDNSResponder/mDNSShared
@@ -21,6 +23,10 @@ CFLAGS+=	-I${.CURDIR}
 CFLAGS+=	-I${.CURDIR}/../../../contrib/mDNSResponder
 CFLAGS+=	-I${.CURDIR}/../../../contrib/mDNSResponder/mDNShared
 CFLAGS+=	-DTARGET_OS_FREEBSD
+
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+=	-DHAVE_IPV6
+.endif
 
 NO_MAN=
 

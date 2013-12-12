@@ -1,4 +1,4 @@
-# $MidnightBSD: src/apache/usr.sbin/dnsextd/Makefile,v 1.3 2010/09/10 18:52:58 laffer1 Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
@@ -11,7 +11,8 @@ SRCS=	mDNSPosix.c mDNSUNP.c
 SRCS+=	DNSDigest.c DNSCommon.c
 .PATH: ${.CURDIR}/../../../contrib/mDNSResponder/mDNSShared
 SRCS+=	dnsextd.c mDNSDebug.c GenLinkedList.c \
-	PlatformCommon.c dnsextd_parser.y dnsextd_lexer.l
+	PlatformCommon.c dnsextd_parser.y dnsextd_lexer.l \
+	CryptoAlg.c
 
 SRCDIRS= ${.CURDIR}/../../../contrib/mDNSResponder/mDNSShared \
 	${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix \
@@ -28,7 +29,6 @@ CFLAGS+=	-DHAVE_IPV6=0
 .else
 CFLAGS+=	-DHAVE_IPV6=1
 .endif
-
 
 DPADD=	${LIBPTHREAD}
 LDADD=	-lpthread

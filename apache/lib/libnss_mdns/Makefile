@@ -1,4 +1,6 @@
-# $MidnightBSD: src/apache/lib/libnss_mdns/Makefile,v 1.4 2011/03/09 20:50:29 laffer1 Exp $
+# $MidnightBSD$
+
+.include <bsd.own.mk>
 
 .PATH: ${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix
 SRCDIR=	${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix \
@@ -27,6 +29,10 @@ CFLAGS+=	-I${.CURDIR}/../../../contrib/mDNSResponder
 CFLAGS+=	-I${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix
 CFLAGS+=        -I${.CURDIR}/../../../contrib/mDNSResponder/mDNShared
 CFLAGS+=        -DTARGET_OS_FREEBSD
+
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+=	-DHAVE_IPV6
+.endif
 
 MAN=	nss_mdns.conf.5 \
 	libnss_mdns.8
