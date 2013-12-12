@@ -18,6 +18,7 @@ apache/lib/libnss_mdns/netbsd.c -text
 apache/usr.bin/Makefile -text
 apache/usr.bin/Makefile.inc -text
 apache/usr.bin/dns-sd/Makefile -text
+apache/usr.bin/mDNSResponderPosix/Makefile -text
 apache/usr.sbin/Makefile -text
 apache/usr.sbin/Makefile.inc -text
 apache/usr.sbin/dnsextd/Makefile -text
