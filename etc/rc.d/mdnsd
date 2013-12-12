@@ -9,7 +9,7 @@
 . /etc/rc.subr
 
 name="mdnsd"
-rcvar=`set_rcvar`
+rcvar=mdnsd_enable
 command="/usr/sbin/${name}"
 pidfile="/var/run/mDNSResponder.pid"
 
