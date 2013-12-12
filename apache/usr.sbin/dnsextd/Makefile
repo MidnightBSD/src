@@ -1,5 +1,6 @@
 # $MidnightBSD$
 
+WARNS=0
 .include <bsd.own.mk>
 
 .PATH: ${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix
@@ -12,7 +13,8 @@ SRCS+=	DNSDigest.c DNSCommon.c
 .PATH: ${.CURDIR}/../../../contrib/mDNSResponder/mDNSShared
 SRCS+=	dnsextd.c mDNSDebug.c GenLinkedList.c \
 	PlatformCommon.c dnsextd_parser.y dnsextd_lexer.l \
-	CryptoAlg.c
+	CryptoAlg.c \
+	y.tab.h
 
 SRCDIRS= ${.CURDIR}/../../../contrib/mDNSResponder/mDNSShared \
 	${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix \
@@ -30,8 +32,11 @@ CFLAGS+=	-DHAVE_IPV6=0
 CFLAGS+=	-DHAVE_IPV6=1
 .endif
 
-DPADD=	${LIBPTHREAD}
-LDADD=	-lpthread
+YFLAGS+=-v
+CLEANFILES= y.output
+
+DPADD=	${LIBL} ${LIBPTHREAD}
+LDADD=	-ll -lpthread
 
 .include <bsd.prog.mk>
 
