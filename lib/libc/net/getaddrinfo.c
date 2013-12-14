@@ -1300,6 +1300,20 @@ get_canonname(const struct addrinfo *pai, struct addrinfo *ai, const char *str)
 	return 0;
 }
 
+struct addrinfo *
+allocaddrinfo(socklen_t addrlen)
+{
+	struct addrinfo *ai;
+ 
+	ai = calloc(sizeof(struct addrinfo) + addrlen, 1);
+	if (ai) {
+		ai->ai_addr = (void *)(ai+1);
+		ai->ai_addrlen = ai->ai_addr->sa_len = addrlen;
+	}
+ 
+	return ai;
+}
+
 static struct addrinfo *
 get_ai(const struct addrinfo *pai, const struct afd *afd, const char *addr)
 {

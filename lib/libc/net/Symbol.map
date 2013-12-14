@@ -148,6 +148,10 @@ FBSD_1.3 {
 	sctp_sendv;
 };
 
+MNBSD_1.1 {
+	allocaddrinfo;
+};
+
 FBSDprivate_1.0 {
 	_nsdispatch;
 	_nsyyerror;	/* generated from nslexer.l */

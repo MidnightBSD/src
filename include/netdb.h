@@ -281,6 +281,9 @@ int		innetgr(const char *, const char *, const char *, const char *);
 void		setnetgrent(const char *);
 #endif
 
+#if (_POSIX_C_SOURCE - 0) >= 200112L || (_XOPEN_SOURCE - 0) >= 520 || __BSD_VISIBLE
+struct addrinfo *allocaddrinfo(socklen_t);
+#endif
 
 /*
  * PRIVATE functions specific to the FreeBSD implementation
