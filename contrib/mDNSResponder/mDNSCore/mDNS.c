@@ -11457,7 +11457,7 @@ mDNSlocal mDNSBool InitCommonState(mDNS *const m, DNSQuestion *const question)
 
     // If ServiceID is 0 or the policy disallows making DNS requests,
     // set DisallowPID
-    question->DisallowPID       = (question->ServiceID == 0 || (mDNSPlatformAllowPID(m, question) == 0));
+    question->DisallowPID       =  0; // Apple bug (question->ServiceID == 0 || (mDNSPlatformAllowPID(m, question) == 0));
     if (question->DisallowPID)
     {
         LogInfo("InitCommonState: Query suppressed for %##s (%s), PID %d/ServiceID %d not allowed", question->qname.c,
