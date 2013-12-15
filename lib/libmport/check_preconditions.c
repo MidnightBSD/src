@@ -27,6 +27,8 @@
 #include <sys/cdefs.h>
 __MBSDID("$MidnightBSD$");
 
+#include <string.h>
+
 #include "mport.h"
 #include "mport_private.h"
 
@@ -71,9 +73,10 @@ static int check_if_installed(sqlite3 *db, mportPackageMeta *pack)
 {
   sqlite3_stmt *stmt;
   const char *inst_version;
+  const char *os_release;
   
   /* check if the package is already installed */
-  if (mport_db_prepare(db, &stmt, "SELECT version FROM packages WHERE pkg=%Q", pack->name) != MPORT_OK) 
+  if (mport_db_prepare(db, &stmt, "SELECT version, os_release FROM packages WHERE pkg=%Q", pack->name) != MPORT_OK) 
     RETURN_CURRENT_ERROR;
 
   switch (sqlite3_step(stmt)) {
@@ -83,6 +86,11 @@ static int check_if_installed(sqlite3 *db, mportPackageMeta *pack)
     case SQLITE_ROW:
       /* Row was found */
       inst_version = sqlite3_column_text(stmt, 0);
+      os_release = sqlite3_column_text(stmt, 1);
+
+      /* Different os release version should not be considered the same package */
+      if (strcmp(os_release, mport_get_osrelease()) != 0)
+        break;
       
       SET_ERRORX(MPORT_ERR_FATAL, "%s (version %s) is already installed.", pack->name, inst_version);
       sqlite3_finalize(stmt);

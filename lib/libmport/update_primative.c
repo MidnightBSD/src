@@ -31,10 +31,12 @@ __MBSDID("$MidnightBSD$");
 #include "mport_private.h"
 #include <string.h>
 #include <stdlib.h>
+
 static int set_prefix_to_installed(mportInstance *, mportPackageMeta *);
 
 
-MPORT_PUBLIC_API int mport_update_primative(mportInstance *mport, const char *filename)
+MPORT_PUBLIC_API int
+mport_update_primative(mportInstance *mport, const char *filename)
 {
   mportBundleRead *bundle;
   mportPackageMeta **pkgs, *pkg;
@@ -74,7 +76,8 @@ MPORT_PUBLIC_API int mport_update_primative(mportInstance *mport, const char *fi
   return MPORT_OK;  
 }
 
-static int set_prefix_to_installed(mportInstance *mport, mportPackageMeta *pkg)
+static int
+set_prefix_to_installed(mportInstance *mport, mportPackageMeta *pkg)
 {
   sqlite3_stmt *stmt;
   int ret = MPORT_OK;
