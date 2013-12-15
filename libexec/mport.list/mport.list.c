@@ -35,7 +35,6 @@ __MBSDID("$MidnightBSD$");
 #include <string.h>
 #include <unistd.h>
 #include <mport.h>
-#include <mport_private.h>
 
 static void usage(void);
 static char * str_remove(const char *, const char);
