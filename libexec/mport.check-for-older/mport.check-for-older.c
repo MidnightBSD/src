@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.check-for-older/mport.check-for-older.c,v 1.3 2011/03/06 18:25:08 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -115,7 +115,9 @@ main(int argc, char *argv[])
 static void
 usage(void) 
 {
-  fprintf(stderr, "Usage: mport.check-for-older -n pkgname -v newversion \n"
-                  "       mport.check-for-older -o origin -v newversion\n");
-  exit(2);
+
+	fprintf(stderr, "Usage: mport.check-for-older -n pkgname -v newversion \n"
+			"       mport.check-for-older -o origin -v newversion\n");
+
+	exit(2);
 }
