@@ -1,4 +1,5 @@
 /*-
+ * Copyright (c) 2013 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/bundle_read_install_pkg.c,v 1.9 2011/07/24 15:59:08 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -46,7 +47,8 @@ static int run_mtree(mportInstance *, mportBundleRead *, mportPackageMeta *);
 static int display_pkg_msg(mportInstance *, mportBundleRead *, mportPackageMeta *);
 
 
-int mport_bundle_read_install_pkg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
+int
+mport_bundle_read_install_pkg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
   if (do_pre_install(mport, bundle, pkg) != MPORT_OK)
     RETURN_CURRENT_ERROR;
@@ -77,7 +79,8 @@ static int do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPa
   return MPORT_OK;    
 }
 
-static int do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
+static int
+do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
   int file_total, ret;
   int file_count = 0;
@@ -114,7 +117,7 @@ static int do_actual_install(mportInstance *mport, mportBundleRead *bundle, mpor
 
   /* Insert the package meta row into the packages table (We use pack here because things might have been twiddled) */
   /* Note that this will be marked as dirty by default */  
-  if (mport_db_do(db, "INSERT INTO packages (pkg, version, origin, prefix, lang, options, comment) VALUES (%Q,%Q,%Q,%Q,%Q,%Q,%Q)", pkg->name, pkg->version, pkg->origin, pkg->prefix, pkg->lang, pkg->options, pkg->comment) != MPORT_OK)
+  if (mport_db_do(db, "INSERT INTO packages (pkg, version, origin, prefix, lang, options, comment, os_release) VALUES (%Q,%Q,%Q,%Q,%Q,%Q,%Q,%Q)", pkg->name, pkg->version, pkg->origin, pkg->prefix, pkg->lang, pkg->options, pkg->comment, pkg->os_release) != MPORT_OK)
     goto ERROR;
 
   /* Insert the assets into the master table (We do this one by one because we want to insert file 
