@@ -1,4 +1,5 @@
 /*-
+ * Copyright (c) 2013 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/instance.c,v 1.7 2011/07/24 15:59:08 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -86,12 +87,45 @@ MPORT_PUBLIC_API int mport_instance_init(mportInstance *mport, const char *root)
   mport->progress_free_cb = &mport_default_progress_free_cb;
   mport->confirm_cb       = &mport_default_confirm_cb;
   
-  
+ 
+  mport_upgrade_master_schema(mport->db, mport_get_database_version(mport->db));
 
   /* create tables */
   return mport_generate_master_schema(mport->db);
 }
 
+int 
+mport_get_database_version(sqlite3 *db) {
+	sqlite3_stmt *stmt_version;
+	int databaseVersion = 0;
+	
+	if (sqlite3_prepare_v2(db, "PRAGMA user_version;", -1, &stmt_version, NULL) == SQLITE_OK) {
+		while (sqlite3_step(stmt_version) == SQLITE_ROW) {
+			databaseVersion = sqlite3_column_int(stmt_version, 0);
+		}
+	} else {
+		return -1; /* ERROR condition */
+	}
+	sqlite3_finalize(stmt_version);
+
+	return databaseVersion;
+}
+
+int
+mport_set_database_version(sqlite3 *db) {
+	char *sql;
+
+	asprintf(&sql, "PRAGMA user_version=%d", MPORT_MASTER_VERSION);
+
+	if (mport_db_do(db, sql) != MPORT_OK) {
+		free(sql);
+		RETURN_CURRENT_ERROR;
+	}
+
+	free(sql);
+
+	return (MPORT_OK);
+}
 
 /* Setters for the variable UI callbacks. */
 MPORT_PUBLIC_API void mport_set_msg_cb(mportInstance *mport, mport_msg_cb cb) 

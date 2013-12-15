@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport_private.h,v 1.12 2013/09/07 19:49:51 laffer1 Exp $
+/* $MidnightBSD$
  *
  * Copyright (c) 2011, 2013 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
@@ -42,6 +42,7 @@
 
 #define MPORT_PUBLIC_API 
 
+#define MPORT_MASTER_VERSION 2
 #define MPORT_BUNDLE_VERSION 2
 #define MPORT_BUNDLE_VERSION_STR "2"
 
@@ -59,6 +60,11 @@ int mport_check_preconditions(mportInstance *, mportPackageMeta *, int);
 /* schema */
 int mport_generate_master_schema(sqlite3 *);
 int mport_generate_stub_schema(sqlite3 *);
+int mport_upgrade_master_schema(sqlite3 *, int);
+
+/* instance */
+int mport_get_database_version(sqlite3 *);
+int mport_set_database_version(sqlite3 *);
 
 /* Various database convience functions */
 int mport_attach_stub_db(sqlite3 *, const char *);
@@ -156,8 +162,6 @@ int mport_set_errx(int , const char *, ...);
 #define MPORT_ARCH "i386"
 #elif defined(__amd64__)
 #define MPORT_ARCH "amd64"
-#elif defined(__sparc64__)
-#define MPORT_ARCH "sparc64"
 #else
 #error "Unable to detect arch!"
 #endif

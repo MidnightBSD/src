@@ -26,13 +26,15 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/db.c,v 1.10 2013/09/07 19:49:51 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sqlite3.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include "mport.h"
 #include "mport_private.h"
+
+static int mport_upgrade_master_schema_0to2(sqlite3 *);
 
 
 /* mport_db_do(sqlite3 *db, const char *sql, ...)
@@ -113,19 +115,21 @@ int mport_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char * fmt, ...)
  *
  * Returns MPORT_OK on success.
  */
-int mport_attach_stub_db(sqlite3 *db, const char *dir)
+int
+mport_attach_stub_db(sqlite3 *db, const char *dir)
 {
-  char *file;
-  asprintf(&file, "%s/%s", dir, MPORT_STUB_DB_FILE);
+	char *file;
+
+	asprintf(&file, "%s/%s", dir, MPORT_STUB_DB_FILE);
   
-  if (mport_db_do(db, "ATTACH %Q AS stub", file) != MPORT_OK) { 
-    free(file);
-    RETURN_CURRENT_ERROR;
-  }
+	if (mport_db_do(db, "ATTACH %Q AS stub", file) != MPORT_OK) { 
+		free(file);
+		RETURN_CURRENT_ERROR;
+	}
   
-  free(file);
+	free(file);
   
-  return MPORT_OK;
+	return (MPORT_OK);
 }
 
 
@@ -135,12 +139,13 @@ int mport_attach_stub_db(sqlite3 *db, const char *dir)
  *
  * Returns MPORT_OK on success.
  */
-int mport_detach_stub_db(sqlite3 *db)
+int
+mport_detach_stub_db(sqlite3 *db)
 {
-  if (mport_db_do(db, "DETACH stub") != MPORT_OK) 
-    RETURN_CURRENT_ERROR;
+	if (mport_db_do(db, "DETACH stub") != MPORT_OK) 
+		RETURN_CURRENT_ERROR;
   
-  return MPORT_OK;
+	return (MPORT_OK);
 }
 
 
@@ -175,28 +180,56 @@ mport_generate_stub_schema(sqlite3 *db)
 }
 
 int
+mport_upgrade_master_schema(sqlite3 *db, int databaseVersion) 
+{
+
+	switch (databaseVersion) {
+		case 0:
+		case 1:
+			mport_upgrade_master_schema_0to2(db);
+			mport_set_database_version(db);
+		case 2:
+			break;
+		default:
+			RETURN_ERROR(MPORT_ERR_FATAL, "Invalid master database version");
+	}
+
+	return (MPORT_OK);
+}
+
+static int
+mport_upgrade_master_schema_0to2(sqlite3 *db)
+{
+
+	RUN_SQL(db, "ALTER TABLE packages ADD COLUMN os_release text;");
+	RUN_SQL(db, "update packages set os_release='0.4'");
+
+	return (MPORT_OK);
+}
+
+int
 mport_generate_master_schema(sqlite3 *db) 
 {
 
-  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, status text default 'dirty', comment text)");
-  RUN_SQL(db, "CREATE UNIQUE INDEX IF NOT EXISTS packages_pkg ON packages (pkg)");
-  RUN_SQL(db, "CREATE INDEX IF NOT EXISTS packages_origin ON packages (origin)");
+	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, status text default 'dirty', comment text, os_release text)");
+	RUN_SQL(db, "CREATE UNIQUE INDEX IF NOT EXISTS packages_pkg ON packages (pkg)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS packages_origin ON packages (origin)");
 
-  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS depends (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
-  RUN_SQL(db, "CREATE INDEX IF NOT EXISTS depends_pkg ON depends (pkg)");
-  RUN_SQL(db, "CREATE INDEX IF NOT EXISTS depends_dependpkgname ON depends (depend_pkgname)");
+	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS depends (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS depends_pkg ON depends (pkg)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS depends_dependpkgname ON depends (depend_pkgname)");
 
-  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS log (pkg text NOT NULL, version text NOT NULL, date int NOT NULL, msg text NOT NULL)");
-  RUN_SQL(db, "CREATE INDEX IF NOT EXISTS log_pkg ON log (pkg, version)");
+	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS log (pkg text NOT NULL, version text NOT NULL, date int NOT NULL, msg text NOT NULL)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS log_pkg ON log (pkg, version)");
 
-  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS assets (pkg text NOT NULL, type int NOT NULL, data text, checksum text)");
-  RUN_SQL(db, "CREATE INDEX IF NOT EXISTS assets_pkg ON assets (pkg)");
+	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS assets (pkg text NOT NULL, type int NOT NULL, data text, checksum text)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS assets_pkg ON assets (pkg)");
   
-  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS categories (pkg text NOT NULL, category text NOT NULL)");
-  RUN_SQL(db, "CREATE INDEX IF NOT EXISTS categories_pkg ON categories (pkg, category)");
+	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS categories (pkg text NOT NULL, category text NOT NULL)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS categories_pkg ON categories (pkg, category)");
 
-  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS settings (name text NOT NULL, val text NOT NULL)");
-  RUN_SQL(db, "CREATE INDEX IF NOT EXISTS settings_name ON settings (name)");
+	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS settings (name text NOT NULL, val text NOT NULL)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS settings_name ON settings (name)");
 
-  return MPORT_OK;
+	return (MPORT_OK);
 }

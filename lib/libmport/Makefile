@@ -1,4 +1,4 @@
-# $MidnightBSD: src/lib/libmport/Makefile,v 1.16 2013/03/03 00:25:12 laffer1 Exp $
+# $MidnightBSD$
 
 LIB=		mport
 SRCS=		bundle_write.c bundle_read.c plist.c create_primative.c db.c \
@@ -10,7 +10,6 @@ SRCS=		bundle_write.c bundle_read.c plist.c create_primative.c db.c \
 INCS=		mport.h 
 
 CFLAGS+=	-I${.CURDIR} -g
-WARNS?=		6
 SHLIB_MAJOR=	1
 MAN=	mport.3
 
