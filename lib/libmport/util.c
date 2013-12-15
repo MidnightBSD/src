@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.35 2013/08/17 19:35:00 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -486,7 +486,7 @@ int mport_decompress_bzip2(const char *input, const char *output)
   return MPORT_OK;
 }
 
-char *
+MPORT_PUBLIC_API char *
 mport_get_osrelease(void)
 {
 	char osrelease[128];

@@ -88,7 +88,6 @@ int mport_xsystem(mportInstance *, const char *, ...);
 int mport_run_asset_exec(mportInstance *, const char *, const char *, const char *);
 void mport_free_vec(void *);
 int mport_decompress_bzip2(const char *, const char *);
-char* mport_get_osrelease(void);
 
 
 /* Mport Bundle (a file containing packages) */
