@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2010, 2011 Lucas Holt
+ * Copyright (c) 2010, 2011, 2013 Lucas Holt
  * Copyright (c) 2008 Chris Reinhardt
  * All rights reserved.
  *
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.12 2011/11/05 19:28:29 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -35,9 +35,10 @@ __MBSDID("$MidnightBSD: src/libexec/mport.list/mport.list.c,v 1.12 2011/11/05 19
 #include <string.h>
 #include <unistd.h>
 #include <mport.h>
+#include <mport_private.h>
 
 static void usage(void);
-static char * str_remove(const char *str, const char ch);
+static char * str_remove(const char *, const char);
 
 int 
 main(int argc, char *argv[]) 
@@ -51,6 +52,7 @@ main(int argc, char *argv[])
 	bool origin = false;
 	bool update = false;
 	char *comment;
+	char *os_release;
 	
 	if (argc > 2)
 		usage();
@@ -77,6 +79,7 @@ main(int argc, char *argv[])
 	} 
 	
 	mport = mport_instance_new();
+	os_release = mport_get_osrelease();
 	
 	if (mport_instance_init(mport, NULL) != MPORT_OK) {
 		warnx("%s", mport_err_string());
@@ -110,8 +113,9 @@ main(int argc, char *argv[])
 			
 			if (indexEntries != NULL) {
 				while (*indexEntries != NULL) {
-					if ((*indexEntries)->version != NULL && mport_version_cmp((*packs)->version, (*indexEntries)->version) < 0)
-						(void) printf("%s: %s < %s\n", (*packs)->name, (*packs)->version, (*indexEntries)->version);
+					if (((*indexEntries)->version != NULL && mport_version_cmp((*packs)->version, (*indexEntries)->version) < 0) 
+						|| ((*packs)->version != NULL && strcmp((*packs)->version, os_release) != 0))
+						(void) printf("%s: %s (%s) < %s\n", (*packs)->name, (*packs)->version, (*packs)->os_release, (*indexEntries)->version);
 					indexEntries++;
 				}
 				
@@ -120,7 +124,7 @@ main(int argc, char *argv[])
 			}
 		} else if (verbose) {
 			comment = str_remove((*packs)->comment, '\\');
-			(void) printf("%s-%s\t%s\n", (*packs)->name, (*packs)->version, comment);
+			(void) printf("%s-%s\t%s\t%s\n", (*packs)->name, (*packs)->version, (*packs)->os_release, comment);
 			free(comment);
 		}
 		else if (quiet && !origin)
@@ -137,7 +141,7 @@ main(int argc, char *argv[])
 	
 	mport_instance_free(mport); 
 	
-	return 0;
+	return (0);
 }
 
 
@@ -164,7 +168,7 @@ str_remove( const char *str, const char ch )
     }
     output[len -1] = '\0';
 	
-    return output;
+    return (output);
 } 
 
 
@@ -173,5 +177,6 @@ usage(void)
 {
 	
 	fprintf(stderr, "Usage: mport.list [-q | -v | -u]\n");
+
 	exit(2);
 }
