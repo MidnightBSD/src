@@ -25,12 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/install.c,v 1.9 2013/03/17 23:54:17 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "mport.h"
 #include "mport_private.h"
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 MPORT_PUBLIC_API int mport_install(mportInstance *mport, const char *pkgname, const char *version, const char *prefix)
 {
@@ -98,8 +99,11 @@ MPORT_PUBLIC_API int mport_install(mportInstance *mport, const char *pkgname, co
   if (mport_verify_hash(filename, e[e_loc]->hash) == 0) {
     free(filename);
     mport_index_entry_free_vec(e);
-    /* XXX should we unlink the bad file here? */
-    RETURN_ERROR(MPORT_ERR_FATAL, "Package fails hash verification.\n");
+
+    if (unlink(filename) == 0)
+      RETURN_ERROR(MPORT_ERR_FATAL, "Package failed hash verification and was removed.\n");
+    else
+      RETURN_ERROR(MPORT_ERR_FATAL, "Package failed hash verification, but could not be removed.\n");
   }
  
   ret = mport_install_primative(mport, filename, prefix);
