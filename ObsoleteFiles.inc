@@ -15,6 +15,9 @@
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
 
+#20131218
+OLD_FILES+=usr/include/clang/3.1/unwind.h
+OLD_DIRS+=usr/include/i4b
 #20130613
 OLD_FILES+=sbin/bsdlabel
 OLD_FILES+=sbin/disklabel
