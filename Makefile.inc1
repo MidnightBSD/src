@@ -1,5 +1,5 @@
 #
-# $MidnightBSD: src/Makefile.inc1,v 1.44 2013/01/26 23:05:37 laffer1 Exp $
+# $MidnightBSD$
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
