@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: release/9.2.0/lib/clang/clang.build.mk 253283 2013-07-12 20:06:52Z dim $
 
 CLANG_SRCS=	${LLVM_SRCS}/tools/clang
@@ -20,15 +21,10 @@ CFLAGS+= -fno-strict-aliasing
 TARGET_ARCH?=	${MACHINE_ARCH}
 BUILD_ARCH?=	${MACHINE_ARCH}
 
-.if (${TARGET_ARCH} == "arm" || ${TARGET_ARCH} == "armv6") && \
-    ${MK_ARM_EABI} != "no"
-TARGET_ABI=	gnueabi
-.else
 TARGET_ABI=	unknown
-.endif
 
-TARGET_TRIPLE?=	${TARGET_ARCH:C/amd64/x86_64/}-${TARGET_ABI}-freebsd9.2
-BUILD_TRIPLE?=	${BUILD_ARCH:C/amd64/x86_64/}-unknown-freebsd9.2
+TARGET_TRIPLE?=	${TARGET_ARCH:C/amd64/x86_64/}-${TARGET_ABI}-freebsd9.1
+BUILD_TRIPLE?=	${BUILD_ARCH:C/amd64/x86_64/}-midnightbsd-freebsd9.1
 CFLAGS+=	-DLLVM_DEFAULT_TARGET_TRIPLE=\"${TARGET_TRIPLE}\" \
 		-DLLVM_HOST_TRIPLE=\"${BUILD_TRIPLE}\" \
 		-DDEFAULT_SYSROOT=\"${TOOLS_PREFIX}\"
