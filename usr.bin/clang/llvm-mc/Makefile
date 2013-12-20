@@ -1,7 +1,9 @@
-# $FreeBSD$
+# $FreeBSD: release/9.2.0/usr.bin/clang/llvm-mc/Makefile 252723 2013-07-04 20:17:04Z dim $
+
+NO_MAN=
+.include <bsd.own.mk>
 
 PROG_CXX=llvm-mc
-NO_MAN=
 
 SRCDIR=	tools/llvm-mc
 SRCS=	llvm-mc.cpp \
@@ -9,38 +11,42 @@ SRCS=	llvm-mc.cpp \
 
 LIBDEPS=llvmmcdisassembler \
 	llvmarmdisassembler \
-	llvmarmasmparser \
 	llvmarmcodegen \
+	llvmarmasmparser \
 	llvmarmdesc \
-	llvmarminstprinter \
 	llvmarminfo \
+	llvmarminstprinter \
+	llvmmipsdisassembler \
 	llvmmipscodegen \
+	llvmmipsasmparser \
 	llvmmipsdesc \
-	llvmmipsinstprinter \
 	llvmmipsinfo \
+	llvmmipsinstprinter \
 	llvmpowerpccodegen \
 	llvmpowerpcdesc \
-	llvmpowerpcinstprinter \
 	llvmpowerpcinfo \
+	llvmpowerpcinstprinter \
 	llvmx86disassembler \
 	llvmx86asmparser \
 	llvmx86codegen \
-	llvmx86desc \
 	llvmselectiondag \
 	llvmasmprinter \
 	llvmmcparser \
 	llvmcodegen \
+	llvmobjcarcopts \
 	llvmscalaropts \
 	llvminstcombine \
 	llvmtransformutils \
 	llvmipa \
 	llvmanalysis \
+	llvmx86desc \
+	llvmx86info \
 	llvmtarget \
 	llvmx86instprinter \
+	llvmmc \
+	llvmobject \
 	llvmx86utils \
 	llvmcore \
-	llvmx86info \
-	llvmmc \
 	llvmsupport
 
 .include "../clang.prog.mk"
