@@ -1,0 +1,14 @@
+clang 3.3
+--This line, and those below, will be ignored--
+> Description of fields to fill in above:                     76 columns --|
+> PR:            If a GNATS PR is affected by the change.
+> Submitted by:  If someone else sent in the change.
+> Reviewed by:   If someone else reviewed your modification.
+> Approved by:   If you needed approval for this commit.
+> Obtained from: If the change is from a third party.
+> MFC after:     N [day[s]|week[s]|month[s]].  Request a reminder email.
+> Security:      Vulnerability reference (one per line) or description.
+> Sponsored by:  If the change was sponsored by an organization.
+> Empty fields above will be automatically removed.
+
+A    .
