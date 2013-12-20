@@ -19241,7 +19241,6 @@ contrib/llvm/runtime/libprofile/Makefile -text
 contrib/llvm/runtime/libprofile/OptimalEdgeProfiling.c -text
 contrib/llvm/runtime/libprofile/PathProfiling.c -text
 contrib/llvm/runtime/libprofile/Profiling.h -text
-contrib/llvm/svn-commit.tmp -text
 contrib/llvm/test/Analysis/BasicAA/2003-02-26-AccessSizeTest.ll -text
 contrib/llvm/test/Analysis/BasicAA/2003-03-04-GEPCrash.ll -text
 contrib/llvm/test/Analysis/BasicAA/2003-04-22-GEPProblem.ll -text
