@@ -12,9 +12,8 @@ SRCS=	mDNSPosix.c mDNSUNP.c
 SRCS+=	DNSDigest.c DNSCommon.c
 .PATH: ${.CURDIR}/../../../contrib/mDNSResponder/mDNSShared
 SRCS+=	dnsextd.c mDNSDebug.c GenLinkedList.c \
-	PlatformCommon.c dnsextd_parser.y dnsextd_lexer.l \
-	CryptoAlg.c \
-	y.tab.h
+	PlatformCommon.c dnsextd_parser.y y.tab.h dnsextd_parser.h dnsextd_lexer.l \
+	CryptoAlg.c
 
 SRCDIRS= ${.CURDIR}/../../../contrib/mDNSResponder/mDNSShared \
 	${.CURDIR}/../../../contrib/mDNSResponder/mDNSPosix \
@@ -33,10 +32,14 @@ CFLAGS+=	-DHAVE_IPV6=1
 .endif
 
 YFLAGS+=-v
-CLEANFILES= y.output
+CLEANFILES= y.output dnsextd_parser.h
 
 DPADD=	${LIBL} ${LIBPTHREAD}
 LDADD=	-ll -lpthread
+
+dnsextd_parser.h:
+	mv y.tab.h ${.TARGET}
+
 
 .include <bsd.prog.mk>
 
