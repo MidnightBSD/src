@@ -2805,7 +2805,6 @@ runtime/libprofile/Makefile -text
 runtime/libprofile/OptimalEdgeProfiling.c -text
 runtime/libprofile/PathProfiling.c -text
 runtime/libprofile/Profiling.h -text
-/svn-commit.tmp -text
 test/Analysis/BasicAA/2003-02-26-AccessSizeTest.ll -text
 test/Analysis/BasicAA/2003-03-04-GEPCrash.ll -text
 test/Analysis/BasicAA/2003-04-22-GEPProblem.ll -text
