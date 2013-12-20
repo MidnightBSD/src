@@ -71321,8 +71321,6 @@ usr.bin/clang/llvm-dis/Makefile -text
 usr.bin/clang/llvm-dis/llvm-dis.1 -text
 usr.bin/clang/llvm-extract/Makefile -text
 usr.bin/clang/llvm-extract/llvm-extract.1 -text
-usr.bin/clang/llvm-ld/Makefile -text
-usr.bin/clang/llvm-ld/llvm-ld.1 -text
 usr.bin/clang/llvm-link/Makefile -text
 usr.bin/clang/llvm-link/llvm-link.1 -text
 usr.bin/clang/llvm-mc/Makefile -text
@@ -71334,7 +71332,6 @@ usr.bin/clang/llvm-prof/llvm-prof.1 -text
 usr.bin/clang/llvm-ranlib/Makefile -text
 usr.bin/clang/llvm-ranlib/llvm-ranlib.1 -text
 usr.bin/clang/llvm-rtdyld/Makefile -text
-usr.bin/clang/llvm-stub/Makefile -text
 usr.bin/clang/macho-dump/Makefile -text
 usr.bin/clang/opt/Makefile -text
 usr.bin/clang/opt/opt.1 -text
