@@ -1,10 +1,22 @@
-# $MidnightBSD$
+# $FreeBSD: release/9.2.0/lib/clang/Makefile 252723 2013-07-04 20:17:04Z dim $
 
 .include <bsd.own.mk>
 
 .if !make(install)
+.if !defined(EARLY_BUILD) && defined(MK_CLANG_FULL) && ${MK_CLANG_FULL} != "no"
+_libclangstaticanalyzer= \
+	libclangstaticanalyzercheckers \
+	libclangstaticanalyzercore \
+	libclangstaticanalyzerfrontend
+_libclangarcmigrate= \
+	libclangarcmigrate
+_libclangrewriter= \
+	libclangrewritecore \
+	libclangrewritefrontend
+.endif # !EARLY_BUILD && MK_CLANG_FULL
+
 SUBDIR=	libclanganalysis \
-	libclangarcmigrate \
+	${_libclangarcmigrate} \
 	libclangast \
 	libclangbasic \
 	libclangcodegen \
@@ -14,12 +26,10 @@ SUBDIR=	libclanganalysis \
 	libclangfrontendtool \
 	libclanglex \
 	libclangparse \
-	libclangrewrite \
+	${_libclangrewriter} \
 	libclangsema \
 	libclangserialization \
-	libclangstaticanalyzercheckers \
-	libclangstaticanalyzercore \
-	libclangstaticanalyzerfrontend \
+	${_libclangstaticanalyzer} \
 	\
 	libllvmanalysis \
 	libllvmarchive \
@@ -33,9 +43,11 @@ SUBDIR=	libclanganalysis \
 	libllvminstrumentation \
 	libllvmipa \
 	libllvmipo \
+	libllvmirreader \
 	libllvmlinker \
 	libllvmmc \
 	libllvmmcparser \
+	libllvmobjcarcopts \
 	libllvmobject \
 	libllvmscalaropts \
 	libllvmselectiondag \
@@ -54,6 +66,7 @@ SUBDIR=	libclanganalysis \
 	libllvmmipsasmparser \
 	libllvmmipscodegen \
 	libllvmmipsdesc \
+	libllvmmipsdisassembler \
 	libllvmmipsinfo \
 	libllvmmipsinstprinter \
 	libllvmpowerpccodegen \
@@ -69,18 +82,15 @@ SUBDIR=	libclanganalysis \
 	libllvmx86utils
 
 .if ${MK_CLANG_EXTRAS} != "no"
-SUBDIR+=libllvmarchive \
-	libllvmdebuginfo \
+SUBDIR+=libllvmdebuginfo \
 	libllvmexecutionengine \
 	libllvminterpreter \
 	libllvmjit \
-	libllvmlinker \
 	libllvmmcdisassembler \
 	libllvmmcjit \
-	libllvmobject \
 	libllvmruntimedyld
-.endif
-.endif
+.endif # MK_CLANG_EXTRAS
+.endif # !make(install)
 
 SUBDIR+= include
 

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: release/9.2.0/lib/clang/libllvmanalysis/Makefile 252723 2013-07-04 20:17:04Z dim $
 
 .include <bsd.own.mk>
 
@@ -12,19 +12,16 @@ SRCS=	AliasAnalysis.cpp \
 	AliasSetTracker.cpp \
 	Analysis.cpp \
 	BasicAliasAnalysis.cpp \
-	BlockFrequencyInfo.cpp \
 	BranchProbabilityInfo.cpp \
 	CFGPrinter.cpp \
 	CaptureTracking.cpp \
 	CodeMetrics.cpp \
 	ConstantFolding.cpp \
-	DIBuilder.cpp \
-	DbgInfoPrinter.cpp \
-	DebugInfo.cpp \
+	CostModel.cpp \
+	DependenceAnalysis.cpp \
 	DomPrinter.cpp \
 	DominanceFrontier.cpp \
 	IVUsers.cpp \
-	InlineCost.cpp \
 	InstCount.cpp \
 	InstructionSimplify.cpp \
 	Interval.cpp \
@@ -34,7 +31,6 @@ SRCS=	AliasAnalysis.cpp \
 	LibCallSemantics.cpp \
 	Lint.cpp \
 	Loads.cpp \
-	LoopDependenceAnalysis.cpp \
 	LoopInfo.cpp \
 	LoopPass.cpp \
 	MemDepPrinter.cpp \
@@ -47,11 +43,14 @@ SRCS=	AliasAnalysis.cpp \
 	PathProfileInfo.cpp \
 	PathProfileVerifier.cpp \
 	PostDominators.cpp \
+	ProfileDataLoader.cpp \
+	ProfileDataLoaderPass.cpp \
 	ProfileEstimatorPass.cpp \
 	ProfileInfo.cpp \
 	ProfileInfoLoader.cpp \
 	ProfileInfoLoaderPass.cpp \
 	ProfileVerifierPass.cpp \
+	PtrUseVisitor.cpp \
 	RegionInfo.cpp \
 	RegionPass.cpp \
 	RegionPrinter.cpp \
@@ -60,16 +59,13 @@ SRCS=	AliasAnalysis.cpp \
 	ScalarEvolutionExpander.cpp \
 	ScalarEvolutionNormalization.cpp \
 	SparsePropagation.cpp \
+	TargetTransformInfo.cpp \
 	Trace.cpp \
 	TypeBasedAliasAnalysis.cpp \
 	ValueTracking.cpp
 
 .if ${MK_CLANG_EXTRAS} != "no"
-SRCS+=	BlockFrequencyInfo.cpp \
-	LibCallSemantics.cpp \
-	PathNumbering.cpp \
-	PathProfileInfo.cpp \
-	PathProfileVerifier.cpp
+SRCS+=	BlockFrequencyInfo.cpp
 .endif
 
 TGHDRS=	Intrinsics

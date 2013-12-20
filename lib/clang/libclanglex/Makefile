@@ -1,4 +1,6 @@
-# $FreeBSD$
+# $FreeBSD: release/9.2.0/lib/clang/libclanglex/Makefile 252723 2013-07-04 20:17:04Z dim $
+
+.include <bsd.own.mk>
 
 LIB=	clanglex
 
@@ -12,6 +14,7 @@ SRCS=	HeaderMap.cpp \
 	ModuleMap.cpp \
 	PPCaching.cpp \
 	PPCallbacks.cpp \
+	PPConditionalDirectiveRecord.cpp \
 	PPDirectives.cpp \
 	PPExpressions.cpp \
 	PPLexerChange.cpp \

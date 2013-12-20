@@ -1,4 +1,6 @@
-# $FreeBSD$
+# $FreeBSD: release/9.2.0/lib/clang/libclangserialization/Makefile 252723 2013-07-04 20:17:04Z dim $
+
+.include <bsd.own.mk>
 
 LIB=	clangserialization
 
@@ -11,6 +13,7 @@ SRCS=	ASTCommon.cpp \
 	ASTWriterDecl.cpp \
 	ASTWriterStmt.cpp \
 	GeneratePCH.cpp \
+	GlobalModuleIndex.cpp \
 	Module.cpp \
 	ModuleManager.cpp
 
@@ -19,6 +22,8 @@ TGHDRS=	AttrList \
 	AttrPCHWrite \
 	AttrParsedAttrList \
 	Attrs \
+	CommentCommandList \
+	CommentNodes \
 	DeclNodes \
 	DiagnosticCommonKinds \
 	DiagnosticFrontendKinds \

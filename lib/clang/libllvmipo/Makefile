@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: release/9.2.0/lib/clang/libllvmipo/Makefile 245431 2013-01-14 19:51:26Z dim $
 
 .include <bsd.own.mk>
 
@@ -6,6 +6,7 @@ LIB=	llvmipo
 
 SRCDIR=	lib/Transforms/IPO
 SRCS=	ArgumentPromotion.cpp \
+	BarrierNoopPass.cpp \
 	ConstantMerge.cpp \
 	DeadArgumentElimination.cpp \
 	ExtractGV.cpp \

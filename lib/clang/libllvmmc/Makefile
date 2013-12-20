@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: release/9.2.0/lib/clang/libllvmmc/Makefile 252723 2013-07-04 20:17:04Z dim $
 
 .include <bsd.own.mk>
 
@@ -12,8 +12,9 @@ SRCS=	ELFObjectWriter.cpp \
 	MCAsmInfoDarwin.cpp \
 	MCAsmStreamer.cpp \
 	MCAssembler.cpp \
-	MCCodeGenInfo.cpp \
+	MCAtom.cpp \
 	MCCodeEmitter.cpp \
+	MCCodeGenInfo.cpp \
 	MCContext.cpp \
 	MCDwarf.cpp \
 	MCELF.cpp \
@@ -23,13 +24,16 @@ SRCS=	ELFObjectWriter.cpp \
 	MCInst.cpp \
 	MCInstPrinter.cpp \
 	MCInstrAnalysis.cpp \
+	MCLabel.cpp \
 	MCMachOStreamer.cpp \
 	MCMachObjectTargetWriter.cpp \
+	MCModule.cpp \
 	MCNullStreamer.cpp \
 	MCObjectFileInfo.cpp \
 	MCObjectStreamer.cpp \
 	MCObjectWriter.cpp \
 	MCPureStreamer.cpp \
+	MCRegisterInfo.cpp \
 	MCSection.cpp \
 	MCSectionCOFF.cpp \
 	MCSectionELF.cpp \
@@ -37,7 +41,7 @@ SRCS=	ELFObjectWriter.cpp \
 	MCStreamer.cpp \
 	MCSubtargetInfo.cpp \
 	MCSymbol.cpp \
-	MCTargetAsmLexer.cpp \
+	MCValue.cpp \
 	MCWin64EH.cpp \
 	MachObjectWriter.cpp \
 	SubtargetFeature.cpp \

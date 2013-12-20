@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: release/9.2.0/lib/clang/libllvmscalaropts/Makefile 252723 2013-07-04 20:17:04Z dim $
 
 .include <bsd.own.mk>
 
@@ -20,16 +20,18 @@ SRCS=	ADCE.cpp \
 	LICM.cpp \
 	LoopDeletion.cpp \
 	LoopIdiomRecognize.cpp \
+	LoopInstSimplify.cpp \
 	LoopRotation.cpp \
 	LoopStrengthReduce.cpp \
 	LoopUnrollPass.cpp \
 	LoopUnswitch.cpp \
 	LowerAtomic.cpp \
 	MemCpyOptimizer.cpp \
-	ObjCARC.cpp \
 	Reassociate.cpp \
 	Reg2Mem.cpp \
 	SCCP.cpp \
+	SROA.cpp \
+	Scalar.cpp \
 	ScalarReplAggregates.cpp \
 	SimplifyCFGPass.cpp \
 	SimplifyLibCalls.cpp \

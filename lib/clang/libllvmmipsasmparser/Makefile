@@ -1,4 +1,6 @@
-# $FreeBSD$
+# $FreeBSD: release/9.2.0/lib/clang/libllvmmipsasmparser/Makefile 246637 2013-02-10 21:24:47Z dim $
+
+.include <bsd.own.mk>
 
 LIB=	llvmmipsasmparser
 
@@ -6,7 +8,8 @@ SRCDIR=	lib/Target/Mips/AsmParser
 INCDIR=	lib/Target/Mips
 SRCS=	MipsAsmParser.cpp
 
-TGHDRS=	MipsGenInstrInfo \
+TGHDRS=	MipsGenAsmMatcher \
+	MipsGenInstrInfo \
 	MipsGenRegisterInfo \
 	MipsGenSubtargetInfo
 

@@ -1,8 +1,10 @@
-# $FreeBSD$
+# $FreeBSD: release/9.2.0/lib/clang/libllvmcore/Makefile 252723 2013-07-04 20:17:04Z dim $
+
+.include <bsd.own.mk>
 
 LIB=	llvmcore
 
-SRCDIR=	lib/VMCore
+SRCDIR=	lib/IR
 SRCS=	AsmWriter.cpp \
 	Attributes.cpp \
 	AutoUpgrade.cpp \
@@ -10,9 +12,13 @@ SRCS=	AsmWriter.cpp \
 	ConstantFold.cpp \
 	Constants.cpp \
 	Core.cpp \
+	DIBuilder.cpp \
+	DataLayout.cpp \
+	DebugInfo.cpp \
 	DebugLoc.cpp \
 	Dominators.cpp \
 	Function.cpp \
+	GCOV.cpp \
 	GVMaterializer.cpp \
 	Globals.cpp \
 	IRBuilder.cpp \
@@ -30,13 +36,13 @@ SRCS=	AsmWriter.cpp \
 	PassRegistry.cpp \
 	PrintModulePass.cpp \
 	Type.cpp \
+	TypeFinder.cpp \
 	Use.cpp \
 	User.cpp \
 	Value.cpp \
 	ValueSymbolTable.cpp \
 	ValueTypes.cpp \
 	Verifier.cpp
-LLVM_REQUIRES_RTTI=
 
 TGHDRS=	Intrinsics
 

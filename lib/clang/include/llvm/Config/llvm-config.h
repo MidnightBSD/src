@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: release/9.2.0/lib/clang/include/llvm/Config/llvm-config.h 252723 2013-07-04 20:17:04Z dim $ */
 /* include/llvm/Config/llvm-config.h.  Generated from llvm-config.h.in by configure.  */
 /*===-- llvm/config/llvm-config.h - llvm configure variable -------*- C -*-===*/
 /*                                                                            */
@@ -41,6 +41,9 @@
 
 /* Has gcc/MSVC atomic intrinsics */
 #define LLVM_HAS_ATOMICS 0
+
+/* Host triple LLVM will be executed on */
+/* #undef LLVM_HOST_TRIPLE */
 
 /* Installation directory for include files */
 /* #undef LLVM_INCLUDEDIR */
@@ -109,12 +112,18 @@
 /* #undef LLVM_PATH_XDOT_PY */
 
 /* Installation prefix directory */
-/* #undef LLVM_PREFIX */
+#define LLVM_PREFIX ""
+
+/* Define if we have the Intel JIT API runtime support library */
+#define LLVM_USE_INTEL_JITEVENTS 0
+
+/* Define if we have the oprofile JIT-support library */
+#define LLVM_USE_OPROFILE 0
 
 /* Major version of the LLVM API */
 #define LLVM_VERSION_MAJOR 3
 
 /* Minor version of the LLVM API */
-#define LLVM_VERSION_MINOR 1
+#define LLVM_VERSION_MINOR 3
 
 #endif

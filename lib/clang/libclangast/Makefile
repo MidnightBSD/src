@@ -1,4 +1,6 @@
-# $FreeBSD$
+# $FreeBSD: release/9.2.0/lib/clang/libclangast/Makefile 252723 2013-07-04 20:17:04Z dim $
+
+.include <bsd.own.mk>
 
 LIB=	clangast
 
@@ -7,15 +9,23 @@ SRCS=	APValue.cpp \
 	ASTConsumer.cpp \
 	ASTContext.cpp \
 	ASTDiagnostic.cpp \
+	ASTDumper.cpp \
 	ASTImporter.cpp \
 	AttrImpl.cpp \
 	CXXInheritance.cpp \
+	Comment.cpp \
+	CommentBriefParser.cpp \
+	CommentCommandTraits.cpp \
+	CommentLexer.cpp \
+	CommentParser.cpp \
+	CommentSema.cpp \
 	Decl.cpp \
 	DeclBase.cpp \
 	DeclCXX.cpp \
 	DeclFriend.cpp \
 	DeclGroup.cpp \
 	DeclObjC.cpp \
+	DeclOpenMP.cpp \
 	DeclPrinter.cpp \
 	DeclTemplate.cpp \
 	DeclarationName.cpp \
@@ -32,14 +42,14 @@ SRCS=	APValue.cpp \
 	Mangle.cpp \
 	MicrosoftCXXABI.cpp \
 	MicrosoftMangle.cpp \
-	NestedNameSpecifier.cpp \
 	NSAPI.cpp \
+	NestedNameSpecifier.cpp \
 	ParentMap.cpp \
+	RawCommentList.cpp \
 	RecordLayout.cpp \
 	RecordLayoutBuilder.cpp \
 	SelectorLocationsKind.cpp \
 	Stmt.cpp \
-	StmtDumper.cpp \
 	StmtIterator.cpp \
 	StmtPrinter.cpp \
 	StmtProfile.cpp \
@@ -52,11 +62,19 @@ SRCS=	APValue.cpp \
 	VTTBuilder.cpp \
 	VTableBuilder.cpp
 
-TGHDRS=	AttrImpl \
+TGHDRS=	AttrDump \
+	AttrImpl \
 	AttrList \
 	Attrs \
+	CommentCommandInfo \
+	CommentCommandList \
+	CommentHTMLNamedCharacterReferences \
+	CommentHTMLTags \
+	CommentHTMLTagsProperties \
+	CommentNodes \
 	DeclNodes \
 	DiagnosticASTKinds \
+	DiagnosticCommentKinds \
 	DiagnosticCommonKinds \
 	DiagnosticSemaKinds \
 	StmtNodes

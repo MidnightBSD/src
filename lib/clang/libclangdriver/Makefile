@@ -1,4 +1,6 @@
-# $FreeBSD$
+# $FreeBSD: release/9.2.0/lib/clang/libclangdriver/Makefile 246637 2013-02-10 21:24:47Z dim $
+
+.include <bsd.own.mk>
 
 LIB=	clangdriver
 
@@ -7,7 +9,6 @@ SRCS=	Action.cpp \
 	Arg.cpp \
 	ArgList.cpp \
 	CC1AsOptions.cpp \
-	CC1Options.cpp \
 	Compilation.cpp \
 	Driver.cpp \
 	DriverOptions.cpp \
@@ -23,7 +24,6 @@ SRCS=	Action.cpp \
 	WindowsToolChain.cpp
 
 TGHDRS=	CC1AsOptions \
-	CC1Options \
 	DiagnosticCommonKinds \
 	DiagnosticDriverKinds \
 	Options

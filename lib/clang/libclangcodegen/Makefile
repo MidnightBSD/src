@@ -1,9 +1,12 @@
-# $FreeBSD$
+# $FreeBSD: release/9.2.0/lib/clang/libclangcodegen/Makefile 252723 2013-07-04 20:17:04Z dim $
+
+.include <bsd.own.mk>
 
 LIB=	clangcodegen
 
 SRCDIR=	tools/clang/lib/CodeGen
 SRCS=	BackendUtil.cpp \
+	CGAtomic.cpp \
 	CGBlocks.cpp \
 	CGBuiltin.cpp \
 	CGCUDANV.cpp \
@@ -45,6 +48,8 @@ SRCS=	BackendUtil.cpp \
 
 TGHDRS=	AttrList \
 	Attrs \
+	CommentCommandList \
+	CommentNodes \
 	DeclNodes \
 	DiagnosticCommonKinds \
 	DiagnosticFrontendKinds \

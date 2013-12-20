@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: release/9.2.0/lib/clang/include/llvm/Config/Targets.def 218893 2011-02-20 19:33:47Z dim $ */
 
 LLVM_TARGET(ARM)
 LLVM_TARGET(Mips)

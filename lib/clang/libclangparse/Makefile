@@ -1,4 +1,6 @@
-# $FreeBSD$
+# $FreeBSD: release/9.2.0/lib/clang/libclangparse/Makefile 252723 2013-07-04 20:17:04Z dim $
+
+.include <bsd.own.mk>
 
 LIB=	clangparse
 
@@ -11,6 +13,7 @@ SRCS=	ParseAST.cpp \
 	ParseExprCXX.cpp \
 	ParseInit.cpp \
 	ParseObjc.cpp \
+	ParseOpenMP.cpp \
 	ParsePragma.cpp \
 	ParseStmt.cpp \
 	ParseTemplate.cpp \
@@ -20,7 +23,10 @@ SRCS=	ParseAST.cpp \
 TGHDRS=	AttrLateParsed \
 	AttrList \
 	AttrParsedAttrList \
+	AttrExprArgs \
 	Attrs \
+	CommentCommandList \
+	CommentNodes \
 	DeclNodes \
 	DiagnosticCommonKinds \
 	DiagnosticParseKinds \
