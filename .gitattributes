@@ -56186,6 +56186,16 @@ lib/libncp/ncpl_rcfile.c -text
 lib/libncp/ncpl_rpc.c -text
 lib/libncp/ncpl_subr.c -text
 lib/libncp/sap.c -text
+lib/libnetbsd/Makefile -text
+lib/libnetbsd/README -text
+lib/libnetbsd/rmd160.h -text
+lib/libnetbsd/sha1.h -text
+lib/libnetbsd/sha2.h -text
+lib/libnetbsd/stdlib.h -text
+lib/libnetbsd/strsuftoll.c -text
+lib/libnetbsd/sys/cdefs.h -text
+lib/libnetbsd/util.c -text
+lib/libnetbsd/util.h -text
 lib/libnetgraph/Makefile -text
 lib/libnetgraph/debug.c -text
 lib/libnetgraph/internal.h -text
