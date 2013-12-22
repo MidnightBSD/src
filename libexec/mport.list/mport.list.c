@@ -53,7 +53,7 @@ main(int argc, char *argv[])
 	char *comment;
 	char *os_release;
 	
-	if (argc > 2)
+	if (argc > 3)
 		usage();
     
 	while ((ch = getopt(argc, argv, "oqvu")) != -1) {
@@ -113,8 +113,13 @@ main(int argc, char *argv[])
 			if (indexEntries != NULL) {
 				while (*indexEntries != NULL) {
 					if (((*indexEntries)->version != NULL && mport_version_cmp((*packs)->version, (*indexEntries)->version) < 0) 
-						|| ((*packs)->version != NULL && strcmp((*packs)->version, os_release) != 0))
-						(void) printf("%s: %s (%s) < %s\n", (*packs)->name, (*packs)->version, (*packs)->os_release, (*indexEntries)->version);
+						|| ((*packs)->version != NULL && strcmp((*packs)->version, os_release) != 0)) {
+						if (verbose) {
+							(void) printf("%s: %s (%s) < %s\n", (*packs)->name, (*packs)->version, (*packs)->os_release, (*indexEntries)->version);
+						} else {
+							(void) printf("%s: %s < %s\n", (*packs)->name, (*packs)->os_release, (*indexEntries)->version);
+						}
+					}
 					indexEntries++;
 				}
 				
