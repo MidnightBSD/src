@@ -41,7 +41,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/usr.bin/make/var.c,v 1.163 2006/07/17 21:05:27 obrien Exp $ */
-__MBSDID("$MidnightBSD: src/usr.bin/make/var.c,v 1.4 2012/01/18 01:49:21 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 /**
  * var.c --
@@ -1422,6 +1422,7 @@ modifier_M(VarParser *vp, const char value[], char endc)
 		vp->ptr++;
 	}
 	*ptr = '\0';
+	DEBUGF(VAR, ("Pattern :%s\n", patt));
 
 	if (modifier == 'M') {
 		newValue = VarModify(value, VarMatch, patt);
@@ -1766,7 +1767,7 @@ ParseModifier(VarParser *vp, char startc, Var *v, Boolean *freeResult)
 				if ((vp->ptr[0] == 's') &&
 				    (vp->ptr[1] == 'h') &&
 				    (vp->ptr[2] == endc || vp->ptr[2] == ':')) {
-					const char	*error;
+					const char	*error = NULL;
 
 					if (vp->execute) {
 						newStr = Buf_Peel(

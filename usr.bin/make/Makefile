@@ -1,7 +1,7 @@
 #	@(#)Makefile	5.2 (Berkeley) 12/28/90
 #	$Id: Makefile,v 1.5 2012-07-20 02:29:45 laffer1 Exp $
 # $FreeBSD: src/usr.bin/make/Makefile,v 1.66 2008/03/04 22:32:58 obrien Exp $
-# $MidnightBSD: src/usr.bin/make/Makefile,v 1.4 2012/01/18 01:49:21 laffer1 Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
@@ -16,7 +16,7 @@ NO_SHARED?=	YES
 .endif
 
 # Version has the RYYYYMMDDX format, where R is from RELENG_<R>
-CFLAGS+=-DMAKE_VERSION=\"9201120530\"
+CFLAGS+=-DMAKE_VERSION=\"9201210220\"
 
 # There is no obvious performance improvement currently.
 # CFLAGS+=-DUSE_KQUEUE
