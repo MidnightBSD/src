@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/share/security/Makefile,v 1.4 2004/12/21 08:46:54 ru Exp $
 
 FILES=	lomac-policy.contexts
