@@ -117,7 +117,7 @@ main(int argc, char *argv[])
 						if (verbose) {
 							(void) printf("%s: %s (%s) < %s\n", (*packs)->name, (*packs)->version, (*packs)->os_release, (*indexEntries)->version);
 						} else {
-							(void) printf("%s: %s < %s\n", (*packs)->name, (*packs)->os_release, (*indexEntries)->version);
+							(void) printf("%s: %s < %s\n", (*packs)->name, (*packs)->version, (*indexEntries)->version);
 						}
 					}
 					indexEntries++;
