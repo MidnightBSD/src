@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/csh.login,v 1.2 2006/08/28 01:35:53 laffer1 Exp $
+# $MidnightBSD$
 # $FreeBSD: src/etc/csh.login,v 1.21 2004/06/06 11:46:27 schweikh Exp $
 #
 # System-wide .login file for csh(1).
