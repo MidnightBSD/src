@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 # $FreeBSD: src/libexec/Makefile,v 1.77 2007/07/03 12:46:04 mlaier Exp $
-# $MidnightBSD: src/libexec/Makefile,v 1.10 2011/08/07 01:27:52 laffer1 Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
@@ -11,7 +11,6 @@ SUBDIR=	${_atrun} \
 	ftpd \
 	getty \
 	${_mail.local} \
-	makekey \
 	${_mknetid} \
 	mport.check-fake \
 	mport.check-for-older \

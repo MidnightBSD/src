@@ -57239,9 +57239,6 @@ libexec/getty/pathnames.h -text
 libexec/getty/subr.c -text
 libexec/getty/ttys.5 -text
 libexec/mail.local/Makefile -text
-libexec/makekey/Makefile -text
-libexec/makekey/makekey.8 -text
-libexec/makekey/makekey.c -text
 libexec/mknetid/Makefile -text
 libexec/mknetid/hash.c -text
 libexec/mknetid/hash.h -text
