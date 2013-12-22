@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.2 (Berkeley) 2/3/94
 # $FreeBSD: src/lib/libc/Makefile,v 1.73 2007/10/01 18:15:10 ru Exp $
-# $MidnightBSD: src/lib/libc/Makefile,v 1.7 2012/07/04 16:18:03 laffer1 Exp $
+# $MidnightBSD$
 
 SHLIBDIR?= /lib
 
@@ -69,8 +69,7 @@ NOASM=
 .include "${.CURDIR}/nls/Makefile.inc"
 .include "${.CURDIR}/ohash/Makefile.inc"
 .include "${.CURDIR}/posix1e/Makefile.inc"
-.if ${LIBC_ARCH} != "amd64" && \
-    ${LIBC_ARCH} != "sparc64"
+.if ${LIBC_ARCH} != "amd64"
 .include "${.CURDIR}/quad/Makefile.inc"
 .endif
 .include "${.CURDIR}/regex/Makefile.inc"
