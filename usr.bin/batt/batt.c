@@ -1,6 +1,6 @@
-/* $MidnightBSD: src/usr.bin/batt/batt.c,v 1.7 2011/11/16 00:55:50 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*- 
- * Copyright (c) 2008 Lucas Holt
+ * Copyright (c) 2008, 2013 Lucas Holt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,6 +39,7 @@ int
 main(int argc, char *argv[])
 {
 	int life, time, units;
+	int acline;
 	size_t len;
 	int ch, cflag, lflag, tflag, uflag;
 
@@ -88,7 +89,14 @@ main(int argc, char *argv[])
 			printf("%d ", time);
 		else {
 			if (time < 1)
-				printf("Battery charging or drained.\n");
+				if (sysctlbyname("hw.acpi.acline", &acline, &len, NULL, 0) < 0)
+					errx(1, "AC line status not available");
+				else
+					if (acline == 1) {
+						puts("System plugged in");
+					} else {
+						printf("Battery charging or drained.\n");
+					}
 			else if (time == 1)
 				printf("1 minute remaining\n");
 			else
