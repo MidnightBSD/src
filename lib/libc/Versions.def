@@ -27,4 +27,4 @@ MNBSD_1.1 {
 # are listed here.  We use a separate namespace so we can write
 # simple ABI-checking tools.
 FBSDprivate_1.0 {
-} MNBSD_1.0;
+} MNBSD_1.1;
