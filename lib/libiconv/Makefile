@@ -2,6 +2,8 @@
 
 .PATH: ${.CURDIR}/../libc/iconv
 
+WARNS?=	0
+
 LIB=	iconv
 SHLIB_MAJOR= 4
 MAN=	iconv.3 iconvctl.3 iconv_canonicalize.3 iconvlist.3 \
