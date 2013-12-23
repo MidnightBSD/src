@@ -22,9 +22,10 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/service/service.8,v 1.5.4.4 2011/08/09 20:07:16 dougb Exp $
+.\" $FreeBSD: release/9.2.0/usr.sbin/service/service.8 246609 2013-02-10 07:23:23Z delphij $
 .\" $MidnightBSD$
-.Dd October 10, 2011
+.\"
+.Dd December 11, 2012
 .Dt SERVICE 8
 .Os
 .Sh NAME
@@ -33,6 +34,8 @@
 .Sh SYNOPSIS
 .Nm
 .Fl e
+.Nm
+.Fl R
 .Nm
 .Op Fl v
 .Fl l | r
@@ -62,6 +65,8 @@ then that list of scripts is checked for an
 .Qq rcvar
 assignment.
 If present the script is checked to see if it is enabled.
+.It Fl R
+Restart all enabled local services.
 .It Fl l
 List all files in
 .Pa /etc/rc.d
