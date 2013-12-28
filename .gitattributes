@@ -62504,7 +62504,6 @@ sys/compat/x86bios/x86bios.c -text
 sys/compat/x86bios/x86bios.h -text
 sys/conf/Makefile.amd64 -text
 sys/conf/Makefile.i386 -text
-sys/conf/Makefile.sparc64 -text
 sys/conf/NOTES -text
 sys/conf/WITHOUT_SOURCELESS -text
 sys/conf/WITHOUT_SOURCELESS_HOST -text
@@ -62513,7 +62512,6 @@ sys/conf/defines -text
 sys/conf/files -text
 sys/conf/files.amd64 -text
 sys/conf/files.i386 -text
-sys/conf/files.sparc64 -text
 sys/conf/kern.mk -text
 sys/conf/kern.post.mk -text
 sys/conf/kern.pre.mk -text
@@ -62521,14 +62519,12 @@ sys/conf/kmod.mk -text
 sys/conf/kmod_syms.awk -text
 sys/conf/ldscript.amd64 -text
 sys/conf/ldscript.i386 -text
-sys/conf/ldscript.sparc64 -text
 sys/conf/makeLINT.mk -text
 sys/conf/makeLINT.sed -text
 sys/conf/newvers.sh -text
 sys/conf/options -text
 sys/conf/options.amd64 -text
 sys/conf/options.i386 -text
-sys/conf/options.sparc64 -text
 sys/conf/systags.sh -text
 sys/contrib/altq/altq/altq.h -text
 sys/contrib/altq/altq/altq_cbq.c -text
