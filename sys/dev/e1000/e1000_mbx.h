@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2010, Intel Corporation 
@@ -30,7 +31,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$MidnightBSD$*/
+/*$FreeBSD: release/9.2.0/sys/dev/e1000/e1000_mbx.h 209616 2010-06-30 21:05:51Z jfv $*/
 
 #ifndef _E1000_MBX_H_
 #define _E1000_MBX_H_

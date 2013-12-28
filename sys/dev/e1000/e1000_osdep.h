@@ -1,6 +1,7 @@
+/* $MidnightBSD$ */
 /******************************************************************************
 
-  Copyright (c) 2001-2010, Intel Corporation 
+  Copyright (c) 2001-2013, Intel Corporation 
   All rights reserved.
   
   Redistribution and use in source and binary forms, with or without 
@@ -30,7 +31,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$MidnightBSD$*/
+/*$FreeBSD: release/9.2.0/sys/dev/e1000/e1000_osdep.h 248292 2013-03-14 22:55:59Z jfv $*/
 
 
 #ifndef _FREEBSD_OS_H_
@@ -66,7 +67,8 @@
 #define MSGOUT(S, A, B)     printf(S "\n", A, B)
 #define DEBUGFUNC(F)        DEBUGOUT(F);
 #define DEBUGOUT(S)			do {} while (0)
-#define DEBUGOUT1(S,A)			do {} while (0)
+/* This define is needed or shared code will not build */
+#define DEBUGOUT1(S,A)			if (0) printf(S,A);
 #define DEBUGOUT2(S,A,B)		do {} while (0)
 #define DEBUGOUT3(S,A,B,C)		do {} while (0)
 #define DEBUGOUT7(S,A,B,C,D,E,F,G)	do {} while (0)

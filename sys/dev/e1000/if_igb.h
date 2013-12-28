@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2011, Intel Corporation 
@@ -30,7 +31,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$MidnightBSD$*/
+/*$FreeBSD: release/9.2.0/sys/dev/e1000/if_igb.h 252899 2013-07-06 22:34:42Z jfv $*/
 
 #ifndef _IGB_H_DEFINED_
 #define _IGB_H_DEFINED_
@@ -297,11 +298,11 @@ struct tx_ring {
 	u32			next_to_clean;
 	volatile u16		tx_avail;
 	struct igb_tx_buffer	*tx_buffers;
-#if __FreeBSD_version >= 800000
+#ifndef IGB_LEGACY_TX
 	struct buf_ring		*br;
+	struct task		txq_task;
 #endif
 	bus_dma_tag_t		txtag;
-	struct task		txq_task;
 
 	u32			bytes;
 	u32			packets;

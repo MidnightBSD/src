@@ -1,6 +1,7 @@
+/* $MidnightBSD$ */
 /******************************************************************************
 
-  Copyright (c) 2001-2012, Intel Corporation 
+  Copyright (c) 2001-2013, Intel Corporation 
   All rights reserved.
   
   Redistribution and use in source and binary forms, with or without 
@@ -30,7 +31,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$MidnightBSD$*/
+/*$FreeBSD: release/9.2.0/sys/dev/e1000/e1000_api.h 248292 2013-03-14 22:55:59Z jfv $*/
 
 #ifndef _E1000_API_H_
 #define _E1000_API_H_
@@ -51,6 +52,7 @@ extern void e1000_power_up_fiber_serdes_link(struct e1000_hw *hw);
 extern void e1000_shutdown_fiber_serdes_link(struct e1000_hw *hw);
 extern void e1000_init_function_pointers_i210(struct e1000_hw *hw);
 
+s32 e1000_set_obff_timer(struct e1000_hw *hw, u32 itr);
 s32 e1000_set_mac_type(struct e1000_hw *hw);
 s32 e1000_setup_init_funcs(struct e1000_hw *hw, bool init_device);
 s32 e1000_init_mac_params(struct e1000_hw *hw);
@@ -105,7 +107,6 @@ s32 e1000_read_nvm(struct e1000_hw *hw, u16 offset, u16 words, u16 *data);
 s32 e1000_read_kmrn_reg(struct e1000_hw *hw, u32 offset, u16 *data);
 s32 e1000_write_kmrn_reg(struct e1000_hw *hw, u32 offset, u16 data);
 s32 e1000_write_nvm(struct e1000_hw *hw, u16 offset, u16 words, u16 *data);
-s32 e1000_wait_autoneg(struct e1000_hw *hw);
 s32 e1000_set_d3_lplu_state(struct e1000_hw *hw, bool active);
 s32 e1000_set_d0_lplu_state(struct e1000_hw *hw, bool active);
 bool e1000_check_mng_mode(struct e1000_hw *hw);
@@ -162,4 +163,6 @@ u32  e1000_translate_register_82542(u32 reg);
 	  (((length) > min_frame_size) && \
 	  ((length) <= (max_frame_size + VLAN_TAG_SIZE + 1)))))
 
-#endif
+#define E1000_MAX(a, b) ((a) > (b) ? (a) : (b))
+#define E1000_DIVIDE_ROUND_UP(a, b)	(((a) + (b) - 1) / (b)) /* ceil(a/b) */
+#endif /* _E1000_API_H_ */
