@@ -74,7 +74,7 @@ __MBSDID("$MidnightBSD$");
 #ifdef USB_DEBUG
 static int ulpt_debug = 0;
 
-SYSCTL_NODE(_hw_usb, OID_AUTO, ulpt, CTLFLAG_RW, 0, "USB ulpt");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, ulpt, CTLFLAG_RW, 0, "USB ulpt");
 SYSCTL_INT(_hw_usb_ulpt, OID_AUTO, debug, CTLFLAG_RW,
     &ulpt_debug, 0, "Debug level");
 #endif
@@ -747,7 +747,7 @@ static device_method_t ulpt_methods[] = {
 	DEVMETHOD(device_probe, ulpt_probe),
 	DEVMETHOD(device_attach, ulpt_attach),
 	DEVMETHOD(device_detach, ulpt_detach),
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t ulpt_driver = {

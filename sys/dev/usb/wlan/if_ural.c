@@ -81,7 +81,7 @@ __MBSDID("$MidnightBSD$");
 #ifdef USB_DEBUG
 static int ural_debug = 0;
 
-SYSCTL_NODE(_hw_usb, OID_AUTO, ural, CTLFLAG_RW, 0, "USB ural");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, ural, CTLFLAG_RW, 0, "USB ural");
 SYSCTL_INT(_hw_usb_ural, OID_AUTO, debug, CTLFLAG_RW, &ural_debug, 0,
     "Debug level");
 #endif
@@ -913,7 +913,7 @@ ural_bulk_read_callback(struct usb_xfer *xfer, usb_error_t error)
 			goto tr_setup;
 		}
 
-		m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+		m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 		if (m == NULL) {
 			DPRINTF("could not allocate mbuf\n");
 			ifp->if_ierrors++;

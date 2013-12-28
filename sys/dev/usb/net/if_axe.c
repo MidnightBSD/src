@@ -133,7 +133,7 @@ __MBSDID("$MidnightBSD$");
 #ifdef USB_DEBUG
 static int axe_debug = 0;
 
-SYSCTL_NODE(_hw_usb, OID_AUTO, axe, CTLFLAG_RW, 0, "USB axe");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, axe, CTLFLAG_RW, 0, "USB axe");
 SYSCTL_INT(_hw_usb_axe, OID_AUTO, debug, CTLFLAG_RW, &axe_debug, 0,
     "Debug level");
 #endif
@@ -162,6 +162,7 @@ static const STRUCT_USB_HOST_ID axe_devs[] = {
 	AXE_DEV(GOODWAY, GWUSB2E, 0),
 	AXE_DEV(IODATA, ETGUS2, AXE_FLAG_178),
 	AXE_DEV(JVC, MP_PRX1, 0),
+	AXE_DEV(LENOVO, ETHERNET, AXE_FLAG_772B),
 	AXE_DEV(LINKSYS2, USB200M, 0),
 	AXE_DEV(LINKSYS4, USB1000, AXE_FLAG_178),
 	AXE_DEV(LOGITEC, LAN_GTJU2A, AXE_FLAG_178),
@@ -1114,7 +1115,7 @@ axe_rxeof(struct usb_ether *ue, struct usb_page_cache *pc, unsigned int offset,
 		return (EINVAL);
 	}
 
-	m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+	m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 	if (m == NULL) {
 		ifp->if_iqdrops++;
 		return (ENOMEM);
@@ -1354,15 +1355,14 @@ axe_init(struct usb_ether *ue)
 
 	if (AXE_IS_178_FAMILY(sc)) {
 		sc->sc_flags &= ~(AXE_FLAG_STD_FRAME | AXE_FLAG_CSUM_FRAME);
-		if ((sc->sc_flags & AXE_FLAG_772B) != 0)
-			sc->sc_lenmask = AXE_CSUM_HDR_LEN_MASK;
-		else
-			sc->sc_lenmask = AXE_HDR_LEN_MASK;
 		if ((sc->sc_flags & AXE_FLAG_772B) != 0 &&
-		    (ifp->if_capenable & IFCAP_RXCSUM) != 0)
+		    (ifp->if_capenable & IFCAP_RXCSUM) != 0) {
+			sc->sc_lenmask = AXE_CSUM_HDR_LEN_MASK;
 			sc->sc_flags |= AXE_FLAG_CSUM_FRAME;
-		else
+		} else {
+			sc->sc_lenmask = AXE_HDR_LEN_MASK;
 			sc->sc_flags |= AXE_FLAG_STD_FRAME;
+		}
 	}
 
 	/* Configure TX/RX checksum offloading. */

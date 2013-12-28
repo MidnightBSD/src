@@ -82,7 +82,7 @@ __MBSDID("$MidnightBSD$");
 
 #ifdef	RUN_DEBUG
 int run_debug = 0;
-SYSCTL_NODE(_hw_usb, OID_AUTO, run, CTLFLAG_RW, 0, "USB run");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, run, CTLFLAG_RW, 0, "USB run");
 SYSCTL_INT(_hw_usb_run, OID_AUTO, debug, CTLFLAG_RW, &run_debug, 0,
     "run debug level");
 #endif
@@ -136,6 +136,7 @@ static const STRUCT_USB_HOST_ID run_devs[] = {
     RUN_DEV(ASUS,		RT2870_5),
     RUN_DEV(ASUS,		USBN13),
     RUN_DEV(ASUS,		RT3070_1),
+    RUN_DEV(ASUS,		USB_N53),
     RUN_DEV(ASUS2,		USBN11),
     RUN_DEV(AZUREWAVE,		RT2870_1),
     RUN_DEV(AZUREWAVE,		RT2870_2),
@@ -209,6 +210,8 @@ static const STRUCT_USB_HOST_ID run_devs[] = {
     RUN_DEV(LOGITEC,		RT2870_2),
     RUN_DEV(LOGITEC,		RT2870_3),
     RUN_DEV(LOGITEC,		LANW300NU2),
+    RUN_DEV(LOGITEC,		LANW150NU2),
+    RUN_DEV(LOGITEC,		LANW300NU2S),
     RUN_DEV(MELCO,		RT2870_1),
     RUN_DEV(MELCO,		RT2870_2),
     RUN_DEV(MELCO,		WLIUCAG300N),
@@ -216,6 +219,7 @@ static const STRUCT_USB_HOST_ID run_devs[] = {
     RUN_DEV(MELCO,		WLIUCG301N),
     RUN_DEV(MELCO,		WLIUCGN),
     RUN_DEV(MELCO,		WLIUCGNM),
+    RUN_DEV(MELCO,		WLIUCGNM2),
     RUN_DEV(MOTOROLA4,		RT2770),
     RUN_DEV(MOTOROLA4,		RT3070),
     RUN_DEV(MSI,		RT3070_1),
@@ -2016,7 +2020,8 @@ run_key_set_cb(void *arg)
 		wcid = 0;	/* NB: update WCID0 for group keys */
 		base = RT2860_SKEY(RUN_VAP(vap)->rvp_id, k->wk_keyix);
 	} else {
-		wcid = RUN_AID2WCID(associd);
+		wcid = (vap->iv_opmode == IEEE80211_M_STA) ?
+		    1 : RUN_AID2WCID(associd);
 		base = RT2860_PKEY(wcid);
 	}
 
@@ -2371,8 +2376,11 @@ run_newassoc(struct ieee80211_node *ni, int isnew)
 	struct run_softc *sc = ic->ic_ifp->if_softc;
 	uint8_t rate;
 	uint8_t ridx;
-	uint8_t wcid = RUN_AID2WCID(ni->ni_associd);
+	uint8_t wcid;
 	int i, j;
+
+	wcid = (vap->iv_opmode == IEEE80211_M_STA) ?
+	    1 : RUN_AID2WCID(ni->ni_associd);
 
 	if (wcid > RT2870_WCID_MAX) {
 		device_printf(sc->sc_dev, "wcid=%d out of range\n", wcid);
@@ -2592,7 +2600,7 @@ run_bulk_rx_callback(struct usb_xfer *xfer, usb_error_t error)
 	case USB_ST_SETUP:
 tr_setup:
 		if (sc->rx_m == NULL) {
-			sc->rx_m = m_getjcl(M_DONTWAIT, MT_DATA, M_PKTHDR,
+			sc->rx_m = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR,
 			    MJUMPAGESIZE /* xfer can be bigger than MCLBYTES */);
 		}
 		if (sc->rx_m == NULL) {
@@ -2666,7 +2674,7 @@ tr_setup:
 		}
 
 		/* copy aggregated frames to another mbuf */
-		m0 = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+		m0 = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 		if (__predict_false(m0 == NULL)) {
 			DPRINTF("could not allocate mbuf\n");
 			ifp->if_ierrors++;
@@ -3041,8 +3049,12 @@ run_tx(struct run_softc *sc, struct mbuf *m, struct ieee80211_node *ni)
 	txd->flags = qflags;
 	txwi = (struct rt2860_txwi *)(txd + 1);
 	txwi->xflags = xflags;
-	txwi->wcid = IEEE80211_IS_MULTICAST(wh->i_addr1) ?
-	    0 : RUN_AID2WCID(ni->ni_associd);
+	if (IEEE80211_IS_MULTICAST(wh->i_addr1)) {
+		txwi->wcid = 0;
+	} else {
+		txwi->wcid = (vap->iv_opmode == IEEE80211_M_STA) ?
+		    1 : RUN_AID2WCID(ni->ni_associd);
+	}
 	/* clear leftover garbage bits */
 	txwi->flags = 0;
 	txwi->txop = 0;

@@ -78,7 +78,7 @@ __MBSDID("$MidnightBSD$");
 #ifdef USB_DEBUG
 static int uhid_debug = 0;
 
-SYSCTL_NODE(_hw_usb, OID_AUTO, uhid, CTLFLAG_RW, 0, "USB uhid");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, uhid, CTLFLAG_RW, 0, "USB uhid");
 SYSCTL_INT(_hw_usb_uhid, OID_AUTO, debug, CTLFLAG_RW,
     &uhid_debug, 0, "Debug level");
 #endif
@@ -691,10 +691,11 @@ uhid_probe(device_t dev)
 	 */
 	if ((uaa->info.bInterfaceClass == UICLASS_HID) &&
 	    (uaa->info.bInterfaceSubClass == UISUBCLASS_BOOT) &&
-	    ((uaa->info.bInterfaceProtocol == UIPROTO_BOOT_KEYBOARD) ||
-	     (uaa->info.bInterfaceProtocol == UIPROTO_MOUSE))) {
+	    (((uaa->info.bInterfaceProtocol == UIPROTO_BOOT_KEYBOARD) &&
+	      !usb_test_quirk(uaa, UQ_KBD_IGNORE)) ||
+	     ((uaa->info.bInterfaceProtocol == UIPROTO_MOUSE) &&
+	      !usb_test_quirk(uaa, UQ_UMS_IGNORE))))
 		return (ENXIO);
-	}
 
 	return (BUS_PROBE_GENERIC);
 }
