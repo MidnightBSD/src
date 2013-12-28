@@ -73,21 +73,13 @@ SYSCTL_INT(_hw_usb, OID_AUTO, no_cs_fail, CTLFLAG_RW,
     &usb_no_cs_fail, 0, "USB clear stall failures are ignored, if set");
 
 #ifdef USB_DEBUG
-static int usb_pr_poll_delay = USB_PORT_RESET_DELAY;
-static int usb_pr_recovery_delay = USB_PORT_RESET_RECOVERY;
-
-SYSCTL_INT(_hw_usb, OID_AUTO, pr_poll_delay, CTLFLAG_RW,
-    &usb_pr_poll_delay, 0, "USB port reset poll delay in ms");
-SYSCTL_INT(_hw_usb, OID_AUTO, pr_recovery_delay, CTLFLAG_RW,
-    &usb_pr_recovery_delay, 0, "USB port reset recovery delay in ms");
-
 #ifdef USB_REQ_DEBUG
 /* The following structures are used in connection to fault injection. */
 struct usb_ctrl_debug {
 	int bus_index;		/* target bus */
 	int dev_index;		/* target address */
 	int ds_fail;		/* fail data stage */
-	int ss_fail;		/* fail data stage */
+	int ss_fail;		/* fail status stage */
 	int ds_delay;		/* data stage delay in ms */
 	int ss_delay;		/* status stage delay in ms */
 	int bmRequestType_value;
@@ -390,9 +382,8 @@ usbd_get_hr_func(struct usb_device *udev)
  * than 30 seconds is treated like a 30 second timeout. This USB stack
  * does not allow control requests without a timeout.
  *
- * NOTE: This function is thread safe. All calls to
- * "usbd_do_request_flags" will be serialised by the use of an
- * internal "sx_lock".
+ * NOTE: This function is thread safe. All calls to "usbd_do_request_flags"
+ * will be serialized by the use of the USB device enumeration lock.
  *
  * Returns:
  *    0: Success
@@ -416,7 +407,7 @@ usbd_do_request_flags(struct usb_device *udev, struct mtx *mtx,
 	uint16_t length;
 	uint16_t temp;
 	uint16_t acttemp;
-	uint8_t enum_locked;
+	uint8_t do_unlock;
 
 	if (timeout < 50) {
 		/* timeout is too small */
@@ -427,8 +418,6 @@ usbd_do_request_flags(struct usb_device *udev, struct mtx *mtx,
 		timeout = 30000;
 	}
 	length = UGETW(req->wLength);
-
-	enum_locked = usbd_enum_is_locked(udev);
 
 	DPRINTFN(5, "udev=%p bmRequestType=0x%02x bRequest=0x%02x "
 	    "wValue=0x%02x%02x wIndex=0x%02x%02x wLength=0x%02x%02x\n",
@@ -460,17 +449,16 @@ usbd_do_request_flags(struct usb_device *udev, struct mtx *mtx,
 	}
 
 	/*
+	 * Grab the USB device enumeration SX-lock serialization is
+	 * achieved when multiple threads are involved:
+	 */
+	do_unlock = usbd_enum_lock(udev);
+
+	/*
 	 * We need to allow suspend and resume at this point, else the
 	 * control transfer will timeout if the device is suspended!
 	 */
-	if (enum_locked)
-		usbd_sr_unlock(udev);
-
-	/*
-	 * Grab the default sx-lock so that serialisation
-	 * is achieved when multiple threads are involved:
-	 */
-	sx_xlock(&udev->ctrl_sx);
+	usbd_sr_unlock(udev);
 
 	hr_func = usbd_get_hr_func(udev);
 
@@ -714,10 +702,10 @@ usbd_do_request_flags(struct usb_device *udev, struct mtx *mtx,
 	USB_XFER_UNLOCK(xfer);
 
 done:
-	sx_xunlock(&udev->ctrl_sx);
+	usbd_sr_lock(udev);
 
-	if (enum_locked)
-		usbd_sr_lock(udev);
+	if (do_unlock)
+		usbd_enum_unlock(udev);
 
 	if ((mtx != NULL) && (mtx != &Giant))
 		mtx_lock(mtx);
@@ -788,12 +776,6 @@ usbd_req_reset_port(struct usb_device *udev, struct mtx *mtx, uint8_t port)
 	uint16_t status;
 	uint16_t change;
 
-#ifdef USB_DEBUG
-	uint16_t pr_poll_delay;
-	uint16_t pr_recovery_delay;
-
-#endif
-
 	DPRINTF("\n");
 
 	/* clear any leftover port reset changes first */
@@ -808,29 +790,12 @@ usbd_req_reset_port(struct usb_device *udev, struct mtx *mtx, uint8_t port)
 	if (err)
 		goto done;
 #ifdef USB_DEBUG
-	/* range check input parameters */
-	pr_poll_delay = usb_pr_poll_delay;
-	if (pr_poll_delay < 1) {
-		pr_poll_delay = 1;
-	} else if (pr_poll_delay > 1000) {
-		pr_poll_delay = 1000;
-	}
-	pr_recovery_delay = usb_pr_recovery_delay;
-	if (pr_recovery_delay > 1000) {
-		pr_recovery_delay = 1000;
-	}
 #endif
 	n = 0;
 	while (1) {
-#ifdef USB_DEBUG
 		/* wait for the device to recover from reset */
-		usb_pause_mtx(mtx, USB_MS_TO_TICKS(pr_poll_delay));
-		n += pr_poll_delay;
-#else
-		/* wait for the device to recover from reset */
-		usb_pause_mtx(mtx, USB_MS_TO_TICKS(USB_PORT_RESET_DELAY));
-		n += USB_PORT_RESET_DELAY;
-#endif
+		usb_pause_mtx(mtx, USB_MS_TO_TICKS(usb_port_reset_delay));
+		n += usb_port_reset_delay;
 		err = usbd_req_get_port_status(udev, mtx, &ps, port);
 		if (err)
 			goto done;
@@ -872,13 +837,8 @@ usbd_req_reset_port(struct usb_device *udev, struct mtx *mtx, uint8_t port)
 		err = USB_ERR_TIMEOUT;
 		goto done;
 	}
-#ifdef USB_DEBUG
 	/* wait for the device to recover from reset */
-	usb_pause_mtx(mtx, USB_MS_TO_TICKS(pr_recovery_delay));
-#else
-	/* wait for the device to recover from reset */
-	usb_pause_mtx(mtx, USB_MS_TO_TICKS(USB_PORT_RESET_RECOVERY));
-#endif
+	usb_pause_mtx(mtx, USB_MS_TO_TICKS(usb_port_reset_recovery));
 
 done:
 	DPRINTFN(2, "port %d reset returning error=%s\n",
@@ -909,12 +869,6 @@ usbd_req_warm_reset_port(struct usb_device *udev, struct mtx *mtx,
 	uint16_t status;
 	uint16_t change;
 
-#ifdef USB_DEBUG
-	uint16_t pr_poll_delay;
-	uint16_t pr_recovery_delay;
-
-#endif
-
 	DPRINTF("\n");
 
 	err = usbd_req_get_port_status(udev, mtx, &ps, port);
@@ -944,30 +898,11 @@ usbd_req_warm_reset_port(struct usb_device *udev, struct mtx *mtx,
 	if (err)
 		goto done;
 
-#ifdef USB_DEBUG
-	/* range check input parameters */
-	pr_poll_delay = usb_pr_poll_delay;
-	if (pr_poll_delay < 1) {
-		pr_poll_delay = 1;
-	} else if (pr_poll_delay > 1000) {
-		pr_poll_delay = 1000;
-	}
-	pr_recovery_delay = usb_pr_recovery_delay;
-	if (pr_recovery_delay > 1000) {
-		pr_recovery_delay = 1000;
-	}
-#endif
 	n = 0;
 	while (1) {
-#ifdef USB_DEBUG
 		/* wait for the device to recover from reset */
-		usb_pause_mtx(mtx, USB_MS_TO_TICKS(pr_poll_delay));
-		n += pr_poll_delay;
-#else
-		/* wait for the device to recover from reset */
-		usb_pause_mtx(mtx, USB_MS_TO_TICKS(USB_PORT_RESET_DELAY));
-		n += USB_PORT_RESET_DELAY;
-#endif
+		usb_pause_mtx(mtx, USB_MS_TO_TICKS(usb_port_reset_delay));
+		n += usb_port_reset_delay;
 		err = usbd_req_get_port_status(udev, mtx, &ps, port);
 		if (err)
 			goto done;
@@ -1001,13 +936,8 @@ usbd_req_warm_reset_port(struct usb_device *udev, struct mtx *mtx,
 		err = USB_ERR_TIMEOUT;
 		goto done;
 	}
-#ifdef USB_DEBUG
 	/* wait for the device to recover from reset */
-	usb_pause_mtx(mtx, USB_MS_TO_TICKS(pr_recovery_delay));
-#else
-	/* wait for the device to recover from reset */
-	usb_pause_mtx(mtx, USB_MS_TO_TICKS(USB_PORT_RESET_RECOVERY));
-#endif
+	usb_pause_mtx(mtx, USB_MS_TO_TICKS(usb_port_reset_recovery));
 
 done:
 	DPRINTFN(2, "port %d warm reset returning error=%s\n",
@@ -1566,7 +1496,7 @@ usbd_req_set_address(struct usb_device *udev, struct mtx *mtx, uint16_t addr)
 done:
 	/* allow device time to set new address */
 	usb_pause_mtx(mtx,
-	    USB_MS_TO_TICKS(USB_SET_ADDRESS_SETTLE));
+	    USB_MS_TO_TICKS(usb_set_address_settle));
 
 	return (err);
 }
