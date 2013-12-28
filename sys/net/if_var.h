@@ -205,7 +205,11 @@ struct ifnet {
 	 * be used with care where binary compatibility is required.
 	 */
 	char	if_cspare[3];
-	int	if_ispare[4];
+	u_int	if_hw_tsomax;		/* tso burst length limit, the minmum
+					 * is (IP_MAXPACKET / 8).
+					 * XXXAO: Have to find a better place
+					 * for it eventually. */
+	int	if_ispare[3];
 	void	*if_pspare[8];		/* 1 netmap, 7 TDB */
 };
 
@@ -419,6 +423,8 @@ EVENTHANDLER_DECLARE(group_change_event, group_change_event_handler_t);
 #define	IF_AFDATA_DESTROY(ifp)	rw_destroy(&(ifp)->if_afdata_lock)
 
 #define	IF_AFDATA_LOCK_ASSERT(ifp)	rw_assert(&(ifp)->if_afdata_lock, RA_LOCKED)
+#define	IF_AFDATA_RLOCK_ASSERT(ifp)	rw_assert(&(ifp)->if_afdata_lock, RA_RLOCKED)
+#define	IF_AFDATA_WLOCK_ASSERT(ifp)	rw_assert(&(ifp)->if_afdata_lock, RA_WLOCKED)
 #define	IF_AFDATA_UNLOCK_ASSERT(ifp)	rw_assert(&(ifp)->if_afdata_lock, RA_UNLOCKED)
 
 int	if_handoff(struct ifqueue *ifq, struct mbuf *m, struct ifnet *ifp,
@@ -587,22 +593,10 @@ do {									\
 } while (0)
 
 #ifdef _KERNEL
-static __inline void
-drbr_stats_update(struct ifnet *ifp, int len, int mflags)
-{
-#ifndef NO_SLOW_STATS
-	ifp->if_obytes += len;
-	if (mflags & M_MCAST)
-		ifp->if_omcasts++;
-#endif
-}
-
 static __inline int
 drbr_enqueue(struct ifnet *ifp, struct buf_ring *br, struct mbuf *m)
 {	
 	int error = 0;
-	int len = m->m_pkthdr.len;
-	int mflags = m->m_flags;
 
 #ifdef ALTQ
 	if (ALTQ_IS_ENABLED(&ifp->if_snd)) {
@@ -610,13 +604,50 @@ drbr_enqueue(struct ifnet *ifp, struct buf_ring *br, struct mbuf *m)
 		return (error);
 	}
 #endif
-	if ((error = buf_ring_enqueue_bytes(br, m, len)) == ENOBUFS) {
-		br->br_drops++;
+	error = buf_ring_enqueue(br, m);
+	if (error)
 		m_freem(m);
-	} else
-		drbr_stats_update(ifp, len, mflags);
-	
+
 	return (error);
+}
+
+static __inline void
+drbr_putback(struct ifnet *ifp, struct buf_ring *br, struct mbuf *new)
+{
+	/*
+	 * The top of the list needs to be swapped 
+	 * for this one.
+	 */
+#ifdef ALTQ
+	if (ifp != NULL && ALTQ_IS_ENABLED(&ifp->if_snd)) {
+		/* 
+		 * Peek in altq case dequeued it
+		 * so put it back.
+		 */
+		IFQ_DRV_PREPEND(&ifp->if_snd, new);
+		return;
+	}
+#endif
+	buf_ring_putback_sc(br, new);
+}
+
+static __inline struct mbuf *
+drbr_peek(struct ifnet *ifp, struct buf_ring *br)
+{
+#ifdef ALTQ
+	struct mbuf *m;
+	if (ifp != NULL && ALTQ_IS_ENABLED(&ifp->if_snd)) {
+		/* 
+		 * Pull it off like a dequeue
+		 * since drbr_advance() does nothing
+		 * for altq and drbr_putback() will
+		 * use the old prepend function.
+		 */
+		IFQ_DEQUEUE(&ifp->if_snd, m);
+		return (m);
+	}
+#endif
+	return(buf_ring_peek(br));
 }
 
 static __inline void
@@ -646,13 +677,25 @@ drbr_dequeue(struct ifnet *ifp, struct buf_ring *br)
 #ifdef ALTQ
 	struct mbuf *m;
 
-	if (ALTQ_IS_ENABLED(&ifp->if_snd)) {	
+	if (ifp != NULL && ALTQ_IS_ENABLED(&ifp->if_snd)) {	
 		IFQ_DEQUEUE(&ifp->if_snd, m);
 		return (m);
 	}
 #endif
 	return (buf_ring_dequeue_sc(br));
 }
+
+static __inline void
+drbr_advance(struct ifnet *ifp, struct buf_ring *br)
+{
+#ifdef ALTQ
+	/* Nothing to do here since peek dequeues in altq case */
+	if (ifp != NULL && ALTQ_IS_ENABLED(&ifp->if_snd))
+		return;
+#endif
+	return (buf_ring_advance_sc(br));
+}
+
 
 static __inline struct mbuf *
 drbr_dequeue_cond(struct ifnet *ifp, struct buf_ring *br,
@@ -715,6 +758,8 @@ drbr_inuse(struct ifnet *ifp, struct buf_ring *br)
  */
 #define	IF_MINMTU	72
 #define	IF_MAXMTU	65535
+
+#define	TOEDEV(ifp)	((ifp)->if_llsoftc)
 
 #endif /* _KERNEL */
 
