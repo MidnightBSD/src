@@ -1,9 +1,11 @@
-# $MidnightBSD: src/sys/modules/igb/Makefile,v 1.2 2012/06/30 03:05:28 laffer1 Exp $
+# $MidnightBSD$
 # $FreeBSD: src/sys/modules/igb/Makefile,v 1.3.2.2.6.1 2010/02/10 00:26:20 kensmith Exp $
+
+.include <bsd.own.mk>
 
 .PATH:  ${.CURDIR}/../../dev/e1000
 KMOD    = if_igb
-SRCS    = device_if.h bus_if.h pci_if.h opt_inet.h
+SRCS    = device_if.h bus_if.h pci_if.h opt_inet.h opt_inet6.h
 SRCS    += if_igb.c $(SHARED_SRCS)
 SHARED_SRCS = e1000_api.c e1000_phy.c e1000_nvm.c e1000_mac.c e1000_manage.c
 SHARED_SRCS += e1000_80003es2lan.c e1000_82542.c e1000_82541.c e1000_82543.c
@@ -15,5 +17,17 @@ CFLAGS += -I${.CURDIR}/../../dev/e1000 -DSMP
 # DEVICE_POLLING gives you non-interrupt handling
 # not advisable since MSIX gives better results
 #CFLAGS  += -DDEVICE_POLLING
+
+.if !defined(KERNBUILDDIR)
+.if ${MK_INET_SUPPORT} != "no"
+opt_inet.h:
+	@echo "#define INET 1" > ${.TARGET}
+.endif
+
+.if ${MK_INET6_SUPPORT} != "no"
+opt_inet6.h:
+	@echo "#define INET6 1" > ${.TARGET}
+.endif
+.endif
 
 .include <bsd.kmod.mk>
