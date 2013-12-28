@@ -79,14 +79,14 @@ static void	usb_attach_sub(device_t, struct usb_bus *);
 #ifdef USB_DEBUG
 static int usb_ctrl_debug = 0;
 
-SYSCTL_NODE(_hw_usb, OID_AUTO, ctrl, CTLFLAG_RW, 0, "USB controller");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, ctrl, CTLFLAG_RW, 0, "USB controller");
 SYSCTL_INT(_hw_usb_ctrl, OID_AUTO, debug, CTLFLAG_RW, &usb_ctrl_debug, 0,
     "Debug level");
 #endif
 
 static int usb_no_boot_wait = 0;
 TUNABLE_INT("hw.usb.no_boot_wait", &usb_no_boot_wait);
-SYSCTL_INT(_hw_usb, OID_AUTO, no_boot_wait, CTLFLAG_RDTUN, &usb_no_boot_wait, 0,
+SYSCTL_INT(_hw_usb, OID_AUTO, no_boot_wait, CTLFLAG_RD|CTLFLAG_TUN, &usb_no_boot_wait, 0,
     "No USB device enumerate waiting at boot.");
 
 static int usb_no_suspend_wait = 0;
@@ -407,6 +407,7 @@ usb_bus_suspend(struct usb_proc_msg *pm)
 	struct usb_bus *bus;
 	struct usb_device *udev;
 	usb_error_t err;
+	uint8_t do_unlock;
 
 	bus = ((struct usb_bus_msg *)pm)->bus;
 	udev = bus->devices[USB_ROOT_HUB_ADDR];
@@ -427,7 +428,7 @@ usb_bus_suspend(struct usb_proc_msg *pm)
 
 	bus_generic_shutdown(bus->bdev);
 
-	usbd_enum_lock(udev);
+	do_unlock = usbd_enum_lock(udev);
 
 	err = usbd_set_config_index(udev, USB_UNCONFIG_INDEX);
 	if (err)
@@ -444,7 +445,8 @@ usb_bus_suspend(struct usb_proc_msg *pm)
 	if (bus->methods->set_hw_power_sleep != NULL)
 		(bus->methods->set_hw_power_sleep) (bus, USB_HW_POWER_SUSPEND);
 
-	usbd_enum_unlock(udev);
+	if (do_unlock)
+		usbd_enum_unlock(udev);
 
 	USB_BUS_LOCK(bus);
 }
@@ -460,6 +462,7 @@ usb_bus_resume(struct usb_proc_msg *pm)
 	struct usb_bus *bus;
 	struct usb_device *udev;
 	usb_error_t err;
+	uint8_t do_unlock;
 
 	bus = ((struct usb_bus_msg *)pm)->bus;
 	udev = bus->devices[USB_ROOT_HUB_ADDR];
@@ -469,7 +472,7 @@ usb_bus_resume(struct usb_proc_msg *pm)
 
 	USB_BUS_UNLOCK(bus);
 
-	usbd_enum_lock(udev);
+	do_unlock = usbd_enum_lock(udev);
 #if 0
 	DEVMETHOD(usb_take_controller, NULL);	/* dummy */
 #endif
@@ -503,7 +506,8 @@ usb_bus_resume(struct usb_proc_msg *pm)
 		    "attach root HUB\n");
 	}
 
-	usbd_enum_unlock(udev);
+	if (do_unlock)
+		usbd_enum_unlock(udev);
 
 	USB_BUS_LOCK(bus);
 }
@@ -519,6 +523,7 @@ usb_bus_shutdown(struct usb_proc_msg *pm)
 	struct usb_bus *bus;
 	struct usb_device *udev;
 	usb_error_t err;
+	uint8_t do_unlock;
 
 	bus = ((struct usb_bus_msg *)pm)->bus;
 	udev = bus->devices[USB_ROOT_HUB_ADDR];
@@ -530,7 +535,7 @@ usb_bus_shutdown(struct usb_proc_msg *pm)
 
 	bus_generic_shutdown(bus->bdev);
 
-	usbd_enum_lock(udev);
+	do_unlock = usbd_enum_lock(udev);
 
 	err = usbd_set_config_index(udev, USB_UNCONFIG_INDEX);
 	if (err)
@@ -547,7 +552,8 @@ usb_bus_shutdown(struct usb_proc_msg *pm)
 	if (bus->methods->set_hw_power_sleep != NULL)
 		(bus->methods->set_hw_power_sleep) (bus, USB_HW_POWER_SHUTDOWN);
 
-	usbd_enum_unlock(udev);
+	if (do_unlock)
+		usbd_enum_unlock(udev);
 
 	USB_BUS_LOCK(bus);
 }
@@ -870,4 +876,29 @@ usb_bus_mem_free_all(struct usb_bus *bus, usb_bus_mem_cb_t *cb)
 #endif
 
 	mtx_destroy(&bus->bus_mtx);
+}
+
+/* convenience wrappers */
+void
+usb_proc_explore_mwait(struct usb_device *udev, void *pm1, void *pm2)
+{
+	usb_proc_mwait(&udev->bus->explore_proc, pm1, pm2);
+}
+
+void	*
+usb_proc_explore_msignal(struct usb_device *udev, void *pm1, void *pm2)
+{
+	return (usb_proc_msignal(&udev->bus->explore_proc, pm1, pm2));
+}
+
+void
+usb_proc_explore_lock(struct usb_device *udev)
+{
+	USB_BUS_LOCK(udev->bus);
+}
+
+void
+usb_proc_explore_unlock(struct usb_device *udev)
+{
+	USB_BUS_UNLOCK(udev->bus);
 }

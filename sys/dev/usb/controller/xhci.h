@@ -385,7 +385,7 @@ struct xhci_hw_dev {
 	uint8_t			state;
 	uint8_t			nports;
 	uint8_t			tt;
-	uint8_t			reserved;
+	uint8_t			context_num;
 };
 
 struct xhci_hw_softc {
@@ -436,6 +436,7 @@ struct xhci_softc {
 
 	struct usb_device	*sc_devices[XHCI_MAX_DEVICES];
 	struct resource		*sc_io_res;
+	int			sc_irq_rid;
 	struct resource		*sc_irq_res;
 
 	void			*sc_intr_hdl;
@@ -490,6 +491,7 @@ struct xhci_softc {
 
 /* prototypes */
 
+uint32_t	xhci_get_port_route(void);
 usb_error_t xhci_halt_controller(struct xhci_softc *);
 usb_error_t xhci_init(struct xhci_softc *, device_t);
 usb_error_t xhci_start_controller(struct xhci_softc *);
