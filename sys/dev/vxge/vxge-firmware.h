@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright(c) 2002-2011 Exar Corp.
  * All rights reserved.
@@ -28,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$MidnightBSD$*/
+/*$FreeBSD: release/9.2.0/sys/dev/vxge/vxge-firmware.h 221167 2011-04-28 14:33:15Z gnn $*/
 unsigned char X3fw_ncf[] = {
 	0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x01, 0x00, 0x08, 0x00, 0xf7, 0x89,
 	0x59, 0x3d, 0xec, 0x91, 0x1c, 0xcd, 0x21, 0x00, 0x00, 0x00, 0x13, 0x00,

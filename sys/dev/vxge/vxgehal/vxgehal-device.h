@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright(c) 2002-2011 Exar Corp.
  * All rights reserved.
@@ -28,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$MidnightBSD$*/
+/*$FreeBSD: release/9.2.0/sys/dev/vxge/vxgehal/vxgehal-device.h 221167 2011-04-28 14:33:15Z gnn $*/
 
 #ifndef	VXGE_HAL_DEVICE_H
 #define	VXGE_HAL_DEVICE_H
