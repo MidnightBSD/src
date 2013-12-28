@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2012, Intel Corporation 
@@ -30,7 +31,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$MidnightBSD$*/
+/*$FreeBSD: release/9.2.0/sys/dev/ixgbe/ixgbe_mbx.c 235528 2012-05-17 00:06:54Z jfv $*/
 
 #include "ixgbe_type.h"
 #include "ixgbe_mbx.h"

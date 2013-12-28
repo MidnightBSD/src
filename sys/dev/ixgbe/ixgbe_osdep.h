@@ -1,6 +1,7 @@
+/* $MidnightBSD$ */
 /******************************************************************************
 
-  Copyright (c) 2001-2012, Intel Corporation 
+  Copyright (c) 2001-2013, Intel Corporation 
   All rights reserved.
   
   Redistribution and use in source and binary forms, with or without 
@@ -30,7 +31,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$MidnightBSD$*/
+/*$FreeBSD: release/9.2.0/sys/dev/ixgbe/ixgbe_osdep.h 252898 2013-07-06 21:38:55Z jfv $*/
 
 #ifndef _IXGBE_OS_H_
 #define _IXGBE_OS_H_
@@ -69,14 +70,26 @@
 	#define DEBUGOUT1(S,A)      printf(S "\n",A)
 	#define DEBUGOUT2(S,A,B)    printf(S "\n",A,B)
 	#define DEBUGOUT3(S,A,B,C)  printf(S "\n",A,B,C)
+	#define DEBUGOUT4(S,A,B,C,D)  printf(S "\n",A,B,C,D)
+	#define DEBUGOUT5(S,A,B,C,D,E)  printf(S "\n",A,B,C,D,E)
+	#define DEBUGOUT6(S,A,B,C,D,E,F)  printf(S "\n",A,B,C,D,E,F)
 	#define DEBUGOUT7(S,A,B,C,D,E,F,G)  printf(S "\n",A,B,C,D,E,F,G)
+	#define ERROR_REPORT1(S,A)      printf(S "\n",A)
+	#define ERROR_REPORT2(S,A,B)    printf(S "\n",A,B)
+	#define ERROR_REPORT3(S,A,B,C)  printf(S "\n",A,B,C)
 #else
 	#define DEBUGOUT(S)
 	#define DEBUGOUT1(S,A)
 	#define DEBUGOUT2(S,A,B)
 	#define DEBUGOUT3(S,A,B,C)
+	#define DEBUGOUT4(S,A,B,C,D)
+	#define DEBUGOUT5(S,A,B,C,D,E)
 	#define DEBUGOUT6(S,A,B,C,D,E,F)
 	#define DEBUGOUT7(S,A,B,C,D,E,F,G)
+
+	#define ERROR_REPORT1(S,A)
+	#define ERROR_REPORT2(S,A,B)
+	#define ERROR_REPORT3(S,A,B,C)
 #endif
 
 #define FALSE               0
@@ -85,6 +98,9 @@
 #define true                1
 #define CMD_MEM_WRT_INVALIDATE          0x0010  /* BIT_4 */
 #define PCI_COMMAND_REGISTER            PCIR_COMMAND
+
+/* Shared code dropped this define.. */
+#define IXGBE_INTEL_VENDOR_ID		0x8086
 
 /* Bunch of defines for shared code bogosity */
 #define UNREFERENCED_PARAMETER(_p)
@@ -104,6 +120,7 @@
 typedef uint8_t		u8;
 typedef int8_t		s8;
 typedef uint16_t	u16;
+typedef int16_t		s16;
 typedef uint32_t	u32;
 typedef int32_t		s32;
 typedef uint64_t	u64;
@@ -142,6 +159,25 @@ void prefetch(void *x)
 #else
 #define prefetch(x)
 #endif
+
+/*
+ * Optimized bcopy thanks to Luigi Rizzo's investigative work.  Assumes
+ * non-overlapping regions and 32-byte padding on both src and dst.
+ */
+static __inline int
+ixgbe_bcopy(void *_src, void *_dst, int l)
+{
+	uint64_t *src = _src;
+	uint64_t *dst = _dst;
+
+	for (; l > 0; l -= 32) {
+		*dst++ = *src++;
+		*dst++ = *src++;
+		*dst++ = *src++;
+		*dst++ = *src++;
+	}
+	return (0);
+}
 
 struct ixgbe_osdep
 {

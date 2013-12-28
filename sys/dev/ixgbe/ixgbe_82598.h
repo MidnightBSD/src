@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2012, Intel Corporation 
@@ -30,7 +31,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$MidnightBSD$*/
+/*$FreeBSD: release/9.2.0/sys/dev/ixgbe/ixgbe_82598.h 246069 2013-01-29 13:49:08Z pfg $*/
 
 #ifndef _IXGBE_82598_H_
 #define _IXGBE_82598_H_

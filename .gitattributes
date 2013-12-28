@@ -64806,6 +64806,12 @@ sys/dev/ixgbe/ixgbe_api.c -text
 sys/dev/ixgbe/ixgbe_api.h -text
 sys/dev/ixgbe/ixgbe_common.c -text
 sys/dev/ixgbe/ixgbe_common.h -text
+sys/dev/ixgbe/ixgbe_dcb.c -text
+sys/dev/ixgbe/ixgbe_dcb.h -text
+sys/dev/ixgbe/ixgbe_dcb_82598.c -text
+sys/dev/ixgbe/ixgbe_dcb_82598.h -text
+sys/dev/ixgbe/ixgbe_dcb_82599.c -text
+sys/dev/ixgbe/ixgbe_dcb_82599.h -text
 sys/dev/ixgbe/ixgbe_mbx.c -text
 sys/dev/ixgbe/ixgbe_mbx.h -text
 sys/dev/ixgbe/ixgbe_osdep.h -text

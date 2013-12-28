@@ -1,6 +1,7 @@
+/* $MidnightBSD$ */
 /******************************************************************************
 
-  Copyright (c) 2001-2012, Intel Corporation 
+  Copyright (c) 2001-2013, Intel Corporation 
   All rights reserved.
   
   Redistribution and use in source and binary forms, with or without 
@@ -30,13 +31,10 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$MidnightBSD$*/
+/*$FreeBSD: release/9.2.0/sys/dev/ixgbe/ixv.c 254573 2013-08-20 17:50:30Z jfv $*/
 
-#ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_inet.h"
 #include "opt_inet6.h"
-#endif
-
 #include "ixv.h"
 
 /*********************************************************************
@@ -169,7 +167,7 @@ static device_method_t ixv_methods[] = {
 	DEVMETHOD(device_attach, ixv_attach),
 	DEVMETHOD(device_detach, ixv_detach),
 	DEVMETHOD(device_shutdown, ixv_shutdown),
-	{0, 0}
+	DEVMETHOD_END
 };
 
 static driver_t ixv_driver = {
@@ -298,11 +296,6 @@ ixv_attach(device_t dev)
 	int             error = 0;
 
 	INIT_DEBUGOUT("ixv_attach: begin");
-
-	if (resource_disabled("ixgbe", device_get_unit(dev))) {
-		device_printf(dev, "Disabled by device hint\n");
-		return (ENXIO);
-	}
 
 	/* Allocate, clear, and link in our adapter structure */
 	adapter = device_get_softc(dev);
@@ -624,24 +617,27 @@ ixv_mq_start_locked(struct ifnet *ifp, struct tx_ring *txr, struct mbuf *m)
 		ixv_txeof(txr);
 
 	enqueued = 0;
-	if (m == NULL) {
-		next = drbr_dequeue(ifp, txr->br);
-	} else if (drbr_needs_enqueue(ifp, txr->br)) {
-		if ((err = drbr_enqueue(ifp, txr->br, m)) != 0)
+	if (m != NULL) {
+		err = drbr_enqueue(ifp, txr->br, m);
+		if (err) {
 			return (err);
-		next = drbr_dequeue(ifp, txr->br);
-	} else
-		next = m;
-
+		}
+	}
 	/* Process the queue */
-	while (next != NULL) {
+	while ((next = drbr_peek(ifp, txr->br)) != NULL) {
 		if ((err = ixv_xmit(txr, &next)) != 0) {
-			if (next != NULL)
-				err = drbr_enqueue(ifp, txr->br, next);
+			if (next == NULL) {
+				drbr_advance(ifp, txr->br);
+			} else {
+				drbr_putback(ifp, txr->br, next);
+			}
 			break;
 		}
+		drbr_advance(ifp, txr->br);
 		enqueued++;
-		drbr_stats_update(ifp, next->m_pkthdr.len, next->m_flags);
+		ifp->if_obytes += next->m_pkthdr.len;
+		if (next->m_flags & M_MCAST)
+			ifp->if_omcasts++;
 		/* Send a copy of the frame to the BPF listener */
 		ETHER_BPF_MTAP(ifp, next);
 		if ((ifp->if_drv_flags & IFF_DRV_RUNNING) == 0)
@@ -650,7 +646,6 @@ ixv_mq_start_locked(struct ifnet *ifp, struct tx_ring *txr, struct mbuf *m)
 			ifp->if_drv_flags |= IFF_DRV_OACTIVE;
 			break;
 		}
-		next = drbr_dequeue(ifp, txr->br);
 	}
 
 	if (enqueued > 0) {
@@ -1238,7 +1233,7 @@ ixv_xmit(struct tx_ring *txr, struct mbuf **m_headp)
 	if (error == EFBIG) {
 		struct mbuf *m;
 
-		m = m_defrag(*m_headp, M_DONTWAIT);
+		m = m_defrag(*m_headp, M_NOWAIT);
 		if (m == NULL) {
 			adapter->mbuf_defrag_failed++;
 			m_freem(*m_headp);
@@ -1567,14 +1562,8 @@ ixv_identify_hardware(struct adapter *adapter)
 	** Make sure BUSMASTER is set, on a VM under
 	** KVM it may not be and will break things.
 	*/
+	pci_enable_busmaster(dev);
 	pci_cmd_word = pci_read_config(dev, PCIR_COMMAND, 2);
-	if (!((pci_cmd_word & PCIM_CMD_BUSMASTEREN) &&
-	    (pci_cmd_word & PCIM_CMD_MEMEN))) {
-		INIT_DEBUGOUT("Memory Access and/or Bus Master "
-		    "bits were not set!\n");
-		pci_cmd_word |= (PCIM_CMD_BUSMASTEREN | PCIM_CMD_MEMEN);
-		pci_write_config(dev, PCIR_COMMAND, pci_cmd_word, 2);
-	}
 
 	/* Save off the information about this board */
 	adapter->hw.vendor_id = pci_get_vendor(dev);
@@ -1692,24 +1681,16 @@ static int
 ixv_setup_msix(struct adapter *adapter)
 {
 	device_t dev = adapter->dev;
-	int rid, vectors, want = 2;
+	int rid, want;
 
 
 	/* First try MSI/X */
 	rid = PCIR_BAR(3);
 	adapter->msix_mem = bus_alloc_resource_any(dev,
 	    SYS_RES_MEMORY, &rid, RF_ACTIVE);
-       	if (!adapter->msix_mem) {
+       	if (adapter->msix_mem == NULL) {
 		device_printf(adapter->dev,
 		    "Unable to map MSIX table \n");
-		goto out;
-	}
-
-	vectors = pci_msix_count(dev); 
-	if (vectors < 2) {
-		bus_release_resource(dev, SYS_RES_MEMORY,
-		    rid, adapter->msix_mem);
-		adapter->msix_mem = NULL;
 		goto out;
 	}
 
@@ -1717,12 +1698,20 @@ ixv_setup_msix(struct adapter *adapter)
 	** Want two vectors: one for a queue,
 	** plus an additional for mailbox.
 	*/
-	if (pci_alloc_msix(dev, &want) == 0) {
+	want = 2;
+	if ((pci_alloc_msix(dev, &want) == 0) && (want == 2)) {
                	device_printf(adapter->dev,
 		    "Using MSIX interrupts with %d vectors\n", want);
 		return (want);
 	}
+	/* Release in case alloc was insufficient */
+	pci_release_msi(dev);
 out:
+       	if (adapter->msix_mem != NULL) {
+		bus_release_resource(dev, SYS_RES_MEMORY,
+		    rid, adapter->msix_mem);
+		adapter->msix_mem = NULL;
+	}
 	device_printf(adapter->dev,"MSIX config error\n");
 	return (ENXIO);
 }
@@ -1893,7 +1882,6 @@ ixv_config_link(struct adapter *adapter)
 {
 	struct ixgbe_hw *hw = &adapter->hw;
 	u32	autoneg, err = 0;
-	bool	negotiate = TRUE;
 
 	if (hw->mac.ops.check_link)
 		err = hw->mac.ops.check_link(hw, &autoneg,
@@ -1902,8 +1890,8 @@ ixv_config_link(struct adapter *adapter)
 		goto out;
 
 	if (hw->mac.ops.setup_link)
-               	err = hw->mac.ops.setup_link(hw, autoneg,
-		    negotiate, adapter->link_up);
+               	err = hw->mac.ops.setup_link(hw,
+		    autoneg, adapter->link_up);
 out:
 	return;
 }
@@ -2726,7 +2714,7 @@ ixv_refresh_mbufs(struct rx_ring *rxr, int limit)
 	while (j != limit) {
 		rxbuf = &rxr->rx_buffers[i];
 		if ((rxbuf->m_head == NULL) && (rxr->hdr_split)) {
-			mh = m_gethdr(M_DONTWAIT, MT_DATA);
+			mh = m_gethdr(M_NOWAIT, MT_DATA);
 			if (mh == NULL)
 				goto update;
 			mh->m_pkthdr.len = mh->m_len = MHLEN;
@@ -2750,7 +2738,7 @@ ixv_refresh_mbufs(struct rx_ring *rxr, int limit)
 		}
 
 		if (rxbuf->m_pack == NULL) {
-			mp = m_getjcl(M_DONTWAIT, MT_DATA,
+			mp = m_getjcl(M_NOWAIT, MT_DATA,
 			    M_PKTHDR, adapter->rx_mbuf_sz);
 			if (mp == NULL)
 				goto update;
