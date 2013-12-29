@@ -296,8 +296,6 @@ p4tcc_set(device_t dev, const struct cf_setting *set)
 	 * what the current mode.
 	 */
 	if (msr & TCC_ENABLE_ONDEMAND)
-		sc->auto_mode = TRUE;
-	else
 		sc->auto_mode = FALSE;
 
 	return (0);
