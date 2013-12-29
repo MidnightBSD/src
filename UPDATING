@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20131228:
+	Imported FreeBSD 9.2 usb stack (plus z87 patches from stable)
+
+	Updated em(4), igb(4) and ixgbe(4)
+
+	MidnightBSD now works with Z87 Intel chipsets.
+
 20131207:
 	Remove sparc64 architecture. It hasn't been working for awhile
 	and it's not useful for desktops anymore.
