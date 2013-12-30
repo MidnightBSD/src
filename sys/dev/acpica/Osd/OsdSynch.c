@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/Osd/OsdSynch.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <contrib/dev/acpica/include/acpi.h>
 #include <contrib/dev/acpica/include/accommon.h>
@@ -45,7 +46,7 @@ __FBSDID("$FreeBSD$");
 #define	_COMPONENT	ACPI_OS_SERVICES
 ACPI_MODULE_NAME("SYNCH")
 
-MALLOC_DEFINE(M_ACPISEM, "acpisem", "ACPI semaphore");
+static MALLOC_DEFINE(M_ACPISEM, "acpisem", "ACPI semaphore");
 
 /*
  * Convert milliseconds to ticks.

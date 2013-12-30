@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Takanori Watanabe <takawata@jp.freebsd.org>
  * Copyright (c) 1999 Mitsuru IWASAKI <iwasaki@FreeBSD.org>
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: release/9.2.0/sys/dev/acpica/acpiio.h 216503 2010-12-17 16:21:30Z avg $
  */
 
 #ifndef _ACPIIO_H_

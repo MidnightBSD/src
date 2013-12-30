@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Mitsuru IWASAKI <iwasaki@jp.freebsd.org>
  * Copyright (c) 2000 Michael Smith <msmith@freebsd.org>
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: release/9.2.0/sys/dev/acpica/acpivar.h 247881 2013-03-06 10:23:56Z avg $
  */
 
 #ifndef _ACPIVAR_H_
@@ -434,6 +435,8 @@ int		acpi_disabled(char *subsys);
 int		acpi_machdep_init(device_t dev);
 void		acpi_install_wakeup_handler(struct acpi_softc *sc);
 int		acpi_sleep_machdep(struct acpi_softc *sc, int state);
+int		acpi_wakeup_machdep(struct acpi_softc *sc, int state,
+		    int sleep_result, int intr_enabled);
 int		acpi_table_quirks(int *quirks);
 int		acpi_machdep_quirks(int *quirks);
 
@@ -476,7 +479,7 @@ ACPI_HANDLE	acpi_GetReference(ACPI_HANDLE scope, ACPI_OBJECT *obj);
 
 /* Default maximum number of tasks to enqueue. */
 #ifndef ACPI_MAX_TASKS
-#define	ACPI_MAX_TASKS		32
+#define	ACPI_MAX_TASKS		MAX(32, MAXCPU * 2)
 #endif
 
 /* Default number of task queue threads to start. */

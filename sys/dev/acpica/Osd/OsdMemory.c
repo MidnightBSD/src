@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Mitsaru Iwasaki
  * Copyright (c) 2000 Michael Smith
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/Osd/OsdMemory.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <contrib/dev/acpica/include/acpi.h>
 
@@ -40,7 +41,7 @@ __FBSDID("$FreeBSD$");
 #include <vm/vm.h>
 #include <vm/pmap.h>
 
-MALLOC_DEFINE(M_ACPICA, "acpica", "ACPI CA memory pool");
+static MALLOC_DEFINE(M_ACPICA, "acpica", "ACPI CA memory pool");
 
 void *
 AcpiOsAllocate(ACPI_SIZE Size)

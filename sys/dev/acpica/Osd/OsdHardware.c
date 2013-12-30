@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000, 2001 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/Osd/OsdHardware.c 213787 2010-10-13 17:06:25Z jkim $");
 
 #include <contrib/dev/acpica/include/acpi.h>
 

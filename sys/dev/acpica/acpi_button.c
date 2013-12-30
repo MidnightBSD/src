@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Mitsaru IWASAKI <iwasaki@jp.freebsd.org>
  * Copyright (c) 2000 Michael Smith <msmith@freebsd.org>
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_button.c 216471 2010-12-15 23:48:45Z jkim $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>

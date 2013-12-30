@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: release/9.2.0/sys/dev/acpica/acpi_pcibvar.h 211430 2010-08-17 15:44:52Z jhb $
  */
 
 #ifndef	_ACPI_PCIBVAR_H_

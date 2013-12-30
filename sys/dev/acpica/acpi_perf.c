@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2005 Nate Lawson (SDG)
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_perf.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -135,7 +136,7 @@ static devclass_t acpi_perf_devclass;
 DRIVER_MODULE(acpi_perf, cpu, acpi_perf_driver, acpi_perf_devclass, 0, 0);
 MODULE_DEPEND(acpi_perf, acpi, 1, 1, 1);
 
-MALLOC_DEFINE(M_ACPIPERF, "acpi_perf", "ACPI Performance states");
+static MALLOC_DEFINE(M_ACPIPERF, "acpi_perf", "ACPI Performance states");
 
 static void
 acpi_perf_identify(driver_t *driver, device_t parent)

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000, 2001 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_thermal.c 248796 2013-03-27 14:23:50Z mav $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -120,6 +121,8 @@ struct acpi_tz_softc {
     int				tz_cooling_updated;
     int				tz_cooling_saved_freq;
 };
+
+#define	TZ_ACTIVE_LEVEL(act)	((act) >= 0 ? (act) : TZ_NUMLEVELS)
 
 #define CPUFREQ_MAX_LEVELS	64 /* XXX cpufreq should export this */
 
@@ -507,15 +510,8 @@ acpi_tz_monitor(void *Context)
      */
     newactive = TZ_ACTIVE_NONE;
     for (i = TZ_NUMLEVELS - 1; i >= 0; i--) {
-	if (sc->tz_zone.ac[i] != -1 && temp >= sc->tz_zone.ac[i]) {
+	if (sc->tz_zone.ac[i] != -1 && temp >= sc->tz_zone.ac[i])
 	    newactive = i;
-	    if (sc->tz_active != newactive) {
-		ACPI_VPRINT(sc->tz_dev,
-			    acpi_device_get_parent_softc(sc->tz_dev),
-			    "_AC%d: temperature %d.%d >= setpoint %d.%d\n", i,
-			    TZ_KELVTOC(temp), TZ_KELVTOC(sc->tz_zone.ac[i]));
-	    }
-	}
     }
 
     /*
@@ -565,18 +561,21 @@ acpi_tz_monitor(void *Context)
     }
 
     if (newactive != sc->tz_active) {
-	/* Turn off the cooling devices that are on, if any are */
-	if (sc->tz_active != TZ_ACTIVE_NONE)
+	/* Turn off unneeded cooling devices that are on, if any are */
+	for (i = TZ_ACTIVE_LEVEL(sc->tz_active);
+	     i < TZ_ACTIVE_LEVEL(newactive); i++) {
 	    acpi_ForeachPackageObject(
-		(ACPI_OBJECT *)sc->tz_zone.al[sc->tz_active].Pointer,
+		(ACPI_OBJECT *)sc->tz_zone.al[i].Pointer,
 		acpi_tz_switch_cooler_off, sc);
-
+	}
 	/* Turn on cooling devices that are required, if any are */
-	if (newactive != TZ_ACTIVE_NONE) {
+	for (i = TZ_ACTIVE_LEVEL(sc->tz_active) - 1;
+	     i >= TZ_ACTIVE_LEVEL(newactive); i--) {
 	    acpi_ForeachPackageObject(
-		(ACPI_OBJECT *)sc->tz_zone.al[newactive].Pointer,
+		(ACPI_OBJECT *)sc->tz_zone.al[i].Pointer,
 		acpi_tz_switch_cooler_on, sc);
 	}
+
 	ACPI_VPRINT(sc->tz_dev, acpi_device_get_parent_softc(sc->tz_dev),
 		    "switched from %s to %s: %d.%dC\n",
 		    acpi_tz_aclevel_string(sc->tz_active),

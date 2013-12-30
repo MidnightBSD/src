@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Michael Smith
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_powerres.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -55,7 +56,7 @@ __FBSDID("$FreeBSD$");
  * on, turned off, etc.
  */
 
-MALLOC_DEFINE(M_ACPIPWR, "acpipwr", "ACPI power resources");
+static MALLOC_DEFINE(M_ACPIPWR, "acpipwr", "ACPI power resources");
 
 /* Hooks for the ACPI CA debugging infrastructure */
 #define _COMPONENT	ACPI_POWERRES
@@ -314,7 +315,6 @@ acpi_pwr_switch_consumer(ACPI_HANDLE consumer, int state)
     ACPI_OBJECT			*reslist_object;
     ACPI_STATUS			status;
     char			*method_name, *reslist_name;
-    int				res_changed;
 
     ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
 
@@ -445,7 +445,7 @@ acpi_pwr_switch_consumer(ACPI_HANDLE consumer, int state)
      * Now we are ready to switch, so kill off any current power
      * resource references.
      */
-    res_changed = acpi_pwr_dereference_resource(pc);
+    acpi_pwr_dereference_resource(pc);
 
     /*
      * Add new power resource references, if we have any.  Traverse the
@@ -457,7 +457,6 @@ acpi_pwr_switch_consumer(ACPI_HANDLE consumer, int state)
 			  reslist_object->Package.Count));
 	acpi_ForeachPackageObject(reslist_object, acpi_pwr_reference_resource,
 				  pc);
-	res_changed = 1;
     }
 
     /*

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_pcib.c 253426 2013-07-17 14:04:18Z jhb $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -132,15 +133,6 @@ acpi_pcib_attach(device_t dev, ACPI_BUFFER *prt, int busno)
     ACPI_STATUS			status;
 
     ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
-
-    /*
-     * Don't attach if we're not really there.
-     *
-     * XXX: This isn't entirely correct since we may be a PCI bus
-     * on a hot-plug docking station, etc.
-     */
-    if (!acpi_DeviceIsPresent(dev))
-	return_VALUE(ENXIO);
 
     /*
      * Get the PCI interrupt routing table for this bus.  If we can't

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Mitsuru IWASAKI <iwasaki@jp.freebsd.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_pci_link.c 251754 2013-06-14 18:30:43Z jhb $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -99,6 +100,7 @@ struct link {
 	uint8_t	l_bios_irq;
 	uint8_t	l_irq;
 	uint8_t	l_initial_irq;
+	UINT32	l_crs_type;
 	int	l_res_index;
 	int	l_num_irqs;
 	int	*l_irqs;
@@ -120,7 +122,7 @@ struct link_res_request {
 	int	link_index;
 };
 
-MALLOC_DEFINE(M_PCI_LINK, "pci_link", "ACPI PCI Link structures");
+static MALLOC_DEFINE(M_PCI_LINK, "pci_link", "ACPI PCI Link structures");
 
 static int pci_link_interrupt_weights[NUM_ACPI_INTERRUPTS];
 static int pci_link_bios_isa_irqs;
@@ -236,6 +238,7 @@ link_add_crs(ACPI_RESOURCE *res, void *context)
 		    ("%s: array boundary violation", __func__));
 		link = &req->sc->pl_links[req->link_index];
 		link->l_res_index = req->res_index;
+		link->l_crs_type = res->Type;
 		req->link_index++;
 		req->res_index++;
 
@@ -364,6 +367,14 @@ link_add_prs(ACPI_RESOURCE *res, void *context)
 					link->l_isa_irq = FALSE;
 			}
 		}
+
+		/*
+		 * If this is not an ISA IRQ but _CRS used a non-extended
+		 * IRQ descriptor, don't use _CRS as a template for _SRS.
+		 */
+		if (!req->sc->pl_crs_bad && !link->l_isa_irq &&
+		    link->l_crs_type == ACPI_RESOURCE_TYPE_IRQ)
+			req->sc->pl_crs_bad = TRUE;
 		break;
 	default:
 		if (req->in_dpf == DPF_IGNORE)

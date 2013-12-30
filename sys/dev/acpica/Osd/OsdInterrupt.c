@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/Osd/OsdInterrupt.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -51,7 +52,7 @@ __FBSDID("$FreeBSD$");
 #define _COMPONENT	ACPI_OS_SERVICES
 ACPI_MODULE_NAME("INTERRUPT")
 
-MALLOC_DEFINE(M_ACPIINTR, "acpiintr", "ACPI interrupt");
+static MALLOC_DEFINE(M_ACPIINTR, "acpiintr", "ACPI interrupt");
 
 struct acpi_intr {
 	SLIST_ENTRY(acpi_intr)	ai_link;

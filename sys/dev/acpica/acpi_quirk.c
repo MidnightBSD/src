@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Nate Lawson (SDG)
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_quirk.c 193530 2009-06-05 18:44:36Z jkim $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

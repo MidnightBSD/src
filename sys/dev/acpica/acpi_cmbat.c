@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Nate Lawson
  * Copyright (c) 2000 Munehiro Matsuda
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_cmbat.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -46,7 +47,8 @@ __FBSDID("$FreeBSD$");
 #include <dev/acpica/acpivar.h>
 #include <dev/acpica/acpiio.h>
 
-MALLOC_DEFINE(M_ACPICMBAT, "acpicmbat", "ACPI control method battery data");
+static MALLOC_DEFINE(M_ACPICMBAT, "acpicmbat",
+    "ACPI control method battery data");
 
 /* Number of times to retry initialization before giving up. */
 #define ACPI_CMBAT_RETRY_MAX	6

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Nate Lawson
  * Copyright (c) 2000 Mitsuru IWASAKI <iwasaki@jp.freebsd.org>
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_battery.c 253642 2013-07-25 08:05:25Z avg $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -360,6 +361,18 @@ acpi_battery_ioctl(u_long cmd, caddr_t addr, void *arg)
     int error, unit;
     device_t dev;
 
+
+    /*
+     * Giant is acquired to work around a reference counting bug in ACPICA
+     * versions prior to 20130328.  If not for that bug this function could
+     * be executed concurrently without any problems.
+     * The bug is in acpi_BatteryIsPresent -> AcpiGetObjectInfo call tree,
+     * where AcpiUtExecute_HID, AcpiUtExecute_UID, etc are executed without
+     * protection of any ACPICA lock and may concurrently call
+     * AcpiUtRemoveReference on a battery object.
+     */
+    mtx_lock(&Giant);
+
     /* For commands that use the ioctl_arg struct, validate it first. */
     error = ENXIO;
     unit = 0;
@@ -417,6 +430,7 @@ acpi_battery_ioctl(u_long cmd, caddr_t addr, void *arg)
 	error = EINVAL;
     }
 
+    mtx_unlock(&Giant);
     return (error);
 }
 
