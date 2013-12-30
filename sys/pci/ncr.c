@@ -1386,7 +1386,7 @@ static char *ncr_name (ncb_p np)
  * Kernel variables referenced in the scripts.
  * THESE MUST ALL BE ALIGNED TO A 4-BYTE BOUNDARY.
  */
-static void *script_kvars[] =
+static volatile void *script_kvars[] =
 	{ &time_second, &ticks, &ncr_cache };
 
 static	struct script script0 = {
@@ -3622,8 +3622,8 @@ ncr_attach (device_t dev)
 			pci_write_config(dev, PCIR_CACHELNSZ, cachelnsz, 1);
 		}
 
-		if (!(command & (1<<4))) {
-			command |= (1<<4);
+		if (!(command & PCIM_CMD_MWRICEN)) {
+			command |= PCIM_CMD_MWRICEN;
 			printf("%s: setting PCI command write and invalidate.\n",
 				ncr_name(np));
 			pci_write_config(dev, PCIR_COMMAND, command, 2);
