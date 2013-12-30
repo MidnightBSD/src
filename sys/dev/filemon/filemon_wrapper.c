@@ -32,27 +32,6 @@ __MBSDID("$MidnightBSD$");
 
 #define FILEMON_HAS_LINKAT
 
-#if __FreeBSD_version < 900044	/* r225617 (2011-09-16) failed to bump
-				   __FreeBSD_version.  This really should
-				   be based on "900045".  "900044" is r225469
-				   (2011-09-10) so this code is broken for
-				   9-CURRENT September 10th-16th. */
-#define sys_chdir	chdir
-#define sys_execve	execve
-#define sys_fork	fork
-#define sys_link	link
-#define sys_open	open
-#define sys_rename	rename
-#define sys_stat	stat
-#define sys_symlink	symlink
-#define sys_unlink	unlink
-#define sys_vfork	vfork
-#define sys_sys_exit	sys_exit
-#ifdef FILEMON_HAS_LINKAT
-#define sys_linkat	linkat
-#endif
-#endif	/* __FreeBSD_version */
-
 static void
 filemon_output(struct filemon *filemon, char *msg, size_t len)
 {
