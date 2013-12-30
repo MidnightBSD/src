@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: release/9.2.0/sys/amd64/acpica/acpi_switch.S 239882 2012-08-29 21:12:19Z jhb $
  */
 
 #include <machine/asmacros.h>
@@ -143,10 +143,8 @@ ENTRY(acpi_restorecpu)
 	movq	%rax, %rdx
 	shrq	$32, %rdx
 	movl	$XCR0, %ecx
-/*	xsetbv	*/
-	.byte	0x0f, 0x01, 0xd1
-/*	xrstor	(%rbx) */
-	.byte	0x0f, 0xae, 0x2b
+	xsetbv
+	xrstor	(%rbx)
 	jmp	2f
 1:
 	fxrstor	(%rbx)

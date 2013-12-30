@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/amd64/acpica/acpi_machdep.c 237822 2012-06-29 21:24:56Z jhb $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
