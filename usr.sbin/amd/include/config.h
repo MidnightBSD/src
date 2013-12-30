@@ -1,5 +1,5 @@
 /*
- * $FreeBSD$
+ * $MidnightBSD$
  *
  * portions derived from
  *      $NetBSD: config.h,v 1.11 1998/08/08 22:33:37 christos Exp $
@@ -28,7 +28,7 @@
 
 /* Define name of host OS's distribution name (eg. debian, redhat, suse, etc.)
    */
-#define DISTRO_NAME "The FreeBSD Project"
+#define DISTRO_NAME "The MidnightBSD Project"
 
 /* Define to the type of elements in the array set by `getgroups'. Usually
    this is either `int' or `gid_t'. */

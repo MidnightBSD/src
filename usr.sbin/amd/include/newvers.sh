@@ -1,5 +1,5 @@
 #	$NetBSD: mkconf,v 1.1.1.1 1997/07/24 21:20:12 christos Exp $
-# $FreeBSD$
+# $MidnightBSD$
 # mkconf
 # Generate local configuration parameters for amd
 #

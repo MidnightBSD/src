@@ -1,4 +1,4 @@
-// $FreeBSD$
+// $MidnightBSD$
 
 /* Adjust once we have some form of Autofs support. */
 
