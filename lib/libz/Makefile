@@ -4,6 +4,8 @@ LIB=		z
 SHLIBDIR?=	/lib
 MAN=		zlib.3
 
+SHLIB_MAJOR=	6
+
 CFLAGS+=	-DHAS_snprintf -DHAS_vsnprintf -I${.CURDIR}
 
 WARNS?=		3
