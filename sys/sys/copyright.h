@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/sys/sys/copyright.h,v 1.11 2012/10/09 04:05:36 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 
@@ -30,7 +30,7 @@
 
 /* MidnightBSD */
 #define COPYRIGHT_MidnightBSD \
-	"Copyright (c) 2006-2013 The MidnightBSD Project.\n"
+	"Copyright (c) 2006-2014 The MidnightBSD Project.\n"
 
 /* FreeBSD */
 #define COPYRIGHT_FreeBSD \
