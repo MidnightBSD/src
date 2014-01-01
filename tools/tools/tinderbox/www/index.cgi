@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD: src/tools/tools/tinderbox/www/index.cgi,v 1.4 2008/03/07 04:44:04 laffer1 Exp $
+# $MidnightBSD$
 # $FreeBSD: projects/tinderbox/www/index.cgi,v 1.32 2008/02/10 17:04:26 des Exp $
 #
 
@@ -179,7 +179,6 @@ MAIN:{
     <meta name='robots' content='nofollow' />
     <meta http-equiv='refresh' content='600' />
     <link rel='stylesheet' type='text/css' media='screen' href='tb.css' />
-    <link rel='shortcut icon' type='image/x-icon' href='favicon.ico' />
   </head>
   <body>
     <!-- h1>MidnightBSD tinderbox logs</h1 -->
