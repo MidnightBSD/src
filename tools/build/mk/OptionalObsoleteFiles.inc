@@ -228,10 +228,6 @@ OLD_DIRS+=var/named/etc/namedb/dynamic
 # to be filled in and removed above
 #.endif
 
-#.if ${MK_BIND_NAMED} == no || ${MK_BIND} == no
-# to be filled in and removed above
-#.endif
-
 .if ${MK_BLUETOOTH} == no
 OLD_FILES+=usr/bin/bthost
 OLD_FILES+=usr/bin/btsockstat
