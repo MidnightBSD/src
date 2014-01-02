@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/periodic/daily/Makefile,v 1.5 2013/01/10 13:29:28 laffer1 Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
@@ -21,10 +21,6 @@ FILES=	100.clean-disks \
 
 .if ${MK_ACCT} != "no"
 FILES+=	310.accounting
-.endif
-
-.if ${MK_BIND_NAMED} != "no"
-FILES+=	470.status-named
 .endif
 
 .if ${MK_CALENDAR} != "no"
