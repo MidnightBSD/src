@@ -1,5 +1,13 @@
 Updating Information for MidnightBSD users.
 
+20140114:
+        Fix two security vulnerabilities.
+
+        bsnmpd contains a stack overflow when sent certain queries.
+
+        bind 9.8 when using NSEC3-signed zones zones, will crash with special
+        crafted packets.
+
 20131228:
 	Imported FreeBSD 9.2 usb stack (plus z87 patches from stable)
 
