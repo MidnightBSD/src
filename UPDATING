@@ -1,5 +1,15 @@
 Updating Information for MidnightBSD users.
 
+20140114:
+	0.4-RELEASE-p6
+
+	Fix two security vulnerabilities. 
+
+	bsnmpd contains a stack overflow when sent certain queries.
+
+	bind 9.8 when using NSEC3-signed zones zones, will crash with special
+	crafted packets.
+
 20131129:
 	0.4-RELEASE-p5
 
