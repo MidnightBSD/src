@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20140122:
+	Support for username with length 32. Previous limit was 16
+
 20140114:
         Fix two security vulnerabilities.
 
