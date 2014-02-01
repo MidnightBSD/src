@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20140201:
+	0.4-RELEASE-p7
+
+	Fix a minor annoyance with the default dot.profile and ssh-agent
+
 20140114:
 	0.4-RELEASE-p6
 
