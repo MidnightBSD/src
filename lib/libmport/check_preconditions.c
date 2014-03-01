@@ -147,6 +147,7 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
   sqlite3 *db = mport->db;
   sqlite3_stmt *stmt, *lookup;
   const char *depend_pkg, *depend_version, *inst_version;
+  const char *os_release;
   int ret;
   
   /* check for depends */
@@ -155,7 +156,7 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
     RETURN_CURRENT_ERROR;
   }
  
-  if (mport_db_prepare(db, &lookup, "SELECT version FROM packages WHERE pkg=? AND status='clean'") != MPORT_OK) {
+  if (mport_db_prepare(db, &lookup, "SELECT version, os_release FROM packages WHERE pkg=? AND status='clean'") != MPORT_OK) {
     sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
   }  
@@ -177,7 +178,15 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
       switch (sqlite3_step(lookup)) {
         case SQLITE_ROW:
           inst_version = sqlite3_column_text(lookup, 0);
+          os_release = sqlite3_column_text(lookup, 1);
           int ok;
+
+          if (strcmp(os_release, mport_get_osrelease()) != 0) {
+               SET_ERRORX(MPORT_ERR_FATAL, "%s depends on %s version %s.  Version %s for MidnightBSD %s is installed.", pack->name, depend_pkg, depend_version, inst_version, os_release);
+            sqlite3_finalize(lookup); 
+            sqlite3_finalize(stmt);
+            RETURN_CURRENT_ERROR;
+          }
                     
           if (depend_version == NULL)
             /* no minimum version */
@@ -230,28 +239,32 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
 }  
 
 /* check to see if an older version of a package is installed. */
-static int check_if_older_installed(mportInstance *mport, mportPackageMeta *pkg)
+static int
+check_if_older_installed(mportInstance *mport, mportPackageMeta *pkg)
 {
-  sqlite3_stmt *stmt;
-  int ret;
-    
-  if (mport_db_prepare(mport->db, &stmt, "SELECT 1 FROM packages WHERE pkg=%Q and mport_version_cmp(version, %Q) < 0", pkg->name, pkg->version) != MPORT_OK) {
-    sqlite3_finalize(stmt);
-    RETURN_CURRENT_ERROR;
-  }
+	sqlite3_stmt *stmt;
+	int ret;
+	const char *os_release;
+
+	os_release = mport_get_osrelease();
+
+	if (mport_db_prepare(mport->db, &stmt, "SELECT os_release FROM packages WHERE pkg=%Q and ((mport_version_cmp(version, %Q) < 0 and os_release=%Q) or os_release != %Q)", pkg->name, pkg->version, os_release, os_release) != MPORT_OK) {
+		sqlite3_finalize(stmt);
+		RETURN_CURRENT_ERROR;
+	}
   
-  switch (sqlite3_step(stmt)) {
-    case SQLITE_ROW:
-      ret = MPORT_OK;
-      break;
-    case SQLITE_DONE:
-      ret = SET_ERRORX(MPORT_ERR_FATAL, "No older version of %s installed", pkg->name);
-      break;
-    default:
-      ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-      break;
-  }
+	switch (sqlite3_step(stmt)) {
+		case SQLITE_ROW:
+			ret = MPORT_OK;
+			break;
+		case SQLITE_DONE:
+			ret = SET_ERRORX(MPORT_ERR_FATAL, "No older version of %s installed", pkg->name);
+			break;
+		default:
+			ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+			break;
+	}
   
-  sqlite3_finalize(stmt);
-  return ret;
+	sqlite3_finalize(stmt);
+	return ret;
 }
