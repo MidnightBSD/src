@@ -500,11 +500,10 @@ mport_get_osrelease(void)
 	if (osrelease == NULL)
 		return NULL;
 
-	version = malloc(10 * sizeof(char));
+	version = calloc(10, sizeof(char));
 	if (version == NULL)	
 		return NULL;
 
-	version[0] = '\0';
 	for (int i = 0; i < 10; i++) {
 		if (osrelease[i] == '\0' || osrelease[i] == '-')
 			break;
