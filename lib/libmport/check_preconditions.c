@@ -27,6 +27,7 @@
 #include <sys/cdefs.h>
 __MBSDID("$MidnightBSD$");
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "mport.h"
@@ -74,6 +75,7 @@ static int check_if_installed(sqlite3 *db, mportPackageMeta *pack)
   sqlite3_stmt *stmt;
   const char *inst_version;
   const char *os_release;
+  char *system_os_release;
   
   /* check if the package is already installed */
   if (mport_db_prepare(db, &stmt, "SELECT version, os_release FROM packages WHERE pkg=%Q", pack->name) != MPORT_OK) 
@@ -87,10 +89,14 @@ static int check_if_installed(sqlite3 *db, mportPackageMeta *pack)
       /* Row was found */
       inst_version = sqlite3_column_text(stmt, 0);
       os_release = sqlite3_column_text(stmt, 1);
+      system_os_release = (char *)mport_get_osrelease();
 
       /* Different os release version should not be considered the same package */
-      if (strcmp(os_release, mport_get_osrelease()) != 0)
+      if (strcmp(os_release, system_os_release) != 0) {
+        free(system_os_release);
         break;
+      }
+      free(system_os_release);
       
       SET_ERRORX(MPORT_ERR_FATAL, "%s (version %s) is already installed.", pack->name, inst_version);
       sqlite3_finalize(stmt);
@@ -148,6 +154,7 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
   sqlite3_stmt *stmt, *lookup;
   const char *depend_pkg, *depend_version, *inst_version;
   const char *os_release;
+  char *system_os_release;
   int ret;
   
   /* check for depends */
@@ -160,6 +167,8 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
     sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
   }  
+
+  system_os_release = (char *)mport_get_osrelease();
   
   while (1) {
     ret = sqlite3_step(stmt);
@@ -172,6 +181,9 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
         SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
         sqlite3_finalize(lookup); 
         sqlite3_finalize(stmt);
+
+        free(system_os_release);
+
         RETURN_CURRENT_ERROR;
       }
       
@@ -181,10 +193,11 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
           os_release = sqlite3_column_text(lookup, 1);
           int ok;
 
-          if (strcmp(os_release, mport_get_osrelease()) != 0) {
-               SET_ERRORX(MPORT_ERR_FATAL, "%s depends on %s version %s.  Version %s for MidnightBSD %s is installed.", pack->name, depend_pkg, depend_version, inst_version, os_release);
+          if (strcmp(os_release, system_os_release) != 0) {
+               SET_ERRORX(MPORT_ERR_FATAL, "%s depends on %s version %s.  Version %s for MidnightBSD %s is installed.", pack->name, depend_pkg, depend_version == NULL ? "<any>" : depend_version, inst_version, os_release);
             sqlite3_finalize(lookup); 
             sqlite3_finalize(stmt);
+	    free(system_os_release);
             RETURN_CURRENT_ERROR;
           }
                     
@@ -197,11 +210,13 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
           if (ok > 0) {
             sqlite3_finalize(lookup); 
             sqlite3_finalize(stmt);
+            free(system_os_release);
             RETURN_CURRENT_ERROR;
           } else if (ok == -1) {
             SET_ERRORX(MPORT_ERR_FATAL, "%s depends on %s version %s.  Version %s is installed.", pack->name, depend_pkg, depend_version, inst_version);
             sqlite3_finalize(lookup); 
             sqlite3_finalize(stmt);
+            free(system_os_release);
             RETURN_CURRENT_ERROR;
           }
           
@@ -211,12 +226,14 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
            SET_ERRORX(MPORT_ERR_FATAL, "%s depends on %s, which is not installed.", pack->name, depend_pkg);
            sqlite3_finalize(lookup); 
            sqlite3_finalize(stmt);
+           free(system_os_release);
            RETURN_CURRENT_ERROR;
           break;
         default:
           SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
           sqlite3_finalize(lookup); 
           sqlite3_finalize(stmt);
+          free(system_os_release);
           RETURN_CURRENT_ERROR;
       }
       
@@ -231,9 +248,12 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
       SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
       sqlite3_finalize(lookup); 
       sqlite3_finalize(stmt);
+      free(system_os_release);
       RETURN_CURRENT_ERROR;
     }
   }        
+
+  free(system_os_release);
   
   return MPORT_OK;    
 }  
