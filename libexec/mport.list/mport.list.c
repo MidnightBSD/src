@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2010, 2011, 2013 Lucas Holt
+ * Copyright (c) 2010, 2011, 2013, 2014 Lucas Holt
  * Copyright (c) 2008 Chris Reinhardt
  * All rights reserved.
  *
@@ -52,6 +52,7 @@ main(int argc, char *argv[])
 	bool update = false;
 	char *comment;
 	char *os_release;
+	char name_version[30];
 	
 	if (argc > 3)
 		usage();
@@ -113,11 +114,11 @@ main(int argc, char *argv[])
 			if (indexEntries != NULL) {
 				while (*indexEntries != NULL) {
 					if (((*indexEntries)->version != NULL && mport_version_cmp((*packs)->version, (*indexEntries)->version) < 0) 
-						|| ((*packs)->version != NULL && strcmp((*packs)->version, os_release) != 0)) {
+						|| ((*packs)->version != NULL && strcmp((*packs)->os_release, os_release) != 0)) {
 						if (verbose) {
-							(void) printf("%s: %s (%s) < %s\n", (*packs)->name, (*packs)->version, (*packs)->os_release, (*indexEntries)->version);
+							(void) printf("%-15s %8s (%s)  <  %-s\n", (*packs)->name, (*packs)->version, (*packs)->os_release, (*indexEntries)->version);
 						} else {
-							(void) printf("%s: %s < %s\n", (*packs)->name, (*packs)->version, (*indexEntries)->version);
+							(void) printf("%-15s %8s  <  %-8s\n", (*packs)->name, (*packs)->version, (*indexEntries)->version);
 						}
 					}
 					indexEntries++;
@@ -128,7 +129,9 @@ main(int argc, char *argv[])
 			}
 		} else if (verbose) {
 			comment = str_remove((*packs)->comment, '\\');
-			(void) printf("%s-%s\t%s\t%s\n", (*packs)->name, (*packs)->version, (*packs)->os_release, comment);
+			snprintf(name_version, 30, "%s-%s", (*packs)->name, (*packs)->version);
+			
+			(void) printf("%-30s\t%6s\t%s\n", name_version, (*packs)->os_release, comment);
 			free(comment);
 		}
 		else if (quiet && !origin)
