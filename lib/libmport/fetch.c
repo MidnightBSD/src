@@ -26,13 +26,14 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/fetch.c,v 1.12 2013/03/03 00:29:51 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "mport.h"
 #include "mport_private.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/param.h>
+#include <sys/stat.h>
 #include <fetch.h>
 #include <string.h>
 #include <errno.h>
@@ -129,11 +130,18 @@ mport_fetch_bundle(mportInstance *mport, const char *filename)
 	char *url;
 	char *dest;
 	int mirrorCount = 0;
+	struct stat sb;
 
 	MPORT_CHECK_FOR_INDEX(mport, "mport_fetch_bundle()");
 	
 	if (mport_index_get_mirror_list(mport, &mirrors, &mirrorCount) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
+
+	if (stat(MPORT_FETCH_STAGING_DIR, &sb) != 0 || ! S_ISDIR(sb.st_mode)) {
+		if (mkdir(MPORT_FETCH_STAGING_DIR, S_IRWXU | S_IRWXG)) {
+			RETURN_CURRENT_ERROR;
+		}
+	}
 		
 	asprintf(&dest, "%s/%s", MPORT_FETCH_STAGING_DIR, filename);
  
