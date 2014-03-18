@@ -55,7 +55,8 @@ void mport_call_progress_init_cb(mportInstance *, const char *, ...);
 #define MPORT_PRECHECK_DEPENDS     2
 #define MPORT_PRECHECK_CONFLICTS   4
 #define MPORT_PRECHECK_UPGRADEABLE 8
-int mport_check_preconditions(mportInstance *, mportPackageMeta *, int);
+#define MPORT_PRECHECK_OS          16
+int mport_check_preconditions(mportInstance *, mportPackageMeta *, long);
 
 /* schema */
 int mport_generate_master_schema(sqlite3 *);

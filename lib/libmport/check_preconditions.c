@@ -38,7 +38,7 @@ static int check_if_installed(sqlite3 *, mportPackageMeta *);
 static int check_conflicts(sqlite3 *, mportPackageMeta *);
 static int check_depends(mportInstance *mport, mportPackageMeta *);
 static int check_if_older_installed(mportInstance *, mportPackageMeta *);
-
+static int check_if_older_os(mportInstance *, mportPackageMeta *);
 
 /* Run the checks requested by the flags given.
  *
@@ -47,6 +47,7 @@ static int check_if_older_installed(mportInstance *, mportPackageMeta *);
  *   MPORT_PRECHECK_UPGRADABLE -- Fail if an older version is not installed
  *   MPORT_PRECHECK_CONFLICTS  -- Fail if the package has a conflict
  *   MPORT_PRECHECK_DEPENDS    -- Fail if the the depends are no resolved
+ *   MPORT_PRECHECK_OS	       -- Fail if the os version of the installed is older
  *
  * The checks are run in the order listed above.  The first failure
  * encountered is the one reported.   
@@ -55,7 +56,7 @@ static int check_if_older_installed(mportInstance *, mportPackageMeta *);
  * connected.
  */
  
-int mport_check_preconditions(mportInstance *mport, mportPackageMeta *pack, int flags) 
+int mport_check_preconditions(mportInstance *mport, mportPackageMeta *pack, long flags) 
 {
   if (flags & MPORT_PRECHECK_INSTALLED && check_if_installed(mport->db, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
@@ -64,6 +65,8 @@ int mport_check_preconditions(mportInstance *mport, mportPackageMeta *pack, int 
   if (flags & MPORT_PRECHECK_CONFLICTS && check_conflicts(mport->db, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   if (flags & MPORT_PRECHECK_DEPENDS && check_depends(mport, pack) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+  if (flags & MPORT_PRECHECK_OS && check_if_older_os(mport, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
   return MPORT_OK;
@@ -287,4 +290,33 @@ check_if_older_installed(mportInstance *mport, mportPackageMeta *pkg)
   
 	sqlite3_finalize(stmt);
 	return ret;
+}
+
+static int
+check_if_older_os(mportInstance *mport, mportPackageMeta *pkg)
+{
+	sqlite3_stmt *stmt;
+	int ret;
+	const char *os_release;
+
+	os_release = mport_get_osrelease();
+	if (mport_db_prepare(mport->db, &stmt, "SELECT os_release FROM packages WHERE pkg=%Q and mport_version_cmp(os_release, %Q) < 0", pkg->name, os_release) != MPORT_OK) {
+                sqlite3_finalize(stmt);
+                RETURN_CURRENT_ERROR;
+        }
+
+        switch (sqlite3_step(stmt)) {
+                case SQLITE_ROW:
+                        ret = MPORT_OK;
+                        break;
+                case SQLITE_DONE:
+                        ret = SET_ERRORX(MPORT_ERR_FATAL, "No older os release version of %s installed", pkg->name);
+                        break;
+                default:
+                        ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+                        break;
+        }
+ 
+        sqlite3_finalize(stmt);
+        return ret;
 }
