@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2010, 2011, 2013 Lucas Holt
+ * Copyright (c) 2010, 2011, 2013, 2014 Lucas Holt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/mport/mport.c,v 1.51 2013/09/07 19:50:08 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -74,15 +74,27 @@ main(int argc, char *argv[]) {
 	}
 
 	if (!strcmp(argv[1], "install")) {
+		if (argc == 2) {
+			mport_instance_free(mport);
+			usage();
+		}
 		loadIndex(mport);
 		resultCode = install(mport, argv[2]);
 	} else if (!strcmp(argv[1], "delete")) {
+		if (argc == 2) {
+			mport_instance_free(mport);
+			usage();
+		}
 		for (i = 2; i < argc; i++) {
 			tempResultCode = delete(argv[i]);
 			if (tempResultCode != 0)
 				resultCode = tempResultCode;
 		}
 	} else if (!strcmp(argv[1], "update")) {
+		if (argc == 2) { 
+			mport_instance_free(mport);
+			usage();
+		}
 		loadIndex(mport);
 		for (i = 2; i < argc; i++) {
 			tempResultCode = update(mport, argv[2]);
