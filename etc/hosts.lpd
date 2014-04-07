@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/hosts.lpd,v 1.2 2006/08/28 01:35:54 laffer1 Exp $
+# $MidnightBSD$
 #
 # See lpd(8)
 #machine.domain
