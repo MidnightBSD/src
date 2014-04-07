@@ -1,4 +1,4 @@
-$MidnightBSD: src/etc/mtree/README,v 1.3 2007/10/13 01:50:52 laffer1 Exp $
+$MidnightBSD$
 $FreeBSD: src/etc/mtree/README,v 1.7 2002/05/18 12:37:19 ru Exp $
 
 Note: If you modify these files, please keep hier(7) updated!

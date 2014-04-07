@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/mtree/BSD.local.dist,v 1.4 2007/10/13 02:00:02 laffer1 Exp $
+# $MidnightBSD$
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #

@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/mtree/BIND.chroot.dist,v 1.2 2006/08/28 01:35:54 laffer1 Exp $
+# $MidnightBSD$
 # $FreeBSD: src/etc/mtree/BIND.chroot.dist,v 1.6.10.1 2009/12/29 07:13:17 dougb Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
