@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20140409:
+	0.4-RELEASE-p8
+
+	Fix a security issue in OpenSSL [CVE-2014-0076]
+
 20140201:
 	0.4-RELEASE-p7
 
