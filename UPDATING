@@ -1,6 +1,10 @@
 Updating Information for MidnightBSD users.
 
 20140409:
+	0.4-RELEASE-p9
+
+	Fix an issue allowing an attacker to deadlock the NFS Server from a trusted client.
+
 	0.4-RELEASE-p8
 
 	Fix a security issue in OpenSSL [CVE-2014-0076]
