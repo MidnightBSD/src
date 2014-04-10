@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD: src/etc/rc.d/FILESYSTEMS,v 1.2 2009/01/17 17:41:30 laffer1 Exp $
+# $MidnightBSD$
 
 # PROVIDE: FILESYSTEMS
 # REQUIRE: root mountcritlocal zfs

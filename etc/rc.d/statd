@@ -2,7 +2,7 @@
 #
 # FreeBSD History: src/etc/rc.d/nfslocking,v 1.11 2004/10/07 13:55:26 mtm Exp
 # $FreeBSD: src/etc/rc.d/statd,v 1.17.6.1 2008/01/28 07:58:31 dougb Exp $
-# $MidnightBSD: src/etc/rc.d/statd,v 1.1 2009/01/17 22:23:54 laffer1 Exp $
+# $MidnightBSD$
 
 # PROVIDE: statd
 # REQUIRE: nfsclient nfsd rpcbind

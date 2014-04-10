@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD: src/etc/rc.d/ntpd,v 1.5 2007/09/28 22:17:23 laffer1 Exp $
+# $MidnightBSD$
 #
 
 # PROVIDE: ntpd

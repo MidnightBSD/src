@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD: src/etc/rc.d/LOGIN,v 1.2 2006/08/28 02:13:44 laffer1 Exp $
+# $MidnightBSD$
 
 # PROVIDE: LOGIN
 # REQUIRE: DAEMON

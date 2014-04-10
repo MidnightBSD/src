@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $FreeBSD: src/etc/rc.d/sshd,v 1.8.2.1 2005/12/16 01:42:54 dougb Exp $
-# $MidnightBSD: src/etc/rc.d/sshd,v 1.4 2007/09/28 22:17:23 laffer1 Exp $
+# $MidnightBSD$
 
 # PROVIDE: sshd
 # REQUIRE: LOGIN cleanvar

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD: src/etc/rc.d/inetd,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
+# $MidnightBSD$
 
 # PROVIDE: mdnsd
 # REQUIRE: DAEMON

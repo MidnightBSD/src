@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $FreeBSD: src/etc/rc.d/timed,v 1.5 2004/10/07 13:55:26 mtm Exp $
-# $MidnightBSD: src/etc/rc.d/timed,v 1.3 2007/09/28 22:17:23 laffer1 Exp $
+# $MidnightBSD$
 
 # PROVIDE: timed
 # REQUIRE: DAEMON

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD: src/etc/rc.d/firstboot,v 1.4 2008/10/17 17:20:42 laffer1 Exp $
+# $MidnightBSD$
 
 # PROVIDE: firstboot
 # REQUIRE: NETWORKING cleanvar
