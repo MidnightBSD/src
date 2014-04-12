@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20140411:
+	Update zlib to 1.2.7
+
 20140122:
 	Support for username with length 32. Previous limit was 16
 
