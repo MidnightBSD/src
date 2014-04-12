@@ -1,6 +1,6 @@
 #!/bin/sh -
 #
-# $MidnightBSD: src/etc/periodic/weekly/350.msearch,v 1.2 2011/08/07 01:33:09 laffer1 Exp $
+# $MidnightBSD$
 
 # If there is a global system configuration file, suck it in.
 #

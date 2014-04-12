@@ -1,6 +1,6 @@
 #!/bin/sh -
 #
-# $MidnightBSD: src/etc/periodic/weekly/310.locate,v 1.2 2006/08/28 02:13:44 laffer1 Exp $
+# $MidnightBSD$
 # $FreeBSD: src/etc/periodic/weekly/310.locate,v 1.6 2000/09/14 17:19:13 brian Exp $
 #
 
