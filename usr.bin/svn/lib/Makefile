@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 SUBDIR=	libapr libapr_util libserf libsqlite3 \
 	libsvn_client libsvn_delta libsvn_diff libsvn_fs libsvn_fs_fs \

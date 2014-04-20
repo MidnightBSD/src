@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 .include "${.CURDIR}/../Makefile.inc"
 
@@ -30,9 +30,9 @@ CFLAGS+= 	-DHAVE_CONFIG_H \
 
 .include <bsd.own.mk>
 
-.if ${MK_ICONV} == "yes"
-CFLAGS+=	-DHAVE_ICONV_H=1 -DAPU_HAVE_ICONV=1
-.endif
+#.if ${MK_ICONV} == "yes"
+#CFLAGS+=	-DHAVE_ICONV_H=1 -DAPU_HAVE_ICONV=1
+#.endif
 
 .include <bsd.lib.mk>
 
