@@ -21,6 +21,8 @@ SRCS=		apr_base64.c apr_brigade.c apr_buckets.c apr_buckets_alloc.c \
 		${APRU}/uri ${APRU}/xlate ${APRU}/xml ${APRU}/include
 
 CFLAGS+= 	-DHAVE_CONFIG_H \
+		-DHAVE_ICONV_H=0 \
+		-DAPU_HAVE_ICONV=1 \
 		-I${.CURDIR} \
 		-I${APRU}/include/private \
 		-I${APRU}/include \
