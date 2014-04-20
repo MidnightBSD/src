@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 .include "${.CURDIR}/../Makefile.inc"
 
@@ -7,7 +7,7 @@ LIB=		sqlite3
 
 SRCS=		sqlite3.c
 
-NOMAN=		internalonly
+NO_MAN=		internalonly
 
 .PATH:		${SQLITE}
 
