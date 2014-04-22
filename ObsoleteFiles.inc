@@ -15,6 +15,8 @@
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
 
+#20140421
+OLD_LIBS+=lib/libz.so.5
 #20131218
 OLD_FILES+=usr/include/clang/3.1/unwind.h
 OLD_DIRS+=usr/include/i4b
