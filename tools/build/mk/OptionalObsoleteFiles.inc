@@ -202,7 +202,7 @@ OLD_DIRS+=var/named/var/dump
 OLD_DIRS+=var/named/var
 .endif
 
-.if ${MK_BIND_DNSSEC} == no || ${MK_BIND} == no
+.if ${MK_BIND} == no
 OLD_FILES+=usr/sbin/dnssec-keygen
 OLD_FILES+=usr/sbin/dnssec-signzone
 .endif
