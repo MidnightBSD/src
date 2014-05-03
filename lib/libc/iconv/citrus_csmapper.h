@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 /* $NetBSD: citrus_csmapper.h,v 1.2 2008/02/09 14:56:20 junyoung Exp $ */
 
 /*-

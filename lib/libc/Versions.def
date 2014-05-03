@@ -19,6 +19,7 @@ FBSD_1.3 {
 MNBSD_1.0 {
 } FBSD_1.3;
 
+# This version was first added to MidnightBSD 0.4-current.
 MNBSD_1.1 {
 } MNBSD_1.0;
 
