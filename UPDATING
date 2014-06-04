@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20140604:
+        Sendmail failed to properly set close-on-exec for open file descriptors.
+
+        ktrace page fault kernel trace entries were set to an incorrect size which resulted
+        in a leak of information.
+
 20140430:
 	Fix a TCP reassembly bug that could result in a DOS attack
 	of the system. It may be possible to obtain portions
