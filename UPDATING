@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20140605:
+	Fix four security issues with OpenSSL
+
 20140604:
         Sendmail failed to properly set close-on-exec for open file descriptors.
 
