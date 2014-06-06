@@ -1,5 +1,22 @@
 Updating Information for MidnightBSD users.
 
+20140605:
+	0.4-RELEASE-p12
+
+	OpenSSL vulnerabilities
+
+	Receipt of an invalid DTLS fragment on an OpenSSL DTLS client or server can
+	lead to a buffer overrun. [CVE-2014-0195]
+
+	Receipt of an invalid DTLS handshake on an OpenSSL DTLS client can lead the
+	code to unnecessary recurse.  [CVE-2014-0221]
+
+	Carefully crafted handshake can force the use of weak keying material in
+	OpenSSL SSL/TLS clients and servers. [CVE-2014-0224]
+
+	Carefully crafted packets can lead to a NULL pointer deference in OpenSSL
+	TLS client code if anonymous ECDH ciphersuites are enabled. [CVE-2014-3470]
+
 20140604:
 	0.4-RELEASE-p11
 
