@@ -12,6 +12,7 @@
 #
 # See also RFC 2142, `MAILBOX NAMES FOR COMMON SERVICES, ROLES
 # AND FUNCTIONS', May 1997
+# 	http://tools.ietf.org/html/rfc2142
 
 # Pretty much everything else in this file points to "root", so
 # you would do well in either reading root's mailbox or forwarding
@@ -26,10 +27,12 @@ postmaster: root
 # General redirections for pseudo accounts
 _dhcp:	root
 _pflogd: root
+auditdistd:	root
 bin:	root
 bind:	root
 daemon:	root
 games:	root
+hast:	root
 kmem:	root
 mailnull: postmaster
 man:	root
