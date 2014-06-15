@@ -58015,10 +58015,6 @@ sbin/shutdown/shutdown.c -text
 sbin/spppcontrol/Makefile -text
 sbin/spppcontrol/spppcontrol.8 -text
 sbin/spppcontrol/spppcontrol.c -text
-sbin/sunlabel/Makefile -text
-sbin/sunlabel/runtest.sh -text
-sbin/sunlabel/sunlabel.8 -text
-sbin/sunlabel/sunlabel.c -text
 sbin/swapon/Makefile -text
 sbin/swapon/swapon.8 -text
 sbin/swapon/swapon.c -text
