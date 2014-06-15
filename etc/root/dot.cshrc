@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/root/dot.cshrc,v 1.3 2008/03/22 05:55:21 laffer1 Exp $
+# $MidnightBSD$
 # $FreeBSD: src/etc/root/dot.cshrc,v 1.29 2004/04/01 19:28:00 krion Exp $
 #
 # .cshrc - csh resource script, read at beginning of execution by each shell
