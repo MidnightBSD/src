@@ -9566,7 +9566,9 @@ contrib/file/cdf.h -text
 contrib/file/cdf_time.c -text
 contrib/file/compile -text
 contrib/file/compress.c -text
+contrib/file/config.guess -text
 contrib/file/config.h.in -text
+contrib/file/config.sub -text
 contrib/file/configure -text
 contrib/file/configure.ac -text
 contrib/file/configure.in -text
