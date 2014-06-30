@@ -9656,13 +9656,6 @@ contrib/file/strlcat.c -text
 contrib/file/strlcpy.c -text
 contrib/file/tar.h -text
 contrib/file/test.c -text
-contrib/file/tests/Makefile.am -text
-contrib/file/tests/Makefile.in -text
-contrib/file/tests/README -text
-contrib/file/tests/gedcom.magic -text
-contrib/file/tests/gedcom.result -text
-contrib/file/tests/gedcom.testfile -text
-contrib/file/tests/test.c -text
 contrib/file/vasprintf.c -text
 contrib/gcc4/BASE-VER -text
 contrib/gcc4/COPYING -text
