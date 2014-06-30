@@ -9570,6 +9570,11 @@ contrib/file/config.h.in -text
 contrib/file/configure -text
 contrib/file/configure.ac -text
 contrib/file/configure.in -text
+contrib/file/doc/Makefile.am -text
+contrib/file/doc/Makefile.in -text
+contrib/file/doc/file.man -text
+contrib/file/doc/libmagic.man -text
+contrib/file/doc/magic.man -text
 contrib/file/elfclass.h -text
 contrib/file/encoding.c -text
 contrib/file/file.c -text
