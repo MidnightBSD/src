@@ -1,6 +1,6 @@
 
 #------------------------------------------------------------------------------
-# $File: animation,v 1.44 2010/11/25 15:00:12 christos Exp $
+# $File: animation,v 1.53 2014/04/30 21:41:02 christos Exp $
 # animation:  file(1) magic for animation/movie formats
 #
 # animation formats
@@ -89,7 +89,10 @@
 >>4      byte               77             \b, main
 >>4      byte               88             \b, extended
 >>6      byte               x              \b @ L %u
+# GRR too general as it catches also FoxPro Memo example NG.FPT
 >3       byte               0xB0           MPEG sequence, v4
+# TODO: maybe this extra line exclude FoxPro Memo example NG.FPT starting with 000001b0 00000100 00000000
+#>>4      byte               !0             MPEG sequence, v4
 !:mime  video/mpeg4-generic
 >>5      belong             0x000001B5
 >>>9     byte               &0x80
@@ -448,6 +451,7 @@
 
 # MP2, M2A
 0       beshort&0xFFFE  0xFFF4         MPEG ADTS, layer II, v2
+!:mime	audio/mpeg
 # rate 
 >2      byte&0xF0       0x10           \b,   8 kbps
 >2      byte&0xF0       0x20           \b,  16 kbps 
@@ -617,7 +621,7 @@
 # Live MPEG-4 audio streams (instead of RTP FlexMux)
 0       beshort&0xFFE0  0x56E0         MPEG-4 LOAS
 !:mime	audio/x-mp4a-latm
-#>1     beshort&0x1FFF  x              \b, %u byte packet
+#>1     beshort&0x1FFF  x              \b, %hu byte packet
 >3      byte&0xE0       0x40
 >>4     byte&0x3C       0x04           \b, single stream
 >>4     byte&0x3C       0x08           \b, 2 streams
@@ -688,10 +692,6 @@
 # iso 13818 transport stream
 #
 # from Oskar Schirmer <schirmer@scara.com> Feb 3, 2001 (ISO 13818.1)
-# (the following is a little bit restrictive and works fine for a stream
-#  that starts with PAT properly. it won't work for stream data, that is
-#  cut from an input device data right in the middle, but this shouldn't
-#  disturb)
 # syncbyte      8 bit	0x47
 # error_ind     1 bit	-
 # payload_start 1 bit	1
@@ -699,9 +699,9 @@
 # PID          13 bit	0x0000
 # scrambling    2 bit	-
 # adaptfld_ctrl 2 bit	1 or 3
-# conti_count   4 bit	0
-0	belong&0xFF5FFF1F	0x47400010	MPEG transport stream data
->188	byte			!0x47		CORRUPTED
+# conti_count   4 bit	-
+0	belong&0xFF5FFF10	0x47400010
+>188	byte			0x47		MPEG transport stream data
 
 # DIF digital video file format <mpruett@sgi.com>
 0	belong&0xffffff00	0x1f070000      DIF
@@ -719,16 +719,16 @@
 !:mime	video/x-mng
 >4	belong			!0x0d0a1a0a	CORRUPTED,
 >4	belong			0x0d0a1a0a
->>16    belong	x				%ld x
->>20    belong	x				%ld
+>>16    belong	x				%d x
+>>20    belong	x				%d
 
 # JNG Video Format, <URL:http://www.libpng.org/pub/mng/spec/>
 0	string			\x8bJNG		JNG video data,
 !:mime	video/x-jng
 >4	belong			!0x0d0a1a0a	CORRUPTED,
 >4	belong			0x0d0a1a0a
->>16    belong	x				%ld x
->>20    belong	x				%ld
+>>16    belong	x				%d x
+>>20    belong	x				%d
 
 # Vivo video (Wolfram Kleff)
 3	string		\x0D\x0AVersion:Vivo	Vivo video data
@@ -755,7 +755,7 @@
 >0	byte		x		GameCube movie,
 >0x34	ubeshort	x		%d x
 >0x36	ubeshort	x		%d,
->0x26	ubeshort	x		%dµs,
+>0x26	ubeshort	x		%dus,
 >0x42	ubeshort	0		no audio
 >0x42	ubeshort	>0		%dHz audio
 
@@ -789,25 +789,26 @@
 
 #						MPEG file
 # MPEG sequences
-# FIXME: This section is from the old magic.mime file and needs integrating with the rest
-0       belong             0x000001BA
->4      byte               &0x40
-!:mime	video/mp2p
->4      byte               ^0x40
-!:mime	video/mpeg
-0       belong             0x000001BB
-!:mime	video/mpeg
-0       belong             0x000001B0
-!:mime	video/mp4v-es
-0       belong             0x000001B5
-!:mime	video/mp4v-es
-0       belong             0x000001B3
-!:mime	video/mpv
-0       belong&0xFF5FFF1F  0x47400010
-!:mime	video/mp2t
-0       belong             0x00000001
->4      byte&0x1F	   0x07
-!:mime	video/h264
+# FIXME: This section is from the old magic.mime file and needs
+# integrating with the rest
+#0       belong             0x000001BA
+#>4      byte               &0x40
+#!:mime	video/mp2p
+#>4      byte               ^0x40
+#!:mime	video/mpeg
+#0       belong             0x000001BB
+#!:mime	video/mpeg
+#0       belong             0x000001B0
+#!:mime	video/mp4v-es
+#0       belong             0x000001B5
+#!:mime	video/mp4v-es
+#0       belong             0x000001B3
+#!:mime	video/mpv
+#0       belong&0xFF5FFF10  0x47400010
+#!:mime	video/mp2t
+#0       belong             0x00000001
+#>4      byte&0x1F	   0x07
+#!:mime	video/h264
 
 # Type: Bink Video
 # Extension: .bik
@@ -835,3 +836,61 @@
 # URL:	http://wiki.multimedia.cx/index.php?title=NUT
 # From:	Adam Buchbinder <adam.buchbinder@gmail.com>
 0	string	nut/multimedia\ container\0	NUT multimedia container
+
+# Type: Nullsoft Video (NSV)
+# URL:  http://wiki.multimedia.cx/index.php?title=Nullsoft_Video
+# From: Mike Melanson <mike@multimedia.cx>
+0	string	NSVf	Nullsoft Video
+
+# Type: REDCode Video
+# URL:  http://www.red.com/ ; http://wiki.multimedia.cx/index.php?title=REDCode
+# From: Mike Melanson <mike@multimedia.cx>
+4	string	RED1	REDCode Video
+
+# Type: MTV Multimedia File
+# URL:  http://wiki.multimedia.cx/index.php?title=MTV
+# From: Mike Melanson <mike@multimedia.cx>
+0	string	AMVS	MTV Multimedia File
+
+# Type: ARMovie
+# URL:  http://wiki.multimedia.cx/index.php?title=ARMovie
+# From: Mike Melanson <mike@multimedia.cx>
+0	string	ARMovie\012	ARMovie
+
+# Type: Interplay MVE Movie
+# URL:  http://wiki.multimedia.cx/index.php?title=Interplay_MVE
+# From: Mike Melanson <mike@multimedia.cx>
+0	string	Interplay\040MVE\040File\032	Interplay MVE Movie
+
+# Type: Windows Television DVR File
+# URL:  http://wiki.multimedia.cx/index.php?title=WTV
+# From: Mike Melanson <mike@mutlimedia.cx>
+# This takes the form of a Windows-style GUID
+0	bequad	0xB7D800203749DA11
+>8	bequad	0xA64E0007E95EAD8D	Windows Television DVR Media
+
+# Type: Sega FILM/CPK Multimedia
+# URL:  http://wiki.multimedia.cx/index.php?title=Sega_FILM
+# From: Mike Melanson <mike@multimedia.cx>
+0	string	FILM	Sega FILM/CPK Multimedia,
+>32	belong	x	%d x
+>28	belong	x	%d
+
+# Type: Nintendo THP Multimedia
+# URL:  http://wiki.multimedia.cx/index.php?title=THP
+# From: Mike Melanson <mike@multimedia.cx>
+0	string	THP\0	Nintendo THP Multimedia
+
+# Type: BBC Dirac Video
+# URL:  http://wiki.multimedia.cx/index.php?title=Dirac
+# From: Mike Melanson <mike@multimedia.cx>
+0	string	BBCD	BBC Dirac Video
+
+# Type: RAD Game Tools Smacker Multimedia
+# URL:  http://wiki.multimedia.cx/index.php?title=Smacker
+# From: Mike Melanson <mike@multimedia.cx>
+0	string	SMK	RAD Game Tools Smacker Multimedia
+>3	byte	x	version %c,
+>4	lelong	x	%d x
+>8	lelong	x	%d,
+>12	lelong	x	%d frames

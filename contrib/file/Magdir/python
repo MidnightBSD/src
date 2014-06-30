@@ -1,11 +1,12 @@
 
 #------------------------------------------------------------------------------
-# $File: python,v 1.16 2010/12/31 18:15:28 christos Exp $
+# $File: python,v 1.25 2014/05/06 16:08:32 christos Exp $
 # python:  file(1) magic for python
 #
+# Outlook puts """ too for urgent messages
 # From: David Necas <yeti@physics.muni.cz>
 # often the module starts with a multiline string
-0	string/t	"""	a python script text executable
+0	string/t	"""	Python script text executable
 # MAGIC as specified in Python/import.c (1.5 to 2.7a0 and 3.1a0, assuming
 # that Py_UnicodeFlag is off for Python 2)
 # 20121  ( YEAR - 1995 ) + MONTH  + DAY (little endian followed by "\r\n"
@@ -20,6 +21,8 @@
 0	belong		0x03f30d0a	python 2.7 byte-compiled
 0	belong		0x3b0c0d0a	python 3.0 byte-compiled
 0	belong		0x4f0c0d0a	python 3.1 byte-compiled
+0	belong		0x6c0c0d0a	python 3.2 byte-compiled
+0	belong		0x9e0c0d0a	python 3.3 byte-compiled
 
 0	search/1/w	#!\ /usr/bin/python	Python script text executable
 !:mime text/x-python
@@ -32,7 +35,7 @@
 
 
 # from module.submodule import func1, func2
-0	regex/b	\^from\\s+(\\w|\\.)+\\s+import.*$	Python script text executable
+0	regex	\^from\\s+(\\w|\\.)+\\s+import.*$	Python script text executable
 !:mime text/x-python
 
 # def __init__ (self, ...):
@@ -41,13 +44,13 @@
 !:mime text/x-python
 
 # comments
-0	search/4096	'''
->&0	regex	.*'''$	Python script text executable
-!:mime text/x-python
+#0	search/4096	'''
+#>&0	regex	.*'''$	Python script text executable
+#!:mime text/x-python
 
-0	search/4096	"""
->&0	regex	.*"""$	Python script text executable
-!:mime text/x-python
+#0	search/4096	"""
+#>&0	regex	.*"""$	Python script text executable
+#!:mime text/x-python
 
 # try:
 # except: or finally:
@@ -56,4 +59,9 @@
 >&0	regex	\^\\s*except.*:	Python script text executable
 !:mime text/x-python
 >&0	search/4096	finally:	Python script text executable
+!:mime text/x-python
+
+# def name(args, args):
+0	regex	 \^(\ |\\t){0,50}def\ {1,50}[a-zA-Z]{1,100}
+>&0	regex	\ {0,50}\\(([a-zA-Z]|,|\ ){1,255}\\):$ Python script text executable
 !:mime text/x-python
