@@ -36524,9 +36524,11 @@ contrib/mksh/main.c -text
 contrib/mksh/mirhash.h -text
 contrib/mksh/misc.c -text
 contrib/mksh/mksh.1 -text
+contrib/mksh/rlimits.gen -text
 contrib/mksh/rlimits.opt -text
 contrib/mksh/setmode.c -text
 contrib/mksh/sh.h -text
+contrib/mksh/sh_flags.gen -text
 contrib/mksh/sh_flags.h -text
 contrib/mksh/sh_flags.opt -text
 contrib/mksh/shf.c -text
