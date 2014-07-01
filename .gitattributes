@@ -512,11 +512,14 @@ dist/lalloc.c -text
 dist/lex.c -text
 dist/lksh.1 -text
 dist/main.c -text
+dist/mirhash.h -text
 dist/misc.c -text
 dist/mksh.1 -text
+dist/rlimits.opt -text
 dist/setmode.c -text
 dist/sh.h -text
 dist/sh_flags.h -text
+dist/sh_flags.opt -text
 dist/shf.c -text
 dist/strlcpy.c -text
 dist/syn.c -text

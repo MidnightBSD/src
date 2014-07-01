@@ -1,8 +1,8 @@
-# $MirOS: src/bin/mksh/check.pl,v 1.32 2013/07/21 18:35:56 tg Exp $
-# $OpenBSD: th,v 1.16 2013/06/14 20:52:08 millert Exp $
+# $MirOS: src/bin/mksh/check.pl,v 1.36 2014/06/09 13:25:50 tg Exp $
+# $OpenBSD: th,v 1.1 2013/12/02 20:39:44 millert Exp $
 #-
 # Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2011,
-#		2012, 2013
+#		2012, 2013, 2014
 #	Thorsten Glaser <tg@mirbsd.org>
 #
 # Provided that these terms and disclaimer and all copyright notices
@@ -172,7 +172,6 @@ BEGIN {
 
 use Getopt::Std;
 use Config;
-use File::Temp qw/ :mktemp /;
 
 $os = defined $^O ? $^O : 'unknown';
 
@@ -251,7 +250,7 @@ die "$prog: no test set specified (use -s)\n" if !defined $opt_s;
 $test_prog = $opt_p;
 $verbose = defined $opt_v && $opt_v;
 $test_set = $opt_s;
-$temp_dir = $opt_T || "/tmp";
+$temp_base = $opt_T || "/tmp";
 if (defined $opt_t) {
     die "$prog: bad -t argument (should be number > 0): $opt_t\n"
 	if $opt_t !~ /^\d+$/ || $opt_t <= 0;
@@ -300,6 +299,18 @@ chop($pwd = `pwd 2>/dev/null`);
 die "$prog: couldn't get current working directory\n" if $pwd eq '';
 die "$prog: couldn't cd to $pwd - $!\n" if !chdir($pwd);
 
+die "$prog: couldn't cd to $temp_base - $!\n" if !chdir($temp_base);
+die "$prog: couldn't get temporary directory base\n" unless -d '.';
+$temps = sprintf("chk%d-%d.", $$, time());
+$tempi = 0;
+until (mkdir(($tempdir = sprintf("%s%03d", $temps, $tempi)), 0700)) {
+    die "$prog: couldn't get temporary directory\n" if $tempi++ >= 999;
+}
+die "$prog: couldn't cd to $tempdir - $!\n" if !chdir($tempdir);
+chop($temp_dir = `pwd 2>/dev/null`);
+die "$prog: couldn't get temporary directory\n" if $temp_dir eq '';
+die "$prog: couldn't cd to $pwd - $!\n" if !chdir($pwd);
+
 if (!$program_kludge) {
     $test_prog = "$pwd/$test_prog" if substr($test_prog, 0, 1) ne '/';
     die "$prog: $test_prog is not executable - bye\n"
@@ -314,15 +325,12 @@ $SIG{'ALRM'} = 'catch_sigalrm';
 $| = 1;
 
 # Create temp files
-($fh, $temps) = mkstemp("${temp_dir}/rts.XXXXXXXX");
-close($fh);
-($fh, $tempi) = mkstemp("${temp_dir}/rti.XXXXXXXX");
-close($fh);
-($fh, $tempo) = mkstemp("${temp_dir}/rto.XXXXXXXX");
-close($fh);
-($fh, $tempe) = mkstemp("${temp_dir}/rte.XXXXXXXX");
-close($fh);
-$tempdir = mkdtemp("${temp_dir}/rtd.XXXXXXXX");
+$temps = "${temp_dir}/rts";
+$tempi = "${temp_dir}/rti";
+$tempo = "${temp_dir}/rto";
+$tempe = "${temp_dir}/rte";
+$tempdir = "${temp_dir}/rtd";
+mkdir($tempdir, 0700) or die "$prog: couldn't mkdir $tempdir - $!\n";
 
 if (-d $test_set) {
     $file_prefix_skip = length($test_set) + 1;
@@ -365,6 +373,7 @@ cleanup_exit
     unlink($tempi, $tempo, $tempe, $temps);
     &scrub_dir($tempdir) if defined $tempdir;
     rmdir($tempdir) if defined $tempdir;
+    rmdir($temp_dir) if defined $temp_dir;
 
     if ($sig) {
 	$SIG{$sig} = 'DEFAULT';
@@ -903,7 +912,7 @@ eval_exit
     } else {
 	$expr = $expect;
 	$expr =~ s/\b([wse])\b/\$$1/g;
-	$expr =~ s/\b(SIG[A-Z0-9]+)\b/&$1/g;
+	$expr =~ s/\b(SIG[A-Z][A-Z0-9]*)\b/&$1/g;
     }
     $w = eval $expr;
     if ($@ ne '') {
@@ -923,12 +932,13 @@ read_test
     %test = ();
     %cnt = ();
     while (<$in>) {
+	chop;
 	next if /^\s*$/;
 	next if /^ *#/;
 	last if /^\s*---\s*$/;
 	$start_lineno = $. if !defined $start_lineno;
 	if (!/^([-\w]+):\s*(|\S|\S.*\S)\s*$/) {
-	    print STDERR "$prog:$file:$.: unrecognised line\n";
+	    print STDERR "$prog:$file:$.: unrecognised line \"$_\"\n";
 	    return undef;
 	}
 	($field, $val) = ($1, $2);
@@ -1154,7 +1164,7 @@ read_test
 		print STDERR "$prog:$test{':long-name'}: expected-exit value $val not in 0..255\n";
 		return undef;
 	    }
-	} elsif ($val !~ /^([\s<>+-=*%\/&|!()]|\b[wse]\b|\bSIG[A-Z0-9]+\b)+$/) {
+	} elsif ($val !~ /^([\s<>+-=*%\/&|!()]|\b[wse]\b|\bSIG[A-Z][A-Z0-9]*\b)+$/) {
 	    print STDERR "$prog:$test{':long-name'}: bad expected-exit expression: $val\n";
 	    return undef;
 	}

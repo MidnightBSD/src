@@ -2,7 +2,7 @@
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
- *		 2011, 2012, 2013
+ *		 2011, 2012, 2013, 2014
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -23,7 +23,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/exec.c,v 1.125 2013/07/21 20:44:44 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/exec.c,v 1.132 2014/06/24 18:38:31 tg Exp $");
 
 #ifndef MKSH_DEFAULT_EXECSHELL
 #define MKSH_DEFAULT_EXECSHELL	"/bin/sh"
@@ -462,7 +462,7 @@ execute(struct op * volatile t,
 	if (vp_pipest->flag & INT_L) {
 		unset(vp_pipest, 1);
 		vp_pipest->flag = DEFINED | ISSET | INTEGER | RDONLY |
-		    ARRAY | INT_U;
+		    ARRAY | INT_U | INT_L;
 		vp_pipest->val.i = rv;
 	}
 
@@ -604,19 +604,15 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 				/* go on, use the builtin */
 				break;
 #endif
-#if !defined(MKSH_SMALL)
 		} else if (tp->val.f == c_trap) {
 			t->u.evalflags &= ~DOTCOMEXEC;
 			break;
-#endif
 		} else
 			break;
 		tp = findcom(ap[0], fcflags & (FC_BI|FC_FUNC));
 	}
-#if !defined(MKSH_SMALL)
 	if (t->u.evalflags & DOTCOMEXEC)
 		flags |= XEXEC;
-#endif
 	l_expand = e->loc;
 	if (keepasn_ok && (!ap[0] || (tp && (tp->flag & KEEPASN))))
 		type_flags = 0;
@@ -656,7 +652,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 		/* but assign in there as usual */
 		typeset(cp, type_flags, 0, 0, 0);
 		if (bourne_function_call && !(type_flags & EXPORT))
-			typeset(cp, LOCAL|LOCAL_COPY|EXPORT, 0, 0, 0);
+			typeset(cp, LOCAL | LOCAL_COPY | EXPORT, 0, 0, 0);
 	}
 
 	if (Flag(FXTRACE)) {
@@ -816,7 +812,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 
 		/* set $_ to programme's full path */
 		/* setstr() can't fail here */
-		setstr(typeset("_", LOCAL|EXPORT, 0, INTEGER, 0),
+		setstr(typeset("_", LOCAL | EXPORT, 0, INTEGER, 0),
 		    tp->val.s, KSH_RETURN_ERROR);
 
 		if (flags&XEXEC) {
@@ -869,7 +865,7 @@ scriptexec(struct op *tp, const char **ap)
 	*tp->args-- = tp->str;
 
 #ifndef MKSH_SMALL
-	if ((fd = open(tp->str, O_RDONLY)) >= 0) {
+	if ((fd = open(tp->str, O_RDONLY | O_BINARY)) >= 0) {
 		/* read first MAXINTERP octets from file */
 		if (read(fd, buf, sizeof(buf)) <= 0)
 			/* read error -> no good */
@@ -884,14 +880,14 @@ scriptexec(struct op *tp, const char **ap)
 		fd = (char *)cp - buf;		/* either 0 or (if BOM) 3 */
 
 		/* scan for newline (or CR) or NUL _before_ end of buffer */
-		while ((char *)cp < (buf + sizeof(buf)))
+		while ((size_t)((char *)cp - buf) < sizeof(buf))
 			if (*cp == '\0' || *cp == '\n' || *cp == '\r') {
 				*cp = '\0';
 				break;
 			} else
 				++cp;
 		/* if the shebang line is longer than MAXINTERP, bail out */
-		if ((char *)cp >= (buf + sizeof(buf)))
+		if ((size_t)((char *)cp - buf) >= sizeof(buf))
 			goto noshebang;
 
 		/* restore begin of shebang position (buf+0 or buf+3) */
@@ -923,6 +919,10 @@ scriptexec(struct op *tp, const char **ap)
 				*tp->args-- = (char *)cp;
 		}
  noshebang:
+		if (buf[0] == 0x7F && buf[1] == 'E' && buf[2] == 'L' &&
+		    buf[3] == 'F')
+			errorf("%s: not executable: %d-bit ELF file", tp->str,
+			    32 * ((uint8_t)buf[4]));
 		fd = buf[0] << 8 | buf[1];
 		if ((fd == /* OMAGIC */ 0407) ||
 		    (fd == /* NMAGIC */ 0410) ||
@@ -931,7 +931,6 @@ scriptexec(struct op *tp, const char **ap)
 		    (fd == /* ECOFF_I386 */ 0x4C01) ||
 		    (fd == /* ECOFF_M68K */ 0x0150 || fd == 0x5001) ||
 		    (fd == /* ECOFF_SH */   0x0500 || fd == 0x0005) ||
-		    (fd == 0x7F45 && buf[2] == 'L' && buf[3] == 'F') ||
 		    (fd == /* "MZ" */ 0x4D5A) ||
 		    (fd == /* gzip */ 0x1F8B))
 			errorf("%s: not executable: magic %04X", tp->str, fd);
@@ -1374,7 +1373,7 @@ iosetup(struct ioword *iop, struct tbl *tp)
 			warningf(true, "%s: %s", cp, "restricted");
 			return (-1);
 		}
-		u = open(cp, flags, 0666);
+		u = open(cp, flags | O_BINARY, 0666);
 	}
 	if (u < 0) {
 		/* herein() may already have printed message */
@@ -1507,7 +1506,7 @@ herein(struct ioword *iop, char **resbuf)
 	 * so temp doesn't get removed too soon).
 	 */
 	h = maketemp(ATEMP, TT_HEREDOC_EXP, &e->temps);
-	if (!(shf = h->shf) || (fd = open(h->tffn, O_RDONLY, 0)) < 0) {
+	if (!(shf = h->shf) || (fd = open(h->tffn, O_RDONLY | O_BINARY, 0)) < 0) {
 		i = errno;
 		warningf(true, "can't %s temporary file %s: %s",
 		    !shf ? "create" : "open", h->tffn, cstrerror(i));
@@ -1669,7 +1668,7 @@ static Test_op
 dbteste_isa(Test_env *te, Test_meta meta)
 {
 	Test_op ret = TO_NONOP;
-	int uqword;
+	bool uqword;
 	const char *p;
 
 	if (!*te->pos.wp)

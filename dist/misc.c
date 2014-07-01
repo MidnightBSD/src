@@ -1,9 +1,9 @@
-/*	$OpenBSD: misc.c,v 1.37 2009/04/19 20:34:05 sthen Exp $	*/
+/*	$OpenBSD: misc.c,v 1.38 2013/11/28 10:33:37 sobrado Exp $	*/
 /*	$OpenBSD: path.c,v 1.12 2005/03/30 17:16:37 deraadt Exp $	*/
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
- *		 2011, 2012, 2013
+ *		 2011, 2012, 2013, 2014
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -30,7 +30,7 @@
 #include <grp.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.214 2013/08/11 14:57:09 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.219 2014/01/05 21:57:27 tg Exp $");
 
 #define KSH_CHVT_FLAG
 #ifdef MKSH_SMALL
@@ -49,10 +49,11 @@ __RCSID("$MirOS: src/bin/mksh/misc.c,v 1.214 2013/08/11 14:57:09 tg Exp $");
 unsigned char chtypes[UCHAR_MAX + 1];
 
 static const unsigned char *pat_scan(const unsigned char *,
-    const unsigned char *, bool);
+    const unsigned char *, bool) MKSH_A_PURE;
 static int do_gmatch(const unsigned char *, const unsigned char *,
-    const unsigned char *, const unsigned char *);
-static const unsigned char *cclass(const unsigned char *, unsigned char);
+    const unsigned char *, const unsigned char *) MKSH_A_PURE;
+static const unsigned char *cclass(const unsigned char *, unsigned char)
+    MKSH_A_PURE;
 #ifdef KSH_CHVT_CODE
 static void chvt(const Getopt *);
 #endif
@@ -125,7 +126,7 @@ Xcheck_grow(XString *xsp, const char *xp, size_t more)
 
 
 #define SHFLAGS_DEFNS
-#include "sh_flags.h"
+#include "sh_flags.gen"
 
 #define OFC(i) (options[i][-2])
 #define OFF(i) (((const unsigned char *)options[i])[-1])
@@ -133,7 +134,7 @@ Xcheck_grow(XString *xsp, const char *xp, size_t more)
 
 const char * const options[] = {
 #define SHFLAGS_ITEMS
-#include "sh_flags.h"
+#include "sh_flags.gen"
 };
 
 /*
@@ -271,6 +272,7 @@ change_flag(enum sh_flag f, int what, bool newset)
 
 		/*XXX this can probably be optimised */
 		kshegid = kshgid = getgid();
+		ksheuid = kshuid = getuid();
 #if HAVE_SETRESUGID
 		DO_SETUID(setresgid, (kshegid, kshegid, kshegid));
 #if HAVE_SETGROUPS
@@ -278,9 +280,8 @@ change_flag(enum sh_flag f, int what, bool newset)
 		setgroups(1, &kshegid);
 #endif
 		DO_SETUID(setresuid, (ksheuid, ksheuid, ksheuid));
-#else
+#else /* !HAVE_SETRESUGID */
 		/* seteuid, setegid, setgid don't EAGAIN on Linux */
-		ksheuid = kshuid = getuid();
 #ifndef MKSH__NO_SETEUGID
 		seteuid(ksheuid);
 #endif
@@ -289,7 +290,7 @@ change_flag(enum sh_flag f, int what, bool newset)
 		setegid(kshegid);
 #endif
 		setgid(kshegid);
-#endif
+#endif /* !HAVE_SETRESUGID */
 	} else if ((f == FPOSIX || f == FSH) && newval) {
 		/* Turning on -o posix or -o sh? */
 		Flag(FBRACEEXPAND) = 0;
@@ -341,46 +342,26 @@ parse_args(const char **argv,
     int what,
     bool *setargsp)
 {
-	static char cmd_opts[NELEM(options) + 5]; /* o:T:\0 */
-	static char set_opts[NELEM(options) + 6]; /* A:o;s\0 */
+	static const char cmd_opts[] =
+#define SHFLAGS_NOT_SET
+#define SHFLAGS_OPTCS
+#include "sh_flags.gen"
+#undef SHFLAGS_NOT_SET
+	    ;
+	static const char set_opts[] =
+#define SHFLAGS_NOT_CMD
+#define SHFLAGS_OPTCS
+#include "sh_flags.gen"
+#undef SHFLAGS_NOT_CMD
+	    ;
 	bool set;
-	char *opts;
+	const char *opts;
 	const char *array = NULL;
 	Getopt go;
 	size_t i;
 	int optc, arrayset = 0;
 	bool sortargs = false;
 	bool fcompatseen = false;
-
-	/* First call? Build option strings... */
-	if (cmd_opts[0] == '\0') {
-		char ch, *p = cmd_opts, *q = set_opts;
-
-		/* see cmd_opts[] declaration */
-		*p++ = 'o';
-		*p++ = ':';
-#ifdef KSH_CHVT_FLAG
-		*p++ = 'T';
-		*p++ = ':';
-#endif
-		/* see set_opts[] declaration */
-		*q++ = 'A';
-		*q++ = ':';
-		*q++ = 'o';
-		*q++ = ';';
-		*q++ = 's';
-
-		for (i = 0; i < NELEM(options); i++) {
-			if ((ch = OFC(i))) {
-				if (OFF(i) & OF_CMDLINE)
-					*p++ = ch;
-				if (OFF(i) & OF_SET)
-					*q++ = ch;
-			}
-		}
-		*p = '\0';
-		*q = '\0';
-	}
 
 	if (what == OF_CMDLINE) {
 		const char *p = argv[0], *q;
@@ -1972,7 +1953,6 @@ c_cd(const char **wp)
 
 
 #ifdef KSH_CHVT_CODE
-extern uint32_t chvt_rndsetup(const void *, size_t);
 extern void chvt_reinit(void);
 
 static void
@@ -2016,9 +1996,9 @@ chvt(const Getopt *go)
 #endif
 	    }
 	}
-	if ((fd = open(dv, O_RDWR)) < 0) {
+	if ((fd = open(dv, O_RDWR | O_BINARY)) < 0) {
 		sleep(1);
-		if ((fd = open(dv, O_RDWR)) < 0) {
+		if ((fd = open(dv, O_RDWR | O_BINARY)) < 0) {
 			errorf("%s: %s %s", "chvt", "can't open", dv);
 		}
 	}
