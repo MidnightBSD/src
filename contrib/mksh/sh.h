@@ -1,16 +1,16 @@
-/*	$OpenBSD: sh.h,v 1.31 2012/09/10 01:25:30 tedu Exp $	*/
+/*	$OpenBSD: sh.h,v 1.33 2013/12/18 13:53:12 millert Exp $	*/
 /*	$OpenBSD: shf.h,v 1.6 2005/12/11 18:53:51 deraadt Exp $	*/
 /*	$OpenBSD: table.h,v 1.8 2012/02/19 07:52:30 otto Exp $	*/
 /*	$OpenBSD: tree.h,v 1.10 2005/03/28 21:28:22 deraadt Exp $	*/
 /*	$OpenBSD: expand.h,v 1.6 2005/03/30 17:16:37 deraadt Exp $	*/
 /*	$OpenBSD: lex.h,v 1.13 2013/03/03 19:11:34 guenther Exp $	*/
-/*	$OpenBSD: proto.h,v 1.34 2012/06/27 07:17:19 otto Exp $	*/
+/*	$OpenBSD: proto.h,v 1.35 2013/09/04 15:49:19 millert Exp $	*/
 /*	$OpenBSD: c_test.h,v 1.4 2004/12/20 11:34:26 otto Exp $	*/
 /*	$OpenBSD: tty.h,v 1.5 2004/12/20 11:34:26 otto Exp $	*/
 
 /*-
  * Copyright © 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
- *	       2011, 2012, 2013
+ *	       2011, 2012, 2013, 2014
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -108,12 +108,12 @@
 
 #undef __attribute__
 #if HAVE_ATTRIBUTE_BOUNDED
-#define MKSH_A_BOUNDED(x,y,z)	__attribute__((__bounded__ (x, y, z)))
+#define MKSH_A_BOUNDED(x,y,z)	__attribute__((__bounded__(x, y, z)))
 #else
 #define MKSH_A_BOUNDED(x,y,z)	/* nothing */
 #endif
 #if HAVE_ATTRIBUTE_FORMAT
-#define MKSH_A_FORMAT(x,y,z)	__attribute__((__format__ (x, y, z)))
+#define MKSH_A_FORMAT(x,y,z)	__attribute__((__format__(x, y, z)))
 #else
 #define MKSH_A_FORMAT(x,y,z)	/* nothing */
 #endif
@@ -121,6 +121,11 @@
 #define MKSH_A_NORETURN		__attribute__((__noreturn__))
 #else
 #define MKSH_A_NORETURN		/* nothing */
+#endif
+#if HAVE_ATTRIBUTE_PURE
+#define MKSH_A_PURE		__attribute__((__pure__))
+#else
+#define MKSH_A_PURE		/* nothing */
 #endif
 #if HAVE_ATTRIBUTE_UNUSED
 #define MKSH_A_UNUSED		__attribute__((__unused__))
@@ -164,9 +169,9 @@
 #endif
 
 #ifdef EXTERN
-__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.667 2013/08/14 20:26:19 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.691 2014/06/29 11:28:28 tg Exp $");
 #endif
-#define MKSH_VERSION "R48 2013/08/14"
+#define MKSH_VERSION "R50 2014/06/29"
 
 /* arithmetic types: C implementation */
 #if !HAVE_CAN_INTTYPES
@@ -298,7 +303,7 @@ struct rusage {
 #define ksh_isupper(c)	(((c) >= 'A') && ((c) <= 'Z'))
 #define ksh_tolower(c)	(((c) >= 'A') && ((c) <= 'Z') ? (c) - 'A' + 'a' : (c))
 #define ksh_toupper(c)	(((c) >= 'a') && ((c) <= 'z') ? (c) - 'a' + 'A' : (c))
-#define ksh_isdash(s)	(((s) != NULL) && ((s)[0] == '-') && ((s)[1] == '\0'))
+#define ksh_isdash(s)	(((s)[0] == '-') && ((s)[1] == '\0'))
 #define ksh_isspace(c)	((((c) >= 0x09) && ((c) <= 0x0D)) || ((c) == 0x20))
 #define ksh_min(x,y)	((x) < (y) ? (x) : (y))
 #define ksh_max(x,y)	((x) > (y) ? (x) : (y))
@@ -337,7 +342,17 @@ struct rusage {
 #define NSIG		(SIGMAX+1)
 #elif defined(_SIGMAX)
 #define NSIG		(_SIGMAX+1)
+#else
+# error Please have your platform define NSIG.
+#define NSIG		64
 #endif
+#endif
+
+/* get rid of this (and awk/printf(1) in Build.sh) later */
+#if (NSIG < 1)
+# error Your NSIG value is not positive.
+#unset NSIG
+#define NSIG		64
 #endif
 
 
@@ -396,6 +411,10 @@ extern int __cdecl setegid(gid_t);
 #endif
 #endif
 
+#ifndef O_BINARY
+#define O_BINARY	0
+#endif
+
 #ifdef MKSH__NO_SYMLINK
 #undef S_ISLNK
 #define S_ISLNK(m)	(/* CONSTCOND */ 0)
@@ -414,12 +433,8 @@ extern int __cdecl setegid(gid_t);
 #define mksh_tcset(fd,st) ioctl((fd), TCSETAW, (st))
 #endif
 
-/* remove redundancies */
-
-#if defined(MirBSD) && (MirBSD >= 0x0AB3) && !defined(MKSH_OPTSTATIC)
-#define MKSH_mirbsd_wcwidth
-#define utf_wcwidth(i) wcwidth((__WCHAR_TYPE__)i)
-extern int wcwidth(__WCHAR_TYPE__);
+#ifndef ISTRIP
+#define ISTRIP		0
 #endif
 
 
@@ -518,7 +533,7 @@ char *ucstrstr(char *, const char *);
 #define mkssert(e)	do { } while (/* CONSTCOND */ 0)
 #endif
 
-#if (!defined(MKSH_BUILDMAKEFILE4BSD) && !defined(MKSH_BUILDSH)) || (MKSH_BUILD_R != 481)
+#if (!defined(MKSH_BUILDMAKEFILE4BSD) && !defined(MKSH_BUILDSH)) || (MKSH_BUILD_R != 501)
 #error Must run Build.sh to compile this.
 extern void thiswillneverbedefinedIhope(void);
 int
@@ -660,7 +675,7 @@ EXTERN Area aperm;		/* permanent object space */
  */
 enum sh_flag {
 #define SHFLAGS_ENUMS
-#include "sh_flags.h"
+#include "sh_flags.gen"
 	FNFLAGS		/* (place holder: how many flags are there) */
 };
 
@@ -1163,11 +1178,11 @@ EXTERN struct tbl vtemp;
 #define arrayindex(vp)	((unsigned long)((vp)->flag & AINDEX ? \
 			    (vp)->ua.index : 0))
 
-EXTERN enum {
+enum namerefflag {
 	SRF_NOP,
 	SRF_ENABLE,
 	SRF_DISABLE
-} set_refflag E_INIT(SRF_NOP);
+};
 
 /* command types */
 #define CNONE		0	/* undefined */
@@ -1380,22 +1395,7 @@ struct ioword {
 #define DOTEMP	BIT(8)		/* dito: in word part of ${..[%#=?]..} */
 #define DOVACHECK BIT(9)	/* var assign check (for typeset, set, etc) */
 #define DOMARKDIRS BIT(10)	/* force markdirs behaviour */
-#if !defined(MKSH_SMALL)
 #define DOTCOMEXEC BIT(11)	/* not an eval flag, used by sh -c hack */
-#endif
-
-/*
- * The arguments of [[ .. ]] expressions are kept in t->args[] and flags
- * indicating how the arguments have been munged are kept in t->vars[].
- * The contents of t->vars[] are stuffed strings (so they can be treated
- * like all other t->vars[]) in which the second character is the one that
- * is examined. The DB_* defines are the values for these second characters.
- */
-#define DB_NORM	1	/* normal argument */
-#define DB_OR	2	/* || -> -o conversion */
-#define DB_AND	3	/* && -> -a conversion */
-#define DB_BE	4	/* an inserted -BE */
-#define DB_PAT	5	/* a pattern argument */
 
 #define X_EXTRA	20	/* this many extra bytes in X string */
 
@@ -1426,7 +1426,7 @@ typedef char *XStringP;
 #define XcheckN(xs, xp, n) do {					\
 	ssize_t more = ((xp) + (n)) - (xs).end;			\
 	if (more > 0)						\
-		(xp) = Xcheck_grow(&(xs), (xp), more);		\
+		(xp) = Xcheck_grow(&(xs), (xp), (size_t)more);	\
 } while (/* CONSTCOND */ 0)
 
 /* check for overflow, expand string */
@@ -1526,9 +1526,7 @@ struct source {
 #define SF_ALIASEND	BIT(2)	/* faking space at end of alias */
 #define SF_TTY		BIT(3)	/* type == SSTDIN & it is a tty */
 #define SF_HASALIAS	BIT(4)	/* u.tblp valid (SALIAS, SEOF) */
-#if !defined(MKSH_SMALL)
 #define SF_MAYEXEC	BIT(5)	/* special sh -c optimisation hack */
-#endif
 
 typedef union {
 	int i;
@@ -1587,6 +1585,7 @@ typedef union {
 #undef CTRL
 #define	CTRL(x)		((x) == '?' ? 0x7F : (x) & 0x1F)	/* ASCII */
 #define	UNCTRL(x)	((x) ^ 0x40)				/* ASCII */
+#define	ISCTRL(x)	(((signed char)((uint8_t)(x) + 1)) < 33)
 
 #define IDENT		64
 
@@ -1611,48 +1610,6 @@ EXTERN struct timeval j_usrtime, j_systime;
 	if (notoktoadd((val), (cnst)))					\
 		internal_errorf(Tintovfl, (size_t)(val),		\
 		    '+', (size_t)(cnst));				\
-} while (/* CONSTCOND */ 0)
-
-
-/* NZAAT hash based on Bob Jenkins' one-at-a-time hash */
-
-/* From: src/kern/include/nzat.h,v 1.2 2011/07/18 00:35:40 tg Exp $ */
-
-#define NZATInit(h) do {					\
-	(h) = 0;						\
-} while (/* CONSTCOND */ 0)
-
-#define NZATUpdateByte(h,b) do {				\
-	(h) += (uint8_t)(b);					\
-	++(h);							\
-	(h) += (h) << 10;					\
-	(h) ^= (h) >> 6;					\
-} while (/* CONSTCOND */ 0)
-
-#define NZATUpdateMem(h,p,z) do {				\
-	register const uint8_t *NZATUpdateMem_p;		\
-	register size_t NZATUpdateMem_z = (z);			\
-								\
-	NZATUpdateMem_p = (const void *)(p);			\
-	while (NZATUpdateMem_z--)				\
-		NZATUpdateByte((h), *NZATUpdateMem_p++);	\
-} while (/* CONSTCOND */ 0)
-
-#define NZATUpdateString(h,s) do {				\
-	register const char *NZATUpdateString_s;		\
-	register uint8_t NZATUpdateString_c;			\
-								\
-	NZATUpdateString_s = (const void *)(s);			\
-	while ((NZATUpdateString_c = *NZATUpdateString_s++))	\
-		NZATUpdateByte((h), NZATUpdateString_c);	\
-} while (/* CONSTCOND */ 0)
-
-#define NZAATFinish(h) do {					\
-	(h) += (h) << 10;					\
-	(h) ^= (h) >> 6;					\
-	(h) += (h) << 3;					\
-	(h) ^= (h) >> 11;					\
-	(h) += (h) << 15;					\
 } while (/* CONSTCOND */ 0)
 
 
@@ -1706,12 +1663,10 @@ int v_evaluate(struct tbl *, const char *, volatile int, bool);
 size_t utf_mbtowc(unsigned int *, const char *);
 size_t utf_wctomb(char *, unsigned int);
 int utf_widthadj(const char *, const char **);
-size_t utf_mbswidth(const char *);
-const char *utf_skipcols(const char *, int);
-size_t utf_ptradj(const char *);
-#ifndef MKSH_mirbsd_wcwidth
-int utf_wcwidth(unsigned int);
-#endif
+size_t utf_mbswidth(const char *) MKSH_A_PURE;
+const char *utf_skipcols(const char *, int) MKSH_A_PURE;
+size_t utf_ptradj(const char *) MKSH_A_PURE;
+int utf_wcwidth(unsigned int) MKSH_A_PURE;
 int ksh_access(const char *, int);
 struct tbl *tempvar(void);
 /* funcs.c */
@@ -1779,10 +1734,10 @@ void sethistsize(mksh_ari_t);
 void sethistfile(const char *);
 #endif
 #if !defined(MKSH_NO_CMDLINE_EDITING) && !MKSH_S_NOVI
-char **histpos(void);
+char **histpos(void) MKSH_A_PURE;
 int histnum(int);
 #endif
-int findhist(int, int, const char *, int);
+int findhist(int, int, const char *, bool) MKSH_A_PURE;
 char **hist_get_newest(bool);
 void inittraps(void);
 void alarm_init(void);
@@ -1817,6 +1772,9 @@ int waitfor(const char *, int *);
 int j_kill(const char *, int);
 #ifndef MKSH_UNEMPLOYED
 int j_resume(const char *, int);
+#endif
+#if !defined(MKSH_UNEMPLOYED) && HAVE_GETSID
+void j_suspend(void);
 #endif
 int j_jobs(const char *, int, int);
 void j_notify(void);
@@ -1895,15 +1853,15 @@ void DF(const char *, ...)
 /* misc.c */
 void setctypes(const char *, int);
 void initctypes(void);
-size_t option(const char *);
+size_t option(const char *) MKSH_A_PURE;
 char *getoptions(void);
 void change_flag(enum sh_flag, int, bool);
 void change_xtrace(unsigned char, bool);
 int parse_args(const char **, int, bool *);
 int getn(const char *, int *);
 int gmatchx(const char *, const char *, bool);
-int has_globbing(const char *, const char *);
-int xstrcmp(const void *, const void *);
+int has_globbing(const char *, const char *) MKSH_A_PURE;
+int xstrcmp(const void *, const void *) MKSH_A_PURE;
 void ksh_getopt_reset(Getopt *, int);
 int ksh_getopt(const char **, Getopt *, const char *);
 void print_value_quoted(struct shf *, const char *);
@@ -1995,19 +1953,21 @@ void setint(struct tbl *, mksh_ari_t);
 void setint_n(struct tbl *, mksh_ari_t, int);
 struct tbl *typeset(const char *, uint32_t, uint32_t, int, int);
 void unset(struct tbl *, int);
-const char *skip_varname(const char *, int);
-const char *skip_wdvarname(const char *, bool);
-int is_wdvarname(const char *, bool);
-int is_wdvarassign(const char *);
+const char *skip_varname(const char *, bool) MKSH_A_PURE;
+const char *skip_wdvarname(const char *, bool) MKSH_A_PURE;
+int is_wdvarname(const char *, bool) MKSH_A_PURE;
+int is_wdvarassign(const char *) MKSH_A_PURE;
 struct tbl *arraysearch(struct tbl *, uint32_t);
 char **makenv(void);
 void change_winsz(void);
-size_t array_ref_len(const char *);
+size_t array_ref_len(const char *) MKSH_A_PURE;
 char *arrayname(const char *);
 mksh_uari_t set_array(const char *, bool, const char **);
-uint32_t hash(const void *);
+uint32_t hash(const void *) MKSH_A_PURE;
+uint32_t chvt_rndsetup(const void *, size_t) MKSH_A_PURE;
 mksh_ari_t rndget(void);
 void rndset(unsigned long);
+void rndpush(const void *);
 
 enum Test_op {
 	/* non-operator */
@@ -2058,10 +2018,11 @@ typedef struct test_env {
 
 extern const char * const dbtest_tokens[];
 
-Test_op	test_isop(Test_meta, const char *);
+Test_op	test_isop(Test_meta, const char *) MKSH_A_PURE;
 int test_eval(Test_env *, Test_op, const char *, const char *, bool);
 int test_parse(Test_env *);
 
+/* tty_fd is not opened O_BINARY, it's thus never read/written */
 EXTERN int tty_fd E_INIT(-1);	/* dup'd tty file descriptor */
 EXTERN bool tty_devtty;		/* true if tty_fd is from /dev/tty */
 EXTERN mksh_ttyst tty_state;	/* saved tty state */

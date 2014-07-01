@@ -1,8 +1,8 @@
-/*	$OpenBSD: lex.c,v 1.47 2013/03/03 19:11:34 guenther Exp $	*/
+/*	$OpenBSD: lex.c,v 1.49 2013/12/17 16:37:06 deraadt Exp $	*/
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
- *		 2011, 2012, 2013
+ *		 2011, 2012, 2013, 2014
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -23,7 +23,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/lex.c,v 1.188 2013/08/10 13:44:31 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/lex.c,v 1.193 2014/06/29 11:28:28 tg Exp $");
 
 /*
  * states while lexing word
@@ -159,9 +159,10 @@ getsc_r(int c)
 	state = statep->type;					\
 } while (/* CONSTCOND */ 0)
 
-#define PUSH_SRETRACE()	do {					\
+#define PUSH_SRETRACE(s) do {					\
 	struct sretrace_info *ri;				\
 								\
+	PUSH_STATE(s);						\
 	statep->ls_start = Xsavepos(ws, wp);			\
 	ri = alloc(sizeof(struct sretrace_info), ATEMP);	\
 	Xinit(ri->xs, ri->xp, 64, ATEMP);			\
@@ -176,6 +177,7 @@ getsc_r(int c)
 	dp = (void *)retrace_info;				\
 	retrace_info = retrace_info->next;			\
 	afree(dp, ATEMP);					\
+	POP_STATE();						\
 } while (/* CONSTCOND */ 0)
 
 /**
@@ -404,9 +406,8 @@ yylex(int cf)
 					c = getsc();
 					if (c == '(') /*)*/ {
 						*wp++ = EXPRSUB;
-						PUSH_STATE(SASPAREN);
+						PUSH_SRETRACE(SASPAREN);
 						statep->nparen = 2;
-						PUSH_SRETRACE();
 						*retrace_info->xp++ = '(';
 					} else {
 						ungetsc(c);
@@ -650,7 +651,6 @@ yylex(int cf)
 				if (statep->nparen == 1) {
 					/* end of EXPRSUB */
 					POP_SRETRACE();
-					POP_STATE();
 
 					if ((c2 = getsc()) == /*(*/ ')') {
 						cz = strlen(sp) - 2;
@@ -833,8 +833,7 @@ yylex(int cf)
 				} else if (c2 == '"') {
 					/* FALLTHROUGH */
 			case '"':
-					state = statep->type = SHEREDQUOTE;
-					PUSH_SRETRACE();
+					PUSH_SRETRACE(SHEREDQUOTE);
 					break;
 				}
 				ungetsc(c2);
@@ -1440,6 +1439,7 @@ getsc_line(Source *s)
 		alarm(0);
 	}
 	cp = Xstring(s->xs, xp);
+	rndpush(cp);
 	s->start = s->str = cp;
 	strip_nuls(Xstring(s->xs, xp), Xlength(s->xs, xp));
 	/* Note: if input is all nulls, this is not eof */
@@ -1521,9 +1521,10 @@ set_prompt(int to, Source *s)
 int
 pprompt(const char *cp, int ntruncate)
 {
-	int columns = 0, lines = 0;
-	bool indelimit = false;
 	char delimiter = 0;
+	bool doprint = (ntruncate != -1);
+	bool indelimit = false;
+	int columns = 0, lines = 0;
 
 	/*
 	 * Undocumented AT&T ksh feature:
@@ -1552,18 +1553,19 @@ pprompt(const char *cp, int ntruncate)
 		else if (UTFMODE && ((unsigned char)*cp > 0x7F)) {
 			const char *cp2;
 			columns += utf_widthadj(cp, &cp2);
-			if (indelimit ||
-			    (ntruncate < (x_cols * lines + columns)))
+			if (doprint && (indelimit ||
+			    (ntruncate < (x_cols * lines + columns))))
 				shf_write(cp, cp2 - cp, shl_out);
 			cp = cp2 - /* loop increment */ 1;
 			continue;
 		} else
 			columns++;
-		if ((*cp != delimiter) &&
+		if (doprint && (*cp != delimiter) &&
 		    (indelimit || (ntruncate < (x_cols * lines + columns))))
 			shf_putc(*cp, shl_out);
 	}
-	shf_flush(shl_out);
+	if (doprint)
+		shf_flush(shl_out);
 	return (x_cols * lines + columns);
 }
 

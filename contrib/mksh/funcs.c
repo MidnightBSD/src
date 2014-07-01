@@ -1,11 +1,11 @@
-/*	$OpenBSD: c_ksh.c,v 1.33 2009/02/07 14:03:24 kili Exp $	*/
-/*	$OpenBSD: c_sh.c,v 1.43 2013/04/19 17:39:45 deraadt Exp $	*/
+/*	$OpenBSD: c_ksh.c,v 1.34 2013/12/17 16:37:05 deraadt Exp $	*/
+/*	$OpenBSD: c_sh.c,v 1.44 2013/09/04 15:49:18 millert Exp $	*/
 /*	$OpenBSD: c_test.c,v 1.18 2009/03/01 20:11:06 otto Exp $	*/
-/*	$OpenBSD: c_ulimit.c,v 1.17 2008/03/21 12:51:19 millert Exp $	*/
+/*	$OpenBSD: c_ulimit.c,v 1.19 2013/11/28 10:33:37 sobrado Exp $	*/
 
 /*-
  * Copyright (c) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
- *		 2010, 2011, 2012, 2013
+ *		 2010, 2011, 2012, 2013, 2014
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -38,7 +38,7 @@
 #endif
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.244 2013/06/03 22:28:32 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.256 2014/06/09 13:25:52 tg Exp $");
 
 #if HAVE_KILLPG
 /*
@@ -58,6 +58,10 @@ __RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.244 2013/06/03 22:28:32 tg Exp $");
 
 #ifdef MKSH_NO_LIMITS
 #define c_ulimit	c_true
+#endif
+
+#if !defined(MKSH_UNEMPLOYED) && HAVE_GETSID
+static int c_suspend(const char **);
 #endif
 
 /* getn() that prints error */
@@ -123,6 +127,9 @@ const struct builtin mkshbuiltins[] = {
 	{"*=return", c_exitreturn},
 	{Tsgset, c_set},
 	{"*=shift", c_shift},
+#if !defined(MKSH_UNEMPLOYED) && HAVE_GETSID
+	{"suspend", c_suspend},
+#endif
 	{"test", c_test},
 	{"*=times", c_times},
 	{"*=trap", c_trap},
@@ -641,6 +648,7 @@ c_typeset(const char **wp)
 	const char *opts;
 	const char *fieldstr = NULL, *basestr = NULL;
 	bool localv = false, func = false, pflag = false, istset = true;
+	enum namerefflag new_refflag = SRF_NOP;
 
 	switch (**wp) {
 
@@ -721,7 +729,7 @@ c_typeset(const char **wp)
 			flag = LCASEV;
 			break;
 		case 'n':
-			set_refflag = (builtin_opt.info & GI_PLUS) ?
+			new_refflag = (builtin_opt.info & GI_PLUS) ?
 			    SRF_DISABLE : SRF_ENABLE;
 			break;
 		/* export, readonly: POSIX -p flag */
@@ -745,8 +753,6 @@ c_typeset(const char **wp)
 			flag = EXPORT;
 			break;
 		case '?':
- errout:
-			set_refflag = SRF_NOP;
 			return (1);
 		}
 		if (builtin_opt.info & GI_PLUS) {
@@ -761,10 +767,10 @@ c_typeset(const char **wp)
 	}
 
 	if (fieldstr && !bi_getn(fieldstr, &field))
-		goto errout;
+		return (1);
 	if (basestr && (!bi_getn(basestr, &base) || base < 1 || base > 36)) {
 		bi_errorf("%s: %s", "bad integer base", basestr);
-		goto errout;
+		return (1);
 	}
 
 	if (!(builtin_opt.info & GI_MINUSMINUS) && wp[builtin_opt.optind] &&
@@ -776,9 +782,9 @@ c_typeset(const char **wp)
 	}
 
 	if (func && (((fset|fclr) & ~(TRACE|UCASEV_AL|EXPORT)) ||
-	    set_refflag != SRF_NOP)) {
+	    new_refflag != SRF_NOP)) {
 		bi_errorf("only -t, -u and -x options may be used with -f");
-		goto errout;
+		return (1);
 	}
 	if (wp[builtin_opt.optind]) {
 		/*
@@ -802,9 +808,17 @@ c_typeset(const char **wp)
 		 * are also set in this command
 		 */
 		if ((fset & (LJUST | RJUST | ZEROFIL | UCASEV_AL | LCASEV |
-		    INTEGER | INT_U | INT_L)) || set_refflag != SRF_NOP)
+		    INTEGER | INT_U | INT_L)) || new_refflag != SRF_NOP)
 			fclr |= ~fset & (LJUST | RJUST | ZEROFIL | UCASEV_AL |
 			    LCASEV | INTEGER | INT_U | INT_L);
+	}
+	if (new_refflag != SRF_NOP) {
+		fclr &= ~(ARRAY | ASSOC);
+		fset &= ~(ARRAY | ASSOC);
+		fclr |= EXPORT;
+		fset |= ASSOC;
+		if (new_refflag == SRF_DISABLE)
+			fclr |= ASSOC;
 	}
 
 	/* set variables and attributes */
@@ -836,14 +850,12 @@ c_typeset(const char **wp)
 				}
 			} else if (!typeset(wp[i], fset, fclr, field, base)) {
 				bi_errorf("%s: %s", wp[i], "is not an identifier");
-				goto errout;
+				return (1);
 			}
 		}
-		set_refflag = SRF_NOP;
 		return (rv);
 	}
 
-	set_refflag = SRF_NOP;
 	/* list variables and attributes */
 
 	/* no difference at this point.. */
@@ -1345,8 +1357,10 @@ c_kill(const char **wp)
 			for (; wp[i]; i++) {
 				if (!bi_getn(wp[i], &n))
 					return (1);
+#if (NSIG < 128)
 				if (n > 128 && n < 128 + NSIG)
 					n -= 128;
+#endif
 				if (n > 0 && n < NSIG)
 					shprintf("%s\n", sigtraps[n].name);
 				else
@@ -3333,16 +3347,6 @@ ptest_error(Test_env *te, int ofs, const char *msg)
 #define SOFT	0x1
 #define HARD	0x2
 
-struct limits {
-	const char *name;
-	int resource;		/* resource to get/set */
-	unsigned int factor;	/* multiply by to get rlim_{cur,max} values */
-	char option;
-};
-
-static void print_ulimit(const struct limits *, int);
-static int set_ulimit(const struct limits *, const char *, int);
-
 /* Magic to divine the 'm' and 'v' limits */
 
 #ifdef RLIMIT_AS
@@ -3385,165 +3389,38 @@ static int set_ulimit(const struct limits *, const char *, int);
 #undef ULIMIT_M_IS_VMEM
 #endif
 
+#if defined(ULIMIT_M_IS_RSS) && defined(ULIMIT_M_IS_VMEM)
+# error nonsensical m ulimit
+#endif
+
+#if defined(ULIMIT_V_IS_VMEM) && defined(ULIMIT_V_IS_AS)
+# error nonsensical v ulimit
+#endif
+
+#define RLIMITS_DEFNS
+#include "rlimits.gen"
+
+static void print_ulimit(const struct limits *, int);
+static int set_ulimit(const struct limits *, const char *, int);
+
+static const struct limits * const rlimits[] = {
+#define RLIMITS_ITEMS
+#include "rlimits.gen"
+};
+
+static const char rlimits_opts[] =
+#define RLIMITS_OPTCS
+#include "rlimits.gen"
+    ;
 
 int
 c_ulimit(const char **wp)
 {
-	static const struct limits limits[] = {
-		/* do not use options -H, -S or -a or change the order */
-#ifdef RLIMIT_CPU
-		{ "time(cpu-seconds)", RLIMIT_CPU, 1, 't' },
-#endif
-#ifdef RLIMIT_FSIZE
-		{ "file(blocks)", RLIMIT_FSIZE, 512, 'f' },
-#endif
-#ifdef RLIMIT_CORE
-		{ "coredump(blocks)", RLIMIT_CORE, 512, 'c' },
-#endif
-#ifdef RLIMIT_DATA
-		{ "data(KiB)", RLIMIT_DATA, 1024, 'd' },
-#endif
-#ifdef RLIMIT_STACK
-		{ "stack(KiB)", RLIMIT_STACK, 1024, 's' },
-#endif
-#ifdef RLIMIT_MEMLOCK
-		{ "lockedmem(KiB)", RLIMIT_MEMLOCK, 1024, 'l' },
-#endif
-#ifdef RLIMIT_NOFILE
-		{ "nofiles(descriptors)", RLIMIT_NOFILE, 1, 'n' },
-#endif
-#ifdef RLIMIT_NPROC
-		{ "processes", RLIMIT_NPROC, 1, 'p' },
-#endif
-#ifdef RLIMIT_SWAP
-		{ "swap(KiB)", RLIMIT_SWAP, 1024, 'w' },
-#endif
-#ifdef RLIMIT_LOCKS
-		{ "flocks", RLIMIT_LOCKS, -1, 'L' },
-#endif
-#ifdef RLIMIT_TIME
-		{ "humantime(seconds)", RLIMIT_TIME, 1, 'T' },
-#endif
-#ifdef RLIMIT_NOVMON
-		{ "vnodemonitors", RLIMIT_NOVMON, 1, 'V' },
-#endif
-#ifdef RLIMIT_SIGPENDING
-		{ "sigpending", RLIMIT_SIGPENDING, 1, 'i' },
-#endif
-#ifdef RLIMIT_MSGQUEUE
-		{ "msgqueue(bytes)", RLIMIT_MSGQUEUE, 1, 'q' },
-#endif
-#ifdef RLIMIT_AIO_MEM
-		{ "AIOlockedmem(KiB)", RLIMIT_AIO_MEM, 1024, 'M' },
-#endif
-#ifdef RLIMIT_AIO_OPS
-		{ "AIOoperations", RLIMIT_AIO_OPS, 1, 'O' },
-#endif
-#ifdef RLIMIT_TCACHE
-		{ "cachedthreads", RLIMIT_TCACHE, 1, 'C' },
-#endif
-#ifdef RLIMIT_SBSIZE
-		{ "sockbufsiz(KiB)", RLIMIT_SBSIZE, 1024, 'B' },
-#endif
-#ifdef RLIMIT_PTHREAD
-		{ "threadsperprocess", RLIMIT_PTHREAD, 1, 'P' },
-#endif
-#ifdef RLIMIT_NICE
-		{ "maxnice", RLIMIT_NICE, 1, 'e' },
-#endif
-#ifdef RLIMIT_RTPRIO
-		{ "maxrtprio", RLIMIT_RTPRIO, 1, 'r' },
-#endif
-#if defined(ULIMIT_M_IS_RSS)
-		{ "resident-set(KiB)", RLIMIT_RSS, 1024, 'm' },
-#elif defined(ULIMIT_M_IS_VMEM)
-		{ "memory(KiB)", RLIMIT_VMEM, 1024, 'm' },
-#endif
-#if defined(ULIMIT_V_IS_VMEM)
-		{ "virtual-memory(KiB)", RLIMIT_VMEM, 1024, 'v' },
-#elif defined(ULIMIT_V_IS_AS)
-		{ "address-space(KiB)", RLIMIT_AS, 1024, 'v' },
-#endif
-		{ NULL, 0, 0, 0 }
-	};
-	static const char opts[] = "a"
-#ifdef RLIMIT_SBSIZE
-	    "B"
-#endif
-#ifdef RLIMIT_TCACHE
-	    "C"
-#endif
-#ifdef RLIMIT_CORE
-	    "c"
-#endif
-#ifdef RLIMIT_DATA
-	    "d"
-#endif
-#ifdef RLIMIT_NICE
-	    "e"
-#endif
-#ifdef RLIMIT_FSIZE
-	    "f"
-#endif
-	    "H"
-#ifdef RLIMIT_SIGPENDING
-	    "i"
-#endif
-#ifdef RLIMIT_LOCKS
-	    "L"
-#endif
-#ifdef RLIMIT_MEMLOCK
-	    "l"
-#endif
-#ifdef RLIMIT_AIO_MEM
-	    "M"
-#endif
-#if defined(ULIMIT_M_IS_RSS) || defined(ULIMIT_M_IS_VMEM)
-	    "m"
-#endif
-#ifdef RLIMIT_NOFILE
-	    "n"
-#endif
-#ifdef RLIMIT_AIO_OPS
-	    "O"
-#endif
-#ifdef RLIMIT_PTHREAD
-	    "P"
-#endif
-#ifdef RLIMIT_NPROC
-	    "p"
-#endif
-#ifdef RLIMIT_MSGQUEUE
-	    "q"
-#endif
-#ifdef RLIMIT_RTPRIO
-	    "r"
-#endif
-	    "S"
-#ifdef RLIMIT_STACK
-	    "s"
-#endif
-#ifdef RLIMIT_TIME
-	    "T"
-#endif
-#ifdef RLIMIT_CPU
-	    "t"
-#endif
-#ifdef RLIMIT_NOVMON
-	    "V"
-#endif
-#if defined(ULIMIT_V_IS_VMEM) || defined(ULIMIT_V_IS_AS)
-	    "v"
-#endif
-#ifdef RLIMIT_SWAP
-	    "w"
-#endif
-	    ;
+	size_t i = 0;
 	int how = SOFT | HARD, optc, what = 'f';
 	bool all = false;
-	const struct limits *l;
 
-	while ((optc = ksh_getopt(wp, &builtin_opt, opts)) != -1)
+	while ((optc = ksh_getopt(wp, &builtin_opt, rlimits_opts)) != -1)
 		switch (optc) {
 		case 'H':
 			how = HARD;
@@ -3555,31 +3432,32 @@ c_ulimit(const char **wp)
 			all = true;
 			break;
 		case '?':
-			bi_errorf("usage: ulimit [-%s] [value]", opts);
+			bi_errorf("usage: ulimit [-%s] [value]", rlimits_opts);
 			return (1);
 		default:
 			what = optc;
 		}
 
-	for (l = limits; l->name && l->option != what; l++)
-		;
-	if (!l->name) {
-		internal_warningf("ulimit: %c", what);
-		return (1);
+	while (i < NELEM(rlimits)) {
+		if (rlimits[i]->optchar == what)
+			goto found;
+		++i;
 	}
-
+	internal_warningf("ulimit: %c", what);
+	return (1);
+ found:
 	if (wp[builtin_opt.optind]) {
 		if (all || wp[builtin_opt.optind + 1]) {
 			bi_errorf("too many arguments");
 			return (1);
 		}
-		return (set_ulimit(l, wp[builtin_opt.optind], how));
+		return (set_ulimit(rlimits[i], wp[builtin_opt.optind], how));
 	}
 	if (!all)
-		print_ulimit(l, how);
-	else for (l = limits; l->name; l++) {
-		shprintf("%-20s ", l->name);
-		print_ulimit(l, how);
+		print_ulimit(rlimits[i], how);
+	else for (i = 0; i < NELEM(rlimits); ++i) {
+		shprintf("%-20s ", rlimits[i]->name);
+		print_ulimit(rlimits[i], how);
 	}
 	return (0);
 }
@@ -3611,7 +3489,11 @@ set_ulimit(const struct limits *l, const char *v, int how)
 	}
 
 	if (getrlimit(l->resource, &limit) < 0) {
-		/* some can't be read, e.g. Linux RLIMIT_LOCKS */
+#ifndef MKSH_SMALL
+		bi_errorf("limit %s could not be read, contact the mksh developers: %s",
+		    l->name, cstrerror(errno));
+#endif
+		/* some can't be read */
 		limit.rlim_cur = RLIM_INFINITY;
 		limit.rlim_max = RLIM_INFINITY;
 	}
@@ -3735,7 +3617,7 @@ c_cat(const char **wp)
 			fn = *wp++;
 			if (fn[0] == '-' && fn[1] == '\0')
 				fd = STDIN_FILENO;
-			else if ((fd = open(fn, O_RDONLY)) < 0) {
+			else if ((fd = open(fn, O_RDONLY | O_BINARY)) < 0) {
 				eno = errno;
 				bi_errorf("%s: %s", fn, cstrerror(eno));
 				rv = 1;
@@ -3840,5 +3722,26 @@ c_sleep(const char **wp)
 #endif
 	}
 	return (rv);
+}
+#endif
+
+#if !defined(MKSH_UNEMPLOYED) && HAVE_GETSID
+static int
+c_suspend(const char **wp)
+{
+	if (wp[1] != NULL) {
+		bi_errorf("too many arguments");
+		return (1);
+	}
+	if (Flag(FLOGIN)) {
+		/* Can't suspend an orphaned process group. */
+		if (getpgid(kshppid) == getpgid(0) ||
+		    getsid(kshppid) != getsid(0)) {
+			bi_errorf("can't suspend a login shell");
+			return (1);
+		}
+	}
+	j_suspend();
+	return (0);
 }
 #endif

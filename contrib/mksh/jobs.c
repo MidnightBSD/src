@@ -1,8 +1,8 @@
-/*	$OpenBSD: jobs.c,v 1.39 2009/12/13 04:36:48 deraadt Exp $	*/
+/*	$OpenBSD: jobs.c,v 1.40 2013/09/04 15:49:18 millert Exp $	*/
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2011,
- *		 2012, 2013
+ *		 2012, 2013, 2014
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -23,7 +23,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/jobs.c,v 1.100 2013/07/26 20:33:23 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/jobs.c,v 1.104 2014/06/10 22:17:09 tg Exp $");
 
 #if HAVE_KILLPG
 #define mksh_killpg		killpg
@@ -224,6 +224,54 @@ proc_errorlevel(Proc *p)
 		return (0);
 	}
 }
+
+#if !defined(MKSH_UNEMPLOYED) && HAVE_GETSID
+/* suspend the shell */
+void
+j_suspend(void)
+{
+	struct sigaction sa, osa;
+
+	/* Restore tty and pgrp. */
+	if (ttypgrp_ok) {
+		if (tty_hasstate)
+			mksh_tcset(tty_fd, &tty_state);
+		if (restore_ttypgrp >= 0) {
+			if (tcsetpgrp(tty_fd, restore_ttypgrp) < 0) {
+				warningf(false, "%s: %s %s: %s", "j_suspend",
+				    "tcsetpgrp", "failed", cstrerror(errno));
+			} else if (setpgid(0, restore_ttypgrp) < 0) {
+				warningf(false, "%s: %s %s: %s", "j_suspend",
+				    "setpgid", "failed", cstrerror(errno));
+			}
+		}
+	}
+
+	/* Suspend the shell. */
+	memset(&sa, 0, sizeof(sa));
+	sigemptyset(&sa.sa_mask);
+	sa.sa_handler = SIG_DFL;
+	sigaction(SIGTSTP, &sa, &osa);
+	kill(0, SIGTSTP);
+
+	/* Back from suspend, reset signals, pgrp and tty. */
+	sigaction(SIGTSTP, &osa, NULL);
+	if (ttypgrp_ok) {
+		if (restore_ttypgrp >= 0) {
+			if (setpgid(0, kshpid) < 0) {
+				warningf(false, "%s: %s %s: %s", "j_suspend",
+				    "setpgid", "failed", cstrerror(errno));
+				ttypgrp_ok = false;
+			} else if (tcsetpgrp(tty_fd, kshpid) < 0) {
+				warningf(false, "%s: %s %s: %s", "j_suspend",
+				    "tcsetpgrp", "failed", cstrerror(errno));
+				ttypgrp_ok = false;
+			}
+		}
+		tty_init_state();
+	}
+}
+#endif
 
 /* job cleanup before shell exit */
 void
@@ -1222,6 +1270,15 @@ j_waitj(Job *j,
 				rv = vp->val.i;
 			p = p->next;
 		}
+	} else if (Flag(FPIPEFAIL) && (j->proc_list != NULL)) {
+		Proc *p = j->proc_list;
+		int i;
+
+		while (p != NULL) {
+			if ((i = proc_errorlevel(p)))
+				rv = i;
+			p = p->next;
+		}
 	}
 
 	if (!(flags & JW_ASYNCNOTIFY)
@@ -1281,7 +1338,11 @@ j_sigchld(int sig MKSH_A_UNUSED)
 	getrusage(RUSAGE_CHILDREN, &ru0);
 	do {
 #ifndef MKSH_NOPROSPECTOFWORK
-		pid = waitpid(-1, &status, (WNOHANG|WUNTRACED));
+		pid = waitpid(-1, &status, (WNOHANG |
+#ifdef WCONTINUED
+		    WCONTINUED |
+#endif
+		    WUNTRACED));
 #else
 		pid = wait(&status);
 #endif
@@ -1320,6 +1381,13 @@ j_sigchld(int sig MKSH_A_UNUSED)
 		if (WIFSTOPPED(status))
 			p->state = PSTOPPED;
 		else
+#ifdef WIFCONTINUED
+		  if (WIFCONTINUED(status)) {
+			p->state = j->state = PRUNNING;
+			/* skip check_job(), no-op in this case */
+			continue;
+		} else
+#endif
 #endif
 		  if (WIFSIGNALED(status))
 			p->state = PSIGNALLED;

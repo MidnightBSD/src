@@ -1,8 +1,8 @@
 #!/bin/sh
-srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.645 2013/08/10 13:44:25 tg Exp $'
+srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.662 2014/06/29 10:56:08 tg Exp $'
 #-
 # Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
-#		2011, 2012, 2013
+#		2011, 2012, 2013, 2014
 #	Thorsten Glaser <tg@mirbsd.org>
 #
 # Provided that these terms and disclaimer and all copyright notices
@@ -28,9 +28,6 @@ srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.645 2013/08/10 13:44:25 tg Exp $'
 LC_ALL=C
 export LC_ALL
 
-echo "For the build logs, demonstrate that /dev/null and /dev/tty exist:"
-ls -l /dev/null /dev/tty
-
 case $ZSH_VERSION:$VERSION in
 :zsh*) ZSH_VERSION=2 ;;
 esac
@@ -45,6 +42,162 @@ if test -d /usr/xpg4/bin/. >/dev/null 2>&1; then
 	PATH=/usr/xpg4/bin:$PATH
 	export PATH
 fi
+
+nl='
+'
+safeIFS='	'
+safeIFS=" $safeIFS$nl"
+IFS=$safeIFS
+allu=QWERTYUIOPASDFGHJKLZXCVBNM
+alll=qwertyuiopasdfghjklzxcvbnm
+alln=0123456789
+alls=______________________________________________________________
+
+genopt_die() {
+	if test -n "$1"; then
+		echo >&2 "E: $*"
+		echo >&2 "E: in '$srcfile': '$line'"
+	else
+		echo >&2 "E: invalid input in '$srcfile': '$line'"
+	fi
+	rm -f "$bn.gen"
+	exit 1
+}
+
+genopt_soptc() {
+	optc=`echo "$line" | sed 's/^[<>]\(.\).*$/\1/'`
+	test x"$optc" = x'|' && return
+	optclo=`echo "$optc" | tr $allu $alll`
+	if test x"$optc" = x"$optclo"; then
+		islo=1
+	else
+		islo=0
+	fi
+	sym=`echo "$line" | sed 's/^[<>]/|/'`
+	o_str=$o_str$nl"<$optclo$islo$sym"
+}
+
+genopt_scond() {
+	case x$cond in
+	x)
+		cond=
+		;;
+	x*' '*)
+		cond=`echo "$cond" | sed 's/^ //'`
+		cond="#if $cond"
+		;;
+	x'!'*)
+		cond=`echo "$cond" | sed 's/^!//'`
+		cond="#ifndef $cond"
+		;;
+	x*)
+		cond="#ifdef $cond"
+		;;
+	esac
+}
+
+do_genopt() {
+	srcfile=$1
+	test -f "$srcfile" || genopt_die Source file \$srcfile not set.
+	bn=`basename "$srcfile" | sed 's/.opt$//'`
+	o_gen=
+	o_str=
+	o_sym=
+	ddefs=
+	state=0
+	exec <"$srcfile"
+	IFS=
+	while IFS= read line; do
+		IFS=$safeIFS
+		case $state:$line in
+		2:'|'*)
+			# end of input
+			o_sym=`echo "$line" | sed 's/^.//'`
+			o_gen=$o_gen$nl"#undef F0"
+			o_gen=$o_gen$nl"#undef FN"
+			o_gen=$o_gen$ddefs
+			state=3
+			;;
+		1:@@)
+			# begin of data block
+			o_gen=$o_gen$nl"#endif"
+			o_gen=$o_gen$nl"#ifndef F0"
+			o_gen=$o_gen$nl"#define F0 FN"
+			o_gen=$o_gen$nl"#endif"
+			state=2
+			;;
+		*:@@*)
+			genopt_die ;;
+		0:@*|1:@*)
+			# begin of a definition block
+			sym=`echo "$line" | sed 's/^@//'`
+			if test $state = 0; then
+				o_gen=$o_gen$nl"#if defined($sym)"
+			else
+				o_gen=$o_gen$nl"#elif defined($sym)"
+			fi
+			ddefs="$ddefs$nl#undef $sym"
+			state=1
+			;;
+		0:*|3:*)
+			genopt_die ;;
+		1:*)
+			# definition line
+			o_gen=$o_gen$nl$line
+			;;
+		2:'<'*'|'*)
+			genopt_soptc
+			;;
+		2:'>'*'|'*)
+			genopt_soptc
+			cond=`echo "$line" | sed 's/^[^|]*|//'`
+			genopt_scond
+			case $optc in
+			'|') optc=0 ;;
+			*) optc=\'$optc\' ;;
+			esac
+			IFS= read line || genopt_die Unexpected EOF
+			IFS=$safeIFS
+			test -n "$cond" && o_gen=$o_gen$nl"$cond"
+			o_gen=$o_gen$nl"$line, $optc)"
+			test -n "$cond" && o_gen=$o_gen$nl"#endif"
+			;;
+		esac
+	done
+	case $state:$o_sym in
+	3:) genopt_die Expected optc sym at EOF ;;
+	3:*) ;;
+	*) genopt_die Missing EOF marker ;;
+	esac
+	echo "$o_str" | sort | while IFS='|' read x opts cond; do
+		IFS=$safeIFS
+		test -n "$x" || continue
+		genopt_scond
+		test -n "$cond" && echo "$cond"
+		echo "\"$opts\""
+		test -n "$cond" && echo "#endif"
+	done | {
+		echo "#ifndef $o_sym$o_gen"
+		echo "#else"
+		cat
+		echo "#undef $o_sym"
+		echo "#endif"
+	} >"$bn.gen"
+	IFS=$safeIFS
+	return 0
+}
+
+if test x"$BUILDSH_RUN_GENOPT" = x"1"; then
+	set x -G "$srcfile"
+	shift
+fi
+if test x"$1" = x"-G"; then
+	do_genopt "$2"
+	exit $?
+fi
+
+echo "For the build logs, demonstrate that /dev/null and /dev/tty exist:"
+ls -l /dev/null /dev/tty
 
 v() {
 	$e "$*"
@@ -66,18 +219,12 @@ vq() {
 rmf() {
 	for _f in "$@"; do
 		case $_f in
-		Build.sh|check.pl|check.t|dot.mkshrc|*.c|*.h|*.ico|*.1) ;;
+		Build.sh|check.pl|check.t|dot.mkshrc|*.1|*.c|*.h|*.ico|*.opt) ;;
 		*) rm -f "$_f" ;;
 		esac
 	done
 }
 
-allu=QWERTYUIOPASDFGHJKLZXCVBNM
-alll=qwertyuiopasdfghjklzxcvbnm
-alln=0123456789
-alls=______________________________________________________________
-nl='
-'
 tcfn=no
 bi=
 ui=
@@ -193,8 +340,9 @@ ac_testn() {
 ac_ifcpp() {
 	expr=$1; shift
 	ac_testn "$@" <<-EOF
+		#include <unistd.h>
 		extern int thiswillneverbedefinedIhope(void);
-		int main(void) { return (
+		int main(void) { return (isatty(0) +
 		#$expr
 		    0
 		#else
@@ -251,7 +399,8 @@ ac_flags() {
 	else
 		ac_testn can_$vn '' "$ft" <<-'EOF'
 			/* evil apo'stroph in comment test */
-			int main(void) { return (0); }
+			#include <unistd.h>
+			int main(void) { return (isatty(0)); }
 		EOF
 	fi
 	eval fv=\$HAVE_CAN_`upper $vn`
@@ -291,19 +440,14 @@ ac_header() {
 		esac
 	done
 	echo "#include <$hf>" >>x
-	echo 'int main(void) { return (0); }' >>x
+	echo '#include <unistd.h>' >>x
+	echo 'int main(void) { return (isatty(0)); }' >>x
 	ac_testn "$hv" "" "<$hf>" <x
 	rmf x
 	test 1 = $na || ac_cppflags
 }
 
 addsrcs() {
-	addsrcs_s=0
-	if test x"$1" = x"-s"; then
-		# optstatic
-		addsrcs_s=1
-		shift
-	fi
 	if test x"$1" = x"!"; then
 		fr=0
 		shift
@@ -311,13 +455,6 @@ addsrcs() {
 		fr=1
 	fi
 	eval i=\$$1
-	if test $addsrcs_s = 1; then
-		if test -f "$2" || test -f "$srcdir/$2"; then
-			# always add $2, since it exists
-			fr=1
-			i=1
-		fi
-	fi
 	test $fr = "$i" && case " $SRCS " in
 	*\ $2\ *)	;;
 	*)		SRCS="$SRCS $2" ;;
@@ -325,9 +462,21 @@ addsrcs() {
 }
 
 
-curdir=`pwd` srcdir=`dirname "$0" 2>/dev/null` check_categories=
-test -n "$srcdir" || srcdir=. # in case dirname does not exist
-dstversion=`sed -n '/define MKSH_VERSION/s/^.*"\([^"]*\)".*$/\1/p' $srcdir/sh.h`
+curdir=`pwd` srcdir=`dirname "$0" 2>/dev/null`
+case x$srcdir in
+x)
+	srcdir=.
+	;;
+*\ *|*"	"*|*"$nl"*)
+	echo >&2 Source directory should not contain space or tab or newline.
+	echo >&2 Errors may occur.
+	;;
+*"'"*)
+	echo Source directory must not contain single quotes.
+	exit 1
+	;;
+esac
+dstversion=`sed -n '/define MKSH_VERSION/s/^.*"\([^"]*\)".*$/\1/p' "$srcdir/sh.h"`
 add_cppflags -DMKSH_BUILDSH
 
 e=echo
@@ -336,6 +485,7 @@ eq=0
 pm=0
 cm=normal
 optflags=-std-compile-opts
+check_categories=
 last=
 tfn=
 legacy=0
@@ -361,6 +511,10 @@ do
 		;;
 	:-c)
 		last=c
+		;;
+	:-G)
+		echo "$me: Do not call me with '-G'!" >&2
+		exit 1
 		;;
 	:-g)
 		# checker, debug, valgrind build
@@ -423,7 +577,7 @@ if test -d $tfn || test -d $tfn.exe; then
 	echo "$me: Error: ./$tfn is a directory!" >&2
 	exit 1
 fi
-rmf a.exe* a.out* conftest.c *core core.* lft ${tfn}* no *.bc *.ll *.o \
+rmf a.exe* a.out* conftest.c *core core.* lft ${tfn}* no *.bc *.ll *.o *.gen \
     Rebuild.sh signames.inc test.sh x vv.out
 
 SRCS="lalloc.c eval.c exec.c expr.c funcs.c histrap.c jobs.c"
@@ -462,7 +616,7 @@ oswarn=
 ccpc=-Wc,
 ccpl=-Wl,
 tsts=
-ccpr='|| for _f in ${tcfn}*; do case $_f in Build.sh|check.pl|check.t|dot.mkshrc|*.c|*.h|*.ico|*.1) ;; *) rm -f "$_f" ;; esac; done'
+ccpr='|| for _f in ${tcfn}*; do case $_f in Build.sh|check.pl|check.t|dot.mkshrc|*.1|*.c|*.h|*.ico|*.opt) ;; *) rm -f "$_f" ;; esac; done'
 
 # Evil hack
 if test x"$TARGET_OS" = x"Android"; then
@@ -786,7 +940,12 @@ AIX)
 	;;
 Darwin)
 	vv '|' "hwprefs machine_type os_type os_class >&2"
+	vv '|' "sw_vers >&2"
+	vv '|' "system_profiler SPSoftwareDataType SPHardwareDataType >&2"
+	vv '|' "/bin/sh --version >&2"
+	vv '|' "xcodebuild -version >&2"
 	vv '|' "uname -a >&2"
+	vv '|' "sysctl kern.version hw.machine hw.model hw.memsize hw.availcpu hw.cpufrequency hw.byteorder hw.cpu64bit_capable >&2"
 	;;
 IRIX*)
 	vv '|' "uname -a >&2"
@@ -905,7 +1064,10 @@ vv ']' "$CPP $CFLAGS $CPPFLAGS $NOWARN conftest.c | \
 sed 's/^/[ /' x
 eval `cat x`
 rmf x vv.out
-echo 'int main(void) { return (0); }' >conftest.c
+cat >conftest.c <<'EOF'
+#include <unistd.h>
+int main(void) { return (isatty(0)); }
+EOF
 case $ct in
 ack)
 	# work around "the famous ACK const bug"
@@ -1091,13 +1253,15 @@ if ac_ifcpp 'if 0' compiler_fails '' \
 	dec)
 		CFLAGS="$CFLAGS ${ccpl}-non_shared"
 		ac_testn can_delexe compiler_fails 0 'for the -non_shared linker option' <<-EOF
-			int main(void) { return (0); }
+			#include <unistd.h>
+			int main(void) { return (isatty(0)); }
 		EOF
 		;;
 	dmc)
 		CFLAGS="$CFLAGS ${ccpl}/DELEXECUTABLE"
 		ac_testn can_delexe compiler_fails 0 'for the /DELEXECUTABLE linker option' <<-EOF
-			int main(void) { return (0); }
+			#include <unistd.h>
+			int main(void) { return (isatty(0)); }
 		EOF
 		;;
 	*)
@@ -1193,7 +1357,8 @@ kencc|tcc|tendra)
 	;;
 sunpro)
 	cat >x <<-'EOF'
-		int main(void) { return (0); }
+		#include <unistd.h>
+		int main(void) { return (isatty(0)); }
 		#define __IDSTRING_CONCAT(l,p)	__LINTED__ ## l ## _ ## p
 		#define __IDSTRING_EXPAND(l,p)	__IDSTRING_CONCAT(l,p)
 		#define pad			void __IDSTRING_EXPAND(__LINE__,x)(void) { }
@@ -1235,7 +1400,9 @@ gcc)
 	# mksh is not written in CFrustFrust!
 	ac_flags 1 no_eh_frame -fno-asynchronous-unwind-tables
 	ac_flags 1 fnostrictaliasing -fno-strict-aliasing
-	ac_flags 1 fstackprotectorall -fstack-protector-all
+	ac_flags 1 fstackprotectorstrong -fstack-protector-strong
+	test 1 = $HAVE_CAN_FSTACKPROTECTORSTRONG || \
+	    ac_flags 1 fstackprotectorall -fstack-protector-all
 	test $cm = dragonegg && case " $CC $CFLAGS $LDFLAGS " in
 	*\ -fplugin=*dragonegg*) ;;
 	*) ac_flags 1 fplugin_dragonegg -fplugin=dragonegg ;;
@@ -1356,8 +1523,8 @@ ac_test attribute_bounded '' 'for __attribute__((__bounded__))' <<-'EOF'
 	#include <string.h>
 	#undef __attribute__
 	int xcopy(const void *, void *, size_t)
-	    __attribute__((__bounded__ (__buffer__, 1, 3)))
-	    __attribute__((__bounded__ (__buffer__, 2, 3)));
+	    __attribute__((__bounded__(__buffer__, 1, 3)))
+	    __attribute__((__bounded__(__buffer__, 2, 3)));
 	int main(int ac, char *av[]) { return (xcopy(av[0], av[--ac], 1)); }
 	int xcopy(const void *s, void *d, size_t n) {
 		/*
@@ -1379,7 +1546,7 @@ ac_test attribute_format '' 'for __attribute__((__format__))' <<-'EOF'
 	#undef __attribute__
 	#undef fprintf
 	extern int fprintf(FILE *, const char *format, ...)
-	    __attribute__((__format__ (__printf__, 2, 3)));
+	    __attribute__((__format__(__printf__, 2, 3)));
 	int main(int ac, char **av) { return (fprintf(stderr, "%s%d", *av, ac)); }
 	#endif
 EOF
@@ -1396,14 +1563,29 @@ ac_test attribute_noreturn '' 'for __attribute__((__noreturn__))' <<-'EOF'
 	void fnord(void) { exit(0); }
 	#endif
 EOF
+ac_test attribute_pure '' 'for __attribute__((__pure__))' <<-'EOF'
+	#if defined(__TenDRA__) || (defined(__GNUC__) && (__GNUC__ < 2))
+	extern int thiswillneverbedefinedIhope(void);
+	/* force a failure: TenDRA and gcc 1.42 have false positive here */
+	int main(void) { return (thiswillneverbedefinedIhope()); }
+	#else
+	#include <unistd.h>
+	#undef __attribute__
+	int foo(const char *) __attribute__((__pure__));
+	int main(int ac, char **av) { return (foo(av[ac - 1]) + isatty(0)); }
+	int foo(const char *s) { return ((int)s[0]); }
+	#endif
+EOF
 ac_test attribute_unused '' 'for __attribute__((__unused__))' <<-'EOF'
 	#if defined(__TenDRA__) || (defined(__GNUC__) && (__GNUC__ < 2))
 	extern int thiswillneverbedefinedIhope(void);
 	/* force a failure: TenDRA and gcc 1.42 have false positive here */
 	int main(void) { return (thiswillneverbedefinedIhope()); }
 	#else
+	#include <unistd.h>
+	#undef __attribute__
 	int main(int ac __attribute__((__unused__)), char **av
-	    __attribute__((__unused__))) { return (0); }
+	    __attribute__((__unused__))) { return (isatty(0)); }
 	#endif
 EOF
 ac_test attribute_used '' 'for __attribute__((__used__))' <<-'EOF'
@@ -1412,8 +1594,10 @@ ac_test attribute_used '' 'for __attribute__((__used__))' <<-'EOF'
 	/* force a failure: TenDRA and gcc 1.42 have false positive here */
 	int main(void) { return (thiswillneverbedefinedIhope()); }
 	#else
+	#include <unistd.h>
+	#undef __attribute__
 	static const char fnord[] __attribute__((__used__)) = "42";
-	int main(void) { return (0); }
+	int main(void) { return (isatty(0)); }
 	#endif
 EOF
 
@@ -1465,7 +1649,8 @@ ac_test both_time_h '' 'whether <sys/time.h> and <time.h> can both be included' 
 	#include <sys/types.h>
 	#include <sys/time.h>
 	#include <time.h>
-	int main(void) { struct tm tm; return ((int)sizeof(tm)); }
+	#include <unistd.h>
+	int main(void) { struct tm tm; return ((int)sizeof(tm) + isatty(0)); }
 EOF
 ac_header sys/bsdtypes.h
 ac_header sys/file.h sys/types.h
@@ -1491,11 +1676,12 @@ ac_header values.h
 # Environment: definitions
 #
 echo '#include <sys/types.h>
+#include <unistd.h>
 /* check that off_t can represent 2^63-1 correctly, thx FSF */
-#define LARGE_OFF_T (((off_t)1 << 62) - 1 + ((off_t)1 << 62))
+#define LARGE_OFF_T ((((off_t)1 << 31) << 31) - 1 + (((off_t)1 << 31) << 31))
 int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721 &&
     LARGE_OFF_T % 2147483647 == 1) ? 1 : -1];
-int main(void) { return (0); }' >lft.c
+int main(void) { return (isatty(0)); }' >lft.c
 ac_testn can_lfs '' "for large file support" <lft.c
 save_CPPFLAGS=$CPPFLAGS
 add_cppflags -D_FILE_OFFSET_BITS=64
@@ -1546,7 +1732,7 @@ ac_test rlim_t <<-'EOF'
 	#include <sys/resource.h>
 	#endif
 	#include <unistd.h>
-	int main(void) { return ((int)(rlim_t)0); }
+	int main(void) { return (((int)(rlim_t)0) + isatty(0)); }
 EOF
 
 # only testn: added later below
@@ -1598,8 +1784,8 @@ else
 		#define EXTERN
 		#define MKSH_INCLUDES_ONLY
 		#include "sh.h"
-		__RCSID("$MirOS: src/bin/mksh/Build.sh,v 1.645 2013/08/10 13:44:25 tg Exp $");
-		int main(void) { printf("Hello, World!\n"); return (0); }
+		__RCSID("$MirOS: src/bin/mksh/Build.sh,v 1.662 2014/06/29 10:56:08 tg Exp $");
+		int main(void) { printf("Hello, World!\n"); return (isatty(0)); }
 EOF
 	case $cm in
 	llvm)
@@ -1638,12 +1824,14 @@ test x"NetBSD" = x"$TARGET_OS" && $e Ignore the compatibility warning.
 ac_testn sys_errlist '' "the sys_errlist[] array and sys_nerr" <<-'EOF'
 	extern const int sys_nerr;
 	extern const char * const sys_errlist[];
-	int main(void) { return (*sys_errlist[sys_nerr - 1]); }
+	extern int isatty(int);
+	int main(void) { return (*sys_errlist[sys_nerr - 1] + isatty(0)); }
 EOF
 ac_testn _sys_errlist '!' sys_errlist 0 "the _sys_errlist[] array and _sys_nerr" <<-'EOF'
 	extern const int _sys_nerr;
 	extern const char * const _sys_errlist[];
-	int main(void) { return (*_sys_errlist[_sys_nerr - 1]); }
+	extern int isatty(int);
+	int main(void) { return (*_sys_errlist[_sys_nerr - 1] + isatty(0)); }
 EOF
 if test 1 = "$HAVE__SYS_ERRLIST"; then
 	add_cppflags -Dsys_nerr=_sys_nerr
@@ -1656,11 +1844,13 @@ for what in name list; do
 	uwhat=`upper $what`
 	ac_testn sys_sig$what '' "the sys_sig${what}[] array" <<-EOF
 		extern const char * const sys_sig${what}[];
-		int main(void) { return (sys_sig${what}[0][0]); }
+		extern int isatty(int);
+		int main(void) { return (sys_sig${what}[0][0] + isatty(0)); }
 	EOF
 	ac_testn _sys_sig$what '!' sys_sig$what 0 "the _sys_sig${what}[] array" <<-EOF
 		extern const char * const _sys_sig${what}[];
-		int main(void) { return (_sys_sig${what}[0][0]); }
+		extern int isatty(int);
+		int main(void) { return (_sys_sig${what}[0][0] + isatty(0)); }
 	EOF
 	eval uwhat_v=\$HAVE__SYS_SIG$uwhat
 	if test 1 = "$uwhat_v"; then
@@ -1703,6 +1893,11 @@ ac_test getrusage <<-'EOF'
 	}
 EOF
 
+ac_test getsid <<-'EOF'
+	#include <unistd.h>
+	int main(void) { return ((int)getsid(0)); }
+EOF
+
 ac_test gettimeofday <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
@@ -1722,7 +1917,7 @@ ac_test memmove <<-'EOF'
 	#include <strings.h>
 	#endif
 	int main(int ac, char *av[]) {
-		return (*(int *)(void *)memmove(av[0], av[1], ac));
+		return (*(int *)(void *)memmove(av[0], av[1], (size_t)ac));
 	}
 EOF
 
@@ -1894,12 +2089,12 @@ EOF
 ac_test sys_errlist_decl sys_errlist 0 "for declaration of sys_errlist[] and sys_nerr" <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
-	int main(void) { return (*sys_errlist[sys_nerr - 1]); }
+	int main(void) { return (*sys_errlist[sys_nerr - 1] + isatty(0)); }
 EOF
 ac_test sys_siglist_decl sys_siglist 0 'for declaration of sys_siglist[]' <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
-	int main(void) { return (sys_siglist[0][0]); }
+	int main(void) { return (sys_siglist[0][0] + isatty(0)); }
 EOF
 
 #
@@ -1970,7 +2165,7 @@ cta(ptr_fits_in_long, sizeof(ptrdiff_t) <= sizeof(long));
 		char padding[64 - NUM];
 	};
 char ctasserts_dblcheck[sizeof(struct ctasserts) == 64 ? 1 : -1];
-	int main(void) { return (sizeof(ctasserts_dblcheck)); }
+	int main(void) { return (sizeof(ctasserts_dblcheck) + isatty(0)); }
 EOF
 CFLAGS=$save_CFLAGS
 eval test 1 = \$HAVE_COMPILE_TIME_ASSERTS_$$ || exit 1
@@ -2054,6 +2249,9 @@ if test 0 = $HAVE_SYS_SIGNAME; then
 #define NSIG (SIGMAX+1)
 #elif defined(_SIGMAX)
 #define NSIG (_SIGMAX+1)
+#else
+/* XXX better error out, see sh.h */
+#define NSIG 64
 #endif
 #endif
 int
@@ -2072,9 +2270,9 @@ mksh_cfg= NSIG
 	test $printf = echo || test "`printf %d 42`" = 42 || printf=echo
 	test $printf = echo || NSIG=`printf %d "$NSIG" 2>/dev/null`
 	$printf "NSIG=$NSIG ... "
-	sigs="INT SEGV ABRT KILL ALRM BUS CHLD CLD CONT DIL EMT FPE HUP ILL"
-	sigs="$sigs INFO IO IOT LOST PIPE PROF PWR QUIT RESV SAK STOP SYS TERM"
-	sigs="$sigs TRAP TSTP TTIN TTOU URG USR1 USR2 VTALRM WINCH XCPU XFSZ"
+	sigs="ABRT FPE ILL INT SEGV TERM ALRM BUS CHLD CONT HUP KILL PIPE QUIT"
+	sigs="$sigs STOP TSTP TTIN TTOU USR1 USR2 POLL PROF SYS TRAP URG VTALRM"
+	sigs="$sigs XCPU XFSZ INFO WINCH EMT IO DIL LOST PWR SAK CLD IOT RESV"
 	test 1 = $HAVE_CPP_DD && test $NSIG -gt 1 && sigs="$sigs "`vq \
 	    "$CPP $CFLAGS $CPPFLAGS $NOWARN -dD conftest.c" | \
 	    grep '[	 ]SIG[A-Z0-9][A-Z0-9]*[	 ]' | \
@@ -2108,12 +2306,11 @@ mksh_cfg= NSIG
 	$e done.
 fi
 
-addsrcs -s '!' HAVE_STRLCPY strlcpy.c
+addsrcs '!' HAVE_STRLCPY strlcpy.c
 addsrcs USE_PRINTF_BUILTIN printf.c
 test 1 = "$USE_PRINTF_BUILTIN" && add_cppflags -DMKSH_PRINTF_BUILTIN
 test 1 = "$HAVE_CAN_VERB" && CFLAGS="$CFLAGS -verbose"
-test -n "$LDSTATIC" && add_cppflags -DMKSH_OPTSTATIC
-add_cppflags -DMKSH_BUILD_R=481
+add_cppflags -DMKSH_BUILD_R=501
 
 $e $bi$me: Finished configuration testing, now producing output.$ao
 
@@ -2175,6 +2372,10 @@ cat >test.sh <<-EOF
 	fi
 	(( vflag )) && args[\${#args[*]}]=-v
 	(( xflag )) && args[\${#args[*]}]=-x	# force usage by synerr
+	if [[ -n \$TMPDIR && -d \$TMPDIR/. ]]; then
+		args[\${#args[*]}]=-T
+		args[\${#args[*]}]=\$TMPDIR
+	fi
 	print Testing mksh for conformance:
 	fgrep -e MirOS: -e MIRBSD "\$sflag"
 	print "This shell is actually:\\n\\t\$KSH_VERSION"
@@ -2224,6 +2425,10 @@ llvm)
 	;;
 esac
 echo ": # work around NeXTstep bug" >Rebuild.sh
+for file in "$srcdir"/*.opt; do
+	echo "echo + Running genopt on '$file'..."
+	echo "(srcfile='$file'; BUILDSH_RUN_GENOPT=1; . '$srcdir/Build.sh')"
+done >>Rebuild.sh
 echo set -x >>Rebuild.sh
 for file in $SRCS; do
 	op=`echo x"$file" | sed 's/^x\(.*\)\.c$/\1./'`
@@ -2253,8 +2458,15 @@ echo tcfn=$mkshexe >>Rebuild.sh
 echo "$CC $CFLAGS $LDFLAGS -o \$tcfn $lobjs $LIBS $ccpr" >>Rebuild.sh
 echo "test -f \$tcfn || exit 1; $SIZE \$tcfn" >>Rebuild.sh
 if test $cm = makefile; then
-	extras='emacsfn.h sh.h sh_flags.h var_spec.h'
+	extras='emacsfn.h rlimits.opt sh.h sh_flags.opt var_spec.h'
 	test 0 = $HAVE_SYS_SIGNAME && extras="$extras signames.inc"
+	gens= genq=
+	for file in "$srcdir"/*.opt; do
+		genf=`basename "$file" | sed 's/.opt$/.gen/'`
+		gens="$gens $genf"
+		genq="$genq$nl$genf: $srcdir/Build.sh $file
+			srcfile=$file; BUILDSH_RUN_GENOPT=1; . $srcdir/Build.sh"
+	done
 	cat >Makefrag.inc <<EOF
 # Makefile fragment for building mksh $dstversion
 
@@ -2271,6 +2483,8 @@ CFLAGS=		$CFLAGS
 CPPFLAGS=	$CPPFLAGS
 LDFLAGS=	$LDFLAGS
 LIBS=		$LIBS
+
+.depend \$(OBJS_BP):$gens$genq
 
 # not BSD make only:
 #VPATH=		$srcdir
@@ -2295,6 +2509,10 @@ EOF
 	$e Generated Makefrag.inc successfully.
 	exit 0
 fi
+for file in "$srcdir"/*.opt; do
+	$e "+ Running genopt on '$file'..."
+	do_genopt "$file" || exit 1
+done
 if test $cm = combine; then
 	objs="-o $mkshexe"
 	for file in $SRCS; do

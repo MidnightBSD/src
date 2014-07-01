@@ -1,8 +1,8 @@
-.\" $MirOS: src/bin/mksh/mksh.1,v 1.320 2013/08/10 14:11:39 tg Exp $
-.\" $OpenBSD: ksh.1,v 1.147 2013/06/13 19:43:09 millert Exp $
+.\" $MirOS: src/bin/mksh/mksh.1,v 1.336 2014/06/24 20:47:44 tg Exp $
+.\" $OpenBSD: ksh.1,v 1.152 2014/02/12 16:28:13 schwarze Exp $
 .\"-
 .\" Copyright © 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
-.\"		2010, 2011, 2012, 2013
+.\"		2010, 2011, 2012, 2013, 2014
 .\"	Thorsten Glaser <tg@mirbsd.org>
 .\"
 .\" Provided that these terms and disclaimer and all copyright notices
@@ -74,7 +74,7 @@
 .\" with -mandoc, it might implement .Mx itself, but we want to
 .\" use our own definition. And .Dd must come *first*, always.
 .\"
-.Dd $Mdocdate: August 10 2013 $
+.Dd $Mdocdate: June 24 2014 $
 .\"
 .\" Check which macro package we use, and do other -mdoc setup.
 .\"
@@ -247,8 +247,7 @@ below.
 Privileged shell.
 A shell is
 .Dq privileged
-if this option is used
-or if the real user ID or group ID does not match the
+if the real user ID or group ID does not match the
 effective user ID or group ID (see
 .Xr getuid 2
 and
@@ -257,6 +256,9 @@ Clearing the privileged option causes the shell to set
 its effective user ID (group ID) to its real user ID (group ID).
 For further implications, see
 .Sx Startup files .
+If the shell is privileged and this flag is not explicitly set, the
+.Dq privileged
+option is cleared automatically after processing the startup files.
 .It Fl r
 Restricted shell.
 A shell is
@@ -366,6 +368,9 @@ parameter after subjecting it to parameter, command, arithmetic and tilde
 substitution; if unset or empty, the user mkshrc profile is processed;
 otherwise, if a file whose name is the substitution result exists,
 it is processed; non-existence is silently ignored.
+A privileged shell then drops privileges if neither was the
+.Fl p
+option given on the command line nor set during execution of the startup files.
 .Ss Command syntax
 The shell begins parsing its input by removing any backslash-newline
 combinations, then breaking it into
@@ -955,7 +960,7 @@ The second operand of the
 .Sq !=
 and
 .Sq =
-expressions are patterns (e.g. the comparison
+expressions are a subset of patterns (e.g. the comparison
 .Ic \&[[ foobar = f*r ]]
 succeeds).
 This even works indirectly:
@@ -967,6 +972,7 @@ $ [[ $bar = \&"$baz" ]]; echo $?
 .Pp
 Perhaps surprisingly, the first comparison succeeds,
 whereas the second doesn't.
+This does not apply to all extglob metacharacters, currently.
 .El
 .El
 .Ss Quoting
@@ -1123,7 +1129,6 @@ nameref=\*(aqtypeset \-n\*(aq
 nohup=\*(aqnohup \*(aq
 r=\*(aqfc \-e \-\*(aq
 stop=\*(aqkill \-STOP\*(aq
-suspend=\*(aqkill \-STOP $$\*(aq
 type=\*(aqwhence \-v\*(aq
 .Ed
 .Pp
@@ -1685,17 +1690,10 @@ Currently,
 must start with a space, opening parenthesis or digit to be recognised.
 Cannot be applied to a vector.
 .Pp
-.It Xo
-.Pf ${ Ar name
-.Pf @# Ns Oo Ar seed Oc Ns }
-.Xc
-The internal hash of the expansion of
-.Ar name ,
-with an optional (defaulting to zero)
-.Op Ar seed .
-At the moment, this is NZAAT (a 32-bit hash based on
-Bob Jenkins' one-at-a-time hash), but this is not set.
-This is the hash the shell uses internally for its associative arrays.
+.It Pf ${ Ns Ar name Ns @#}
+The hash (using the BAFH algorithm) of the expansion of
+.Ar name .
+This is also used internally for the shell's hashtables.
 .Pp
 .It Pf ${ Ns Ar name Ns @Q}
 A quoted expression safe for re-entry, whose value is the value of the
@@ -2037,7 +2035,7 @@ in reverse video
 in the prompt string:
 .Bd -literal -offset indent
 x=$(print \e\e001)
-PS1="$x$(print \e\er)$x$(tput smso)$x\e$PWD$x$(tput rmso)$x\*(Gt "
+PS1="$x$(print \e\er)$x$(tput so)$x\e$PWD$x$(tput se)$x\*(Gt "
 .Ed
 .Pp
 Due to a strong suggestion from David G. Korn,
@@ -2592,7 +2590,7 @@ in all forms of arithmetic expressions, except as numeric arguments to the
 built-in command.
 Prefixing numbers with a sole digit zero
 .Pq Sq 0
-leads to the shell interpreting it as base-8 integer in
+leads to the shell interpreting it as base-8 (octal) integer in
 .Ic posix
 mode
 .Em only ;
@@ -2953,8 +2951,9 @@ Builtins that are not special:
 .Ic false , fc , fg , getopts ,
 .Ic jobs , kill , let , mknod ,
 .Ic print , pwd , read , realpath ,
-.Ic rename , sleep , test , true ,
-.Ic ulimit , umask , unalias , whence
+.Ic rename , sleep , suspend , test ,
+.Ic true , ulimit , umask , unalias ,
+.Ic whence
 .Pp
 Once the type of command has been determined, any command-line parameter
 assignments are performed and exported for the duration of the command.
@@ -3411,6 +3410,7 @@ and
 .Ar last
 select commands from the history.
 Commands can be selected by history number
+(negative numbers go backwards from the current, most recent, line)
 or a string specifying the most recent command starting with that string.
 The
 .Fl l
@@ -3623,7 +3623,7 @@ Since expressions may need to be quoted,
 is syntactic sugar for
 .No let \&" Ns Ar expr Ns \&" .
 .Pp
-.It let]
+.It Ic let]
 Internally used alias for
 .Ic let .
 .Pp
@@ -4036,6 +4036,12 @@ Only used if job control is enabled
 .It Fl C \*(Ba Fl o Ic noclobber
 Prevent \*(Gt redirection from overwriting existing files.
 Instead, \*(Gt\*(Ba must be used to force an overwrite.
+Note that this is not safe to use for creation of temporary files or
+lockfiles due to a TOCTOU in a check allowing one to redirect output to
+.Pa /dev/null
+or other device files even in
+.Ic noclobber
+mode.
 .It Fl e \*(Ba Fl o Ic errexit
 Exit (after executing the
 .Dv ERR
@@ -4242,6 +4248,9 @@ mode.
 Enable
 .Xr vi 1 Ns -like
 command-line editing (interactive shells only).
+See
+.Sx Vi editing mode
+for documentation and limitations.
 .It Fl o Ic vi\-esccomplete
 In vi command-line editing, do command and file name completion when escape
 (\*(ha[) is entered in command mode.
@@ -4314,6 +4323,16 @@ In
 and
 .Nm mksh ,
 this is implemented as a shell alias instead of a builtin.
+.Pp
+.It Ic suspend
+Stops the shell as if it had received the suspend character from
+the terminal.
+It is not possible to suspend a login shell unless the parent process
+is a member of the same terminal session but is a member of a different
+process group.
+As a general rule, if the shell was started by another shell or via
+.Xr su 1 ,
+it can be suspended.
 .Pp
 .It Ic test Ar expression
 .It Ic \&[ Ar expression Ic \&]
@@ -4878,7 +4897,7 @@ unless they are also given on the same command line.
 .Pp
 .It Xo
 .Ic ulimit
-.Op Fl aBCcdefHiLlMmnOPpqrSsTtVvw
+.Op Fl aBCcdefHilMmnOPpqrSsTtVvw
 .Op Ar value
 .Xc
 Display or set process limits.
@@ -4929,8 +4948,6 @@ Set the hard limit only (the default is to set both hard and soft limits).
 .It Fl i Ar n
 Set the number of pending signals to
 .Ar n .
-.It Fl L Ar n
-Control flocks; documentation is missing.
 .It Fl l Ar n
 Impose a limit of
 .Ar n
@@ -5673,6 +5690,7 @@ replaces the inserted text string with the next previously killed text string.
 .Ss Vi editing mode
 .Em Note:
 The vi command-line editing mode is orphaned, yet still functional.
+It is 8-bit clean but specifically does not support UTF-8 or MBCS.
 .Pp
 The vi command-line editor in
 .Nm
@@ -6307,15 +6325,15 @@ contains the system and suid profile.
 .%A Stephen G. Kochan
 .%A Patrick H. Wood
 .%B "\\*(tNUNIX\\*(sP Shell Programming"
-.%V "Revised Edition"
-.%D 1990
-.%I "Hayden"
-.%P "xi\ +\ 490 pages"
-.%O "ISBN 978\-0\-672\-48448\-3 (0\-672\-48448\-X)"
+.%V "3rd Edition"
+.%D 2003
+.%I "Sams"
+.%P "xiii\ +\ 437 pages"
+.%O "ISBN 978\-0\-672\-32490\-1 (0\-672\-32490\-3)"
 .Re
 .Rs
 .%A "IEEE Inc."
-.%B "\\*(tNIEEE\\*(sP Standard for Information Technology \*(en Portable Operating System Interface (POSIX)"
+.%T "\\*(tNIEEE\\*(sP Standard for Information Technology \*(en Portable Operating System Interface (POSIX)"
 .%V "Part 2: Shell and Utilities"
 .%D 1993
 .%I "IEEE Press"
@@ -6348,24 +6366,35 @@ contains the system and suid profile.
 .%O "ISBN 978\-0\-201\-56324\-5 (0\-201\-56324\-X)"
 .Re
 .Sh AUTHORS
+.An -nosplit
 .Nm "The MirBSD Korn Shell"
 is developed by
 .An Thorsten Glaser Aq tg@mirbsd.org
 and currently maintained as part of The MirOS Project.
-This shell is based upon the Public Domain Korn SHell.
-The developer of mksh recognises the efforts of the pdksh authors,
-who had dedicated their work into Public Domain, our users, and
-all contributors, such as the Debian and OpenBSD projects.
-.\"
-.\" Charles Forsyth, author of the (Public Domain) Bourne Shell clone,
-.\" which mksh is derived from, agreed to the following:
-.\"
-.\" In countries where the Public Domain status of the work may not be
-.\" valid, its primary author hereby grants a copyright licence to the
-.\" general public to deal in the work without restriction and permis-
-.\" sion to sublicence derivates under the terms of any (OSI approved)
-.\" Open Source licence.
-.\"
+This shell is based on the public domain 7th edition Bourne shell clone by
+.An Charles Forsyth ,
+who kindly agreed to, in countries where the Public Domain status of the work
+may not be valid, grant a copyright licence to the general public to deal in
+the work without restriction and permission to sublicence derivates under the
+terms of any (OSI approved) Open Source licence,
+and parts of the BRL shell by
+.An Doug A. Gwyn ,
+.An Doug Kingston ,
+.An Ron Natalie ,
+.An Arnold Robbins ,
+.An Lou Salkind ,
+and others.
+The first release of
+.Nm pdksh
+was created by
+.An Eric Gisin ,
+and it was subsequently maintained by
+.An John R. MacMillan Aq Mt change!john@sq.sq.com ,
+.An Simon J. Gerraty Aq Mt sjg@zen.void.oz.au ,
+and
+.An Michael Rendell Aq Mt michael@cs.mun.ca .
+The effort of several projects, such as Debian and OpenBSD, and other
+contributors including our users, to improve the shell is appreciated.
 See the documentation, CVS, and web site for details.
 .Pp
 The BSD daemon is Copyright \(co Marshall Kirk McKusick.
@@ -6425,7 +6454,7 @@ $ /bin/sleep 666 && echo fubar
 .Ed
 .Pp
 This document attempts to describe
-.Nm mksh\ R48
+.Nm mksh\ R50
 and up,
 compiled without any options impacting functionality, such as
 .Dv MKSH_SMALL ,

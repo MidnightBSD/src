@@ -1,11 +1,11 @@
-/*	$OpenBSD: main.c,v 1.52 2013/06/15 17:25:19 millert Exp $	*/
+/*	$OpenBSD: main.c,v 1.54 2013/11/28 10:33:37 sobrado Exp $	*/
 /*	$OpenBSD: tty.c,v 1.9 2006/03/14 22:08:01 deraadt Exp $	*/
-/*	$OpenBSD: io.c,v 1.22 2006/03/17 16:30:13 millert Exp $	*/
+/*	$OpenBSD: io.c,v 1.23 2013/12/17 16:37:06 deraadt Exp $	*/
 /*	$OpenBSD: table.c,v 1.15 2012/02/19 07:52:30 otto Exp $	*/
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
- *		 2011, 2012, 2013
+ *		 2011, 2012, 2013, 2014
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -34,7 +34,7 @@
 #include <locale.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/main.c,v 1.269 2013/07/25 18:07:46 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/main.c,v 1.280 2014/06/09 12:28:17 tg Exp $");
 
 extern char **environ;
 
@@ -48,7 +48,6 @@ extern char **environ;
 
 static uint8_t isuc(const char *);
 static int main_init(int, const char *[], Source **, struct block **);
-uint32_t chvt_rndsetup(const void *, size_t);
 void chvt_reinit(void);
 static void reclaim(void);
 static void remove_temps(struct temp *);
@@ -76,7 +75,6 @@ static const char *initcoms[] = {
 	/* not in Android for political reasons */
 	/* not in ARGE mksh due to no job control */
 	"stop=kill -STOP",
-	"suspend=kill -STOP $$",
 #endif
 	"autoload=typeset -fu",
 	"functions=typeset -f",
@@ -142,21 +140,6 @@ rndsetup(void)
 
 	afree(cp, APERM);
 	return ((mksh_uari_t)h);
-}
-
-uint32_t
-chvt_rndsetup(const void *bp, size_t sz)
-{
-	register uint32_t h;
-
-	NZATInit(h);
-	/* variation through pid, ppid, and the works */
-	NZATUpdateMem(h, &rndsetupstate, sizeof(rndsetupstate));
-	/* some variation, some possibly entropy, depending on OE */
-	NZATUpdateMem(h, bp, sz);
-	NZAATFinish(h);
-
-	return (h);
 }
 
 void
@@ -247,6 +230,23 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 	if (!*ccp)
 		ccp = empty_argv[0];
 
+	/*
+	 * Turn on nohup by default. (AT&T ksh does not have a nohup
+	 * option - it always sends the hup).
+	 */
+	Flag(FNOHUP) = 1;
+
+	/*
+	 * Turn on brace expansion by default. AT&T kshs that have
+	 * alternation always have it on.
+	 */
+	Flag(FBRACEEXPAND) = 1;
+
+	/*
+	 * Turn on "set -x" inheritance by default.
+	 */
+	Flag(FXTRACEREC) = 1;
+
 	/* define built-in commands and see if we were called as one */
 	ktinit(APERM, &builtins,
 	    /* currently up to 51 builtins: 75% of 128 = 2^7 */
@@ -329,25 +329,6 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 	/* setstr can't fail here */
 	setstr(vp, def_path, KSH_RETURN_ERROR);
 
-	/*
-	 * Turn on nohup by default for now - will change to off
-	 * by default once people are aware of its existence
-	 * (AT&T ksh does not have a nohup option - it always sends
-	 * the hup).
-	 */
-	Flag(FNOHUP) = 1;
-
-	/*
-	 * Turn on brace expansion by default. AT&T kshs that have
-	 * alternation always have it on.
-	 */
-	Flag(FBRACEEXPAND) = 1;
-
-	/*
-	 * Turn on "set -x" inheritance by default.
-	 */
-	Flag(FXTRACEREC) = 1;
-
 #ifndef MKSH_NO_CMDLINE_EDITING
 	/*
 	 * Set edit mode to emacs by default, may be overridden
@@ -361,9 +342,14 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 #endif
 
 	/* import environment */
-	if (environ != NULL)
-		for (wp = (const char **)environ; *wp != NULL; wp++)
+	if (environ != NULL) {
+		wp = (const char **)environ;
+		while (*wp != NULL) {
+			rndpush(*wp);
 			typeset(*wp, IMPORT | EXPORT, 0, 0, 0);
+			++wp;
+		}
+	}
 
 	/* for security */
 	typeset(initifs, 0, 0, 0, 0);
@@ -421,7 +407,7 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 	setint_n((vp_pipest = global("PIPESTATUS")), 0, 10);
 
 	/* Set this before parsing arguments */
-	Flag(FPRIVILEGED) = kshuid != ksheuid || kshgid != kshegid;
+	Flag(FPRIVILEGED) = (kshuid != ksheuid || kshgid != kshegid) ? 2 : 0;
 
 	/* this to note if monitor is set on command line (see below) */
 #ifndef MKSH_UNEMPLOYED
@@ -436,44 +422,6 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 			return (1);
 	}
 
-#if defined(DEBUG) && !defined(MKSH_LEGACY_MODE)
-	/* test wraparound of arithmetic types */
-	{
-		volatile long xl;
-		volatile unsigned long xul;
-		volatile int xi;
-		volatile unsigned int xui;
-		volatile mksh_ari_t xa;
-		volatile mksh_uari_t xua, xua2;
-		volatile uint8_t xc;
-
-		xa = 2147483647;
-		xua = 2147483647;
-		++xa;
-		++xua;
-		xua2 = xa;
-		xl = xa;
-		xul = xua;
-		xa = 0;
-		xua = 0;
-		--xa;
-		--xua;
-		xi = xa;
-		xui = xua;
-		xa = -1;
-		xua = xa;
-		++xa;
-		++xua;
-		xc = 0;
-		--xc;
-		if ((xua2 != 2147483648UL) ||
-		    (xl != (-2147483647L-1)) || (xul != 2147483648UL) ||
-		    (xi != -1) || (xui != 4294967295U) ||
-		    (xa != 0) || (xua != 0) || (xc != 255))
-			errorf("integer wraparound test failed");
-	}
-#endif
-
 	/* process this later only, default to off (hysterical raisins) */
 	utf_flag = UTFMODE;
 	UTFMODE = 0;
@@ -485,7 +433,6 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 		s = pushs(SSTRINGCMDLINE, ATEMP);
 		if (!(s->start = s->str = argv[argi++]))
 			errorf("%s %s", "-c", "requires an argument");
-#if !defined(MKSH_SMALL)
 		while (*s->str) {
 			if (*s->str != ' ' && ctype(*s->str, C_QUOTE))
 				break;
@@ -494,7 +441,6 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 		if (!*s->str)
 			s->flags |= SF_MAYEXEC;
 		s->str = s->start;
-#endif
 #ifdef MKSH_MIDNIGHTBSD01ASH_COMPAT
 		/* compatibility to MidnightBSD 0.1 /bin/sh (kludge) */
 		if (Flag(FSH) && argv[argi] && !strcmp(argv[argi], "--"))
@@ -543,11 +489,13 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 #ifndef MKSH_ASSUME_UTF8
 			/* auto-detect from locale or environment */
 			utf_flag = 4;
-#elif MKSH_ASSUME_UTF8
+#else /* this may not be an #elif */
+#if MKSH_ASSUME_UTF8
 			utf_flag = 1;
 #else
 			/* always disable UTF-8 (for interactive) */
 			utf_flag = 0;
+#endif
 #endif
 		}
 #ifndef MKSH_NO_CMDLINE_EDITING
@@ -637,22 +585,22 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 	if (!current_wd[0] && Flag(FTALKING))
 		warningf(false, "can't determine current directory");
 
-	if (Flag(FLOGIN)) {
+	if (Flag(FLOGIN))
 		include(MKSH_SYSTEM_PROFILE, 0, NULL, true);
-		if (!Flag(FPRIVILEGED))
-			include(substitute("$HOME/.profile", 0), 0,
-			    NULL, true);
-	}
-	if (Flag(FPRIVILEGED))
+	if (!Flag(FPRIVILEGED)) {
+		if (Flag(FLOGIN))
+			include(substitute("$HOME/.profile", 0), 0, NULL, true);
+		if (Flag(FTALKING)) {
+			cp = substitute(substitute("${ENV:-" MKSHRC_PATH "}",
+			    0), DOTILDE);
+			if (cp[0] != '\0')
+				include(cp, 0, NULL, true);
+		}
+	} else {
 		include(MKSH_SUID_PROFILE, 0, NULL, true);
-	else if (Flag(FTALKING)) {
-		char *env_file;
-
-		/* include $ENV */
-		env_file = substitute(substitute("${ENV:-" MKSHRC_PATH "}", 0),
-		    DOTILDE);
-		if (*env_file != '\0')
-			include(env_file, 0, NULL, true);
+		/* turn off -p if not set explicitly */
+		if (Flag(FPRIVILEGED) != 1)
+			change_flag(FPRIVILEGED, OF_INTERNAL, false);
 	}
 
 	if (restricted) {
@@ -873,11 +821,8 @@ shell(Source * volatile s, volatile bool toplevel)
 					unwind(LEXIT);
 				break;
 			}
-		}
-#if !defined(MKSH_SMALL)
-		  else if ((s->flags & SF_MAYEXEC) && t->type == TCOM)
+		} else if ((s->flags & SF_MAYEXEC) && t->type == TCOM)
 			t->u.evalflags |= DOTCOMEXEC;
-#endif
 		if (!Flag(FNOEXEC) || (s->flags & SF_TTY))
 			exstat = execute(t, 0, NULL) & 0xFF;
 
@@ -1659,7 +1604,8 @@ maketemp(Area *ap, Temp_type type, struct temp **tlist)
 	} while (len < 5);
 
 	/* cyclically attempt to open a temporary file */
-	while ((i = open(tp->tffn, O_CREAT | O_EXCL | O_RDWR, 0600)) < 0) {
+	while ((i = open(tp->tffn, O_CREAT | O_EXCL | O_RDWR | O_BINARY,
+	    0600)) < 0) {
 		if (errno != EEXIST)
 			goto maketemp_out;
 		/* count down from z to a then from 9 to 0 */
@@ -1921,9 +1867,10 @@ x_mkraw(int fd, mksh_ttyst *ocb, bool forread)
 
 	cb = *ocb;
 	if (forread) {
+		cb.c_iflag &= ~(ISTRIP);
 		cb.c_lflag &= ~(ICANON) | ECHO;
 	} else {
-		cb.c_iflag &= ~(INLCR | ICRNL);
+		cb.c_iflag &= ~(INLCR | ICRNL | ISTRIP);
 		cb.c_lflag &= ~(ISIG | ICANON | ECHO);
 	}
 #if defined(VLNEXT) && defined(_POSIX_VDISABLE)

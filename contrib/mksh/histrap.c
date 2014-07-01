@@ -3,7 +3,7 @@
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
- *		 2011, 2012
+ *		 2011, 2012, 2014
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -27,7 +27,7 @@
 #include <sys/file.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/histrap.c,v 1.131 2012/12/28 02:28:35 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/histrap.c,v 1.134 2014/06/09 13:25:53 tg Exp $");
 
 Trap sigtraps[NSIG + 1];
 static struct sigaction Sigact_ign;
@@ -442,7 +442,7 @@ hist_get(const char *str, bool approx, bool allow_cur)
 			hp = NULL;
 		}
 	} else {
-		int anchored = *str == '?' ? (++str, 0) : 1;
+		bool anchored = *str == '?' ? (++str, false) : true;
 
 		/* the -1 is to avoid the current fc command */
 		if ((n = findhist(histptr - history - 1, 0, str, anchored)) < 0)
@@ -509,7 +509,7 @@ histnum(int n)
  * direction.
  */
 int
-findhist(int start, int fwd, const char *str, int anchored)
+findhist(int start, int fwd, const char *str, bool anchored)
 {
 	char **hp;
 	int maxhist = histptr - history;
@@ -720,7 +720,8 @@ hist_init(Source *s)
 
  retry:
 	/* we have a file and are interactive */
-	if ((fd = open(hname, O_RDWR | O_CREAT | O_APPEND, 0600)) < 0)
+	if ((fd = open(hname, O_RDWR | O_CREAT | O_APPEND | O_BINARY,
+	    0600)) < 0)
 		return;
 
 	histfd = savefd(fd);
@@ -756,7 +757,7 @@ hist_init(Source *s)
 			/* create temporary file */
 			nhname = shf_smprintf("%s.%d", hname, (int)procpid);
 			if ((fd = open(nhname, O_RDWR | O_CREAT | O_TRUNC |
-			    O_EXCL, 0600)) < 0) {
+			    O_EXCL | O_BINARY, 0600)) < 0) {
 				/* just don't truncate then, meh. */
 				goto hist_trunc_dont;
 			}
@@ -976,6 +977,7 @@ inittraps(void)
 	trap_exstat = -1;
 
 	/* Populate sigtraps based on sys_signame and sys_siglist. */
+	/*XXX this is idiotic, use a multi-key/value hashtable! */
 	for (i = 0; i <= NSIG; i++) {
 		sigtraps[i].signal = i;
 		if (i == ksh_SIGERR) {
