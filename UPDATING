@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20140710:
+	0.4-RELEASE-p13
+
+	Fix a vulnerability in the control message API. A buffer is not properly cleared
+	before sharing with userland.
+
 20140605:
 	0.4-RELEASE-p12
 
