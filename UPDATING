@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20140728:
+	Jails now run shutdown scripts.
+
 20140710:
 	Fix a vulnerability in the control message API. A buffer is not properly cleared
 	before sharing with userland.
