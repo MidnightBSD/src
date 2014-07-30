@@ -86,7 +86,7 @@ init_variables()
 	if [ -n "${_exec}" ]; then
 		#   simple/backward-compatible execution
 		_exec_start="${_exec}"
-		_exec_stop=""
+		_exec_stop="/bin/sh /etc/rc.shutdown"
 	else
 		#   flexible execution
 		if [ -z "${_exec_start}" ]; then
