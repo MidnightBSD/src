@@ -3206,7 +3206,7 @@ S_op_integerize(pTHX_ OP *o)
     if ((PL_opargs[type] & OA_OTHERINT) && (PL_hints & HINT_INTEGER))
     {
 	dVAR;
-	o->op_ppaddr = PL_ppaddr[type = ++(o->op_type)];
+	o->op_ppaddr = PL_ppaddr[++(o->op_type)];
     }
 
     if (type == OP_NEGATE)
@@ -11144,8 +11144,8 @@ Perl_rpeep(pTHX_ OP *o)
                             && (   p->op_next->op_type == OP_NEXTSTATE
                                 || p->op_next->op_type == OP_DBSTATE)
                             && count < OPpPADRANGE_COUNTMASK
+                            && base + count == p->op_targ
                     ) {
-                        assert(base + count == p->op_targ);
                         count++;
                         followop = p->op_next;
                     }
