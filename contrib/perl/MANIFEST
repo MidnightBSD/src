@@ -3456,6 +3456,7 @@ dist/Module-CoreList/README			Module::CoreList
 dist/Module-CoreList/t/corelist.t		Module::CoreList tests
 dist/Module-CoreList/t/deprecated.t		Module::CoreList tests
 dist/Module-CoreList/t/find_modules.t		Module::CoreList tests
+dist/Module-CoreList/t/is_core.t			Module::CoreList tests
 dist/Module-CoreList/t/pod.t			Module::CoreList tests
 dist/Module-CoreList/t/utils.t			Module::CoreList tests
 dist/Net-Ping/Changes			Net::Ping
@@ -3797,6 +3798,7 @@ ext/File-Glob/t/global.t	See if File::Glob works
 ext/File-Glob/TODO		File::Glob extension todo list
 ext/File-Glob/t/rt114984.t	See if File::Glob works
 ext/File-Glob/t/taint.t		See if File::Glob works
+ext/File-Glob/t/threads.t	See if File::Glob + threads works
 ext/GDBM_File/GDBM_File.pm	GDBM extension Perl module
 ext/GDBM_File/GDBM_File.xs	GDBM extension external subroutines
 ext/GDBM_File/hints/sco.pl	Hint for GDBM_File for named architecture
@@ -4726,6 +4728,7 @@ pod/perl5161delta.pod		Perl changes in version 5.16.1
 pod/perl5162delta.pod		Perl changes in version 5.16.2
 pod/perl5163delta.pod		Perl changes in version 5.16.3
 pod/perl5180delta.pod		Perl changes in version 5.18.0
+pod/perl5181delta.pod		Perl changes in version 5.18.1
 pod/perl561delta.pod		Perl changes in version 5.6.1
 pod/perl56delta.pod		Perl changes in version 5.6
 pod/perl581delta.pod		Perl changes in version 5.8.1
@@ -4804,6 +4807,7 @@ pod/perlref.pod			Perl references, the rest of the story
 pod/perlreftut.pod		Perl references short introduction
 pod/perlreguts.pod		Perl regular expression engine internals
 pod/perlre.pod			Perl regular expressions, the rest of the story
+pod/perlrepository.pod		
 pod/perlrequick.pod		Perl regular expressions quick start
 pod/perlreref.pod		Perl regular expressions quick reference
 pod/perlretut.pod		Perl regular expressions tutorial

@@ -41644,6 +41644,7 @@ contrib/perl/dist/Module-CoreList/lib/Module/CoreList/Utils.pm -text
 contrib/perl/dist/Module-CoreList/t/corelist.t -text
 contrib/perl/dist/Module-CoreList/t/deprecated.t -text
 contrib/perl/dist/Module-CoreList/t/find_modules.t -text
+contrib/perl/dist/Module-CoreList/t/is_core.t -text
 contrib/perl/dist/Module-CoreList/t/pod.t -text
 contrib/perl/dist/Module-CoreList/t/utils.t -text
 contrib/perl/dist/Net-Ping/Changes -text
@@ -42014,6 +42015,7 @@ contrib/perl/ext/File-Glob/t/case.t -text
 contrib/perl/ext/File-Glob/t/global.t -text
 contrib/perl/ext/File-Glob/t/rt114984.t -text
 contrib/perl/ext/File-Glob/t/taint.t -text
+contrib/perl/ext/File-Glob/t/threads.t -text
 contrib/perl/ext/FileCache/lib/FileCache.pm -text
 contrib/perl/ext/FileCache/t/01open.t -text
 contrib/perl/ext/FileCache/t/02maxopen.t -text
@@ -42908,6 +42910,7 @@ contrib/perl/pod/perl5161delta.pod -text
 contrib/perl/pod/perl5162delta.pod -text
 contrib/perl/pod/perl5163delta.pod -text
 contrib/perl/pod/perl5180delta.pod -text
+contrib/perl/pod/perl5181delta.pod -text
 contrib/perl/pod/perl561delta.pod -text
 contrib/perl/pod/perl56delta.pod -text
 contrib/perl/pod/perl581delta.pod -text
