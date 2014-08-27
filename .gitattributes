@@ -42988,6 +42988,7 @@ contrib/perl/pod/perlrecharclass.pod -text
 contrib/perl/pod/perlref.pod -text
 contrib/perl/pod/perlreftut.pod -text
 contrib/perl/pod/perlreguts.pod -text
+contrib/perl/pod/perlrepository.pod -text
 contrib/perl/pod/perlrequick.pod -text
 contrib/perl/pod/perlreref.pod -text
 contrib/perl/pod/perlretut.pod -text
