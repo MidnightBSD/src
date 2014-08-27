@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20140827:
+	Perl 5.18.2
+
 20140728:
 	Jails now run shutdown scripts.
 
