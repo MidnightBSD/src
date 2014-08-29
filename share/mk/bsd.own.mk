@@ -44,6 +44,11 @@
 # LIBMODE	Library mode. [${NOBINMODE}]
 #
 #
+# DEBUGDIR	Base path for standalone debug files. [/usr/lib/debug]
+#
+# DEBUGMODE	Mode for debug files. [${NOBINMODE}]
+#
+#
 # KMODDIR	Base path for loadable kernel modules
 #		(see kld(4)). [/boot/kernel]
 #
@@ -148,6 +153,9 @@ LIBOWN?=	${BINOWN}
 LIBGRP?=	${BINGRP}
 LIBMODE?=	${NOBINMODE}
 
+DEBUGDIR?=	/usr/lib/debug
+DEBUGMODE?=	${NOBINMODE}
+
 
 # Share files
 SHAREDIR?=	/usr/share
@@ -182,6 +190,15 @@ NLSMODE?=	${NOBINMODE}
 
 INCLUDEDIR?=	/usr/include
 
+#
+# install(1) parameters.
+#
+HRDLINK?=	-l h
+SYMLINK?=	-l s
+
+INSTALL_LINK?=		${INSTALL} ${HRDLINK}
+INSTALL_SYMLINK?=	${INSTALL} ${SYMLINK}
+
 # Common variables
 .if !defined(DEBUG_FLAGS)
 STRIP?=		-s
@@ -204,10 +221,19 @@ COMPRESS_EXT?=	.gz
 # regardless of user's setting).
 #
 .for var in \
+    CTF \
+    DEBUG_FILES \
     INSTALLLIB \
     MAN \
     PROFILE
 .if defined(NO_${var})
+.if defined(WITH_${var})
+.warning unsetting WITH_${var}
+.undef WITH_${var}
+.if defined(WITH_${var})
+.error wtf
+.endif
+.endif
 WITHOUT_${var}=
 .endif
 .endfor
@@ -223,9 +249,11 @@ WITHOUT_${var}=
     AUDIT \
     AUTHPF \
     BIND \
+    BIND_DNSSEC \
     BIND_ETC \
     BIND_LIBS_LWRES \
     BIND_MTREE \
+    BIND_NAMED \
     BIND_UTILS \
     BLUETOOTH \
     BOOT \
@@ -308,9 +336,11 @@ __DEFAULT_YES_OPTIONS = \
     AUDIT \
     AUTHPF \
     BIND \
+    BIND_DNSSEC \
     BIND_ETC \
     BIND_LIBS_LWRES \
     BIND_MTREE \
+    BIND_NAMED \
     BIND_UTILS \
     BINUTILS \
     BLUETOOTH \
@@ -343,7 +373,6 @@ __DEFAULT_YES_OPTIONS = \
     GPIO \
     GROFF \
     HTML \
-    ICONV \
     INET \
     INET6 \
     INFO \
@@ -379,6 +408,7 @@ __DEFAULT_YES_OPTIONS = \
     OPENSSH \
     OPENSSL \
     PAM \
+    PC_SYSINSTALL \
     PF \
     PMC \
     PPP \
@@ -416,10 +446,14 @@ __DEFAULT_NO_OPTIONS = \
     BIND_XML \
     CLANG_EXTRAS \
     CLANG_IS_CC \
+    CTF \
+    DEBUG_FILES \
     HESIOD \
+    ICONV \
     IDEA \
-    LIBCPLUSPLUS \
+    NMTREE \
     OFED \
+    OPENSSH_NONE_CIPHER \
     SHARED_TOOLCHAIN \
     SVN
 
@@ -438,9 +472,9 @@ __T=${MACHINE_ARCH}
 .endif
 # Clang is only for x86 right now, by default.
 .if ${__T} == "amd64" || ${__T} == "i386"
-__DEFAULT_YES_OPTIONS+=CLANG
+__DEFAULT_YES_OPTIONS+=CLANG CLANG_FULL
 .else
-__DEFAULT_NO_OPTIONS+=CLANG
+__DEFAULT_NO_OPTIONS+=CLANG CLANG_FULL
 .endif
 __DEFAULT_NO_OPTIONS+=FDT
 .undef __T
@@ -494,10 +528,12 @@ MK_BIND:=	no
 .endif
 
 .if ${MK_BIND} == "no"
+MK_BIND_DNSSEC:= no
 MK_BIND_ETC:=	no
 MK_BIND_LIBS:=	no
 MK_BIND_LIBS_LWRES:= no
 MK_BIND_MTREE:=	no
+MK_BIND_NAMED:=	no
 MK_BIND_UTILS:=	no
 .endif
 
@@ -512,10 +548,7 @@ MK_SOURCELESS_UCODE:= no
 
 .if ${MK_CDDL} == "no"
 MK_ZFS:=	no
-.endif
-
-.if ${MK_CLANG} == "no"
-MK_CLANG_EXTRAS:= no
+MK_CTF:=	no
 .endif
 
 .if ${MK_CRYPT} == "no"
@@ -564,12 +597,10 @@ MK_GDB:=	no
 .endif
 
 .if ${MK_CLANG} == "no"
+MK_CLANG_EXTRAS:= no
+MK_CLANG_FULL:= no
 MK_CLANG_IS_CC:= no
 .endif
-
-MK_LIBCPLUSPLUS?= no
-
-MK_LIBCPLUSPLUS?= no
 
 #
 # Set defaults for the MK_*_SUPPORT variables.
@@ -623,6 +654,41 @@ MK_${vv:H}:=	no
 MK_${vv:H}:=	${MK_${vv:T}}
 .endif
 .endfor
+
+#
+# MK_* options that default to "yes" if the compiler is a C++11 compiler.
+#
+.include <bsd.compiler.mk>
+.for var in \
+    LIBCPLUSPLUS
+.if defined(WITH_${var}) && defined(WITHOUT_${var})
+.error WITH_${var} and WITHOUT_${var} can't both be set.
+.endif
+.if defined(MK_${var})
+.error MK_${var} can't be set by a user.
+.endif
+.if ${COMPILER_FEATURES:Mc++11}
+.if defined(WITHOUT_${var})
+MK_${var}:=	no
+.else
+MK_${var}:=	yes
+.endif
+.else
+.if defined(WITH_${var})
+MK_${var}:=	yes
+.else
+MK_${var}:=	no
+.endif
+.endif
+.endfor
+
+.if ${MK_CTF} != "no"
+CTFCONVERT_CMD=	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.elif defined(.PARSEDIR) || ${MAKE_VERSION} >= 9201210220
+CTFCONVERT_CMD=
+.else
+CTFCONVERT_CMD=	@:
+.endif 
 
 .endif # !_WITHOUT_SRCCONF
 
