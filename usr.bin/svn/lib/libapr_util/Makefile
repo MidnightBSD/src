@@ -21,8 +21,6 @@ SRCS=		apr_base64.c apr_brigade.c apr_buckets.c apr_buckets_alloc.c \
 		${APRU}/uri ${APRU}/xlate ${APRU}/xml ${APRU}/include
 
 CFLAGS+= 	-DHAVE_CONFIG_H \
-		-DHAVE_ICONV_H=0 \
-		-DAPU_HAVE_ICONV=1 \
 		-I${.CURDIR} \
 		-I${APRU}/include/private \
 		-I${APRU}/include \
@@ -32,9 +30,9 @@ CFLAGS+= 	-DHAVE_CONFIG_H \
 
 .include <bsd.own.mk>
 
-#.if ${MK_ICONV} == "yes"
-#CFLAGS+=	-DHAVE_ICONV_H=1 -DAPU_HAVE_ICONV=1
-#.endif
+.if ${MK_ICONV} == "yes"
+CFLAGS+=	-DHAVE_ICONV_H=1 -DAPU_HAVE_ICONV=1
+.endif
 
 .include <bsd.lib.mk>
 
