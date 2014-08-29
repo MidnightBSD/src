@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.dep.mk,v 1.48 2005/01/06 11:12:43 krion Exp $
-# $MidnightBSD: src/share/mk/bsd.dep.mk,v 1.3 2010/08/21 01:48:10 laffer1 Exp $
+# $MidnightBSD$
 #
 # The include file <bsd.dep.mk> handles Makefile dependencies.
 #
@@ -124,10 +124,15 @@ ${_YC:R}.o: ${_YC}
 .if defined(SRCS)
 depend: beforedepend ${DEPENDFILE} afterdepend
 
+# Tell bmake not to look for generated files via .PATH
+.NOPATH: ${DEPENDFILE}
+
 # Different types of sources are compiled with slightly different flags.
 # Split up the sources, and filter out headers and non-applicable flags.
-MKDEP_CFLAGS=	${CFLAGS:M-nostdinc*} ${CFLAGS:M-[BIDU]*}
-MKDEP_CXXFLAGS=	${CXXFLAGS:M-nostdinc*} ${CXXFLAGS:M-[BIDU]*}
+MKDEP_CFLAGS=	${CFLAGS:M-nostdinc*} ${CFLAGS:M-[BIDU]*} ${CFLAGS:M-std=*} \
+		${CFLAGS:M-ansi}
+MKDEP_CXXFLAGS=	${CXXFLAGS:M-nostdinc*} ${CXXFLAGS:M-[BIDU]*} \
+		${CXXFLAGS:M-std=*} ${CXXFLAGS:M-ansi} ${CXXFLAGS:M-stdlib=*}
 
 DPSRCS+= ${SRCS}
 ${DEPENDFILE}: ${DPSRCS}
