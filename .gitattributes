@@ -68,6 +68,7 @@ bin/csh/Makefile -text
 bin/csh/config.h -text
 bin/csh/config_p.h -text
 bin/csh/iconv_stub.c -text
+bin/csh/iconv_stub.h -text
 bin/date/Makefile -text
 bin/date/date.1 -text
 bin/date/date.c -text
