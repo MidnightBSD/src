@@ -16,9 +16,9 @@
 #
 
 #20140829
+OLD_FILES+=usr/lib/libmport_p.a
 OLD_LIBS+=usr/lib/libfetch.so.5
 OLD_LIBS+=usr/lib/liblwres.so.50
-OLD_LIBS+=usr/lib/libmport_p.a
 #20140421
 OLD_LIBS+=lib/libz.so.5
 #20131218
