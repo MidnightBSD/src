@@ -17,6 +17,9 @@
 
 #20140829
 OLD_FILES+=usr/lib/libmport_p.a
+OLD_LIBS+=lib/libc.so.6
+OLD_LIBS+=lib/geom/geom_raid3.so
+OLD_LIBS+=lib/geom/geom_raid5.so
 OLD_LIBS+=usr/lib/libfetch.so.5
 OLD_LIBS+=usr/lib/liblwres.so.50
 #20140421
