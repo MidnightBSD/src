@@ -16,7 +16,26 @@
 #
 
 #20140829
+OLD_FILES+=sbin/mount_nfs4
 OLD_FILES+=usr/lib/libmport_p.a
+OLD_FILES+=usr/sbin/arpaname
+OLD_FILES+=usr/sbin/ddns-confgen
+OLD_FILES+=usr/sbin/dnssec-dsfromkey
+OLD_FILES+=usr/sbin/dnssec-keyfromlabel
+OLD_FILES+=usr/sbin/dnssec-revoke
+OLD_FILES+=usr/sbin/dnsssec-settime
+OLD_FILES+=usr/sbin/dsnsec-signzone
+OLD_FILES+=usr/sbin/genrandom
+OLD_FILES+=usr/sbin/isc-hmac-fixup
+OLD_FILES+=usr/sbin/lwresd
+OLD_FILES+=usr/sbin/named
+OLD_FILES+=usr/sbin/named-checkconf
+OLD_FILES+=usr/sbin/named-checkzone
+OLD_FILES+=usr/sbin/named-compilezone
+OLD_FILES+=usr/sbin/named-journalprint
+OLD_FILES+=usr/sbin/nsec3hash
+OLD_FILES+=usr/sbin/rndc
+OLD_FILES+=usr/sbin/rndc-confgen
 OLD_LIBS+=lib/libc.so.6
 OLD_LIBS+=lib/geom/geom_raid3.so
 OLD_LIBS+=lib/geom/geom_raid5.so
