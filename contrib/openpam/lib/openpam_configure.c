@@ -214,6 +214,7 @@ openpam_read_chain(pam_handle_t *pamh,
 			openpam_log(PAM_LOG_ERROR,
 			    "%s(%d): missing module name",
 			    filename, lineno);
+			errno = EINVAL;
 			goto fail;
 		}
 		if ((name = dup_word(p)) == NULL)
