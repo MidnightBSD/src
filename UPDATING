@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20140902:
+	We're now 0.6-CURRENT
+
+	Update USB quirks to support K70 Corsair keyboard, and several
+	other devices.
+
 20140827:
 	Perl 5.18.2
 
