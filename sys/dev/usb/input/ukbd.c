@@ -469,7 +469,8 @@ ukbd_get_key(struct ukbd_softc *sc, uint8_t wait)
 	    || (sc->sc_flags & UKBD_FLAG_POLLING) != 0,
 	    ("not polling in kdb or panic\n"));
 
-	if (sc->sc_inputs == 0) {
+	if (sc->sc_inputs == 0 &&
+	    (sc->sc_flags & UKBD_FLAG_GONE) == 0) {
 		/* start transfer, if not already started */
 		usbd_transfer_start(sc->sc_xfer[UKBD_INTR_DT]);
 	}
@@ -1126,8 +1127,12 @@ ukbd_parse_hid(struct ukbd_softc *sc, const uint8_t *ptr, uint32_t len)
 	    HID_USAGE2(HUP_KEYBOARD, 0x00),
 	    hid_input, 0, &sc->sc_loc_events, &flags,
 	    &sc->sc_id_events)) {
-		sc->sc_flags |= UKBD_FLAG_EVENTS;
-		DPRINTFN(1, "Found keyboard events\n");
+		if (flags & HIO_VARIABLE) {
+			DPRINTFN(1, "Ignoring keyboard event control\n");
+		} else {
+			sc->sc_flags |= UKBD_FLAG_EVENTS;
+			DPRINTFN(1, "Found keyboard event array\n");
+		}
 	}
 
 	/* figure out leds on keyboard */
@@ -1295,6 +1300,18 @@ ukbd_detach(device_t dev)
 	sc->sc_flags |= UKBD_FLAG_GONE;
 
 	usb_callout_stop(&sc->sc_callout);
+
+	/* kill any stuck keys */
+	if (sc->sc_flags & UKBD_FLAG_ATTACHED) {
+		/* stop receiving events from the USB keyboard */
+		usbd_transfer_stop(sc->sc_xfer[UKBD_INTR_DT]);
+
+		/* release all leftover keys, if any */
+		memset(&sc->sc_ndata, 0, sizeof(sc->sc_ndata));
+
+		/* process releasing of all keys */
+		ukbd_interrupt(sc);
+	}
 
 	ukbd_disable(&sc->sc_kbd);
 
@@ -1871,6 +1888,12 @@ static int
 ukbd_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 {
 	int result;
+
+	/*
+	 * XXX Check of someone is calling us from a critical section:
+	 */
+	if (curthread->td_critnest != 0)
+		return (EDEADLK);
 
 	/*
 	 * XXX KDGKBSTATE, KDSKBSTATE and KDSETLED can be called from any
