@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libusb/libusb20_ugen20.c,v 1.2.2.1 2013/06/16 00:27:30 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -69,6 +69,7 @@ static libusb20_reset_device_t ugen20_reset_device;
 static libusb20_check_connected_t ugen20_check_connected;
 static libusb20_set_power_mode_t ugen20_set_power_mode;
 static libusb20_get_power_mode_t ugen20_get_power_mode;
+static libusb20_get_power_usage_t ugen20_get_power_usage;
 static libusb20_kernel_driver_active_t ugen20_kernel_driver_active;
 static libusb20_detach_kernel_driver_t ugen20_detach_kernel_driver;
 static libusb20_do_request_sync_t ugen20_do_request_sync;
@@ -635,6 +636,18 @@ ugen20_get_power_mode(struct libusb20_device *pdev, uint8_t *power_mode)
 		break;
 	}
 	*power_mode = temp;
+	return (0);			/* success */
+}
+
+static int
+ugen20_get_power_usage(struct libusb20_device *pdev, uint16_t *power_usage)
+{
+	int temp;
+
+	if (ioctl(pdev->file_ctrl, USB_GET_POWER_USAGE, &temp)) {
+		return (LIBUSB20_ERROR_OTHER);
+	}
+	*power_usage = temp;
 	return (0);			/* success */
 }
 

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libusb/libusb20.c,v 1.2.2.1 2013/06/16 00:27:30 laffer1 Exp $ */
+/* $FreeBSD: release/9.2.0/lib/libusb/libusb20.c 247475 2013-02-28 16:56:08Z hselasky $ */
 /*-
  * Copyright (c) 2008-2009 Hans Petter Selasky. All rights reserved.
  *
@@ -71,6 +71,7 @@ dummy_callback(struct libusb20_transfer *xfer)
 #define	dummy_check_connected (void *)dummy_int
 #define	dummy_set_power_mode (void *)dummy_int
 #define	dummy_get_power_mode (void *)dummy_int
+#define	dummy_get_power_usage (void *)dummy_int
 #define	dummy_kernel_driver_active (void *)dummy_int
 #define	dummy_detach_kernel_driver (void *)dummy_int
 #define	dummy_do_request_sync (void *)dummy_int
@@ -708,6 +709,18 @@ libusb20_dev_get_power_mode(struct libusb20_device *pdev)
 	if (error)
 		power_mode = LIBUSB20_POWER_ON;	/* fake power mode */
 	return (power_mode);
+}
+
+uint16_t
+libusb20_dev_get_power_usage(struct libusb20_device *pdev)
+{
+	int error;
+	uint16_t power_usage;
+
+	error = pdev->methods->get_power_usage(pdev, &power_usage);
+	if (error)
+		power_usage = 0;
+	return (power_usage);
 }
 
 int
