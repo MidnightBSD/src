@@ -54419,6 +54419,7 @@ lib/libc/gen/pw_scan.c -text
 lib/libc/gen/pw_scan.h -text
 lib/libc/gen/pwcache.3 -text
 lib/libc/gen/pwcache.c -text
+lib/libc/gen/pwcache.h -text
 lib/libc/gen/raise.3 -text
 lib/libc/gen/raise.c -text
 lib/libc/gen/rand48.3 -text
