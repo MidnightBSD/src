@@ -698,9 +698,9 @@ clearenv(void)
 			}
 		free(envVars);
 		envVars = NULL;
-		environ = NULL;
+		*environ = NULL;
 	} else
-		environ = NULL;
+		*environ = NULL;
 
 	return (0);
 }
