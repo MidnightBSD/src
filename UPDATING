@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20140909:
+	Fixed a bug with our clearenv(3) implementation that caused segfaults
+	with some programs including Dovecot.
+
 20140902:
 	We're now 0.6-CURRENT
 
