@@ -4,6 +4,21 @@ Updating Information for MidnightBSD users.
 	Fixed a bug with our clearenv(3) implementation that caused segfaults
 	with some programs including Dovecot.
 
+	OpenSSL security patch: 
+
+	The receipt of a specifically crafted DTLS handshake message may cause OpenSSL
+	to consume large amounts of memory. [CVE-2014-3506]
+
+	The receipt of a specifically crafted DTLS packet could cause OpenSSL to leak
+	memory. [CVE-2014-3507]
+
+	A flaw in OBJ_obj2txt may cause pretty printing functions such as
+	X509_name_oneline, X509_name_print_ex et al. to leak some information from
+	the stack. [CVE-2014-3508]
+
+	OpenSSL DTLS clients enabling anonymous (EC)DH ciphersuites are subject to
+	a denial of service attack. [CVE-2014-3510]
+
 20140902:
 	We're now 0.6-CURRENT
 
