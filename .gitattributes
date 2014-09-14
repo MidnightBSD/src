@@ -73438,6 +73438,9 @@ usr.sbin/eeprom/eeprom.8 -text
 usr.sbin/eeprom/eeprom.c -text
 usr.sbin/eeprom/ofw_options.c -text
 usr.sbin/eeprom/ofw_options.h -text
+usr.sbin/etcupdate/Makefile -text
+usr.sbin/etcupdate/etcupdate.8 -text
+usr.sbin/etcupdate/etcupdate.sh -text
 usr.sbin/extattr/Makefile -text
 usr.sbin/extattr/rmextattr.8 -text
 usr.sbin/extattr/rmextattr.c -text
