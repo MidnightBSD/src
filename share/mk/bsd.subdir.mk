@@ -1,6 +1,6 @@
 #	from: @(#)bsd.subdir.mk	5.9 (Berkeley) 2/1/91
 # $FreeBSD: src/share/mk/bsd.subdir.mk,v 1.50 2005/05/31 07:14:51 ru Exp $
-# $MidnightBSD: src/share/mk/bsd.subdir.mk,v 1.2 2006/05/22 06:03:21 laffer1 Exp $
+# $MidnightBSD$
 #
 # The include file <bsd.subdir.mk> contains the default targets
 # for building subdirectories.
@@ -43,7 +43,7 @@ distribute:
 
 _SUBDIR: .USE
 .if defined(SUBDIR) && !empty(SUBDIR) && !defined(NO_SUBDIR)
-	@${_+_}for entry in ${SUBDIR}; do \
+	@${_+_}set -e; for entry in ${SUBDIR}; do \
 		if test -d ${.CURDIR}/$${entry}.${MACHINE_ARCH}; then \
 			${ECHODIR} "===> ${DIRPRFX}$${entry}.${MACHINE_ARCH} (${.TARGET:realinstall=install})"; \
 			edir=$${entry}.${MACHINE_ARCH}; \
@@ -69,7 +69,26 @@ ${SUBDIR}: .PHONY
 .for __target in all all-man checkdpadd clean cleandepend cleandir \
     cleanilinks depend distribute lint maninstall manlint obj objlink \
     realinstall regress tags ${SUBDIR_TARGETS}
+.ifdef SUBDIR_PARALLEL
+.for __dir in ${SUBDIR}
+${__target}: ${__target}_subdir_${__dir}
+${__target}_subdir_${__dir}: .MAKE
+	@${_+_}set -e; \
+		if test -d ${.CURDIR}/${__dir}.${MACHINE_ARCH}; then \
+			${ECHODIR} "===> ${DIRPRFX}${__dir}.${MACHINE_ARCH} (${__target:realinstall=install})"; \
+			edir=${__dir}.${MACHINE_ARCH}; \
+			cd ${.CURDIR}/$${edir}; \
+		else \
+			${ECHODIR} "===> ${DIRPRFX}${__dir} (${__target:realinstall=install})"; \
+			edir=${__dir}; \
+			cd ${.CURDIR}/$${edir}; \
+		fi; \
+		${MAKE} ${__target:realinstall=install} \
+		    DIRPRFX=${DIRPRFX}$$edir/
+.endfor
+.else
 ${__target}: _SUBDIR
+.endif
 .endfor
 
 .for __target in files includes
@@ -80,7 +99,7 @@ ${__stage}${__target}: _SUBDIR
 .endif
 .endfor
 ${__target}:
-	${_+_}cd ${.CURDIR}; ${MAKE} build${__target}; ${MAKE} install${__target}
+	${_+_}set -e; cd ${.CURDIR}; ${MAKE} build${__target}; ${MAKE} install${__target}
 .endfor
 
 .if !target(install)
