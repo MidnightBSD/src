@@ -1,4 +1,4 @@
-# $MidnightBSD: src/gnu/usr.bin/Makefile,v 1.9 2012/09/01 22:48:42 laffer1 Exp $
+# $MidnightBSD$
 # $FreeBSD: src/gnu/usr.bin/Makefile,v 1.84 2005/03/21 05:30:58 kientzle Exp $
 
 .include <bsd.own.mk>
@@ -50,5 +50,7 @@ _cc=		cc
 .if ${MK_GDB} != "no"
 _gdb=		gdb
 .endif
+
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>
