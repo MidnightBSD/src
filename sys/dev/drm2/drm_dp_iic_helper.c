@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright © 2009 Keith Packard
  *
@@ -21,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/drm2/drm_dp_iic_helper.c 235783 2012-05-22 11:07:44Z kib $");
 
 #include <sys/types.h>
 #include <sys/kobj.h>

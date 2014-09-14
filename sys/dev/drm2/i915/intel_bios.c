@@ -23,7 +23,7 @@
  * Authors:
  *    Eric Anholt <eric@anholt.net>
  *
- * $MidnightBSD$
+ * $FreeBSD: release/9.2.0/sys/dev/drm2/i915/intel_bios.c 235783 2012-05-22 11:07:44Z kib $
  */
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm.h>

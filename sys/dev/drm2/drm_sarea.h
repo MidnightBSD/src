@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /**
  * \file drm_sarea.h
  * \brief SAREA definitions
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/drm2/drm_sarea.h 235783 2012-05-22 11:07:44Z kib $");
 
 #ifndef _DRM_SAREA_H_
 #define _DRM_SAREA_H_

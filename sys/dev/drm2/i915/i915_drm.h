@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/drm2/i915/i915_drm.h 235783 2012-05-22 11:07:44Z kib $");
 
 #ifndef _I915_DRM_H_
 #define _I915_DRM_H_

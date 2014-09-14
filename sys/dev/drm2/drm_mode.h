@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007 Dave Airlie <airlied@linux.ie>
  * Copyright (c) 2007 Jakob Bornecrantz <wallbraker@gmail.com>
@@ -23,7 +24,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * $MidnightBSD$
+ * $FreeBSD: release/9.2.0/sys/dev/drm2/drm_mode.h 235783 2012-05-22 11:07:44Z kib $
  */
 
 #ifndef _DRM_MODE_H

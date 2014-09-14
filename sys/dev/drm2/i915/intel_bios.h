@@ -23,7 +23,7 @@
  * Authors:
  *    Eric Anholt <eric@anholt.net>
  *
- * $MidnightBSD$
+ * $FreeBSD: release/9.2.0/sys/dev/drm2/i915/intel_bios.h 235783 2012-05-22 11:07:44Z kib $
  */
 
 #ifndef _I830_BIOS_H_

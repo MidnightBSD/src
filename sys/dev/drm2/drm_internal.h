@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2007 Red Hat, Inc
  * All rights reserved.
@@ -23,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/drm2/drm_internal.h 235783 2012-05-22 11:07:44Z kib $");
 
 /* This header file holds function prototypes and data types that are
  * internal to the drm (not exported to user space) but shared across

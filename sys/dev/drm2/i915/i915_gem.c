@@ -52,7 +52,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/drm2/i915/i915_gem.c 252496 2013-07-02 04:42:32Z kib $");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm.h>
@@ -1362,7 +1362,6 @@ unlocked_vmobj:
 	cause = ret = 0;
 	m = NULL;
 
-
 	if (i915_intr_pf) {
 		ret = i915_mutex_lock_interruptible(dev);
 		if (ret != 0) {
@@ -1371,6 +1370,23 @@ unlocked_vmobj:
 		}
 	} else
 		DRM_LOCK(dev);
+
+	/*
+	 * Since the object lock was dropped, other thread might have
+	 * faulted on the same GTT address and instantiated the
+	 * mapping for the page.  Recheck.
+	 */
+	VM_OBJECT_LOCK(vm_obj);
+	m = vm_page_lookup(vm_obj, OFF_TO_IDX(offset));
+	if (m != NULL) {
+		if ((m->flags & VPO_BUSY) != 0) {
+			DRM_UNLOCK(dev);
+			vm_page_sleep(m, "915pee");
+			goto retry;
+		}
+		goto have_page;
+	} else
+		VM_OBJECT_UNLOCK(vm_obj);
 
 	/* Now bind it into the GTT if needed */
 	if (!obj->map_and_fenceable) {
@@ -1425,10 +1441,9 @@ unlocked_vmobj:
 		goto retry;
 	}
 	m->valid = VM_PAGE_BITS_ALL;
-	*mres = m;
-	vm_page_lock(m);
 	vm_page_insert(m, vm_obj, OFF_TO_IDX(offset));
-	vm_page_unlock(m);
+have_page:
+	*mres = m;
 	vm_page_busy(m);
 
 	CTR4(KTR_DRM, "fault %p %jx %x phys %x", gem_obj, offset, prot,
