@@ -64377,6 +64377,7 @@ sys/dev/drm2/i915/i915_gem_evict.c -text
 sys/dev/drm2/i915/i915_gem_execbuffer.c -text
 sys/dev/drm2/i915/i915_gem_gtt.c -text
 sys/dev/drm2/i915/i915_gem_tiling.c -text
+sys/dev/drm2/i915/i915_ioc32.c -text
 sys/dev/drm2/i915/i915_irq.c -text
 sys/dev/drm2/i915/i915_reg.h -text
 sys/dev/drm2/i915/i915_suspend.c -text
