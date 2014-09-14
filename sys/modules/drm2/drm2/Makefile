@@ -1,4 +1,5 @@
-# $FreeBSD$
+# $MidnightBSD$
+# $FreeBSD: release/9.2.0/sys/modules/drm2/drm2/Makefile 249082 2013-04-04 05:47:50Z kib $
 
 .PATH:	${.CURDIR}/../../../dev/drm2
 KMOD	= drm2
@@ -18,6 +19,7 @@ SRCS	= \
 	drm_fops.c \
 	drm_gem.c \
 	drm_gem_names.c \
+	drm_global.c \
 	drm_hashtab.c \
 	drm_ioctl.c \
 	drm_irq.c \
@@ -33,7 +35,11 @@ SRCS	= \
 	drm_sysctl.c \
 	drm_vm.c
 
+.if ${MACHINE_CPUARCH} == "amd64"
+SRCS	+= drm_ioc32.c
+.endif
+
 SRCS	+=device_if.h bus_if.h pci_if.h device_if.h iicbus_if.h opt_drm.h \
-	opt_vm.h
+	opt_vm.h opt_compat.h
 
 .include <bsd.kmod.mk>
