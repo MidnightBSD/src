@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20140916:
+        Fix a security issue with TCP SYN.
+
+        When a segment with the SYN flag for an already existing connection arrives,
+        the TCP stack tears down the connection, bypassing a check that the
+        sequence number in the segment is in the expected window.
+
 20140909:
 	Fixed a bug with our clearenv(3) implementation that caused segfaults
 	with some programs including Dovecot.
