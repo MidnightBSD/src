@@ -1,5 +1,14 @@
 Updating Information for MidnightBSD users.
 
+20140916:
+	0.4-RELEASE-p15
+
+        Fix a security issue with TCP SYN.
+
+        When a segment with the SYN flag for an already existing connection arrives,
+        the TCP stack tears down the connection, bypassing a check that the
+        sequence number in the segment is in the expected window.
+
 20140909:
 	0.4-RELEASE-p14
 	
@@ -17,7 +26,6 @@ Updating Information for MidnightBSD users.
 
         OpenSSL DTLS clients enabling anonymous (EC)DH ciphersuites are subject to
         a denial of service attack. [CVE-2014-3510]
-
 
 20140710:
 	0.4-RELEASE-p13
