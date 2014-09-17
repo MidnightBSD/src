@@ -64346,6 +64346,7 @@ sys/dev/drm2/drm_gem.c -text
 sys/dev/drm2/drm_gem_names.c -text
 sys/dev/drm2/drm_gem_names.h -text
 sys/dev/drm2/drm_global.c -text
+sys/dev/drm2/drm_global.h -text
 sys/dev/drm2/drm_hashtab.c -text
 sys/dev/drm2/drm_hashtab.h -text
 sys/dev/drm2/drm_internal.h -text
