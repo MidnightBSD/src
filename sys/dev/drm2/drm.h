@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**
  * \file drm.h
  * Header for the Direct Rendering Manager
@@ -35,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/drm2/drm.h 235783 2012-05-22 11:07:44Z kib $");
+__FBSDID("$FreeBSD: stable/9/sys/dev/drm2/drm.h 261673 2014-02-09 19:54:39Z dumbbell $");
 
 /**
  * \mainpage
@@ -83,7 +82,7 @@ __FBSDID("$FreeBSD: release/9.2.0/sys/dev/drm2/drm.h 235783 2012-05-22 11:07:44Z
 #define DRM_IOC_WRITE		_IOC_WRITE
 #define DRM_IOC_READWRITE	_IOC_READ|_IOC_WRITE
 #define DRM_IOC(dir, group, nr, size) _IOC(dir, group, nr, size)
-#elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
+#elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__) || defined(__MidnightBSD__) || defined(__MidnightBSD_kernel__)
 #include <sys/ioccom.h>
 #define DRM_IOCTL_NR(n)		((n) & 0xff)
 #define DRM_IOC_VOID		IOC_VOID
@@ -1016,6 +1015,8 @@ struct drm_event_vblank {
 #define DRM_CAP_VBLANK_HIGH_CRTC 0x2
 #define DRM_CAP_DUMB_PREFERRED_DEPTH 0x3
 #define DRM_CAP_DUMB_PREFER_SHADOW 0x4
+#define DRM_CAP_PRIME 0x5
+#define DRM_CAP_TIMESTAMP_MONOTONIC 0x6
 
 #include "drm_mode.h"
 
