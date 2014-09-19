@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20140919:
+	0.5-RELEASE
+
 20140916:
 	Fix a security issue with TCP SYN.
 
