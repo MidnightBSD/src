@@ -1,4 +1,5 @@
 /*-
+ * Copyright (c) 2014 Lucas Holt
  * Copyright (c) 2007 Chris Reinhardt
  * All rights reserved.
  *
@@ -23,13 +24,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.9 2012/04/11 00:46:55 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.9 2012/04/11 00:46:55 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 
 #include <stdlib.h>
@@ -52,7 +53,7 @@ int main(int argc, char *argv[])
   mportAssetList *assetlist = mport_assetlist_new();
   FILE *fp;
     
-  while ((ch = getopt(argc, argv, "o:n:v:c:l:s:d:p:P:D:M:O:C:i:j:m:r:t:")) != -1) {
+  while ((ch = getopt(argc, argv, "o:n:v:c:e:l:s:d:p:P:D:M:O:C:i:j:m:r:t:")) != -1) {
     switch (ch) {
       case 'o':
         extra->pkg_filename = optarg;
@@ -66,6 +67,8 @@ int main(int argc, char *argv[])
       case 'c':
         pack->comment = optarg;
         break;
+      case 'e':
+	pack->cpe = optarg;
       case 'l':
         pack->lang = optarg;
         break;
@@ -168,6 +171,7 @@ static void usage(void)
   fprintf(stderr, "\t-P <prefix>\n");
   fprintf(stderr, "\t-O <origin>\n");
   fprintf(stderr, "\t-c <comment (short description)>\n");
+  fprintf(stderr, "\t-e <cpe string>\n");
   fprintf(stderr, "\t-l <package lang>\n");
   fprintf(stderr, "\t-D <package depends>\n");
   fprintf(stderr, "\t-C <package conflicts>\n");
