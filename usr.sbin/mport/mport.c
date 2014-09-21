@@ -43,6 +43,7 @@ static void loadIndex(mportInstance *);
 static mportIndexEntry ** lookupIndex(mportInstance *, const char *);
 static int install_depends(mportInstance *, const char *, const char *);
 static int install(mportInstance *, const char *);
+static int cpeList(mportInstance *);
 static int delete(const char *);
 static int deleteAll(mportInstance *);
 static int download(mportInstance *, const char *);
@@ -144,6 +145,8 @@ main(int argc, char *argv[]) {
 		free(searchQuery);
 	} else if (!strcmp(argv[1], "clean")) {
 		resultCode = clean(mport);
+	} else if (!strcmp(argv[1], "cpe")) {
+		resultCode = cpeList(mport);
 	} else if (!strcmp(argv[1], "deleteall")) {
 		resultCode = deleteAll(mport);
 	} else if (!strcmp(argv[1], "verify")) {
@@ -163,6 +166,7 @@ usage(void) {
 	fprintf(stderr, 
 		"usage: mport <command> args:\n"
 		"       mport clean\n"
+		"	mport cpe\n"
 		"       mport delete [package name]\n"
 		"       mport deleteall\n"
 		"       mport download [package name]\n"
@@ -235,6 +239,7 @@ info(mportInstance *mport, const char *packageName) {
 	mportPackageMeta **packs;
 	char *status, *origin;
 	char *os_release;
+	char *cpe;
 
 	if (packageName == NULL) {
 		warnx("%s", "Specify package name");
@@ -256,24 +261,29 @@ info(mportInstance *mport, const char *packageName) {
 		status = strdup("N/A");
 		origin = strdup("");
 		os_release = strdup("");
+		cpe = strdup("");
 	} else {
 		status = (*packs)->version;
 		origin = (*packs)->origin;
 		os_release = (*packs)->os_release;
+		cpe = (*packs)->cpe;
 	}
 
-	printf("%s\nlatest: %s\ninstalled: %s\nlicense: %s\norigin: %s\nos: %s\n\n%s\n",
+	printf("%s\nlatest: %s\ninstalled: %s\nlicense: %s\norigin: %s\nos: %s\n\n%s\ncpe: %s\n",
 		(*indexEntry)->pkgname,
 		(*indexEntry)->version,
 		status,
 		(*indexEntry)->license,
 		origin,
 		os_release,
-		(*indexEntry)->comment);
+		(*indexEntry)->comment,
+		cpe);
 
 	if (packs == NULL) {
 		free(status);
 		free(origin);
+		free(os_release);
+		free(cpe);
 	} else
 		mport_pkgmeta_vec_free(packs);
 
@@ -481,6 +491,31 @@ upgrade(mportInstance *mport) {
 	}
 	mport_pkgmeta_vec_free(packs);
 	printf("Packages updated: %d\nTotal: %d\n", updated, total);
+	return (0);
+}
+
+int
+cpeList(mportInstance *mport) {
+	mportPackageMeta **packs;
+
+	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		return mport_err_code();
+	}
+
+	if (packs == NULL) {
+		warnx("No packages installed.");
+		return (1);
+	}
+
+	while (*packs != NULL) {
+		if ((*packs)->cpe != NULL)
+			printf("%s\n", (*packs)->cpe);
+		packs++;
+	}
+
+	mport_pkgmeta_vec_free(packs);
+
 	return (0);
 }
 
