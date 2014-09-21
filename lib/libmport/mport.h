@@ -1,6 +1,6 @@
 /* $MidnightBSD$
  *
- * Copyright (c) 2013 Lucas Holt
+ * Copyright (c) 2013, 2014 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -112,6 +112,7 @@ typedef struct {
   char *origin;
   char **categories;
   char *os_release;
+  char *cpe;
 } mportPackageMeta;  
 
 

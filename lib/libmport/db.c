@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2013 Lucas Holt
+ * Copyright (c) 2013, 2014 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -35,6 +35,7 @@ __MBSDID("$MidnightBSD$");
 #include "mport_private.h"
 
 static int mport_upgrade_master_schema_0to2(sqlite3 *);
+static int mport_upgrade_master_schema_2to3(sqlite3 *);
 
 
 /* mport_db_do(sqlite3 *db, const char *sql, ...)
@@ -171,7 +172,7 @@ mport_generate_stub_schema(sqlite3 *db)
 	RUN_SQL(db, "INSERT INTO meta VALUES (\"bundle_format_version\", " MPORT_BUNDLE_VERSION_STR ")");
 	RUN_SQL(db, sql);
 	RUN_SQL(db, "CREATE TABLE assets (pkg text not NULL, type int NOT NULL, data text, checksum text)");
-	RUN_SQL(db, "CREATE TABLE packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, lang text, options text, prefix text NOT NULL, comment text, os_release text NOT NULL)");
+	RUN_SQL(db, "CREATE TABLE packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, lang text, options text, prefix text NOT NULL, comment text, os_release text NOT NULL, cpe text NOT NULL)");
 	RUN_SQL(db, "CREATE TABLE conflicts (pkg text NOT NULL, conflict_pkg text NOT NULL, conflict_version text NOT NULL)");
 	RUN_SQL(db, "CREATE TABLE depends (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
 	RUN_SQL(db, "CREATE TABLE categories (pkg text NOT NULL, category text NOT NULL)");
@@ -187,8 +188,12 @@ mport_upgrade_master_schema(sqlite3 *db, int databaseVersion)
 		case 0:
 		case 1:
 			mport_upgrade_master_schema_0to2(db);
+			mport_upgrade_master_schema_2to3(db);
 			mport_set_database_version(db);
 		case 2:
+			mport_upgrade_master_schema_2to3(db);
+			break;
+		case 3:
 			break;
 		default:
 			RETURN_ERROR(MPORT_ERR_FATAL, "Invalid master database version");
@@ -207,11 +212,20 @@ mport_upgrade_master_schema_0to2(sqlite3 *db)
 	return (MPORT_OK);
 }
 
+static int
+mport_upgrade_master_schema_2to3(sqlite3 *db)
+{
+
+        RUN_SQL(db, "ALTER TABLE packages ADD COLUMN cpe text;");
+
+        return (MPORT_OK);
+}
+
 int
 mport_generate_master_schema(sqlite3 *db) 
 {
 
-	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, status text default 'dirty', comment text, os_release text)");
+	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, status text default 'dirty', comment text, os_release text, cpe text)");
 	RUN_SQL(db, "CREATE UNIQUE INDEX IF NOT EXISTS packages_pkg ON packages (pkg)");
 	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS packages_origin ON packages (origin)");
 
