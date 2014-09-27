@@ -194,6 +194,10 @@ static int insert_meta(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *e
   char sql[]  = "INSERT INTO packages (pkg, version, origin, lang, prefix, comment, os_release, cpe) VALUES (?,?,?,?,?,?,?,?)";
 
   os_release = mport_get_osrelease();
+  if (pack->cpe == NULL) {
+    pack->cpe = alloca(1);
+    pack->cpe[0] = '\0';
+  }
   
   if (sqlite3_prepare_v2(db, sql, -1, &stmnt, &rest) != SQLITE_OK) {
     RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
