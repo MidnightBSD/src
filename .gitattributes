@@ -71614,6 +71614,11 @@ usr.bin/bluetooth/rfcomm_sppd/Makefile -text
 usr.bin/bluetooth/rfcomm_sppd/rfcomm_sdp.c -text
 usr.bin/bluetooth/rfcomm_sppd/rfcomm_sppd.1 -text
 usr.bin/bluetooth/rfcomm_sppd/rfcomm_sppd.c -text
+usr.bin/bmake/Makefile -text
+usr.bin/bmake/Makefile.config -text
+usr.bin/bmake/Makefile.inc -text
+usr.bin/bmake/config.h -text
+usr.bin/bmake/unit-tests/Makefile -text
 usr.bin/brainfuck/Makefile -text
 usr.bin/brainfuck/brainfuck -text
 usr.bin/brainfuck/brainfuck.1 -text

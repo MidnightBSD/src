@@ -278,7 +278,11 @@ SUBDIR+=	msgs
 .endif
 
 .if ${MK_MAKE} != "no"
+.if ${MK_BMAKE} != "no"
+SUBDIR+=	bmake
+.else
 SUBDIR+=	make
+.endif
 .endif
 
 .if ${MK_MAN_UTILS} != "no"
@@ -358,5 +362,7 @@ SUBDIR+=	svn
 .include <bsd.arch.inc.mk>
 
 SUBDIR:=	${SUBDIR:O}
+
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>
