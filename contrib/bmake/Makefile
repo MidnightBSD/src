@@ -94,7 +94,7 @@ SUBDIR+= unit-tests
 # we skip a lot of this when building as part of FreeBSD etc.
 
 # list of OS's which are derrived from BSD4.4
-BSD44_LIST= NetBSD FreeBSD OpenBSD DragonFly
+BSD44_LIST= NetBSD FreeBSD OpenBSD DragonFly MidnightBSD
 # we are...
 OS!= uname -s
 # are we 4.4BSD ?
