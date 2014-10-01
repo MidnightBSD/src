@@ -528,10 +528,8 @@ R50/var.c -text
 R50/var_spec.h -text
 dist/Build.sh -text
 dist/Makefile -text
-dist/alloc.c -text
 dist/check.pl -text
 dist/check.t -text
-dist/copyright -text
 dist/dot.mkshrc -text
 dist/edit.c -text
 dist/emacsfn.h -text
@@ -549,9 +547,7 @@ dist/mirhash.h -text
 dist/misc.c -text
 dist/mksh.1 -text
 dist/rlimits.opt -text
-dist/setmode.c -text
 dist/sh.h -text
-dist/sh_flags.h -text
 dist/sh_flags.opt -text
 dist/shf.c -text
 dist/strlcpy.c -text
