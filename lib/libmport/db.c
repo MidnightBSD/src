@@ -62,6 +62,7 @@ int mport_db_do(sqlite3 *db, const char *fmt, ...)
   sqlcode = sqlite3_exec(db, sql, 0, 0, 0);
   /* if we get an error code, we want to run it again in some cases */
   if (sqlcode == SQLITE_BUSY || sqlcode == SQLITE_LOCKED) {
+    sleep(1);
     if (sqlite3_exec(db, sql, 0, 0, 0) != SQLITE_OK) {
       sqlite3_free(sql);
       RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
@@ -189,9 +190,9 @@ mport_upgrade_master_schema(sqlite3 *db, int databaseVersion)
 		case 1:
 			mport_upgrade_master_schema_0to2(db);
 			mport_upgrade_master_schema_2to3(db);
-			mport_set_database_version(db);
 		case 2:
 			mport_upgrade_master_schema_2to3(db);
+			mport_set_database_version(db);
 			break;
 		case 3:
 			break;
