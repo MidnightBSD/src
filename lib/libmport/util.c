@@ -30,6 +30,8 @@ __MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
+#include <pwd.h>
+#include <grp.h>
 #include <sha256.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -120,6 +122,34 @@ MPORT_PUBLIC_API int mport_verify_hash(const char *filename, const char *hash)
 char * mport_hash_file(const char *filename)
 {
   return SHA256_File(filename, NULL);
+}
+
+uid_t mport_get_uid(const char *username)
+{
+	struct passwd *pw;
+
+        if (username == NULL || *username == '\0')
+		return 0; /* root */
+
+	pw = getpwnam(username);
+	if (pw == NULL)
+		return 0; /* if we cant figure it out be safe */
+
+	return pw->pw_uid;
+}
+
+gid_t mport_get_gid(const char *group)
+{
+	struct group *gr;
+
+        if (group == NULL || *group == '\0')
+                return 0; /* wheel */
+
+	gr = getgrnam(group);
+	if (gr == NULL)
+		return 0; /* wheel, could not look up */
+
+	return gr->gr_gid;
 }
 
 /* a wrapper around chdir, to work with our error system */

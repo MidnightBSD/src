@@ -81,6 +81,8 @@ int mport_pkgmeta_logevent(mportInstance *, mportPackageMeta *, const char *);
 /* Utils */
 char* mport_hash_file(const char *);
 int mport_copy_file(const char *, const char *);
+uid_t mport_get_uid(const char *);
+gid_t mport_get_gid(const char *);
 int mport_rmtree(const char *);
 int mport_mkdir(const char *);
 int mport_rmdir(const char *, int);
