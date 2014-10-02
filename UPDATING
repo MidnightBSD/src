@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20141002:
+	sqlite 3.8.6
+
+	sudo 1.7.8 - some issues with the current version, but we're slowly
+	getting up to date.
+
 20141001:
 	mksh R50b
 
