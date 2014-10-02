@@ -1,8 +1,370 @@
+2011-04-29  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* toke.c, toke.l:
+	Split ALL, ROLE and TYPE into their own actions. Since you can only
+	have #ifdefs inside of braces, ROLE and TYPE use a naughty goto in
+	the non-SELinux case. This is safe because the actions are in one
+	big switch() statement.
+	[19863b5cecde] [tip] <1.7>
+
+	* toke.c, toke.l:
+	Fix regexp for matching a CIDR-style IPv4 netmask. From Marc Espie.
+	[cbf8c4ee2981] <1.7>
+
+	* sudoers.pod:
+	Remove obsolete warning about runas_default and ordering.
+	[eff3ac4c594b] <1.7>
+
+2011-04-18  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* configure, configure.in:
+	Need to do checks for krb5_verify_user, krb5_init_secure_context and
+	krb5_get_init_creds_opt_alloc regardless of whether or not
+	krb5-config is present.
+	[6ceda8c8c126] <1.7>
+
+	* NEWS:
+	sudo 1.7.6p1 updates
+	[888e4e84b839] <1.7>
+
+2011-04-14  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* sudo.pp:
+	update copyright year
+	[edf691539a65] <1.7>
+
+	* toke.c, toke.l:
+	Treat a missing includedir like an empty one and do not return an
+	error.
+	[9c770ff2d0bc] <1.7>
+
+2011-04-12  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* pp:
+	Fix ARCH setting in cross-compile Solaris packages.
+	[057d743bd1a2] <1.7>
+
+	* sudo.pp:
+	Fix aix version setting.
+	[1a2621321f5c] <1.7>
+
+	* ldap.c:
+	Remove extraneous parens in LDAP filter when sudoers_search_filter
+	is enabled that causes a search error. From Matthew Thomas.
+	[7a5a2d021d32] <1.7>
+
+2011-04-09  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* .hgtags:
+	Added tag SUDO_1_7_6 for changeset fafbb7b0aea2
+	[6f5c74a8a6ac] <1.7>
+
+	* configure, configure.in, sudo.cat, sudo.man.in, sudoers.cat,
+	sudoers.ldap.cat, sudoers.ldap.man.in, sudoers.man.in,
+	sudoreplay.cat, sudoreplay.man.in, visudo.cat, visudo.man.in:
+	regen for 1.7.6
+	[fafbb7b0aea2] [SUDO_1_7_6] <1.7>
+
+	* sudo.cat, sudo.man.in:
+	regen man pages for 1.7.6
+	[94d851285f31] <1.7>
+
+2011-04-06  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* configure, configure.in:
+	Fix warnings when -without-skey, --without-opie, --without-kerb4,
+	--without-kerb5 or --without-SecurID were specified.
+	[83a99d369286] <1.7>
+
+2011-04-05  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* NEWS:
+	Mention %#gid support in User_List and Runas_List
+	[8ff14765d7df] <1.7>
+
+	* sudoers.pod:
+	Merge SETENV and NOSETENV description from 1.8
+	[dd44e79b53a0] <1.7>
+
+2011-04-01  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* testsudoers.c:
+	In dump-only mode, use "root" as the default username instead of
+	"nobody" as the latter may not be available on all systems.
+	[8082b8a1374c] <1.7>
+
+2011-03-31  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* testsudoers.c:
+	Fix setting of user_args
+	[0669612feeb1] <1.7>
+
+	* toke.c, toke.l:
+	Add '!' token to lex tracing
+	[7738d002a8d0] <1.7>
+
+	* toke.c, toke.l:
+	Avoid using pre or post increment in a parameter to a ctype(3)
+	function as it might be a macro that causes the increment to happen
+	more than once.
+	[2d23161e06dc] <1.7>
+
+2011-03-30  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* sudo.pp:
+	Strip off the beta or release candidate version when building AIX
+	packages.
+	[246ebb79e64f] <1.7>
+
+	* aix.c:
+	getuserattr(user, ...) will fall back to the "default" entry
+	automatically, there's no need to check "default" manually.
+	[dd233ca1092a] <1.7>
+
+2011-03-29  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* UPGRADE:
+	Document parser changes.
+	[f767c045e6c0] <1.7>
+
+	* testsudoers.c:
+	Add runasgroup support to testsudoers
+	[23f060665d23] <1.7>
+
+	* testsudoers.c:
+	More useful exit codes:
+	 * 0 - parsed OK and command matched.
+	 * 1 - parse error
+	 * 2 - command not matched
+	 * 3 - command denied
+	[bda610d9f6da] <1.7>
+
+	* Makefile.in:
+	If there is an existing sudoers file, only install if it passes a
+	syntax check.
+	[189eaeea562e] <1.7>
+
+	* sudoers.pod:
+	Document %#gid, and %:#nonunix_gid syntax.
+	[59e7df4c91e4] <1.7>
+
+	* pwutil.c:
+	Add support to user_in_group() for treating group names that begin
+	with a '#' as gids.
+	[3926017fbf95] <1.7>
+
+2011-03-28  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* aclocal.m4:
+	Quote first argument to AC_DEFUN(); from Elan Ruusamae
+	[a245e4891bab] <1.7>
+
+2011-03-27  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* toke.c, toke.l:
+	Use bitwise AND instead of modulus to check for length being odd. A
+	newline in the middle of a string is an error unless a line
+	continuation character is used.
+	[37a7f1fc54b7] <1.7>
+
+	* gram.c, toke.c:
+	Add missing include of config.h
+	[b13da7baee1e] <1.7>
+
+	* gram.c, gram.y, toke.c, toke.l:
+	Move lexer globals initialization into init_lexer.
+	[b7c124212d05] <1.7>
+
+	* toke.c, toke.l:
+	Fix a potential crash when a non-regular file is present in an
+	includedir. Fixes bz #452
+	[f1209a710607] <1.7>
+
+	* pp:
+	On some Linux systems, "uname -p" contains detailed processor info
+	so check "uname -m" first and then "uname -p" if needed. Recognize
+	PLD Linux.
+	[83af85a391df] <1.7>
+
+	* toke.c, toke.l:
+	Make an empty group or netgroup a syntax error.
+	[e88aa7b31a43] <1.7>
+
+	* toke.c, toke.l:
+	Allow a group ID in the User_Spec.
+	[3e58bc732e33] <1.7>
+
+	* toke.c, toke.l:
+	Return an error for the empty string when a word is expected. Allow
+	an ID for per-user or per-runas Defaults.
+	[83bb1a9c80ad] <1.7>
+
+2011-03-23  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* testsudoers.c:
+	Fix printing "User_Alias FOO = ALL"
+	[8e6e810e89ce] <1.7>
+
+2011-03-22  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* parse_args.c:
+	Better error message about invalid -C argument
+	[fc14f8dc03d2] <1.7>
+
+	* NEWS:
+	fix typo
+	[f789649fdeaf] <1.7>
+
+	* sudoers.pod:
+	Fix placement of equal size ('=') in user specification summary.
+	[51861d678ac1] <1.7>
+
+2011-03-21  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* toke.l:
+	If we match a rule anchored to the beginning of a line after parsing
+	a line continuation character, return an ERROR token. It would be
+	nicer to use REJECT instead but that substantially slows down the
+	lexer.
+	[f31c6622aaf9] <1.7>
+
+	* toke.c, toke.l:
+	Allow whitespace after the modifier in a Defaults entry. E.g.
+	"Defaults: username set_home"
+	[57c09139d10c] <1.7>
+
+2011-03-18  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* mkpkg:
+	Don't set CC when cross-compiling. Use the Sun Studio C compiler on
+	Solaris if possible.
+	[b91feb0678c1] <1.7>
+
+	* NEWS:
+	Credit Matthew Thomas for the sudoers_search_filter changes.
+	[4b3f239e114d] <1.7>
+
+	* NEWS:
+	Update for sudo 1.7.6 beta
+	[26cdd6578c23] <1.7>
+
+	* exec_pty.c:
+	Save the controlling tty process group before suspending in pty
+	mode. Previously, we assumed that the child pgrp == child pid
+	(which is usually, but not always, the case).
+	[670657004784] <1.7>
+
+	* ldap.c, sudoers.ldap.pod:
+	Add support for sudoers_search_filter setting in ldap.conf. This
+	can be used to restrict the set of records returned by the LDAP
+	query.
+	[c941bb5f68f2] <1.7>
+
+2011-03-17  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* configure, configure.in:
+	Remove the hack to disable -g in CFLAGS unless --with-devel
+	[933300bf3848] <1.7>
+
+	* sudoers.pod:
+	The '@' character does not normally need to be quoted.
+	[7e96569aed54] <1.7>
+
+	* toke.c, toke.l:
+	We normaly transition from GOTDEFS to STARTDEFS on whitespace, but
+	if that whitespace is followed by a comma, we want to treat it as
+	part of a list and not transition.
+	[6dd87c25c79c] <1.7>
+
+	* Makefile.in:
+	toke_util.c lives in $(srcdir) not $(devdir)
+	[b1b59d72f026] <1.7>
+
+	* toke.c, toke.l:
+	Fix parsing of double-quoted names in Defaults and Aliases which was
+	broken in c2b486b12951.
+	[30b2fdbafdc2] <1.7>
+
+2011-03-16  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* NEWS:
+	Document major changes for sudo 1.7.6
+	[d474a2aeb411] <1.7>
+
+	* configure, configure.in:
+	Update version to 1.7.6
+	[c1c80b99ed82] <1.7>
+
+	* match.c:
+	Be careful not to deref user_stat if it is NULL. This cannot
+	currently happen in sudo but might in other programs using the
+	parser.
+	[0926b1653e20] <1.7>
+
+	* mkpkg:
+	configure will not add -O2 to CFLAGS if it is already defined to add
+	-O2 to the CFLAGS we pass in when PIE is being used.
+	[a4444e287bcb] <1.7>
+
+	* sudoers.pod:
+	Warn about the dangers of log_input and mention iolog_dir in the
+	log_input and log_output descriptions.
+	[68c3615f7487] <1.7>
+
+	* pp:
+	Back out 2b81d57de4a4 and sync with git version
+	[5a2443567b9c] <1.7>
+
+	* exec.c:
+	Save the controlling tty process group before suspending so we can
+	restore it when we resume. Fixes job control problems on Linux
+	caused by the previous attemp to fix resuming a shell when I/O
+	logging not enabled.
+	[3e4e26b79f59] <1.7>
+
+	* exec.c:
+	In handle_signals(), restart the read() on EINTR to make sure we
+	keep up with the signal pipe. Don't return -1 on EAGAIN, it just
+	means we have emptied the pipe.
+	[5bcfe5a061c2] <1.7>
+
+	* lbuf.c:
+	Fix printing of the remainder after a newline. Fixes "sudo -l"
+	output corruption that could occur in some cases.
+	[41e5595f0559] <1.7>
+
+2011-03-08  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* mkpkg:
+	Fix default setting of osversion variable.
+	[c67d9d3bfa2b] <1.7>
+
+2011-03-07  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* mkpkg:
+	Add --osversion flag to specify OS instead of running "pp
+	--probeonly"
+	[550104604d4b] <1.7>
+
+	* sudo.pp:
+	Fix expr usage w/ GNU expr
+	[c2161988dec9] <1.7>
+
+2011-03-02  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* sudo.pp:
+	Don't use the beta or release candidate version as the rpm release.
+	[56f8c0b1eb46] <1.7>
+
 2011-02-25  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* .hgtags:
+	Added tag SUDO_1_7_5 for changeset 9314212577c3
+	[75f9d661ea03] <1.7>
 
 	* configure, configure.in:
 	version 1.7.5
-	[9314212577c3] [tip] <1.7>
+	[9314212577c3] [SUDO_1_7_5] <1.7>
 
 2011-02-21  Todd C. Miller  <Todd.Miller@courtesan.com>
 

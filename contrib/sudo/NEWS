@@ -1,3 +1,44 @@
+What's new in Sudo 1.7.6p2
+
+ * Two-character CIDR-style IPv4 netmasks are now matched correctly 
+   in the sudoers file.
+
+ * A build error with MIT Kerberos V has been resolved.
+
+What's new in Sudo 1.7.6p1
+
+ * A non-existent includedir is now treated the same as an empty
+   directory and not reported as an error.
+
+ * Removed extraneous parens in LDAP filter when sudoers_search_filter
+   is enabled that can cause an LDAP search error.
+
+What's new in Sudo 1.7.6?
+
+ * A new LDAP setting, sudoers_search_filter, has been added to
+   ldap.conf.  This setting can be used to restrict the set of
+   records returned by the LDAP query.  Based on changes from Matthew
+   Thomas.
+
+ * White space is now permitted within a User_List when used in
+   conjunction with a per-user Defaults definition.
+
+ * A group ID (%#gid) may now be specified in a User_List or Runas_List.
+   Likewise, for non-Unix groups the syntax is %:#gid.
+
+ * Support for double-quoted words in the sudoers file has been fixed.
+   The change in 1.7.5 for escaping the double quote character
+   caused the double quoting to only be available at the beginning
+   of an entry.
+
+ * The fix for resuming a suspended shell in 1.7.5 caused problems
+   with resuming non-shells on Linux.  Sudo will now save the process
+   group ID of the program it is running on suspend and restore it
+   when resuming, which fixes both problems.
+
+ * A bug that could result in corrupted output in "sudo -l" has been
+   fixed.
+
 What's new in Sudo 1.7.5?
 
  * When using visudo in check mode, a file named "-" may be used to
@@ -39,7 +80,7 @@ What's new in Sudo 1.7.5?
  * LDAP Sudoers entries may now specify a sudoOrder attribute that
    determines the order in which matching entries are applied.  The
    last matching entry is used, just like file-based sudoers.  This
-   requires an updated sudoers schema that includes the sudOrder
+   requires an updated sudoers schema that includes the sudoOrder
    attribute.  Based on changes from Andreas Mueller.
 
  * When run as sudoedit, or when given the -e flag, sudo now treats

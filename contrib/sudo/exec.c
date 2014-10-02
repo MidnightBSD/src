@@ -359,8 +359,6 @@ sudo_execve(path, argv, envp, uid, cstat, dowait, bgmode)
 		goto done;
 	    }
 	    if (n == -1) {
-		if (errno == EAGAIN || errno == EINTR)
-		    continue;
 		/* Error reading signal_pipe[0], should not happen. */
 		break;
 	    }
@@ -445,7 +443,7 @@ done:
 
 /*
  * Read signals on fd written to by handler().
- * Returns -1 on error (possibly non-fatal), 0 on child exit, else 1.
+ * Returns -1 on error, 0 on child exit, else 1.
  */
 static int
 handle_signals(fd, child, cstat)
@@ -465,10 +463,14 @@ handle_signals(fd, child, cstat)
 	    /* It should not be possible to get EOF but just in case. */
 	    if (nread == 0)
 		errno = ECONNRESET;
-	    if (errno != EINTR && errno != EAGAIN) {
-		cstat->type = CMD_ERRNO;
-		cstat->val = errno;
-	    }
+	    /* Restart if interrupted by signal so the pipe doesn't fill. */
+	    if (errno == EINTR)
+		continue;
+	    /* If pipe is empty, we are done. */
+	    if (errno == EAGAIN)
+		break;
+	    cstat->type = CMD_ERRNO;
+	    cstat->val = errno;
 	    return -1;
 	}
 	if (signo == SIGCHLD) {
@@ -490,9 +492,25 @@ handle_signals(fd, child, cstat)
 #endif
 		{
 		    if (WIFSTOPPED(status)) {
-			/* Child may not have privs to suspend us itself. */
+			/*
+			 * Save the controlling terminal's process group
+			 * so we can restore it after we resume.
+			 */
+#ifdef HAVE_TCSETPGRP
+			pid_t saved_pgrp = (pid_t)-1;
+			int fd = open(_PATH_TTY, O_RDWR|O_NOCTTY, 0);
+			if (fd != -1)
+			    saved_pgrp = tcgetpgrp(fd);
+#endif /* HAVE_TCSETPGRP */
 			if (kill(getpid(), WSTOPSIG(status)) != 0)
 			    warning("kill(%d, %d)", getpid(), WSTOPSIG(status));
+#ifdef HAVE_TCSETPGRP
+			if (fd != -1) {
+			    if (saved_pgrp != (pid_t)-1)
+				(void)tcsetpgrp(fd, saved_pgrp);
+			    close(fd);
+			}
+#endif /* HAVE_TCSETPGRP */
 		    } else {
 			/* Child has exited, we are done. */
 			cstat->type = CMD_WSTATUS;
@@ -510,20 +528,6 @@ handle_signals(fd, child, cstat)
 	    } else
 #endif
 	    {
-#ifdef HAVE_TCSETPGRP
-		if (signo == SIGCONT) {
-		    /*
-		     * Before continuing the child, make it the foreground
-		     * pgrp if possible.  Fixes resuming a shell.
-		     */
-		    int fd = open(_PATH_TTY, O_RDWR|O_NOCTTY, 0);
-		    if (fd != -1) {
-			if (tcgetpgrp(fd) == getpgrp())
-			    (void)tcsetpgrp(fd, child);
-			close(fd);
-		    }
-		}
-#endif
 		/* Nothing listening on sv[0], send directly. */
 		if (kill(child, signo) != 0)
 		    warning("kill(%d, %d)", child, signo);
