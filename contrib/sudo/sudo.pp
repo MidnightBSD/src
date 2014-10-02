@@ -6,7 +6,7 @@
 		name="sudo"
 		pp_kit_package="sudo"
 	fi
-	summary="Provide limited super-user priveleges to specific users"
+	summary="Provide limited super-user privileges to specific users"
 	description="Sudo is a program designed to allow a sysadmin to give \
 limited root privileges to users and log root activity.  \
 The basic philosophy is to give as few privileges as possible but \
@@ -205,7 +205,10 @@ still allow people to get their work done."
 	# Don't overwrite an existing sudoers file
 	sudoersdir=%{sudoersdir}
 	if test ! -r $sudoersdir/sudoers; then
-		cp -p $sudoersdir/sudoers.dist $sudoersdir/sudoers
+		cp $sudoersdir/sudoers.dist $sudoersdir/sudoers
+		chmod %{sudoers_mode} $sudoersdir/sudoers
+		chown %{sudoers_uid} $sudoersdir/sudoers
+		chgrp %{sudoers_gid} $sudoersdir/sudoers
 	fi
 
 %post [deb]

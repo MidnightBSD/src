@@ -270,7 +270,7 @@ void io_nextid __P((void));
 
 /* pam.c */
 int pam_begin_session	__P((struct passwd *));
-int pam_end_session	__P((void));
+int pam_end_session	__P((struct passwd *));
 
 /* parse.c */
 int sudo_file_open	__P((struct sudo_nss *));
@@ -295,6 +295,7 @@ struct group *sudo_fakegrnam __P((const char *));
 struct group *sudo_getgrgid __P((gid_t));
 struct group *sudo_getgrnam __P((const char *));
 struct passwd *sudo_fakepwnam __P((const char *, gid_t));
+struct passwd *sudo_fakepwuid __P((uid_t uid, gid_t gid));
 struct passwd *sudo_getpwnam __P((const char *));
 struct passwd *sudo_getpwuid __P((uid_t));
 void sudo_endgrent	__P((void));
@@ -327,6 +328,8 @@ void set_fqdn		__P((void));
 void verify_user	__P((struct passwd *, char *));
 void pass_warn		__P((FILE *));
 void dump_auth_methods	__P((void));
+void sudo_auth_init	__P((struct passwd *));
+void sudo_auth_cleanup	__P((struct passwd *));
 
 /* sudo_nss.c */
 void display_privs	__P((struct sudo_nss_list *, struct passwd *));
@@ -364,9 +367,6 @@ extern int sudo_mode;
 extern uid_t timestamp_uid;
 /* XXX - conflicts with the one in visudo */
 int run_command __P((const char *path, char *argv[], char *envp[], uid_t uid, int dowait));
-#endif
-#ifndef errno
-extern int errno;
 #endif
 
 #endif /* _SUDO_SUDO_H */

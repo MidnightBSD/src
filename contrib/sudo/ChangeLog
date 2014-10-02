@@ -1,3 +1,362 @@
+2011-10-21  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* .hgtags:
+	Added tag SUDO_1_7_8 for changeset 571f47a3e08c
+	[3de502bba852] [tip] <1.7>
+
+	* configure, configure.in:
+	Revert unintended commit of version change to 1.7.8rc1
+	[571f47a3e08c] [SUDO_1_7_8] <1.7>
+
+2011-10-10  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* NEWS:
+	Add sudoedit fix
+	[350569be47a9] <1.7>
+
+	* env.c:
+	Ignore set_logname (which is now the default) for sudoedit since we
+	want the LOGNAME, USER and USERNAME environment variables to refer
+	to the calling user since that is who the editor runs as. This
+	allows the editor to find the user's startup files. Fixes bugzilla
+	#515
+	[8615dc42239d] <1.7>
+
+2011-09-27  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* auth/API, auth/bsdauth.c, auth/fwtk.c, auth/kerb4.c, auth/kerb5.c,
+	auth/pam.c, auth/passwd.c, auth/secureware.c, auth/securid.c,
+	auth/securid5.c, auth/sudo_auth.c, auth/sudo_auth.h, check.c,
+	sudo.c, sudo.h:
+	Modify the authentication API such that the init and cleanup
+	functions are always called, regardless of whether or not we are
+	going to verify a password. This is needed for proper PAM session
+	support.
+	[c8ea54add6cd] <1.7>
+
+2011-09-24  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* pwutil.c, sudo.c, sudo.h:
+	If the invoking user cannot be resolved by uid fake the struct
+	passwd and store it in the cache so we can delref it on exit.
+	[e884526c625f] <1.7>
+
+2011-09-22  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* .hgtags:
+	Added tag SUDO_1_7_7 for changeset 9fba0207f99a
+	[9a2a6bc562ba] <1.7>
+
+2011-09-21  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* TROUBLESHOOTING:
+	Update to current reality and add bit about ssh auth
+	[e685cf9d5b80] <1.7>
+
+	* gram.c, gram.y:
+	Make "verbose" static; fixes a namespace clash with
+	pam_ssh_agent_auth (and it doesn't need to be extern these days).
+	[b7af22bb2a44] <1.7>
+
+	* config.h.in, configure, configure.in, get_pty.c:
+	FreeBSD has libutil.h not util.h
+	[299f690e00c1] <1.7>
+
+	* configure, configure.in:
+	Define _BSD_SOURCE on FreeBSD, OpenBSD and DragonflyBSD
+	[b62354af36fb] <1.7>
+
+2011-09-17  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* NEWS, sudo.c:
+	Apply MODE_MASK to sudo_mode in the switch statement that handles
+	modes other than MODE_RUN.
+	[207aa8b0d0b0] <1.7>
+
+2011-09-16  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* NEWS, configure, configure.in, sudo.cat, sudo.man.in, sudoers.cat,
+	sudoers.ldap.cat, sudoers.ldap.man.in, sudoers.man.in,
+	sudoreplay.cat, sudoreplay.man.in, visudo.cat, visudo.man.in:
+	Update for version 1.7.8
+	[a1e17108be5c] <1.7>
+
+	* ldap.c, sudoers.ldap.pod:
+	Add support for DEREF in ldap.conf.
+	[125671af12dd] <1.7>
+
+	* configure, configure.in:
+	Check for -libmldap too when looking for ldap libs, which is the
+	Tivoli Directory Server client library.
+	[bd1f9c9572f1] <1.7>
+
+	* parse.c:
+	Honor NOPASSWD tag for denied commands too.
+	[73e53bf979d0] <1.7>
+
+	* INSTALL, configure, configure.in:
+	Remove --with-CC option; it doesn't work correctly now that we use
+	libtool. Users can get the same effect by setting the CC environment
+	variable when running configure.
+	[b3c8e1d3b601] <1.7>
+
+	* visudo.c:
+	Don't assume all editors support the +linenumber command line
+	argument, use a whitelist of known good editors.
+	[e639904656b6] <1.7>
+
+	* configure, configure.in:
+	Use PAM by default on AIX 6 and higher. Fix some square brackets in
+	case statements that needed to be doubled up. While here, use
+	$OSMAJOR when it makes sense.
+	[4a4fb717a75f] <1.7>
+
+2011-08-30  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* INSTALL, configure, configure.in:
+	Add --enable-werror configure option. Add -Wall and -Werror after
+	all tests so they don't cause failures.
+	[805eb7c4af8b] <1.7>
+
+	* config.h.in, configure, configure.in, missing.h, sudo.h,
+	sudo_noexec.c:
+	Add configure test for missing errno declaration and only declare it
+	ourselves if it is missing.
+	[9e26d7bc28b9] <1.7>
+
+	* alias.c:
+	Include errno.h before sudo.h to avoid conflicting with the system
+	definition of errno.
+	[991e5efb9333] <1.7>
+
+2011-08-27  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* match.c:
+	Fix matching a network number with netmask when the network number
+	is not the first address in the CIDR block.
+	[18ae73d884ae] <1.7>
+
+2011-08-23  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* mkpkg:
+	Fix building on RHEL 3
+	[c54c381a9093] <1.7>
+
+2011-08-14  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* NEWS, sudo.c:
+	bash 2.x doesd not support the -l flag and exits with an error if it
+	is specified so use --login instead. This causes an error with bash
+	1.x (which uses -login instead) but this version is hopefully less
+	used than 2.x.
+	[9fba0207f99a] [SUDO_1_7_7] <1.7>
+
+	* configure, configure.in:
+	Detect HP-UX bundled compiler on ia64 systems.
+	[92579c1de7d6] <1.7>
+
+	* lbuf.c:
+	Fix cut & pasto in K&R lbuf_append function declaration
+	[e31c4d533e9a] <1.7>
+
+	* NEWS:
+	sync
+	[abe2abe9875b] <1.7>
+
+	* exec.c, exec_pty.c, sudo_exec.h:
+	Improved background mode support. When not allocating a pty, the
+	command is run in its own process group. This prevents write access
+	to the tty. When running in a pty, stdin is not hooked up and we
+	never read from /dev/tty, which results in similar behavior.
+	[9a5513a80338] <1.7>
+
+	* lbuf.c, lbuf.h, ldap.c, parse.c, parse_args.c, sudo_nss.c:
+	Add primitive format string support to the lbuf code.
+	[2628965a3272] <1.7>
+
+	* sudo.c:
+	Go back to escaping the command args for "sudo -i" and "sudo -s" in
+	NewArgv before checking sudoers but unescape non-spaces when
+	building user_args to make sudoers matching easier.
+	[4c88da5fc510] <1.7>
+
+2011-08-13  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* INSTALL, NEWS, README, configure, configure.in, sudo.cat,
+	sudo.man.in, sudoers.cat, sudoers.ldap.cat, sudoers.ldap.man.in,
+	sudoers.man.in, sudoreplay.cat, sudoreplay.man.in, visudo.cat,
+	visudo.man.in:
+	Prepare for sudo 1.7.7
+	[8ea26959ac1d] <1.7>
+
+	* sudo.c:
+	Only check gid of sudoers file if it is group-readable or writable.
+	[ecb53c982ab8] <1.7>
+
+	* mkpkg:
+	configure args on the command line should override builtin defaults.
+	Add -g to CFLAG for PIE builds.
+	[35f35e806705] <1.7>
+
+	* configure, configure.in:
+	Add checks for nroff -c and -Tascii flags
+	[897772861c2c] <1.7>
+
+	* configure, configure.in:
+	When building with gcc on HP-UX, use -march=1.1 to produce portable
+	binaries on a pa-risc2 host. Previously, the +Dportable option was
+	used for the HP-UX C compiler but gcc always produced native
+	binaries.
+	[d3b0893cd038] <1.7>
+
+	* zlib/adler32.c, zlib/crc32.c, zlib/crc32.h, zlib/infback.c,
+	zlib/inffast.c, zlib/inflate.c, zlib/inftrees.c, zlib/trees.c:
+	Fix K&R compilation
+	[e7b103358019] <1.7>
+
+	* sudo.c:
+	fix K&R compilation
+	[5d6c476a5f73] <1.7>
+
+	* match.c:
+	If the user specifies a runas group via sudo's -g option that
+	matches the runas user's group in the passwd database and that group
+	is not denied in the Runas_Spec, allow it. Thus, if user root's gid
+	in /etc/passwd is 0, then "sudo -u root -g root id" is allow even if
+	no groups are present in the Runas_Spec.
+	[fafe67fa39c1] <1.7>
+
+	* visudo.c:
+	When checking aliases, also check the contents of the alias in case
+	there are problems with an alias that is referenced inside another.
+	Replace the self reference check with real alias cycle detection.
+	[8957b4c7e6c9] <1.7>
+
+	* alias.c:
+	Set errno to ELOOP in alias_find() if there is a cycle. Set errno to
+	ENOENT in alias_find() and alias_remove() if the entry could not be
+	found.
+	[c2fa4faa8abf] <1.7>
+
+	* visudo.c:
+	Increment alias_seqno before calls to alias_remove_recursive() to
+	avoid false positives with the alias loop detection. Fixes spurious
+	warnings about unused aliases when they are nested.
+	[0260e8087c03] <1.7>
+
+	* ldap.c, sudoers.ldap.pod:
+	Tivoli Directory Server requires that seconds be present in a
+	timestamp, even though RFC 4517 states that they are optional.
+	[467e8876e3da] <1.7>
+
+	* sudo.c:
+	Set def_preserve_groups before searching for the command when the
+	-P flag is specified.
+	[ba3b399a2e55] <1.7>
+
+	* sudoers.pod:
+	The group named by exempt_group should not have a % prefix.
+	[41c7640647e5] <1.7>
+
+	* getdate.c, getdate.y:
+	Do not declare yyparse() static as the actual function generated by
+	yacc is extern.
+	[e25721f456ef] <1.7>
+
+	* configure, configure.in:
+	Disable noexec for AIX < 5. LDR_PRELOAD is only available in AIX 5.3
+	and above.
+	[34ebbe43f380] <1.7>
+
+	* mkpkg:
+	For SuSE, only use /usr/lib64 as libexec if generating 64-bit
+	binaries.
+	[9277f9dfb21d] <1.7>
+
+	* Makefile.in, logging.c, logging.h, logwrap.c:
+	Split out log file word wrap code into its own file. Fixes an off-
+	by one in the word wrap when the log line length matches loglinelen.
+	[c3759952fe9e] <1.7>
+
+	* audit.c:
+	Add a NULL check in audit_success() and audit_failure() just to be
+	on the safe side.
+	[265ccdf16561] <1.7>
+
+	* check.c, ldap.c, parse.c, toke.c, toke.l:
+	Fix some potential problems found by the clang static analyzer, none
+	serious.
+	[0183767382c3] <1.7>
+
+	* auth/aix_auth.c:
+	For AIX, keep calling authenticate() until reenter reaches 0.
+	[df98b55de2ab] <1.7>
+
+	* config.guess, config.sub, configure, configure.in, ltmain.sh,
+	m4/libtool.m4, m4/ltoptions.m4, m4/ltversion.m4, m4/lt~obsolete.m4:
+	Update to autoconf 2.68 and libtool 2.4
+	[d8e09ea9a10e] <1.7>
+
+	* auth/rfc1938.c, config.h.in, configure.in:
+	Add check for NetBSD-style 4-argument skeychallenge() as Gentoo also
+	has this. Adapted from a patch from Diego Elio Petteno
+	[124c020dc27d] <1.7>
+
+2011-08-11  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* sudoers.pod:
+	Fix typo; OPT should be OTP
+	[f24c4f190ff4] <1.7>
+
+2011-08-10  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* sudo.c:
+	Add dedicated callback function for runas_default sudoers setting
+	that only sets runas_pw if no runas user or group was specified by
+	the user.
+	[0a57b26041c6] <1.7>
+
+2011-08-09  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* defaults.h, sudo.c:
+	Go back to using a callback for runas_default to keep runas_pw in
+	sync. This is needed to make per-entry runas_default settings work
+	with LDAP-based sudoers. Instead of declaring it a callback in
+	def_data.in, sudo pokes sudo_defs_table[] which is a bit naughty,
+	but avoids requiring stub functions in visudo and testsudoers.
+	[3f5ef76c6de5] <1.7>
+
+2011-07-13  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* mkpkg:
+	Only run configure with --with-pam-login for RHEL 5 and above.
+	[59c88e848991] <1.7>
+
+	* sudo.pp:
+	Fix typo in summary
+	[ac1d930d3822] <1.7>
+
+2011-06-13  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* env.c:
+	Preserve SHELL variable for "sudo -s". Otherwise we can end up with
+	a situation where the SHELL variable and the actual shell being run
+	do not match.
+	[1eb3f17d128f] <1.7>
+
+2011-06-10  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* configure, configure.in:
+	Only enable Solaris project support when setproject() is present in
+	libproject.
+	[17c6f8635946] <1.7>
+
+	* sudo.pp:
+	Explicitly set mode and owner of /etc/sudoers instead of relying on
+	"cp -p" to work in the postinstall script. On AIX 6.1 at least the
+	postinstall script runs before the final file permissions are set.
+	[6e3fcb12a27f] <1.7>
+
 2011-04-29  Todd C. Miller  <Todd.Miller@courtesan.com>
 
 	* toke.c, toke.l:
@@ -5,7 +364,7 @@
 	have #ifdefs inside of braces, ROLE and TYPE use a naughty goto in
 	the non-SELinux case. This is safe because the actions are in one
 	big switch() statement.
-	[19863b5cecde] [tip] <1.7>
+	[19863b5cecde] <1.7>
 
 	* toke.c, toke.l:
 	Fix regexp for matching a CIDR-style IPv4 netmask. From Marc Espie.

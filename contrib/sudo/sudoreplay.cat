@@ -1,7 +1,5 @@
+SUDOREPLAY(1m)               MAINTENANCE COMMANDS               SUDOREPLAY(1m)
 
-
-
-SUDOREPLAY(1m)         MAINTENANCE COMMANDS        SUDOREPLAY(1m)
 
 
 NNAAMMEE
@@ -57,19 +55,6 @@ OOPPTTIIOONNSS
                    displayed.  An expression is composed of the following
                    predicates:
 
-
-
-
-
-1.7.6                     April  9, 2011                        1
-
-
-
-
-
-SUDOREPLAY(1m)         MAINTENANCE COMMANDS        SUDOREPLAY(1m)
-
-
                    command _c_o_m_m_a_n_d _p_a_t_t_e_r_n
                            Evaluates to true if the command run matches
                            _c_o_m_m_a_n_d _p_a_t_t_e_r_n.  On systems with POSIX regular
@@ -124,18 +109,6 @@ SUDOREPLAY(1m)         MAINTENANCE COMMANDS        SUDOREPLAY(1m)
 
        -m _m_a_x___w_a_i_t Specify an upper bound on how long to wait between key
                    presses or output data.  By default, ssuuddoo__rreeppllaayy will
-
-
-
-1.7.6                     April  9, 2011                        2
-
-
-
-
-
-SUDOREPLAY(1m)         MAINTENANCE COMMANDS        SUDOREPLAY(1m)
-
-
                    accurately reproduce the delays between key presses or
                    program output.  However, this can be tedious when the
                    session includes long pauses.  When the _-_m option is
@@ -190,17 +163,6 @@ SUDOREPLAY(1m)         MAINTENANCE COMMANDS        SUDOREPLAY(1m)
 
        2 hours ago
                2 hours ago.
-
-
-
-1.7.6                     April  9, 2011                        3
-
-
-
-
-
-SUDOREPLAY(1m)         MAINTENANCE COMMANDS        SUDOREPLAY(1m)
-
 
        next Friday
                The first second of the next Friday.
@@ -257,17 +219,6 @@ EEXXAAMMPPLLEESS
 
         sudoreplay -l user millert
 
-
-
-1.7.6                     April  9, 2011                        4
-
-
-
-
-
-SUDOREPLAY(1m)         MAINTENANCE COMMANDS        SUDOREPLAY(1m)
-
-
        List sessions run by user _b_o_b with a command containing the string vi:
 
         sudoreplay -l user bob command vi
@@ -304,27 +255,4 @@ DDIISSCCLLAAIIMMEERR
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1.7.6                     April  9, 2011                        5
-
-
+1.7.8                         September 16, 2011                SUDOREPLAY(1m)

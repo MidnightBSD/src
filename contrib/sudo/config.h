@@ -80,6 +80,10 @@
 /* Define to 1 if your `DIR' contains dd_fd. */
 /* #undef HAVE_DD_FD */
 
+/* Define to 1 if you have the declaration of `errno', and to 0 if you don't.
+   */
+#define HAVE_DECL_ERRNO 1
+
 /* Define to 1 if you have the declaration of `sys_siglist', and to 0 if you
    don't. */
 /* #undef HAVE_DECL_SYS_SIGLIST */
@@ -308,6 +312,9 @@
 /* Define to 1 if you have the `dl' library (-ldl). */
 /* #undef HAVE_LIBDL */
 
+/* Define to 1 if you have the <libutil.h> header file. */
+#define HAVE_LIBUTIL_H 1
+
 /* Define to 1 to enable Linux audit support. */
 /* #undef HAVE_LINUX_AUDIT */
 
@@ -400,6 +407,10 @@
 
 /* Define to 1 if you have the `revoke' function. */
 /* #undef HAVE_REVOKE */
+
+/* Define to 1 if the skeychallenge() function is RFC1938-compliant and takes
+   4 arguments */
+/* #undef HAVE_RFC1938_SKEYCHALLENGE */
 
 /* Define to 1 if you have the <sasl.h> header file. */
 /* #undef HAVE_SASL_H */
@@ -672,7 +683,7 @@
 #define PACKAGE_NAME "sudo"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "sudo 1.7.6p2"
+#define PACKAGE_STRING "sudo 1.7.8"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "sudo"
@@ -681,7 +692,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.7.6p2"
+#define PACKAGE_VERSION "1.7.8"
 
 /* The default password prompt. */
 #define PASSPROMPT "Password:"

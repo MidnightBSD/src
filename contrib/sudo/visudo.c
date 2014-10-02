@@ -107,8 +107,6 @@ static int install_sudoers	__P((struct sudoersfile *, int));
 static int print_unused		__P((void *, void *));
 static int reparse_sudoers	__P((char *, char *, int, int));
 static int run_command		__P((char *, char **));
-static void print_selfref	__P((char *, int, int, int));
-static void print_undefined	__P((char *, int, int, int));
 static void setup_signals	__P((void));
 static void help		__P((void)) __attribute__((__noreturn__));
 static void usage		__P((int));
@@ -249,6 +247,30 @@ main(argc, argv)
 }
 
 /*
+ * List of editors that support the "+lineno" command line syntax.
+ * If an entry starts with '*' the tail end of the string is matched.
+ * No other wild cards are supported.
+ */
+static char *lineno_editors[] = {
+    "ex",
+    "nex",
+    "vi",
+    "nvi",
+    "vim",
+    "elvis",
+    "*macs",
+    "mg",
+    "vile",
+    "jove",
+    "pico",
+    "nano",
+    "ee",
+    "joe",
+    "zile",
+    NULL
+};
+
+/*
  * Edit each sudoers file.
  * Returns TRUE on success, else FALSE.
  */
@@ -304,6 +326,34 @@ edit_sudoers(sp, editor, args, lineno)
 	(void) close(tfd);
     }
     (void) touch(-1, sp->tpath, &orig_mtim);
+
+    /* Does the editor support +lineno? */
+    if (lineno > 0)
+    {
+	char *editor_base = strrchr(editor, '/');
+	if (editor_base != NULL)
+	    editor_base++;
+	else
+	    editor_base = editor;
+	if (*editor_base == 'r')
+	    editor_base++;
+
+	for (av = lineno_editors; (cp = *av) != NULL; av++) {
+	    /* We only handle a leading '*' wildcard. */
+	    if (*cp == '*') {
+		size_t blen = strlen(editor_base);
+		size_t clen = strlen(++cp);
+		if (blen >= clen) {
+		    if (strcmp(cp, editor_base + blen - clen) == 0)
+			break;
+		}
+	    } else if (strcmp(cp, editor_base) == 0)
+		break;
+	}
+	/* Disable +lineno if editor doesn't support it. */
+	if (cp == NULL)
+	    lineno = -1;
+    }
 
     /* Find the length of the argument vector */
     ac = 3 + (lineno > 0);
@@ -967,13 +1017,8 @@ alias_remove_recursive(name, type, strict, quiet)
     if ((a = alias_find(name, type)) != NULL) {
 	tq_foreach_fwd(&a->members, m) {
 	    if (m->type == ALIAS) {
-		if (strcmp(name, m->name) == 0) {
-		    print_selfref(m->name, type, strict, quiet);
+		if (!alias_remove_recursive(m->name, type, strict, quiet))
 		    error = 1;
-		} else {
-		    if (!alias_remove_recursive(m->name, type, strict, quiet))
-			error = 1;
-		}
 	    }
 	}
     }
@@ -981,6 +1026,46 @@ alias_remove_recursive(name, type, strict, quiet)
     a = alias_remove(name, type);
     if (a)
 	rbinsert(alias_freelist, a);
+    return error;
+}
+
+static int
+check_alias(name, type, strict, quiet)
+    char *name;
+    int type;
+    int strict;
+    int quiet;
+{
+    struct member *m;
+    struct alias *a;
+    int error = 0;
+
+    if ((a = alias_find(name, type)) != NULL) {
+	/* check alias contents */
+	tq_foreach_fwd(&a->members, m) {
+	    if (m->type == ALIAS)
+		error += check_alias(m->name, type, strict, quiet);
+	}
+    } else {
+	if (!quiet) {
+	    char *fmt;
+	    if (errno == ELOOP) {
+		fmt = strict ?
+		    "Error: cycle in %s_Alias `%s'" :
+		    "Warning: cycle in %s_Alias `%s'";
+	    } else {
+		fmt = strict ?
+		    "Error: %s_Alias `%s' referenced but not defined" :
+		    "Warning: %s_Alias `%s' referenced but not defined";
+	    }
+	    warningx(fmt,
+		type == HOSTALIAS ? "Host" : type == CMNDALIAS ? "Cmnd" :
+		type == USERALIAS ? "User" : type == RUNASALIAS ? "Runas" :
+		"Unknown", name);
+	}
+	error++;
+    }
+
     return error;
 }
 
@@ -1007,38 +1092,26 @@ check_aliases(strict, quiet)
 	tq_foreach_fwd(&us->users, m) {
 	    if (m->type == ALIAS) {
 		alias_seqno++;
-		if (alias_find(m->name, USERALIAS) == NULL) {
-		    print_undefined(m->name, USERALIAS, strict, quiet);
-		    error++;
-		}
+		error += check_alias(m->name, USERALIAS, strict, quiet);
 	    }
 	}
 	tq_foreach_fwd(&us->privileges, priv) {
 	    tq_foreach_fwd(&priv->hostlist, m) {
 		if (m->type == ALIAS) {
 		    alias_seqno++;
-		    if (alias_find(m->name, HOSTALIAS) == NULL) {
-			print_undefined(m->name, HOSTALIAS, strict, quiet);
-			error++;
-		    }
+		    error += check_alias(m->name, HOSTALIAS, strict, quiet);
 		}
 	    }
 	    tq_foreach_fwd(&priv->cmndlist, cs) {
 		tq_foreach_fwd(&cs->runasuserlist, m) {
 		    if (m->type == ALIAS) {
 			alias_seqno++;
-			if (alias_find(m->name, RUNASALIAS) == NULL) {
-			    print_undefined(m->name, RUNASALIAS, strict, quiet);
-			    error++;
-			}
+			error += check_alias(m->name, RUNASALIAS, strict, quiet);
 		    }
 		}
 		if ((m = cs->cmnd)->type == ALIAS) {
 		    alias_seqno++;
-		    if (alias_find(m->name, CMNDALIAS) == NULL) {
-			print_undefined(m->name, CMNDALIAS, strict, quiet);
-			error++;
-		    }
+		    error += check_alias(m->name, CMNDALIAS, strict, quiet);
 		}
 	    }
 	}
@@ -1048,28 +1121,35 @@ check_aliases(strict, quiet)
     tq_foreach_fwd(&userspecs, us) {
 	tq_foreach_fwd(&us->users, m) {
 	    if (m->type == ALIAS) {
+		alias_seqno++;
 		if (!alias_remove_recursive(m->name, USERALIAS, strict, quiet))
 		    error++;
 	    }
 	}
 	tq_foreach_fwd(&us->privileges, priv) {
 	    tq_foreach_fwd(&priv->hostlist, m) {
-		if (m->type == ALIAS)
+		if (m->type == ALIAS) {
+		    alias_seqno++;
 		    if (!alias_remove_recursive(m->name, HOSTALIAS, strict,
 			quiet))
 			error++;
+		}
 	    }
 	    tq_foreach_fwd(&priv->cmndlist, cs) {
 		tq_foreach_fwd(&cs->runasuserlist, m) {
-		    if (m->type == ALIAS)
+		    if (m->type == ALIAS) {
+			alias_seqno++;
 			if (!alias_remove_recursive(m->name, RUNASALIAS,
 			    strict, quiet))
 			    error++;
+		    }
 		}
-		if ((m = cs->cmnd)->type == ALIAS)
+		if ((m = cs->cmnd)->type == ALIAS) {
+		    alias_seqno++;
 		    if (!alias_remove_recursive(m->name, CMNDALIAS, strict,
 			quiet))
 			error++;
+		}
 	    }
 	}
     }
@@ -1092,9 +1172,11 @@ check_aliases(strict, quiet)
 	}
 	tq_foreach_fwd(&d->binding, binding) {
 	    for (m = binding; m != NULL; m = m->next) {
-		if (m->type == ALIAS)
+		if (m->type == ALIAS) {
+		    alias_seqno++;
 		    if (!alias_remove_recursive(m->name, atype, strict, quiet))
 			error++;
+		}
 	    }
 	}
     }
@@ -1105,38 +1187,6 @@ check_aliases(strict, quiet)
 	alias_apply(print_unused, strict ? "Error" : "Warning");
 
     return strict ? error : 0;
-}
-
-static void
-print_undefined(name, type, strict, quiet)
-    char *name;
-    int type;
-    int strict;
-    int quiet;
-{
-    if (!quiet) {
-	warningx("%s: %s_Alias `%s' referenced but not defined",
-	    strict ? "Error" : "Warning",
-	    type == HOSTALIAS ? "Host" : type == CMNDALIAS ? "Cmnd" :
-	    type == USERALIAS ? "User" : type == RUNASALIAS ? "Runas" :
-	    "Unknown", name);
-    }
-}
-
-static void
-print_selfref(name, type, strict, quiet)
-    char *name;
-    int type;
-    int strict;
-    int quiet;
-{
-    if (!quiet) {
-	warningx("%s: %s_Alias `%s' references self",
-	    strict ? "Error" : "Warning",
-	    type == HOSTALIAS ? "Host" : type == CMNDALIAS ? "Cmnd" :
-	    type == USERALIAS ? "User" : type == RUNASALIAS ? "Runas" :
-	    "Unknown", name);
-    }
 }
 
 static int

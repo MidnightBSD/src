@@ -46597,6 +46597,7 @@ contrib/sudo/list.c -text
 contrib/sudo/list.h -text
 contrib/sudo/logging.c -text
 contrib/sudo/logging.h -text
+contrib/sudo/logwrap.c -text
 contrib/sudo/ltmain.sh -text
 contrib/sudo/m4/libtool.m4 -text
 contrib/sudo/m4/ltoptions.m4 -text

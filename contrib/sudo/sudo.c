@@ -114,8 +114,9 @@ static void init_vars			__P((char **));
 static int set_cmnd			__P((int));
 static void initial_setup		__P((void));
 static void set_loginclass		__P((struct passwd *));
-static void set_runasgr			__P((char *));
-static void set_runaspw			__P((char *));
+static void set_runaspw			__P((const char *));
+static void set_runasgr			__P((const char *));
+static int cb_runas_default		__P((const char *));
 static void show_version		__P((void));
 static void create_admin_success_flag	__P((void));
 extern int sudo_edit			__P((int, char **, char **));
@@ -230,7 +231,7 @@ main(argc, argv, envp)
     else if (ISSET(sudo_mode, MODE_EDIT))
 	user_cmnd = "sudoedit";
     else {
-	switch (sudo_mode) {
+	switch (sudo_mode & MODE_MASK) {
 	    case MODE_VERSION:
 		show_version();
 		break;
@@ -337,6 +338,10 @@ main(argc, argv, envp)
 	    def_closefrom = user_closefrom;
     }
 
+    /* If given the -P option, set the "preserve_groups" flag. */
+    if (ISSET(sudo_mode, MODE_PRESERVE_GROUPS))
+	def_preserve_groups = TRUE;
+
     cmnd_status = set_cmnd(sudo_mode);
 
 #ifdef HAVE_SETLOCALE
@@ -389,10 +394,6 @@ main(argc, argv, envp)
 	timestamp_uid = pw->pw_uid;
 	pw_delref(pw);
     }
-
-    /* If given the -P option, set the "preserve_groups" flag. */
-    if (ISSET(sudo_mode, MODE_PRESERVE_GROUPS))
-	def_preserve_groups = TRUE;
 
     /* If no command line args and "set_home" is not set, error out. */
     if (ISSET(sudo_mode, MODE_IMPLIED_SHELL) && !def_shell_noargs)
@@ -504,6 +505,20 @@ main(argc, argv, envp)
 	    *p = '-';
 	    NewArgv[0] = p;
 
+	    /*
+	     * Newer versions of bash require the --login option to be used
+	     * in conjunction with the -c option even if the shell name starts
+	     * with a '-'.  Unfortunately, bash 1.x uses -login, not --login
+	     * so this will cause an error for that.
+	     */
+	    if (NewArgc > 1 && strcmp(NewArgv[0], "-bash") == 0) {
+		/* Use an extra slot before NewArgv so we can store --login. */
+		NewArgv--;
+		NewArgc++;
+		NewArgv[0] = NewArgv[1];
+		NewArgv[1] = "--login";
+	    }
+
 #if defined(__linux__) || defined(_AIX)
 	    /* Insert system-wide environment variables. */
 	    read_env_file(_PATH_ENVIRONMENT, TRUE);
@@ -557,31 +572,6 @@ main(argc, argv, envp)
 	exit(1);
     }
     exit(0);	/* not reached */
-}
-
-/*
- * Escape any non-alpha numeric or blank characters to make sure
- * they are not interpreted specially by the shell.
- */
-static char *
-escape_cmnd(src)
-    const char *src;
-{
-    char *cmnd, *dst;
-
-    /* Worst case scenario, we have to escape everything. */
-    cmnd = dst = emalloc((2 * strlen(src)) + 1);
-    while (*src != '\0') {
-	if (!isalnum((unsigned char)*src) && !isspace((unsigned char)*src) &&
-	    *src != '_' && *src != '-') {
-	    /* quote potential meta character */
-	    *dst++ = '\\';
-	}
-	*dst++ = *src++;
-    }
-    *dst++ = '\0';
-
-    return cmnd;
 }
 
 /*
@@ -669,15 +659,8 @@ init_vars(envp)
      * Stash a local copy of the user's struct passwd.
      */
     if ((sudo_user.pw = sudo_getpwuid(getuid())) == NULL) {
-	/* Need to make a fake struct passwd for logging to work. */
-	struct passwd pw;
-	char pw_name[MAX_UID_T_LEN + 1];
-
-	pw.pw_uid = getuid();
-	(void) snprintf(pw_name, sizeof(pw_name), "%u",
-	    (unsigned int) pw.pw_uid);
-	pw.pw_name = pw_name;
-	sudo_user.pw = &pw;
+	uid_t uid = getuid();
+	gid_t gid = getgid();
 
 	/*
 	 * If we are in -k/-K mode, just spew to stderr.  It is not unusual for
@@ -685,8 +668,11 @@ init_vars(envp)
 	 * be run during reboot after the YP/NIS/NIS+/LDAP/etc daemon has died.
 	 */
 	if (sudo_mode == MODE_KILL || sudo_mode == MODE_INVALIDATE)
-	    errorx(1, "unknown uid: %s", pw_name);
-	log_error(0, "unknown uid: %s", pw_name);
+	    errorx(1, "unknown uid: %u", (unsigned int) uid);
+
+	/* Need to make a fake struct passwd for the call to log_error(). */
+	sudo_user.pw = sudo_fakepwuid(uid, gid);
+	log_error(0, "unknown uid: %u", (unsigned int) uid);
     }
 #ifdef HAVE_MBR_CHECK_MEMBERSHIP
     mbr_uid_to_uuid(user_uid, user_uuid);
@@ -727,21 +713,31 @@ init_vars(envp)
     if (ISSET(sudo_mode, MODE_SHELL)) {
 	char **av;
 
-	/* Allocate an extra slot for execve() failure (ENOEXEC). */
-	av = (char **) emalloc2(5, sizeof(char *));
-	av++;
+	/* Allocate 2 extra slots for --login and execve() failure (ENOEXEC). */
+	av = (char **) emalloc2(6, sizeof(char *));
+	av += 2;
 
 	av[0] = user_shell;	/* may be updated later */
 	if (NewArgc > 0) {
-	    size_t cmnd_size;
-	    char *cmnd, *src, *dst, *end;
-	    cmnd_size = (size_t) (NewArgv[NewArgc - 1] - NewArgv[0]) +
+	    /* shell -c "command" */
+	    char *cmnd, *src, *dst;
+	    size_t cmnd_size = (size_t) (NewArgv[NewArgc - 1] - NewArgv[0]) +
 		    strlen(NewArgv[NewArgc - 1]) + 1;
-	    cmnd = dst = emalloc(cmnd_size);
-	    src = NewArgv[0];
-	    for (end = src + cmnd_size - 1; src < end; src++, dst++)
-		*dst = *src == '\0' ? ' ' : *src;
+
+	    cmnd = dst = emalloc2(cmnd_size, 2);
+	    for (av = NewArgv; *av != NULL; av++) {
+		for (src = *av; *src != '\0'; src++) {
+		    /* quote potential meta characters */
+		    if (!isalnum((unsigned char)*src) && *src != '_' && *src != '-')
+			*dst++ = '\\';
+		    *dst++ = *src;
+		}
+		*dst++ = ' ';
+	    }
+	    if (cmnd != dst)
+		dst--;	/* replace last space with a NUL */
 	    *dst = '\0';
+
 	    av[1] = "-c";
 	    av[2] = cmnd;
 	    NewArgc = 2;
@@ -753,6 +749,9 @@ init_vars(envp)
 	NewArgc++;
 	NewArgv[0] = user_cmnd;
     }
+
+    /* Set runas callback. */
+    sudo_defs_table[I_RUNAS_DEFAULT].callback = cb_runas_default;
 }
 
 /*
@@ -788,28 +787,43 @@ set_cmnd(sudo_mode)
 
 	/* set user_args */
 	if (NewArgc > 1) {
-	    char *to, **from;
+	    char *to, *from, **av;
 	    size_t size, n;
 
-	    /* If we didn't realloc NewArgv it is contiguous so just count. */
-	    if (!ISSET(sudo_mode, MODE_SHELL)) {
-		size = (size_t) (NewArgv[NewArgc-1] - NewArgv[1]) +
-			strlen(NewArgv[NewArgc-1]) + 1;
-	    } else {
-		for (size = 0, from = NewArgv + 1; *from; from++)
-		    size += strlen(*from) + 1;
-	    }
+	    if (ISSET(sudo_mode, MODE_SHELL)) {
+		for (size = 0, av = NewArgv + 1; *av; av++)
+		    size += strlen(*av) + 1;
+		user_args = emalloc(size);
 
-	    /* Alloc and build up user_args. */
-	    user_args = (char *) emalloc(size);
-	    for (to = user_args, from = NewArgv + 1; *from; from++) {
-		n = strlcpy(to, *from, size - (to - user_args));
-		if (n >= size - (to - user_args))
-		    errorx(1, "internal error, init_vars() overflow");
-		to += n;
-		*to++ = ' ';
+		/*
+		 * When running a command via a shell, sudo escapes potential
+		 * meta chars in NewArgv.  We unescape non-spaces for sudoers
+		 * matching and logging purposes.
+		 */
+		for (to = user_args, av = NewArgv + 1; (from = *av); av++) {
+		    while (*from) {
+			if (from[0] == '\\' && !isspace((unsigned char)from[1]))
+			    from++;
+			*to++ = *from++;
+		    }
+		    *to++ = ' ';
+		}
+		*--to = '\0';
+	    } else {
+		/* NewArgv is contiguous so just count. */
+		size = (size_t) (NewArgv[NewArgc - 1] - NewArgv[1]) +
+			strlen(NewArgv[NewArgc - 1]) + 1;
+		user_args = emalloc(size);
+
+		for (to = user_args, av = NewArgv + 1; *av; av++) {
+		    n = strlcpy(to, *av, size - (to - user_args));
+		    if (n >= size - (to - user_args))
+			errorx(1, "internal error, init_vars() overflow");
+		    to += n;
+		    *to++ = ' ';
+		}
+		*--to = '\0';
 	    }
-	    *--to = '\0';
 	}
     }
     if ((user_base = strrchr(user_cmnd, '/')) != NULL)
@@ -819,9 +833,6 @@ set_cmnd(sudo_mode)
 
     if (!update_defaults(SETDEF_CMND))
 	log_error(NO_STDERR|NO_EXIT, "problem with defaults entries");
-
-    if (!runas_user && !runas_group)
-	set_runaspw(def_runas_default);	/* may have been updated above */
 
     return rval;
 }
@@ -936,13 +947,6 @@ run_command(path, argv, envp, uid, dowait)
     cstat.type = CMD_INVALID;
     cstat.val = 0;
 
-    /* Escape meta chars if running a shell with args. */
-    if (ISSET(sudo_mode, MODE_SHELL) && argv[1] != NULL) {
-	char *cmnd = argv[2];
-	argv[2] = escape_cmnd(cmnd);
-	efree(cmnd);
-    }
-
     sudo_execve(path, argv, envp, uid, &cstat, dowait,
 	ISSET(sudo_mode, MODE_BACKGROUND));
 
@@ -964,7 +968,7 @@ run_command(path, argv, envp, uid, dowait)
 	break;
     }
 #ifdef HAVE_PAM
-    pam_end_session();
+    pam_end_session(runas_pw);
 #endif /* HAVE_PAM */
 #ifdef _PATH_SUDO_IO_LOGDIR
     io_log_close();
@@ -1032,7 +1036,7 @@ open_sudoers(sudoers, doedit, keepopen)
     else if (statbuf.st_uid != SUDOERS_UID)
 	log_error(NO_EXIT, "%s is owned by uid %u, should be %u", sudoers,
 	    (unsigned int) statbuf.st_uid, (unsigned int) SUDOERS_UID);
-    else if (statbuf.st_gid != SUDOERS_GID)
+    else if (statbuf.st_gid != SUDOERS_GID && ISSET(statbuf.st_mode, S_IRGRP|S_IWGRP))
 	log_error(NO_EXIT, "%s is owned by gid %u, should be %u", sudoers,
 	    (unsigned int) statbuf.st_gid, (unsigned int) SUDOERS_GID);
     else if ((fp = fopen(sudoers, "r")) == NULL)
@@ -1210,9 +1214,9 @@ set_fqdn()
  * Get passwd entry for the user we are going to run commands as
  * and store it in runas_pw.  By default, commands run as "root".
  */
-static void
+void
 set_runaspw(user)
-    char *user;
+    const char *user;
 {
     if (runas_pw != NULL)
 	pw_delref(runas_pw);
@@ -1233,7 +1237,7 @@ set_runaspw(user)
  */
 static void
 set_runasgr(group)
-    char *group;
+    const char *group;
 {
     if (runas_gr != NULL)
 	gr_delref(runas_gr);
@@ -1244,6 +1248,19 @@ set_runasgr(group)
 	if ((runas_gr = sudo_getgrnam(group)) == NULL)
 	    log_error(NO_MAIL|MSG_ONLY, "unknown group: %s", group);
     }
+}
+
+/*
+ * Callback for runas_default sudoers setting.
+ */
+static int
+cb_runas_default(user)
+    const char *user;
+{
+    /* Only reset runaspw if user didn't specify one. */
+    if (!runas_user && !runas_group)
+	set_runaspw(user);
+    return TRUE;
 }
 
 /*

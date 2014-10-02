@@ -778,7 +778,7 @@ This flag is I<off> by default.
 
 =item long_otp_prompt
 
-When validating with a One Time Password (OPT) scheme such as
+When validating with a One Time Password (OTP) scheme such as
 B<S/Key> or B<OPIE>, a two-line prompt is used to make it easier
 to cut and paste the challenge to a local window.  It's not as
 pretty as the default but some people find it more convenient.  This
@@ -1202,6 +1202,7 @@ as I<env_keep> and I<env_check>.
 =item exempt_group
 
 Users in this group are exempt from password and PATH requirements.
+The group name specified should not include a C<%> prefix.
 This is not set by default.
 
 =item lecture
