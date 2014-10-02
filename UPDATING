@@ -5,6 +5,8 @@ Updating Information for MidnightBSD users.
 
 	libmport now supports plist commands @dir, @owner, @group, @mode.
 
+	sudo 1.7.6p2
+
 20140916:
         Fix a security issue with TCP SYN.
 
