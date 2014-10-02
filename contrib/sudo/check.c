@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1993-1996,1998-2005, 2007-2010
+ * Copyright (c) 1993-1996,1998-2005, 2007-2011
  *	Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -90,6 +90,7 @@ static char *expand_prompt	__P((char *, char *, char *));
 static void  lecture		__P((int));
 static void  update_timestamp	__P((char *, char *));
 static int   tty_is_devpts	__P((const char *));
+static struct passwd *get_authpw __P((void));
 
 /*
  * This function only returns if the user can successfully
@@ -134,6 +135,8 @@ check_user(validated, mode)
 	TS_MAKE_DIRS);
 
     if (status != TS_CURRENT || ISSET(validated, FLAG_CHECK_USER)) {
+	struct passwd *auth_pw;
+
 	/* Bail out if we are non-interactive and a password is required */
 	if (ISSET(mode, MODE_NONINTERACTIVE))
 	    errorx(1, "sorry, a password is required to run %s", getprogname());
@@ -162,7 +165,9 @@ check_user(validated, mode)
 	prompt = expand_prompt(user_prompt ? user_prompt : def_passprompt,
 	    user_name, user_shost);
 
+	auth_pw = get_authpw();
 	verify_user(auth_pw, prompt);
+	pw_delref(auth_pw);
     }
     /* Only update timestamp if user was validated. */
     if (ISSET(validated, VALIDATE_OK) && !ISSET(mode, MODE_INVALIDATE) && status != TS_ERROR)
@@ -225,7 +230,8 @@ update_timestamp(timestampdir, timestampfile)
 	    log_error(NO_EXIT|USE_ERRNO, "Can't open %s", timestampfile);
 	else {
 	    lock_file(fd, SUDO_LOCK);
-	    write(fd, &tty_info, sizeof(tty_info));
+	    if (write(fd, &tty_info, sizeof(tty_info)) != sizeof(tty_info))
+		log_error(NO_EXIT|USE_ERRNO, "Can't write %s", timestampfile);
 	    close(fd);
 	}
     } else {
@@ -299,7 +305,7 @@ expand_prompt(old_prompt, user, host)
     }
 
     if (subst) {
-	new_prompt = (char *) emalloc(++len);
+	new_prompt = emalloc(++len);
 	endp = new_prompt + len;
 	for (p = old_prompt, np = new_prompt; *p; p++) {
 	    if (p[0] =='%') {
@@ -361,7 +367,7 @@ expand_prompt(old_prompt, user, host)
     } else
 	new_prompt = old_prompt;
 
-    return(new_prompt);
+    return new_prompt;
 
 oflow:
     /* We pre-allocate enough space, so this should never happen. */
@@ -375,8 +381,8 @@ int
 user_is_exempt()
 {
     if (!def_exempt_group)
-	return(FALSE);
-    return(user_in_group(sudo_user.pw, def_exempt_group));
+	return FALSE;
+    return user_in_group(sudo_user.pw, def_exempt_group);
 }
 
 /*
@@ -453,9 +459,9 @@ timestamp_status(timestampdir, timestampfile, user, flags)
 	    log_error(NO_EXIT, "%s exists but is not a directory (0%o)",
 		dirparent, (unsigned int) sb.st_mode);
 	else if (sb.st_uid != timestamp_uid)
-	    log_error(NO_EXIT, "%s owned by uid %lu, should be uid %lu",
-		dirparent, (unsigned long) sb.st_uid,
-		(unsigned long) timestamp_uid);
+	    log_error(NO_EXIT, "%s owned by uid %u, should be uid %u",
+		dirparent, (unsigned int) sb.st_uid,
+		(unsigned int) timestamp_uid);
 	else if ((sb.st_mode & 0000022))
 	    log_error(NO_EXIT,
 		"%s writable by non-owner (0%o), should be mode 0700",
@@ -480,7 +486,7 @@ timestamp_status(timestampdir, timestampfile, user, flags)
     if (status == TS_ERROR) {
 	if (timestamp_uid != 0)
 	    set_perms(PERM_ROOT);
-	return(status);
+	return status;
     }
 
     /*
@@ -500,9 +506,9 @@ timestamp_status(timestampdir, timestampfile, user, flags)
 		log_error(NO_EXIT, "%s exists but is not a directory (0%o)",
 		    timestampdir, (unsigned int) sb.st_mode);
 	} else if (sb.st_uid != timestamp_uid)
-	    log_error(NO_EXIT, "%s owned by uid %lu, should be uid %lu",
-		timestampdir, (unsigned long) sb.st_uid,
-		(unsigned long) timestamp_uid);
+	    log_error(NO_EXIT, "%s owned by uid %u, should be uid %u",
+		timestampdir, (unsigned int) sb.st_uid,
+		(unsigned int) timestamp_uid);
 	else if ((sb.st_mode & 0000022))
 	    log_error(NO_EXIT,
 		"%s writable by non-owner (0%o), should be mode 0700",
@@ -545,9 +551,9 @@ timestamp_status(timestampdir, timestampfile, user, flags)
 		/* If bad uid or file mode, complain and kill the bogus file. */
 		if (sb.st_uid != timestamp_uid) {
 		    log_error(NO_EXIT,
-			"%s owned by uid %lu, should be uid %lu",
-			timestampfile, (unsigned long) sb.st_uid,
-			(unsigned long) timestamp_uid);
+			"%s owned by uid %u, should be uid %u",
+			timestampfile, (unsigned int) sb.st_uid,
+			(unsigned int) timestamp_uid);
 		    (void) unlink(timestampfile);
 		} else if ((sb.st_mode & 0000022)) {
 		    log_error(NO_EXIT,
@@ -624,7 +630,7 @@ timestamp_status(timestampdir, timestampfile, user, flags)
 done:
     if (timestamp_uid != 0)
 	set_perms(PERM_ROOT);
-    return(status);
+    return status;
 }
 
 /*
@@ -697,4 +703,34 @@ tty_is_devpts(tty)
     }
 #endif /* __linux__ */
     return retval;
+}
+
+/*
+ * Get passwd entry for the user we are going to authenticate as.
+ * By default, this is the user invoking sudo.  In the most common
+ * case, this matches sudo_user.pw or runas_pw.
+ */
+static struct passwd *
+get_authpw()
+{
+    struct passwd *pw;
+
+    if (def_rootpw) {
+	if ((pw = sudo_getpwuid(0)) == NULL)
+	    log_error(0, "unknown uid: 0");
+    } else if (def_runaspw) {
+	if ((pw = sudo_getpwnam(def_runas_default)) == NULL)
+	    log_error(0, "unknown user: %s", def_runas_default);
+    } else if (def_targetpw) {
+	if (runas_pw->pw_name == NULL)
+	    log_error(NO_MAIL|MSG_ONLY, "unknown uid: %u",
+		(unsigned int) runas_pw->pw_uid);
+	pw_addref(runas_pw);
+	pw = runas_pw;
+    } else {
+	pw_addref(sudo_user.pw);
+	pw = sudo_user.pw;
+    }
+
+    return pw;
 }

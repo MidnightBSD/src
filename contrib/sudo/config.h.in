@@ -27,6 +27,9 @@
    variables. */
 #undef ENV_EDITOR
 
+/* Define to 1 to enable environment resetting by default. */
+#undef ENV_RESET
+
 /* If defined, users in this group need not enter a passwd (ie "sudo"). */
 #undef EXEMPTGROUP
 
@@ -280,6 +283,9 @@
 /* Define to 1 if you have the `ldap_search_ext_s' function. */
 #undef HAVE_LDAP_SEARCH_EXT_S
 
+/* Define to 1 if you have the `ldap_search_st' function. */
+#undef HAVE_LDAP_SEARCH_ST
+
 /* Define to 1 if you have the `ldap_ssl_client_init' function. */
 #undef HAVE_LDAP_SSL_CLIENT_INIT
 
@@ -354,6 +360,9 @@
 
 /* Define to 1 if you have the <netgroup.h> header file. */
 #undef HAVE_NETGROUP_H
+
+/* Define to 1 if you have the `nl_langinfo' function. */
+#undef HAVE_NL_LANGINFO
 
 /* Define to 1 if you have the `openpty' function. */
 #undef HAVE_OPENPTY
@@ -537,6 +546,9 @@
 /* Define to 1 if you have the <sys/stropts.h> header file. */
 #undef HAVE_SYS_STROPTS_H
 
+/* Define to 1 if you have the <sys/sysmacros.h> header file. */
+#undef HAVE_SYS_SYSMACROS_H
+
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
 
@@ -573,9 +585,6 @@
 
 /* Define to 1 if you have the `vasprintf' function. */
 #undef HAVE_VASPRINTF
-
-/* Define to 1 if you have the `vhangup' function. */
-#undef HAVE_VHANGUP
 
 /* Define to 1 if you have the `vsnprintf' function. */
 #undef HAVE_VSNPRINTF
@@ -729,7 +738,7 @@
 /* Define to 1 if the code in interfaces.c does not compile for you. */
 #undef STUB_LOAD_INTERFACES
 
-/* The umask that the root-run prog should use. */
+/* The umask that the sudo-run prog should use. */
 #undef SUDO_UMASK
 
 /* The number of minutes before sudo asks for a password again. */
@@ -740,6 +749,10 @@
 
 /* The number of tries a user gets to enter their password. */
 #undef TRIES_FOR_PASSWORD
+
+/* Define to 1 to use the umask specified in sudoers even when it is less
+   restrictive than the invoking user's. */
+#undef UMASK_OVERRIDE
 
 /* Define to 1 if the `unsetenv' function returns void instead of `int'. */
 #undef UNSETENV_VOID
@@ -760,6 +773,12 @@
 
 /* Define to avoid using the passwd/shadow file for authentication. */
 #undef WITHOUT_PASSWD
+
+/* Number of bits in a file offset, on hosts where this is settable. */
+#undef _FILE_OFFSET_BITS
+
+/* Define for large files, on AIX-style hosts. */
+#undef _LARGE_FILES
 
 /* Define to `signed' or nothing if compiler does not support a signed type
    qualifier. */

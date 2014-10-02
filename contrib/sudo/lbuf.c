@@ -31,6 +31,9 @@
 # endif
 #endif /* STDC_HEADERS */
 #ifdef HAVE_STRING_H
+# if defined(HAVE_MEMORY_H) && !defined(STDC_HEADERS)
+#  include <memory.h>
+# endif
 # include <string.h>
 #endif /* HAVE_STRING_H */
 #ifdef HAVE_STRINGS_H
@@ -51,10 +54,11 @@
 #include "sudo.h"
 #include "lbuf.h"
 
-#if !defined(TIOCGSIZE) && defined(TIOCGWINSZ)
-# define TIOCGSIZE	TIOCGWINSZ
-# define ttysize	winsize
-# define ts_cols	ws_col
+/* Compatibility with older tty systems. */
+#if !defined(TIOCGWINSZ) && defined(TIOCGSIZE)
+# define TIOCGWINSZ	TIOCGSIZE
+# define winsize	ttysize
+# define ws_col		ts_cols
 #endif
 
 int
@@ -62,17 +66,17 @@ get_ttycols()
 {
     char *p;
     int cols;
-#ifdef TIOCGSIZE
-    struct ttysize win;
+#ifdef TIOCGWINSZ
+    struct winsize wsize;
 
-    if (ioctl(STDERR_FILENO, TIOCGSIZE, &win) == 0 && win.ts_cols != 0)
-	return((int)win.ts_cols);
+    if (ioctl(STDERR_FILENO, TIOCGWINSZ, &wsize) == 0 && wsize.ws_col != 0)
+	return (int)wsize.ws_col;
 #endif
 
     /* Fall back on $COLUMNS. */
     if ((p = getenv("COLUMNS")) == NULL || (cols = atoi(p)) <= 0)
 	cols = 80;
-    return(cols);
+    return cols;
 }
 
 void
@@ -282,8 +286,8 @@ lbuf_print(lbuf)
 
     /* For very small widths just give up... */
     if (lbuf->cols <= lbuf->indent + contlen + 20) {
+	lbuf->buf[lbuf->len] = '\0';
 	lbuf->output(lbuf->buf);
-	lbuf->output("\n");
 	goto done;
     }
 

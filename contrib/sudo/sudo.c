@@ -117,7 +117,6 @@ static void set_loginclass		__P((struct passwd *));
 static void set_runasgr			__P((char *));
 static void set_runaspw			__P((char *));
 static void show_version		__P((void));
-static struct passwd *get_authpw	__P((void));
 static void create_admin_success_flag	__P((void));
 extern int sudo_edit			__P((int, char **, char **));
 int run_command __P((const char *path, char *argv[], char *envp[], uid_t uid, int dowait)); /* XXX should be in sudo.h */
@@ -130,7 +129,7 @@ char **Argv, **NewArgv;
 char *prev_user;
 int user_closefrom = -1;
 struct sudo_user sudo_user;
-struct passwd *auth_pw, *list_pw;
+struct passwd *list_pw;
 struct interface *interfaces;
 int num_interfaces;
 int tgetpass_flags;
@@ -236,7 +235,7 @@ main(argc, argv, envp)
 		show_version();
 		break;
 	    case MODE_HELP:
-		usage(0);
+		help();
 		break;
 	    case MODE_VALIDATE:
 	    case MODE_VALIDATE|MODE_INVALIDATE:
@@ -313,7 +312,7 @@ main(argc, argv, envp)
 
     /* Update initial shell now that runas is set. */
     if (ISSET(sudo_mode, MODE_LOGIN_SHELL))
-	NewArgv[0] = runas_pw->pw_shell;
+	NewArgv[0] = estrdup(runas_pw->pw_shell);
 
     /* This goes after sudoers is parsed since it may have timestamp options. */
     if (sudo_mode == MODE_KILL || sudo_mode == MODE_INVALIDATE) {
@@ -388,6 +387,7 @@ main(argc, argv, envp)
 	    log_error(0, "timestamp owner (%s): No such user",
 		def_timestampowner);
 	timestamp_uid = pw->pw_uid;
+	pw_delref(pw);
     }
 
     /* If given the -P option, set the "preserve_groups" flag. */
@@ -422,9 +422,6 @@ main(argc, argv, envp)
     /* Build a new environment that avoids any nasty bits. */
     rebuild_env(def_noexec);
 
-    /* Fill in passwd struct based on user we are authenticating as.  */
-    auth_pw = get_authpw();
-
     /* Require a password if sudoers says so.  */
     if (def_authenticate)
 	check_user(validated, sudo_mode);
@@ -436,6 +433,8 @@ main(argc, argv, envp)
 	    struct passwd *pw;
 
 	    if ((pw = sudo_getpwnam(prev_user)) != NULL) {
+		    if (sudo_user.pw != NULL)
+			pw_delref(sudo_user.pw);
 		    sudo_user.pw = pw;
 #ifdef HAVE_MBR_CHECK_MEMBERSHIP
 		    mbr_uid_to_uuid(user_uid, user_uuid);
@@ -487,8 +486,11 @@ main(argc, argv, envp)
 #endif
 
 	/* Deferred exit due to sudo_ldap_close() */
-	if (ISSET(sudo_mode, (MODE_VALIDATE|MODE_CHECK|MODE_LIST)))
+	if (ISSET(sudo_mode, (MODE_VALIDATE|MODE_CHECK|MODE_LIST))) {
+	    if (list_pw != NULL)
+		pw_delref(list_pw);
 	    exit(rc);
+	}
 
 	/* Must audit before uid change. */
 	audit_success(NewArgv);
@@ -555,6 +557,31 @@ main(argc, argv, envp)
 	exit(1);
     }
     exit(0);	/* not reached */
+}
+
+/*
+ * Escape any non-alpha numeric or blank characters to make sure
+ * they are not interpreted specially by the shell.
+ */
+static char *
+escape_cmnd(src)
+    const char *src;
+{
+    char *cmnd, *dst;
+
+    /* Worst case scenario, we have to escape everything. */
+    cmnd = dst = emalloc((2 * strlen(src)) + 1);
+    while (*src != '\0') {
+	if (!isalnum((unsigned char)*src) && !isspace((unsigned char)*src) &&
+	    *src != '_' && *src != '-') {
+	    /* quote potential meta character */
+	    *dst++ = '\\';
+	}
+	*dst++ = *src++;
+    }
+    *dst++ = '\0';
+
+    return cmnd;
 }
 
 /*
@@ -639,9 +666,7 @@ init_vars(envp)
     }
 
     /*
-     * Get a local copy of the user's struct passwd with the shadow password
-     * if necessary.  It is assumed that euid is 0 at this point so we
-     * can read the shadow passwd file if necessary.
+     * Stash a local copy of the user's struct passwd.
      */
     if ((sudo_user.pw = sudo_getpwuid(getuid())) == NULL) {
 	/* Need to make a fake struct passwd for logging to work. */
@@ -649,8 +674,8 @@ init_vars(envp)
 	char pw_name[MAX_UID_T_LEN + 1];
 
 	pw.pw_uid = getuid();
-	(void) snprintf(pw_name, sizeof(pw_name), "%lu",
-	    (unsigned long) pw.pw_uid);
+	(void) snprintf(pw_name, sizeof(pw_name), "%u",
+	    (unsigned int) pw.pw_uid);
 	pw.pw_name = pw_name;
 	sudo_user.pw = &pw;
 
@@ -708,32 +733,14 @@ init_vars(envp)
 
 	av[0] = user_shell;	/* may be updated later */
 	if (NewArgc > 0) {
-	    size_t cmnd_size = 1024;
-	    char *cmnd, *src, *dst, **ap;
-
+	    size_t cmnd_size;
+	    char *cmnd, *src, *dst, *end;
+	    cmnd_size = (size_t) (NewArgv[NewArgc - 1] - NewArgv[0]) +
+		    strlen(NewArgv[NewArgc - 1]) + 1;
 	    cmnd = dst = emalloc(cmnd_size);
-	    for (ap = NewArgv; *ap != NULL; ap++) {
-		for (src = *ap; *src != '\0'; src++) {
-		    /* reserve room for an escaped char + space */
-		    if (cmnd_size < (dst - cmnd) + 3) {
-			char *new_cmnd;
-			cmnd_size <<= 1;
-			new_cmnd = erealloc(cmnd, cmnd_size);
-			dst = new_cmnd + (dst - cmnd);
-			cmnd = new_cmnd;
-		    }
-		    if (isalnum((unsigned char)*src) || *src == '_' || *src == '-') {
-			*dst++ = *src;
-		    } else {
-			/* quote potential meta character */
-			*dst++ = '\\';
-			*dst++ = *src;
-		    }
-		}
-		*dst++ = ' ';
-	    }
-	    if (cmnd != dst)
-		dst--;	/* replace last space with a NUL */
+	    src = NewArgv[0];
+	    for (end = src + cmnd_size - 1; src < end; src++, dst++)
+		*dst = *src == '\0' ? ' ' : *src;
 	    *dst = '\0';
 	    av[1] = "-c";
 	    av[2] = cmnd;
@@ -816,7 +823,7 @@ set_cmnd(sudo_mode)
     if (!runas_user && !runas_group)
 	set_runaspw(def_runas_default);	/* may have been updated above */
 
-    return(rval);
+    return rval;
 }
 
 /*
@@ -837,10 +844,6 @@ exec_setup(rbac_enabled, ttyname, ttyfd)
 	   goto done;
     }
 #endif
-
-    /* Close the password and group files and free up memory. */
-    sudo_endpwent();
-    sudo_endgrent();
 
     /*
      * For sudoedit, the command runas a the user with no additional setup.
@@ -898,10 +901,18 @@ exec_setup(rbac_enabled, ttyname, ttyfd)
     }
 #endif
 
+    /* Close the password and group files and free up memory. */
+    sudo_endpwent();
+    sudo_endgrent();
+    pw_delref(sudo_user.pw);
+    pw_delref(runas_pw);
+    if (runas_gr != NULL)
+	gr_delref(runas_gr);
+
     rval = TRUE;
 
 done:
-    return(rval);
+    return rval;
 }
 
 /*
@@ -924,6 +935,13 @@ run_command(path, argv, envp, uid, dowait)
 
     cstat.type = CMD_INVALID;
     cstat.val = 0;
+
+    /* Escape meta chars if running a shell with args. */
+    if (ISSET(sudo_mode, MODE_SHELL) && argv[1] != NULL) {
+	char *cmnd = argv[2];
+	argv[2] = escape_cmnd(cmnd);
+	efree(cmnd);
+    }
 
     sudo_execve(path, argv, envp, uid, &cstat, dowait,
 	ISSET(sudo_mode, MODE_BACKGROUND));
@@ -951,7 +969,13 @@ run_command(path, argv, envp, uid, dowait)
 #ifdef _PATH_SUDO_IO_LOGDIR
     io_log_close();
 #endif
-    return(exitcode);
+    sudo_endpwent();
+    sudo_endgrent();
+    pw_delref(sudo_user.pw);
+    pw_delref(runas_pw);
+    if (runas_gr != NULL)
+	gr_delref(runas_gr);
+    return exitcode;
 }
 
 /*
@@ -1001,16 +1025,16 @@ open_sudoers(sudoers, doedit, keepopen)
 	log_error(USE_ERRNO|NO_EXIT, "can't stat %s", sudoers);
     else if (!S_ISREG(statbuf.st_mode))
 	log_error(NO_EXIT, "%s is not a regular file", sudoers);
-    else if ((statbuf.st_mode & 07777) != SUDOERS_MODE)
+    else if ((statbuf.st_mode & 07577) != SUDOERS_MODE)
 	log_error(NO_EXIT, "%s is mode 0%o, should be 0%o", sudoers,
 	    (unsigned int) (statbuf.st_mode & 07777),
 	    (unsigned int) SUDOERS_MODE);
     else if (statbuf.st_uid != SUDOERS_UID)
-	log_error(NO_EXIT, "%s is owned by uid %lu, should be %lu", sudoers,
-	    (unsigned long) statbuf.st_uid, (unsigned long) SUDOERS_UID);
+	log_error(NO_EXIT, "%s is owned by uid %u, should be %u", sudoers,
+	    (unsigned int) statbuf.st_uid, (unsigned int) SUDOERS_UID);
     else if (statbuf.st_gid != SUDOERS_GID)
-	log_error(NO_EXIT, "%s is owned by gid %lu, should be %lu", sudoers,
-	    (unsigned long) statbuf.st_gid, (unsigned long) SUDOERS_GID);
+	log_error(NO_EXIT, "%s is owned by gid %u, should be %u", sudoers,
+	    (unsigned int) statbuf.st_gid, (unsigned int) SUDOERS_GID);
     else if ((fp = fopen(sudoers, "r")) == NULL)
 	log_error(USE_ERRNO|NO_EXIT, "can't open %s", sudoers);
     else {
@@ -1031,7 +1055,7 @@ open_sudoers(sudoers, doedit, keepopen)
     }
 
     set_perms(PERM_ROOT);		/* change back to root */
-    return(fp);
+    return fp;
 }
 
 /*
@@ -1042,9 +1066,14 @@ static void
 initial_setup()
 {
     int miss[3], devnull = -1;
+    sigset_t mask;
 #if defined(__linux__) || (defined(RLIMIT_CORE) && !defined(SUDO_DEVEL))
     struct rlimit rl;
 #endif
+
+    /* Reset signal mask. */
+    (void) sigemptyset(&mask);
+    (void) sigprocmask(SIG_SETMASK, &mask, NULL);
 
 #if defined(__linux__)
     /*
@@ -1178,13 +1207,15 @@ set_fqdn()
 }
 
 /*
- * Get passwd entry for the user we are going to run commands as.
- * By default, this is "root".  Updates runas_pw as a side effect.
+ * Get passwd entry for the user we are going to run commands as
+ * and store it in runas_pw.  By default, commands run as "root".
  */
 static void
 set_runaspw(user)
     char *user;
 {
+    if (runas_pw != NULL)
+	pw_delref(runas_pw);
     if (*user == '#') {
 	if ((runas_pw = sudo_getpwuid(atoi(user + 1))) == NULL)
 	    runas_pw = sudo_fakepwnam(user, runas_gr ? runas_gr->gr_gid : 0);
@@ -1197,13 +1228,15 @@ set_runaspw(user)
 }
 
 /*
- * Get group entry for the group we are going to run commands as.
- * Updates runas_pw as a side effect.
+ * Get group entry for the group we are going to run commands as
+ * and store it in runas_gr.
  */
 static void
 set_runasgr(group)
     char *group;
 {
+    if (runas_gr != NULL)
+	gr_delref(runas_gr);
     if (*group == '#') {
 	if ((runas_gr = sudo_getgrgid(atoi(group + 1))) == NULL)
 	    runas_gr = sudo_fakegrnam(group);
@@ -1211,33 +1244,6 @@ set_runasgr(group)
 	if ((runas_gr = sudo_getgrnam(group)) == NULL)
 	    log_error(NO_MAIL|MSG_ONLY, "unknown group: %s", group);
     }
-}
-
-/*
- * Get passwd entry for the user we are going to authenticate as.
- * By default, this is the user invoking sudo.  In the most common
- * case, this matches sudo_user.pw or runas_pw.
- */
-static struct passwd *
-get_authpw()
-{
-    struct passwd *pw;
-
-    if (def_rootpw) {
-	if ((pw = sudo_getpwuid(0)) == NULL)
-	    log_error(0, "unknown uid: 0");
-    } else if (def_runaspw) {
-	if ((pw = sudo_getpwnam(def_runas_default)) == NULL)
-	    log_error(0, "unknown user: %s", def_runas_default);
-    } else if (def_targetpw) {
-	if (runas_pw->pw_name == NULL)
-	    log_error(NO_MAIL|MSG_ONLY, "unknown uid: %lu",
-		(unsigned long) runas_pw->pw_uid);
-	pw = runas_pw;
-    } else
-	pw = sudo_user.pw;
-
-    return(pw);
 }
 
 /*

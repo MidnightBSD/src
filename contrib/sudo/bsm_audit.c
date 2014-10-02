@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2009-2010 Todd C. Miller <Todd.Miller@courtesan.com>
  * Copyright (c) 2009 Christian S.J. Peron
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -35,7 +36,7 @@
  * Solaris auditon() returns EINVAL if BSM audit not configured.
  * OpenBSM returns ENOSYS for unimplemented options.
  */
-#ifdef __sun__
+#ifdef __sun
 # define AUDIT_NOT_CONFIGURED	EINVAL
 #else
 # define AUDIT_NOT_CONFIGURED	ENOSYS
@@ -62,7 +63,7 @@ audit_sudo_selected(int sf)
 		mask = &ainfo_addr.ai_mask;
 	sorf = (sf == 0) ? AU_PRS_SUCCESS : AU_PRS_FAILURE;
 	rc = au_preselect(AUE_sudo, mask, sorf, AU_PRS_REREAD);
-        return (rc);
+        return rc;
 }
 
 void

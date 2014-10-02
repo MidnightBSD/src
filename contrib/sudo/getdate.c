@@ -1,3 +1,4 @@
+#include <config.h>
 #include <stdlib.h>
 #include <string.h>
 #define YYBYACC 1
@@ -50,7 +51,7 @@
 #endif
 #include <ctype.h>
 
-#include "compat.h"
+#include "missing.h"
 
 
 #define EPOCH		1970

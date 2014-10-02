@@ -1,3 +1,90 @@
+What's new in Sudo 1.7.5?
+
+ * When using visudo in check mode, a file named "-" may be used to
+   check sudoers data on the standard input.
+
+ * Sudo now only fetches shadow password entries when using the
+   password database directly for authentication.
+
+ * Password and group entries are now cached using the same key
+   that was used to look them up.  This fixes a problem when looking
+   up entries by name if the name in the retrieved entry does not
+   match the name used to look it up.  This may happen on some systems
+   that do case insensitive lookups or that truncate long names.
+
+ * GCC will no longer display warnings on glibc systems that use
+   the warn_unused_result attribute for write(2) and other system calls.
+
+ * If a PAM account management module denies access, sudo now prints
+   a more useful error message and stops trying to validate the user.
+
+ * Fixed a potential hang on idle systems when the sudo-run process
+   exits immediately.
+
+ * Sudo now includes a copy of zlib that will be used on systems
+   that do not have zlib installed.
+
+ * The --with-umask-override configure flag has been added to enable
+   the "umask_override" sudoers Defaults option at build time.
+
+ * Sudo now unblocks all signals on startup to avoid problems caused
+   by the parent process changing the default signal mask.
+
+ * LDAP Sudoers entries may now specify a time period for which
+   the entry is valid.  This requires an updated sudoers schema
+   that includes the sudoNotBefore and sudoNotAfter attributes.
+   Support for timed entries must be explicitly enabled in the
+   ldap.conf file.  Based on changes from Andreas Mueller.
+
+ * LDAP Sudoers entries may now specify a sudoOrder attribute that
+   determines the order in which matching entries are applied.  The
+   last matching entry is used, just like file-based sudoers.  This
+   requires an updated sudoers schema that includes the sudOrder
+   attribute.  Based on changes from Andreas Mueller.
+
+ * When run as sudoedit, or when given the -e flag, sudo now treats
+   command line arguments as pathnames.  This means that slashes
+   in the sudoers file entry must explicitly match slashes in
+   the command line arguments.  As a result, and entry such as:
+	user ALL = sudoedit /etc/*
+   will allow editing of /etc/motd but not /etc/security/default.
+
+ * NETWORK_TIMEOUT is now an alias for BIND_TIMELIMIT in ldap.conf for
+   compatibility with OpenLDAP configuration files.
+
+ * The LDAP API TIMEOUT parameter is now honored in ldap.conf.
+
+ * The I/O log directory may now be specified in the sudoers file.
+
+ * Sudo will no longer refuse to run if the sudoers file is writable
+   by root.
+
+ * Sudo now performs command line escaping for "sudo -s" and "sudo -i"
+   after validating the command so the sudoers entries do not need
+   to include the backslashes.
+
+ * Logging and email sending are now done in the locale specified
+   by the "sudoers_locale" setting ("C" by default).  Email send by
+   sudo now includes MIME headers when "sudoers_locale" is not "C".
+
+ * The configure script has a new option, --disable-env-reset, to
+   allow one to change the default for the sudoers Default setting
+   "env_reset" at compile time.
+
+ * When logging "sudo -l command", sudo will now prepend "list "
+   to the command in the log line to distinguish between an
+   actual command invocation in the logs.
+
+ * Double-quoted group and user names may now include escaped double
+   quotes as part of the name.  Previously this was a parse error.
+
+ * Sudo once again restores the state of the signal handlers it
+   modifies before executing the command.  This allows sudo to be
+   used with the nohup command.
+
+ * Resuming a suspended shell now works properly when I/O logging
+   is not enabled (the I/O logging case was already correct).
+
 What's new in Sudo 1.7.4p6?
 
  * A bug has been fixed in the I/O logging support that could cause

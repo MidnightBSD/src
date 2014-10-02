@@ -18,6 +18,9 @@
 
 #include <sys/types.h>
 #include <sys/param.h>
+#ifdef HAVE_SYS_SYSMACROS_H
+# include <sys/sysmacros.h>
+#endif
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/wait.h>
@@ -50,7 +53,7 @@
 # include <time.h>
 #endif
 #ifndef HAVE_TIMESPEC
-# include <emul/timespec.h>
+# include "emul/timespec.h"
 #endif
 #include <ctype.h>
 #include <errno.h>
@@ -85,10 +88,9 @@
 
 #include <pathnames.h>
 
-#include "compat.h"
+#include "missing.h"
 #include "alloc.h"
 #include "error.h"
-#include "missing.h"
 
 #ifndef LINE_MAX
 # define LINE_MAX 2048
@@ -191,13 +193,14 @@ extern char *get_timestr __P((time_t, int));
 extern int term_raw __P((int, int));
 extern int term_restore __P((int, int));
 extern void zero_bytes __P((volatile void *, size_t));
-void cleanup __P((int));
+RETSIGTYPE cleanup __P((int));
 
 static int list_sessions __P((int, char **, const char *, const char *, const char *));
 static int parse_expr __P((struct search_node **, char **));
 static void check_input __P((int, double *));
 static void delay __P((double));
-static void usage __P((void));
+static void help __P((void)) __attribute__((__noreturn__));
+static void usage __P((int));
 static void *open_io_fd __P((char *pathbuf, int len, const char *suffix));
 static int parse_timing __P((const char *buf, const char *decimal, int *idx, double *seconds, size_t *nbytes));
 
@@ -235,7 +238,7 @@ main(argc, argv)
     decimal = localeconv()->decimal_point;
 #endif
 
-    while ((ch = getopt(argc, argv, "d:f:lm:s:V")) != -1) {
+    while ((ch = getopt(argc, argv, "d:f:hlm:s:V")) != -1) {
 	switch(ch) {
 	case 'd':
 	    session_dir = optarg;
@@ -254,6 +257,9 @@ main(argc, argv)
 		    errorx(1, "invalid filter option: %s", optarg);
 	    }
 	    break;
+	case 'h':
+	    help();
+	    /* NOTREACHED */
 	case 'l':
 	    listonly = 1;
 	    break;
@@ -273,7 +279,7 @@ main(argc, argv)
 	    (void) printf("%s version %s\n", getprogname(), PACKAGE_VERSION);
 	    exit(0);
 	default:
-	    usage();
+	    usage(1);
 	    /* NOTREACHED */
 	}
 
@@ -285,7 +291,7 @@ main(argc, argv)
 	exit(list_sessions(argc, argv, pattern, user, tty));
 
     if (argc != 1)
-	usage();
+	usage(1);
 
     /* 6 digit ID in base 36, e.g. 01G712AB */
     id = argv[0];
@@ -316,9 +322,12 @@ main(argc, argv)
 	error(1, "unable to open %s", path);
     cp = NULL;
     len = 0;
-    getline(&cp, &len, lfile); /* log */
-    getline(&cp, &len, lfile); /* cwd */
-    getline(&cp, &len, lfile); /* command */
+    /* Pull out command (third line). */
+    if (getline(&cp, &len, lfile) == -1 ||
+	getline(&cp, &len, lfile) == -1 ||
+	getline(&cp, &len, lfile) == -1) {
+	errorx(1, "invalid log file %s", path);
+    }
     printf("Replaying sudo session: %s", cp);
     free(cp);
     fclose(lfile);
@@ -537,7 +546,7 @@ parse_expr(headp, argv)
 		errorx(1, "unmatched ')' in expression");
 	    if (node_stack[stack_top])
 		sn->next = node_stack[stack_top]->next;
-	    return(av - argv + 1);
+	    return av - argv + 1;
 	bad:
 	default:
 	    errorx(1, "unknown search term \"%s\"", *av);
@@ -583,7 +592,7 @@ parse_expr(headp, argv)
     if (not)
 	errorx(1, "illegal trailing \"!\"");
 
-    return(av - argv);
+    return av - argv;
 }
 
 static int
@@ -641,7 +650,7 @@ match_expr(head, log)
 	if (sn->negated)
 	    matched = !matched;
     }
-    return(matched);
+    return matched;
 }
 
 static int
@@ -662,7 +671,7 @@ list_session_dir(pathbuf, re, user, tty)
     d = opendir(pathbuf);
     if (d == NULL && errno != ENOTDIR) {
 	warning("cannot opendir %s", pathbuf);
-	return(-1);
+	return -1;
     }
     while ((dp = readdir(d)) != NULL) {
 	if (NAMLEN(dp) != 2 || !isalnum((unsigned char)dp->d_name[0]) ||
@@ -747,7 +756,7 @@ list_session_dir(pathbuf, re, user, tty)
 	    printf("GROUP=%s ; ", li.runas_group);
 	printf("TSID=%s ; COMMAND=%s\n", idstr, li.cmd);
     }
-    return(0);
+    return 0;
 }
 
 static int
@@ -819,7 +828,7 @@ list_sessions(argc, argv, pattern, user, tty)
 	closedir(d2);
     }
     closedir(d1);
-    return(0);
+    return 0;
 }
 
 /*
@@ -934,21 +943,39 @@ bad:
 }
 
 static void
-usage()
+usage(fatal)
+    int fatal;
 {
-    fprintf(stderr,
-	"usage: %s [-d directory] [-m max_wait] [-s speed_factor] ID\n",
+    fprintf(fatal ? stderr : stdout,
+	"usage: %s [-h] [-d directory] [-f filter] [-m max_wait] [-s speed_factor] ID\n",
 	getprogname());
-    fprintf(stderr,
-	"usage: %s [-d directory] -l [search expression]\n",
+    fprintf(fatal ? stderr : stdout,
+	"usage: %s [-h] [-d directory] -l [search expression]\n",
 	getprogname());
-    exit(1);
+    if (fatal)
+	exit(1);
+}
+
+static void
+help()
+{
+    (void) printf("%s - replay sudo session logs\n\n", getprogname());
+    usage(0);
+    (void) puts("\nOptions:");
+    (void) puts("  -d directory     specify directory for session logs");
+    (void) puts("  -f filter        specify which I/O type to display");
+    (void) puts("  -h               display help message and exit");
+    (void) puts("  -l [expression]  list available session IDs that match expression");
+    (void) puts("  -m max_wait      max number of seconds to wait between events");
+    (void) puts("  -s speed_factor  speed up or slow down output");
+    (void) puts("  -V               display version information and exit");
+    exit(0);
 }
 
 /*
  * Cleanup hook for error()/errorx()
   */
-void
+RETSIGTYPE
 cleanup(signo)
     int signo;
 {

@@ -1,6 +1,6 @@
 dnl Local m4 macros for autoconf (used by sudo)
 dnl
-dnl Copyright (c) 1994-1996, 1998-2005, 2007-2009
+dnl Copyright (c) 1994-1996, 1998-2005, 2007-2011
 dnl	Todd C. Miller <Todd.Miller@courtesan.com>
 dnl
 dnl XXX - should cache values in all cases!!!
@@ -124,18 +124,18 @@ dnl
 AC_DEFUN(SUDO_IO_LOGDIR, [
     AC_MSG_CHECKING(for I/O log dir location)
     if test "${with_iologdir-yes}" != "yes"; then
-	:
+	iolog_dir="$with_iologdir"
     elif test -d "/var/log"; then
-	with_iologdir="/var/log/sudo-io"
+	iolog_dir="/var/log/sudo-io"
     elif test -d "/var/adm"; then
-	with_iologdir="/var/adm/sudo-io"
+	iolog_dir="/var/adm/sudo-io"
     else
-	with_iologdir="/usr/adm/sudo-io"
+	iolog_dir="/usr/adm/sudo-io"
     fi
-    if test "${with_iologdir-yes}" != "no"; then
-	SUDO_DEFINE_UNQUOTED(_PATH_SUDO_IO_LOGDIR, "$with_iologdir")
+    if test "${with_iologdir}" != "no"; then
+	SUDO_DEFINE_UNQUOTED(_PATH_SUDO_IO_LOGDIR, "$iolog_dir")
     fi
-    AC_MSG_RESULT($with_iologdir)
+    AC_MSG_RESULT($iolog_dir)
 ])dnl
 
 dnl
@@ -323,8 +323,8 @@ AC_DEFUN(SUDO_MAILDIR, [
 maildir=no
 if test X"$ac_cv_header_paths_h" = X"yes"; then
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([AC_INCLUDES_DEFAULT
-#include <paths.h>
-int main() {char *p = _PATH_MAILDIR;}], [])], [maildir=yes], [])
+#include <paths.h>],
+[char *p = _PATH_MAILDIR;])], [maildir=yes], [])
 fi
 if test $maildir = no; then
     # Solaris has maillock.h which defines MAILDIR

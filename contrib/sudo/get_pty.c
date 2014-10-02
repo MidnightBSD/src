@@ -67,13 +67,16 @@ get_pty(master, slave, name, namesz, ttyuid)
     struct group *gr;
     gid_t ttygid = -1;
 
-    if ((gr = sudo_getgrnam("tty")) != NULL)
+    if ((gr = sudo_getgrnam("tty")) != NULL) {
 	ttygid = gr->gr_gid;
+	gr_delref(gr);
+    }
 
     if (openpty(master, slave, name, NULL, NULL) != 0)
-	return(0);
-    (void) chown(name, ttyuid, ttygid);
-    return(1);
+	return 0;
+    if (chown(name, ttyuid, ttygid) != 0)
+	return 0;
+    return 1;
 }
 
 #elif defined(HAVE__GETPTY)
@@ -90,15 +93,15 @@ get_pty(master, slave, name, namesz, ttyuid)
     /* IRIX-style dynamic ptys (may fork) */
     line = _getpty(master, O_RDWR, S_IRUSR|S_IWUSR|S_IWGRP, 0);
     if (line == NULL)
-	return (0);
+	return 0;
     *slave = open(line, O_RDWR|O_NOCTTY, 0);
     if (*slave == -1) {
 	close(*master);
-	return(0);
+	return 0;
     }
     (void) chown(line, ttyuid, -1);
     strlcpy(name, line, namesz);
-    return(1);
+    return 1;
 }
 #elif defined(HAVE_GRANTPT)
 # ifndef HAVE_POSIX_OPENPT
@@ -113,7 +116,7 @@ posix_openpt(oflag)
 #  else
     fd = open("/dev/ptmx", oflag);
 #  endif
-    return(fd);
+    return fd;
 }
 # endif /* HAVE_POSIX_OPENPT */
 
@@ -129,22 +132,22 @@ get_pty(master, slave, name, namesz, ttyuid)
 
     *master = posix_openpt(O_RDWR|O_NOCTTY);
     if (*master == -1)
-	return(0);
+	return 0;
 
     (void) grantpt(*master); /* may fork */
     if (unlockpt(*master) != 0) {
 	close(*master);
-	return(0);
+	return 0;
     }
     line = ptsname(*master);
     if (line == NULL) {
 	close(*master);
-	return(0);
+	return 0;
     }
     *slave = open(line, O_RDWR|O_NOCTTY, 0);
     if (*slave == -1) {
 	close(*master);
-	return(0);
+	return 0;
     }
 # if defined(I_PUSH) && !defined(_AIX)
     ioctl(*slave, I_PUSH, "ptem");	/* pseudo tty emulation module */
@@ -152,7 +155,7 @@ get_pty(master, slave, name, namesz, ttyuid)
 # endif
     (void) chown(line, ttyuid, -1);
     strlcpy(name, line, namesz);
-    return(1);
+    return 1;
 }
 
 #else /* Old-style BSD ptys */
@@ -181,7 +184,7 @@ get_pty(master, slave, name, namesz, ttyuid)
 	    *master = open(line, O_RDWR|O_NOCTTY, 0);
 	    if (*master == -1) {
 		if (errno == ENOENT)
-		    return(0); /* out of ptys */
+		    return 0; /* out of ptys */
 		continue; /* already in use */
 	    }
 	    line[sizeof("/dev/p") - 2] = 't';
@@ -193,11 +196,11 @@ get_pty(master, slave, name, namesz, ttyuid)
 	    *slave = open(line, O_RDWR|O_NOCTTY, 0);
 	    if (*slave != -1) {
 		    strlcpy(name, line, namesz);
-		    return(1); /* success */
+		    return 1; /* success */
 	    }
 	    (void) close(*master);
 	}
     }
-    return(0);
+    return 0;
 }
 #endif /* HAVE_OPENPTY */

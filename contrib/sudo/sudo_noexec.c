@@ -16,6 +16,8 @@
 
 #include <config.h>
 
+#include <sys/types.h>
+
 #include <errno.h>
 #ifndef HAVE_TIMESPEC
 # include <time.h>
@@ -26,7 +28,7 @@
 # include <varargs.h>
 #endif
 
-#include <compat.h>
+#include "missing.h"
 
 /*
  * Dummy versions of the execve() family of syscalls.  We don't need
@@ -43,7 +45,7 @@ extern int errno;
 #define DUMMY_BODY				\
 {						\
     errno = EACCES;				\
-    return(-1);					\
+    return -1;					\
 }
 
 #ifdef __STDC__

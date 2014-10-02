@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1996, 1998-2005, 2007-2010
+ * Copyright (c) 1996, 1998-2005, 2007-2011
  *	Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -146,7 +146,7 @@ _userlist_matches(pw, list)
 	if (matched != UNSPEC)
 	    break;
     }
-    return(matched);
+    return matched;
 }
 
 int
@@ -155,7 +155,7 @@ userlist_matches(pw, list)
     struct member_list *list;
 {
     alias_seqno++;
-    return(_userlist_matches(pw, list));
+    return _userlist_matches(pw, list);
 }
 
 /*
@@ -177,7 +177,7 @@ _runaslist_matches(user_list, group_list)
     if (runas_pw != NULL) {
 	/* If no runas user or runas group listed in sudoers, use default. */
 	if (tq_empty(user_list) && tq_empty(group_list))
-	    return(userpw_matches(def_runas_default, runas_pw->pw_name, runas_pw));
+	    return userpw_matches(def_runas_default, runas_pw->pw_name, runas_pw);
 
 	tq_foreach_rev(user_list, m) {
 	    switch (m->type) {
@@ -239,10 +239,10 @@ _runaslist_matches(user_list, group_list)
     }
 
     if (user_matched == DENY || group_matched == DENY)
-	return(DENY);
+	return DENY;
     if (user_matched == group_matched || runas_gr == NULL)
-	return(user_matched);
-    return(UNSPEC);
+	return user_matched;
+    return UNSPEC;
 }
 
 int
@@ -251,8 +251,8 @@ runaslist_matches(user_list, group_list)
     struct member_list *group_list;
 {
     alias_seqno++;
-    return(_runaslist_matches(user_list ? user_list : &empty,
-	group_list ? group_list : &empty));
+    return _runaslist_matches(user_list ? user_list : &empty,
+	group_list ? group_list : &empty);
 }
 
 /*
@@ -296,7 +296,7 @@ _hostlist_matches(list)
 	if (matched != UNSPEC)
 	    break;
     }
-    return(matched);
+    return matched;
 }
 
 int
@@ -304,7 +304,7 @@ hostlist_matches(list)
     struct member_list *list;
 {
     alias_seqno++;
-    return(_hostlist_matches(list));
+    return _hostlist_matches(list);
 }
 
 /*
@@ -323,7 +323,7 @@ _cmndlist_matches(list)
 	if (matched != UNSPEC)
 	    break;
     }
-    return(matched);
+    return matched;
 }
 
 int
@@ -331,7 +331,7 @@ cmndlist_matches(list)
     struct member_list *list;
 {
     alias_seqno++;
-    return(_cmndlist_matches(list));
+    return _cmndlist_matches(list);
 }
 
 /*
@@ -364,7 +364,35 @@ cmnd_matches(m)
 		matched = !m->negated;
 	    break;
     }
-    return(matched);
+    return matched;
+}
+
+static int
+command_args_match(sudoers_cmnd, sudoers_args)
+    char *sudoers_cmnd;
+    char *sudoers_args;
+{
+    int flags = 0;
+
+    /*
+     * If no args specified in sudoers, any user args are allowed.
+     * If the empty string is specified in sudoers, no user args are allowed.
+     */
+    if (!sudoers_args ||
+	(!user_args && sudoers_args && !strcmp("\"\"", sudoers_args)))
+	return TRUE;
+    /*
+     * If args are specified in sudoers, they must match the user args.
+     * If running as sudoedit, all args are assumed to be paths.
+     */
+    if (sudoers_args) {
+	/* For sudoedit, all args are assumed to be pathnames. */
+	if (strcmp(sudoers_cmnd, "sudoedit") == 0)
+	    flags = FNM_PATHNAME;
+	if (fnmatch(sudoers_args, user_args ? user_args : "", flags) == 0)
+	    return TRUE;
+    }
+    return FALSE;
 }
 
 /*
@@ -386,16 +414,13 @@ command_matches(sudoers_cmnd, sudoers_args)
 	 */
 	if (strcmp(sudoers_cmnd, "sudoedit") != 0 ||
 	    strcmp(user_cmnd, "sudoedit") != 0)
-	    return(FALSE);
-	if (!sudoers_args ||
-	    (!user_args && sudoers_args && !strcmp("\"\"", sudoers_args)) ||
-	    (sudoers_args &&
-	     fnmatch(sudoers_args, user_args ? user_args : "", 0) == 0)) {
+	    return FALSE;
+	if (command_args_match(sudoers_cmnd, sudoers_args)) {
 	    efree(safe_cmnd);
 	    safe_cmnd = estrdup(sudoers_cmnd);
-	    return(TRUE);
+	    return TRUE;
 	} else
-	    return(FALSE);
+	    return FALSE;
     }
 
     if (has_meta(sudoers_cmnd)) {
@@ -404,10 +429,10 @@ command_matches(sudoers_cmnd, sudoers_args)
 	 * use glob(3) and/or fnmatch(3) to do the matching.
 	 */
 	if (def_fast_glob)
-	    return(command_matches_fnmatch(sudoers_cmnd, sudoers_args));
-	return(command_matches_glob(sudoers_cmnd, sudoers_args));
+	    return command_matches_fnmatch(sudoers_cmnd, sudoers_args);
+	return command_matches_glob(sudoers_cmnd, sudoers_args);
     }
-    return(command_matches_normal(sudoers_cmnd, sudoers_args));
+    return command_matches_normal(sudoers_cmnd, sudoers_args);
 }
 
 static int
@@ -423,17 +448,14 @@ command_matches_fnmatch(sudoers_cmnd, sudoers_args)
      * else return false.
      */
     if (fnmatch(sudoers_cmnd, user_cmnd, FNM_PATHNAME) != 0)
-	return(FALSE);
-    if (!sudoers_args ||
-	(!user_args && sudoers_args && !strcmp("\"\"", sudoers_args)) ||
-	(sudoers_args &&
-	 fnmatch(sudoers_args, user_args ? user_args : "", 0) == 0)) {
+	return FALSE;
+    if (command_args_match(sudoers_cmnd, sudoers_args)) {
 	if (safe_cmnd)
 	    free(safe_cmnd);
 	safe_cmnd = estrdup(user_cmnd);
-	return(TRUE);
+	return TRUE;
     } else
-	return(FALSE);
+	return FALSE;
 }
 
 static int
@@ -456,7 +478,7 @@ command_matches_glob(sudoers_cmnd, sudoers_args)
 	if ((base = strrchr(sudoers_cmnd, '/')) != NULL) {
 	    base++;
 	    if (!has_meta(base) && strcmp(user_base, base) != 0)
-		return(FALSE);
+		return FALSE;
 	}
     }
     /*
@@ -469,7 +491,7 @@ command_matches_glob(sudoers_cmnd, sudoers_args)
 #define GLOB_FLAGS	(GLOB_NOSORT | GLOB_MARK | GLOB_BRACE | GLOB_TILDE)
     if (glob(sudoers_cmnd, GLOB_FLAGS, NULL, &gl) != 0 || gl.gl_pathc == 0) {
 	globfree(&gl);
-	return(FALSE);
+	return FALSE;
     }
     /* For each glob match, compare basename, st_dev and st_ino. */
     for (ap = gl.gl_pathv; (cp = *ap) != NULL; ap++) {
@@ -477,7 +499,7 @@ command_matches_glob(sudoers_cmnd, sudoers_args)
 	dlen = strlen(cp);
 	if (cp[dlen - 1] == '/') {
 	    if (command_matches_dir(cp, dlen))
-		return(TRUE);
+		return TRUE;
 	    continue;
 	}
 
@@ -499,17 +521,14 @@ command_matches_glob(sudoers_cmnd, sudoers_args)
     }
     globfree(&gl);
     if (cp == NULL)
-	return(FALSE);
+	return FALSE;
 
-    if (!sudoers_args ||
-	(!user_args && sudoers_args && !strcmp("\"\"", sudoers_args)) ||
-	(sudoers_args &&
-	 fnmatch(sudoers_args, user_args ? user_args : "", 0) == 0)) {
+    if (command_args_match(sudoers_cmnd, sudoers_args)) {
 	efree(safe_cmnd);
 	safe_cmnd = estrdup(user_cmnd);
-	return(TRUE);
+	return TRUE;
     }
-    return(FALSE);
+    return FALSE;
 }
 
 static int
@@ -524,7 +543,7 @@ command_matches_normal(sudoers_cmnd, sudoers_args)
     /* If it ends in '/' it is a directory spec. */
     dlen = strlen(sudoers_cmnd);
     if (sudoers_cmnd[dlen - 1] == '/')
-	return(command_matches_dir(sudoers_cmnd, dlen));
+	return command_matches_dir(sudoers_cmnd, dlen);
 
     /* Only proceed if user_base and basename(sudoers_cmnd) match */
     if ((base = strrchr(sudoers_cmnd, '/')) == NULL)
@@ -533,7 +552,7 @@ command_matches_normal(sudoers_cmnd, sudoers_args)
 	base++;
     if (strcmp(user_base, base) != 0 ||
 	stat(sudoers_cmnd, &sudoers_stat) == -1)
-	return(FALSE);
+	return FALSE;
 
     /*
      * Return true if inode/device matches AND
@@ -544,16 +563,13 @@ command_matches_normal(sudoers_cmnd, sudoers_args)
     if (user_stat != NULL &&
 	(user_stat->st_dev != sudoers_stat.st_dev ||
 	user_stat->st_ino != sudoers_stat.st_ino))
-	return(FALSE);
-    if (!sudoers_args ||
-	(!user_args && sudoers_args && !strcmp("\"\"", sudoers_args)) ||
-	(sudoers_args &&
-	 fnmatch(sudoers_args, user_args ? user_args : "", 0) == 0)) {
+	return FALSE;
+    if (command_args_match(sudoers_cmnd, sudoers_args)) {
 	efree(safe_cmnd);
 	safe_cmnd = estrdup(sudoers_cmnd);
-	return(TRUE);
+	return TRUE;
     }
-    return(FALSE);
+    return FALSE;
 }
 
 /*
@@ -574,11 +590,11 @@ command_matches_dir(sudoers_dir, dlen)
      */
     dirp = opendir(sudoers_dir);
     if (dirp == NULL)
-	return(FALSE);
+	return FALSE;
 
     if (strlcpy(buf, sudoers_dir, sizeof(buf)) >= sizeof(buf)) {
 	closedir(dirp);
-	return(FALSE);
+	return FALSE;
     }
     while ((dent = readdir(dirp)) != NULL) {
 	/* ignore paths > PATH_MAX (XXX - log) */
@@ -599,7 +615,7 @@ command_matches_dir(sudoers_dir, dlen)
     }
 
     closedir(dirp);
-    return(dent != NULL);
+    return dent != NULL;
 }
 
 static int
@@ -633,24 +649,24 @@ addr_matches_if(n)
 		if (ifp->addr.ip4.s_addr == addr.ip4.s_addr ||
 		    (ifp->addr.ip4.s_addr & ifp->netmask.ip4.s_addr)
 		    == addr.ip4.s_addr)
-		    return(TRUE);
+		    return TRUE;
 		break;
 #ifdef HAVE_IN6_ADDR
 	    case AF_INET6:
 		if (memcmp(ifp->addr.ip6.s6_addr, addr.ip6.s6_addr,
 		    sizeof(addr.ip6.s6_addr)) == 0)
-		    return(TRUE);
+		    return TRUE;
 		for (j = 0; j < sizeof(addr.ip6.s6_addr); j++) {
 		    if ((ifp->addr.ip6.s6_addr[j] & ifp->netmask.ip6.s6_addr[j]) != addr.ip6.s6_addr[j])
 			break;
 		}
 		if (j == sizeof(addr.ip6.s6_addr))
-		    return(TRUE);
+		    return TRUE;
 #endif
 	}
     }
 
-    return(FALSE);
+    return FALSE;
 }
 
 static int
@@ -710,7 +726,7 @@ addr_matches_if_netmask(n, m)
 	switch(family) {
 	    case AF_INET:
 		if ((ifp->addr.ip4.s_addr & mask.ip4.s_addr) == addr.ip4.s_addr)
-		    return(TRUE);
+		    return TRUE;
 #ifdef HAVE_IN6_ADDR
 	    case AF_INET6:
 		for (j = 0; j < sizeof(addr.ip6.s6_addr); j++) {
@@ -718,12 +734,12 @@ addr_matches_if_netmask(n, m)
 			break;
 		}
 		if (j == sizeof(addr.ip6.s6_addr))
-		    return(TRUE);
+		    return TRUE;
 #endif /* HAVE_IN6_ADDR */
 	}
     }
 
-    return(FALSE);
+    return FALSE;
 }
 
 /*
@@ -745,7 +761,7 @@ addr_matches(n)
     } else
 	retval = addr_matches_if(n);
 
-    return(retval);
+    return retval;
 }
 
 /*
@@ -759,14 +775,14 @@ hostname_matches(shost, lhost, pattern)
 {
     if (has_meta(pattern)) {
 	if (strchr(pattern, '.'))
-	    return(!fnmatch(pattern, lhost, FNM_CASEFOLD));
+	    return !fnmatch(pattern, lhost, FNM_CASEFOLD);
 	else
-	    return(!fnmatch(pattern, shost, FNM_CASEFOLD));
+	    return !fnmatch(pattern, shost, FNM_CASEFOLD);
     } else {
 	if (strchr(pattern, '.'))
-	    return(!strcasecmp(lhost, pattern));
+	    return !strcasecmp(lhost, pattern);
 	else
-	    return(!strcasecmp(shost, pattern));
+	    return !strcasecmp(shost, pattern);
     }
 }
 
@@ -783,9 +799,9 @@ userpw_matches(sudoers_user, user, pw)
     if (pw != NULL && *sudoers_user == '#') {
 	uid_t uid = (uid_t) atoi(sudoers_user + 1);
 	if (uid == pw->pw_uid)
-	    return(TRUE);
+	    return TRUE;
     }
-    return(strcmp(sudoers_user, user) == 0);
+    return strcmp(sudoers_user, user) == 0;
 }
 
 /*
@@ -800,9 +816,9 @@ group_matches(sudoers_group, gr)
     if (*sudoers_group == '#') {
 	gid_t gid = (gid_t) atoi(sudoers_group + 1);
 	if (gid == gr->gr_gid)
-	    return(TRUE);
+	    return TRUE;
     }
-    return(strcmp(gr->gr_name, sudoers_group) == 0);
+    return strcmp(gr->gr_name, sudoers_group) == 0;
 }
 
 /*
@@ -815,30 +831,46 @@ usergr_matches(group, user, pw)
     char *user;
     struct passwd *pw;
 {
+    int matched = FALSE;
+    struct passwd *pw0 = NULL;
+
     /* make sure we have a valid usergroup, sudo style */
     if (*group++ != '%')
-	return(FALSE);
+	goto done;
 
 #ifdef USING_NONUNIX_GROUPS
-    if (*group == ':')
-	return(sudo_nonunix_groupcheck(++group, user, pw));   
+    if (*group == ':') {
+	matched = sudo_nonunix_groupcheck(++group, user, pw);
+	goto done;
+    }
 #endif /* USING_NONUNIX_GROUPS */
 
     /* look up user's primary gid in the passwd file */
-    if (pw == NULL && (pw = sudo_getpwnam(user)) == NULL)
-	return(FALSE);
+    if (pw == NULL) {
+	if ((pw0 = sudo_getpwnam(user)) == NULL)
+	    goto done;
+	pw = pw0;
+    }
 
-    if (user_in_group(pw, group))
-	return(TRUE);
+    if (user_in_group(pw, group)) {
+	matched = TRUE;
+	goto done;
+    }
 
 #ifdef USING_NONUNIX_GROUPS
     /* not a Unix group, could be an AD group */
     if (sudo_nonunix_groupcheck_available() &&
-	sudo_nonunix_groupcheck(group, user, pw))
-    	return(TRUE);
+	sudo_nonunix_groupcheck(group, user, pw)) {
+	matched = TRUE;
+	goto done;
+    }
 #endif /* USING_NONUNIX_GROUPS */
 
-    return(FALSE);
+done:
+    if (pw0 != NULL)
+	pw_delref(pw0);
+
+    return matched;
 }
 
 /*
@@ -862,7 +894,7 @@ netgr_matches(netgr, lhost, shost, user)
 
     /* make sure we have a valid netgroup, sudo style */
     if (*netgr++ != '+')
-	return(FALSE);
+	return FALSE;
 
 #ifdef HAVE_GETDOMAINNAME
     /* get the domain name (if any) */
@@ -878,10 +910,10 @@ netgr_matches(netgr, lhost, shost, user)
 
 #ifdef HAVE_INNETGR
     if (innetgr(netgr, lhost, user, domain))
-	return(TRUE);
+	return TRUE;
     else if (lhost != shost && innetgr(netgr, shost, user, domain))
-	return(TRUE);
+	return TRUE;
 #endif /* HAVE_INNETGR */
 
-    return(FALSE);
+    return FALSE;
 }

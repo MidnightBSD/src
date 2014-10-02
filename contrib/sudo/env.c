@@ -205,6 +205,9 @@ static const char *initial_keepenv_table[] = {
     "TZ",
     "XAUTHORITY",
     "XAUTHORIZATION",
+#ifdef _AIX
+    "ODMDIR",
+#endif
     NULL
 };
 
@@ -311,7 +314,7 @@ setenv(var, val, overwrite)
 
     if (!var || *var == '\0') {
 	errno = EINVAL;
-	return(-1);
+	return -1;
     }
 
     if (env.envp == NULL)
@@ -344,7 +347,7 @@ setenv(var, val, overwrite)
 	errorx(1, "setenv: corrupted envp, len mismatch");
 #endif
     sudo_putenv(estring, TRUE, overwrite);
-    return(0);
+    return 0;
 }
 
 /*
@@ -366,7 +369,7 @@ unsetenv(var)
 #ifdef UNSETENV_VOID
 	return;
 #else
-	return(-1);
+	return -1;
 #endif
     }
 
@@ -392,7 +395,7 @@ unsetenv(var)
     }
     env.env_len = ep - env.envp;
 #ifndef UNSETENV_VOID
-    return(0);
+    return 0;
 #endif
 }
 
@@ -412,14 +415,14 @@ putenv(string)
 
     if (strchr(string, '=') == NULL) {
 	errno = EINVAL;
-	return(-1);
+	return -1;
     }
 #ifdef ENV_DEBUG
     if (env.envp[env.env_len] != NULL)
 	errorx(1, "putenv: corrupted envp, len mismatch");
 #endif
     sudo_putenv((char *)string, TRUE, TRUE);
-    return(0);
+    return 0;
 }
 
 /*
@@ -520,7 +523,7 @@ matches_env_delete(var)
 	    break;
 	}
     }
-    return(match);
+    return match;
 }
 
 /*
@@ -550,7 +553,7 @@ matches_env_check(var)
 	    break;
 	}
     }
-    return(keepit);
+    return keepit;
 }
 
 /*
@@ -579,7 +582,7 @@ matches_env_keep(var)
 	    break;
 	}
     }
-    return(keepit);
+    return keepit;
 }
 
 /*
@@ -608,10 +611,16 @@ rebuild_env(noexec)
 #ifdef ENV_DEBUG
     memset(env.envp, 0, env.env_size * sizeof(char *));
 #endif
-    if (def_env_reset || ISSET(sudo_mode, MODE_LOGIN_SHELL)) {
-	/* Reset HOME based on target user unless keeping old value. */
-	reset_home = TRUE;
 
+    /* Reset HOME based on target user if configured to. */
+    if (ISSET(sudo_mode, MODE_RUN)) {
+	if (def_always_set_home ||
+	    ISSET(sudo_mode, MODE_RESET_HOME | MODE_LOGIN_SHELL) || 
+	    (ISSET(sudo_mode, MODE_SHELL) && def_set_home))
+	    reset_home = TRUE;
+    }
+
+    if (def_env_reset || ISSET(sudo_mode, MODE_LOGIN_SHELL)) {
 	/* Pull in vars we want to keep from the old environment. */
 	for (ep = old_envp; *ep; ep++) {
 	    int keepit;
@@ -696,6 +705,11 @@ rebuild_env(noexec)
 	    if (!ISSET(didvar, DID_USERNAME))
 		sudo_setenv("USERNAME", user_name, FALSE);
 	}
+
+	/* If we didn't keep HOME, reset it based on target user. */
+	if (!ISSET(didvar, KEPT_HOME))
+	    reset_home = TRUE;
+
 	/*
 	 * Set MAIL to target user in -i mode or if MAIL is not preserved
 	 * from user's environment.
@@ -709,13 +723,6 @@ rebuild_env(noexec)
 	    sudo_putenv(cp, ISSET(didvar, DID_MAIL), TRUE);
 	}
     } else {
-	/* Reset HOME based on target user if configured to. */
-	if (ISSET(sudo_mode, MODE_RUN)) {
-	    if (def_always_set_home || ISSET(sudo_mode, MODE_RESET_HOME) || 
-		(ISSET(sudo_mode, MODE_SHELL) && def_set_home))
-		reset_home = TRUE;
-	}
-
 	/*
 	 * Copy environ entries as long as they don't match env_delete or
 	 * env_check.
@@ -765,7 +772,7 @@ rebuild_env(noexec)
     }
 
     /* Set $HOME to target user if not preserving user's value. */
-    if (reset_home && !ISSET(didvar, KEPT_HOME))
+    if (reset_home)
 	sudo_setenv("HOME", runas_pw->pw_dir, TRUE);
 
     /* Provide default values for $TERM and $PATH if they are not set. */
@@ -813,9 +820,9 @@ rebuild_env(noexec)
 
     /* Add the SUDO_USER, SUDO_UID, SUDO_GID environment variables. */
     sudo_setenv("SUDO_USER", user_name, TRUE);
-    snprintf(idbuf, sizeof(idbuf), "%lu", (unsigned long) user_uid);
+    snprintf(idbuf, sizeof(idbuf), "%u", (unsigned int) user_uid);
     sudo_setenv("SUDO_UID", idbuf, TRUE);
-    snprintf(idbuf, sizeof(idbuf), "%lu", (unsigned long) user_gid);
+    snprintf(idbuf, sizeof(idbuf), "%u", (unsigned int) user_gid);
     sudo_setenv("SUDO_GID", idbuf, TRUE);
 
     /* Free old environment. */

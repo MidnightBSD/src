@@ -24,7 +24,7 @@
 
 #include <pathnames.h>
 #include <limits.h>
-#include "compat.h"
+#include "missing.h"
 #include "alloc.h"
 #include "defaults.h"
 #include "error.h"
@@ -235,6 +235,8 @@ void validate_env_vars	__P((struct list_member *));
 /* exec.c */
 int sudo_execve __P((const char *path, char *argv[], char *envp[], uid_t uid,
     struct command_status *cstat, int dowait, int bgmode));
+void save_signals __P((void));
+void restore_signals __P((void));
 
 /* fileops.c */
 char *sudo_parseln	__P((FILE *));
@@ -301,6 +303,10 @@ void sudo_endspent	__P((void));
 void sudo_setgrent	__P((void));
 void sudo_setpwent	__P((void));
 void sudo_setspent	__P((void));
+void gr_addref		__P((struct group *));
+void gr_delref		__P((struct group *));
+void pw_addref		__P((struct passwd *));
+void pw_delref		__P((struct passwd *));
 
 /* selinux.c */
 int selinux_restore_tty __P((void));
@@ -314,7 +320,7 @@ int set_perms		__P((int));
 /* sudo.c */
 FILE *open_sudoers	__P((const char *, int, int *));
 int exec_setup		__P((int, const char *, int));
-void cleanup		__P((int));
+RETSIGTYPE cleanup	__P((int));
 void set_fqdn		__P((void));
 
 /* sudo_auth.c */
@@ -350,7 +356,7 @@ void zero_bytes		__P((volatile void *, size_t));
 /* Only provide extern declarations outside of sudo.c. */
 #ifndef _SUDO_MAIN
 extern struct sudo_user sudo_user;
-extern struct passwd *auth_pw, *list_pw;
+extern struct passwd *list_pw;
 
 extern int tgetpass_flags;
 extern int long_list;

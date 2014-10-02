@@ -33,6 +33,9 @@
 # endif
 #endif /* STDC_HEADERS */
 #ifdef HAVE_STRING_H
+# if defined(HAVE_MEMORY_H) && !defined(STDC_HEADERS)
+#  include <memory.h>
+# endif
 # include <string.h>
 #endif /* HAVE_STRING_H */
 #ifdef HAVE_STRINGS_H
@@ -45,7 +48,9 @@
 # include <inttypes.h>
 #endif
 
-#include "sudo.h"
+#include "missing.h"
+#include "alloc.h"
+#include "error.h"
 
 /*
  * If there is no SIZE_MAX or SIZE_T_MAX we have to assume that size_t
@@ -76,7 +81,7 @@ emalloc(size)
 
     if ((ptr = malloc(size)) == NULL)
 	errorx(1, "unable to allocate memory");
-    return(ptr);
+    return ptr;
 }
 
 /*
@@ -98,7 +103,7 @@ emalloc2(nmemb, size)
     size *= nmemb;
     if ((ptr = malloc(size)) == NULL)
 	errorx(1, "unable to allocate memory");
-    return(ptr);
+    return ptr;
 }
 
 /*
@@ -118,7 +123,7 @@ erealloc(ptr, size)
     ptr = ptr ? realloc(ptr, size) : malloc(size);
     if (ptr == NULL)
 	errorx(1, "unable to allocate memory");
-    return(ptr);
+    return ptr;
 }
 
 /*
@@ -143,7 +148,7 @@ erealloc3(ptr, nmemb, size)
     ptr = ptr ? realloc(ptr, size) : malloc(size);
     if (ptr == NULL)
 	errorx(1, "unable to allocate memory");
-    return(ptr);
+    return ptr;
 }
 
 /*
@@ -155,14 +160,15 @@ estrdup(src)
     const char *src;
 {
     char *dst = NULL;
-    size_t size;
+    size_t len;
 
     if (src != NULL) {
-	size = strlen(src) + 1;
-	dst = (char *) emalloc(size);
-	(void) memcpy(dst, src, size);
+	len = strlen(src);
+	dst = (char *) emalloc(len + 1);
+	(void) memcpy(dst, src, len);
+	dst[len] = '\0';
     }
-    return(dst);
+    return dst;
 }
 
 /*
@@ -191,7 +197,7 @@ easprintf(ret, fmt, va_alist)
 
     if (len == -1)
 	errorx(1, "unable to allocate memory");
-    return(len);
+    return len;
 }
 
 /*
@@ -208,7 +214,7 @@ evasprintf(ret, format, args)
 
     if ((len = vasprintf(ret, format, args)) == -1)
 	errorx(1, "unable to allocate memory");
-    return(len);
+    return len;
 }
 
 /*

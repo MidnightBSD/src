@@ -90,7 +90,7 @@ struct sudoersfile {
     int modified;
     int doedit;
 };
-TQ_DECLARE(sudoersfile);
+TQ_DECLARE(sudoersfile)
 
 /*
  * Function prototypes
@@ -110,7 +110,8 @@ static int run_command		__P((char *, char **));
 static void print_selfref	__P((char *, int, int, int));
 static void print_undefined	__P((char *, int, int, int));
 static void setup_signals	__P((void));
-static void usage		__P((void)) __attribute__((__noreturn__));
+static void help		__P((void)) __attribute__((__noreturn__));
+static void usage		__P((int));
 
 extern void yyerror		__P((const char *));
 extern void yyrestart		__P((FILE *));
@@ -153,14 +154,14 @@ main(argc, argv)
 
     Argv = argv;
     if ((Argc = argc) < 1)
-	usage();
+	usage(1);
 
     /*
      * Arg handling.
      */
     checkonly = oldperms = quiet = strict = FALSE;
     sudoers_path = _PATH_SUDOERS;
-    while ((ch = getopt(argc, argv, "Vcf:sq")) != -1) {
+    while ((ch = getopt(argc, argv, "Vcf:hsq")) != -1) {
 	switch (ch) {
 	    case 'V':
 		(void) printf("%s version %s\n", getprogname(), PACKAGE_VERSION);
@@ -172,6 +173,9 @@ main(argc, argv)
 		sudoers_path = optarg;	/* sudoers file path */
 		oldperms = TRUE;
 		break;
+	    case 'h':
+		help();
+		break;
 	    case 's':
 		strict++;		/* strict mode */
 		break;
@@ -179,13 +183,13 @@ main(argc, argv)
 		quiet++;		/* quiet mode */
 		break;
 	    default:
-		usage();
+		usage(1);
 	}
     }
     argc -= optind;
     argv += optind;
     if (argc)
-	usage();
+	usage(1);
 
     sudo_setpwent();
     sudo_setgrent();
@@ -293,7 +297,8 @@ edit_sudoers(sp, editor, args, lineno)
 	    /* Add missing newline at EOF if needed. */
 	    if (nread > 0 && buf[nread - 1] != '\n') {
 		buf[0] = '\n';
-		write(tfd, buf, 1);
+		if (write(tfd, buf, 1) != 1)
+		    error(1, "write error");
 	    }
 	}
 	(void) close(tfd);
@@ -349,17 +354,17 @@ edit_sudoers(sp, editor, args, lineno)
 	if (stat(sp->tpath, &sb) < 0) {
 	    warningx("cannot stat temporary file (%s), %s unchanged",
 		sp->tpath, sp->path);
-	    return(FALSE);
+	    return FALSE;
 	}
 	if (sb.st_size == 0 && orig_size != 0) {
 	    warningx("zero length temporary file (%s), %s unchanged",
 		sp->tpath, sp->path);
 	    sp->modified = TRUE;
-	    return(FALSE);
+	    return FALSE;
 	}
     } else {
 	warningx("editor (%s) failed, %s unchanged", editor, sp->path);
-	return(FALSE);
+	return FALSE;
     }
 
     /* Set modified bit if use changed the file. */
@@ -383,7 +388,7 @@ edit_sudoers(sp, editor, args, lineno)
     else
 	warningx("%s unchanged", sp->tpath);
 
-    return(TRUE);
+    return TRUE;
 }
 
 /*
@@ -464,7 +469,7 @@ reparse_sudoers(editor, args, strict, quiet)
 	}
     } while (parse_error);
 
-    return(TRUE);
+    return TRUE;
 }
 
 /*
@@ -490,18 +495,24 @@ install_sudoers(sp, oldperms)
 	if (stat(sp->path, &sb) == -1)
 #endif
 	    error(1, "can't stat %s", sp->path);
-	(void) chown(sp->tpath, sb.st_uid, sb.st_gid);
-	(void) chmod(sp->tpath, sb.st_mode & 0777);
+	if (chown(sp->tpath, sb.st_uid, sb.st_gid) != 0) {
+	    warning("unable to set (uid, gid) of %s to (%d, %d)",
+		sp->tpath, sb.st_uid, sb.st_gid);
+	}
+	if (chmod(sp->tpath, sb.st_mode & 0777) != 0) {
+	    warning("unable to change mode of %s to 0%o", sp->tpath,
+		(sb.st_mode & 0777));
+	}
     } else {
 	if (chown(sp->tpath, SUDOERS_UID, SUDOERS_GID) != 0) {
 	    warning("unable to set (uid, gid) of %s to (%d, %d)",
 		sp->tpath, SUDOERS_UID, SUDOERS_GID);
-	    return(FALSE);
+	    return FALSE;
 	}
 	if (chmod(sp->tpath, SUDOERS_MODE) != 0) {
 	    warning("unable to change mode of %s to 0%o", sp->tpath,
 		SUDOERS_MODE);
-	    return(FALSE);
+	    return FALSE;
 	}
     }
 
@@ -535,17 +546,17 @@ install_sudoers(sp, oldperms)
 		(void) unlink(sp->tpath);
 		efree(sp->tpath);
 		sp->tpath = NULL;
-		return(FALSE);
+		return FALSE;
 	    }
 	    efree(sp->tpath);
 	    sp->tpath = NULL;
 	} else {
 	    warning("error renaming %s, %s unchanged", sp->tpath, sp->path);
 	    (void) unlink(sp->tpath);
-	    return(FALSE);
+	    return FALSE;
 	}
     }
-    return(TRUE);
+    return TRUE;
 }
 
 /* STUB */
@@ -566,7 +577,7 @@ init_envtables()
 int
 user_is_exempt()
 {
-    return(FALSE);
+    return FALSE;
 }
 
 /* STUB */
@@ -587,7 +598,7 @@ char *
 sudo_getepw(pw)
     const struct passwd *pw;
 {
-    return (pw->pw_passwd);
+    return pw->pw_passwd;
 }
 
 /*
@@ -612,7 +623,7 @@ whatnow()
 	    case 'e':
 	    case 'x':
 	    case 'Q':
-		return(choice);
+		return choice;
 	    default:
 		(void) puts("Options are:");
 		(void) puts("  (e)dit sudoers file again");
@@ -674,8 +685,8 @@ run_command(path, argv)
     } while (rv == -1 && errno == EINTR);
 
     if (rv == -1 || !WIFEXITED(status))
-	return(-1);
-    return(WEXITSTATUS(status));
+	return -1;
+    return WEXITSTATUS(status);
 }
 
 static int
@@ -687,7 +698,10 @@ check_syntax(sudoers_path, quiet, strict)
     struct stat sb;
     int error;
 
-    if ((yyin = fopen(sudoers_path, "r")) == NULL) {
+    if (strcmp(sudoers_path, "-") == 0) {
+	yyin = stdin;
+	sudoers_path = "stdin";
+    } else if ((yyin = fopen(sudoers_path, "r")) == NULL) {
 	if (!quiet)
 	    warning("unable to open %s", sudoers_path);
 	exit(1);
@@ -717,9 +731,9 @@ check_syntax(sudoers_path, quiet, strict)
     }
     /* Check mode and owner in strict mode. */
 #ifdef HAVE_FSTAT
-    if (strict && fstat(fileno(yyin), &sb) == 0)
+    if (strict && yyin != stdin && fstat(fileno(yyin), &sb) == 0)
 #else
-    if (strict && stat(sudoers_path, &sb) == 0)
+    if (strict && yyin != stdin && stat(sudoers_path, &sb) == 0)
 #endif
     {
 	if (sb.st_uid != SUDOERS_UID || sb.st_gid != SUDOERS_GID) {
@@ -738,7 +752,7 @@ check_syntax(sudoers_path, quiet, strict)
 	}
     }
 
-    return(error);
+    return error;
 }
 
 /*
@@ -771,7 +785,7 @@ open_sudoers(path, doedit, keepopen)
 	if (entry->fd == -1) {
 	    warning("%s", entry->path);
 	    efree(entry);
-	    return(NULL);
+	    return NULL;
 	}
 	if (!lock_file(entry->fd, SUDO_TLOCK))
 	    errorx(1, "%s busy, try again later", entry->path);
@@ -791,7 +805,7 @@ open_sudoers(path, doedit, keepopen)
     }
     if (keepopen != NULL)
 	*keepopen = TRUE;
-    return(fp);
+    return fp;
 }
 
 static char *
@@ -892,7 +906,7 @@ get_editor(args)
 	    errorx(1, "no editor found (editor path = %s)", def_editor);
     }
     *args = EditorArgs;
-    return(Editor);
+    return Editor;
 }
 
 /*
@@ -912,7 +926,7 @@ get_args(cmnd)
 	while (*args && isblank((unsigned char) *args))
 	    args++;
     }
-    return(*args ? args : NULL);
+    return *args ? args : NULL;
 }
 
 /*
@@ -967,7 +981,7 @@ alias_remove_recursive(name, type, strict, quiet)
     a = alias_remove(name, type);
     if (a)
 	rbinsert(alias_freelist, a);
-    return(error);
+    return error;
 }
 
 /*
@@ -1041,7 +1055,7 @@ check_aliases(strict, quiet)
 	tq_foreach_fwd(&us->privileges, priv) {
 	    tq_foreach_fwd(&priv->hostlist, m) {
 		if (m->type == ALIAS)
-		    if (!alias_remove_recursive(m->name, HOSTALIAS, strict, 
+		    if (!alias_remove_recursive(m->name, HOSTALIAS, strict,
 			quiet))
 			error++;
 	    }
@@ -1090,7 +1104,7 @@ check_aliases(strict, quiet)
     if (!no_aliases() && !quiet)
 	alias_apply(print_unused, strict ? "Error" : "Warning");
 
-    return (strict ? error : 0);
+    return strict ? error : 0;
 }
 
 static void
@@ -1137,7 +1151,7 @@ print_unused(v1, v2)
 	a->type == HOSTALIAS ? "Host" : a->type == CMNDALIAS ? "Cmnd" :
 	a->type == USERALIAS ? "User" : a->type == RUNASALIAS ? "Runas" :
 	"Unknown", a->name);
-    return(0);
+    return 0;
 }
 
 /*
@@ -1168,15 +1182,33 @@ quit(signo)
 {
     cleanup(signo);
 #define	emsg	 " exiting due to signal.\n"
-    write(STDERR_FILENO, getprogname(), strlen(getprogname()));
-    write(STDERR_FILENO, emsg, sizeof(emsg) - 1);
+    if (write(STDERR_FILENO, getprogname(), strlen(getprogname())) == -1 ||
+	write(STDERR_FILENO, emsg, sizeof(emsg) - 1) == -1)
+	/* shut up glibc */;
     _exit(signo);
 }
 
 static void
-usage()
+usage(fatal)
+    int fatal;
 {
-    (void) fprintf(stderr, "usage: %s [-c] [-q] [-s] [-V] [-f sudoers]\n",
-	getprogname());
-    exit(1);
+    (void) fprintf(fatal ? stderr : stdout,
+	"usage: %s [-chqsV] [-f sudoers]\n", getprogname());
+    if (fatal)
+	exit(1);
+}
+
+static void
+help()
+{
+    (void) printf("%s - safely edit the sudoers file\n\n", getprogname());
+    usage(0);
+    (void) puts("\nOptions:");
+    (void) puts("  -c          check-only mode");
+    (void) puts("  -f sudoers  specify sudoers file location");
+    (void) puts("  -h          display help message and exit");
+    (void) puts("  -q          less verbose (quiet) syntax error messages");
+    (void) puts("  -s          strict syntax checking");
+    (void) puts("  -V          display version information and exit");
+    exit(0);
 }

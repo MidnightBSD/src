@@ -1,3 +1,4 @@
+#include <config.h>
 #include <stdlib.h>
 #include <string.h>
 #define YYBYACC 1
@@ -650,7 +651,7 @@ new_default(var, val, op)
     d->prev = d;
     d->next = NULL;
 
-    return(d);
+    return d;
 }
 
 static struct member *
@@ -666,7 +667,7 @@ new_member(name, type)
     m->prev = m;
     m->next = NULL;
 
-    return(m);
+    return m;
 }
 
 /*

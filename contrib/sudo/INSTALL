@@ -463,6 +463,11 @@ The following options are also configurable at runtime:
   --without-umask
 	Preserves the umask of the user invoking sudo.
 
+  --with-umask-override
+        Use the umask specified in sudoers even if it is less restrictive
+	than the user's.  The default is to use the intersection of the
+	user's umask and the umask specified in sudoers.
+
   --with-runas-default=USER
 	The default user to run commands as if the -u flag is not specified
 	on the command line.  This defaults to "root".
@@ -562,6 +567,16 @@ The following options are also configurable at runtime:
         prompt as an argument and print the received password to
         the standard output.
 
+  --without-iologdir
+	Disable sudo's I/O logging support.  This can be used to allow sudo
+	to be compiled on systems without pseudo-tty support.
+
+  --with-iologdir[=DIR]
+	By default, sudo stores I/O log files in either /var/log/sudo-io,
+	/var/adm/sudo-sudo-io or /usr/log/sudo-io.  If DIR is
+	specified, I/O logs will be stored in the indicated directory
+	instead.
+
   --disable-authentication
 	By default, sudo requires the user to authenticate via a
 	password or similar means.  This options causes sudo to
@@ -603,22 +618,16 @@ The following options are also configurable at runtime:
 	if the executable is simply not in the user's path, sudo will tell
 	the user that they are not allowed to run it, which can be confusing.
 
-  --disable-iologdir
-	Disable sudo's I/O logging support.  This can be used to allow sudo
-	to be compiled on systems without pseudo-tty support.
-
-  --enable-iologdir[=DIR]
-	By default, sudo stores I/O log files in either /var/log/sudo-io,
-	/var/adm/sudo-sudo-io or /usr/log/sudo-io.  If DIR is
-	specified, I/O logs will be stored in the indicated directory
-	instead.
-
-  --enable-zlib[=DIR]
-	Enable the use of the zlib compress library when storing
-	I/O log files.  If specified, DIR is the base directory
-	containing the zlib include and lib directories.  By default
-	zlib is used if it is found on the system and I/O logging
-	support is not disabled.
+  --enable-zlib[=location]
+        Enable the use of the zlib compress library when storing
+        I/O log files.  If specified, location is the base directory
+        containing the zlib include and lib directories.  The special
+        values "system" and "builtin" can be used to indicate that
+        the system version of zlib should be used or that the version
+        of zlib shipped with sudo should be used instead.
+        If this option is not specified, configure will use the
+        system zlib if it is present and I/O logging support has
+        not been disabled.
 
   --disable-zlib
         Disable the use of the zlib compress library when storing
@@ -630,6 +639,10 @@ The following options are also configurable at runtime:
   --enable-admin-flag
 	Enable the creation of an Ubuntu-style admin flag file
 	the first time sudo is run.
+
+  --disable-env-reset
+        Disable environment resetting.  This sets the default value
+        of the "env_reset" Defaults option in sudoers to false.
 
 Shadow password and C2 support
 ==============================

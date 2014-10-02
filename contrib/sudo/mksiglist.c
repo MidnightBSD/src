@@ -17,6 +17,8 @@
 
 #include <config.h>
 
+#include <sys/types.h>
+
 #include <stdio.h>
 #ifdef STDC_HEADERS
 # include <stdlib.h>
@@ -28,7 +30,7 @@
 #endif /* STDC_HEADERS */
 #include <signal.h>
 
-#include <compat.h>
+#include "missing.h"
 
 int
 main(argc, argv)
@@ -42,7 +44,7 @@ main(argc, argv)
 
     printf("#include <config.h>\n");
     printf("#include <signal.h>\n");
-    printf("#include <compat.h>\n\n");
+    printf("#include \"missing.h\"\n\n");
     printf("const char *const my_sys_siglist[NSIG] = {\n");
     for (i = 0; i < NSIG; i++) {
 	if (my_sys_siglist[i] != NULL) {

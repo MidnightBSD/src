@@ -18,6 +18,9 @@
 
 #include <sys/types.h>
 #include <sys/param.h>
+#ifdef HAVE_SYS_SYSMACROS_H
+# include <sys/sysmacros.h>
+#endif
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/wait.h>
@@ -72,11 +75,10 @@
 #define TERM_RAW	1
 
 /* Compatibility with older tty systems. */
-#if !defined(TIOCGSIZE) && defined(TIOCGWINSZ)
-# define TIOCGSIZE	TIOCGWINSZ
-# define TIOCSSIZE	TIOCSWINSZ
-# define ttysize	winsize
-# define ts_cols	ws_col
+#if !defined(TIOCGWINSZ) && defined(TIOCGSIZE)
+# define TIOCGWINSZ	TIOCGSIZE
+# define TIOCSWINSZ	TIOCSSIZE
+# define winsize	ttysize
 #endif
 
 struct io_buffer {
@@ -103,7 +105,7 @@ static int exec_monitor __P((const char *path, char *argv[],
     char *envp[], int, int));
 static void exec_pty __P((const char *path, char *argv[],
     char *envp[], int));
-static void sigwinch __P((int s));
+static RETSIGTYPE sigwinch __P((int s));
 static void sync_ttysize __P((int src, int dst));
 static void deliver_signal __P((pid_t pid, int signo));
 static int safe_close __P((int fd));
@@ -146,7 +148,8 @@ check_foreground()
 
 /*
  * Suspend sudo if the underlying command is suspended.
- * Returns SIGUSR1 if the child should be resume in foreground else SIGUSR2.
+ * Returns SIGCONT_FG if the child should be resume in the
+ * foreground or SIGCONT_BG if it is a background process.
  */
 int
 suspend_parent(signo)
@@ -171,7 +174,7 @@ suspend_parent(signo)
 		} while (!n && errno == EINTR);
 		ttymode = TERM_RAW;
 	    }
-	    rval = SIGUSR1; /* resume child in foreground */
+	    rval = SIGCONT_FG; /* resume child in foreground */
 	    break;
 	}
 	ttymode = TERM_RAW;
@@ -214,11 +217,11 @@ suspend_parent(signo)
 	}
 
 	sigaction(signo, &osa, NULL);
-	rval = ttymode == TERM_RAW ? SIGUSR1 : SIGUSR2;
+	rval = ttymode == TERM_RAW ? SIGCONT_FG : SIGCONT_BG;
 	break;
     }
 
-    return(rval);
+    return rval;
 }
 
 /*
@@ -448,6 +451,8 @@ fork_pty(path, argv, envp, sv, rbac_enabled, maxfd)
     case 0:
 	/* child */
 	close(sv[0]);
+	close(signal_pipe[0]);
+	close(signal_pipe[1]);
 	fcntl(sv[1], F_SETFD, FD_CLOEXEC);
 	if (exec_setup(rbac_enabled, slavename, io_fds[SFD_SLAVE]) == TRUE) {
 	    /* Close the other end of the stdin/stdout/stderr pipes and exec. */
@@ -525,10 +530,14 @@ pty_close(cstat)
 	    const char *reason = strsignal(signo);
 	    n = io_fds[SFD_USERTTY] != -1 ?
 		io_fds[SFD_USERTTY] : STDOUT_FILENO;
-	    write(n, reason, strlen(reason));
-	    if (WCOREDUMP(cstat->val))
-		write(n, " (core dumped)", 14);
-	    write(n, "\n", 1);
+	    if (write(n, reason, strlen(reason)) != -1) {
+		if (WCOREDUMP(cstat->val)) {
+		    if (write(n, " (core dumped)", 14) == -1)
+			/* shut up glibc */;
+		}
+		if (write(n, "\n", 1) == -1)
+		    /* shut up glibc */;
+	    }
 	}
     }
 }
@@ -582,37 +591,26 @@ deliver_signal(pid, signo)
 
     /* Handle signal from parent. */
     switch (signo) {
-    case SIGKILL:
-	_exit(1); /* XXX */
-	/* NOTREACHED */
-    case SIGPIPE:
-    case SIGHUP:
-    case SIGTERM:
-    case SIGINT:
-    case SIGQUIT:
-    case SIGTSTP:
-	/* relay signal to child */
-	killpg(pid, signo);
-	break;
-    case SIGALRM:
-	terminate_child(pid, TRUE);
-	break;
-    case SIGUSR1:
-	/* foreground process, grant it controlling tty. */
+    case SIGCONT_FG:
+	/* Continue in foreground, grant it controlling tty. */
 	do {
 	    status = tcsetpgrp(io_fds[SFD_SLAVE], pid);
 	} while (status == -1 && errno == EINTR);
 	killpg(pid, SIGCONT);
 	break;
-    case SIGUSR2:
-	/* background process, I take controlling tty. */
+    case SIGCONT_BG:
+	/* Continue in background, I take controlling tty. */
 	do {
 	    status = tcsetpgrp(io_fds[SFD_SLAVE], getpid());
 	} while (status == -1 && errno == EINTR);
 	killpg(pid, SIGCONT);
 	break;
+    case SIGKILL:
+	_exit(1); /* XXX */
+	/* NOTREACHED */
     default:
-	warningx("unexpected signal from child: %d", signo);
+	/* Relay signal to child. */
+	killpg(pid, signo);
 	break;
     }
 }
@@ -695,6 +693,7 @@ exec_monitor(path, argv, envp, backchannel, rbac)
     sigaction_t sa;
     int errpipe[2], maxfd, n, status;
     int alive = TRUE;
+    unsigned char signo;
 
     /* Close unused fds. */
     if (io_fds[SFD_MASTER] != -1)
@@ -702,13 +701,19 @@ exec_monitor(path, argv, envp, backchannel, rbac)
     if (io_fds[SFD_USERTTY] != -1)
 	close(io_fds[SFD_USERTTY]);
 
-    /* Reset SIGWINCH and SIGALRM. */
+    /*
+     * We use a pipe to atomically handle signal notification within
+     * the select() loop.
+     */
+    if (pipe_nonblock(signal_pipe) != 0)
+	error(1, "cannot create pipe");
+
+    /* Reset SIGWINCH. */
     zero_bytes(&sa, sizeof(sa));
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_RESTART;
     sa.sa_handler = SIG_DFL;
     sigaction(SIGWINCH, &sa, NULL);
-    sigaction(SIGALRM, &sa, NULL);
 
     /* Ignore any SIGTTIN or SIGTTOU we get. */
     sa.sa_handler = SIG_IGN;
@@ -760,14 +765,18 @@ exec_monitor(path, argv, envp, backchannel, rbac)
     if (child == 0) {
 	/* We pass errno back to our parent via pipe on exec failure. */
 	close(backchannel);
+	close(signal_pipe[0]);
+	close(signal_pipe[1]);
 	close(errpipe[0]);
 	fcntl(errpipe[1], F_SETFD, FD_CLOEXEC);
+	restore_signals();
 
 	/* setup tty and exec command */
 	exec_pty(path, argv, envp, rbac);
 	cstat.type = CMD_ERRNO;
 	cstat.val = errno;
-	write(errpipe[1], &cstat, sizeof(cstat));
+	if (write(errpipe[1], &cstat, sizeof(cstat)) == -1)
+	    /* shut up glibc */;
 	_exit(1);
     }
     close(errpipe[1]);
@@ -792,27 +801,20 @@ exec_monitor(path, argv, envp, backchannel, rbac)
     }
 
     /* Wait for errno on pipe, signal on backchannel or for SIGCHLD */
-    maxfd = MAX(errpipe[0], backchannel);
+    maxfd = MAX(MAX(errpipe[0], signal_pipe[0]), backchannel);
     fdsr = (fd_set *)emalloc2(howmany(maxfd + 1, NFDBITS), sizeof(fd_mask));
     zero_bytes(fdsr, howmany(maxfd + 1, NFDBITS) * sizeof(fd_mask));
     zero_bytes(&cstat, sizeof(cstat));
     tv.tv_sec = 0;
     tv.tv_usec = 0;
     for (;;) {
-	/* Read child status. */
-	if (recvsig[SIGCHLD]) {
-	    recvsig[SIGCHLD] = FALSE;
-	    alive = handle_sigchld(backchannel, &cstat);
-	}
-
 	/* Check for signal on backchannel or errno on errpipe. */
 	FD_SET(backchannel, fdsr);
+	FD_SET(signal_pipe[0], fdsr);
 	if (errpipe[0] != -1)
 	    FD_SET(errpipe[0], fdsr);
-	maxfd = MAX(errpipe[0], backchannel);
+	maxfd = MAX(MAX(errpipe[0], signal_pipe[0]), backchannel);
 
-	if (recvsig[SIGCHLD])
-	    continue;
 	/* If command exited we just poll, there may be data on errpipe. */
 	n = select(maxfd + 1, fdsr, NULL, NULL, alive ? NULL : &tv);
 	if (n <= 0) {
@@ -823,6 +825,24 @@ exec_monitor(path, argv, envp, backchannel, rbac)
 	    error(1, "select failed");
 	}
 
+	if (FD_ISSET(signal_pipe[0], fdsr)) {
+	    n = read(signal_pipe[0], &signo, sizeof(signo));
+	    if (n == -1) {
+		if (errno == EINTR || errno == EAGAIN)
+		    continue;
+		warning("error reading from signal pipe");
+		goto done;
+	    }
+	    /*
+	     * Handle SIGCHLD specially and deliver other signals
+	     * directly to the child.
+	     */
+	    if (signo == SIGCHLD)
+		alive = handle_sigchld(backchannel, &cstat);
+	    else
+		deliver_signal(child, signo);
+	    continue;
+	}
 	if (errpipe[0] != -1 && FD_ISSET(errpipe[0], fdsr)) {
 	    /* read errno or EOF from command pipe */
 	    n = read(errpipe[0], &cstat, sizeof(cstat));
@@ -954,24 +974,7 @@ exec_pty(path, argv, envp, rbac_enabled)
     char *envp[];
     int rbac_enabled;
 {
-    sigaction_t sa;
     pid_t self = getpid();
-
-    /* Reset signal handlers. */
-    zero_bytes(&sa, sizeof(sa));
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART;
-    sa.sa_handler = SIG_DFL;
-    sigaction(SIGHUP, &sa, NULL);
-    sigaction(SIGTERM, &sa, NULL);
-    sigaction(SIGINT, &sa, NULL);
-    sigaction(SIGQUIT, &sa, NULL);
-    sigaction(SIGTSTP, &sa, NULL);
-    sigaction(SIGTTIN, &sa, NULL);
-    sigaction(SIGTTOU, &sa, NULL);
-    sigaction(SIGUSR1, &sa, NULL);
-    sigaction(SIGUSR2, &sa, NULL);
-    sigaction(SIGCHLD, &sa, NULL);
 
     /* Set child process group here too to avoid a race. */
     setpgid(0, self);
@@ -1015,12 +1018,12 @@ sync_ttysize(src, dst)
     int src;
     int dst;
 {
-#ifdef TIOCGSIZE
-    struct ttysize tsize;
+#ifdef TIOCGWINSZ
+    struct winsize wsize;
     pid_t pgrp;
 
-    if (ioctl(src, TIOCGSIZE, &tsize) == 0) {
-	    ioctl(dst, TIOCSSIZE, &tsize);
+    if (ioctl(src, TIOCGWINSZ, &wsize) == 0) {
+	    ioctl(dst, TIOCSWINSZ, &wsize);
 	    if ((pgrp = tcgetpgrp(dst)) != -1)
 		killpg(pgrp, SIGWINCH);
     }
