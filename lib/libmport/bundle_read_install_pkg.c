@@ -36,6 +36,7 @@ __MBSDID("$MidnightBSD$");
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 #include <archive_entry.h>
 
 
@@ -82,15 +83,21 @@ static int do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPa
 static int
 do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
-  int file_total, ret;
-  int file_count = 0;
-  mportAssetListEntryType type;
-  struct archive_entry *entry;
-  const char *data, *checksum;
-  char *orig_cwd; 
-  char file[FILENAME_MAX], cwd[FILENAME_MAX], dir[FILENAME_MAX];
-  sqlite3_stmt *assets = NULL, *count, *insert = NULL;
-  sqlite3 *db;
+	int file_total, ret;
+	int file_count = 0;
+	mportAssetListEntryType type;
+	struct archive_entry *entry;
+	const char *data, *checksum;
+	char *orig_cwd;
+	uid_t owner = 0; /* root */
+	gid_t group = 0; /* wheel */
+	mode_t *set;
+	mode_t newmode;
+	char *mode = NULL; 
+	struct stat sb;
+	char file[FILENAME_MAX], cwd[FILENAME_MAX], dir[FILENAME_MAX];
+	sqlite3_stmt *assets = NULL, *count, *insert = NULL;
+	sqlite3 *db;
   
   db = mport->db;
 
@@ -161,6 +168,24 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
           goto ERROR;
           
         break;
+      case ASSET_CHMOD:
+	if (mode != NULL)
+		free(mode);
+	mode = strdup(data);
+        break;
+      case ASSET_CHOWN:
+	owner = mport_get_uid(data);
+        break;
+      case ASSET_CHGRP:
+	group = mport_get_gid(data);
+        break;
+      case ASSET_DIR:
+      case ASSET_DIRRM:
+      case ASSET_DIRRMTRY:
+        /* TODO: handle mode properly */
+        if (stat(data, &sb) == -1)
+	   mkdir(data, 0755); /* XXX: we ignore error because it's most likely already there */
+	break;
       case ASSET_EXEC:
         if (mport_run_asset_exec(mport, data, cwd, file) != MPORT_OK)
           goto ERROR;
@@ -174,7 +199,24 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 
         if (mport_bundle_read_extract_next_file(bundle, entry) != MPORT_OK) 
           goto ERROR;
-        
+
+	/* Set the owner and group */
+	if (chown(file, owner, group) == -1)
+		goto ERROR;
+
+	/* Set the file permissions, assumes non NFSv4 */
+	if (mode != NULL)
+	{
+		if (stat(file, &sb))
+			goto ERROR;
+		if ((set = setmode(mode)) == NULL)
+			goto ERROR;
+		newmode = getmode(set, sb.st_mode);
+		free(set);
+		if (chmod(file, newmode))
+			goto ERROR;
+	}
+
         (mport->progress_step_cb)(++file_count, file_total, file);
         
         break;

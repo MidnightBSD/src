@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/plist.c,v 1.13 2012/04/10 22:11:33 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/cdefs.h>
 #include <stdio.h>
@@ -170,6 +170,8 @@ static mportAssetListEntryType parse_command(const char *s)
     return ASSET_DIRRM;
   if (STRING_EQ(s, "dirrmtry"))
     return ASSET_DIRRMTRY;
+  if (STRING_EQ(s, "dir"))
+    return ASSET_DIR;
   if (STRING_EQ(s, "cwd") || STRING_EQ(s, "cd"))
     return ASSET_CWD;
   if (STRING_EQ(s, "srcdir"))

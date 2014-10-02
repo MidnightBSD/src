@@ -143,6 +143,7 @@ MPORT_PUBLIC_API int mport_delete_primative(mportInstance *mport, mportPackageMe
           mport_call_msg_cb(mport, "Could not execute %s: %s", data, mport_err_string());
         }
         break;
+      case ASSET_DIR:
       case ASSET_DIRRM:
       case ASSET_DIRRMTRY:
         if (mport_rmdir(file, type == ASSET_DIRRMTRY ? 1 : 0) != MPORT_OK) {
