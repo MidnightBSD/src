@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $MidnightBSD$
 
 all:
 	@echo "make LINT only"
