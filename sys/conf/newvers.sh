@@ -29,7 +29,7 @@
 #
 #	@(#)newvers.sh	8.1 (Berkeley) 4/20/94
 # $FreeBSD: src/sys/conf/newvers.sh,v 1.69.2.10 2006/02/01 18:04:43 kensmith Exp $
-# $MidnightBSD: src/sys/conf/newvers.sh,v 1.9 2012/10/07 14:18:18 laffer1 Exp $
+# $MidnightBSD$
 
 TYPE="MidnightBSD"
 REVISION="0.6"

@@ -1,4 +1,4 @@
-# $MidnightBSD: src/sys/conf/files,v 1.38 2012/09/14 01:54:57 laffer1 Exp $
+# $MidnightBSD$
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
