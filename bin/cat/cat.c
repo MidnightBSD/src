@@ -68,8 +68,8 @@ static char sccsid[] = "@(#)cat.c	8.2 (Berkeley) 4/27/95";
 
 #define	DATEPFX_MAXLEN	1024
 
-int bflag, eflag, nflag, sflag, tflag, vflag;
-int rval;
+static int bflag, eflag, lflag, nflag, sflag, tflag, vflag;
+static int rval;
 static time_t prev_time;
 static const char *datefmt;
 static char *datepfx;
@@ -85,20 +85,39 @@ static void set_datepfx(void);
 static int udom_open(const char *path, int flags);
 #endif
 
+/*
+ * Memory strategy threshold, in pages: if physmem is larger than this,
+ * use a large buffer.
+ */
+#define	PHYSPAGES_THRESHOLD (32 * 1024)
+
+/* Maximum buffer size in bytes - do not allow it to grow larger than this. */
+#define	BUFSIZE_MAX (2 * 1024 * 1024)
+
+/*
+ * Small (default) buffer size in bytes. It's inefficient for this to be
+ * smaller than MAXPHYS.
+ */
+#define	BUFSIZE_SMALL (MAXPHYS)
+
 int
 main(int argc, char *argv[])
 {
 	int ch;
+	struct flock stdout_lock;
 
 	setlocale(LC_CTYPE, "");
 
-	while ((ch = getopt(argc, argv, "bD:enstuv")) != -1)
+	while ((ch = getopt(argc, argv, "bD:elnstuv")) != -1)
 		switch (ch) {
 		case 'b':
 			bflag = nflag = 1;	/* -b implies -n */
 			break;
 		case 'e':
 			eflag = vflag = 1;	/* -e implies -v */
+			break;
+		case 'l':
+			lflag = 1;
 			break;
 		case 'n':
 			nflag = 1;
@@ -123,6 +142,15 @@ main(int argc, char *argv[])
 		}
 	argv += optind;
 
+	if (lflag) {
+		stdout_lock.l_len = 0;
+		stdout_lock.l_start = 0;
+		stdout_lock.l_type = F_WRLCK;
+		stdout_lock.l_whence = SEEK_SET;
+		if (fcntl(STDOUT_FILENO, F_SETLKW, &stdout_lock) == -1)
+			err(EXIT_FAILURE, "stdout");
+	}
+
 	/* 
          * Test date format so the user will get an error sooner
          * rather than later
@@ -144,7 +172,7 @@ main(int argc, char *argv[])
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: cat [-benstuv] [-D datefmt] [file ...]\n");
+	fprintf(stderr, "usage: cat [-belnstuv] [-D datefmt] [file ...]\n");
 	exit(1);
 	/* NOTREACHED */
 }
@@ -152,18 +180,17 @@ usage(void)
 static void
 scanfiles(char *argv[], int cooked)
 {
-	int i = 0;
+	int fd, i;
 	char *path;
 	FILE *fp;
 
+	i = 0;
 	while ((path = argv[i]) != NULL || i == 0) {
-		int fd;
-
 		if (path == NULL || strcmp(path, "-") == 0) {
 			filename = "stdin";
 			fd = STDIN_FILENO;
 		} else {
-		filename = path;
+			filename = path;
 			fd = open(path, O_RDONLY);
 #ifndef NO_UDOM_SUPPORT
 			if (fd < 0 && errno == EOPNOTSUPP)
@@ -272,9 +299,17 @@ raw_cat(int rfd)
 	if (buf == NULL) {
 		if (fstat(wfd, &sbuf))
 			err(1, "stdout");
-		bsize = MAX(sbuf.st_blksize, 1024);
+		if (S_ISREG(sbuf.st_mode)) {
+			/* If there's plenty of RAM, use a large copy buffer */
+			if (sysconf(_SC_PHYS_PAGES) > PHYSPAGES_THRESHOLD)
+				bsize = MIN(BUFSIZE_MAX, MAXPHYS * 8);
+			else
+				bsize = BUFSIZE_SMALL;
+		} else
+			bsize = MAX(sbuf.st_blksize,
+			    (blksize_t)sysconf(_SC_PAGESIZE));
 		if ((buf = malloc(bsize)) == NULL)
-			err(1, "buffer");
+			err(1, "malloc() failure of IO buffer");
 	}
 	while ((nr = read(rfd, buf, bsize)) > 0)
 		for (off = 0; nr; nr -= nw, off += nw)
@@ -358,7 +393,7 @@ udom_open(const char *path, int flags)
 			break;
 		}
 	}
-	return(fd);
+	return (fd);
 }
 
 #endif
