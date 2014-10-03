@@ -9,7 +9,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/libkern/arc4random.c 249915 2013-04-26 01:56:58Z ache $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -23,6 +23,8 @@ __FBSDID("$FreeBSD$");
 #define	ARC4_RESEED_BYTES 65536
 #define	ARC4_RESEED_SECONDS 300
 #define	ARC4_KEYBYTES (256 / 8)
+
+int arc4rand_iniseed_state = ARC4_ENTR_NONE;
 
 static u_int8_t arc4_i, arc4_j;
 static int arc4_numruns = 0;
@@ -130,7 +132,8 @@ arc4rand(void *ptr, u_int len, int reseed)
 	struct timeval tv;
 
 	getmicrouptime(&tv);
-	if (reseed || 
+	if (atomic_cmpset_int(&arc4rand_iniseed_state, ARC4_ENTR_HAVE,
+	    ARC4_ENTR_SEED) || reseed ||
 	   (arc4_numruns > ARC4_RESEED_BYTES) ||
 	   (tv.tv_sec > arc4_t_reseed))
 		arc4_randomstir();
