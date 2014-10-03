@@ -1,4 +1,4 @@
-# $MidnightBSD: src/sys/conf/kern.mk,v 1.5 2011/10/23 16:17:29 laffer1 Exp $
+# $MidnightBSD$
 # $FreeBSD: src/sys/conf/kern.mk,v 1.52 2007/05/24 21:53:42 obrien Exp $
 
 #
@@ -25,6 +25,7 @@ NO_WUNUSED_VALUE=		-Wno-unused-value
 NO_WSELF_ASSIGN=		-Wno-self-assign
 NO_WFORMAT_SECURITY=		-Wno-format-security
 NO_WUNNEEDED_INTERNAL_DECL=	-Wno-unneeded-internal-declaration
+NO_WSOMETIMES_UNINITIALIZED=	-Wno-error-sometimes-uninitialized
 # Several other warnings which might be useful in some cases, but not severe
 # enough to error out the whole kernel build.  Display them anyway, so there is
 # some incentive to fix them eventually.
