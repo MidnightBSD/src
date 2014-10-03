@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/i386/i386/identcpu.c 240898 2012-09-24 20:05:52Z dim $");
 
 #include "opt_cpu.h"
 
@@ -688,8 +688,8 @@ printcpuinfo(void)
 	    cpu_vendor_id == CPU_VENDOR_NSC ||
 		(cpu_vendor_id == CPU_VENDOR_CYRIX &&
 		 ((cpu_id & 0xf00) > 0x500))) {
-		printf("  Family = %x", CPUID_TO_FAMILY(cpu_id));
-		printf("  Model = %x", CPUID_TO_MODEL(cpu_id));
+		printf("  Family = 0x%x", CPUID_TO_FAMILY(cpu_id));
+		printf("  Model = 0x%x", CPUID_TO_MODEL(cpu_id));
 		printf("  Stepping = %u", cpu_id & CPUID_STEPPING);
 		if (cpu_vendor_id == CPU_VENDOR_CYRIX)
 			printf("\n  DIR=0x%04x", cyrix_did);
