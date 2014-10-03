@@ -47,7 +47,7 @@ static void random_ivy_deinit(void);
 static int random_ivy_read(void *, int);
 
 struct random_systat random_ivy = {
-	.ident = "Hardware, Intel IvyBridge+ RNG",
+	.ident = "Hardware, Intel Secure Key RNG",
 	.init = random_ivy_init,
 	.deinit = random_ivy_deinit,
 	.read = random_ivy_read,
