@@ -62089,7 +62089,6 @@ sys/boot/Makefile -text
 sys/boot/Makefile.amd64 -text
 sys/boot/Makefile.i386 -text
 sys/boot/Makefile.inc -text
-sys/boot/Makefile.sparc64 -text
 sys/boot/README -text
 sys/boot/common/Makefile.inc -text
 sys/boot/common/bcache.c -text
