@@ -26,7 +26,11 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/random/nehemiah.c 240950 2012-09-26 09:22:28Z kib $");
+
+#include "opt_cpu.h"
+
+#ifdef PADLOCK_RNG
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -203,3 +207,5 @@ random_nehemiah_read(void *buf, int c)
 	mtx_unlock(&random_nehemiah_mtx);
 	return (c);
 }
+
+#endif

@@ -65786,8 +65786,8 @@ sys/dev/ral/rt2860var.h -text
 sys/dev/random/harvest.c -text
 sys/dev/random/hash.c -text
 sys/dev/random/hash.h -text
+sys/dev/random/ivy.c svneol=native#text/plain
 sys/dev/random/nehemiah.c -text
-sys/dev/random/nehemiah.h -text
 sys/dev/random/probe.c -text
 sys/dev/random/randomdev.c -text
 sys/dev/random/randomdev.h -text
