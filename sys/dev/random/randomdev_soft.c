@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/random/randomdev_soft.c 249915 2013-04-26 01:56:58Z ache $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -391,7 +391,7 @@ random_yarrow_block(int flag)
 	mtx_lock(&random_reseed_mtx);
 
 	/* Blocking logic */
-	while (random_systat.seeded && !error) {
+	while (!random_systat.seeded && !error) {
 		if (flag & O_NONBLOCK)
 			error = EWOULDBLOCK;
 		else {
