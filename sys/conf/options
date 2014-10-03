@@ -31,6 +31,7 @@
 # opt_<name-of-option-in-lower-case>.h
 
 AAC_DEBUG		opt_aac.h
+AACRAID_DEBUG		opt_aacraid.h
 AHC_ALLOW_MEMIO		opt_aic7xxx.h
 AHC_TMODE_ENABLE	opt_aic7xxx.h
 AHC_DUMP_EEPROM		opt_aic7xxx.h
@@ -308,6 +309,7 @@ CAM_DEBUG_BUS		opt_cam.h
 CAM_DEBUG_TARGET	opt_cam.h
 CAM_DEBUG_LUN		opt_cam.h
 CAM_DEBUG_FLAGS		opt_cam.h
+CAM_BOOT_DELAY		opt_cam.h
 SCSI_DELAY		opt_scsi.h
 SCSI_NO_SENSE_STRINGS	opt_scsi.h
 SCSI_NO_OP_STRINGS	opt_scsi.h
@@ -430,7 +432,7 @@ RADIX_MPATH		opt_mpath.h
 ROUTETABLES		opt_route.h
 SLIP_IFF_OPTS		opt_slip.h
 TCPDEBUG
-TCP_OFFLOAD_DISABLE	opt_inet.h #Disable code to dispatch tcp offloading
+TCP_OFFLOAD		opt_inet.h # Enable code to dispatch TCP offloading
 TCP_SIGNATURE		opt_inet.h
 VLAN_ARRAY		opt_vlan.h
 XBONEHACK
@@ -593,6 +595,7 @@ VFS_BIO_DEBUG		opt_global.h
 VM_KMEM_SIZE		opt_vm.h
 VM_KMEM_SIZE_SCALE	opt_vm.h
 VM_KMEM_SIZE_MAX	opt_vm.h
+VM_NDOMAIN		opt_vm.h
 VM_NRESERVLEVEL		opt_vm.h
 VM_LEVEL_0_ORDER	opt_vm.h
 NO_SWAPPING		opt_vm.h
