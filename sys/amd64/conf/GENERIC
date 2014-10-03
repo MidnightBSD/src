@@ -248,7 +248,7 @@ device		wlan_ccmp	# 802.11 CCMP support
 device		wlan_tkip	# 802.11 TKIP support
 device		wlan_amrr	# AMRR transmit rate control algorithm
 device		an		# Aironet 4500/4800 802.11 wireless NICs.
-device		ath		# Atheros NIC's
+device		ath		# Atheros NICs
 device		ath_pci		# Atheros pci/cardbus glue
 device		ath_hal		# pci/cardbus chip support
 options 	AH_SUPPORT_AR5416	# enable AR5416 tx/rx descriptors
@@ -334,3 +334,11 @@ device		snd_hda		# Intel High Definition Audio
 device		snd_ich		# Intel, NVidia and other ICH AC'97 Audio
 device		snd_uaudio	# USB Audio
 device		snd_via8233	# VIA VT8233x Audio
+
+# VirtIO support
+device		virtio		# Generic VirtIO bus (required)
+device		virtio_pci	# VirtIO PCI Interface
+device		vtnet		# VirtIO Ethernet device
+device		virtio_blk	# VirtIO Block device
+#device		virtio_scsi	# VirtIO SCSI device
+device		virtio_balloon	# VirtIO Memory Balloon device
