@@ -1,6 +1,6 @@
 /*	$OpenBSD: main.c,v 1.54 2013/11/28 10:33:37 sobrado Exp $	*/
-/*	$OpenBSD: tty.c,v 1.9 2006/03/14 22:08:01 deraadt Exp $	*/
-/*	$OpenBSD: io.c,v 1.23 2013/12/17 16:37:06 deraadt Exp $	*/
+/*	$OpenBSD: tty.c,v 1.10 2014/08/10 02:44:26 guenther Exp $	*/
+/*	$OpenBSD: io.c,v 1.25 2014/08/11 20:28:47 guenther Exp $	*/
 /*	$OpenBSD: table.c,v 1.15 2012/02/19 07:52:30 otto Exp $	*/
 
 /*-
@@ -34,7 +34,7 @@
 #include <locale.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/main.c,v 1.280 2014/06/09 12:28:17 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/main.c,v 1.284 2014/10/03 17:19:27 tg Exp $");
 
 extern char **environ;
 
@@ -63,7 +63,7 @@ static const char initsubs[] =
 
 static const char *initcoms[] = {
 	Ttypeset, "-r", initvsn, NULL,
-	Ttypeset, "-x", "HOME", "PATH", "RANDOM", "SHELL", NULL,
+	Ttypeset, "-x", "HOME", "PATH", "SHELL", NULL,
 	Ttypeset, "-i10", "COLUMNS", "LINES", "SECONDS", "TMOUT", NULL,
 	Talias,
 	"integer=typeset -i",
@@ -184,7 +184,7 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 	int argi, i;
 	Source *s = NULL;
 	struct block *l;
-	unsigned char restricted, errexit, utf_flag;
+	unsigned char restricted_shell, errexit, utf_flag;
 	char *cp;
 	const char *ccp, **wp;
 	struct tbl *vp;
@@ -407,7 +407,11 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 	setint_n((vp_pipest = global("PIPESTATUS")), 0, 10);
 
 	/* Set this before parsing arguments */
-	Flag(FPRIVILEGED) = (kshuid != ksheuid || kshgid != kshegid) ? 2 : 0;
+	Flag(FPRIVILEGED) = (
+#if HAVE_ISSETUGID
+	    issetugid() ||
+#endif
+	    kshuid != ksheuid || kshgid != kshegid) ? 2 : 0;
 
 	/* this to note if monitor is set on command line (see below) */
 #ifndef MKSH_UNEMPLOYED
@@ -573,7 +577,7 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 	}
 
 	/* Disable during .profile/ENV reading */
-	restricted = Flag(FRESTRICTED);
+	restricted_shell = Flag(FRESTRICTED);
 	Flag(FRESTRICTED) = 0;
 	errexit = Flag(FERREXIT);
 	Flag(FERREXIT) = 0;
@@ -603,7 +607,7 @@ main_init(int argc, const char *argv[], Source **sp, struct block **lp)
 			change_flag(FPRIVILEGED, OF_INTERNAL, false);
 	}
 
-	if (restricted) {
+	if (restricted_shell) {
 		shcomexec(restr_com);
 		/* After typeset command... */
 		Flag(FRESTRICTED) = 1;
