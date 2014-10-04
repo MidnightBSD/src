@@ -1,5 +1,5 @@
-.\" $MirOS: src/bin/mksh/mksh.1,v 1.336 2014/06/24 20:47:44 tg Exp $
-.\" $OpenBSD: ksh.1,v 1.152 2014/02/12 16:28:13 schwarze Exp $
+.\" $MirOS: src/bin/mksh/mksh.1,v 1.343 2014/10/03 12:35:38 tg Exp $
+.\" $OpenBSD: ksh.1,v 1.153 2014/08/17 07:15:41 jmc Exp $
 .\"-
 .\" Copyright © 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
 .\"		2010, 2011, 2012, 2013, 2014
@@ -74,7 +74,7 @@
 .\" with -mandoc, it might implement .Mx itself, but we want to
 .\" use our own definition. And .Dd must come *first*, always.
 .\"
-.Dd $Mdocdate: June 24 2014 $
+.Dd $Mdocdate: October 3 2014 $
 .\"
 .\" Check which macro package we use, and do other -mdoc setup.
 .\"
@@ -208,7 +208,7 @@ will execute the command(s) contained in
 .Ar string .
 .It Fl i
 Interactive shell.
-A shell is
+A shell that reads commands from standard input is
 .Dq interactive
 if this
 option is used or if both standard input and standard error are attached
@@ -1232,10 +1232,8 @@ whitespace octets, in combination with zero or one
 whitespace octets, delimit a field.
 As a special case, leading and trailing
 .Ev IFS
-whitespace and trailing
-.Ev IFS
-non-whitespace are stripped (i.e. no leading or trailing empty field
-is created by it); leading
+whitespace is stripped (i.e. no leading or trailing empty field
+is created by it); leading or trailing
 .Pf non- Ev IFS
 whitespace does create an empty field.
 .Pp
@@ -1877,6 +1875,9 @@ This is different from
 .It Ev HISTSIZE
 The number of commands normally stored for history.
 The default is 2047.
+Do not set this value to insanely high values such as 1000000000 because
+.Nm
+can then not allocate enough memory for the history and will not start.
 .It Ev HOME
 The default directory for the
 .Ic cd
@@ -2697,7 +2698,7 @@ Not equal; the result is 0 if both arguments are equal, 1 if not.
 Less than; the result is 1 if the left argument is less than the right, 0 if
 not.
 .It \*(Lt= \*(Gt \*(Gt=
-Less than or equal, greater than or equal, greater than.
+Less than or equal, greater than, greater than or equal.
 See
 .Ic \*(Lt .
 .It \*(Lt\*(Lt\*(Lt \*(Gt\*(Gt\*(Gt
@@ -2711,8 +2712,15 @@ Shift left (right); the result is the left argument with its bits shifted left
 .It + \- * /
 Addition, subtraction, multiplication, and division.
 .It %
-Remainder; the result is the remainder of the division of the left argument by
-the right.
+Remainder; the result is the symmetric remainder of the division of the left
+argument by the right.
+To get the mathematical modulus of
+.Dq a Ic mod No b ,
+use the formula
+.Do
+.Pq a % b + b
+.No % b
+.Dc .
 .It Xo
 .Sm off
 .Aq Ar arg1 ?
@@ -6436,8 +6444,8 @@ foo \*(Ba bar \*(Ba& read \-p baz        # will, however, do so
 .Pp
 .Nm mksh
 provides a consistent set of 32-bit integer arithmetics, both signed
-and unsigned, with defined wraparound and sign of the result of a modulo
-operation, even (defying POSIX) on 64-bit systems.
+and unsigned, with defined wraparound and sign of the result of a
+remainder operation, even (defying POSIX) on 64-bit systems.
 If you require 64-bit integer arithmetics, use
 .Nm lksh Pq legacy mksh
 instead, but be aware that, in POSIX, it's legal for the OS to make

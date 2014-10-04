@@ -28,7 +28,7 @@
 #include <sys/sysctl.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/var.c,v 1.180 2014/06/26 20:36:02 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/var.c,v 1.182 2014/10/03 17:20:03 tg Exp $");
 
 /*-
  * Variables
@@ -751,18 +751,18 @@ typeset(const char *var, uint32_t set, uint32_t clr, int field, int base)
 		}
 		val += len;
 	}
-	if (val[0] == '=' || (val[0] == '+' && val[1] == '=')) {
+	if (val[0] == '=') {
 		strndupx(tvar, var, val - var, ATEMP);
-		if (*val++ == '+') {
-			++val;
-			vappend = true;
-		}
-	} else if ((val[0] != '\0') || (set & IMPORT)) {
-		/*
-		 * must have a = when setting a variable by importing
-		 * the original environment, otherwise be empty; we
-		 * also end up here when a variable name was invalid
-		 */
+		++val;
+	} else if (set & IMPORT) {
+		/* environment invalid variable name or no assignment */
+		return (NULL);
+	} else if (val[0] == '+' && val[1] == '=') {
+		strndupx(tvar, var, val - var, ATEMP);
+		val += 2;
+		vappend = true;
+	} else if (val[0] != '\0') {
+		/* other invalid variable names (not from environment) */
 		return (NULL);
 	} else {
 		/* just varname with no value part nor equals sign */
@@ -789,8 +789,22 @@ typeset(const char *var, uint32_t set, uint32_t clr, int field, int base)
 		}
 		/* check target value for being a valid variable name */
 		ccp = skip_varname(qval, false);
-		if (ccp == qval)
+		if (ccp == qval) {
+			if (ksh_isdigit(qval[0])) {
+				int c;
+
+				if (getn(qval, &c))
+					goto nameref_rhs_checked;
+			} else if (qval[1] == '\0') switch (qval[0]) {
+			case '$':
+			case '!':
+			case '?':
+			case '#':
+			case '-':
+				goto nameref_rhs_checked;
+			}
 			errorf("%s: %s", var, "empty nameref target");
+		}
 		len = (*ccp == '[') ? array_ref_len(ccp) : 0;
 		if (ccp[len]) {
 			/*
@@ -801,6 +815,7 @@ typeset(const char *var, uint32_t set, uint32_t clr, int field, int base)
 			errorf("%s: %s", qval,
 			    "nameref target not a valid parameter name");
 		}
+ nameref_rhs_checked:
 		/* prevent nameref loops */
 		while (qval) {
 			if (!strcmp(qval, tvar))

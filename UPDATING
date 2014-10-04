@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20141004:
+	0.5.1 
+	mksh R50c is a minor security update to fix an issue with the
+	handling of environment variables that could provide a limited
+	attack vector.
+
 20140919:
 	0.5-RELEASE
 

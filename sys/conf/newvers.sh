@@ -32,7 +32,7 @@
 # $MidnightBSD: src/sys/conf/newvers.sh,v 1.9 2012/10/07 14:18:18 laffer1 Exp $
 
 TYPE="MidnightBSD"
-REVISION="0.5"
+REVISION="0.5.1"
 BRANCH="RELEASE"
 if [ "X${BRANCH_OVERRIDE}" != "X" ]; then
 	BRANCH=${BRANCH_OVERRIDE}
