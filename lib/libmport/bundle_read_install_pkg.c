@@ -200,21 +200,27 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
         if (mport_bundle_read_extract_next_file(bundle, entry) != MPORT_OK) 
           goto ERROR;
 
-	/* Set the owner and group */
-	if (chown(file, owner, group) == -1)
+	if (lstat(file, &sb))
 		goto ERROR;
 
-	/* Set the file permissions, assumes non NFSv4 */
-	if (mode != NULL)
+	if (S_ISREG(sb.st_mode))
 	{
-		if (stat(file, &sb))
+		/* Set the owner and group */
+		if (chown(file, owner, group) == -1)
 			goto ERROR;
-		if ((set = setmode(mode)) == NULL)
-			goto ERROR;
-		newmode = getmode(set, sb.st_mode);
-		free(set);
-		if (chmod(file, newmode))
-			goto ERROR;
+
+		/* Set the file permissions, assumes non NFSv4 */
+		if (mode != NULL)
+		{
+			if (stat(file, &sb))
+				goto ERROR;
+			if ((set = setmode(mode)) == NULL)
+				goto ERROR;
+			newmode = getmode(set, sb.st_mode);
+			free(set);
+			if (chmod(file, newmode))
+				goto ERROR;
+		}
 	}
 
         (mport->progress_step_cb)(++file_count, file_total, file);
@@ -240,7 +246,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
         SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
         goto ERROR;
       }
-    } else if (type == ASSET_DIRRM || type == ASSET_DIRRMTRY) {
+    } else if (type == ASSET_DIR || type == ASSET_DIRRM || type == ASSET_DIRRMTRY) {
       (void)snprintf(dir, FILENAME_MAX, "%s/%s", cwd, data);
       if (sqlite3_bind_text(insert, 2, dir, -1, SQLITE_STATIC) != SQLITE_OK) {
         SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
