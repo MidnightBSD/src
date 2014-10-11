@@ -48428,36 +48428,81 @@ contrib/wpa/wpa_supplicant/wpas_glue.c -text
 contrib/wpa/wpa_supplicant/wpas_glue.h -text
 contrib/wpa/wpa_supplicant/wps_supplicant.c -text
 contrib/wpa/wpa_supplicant/wps_supplicant.h -text
+contrib/xz/ABOUT-NLS -text
 contrib/xz/AUTHORS -text
 contrib/xz/COPYING -text
+contrib/xz/COPYING.GPLv2 -text
+contrib/xz/COPYING.GPLv3 -text
+contrib/xz/COPYING.LGPLv2.1 -text
 contrib/xz/ChangeLog -text
+contrib/xz/INSTALL -text
+contrib/xz/INSTALL.generic -text
 contrib/xz/MIDNIGHTBSD-Xlist -text
 contrib/xz/MIDNIGHTBSD-upgrade -text
+contrib/xz/NEWS -text
+contrib/xz/PACKAGERS -text
 contrib/xz/README -text
 contrib/xz/THANKS -text
 contrib/xz/TODO -text
+contrib/xz/doc/examples/00_README.txt -text
+contrib/xz/doc/examples/01_compress_easy.c -text
+contrib/xz/doc/examples/02_decompress.c -text
+contrib/xz/doc/examples/03_compress_custom.c -text
+contrib/xz/doc/examples/Makefile -text
+contrib/xz/doc/examples_old/xz_pipe_comp.c -text
+contrib/xz/doc/examples_old/xz_pipe_decomp.c -text
+contrib/xz/doc/faq.txt -text
+contrib/xz/doc/history.txt -text
+contrib/xz/doc/lzma-file-format.txt -text
+contrib/xz/doc/man/pdf-a4/lzmainfo-a4.pdf -text svneol=unset#application/pdf
+contrib/xz/doc/man/pdf-a4/xz-a4.pdf -text svneol=unset#application/pdf
+contrib/xz/doc/man/pdf-a4/xzdec-a4.pdf -text svneol=unset#application/pdf
+contrib/xz/doc/man/pdf-a4/xzdiff-a4.pdf -text svneol=unset#application/pdf
+contrib/xz/doc/man/pdf-a4/xzgrep-a4.pdf -text svneol=unset#application/pdf
+contrib/xz/doc/man/pdf-a4/xzless-a4.pdf -text svneol=unset#application/pdf
+contrib/xz/doc/man/pdf-a4/xzmore-a4.pdf -text svneol=unset#application/pdf
+contrib/xz/doc/man/pdf-letter/lzmainfo-letter.pdf -text svneol=unset#application/pdf
+contrib/xz/doc/man/pdf-letter/xz-letter.pdf -text svneol=unset#application/pdf
+contrib/xz/doc/man/pdf-letter/xzdec-letter.pdf -text svneol=unset#application/pdf
+contrib/xz/doc/man/pdf-letter/xzdiff-letter.pdf -text svneol=unset#application/pdf
+contrib/xz/doc/man/pdf-letter/xzgrep-letter.pdf -text svneol=unset#application/pdf
+contrib/xz/doc/man/pdf-letter/xzless-letter.pdf -text svneol=unset#application/pdf
+contrib/xz/doc/man/pdf-letter/xzmore-letter.pdf -text svneol=unset#application/pdf
+contrib/xz/doc/man/txt/lzmainfo.txt -text
+contrib/xz/doc/man/txt/xz.txt -text
+contrib/xz/doc/man/txt/xzdec.txt -text
+contrib/xz/doc/man/txt/xzdiff.txt -text
+contrib/xz/doc/man/txt/xzgrep.txt -text
+contrib/xz/doc/man/txt/xzless.txt -text
+contrib/xz/doc/man/txt/xzmore.txt -text
+contrib/xz/doc/xz-file-format.txt -text
+contrib/xz/lib/getopt.c -text
+contrib/xz/lib/getopt.in.h -text
+contrib/xz/lib/getopt1.c -text
+contrib/xz/lib/getopt_int.h -text
 contrib/xz/po/LINGUAS -text
 contrib/xz/po/Makevars -text
 contrib/xz/po/POTFILES.in -text
 contrib/xz/po/Rules-quot -text
 contrib/xz/po/boldquot.sed -text
-contrib/xz/po/cs.gmo -text svneol=unset#unset
+contrib/xz/po/cs.gmo -text
 contrib/xz/po/cs.po -text
-contrib/xz/po/de.gmo -text svneol=unset#unset
+contrib/xz/po/de.gmo -text
 contrib/xz/po/de.po -text
 contrib/xz/po/en@boldquot.header -text
 contrib/xz/po/en@quot.header -text
-contrib/xz/po/fr.gmo -text svneol=unset#unset
+contrib/xz/po/fr.gmo -text
 contrib/xz/po/fr.po -text
 contrib/xz/po/insert-header.sin -text
-contrib/xz/po/it.gmo -text svneol=unset#unset
+contrib/xz/po/it.gmo -text
 contrib/xz/po/it.po -text
-contrib/xz/po/pl.gmo -text svneol=unset#unset
+contrib/xz/po/pl.gmo -text
 contrib/xz/po/pl.po -text
 contrib/xz/po/quot.sed -text
 contrib/xz/po/remove-potcdate.sin -text
 contrib/xz/po/stamp-po -text
 contrib/xz/po/xz.pot -text
+contrib/xz/src/common/common_w32res.rc -text
 contrib/xz/src/common/mythread.h -text
 contrib/xz/src/common/sysdefs.h -text
 contrib/xz/src/common/tuklib_common.h -text
@@ -48492,6 +48537,7 @@ contrib/xz/src/liblzma/api/lzma/lzma.h -text
 contrib/xz/src/liblzma/api/lzma/stream_flags.h -text
 contrib/xz/src/liblzma/api/lzma/version.h -text
 contrib/xz/src/liblzma/api/lzma/vli.h -text
+contrib/xz/src/liblzma/check/Makefile.inc -text
 contrib/xz/src/liblzma/check/check.c -text
 contrib/xz/src/liblzma/check/check.h -text
 contrib/xz/src/liblzma/check/crc32_fast.c -text
@@ -48510,6 +48556,7 @@ contrib/xz/src/liblzma/check/crc64_tablegen.c -text
 contrib/xz/src/liblzma/check/crc64_x86.S -text
 contrib/xz/src/liblzma/check/crc_macros.h -text
 contrib/xz/src/liblzma/check/sha256.c -text
+contrib/xz/src/liblzma/common/Makefile.inc -text
 contrib/xz/src/liblzma/common/alone_decoder.c -text
 contrib/xz/src/liblzma/common/alone_decoder.h -text
 contrib/xz/src/liblzma/common/alone_encoder.c -text
@@ -48561,6 +48608,7 @@ contrib/xz/src/liblzma/common/stream_flags_encoder.c -text
 contrib/xz/src/liblzma/common/vli_decoder.c -text
 contrib/xz/src/liblzma/common/vli_encoder.c -text
 contrib/xz/src/liblzma/common/vli_size.c -text
+contrib/xz/src/liblzma/delta/Makefile.inc -text
 contrib/xz/src/liblzma/delta/delta_common.c -text
 contrib/xz/src/liblzma/delta/delta_common.h -text
 contrib/xz/src/liblzma/delta/delta_decoder.c -text
@@ -48568,6 +48616,9 @@ contrib/xz/src/liblzma/delta/delta_decoder.h -text
 contrib/xz/src/liblzma/delta/delta_encoder.c -text
 contrib/xz/src/liblzma/delta/delta_encoder.h -text
 contrib/xz/src/liblzma/delta/delta_private.h -text
+contrib/xz/src/liblzma/liblzma.pc.in -text
+contrib/xz/src/liblzma/liblzma_w32res.rc -text
+contrib/xz/src/liblzma/lz/Makefile.inc -text
 contrib/xz/src/liblzma/lz/lz_decoder.c -text
 contrib/xz/src/liblzma/lz/lz_decoder.h -text
 contrib/xz/src/liblzma/lz/lz_encoder.c -text
@@ -48575,6 +48626,7 @@ contrib/xz/src/liblzma/lz/lz_encoder.h -text
 contrib/xz/src/liblzma/lz/lz_encoder_hash.h -text
 contrib/xz/src/liblzma/lz/lz_encoder_hash_table.h -text
 contrib/xz/src/liblzma/lz/lz_encoder_mf.c -text
+contrib/xz/src/liblzma/lzma/Makefile.inc -text
 contrib/xz/src/liblzma/lzma/fastpos.h -text
 contrib/xz/src/liblzma/lzma/fastpos_table.c -text
 contrib/xz/src/liblzma/lzma/fastpos_tablegen.c -text
@@ -48591,12 +48643,14 @@ contrib/xz/src/liblzma/lzma/lzma_encoder_optimum_fast.c -text
 contrib/xz/src/liblzma/lzma/lzma_encoder_optimum_normal.c -text
 contrib/xz/src/liblzma/lzma/lzma_encoder_presets.c -text
 contrib/xz/src/liblzma/lzma/lzma_encoder_private.h -text
+contrib/xz/src/liblzma/rangecoder/Makefile.inc -text
 contrib/xz/src/liblzma/rangecoder/price.h -text
 contrib/xz/src/liblzma/rangecoder/price_table.c -text
 contrib/xz/src/liblzma/rangecoder/price_tablegen.c -text
 contrib/xz/src/liblzma/rangecoder/range_common.h -text
 contrib/xz/src/liblzma/rangecoder/range_decoder.h -text
 contrib/xz/src/liblzma/rangecoder/range_encoder.h -text
+contrib/xz/src/liblzma/simple/Makefile.inc -text
 contrib/xz/src/liblzma/simple/arm.c -text
 contrib/xz/src/liblzma/simple/armthumb.c -text
 contrib/xz/src/liblzma/simple/ia64.c -text
@@ -48612,6 +48666,15 @@ contrib/xz/src/liblzma/simple/sparc.c -text
 contrib/xz/src/liblzma/simple/x86.c -text
 contrib/xz/src/lzmainfo/lzmainfo.1 -text
 contrib/xz/src/lzmainfo/lzmainfo.c -text
+contrib/xz/src/lzmainfo/lzmainfo_w32res.rc -text
+contrib/xz/src/scripts/xzdiff.1 -text
+contrib/xz/src/scripts/xzdiff.in -text
+contrib/xz/src/scripts/xzgrep.1 -text
+contrib/xz/src/scripts/xzgrep.in -text
+contrib/xz/src/scripts/xzless.1 -text
+contrib/xz/src/scripts/xzless.in -text
+contrib/xz/src/scripts/xzmore.1 -text
+contrib/xz/src/scripts/xzmore.in -text
 contrib/xz/src/xz/args.c -text
 contrib/xz/src/xz/args.h -text
 contrib/xz/src/xz/coder.c -text
@@ -48636,8 +48699,11 @@ contrib/xz/src/xz/suffix.h -text
 contrib/xz/src/xz/util.c -text
 contrib/xz/src/xz/util.h -text
 contrib/xz/src/xz/xz.1 -text
+contrib/xz/src/xz/xz_w32res.rc -text
+contrib/xz/src/xzdec/lzmadec_w32res.rc -text
 contrib/xz/src/xzdec/xzdec.1 -text
 contrib/xz/src/xzdec/xzdec.c -text
+contrib/xz/src/xzdec/xzdec_w32res.rc -text
 crypto/README -text
 crypto/heimdal/ChangeLog -text
 crypto/heimdal/ChangeLog.1998 -text
