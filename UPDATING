@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20141011:
+	mksh R50d - fix field splitting regression and null 
+	pointer dereference
+
 20141004:
 	mksh R50c - security update for environment var bug with 
 	foo vs foo+	
