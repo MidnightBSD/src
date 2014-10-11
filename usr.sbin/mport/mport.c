@@ -166,7 +166,7 @@ usage(void) {
 	fprintf(stderr, 
 		"usage: mport <command> args:\n"
 		"       mport clean\n"
-		"	mport cpe\n"
+		"       mport cpe\n"
 		"       mport delete [package name]\n"
 		"       mport deleteall\n"
 		"       mport download [package name]\n"
