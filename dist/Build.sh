@@ -1,5 +1,5 @@
 #!/bin/sh
-srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.664 2014/09/03 19:22:48 tg Exp $'
+srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.669 2014/10/07 15:22:12 tg Exp $'
 #-
 # Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
 #		2011, 2012, 2013, 2014
@@ -1784,7 +1784,7 @@ else
 		#define EXTERN
 		#define MKSH_INCLUDES_ONLY
 		#include "sh.h"
-		__RCSID("$MirOS: src/bin/mksh/Build.sh,v 1.664 2014/09/03 19:22:48 tg Exp $");
+		__RCSID("$MirOS: src/bin/mksh/Build.sh,v 1.669 2014/10/07 15:22:12 tg Exp $");
 		int main(void) { printf("Hello, World!\n"); return (isatty(0)); }
 EOF
 	case $cm in
@@ -1902,6 +1902,11 @@ ac_test gettimeofday <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
 	int main(void) { struct timeval tv; return (gettimeofday(&tv, NULL)); }
+EOF
+
+ac_test issetugid <<-'EOF'
+	#include <unistd.h>
+	int main(void) { return (issetugid()); }
 EOF
 
 ac_test killpg <<-'EOF'
@@ -2273,6 +2278,7 @@ mksh_cfg= NSIG
 	sigs="ABRT FPE ILL INT SEGV TERM ALRM BUS CHLD CONT HUP KILL PIPE QUIT"
 	sigs="$sigs STOP TSTP TTIN TTOU USR1 USR2 POLL PROF SYS TRAP URG VTALRM"
 	sigs="$sigs XCPU XFSZ INFO WINCH EMT IO DIL LOST PWR SAK CLD IOT RESV"
+	sigs="$sigs STKFLT UNUSED"
 	test 1 = $HAVE_CPP_DD && test $NSIG -gt 1 && sigs="$sigs "`vq \
 	    "$CPP $CFLAGS $CPPFLAGS $NOWARN -dD conftest.c" | \
 	    grep '[	 ]SIG[A-Z0-9][A-Z0-9]*[	 ]' | \
@@ -2310,7 +2316,7 @@ addsrcs '!' HAVE_STRLCPY strlcpy.c
 addsrcs USE_PRINTF_BUILTIN printf.c
 test 1 = "$USE_PRINTF_BUILTIN" && add_cppflags -DMKSH_PRINTF_BUILTIN
 test 1 = "$HAVE_CAN_VERB" && CFLAGS="$CFLAGS -verbose"
-add_cppflags -DMKSH_BUILD_R=502
+add_cppflags -DMKSH_BUILD_R=504
 
 $e $bi$me: Finished configuration testing, now producing output.$ao
 
@@ -2647,7 +2653,7 @@ $ (sh Build.sh -r -c lto && ./test.sh -f) 2>&1 | tee log
 Copy dot.mkshrc to /etc/skel/.mkshrc; install mksh into $prefix/bin; or
 /bin; install the manpage, if omitting the -r flag a catmanpage is made
 using $NROFF. Consider using a forward script as /etc/skel/.mkshrc like
-https://www.mirbsd.org/cvs.cgi/contrib/hosted/tg/deb/mksh/debian/.mkshrc?rev=HEAD
+http://anonscm.debian.org/cgit/collab-maint/mksh.git/plain/debian/.mkshrc
 and put dot.mkshrc as /etc/mkshrc so users need not keep up their HOME.
 
 EOD
