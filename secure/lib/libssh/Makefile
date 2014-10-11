@@ -9,20 +9,24 @@ SRCS=	authfd.c authfile.c bufaux.c bufbn.c buffer.c \
 	canohost.c channels.c cipher.c cipher-aes.c \
 	cipher-bf1.c cipher-ctr.c cipher-3des1.c cleanup.c \
 	compat.c compress.c crc32.c deattack.c fatal.c hostfile.c \
-	log.c match.c md-sha256.c moduli.c nchan.c packet.c \
+	krl.c log.c match.c md-sha256.c moduli.c nchan.c packet.c \
 	readpass.c rsa.c ttymodes.c xmalloc.c addrmatch.c \
 	atomicio.c key.c dispatch.c kex.c mac.c uidswap.c uuencode.c misc.c \
 	monitor_fdpass.c rijndael.c ssh-dss.c ssh-ecdsa.c ssh-rsa.c dh.c \
 	kexdh.c kexgex.c kexdhc.c kexgexc.c bufec.c kexecdh.c kexecdhc.c \
 	msg.c progressmeter.c dns.c entropy.c umac.c umac128.c \
-	jpake.c schnorr.c ssh-pkcs11.c krl.c
+	ssh-pkcs11.c kexc25519.c kexc25519c.c kexc25519s.c \
+	poly1305.c chacha.c cipher-chachapoly.c \
+	ssh-ed25519.c digest-openssl.c hmac.c \
+	sc25519.c ge25519.c fe25519.c ed25519.c verify.c hash.c blocks.c \
+	smult_curve25519_ref.c
 # gss-genr.c should be in $SRCS but causes linking problems, so it is
 # compiled directly into sshd instead.
 
 # Portability layer
-SRCS+=	bsd-misc.c fmt_scaled.c getrrsetbyname.c glob.c \
+SRCS+=	bsd-misc.c explicit_bzero.c fmt_scaled.c getrrsetbyname.c glob.c \
 	openssl-compat.c port-tun.c strtonum.c timingsafe_bcmp.c \
-	vis.c xcrypt.c xmmap.c
+	vis.c xcrypt.c xmmap.c bcrypt_pbkdf.c
 
 CFLAGS+= -I${SSHDIR} -include ssh_namespace.h
 
