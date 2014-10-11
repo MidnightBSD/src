@@ -31,7 +31,7 @@
 #ifndef _FETCH_H_INCLUDED
 #define _FETCH_H_INCLUDED
 
-#define _LIBFETCH_VER "libfetch/2.0"
+#define _LIBFETCH_VER "libfetch/2.0 (MidnightBSD)"
 
 #define URL_SCHEMELEN 16
 #define URL_USERLEN 256
