@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: xz-utils\n"
 "Report-Msgid-Bugs-To: lasse.collin@tukaani.org\n"
-"POT-Creation-Date: 2012-06-22 14:56+0300\n"
+"POT-Creation-Date: 2014-09-20 20:46+0300\n"
 "PO-Revision-Date: 2012-05-31 09:57+0800\n"
 "Last-Translator: Milo Casagrande <milo@ubuntu.com>\n"
 "Language-Team: Italian <tp@lists.linux.it>\n"
@@ -39,40 +39,40 @@ msgstr "Solo un file può essere specificato con \"--files\" o \"--files0\"."
 msgid "The environment variable %s contains too many arguments"
 msgstr "La variabile d'ambiente %s contiene troppi argomenti"
 
-#: src/xz/coder.c:95
+#: src/xz/coder.c:99
 msgid "Maximum number of filters is four"
 msgstr "Il numero massimo di filtri è quattro"
 
-#: src/xz/coder.c:108
+#: src/xz/coder.c:118
 msgid "Memory usage limit is too low for the given filter setup."
 msgstr "Il limite dell'uso della memoria è troppo basso per l'impostazione del filtro dato."
 
-#: src/xz/coder.c:129
+#: src/xz/coder.c:139
 msgid "Using a preset in raw mode is discouraged."
 msgstr "Non è consigliato usare un preset nella modalità raw."
 
-#: src/xz/coder.c:131
+#: src/xz/coder.c:141
 msgid "The exact options of the presets may vary between software versions."
 msgstr "Le opzioni esatte per i preset possono variare tra le versioni del software."
 
-#: src/xz/coder.c:157
+#: src/xz/coder.c:164
 msgid "The .lzma format supports only the LZMA1 filter"
 msgstr "Il formato .lzma supporta solo il filtro LZMA1"
 
-#: src/xz/coder.c:165
+#: src/xz/coder.c:172
 msgid "LZMA1 cannot be used with the .xz format"
 msgstr "LZMA1 non può essere usato con il formato .xz"
 
-#: src/xz/coder.c:182
+#: src/xz/coder.c:189
 msgid "Unsupported filter chain or filter options"
 msgstr "Catena di filtri od opzioni del filtro non supportata"
 
-#: src/xz/coder.c:190
+#: src/xz/coder.c:197
 #, c-format
 msgid "Decompression will need %s MiB of memory."
 msgstr "L'estrazione necessita di %s MiB di memoria."
 
-#: src/xz/coder.c:247
+#: src/xz/coder.c:254
 #, c-format
 msgid "Adjusted LZMA%c dictionary size from %s MiB to %s MiB to not exceed the memory usage limit of %s MiB"
 msgstr "Regolata la dimensione del dizionario LZMA%c da %s MiB a %s MiB per non superare il limite dell'uso della memoria di %s MiB"
@@ -87,92 +87,92 @@ msgstr "Regolata la dimensione del dizionario LZMA%c da %s MiB a %s MiB per non 
 #. it is possible that the user has put a new file in place
 #. of the original file, and in that case it obviously
 #. shouldn't be removed.
-#: src/xz/file_io.c:137
+#: src/xz/file_io.c:138
 #, c-format
 msgid "%s: File seems to have been moved, not removing"
 msgstr "%s: sembra che il file sia stato spostato, non viene rimosso"
 
-#: src/xz/file_io.c:144 src/xz/file_io.c:589
+#: src/xz/file_io.c:145 src/xz/file_io.c:586
 #, c-format
 msgid "%s: Cannot remove: %s"
 msgstr "%s: impossibile rimuovere: %s"
 
-#: src/xz/file_io.c:169
+#: src/xz/file_io.c:170
 #, c-format
 msgid "%s: Cannot set the file owner: %s"
 msgstr "%s: impossibile impostare il proprietario del file: %s"
 
-#: src/xz/file_io.c:175
+#: src/xz/file_io.c:176
 #, c-format
 msgid "%s: Cannot set the file group: %s"
 msgstr "%s: impossibile impostare il gruppo del file: %s"
 
-#: src/xz/file_io.c:194
+#: src/xz/file_io.c:195
 #, c-format
 msgid "%s: Cannot set the file permissions: %s"
 msgstr "%s: impossibile impostare i permessi del file: %s"
 
-#: src/xz/file_io.c:337 src/xz/file_io.c:420
+#: src/xz/file_io.c:338 src/xz/file_io.c:417
 #, c-format
 msgid "%s: Is a symbolic link, skipping"
 msgstr "%s: è un collegamento simbolico, viene saltato"
 
-#: src/xz/file_io.c:455
+#: src/xz/file_io.c:452
 #, c-format
 msgid "%s: Is a directory, skipping"
 msgstr "%s: è una directory, viene saltata"
 
-#: src/xz/file_io.c:461
+#: src/xz/file_io.c:458
 #, c-format
 msgid "%s: Not a regular file, skipping"
 msgstr "%s: non è un file regolare, viene saltato"
 
-#: src/xz/file_io.c:478
+#: src/xz/file_io.c:475
 #, c-format
 msgid "%s: File has setuid or setgid bit set, skipping"
 msgstr "%s: il file ha il bit setuid o setgid impostato, viene saltato"
 
-#: src/xz/file_io.c:485
+#: src/xz/file_io.c:482
 #, c-format
 msgid "%s: File has sticky bit set, skipping"
 msgstr "%s: il file ha lo sticky bit impostato, viene saltato"
 
-#: src/xz/file_io.c:492
+#: src/xz/file_io.c:489
 #, c-format
 msgid "%s: Input file has more than one hard link, skipping"
 msgstr "%s: il file di input ha più di un collegamento fisico, viene saltato"
 
-#: src/xz/file_io.c:713
+#: src/xz/file_io.c:711
 #, c-format
 msgid "Error restoring the O_APPEND flag to standard output: %s"
 msgstr "Errore nel ripristinare la flag O_APPEND sullo standard output: %s"
 
-#: src/xz/file_io.c:725
+#: src/xz/file_io.c:723
 #, c-format
 msgid "%s: Closing the file failed: %s"
 msgstr "%s: chiusura del file non riuscita: %s"
 
-#: src/xz/file_io.c:761 src/xz/file_io.c:945
+#: src/xz/file_io.c:759 src/xz/file_io.c:943
 #, c-format
 msgid "%s: Seeking failed when trying to create a sparse file: %s"
 msgstr "%s: posizionamento non riuscito nel tentativo di creare un file sparso: %s"
 
-#: src/xz/file_io.c:820
+#: src/xz/file_io.c:818
 #, c-format
 msgid "%s: Read error: %s"
 msgstr "%s: errore di lettura: %s"
 
-#: src/xz/file_io.c:843
+#: src/xz/file_io.c:841
 #, c-format
 msgid "%s: Error seeking the file: %s"
 msgstr "%s: errore nel cercare il file: %s"
 
-#: src/xz/file_io.c:853
+#: src/xz/file_io.c:851
 #, c-format
 msgid "%s: Unexpected end of file"
 msgstr "%s: fine del file inaspettata"
 
-#: src/xz/file_io.c:903
+#: src/xz/file_io.c:901
 #, c-format
 msgid "%s: Write error: %s"
 msgstr "%s: errore di scrittura: %s"
@@ -269,41 +269,41 @@ msgstr "%s: troppo piccolo per essere un file .xz valido"
 #. to Ratio, the columns are right aligned. Check and Filename
 #. are left aligned. If you need longer words, it's OK to
 #. use two lines here. Test with "xz -l foo.xz".
-#: src/xz/list.c:603
+#: src/xz/list.c:629
 msgid "Strms  Blocks   Compressed Uncompressed  Ratio  Check   Filename"
 msgstr " Strm  Blocc.    Compresso     Estratto  Rapp.  Contr   Nome file"
 
-#: src/xz/list.c:643
+#: src/xz/list.c:669
 #, c-format
 msgid "  Streams:            %s\n"
 msgstr "  Stream:               %s\n"
 
-#: src/xz/list.c:645
+#: src/xz/list.c:671
 #, c-format
 msgid "  Blocks:             %s\n"
 msgstr "  Blocchi:              %s\n"
 
-#: src/xz/list.c:647
+#: src/xz/list.c:673
 #, c-format
 msgid "  Compressed size:    %s\n"
 msgstr "  Dim. compresso:       %s\n"
 
-#: src/xz/list.c:650
+#: src/xz/list.c:676
 #, c-format
 msgid "  Uncompressed size:  %s\n"
 msgstr "  Dim. estratto:        %s\n"
 
-#: src/xz/list.c:653
+#: src/xz/list.c:679
 #, c-format
 msgid "  Ratio:              %s\n"
 msgstr "  Rapporto:             %s\n"
 
-#: src/xz/list.c:655
+#: src/xz/list.c:681
 #, c-format
 msgid "  Check:              %s\n"
 msgstr "  Controllo:            %s\n"
 
-#: src/xz/list.c:656
+#: src/xz/list.c:682
 #, c-format
 msgid "  Stream padding:     %s\n"
 msgstr "  Padding dello stream: %s\n"
@@ -311,7 +311,7 @@ msgstr "  Padding dello stream: %s\n"
 #. TRANSLATORS: The second line is column headings. All except
 #. Check are right aligned; Check is left aligned. Test with
 #. "xz -lv foo.xz".
-#: src/xz/list.c:684
+#: src/xz/list.c:710
 msgid ""
 "  Streams:\n"
 "    Stream    Blocks      CompOffset    UncompOffset        CompSize      UncompSize  Ratio  Check      Padding"
@@ -321,7 +321,7 @@ msgstr ""
 
 #. TRANSLATORS: The second line is column headings. All
 #. except Check are right aligned; Check is left aligned.
-#: src/xz/list.c:739
+#: src/xz/list.c:765
 #, c-format
 msgid ""
 "  Blocks:\n"
@@ -337,52 +337,52 @@ msgstr ""
 #. are right aligned. %*s is replaced with 0-120
 #. spaces to make the CheckVal column wide enough.
 #. Test with "xz -lvv foo.xz".
-#: src/xz/list.c:751
+#: src/xz/list.c:777
 #, c-format
 msgid "      CheckVal %*s Header  Flags        CompSize    MemUsage  Filters"
 msgstr "      Val.cont %*s Header  Flag       Dim.compr.    Uso mem.  Filtri"
 
-#: src/xz/list.c:829 src/xz/list.c:998
+#: src/xz/list.c:855 src/xz/list.c:1024
 #, c-format
 msgid "  Memory needed:      %s MiB\n"
 msgstr "  Memoria necessaria:   %s MiB\n"
 
-#: src/xz/list.c:831 src/xz/list.c:1000
+#: src/xz/list.c:857 src/xz/list.c:1026
 #, c-format
 msgid "  Sizes in headers:   %s\n"
 msgstr "  Dim. negli header:    %s\n"
 
-#: src/xz/list.c:832 src/xz/list.c:1001
+#: src/xz/list.c:858 src/xz/list.c:1027
 msgid "Yes"
 msgstr "Sì"
 
-#: src/xz/list.c:832 src/xz/list.c:1001
+#: src/xz/list.c:858 src/xz/list.c:1027
 msgid "No"
 msgstr "No"
 
 #. TRANSLATORS: %s is an integer. Only the plural form of this
 #. message is used (e.g. "2 files"). Test with "xz -l foo.xz bar.xz".
-#: src/xz/list.c:977
+#: src/xz/list.c:1003
 #, c-format
 msgid "%s file\n"
 msgid_plural "%s files\n"
 msgstr[0] "%s file\n"
 msgstr[1] "%s file\n"
 
-#: src/xz/list.c:990
+#: src/xz/list.c:1016
 msgid "Totals:"
 msgstr "Totali:"
 
-#: src/xz/list.c:991
+#: src/xz/list.c:1017
 #, c-format
 msgid "  Number of files:    %s\n"
 msgstr "  Numero di file:       %s\n"
 
-#: src/xz/list.c:1063
+#: src/xz/list.c:1089
 msgid "--list works only on .xz files (--format=xz or --format=auto)"
 msgstr "--list funziona solamente con file .xz (--format=xz o --format=auto)"
 
-#: src/xz/list.c:1069
+#: src/xz/list.c:1095
 msgid "--list does not support reading from standard input"
 msgstr "--list non è in grado di leggere dallo standard input"
 
@@ -808,34 +808,34 @@ msgstr "%s: il file ha già il suffisso \"%s\", viene saltato"
 msgid "%s: Invalid filename suffix"
 msgstr "%s: suffisso del nome del file non valido"
 
-#: src/xz/util.c:61
+#: src/xz/util.c:71
 #, c-format
 msgid "%s: Value is not a non-negative decimal integer"
 msgstr "%s: il valore non è un numero intero decimale non-negativo"
 
-#: src/xz/util.c:103
+#: src/xz/util.c:113
 #, c-format
 msgid "%s: Invalid multiplier suffix"
 msgstr "%s: suffisso del moltiplicatore non valido"
 
-#: src/xz/util.c:105
+#: src/xz/util.c:115
 msgid "Valid suffixes are `KiB' (2^10), `MiB' (2^20), and `GiB' (2^30)."
 msgstr "I suffissi validi sono \"KiB\" (2^10), \"MiB\" (2^20), e \"GiB\" (2^30)."
 
-#: src/xz/util.c:122
+#: src/xz/util.c:132
 #, c-format
 msgid "Value of the option `%s' must be in the range [%<PRIu64>, %<PRIu64>]"
 msgstr "Il valore dell'opzione \"%s\" deve essere nell'intervallo [%<PRIu64>, %<PRIu64>]"
 
-#: src/xz/util.c:247
+#: src/xz/util.c:257
 msgid "Empty filename, skipping"
 msgstr "Nome file vuoto, viene saltato"
 
-#: src/xz/util.c:261
+#: src/xz/util.c:271
 msgid "Compressed data cannot be read from a terminal"
 msgstr "I dati compressi non possono essere letti da un terminale"
 
-#: src/xz/util.c:274
+#: src/xz/util.c:284
 msgid "Compressed data cannot be written to a terminal"
 msgstr "I dati compressi non possono essere scritti ad un terminale"
 
