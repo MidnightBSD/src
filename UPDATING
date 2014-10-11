@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20141011:
+	0.5.2
+
+	mksh R50d - R50c had a regression with field splitting.
+
 20141004:
 	0.5.1 
 	mksh R50c is a minor security update to fix an issue with the
