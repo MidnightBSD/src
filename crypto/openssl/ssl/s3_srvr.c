@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* ssl/s3_srvr.c */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
@@ -1134,6 +1133,7 @@ int ssl3_get_client_hello(SSL *s)
 	 * s->tmp.new_cipher	- the new cipher to use.
 	 */
 
+#ifndef OPENSSL_NO_TLSEXT
 	/* Handles TLS extensions that we couldn't check earlier */
 	if (s->version >= SSL3_VERSION)
 		{
@@ -1143,6 +1143,7 @@ int ssl3_get_client_hello(SSL *s)
 			goto err;
 			}
 		}
+#endif
 
 	if (ret < 0) ret=1;
 	if (0)
@@ -1763,6 +1764,11 @@ int ssl3_send_certificate_request(SSL *s)
 		s->init_num=n+4;
 		s->init_off=0;
 #ifdef NETSCAPE_HANG_BUG
+		if (!BUF_MEM_grow_clean(buf, s->init_num + 4))
+			{
+			SSLerr(SSL_F_SSL3_SEND_CERTIFICATE_REQUEST,ERR_R_BUF_LIB);
+			goto err;
+			}
 		p=(unsigned char *)s->init_buf->data + s->init_num;
 
 		/* do the header */
@@ -2374,7 +2380,7 @@ int ssl3_get_cert_verify(SSL *s)
 		SSL3_ST_SR_CERT_VRFY_A,
 		SSL3_ST_SR_CERT_VRFY_B,
 		-1,
-		514, /* 514? */
+		SSL3_RT_MAX_PLAIN_LENGTH,
 		&ok);
 
 	if (!ok) return((int)n);

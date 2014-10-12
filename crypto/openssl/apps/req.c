@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* apps/req.c */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
@@ -1575,7 +1574,13 @@ start:
 #ifdef CHARSET_EBCDIC
 	ebcdic2ascii(buf, buf, i);
 #endif
-	if(!req_check_len(i, n_min, n_max)) goto start;
+	if(!req_check_len(i, n_min, n_max))
+		{
+		if (batch || value)
+			return 0;
+		goto start;
+		}
+
 	if (!X509_NAME_add_entry_by_NID(n,nid, chtype,
 				(unsigned char *) buf, -1,-1,mval)) goto err;
 	ret=1;
@@ -1634,7 +1639,12 @@ start:
 #ifdef CHARSET_EBCDIC
 	ebcdic2ascii(buf, buf, i);
 #endif
-	if(!req_check_len(i, n_min, n_max)) goto start;
+	if(!req_check_len(i, n_min, n_max))
+		{
+		if (batch || value)
+			return 0;
+		goto start;
+		}
 
 	if(!X509_REQ_add1_attr_by_NID(req, nid, chtype,
 					(unsigned char *)buf, -1)) {

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* ssl/d1_clnt.c */
 /* 
  * DTLS implementation written by Nagendra Modadugu

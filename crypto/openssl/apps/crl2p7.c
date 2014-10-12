@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* apps/crl2p7.c */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
@@ -143,7 +142,13 @@ int MAIN(int argc, char **argv)
 			{
 			if (--argc < 1) goto bad;
 			if(!certflst) certflst = sk_new_null();
-			sk_push(certflst,*(++argv));
+			if (!certflst)
+				goto end;
+			if (!sk_push(certflst,*(++argv)))
+				{
+				sk_free(certflst);
+				goto end;
+				}
 			}
 		else
 			{

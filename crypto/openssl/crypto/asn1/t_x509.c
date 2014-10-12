@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* crypto/asn1/t_x509.c */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
@@ -466,6 +465,8 @@ int X509_NAME_print(BIO *bp, X509_NAME *name, int obase)
 	l=80-2-obase;
 
 	b=X509_NAME_oneline(name,NULL,0);
+	if (!b)
+		return 0;
 	if (!*b)
 		{
 		OPENSSL_free(b);

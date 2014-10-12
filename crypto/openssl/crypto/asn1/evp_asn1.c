@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* crypto/asn1/evp_asn1.c */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
@@ -67,7 +66,11 @@ int ASN1_TYPE_set_octetstring(ASN1_TYPE *a, unsigned char *data, int len)
 	ASN1_STRING *os;
 
 	if ((os=M_ASN1_OCTET_STRING_new()) == NULL) return(0);
-	if (!M_ASN1_OCTET_STRING_set(os,data,len)) return(0);
+	if (!M_ASN1_OCTET_STRING_set(os,data,len))
+		{
+		M_ASN1_OCTET_STRING_free(os);
+		return 0;
+		}
 	ASN1_TYPE_set(a,V_ASN1_OCTET_STRING,os);
 	return(1);
 	}

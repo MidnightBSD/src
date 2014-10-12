@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* crypto/asn1/a_time.c */
 /* ====================================================================
  * Copyright (c) 1999 The OpenSSL Project.  All rights reserved.

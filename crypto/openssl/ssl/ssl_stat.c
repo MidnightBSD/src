@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* ssl/ssl_stat.c */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
@@ -187,7 +186,6 @@ case SSL3_ST_SR_CERT_VRFY_A:	str="SSLv3 read certificate verify A"; break;
 case SSL3_ST_SR_CERT_VRFY_B:	str="SSLv3 read certificate verify B"; break;
 #endif
 
-#if !defined(OPENSSL_NO_SSL2) && !defined(OPENSSL_NO_SSL3)
 /* SSLv2/v3 compatibility states */
 /* client */
 case SSL23_ST_CW_CLNT_HELLO_A:	str="SSLv2/v3 write client hello A"; break;
@@ -197,7 +195,6 @@ case SSL23_ST_CR_SRVR_HELLO_B:	str="SSLv2/v3 read server hello B"; break;
 /* server */
 case SSL23_ST_SR_CLNT_HELLO_A:	str="SSLv2/v3 read client hello A"; break;
 case SSL23_ST_SR_CLNT_HELLO_B:	str="SSLv2/v3 read client hello B"; break;
-#endif
 
 /* DTLS */
 case DTLS1_ST_CR_HELLO_VERIFY_REQUEST_A: str="DTLS1 read hello verify request A"; break;
@@ -341,7 +338,6 @@ case SSL3_ST_SR_CERT_VRFY_A:			str="3RCV_A"; break;
 case SSL3_ST_SR_CERT_VRFY_B:			str="3RCV_B"; break;
 #endif
 
-#if !defined(OPENSSL_NO_SSL2) && !defined(OPENSSL_NO_SSL3)
 /* SSLv2/v3 compatibility states */
 /* client */
 case SSL23_ST_CW_CLNT_HELLO_A:			str="23WCHA"; break;
@@ -351,7 +347,7 @@ case SSL23_ST_CR_SRVR_HELLO_B:			str="23RSHA"; break;
 /* server */
 case SSL23_ST_SR_CLNT_HELLO_A:			str="23RCHA"; break;
 case SSL23_ST_SR_CLNT_HELLO_B:			str="23RCHB"; break;
-#endif
+
 /* DTLS */
 case DTLS1_ST_CR_HELLO_VERIFY_REQUEST_A: str="DRCHVA"; break;
 case DTLS1_ST_CR_HELLO_VERIFY_REQUEST_B: str="DRCHVB"; break;
@@ -415,6 +411,12 @@ const char *SSL_alert_desc_string(int value)
 	case TLS1_AD_INTERNAL_ERROR:		str="IE"; break;
 	case TLS1_AD_USER_CANCELLED:		str="US"; break;
 	case TLS1_AD_NO_RENEGOTIATION:		str="NR"; break;
+	case TLS1_AD_UNSUPPORTED_EXTENSION:	str="UE"; break;
+	case TLS1_AD_CERTIFICATE_UNOBTAINABLE:	str="CO"; break;
+	case TLS1_AD_UNRECOGNIZED_NAME:		str="UN"; break;
+	case TLS1_AD_BAD_CERTIFICATE_STATUS_RESPONSE: str="BR"; break;
+	case TLS1_AD_BAD_CERTIFICATE_HASH_VALUE: str="BH"; break;
+	case TLS1_AD_UNKNOWN_PSK_IDENTITY:	str="UP"; break;
 	default:				str="UK"; break;
 		}
 	return(str);
@@ -497,6 +499,24 @@ const char *SSL_alert_desc_string_long(int value)
 		break;
 	case TLS1_AD_NO_RENEGOTIATION:
 		str="no renegotiation";
+		break;
+	case TLS1_AD_UNSUPPORTED_EXTENSION:
+		str="unsupported extension";
+		break;
+	case TLS1_AD_CERTIFICATE_UNOBTAINABLE:
+		str="certificate unobtainable";
+		break;
+	case TLS1_AD_UNRECOGNIZED_NAME:
+		str="unrecognized name";
+		break;
+	case TLS1_AD_BAD_CERTIFICATE_STATUS_RESPONSE:
+		str="bad certificate status response";
+		break;
+	case TLS1_AD_BAD_CERTIFICATE_HASH_VALUE:
+		str="bad certificate hash value";
+		break;
+	case TLS1_AD_UNKNOWN_PSK_IDENTITY:
+		str="unknown PSK identity";
 		break;
 	default: str="unknown"; break;
 		}

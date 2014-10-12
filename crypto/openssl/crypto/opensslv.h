@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #ifndef HEADER_OPENSSLV_H
 #define HEADER_OPENSSLV_H
 
@@ -26,11 +25,11 @@
  * (Prior to 0.9.5a beta1, a different scheme was used: MMNNFFRBB for
  *  major minor fix final patch/beta)
  */
-#define OPENSSL_VERSION_NUMBER	0x0090819fL
+#define OPENSSL_VERSION_NUMBER	0x009081bfL
 #ifdef OPENSSL_FIPS
-#define OPENSSL_VERSION_TEXT	"OpenSSL 0.9.8y-fips 5 Feb 2013"
+#define OPENSSL_VERSION_TEXT	"OpenSSL 0.9.8zb-fips 6 Aug 2014"
 #else
-#define OPENSSL_VERSION_TEXT	"OpenSSL 0.9.8y 5 Feb 2013"
+#define OPENSSL_VERSION_TEXT	"OpenSSL 0.9.8zb 6 Aug 2014"
 #endif
 #define OPENSSL_VERSION_PTEXT	" part of " OPENSSL_VERSION_TEXT
 

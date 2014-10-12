@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* crypto/asn1/asn1_lib.c */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
@@ -131,6 +130,9 @@ int ASN1_get_object(const unsigned char **pp, long *plength, int *ptag,
 	*ptag=tag;
 	*pclass=xclass;
 	if (!asn1_get_length(&p,&inf,plength,(int)max)) goto err;
+
+	if (inf && !(ret & V_ASN1_CONSTRUCTED))
+		goto err;
 
 #if 0
 	fprintf(stderr,"p=%d + *plength=%ld > omax=%ld + *pp=%d  (%d > %d)\n", 

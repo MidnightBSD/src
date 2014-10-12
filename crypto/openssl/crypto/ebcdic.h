@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* crypto/ebcdic.h */
 
 #ifndef HEADER_EBCDIC_H

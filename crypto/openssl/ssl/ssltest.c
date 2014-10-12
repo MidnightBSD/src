@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* ssl/ssltest.c */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
@@ -736,7 +735,13 @@ bad:
 		meth=SSLv23_method();
 #else
 #ifdef OPENSSL_NO_SSL2
-	meth=SSLv3_method();
+	if (tls1)
+		meth=TLSv1_method();
+	else
+	if (ssl3)
+		meth=SSLv3_method();
+	else
+		meth=SSLv23_method();
 #else
 	meth=SSLv2_method();
 #endif

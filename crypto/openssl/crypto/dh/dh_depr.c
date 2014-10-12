@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* crypto/dh/dh_depr.c */
 /* ====================================================================
  * Copyright (c) 1998-2002 The OpenSSL Project.  All rights reserved.

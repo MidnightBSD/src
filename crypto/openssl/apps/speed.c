@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* apps/speed.c -*- mode:C; c-file-style: "eay" -*- */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
@@ -2768,7 +2767,11 @@ static int do_multi(int multi)
 	fds=malloc(multi*sizeof *fds);
 	for(n=0 ; n < multi ; ++n)
 		{
-		pipe(fd);
+		if (pipe(fd) == -1)
+			{
+			fprintf(stderr, "pipe failure\n");
+			exit(1);
+			}
 		fflush(stdout);
 		fflush(stderr);
 		if(fork())
@@ -2780,7 +2783,11 @@ static int do_multi(int multi)
 			{
 			close(fd[0]);
 			close(1);
-			dup(fd[1]);
+			if (dup(fd[1]) == -1)
+				{
+				fprintf(stderr, "dup failed\n");
+				exit(1);
+				}
 			close(fd[1]);
 			mr=1;
 			usertime=0;

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* ====================================================================
  * Copyright (c) 2004 The OpenSSL Project.  All rights reserved.
  *

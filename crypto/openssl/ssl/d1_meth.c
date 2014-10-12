@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* ssl/d1_meth.h */
 /* 
  * DTLS implementation written by Nagendra Modadugu

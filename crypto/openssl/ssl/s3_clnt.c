@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* ssl/s3_clnt.c */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
@@ -443,6 +442,7 @@ int ssl3_connect(SSL *s)
 				s->method->ssl3_enc->client_finished_label,
 				s->method->ssl3_enc->client_finished_label_len);
 			if (ret <= 0) goto end;
+			s->s3->flags |= SSL3_FLAGS_CCS_OK;
 			s->state=SSL3_ST_CW_FLUSH;
 
 			/* clear flags */
@@ -896,7 +896,9 @@ int ssl3_get_server_hello(SSL *s)
 	return(1);
 f_err:
 	ssl3_send_alert(s,SSL3_AL_FATAL,al);
+#ifndef OPENSSL_NO_TLSEXT
 err:
+#endif
 	return(-1);
 	}
 

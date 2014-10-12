@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* ssl/s23_lib.c */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
@@ -113,6 +112,9 @@ int ssl23_put_cipher_by_char(const SSL_CIPHER *c, unsigned char *p)
 	long l;
 
 	/* We can write SSLv2 and SSLv3 ciphers */
+	/* but no ECC ciphers */
+	if (c->algorithms & (SSL_ECDH|SSL_aECDSA))
+		return 0;
 	if (p != NULL)
 		{
 		l=c->id;

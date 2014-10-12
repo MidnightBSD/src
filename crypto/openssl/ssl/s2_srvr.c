@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* ssl/s2_srvr.c */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.

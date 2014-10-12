@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* apps/ec.c */
 /*
  * Written by Nils Larsch for the OpenSSL project.

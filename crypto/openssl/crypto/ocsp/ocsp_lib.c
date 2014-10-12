@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* ocsp_lib.c */
 /* Written by Tom Titchener <Tom_Titchener@groove.net> for the OpenSSL
  * project. */
@@ -221,8 +220,19 @@ int OCSP_parse_url(char *url, char **phost, char **pport, char **ppath, int *pss
 
 	if (!*ppath) goto mem_err;
 
+	p = host;
+	if(host[0] == '[')
+		{
+		/* ipv6 literal */
+		host++;
+		p = strchr(host, ']');
+		if(!p) goto parse_err;
+		*p = '\0';
+		p++;
+		}
+
 	/* Look for optional ':' for port number */
-	if ((p = strchr(host, ':')))
+	if ((p = strchr(p, ':')))
 		{
 		*p = 0;
 		port = p + 1;

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* crypto/cryptlib.c */
 /* ====================================================================
  * Copyright (c) 1998-2003 The OpenSSL Project.  All rights reserved.

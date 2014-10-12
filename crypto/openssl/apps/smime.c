@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* smime.c */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project.
@@ -522,8 +521,8 @@ int MAIN(int argc, char **argv)
 		{
 		if (!cipher)
 			{
-#ifndef OPENSSL_NO_RC2			
-			cipher = EVP_rc2_40_cbc();
+#ifndef OPENSSL_NO_DES			
+			cipher = EVP_des_ede3_cbc();
 #else
 			BIO_printf(bio_err, "No cipher selected\n");
 			goto end;

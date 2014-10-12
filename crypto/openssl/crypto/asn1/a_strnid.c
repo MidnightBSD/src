@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* a_strnid.c */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 1999.
@@ -76,7 +75,7 @@ static int table_cmp(const void *a, const void *b);
  * certain software (e.g. Netscape) has problems with them.
  */
 
-static unsigned long global_mask = 0xFFFFFFFFL;
+static unsigned long global_mask = B_ASN1_UTF8STRING;
 
 void ASN1_STRING_set_default_mask(unsigned long mask)
 {
