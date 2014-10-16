@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: /usr/local/www/cvsroot/FreeBSD/src/secure/lib/libcrypto/Makefile,v 1.81.2.1 2010/11/28 13:45:51 simon Exp $
 
 SHLIBDIR?=	/lib
