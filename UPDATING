@@ -1,12 +1,32 @@
 Updating Information for MidnightBSD users.
 
+20141021:
+	0.5.3 RELEASE
+
+	Fix several security vulnerabilities in OpenSSL, routed, rtsold,
+	and namei with respect to Capsicum sandboxes looking up
+	nonexistent path names and leaking memory. 
+
+	OpenSSL update adds some workarounds for the recent
+	poodle vulnerability reported by Google.
+
+	The input path in routed(8) will accept queries from any source and
+	attempt to answer them.  However, the output path assumes that the
+	destination address for the response is on a directly connected
+	network.
+
+	Due to a missing length check in the code that handles DNS parameters,
+	a malformed router advertisement message can result in a stack buffer
+	overflow in rtsold(8).
+
 20141011:
-	0.5.2
+	0.5.2 RELEASE
 
 	mksh R50d - R50c had a regression with field splitting.
 
 20141004:
-	0.5.1 
+	0.5.1 RELEASE
+
 	mksh R50c is a minor security update to fix an issue with the
 	handling of environment variables that could provide a limited
 	attack vector.
