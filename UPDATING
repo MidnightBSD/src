@@ -1,5 +1,19 @@
 Updating Information for MidnightBSD users.
 
+20141021:
+	Fix several security vulnerabilities in routed, rtsold,
+        and namei with respect to Capsicum sandboxes looking up
+        nonexistent path names and leaking memory.
+
+        The input path in routed(8) will accept queries from any source and
+        attempt to answer them.  However, the output path assumes that the
+        destination address for the response is on a directly connected
+        network.
+
+        Due to a missing length check in the code that handles DNS parameters,
+        a malformed router advertisement message can result in a stack buffer
+        overflow in rtsold(8).
+
 20141011:
 	mksh R50d - fix field splitting regression and null 
 	pointer dereference
