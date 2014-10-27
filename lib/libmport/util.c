@@ -537,9 +537,11 @@ mport_get_osrelease(void)
 	for (int i = 0; i < 10; i++) {
 		if (osrelease[i] == '\0' || osrelease[i] == '-')
 			break;
-		
+
 		version[i] = osrelease[i];
-	}	
+	}
+
+	version[3] = '\0'; /* force major version only for now */
 
 	return version;
 }
