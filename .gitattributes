@@ -51237,6 +51237,8 @@ crypto/openssl/crypto/conf/conf_sap.c -text
 crypto/openssl/crypto/conf/keysets.pl -text
 crypto/openssl/crypto/conf/ssleay.cnf -text
 crypto/openssl/crypto/conf/test.c -text
+crypto/openssl/crypto/constant_time_locl.h -text
+crypto/openssl/crypto/constant_time_test.c -text
 crypto/openssl/crypto/cpt_err.c -text
 crypto/openssl/crypto/cryptlib.c -text
 crypto/openssl/crypto/cryptlib.h -text
@@ -52586,6 +52588,7 @@ crypto/openssl/test/bntest.c -text
 crypto/openssl/test/casttest.c -text
 crypto/openssl/test/cms-examples.pl -text
 crypto/openssl/test/cms-test.pl -text
+crypto/openssl/test/constant_time_test.c -text
 crypto/openssl/test/destest.c -text
 crypto/openssl/test/dhtest.c -text
 crypto/openssl/test/dsatest.c -text
