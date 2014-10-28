@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20141028:
+	OpenSSL 0.9.8zc
+
 20141021:
 	Fix several security vulnerabilities in routed, rtsold,
         and namei with respect to Capsicum sandboxes looking up
