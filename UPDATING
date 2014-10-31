@@ -1,5 +1,15 @@
 Updating Information for MidnightBSD users.
 
+20141031:
+	0.5.5 RELEASE
+
+	tnftp 20141031 fixes a security vulnerability with tnftp,
+        CVE-2014-8517.
+
+	0.5.4 RELEASE
+
+	libmport fix for packages
+
 20141021:
 	0.5.3 RELEASE
 

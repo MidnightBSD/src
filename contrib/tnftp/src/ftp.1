@@ -1,7 +1,7 @@
-.\" 	$NetBSD: ftp.1,v 1.13 2009/11/15 10:12:37 lukem Exp $
-.\" 	from	NetBSD: ftp.1,v 1.130 2009/07/11 18:35:48 joerg Exp
+.\" 	$NetBSD: ftp.1,v 1.14 2013/05/05 11:17:30 lukem Exp $
+.\" 	from	NetBSD: ftp.1,v 1.134 2012/12/22 16:57:10 christos Exp
 .\"
-.\" Copyright (c) 1996-2008 The NetBSD Foundation, Inc.
+.\" Copyright (c) 1996-2010 The NetBSD Foundation, Inc.
 .\" All rights reserved.
 .\"
 .\" This code is derived from software contributed to The NetBSD Foundation
@@ -58,7 +58,7 @@
 .\"
 .\"	@(#)ftp.1	8.3 (Berkeley) 10/9/94
 .\"
-.Dd May 10, 2008
+.Dd December 22, 2012
 .Dt FTP 1
 .Os
 .Sh NAME
@@ -67,21 +67,11 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl 46AadefginpRtVv
-.Bk -words
 .Op Fl N Ar netrc
-.Ek
-.Bk -words
 .Op Fl o Ar output
-.Ek
-.Bk -words
 .Op Fl P Ar port
-.Ek
-.Bk -words
 .Op Fl q Ar quittime
-.Ek
-.Bk -words
 .Op Fl r Ar retry
-.Ek
 .Op Fl s Ar srcaddr
 .Bk -words
 .\" [-T dir,max[,inc]]
@@ -778,7 +768,7 @@ mode is
 .Dq stream .
 .It Ic modtime Ar remote-file
 Show the last modification time of the file on the remote machine, in
-.Li RFC2822
+.Li RFC 2822
 format.
 .It Ic more Ar file
 A synonym for
@@ -999,7 +989,7 @@ traffic.
 servers are required to support the
 .Dv PASV
 command by
-.Li RFC1123 ,
+.Li RFC 1123 ,
 some do not.)
 .It Ic pdir Op Ar remote-path
 Perform
@@ -1336,7 +1326,7 @@ and
 .Ar value
 are not given, display all of the options and their values.
 The currently supported options are:
-.Bl -tag -width "http_proxy" -offset indent
+.Bl -tag -width "https_proxy" -offset indent
 .It Cm anonpass
 Defaults to
 .Ev $FTPANONPASS
@@ -1346,6 +1336,9 @@ Defaults to
 .It Cm http_proxy
 Defaults to
 .Ev $http_proxy .
+.It Cm https_proxy
+Defaults to
+.Ev $https_proxy .
 .It Cm no_proxy
 Defaults to
 .Ev $no_proxy .
@@ -1592,7 +1585,7 @@ ascii or binary (respectively).
 The default transfer type is binary.
 .Pp
 In order to be compliant with
-.Li RFC3986 ,
+.Li RFC 3986 ,
 .Nm
 interprets the
 .Ar path
@@ -1645,7 +1638,7 @@ Any
 .Sq Li \&% Ns Ar XX
 codes
 (per
-.Li RFC3986 )
+.Li RFC 3986 )
 within the path components are decoded, with
 .Ar XX
 representing a character code in hexadecimal.
@@ -1753,6 +1746,29 @@ and
 (and optionally
 .Sq password )
 is in the URL, use them for the first attempt to authenticate.
+.\" https://[user[:password]@]host[:port]/path
+.It Li https:// Ns Oo Ar user Ns Oo Li \&: Ns Ar password Oc Ns Li \&@ Oc \
+Ns Ar host Ns Oo Li \&: Ns Ar port Oc Ns Li / Ns Ar path
+An
+.Tn HTTPS
+URL, retrieved using the
+.Tn HTTPS
+protocol.
+If
+.Ic "set https_proxy"
+is defined, it is used as a URL to an
+.Tn HTTPS
+proxy server.
+If
+.Tn HTTPS
+authorization is required to retrieve
+.Ar path ,
+and
+.Sq user
+(and optionally
+.Sq password )
+is in the URL, use them for the first attempt to authenticate.
+There is currently no certificate validation and verification.
 .\" file:///path
 .It Li file:/// Ns Ar path
 A local URL, copied from
@@ -1902,7 +1918,7 @@ Failing the above checks, if
 .Dq globbing
 is enabled, local file names are expanded according to the rules
 used in the
-.Xr csh  1  ;
+.Xr csh 1 ;
 see the
 .Ic glob
 command.
@@ -2286,7 +2302,7 @@ URL characters are required in the username or password
 or
 .Sq / ) ,
 encode them with
-.Li RFC3986
+.Li RFC 3986
 .Sq Li \&% Ns Ar XX
 encoding.
 .Pp
@@ -2331,23 +2347,23 @@ for an example of how to make this automatic.
 .Nm
 attempts to be compliant with:
 .Bl -tag -offset indent -width 8n
-.It Li RFC0959
+.It Li RFC 959
 .Em File Transfer Protocol
-.It Li RFC1123
+.It Li RFC 1123
 .Em Requirements for Internet Hosts - Application and Support
-.It Li RFC1635
+.It Li RFC 1635
 .Em How to Use Anonymous FTP
-.It Li RFC2389
+.It Li RFC 2389
 .Em Feature negotiation mechanism for the File Transfer Protocol
-.It Li RFC2428
+.It Li RFC 2428
 .Em FTP Extensions for IPv6 and NATs
-.It Li RFC2616
+.It Li RFC 2616
 .Em Hypertext Transfer Protocol -- HTTP/1.1
-.It Li RFC2822
+.It Li RFC 2822
 .Em Internet Message Format
-.It Li RFC3659
+.It Li RFC 3659
 .Em Extensions to FTP
-.It Li RFC3986
+.It Li RFC 3986
 .Em Uniform Resource Identifier (URI)
 .El
 .Sh HISTORY

@@ -1,4 +1,4 @@
-## $NetBSD: Makefile.am,v 1.2 2010/01/04 06:24:20 lukem Exp $
+## $NetBSD: Makefile.am,v 1.4 2013/05/05 13:29:19 lukem Exp $
 
 bin_PROGRAMS = tnftp
 
@@ -35,6 +35,19 @@ tnftp_LDADD += \
 endif
 
 
+if WITH_SSL
+tnftp_SOURCES += \
+	ssl.c
+
+tnftp_CPPFLAGS += \
+	$(OPENSSL_INCLUDES)
+
+tnftp_LDADD += \
+	$(OPENSSL_LDFLAGS) \
+	$(OPENSSL_LIBS)
+endif
+
+
 man1_MANS = \
 	tnftp.1
 
@@ -49,4 +62,5 @@ EXTRA_DIST = \
 	ftp.1 \
 	ftp_var.h \
 	progressbar.h \
+	ssl.h \
 	version.h

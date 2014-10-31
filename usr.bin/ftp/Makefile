@@ -1,4 +1,4 @@
-# $MidnightBSD: src/usr.bin/ftp/Makefile,v 1.3 2012/12/31 08:08:11 laffer1 Exp $
+# $MidnightBSD$
 #	$NetBSD: Makefile,v 1.15 1997/10/18 15:31:20 lukem Exp $
 #	from: @(#)Makefile	8.2 (Berkeley) 4/3/94
 
@@ -19,9 +19,17 @@ SRCS=	cmds.c cmdtab.c complete.c domacro.c fetch.c ftp.c main.c \
 CFLAGS+= -DINET6
 .endif
 
+.if ${MK_OPENSSL} != "no"
+CFLAGS+=        -DWITH_SSL
+DPADD=          ${LIBSSL} ${LIBCRYPTO}
+LDADD=          -lssl -lcrypto
+SRCS+=		ssl.c
+.endif
+
+
 CFLAGS+= -I${.CURDIR} -I${TNFTP}
-LDADD=	-ledit -ltermcap -lutil
-DPADD=	${LIBEDIT} ${LIBTERMCAP} ${LIBUTIL}
+LDADD+=	-ledit -ltermcap -lutil
+DPADD+=	${LIBEDIT} ${LIBTERMCAP} ${LIBUTIL}
 
 WARNS?=	2
 

@@ -1,5 +1,5 @@
-/*	$NetBSD: progressbar.c,v 1.14 2009/05/20 12:53:47 lukem Exp $	*/
-/*	from	NetBSD: progressbar.c,v 1.21 2009/04/12 10:18:52 lukem Exp	*/
+/*	$NetBSD: progressbar.c,v 1.15 2013/05/05 11:17:31 lukem Exp $	*/
+/*	from	NetBSD: progressbar.c,v 1.22 2012/06/27 22:07:36 riastradh Exp	*/
 
 /*-
  * Copyright (c) 1997-2009 The NetBSD Foundation, Inc.
@@ -36,14 +36,15 @@
 
 #include <sys/cdefs.h>
 #ifndef lint
-__RCSID(" NetBSD: progressbar.c,v 1.21 2009/04/12 10:18:52 lukem Exp  ");
+__RCSID(" NetBSD: progressbar.c,v 1.22 2012/06/27 22:07:36 riastradh Exp  ");
 #endif /* not lint */
 
 /*
  * FTP User Program -- Misc support routines
  */
-#include <sys/types.h>
 #include <sys/param.h>
+#include <sys/types.h>
+#include <sys/time.h>
 
 #include <err.h>
 #include <errno.h>

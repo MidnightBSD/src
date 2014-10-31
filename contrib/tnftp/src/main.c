@@ -1,5 +1,5 @@
-/*	$NetBSD: main.c,v 1.17 2009/11/15 10:12:37 lukem Exp $	*/
-/*	from	NetBSD: main.c,v 1.117 2009/07/13 19:05:41 roy Exp	*/
+/*	$NetBSD: main.c,v 1.19 2013/05/05 11:48:16 lukem Exp $	*/
+/*	from	NetBSD: main.c,v 1.122 2012/12/22 16:57:10 christos Exp	*/
 
 /*-
  * Copyright (c) 1996-2009 The NetBSD Foundation, Inc.
@@ -103,7 +103,7 @@ __COPYRIGHT("@(#) Copyright (c) 1985, 1989, 1993, 1994\
 #if 0
 static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 10/9/94";
 #else
-__RCSID(" NetBSD: main.c,v 1.117 2009/07/13 19:05:41 roy Exp  ");
+__RCSID(" NetBSD: main.c,v 1.122 2012/12/22 16:57:10 christos Exp  ");
 #endif
 #endif /* not lint */
 
@@ -133,11 +133,12 @@ __RCSID(" NetBSD: main.c,v 1.117 2009/07/13 19:05:41 roy Exp  ");
 
 #define	FTP_PROXY	"ftp_proxy"	/* env var with FTP proxy location */
 #define	HTTP_PROXY	"http_proxy"	/* env var with HTTP proxy location */
+#define	HTTPS_PROXY	"https_proxy"	/* env var with HTTPS proxy location */
 #define	NO_PROXY	"no_proxy"	/* env var with list of non-proxied
 					 * hosts, comma or space separated */
 
+__dead static void	usage(void);
 static void	setupoption(const char *, const char *, const char *);
-int		main(int, char *[]);
 
 int
 main(int volatile argc, char **volatile argv)
@@ -150,15 +151,18 @@ main(int volatile argc, char **volatile argv)
 	size_t len;
 
 	tzset();
-#if 0	/* tnftp */	/* XXX */
+#if defined(HAVE_SETLOCALE)
 	setlocale(LC_ALL, "");
-#endif	/* tnftp */
+#endif
 	setprogname(argv[0]);
 
 	sigint_raised = 0;
 
 	ftpport = "ftp";
 	httpport = "http";
+#ifdef WITH_SSL
+	httpsport = "https";
+#endif
 	gateport = NULL;
 	cp = getenv("FTPSERVERPORT");
 	if (cp != NULL)
@@ -494,6 +498,7 @@ main(int volatile argc, char **volatile argv)
 	setupoption("anonpass",		getenv("FTPANONPASS"),	anonpass);
 	setupoption("ftp_proxy",	getenv(FTP_PROXY),	"");
 	setupoption("http_proxy",	getenv(HTTP_PROXY),	"");
+	setupoption("https_proxy",	getenv(HTTPS_PROXY),	"");
 	setupoption("no_proxy",		getenv(NO_PROXY),	"");
 	setupoption("pager",		getenv("PAGER"),	DEFAULTPAGER);
 	setupoption("prompt",		getenv("FTPPROMPT"),	DEFAULTPROMPT);
@@ -716,7 +721,7 @@ cmdscanner(void)
 			 */
 			if (strchr(margv[0], ':') != NULL ||
 			    !editing ||
-			    el_parse(el, margc, (const char **)margv) != 0)
+			    el_parse(el, margc, (void *)margv) != 0)
 #endif /* !NO_EDITCOMPLETE */
 				fputs("?Invalid command.\n", ttyout);
 			continue;
@@ -1053,6 +1058,9 @@ usage(void)
 "           [[user@]host [port]] [host:path[/]] [file:///file]\n"
 "           [ftp://[user[:pass]@]host[:port]/path[/]]\n"
 "           [http://[user[:pass]@]host[:port]/path] [...]\n"
+#ifdef WITH_SSL
+"           [https://[user[:pass]@]host[:port]/path] [...]\n"
+#endif
 "       %s -u URL file [...]\n", progname, progname);
 	exit(1);
 }

@@ -1,4 +1,6 @@
-## $NetBSD: Makefile.am,v 1.2 2010/01/04 06:24:58 lukem Exp $
+## $NetBSD: Makefile.am,v 1.3 2013/05/05 13:06:37 lukem Exp $
+
+ACLOCAL_AMFLAGS = -I buildaux
 
 SUBDIRS = libnetbsd
 

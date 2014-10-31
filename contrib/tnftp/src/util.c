@@ -1,5 +1,5 @@
-/*	$NetBSD: util.c,v 1.21 2009/11/15 10:12:37 lukem Exp $	*/
-/*	from	NetBSD: util.c,v 1.152 2009/07/13 19:05:41 roy Exp	*/
+/*	$NetBSD: util.c,v 1.23 2013/05/05 11:51:43 lukem Exp $	*/
+/*	from	NetBSD: util.c,v 1.158 2013/02/19 23:29:15 dsl Exp	*/
 
 /*-
  * Copyright (c) 1997-2009 The NetBSD Foundation, Inc.
@@ -69,7 +69,7 @@
 
 #include <sys/cdefs.h>
 #ifndef lint
-__RCSID(" NetBSD: util.c,v 1.152 2009/07/13 19:05:41 roy Exp  ");
+__RCSID(" NetBSD: util.c,v 1.158 2013/02/19 23:29:15 dsl Exp  ");
 #endif /* not lint */
 
 /*
@@ -90,6 +90,7 @@ __RCSID(" NetBSD: util.c,v 1.152 2009/07/13 19:05:41 roy Exp  ");
 #include <signal.h>
 #include <libgen.h>
 #include <limits.h>
+#include <locale.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -175,7 +176,7 @@ parse_feat(const char *fline)
 
 			/*
 			 * work-around broken ProFTPd servers that can't
-			 * even obey RFC2389.
+			 * even obey RFC 2389.
 			 */
 	while (*fline && isspace((int)*fline))
 		fline++;
@@ -208,25 +209,20 @@ getremoteinfo(void)
 			/* determine remote system type */
 	if (command("SYST") == COMPLETE) {
 		if (overbose) {
-			char *cp, c;
-
-			c = 0;
-			cp = strchr(reply_string + 4, ' ');
-			if (cp == NULL)
-				cp = strchr(reply_string + 4, '\r');
-			if (cp) {
-				if (cp[-1] == '.')
-					cp--;
-				c = *cp;
-				*cp = '\0';
-			}
-
-			fprintf(ttyout, "Remote system type is %s.\n",
-			    reply_string + 4);
-			if (cp)
-				*cp = c;
+			int os_len = strcspn(reply_string + 4, " \r\n\t");
+			if (os_len > 1 && reply_string[4 + os_len - 1] == '.')
+				os_len--;
+			fprintf(ttyout, "Remote system type is %.*s.\n",
+			    os_len, reply_string + 4);
 		}
-		if (!strncmp(reply_string, "215 UNIX Type: L8", 17)) {
+		/*
+		 * Decide whether we should default to bninary.
+		 * Traditionally checked for "215 UNIX Type: L8", but
+		 * some printers report "Linux" ! so be more forgiving.
+		 * In reality we probably almost never want text any more.
+		 */
+		if (!strncasecmp(reply_string + 4, "unix", 4) ||
+		    !strncasecmp(reply_string + 4, "linux", 5)) {
 			if (proxy)
 				unix_proxy = 1;
 			else
@@ -399,7 +395,7 @@ ftp_login(const char *host, const char *luser, const char *lpass)
 	 */
 	if (anonftp) {
 		FREEPTR(fuser);
-		fuser = ftp_strdup("anonymous");	/* as per RFC1635 */
+		fuser = ftp_strdup("anonymous");	/* as per RFC 1635 */
 		FREEPTR(pass);
 		pass = ftp_strdup(getoptionvalue("anonpass"));
 	}
@@ -763,7 +759,7 @@ remotemodtime(const char *file, int noisy)
 			else
 				goto cleanup_parse_time;
 		} else {
-			DPRINTF("remotemodtime: parsed date `%s' as " LLF
+			DPRINTF("remotemodtime: parsed time `%s' as " LLF
 			    ", %s",
 			    timestr, (LLT)rtime,
 			    rfc2822time(localtime(&rtime)));
@@ -784,7 +780,7 @@ remotemodtime(const char *file, int noisy)
 }
 
 /*
- * Format tm in an RFC2822 compatible manner, with a trailing \n.
+ * Format tm in an RFC 2822 compatible manner, with a trailing \n.
  * Returns a pointer to a static string containing the result.
  */
 const char *
@@ -794,8 +790,38 @@ rfc2822time(const struct tm *tm)
 
 	if (strftime(result, sizeof(result),
 	    "%a, %d %b %Y %H:%M:%S %z\n", tm) == 0)
-		errx(1, "Can't convert RFC2822 time: buffer too small");
+		errx(1, "Can't convert RFC 2822 time: buffer too small");
 	return result;
+}
+
+/*
+ * Parse HTTP-date as per RFC 2616.
+ * Return a pointer to the next character of the consumed date string,
+ * or NULL if failed.
+ */
+const char *
+parse_rfc2616time(struct tm *parsed, const char *httpdate)
+{
+	const char *t;
+#if defined(HAVE_SETLOCALE)
+	const char *curlocale;
+
+	/* The representation of %a depends on the current locale. */
+	curlocale = setlocale(LC_TIME, NULL);
+	(void)setlocale(LC_TIME, "C");
+#endif
+								/* RFC 1123 */
+	if ((t = strptime(httpdate, "%a, %d %b %Y %H:%M:%S GMT", parsed)) ||
+								/* RFC 850 */
+	    (t = strptime(httpdate, "%a, %d-%b-%y %H:%M:%S GMT", parsed)) ||
+								/* asctime */
+	    (t = strptime(httpdate, "%a, %b %d %H:%M:%S %Y", parsed))) {
+		;			/* do nothing */
+	}
+#if defined(HAVE_SETLOCALE)
+	(void)setlocale(LC_TIME, curlocale);
+#endif
+	return t;
 }
 
 /*
@@ -1104,9 +1130,8 @@ ftpvis(char *dst, size_t dstlen, const char *src, size_t srclen)
 {
 	size_t	di, si;
 
-	for (di = si = 0;
-	    src[si] != '\0' && di < dstlen && si < srclen;
-	    di++, si++) {
+	di = si = 0;
+	while (src[si] != '\0' && di < dstlen && si < srclen) {
 		switch (src[si]) {
 		case '\\':
 		case ' ':
@@ -1114,12 +1139,18 @@ ftpvis(char *dst, size_t dstlen, const char *src, size_t srclen)
 		case '\r':
 		case '\n':
 		case '"':
-			dst[di++] = '\\';
-			if (di >= dstlen)
+			/*
+			 * Need room for two characters and NUL, avoiding
+			 * incomplete escape sequences at end of dst.
+			 */
+			if (di >= dstlen - 3)
 				break;
+			dst[di++] = '\\';
 			/* FALLTHROUGH */
 		default:
-			dst[di] = src[si];
+			dst[di] = src[si++];
+			if (di < dstlen)
+				di++;
 		}
 	}
 	dst[di] = '\0';
@@ -1326,7 +1357,7 @@ get_line(FILE *stream, char *buf, size_t buflen, const char **errormsg)
  * error message displayed.)
  */
 int
-ftp_connect(int sock, const struct sockaddr *name, socklen_t namelen)
+ftp_connect(int sock, const struct sockaddr *name, socklen_t namelen, int pe)
 {
 	int		flags, rv, timeout, error;
 	socklen_t	slen;
@@ -1392,8 +1423,9 @@ ftp_connect(int sock, const struct sockaddr *name, socklen_t namelen)
 	rv = connect(sock, name, namelen);	/* inititate the connection */
 	if (rv == -1) {				/* connection error */
 		if (errno != EINPROGRESS) {	/* error isn't "please wait" */
+			if (pe || (errno != EHOSTUNREACH))
  connecterror:
-			warn("Can't connect to `%s:%s'", hname, sname);
+				warn("Can't connect to `%s:%s'", hname, sname);
 			return -1;
 		}
 
