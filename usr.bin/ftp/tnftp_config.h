@@ -161,6 +161,9 @@
 /* Define to 1 if you have the <limits.h> header file. */
 #define HAVE_LIMITS_H 1
 
+/* Define to 1 if you have the <locale.h> header file. */
+#define HAVE_LOCALE_H 1
+
 /* Define to 1 if the system has the type `long double'. */
 #define HAVE_LONG_DOUBLE 1
 
@@ -200,6 +203,9 @@
 /* Define to 1 if you have the <netinet/ip.h> header file. */
 #define HAVE_NETINET_IP_H 1
 
+/* Define to 1 if you have the <netinet/tcp.h> header file. */
+#define HAVE_NETINET_TCP_H 1
+
 /* Define to 1 if you have the <paths.h> header file. */
 #define HAVE_PATHS_H 1
 
@@ -209,11 +215,11 @@
 /* Define to 1 if you have the <poll.h> header file. */
 #define HAVE_POLL_H 1
 
-/* Define if `long long' is supported and *printf() supports %lld or %qd to
+/* Define if 'long long' is supported and *printf() supports %lld or %qd to
    print them. */
 #define HAVE_PRINTF_LONG_LONG 1
 
-/* Define if *printf() uses %qd to print `long long' (otherwise uses %lld). */
+/* Define if *printf() uses %qd to print 'long long' (otherwise uses %lld). */
 /* #undef HAVE_PRINTF_QD */
 
 /* Define to 1 if you have the <pwd.h> header file. */
@@ -331,7 +337,7 @@
 /* Define to 1 if the system has the type `struct addrinfo'. */
 #define HAVE_STRUCT_ADDRINFO 1
 
-/* Define to 1 if `struct dirent' is a member of `d_namlen'. */
+/* Define to 1 if `d_namlen' is a member of `struct dirent'. */
 #define HAVE_STRUCT_DIRENT_D_NAMLEN 1
 
 /* Define to 1 if the system has the type `struct pollfd'. */
@@ -340,10 +346,10 @@
 /* Define to 1 if the system has the type `struct sockaddr_in6'. */
 #define HAVE_STRUCT_SOCKADDR_IN6 1
 
-/* Define to 1 if `struct sockaddr_in' is a member of `sin_len'. */
+/* Define to 1 if `sin_len' is a member of `struct sockaddr_in'. */
 #define HAVE_STRUCT_SOCKADDR_IN_SIN_LEN 1
 
-/* Define to 1 if `struct sockaddr' is a member of `sa_len'. */
+/* Define to 1 if `sa_len' is a member of `struct sockaddr'. */
 #define HAVE_STRUCT_SOCKADDR_SA_LEN 1
 
 /* Define to 1 if you have the `strunvis' function. */
@@ -399,6 +405,9 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
 
+/* Define to 1 if the system has the type `unsigned long long int'. */
+#define HAVE_UNSIGNED_LONG_LONG_INT 1
+
 /* Define to 1 if you have the `usleep' function. */
 #define HAVE_USLEEP 1
 
@@ -436,7 +445,7 @@
 #define PACKAGE_NAME "tnftp"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "tnftp 20100108"
+#define PACKAGE_STRING "tnftp 20141031"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "tnftp"
@@ -445,7 +454,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "20100108"
+#define PACKAGE_VERSION "20141031"
 
 /* Define as the return type of signal handlers (`int' or `void'). */
 #define RETSIGTYPE void
@@ -470,11 +479,22 @@
 /* Define to 1 if your <sys/time.h> declares `struct tm'. */
 /* #undef TM_IN_SYS_TIME */
 
+/* Define if using IPv6 support. */
+/* #define USE_INET6 1 commented out so we can config with makefile */
+
 /* Define if using (Dante) SOCKS5 proxy. */
 /* #undef USE_SOCKS */
 
 /* Version number of package */
-#define VERSION "20100108"
+#define VERSION "20141031"
+
+/* Define if enabling SSL support. */
+/* #define WITH_SSL 1 */
+
+/* Enable large inode numbers on Mac OS X 10.5.  */
+#ifndef _DARWIN_USE_64_BIT_INODE
+# define _DARWIN_USE_64_BIT_INODE 1
+#endif
 
 /* Number of bits in a file offset, on hosts where this is settable. */
 /* #undef _FILE_OFFSET_BITS */
@@ -505,10 +525,5 @@
 
 /* Define as `fork' if `vfork' does not work. */
 /* #undef vfork */
-
-
-/* Define if using IPv6 support. */
-/* Commented out so this can be selected fromt he Makefile -gavin */
-/* #define USE_INET6 1 */
 
 #define USE_GLOB_H 1
