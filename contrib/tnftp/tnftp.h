@@ -5,6 +5,8 @@
 
 #include "tnftp_config.h"
 
+#include <sys/uio.h>
+
 #include <assert.h>
 #include <stdio.h>
 #include <ctype.h>

@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20141031:
+	tnftp 20141031 fixes a security vulnerability with tnftp,
+	CVE-2014-8517. 
+
 20141028:
 	OpenSSL 0.9.8zc
 
