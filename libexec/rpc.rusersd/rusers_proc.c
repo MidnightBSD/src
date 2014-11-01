@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/libexec/rpc.rusersd/rusers_proc.c,v 1.2 2012/04/11 00:58:36 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993, John Brezak
  * All rights reserved.
@@ -130,7 +130,7 @@ getidle(const char *tty, const char *display __unused)
 	idle = 0;
 	if (*tty == 'X') {
 		u_long kbd_idle, mouse_idle;
-#if	!defined(__FreeBSD__)
+#if	!defined(__FreeBSD__) && !defined(__MidnightBSD__)
 		kbd_idle = getidle("kbd", NULL);
 #else
 		kbd_idle = getidle("vga", NULL);
