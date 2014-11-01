@@ -81,7 +81,7 @@ __MBSDID("$MidnightBSD$");
 #define	HAVE_IFAM_DATA
 #endif
 
-#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__FreeBSD__)
+#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__MidnightBSD__)
 #define	HAVE_IFM_DATA
 #endif
 
