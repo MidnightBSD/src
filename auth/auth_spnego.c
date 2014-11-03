@@ -13,9 +13,9 @@
  * limitations under the License.
  */
 
-#include "auth_kerb.h"
+#include "auth_spnego.h"
 
-#ifdef SERF_HAVE_KERB
+#ifdef SERF_HAVE_SPNEGO
 
 /** These functions implement SPNEGO-based Kerberos and NTLM authentication,
  *  using either GSS-API (RFC 2743) or SSPI on Windows.
@@ -31,8 +31,6 @@
 #include <apr_strings.h>
 
 /** TODO:
- ** - This implements the SPNEGO mechanism, not Kerberos directly. Adapt
- **   filename, functions & comments.
  ** - send session key directly on new connections where we already know
  **   the server requires Kerberos authn.
  ** - Add a way for serf to give detailed error information back to the
@@ -166,7 +164,7 @@ typedef struct
     apr_pool_t *pool;
 
     /* GSSAPI context */
-    serf__kerb_context_t *gss_ctx;
+    serf__spnego_context_t *gss_ctx;
 
     /* Current state of the authentication cycle. */
     gss_api_auth_state state;
@@ -183,13 +181,14 @@ typedef struct
    claim to be. The session key can only be used with the HTTP service
    on the target host. */
 static apr_status_t
-gss_api_get_credentials(char *token, apr_size_t token_len,
+gss_api_get_credentials(serf_connection_t *conn,
+                        char *token, apr_size_t token_len,
                         const char *hostname,
                         const char **buf, apr_size_t *buf_len,
                         gss_authn_info_t *gss_info)
 {
-    serf__kerb_buffer_t input_buf;
-    serf__kerb_buffer_t output_buf;
+    serf__spnego_buffer_t input_buf;
+    serf__spnego_buffer_t output_buf;
     apr_status_t status = APR_SUCCESS;
 
     /* If the server sent us a token, pass it to gss_init_sec_token for
@@ -203,8 +202,9 @@ gss_api_get_credentials(char *token, apr_size_t token_len,
     }
 
     /* Establish a security context to the server. */
-    status = serf__kerb_init_sec_context
-        (gss_info->gss_ctx,
+    status = serf__spnego_init_sec_context(
+         conn,
+         gss_info->gss_ctx,
          KRB_HTTP_SERVICE, hostname,
          &input_buf,
          &output_buf,
@@ -214,7 +214,11 @@ gss_api_get_credentials(char *token, apr_size_t token_len,
 
     switch(status) {
     case APR_SUCCESS:
-        gss_info->state = gss_api_auth_completed;
+        if (output_buf.length == 0) {
+            gss_info->state = gss_api_auth_completed;
+        } else {
+            gss_info->state = gss_api_auth_in_progress;
+        }
         break;
     case APR_EAGAIN:
         gss_info->state = gss_api_auth_in_progress;
@@ -244,16 +248,22 @@ do_auth(peer_t peer,
         int code,
         gss_authn_info_t *gss_info,
         serf_connection_t *conn,
+        serf_request_t *request,
         const char *auth_hdr,
         apr_pool_t *pool)
 {
     serf_context_t *ctx = conn->ctx;
-    serf__authn_info_t *authn_info = (peer == HOST) ? &ctx->authn_info :
-        &ctx->proxy_authn_info;
+    serf__authn_info_t *authn_info;
     const char *tmp = NULL;
     char *token = NULL;
     apr_size_t tmp_len = 0, token_len = 0;
     apr_status_t status;
+
+    if (peer == HOST) {
+        authn_info = serf__get_authn_info_for_server(conn);
+    } else {
+        authn_info = &ctx->proxy_authn_info;
+    }
 
     /* Is this a response from a host/proxy? auth_hdr should always be set. */
     if (code && auth_hdr) {
@@ -303,22 +313,31 @@ do_auth(peer_t peer,
             break;
     }
 
+    if (request->auth_baton && !token) {
+        /* We provided token with this request, but server responded with empty
+           authentication header. This means server rejected our credentials.
+           XXX: Probably we need separate error code for this case like
+           SERF_ERROR_AUTHN_CREDS_REJECTED? */
+        return SERF_ERROR_AUTHN_FAILED;
+    }
+
     /* If the server didn't provide us with a token, start with a new initial
        step in the SPNEGO authentication. */
     if (!token) {
-        serf__kerb_reset_sec_context(gss_info->gss_ctx);
+        serf__spnego_reset_sec_context(gss_info->gss_ctx);
         gss_info->state = gss_api_auth_not_started;
     }
 
     if (peer == HOST) {
-        status = gss_api_get_credentials(token, token_len,
+        status = gss_api_get_credentials(conn,
+                                         token, token_len,
                                          conn->host_info.hostname,
                                          &tmp, &tmp_len,
                                          gss_info);
     } else {
-        char *proxy_host;
-        apr_getnameinfo(&proxy_host, conn->ctx->proxy_address, 0);
-        status = gss_api_get_credentials(token, token_len, proxy_host,
+        char *proxy_host = conn->ctx->proxy_address->hostname;
+        status = gss_api_get_credentials(conn,
+                                         token, token_len, proxy_host,
                                          &tmp, &tmp_len,
                                          gss_info);
     }
@@ -339,9 +358,9 @@ do_auth(peer_t peer,
 }
 
 apr_status_t
-serf__init_kerb(int code,
-                serf_context_t *ctx,
-                apr_pool_t *pool)
+serf__init_spnego(int code,
+                  serf_context_t *ctx,
+                  apr_pool_t *pool)
 {
     return APR_SUCCESS;
 }
@@ -349,28 +368,37 @@ serf__init_kerb(int code,
 /* A new connection is created to a server that's known to use
    Kerberos. */
 apr_status_t
-serf__init_kerb_connection(int code,
-                           serf_connection_t *conn,
-                           apr_pool_t *pool)
+serf__init_spnego_connection(const serf__authn_scheme_t *scheme,
+                             int code,
+                             serf_connection_t *conn,
+                             apr_pool_t *pool)
 {
-    gss_authn_info_t *gss_info;
-    apr_status_t status;
+    serf_context_t *ctx = conn->ctx;
+    serf__authn_info_t *authn_info;
+    gss_authn_info_t *gss_info = NULL;
 
-    gss_info = apr_pcalloc(pool, sizeof(*gss_info));
-    gss_info->pool = conn->pool;
-    gss_info->state = gss_api_auth_not_started;
-    gss_info->pstate = pstate_init;
-    status = serf__kerb_create_sec_context(&gss_info->gss_ctx, pool,
-                                           gss_info->pool);
-
-    if (status) {
-        return status;
-    }
-
+    /* For proxy authentication, reuse the gss context for all connections. 
+       For server authentication, create a new gss context per connection. */
     if (code == 401) {
-        conn->authn_baton = gss_info;
+        authn_info = &conn->authn_info;
     } else {
-        conn->proxy_authn_baton = gss_info;
+        authn_info = &ctx->proxy_authn_info;
+    }
+    gss_info = authn_info->baton;
+
+    if (!gss_info) {
+        apr_status_t status;
+
+        gss_info = apr_pcalloc(conn->pool, sizeof(*gss_info));
+        gss_info->pool = conn->pool;
+        gss_info->state = gss_api_auth_not_started;
+        gss_info->pstate = pstate_init;
+        status = serf__spnego_create_sec_context(&gss_info->gss_ctx, scheme,
+                                                 gss_info->pool, pool);
+        if (status) {
+            return status;
+        }
+        authn_info->baton = gss_info;
     }
 
     /* Make serf send the initial requests one by one */
@@ -384,38 +412,41 @@ serf__init_kerb_connection(int code,
 
 /* A 40x response was received, handle the authentication. */
 apr_status_t
-serf__handle_kerb_auth(int code,
-                       serf_request_t *request,
-                       serf_bucket_t *response,
-                       const char *auth_hdr,
-                       const char *auth_attr,
-                       void *baton,
-                       apr_pool_t *pool)
+serf__handle_spnego_auth(int code,
+                         serf_request_t *request,
+                         serf_bucket_t *response,
+                         const char *auth_hdr,
+                         const char *auth_attr,
+                         void *baton,
+                         apr_pool_t *pool)
 {
     serf_connection_t *conn = request->conn;
-    gss_authn_info_t *gss_info = (code == 401) ? conn->authn_baton :
-        conn->proxy_authn_baton;
+    serf_context_t *ctx = conn->ctx;
+    gss_authn_info_t *gss_info = (code == 401) ? conn->authn_info.baton :
+                                                 ctx->proxy_authn_info.baton;
 
     return do_auth(code == 401 ? HOST : PROXY,
                    code,
                    gss_info,
                    request->conn,
+                   request,
                    auth_hdr,
                    pool);
 }
 
 /* Setup the authn headers on this request message. */
 apr_status_t
-serf__setup_request_kerb_auth(peer_t peer,
-                              int code,
-                              serf_connection_t *conn,
-                              serf_request_t *request,
-                              const char *method,
-                              const char *uri,
-                              serf_bucket_t *hdrs_bkt)
+serf__setup_request_spnego_auth(peer_t peer,
+                                int code,
+                                serf_connection_t *conn,
+                                serf_request_t *request,
+                                const char *method,
+                                const char *uri,
+                                serf_bucket_t *hdrs_bkt)
 {
-    gss_authn_info_t *gss_info = (peer == HOST) ? conn->authn_baton :
-        conn->proxy_authn_baton;
+    serf_context_t *ctx = conn->ctx;
+    gss_authn_info_t *gss_info = (peer == HOST) ? conn->authn_info.baton :
+                                                  ctx->proxy_authn_info.baton;
 
     /* If we have an ongoing authentication handshake, the handler of the
        previous response will have created the authn headers for this request
@@ -426,6 +457,10 @@ serf__setup_request_kerb_auth(peer_t peer,
 
         serf_bucket_headers_setn(hdrs_bkt, gss_info->header,
                                  gss_info->value);
+
+        /* Remember that we're using this request for authentication
+           handshake. */
+        request->auth_baton = (void*) TRUE;
 
         /* We should send each token only once. */
         gss_info->header = NULL;
@@ -465,6 +500,7 @@ serf__setup_request_kerb_auth(peer_t peer,
                                  code,
                                  gss_info,
                                  conn,
+                                 request,
                                  0l,    /* no response authn header */
                                  conn->pool);
                 if (status)
@@ -472,6 +508,11 @@ serf__setup_request_kerb_auth(peer_t peer,
 
                 serf_bucket_headers_setn(hdrs_bkt, gss_info->header,
                                          gss_info->value);
+
+                /* Remember that we're using this request for authentication
+                   handshake. */
+                request->auth_baton = (void*) TRUE;
+
                 /* We should send each token only once. */
                 gss_info->header = NULL;
                 gss_info->value = NULL;
@@ -482,19 +523,70 @@ serf__setup_request_kerb_auth(peer_t peer,
     return APR_SUCCESS;
 }
 
+/**
+ * Baton passed to the get_auth_header callback function.
+ */
+typedef struct {
+    const char *hdr_name;
+    const char *auth_name;
+    const char *hdr_value;
+    apr_pool_t *pool;
+} get_auth_header_baton_t;
+
+static int
+get_auth_header_cb(void *baton,
+                   const char *key,
+                   const char *header)
+{
+    get_auth_header_baton_t *b = baton;
+
+    /* We're only interested in xxxx-Authenticate headers. */
+    if (strcasecmp(key, b->hdr_name) != 0)
+        return 0;
+
+    /* Check if header value starts with interesting auth name. */
+    if (strncmp(header, b->auth_name, strlen(b->auth_name)) == 0) {
+        /* Save interesting header value and stop iteration. */
+        b->hdr_value = apr_pstrdup(b->pool,  header);
+        return 1;
+    }
+
+    return 0;
+}
+
+static const char *
+get_auth_header(serf_bucket_t *hdrs,
+                const char *hdr_name,
+                const char *auth_name,
+                apr_pool_t *pool)
+{
+    get_auth_header_baton_t b;
+
+    b.auth_name = hdr_name;
+    b.hdr_name = auth_name;
+    b.hdr_value = NULL;
+    b.pool = pool;
+
+    serf_bucket_headers_do(hdrs, get_auth_header_cb, &b);
+
+    return b.hdr_value;
+}
+
 /* Function is called when 2xx responses are received. Normally we don't
  * have to do anything, except for the first response after the
  * authentication handshake. This specific response includes authentication
  * data which should be validated by the client (mutual authentication).
  */
 apr_status_t
-serf__validate_response_kerb_auth(peer_t peer,
-                                  int code,
-                                  serf_connection_t *conn,
-                                  serf_request_t *request,
-                                  serf_bucket_t *response,
-                                  apr_pool_t *pool)
+serf__validate_response_spnego_auth(const serf__authn_scheme_t *scheme,
+                                    peer_t peer,
+                                    int code,
+                                    serf_connection_t *conn,
+                                    serf_request_t *request,
+                                    serf_bucket_t *response,
+                                    apr_pool_t *pool)
 {
+    serf_context_t *ctx = conn->ctx;
     gss_authn_info_t *gss_info;
     const char *auth_hdr_name;
 
@@ -507,10 +599,10 @@ serf__validate_response_kerb_auth(peer_t peer,
                   "Validate Negotiate response header.\n");
 
     if (peer == HOST) {
-        gss_info = conn->authn_baton;
+        gss_info = conn->authn_info.baton;
         auth_hdr_name = "WWW-Authenticate";
     } else {
-        gss_info = conn->proxy_authn_baton;
+        gss_info = ctx->proxy_authn_info.baton;
         auth_hdr_name = "Proxy-Authenticate";
     }
 
@@ -520,11 +612,23 @@ serf__validate_response_kerb_auth(peer_t peer,
         apr_status_t status;
 
         hdrs = serf_bucket_response_get_headers(response);
-        auth_hdr_val = serf_bucket_headers_get(hdrs, auth_hdr_name);
+        auth_hdr_val = get_auth_header(hdrs, auth_hdr_name, scheme->name,
+                                       pool);
 
-        status = do_auth(peer, code, gss_info, conn, auth_hdr_val, pool);
-        if (status)
-            return status;
+        if (auth_hdr_val) {
+            status = do_auth(peer, code, gss_info, conn, request, auth_hdr_val,
+                             pool);
+            if (status) {
+                return status;
+            }
+        } else {
+            /* No Authenticate headers, nothing to validate: authentication
+               completed.*/
+            gss_info->state = gss_api_auth_completed;
+
+            serf__log_skt(AUTH_VERBOSE, __FILE__, conn->skt,
+                          "SPNEGO handshake completed.\n");
+        }
     }
 
     if (gss_info->state == gss_api_auth_completed) {
@@ -549,4 +653,4 @@ serf__validate_response_kerb_auth(peer_t peer,
     return APR_SUCCESS;
 }
 
-#endif /* SERF_HAVE_GSSAPI */
+#endif /* SERF_HAVE_SPNEGO */

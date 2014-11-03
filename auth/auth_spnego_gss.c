@@ -15,7 +15,7 @@
 
 #include "serf.h"
 #include "serf_private.h"
-#include "auth_kerb.h"
+#include "auth_spnego.h"
 
 #ifdef SERF_USE_GSSAPI
 #include <apr_strings.h>
@@ -33,7 +33,7 @@ static gss_OID_desc spnego_mech_oid = { 6, "\x2b\x06\x01\x05\x05\x02" };
 #define GSS_SPNEGO_MECHANISM &spnego_mech_oid
 #endif
 
-struct serf__kerb_context_t
+struct serf__spnego_context_t
 {
     /* GSSAPI context */
     gss_ctx_id_t gss_ctx;
@@ -43,8 +43,8 @@ struct serf__kerb_context_t
 };
 
 static void
-log_error(int verbose_flag, const char *filename,
-          serf__kerb_context_t *ctx,
+log_error(int verbose_flag, apr_socket_t *skt,
+          serf__spnego_context_t *ctx,
           OM_uint32 err_maj_stat,
           OM_uint32 err_min_stat,
           const char *msg)
@@ -70,7 +70,7 @@ log_error(int verbose_flag, const char *filename,
                                           &stat_buff);
         }
 
-        serf__log(verbose_flag, filename,
+        serf__log_skt(verbose_flag, __FILE__, skt,
                   "%s (%x,%d): %s\n", msg,
                   err_maj_stat, err_min_stat, stat_buff.value);
     }
@@ -81,13 +81,19 @@ log_error(int verbose_flag, const char *filename,
 static apr_status_t
 cleanup_ctx(void *data)
 {
-    OM_uint32 min_stat;
-    serf__kerb_context_t *ctx = data;
+    serf__spnego_context_t *ctx = data;
 
     if (ctx->gss_ctx != GSS_C_NO_CONTEXT) {
-        if (gss_delete_sec_context(&min_stat, &ctx->gss_ctx,
-                                   GSS_C_NO_BUFFER) == GSS_S_FAILURE)
-            return APR_EGENERAL;
+        OM_uint32 gss_min_stat, gss_maj_stat;
+
+        gss_maj_stat = gss_delete_sec_context(&gss_min_stat, &ctx->gss_ctx,
+                                              GSS_C_NO_BUFFER);
+        if(GSS_ERROR(gss_maj_stat)) {
+            log_error(AUTH_VERBOSE, NULL, ctx,
+                      gss_maj_stat, gss_min_stat,
+                      "Error cleaning up GSS security context");
+            return SERF_ERROR_AUTHN_FAILED;
+        }
     }
 
     return APR_SUCCESS;
@@ -105,11 +111,12 @@ cleanup_sec_buffer(void *data)
 }
 
 apr_status_t
-serf__kerb_create_sec_context(serf__kerb_context_t **ctx_p,
-                              apr_pool_t *scratch_pool,
-                              apr_pool_t *result_pool)
+serf__spnego_create_sec_context(serf__spnego_context_t **ctx_p,
+                                const serf__authn_scheme_t *scheme,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
 {
-    serf__kerb_context_t *ctx;
+    serf__spnego_context_t *ctx;
 
     ctx = apr_pcalloc(result_pool, sizeof(*ctx));
 
@@ -126,7 +133,7 @@ serf__kerb_create_sec_context(serf__kerb_context_t **ctx_p,
 }
 
 apr_status_t
-serf__kerb_reset_sec_context(serf__kerb_context_t *ctx)
+serf__spnego_reset_sec_context(serf__spnego_context_t *ctx)
 {
     OM_uint32 dummy_stat;
 
@@ -139,14 +146,15 @@ serf__kerb_reset_sec_context(serf__kerb_context_t *ctx)
 }
 
 apr_status_t
-serf__kerb_init_sec_context(serf__kerb_context_t *ctx,
-                            const char *service,
-                            const char *hostname,
-                            serf__kerb_buffer_t *input_buf,
-                            serf__kerb_buffer_t *output_buf,
-                            apr_pool_t *scratch_pool,
-                            apr_pool_t *result_pool
-                            )
+serf__spnego_init_sec_context(serf_connection_t *conn,
+                              serf__spnego_context_t *ctx,
+                              const char *service,
+                              const char *hostname,
+                              serf__spnego_buffer_t *input_buf,
+                              serf__spnego_buffer_t *output_buf,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool
+                              )
 {
     gss_buffer_desc gss_input_buf = GSS_C_EMPTY_BUFFER;
     gss_buffer_desc *gss_output_buf_p;
@@ -159,12 +167,16 @@ serf__kerb_init_sec_context(serf__kerb_context_t *ctx,
     /* TODO: should be shared between multiple requests. */
     bufdesc.value = apr_pstrcat(scratch_pool, service, "@", hostname, NULL);
     bufdesc.length = strlen(bufdesc.value);
-    serf__log(AUTH_VERBOSE, __FILE__, "Get principal for %s\n", bufdesc.value);
+    serf__log_skt(AUTH_VERBOSE, __FILE__, conn->skt,
+                  "Get principal for %s\n", bufdesc.value);
     gss_maj_stat = gss_import_name (&gss_min_stat, &bufdesc,
                                     GSS_C_NT_HOSTBASED_SERVICE,
                                     &host_gss_name);
     if(GSS_ERROR(gss_maj_stat)) {
-        return APR_EGENERAL;
+        log_error(AUTH_VERBOSE, conn->skt, ctx,
+                  gss_maj_stat, gss_min_stat,
+                  "Error converting principal name to GSS internal format ");
+        return SERF_ERROR_AUTHN_FAILED;
     }
 
     /* If the server sent us a token, pass it to gss_init_sec_token for
@@ -204,10 +216,10 @@ serf__kerb_init_sec_context(serf__kerb_context_t *ctx,
     case GSS_S_CONTINUE_NEEDED:
         return APR_EAGAIN;
     default:
-        log_error(AUTH_VERBOSE, __FILE__, ctx,
+        log_error(AUTH_VERBOSE, conn->skt, ctx,
                   gss_maj_stat, gss_min_stat,
                   "Error during Kerberos handshake");
-        return APR_EGENERAL;
+        return SERF_ERROR_AUTHN_FAILED;
     }
 }
 
