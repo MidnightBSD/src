@@ -27,8 +27,12 @@
 
 /** Digest authentication, implements RFC 2617. **/
 
+/* TODO: add support for the domain attribute. This defines the protection
+   space, so that serf can decide per URI if it should reuse the cached
+   credentials for the server, or not. */
+
 /* Stores the context information related to Digest authentication.
-   The context is per connection. */
+   This information is stored in the per server cache in the serf context. */
 typedef struct digest_authn_info_t {
     /* nonce-count for digest authentication */
     unsigned int digest_nc;
@@ -92,8 +96,9 @@ random_cnonce(apr_pool_t *pool)
     return hex_encode((unsigned char*)buf, pool);
 }
 
-static const char *
-build_digest_ha1(const char *username,
+static apr_status_t
+build_digest_ha1(const char **out_ha1,
+                 const char *username,
                  const char *password,
                  const char *realm_name,
                  apr_pool_t *pool)
@@ -109,12 +114,17 @@ build_digest_ha1(const char *username,
                        realm_name,
                        password);
     status = apr_md5(ha1, tmp, strlen(tmp));
+    if (status)
+        return status;
 
-    return hex_encode(ha1, pool);
+    *out_ha1 = hex_encode(ha1, pool);
+
+    return APR_SUCCESS;
 }
 
-static const char *
-build_digest_ha2(const char *uri,
+static apr_status_t
+build_digest_ha2(const char **out_ha2,
+                 const char *uri,
                  const char *method,
                  const char *qop,
                  apr_pool_t *pool)
@@ -130,17 +140,21 @@ build_digest_ha2(const char *uri,
                            method,
                            uri);
         status = apr_md5(ha2, tmp, strlen(tmp));
+        if (status)
+            return status;
 
-        return hex_encode(ha2, pool);
+        *out_ha2 = hex_encode(ha2, pool);
+
+        return APR_SUCCESS;
     } else {
         /* TODO: auth-int isn't supported! */
+        return APR_ENOTIMPL;
     }
-
-    return NULL;
 }
 
-static const char *
-build_auth_header(digest_authn_info_t *digest_info,
+static apr_status_t
+build_auth_header(const char **out_header,
+                  digest_authn_info_t *digest_info,
                   const char *path,
                   const char *method,
                   apr_pool_t *pool)
@@ -152,7 +166,9 @@ build_auth_header(digest_authn_info_t *digest_info,
     const char *response_hdr_hex;
     apr_status_t status;
 
-    ha2 = build_digest_ha2(path, method, digest_info->qop, pool);
+    status = build_digest_ha2(&ha2, path, method, digest_info->qop, pool);
+    if (status)
+        return status;
 
     hdr = apr_psprintf(pool,
                        "Digest realm=\"%s\","
@@ -190,6 +206,9 @@ build_auth_header(digest_authn_info_t *digest_info,
     }
 
     status = apr_md5(response_hdr, response, strlen(response));
+    if (status)
+        return status;
+
     response_hdr_hex = hex_encode(response_hdr, pool);
 
     hdr = apr_psprintf(pool, "%s, response=\"%s\"", hdr, response_hdr_hex);
@@ -203,7 +222,9 @@ build_auth_header(digest_authn_info_t *digest_info,
                            digest_info->algorithm);
     }
 
-    return hdr;
+    *out_header = hdr;
+
+    return APR_SUCCESS;
 }
 
 apr_status_t
@@ -217,7 +238,7 @@ serf__handle_digest_auth(int code,
 {
     char *attrs;
     char *nextkv;
-    const char *realm_name = NULL;
+    const char *realm, *realm_name = NULL;
     const char *nonce = NULL;
     const char *algorithm = NULL;
     const char *qop = NULL;
@@ -225,10 +246,8 @@ serf__handle_digest_auth(int code,
     const char *key;
     serf_connection_t *conn = request->conn;
     serf_context_t *ctx = conn->ctx;
-    serf__authn_info_t *authn_info = (code == 401) ? &ctx->authn_info :
-        &ctx->proxy_authn_info;
-    digest_authn_info_t *digest_info = (code == 401) ? conn->authn_baton :
-        conn->proxy_authn_baton;
+    serf__authn_info_t *authn_info;
+    digest_authn_info_t *digest_info;
     apr_status_t status;
     apr_pool_t *cred_pool;
     char *username, *password;
@@ -238,6 +257,13 @@ serf__handle_digest_auth(int code,
     if (!ctx->cred_cb) {
         return SERF_ERROR_AUTHN_FAILED;
     }
+
+    if (code == 401) {
+        authn_info = serf__get_authn_info_for_server(conn);
+    } else {
+        authn_info = &ctx->proxy_authn_info;
+    }
+    digest_info = authn_info->baton;
 
     /* Need a copy cuz we're going to write NUL characters into the string.  */
     attrs = apr_pstrdup(pool, auth_attr);
@@ -286,17 +312,17 @@ serf__handle_digest_auth(int code,
         return SERF_ERROR_AUTHN_MISSING_ATTRIBUTE;
     }
 
-    authn_info->realm = apr_psprintf(conn->pool, "<%s://%s:%d> %s",
-                                     conn->host_info.scheme,
-                                     conn->host_info.hostname,
-                                     conn->host_info.port,
-                                     realm_name);
+    realm = serf__construct_realm(code == 401 ? HOST : PROXY,
+                                  conn, realm_name,
+                                  pool);
 
     /* Ask the application for credentials */
     apr_pool_create(&cred_pool, pool);
-    status = (*ctx->cred_cb)(&username, &password, request, baton,
-                             code, authn_info->scheme->name,
-                             authn_info->realm, cred_pool);
+    status = serf__provide_credentials(ctx,
+                                       &username, &password,
+                                       request, baton,
+                                       code, authn_info->scheme->name,
+                                       realm, cred_pool);
     if (status) {
         apr_pool_destroy(cred_pool);
         return status;
@@ -305,9 +331,12 @@ serf__handle_digest_auth(int code,
     digest_info->header = (code == 401) ? "Authorization" :
                                           "Proxy-Authorization";
 
-    /* Store the digest authentication parameters in the context relative
-       to this connection, so we can use it to create the Authorization header
-       when setting up requests. */
+    /* Store the digest authentication parameters in the context cached for
+       this server in the serf context, so we can use it to create the
+       Authorization header when setting up requests on the same or different
+       connections (e.g. in case of KeepAlive off on the server).
+       TODO: we currently don't cache this info per realm, so each time a request
+       'switches realms', we have to ask the application for new credentials. */
     digest_info->pool = conn->pool;
     digest_info->qop = apr_pstrdup(digest_info->pool, qop);
     digest_info->nonce = apr_pstrdup(digest_info->pool, nonce);
@@ -318,8 +347,8 @@ serf__handle_digest_auth(int code,
     digest_info->username = apr_pstrdup(digest_info->pool, username);
     digest_info->digest_nc++;
 
-    digest_info->ha1 = build_digest_ha1(username, password, digest_info->realm,
-                                        digest_info->pool);
+    status = build_digest_ha1(&digest_info->ha1, username, password,
+                              digest_info->realm, digest_info->pool);
 
     apr_pool_destroy(cred_pool);
 
@@ -327,7 +356,7 @@ serf__handle_digest_auth(int code,
        likes. */
     serf_connection_set_max_outstanding_requests(conn, 0);
 
-    return APR_SUCCESS;
+    return status;
 }
 
 apr_status_t
@@ -339,16 +368,22 @@ serf__init_digest(int code,
 }
 
 apr_status_t
-serf__init_digest_connection(int code,
+serf__init_digest_connection(const serf__authn_scheme_t *scheme,
+                             int code,
                              serf_connection_t *conn,
                              apr_pool_t *pool)
 {
-    /* Digest authentication is done per connection, so keep all progress
-       information per connection. */
+    serf_context_t *ctx = conn->ctx;
+    serf__authn_info_t *authn_info;
+
     if (code == 401) {
-        conn->authn_baton = apr_pcalloc(pool, sizeof(digest_authn_info_t));
+        authn_info = serf__get_authn_info_for_server(conn);
     } else {
-        conn->proxy_authn_baton = apr_pcalloc(pool, sizeof(digest_authn_info_t));
+        authn_info = &ctx->proxy_authn_info;
+    }
+
+    if (!authn_info->baton) {
+        authn_info->baton = apr_pcalloc(pool, sizeof(digest_authn_info_t));
     }
 
     /* Make serf send the initial requests one by one */
@@ -366,24 +401,47 @@ serf__setup_request_digest_auth(peer_t peer,
                                 const char *uri,
                                 serf_bucket_t *hdrs_bkt)
 {
-    digest_authn_info_t *digest_info = (peer == HOST) ? conn->authn_baton :
-        conn->proxy_authn_baton;
-    apr_status_t status = APR_SUCCESS;
+    serf_context_t *ctx = conn->ctx;
+    serf__authn_info_t *authn_info;
+    digest_authn_info_t *digest_info;
+    apr_status_t status;
+
+    if (peer == HOST) {
+        authn_info = serf__get_authn_info_for_server(conn);
+    } else {
+        authn_info = &ctx->proxy_authn_info;
+    }
+    digest_info = authn_info->baton;
 
     if (digest_info && digest_info->realm) {
         const char *value;
-        apr_uri_t parsed_uri;
+        const char *path;
 
         /* TODO: per request pool? */
 
-        /* Extract path from uri. */
-        status = apr_uri_parse(conn->pool, uri, &parsed_uri);
+        /* for request 'CONNECT serf.googlecode.com:443', the uri also should be
+           serf.googlecode.com:443. apr_uri_parse can't handle this, so special
+           case. */
+        if (strcmp(method, "CONNECT") == 0)
+            path = uri;
+        else {
+            apr_uri_t parsed_uri;
+
+            /* Extract path from uri. */
+            status = apr_uri_parse(conn->pool, uri, &parsed_uri);
+            if (status)
+                return status;
+
+            path = parsed_uri.path;
+        }
 
         /* Build a new Authorization header. */
         digest_info->header = (peer == HOST) ? "Authorization" :
             "Proxy-Authorization";
-        value = build_auth_header(digest_info, parsed_uri.path, method,
-                                  conn->pool);
+        status = build_auth_header(&value, digest_info, path, method,
+                                   conn->pool);
+        if (status)
+            return status;
 
         serf_bucket_headers_setn(hdrs_bkt, digest_info->header,
                                  value);
@@ -392,14 +450,15 @@ serf__setup_request_digest_auth(peer_t peer,
         /* Store the uri of this request on the serf_request_t object, to make
            it available when validating the Authentication-Info header of the
            matching response. */
-        request->auth_baton = parsed_uri.path;
+        request->auth_baton = (void *)path;
     }
 
-    return status;
+    return APR_SUCCESS;
 }
 
 apr_status_t
-serf__validate_response_digest_auth(peer_t peer,
+serf__validate_response_digest_auth(const serf__authn_scheme_t *scheme,
+                                    peer_t peer,
                                     int code,
                                     serf_connection_t *conn,
                                     serf_request_t *request,
@@ -413,8 +472,8 @@ serf__validate_response_digest_auth(peer_t peer,
     const char *qop = NULL;
     const char *nc_str = NULL;
     serf_bucket_t *hdrs;
-    digest_authn_info_t *digest_info = (peer == HOST) ? conn->authn_baton :
-        conn->proxy_authn_baton;
+    serf_context_t *ctx = conn->ctx;
+    apr_status_t status;
 
     hdrs = serf_bucket_response_get_headers(response);
 
@@ -468,8 +527,20 @@ serf__validate_response_digest_auth(peer_t peer,
         const char *ha2, *tmp, *resp_hdr_hex;
         unsigned char resp_hdr[APR_MD5_DIGESTSIZE];
         const char *req_uri = request->auth_baton;
+        serf__authn_info_t *authn_info;
+        digest_authn_info_t *digest_info;
 
-        ha2 = build_digest_ha2(req_uri, "", qop, pool);
+        if (peer == HOST) {
+            authn_info = serf__get_authn_info_for_server(conn);
+        } else {
+            authn_info = &ctx->proxy_authn_info;
+        }
+        digest_info = authn_info->baton;
+
+        status = build_digest_ha2(&ha2, req_uri, "", qop, pool);
+        if (status)
+            return status;
+
         tmp = apr_psprintf(pool, "%s:%s:%s:%s:%s:%s",
                            digest_info->ha1, digest_info->nonce, nc_str,
                            digest_info->cnonce, digest_info->qop, ha2);

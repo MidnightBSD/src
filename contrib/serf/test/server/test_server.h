@@ -16,6 +16,10 @@
 #ifndef TEST_SERVER_H
 #define TEST_SERVER_H
 
+/* Test logging facilities, set flag to 1 to enable console logging for
+   the test suite. */
+#define TEST_VERBOSE 0
+
 #define TEST_SERVER_DUMP 1
 
 /* Default port for our test server. */
@@ -32,6 +36,7 @@ typedef apr_status_t (*receive_func_t)(serv_ctx_t *serv_ctx, char *data,
                                        apr_size_t *len);
 
 typedef apr_status_t (*handshake_func_t)(serv_ctx_t *serv_ctx);
+typedef apr_status_t (*reset_conn_func_t)(serv_ctx_t *serv_ctx);
 
 typedef struct
 {
@@ -40,7 +45,8 @@ typedef struct
         SERVER_SEND,
         SERVER_RESPOND,
         SERVER_IGNORE_AND_KILL_CONNECTION,
-        SERVER_KILL_CONNECTION
+        SERVER_KILL_CONNECTION,
+        PROXY_FORWARD,
     } kind;
 
     const char *text;
@@ -54,6 +60,7 @@ typedef struct
 struct serv_ctx_t {
     /* Pool for resource allocation. */
     apr_pool_t *pool;
+    serf_bucket_alloc_t *allocator;
 
     apr_int32_t options;
 
@@ -87,14 +94,25 @@ struct serv_ctx_t {
     /* Accepted client socket. NULL if there is no client socket. */
     apr_socket_t *client_sock;
 
+    /* Client socket to a server, in case this server acts as a proxy. */
+    apr_socket_t *proxy_client_sock;
+
+    serf_bucket_t *clientstream;
+    serf_bucket_t *servstream;
+
     send_func_t send;
     receive_func_t read;
 
+    /* SSL related variables */
     handshake_func_t handshake;
+    reset_conn_func_t reset;
+
     void *ssl_ctx;
+    const char *client_cn;
+    apr_status_t bio_read_status;
 };
 
-void test_setup_server(serv_ctx_t **servctx_p,
+void setup_test_server(serv_ctx_t **servctx_p,
                        apr_sockaddr_t *address,
                        test_server_message_t *message_list,
                        apr_size_t message_count,
@@ -103,7 +121,7 @@ void test_setup_server(serv_ctx_t **servctx_p,
                        apr_int32_t options,
                        apr_pool_t *pool);
 
-void test_setup_https_server(serv_ctx_t **servctx_p,
+void setup_https_test_server(serv_ctx_t **servctx_p,
                              apr_sockaddr_t *address,
                              test_server_message_t *message_list,
                              apr_size_t message_count,
@@ -111,25 +129,15 @@ void test_setup_https_server(serv_ctx_t **servctx_p,
                              apr_size_t action_count,
                              apr_int32_t options,
                              const char *keyfile,
-                             const char *certfile,
+                             const char **certfiles,
+                             const char *client_cn,
                              apr_pool_t *pool);
 
-apr_status_t test_start_server(serv_ctx_t *serv_ctx);
+apr_status_t start_test_server(serv_ctx_t *serv_ctx);
 
-apr_status_t test_server_run(serv_ctx_t *servctx,
+apr_status_t run_test_server(serv_ctx_t *servctx,
                              apr_short_interval_time_t duration,
                              apr_pool_t *pool);
-
-apr_status_t test_server_destroy(serv_ctx_t *servctx, apr_pool_t *pool);
-
-apr_status_t init_ssl_context(serv_ctx_t *serv_ctx,
-                              const char *keyfile,
-                              const char *certfile);
-apr_status_t ssl_handshake(serv_ctx_t *servctx);
-apr_status_t ssl_socket_write(serv_ctx_t *serv_ctx, const char *data,
-                              apr_size_t *len);
-apr_status_t ssl_socket_read(serv_ctx_t *serv_ctx, char *data, apr_size_t *len);
-void cleanup_ssl_context(serv_ctx_t *serv_ctx);
 
 
 #ifndef APR_VERSION_AT_LEAST /* Introduced in APR 1.3.0 */
