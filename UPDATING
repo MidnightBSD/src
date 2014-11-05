@@ -1,5 +1,13 @@
 Updating Information for MidnightBSD users.
 
+20141104:
+	Fix two security issues:
+
+	1. sshd may link libpthread in the wrong order, shadowing libc
+	   functions and causing a possible DOS attack for connecting clients.
+	2. getlogin may leak kernel memory via a buffer that is 
+	   copied without clearing.
+
 20141031:
 	0.5.5 RELEASE
 
