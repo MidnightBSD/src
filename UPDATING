@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20141106:
+	0.5.6 RELEASE
+
+	Update timezone data tzdata 2014i
+
+	(plus previous security fixes)
+
 20141104:
 	Fix two security issues:
 
