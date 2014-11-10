@@ -3799,13 +3799,6 @@ ext/File-Glob/TODO		File::Glob extension todo list
 ext/File-Glob/t/rt114984.t	See if File::Glob works
 ext/File-Glob/t/taint.t		See if File::Glob works
 ext/File-Glob/t/threads.t	See if File::Glob + threads works
-ext/GDBM_File/GDBM_File.pm	GDBM extension Perl module
-ext/GDBM_File/GDBM_File.xs	GDBM extension external subroutines
-ext/GDBM_File/hints/sco.pl	Hint for GDBM_File for named architecture
-ext/GDBM_File/Makefile.PL	GDBM extension makefile writer
-ext/GDBM_File/t/fatal.t		Test the fatal_func argument to gdbm_open
-ext/GDBM_File/t/gdbm.t		See if GDBM_File works
-ext/GDBM_File/typemap		GDBM extension interface types
 ext/Hash-Util/Changes		Change history of Hash::Util
 ext/Hash-Util-FieldHash/Changes			Changes for Hash::Util::FieldHash
 ext/Hash-Util-FieldHash/FieldHash.xs		XS portion

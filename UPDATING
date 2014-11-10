@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20141109:
+	Fix building perl during buildworld when the GDBM port is installed.
+
 20141106:
 	tzdata 2014i
 
