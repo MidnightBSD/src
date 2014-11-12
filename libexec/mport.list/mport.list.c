@@ -114,7 +114,7 @@ main(int argc, char *argv[])
 			if (indexEntries != NULL) {
 				while (*indexEntries != NULL) {
 					if (((*indexEntries)->version != NULL && mport_version_cmp((*packs)->version, (*indexEntries)->version) < 0) 
-						|| ((*packs)->version != NULL && strcmp((*packs)->os_release, os_release) != 0)) {
+						|| ((*packs)->version != NULL && mport_version_cmp((*packs)->os_release, os_release) < 0)) {
 						if (verbose) {
 							(void) printf("%-15s %8s (%s)  <  %-s\n", (*packs)->name, (*packs)->version, (*packs)->os_release, (*indexEntries)->version);
 						} else {
