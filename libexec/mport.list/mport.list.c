@@ -46,6 +46,7 @@ main(int argc, char *argv[])
 	mportInstance *mport;
 	mportPackageMeta **packs;
 	mportIndexEntry **indexEntries;
+	mportIndexEntry **iestart;
 	bool quiet = false;
 	bool verbose = false;
 	bool origin = false;
@@ -112,6 +113,7 @@ main(int argc, char *argv[])
 			}
 			
 			if (indexEntries != NULL) {
+				iestart = indexEntries;
 				while (*indexEntries != NULL) {
 					if (((*indexEntries)->version != NULL && mport_version_cmp((*packs)->version, (*indexEntries)->version) < 0) 
 						|| ((*packs)->version != NULL && mport_version_cmp((*packs)->os_release, os_release) < 0)) {
@@ -124,8 +126,8 @@ main(int argc, char *argv[])
 					indexEntries++;
 				}
 				
-				mport_index_entry_free_vec(indexEntries);
-				indexEntries = NULL;
+				mport_index_entry_free_vec(iestart);
+				iestart = NULL;
 			} else {
 				(void) printf("%-15s %8s is no longer available.\n", (*packs)->name, (*packs)->version);
 			}
