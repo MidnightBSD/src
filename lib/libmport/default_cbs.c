@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/default_cbs.c,v 1.6 2011/07/24 15:59:08 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <stdio.h>
 #include <termios.h>
@@ -92,7 +92,7 @@ void mport_default_progress_step_cb(int current, int total, const char *msg)
   if (current > total)
     current = total;
 
-  if ((tcgetattr(STDIN_FILENO, &term) < 0) || (ioctl(STDIN_FILENO, TIOCGWINSZ, &win) < 0)) {
+  if (!isatty(STDIN_FILENO) || (tcgetattr(STDIN_FILENO, &term) < 0) || (ioctl(STDIN_FILENO, TIOCGWINSZ, &win) < 0)) {
     /* not a terminal or couldn't get terminal width*/
     (void)printf("%s\n", msg);
     return;
