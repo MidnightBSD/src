@@ -126,6 +126,8 @@ main(int argc, char *argv[])
 				
 				mport_index_entry_free_vec(indexEntries);
 				indexEntries = NULL;
+			} else {
+				(void) printf("%-15s %8s is no longer available.\n", (*packs)->name, (*packs)->version);
 			}
 		} else if (verbose) {
 			comment = str_remove((*packs)->comment, '\\');
