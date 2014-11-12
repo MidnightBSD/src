@@ -5,7 +5,7 @@ WARNS?= 	6
 
 NO_MAN=		yes
 
-LDADD= 	-lmport
+LDADD= 	-lmport -pthread
 DPADD= 	${LIBMPORT}
 
 .include <bsd.prog.mk>
