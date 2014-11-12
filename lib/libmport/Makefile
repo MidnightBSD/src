@@ -15,7 +15,7 @@ MAN=	mport.3
 
 NO_PROFILE=
 
-DPADD=	${LIBMD} ${LIBARCHIVE} ${LIBBZP2} ${LIBLZMA} ${LIBZ} ${LIBFETCH} ${LIBSQLITE3}
-LDADD=	-lmd -larchive -lbz2 -llzma -lz -lfetch -lsqlite3
+DPADD=	${LIBMD} ${LIBARCHIVE} ${LIBBZP2} ${LIBLZMA} ${LIBZ} ${LIBFETCH} ${LIBSQLITE3} ${LIBPTHREAD}
+LDADD=	-lmd -larchive -lbz2 -llzma -lz -lfetch -lsqlite3 -lpthread
 
 .include <bsd.lib.mk>
