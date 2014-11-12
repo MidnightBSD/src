@@ -19,6 +19,9 @@ NO_MAN=
 
 INCS=		${SQLITEDIR}/sqlite3.h ${SQLITEDIR}/sqlite3ext.h
 
+DPADD=	${LIBPTHREAD}
+LDADD=	-lpthread
+
 .if !defined(COMPAT_32BIT)
 afterinstall: 
 	${INSTALL} ${SHLINSTALLFLAGS} -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
