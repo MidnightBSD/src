@@ -117,7 +117,8 @@ main(int argc, char *argv[])
 				packs++;
 				continue;
 			}
-			
+	
+			iestart = indexEntries;		
 			while (*indexEntries != NULL) {
 				if (((*indexEntries)->version != NULL && mport_version_cmp((*packs)->version, (*indexEntries)->version) < 0) 
 					|| ((*packs)->version != NULL && mport_version_cmp((*packs)->os_release, os_release) < 0)) {
@@ -130,7 +131,7 @@ main(int argc, char *argv[])
 				indexEntries++;
 			}
 				
-			mport_index_entry_free_vec(indexEntries);
+			mport_index_entry_free_vec(iestart);
 			indexEntries = NULL;
 		} else if (verbose) {
 			comment = str_remove((*packs)->comment, '\\');
