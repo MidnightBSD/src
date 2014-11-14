@@ -108,29 +108,30 @@ main(int argc, char *argv[])
 	while (*packs != NULL) {
 		if (update) {
 			if (mport_index_lookup_pkgname(mport, (*packs)->name, &indexEntries) != MPORT_OK) {
-				fprintf(stderr, "Error Looking up package name %s: %d %s\n", (*packs)->name,  mport_err_code(), mport_err_string());
+				(void) fprintf(stderr, "Error Looking up package name %s: %d %s\n", (*packs)->name,  mport_err_code(), mport_err_string());
 				exit(mport_err_code());
 			}
-			
-			if (indexEntries != NULL) {
-				iestart = indexEntries;
-				while (*indexEntries != NULL) {
-					if (((*indexEntries)->version != NULL && mport_version_cmp((*packs)->version, (*indexEntries)->version) < 0) 
-						|| ((*packs)->version != NULL && mport_version_cmp((*packs)->os_release, os_release) < 0)) {
-						if (verbose) {
-							(void) printf("%-15s %8s (%s)  <  %-s\n", (*packs)->name, (*packs)->version, (*packs)->os_release, (*indexEntries)->version);
-						} else {
-							(void) printf("%-15s %8s  <  %-8s\n", (*packs)->name, (*packs)->version, (*indexEntries)->version);
-						}
-					}
-					indexEntries++;
-				}
-				
-				mport_index_entry_free_vec(iestart);
-				iestart = NULL;
-			} else {
+
+			if (indexEntries == NULL || *indexEntries == NULL) {
 				(void) printf("%-15s %8s is no longer available.\n", (*packs)->name, (*packs)->version);
+				packs++;
+				continue;
 			}
+			
+			while (*indexEntries != NULL) {
+				if (((*indexEntries)->version != NULL && mport_version_cmp((*packs)->version, (*indexEntries)->version) < 0) 
+					|| ((*packs)->version != NULL && mport_version_cmp((*packs)->os_release, os_release) < 0)) {
+					if (verbose) {
+						(void) printf("%-15s %8s (%s)  <  %-s\n", (*packs)->name, (*packs)->version, (*packs)->os_release, (*indexEntries)->version);
+					} else {
+						(void) printf("%-15s %8s  <  %-8s\n", (*packs)->name, (*packs)->version, (*indexEntries)->version);
+					}
+				}
+				indexEntries++;
+			}
+				
+			mport_index_entry_free_vec(indexEntries);
+			indexEntries = NULL;
 		} else if (verbose) {
 			comment = str_remove((*packs)->comment, '\\');
 			snprintf(name_version, 30, "%s-%s", (*packs)->name, (*packs)->version);
