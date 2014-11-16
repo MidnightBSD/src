@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20141117:
+	Add support for UDP Lite protocol aka RFC 3828 to IPv4 and IPv6
+	stacks.
+
+	Based on FreeBSD's 10.1 patch.	
+
 20141109:
 	Fix building perl during buildworld when the GDBM port is installed.
 
