@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/18/93
-# $MidnightBSD: src/share/man/man4/Makefile,v 1.33 2012/12/29 16:29:12 laffer1 Exp $
+# $MidnightBSD$
 
 MAN=	aac.4 \
 	acpi.4 \
@@ -478,6 +478,7 @@ MAN=	aac.4 \
 	udav.4 \
 	udbp.4 \
 	udp.4 \
+	udplite.4 \
 	uep.4 \
 	ufm.4 \
 	ufoma.4 \

@@ -61093,6 +61093,7 @@ share/man/man4/ucycom.4 -text
 share/man/man4/udav.4 -text
 share/man/man4/udbp.4 -text
 share/man/man4/udp.4 -text
+share/man/man4/udplite.4 svneol=native#text/plain
 share/man/man4/uep.4 -text
 share/man/man4/ufm.4 -text
 share/man/man4/ufoma.4 -text
