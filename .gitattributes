@@ -69386,6 +69386,7 @@ sys/netinet/toedev.h -text
 sys/netinet/udp.h -text
 sys/netinet/udp_usrreq.c -text
 sys/netinet/udp_var.h -text
+sys/netinet/udplite.h svneol=native#text/plain
 sys/netinet6/dest6.c -text
 sys/netinet6/frag6.c -text
 sys/netinet6/icmp6.c -text
