@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20141211:
+	Fix a security issue with file and libmagic that can allow
+	an attacker to create a denial of service attack on any
+	program that uses libmagic.
+
 20141117:
 	Add support for UDP Lite protocol aka RFC 3828 to IPv4 and IPv6
 	stacks.

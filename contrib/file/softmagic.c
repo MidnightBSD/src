@@ -67,6 +67,9 @@ private void cvt_32(union VALUETYPE *, const struct magic *);
 private void cvt_64(union VALUETYPE *, const struct magic *);
 
 #define OFFSET_OOB(n, o, i)	((n) < (o) || (i) > ((n) - (o)))
+
+#define MAX_RECURSION_LEVEL	10
+
 /*
  * softmagic - lookup one file in parsed, in-memory copy of database
  * Passed the name and FILE * of one file to be typed.
@@ -1200,7 +1203,7 @@ mget(struct magic_set *ms, const unsigned char *s, struct magic *m,
 	union VALUETYPE *p = &ms->ms_value;
 	struct mlist ml;
 
-	if (recursion_level >= 20) {
+	if (recursion_level >= MAX_RECURSION_LEVEL) {
 		file_error(ms, 0, "recursion nesting exceeded");
 		return -1;
 	}
