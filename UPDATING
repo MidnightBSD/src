@@ -1,5 +1,38 @@
 Updating Information for MidnightBSD users.
 
+20150114:
+	0.5.8 RELEASE
+
+	Fix several security issues with OpenSSL.
+
+	A carefully crafted DTLS message can cause a segmentation fault in OpenSSL
+	due to a NULL pointer dereference. [CVE-2014-3571]
+
+	A memory leak can occur in the dtls1_buffer_record function under certain
+	conditions. [CVE-2015-0206]
+
+	When OpenSSL is built with the no-ssl3 option and a SSL v3 ClientHello is
+	received the ssl method would be set to NULL which could later result in
+	a NULL pointer dereference.  [CVE-2014-3569]
+
+	An OpenSSL client will accept a handshake using an ephemeral ECDH
+	ciphersuite using an ECDSA certificate if the server key exchange message
+	is omitted. [CVE-2014-3572]
+
+	An OpenSSL client will accept the use of an RSA temporary key in a non-export
+	RSA key exchange ciphersuite. [CVE-2015-0204]
+
+	An OpenSSL server will accept a DH certificate for client authentication
+	without the certificate verify message. [CVE-2015-0205]
+
+	OpenSSL accepts several non-DER-variations of certificate signature
+	algorithm and signature encodings.  OpenSSL also does not enforce a
+	match between the signature algorithm between the signed and unsigned
+	portions of the certificate. [CVE-2014-8275]
+
+	Bignum squaring (BN_sqr) may produce incorrect results on some
+	platforms, including x86_64. [CVE-2014-3570]
+
 20141211:
 	0.5.7 RELEASE
 
