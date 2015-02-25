@@ -1,5 +1,21 @@
 Updating Information for MidnightBSD users.
 
+20150225:
+        Fix two security vulnerabilities.
+
+        1. BIND servers which are configured to perform DNSSEC validation and which
+        are using managed keys (which occurs implicitly when using
+        "dnssec-validation auto;" or "dnssec-lookaside auto;") may exhibit
+        unpredictable behavior due to the use of an improperly initialized
+        variable.
+
+        CVE-2015-1349
+
+        2. An integer overflow in computing the size of IGMPv3 data buffer can result
+        in a buffer which is too small for the requested operation.
+
+        This can result in a DOS attack.
+
 20141211:
 	Fix a security issue with file and libmagic that can allow
 	an attacker to create a denial of service attack on any
