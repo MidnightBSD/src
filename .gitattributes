@@ -50870,8 +50870,6 @@ crypto/openssl/CHANGES.SSLeay -text
 crypto/openssl/Configure -text
 crypto/openssl/FAQ -text
 crypto/openssl/INSTALL -text
-crypto/openssl/INSTALL.DJGPP -text
-crypto/openssl/INSTALL.VMS -text
 crypto/openssl/LICENSE -text
 crypto/openssl/MIDNIGHTBSD-Xlist -text
 crypto/openssl/MIDNIGHTBSD-upgrade -text

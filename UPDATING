@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20150306:
+	Upgrade OpenSSL to 0.9.8ze
+
 20150225:
         Fix two security vulnerabilities.
 
