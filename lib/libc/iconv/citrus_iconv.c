@@ -114,7 +114,10 @@ open_shared(struct _citrus_iconv_shared * __restrict * __restrict rci,
 	size_t len_convname;
 	int ret;
 
- 	module = (strcmp(src, dst) != 0) ? "iconv_std" : "iconv_none";
+ 	/* incompatible with GNU iconv due to gettext 0.18.3+
+        module = (strcmp(src, dst) != 0) ? "iconv_std" : "iconv_none";
+	*/
+	module = "iconv_std";
 
 	/* initialize iconv handle */
 	len_convname = strlen(convname);
