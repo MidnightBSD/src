@@ -169,9 +169,14 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
           
         break;
       case ASSET_CHMOD:
+	printf("asset_chmod %s, %s\n", mode, data);
 	if (mode != NULL)
 		free(mode);
-	mode = strdup(data);
+	/* TODO: should we reset the mode rather than NULL here */
+	if (data == NULL)
+		mode = NULL;
+	else
+		mode = strdup(data);
         break;
       case ASSET_CHOWN:
 	owner = mport_get_uid(data);
