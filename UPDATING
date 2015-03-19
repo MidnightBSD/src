@@ -1,5 +1,29 @@
 Updating Information for MidnightBSD users.
 
+20150319:
+	0.5.10 RELEASE
+
+	OpenSSL Security update
+
+	A malformed elliptic curve private key file could cause a use-after-free
+	condition in the d2i_ECPrivateKey function.  [CVE-2015-0209]
+
+	An attempt to compare ASN.1 boolean types will cause the ASN1_TYPE_cmp
+	function to crash with an invalid read.  [CVE-2015-0286]
+
+	Reusing a structure in ASN.1 parsing may allow an attacker to cause memory
+	corruption via an invalid write. [CVE-2015-0287]
+
+	The function X509_to_X509_REQ will crash with a NULL pointer dereference if
+	the certificate key is invalid.  [CVE-2015-0288]
+
+	The PKCS#7 parsing code does not handle missing outer ContentInfo correctly.
+	[CVE-2015-0289]
+
+	A malicious client can trigger an OPENSSL_assert in servers that both support
+	SSLv2 and enable export cipher suites by sending a specially crafted SSLv2
+	CLIENT-MASTER-KEY message.  [CVE-2015-0293]
+
 20150225:
 	0.5.9 RELEASE
 
