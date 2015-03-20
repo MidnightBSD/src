@@ -36399,11 +36399,13 @@ contrib/mDNSResponder/mDNSMacOSX/PreferencePane/ddnswriteconfig.m -text
 contrib/mDNSResponder/mDNSMacOSX/PreferencePane/installtool -text
 contrib/mDNSResponder/mDNSMacOSX/Private/dns_services.c -text
 contrib/mDNSResponder/mDNSMacOSX/Private/dns_services.h -text
+contrib/mDNSResponder/mDNSMacOSX/Private/dns_services_mdns.h -text
 contrib/mDNSResponder/mDNSMacOSX/Private/dns_xpc.h -text
 contrib/mDNSResponder/mDNSMacOSX/Private/xpc_services.c -text
 contrib/mDNSResponder/mDNSMacOSX/Private/xpc_services.h -text
 contrib/mDNSResponder/mDNSMacOSX/README.privsep -text
 contrib/mDNSResponder/mDNSMacOSX/VPNService.c -text
+contrib/mDNSResponder/mDNSMacOSX/base.xcconfig -text
 contrib/mDNSResponder/mDNSMacOSX/com.apple.networking.mDNSResponder -text
 contrib/mDNSResponder/mDNSMacOSX/daemon.c -text
 contrib/mDNSResponder/mDNSMacOSX/dnsctl-entitlements.plist -text svneol=unset#application/xml

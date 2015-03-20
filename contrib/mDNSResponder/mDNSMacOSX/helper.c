@@ -85,7 +85,6 @@ void TCPCheckSum(int af, struct tcphdr *t, int tcplen, v6addr_t sadd6, v6addr_t 
 
 uid_t mDNSResponderUID;
 gid_t mDNSResponderGID;
-static const char kTunnelAddressInterface[] = "lo0";
 
 void
 debug_(const char *func, const char *fmt, ...)
@@ -698,12 +697,13 @@ enum DNSKeyFormat
 // therefore I need to add some byte swapping in this API to make this four-character string backwards too."
 // To cope with this we allow *both* "ddns" and "sndd" as valid item types.
 
+
+#ifndef NO_SECURITYFRAMEWORK
+static const char btmmprefix[] = "btmmdns:";
 static const char dnsprefix[] = "dns:";
 static const char ddns[] = "ddns";
 static const char ddnsrev[] = "sndd";
-static const char btmmprefix[] = "btmmdns:";
 
-#ifndef NO_SECURITYFRAMEWORK
 static enum DNSKeyFormat
 getDNSKeyFormat(SecKeychainItemRef item, SecKeychainAttributeList **attributesp)
 {
