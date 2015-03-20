@@ -10,7 +10,7 @@
 
 /*-
  * Copyright © 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
- *	       2011, 2012, 2013, 2014
+ *	       2011, 2012, 2013, 2014, 2015
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -169,9 +169,9 @@
 #endif
 
 #ifdef EXTERN
-__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.697 2014/10/07 15:22:17 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.701.2.4 2015/03/01 15:43:05 tg Exp $");
 #endif
-#define MKSH_VERSION "R50 2014/10/07"
+#define MKSH_VERSION "R50 2015/03/01"
 
 /* arithmetic types: C implementation */
 #if !HAVE_CAN_INTTYPES
@@ -312,7 +312,11 @@ struct rusage {
 #undef PATH_MAX
 #else
 #ifndef PATH_MAX
+#ifdef MAXPATHLEN
+#define PATH_MAX	MAXPATHLEN
+#else
 #define PATH_MAX	1024
+#endif
 #endif
 #endif
 #ifndef SIZE_MAX
@@ -533,7 +537,7 @@ char *ucstrstr(char *, const char *);
 #define mkssert(e)	do { } while (/* CONSTCOND */ 0)
 #endif
 
-#if (!defined(MKSH_BUILDMAKEFILE4BSD) && !defined(MKSH_BUILDSH)) || (MKSH_BUILD_R != 504)
+#if (!defined(MKSH_BUILDMAKEFILE4BSD) && !defined(MKSH_BUILDSH)) || (MKSH_BUILD_R != 505)
 #error Must run Build.sh to compile this.
 extern void thiswillneverbedefinedIhope(void);
 int
@@ -992,8 +996,8 @@ EXTERN sigset_t		sm_default, sm_sigchld;
 
 /* name of called builtin function (used by error functions) */
 EXTERN const char *builtin_argv0;
-/* flags of called builtin (SPEC_BI, etc.) */
-EXTERN uint32_t builtin_flag;
+/* is called builtin SPEC_BI? */
+EXTERN bool builtin_spec;
 
 /* current working directory */
 EXTERN char	*current_wd;
@@ -1233,6 +1237,7 @@ struct block {
 
 /* Values for struct block.flags */
 #define BF_DOGETOPTS	BIT(0)	/* save/restore getopts state */
+#define BF_STOPENV	BIT(1)	/* do not export further */
 
 /*
  * Used by ktwalk() and ktnext() routines.
@@ -1396,7 +1401,8 @@ struct ioword {
 #define DOVACHECK BIT(9)	/* var assign check (for typeset, set, etc) */
 #define DOMARKDIRS BIT(10)	/* force markdirs behaviour */
 #define DOTCOMEXEC BIT(11)	/* not an eval flag, used by sh -c hack */
-#define DOASNFIELD BIT(12)	/* is assignment, change field handling */
+#define DOSCALAR BIT(12)	/* change field handling to non-list context */
+#define DOHEREDOC BIT(13)	/* change scalar handling to heredoc body */
 
 #define X_EXTRA	20	/* this many extra bytes in X string */
 
@@ -1645,7 +1651,7 @@ char *evalonestr(const char *cp, int);
 char *debunk(char *, const char *, size_t);
 void expand(const char *, XPtrV *, int);
 int glob_str(char *, XPtrV *, bool);
-char *tilde(char *);
+char *do_tilde(char *);
 /* exec.c */
 int execute(struct op * volatile, volatile int, volatile int * volatile);
 int shcomexec(const char **);

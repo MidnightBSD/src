@@ -2,7 +2,7 @@
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
- *		 2011, 2012, 2013, 2014
+ *		 2011, 2012, 2013, 2014, 2015
  *	Thorsten Glaser <tg@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -23,7 +23,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/exec.c,v 1.133 2014/10/03 17:32:11 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/exec.c,v 1.137.2.2 2015/03/01 15:42:59 tg Exp $");
 
 #ifndef MKSH_DEFAULT_EXECSHELL
 #define MKSH_DEFAULT_EXECSHELL	"/bin/sh"
@@ -32,7 +32,7 @@ __RCSID("$MirOS: src/bin/mksh/exec.c,v 1.133 2014/10/03 17:32:11 tg Exp $");
 static int comexec(struct op *, struct tbl * volatile, const char **,
     int volatile, volatile int *);
 static void scriptexec(struct op *, const char **) MKSH_A_NORETURN;
-static int call_builtin(struct tbl *, const char **, const char *);
+static int call_builtin(struct tbl *, const char **, const char *, bool);
 static int iosetup(struct ioword *, struct tbl *);
 static int herein(struct ioword *, char **);
 static const char *do_selectargs(const char **, bool);
@@ -81,6 +81,8 @@ execute(struct op * volatile t,
 	/* we want to run an executable, do some variance checks */
 	if (t->type == TCOM) {
 		/* check if this is 'var=<<EOF' */
+		/*XXX this is broken, don’t use! */
+		/*XXX https://bugs.launchpad.net/mksh/+bug/1380389 */
 		if (
 		    /* we have zero arguments, i.e. no programme to run */
 		    t->args[0] == NULL &&
@@ -94,20 +96,23 @@ execute(struct op * volatile t,
 		    /* the variable assignment begins with a valid varname */
 		    (ccp = skip_wdvarname(t->vars[0], true)) != t->vars[0] &&
 		    /* and has no right-hand side (i.e. "varname=") */
-		    ccp[0] == CHAR && ccp[1] == '=' && ccp[2] == EOS &&
+		    ccp[0] == CHAR && ((ccp[1] == '=' && ccp[2] == EOS) ||
+		    /* or "varname+=" */ (ccp[1] == '+' && ccp[2] == CHAR &&
+		    ccp[3] == '=' && ccp[4] == EOS)) &&
 		    /* plus we can have a here document content */
 		    herein(t->ioact[0], &cp) == 0 && cp && *cp) {
 			char *sp = cp, *dp;
-			size_t n = ccp - t->vars[0] + 2, z;
+			size_t n = ccp - t->vars[0] + (ccp[1] == '+' ? 4 : 2);
+			size_t z;
 
 			/* drop redirection (will be garbage collected) */
 			t->ioact = NULL;
 
 			/* set variable to its expanded value */
-			z = strlen(cp) + 1;
-			if (notoktomul(z, 2) || notoktoadd(z * 2, n))
+			z = strlen(cp);
+			if (notoktomul(z, 2) || notoktoadd(z * 2, n + 1))
 				internal_errorf(Toomem, (size_t)-1);
-			dp = alloc(z * 2 + n, ATEMP);
+			dp = alloc(z * 2 + n + 1, APERM);
 			memcpy(dp, t->vars[0], n);
 			t->vars[0] = dp;
 			dp += n;
@@ -398,7 +403,7 @@ execute(struct op * volatile t,
 
 	case TCASE:
 		i = 0;
-		ccp = evalstr(t->str, DOTILDE);
+		ccp = evalstr(t->str, DOTILDE | DOSCALAR);
 		for (t = t->left; t != NULL && t->type == TPAT; t = t->right) {
 			for (ap = (const char **)t->vars; *ap; ap++) {
 				if (i || ((s = evalstr(*ap, DOTILDE|DOPAT)) &&
@@ -441,7 +446,6 @@ execute(struct op * volatile t,
 
 	case TEXEC:
 		/* an eval'd TCOM */
-		s = t->args[0];
 		up = makenv();
 		restoresigs();
 		cleanup_proc_env();
@@ -455,7 +459,7 @@ execute(struct op * volatile t,
 		if (rv == ENOEXEC)
 			scriptexec(t, (const char **)up);
 		else
-			errorf("%s: %s", s, cstrerror(rv));
+			errorf("%s: %s", t->str, cstrerror(rv));
 	}
  Break:
 	exstat = rv & 0xFF;
@@ -500,18 +504,21 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 	/* Must be static (XXX but why?) */
 	static struct op texec;
 	int type_flags;
-	bool keepasn_ok;
+	bool resetspec;
 	int fcflags = FC_BI|FC_FUNC|FC_PATH;
-	bool bourne_function_call = false;
 	struct block *l_expand, *l_assign;
+	int optc;
+	const char *exec_argv0 = NULL;
+	bool exec_clrenv = false;
 
-	/*
-	 * snag the last argument for $_ XXX not the same as AT&T ksh,
-	 * which only seems to set $_ after a newline (but not in
-	 * functions/dot scripts, but in interactive and script) -
-	 * perhaps save last arg here and set it in shell()?.
-	 */
+	/* snag the last argument for $_ */
 	if (Flag(FTALKING) && *(lastp = ap)) {
+		/*
+		 * XXX not the same as AT&T ksh, which only seems to set $_
+		 * after a newline (but not in functions/dot scripts, but in
+		 * interactive and script) - perhaps save last arg here and
+		 * set it in shell()?.
+		 */
 		while (*++lastp)
 			;
 		/* setstr() can't fail here */
@@ -532,7 +539,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 	 *	FOO=bar command			FOO is neither kept nor exported
 	 *	PATH=... foobar			use new PATH in foobar search
 	 */
-	keepasn_ok = true;
+	resetspec = false;
 	while (tp && tp->type == CSHELL) {
 		/* undo effects of command */
 		fcflags = FC_BI|FC_FUNC|FC_PATH;
@@ -548,10 +555,25 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 		} else if (tp->val.f == c_exec) {
 			if (ap[1] == NULL)
 				break;
-			ap++;
+			ksh_getopt_reset(&builtin_opt, GF_ERROR);
+			while ((optc = ksh_getopt(ap, &builtin_opt, "a:c")) != -1)
+				switch (optc) {
+				case 'a':
+					exec_argv0 = builtin_opt.optarg;
+					break;
+				case 'c':
+					exec_clrenv = true;
+					/* ensure we can actually do this */
+					resetspec = true;
+					break;
+				default:
+					rv = 2;
+					goto Leave;
+				}
+			ap += builtin_opt.optind;
 			flags |= XEXEC;
 		} else if (tp->val.f == c_command) {
-			int optc, saw_p = 0;
+			bool saw_p = false;
 
 			/*
 			 * Ugly dealing with options in two places (here
@@ -559,8 +581,8 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 			 */
 			ksh_getopt_reset(&builtin_opt, 0);
 			while ((optc = ksh_getopt(ap, &builtin_opt, ":p")) == 'p')
-				saw_p = 1;
-			if (optc != EOF)
+				saw_p = true;
+			if (optc != -1)
 				/* command -vV or something */
 				break;
 			/* don't look for functions */
@@ -579,7 +601,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 			 * POSIX says special builtins lose their status
 			 * if accessed using command.
 			 */
-			keepasn_ok = false;
+			resetspec = true;
 			if (!ap[0]) {
 				/* ensure command with no args exits with 0 */
 				subst_exstat = 0;
@@ -614,20 +636,21 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 	if (t->u.evalflags & DOTCOMEXEC)
 		flags |= XEXEC;
 	l_expand = e->loc;
-	if (keepasn_ok && (!ap[0] || (tp && (tp->flag & KEEPASN))))
+	if (!resetspec && (!ap[0] || (tp && (tp->flag & KEEPASN))))
 		type_flags = 0;
 	else {
 		/* create new variable/function block */
 		newblock();
 		/* ksh functions don't keep assignments, POSIX functions do. */
-		if (keepasn_ok && tp && tp->type == CFUNC &&
-		    !(tp->flag & FKSH)) {
-			bourne_function_call = true;
+		if (!resetspec && tp && tp->type == CFUNC &&
+		    !(tp->flag & FKSH))
 			type_flags = EXPORT;
-		} else
+		else
 			type_flags = LOCAL|LOCAL_COPY|EXPORT;
 	}
 	l_assign = e->loc;
+	if (exec_clrenv)
+		l_assign->flags |= BF_STOPENV;
 	if (Flag(FEXPORT))
 		type_flags |= EXPORT;
 	if (Flag(FXTRACE))
@@ -635,7 +658,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 	for (i = 0; t->vars[i]; i++) {
 		/* do NOT lookup in the new var/fn block just created */
 		e->loc = l_expand;
-		cp = evalstr(t->vars[i], DOASNTILDE | DOASNFIELD);
+		cp = evalstr(t->vars[i], DOASNTILDE | DOSCALAR);
 		e->loc = l_assign;
 		if (Flag(FXTRACE)) {
 			const char *ccp;
@@ -651,8 +674,6 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 		}
 		/* but assign in there as usual */
 		typeset(cp, type_flags, 0, 0, 0);
-		if (bourne_function_call && !(type_flags & EXPORT))
-			typeset(cp, LOCAL | LOCAL_COPY | EXPORT, 0, 0, 0);
 	}
 
 	if (Flag(FXTRACE)) {
@@ -684,8 +705,8 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 
 	/* shell built-in */
 	case CSHELL:
-		rv = call_builtin(tp, (const char **)ap, null);
-		if (!keepasn_ok && tp->val.f == c_shift) {
+		rv = call_builtin(tp, (const char **)ap, null, resetspec);
+		if (resetspec && tp->val.f == c_shift) {
 			l_expand->argc = l_assign->argc;
 			l_expand->argv = l_assign->argv;
 		}
@@ -810,14 +831,24 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 			break;
 		}
 
-		/* set $_ to programme's full path */
+		/* set $_ to program's full path */
 		/* setstr() can't fail here */
 		setstr(typeset("_", LOCAL | EXPORT, 0, INTEGER, 0),
 		    tp->val.s, KSH_RETURN_ERROR);
 
-		if (flags&XEXEC) {
+		/* to fork, we set up a TEXEC node and call execute */
+		texec.type = TEXEC;
+		/* for vistree/dumptree */
+		texec.left = t;
+		texec.str = tp->val.s;
+		texec.args = ap;
+
+		/* in this case we do not fork, of course */
+		if (flags & XEXEC) {
+			if (exec_argv0)
+				texec.args[0] = exec_argv0;
 			j_exit();
-			if (!(flags&XBGND)
+			if (!(flags & XBGND)
 #ifndef MKSH_UNEMPLOYED
 			    || Flag(FMONITOR)
 #endif
@@ -827,12 +858,6 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 			}
 		}
 
-		/* to fork we set up a TEXEC node and call execute */
-		texec.type = TEXEC;
-		/* for tprint */
-		texec.left = t;
-		texec.str = tp->val.s;
-		texec.args = ap;
 		rv = exchild(&texec, flags, xerrok, -1);
 		break;
 	}
@@ -849,10 +874,8 @@ scriptexec(struct op *tp, const char **ap)
 {
 	const char *sh;
 #ifndef MKSH_SMALL
-	unsigned char *cp;
-	/* 64 == MAXINTERP in MirBSD <sys/param.h> */
-	char buf[64];
 	int fd;
+	unsigned char buf[68];
 #endif
 	union mksh_ccphack args, cap;
 
@@ -866,33 +889,35 @@ scriptexec(struct op *tp, const char **ap)
 
 #ifndef MKSH_SMALL
 	if ((fd = open(tp->str, O_RDONLY | O_BINARY)) >= 0) {
-		/* read first MAXINTERP octets from file */
-		if (read(fd, buf, sizeof(buf)) <= 0)
-			/* read error -> no good */
-			buf[0] = '\0';
+		unsigned char *cp;
+		unsigned short m;
+		ssize_t n;
+
+		/* read first couple of octets from file */
+		n = read(fd, buf, sizeof(buf) - 1);
 		close(fd);
+		/* read error or short read? */
+		if (n < 5)
+			goto nomagic;
+		/* terminate buffer */
+		buf[n] = '\0';
 
 		/* skip UTF-8 Byte Order Mark, if present */
-		cp = (unsigned char *)buf;
-		if ((cp[0] == 0xEF) && (cp[1] == 0xBB) && (cp[2] == 0xBF))
-			cp += 3;
-		/* save begin of shebang for later */
-		fd = (char *)cp - buf;		/* either 0 or (if BOM) 3 */
+		cp = buf + (n = ((buf[0] == 0xEF) && (buf[1] == 0xBB) &&
+		    (buf[2] == 0xBF)) ? 3 : 0);
 
-		/* scan for newline (or CR) or NUL _before_ end of buffer */
-		while ((size_t)((char *)cp - buf) < sizeof(buf))
-			if (*cp == '\0' || *cp == '\n' || *cp == '\r') {
-				*cp = '\0';
-				break;
-			} else
-				++cp;
+		/* scan for newline or NUL (end of buffer) */
+		while (*cp && *cp != '\n')
+			++cp;
 		/* if the shebang line is longer than MAXINTERP, bail out */
-		if ((size_t)((char *)cp - buf) >= sizeof(buf))
+		if (!*cp)
 			goto noshebang;
+		/* replace newline by NUL */
+		*cp = '\0';
 
 		/* restore begin of shebang position (buf+0 or buf+3) */
-		cp = (unsigned char *)(buf + fd);
-		/* bail out if read error (above) or no shebang */
+		cp = buf + n;
+		/* bail out if no shebang magic found */
 		if ((cp[0] != '#') || (cp[1] != '!'))
 			goto noshebang;
 
@@ -918,22 +943,24 @@ scriptexec(struct op *tp, const char **ap)
 			if (*cp)
 				*tp->args-- = (char *)cp;
 		}
+		goto nomagic;
  noshebang:
-		if (buf[0] == 0x7F && buf[1] == 'E' && buf[2] == 'L' &&
-		    buf[3] == 'F')
+		m = buf[0] << 8 | buf[1];
+		if (m == 0x7F45 && buf[2] == 'L' && buf[3] == 'F')
 			errorf("%s: not executable: %d-bit ELF file", tp->str,
-			    32 * ((uint8_t)buf[4]));
-		fd = buf[0] << 8 | buf[1];
-		if ((fd == /* OMAGIC */ 0407) ||
-		    (fd == /* NMAGIC */ 0410) ||
-		    (fd == /* ZMAGIC */ 0413) ||
-		    (fd == /* QMAGIC */ 0314) ||
-		    (fd == /* ECOFF_I386 */ 0x4C01) ||
-		    (fd == /* ECOFF_M68K */ 0x0150 || fd == 0x5001) ||
-		    (fd == /* ECOFF_SH */   0x0500 || fd == 0x0005) ||
-		    (fd == /* "MZ" */ 0x4D5A) ||
-		    (fd == /* gzip */ 0x1F8B))
-			errorf("%s: not executable: magic %04X", tp->str, fd);
+			    32 * buf[4]);
+		if ((m == /* OMAGIC */ 0407) ||
+		    (m == /* NMAGIC */ 0410) ||
+		    (m == /* ZMAGIC */ 0413) ||
+		    (m == /* QMAGIC */ 0314) ||
+		    (m == /* ECOFF_I386 */ 0x4C01) ||
+		    (m == /* ECOFF_M68K */ 0x0150 || m == 0x5001) ||
+		    (m == /* ECOFF_SH */   0x0500 || m == 0x0005) ||
+		    (m == /* "MZ" */ 0x4D5A) ||
+		    (m == /* gzip */ 0x1F8B) || (m == /* .Z */ 0x1F9D))
+			errorf("%s: not executable: magic %04X", tp->str, m);
+ nomagic:
+		;
 	}
 #endif
 	args.ro = tp->args;
@@ -952,7 +979,7 @@ shcomexec(const char **wp)
 	struct tbl *tp;
 
 	tp = ktsearch(&builtins, *wp, hash(*wp));
-	return (call_builtin(tp, wp, "shcomexec"));
+	return (call_builtin(tp, wp, "shcomexec", false));
 }
 
 /*
@@ -1001,8 +1028,6 @@ define(const char *name, struct op *t)
 
 	while (/* CONSTCOND */ 1) {
 		tp = findfunc(name, nhash, true);
-		/* because findfunc:create=true */
-		mkssert(tp != NULL);
 
 		if (tp->flag & ISSET)
 			was_set = true;
@@ -1265,22 +1290,22 @@ search_path(const char *name, const char *lpath,
 }
 
 static int
-call_builtin(struct tbl *tp, const char **wp, const char *where)
+call_builtin(struct tbl *tp, const char **wp, const char *where, bool resetspec)
 {
 	int rv;
 
 	if (!tp)
 		internal_errorf("%s: %s", where, wp[0]);
 	builtin_argv0 = wp[0];
-	builtin_flag = tp->flag;
+	builtin_spec = tobool(!resetspec && (tp->flag & SPEC_BI));
 	shf_reopen(1, SHF_WR, shl_stdout);
 	shl_stdout_ok = true;
 	ksh_getopt_reset(&builtin_opt, GF_ERROR);
 	rv = (*tp->val.f)(wp);
 	shf_flush(shl_stdout);
 	shl_stdout_ok = false;
-	builtin_flag = 0;
 	builtin_argv0 = NULL;
+	builtin_spec = false;
 	return (rv);
 }
 
@@ -1467,7 +1492,7 @@ hereinval(const char *content, int sub, char **resbuf, struct shf *shf)
 		if (yylex(sub) != LWORD)
 			internal_errorf("%s: %s", "herein", "yylex");
 		source = osource;
-		ccp = evalstr(yylval.cp, 0);
+		ccp = evalstr(yylval.cp, DOSCALAR | DOHEREDOC);
 	}
 
 	if (resbuf == NULL)
@@ -1487,7 +1512,7 @@ herein(struct ioword *iop, char **resbuf)
 	struct temp *h;
 	int i;
 
-	/* ksh -c 'cat << EOF' can cause this... */
+	/* ksh -c 'cat <<EOF' can cause this... */
 	if (iop->heredoc == NULL) {
 		warningf(true, "%s missing", "here document");
 		/* special to iosetup(): don't print error */
@@ -1522,7 +1547,7 @@ herein(struct ioword *iop, char **resbuf)
 		return (-2);
 	}
 
-	if (shf_close(shf) == EOF) {
+	if (shf_close(shf) == -1) {
 		i = errno;
 		close(fd);
 		warningf(true, "can't %s temporary file %s: %s",
@@ -1559,7 +1584,8 @@ do_selectargs(const char **ap, bool print_menu)
 		if (print_menu || !*str_val(global("REPLY")))
 			pr_menu(ap);
 		shellf("%s", str_val(global("PS3")));
-		if (call_builtin(findcom("read", FC_BI), read_args, Tselect))
+		if (call_builtin(findcom("read", FC_BI), read_args, Tselect,
+		    false))
 			return (NULL);
 		s = str_val(global("REPLY"));
 		if (*s && getn(s, &i))
@@ -1709,6 +1735,7 @@ static const char *
 dbteste_getopnd(Test_env *te, Test_op op, bool do_eval)
 {
 	const char *s = *te->pos.wp;
+	int flags = DOTILDE | DOSCALAR;
 
 	if (!s)
 		return (NULL);
@@ -1719,11 +1746,9 @@ dbteste_getopnd(Test_env *te, Test_op op, bool do_eval)
 		return (null);
 
 	if (op == TO_STEQL || op == TO_STNEQ)
-		s = evalstr(s, DOTILDE | DOPAT);
-	else
-		s = evalstr(s, DOTILDE);
+		flags |= DOPAT;
 
-	return (s);
+	return (evalstr(s, flags));
 }
 
 static void
