@@ -52859,6 +52859,7 @@ crypto/openssl/util/extract-section.pl -text
 crypto/openssl/util/files.pl -text
 crypto/openssl/util/fipslink.pl -text
 crypto/openssl/util/fixNT.sh -text
+crypto/openssl/util/indent.pro -text
 crypto/openssl/util/install.sh -text
 crypto/openssl/util/libeay.num -text
 crypto/openssl/util/mk1mf.pl -text
@@ -52870,6 +52871,7 @@ crypto/openssl/util/mkfiles.pl -text
 crypto/openssl/util/mklink.pl -text
 crypto/openssl/util/mksdef.pl -text
 crypto/openssl/util/mkstack.pl -text
+crypto/openssl/util/openssl-format-source -text
 crypto/openssl/util/opensslwrap.sh -text
 crypto/openssl/util/perlpath.pl -text
 crypto/openssl/util/pl/BC-32.pl -text
@@ -52890,6 +52892,7 @@ crypto/openssl/util/sp-diff.pl -text
 crypto/openssl/util/speed.sh -text
 crypto/openssl/util/src-dep.pl -text
 crypto/openssl/util/ssleay.num -text
+crypto/openssl/util/su-filter.pl -text
 crypto/openssl/util/tab_num.pl -text
 crypto/openssl/util/x86asm.sh -text
 etc/Makefile -text
