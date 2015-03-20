@@ -1555,7 +1555,7 @@ mDNSexport mDNSs32 mDNSPlatformGetServiceID(mDNS *const m, DNSQuestion *q)
 {
     (void) m;
     (void) q;
-    return 0;
+    return -1;
 }
 
 mDNSexport void mDNSPlatformSetDelegatePID(UDPSocket *src, const mDNSAddr *dst, DNSQuestion *q)

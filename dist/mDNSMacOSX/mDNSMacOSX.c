@@ -248,9 +248,10 @@ mDNSlocal void PrintHex(mDNSu8 *data, mDNSu16 len);
 typedef struct D2DRecordListElem
 {
     struct D2DRecordListElem *next;
-    AuthRecord               ar;
     D2DServiceInstance       instanceHandle;
     D2DTransportType         transportType;
+    AuthRecord               ar;    // must be last in the structure to accomodate extra space
+                                    // allocated for large records.
 } D2DRecordListElem;
 
 static D2DRecordListElem *D2DRecords = NULL; // List of records returned with D2DServiceFound events
@@ -1863,7 +1864,8 @@ mDNSexport mStatus mDNSPlatformSendUDP(const mDNS *const m, const void *const ms
     if (err < 0)
     {
         static int MessageCount = 0;
-        // Don't report EHOSTDOWN (i.e. ARP failure), ENETDOWN, or no route to host for unicast destinations
+        LogInfo("mDNSPlatformSendUDP -> sendto(%d) failed to send packet on InterfaceID %p %5s/%d to %#a:%d skt %d error %d errno %d (%s) %lu",
+                s, InterfaceID, ifa_name, dst->type, dst, mDNSVal16(dstPort), s, err, errno, strerror(errno), (mDNSu32)(m->timenow));
         if (!mDNSAddressIsAllDNSLinkGroup(dst))
             if (errno == EHOSTDOWN || errno == ENETDOWN || errno == EHOSTUNREACH || errno == ENETUNREACH) return(mStatus_TransientErr);
         // Don't report EHOSTUNREACH in the first three minutes after boot

@@ -2895,11 +2895,13 @@ dist/mDNSMacOSX/PreferencePane/ddnswriteconfig.m -text
 dist/mDNSMacOSX/PreferencePane/installtool -text
 dist/mDNSMacOSX/Private/dns_services.c -text
 dist/mDNSMacOSX/Private/dns_services.h -text
+dist/mDNSMacOSX/Private/dns_services_mdns.h -text
 dist/mDNSMacOSX/Private/dns_xpc.h -text
 dist/mDNSMacOSX/Private/xpc_services.c -text
 dist/mDNSMacOSX/Private/xpc_services.h -text
 dist/mDNSMacOSX/README.privsep -text
 dist/mDNSMacOSX/VPNService.c -text
+dist/mDNSMacOSX/base.xcconfig -text
 dist/mDNSMacOSX/com.apple.networking.mDNSResponder -text
 dist/mDNSMacOSX/daemon.c -text
 dist/mDNSMacOSX/dnsctl-entitlements.plist -text svneol=unset#application/xml
