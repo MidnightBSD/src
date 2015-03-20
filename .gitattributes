@@ -2607,6 +2607,586 @@
 541/mDNSWindows/mdnsNSP/mdnsNSP.vcxproj -text svneol=unset#application/xml
 541/mDNSWindows/mdnsNSP/mdnsNSP.vcxproj.filters -text svneol=unset#application/xml
 541/mDNSWindows/mdnsNSP/resource.h -text
+561.1.1/Clients/BonjourExample/BonjourExample.cpp -text
+561.1.1/Clients/BonjourExample/BonjourExample.sln -text
+561.1.1/Clients/BonjourExample/BonjourExample.vcproj -text svneol=unset#application/xml
+561.1.1/Clients/BonjourExample/stdafx.cpp -text
+561.1.1/Clients/BonjourExample/stdafx.h -text
+561.1.1/Clients/ClientCommon.c -text
+561.1.1/Clients/ClientCommon.h -text
+561.1.1/Clients/DNS-SD.VisualStudio/DNS-SD.manifest -text svneol=unset#application/xml
+561.1.1/Clients/DNS-SD.VisualStudio/DNS-SD64.manifest -text svneol=unset#application/xml
+561.1.1/Clients/DNS-SD.VisualStudio/dns-sd.rc -text
+561.1.1/Clients/DNS-SD.VisualStudio/dns-sd.sdk.rc -text
+561.1.1/Clients/DNS-SD.VisualStudio/dns-sd.sdk.vcproj -text svneol=unset#application/xml
+561.1.1/Clients/DNS-SD.VisualStudio/dns-sd.vcproj -text svneol=unset#application/xml
+561.1.1/Clients/DNS-SD.VisualStudio/dns-sd.vcxproj -text svneol=unset#application/xml
+561.1.1/Clients/DNS-SD.VisualStudio/dns-sd.vcxproj.filters -text svneol=unset#application/xml
+561.1.1/Clients/DNS-SD.VisualStudio/resource.h -text
+561.1.1/Clients/DNS-SD.xcodeproj/project.pbxproj -text
+561.1.1/Clients/DNSServiceBrowser-Info.plist -text svneol=unset#application/xml
+561.1.1/Clients/DNSServiceBrowser.NET/App.ico -text svneol=unset#image/x-icon
+561.1.1/Clients/DNSServiceBrowser.NET/AssemblyInfo.cs -text
+561.1.1/Clients/DNSServiceBrowser.NET/DNSServiceBrowser.NET.csproj -text svneol=unset#application/xml
+561.1.1/Clients/DNSServiceBrowser.NET/DNSServiceBrowser.cs -text
+561.1.1/Clients/DNSServiceBrowser.NET/DNSServiceBrowser.resx -text svneol=unset#application/xml
+561.1.1/Clients/DNSServiceBrowser.VB/DNSServiceBrowser.Designer.vb -text
+561.1.1/Clients/DNSServiceBrowser.VB/DNSServiceBrowser.VB.vbproj -text svneol=unset#application/xml
+561.1.1/Clients/DNSServiceBrowser.VB/DNSServiceBrowser.resx -text svneol=unset#application/xml
+561.1.1/Clients/DNSServiceBrowser.VB/DNSServiceBrowser.vb -text
+561.1.1/Clients/DNSServiceBrowser.VB/My[!!-~]Project/Application.Designer.vb -text
+561.1.1/Clients/DNSServiceBrowser.VB/My[!!-~]Project/Application.myapp -text svneol=unset#application/xml
+561.1.1/Clients/DNSServiceBrowser.VB/My[!!-~]Project/AssemblyInfo.vb -text
+561.1.1/Clients/DNSServiceBrowser.VB/My[!!-~]Project/Resources.Designer.vb -text
+561.1.1/Clients/DNSServiceBrowser.VB/My[!!-~]Project/Resources.resx -text svneol=unset#application/xml
+561.1.1/Clients/DNSServiceBrowser.VB/My[!!-~]Project/Settings.Designer.vb -text
+561.1.1/Clients/DNSServiceBrowser.VB/My[!!-~]Project/Settings.settings -text svneol=unset#application/xml
+561.1.1/Clients/DNSServiceBrowser.m -text
+561.1.1/Clients/DNSServiceBrowser.nib/classes.nib -text
+561.1.1/Clients/DNSServiceBrowser.nib/info.nib -text svneol=unset#application/xml
+561.1.1/Clients/DNSServiceBrowser.nib/objects.nib -text
+561.1.1/Clients/DNSServiceReg-Info.plist -text svneol=unset#application/xml
+561.1.1/Clients/DNSServiceReg.m -text
+561.1.1/Clients/DNSServiceReg.nib/classes.nib -text
+561.1.1/Clients/DNSServiceReg.nib/info.nib -text svneol=unset#application/xml
+561.1.1/Clients/DNSServiceReg.nib/objects.nib -text
+561.1.1/Clients/ExplorerPlugin/About.cpp -text
+561.1.1/Clients/ExplorerPlugin/About.h -text
+561.1.1/Clients/ExplorerPlugin/ClassFactory.cpp -text
+561.1.1/Clients/ExplorerPlugin/ClassFactory.h -text
+561.1.1/Clients/ExplorerPlugin/ExplorerBar.cpp -text
+561.1.1/Clients/ExplorerPlugin/ExplorerBar.h -text
+561.1.1/Clients/ExplorerPlugin/ExplorerBarWindow.cpp -text
+561.1.1/Clients/ExplorerPlugin/ExplorerBarWindow.h -text
+561.1.1/Clients/ExplorerPlugin/ExplorerPlugin.cpp -text
+561.1.1/Clients/ExplorerPlugin/ExplorerPlugin.def -text
+561.1.1/Clients/ExplorerPlugin/ExplorerPlugin.h -text
+561.1.1/Clients/ExplorerPlugin/ExplorerPlugin.rc -text
+561.1.1/Clients/ExplorerPlugin/ExplorerPlugin.vcproj -text svneol=unset#application/xml
+561.1.1/Clients/ExplorerPlugin/ExplorerPlugin.vcxproj -text svneol=unset#application/xml
+561.1.1/Clients/ExplorerPlugin/ExplorerPlugin.vcxproj.filters -text svneol=unset#application/xml
+561.1.1/Clients/ExplorerPlugin/ExplorerPluginLocRes.rc -text
+561.1.1/Clients/ExplorerPlugin/ExplorerPluginLocRes.vcproj -text svneol=unset#application/xml
+561.1.1/Clients/ExplorerPlugin/ExplorerPluginLocRes.vcxproj -text svneol=unset#application/xml
+561.1.1/Clients/ExplorerPlugin/ExplorerPluginLocRes.vcxproj.filters -text svneol=unset#application/xml
+561.1.1/Clients/ExplorerPlugin/ExplorerPluginRes.rc -text
+561.1.1/Clients/ExplorerPlugin/ExplorerPluginRes.vcproj -text svneol=unset#application/xml
+561.1.1/Clients/ExplorerPlugin/ExplorerPluginRes.vcxproj -text svneol=unset#application/xml
+561.1.1/Clients/ExplorerPlugin/ExplorerPluginRes.vcxproj.filters -text svneol=unset#application/xml
+561.1.1/Clients/ExplorerPlugin/LoginDialog.cpp -text
+561.1.1/Clients/ExplorerPlugin/LoginDialog.h -text
+561.1.1/Clients/ExplorerPlugin/ReadMe.txt -text
+561.1.1/Clients/ExplorerPlugin/Resource.h -text
+561.1.1/Clients/ExplorerPlugin/StdAfx.cpp -text
+561.1.1/Clients/ExplorerPlugin/StdAfx.h -text
+561.1.1/Clients/ExplorerPlugin/res/ExplorerPlugin.manifest -text svneol=unset#application/xml
+561.1.1/Clients/ExplorerPlugin/res/ExplorerPlugin64.manifest -text svneol=unset#application/xml
+561.1.1/Clients/ExplorerPlugin/res/about.bmp -text svneol=unset#image/x-ms-bmp
+561.1.1/Clients/ExplorerPlugin/res/button-2k.ico -text svneol=unset#image/x-icon
+561.1.1/Clients/ExplorerPlugin/res/button-xp.ico -text svneol=unset#image/x-icon
+561.1.1/Clients/ExplorerPlugin/res/cold.ico -text svneol=unset#image/x-icon
+561.1.1/Clients/ExplorerPlugin/res/hot.ico -text svneol=unset#image/x-icon
+561.1.1/Clients/ExplorerPlugin/res/logo.bmp -text svneol=unset#image/x-ms-bmp
+561.1.1/Clients/ExplorerPlugin/resource_dll.h -text
+561.1.1/Clients/ExplorerPlugin/resource_loc_res.h -text
+561.1.1/Clients/ExplorerPlugin/resource_res.h -text
+561.1.1/Clients/FirefoxExtension/CDNSSDService.cpp -text
+561.1.1/Clients/FirefoxExtension/CDNSSDService.h -text
+561.1.1/Clients/FirefoxExtension/CDNSSDServiceModule.cpp -text
+561.1.1/Clients/FirefoxExtension/DNSSDService.sln -text
+561.1.1/Clients/FirefoxExtension/FirefoxExtension.rc -text
+561.1.1/Clients/FirefoxExtension/FirefoxExtension.vcproj -text svneol=unset#application/xml
+561.1.1/Clients/FirefoxExtension/FirefoxExtension.vcxproj -text svneol=unset#application/xml
+561.1.1/Clients/FirefoxExtension/FirefoxExtension.vcxproj.filters -text svneol=unset#application/xml
+561.1.1/Clients/FirefoxExtension/IDNSSDService.h -text
+561.1.1/Clients/FirefoxExtension/IDNSSDService.idl -text
+561.1.1/Clients/FirefoxExtension/extension/chrome.manifest -text
+561.1.1/Clients/FirefoxExtension/extension/components/IDNSSDService.xpt -text
+561.1.1/Clients/FirefoxExtension/extension/content/_internal_bonjour4firefox.png -text svneol=unset#image/png
+561.1.1/Clients/FirefoxExtension/extension/content/_internal_listImage.png -text svneol=unset#image/png
+561.1.1/Clients/FirefoxExtension/extension/content/bonjour4firefox.css -text
+561.1.1/Clients/FirefoxExtension/extension/content/bonjour4firefox.xul -text svneol=unset#application/xml
+561.1.1/Clients/FirefoxExtension/extension/content/browserOverlay.xul -text svneol=unset#application/xml
+561.1.1/Clients/FirefoxExtension/extension/content/overlay.js -text
+561.1.1/Clients/FirefoxExtension/extension/defaults/preferences/bonjour4firefox.js -text
+561.1.1/Clients/FirefoxExtension/extension/install.rdf -text svneol=unset#application/xml
+561.1.1/Clients/FirefoxExtension/extension/locale/en-US/bonjour4firefox.dtd -text
+561.1.1/Clients/FirefoxExtension/extension/locale/en-US/bonjour4firefox.properties -text
+561.1.1/Clients/FirefoxExtension/extension/readme.txt -text
+561.1.1/Clients/FirefoxExtension/extension/skin-darwin/_internal_toobar-button.png -text svneol=unset#image/png
+561.1.1/Clients/FirefoxExtension/extension/skin-darwin/overlay.css -text
+561.1.1/Clients/FirefoxExtension/extension/skin/_internal_toobar-button.png -text svneol=unset#image/png
+561.1.1/Clients/FirefoxExtension/extension/skin/overlay.css -text
+561.1.1/Clients/FirefoxExtension/readme.txt -text
+561.1.1/Clients/FirefoxExtension/resource.h -text
+561.1.1/Clients/Java/BrowserApp.java -text
+561.1.1/Clients/Java/BrowserApp.manifest -text
+561.1.1/Clients/Java/DNSSDUnitTest.java -text
+561.1.1/Clients/Java/JavaSamples.vcproj -text svneol=unset#application/xml
+561.1.1/Clients/Java/JavaSamples.vcxproj -text svneol=unset#application/xml
+561.1.1/Clients/Java/SimpleChat.java -text
+561.1.1/Clients/Java/SimpleChat.manifest -text
+561.1.1/Clients/Java/SwingBrowseListener.java -text
+561.1.1/Clients/Java/SwingDomainListener.java -text
+561.1.1/Clients/Java/SwingQueryListener.java -text
+561.1.1/Clients/Java/nmakefile -text
+561.1.1/Clients/Makefile -text
+561.1.1/Clients/PrinterSetupWizard/About.cpp -text
+561.1.1/Clients/PrinterSetupWizard/About.h -text
+561.1.1/Clients/PrinterSetupWizard/FirstPage.cpp -text
+561.1.1/Clients/PrinterSetupWizard/FirstPage.h -text
+561.1.1/Clients/PrinterSetupWizard/FourthPage.cpp -text
+561.1.1/Clients/PrinterSetupWizard/FourthPage.h -text
+561.1.1/Clients/PrinterSetupWizard/Logger.cpp -text
+561.1.1/Clients/PrinterSetupWizard/Logger.h -text
+561.1.1/Clients/PrinterSetupWizard/PrinterSetupWizard.ncb -text
+561.1.1/Clients/PrinterSetupWizard/PrinterSetupWizard.rc -text
+561.1.1/Clients/PrinterSetupWizard/PrinterSetupWizard.vcproj -text svneol=unset#application/xml
+561.1.1/Clients/PrinterSetupWizard/PrinterSetupWizard.vcxproj -text svneol=unset#application/xml
+561.1.1/Clients/PrinterSetupWizard/PrinterSetupWizard.vcxproj.filters -text svneol=unset#application/xml
+561.1.1/Clients/PrinterSetupWizard/PrinterSetupWizardApp.cpp -text
+561.1.1/Clients/PrinterSetupWizard/PrinterSetupWizardApp.h -text
+561.1.1/Clients/PrinterSetupWizard/PrinterSetupWizardLocRes.rc -text
+561.1.1/Clients/PrinterSetupWizard/PrinterSetupWizardLocRes.vcproj -text svneol=unset#application/xml
+561.1.1/Clients/PrinterSetupWizard/PrinterSetupWizardLocRes.vcxproj -text svneol=unset#application/xml
+561.1.1/Clients/PrinterSetupWizard/PrinterSetupWizardLocRes.vcxproj.filters -text svneol=unset#application/xml
+561.1.1/Clients/PrinterSetupWizard/PrinterSetupWizardRes.rc -text
+561.1.1/Clients/PrinterSetupWizard/PrinterSetupWizardRes.vcproj -text svneol=unset#application/xml
+561.1.1/Clients/PrinterSetupWizard/PrinterSetupWizardRes.vcxproj -text svneol=unset#application/xml
+561.1.1/Clients/PrinterSetupWizard/PrinterSetupWizardRes.vcxproj.filters -text svneol=unset#application/xml
+561.1.1/Clients/PrinterSetupWizard/PrinterSetupWizardSheet.cpp -text
+561.1.1/Clients/PrinterSetupWizard/PrinterSetupWizardSheet.h -text
+561.1.1/Clients/PrinterSetupWizard/ReadMe.txt -text
+561.1.1/Clients/PrinterSetupWizard/SecondPage.cpp -text
+561.1.1/Clients/PrinterSetupWizard/SecondPage.h -text
+561.1.1/Clients/PrinterSetupWizard/ThirdPage.cpp -text
+561.1.1/Clients/PrinterSetupWizard/ThirdPage.h -text
+561.1.1/Clients/PrinterSetupWizard/UtilTypes.h -text
+561.1.1/Clients/PrinterSetupWizard/res/Info.ico -text svneol=unset#image/x-icon
+561.1.1/Clients/PrinterSetupWizard/res/NetworkPrinter.ico -text svneol=unset#image/x-icon
+561.1.1/Clients/PrinterSetupWizard/res/Print.ico -text svneol=unset#image/x-icon
+561.1.1/Clients/PrinterSetupWizard/res/PrinterSetupWizard.ico -text svneol=unset#image/x-icon
+561.1.1/Clients/PrinterSetupWizard/res/PrinterSetupWizard.manifest -text svneol=unset#application/xml
+561.1.1/Clients/PrinterSetupWizard/res/PrinterSetupWizard.rc2 -text
+561.1.1/Clients/PrinterSetupWizard/res/PrinterSetupWizard64.manifest -text svneol=unset#application/xml
+561.1.1/Clients/PrinterSetupWizard/res/PrinterSetupWizardLocRes.rc2 -text
+561.1.1/Clients/PrinterSetupWizard/res/PrinterSetupWizardRes.rc2 -text
+561.1.1/Clients/PrinterSetupWizard/res/Thumbs.db -text
+561.1.1/Clients/PrinterSetupWizard/res/about.bmp -text svneol=unset#image/x-ms-bmp
+561.1.1/Clients/PrinterSetupWizard/res/banner_icon.bmp -text svneol=unset#image/x-ms-bmp
+561.1.1/Clients/PrinterSetupWizard/res/watermark.bmp -text svneol=unset#image/x-ms-bmp
+561.1.1/Clients/PrinterSetupWizard/resource.h -text
+561.1.1/Clients/PrinterSetupWizard/resource_exe.h -text
+561.1.1/Clients/PrinterSetupWizard/resource_loc_res.h -text
+561.1.1/Clients/PrinterSetupWizard/resource_res.h -text
+561.1.1/Clients/PrinterSetupWizard/stdafx.cpp -text
+561.1.1/Clients/PrinterSetupWizard/stdafx.h -text
+561.1.1/Clients/PrinterSetupWizard/tcpxcv.h -text
+561.1.1/Clients/ReadMe.txt -text
+561.1.1/Clients/SimpleChat.NET/App.ico -text svneol=unset#image/x-icon
+561.1.1/Clients/SimpleChat.NET/AssemblyInfo.cs -text
+561.1.1/Clients/SimpleChat.NET/SimpleChat.NET.csproj -text svneol=unset#application/xml
+561.1.1/Clients/SimpleChat.NET/SimpleChat.cs -text
+561.1.1/Clients/SimpleChat.NET/SimpleChat.resx -text svneol=unset#application/xml
+561.1.1/Clients/SimpleChat.VB/My[!!-~]Project/Application.Designer.vb -text
+561.1.1/Clients/SimpleChat.VB/My[!!-~]Project/Application.myapp -text svneol=unset#application/xml
+561.1.1/Clients/SimpleChat.VB/My[!!-~]Project/AssemblyInfo.vb -text
+561.1.1/Clients/SimpleChat.VB/My[!!-~]Project/Resources.Designer.vb -text
+561.1.1/Clients/SimpleChat.VB/My[!!-~]Project/Resources.resx -text svneol=unset#application/xml
+561.1.1/Clients/SimpleChat.VB/My[!!-~]Project/Settings.Designer.vb -text
+561.1.1/Clients/SimpleChat.VB/My[!!-~]Project/Settings.settings -text svneol=unset#application/xml
+561.1.1/Clients/SimpleChat.VB/SimpleChat.Designer.vb -text
+561.1.1/Clients/SimpleChat.VB/SimpleChat.VB.vbproj -text svneol=unset#application/xml
+561.1.1/Clients/SimpleChat.VB/SimpleChat.resx -text svneol=unset#application/xml
+561.1.1/Clients/SimpleChat.VB/SimpleChat.vb -text
+561.1.1/Clients/dns-sd.c -text
+561.1.1/Clients/dnsctl.c -text
+561.1.1/Clients/mDNSNetMonitor.VisualStudio/mDNSNetMonitor.manifest -text svneol=unset#application/xml
+561.1.1/Clients/mDNSNetMonitor.VisualStudio/mDNSNetMonitor.rc -text
+561.1.1/Clients/mDNSNetMonitor.VisualStudio/mDNSNetMonitor.vcproj -text svneol=unset#application/xml
+561.1.1/Clients/mDNSNetMonitor.VisualStudio/mDNSNetMonitor.vcxproj -text svneol=unset#application/xml
+561.1.1/Clients/mDNSNetMonitor.VisualStudio/mDNSNetMonitor.vcxproj.filters -text svneol=unset#application/xml
+561.1.1/Clients/mDNSNetMonitor.VisualStudio/resource.h -text
+561.1.1/LICENSE -text
+561.1.1/Makefile -text
+561.1.1/PrivateDNS.txt -text
+561.1.1/README.txt -text
+561.1.1/mDNSCore/CryptoAlg.c -text
+561.1.1/mDNSCore/CryptoAlg.h -text
+561.1.1/mDNSCore/DNSCommon.c -text
+561.1.1/mDNSCore/DNSCommon.h -text
+561.1.1/mDNSCore/DNSDigest.c -text
+561.1.1/mDNSCore/Implementer[!!-~]Notes.txt -text
+561.1.1/mDNSCore/anonymous.c -text
+561.1.1/mDNSCore/anonymous.h -text
+561.1.1/mDNSCore/dnsproxy.c -text
+561.1.1/mDNSCore/dnsproxy.h -text
+561.1.1/mDNSCore/dnssec.c -text
+561.1.1/mDNSCore/dnssec.h -text
+561.1.1/mDNSCore/mDNS.c -text
+561.1.1/mDNSCore/mDNSDebug.h -text
+561.1.1/mDNSCore/mDNSEmbeddedAPI.h -text
+561.1.1/mDNSCore/nsec.c -text
+561.1.1/mDNSCore/nsec.h -text
+561.1.1/mDNSCore/nsec3.c -text
+561.1.1/mDNSCore/nsec3.h -text
+561.1.1/mDNSCore/uDNS.c -text
+561.1.1/mDNSCore/uDNS.h -text
+561.1.1/mDNSMacOS9/CarbonResource.r -text
+561.1.1/mDNSMacOS9/Mac[!!-~]OS[!!-~]Test[!!-~]Responder.c -text
+561.1.1/mDNSMacOS9/Mac[!!-~]OS[!!-~]Test[!!-~]Searcher.c -text
+561.1.1/mDNSMacOS9/README.txt -text
+561.1.1/mDNSMacOS9/Responder.c -text
+561.1.1/mDNSMacOS9/Searcher.c -text
+561.1.1/mDNSMacOS9/ShowInitIcon.c -text
+561.1.1/mDNSMacOS9/ShowInitIcon.h -text
+561.1.1/mDNSMacOS9/SubTypeTester.c -text
+561.1.1/mDNSMacOS9/mDNS.mcp -text
+561.1.1/mDNSMacOS9/mDNSLibrary.c -text
+561.1.1/mDNSMacOS9/mDNSLibraryLoader.c -text
+561.1.1/mDNSMacOS9/mDNSLibraryResources.r -text
+561.1.1/mDNSMacOS9/mDNSMacOS9.c -text
+561.1.1/mDNSMacOS9/mDNSMacOS9.h -text
+561.1.1/mDNSMacOS9/mDNSPrefix.h -text
+561.1.1/mDNSMacOSX/BonjourEvents-Info.plist -text svneol=unset#application/xml
+561.1.1/mDNSMacOSX/BonjourEvents.c -text
+561.1.1/mDNSMacOSX/CUPolicy.c -text
+561.1.1/mDNSMacOSX/CryptoSupport.c -text
+561.1.1/mDNSMacOSX/CryptoSupport.h -text
+561.1.1/mDNSMacOSX/DNSProxySupport.c -text
+561.1.1/mDNSMacOSX/DNSSECSupport.c -text
+561.1.1/mDNSMacOSX/DNSSECSupport.h -text
+561.1.1/mDNSMacOSX/DNSServiceDiscovery.c -text
+561.1.1/mDNSMacOSX/DNSServiceDiscovery.h -text
+561.1.1/mDNSMacOSX/DNSServiceDiscoveryDefines.h -text
+561.1.1/mDNSMacOSX/DNSServiceDiscoveryReply.defs -text
+561.1.1/mDNSMacOSX/DNSServiceDiscoveryRequest.defs -text
+561.1.1/mDNSMacOSX/LaunchDaemonInfo-Tiger.helper.plist -text svneol=unset#application/xml
+561.1.1/mDNSMacOSX/LaunchDaemonInfo-Tiger.plist -text svneol=unset#application/xml
+561.1.1/mDNSMacOSX/LaunchDaemonInfo.dnsextd.plist -text svneol=unset#application/xml
+561.1.1/mDNSMacOSX/LaunchDaemonInfo.helper.plist -text svneol=unset#application/xml
+561.1.1/mDNSMacOSX/LaunchDaemonInfo.plist -text svneol=unset#application/xml
+561.1.1/mDNSMacOSX/LegacyNATTraversal.c -text
+561.1.1/mDNSMacOSX/P2PPacketFilter.c -text
+561.1.1/mDNSMacOSX/P2PPacketFilter.h -text
+561.1.1/mDNSMacOSX/PreferencePane/Artwork/add_idle.tiff -text svneol=unset#image/tiff
+561.1.1/mDNSMacOSX/PreferencePane/Artwork/add_pressed.tiff -text svneol=unset#image/tiff
+561.1.1/mDNSMacOSX/PreferencePane/Artwork/failure.tiff -text svneol=unset#image/tiff
+561.1.1/mDNSMacOSX/PreferencePane/Artwork/inprogress.tiff -text svneol=unset#image/tiff
+561.1.1/mDNSMacOSX/PreferencePane/Artwork/remove_disabled.tiff -text svneol=unset#image/tiff
+561.1.1/mDNSMacOSX/PreferencePane/Artwork/remove_idle.tiff -text svneol=unset#image/tiff
+561.1.1/mDNSMacOSX/PreferencePane/Artwork/remove_pressed.tiff -text svneol=unset#image/tiff
+561.1.1/mDNSMacOSX/PreferencePane/Artwork/success.tiff -text svneol=unset#image/tiff
+561.1.1/mDNSMacOSX/PreferencePane/BonjourPref.icns -text
+561.1.1/mDNSMacOSX/PreferencePane/BonjourPref.tiff -text svneol=unset#image/tiff
+561.1.1/mDNSMacOSX/PreferencePane/ConfigurationAuthority.c -text
+561.1.1/mDNSMacOSX/PreferencePane/ConfigurationAuthority.h -text
+561.1.1/mDNSMacOSX/PreferencePane/ConfigurationRights.h -text
+561.1.1/mDNSMacOSX/PreferencePane/DNSServiceDiscoveryPref.h -text
+561.1.1/mDNSMacOSX/PreferencePane/DNSServiceDiscoveryPref.m -text
+561.1.1/mDNSMacOSX/PreferencePane/English.lproj/DNSServiceDiscoveryPref.nib/classes.nib -text
+561.1.1/mDNSMacOSX/PreferencePane/English.lproj/DNSServiceDiscoveryPref.nib/info.nib -text svneol=unset#application/xml
+561.1.1/mDNSMacOSX/PreferencePane/English.lproj/DNSServiceDiscoveryPref.nib/keyedobjects.nib -text
+561.1.1/mDNSMacOSX/PreferencePane/English.lproj/InfoPlist.strings -text
+561.1.1/mDNSMacOSX/PreferencePane/Info-PreferencePane.plist -text svneol=unset#application/xml
+561.1.1/mDNSMacOSX/PreferencePane/PrivilegedOperations.c -text
+561.1.1/mDNSMacOSX/PreferencePane/PrivilegedOperations.h -text
+561.1.1/mDNSMacOSX/PreferencePane/ddnswriteconfig.m -text
+561.1.1/mDNSMacOSX/PreferencePane/installtool -text
+561.1.1/mDNSMacOSX/Private/dns_services.c -text
+561.1.1/mDNSMacOSX/Private/dns_services.h -text
+561.1.1/mDNSMacOSX/Private/dns_services_mdns.h -text
+561.1.1/mDNSMacOSX/Private/dns_xpc.h -text
+561.1.1/mDNSMacOSX/Private/xpc_services.c -text
+561.1.1/mDNSMacOSX/Private/xpc_services.h -text
+561.1.1/mDNSMacOSX/README.privsep -text
+561.1.1/mDNSMacOSX/VPNService.c -text
+561.1.1/mDNSMacOSX/base.xcconfig -text
+561.1.1/mDNSMacOSX/com.apple.networking.mDNSResponder -text
+561.1.1/mDNSMacOSX/daemon.c -text
+561.1.1/mDNSMacOSX/dnsctl-entitlements.plist -text svneol=unset#application/xml
+561.1.1/mDNSMacOSX/helper-entitlements.plist -text svneol=unset#application/xml
+561.1.1/mDNSMacOSX/helper-error.h -text
+561.1.1/mDNSMacOSX/helper-main.c -text
+561.1.1/mDNSMacOSX/helper-server.h -text
+561.1.1/mDNSMacOSX/helper-stubs.c -text
+561.1.1/mDNSMacOSX/helper.c -text
+561.1.1/mDNSMacOSX/helper.h -text
+561.1.1/mDNSMacOSX/helpermsg-types.h -text
+561.1.1/mDNSMacOSX/helpermsg.defs -text
+561.1.1/mDNSMacOSX/ipsec_strerror.h -text
+561.1.1/mDNSMacOSX/libpfkey.h -text
+561.1.1/mDNSMacOSX/mDNSMacOSX.c -text
+561.1.1/mDNSMacOSX/mDNSMacOSX.h -text
+561.1.1/mDNSMacOSX/mDNSResponder-bundle/Resources/English.lproj/Localizable.strings -text
+561.1.1/mDNSMacOSX/mDNSResponder-bundle/Resources/French.lproj/Localizable.strings -text
+561.1.1/mDNSMacOSX/mDNSResponder-entitlements.plist -text svneol=unset#application/xml
+561.1.1/mDNSMacOSX/mDNSResponder.order -text
+561.1.1/mDNSMacOSX/mDNSResponder.pbproj/project.pbxproj -text
+561.1.1/mDNSMacOSX/mDNSResponder.plist -text svneol=unset#application/xml
+561.1.1/mDNSMacOSX/mDNSResponder.sb -text
+561.1.1/mDNSMacOSX/mDNSResponder.txt -text
+561.1.1/mDNSMacOSX/mDNSResponder.xcodeproj/project.pbxproj -text
+561.1.1/mDNSMacOSX/mDNSResponderHelper.8 -text
+561.1.1/mDNSMacOSX/mDNSResponderHelper.plist -text svneol=unset#application/xml
+561.1.1/mDNSMacOSX/mDNSResponderLogging.mobileconfig -text svneol=unset#application/xml
+561.1.1/mDNSMacOSX/pfkey.c -text
+561.1.1/mDNSPosix/Client.c -text
+561.1.1/mDNSPosix/ExampleClientApp.c -text
+561.1.1/mDNSPosix/ExampleClientApp.h -text
+561.1.1/mDNSPosix/Identify.c -text
+561.1.1/mDNSPosix/Makefile -text
+561.1.1/mDNSPosix/NetMonitor.c -text
+561.1.1/mDNSPosix/PosixDaemon.c -text
+561.1.1/mDNSPosix/ProxyResponder.c -text
+561.1.1/mDNSPosix/ReadMe.txt -text
+561.1.1/mDNSPosix/Responder.c -text
+561.1.1/mDNSPosix/Services.txt -text
+561.1.1/mDNSPosix/libnss_mdns.8 -text
+561.1.1/mDNSPosix/mDNSPosix.c -text
+561.1.1/mDNSPosix/mDNSPosix.h -text
+561.1.1/mDNSPosix/mDNSUNP.c -text
+561.1.1/mDNSPosix/mDNSUNP.h -text
+561.1.1/mDNSPosix/mdnsd.sh -text
+561.1.1/mDNSPosix/nss_ReadMe.txt -text
+561.1.1/mDNSPosix/nss_mdns.c -text
+561.1.1/mDNSPosix/nss_mdns.conf -text
+561.1.1/mDNSPosix/nss_mdns.conf.5 -text
+561.1.1/mDNSPosix/parselog.py -text
+561.1.1/mDNSResponder.sln -text
+561.1.1/mDNSShared/CommonServices.h -text
+561.1.1/mDNSShared/DebugServices.c -text
+561.1.1/mDNSShared/DebugServices.h -text
+561.1.1/mDNSShared/GenLinkedList.c -text
+561.1.1/mDNSShared/GenLinkedList.h -text
+561.1.1/mDNSShared/Java/BaseListener.java -text
+561.1.1/mDNSShared/Java/BrowseListener.java -text
+561.1.1/mDNSShared/Java/DNSRecord.java -text
+561.1.1/mDNSShared/Java/DNSSD.java -text
+561.1.1/mDNSShared/Java/DNSSDException.java -text
+561.1.1/mDNSShared/Java/DNSSDRecordRegistrar.java -text
+561.1.1/mDNSShared/Java/DNSSDRegistration.java -text
+561.1.1/mDNSShared/Java/DNSSDService.java -text
+561.1.1/mDNSShared/Java/DomainListener.java -text
+561.1.1/mDNSShared/Java/JNISupport.c -text
+561.1.1/mDNSShared/Java/QueryListener.java -text
+561.1.1/mDNSShared/Java/RegisterListener.java -text
+561.1.1/mDNSShared/Java/RegisterRecordListener.java -text
+561.1.1/mDNSShared/Java/ResolveListener.java -text
+561.1.1/mDNSShared/Java/TXTRecord.java -text
+561.1.1/mDNSShared/PlatformCommon.c -text
+561.1.1/mDNSShared/PlatformCommon.h -text
+561.1.1/mDNSShared/dns-sd.1 -text
+561.1.1/mDNSShared/dns_sd.h -text
+561.1.1/mDNSShared/dnsextd.8 -text
+561.1.1/mDNSShared/dnsextd.c -text
+561.1.1/mDNSShared/dnsextd.conf -text
+561.1.1/mDNSShared/dnsextd.h -text
+561.1.1/mDNSShared/dnsextd_lexer.l -text
+561.1.1/mDNSShared/dnsextd_parser.y -text
+561.1.1/mDNSShared/dnssd_clientlib.c -text
+561.1.1/mDNSShared/dnssd_clientshim.c -text
+561.1.1/mDNSShared/dnssd_clientstub.c -text
+561.1.1/mDNSShared/dnssd_ipc.c -text
+561.1.1/mDNSShared/dnssd_ipc.h -text
+561.1.1/mDNSShared/mDNSDebug.c -text
+561.1.1/mDNSShared/mDNSResponder.8 -text
+561.1.1/mDNSShared/uds_daemon.c -text
+561.1.1/mDNSShared/uds_daemon.h -text
+561.1.1/mDNSVxWorks/README.txt -text
+561.1.1/mDNSVxWorks/mDNSVxWorks.c -text
+561.1.1/mDNSVxWorks/mDNSVxWorks.h -text
+561.1.1/mDNSVxWorks/mDNSVxWorksIPv4Only.c -text
+561.1.1/mDNSVxWorks/mDNSVxWorksIPv4Only.h -text
+561.1.1/mDNSWindows/ControlPanel/BrowsingPage.cpp -text
+561.1.1/mDNSWindows/ControlPanel/BrowsingPage.h -text
+561.1.1/mDNSWindows/ControlPanel/ConfigDialog.cpp -text
+561.1.1/mDNSWindows/ControlPanel/ConfigDialog.h -text
+561.1.1/mDNSWindows/ControlPanel/ConfigPropertySheet.cpp -text
+561.1.1/mDNSWindows/ControlPanel/ConfigPropertySheet.h -text
+561.1.1/mDNSWindows/ControlPanel/ControlPanel.cpp -text
+561.1.1/mDNSWindows/ControlPanel/ControlPanel.def -text
+561.1.1/mDNSWindows/ControlPanel/ControlPanel.h -text
+561.1.1/mDNSWindows/ControlPanel/ControlPanel.rc -text
+561.1.1/mDNSWindows/ControlPanel/ControlPanel.vcproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/ControlPanel/ControlPanel.vcxproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/ControlPanel/ControlPanel.vcxproj.filters -text svneol=unset#application/xml
+561.1.1/mDNSWindows/ControlPanel/ControlPanelDll.rc -text
+561.1.1/mDNSWindows/ControlPanel/ControlPanelExe.cpp -text
+561.1.1/mDNSWindows/ControlPanel/ControlPanelExe.h -text
+561.1.1/mDNSWindows/ControlPanel/ControlPanelExe.rc -text
+561.1.1/mDNSWindows/ControlPanel/ControlPanelExe.vcproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/ControlPanel/ControlPanelLocRes.rc -text
+561.1.1/mDNSWindows/ControlPanel/ControlPanelLocRes.vcproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/ControlPanel/ControlPanelLocRes.vcxproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/ControlPanel/ControlPanelLocRes.vcxproj.filters -text svneol=unset#application/xml
+561.1.1/mDNSWindows/ControlPanel/ControlPanelRes.rc -text
+561.1.1/mDNSWindows/ControlPanel/ControlPanelRes.vcproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/ControlPanel/ControlPanelRes.vcxproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/ControlPanel/ControlPanelRes.vcxproj.filters -text svneol=unset#application/xml
+561.1.1/mDNSWindows/ControlPanel/FourthPage.cpp -text
+561.1.1/mDNSWindows/ControlPanel/FourthPage.h -text
+561.1.1/mDNSWindows/ControlPanel/RegistrationPage.cpp -text
+561.1.1/mDNSWindows/ControlPanel/RegistrationPage.h -text
+561.1.1/mDNSWindows/ControlPanel/SecondPage.cpp -text
+561.1.1/mDNSWindows/ControlPanel/SecondPage.h -text
+561.1.1/mDNSWindows/ControlPanel/ServicesPage.cpp -text
+561.1.1/mDNSWindows/ControlPanel/ServicesPage.h -text
+561.1.1/mDNSWindows/ControlPanel/SharedSecret.cpp -text
+561.1.1/mDNSWindows/ControlPanel/SharedSecret.h -text
+561.1.1/mDNSWindows/ControlPanel/res/ControlPanel.dll.manifest -text svneol=unset#application/xml
+561.1.1/mDNSWindows/ControlPanel/res/ControlPanel.exe.manifest -text svneol=unset#application/xml
+561.1.1/mDNSWindows/ControlPanel/res/ControlPanel.manifest -text svneol=unset#application/xml
+561.1.1/mDNSWindows/ControlPanel/res/ControlPanel.rc2 -text
+561.1.1/mDNSWindows/ControlPanel/res/ControlPanel64.manifest -text svneol=unset#application/xml
+561.1.1/mDNSWindows/ControlPanel/res/EnergySaver.ico -text svneol=unset#image/x-icon
+561.1.1/mDNSWindows/ControlPanel/res/controlpanel.ico -text svneol=unset#image/x-icon
+561.1.1/mDNSWindows/ControlPanel/res/failure.ico -text svneol=unset#image/x-icon
+561.1.1/mDNSWindows/ControlPanel/res/success.ico -text svneol=unset#image/x-icon
+561.1.1/mDNSWindows/ControlPanel/resource.h -text
+561.1.1/mDNSWindows/ControlPanel/stdafx.cpp -text
+561.1.1/mDNSWindows/ControlPanel/stdafx.h -text
+561.1.1/mDNSWindows/DLL.NET/AssemblyInfo.cpp -text
+561.1.1/mDNSWindows/DLL.NET/PString.h -text
+561.1.1/mDNSWindows/DLL.NET/Stdafx.cpp -text
+561.1.1/mDNSWindows/DLL.NET/Stdafx.h -text
+561.1.1/mDNSWindows/DLL.NET/dnssd_NET.cpp -text
+561.1.1/mDNSWindows/DLL.NET/dnssd_NET.h -text
+561.1.1/mDNSWindows/DLL.NET/dnssd_NET.ico -text svneol=unset#image/x-icon
+561.1.1/mDNSWindows/DLL.NET/dnssd_NET.rc -text
+561.1.1/mDNSWindows/DLL.NET/dnssd_NET.vcproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/DLL.NET/resource.h -text
+561.1.1/mDNSWindows/DLL/dll.aps -text
+561.1.1/mDNSWindows/DLL/dll.rc -text
+561.1.1/mDNSWindows/DLL/dllmain.c -text
+561.1.1/mDNSWindows/DLL/dnssd.def -text
+561.1.1/mDNSWindows/DLL/dnssd.vcproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/DLL/dnssd.vcxproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/DLL/dnssd.vcxproj.filters -text svneol=unset#application/xml
+561.1.1/mDNSWindows/DLL/resource.h -text
+561.1.1/mDNSWindows/DLLStub/DLLStub.cpp -text
+561.1.1/mDNSWindows/DLLStub/DLLStub.h -text
+561.1.1/mDNSWindows/DLLStub/DLLStub.vcproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/DLLStub/DLLStub.vcxproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/DLLStub/DLLStub.vcxproj.filters -text svneol=unset#application/xml
+561.1.1/mDNSWindows/DLLX/DLLX.cpp -text
+561.1.1/mDNSWindows/DLLX/DLLX.def -text
+561.1.1/mDNSWindows/DLLX/DLLX.idl -text
+561.1.1/mDNSWindows/DLLX/DLLX.rc -text
+561.1.1/mDNSWindows/DLLX/DLLX.rgs -text
+561.1.1/mDNSWindows/DLLX/DLLX.vcproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/DLLX/DLLX.vcxproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/DLLX/DLLX.vcxproj.filters -text svneol=unset#application/xml
+561.1.1/mDNSWindows/DLLX/DNSSD.cpp -text
+561.1.1/mDNSWindows/DLLX/DNSSDEventManager.cpp -text
+561.1.1/mDNSWindows/DLLX/DNSSDEventManager.h -text
+561.1.1/mDNSWindows/DLLX/DNSSDEventManager.rgs -text
+561.1.1/mDNSWindows/DLLX/DNSSDRecord.cpp -text
+561.1.1/mDNSWindows/DLLX/DNSSDRecord.h -text
+561.1.1/mDNSWindows/DLLX/DNSSDRecord.rgs -text
+561.1.1/mDNSWindows/DLLX/DNSSDService.cpp -text
+561.1.1/mDNSWindows/DLLX/DNSSDService.h -text
+561.1.1/mDNSWindows/DLLX/DNSSDService.rgs -text
+561.1.1/mDNSWindows/DLLX/StringServices.cpp -text
+561.1.1/mDNSWindows/DLLX/StringServices.h -text
+561.1.1/mDNSWindows/DLLX/TXTRecord.cpp -text
+561.1.1/mDNSWindows/DLLX/TXTRecord.h -text
+561.1.1/mDNSWindows/DLLX/TXTRecord.rgs -text
+561.1.1/mDNSWindows/DLLX/_IDNSSDEvents_CP.h -text
+561.1.1/mDNSWindows/DLLX/dlldatax.c -text
+561.1.1/mDNSWindows/DLLX/dlldatax.h -text
+561.1.1/mDNSWindows/DLLX/resource.h -text
+561.1.1/mDNSWindows/DLLX/stdafx.h -text
+561.1.1/mDNSWindows/DNSServiceBrowser/Windows/ApplicationVS2002.sln -text
+561.1.1/mDNSWindows/DNSServiceBrowser/Windows/ApplicationVS2002.vcproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/DNSServiceBrowser/Windows/ApplicationVS2003.sln -text
+561.1.1/mDNSWindows/DNSServiceBrowser/Windows/ApplicationVS2003.vcproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/DNSServiceBrowser/Windows/Resources/Application.ico -text svneol=unset#image/x-icon
+561.1.1/mDNSWindows/DNSServiceBrowser/Windows/Resources/Application.rc -text
+561.1.1/mDNSWindows/DNSServiceBrowser/Windows/Resources/Application.rc2 -text
+561.1.1/mDNSWindows/DNSServiceBrowser/Windows/Resources/Resource.h -text
+561.1.1/mDNSWindows/DNSServiceBrowser/Windows/Sources/AboutDialog.cpp -text
+561.1.1/mDNSWindows/DNSServiceBrowser/Windows/Sources/AboutDialog.h -text
+561.1.1/mDNSWindows/DNSServiceBrowser/Windows/Sources/Application.cpp -text
+561.1.1/mDNSWindows/DNSServiceBrowser/Windows/Sources/Application.h -text
+561.1.1/mDNSWindows/DNSServiceBrowser/Windows/Sources/ChooserDialog.cpp -text
+561.1.1/mDNSWindows/DNSServiceBrowser/Windows/Sources/ChooserDialog.h -text
+561.1.1/mDNSWindows/DNSServiceBrowser/Windows/Sources/LoginDialog.cpp -text
+561.1.1/mDNSWindows/DNSServiceBrowser/Windows/Sources/LoginDialog.h -text
+561.1.1/mDNSWindows/DNSServiceBrowser/Windows/Sources/StdAfx.cpp -text
+561.1.1/mDNSWindows/DNSServiceBrowser/Windows/Sources/StdAfx.h -text
+561.1.1/mDNSWindows/DNSServiceBrowser/WindowsCE/Application.vcc -text
+561.1.1/mDNSWindows/DNSServiceBrowser/WindowsCE/Application.vcp -text
+561.1.1/mDNSWindows/DNSServiceBrowser/WindowsCE/Application.vcw -text
+561.1.1/mDNSWindows/DNSServiceBrowser/WindowsCE/Resources/Application.ico -text svneol=unset#image/x-icon
+561.1.1/mDNSWindows/DNSServiceBrowser/WindowsCE/Resources/Application.rc -text
+561.1.1/mDNSWindows/DNSServiceBrowser/WindowsCE/Resources/Application.rc2 -text
+561.1.1/mDNSWindows/DNSServiceBrowser/WindowsCE/Resources/newres.h -text
+561.1.1/mDNSWindows/DNSServiceBrowser/WindowsCE/Resources/resource.h -text
+561.1.1/mDNSWindows/DNSServiceBrowser/WindowsCE/Sources/Application.cpp -text
+561.1.1/mDNSWindows/DNSServiceBrowser/WindowsCE/Sources/Application.h -text
+561.1.1/mDNSWindows/DNSServiceBrowser/WindowsCE/Sources/BrowserDialog.cpp -text
+561.1.1/mDNSWindows/DNSServiceBrowser/WindowsCE/Sources/BrowserDialog.h -text
+561.1.1/mDNSWindows/DNSServiceBrowser/WindowsCE/Sources/StdAfx.cpp -text
+561.1.1/mDNSWindows/DNSServiceBrowser/WindowsCE/Sources/StdAfx.h -text
+561.1.1/mDNSWindows/Java/Java.vcproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/Java/Java.vcxproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/Java/jdns_sd.rc -text
+561.1.1/mDNSWindows/Java/makefile -text
+561.1.1/mDNSWindows/Java/makefile64 -text
+561.1.1/mDNSWindows/NSPTool/NSPTool.aps -text
+561.1.1/mDNSWindows/NSPTool/NSPTool.c -text
+561.1.1/mDNSWindows/NSPTool/NSPTool.rc -text
+561.1.1/mDNSWindows/NSPTool/NSPTool.vcproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/NSPTool/NSPTool.vcxproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/NSPTool/NSPTool.vcxproj.filters -text svneol=unset#application/xml
+561.1.1/mDNSWindows/NSPTool/Prefix.h -text
+561.1.1/mDNSWindows/NSPTool/resource.h -text
+561.1.1/mDNSWindows/Poll.c -text
+561.1.1/mDNSWindows/Poll.h -text
+561.1.1/mDNSWindows/PosixCompat.c -text
+561.1.1/mDNSWindows/PosixCompat.h -text
+561.1.1/mDNSWindows/README.txt -text
+561.1.1/mDNSWindows/RegNames.h -text
+561.1.1/mDNSWindows/Secret.c -text
+561.1.1/mDNSWindows/Secret.h -text
+561.1.1/mDNSWindows/SystemService/EventLog.mc -text
+561.1.1/mDNSWindows/SystemService/EventLogMessages.bin -text
+561.1.1/mDNSWindows/SystemService/Firewall.cpp -text
+561.1.1/mDNSWindows/SystemService/Firewall.h -text
+561.1.1/mDNSWindows/SystemService/Prefix.h -text
+561.1.1/mDNSWindows/SystemService/Service.aps -text
+561.1.1/mDNSWindows/SystemService/Service.c -text
+561.1.1/mDNSWindows/SystemService/Service.h -text
+561.1.1/mDNSWindows/SystemService/Service.mcp -text
+561.1.1/mDNSWindows/SystemService/Service.rc -text
+561.1.1/mDNSWindows/SystemService/Service.vcproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/SystemService/Service.vcxproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/SystemService/Service.vcxproj.filters -text svneol=unset#application/xml
+561.1.1/mDNSWindows/SystemService/main.c -text
+561.1.1/mDNSWindows/SystemService/res/mDNSResponder.manifest -text svneol=unset#application/xml
+561.1.1/mDNSWindows/SystemService/res/mDNSResponder64.manifest -text svneol=unset#application/xml
+561.1.1/mDNSWindows/SystemService/resource.h -text
+561.1.1/mDNSWindows/SystemService/resrc1.h -text
+561.1.1/mDNSWindows/VPCDetect.cpp -text
+561.1.1/mDNSWindows/VPCDetect.h -text
+561.1.1/mDNSWindows/WinServices.cpp -text
+561.1.1/mDNSWindows/WinServices.h -text
+561.1.1/mDNSWindows/WinVersRes.h -text
+561.1.1/mDNSWindows/isocode.h -text
+561.1.1/mDNSWindows/loclibrary.c -text
+561.1.1/mDNSWindows/loclibrary.h -text
+561.1.1/mDNSWindows/mDNSWin32.c -text
+561.1.1/mDNSWindows/mDNSWin32.h -text
+561.1.1/mDNSWindows/mdnsNSP/ReadMe.txt -text
+561.1.1/mDNSWindows/mdnsNSP/mdnsNSP.aps -text
+561.1.1/mDNSWindows/mdnsNSP/mdnsNSP.c -text
+561.1.1/mDNSWindows/mdnsNSP/mdnsNSP.def -text
+561.1.1/mDNSWindows/mdnsNSP/mdnsNSP.rc -text
+561.1.1/mDNSWindows/mdnsNSP/mdnsNSP.vcproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/mdnsNSP/mdnsNSP.vcxproj -text svneol=unset#application/xml
+561.1.1/mDNSWindows/mdnsNSP/mdnsNSP.vcxproj.filters -text svneol=unset#application/xml
+561.1.1/mDNSWindows/mdnsNSP/resource.h -text
 dist/Clients/BonjourExample/BonjourExample.cpp -text
 dist/Clients/BonjourExample/BonjourExample.sln -text
 dist/Clients/BonjourExample/BonjourExample.vcproj -text svneol=unset#application/xml
