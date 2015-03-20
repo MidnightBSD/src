@@ -1,6 +1,6 @@
 /*	$OpenBSD: edit.c,v 1.39 2013/12/17 16:37:05 deraadt Exp $	*/
 /*	$OpenBSD: edit.h,v 1.9 2011/05/30 17:14:35 martynas Exp $	*/
-/*	$OpenBSD: emacs.c,v 1.48 2013/12/17 16:37:05 deraadt Exp $	*/
+/*	$OpenBSD: emacs.c,v 1.49 2015/02/16 01:44:41 tedu Exp $	*/
 /*	$OpenBSD: vi.c,v 1.28 2013/12/18 16:45:46 deraadt Exp $	*/
 
 /*-
@@ -28,7 +28,7 @@
 
 #ifndef MKSH_NO_CMDLINE_EDITING
 
-__RCSID("$MirOS: src/bin/mksh/edit.c,v 1.276 2014/07/13 11:34:28 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/edit.c,v 1.276.2.3 2015/03/01 15:42:56 tg Exp $");
 
 /*
  * in later versions we might use libtermcap for this, but since external
@@ -327,7 +327,7 @@ x_glob_hlp_tilde_and_rem_qchar(char *s, bool magic_flag)
 		/* ok, so split into "~foo"/"bar" or "~"/"baz" */
 		*cp++ = 0;
 		/* try to expand the tilde */
-		if (!(dp = tilde(s + 1))) {
+		if (!(dp = do_tilde(s + 1))) {
 			/* nope, revert damage */
 			*--cp = '/';
 		} else {
@@ -591,8 +591,6 @@ x_cf_glob(int *flagsp, const char *buf, int buflen, int pos, int *startp,
 	int len, nwords = 0;
 	char **words = NULL;
 	bool is_command;
-
-	mkssert(buf != NULL);
 
 	len = x_locate_word(buf, buflen, pos, startp, &is_command);
 	if (!((*flagsp) & XCF_COMMAND))
@@ -1009,7 +1007,6 @@ enum emacs_funcs {
 static const struct x_ftab x_ftab[] = {
 #define EMACSFN_ITEMS
 #include "emacsfn.h"
-	{ 0, NULL, 0 }
 };
 
 static struct x_defbindings const x_defbindings[] = {
@@ -2240,7 +2237,6 @@ x_push(int nchars)
 {
 	char *cp;
 
-	mkssert(xcp != NULL);
 	strndupx(cp, xcp, nchars, AEDIT);
 	if (killstack[killsp])
 		afree(killstack[killsp], AEDIT);
@@ -2455,8 +2451,7 @@ x_bind(const char *a1, const char *a2,
 	/* List function names */
 	if (list) {
 		for (f = 0; f < NELEM(x_ftab); f++)
-			if (x_ftab[f].xf_name &&
-			    !(x_ftab[f].xf_flags & XF_NOBIND))
+			if (!(x_ftab[f].xf_flags & XF_NOBIND))
 				shprintf("%s\n", x_ftab[f].xf_name);
 		return (0);
 	}
@@ -2517,8 +2512,7 @@ x_bind(const char *a1, const char *a2,
 #endif
 	} else {
 		for (f = 0; f < NELEM(x_ftab); f++)
-			if (x_ftab[f].xf_name &&
-			    strcmp(x_ftab[f].xf_name, a2) == 0)
+			if (!strcmp(x_ftab[f].xf_name, a2))
 				break;
 		if (f == NELEM(x_ftab) || x_ftab[f].xf_flags & XF_NOBIND) {
 			bi_errorf("%s: %s %s", a2, "no such", Tfunction);
