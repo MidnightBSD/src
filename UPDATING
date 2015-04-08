@@ -1,5 +1,15 @@
 Updating Information for MidnightBSD users.
 
+20150407:
+	Fix two security vulnerabilities:
+
+	The previous fix for IGMP had an overflow issue. This has been corrected.
+
+	ipv6: The Neighbor Discover Protocol allows a local router to advertise a
+	suggested Current Hop Limit value of a link, which will replace
+	Current Hop Limit on an interface connected to the link on the MidnightBSD
+	system.
+
 20150319:
 	OpenSSL 0.9.8.zf
 
