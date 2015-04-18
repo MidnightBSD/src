@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20150418:
+	sqlite 3.8.9
+
 20150407:
 	Fix two security vulnerabilities:
 
