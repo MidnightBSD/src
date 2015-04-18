@@ -200,6 +200,8 @@ static mportAssetListEntryType parse_command(const char *s)
     return ASSET_MTREE;
   if (STRING_EQ(s, "option"))
     return ASSET_OPTION;
+  if (STRING_EQ(s, "sample"))
+    return ASSET_SAMPLE;
   
   return ASSET_INVALID;
 }

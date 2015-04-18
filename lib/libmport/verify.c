@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/verify.c,v 1.8.2.1 2013/07/17 22:54:04 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -81,6 +81,7 @@ mport_verify_package(mportInstance *mport, mportPackageMeta *pack) {
 
 		switch (type) {
 			case ASSET_FILE:
+			case ASSET_SAMPLE:
 				if (lstat(file, &st) != 0) {
 					mport_call_msg_cb(mport, "Can't stat %s: %s", file, strerror(errno));
 					break; /* next asset */

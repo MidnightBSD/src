@@ -145,7 +145,7 @@ static int insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackage
       RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
     }
     
-    if (e->type == ASSET_FILE) {
+    if (e->type == ASSET_FILE || e->type == ASSET_SAMPLE) {
       /* Don't prepend cwd onto absolute file paths (this is useful for update) */
       if (*(e->data) == '/') {
         (void)strlcpy(file, e->data, FILENAME_MAX);
@@ -479,7 +479,7 @@ static int archive_assetlistfiles(mportBundleWrite *bundle, mportPackageMeta *pa
     if (e->type == ASSET_CWD) 
       cwd = e->data == NULL ? pack->prefix : e->data;
     
-    if (e->type != ASSET_FILE) {
+    if (e->type != ASSET_FILE && e->type != ASSET_SAMPLE) {
       continue;
     }
 
