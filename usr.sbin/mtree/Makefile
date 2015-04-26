@@ -15,8 +15,8 @@ DPADD=	${LIBMD}
 LDADD=	-lmd
 
 #.if ${MK_NMTREE} == "no"
-#LINKS=	${BINDIR}/fmtree ${BINDIR}/mtree
-#MLINKS=	fmtree.8 mtree.8
+LINKS=	${BINDIR}/fmtree ${BINDIR}/mtree
+MLINKS=	fmtree.8 mtree.8
 #.endif
 
 CLEANFILES+=	fmtree.8
