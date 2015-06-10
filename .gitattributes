@@ -9770,7 +9770,6 @@ contrib/file/Magdir/zfs -text
 contrib/file/Magdir/zilog -text
 contrib/file/Magdir/zyxel -text
 contrib/file/NEWS -text
-contrib/file/PORTING -text
 contrib/file/README -text
 contrib/file/TODO -text
 contrib/file/acinclude.m4 -text
