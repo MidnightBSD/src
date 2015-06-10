@@ -9787,7 +9787,6 @@ contrib/file/compress.c -text
 contrib/file/config.h.in -text
 contrib/file/configure -text
 contrib/file/configure.ac -text
-contrib/file/configure.in -text
 contrib/file/ctime_r.c -text
 contrib/file/elfclass.h -text
 contrib/file/encoding.c -text
