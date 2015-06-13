@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20150613:
+	tzdata 2015d
+
+20150612:
+	OpenSSL 0.9.8zg
+
 20150419:
 	MidnightBSD 0.6 stable branch created. Continue 0.7 
 	development.
