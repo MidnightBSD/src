@@ -5,7 +5,7 @@
 PACKAGE=	tzcode
 
 # Version numbers of the code and data distributions.
-VERSION=	2014i
+VERSION=	2015d
 
 # Email address for bug reports.
 BUGEMAIL=	tz@iana.org
@@ -120,6 +120,7 @@ LDLIBS=
 #  -DHAVE_STDINT_H=1 if you have a pre-C99 compiler with "stdint.h"
 #  -DHAVE_STRFTIME_L=1 if <time.h> declares locale_t and strftime_l
 #	This defaults to 0 if _POSIX_VERSION < 200809, 1 otherwise.
+#  -DHAVE_STRDUP=0 if your system lacks the strdup function
 #  -DHAVE_SYMLINK=0 if your system lacks the symlink function
 #  -DHAVE_SYS_STAT_H=0 if your compiler lacks a "sys/stat.h"
 #  -DHAVE_SYS_WAIT_H=0 if your compiler lacks a "sys/wait.h"
@@ -149,18 +150,18 @@ LDLIBS=
 #  $(GCC_DEBUG_FLAGS) if you are using GCC and want lots of checking
 GCC_DEBUG_FLAGS = -Dlint -g3 -O3 -fno-common -fstrict-aliasing \
 	-Wall -Wextra \
-	-Wbad-function-cast -Wcast-align -Wcast-qual \
+	-Wbad-function-cast -Wcast-align -Wdate-time \
 	-Wdeclaration-after-statement \
+	-Wdouble-promotion \
 	-Wformat=2 -Winit-self -Wjump-misses-init \
-	-Wmissing-declarations -Wmissing-noreturn -Wmissing-prototypes \
-	-Wnested-externs -Wno-address -Wno-cast-qual \
-	-Wno-format-nonliteral -Wno-sign-compare -Wno-sign-conversion \
-	-Wno-type-limits \
-	-Wno-unused-parameter -Woverlength-strings -Wpointer-arith \
+	-Wlogical-op -Wmissing-prototypes -Wnested-externs \
+	-Wold-style-definition -Woverlength-strings -Wpointer-arith \
 	-Wshadow -Wstrict-prototypes -Wsuggest-attribute=const \
 	-Wsuggest-attribute=format -Wsuggest-attribute=noreturn \
 	-Wsuggest-attribute=pure -Wtrampolines \
-	-Wwrite-strings
+	-Wunused -Wwrite-strings \
+	-Wno-address -Wno-format-nonliteral -Wno-sign-compare \
+	-Wno-type-limits -Wno-unused-parameter
 #
 # If you want to use System V compatibility code, add
 #	-DUSG_COMPAT
@@ -330,13 +331,13 @@ AR=		ar
 # ':' on typical hosts; 'ranlib' on the ancient hosts that still need ranlib.
 RANLIB=		:
 
-TZCOBJS=	zic.o scheck.o ialloc.o
+TZCOBJS=	zic.o
 TZDOBJS=	zdump.o localtime.o asctime.o
 DATEOBJS=	date.o localtime.o strftime.o asctime.o
 LIBSRCS=	localtime.c asctime.c difftime.c
 LIBOBJS=	localtime.o asctime.o difftime.o
 HEADERS=	tzfile.h private.h
-NONLIBSRCS=	zic.c zdump.c scheck.c ialloc.c
+NONLIBSRCS=	zic.c zdump.c
 NEWUCBSRCS=	date.c strftime.c
 SOURCES=	$(HEADERS) $(LIBSRCS) $(NONLIBSRCS) $(NEWUCBSRCS) \
 			tzselect.ksh workman.sh
@@ -359,7 +360,7 @@ TABDATA=	iso3166.tab leapseconds $(ZONETABLES)
 LEAP_DEPS=	leapseconds.awk leap-seconds.list
 DATA=		$(YDATA) $(NDATA) backzone $(TABDATA) \
 			leap-seconds.list yearistype.sh
-AWK_SCRIPTS=	checktab.awk leapseconds.awk
+AWK_SCRIPTS=	checklinks.awk checktab.awk leapseconds.awk
 MISC=		$(AWK_SCRIPTS) zoneinfo2tdf.pl
 ENCHILADA=	$(COMMON) $(DOCS) $(SOURCES) $(DATA) $(MISC)
 
@@ -468,7 +469,7 @@ tzselect:	tzselect.ksh
 			<$? >$@
 		chmod +x $@
 
-check:		check_character_set check_white_space check_sorted \
+check:		check_character_set check_white_space check_links check_sorted \
 		  check_tables check_web
 
 check_character_set: $(ENCHILADA)
@@ -484,9 +485,8 @@ check_character_set: $(ENCHILADA)
 		! grep -Env $(VALID_LINE) $(ENCHILADA)
 
 check_white_space: $(ENCHILADA)
-		! grep -n ' '$(TAB_CHAR) $(ENCHILADA)
+		! grep -En ' '$(TAB_CHAR)"|$$(printf '[\f\r\v]')" $(ENCHILADA)
 		! grep -n '[[:space:]]$$' $(ENCHILADA)
-		! grep -n "$$(printf '[\f\r\v]\n')" $(ENCHILADA)
 
 CHECK_CC_LIST = { n = split($$1,a,/,/); for (i=2; i<=n; i++) print a[1], a[i]; }
 
@@ -499,6 +499,9 @@ check_sorted: backward backzone iso3166.tab zone.tab zone1970.tab
 		  LC_ALL=C sort -c
 		$(AWK) '/^[^#]/ $(CHECK_CC_LIST)' zone1970.tab | \
 		  LC_ALL=C sort -cu
+
+check_links:	checklinks.awk $(TDATA)
+		$(AWK) -f checklinks.awk $(TDATA)
 
 check_tables:	checktab.awk $(PRIMARY_YDATA) $(ZONETABLES)
 		for tab in $(ZONETABLES); do \
@@ -652,9 +655,7 @@ zonenames:	$(TDATA)
 asctime.o:	private.h tzfile.h
 date.o:		private.h
 difftime.o:	private.h
-ialloc.o:	private.h
 localtime.o:	private.h tzfile.h
-scheck.o:	private.h
 strftime.o:	private.h tzfile.h
 zdump.o:	version.h
 zic.o:		private.h tzfile.h version.h
@@ -662,7 +663,8 @@ zic.o:		private.h tzfile.h version.h
 .KEEP_STATE:
 
 .PHONY: ALL INSTALL all
-.PHONY: check check_character_set check_public check_sorted check_tables
+.PHONY: check check_character_set check_links
+.PHONY: check_public check_sorted check_tables
 .PHONY: check_time_t_alternatives check_web check_white_space clean clean_misc
 .PHONY: install maintainer-clean names posix_packrat posix_only posix_right
 .PHONY: public right_only right_posix signatures tarballs typecheck
