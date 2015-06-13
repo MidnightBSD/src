@@ -1,3 +1,19 @@
+2012-01-13  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* sudo.pp:
+	Include parent directories in case they don't already exist. This
+	fixes a directory permissions problem with the AIX package when the
+	/usr/local directories don't already exist.
+	[94c64d964891] <1.7>
+
+2011-11-08  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* sudo.pp:
+	Mark libexec files as optional. If there is no support for noexec,
+	sudo will not build sudo_noexec.so. Fixes a packaging problem on
+	AIX 4.3
+	[b3b80e0ebeb2] <1.7>
+
 2011-10-25  Todd C. Miller  <Todd.Miller@courtesan.com>
 
 	* NEWS, match.c:
