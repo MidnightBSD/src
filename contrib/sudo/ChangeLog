@@ -1,8 +1,15 @@
+2011-10-25  Todd C. Miller  <Todd.Miller@courtesan.com>
+
+	* NEWS, match.c:
+	When matching a RunasAlias for a runas group, pass the alias in as
+	the group_list, not the user_list. From Daniel Kopecek.
+	[3ab0460a4dee] [tip] <1.7>
+
 2011-10-21  Todd C. Miller  <Todd.Miller@courtesan.com>
 
 	* .hgtags:
 	Added tag SUDO_1_7_8 for changeset 571f47a3e08c
-	[3de502bba852] [tip] <1.7>
+	[3de502bba852] <1.7>
 
 	* configure, configure.in:
 	Revert unintended commit of version change to 1.7.8rc1

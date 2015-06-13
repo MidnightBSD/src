@@ -683,7 +683,7 @@
 #define PACKAGE_NAME "sudo"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "sudo 1.7.8"
+#define PACKAGE_STRING "sudo 1.7.8p1"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "sudo"
@@ -692,7 +692,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.7.8"
+#define PACKAGE_VERSION "1.7.8p1"
 
 /* The default password prompt. */
 #define PASSPROMPT "Password:"
