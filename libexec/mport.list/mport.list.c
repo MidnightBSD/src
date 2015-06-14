@@ -154,6 +154,7 @@ main(int argc, char *argv[])
 		else if (locks) {
 			if ((*packs)->locked == 1)
 				(void) printf("%s-%s\n", (*packs)->name, (*packs)->version);
+
 		} else
 			(void) printf("%s-%s\n", (*packs)->name, (*packs)->version);
 		packs++;
