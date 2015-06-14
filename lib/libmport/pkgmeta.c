@@ -505,6 +505,8 @@ static int populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_
   if ((pack->os_release = strdup(tmp)) == NULL)
     RETURN_ERROR(MPORT_ERR_FATAL,"Out of memory.");
 
+  pack->locked = sqlite3_column_int(stmt, 8);
+
   /* CPE */
   if ((tmp = sqlite3_column_text(stmt, 7)) == NULL) {
       return MPORT_OK; /* XXX: new field..
@@ -513,8 +515,6 @@ static int populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_
   } 
   if ((pack->cpe = strdup(tmp)) == NULL)
     RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
-
-  pack->locked = sqlite3_column_int(stmt, 8);
   
   return MPORT_OK;
 }
