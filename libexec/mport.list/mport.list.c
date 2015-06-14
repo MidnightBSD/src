@@ -51,6 +51,7 @@ main(int argc, char *argv[])
 	bool verbose = false;
 	bool origin = false;
 	bool update = false;
+	bool locks = false;
 	char *comment;
 	char *os_release;
 	char name_version[30];
@@ -58,8 +59,11 @@ main(int argc, char *argv[])
 	if (argc > 3)
 		usage();
     
-	while ((ch = getopt(argc, argv, "oqvu")) != -1) {
+	while ((ch = getopt(argc, argv, "loqvu")) != -1) {
 		switch (ch) {
+			case 'l':
+				locks = true;
+				break;
 			case 'o':
 				origin = true;
 				break;
@@ -147,7 +151,10 @@ main(int argc, char *argv[])
 		else if (origin)
 			(void) printf("Information for %s-%s:\n\nOrigin:\n%s\n\n",
 						  (*packs)->name, (*packs)->version, (*packs)->origin);
-		else
+		else if (locks) {
+			if ((*packs)->locked == 1)
+				(void) printf("%s-%s\n", (*packs)->name, (*packs)->version);
+		} else
 			(void) printf("%s-%s\n", (*packs)->name, (*packs)->version);
 		packs++;
 	}
