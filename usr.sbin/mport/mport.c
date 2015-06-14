@@ -112,6 +112,12 @@ main(int argc, char *argv[]) {
 	} else if (!strcmp(argv[1], "upgrade")) {
 		loadIndex(mport);
 		resultCode = upgrade(mport);
+	} else if (!strcmp(argv[1], "locks")) {
+		asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.list");
+		flag = strdup("-l");
+		resultCode = execl(buf, "mport.list", flag, (char *)0);
+                free(flag);
+                free(buf);
         } else if (!strcmp(argv[1], "list")) {
 		asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.list");
 		if (argc > 2) {
@@ -173,6 +179,7 @@ usage(void) {
 		"       mport info [package name]\n"
 		"       mport install [package name]\n"
 		"       mport list [updates]\n"
+		"       mport locks\n"
 		"       mport search [query ...]\n"
 		"       mport update [package name]\n"
 		"       mport upgrade\n"
