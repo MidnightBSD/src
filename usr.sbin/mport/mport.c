@@ -55,6 +55,8 @@ static int clean(mportInstance *);
 static int indexCheck(mportInstance *, mportPackageMeta *);
 static int updateDown(mportInstance *, mportPackageMeta *);
 static int verify(mportInstance *);
+static int lock(mportInstance *, const char *);
+static int unlock(mportInstance *, const char *);
 
 int 
 main(int argc, char *argv[]) {
@@ -118,6 +120,18 @@ main(int argc, char *argv[]) {
 		resultCode = execl(buf, "mport.list", flag, (char *)0);
                 free(flag);
                 free(buf);
+	} else if (!strcmp(argv[1], "lock")) {
+		if (argc > 2) {
+			lock(mport, argv[2]);
+		} else {
+			usage();
+		}
+	} else if (!strcmp(argv[1], "unlock")) {
+		if (argc > 2) {
+			unlock(mport, argv[2]);
+		} else {
+			usage();
+		}
         } else if (!strcmp(argv[1], "list")) {
 		asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.list");
 		if (argc > 2) {
@@ -179,8 +193,10 @@ usage(void) {
 		"       mport info [package name]\n"
 		"       mport install [package name]\n"
 		"       mport list [updates]\n"
+		"       mport lock [package name]\n"
 		"       mport locks\n"
 		"       mport search [query ...]\n"
+		"       mport unlock [package name]\n"
 		"       mport update [package name]\n"
 		"       mport upgrade\n"
 		"       mport verify\n"
@@ -241,12 +257,61 @@ search(mportInstance *mport, char **query) {
 }
 
 int
+lock(mportInstance *mport, const char *packageName) {
+	mportPackageMeta **packs;
+
+	if (packageName == NULL) {
+                warnx("%s", "Specify package name");
+                return (1);
+        }
+
+	if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", packageName) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		return (1);
+	}
+
+	if (packs == NULL) {
+		warnx("Package name not found, %s", packageName);
+		return (1);
+	} else {
+		mport_lock_lock(mport, (*packs));
+	}
+
+	return (0);
+}
+
+int
+unlock(mportInstance *mport, const char *packageName) {
+        mportPackageMeta **packs;
+
+	if (packageName == NULL) {
+		warnx("%s", "Specify package name");
+		return (1);
+	}
+
+	if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", packageName) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		return (1);
+	}
+
+	if (packs == NULL) {
+		warnx("Package name not found, %s", packageName);
+		return (1);
+	} else {
+		mport_lock_unlock(mport, (*packs));
+	}
+
+	return (0);
+}
+
+int
 info(mportInstance *mport, const char *packageName) {
 	mportIndexEntry **indexEntry;
 	mportPackageMeta **packs;
 	char *status, *origin;
 	char *os_release;
 	char *cpe;
+	int locked;
 
 	if (packageName == NULL) {
 		warnx("%s", "Specify package name");
@@ -274,9 +339,10 @@ info(mportInstance *mport, const char *packageName) {
 		origin = (*packs)->origin;
 		os_release = (*packs)->os_release;
 		cpe = (*packs)->cpe;
+		locked = (*packs)->locked;
 	}
 
-	printf("%s\nlatest: %s\ninstalled: %s\nlicense: %s\norigin: %s\nos: %s\n\n%s\ncpe: %s\n",
+	printf("%s\nlatest: %s\ninstalled: %s\nlicense: %s\norigin: %s\nos: %s\n\n%s\ncpe: %s\nlocked: %s\n",
 		(*indexEntry)->pkgname,
 		(*indexEntry)->version,
 		status,
@@ -284,7 +350,8 @@ info(mportInstance *mport, const char *packageName) {
 		origin,
 		os_release,
 		(*indexEntry)->comment,
-		cpe);
+		cpe,
+		locked ? "yes" : "no");
 
 	if (packs == NULL) {
 		free(status);
