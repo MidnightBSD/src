@@ -36,6 +36,7 @@ __MBSDID("$MidnightBSD$");
 
 static int mport_upgrade_master_schema_0to2(sqlite3 *);
 static int mport_upgrade_master_schema_2to3(sqlite3 *);
+static int mport_upgrade_master_schema_3to4(sqlite3 *);
 
 
 /* mport_db_do(sqlite3 *db, const char *sql, ...)
@@ -192,9 +193,11 @@ mport_upgrade_master_schema(sqlite3 *db, int databaseVersion)
 			mport_upgrade_master_schema_2to3(db);
 		case 2:
 			mport_upgrade_master_schema_2to3(db);
+		case 3:
+			mport_upgrade_master_schema_3to4(db);
 			mport_set_database_version(db);
 			break;
-		case 3:
+		case 4:
 			break;
 		default:
 			RETURN_ERROR(MPORT_ERR_FATAL, "Invalid master database version");
@@ -222,11 +225,20 @@ mport_upgrade_master_schema_2to3(sqlite3 *db)
         return (MPORT_OK);
 }
 
+static int
+mport_upgrade_master_schema_3to4(sqlite3 *db)
+{
+	RUN_SQL(db, "ALTER TABLE Packages ADD COLUMN locked int");
+	RUN_SQL(db, "update packages set locked=0");
+
+	return (MPORT_OK);
+}
+
 int
 mport_generate_master_schema(sqlite3 *db) 
 {
 
-	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, status text default 'dirty', comment text, os_release text, cpe text)");
+	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, status text default 'dirty', comment text, os_release text, cpe text, locked int NOT NULL)");
 	RUN_SQL(db, "CREATE UNIQUE INDEX IF NOT EXISTS packages_pkg ON packages (pkg)");
 	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS packages_origin ON packages (origin)");
 

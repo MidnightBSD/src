@@ -73,6 +73,11 @@ MPORT_PUBLIC_API int mport_delete_primative(mportInstance *mport, mportPackageMe
       sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
   }
+
+  if (mport_lock_islocked(pack) == MPORT_LOCKED) {
+    SET_ERROR(MPORT_ERR_FATAL, "Package is locked.");
+    RETURN_CURRENT_ERROR;
+  }
   
   mport_call_progress_init_cb(mport, "Deleteing %s-%s", pack->name, pack->version);
 

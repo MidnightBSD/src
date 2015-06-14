@@ -199,7 +199,7 @@ mport_pkgmeta_search_master(mportInstance *mport, mportPackageMeta ***ref, const
     return MPORT_OK;
   }
 
-  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe FROM packages WHERE %s", where) != MPORT_OK) {
+  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe, locked FROM packages WHERE %s", where) != MPORT_OK) {
     sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
   }
@@ -244,7 +244,7 @@ mport_pkgmeta_list(mportInstance *mport, mportPackageMeta ***ref)
     return MPORT_OK;
   }
 
-  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe FROM packages ORDER BY pkg, version") != MPORT_OK) {
+  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe, locked FROM packages ORDER BY pkg, version") != MPORT_OK) {
     sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
   }
@@ -289,7 +289,7 @@ mport_pkgmeta_get_downdepends(mportInstance *mport, mportPackageMeta *pkg, mport
   }
 
   if (mport_db_prepare(mport->db, &stmt, 
-      "SELECT packages.pkg, packages.version, packages.origin, packages.lang, packages.prefix, packages.comment, packages.os_release, packages.cpe FROM packages,depends WHERE packages.pkg=depends.depend_pkgname AND depends.pkg=%Q", 
+      "SELECT packages.pkg, packages.version, packages.origin, packages.lang, packages.prefix, packages.comment, packages.os_release, packages.cpe, packages.locked FROM packages,depends WHERE packages.pkg=depends.depend_pkgname AND depends.pkg=%Q", 
       pkg->name) != MPORT_OK) {
     sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
@@ -513,6 +513,8 @@ static int populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_
   } 
   if ((pack->cpe = strdup(tmp)) == NULL)
     RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+
+  pack->locked = sqlite3_column_int(stmt, 8);
   
   return MPORT_OK;
 }

@@ -57,6 +57,12 @@ mport_update_primative(mportInstance *mport, const char *filename)
   for (i=0; *(pkgs + i) != NULL; i++) {
     pkg = pkgs[i];
 
+    if (mport_lock_islocked(pkg) == MPORT_LOCKED) {
+      mport_call_msg_cb(mport, "Unable to update %s-%s: pacakge is locked.", pkg->name, pkg->version);
+      mport_set_err(MPORT_OK, NULL);
+      continue;
+    }
+
     if (
         (mport_check_preconditions(mport, pkg, MPORT_PRECHECK_UPGRADEABLE|MPORT_PRECHECK_CONFLICTS|MPORT_PRECHECK_DEPENDS) != MPORT_OK) 
                       ||

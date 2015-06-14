@@ -73,7 +73,6 @@ void mport_default_progress_init_cb(const char *);
 void mport_default_progress_step_cb(int, int, const char *);
 void mport_default_progress_free_cb(void);
 
-/* For now this is just the FreeBSD list, this will change soon. */
 enum _AssetListEntryType { 
   ASSET_INVALID, ASSET_FILE, ASSET_CWD, ASSET_CHMOD, ASSET_CHOWN, ASSET_CHGRP,
   ASSET_COMMENT, ASSET_IGNORE, ASSET_NAME, ASSET_EXEC, ASSET_UNEXEC,
@@ -113,6 +112,7 @@ typedef struct {
   char **categories;
   char *os_release;
   char *cpe;
+  int locked;
 } mportPackageMeta;  
 
 
@@ -218,6 +218,16 @@ int mport_file_exists(const char *);
 char * mport_version(void);
 char * mport_get_osrelease(void);
 
+/* Locks */
+enum _LockState {
+	MPORT_UNLOCKED, MPORT_LOCKED
+};
+
+typedef enum _LockState mportLockState;
+
+int mport_lock_lock(mportInstance *, mportPackageMeta *);
+int mport_lock_unlock(mportInstance *, mportPackageMeta *);
+int mport_lock_islocked(mportPackageMeta *);
 
 #endif /* ! defined _MPORT_H */
 
