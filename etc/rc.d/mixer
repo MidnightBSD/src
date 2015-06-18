@@ -27,7 +27,7 @@
 # $MidnightBSD$
 
 # PROVIDE: mixer
-# REQUIRE: cleanvar
+# REQUIRE: FILESYSTEMS
 # KEYWORD: nojail shutdown
 
 . /etc/rc.subr

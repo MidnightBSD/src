@@ -3,7 +3,7 @@
 # $MidnightBSD$
 
 # PROVIDE: firstboot
-# REQUIRE: NETWORKING cleanvar
+# REQUIRE: NETWORKING FILESYSTEMS
 # KEYWORD: nojail
 
 . /etc/rc.subr
