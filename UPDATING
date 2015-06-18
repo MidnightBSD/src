@@ -1,5 +1,13 @@
 Updating Information for MidnightBSD users.
 
+
+20150618:
+        With the recent changes to OpenSSL to block 512 bit certificates,
+        sendmail can't connect with TLS to some servers.
+
+        Increase the default size to 1024 bit for client connections to
+        match the server configuration.
+
 20150613:
 	tzdata 2015d
 
