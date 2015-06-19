@@ -1,4 +1,4 @@
-# $MidnightBSD: src/sys/modules/zfs/Makefile,v 1.6 2012/04/10 19:39:40 laffer1 Exp $
+# $MidnightBSD$
 # $FreeBSD: src/sys/modules/zfs/Makefile,v 1.6.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
 
 KMOD=	zfs
@@ -72,6 +72,7 @@ SRCS+=	sha2.c
 ZFS_SRCS=	${ZFS_OBJS:C/.o$/.c/}
 SRCS+=	${ZFS_SRCS}
 SRCS+=	vdev_geom.c
+SRCS+=	trim_map.c
 
 # Use FreeBSD's namecache.
 CFLAGS+=-DFREEBSD_NAMECACHE
