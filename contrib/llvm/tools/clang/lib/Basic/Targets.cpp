@@ -249,8 +249,10 @@ protected:
 
     unsigned Release = Triple.getOSMajorVersion();
     if (Release == 0U)
-      Release = 8;
+      Release = 9;
 
+    Builder.defineMacro("__MidnightBSD__", Twine(Release));
+    Builder.defineMacro("__MidnightBSD__cc_version", Twine(Release * 100000U + 1U));
     Builder.defineMacro("__FreeBSD__", Twine(Release));
     Builder.defineMacro("__FreeBSD_cc_version", Twine(Release * 100000U + 1U));
     Builder.defineMacro("__KPRINTF_ATTRIBUTE__");
