@@ -71901,7 +71901,6 @@ usr.bin/Makefile -text
 usr.bin/Makefile.amd64 -text
 usr.bin/Makefile.i386 -text
 usr.bin/Makefile.inc -text
-usr.bin/Makefile.sparc64 -text
 usr.bin/alias/Makefile -text
 usr.bin/alias/generic.sh -text
 usr.bin/apply/Makefile -text
