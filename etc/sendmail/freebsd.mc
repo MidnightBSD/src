@@ -34,17 +34,22 @@ divert(-1)
 #
 
 #
-#  This is a generic configuration file for FreeBSD 5.X and later systems.
+#  This is a generic configuration file for FreeBSD 6.X and later systems.
 #  If you want to customize it, copy it to a name appropriate for your
 #  environment and do the modifications there.
 #
 #  The best documentation for this .mc file is:
 #  /usr/share/sendmail/cf/README or
 #  /usr/src/contrib/sendmail/cf/README
+# 
+#
+#  NOTE: If you enable RunAsUser, make sure that you adjust the permissions
+#  and owner of the SSL certificates and keys in /etc/mail/certs to be usable
+#  by that user.
 #
 
 divert(0)
-VERSIONID(`$MidnightBSD: src/etc/sendmail/freebsd.mc,v 1.3 2007/11/23 22:11:51 laffer1 Exp $')
+VERSIONID(`$MidnightBSD$')
 OSTYPE(freebsd6)
 DOMAIN(generic)
 
@@ -53,6 +58,16 @@ FEATURE(blacklist_recipients)
 FEATURE(local_lmtp)
 FEATURE(mailertable, `hash -o /etc/mail/mailertable')
 FEATURE(virtusertable, `hash -o /etc/mail/virtusertable')
+
+dnl Enable STARTTLS for receiving email.
+define(`CERT_DIR', `/etc/mail/certs')dnl
+define(`confSERVER_CERT', `CERT_DIR/host.cert')dnl
+define(`confSERVER_KEY', `CERT_DIR/host.key')dnl
+define(`confCLIENT_CERT', `CERT_DIR/host.cert')dnl
+define(`confCLIENT_KEY', `CERT_DIR/host.key')dnl
+define(`confCACERT', `CERT_DIR/cacert.pem')dnl
+define(`confCACERT_PATH', `CERT_DIR')dnl
+define(`confDH_PARAMETERS', `CERT_DIR/dh.param')dnl
 
 dnl Uncomment to allow relaying based on your MX records.
 dnl NOTE: This can allow sites to use your server as a backup MX without
@@ -63,15 +78,13 @@ dnl DNS based black hole lists
 dnl --------------------------------
 dnl DNS based black hole lists come and go on a regular basis
 dnl so this file will not serve as a database of the available servers.
-dnl For that, visit
-dnl http://www.google.com/Top/Computers/Internet/E-mail/Spam/Blacklists/
+dnl For more information, visit
+dnl http://en.wikipedia.org/wiki/DNSBL
 
-dnl Uncomment to activate Realtime Blackhole List
-dnl information available at http://www.mail-abuse.com/
-dnl NOTE: This is a subscription service as of July 31, 2001
-dnl FEATURE(dnsbl)
+dnl Uncomment to activate your chosen DNS based blacklist
+dnl FEATURE(dnsbl, `dnsbl.example.com')
 dnl Alternatively, you can provide your own server and rejection message:
-dnl FEATURE(dnsbl, `blackholes.mail-abuse.org', ``"550 Mail from " $&{client_addr} " rejected, see http://mail-abuse.org/cgi-bin/lookup?" $&{client_addr}'')
+dnl FEATURE(dnsbl, `dnsbl.example.com', ``"550 Mail from " $&{client_addr} " rejected"'')
 
 dnl Dialup users should uncomment and define this appropriately
 dnl define(`SMART_HOST', `your.isp.mail.server')
