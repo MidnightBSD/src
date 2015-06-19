@@ -25,8 +25,8 @@ M4FILES!=	find ${SENDMAIL_CF_DIR} -type f -name '*.m4' -print
 DEST_CF=	${DESTDIR}/etc/mail/sendmail.cf
 DEST_SUBMIT_CF=	${DESTDIR}/etc/mail/submit.cf
 
-ALL=		freebsd.cf freebsd.submit.cf
-CLEANFILES=	freebsd.cf freebsd.submit.cf
+ALL=		midnightbsd.cf midnightbsd.submit.cf
+CLEANFILES=	midnightbsd.cf midnightbsd.submit.cf
 
 # Local SENDMAIL_MC or SENDMAIL_CF may be set in /etc/make.conf.
 # Warning!  If set, this causes 'make install' to always copy it
@@ -65,17 +65,17 @@ all: ${ALL}
 
 distribution:
 	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
-	    ${.CURDIR}/freebsd.mc freebsd.cf ${DESTDIR}/etc/mail
+	    ${.CURDIR}/midnightbsd.mc midnightbsd.cf ${DESTDIR}/etc/mail
 	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 444 \
-	    ${.CURDIR}/freebsd.submit.mc freebsd.submit.cf ${DESTDIR}/etc/mail
+	    ${.CURDIR}/midnightbsd.submit.mc midnightbsd.submit.cf ${DESTDIR}/etc/mail
 	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 444 \
 	    ${SMDIR}/helpfile ${DESTDIR}/etc/mail
 	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 640 \
 	    /dev/null ${DESTDIR}/var/log/sendmail.st
 	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
-	    freebsd.cf ${DEST_CF}
+	    midnightbsd.cf ${DEST_CF}
 	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 444 \
-	    freebsd.submit.cf ${DEST_SUBMIT_CF}
+	    midnightbsd.submit.cf ${DEST_SUBMIT_CF}
 
 install:
 .if defined(INSTALL_CF) && ${INSTALL_CF} != ${DEST_CF}
