@@ -4,7 +4,7 @@
 #
 
 # PROVIDE: ntpd
-# REQUIRE: DAEMON rdate devfs
+# REQUIRE: DAEMON rdate FILESYSTEMS devfs
 # BEFORE:  LOGIN
 # KEYWORD: nojail shutdown
 

@@ -28,7 +28,7 @@
 #
 
 # PROVIDE: var
-# REQUIRE: FILESYSTEMS kld addswap
+# REQUIRE: mountcritlocal zfs
 
 . /etc/rc.subr
 

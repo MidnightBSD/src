@@ -4,7 +4,7 @@
 #
 
 # PROVIDE: cron
-# REQUIRE: LOGIN
+# REQUIRE: LOGIN FILESYSTEMS
 # BEFORE: securelevel
 # KEYWORD: shutdown
 

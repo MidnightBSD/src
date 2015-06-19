@@ -4,7 +4,7 @@
 # $MidnightBSD$
 
 # PROVIDE: random
-# REQUIRE: var initrandom
+# REQUIRE: initrandom FILESYSTEMS
 # BEFORE: netif
 # KEYWORD: nojail shutdown
 
