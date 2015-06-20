@@ -6,6 +6,7 @@ CLANG_SRCS=	${LLVM_SRCS}/tools/clang
 CFLAGS+=	-I${LLVM_SRCS}/include -I${CLANG_SRCS}/include \
 		-I${LLVM_SRCS}/${SRCDIR} ${INCDIR:C/^/-I${LLVM_SRCS}\//} -I. \
 		-I${LLVM_SRCS}/../../lib/clang/include \
+		-I${CLANG_SRCS}/lib/Headers/ \
 		-DLLVM_ON_UNIX -DLLVM_ON_FREEBSD \
 		-D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS #-DNDEBUG
 
