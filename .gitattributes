@@ -27369,9 +27369,6 @@ contrib/llvm/tools/opt/LLVMBuild.txt -text
 contrib/llvm/tools/opt/Makefile -text
 contrib/llvm/tools/opt/PrintSCC.cpp -text
 contrib/llvm/tools/opt/opt.cpp -text
-contrib/llvm/tools/yaml2obj/CMakeLists.txt -text
-contrib/llvm/tools/yaml2obj/Makefile -text
-contrib/llvm/tools/yaml2obj/yaml2obj.cpp -text
 contrib/llvm/utils/DSAclean.py -text
 contrib/llvm/utils/DSAextract.py -text
 contrib/llvm/utils/FileCheck/CMakeLists.txt -text

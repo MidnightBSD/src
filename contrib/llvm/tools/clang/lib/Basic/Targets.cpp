@@ -249,10 +249,11 @@ protected:
 
     unsigned Release = Triple.getOSMajorVersion();
     if (Release == 0U)
-      Release = 9;
+      Release = 8;
 
-    Builder.defineMacro("__MidnightBSD__", Twine(Release));
-    Builder.defineMacro("__MidnightBSD__cc_version", Twine(Release * 100000U + 1U));
+	Builder.defineMacro("__MidnightBSD__", Twine(Release));
+	Builder.defineMacro("__MidnightBSD__cc_version", Twine(Release * 100000U + 1U));
+
     Builder.defineMacro("__FreeBSD__", Twine(Release));
     Builder.defineMacro("__FreeBSD_cc_version", Twine(Release * 100000U + 1U));
     Builder.defineMacro("__KPRINTF_ATTRIBUTE__");
@@ -3535,8 +3536,8 @@ class ARMTargetInfo : public TargetInfo {
     // the kernel which on armv6 and newer uses ldrex and strex. The net result
     // is that if we assume the kernel is at least as recent as the hardware,
     // it is safe to use atomic instructions on armv6 and newer.
-    if (T.getOS() != llvm::Triple::Linux)
-     return false;
+    if (T.getOS() != llvm::Triple::Linux && T.getOS() != llvm::Triple::FreeBSD)
+      return false;
     StringRef ArchName = T.getArchName();
     if (T.getArch() == llvm::Triple::arm) {
       if (!ArchName.startswith("armv"))
