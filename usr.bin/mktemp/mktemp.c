@@ -43,7 +43,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-	"$FreeBSD: src/usr.bin/mktemp/mktemp.c,v 1.5 2002/03/22 01:33:17 imp Exp $";
+	"$MidnightBSD$";
 #endif /* not lint */
 
 static void usage(void);
@@ -87,6 +87,11 @@ main(int argc, char **argv)
 	argc -= optind;
 	argv += optind;
 
+	if (!tflag && argc < 1) {
+		tflag = 1;
+		prefix = "tmp";
+	}
+
 	if (tflag) {
 		tmpdir = getenv("TMPDIR");
 		if (tmpdir == NULL)
@@ -100,8 +105,6 @@ main(int argc, char **argv)
 			else
 				errx(1, "cannot generate template");
 		}
-	} else if (argc < 1) {
-		usage();
 	}
 		
 	/* generate all requested files */
