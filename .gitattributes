@@ -63024,6 +63024,7 @@ sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/spa.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/spa_boot.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/spa_impl.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/space_map.h -text
+sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/trim_map.h svneol=native#text/plain
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/txg.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/txg_impl.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/uberblock.h -text
@@ -63057,6 +63058,7 @@ sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/zio_compress.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/zio_impl.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/zrlock.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/zvol.h -text
+sys/cddl/contrib/opensolaris/uts/common/fs/zfs/trim_map.c svneol=native#text/plain
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/txg.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/uberblock.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/unique.c -text
