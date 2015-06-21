@@ -1,6 +1,12 @@
 Updating Information for MidnightBSD users.
 
 
+20150621:
+	libmport now automatically stops services when deleting packages.
+
+	The package must have installed an rc.d script in /usr/local/etc
+	for this to work. This is equivalent to running service <name> onestop
+
 20150618:
 	Sendmail
 
