@@ -1,4 +1,5 @@
 /*-
+ * Copyright (c) 2015 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -34,6 +35,7 @@ __MBSDID("$MidnightBSD$");
 #include <sqlite3.h>
 #include <md5.h>
 #include <stdlib.h>
+#include <libgen.h>
 #include "mport.h"
 #include "mport_private.h"
 
@@ -49,7 +51,7 @@ MPORT_PUBLIC_API int mport_delete_primative(mportInstance *mport, mportPackageMe
   sqlite3_stmt *stmt;
   int ret, current, total;
   mportAssetListEntryType type;
-  const char *data, *checksum, *cwd;
+  const char *data, *checksum, *cwd, *service, *rc_script;
   struct stat st;
   char md5[33];
   
@@ -58,12 +60,35 @@ MPORT_PUBLIC_API int mport_delete_primative(mportInstance *mport, mportPackageMe
       RETURN_CURRENT_ERROR;
   }
 
+  mport_call_progress_init_cb(mport, "Deleteing %s-%s", pack->name, pack->version);
+
+  /* stop any services that might exist; this replaces @stopdaemon */
+  if (mport_db_prepare(mport->db, &stmt, "select * from assets where data like '/usr/local/etc/rc.d/%%' and type=%i and pkg=%Q", ASSET_FILE, pack->name) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+
+while (1) {
+    ret = sqlite3_step(stmt);
+    if (ret != SQLITE_ROW) {
+        break;
+    }
+
+    rc_script = sqlite3_column_text(stmt, 0);
+    if (rc_script == NULL)
+        continue;
+    service = basename(rc_script);
+    if (mport_xsystem(mport, "/usr/sbin/service %s onestop", 
+        service) != 0) {
+        mport_call_msg_cb(mport, "Unable to stop service %s\n", service);
+    }
+  }
+
   /* get the file count for the progress meter */
   if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM assets WHERE (type=%i or type=%i) AND pkg=%Q", ASSET_FILE, ASSET_SAMPLE, pack->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
   switch (sqlite3_step(stmt)) {
     case SQLITE_ROW:
+		
       total   = sqlite3_column_int(stmt, 0) + 1;
       current = 0;
       sqlite3_finalize(stmt);
@@ -79,8 +104,6 @@ MPORT_PUBLIC_API int mport_delete_primative(mportInstance *mport, mportPackageMe
     RETURN_CURRENT_ERROR;
   }
   
-  mport_call_progress_init_cb(mport, "Deleteing %s-%s", pack->name, pack->version);
-
   if (mport_db_do(mport->db, "UPDATE packages SET status='dirty' WHERE pkg=%Q", pack->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
