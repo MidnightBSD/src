@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/cddl/boot/zfs/zfssubr.c 247309 2013-02-26 05:58:05Z delphij $");
 
 static uint64_t zfs_crc64_table[256];
 
@@ -119,6 +119,7 @@ typedef struct zio_compress_info {
 
 #include "lzjb.c"
 #include "zle.c"
+#include "lz4.c"
 
 /*
  * Compression vectors.
@@ -139,6 +140,7 @@ static zio_compress_info_t zio_compress_table[ZIO_COMPRESS_FUNCTIONS] = {
 	{NULL,			NULL,			8,	"gzip-8"},
 	{NULL,			NULL,			9,	"gzip-9"},
 	{NULL,			zle_decompress,		64,	"zle"},
+	{NULL,			lz4_decompress,		0,	"lz4"},
 };
 
 static void

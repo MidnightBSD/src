@@ -53844,6 +53844,7 @@ sys/cam/scsi/smp_all.c -text
 sys/cam/scsi/smp_all.h -text
 sys/cddl/boot/zfs/README -text
 sys/cddl/boot/zfs/fletcher.c -text
+sys/cddl/boot/zfs/lz4.c svneol=native#text/plain
 sys/cddl/boot/zfs/lzjb.c -text
 sys/cddl/boot/zfs/sha256.c -text
 sys/cddl/boot/zfs/zfsimpl.h -text
@@ -53959,6 +53960,8 @@ sys/cddl/contrib/opensolaris/uts/common/dtrace/sdt_subr.c -text
 sys/cddl/contrib/opensolaris/uts/common/dtrace/systrace.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/gfs.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/vnode.c -text
+sys/cddl/contrib/opensolaris/uts/common/fs/zfs/THIRDPARTYLICENSE.lz4 -text
+sys/cddl/contrib/opensolaris/uts/common/fs/zfs/THIRDPARTYLICENSE.lz4.descrip -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/arc.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/bplist.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/bpobj.c -text
@@ -53984,6 +53987,7 @@ sys/cddl/contrib/opensolaris/uts/common/fs/zfs/dsl_prop.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/dsl_scan.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/dsl_synctask.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/gzip.c -text
+sys/cddl/contrib/opensolaris/uts/common/fs/zfs/lz4.c svneol=native#text/plain
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/lzjb.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/metaslab.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/refcount.c -text

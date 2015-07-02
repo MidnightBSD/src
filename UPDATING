@@ -1,5 +1,20 @@
 Updating Information for MidnightBSD users.
 
+20150702:
+	ZFS in MidnightBSD now supports lz4 compression. You can enable it
+	with zfs set compression=lz4 pool/path.
+
+	Verify it's working with 
+	zfs get compressratio pool/path
+	du -h -s *
+
+	Note you must write new data when turning on compression to see
+	changes. Existing files are not compressed.
+
+	Note: While we used the same basic implementation of lz4 that
+	FreeBSD and OpenZFS uses, we did not yet implement features support
+	and the zfs version still reports 28. This may come in a future update
+	to ZFS.
 
 20150621:
 	libmport now automatically stops services when deleting packages.

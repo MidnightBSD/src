@@ -18,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD$
+ * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/byteorder.h 247309 2013-02-26 05:58:05Z delphij $
  */
 
 /*
@@ -41,6 +41,11 @@
 
 #ifndef _OPENSOLARIS_SYS_BYTEORDER_H_
 #define	_OPENSOLARIS_SYS_BYTEORDER_H_
+
+/* for htonl() */
+#ifndef _KERNEL
+#include <netinet/in.h>
+#endif
 
 /*
  * Macros to reverse byte order
@@ -85,5 +90,7 @@
 #define	htonll(x)	BSWAP_64(x)
 #define	ntohll(x)	BSWAP_64(x)
 #endif
+
+#define BE_IN32(xa)	htonl(*((uint32_t *)(void *)(xa)))
 
 #endif /* _OPENSOLARIS_SYS_BYTEORDER_H_ */

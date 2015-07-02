@@ -53,6 +53,7 @@ ZFS_COMMON_OBJS +=		\
 	dsl_prop.o		\
 	dsl_scan.o		\
 	gzip.o			\
+	lz4.o			\
 	lzjb.o			\
 	metaslab.o		\
 	refcount.o		\
