@@ -1,4 +1,5 @@
-/*	$OpenBSD: stdd.h,v 1.4 1999/11/09 18:16:18 deraadt Exp $	*/
+/* $MidnightBSD$ */
+/*	$OpenBSD: stdd.h,v 1.6 2010/09/07 19:58:09 marco Exp $	*/
 /*	$NetBSD: stdd.h,v 1.2 1995/09/28 05:37:50 tls Exp $	*/
 
 /*-
@@ -16,7 +17,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -33,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)stdd.h	8.1 (Berkeley) 6/6/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/m4/stdd.h 228063 2011-11-28 13:32:39Z bapt $
  */
 
 /*
