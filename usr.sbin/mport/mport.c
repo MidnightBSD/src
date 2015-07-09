@@ -182,7 +182,10 @@ main(int argc, char *argv[]) {
 
 void
 usage(void) {
-	fprintf(stderr, mport_version());
+	char *version = mport_version();
+	fprintf(stderr, "%s", version);
+	free(version);
+
 	fprintf(stderr, 
 		"usage: mport <command> args:\n"
 		"       mport clean\n"
