@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20150709:
+	flex 2.5.39
+
 20150702:
 	ZFS in MidnightBSD now supports lz4 compression. You can enable it
 	with zfs set compression=lz4 pool/path.
