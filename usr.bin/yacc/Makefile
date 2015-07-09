@@ -1,11 +1,23 @@
 #	@(#)Makefile	5.3 (Berkeley) 5/12/90
-# $MidnightBSD$
+# $FreeBSD: stable/10/usr.bin/yacc/Makefile 277086 2015-01-12 20:14:31Z jkim $
+
+.include <bsd.own.mk>
+
+BYACC_SRC=	${.CURDIR}/../../contrib/byacc
+.PATH: ${BYACC_SRC}
 
 PROG=	yacc
-SRCS=	closure.c error.c lalr.c lr0.c main.c mkpar.c output.c reader.c \
-	skeleton.c symtab.c verbose.c warshall.c
-SCRIPTS=yyfix.sh
-MAN=	yacc.1 yyfix.1
+SRCS=	closure.c error.c graph.c lalr.c lr0.c main.c mkpar.c mstring.c output.c \
+	reader.c yaccpar.c symtab.c verbose.c warshall.c
+
+CFLAGS+=	-DHAVE_FCNTL_H=1 \
+		-DHAVE_MKSTEMP=1 \
+		-DMAXTABLE=INT_MAX \
+		-DMIXEDCASE_FILENAMES=1
+
+YYPATCH!=	cat ${BYACC_SRC}/VERSION
+CFLAGS+=	-DYYPATCH=${YYPATCH}
+
 LINKS=	${BINDIR}/yacc ${BINDIR}/byacc
 MLINKS=	yacc.1 byacc.1
 
