@@ -598,7 +598,7 @@ cpeList(mportInstance *mport) {
 
 int
 verify(mportInstance *mport) {
-	mportPackageMeta **packs;
+	mportPackageMeta **packs, **ref;
 	int total = 0;
 	
 	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
@@ -610,6 +610,7 @@ verify(mportInstance *mport) {
 		warnx("No packages installed.");
 		return (1);
 	}
+	ref = packs;
 	
 	while (*packs != NULL) {
 		mport_verify_package(mport, *packs); 
@@ -617,7 +618,7 @@ verify(mportInstance *mport) {
 		total++;
 	}
 	
-	mport_pkgmeta_vec_free(packs);
+	mport_pkgmeta_vec_free(ref);
 	printf("Packages verified: %d\n", total);
 	
 	return (0);
