@@ -97,6 +97,7 @@ mport_fetch_index(mportInstance *mport)
 	for (int mi = 0; mi < mirrorCount; mi++) 
 		free(mirrors[mi]);
 
+	free(mirrors);
 	RETURN_ERRORX(MPORT_ERR_FATAL, "Unable to fetch index file: %s", mport_err_string());
 }
 
