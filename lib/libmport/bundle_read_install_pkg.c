@@ -105,7 +105,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
   orig_cwd = getcwd(NULL, 0);
 
   /* get the file count for the progress meter */
-  if (mport_db_prepare(db, &count, "SELECT COUNT(*) FROM stub.assets WHERE (type=%i or type=%i) AND pkg=%Q", ASSET_FILE, ASSET_SAMPLE, pkg->name) != MPORT_OK)
+  if (mport_db_prepare(db, &count, "SELECT COUNT(*) FROM stub.assets WHERE (type=%i or type=%i or type=%i) AND pkg=%Q", ASSET_FILE, ASSET_SAMPLE, ASSET_SHELL, pkg->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
   switch (sqlite3_step(count)) {
@@ -197,6 +197,8 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
         break;
       case ASSET_FILE:
         /* FALLS THROUGH */
+      case ASSET_SHELL:
+        /* FALLS THROUGH */
       case ASSET_SAMPLE:
         if (mport_bundle_read_next_entry(bundle, &entry) != MPORT_OK)
           goto ERROR;
@@ -243,7 +245,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
       SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));    
       goto ERROR;
     }
-    if (type == ASSET_FILE || type == ASSET_SAMPLE) {
+    if (type == ASSET_FILE || type == ASSET_SAMPLE || type == ASSET_SHELL) {
       /* don't put the root in the database! */
       if (sqlite3_bind_text(insert, 2, file + strlen(mport->root), -1, SQLITE_STATIC) != SQLITE_OK) {
         SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));

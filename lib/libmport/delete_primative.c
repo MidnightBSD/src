@@ -83,7 +83,7 @@ while (1) {
   }
 
   /* get the file count for the progress meter */
-  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM assets WHERE (type=%i or type=%i) AND pkg=%Q", ASSET_FILE, ASSET_SAMPLE, pack->name) != MPORT_OK)
+  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM assets WHERE (type=%i or type=%i or type=%i) AND pkg=%Q", ASSET_FILE, ASSET_SAMPLE, ASSET_SHELL, pack->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
   switch (sqlite3_step(stmt)) {
@@ -145,6 +145,8 @@ while (1) {
 
     switch (type) {
       case ASSET_FILE:
+        /* falls through */
+      case ASSET_SHELL:
         /* falls through */
       case ASSET_SAMPLE:
         (mport->progress_step_cb)(++current, total, file);
