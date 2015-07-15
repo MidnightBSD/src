@@ -180,19 +180,38 @@ int mport_chdir(mportInstance *mport, const char *dir)
 /* deletes the entire directory tree at name.
  * think rm -r filename
  */
-int mport_rmtree(const char *filename) 
+int
+mport_rmtree(const char *filename) 
 {
   return mport_xsystem(NULL, "/bin/rm -r %s", filename);
 }  
 
 
 /*
- * Copy fromname to toname 
- *
+ * Copy file fromname to toname 
  */
-int mport_copy_file(const char *fromname, const char *toname)
+int
+mport_copy_file(const char *fromname, const char *toname)
 {
-  return mport_xsystem(NULL, "/bin/cp %s %s", fromname, toname);
+	char buf[BUFSIZ];
+	size_t size;
+
+	FILE *fsrc = fopen(fromname, "rb");
+	if (fsrc == NULL)
+		RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open source file for copying %s: %s", fromname, strerror(errno));
+
+	FILE *fdest = fopen(toname, "wb");
+	if (fdest == NULL)
+		RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open destination file for copying %s: %s", toname, strerror(errno));
+
+	while ((size = fread(buf, 1, BUFSIZ, fsrc)) > 0) {
+		fwrite(buf, 1, size, fdest);
+	}
+
+	fclose(fsrc);
+	fclose(fdest);
+
+	return MPORT_OK;
 }
 
 

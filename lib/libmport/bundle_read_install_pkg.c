@@ -230,6 +230,22 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 			if (chmod(file, newmode))
 				goto ERROR;
 		}
+
+		/* for sample files, if we don't have an existing file
+		   make a new one */
+		if (type == ASSET_SAMPLE) {
+			char *nonSample = strdup(file);
+			if (nonSample == NULL)
+				goto ERROR;
+			char *sptr = strcasestr(file, ".sample");
+			if (sptr != NULL) {
+				sptr[0] = '\0'; /* hack off .sample */
+				if (!mport_file_exists(nonSample)) {
+					mport_copy_file(file, nonSample); 
+				}
+			}
+			free(nonSample);
+		}
 	}
 
         (mport->progress_step_cb)(++file_count, file_total, file);
