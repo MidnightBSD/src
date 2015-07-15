@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20150715:
+	libmport now supports @shell and @sample in plists. This means that
+	a shell port can automatically add an entry to /etc/shells and remove
+	it upon uninstallation. For sample files, a copy is made without the 
+	.sample extension if one does not exist and it is removed automatically
+	only if the md5 hash of the two files is the same. 
+
 20150709:
 	flex 2.5.39
 
