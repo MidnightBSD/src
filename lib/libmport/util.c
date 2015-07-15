@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2011, 2013 Lucas Holt
+ * Copyright (c) 2011, 2013, 2015 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -249,6 +249,26 @@ int mport_rmdir(const char *dir, int ignore_nonempty)
   } 
   
   return MPORT_OK;
+}
+
+
+int
+mport_shell_register(const char *shell_file)
+{
+	if (shell_file == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Shell to register is invalid.");
+
+	return mport_xsystem(NULL, "echo %s >> /etc/shells", shell_file);	
+}
+
+
+int
+mport_shell_unregister(const char *shell_file)
+{
+	if (shell_file == NULL)
+		 RETURN_ERROR(MPORT_ERR_FATAL, "Shell to unregister is invalid.");
+
+	return mport_xsystem(NULL, "grep -v %s /etc/shells > /etc/shells.bak && mv /etc/shells.bak /etc/shells", shell_file);
 }
 
 

@@ -185,6 +185,11 @@ while (1) {
         if (unlink(file) != 0) 
           mport_call_msg_cb(mport, "Could not unlink %s: %s", file, strerror(errno));
 
+	if (type == ASSET_SHELL) {
+		if (mport_shell_unregister(file) != MPORT_OK)
+			mport_call_msg_cb(mport, "Could not unregister shell: %s", file);
+	}
+
         break;
       case ASSET_UNEXEC:
         if (mport_run_asset_exec(mport, data, cwd, file) != MPORT_OK) {

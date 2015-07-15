@@ -231,6 +231,12 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 				goto ERROR;
 		}
 
+		/* shell registration */
+		if (type == ASSET_SHELL) {
+			if (mport_shell_register(file) != MPORT_OK)
+                                goto ERROR;
+		}
+
 		/* for sample files, if we don't have an existing file
 		   make a new one */
 		if (type == ASSET_SAMPLE) {
