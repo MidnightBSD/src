@@ -151,12 +151,10 @@ while (1) {
       case ASSET_SAMPLE:
         (mport->progress_step_cb)(++current, total, file);
         
-      
         if (lstat(file, &st) != 0) {
           mport_call_msg_cb(mport, "Can't stat %s: %s", file, strerror(errno));
           break; /* next asset */
         } 
-        
         
         if (S_ISREG(st.st_mode)) {
           if (MD5File(file, md5) == NULL) 
@@ -164,6 +162,24 @@ while (1) {
           
           if (strcmp(md5, checksum) != 0) 
             mport_call_msg_cb(mport, "Checksum mismatch: %s", file);
+
+          if (type == ASSET_SAMPLE) {
+              char sample_md5[33];
+              char nonSample[FILENAME_MAX];
+              strlcpy(nonSample, file, FILENAME_MAX);
+              char *sptr = strcasestr(file, ".sample");
+              if (sptr != NULL) {
+                  sptr[0] = '\0'; /* hack off .sample */
+                  if (MD5File(nonSample, sample_md5) == NULL) {
+                      mport_call_msg_cb(mport, "File does not match sample, remove file %s manually.", nonSample);
+                  } else {
+                      if (strcmp(sample_md5, md5) == 0) {
+		          if (unlink(nonSample) != 0)
+          	   	    mport_call_msg_cb(mport, "Could not unlink %s: %s", file, strerror(errno));
+		      } 
+                  }
+              }
+          }
         }
         
         if (unlink(file) != 0) 
