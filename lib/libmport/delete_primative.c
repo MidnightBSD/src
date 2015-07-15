@@ -167,17 +167,17 @@ while (1) {
               char sample_md5[33];
               char nonSample[FILENAME_MAX];
               strlcpy(nonSample, file, FILENAME_MAX);
-              char *sptr = strcasestr(file, ".sample");
+              char *sptr = strcasestr(nonSample, ".sample");
               if (sptr != NULL) {
                   sptr[0] = '\0'; /* hack off .sample */
                   if (MD5File(nonSample, sample_md5) == NULL) {
+                      mport_call_msg_cb(mport, "Could not check file %s, review and remove manually.", nonSample);
+                  } else if (strcmp(sample_md5, md5) == 0) {
+		      if (unlink(nonSample) != 0)
+          	          mport_call_msg_cb(mport, "Could not unlink %s: %s", file, strerror(errno));
+		  } else {
                       mport_call_msg_cb(mport, "File does not match sample, remove file %s manually.", nonSample);
-                  } else {
-                      if (strcmp(sample_md5, md5) == 0) {
-		          if (unlink(nonSample) != 0)
-          	   	    mport_call_msg_cb(mport, "Could not unlink %s: %s", file, strerror(errno));
-		      } 
-                  }
+		  }
               }
           }
         }
