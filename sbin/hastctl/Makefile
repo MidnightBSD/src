@@ -19,6 +19,8 @@ SRCS+=	subr.c
 SRCS+=	y.tab.h
 MAN=	hastctl.8
 
+WARNS=	0
+
 NO_WFORMAT=
 NO_WCAST_ALIGN=
 CFLAGS+=-I${.CURDIR}/../hastd
