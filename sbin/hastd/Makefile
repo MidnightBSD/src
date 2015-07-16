@@ -19,6 +19,8 @@ SRCS+=	token.l
 SRCS+=	y.tab.h
 MAN=	hastd.8 hast.conf.5
 
+WARNS=	0
+
 NO_WFORMAT=
 NO_WCAST_ALIGN=
 CFLAGS+=-I${.CURDIR}
