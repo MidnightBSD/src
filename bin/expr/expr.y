@@ -5,8 +5,8 @@
  *
  * Largely rewritten by J.T. Conklin (jtc@wimsey.com)
  *
- * $FreeBSD: src/bin/expr/expr.y,v 1.24 2005/01/10 08:39:22 imp Exp $
- * $MidnightBSD: src/bin/expr/expr.y,v 1.3 2008/06/30 03:07:46 laffer1 Exp $
+ * $MidnightBSD$
+ * $FreeBSD: stable/10/bin/expr/expr.y 235771 2012-05-22 03:01:54Z kevlo $
  */
 
 #include <sys/types.h>
@@ -75,7 +75,6 @@ int		to_integer(struct val *);
 void		to_string(struct val *);
 int		yyerror(const char *);
 int		yylex(void);
-int		yyparse(void);
 
 %}
 
@@ -541,7 +540,7 @@ op_colon(struct val *a, struct val *b)
 			v = make_str(a->u.s + rm[1].rm_so);
 
 		} else
-			v = make_integer((intmax_t)(rm[0].rm_eo - rm[0].rm_so));
+			v = make_integer((intmax_t)(rm[0].rm_eo));
 	else
 		if (rp.re_nsub == 0)
 			v = make_integer((intmax_t)0);

@@ -1,8 +1,15 @@
-# $MidnightBSD: src/bin/expr/Makefile,v 1.3 2012/04/12 23:23:29 laffer1 Exp $ 
-# $FreeBSD: src/bin/expr/Makefile,v 1.18 2003/06/13 07:04:02 markm Exp $
+# $MidnightBSD$
+# $FreeBSD: stable/10/bin/expr/Makefile 281148 2015-04-06 14:45:40Z dim $
+
+.include <bsd.own.mk>
 
 PROG=	expr
 SRCS=	expr.y
 YFLAGS=
+
+# expr relies on signed integer wrapping
+CFLAGS+= -fwrapv
+
+NO_WMISSING_VARIABLE_DECLARATIONS=
 
 .include <bsd.prog.mk>
