@@ -29,6 +29,7 @@
  * $MidnightBSD$
  */
 
+#include <sys/cdefs.h>
 #include "devd.h"
 #include <stdio.h>
 #include <string.h>
