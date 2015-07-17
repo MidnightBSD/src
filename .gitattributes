@@ -63835,6 +63835,7 @@ usr.bin/bc/bc.y -text
 usr.bin/bc/extern.h -text
 usr.bin/bc/pathnames.h -text
 usr.bin/bc/scan.l -text
+usr.bin/bc/tty.c svneol=native#text/plain
 usr.bin/biff/Makefile -text
 usr.bin/biff/biff.1 -text
 usr.bin/biff/biff.c -text
