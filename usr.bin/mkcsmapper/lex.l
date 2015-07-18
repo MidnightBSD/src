@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: release/9.2.0/usr.bin/mkcsmapper/lex.l 240537 2012-09-15 18:53:00Z dim $ */
 /* $NetBSD: lex.l,v 1.4 2006/02/09 22:03:15 dogcow Exp $	*/
 
 %{
@@ -43,6 +43,7 @@
 
 int line_number = 1;
 %}
+%option	noinput
 %option	nounput
 
 %x	COMMENT
@@ -57,7 +58,7 @@ int line_number = 1;
 <COMMENT>[\n]	{ line_number++; }
 <COMMENT>.	{ }
 <COMMENT><<EOF>>	{
-		yyerror("unexpected file end (unterminate comment)\n");
+		yyerror("unexpected file end (unterminated comment)\n");
 		exit(1);
 	}
 
