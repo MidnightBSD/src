@@ -6,7 +6,7 @@
 PROG=		bthidcontrol
 MAN=		bthidcontrol.8
 SRCS=		bthidcontrol.c hid.c lexer.l  parser.y sdp.c
-WARNS?=		1
+WARNS?=		0
 CFLAGS+=	-DBTHIDCONTROL=1 -I${.CURDIR}/../bthidd
 
 DPADD=		${LIBBLUETOOTH} ${LIBSDP} ${LIBUSBHID}
