@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)yacc.y	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include <arpa/inet.h>
 

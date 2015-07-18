@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)lex.l	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include <ctype.h>
 #include <stdio.h>
@@ -47,6 +47,8 @@ __FBSDID("$FreeBSD$");
 #include "ldef.h"
 #include "y.tab.h"
 #include "extern.h"
+
+#define	YY_DECL	int yylex(void)
 %}
 
 ODIGIT	[0-7]

@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.bin/mklocale/extern.h 235789 2012-05-22 16:33:10Z bapt $
  */
 
 int yylex(void);
-int yyparse(void);
