@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/10/usr.bin/mkesdb/ldef.h 250984 2013-05-25 15:36:15Z ed $ */
 /* $NetBSD: ldef.h,v 1.2 2005/06/27 01:23:59 fvdl Exp $	*/
 
 /*-
@@ -27,10 +28,9 @@
  * SUCH DAMAGE.
  */
 
-extern int	 line_number;
+extern int	 linenumber;
 extern int	 yyerror(const char *);
 extern int	 yylex(void);
-extern int	 yyparse(void);
 
 struct named_csid {
 	STAILQ_ENTRY(named_csid)	 ci_entry;

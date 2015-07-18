@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/10/usr.bin/mkesdb/yacc.y 250984 2013-05-25 15:36:15Z ed $ */
 /* $NetBSD: yacc.y,v 1.4 2005/06/02 02:09:25 lukem Exp $	*/
 
 %{
@@ -114,7 +115,7 @@ int
 yyerror(const char *s)
 {
 
-	fprintf(stderr, "%s in %d\n", s, line_number);
+	fprintf(stderr, "%s in %d\n", s, linenumber);
 
 	return (0);
 }

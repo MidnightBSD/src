@@ -1,4 +1,5 @@
 /* $MidnightBSD$ */
+/* $FreeBSD: stable/10/usr.bin/mkesdb/lex.l 252582 2013-07-03 18:25:27Z peter $ */
 /* $NetBSD: lex.l,v 1.3 2006/02/09 22:03:15 dogcow Exp $	*/
 
 %{
@@ -43,8 +44,11 @@
 #include "ldef.h"
 #include "yacc.h"
 
-int line_number = 1;
+#define YY_DECL int yylex(void)
+
+int linenumber = 1;
 %}
+%option	noinput
 %option	nounput
 
 %x	COMMENT
@@ -52,14 +56,14 @@ int line_number = 1;
 %%
 
 [ \t]+	{ }
-#.*[\n]|"//".*[\n]|[\n]	{ line_number++; return (R_LN); }
+#.*[\n]|"//".*[\n]|[\n]	{ linenumber++; return (R_LN); }
 
 "/*"		{ BEGIN COMMENT; }
 <COMMENT>"*/"	{ BEGIN 0; }
-<COMMENT>[\n]	{ line_number++; }
+<COMMENT>[\n]	{ linenumber++; }
 <COMMENT>.	{ }
 <COMMENT><<EOF>>	{
-		yyerror("unexpected file end (unterminate comment)\n");
+		yyerror("unexpected file end (unterminated comment)\n");
 		exit(1);
 	}
 
