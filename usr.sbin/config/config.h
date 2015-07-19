@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)config.h	8.1 (Berkeley) 6/6/93
- * $MidnightBSD$
+ * $FreeBSD: stable/10/usr.sbin/config/config.h 264325 2014-04-10 19:51:33Z asomers $
  */
 
 /*
@@ -144,6 +145,13 @@ struct hint {
 
 STAILQ_HEAD(hint_head, hint) hints;
 
+struct includepath {
+	char	*path;
+	SLIST_ENTRY(includepath) path_next;
+};
+
+SLIST_HEAD(, includepath) includepath;
+
 /*
  * Tag present in the kernelconf.tmlp template file. It's mandatory for those
  * two strings to be the same. Otherwise you'll get into trouble.
@@ -171,7 +179,6 @@ char	*path(const char *);
 char	*raisestr(char *);
 void	remember(const char *);
 void	moveifchanged(const char *, const char *);
-int	yyparse(void);
 int	yylex(void);
 void	options(void);
 void	makefile(void);

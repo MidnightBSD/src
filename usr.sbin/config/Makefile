@@ -1,5 +1,5 @@
 # 	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $MidnightBSD$
+# $FreeBSD: stable/10/usr.sbin/config/Makefile 249657 2013-04-19 19:45:00Z ed $
 
 PROG=	config
 MAN=	config.5 config.8
@@ -10,6 +10,8 @@ kernconf.c: kernconf.tmpl
 	file2c 'char kernconfstr[] = {' ',0};' < ${.CURDIR}/kernconf.tmpl > kernconf.c
 
 CFLAGS+= -I. -I${.CURDIR}
+
+NO_WMISSING_VARIABLE_DECLARATIONS=
 
 DPADD=	${LIBL} ${LIBSBUF}
 LDADD=	-ll -lsbuf

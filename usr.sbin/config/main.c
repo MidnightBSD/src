@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -38,7 +39,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)main.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/10/usr.sbin/config/main.c 276280 2014-12-27 03:19:04Z ian $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -91,6 +92,7 @@ static void usage(void);
 static void cleanheaders(char *);
 static void kernconfdump(const char *);
 static void checkversion(void);
+extern int yyparse(void);
 
 struct hdr_list {
 	char *h_name;
@@ -109,14 +111,24 @@ main(int argc, char **argv)
 	int ch, len;
 	char *p;
 	char *kernfile;
+	struct includepath* ipath;
 	int printmachine;
 
 	printmachine = 0;
 	kernfile = NULL;
-	while ((ch = getopt(argc, argv, "Cd:gmpVx:")) != -1)
+	SLIST_INIT(&includepath);
+	while ((ch = getopt(argc, argv, "CI:d:gmpVx:")) != -1)
 		switch (ch) {
 		case 'C':
 			filebased = 1;
+			break;
+		case 'I':
+			ipath = (struct includepath *) \
+			    	calloc(1, sizeof (struct includepath));
+			if (ipath == NULL)
+				err(EXIT_FAILURE, "calloc");
+			ipath->path = optarg;
+			SLIST_INSERT_HEAD(&includepath, ipath, path_next);
 			break;
 		case 'm':
 			printmachine = 1;
@@ -303,6 +315,11 @@ begin:
 	}
 	cp = line;
 	*cp++ = ch;
+	/* Negation operator is a word by itself. */
+	if (ch == '!') {
+		*cp = 0;
+		return (line);
+	}
 	while ((ch = getc(fp)) != EOF) {
 		if (isspace(ch))
 			break;
@@ -350,16 +367,24 @@ begin:
 	if (ch == '"' || ch == '\'') {
 		int quote = ch;
 
+		escaped_nl = 0;
 		while ((ch = getc(fp)) != EOF) {
-			if (ch == quote)
+			if (ch == quote && !escaped_nl)
 				break;
-			if (ch == '\n') {
+			if (ch == '\n' && !escaped_nl) {
 				*cp = 0;
 				printf("config: missing quote reading `%s'\n",
 					line);
 				exit(2);
 			}
+			if (ch == '\\' && !escaped_nl) {
+				escaped_nl = 1;
+				continue;
+			}
+			if (ch != quote && escaped_nl)
+				*cp++ = '\\';
 			*cp++ = ch;
+			escaped_nl = 0;
 		}
 	} else {
 		*cp++ = ch;
@@ -626,7 +651,7 @@ remember(const char *file)
 	else
 		s = ns(file);
 
-	if (index(s, '_') && strncmp(s, "opt_", 4) != 0) {
+	if (strchr(s, '_') && strncmp(s, "opt_", 4) != 0) {
 		free(s);
 		return;
 	}
@@ -697,17 +722,11 @@ kernconfdump(const char *file)
 		r = fgetc(fp);
 		if (r == EOF)
 			break;
-		/* 
-		 * If '\0' is present in the middle of the configuration
-		 * string, this means something very weird is happening.
-		 * Make such case very visible.  However, some architectures
-		 * pad the length of the section with NULs to a multiple of
-		 * sh_addralign, allow a NUL in that part of the section.
-		 */
-		if (r == '\0' && (size - i) < align)
+		if (r == '\0') {
+			assert(i == size - 1 &&
+			    ("\\0 found in the middle of a file"));
 			break;
-		assert(r != '\0' && ("Char present in the configuration "
-		    "string mustn't be equal to 0"));
+		}
 		fputc(r, stdout);
 	}
 	fclose(fp);
