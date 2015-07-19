@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * kbd.c
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: kbd.c,v 1.3 2013-01-01 17:41:47 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: kbd.c,v 1.4 2006/09/07 21:06:53 max Exp $
+ * $FreeBSD: stable/10/usr.sbin/bluetooth/bthidd/kbd.c 276791 2015-01-07 20:01:15Z emax $
  */
 
 #include <sys/consio.h>
@@ -67,7 +68,7 @@ static int32_t	kbd_xlate(int32_t code, int32_t make, int32_t *b, int32_t const *
  * The "break" (key released) code is generated as "make" | 0x80
  */
 
-#define E0PREFIX	(1 << 31)
+#define E0PREFIX	(1U << 31)
 #define NOBREAK		(1 << 30)
 #define CODEMASK	(~(E0PREFIX|NOBREAK))
 
@@ -225,8 +226,8 @@ static int32_t const	x[] =
 /* Keyboard Int'l 7             8D */ -1,   /* Unassigned */
 /* Keyboard Int'l 8             8E */ -1,   /* Unassigned */
 /* Keyboard Int'l 9             8F */ -1,   /* Unassigned */
-/* Keyboard Lang 1              90 */ NOBREAK|0xF2, /* None */
-/* Keyboard Lang 2              91 */ NOBREAK|0xF1, /* None */
+/* Keyboard Lang 1              90 */ 0x71, /* eisu */
+/* Keyboard Lang 2              91 */ 0x72, /* kana */
 /* Keyboard Lang 3              92 */ 0x78, /* F8 */
 /* Keyboard Lang 4              93 */ 0x77, /* F7 */
 /* Keyboard Lang 5              94 */ 0x76, /* F6 */

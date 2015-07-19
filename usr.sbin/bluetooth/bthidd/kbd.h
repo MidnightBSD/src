@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * kbd.h
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: kbd.h,v 1.3 2013-01-01 17:41:47 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: kbd.h,v 1.3 2006/09/07 21:06:53 max Exp $
+ * $FreeBSD: stable/10/usr.sbin/bluetooth/bthidd/kbd.h 162128 2006-09-07 21:47:49Z emax $
  */
 
 #ifndef _KBD_H_

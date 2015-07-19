@@ -28,7 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: parser.y,v 1.3 2013-01-01 17:41:47 laffer1 Exp $
+ * $Id: parser.y,v 1.7 2006/09/07 21:06:53 max Exp $
+ * $FreeBSD: stable/10/usr.sbin/bluetooth/bthidd/parser.y 235789 2012-05-22 16:33:10Z bapt $
  * $MidnightBSD$
  */
 
@@ -39,6 +40,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <usbhid.h>
@@ -61,7 +63,6 @@
 
 #include "bthid_config.h"
 
-	int	yyparse		(void);
 	int	yylex		(void);
 	void	yyerror		(char const *);
 static	int32_t	check_hid_device(hid_device_p hid_device);

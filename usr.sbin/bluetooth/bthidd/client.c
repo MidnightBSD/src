@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * client.c
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: client.c,v 1.3 2013-01-01 17:41:47 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: client.c,v 1.7 2006/09/07 21:06:53 max Exp $
+ * $FreeBSD: stable/10/usr.sbin/bluetooth/bthidd/client.c 163918 2006-11-02 18:57:09Z emax $
  */
 
 #include <sys/queue.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * hid.c
  */
@@ -27,8 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: hid.c,v 1.3 2013-01-01 17:41:47 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: hid.c,v 1.5 2006/09/07 21:06:53 max Exp $
+ * $FreeBSD: stable/10/usr.sbin/bluetooth/bthidd/hid.c 281567 2015-04-15 22:07:51Z rakuco $
  */
 
 #include <sys/consio.h>
@@ -47,12 +48,6 @@
 #include "bthid_config.h"
 #include "bthidd.h"
 #include "kbd.h"
-
-#undef	min
-#define	min(x, y)	(((x) < (y))? (x) : (y))
-
-#undef	ASIZE
-#define	ASIZE(a)	(sizeof(a)/sizeof(a[0]))
 
 /*
  * Process data from control channel
@@ -165,8 +160,20 @@ hid_interrupt(bthid_session_p s, uint8_t *data, int32_t len)
 			continue;
 
 		page = HID_PAGE(h.usage);
-		usage = HID_USAGE(h.usage);
 		val = hid_get_data(data, &h);
+
+		/*
+		 * When the input field is an array and the usage is specified
+		 * with a range instead of an ID, we have to derive the actual
+		 * usage by using the item value as an index in the usage range
+		 * list.
+		 */
+		if ((h.flags & HIO_VARIABLE)) {
+			usage = HID_USAGE(h.usage);
+		} else {
+			const uint32_t usage_offset = val - h.logical_minimum;
+			usage = HID_USAGE(h.usage_minimum + usage_offset);
+		}
 
 		switch (page) {
 		case HUP_GENERIC_DESKTOP:

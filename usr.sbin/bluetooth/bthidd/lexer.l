@@ -28,7 +28,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: lexer.l,v 1.3 2013-01-01 17:41:47 laffer1 Exp $
+ * $Id: lexer.l,v 1.3 2006/09/07 21:06:53 max Exp $
+ * $FreeBSD: stable/10/usr.sbin/bluetooth/bthidd/lexer.l 250926 2013-05-23 05:42:35Z jkim $
  * $MidnightBSD$
  */
 
@@ -37,6 +38,8 @@
 #include "parser.h"
 
 	int	yylex	(void);
+
+#define	YY_DECL	int yylex(void)
 %}
 
 %option yylineno noyywrap nounput noinput
