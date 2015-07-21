@@ -58,7 +58,7 @@
  * [including the GNU Public Licence.]
  */
 /* ====================================================================
- * Copyright (c) 1998-2006 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 1998-2007 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -161,6 +161,21 @@ int SSL_get_ex_data_X509_STORE_CTX_idx(void)
     return ssl_x509_store_ctx_idx;
 }
 
+static void ssl_cert_set_default_md(CERT *cert)
+{
+    /* Set digest values to defaults */
+#ifndef OPENSSL_NO_DSA
+    cert->pkeys[SSL_PKEY_DSA_SIGN].digest = EVP_sha1();
+#endif
+#ifndef OPENSSL_NO_RSA
+    cert->pkeys[SSL_PKEY_RSA_SIGN].digest = EVP_sha1();
+    cert->pkeys[SSL_PKEY_RSA_ENC].digest = EVP_sha1();
+#endif
+#ifndef OPENSSL_NO_ECDSA
+    cert->pkeys[SSL_PKEY_ECC].digest = EVP_sha1();
+#endif
+}
+
 CERT *ssl_cert_new(void)
 {
     CERT *ret;
@@ -174,7 +189,7 @@ CERT *ssl_cert_new(void)
 
     ret->key = &(ret->pkeys[SSL_PKEY_RSA_ENC]);
     ret->references = 1;
-
+    ssl_cert_set_default_md(ret);
     return (ret);
 }
 
@@ -198,8 +213,10 @@ CERT *ssl_cert_dup(CERT *cert)
      */
 
     ret->valid = cert->valid;
-    ret->mask = cert->mask;
-    ret->export_mask = cert->export_mask;
+    ret->mask_k = cert->mask_k;
+    ret->mask_a = cert->mask_a;
+    ret->export_mask_k = cert->export_mask_k;
+    ret->export_mask_a = cert->export_mask_a;
 
 #ifndef OPENSSL_NO_RSA
     if (cert->rsa_tmp != NULL) {
@@ -257,35 +274,6 @@ CERT *ssl_cert_dup(CERT *cert)
             ret->pkeys[i].privatekey = cert->pkeys[i].privatekey;
             CRYPTO_add(&ret->pkeys[i].privatekey->references, 1,
                        CRYPTO_LOCK_EVP_PKEY);
-
-            switch (i) {
-                /*
-                 * If there was anything special to do for certain types of
-                 * keys, we'd do it here. (Nothing at the moment, I think.)
-                 */
-
-            case SSL_PKEY_RSA_ENC:
-            case SSL_PKEY_RSA_SIGN:
-                /* We have an RSA key. */
-                break;
-
-            case SSL_PKEY_DSA_SIGN:
-                /* We have a DSA key. */
-                break;
-
-            case SSL_PKEY_DH_RSA:
-            case SSL_PKEY_DH_DSA:
-                /* We have a DH key. */
-                break;
-
-            case SSL_PKEY_ECC:
-                /* We have an ECC key */
-                break;
-
-            default:
-                /* Can't happen. */
-                SSLerr(SSL_F_SSL_CERT_DUP, SSL_R_LIBRARY_BUG);
-            }
         }
     }
 
@@ -295,6 +283,11 @@ CERT *ssl_cert_dup(CERT *cert)
      */
 
     ret->references = 1;
+    /*
+     * Set digests to defaults. NB: we don't copy existing values as they
+     * will be set during handshake.
+     */
+    ssl_cert_set_default_md(ret);
 
     return (ret);
 

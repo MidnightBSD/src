@@ -80,7 +80,7 @@
 # include <openssl/pem.h>
 # include <openssl/rand.h>
 
-# define DEFBITS 512
+# define DEFBITS 1024
 # undef PROG
 # define PROG genrsa_main
 
@@ -91,10 +91,12 @@ int MAIN(int, char **);
 int MAIN(int argc, char **argv)
 {
     BN_GENCB cb;
+# ifndef OPENSSL_NO_ENGINE
+    ENGINE *e = NULL;
+# endif
     int ret = 1;
     int i, num = DEFBITS;
     long l;
-    int use_x931 = 0;
     const EVP_CIPHER *enc = NULL;
     unsigned long f4 = RSA_F4;
     char *outfile = NULL;
@@ -137,8 +139,6 @@ int MAIN(int argc, char **argv)
             f4 = 3;
         else if (strcmp(*argv, "-F4") == 0 || strcmp(*argv, "-f4") == 0)
             f4 = RSA_F4;
-        else if (strcmp(*argv, "-x931") == 0)
-            use_x931 = 1;
 # ifndef OPENSSL_NO_ENGINE
         else if (strcmp(*argv, "-engine") == 0) {
             if (--argc < 1)
@@ -241,7 +241,7 @@ int MAIN(int argc, char **argv)
         goto err;
     }
 # ifndef OPENSSL_NO_ENGINE
-    setup_engine(bio_err, engine, 0);
+    e = setup_engine(bio_err, engine, 0);
 # endif
 
     if (outfile == NULL) {
@@ -270,21 +270,15 @@ int MAIN(int argc, char **argv)
 
     BIO_printf(bio_err, "Generating RSA private key, %d bit long modulus\n",
                num);
-
+# ifdef OPENSSL_NO_ENGINE
     rsa = RSA_new();
+# else
+    rsa = RSA_new_method(e);
+# endif
     if (!rsa)
         goto err;
 
-    if (use_x931) {
-        BIGNUM *pubexp;
-        pubexp = BN_new();
-        if (!BN_set_word(pubexp, f4))
-            goto err;
-        if (!RSA_X931_generate_key_ex(rsa, num, pubexp, &cb))
-            goto err;
-        BN_free(pubexp);
-    } else if (!BN_set_word(bn, f4)
-               || !RSA_generate_key_ex(rsa, num, bn, &cb))
+    if (!BN_set_word(bn, f4) || !RSA_generate_key_ex(rsa, num, bn, &cb))
         goto err;
 
     app_RAND_write_file(NULL, bio_err);

@@ -111,8 +111,8 @@ ASN1_UTCTIME *d2i_ASN1_UTCTIME(ASN1_UTCTIME **a, unsigned char **pp,
 
 int ASN1_UTCTIME_check(ASN1_UTCTIME *d)
 {
-    static int min[8] = { 0, 1, 1, 0, 0, 0, 0, 0 };
-    static int max[8] = { 99, 12, 31, 23, 59, 59, 12, 59 };
+    static const int min[8] = { 0, 1, 1, 0, 0, 0, 0, 0 };
+    static const int max[8] = { 99, 12, 31, 23, 59, 59, 12, 59 };
     char *a;
     int n, i, l, o;
 
@@ -189,26 +189,43 @@ int ASN1_UTCTIME_set_string(ASN1_UTCTIME *s, const char *str)
 
 ASN1_UTCTIME *ASN1_UTCTIME_set(ASN1_UTCTIME *s, time_t t)
 {
+    return ASN1_UTCTIME_adj(s, t, 0, 0);
+}
+
+ASN1_UTCTIME *ASN1_UTCTIME_adj(ASN1_UTCTIME *s, time_t t,
+                               int offset_day, long offset_sec)
+{
     char *p;
     struct tm *ts;
     struct tm data;
     size_t len = 20;
+    int free_s = 0;
 
-    if (s == NULL)
+    if (s == NULL) {
+        free_s = 1;
         s = M_ASN1_UTCTIME_new();
+    }
     if (s == NULL)
-        return (NULL);
+        goto err;
 
     ts = OPENSSL_gmtime(&t, &data);
     if (ts == NULL)
-        return (NULL);
+        goto err;
+
+    if (offset_day || offset_sec) {
+        if (!OPENSSL_gmtime_adj(ts, offset_day, offset_sec))
+            goto err;
+    }
+
+    if ((ts->tm_year < 50) || (ts->tm_year >= 150))
+        goto err;
 
     p = (char *)s->data;
     if ((p == NULL) || ((size_t)s->length < len)) {
         p = OPENSSL_malloc(len);
         if (p == NULL) {
-            ASN1err(ASN1_F_ASN1_UTCTIME_SET, ERR_R_MALLOC_FAILURE);
-            return (NULL);
+            ASN1err(ASN1_F_ASN1_UTCTIME_ADJ, ERR_R_MALLOC_FAILURE);
+            goto err;
         }
         if (s->data != NULL)
             OPENSSL_free(s->data);
@@ -224,6 +241,10 @@ ASN1_UTCTIME *ASN1_UTCTIME_set(ASN1_UTCTIME *s, time_t t)
     ebcdic2ascii(s->data, s->data, s->length);
 #endif
     return (s);
+ err:
+    if (free_s && s)
+        M_ASN1_UTCTIME_free(s);
+    return NULL;
 }
 
 int ASN1_UTCTIME_cmp_time_t(const ASN1_UTCTIME *s, time_t t)
@@ -246,6 +267,11 @@ int ASN1_UTCTIME_cmp_time_t(const ASN1_UTCTIME *s, time_t t)
     t -= offset * 60;           /* FIXME: may overflow in extreme cases */
 
     tm = OPENSSL_gmtime(&t, &data);
+    /*
+     * NB: -1, 0, 1 already valid return values so use -2 to indicate error.
+     */
+    if (tm == NULL)
+        return -2;
 
 #define return_cmp(a,b) if ((a)<(b)) return -1; else if ((a)>(b)) return 1
     year = g2(s->data);

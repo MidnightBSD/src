@@ -94,17 +94,17 @@ static int ubsec_finish(ENGINE *e);
 static int ubsec_ctrl(ENGINE *e, int cmd, long i, void *p, void (*f) (void));
 static int ubsec_mod_exp(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
                          const BIGNUM *m, BN_CTX *ctx);
+#  ifndef OPENSSL_NO_RSA
 static int ubsec_mod_exp_crt(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
                              const BIGNUM *q, const BIGNUM *dp,
                              const BIGNUM *dq, const BIGNUM *qinv,
                              BN_CTX *ctx);
-#  ifndef OPENSSL_NO_RSA
 static int ubsec_rsa_mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa,
                              BN_CTX *ctx);
-#  endif
 static int ubsec_mod_exp_mont(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
                               const BIGNUM *m, BN_CTX *ctx,
                               BN_MONT_CTX *m_ctx);
+#  endif
 #  ifndef OPENSSL_NO_DSA
 #   ifdef NOT_USED
 static int ubsec_dsa_mod_exp(DSA *dsa, BIGNUM *rr, BIGNUM *a1,
@@ -310,10 +310,10 @@ static t_UBSEC_diffie_hellman_generate_ioctl
 static t_UBSEC_diffie_hellman_agree_ioctl *p_UBSEC_diffie_hellman_agree_ioctl
     = NULL;
 #  endif
-/* #ifndef OPENSSL_NO_RSA */
+#  ifndef OPENSSL_NO_RSA
 static t_UBSEC_rsa_mod_exp_ioctl *p_UBSEC_rsa_mod_exp_ioctl = NULL;
 static t_UBSEC_rsa_mod_exp_crt_ioctl *p_UBSEC_rsa_mod_exp_crt_ioctl = NULL;
-/* #endif */
+#  endif
 #  ifndef OPENSSL_NO_DSA
 static t_UBSEC_dsa_sign_ioctl *p_UBSEC_dsa_sign_ioctl = NULL;
 static t_UBSEC_dsa_verify_ioctl *p_UBSEC_dsa_verify_ioctl = NULL;
@@ -631,7 +631,6 @@ static int ubsec_rsa_mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa,
  err:
     return to_return;
 }
-#  endif
 
 static int ubsec_mod_exp_crt(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
                              const BIGNUM *q, const BIGNUM *dp,
@@ -679,6 +678,7 @@ static int ubsec_mod_exp_crt(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
     r->top = (BN_num_bits(p) + BN_num_bits(q) + BN_BITS2 - 1) / BN_BITS2;
     return 1;
 }
+#  endif
 
 #  ifndef OPENSSL_NO_DSA
 #   ifdef NOT_USED
@@ -714,6 +714,8 @@ static int ubsec_mod_exp_dsa(DSA *dsa, BIGNUM *r, BIGNUM *a,
 #   endif
 #  endif
 
+#  ifndef OPENSSL_NO_RSA
+
 /*
  * This function is aliased to mod_exp (with the mont stuff dropped).
  */
@@ -723,19 +725,17 @@ static int ubsec_mod_exp_mont(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 {
     int ret = 0;
 
-#  ifndef OPENSSL_NO_RSA
     /* Do in software if the key is too large for the hardware. */
     if (BN_num_bits(m) > max_key_len) {
         const RSA_METHOD *meth = RSA_PKCS1_SSLeay();
         ret = (*meth->bn_mod_exp) (r, a, p, m, ctx, m_ctx);
-    } else
-#  endif
-    {
+    } else {
         ret = ubsec_mod_exp(r, a, p, m, ctx);
     }
 
     return ret;
 }
+#  endif
 
 #  ifndef OPENSSL_NO_DH
 /* This function is aliased to mod_exp (with the dh and mont dropped). */
@@ -967,10 +967,10 @@ static int ubsec_dh_generate_key(DH *dh)
 
     if (dh->pub_key == NULL) {
         pub_key = BN_new();
+        if (pub_key == NULL)
+            goto err;
         pub_key_len = BN_num_bits(dh->p);
         if (bn_wexpand(pub_key, dh->p->top) == NULL)
-            goto err;
-        if (pub_key == NULL)
             goto err;
     } else {
         pub_key = dh->pub_key;

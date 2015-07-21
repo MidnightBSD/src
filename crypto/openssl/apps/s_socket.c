@@ -234,14 +234,11 @@ static int ssl_sock_init(void)
 int init_client(int *sock, char *host, int port, int type)
 {
     unsigned char ip[4];
-    short p = 0;
 
-    if (!host_ip(host, &(ip[0]))) {
-        return (0);
-    }
-    if (p != 0)
-        port = p;
-    return (init_client_ip(sock, ip, port, type));
+    memset(ip, '\0', sizeof ip);
+    if (!host_ip(host, &(ip[0])))
+        return 0;
+    return init_client_ip(sock, ip, port, type);
 }
 
 static int init_client_ip(int *sock, unsigned char ip[4], int port, int type)
@@ -271,11 +268,12 @@ static int init_client_ip(int *sock, unsigned char ip[4], int port, int type)
         perror("socket");
         return (0);
     }
-# ifndef OPENSSL_SYS_MPE
+# if defined(SO_KEEPALIVE) && !defined(OPENSSL_SYS_MPE)
     if (type == SOCK_STREAM) {
         i = 0;
         i = setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, (char *)&i, sizeof(i));
         if (i < 0) {
+            closesocket(s);
             perror("keepalive");
             return (0);
         }
@@ -283,7 +281,7 @@ static int init_client_ip(int *sock, unsigned char ip[4], int port, int type)
 # endif
 
     if (connect(s, (struct sockaddr *)&them, sizeof(them)) == -1) {
-        close(s);
+        closesocket(s);
         perror("connect");
         return (0);
     }
@@ -297,7 +295,7 @@ int do_server(int port, int type, int *ret,
 {
     int sock;
     char *name = NULL;
-    int accept_socket;
+    int accept_socket = 0;
     int i;
 
     if (!init_server(&accept_socket, port, type))
@@ -454,6 +452,7 @@ static int do_accept(int acc_sock, int *sock, char **host)
     } else {
         if ((*host = (char *)OPENSSL_malloc(strlen(h1->h_name) + 1)) == NULL) {
             perror("OPENSSL_malloc");
+            closesocket(ret);
             return (0);
         }
         BUF_strlcpy(*host, h1->h_name, strlen(h1->h_name) + 1);
@@ -461,10 +460,12 @@ static int do_accept(int acc_sock, int *sock, char **host)
         h2 = GetHostByName(*host);
         if (h2 == NULL) {
             BIO_printf(bio_err, "gethostbyname failure\n");
+            closesocket(ret);
             return (0);
         }
         if (h2->h_addrtype != AF_INET) {
             BIO_printf(bio_err, "gethostbyname addr is not AF_INET\n");
+            closesocket(ret);
             return (0);
         }
     }

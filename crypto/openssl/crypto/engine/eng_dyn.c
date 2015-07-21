@@ -119,10 +119,6 @@ static const ENGINE_CMD_DEFN dynamic_cmd_defns[] = {
     {0, NULL, NULL, 0}
 };
 
-static const ENGINE_CMD_DEFN dynamic_cmd_defns_empty[] = {
-    {0, NULL, NULL, 0}
-};
-
 /*
  * Loading code stores state inside the ENGINE structure via the "ex_data"
  * element. We load all our state into a single structure and use that as a
@@ -161,7 +157,7 @@ struct st_dynamic_data_ctx {
      */
     int dir_load;
     /* A stack of directories from which ENGINEs could be loaded */
-    STACK *dirs;
+    STACK_OF(OPENSSL_STRING) *dirs;
 };
 
 /*
@@ -170,7 +166,7 @@ struct st_dynamic_data_ctx {
  */
 static int dynamic_ex_data_idx = -1;
 
-static void int_free_str(void *s)
+static void int_free_str(char *s)
 {
     OPENSSL_free(s);
 }
@@ -197,7 +193,7 @@ static void dynamic_data_ctx_free_func(void *parent, void *ptr,
         if (ctx->engine_id)
             OPENSSL_free((void *)ctx->engine_id);
         if (ctx->dirs)
-            sk_pop_free(ctx->dirs, int_free_str);
+            sk_OPENSSL_STRING_pop_free(ctx->dirs, int_free_str);
         OPENSSL_free(ctx);
     }
 }
@@ -227,7 +223,7 @@ static int dynamic_set_data_ctx(ENGINE *e, dynamic_data_ctx **ctx)
     c->DYNAMIC_F1 = "v_check";
     c->DYNAMIC_F2 = "bind_engine";
     c->dir_load = 1;
-    c->dirs = sk_new_null();
+    c->dirs = sk_OPENSSL_STRING_new_null();
     if (!c->dirs) {
         ENGINEerr(ENGINE_F_DYNAMIC_SET_DATA_CTX, ERR_R_MALLOC_FAILURE);
         OPENSSL_free(c);
@@ -416,7 +412,7 @@ static int dynamic_ctrl(ENGINE *e, int cmd, long i, void *p, void (*f) (void))
                 ENGINEerr(ENGINE_F_DYNAMIC_CTRL, ERR_R_MALLOC_FAILURE);
                 return 0;
             }
-            sk_insert(ctx->dirs, tmp_str, -1);
+            sk_OPENSSL_STRING_insert(ctx->dirs, tmp_str, -1);
         }
         return 1;
     default:
@@ -435,10 +431,10 @@ static int int_load(dynamic_data_ctx *ctx)
                                           0)) != NULL)
         return 1;
     /* If we're not allowed to use 'dirs' or we have none, fail */
-    if (!ctx->dir_load || ((num = sk_num(ctx->dirs)) < 1))
+    if (!ctx->dir_load || (num = sk_OPENSSL_STRING_num(ctx->dirs)) < 1)
         return 0;
     for (loop = 0; loop < num; loop++) {
-        const char *s = sk_value(ctx->dirs, loop);
+        const char *s = sk_OPENSSL_STRING_value(ctx->dirs, loop);
         char *merge = DSO_merge(ctx->dynamic_dso, ctx->DYNAMIC_LIBNAME, s);
         if (!merge)
             return 0;

@@ -83,15 +83,16 @@ int EC_GROUP_get_basis_type(const EC_GROUP *group)
         return 0;
 }
 
+#ifndef OPENSSL_NO_EC2M
 int EC_GROUP_get_trinomial_basis(const EC_GROUP *group, unsigned int *k)
 {
     if (group == NULL)
         return 0;
 
-    if (EC_GROUP_method_of(group)->group_set_curve !=
-        ec_GF2m_simple_group_set_curve || !((group->poly[0] != 0)
-                                            && (group->poly[1] != 0)
-                                            && (group->poly[2] == 0))) {
+    if (EC_METHOD_get_field_type(EC_GROUP_method_of(group)) !=
+        NID_X9_62_characteristic_two_field
+        || !((group->poly[0] != 0) && (group->poly[1] != 0)
+             && (group->poly[2] == 0))) {
         ECerr(EC_F_EC_GROUP_GET_TRINOMIAL_BASIS,
               ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED);
         return 0;
@@ -109,12 +110,11 @@ int EC_GROUP_get_pentanomial_basis(const EC_GROUP *group, unsigned int *k1,
     if (group == NULL)
         return 0;
 
-    if (EC_GROUP_method_of(group)->group_set_curve !=
-        ec_GF2m_simple_group_set_curve || !((group->poly[0] != 0)
-                                            && (group->poly[1] != 0)
-                                            && (group->poly[2] != 0)
-                                            && (group->poly[3] != 0)
-                                            && (group->poly[4] == 0))) {
+    if (EC_METHOD_get_field_type(EC_GROUP_method_of(group)) !=
+        NID_X9_62_characteristic_two_field
+        || !((group->poly[0] != 0) && (group->poly[1] != 0)
+             && (group->poly[2] != 0) && (group->poly[3] != 0)
+             && (group->poly[4] == 0))) {
         ECerr(EC_F_EC_GROUP_GET_PENTANOMIAL_BASIS,
               ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED);
         return 0;
@@ -129,6 +129,7 @@ int EC_GROUP_get_pentanomial_basis(const EC_GROUP *group, unsigned int *k1,
 
     return 1;
 }
+#endif
 
 /* some structures needed for the asn1 encoding */
 typedef struct x9_62_pentanomial_st {
@@ -344,8 +345,14 @@ static int ec_asn1_group2fieldid(const EC_GROUP *group, X9_62_FIELDID *field)
             ECerr(EC_F_EC_ASN1_GROUP2FIELDID, ERR_R_ASN1_LIB);
             goto err;
         }
-    } else {                    /* nid == NID_X9_62_characteristic_two_field */
-
+    } else                      /* nid == NID_X9_62_characteristic_two_field */
+#ifdef OPENSSL_NO_EC2M
+    {
+        ECerr(EC_F_EC_ASN1_GROUP2FIELDID, EC_R_GF2M_NOT_SUPPORTED);
+        goto err;
+    }
+#else
+    {
         int field_type;
         X9_62_CHARACTERISTIC_TWO *char_two;
 
@@ -412,6 +419,7 @@ static int ec_asn1_group2fieldid(const EC_GROUP *group, X9_62_FIELDID *field)
             }
         }
     }
+#endif
 
     ok = 1;
 
@@ -445,14 +453,16 @@ static int ec_asn1_group2curve(const EC_GROUP *group, X9_62_CURVE *curve)
             ECerr(EC_F_EC_ASN1_GROUP2CURVE, ERR_R_EC_LIB);
             goto err;
         }
-    } else {                    /* nid == NID_X9_62_characteristic_two_field */
+    }
+#ifndef OPENSSL_NO_EC2M
+    else {                      /* nid == NID_X9_62_characteristic_two_field */
 
         if (!EC_GROUP_get_curve_GF2m(group, NULL, tmp_1, tmp_2, NULL)) {
             ECerr(EC_F_EC_ASN1_GROUP2CURVE, ERR_R_EC_LIB);
             goto err;
         }
     }
-
+#endif
     len_1 = (size_t)BN_num_bytes(tmp_1);
     len_2 = (size_t)BN_num_bytes(tmp_2);
 
@@ -711,8 +721,14 @@ static EC_GROUP *ec_asn1_parameters2group(const ECPARAMETERS *params)
 
     /* get the field parameters */
     tmp = OBJ_obj2nid(params->fieldID->fieldType);
-
-    if (tmp == NID_X9_62_characteristic_two_field) {
+    if (tmp == NID_X9_62_characteristic_two_field)
+#ifdef OPENSSL_NO_EC2M
+    {
+        ECerr(EC_F_EC_ASN1_PARAMETERS2GROUP, EC_R_GF2M_NOT_SUPPORTED);
+        goto err;
+    }
+#else
+    {
         X9_62_CHARACTERISTIC_TWO *char_two;
 
         char_two = params->fieldID->p.char_two;
@@ -793,7 +809,9 @@ static EC_GROUP *ec_asn1_parameters2group(const ECPARAMETERS *params)
 
         /* create the EC_GROUP structure */
         ret = EC_GROUP_new_curve_GF2m(p, a, b, NULL);
-    } else if (tmp == NID_X9_62_prime_field) {
+    }
+#endif
+    else if (tmp == NID_X9_62_prime_field) {
         /* we have a curve over a prime field */
         /* extract the prime number */
         if (!params->fieldID->p.prime) {
@@ -961,6 +979,7 @@ EC_GROUP *d2i_ECPKParameters(EC_GROUP **a, const unsigned char **in, long len)
 
     if ((group = ec_asn1_pkparameters2group(params)) == NULL) {
         ECerr(EC_F_D2I_ECPKPARAMETERS, EC_R_PKPARAMETERS2GROUP_FAILURE);
+        ECPKPARAMETERS_free(params);
         return NULL;
     }
 
@@ -998,14 +1017,8 @@ EC_KEY *d2i_ECPrivateKey(EC_KEY **a, const unsigned char **in, long len)
     EC_KEY *ret = NULL;
     EC_PRIVATEKEY *priv_key = NULL;
 
-    if ((priv_key = EC_PRIVATEKEY_new()) == NULL) {
-        ECerr(EC_F_D2I_ECPRIVATEKEY, ERR_R_MALLOC_FAILURE);
-        return NULL;
-    }
-
-    if ((priv_key = d2i_EC_PRIVATEKEY(&priv_key, in, len)) == NULL) {
+    if ((priv_key = d2i_EC_PRIVATEKEY(NULL, in, len)) == NULL) {
         ECerr(EC_F_D2I_ECPRIVATEKEY, ERR_R_EC_LIB);
-        EC_PRIVATEKEY_free(priv_key);
         return NULL;
     }
 
@@ -1043,26 +1056,42 @@ EC_KEY *d2i_ECPrivateKey(EC_KEY **a, const unsigned char **in, long len)
         goto err;
     }
 
+    if (ret->pub_key)
+        EC_POINT_clear_free(ret->pub_key);
+    ret->pub_key = EC_POINT_new(ret->group);
+    if (ret->pub_key == NULL) {
+        ECerr(EC_F_D2I_ECPRIVATEKEY, ERR_R_EC_LIB);
+        goto err;
+    }
+
     if (priv_key->publicKey) {
         const unsigned char *pub_oct;
-        size_t pub_oct_len;
+        int pub_oct_len;
 
-        if (ret->pub_key)
-            EC_POINT_clear_free(ret->pub_key);
-        ret->pub_key = EC_POINT_new(ret->group);
-        if (ret->pub_key == NULL) {
-            ECerr(EC_F_D2I_ECPRIVATEKEY, ERR_R_EC_LIB);
-            goto err;
-        }
         pub_oct = M_ASN1_STRING_data(priv_key->publicKey);
         pub_oct_len = M_ASN1_STRING_length(priv_key->publicKey);
-        /* save the point conversion form */
+        /*
+         * The first byte - point conversion form - must be present.
+         */
+        if (pub_oct_len <= 0) {
+            ECerr(EC_F_D2I_ECPRIVATEKEY, EC_R_BUFFER_TOO_SMALL);
+            goto err;
+        }
+        /* Save the point conversion form. */
         ret->conv_form = (point_conversion_form_t) (pub_oct[0] & ~0x01);
         if (!EC_POINT_oct2point(ret->group, ret->pub_key,
-                                pub_oct, pub_oct_len, NULL)) {
+                                pub_oct, (size_t)(pub_oct_len), NULL)) {
             ECerr(EC_F_D2I_ECPRIVATEKEY, ERR_R_EC_LIB);
             goto err;
         }
+    } else {
+        if (!EC_POINT_mul
+            (ret->group, ret->pub_key, ret->priv_key, NULL, NULL, NULL)) {
+            ECerr(EC_F_D2I_ECPRIVATEKEY, ERR_R_EC_LIB);
+            goto err;
+        }
+        /* Remember the original private-key-only encoding. */
+        ret->enc_flag |= EC_PKEY_NO_PUBKEY;
     }
 
     if (a)
@@ -1085,10 +1114,11 @@ int i2d_ECPrivateKey(EC_KEY *a, unsigned char **out)
 {
     int ret = 0, ok = 0;
     unsigned char *buffer = NULL;
-    size_t buf_len = 0, tmp_len;
+    size_t buf_len = 0, tmp_len, bn_len;
     EC_PRIVATEKEY *priv_key = NULL;
 
-    if (a == NULL || a->group == NULL || a->priv_key == NULL) {
+    if (a == NULL || a->group == NULL || a->priv_key == NULL ||
+        (!(a->enc_flag & EC_PKEY_NO_PUBKEY) && a->pub_key == NULL)) {
         ECerr(EC_F_I2D_ECPRIVATEKEY, ERR_R_PASSED_NULL_PARAMETER);
         goto err;
     }
@@ -1100,16 +1130,30 @@ int i2d_ECPrivateKey(EC_KEY *a, unsigned char **out)
 
     priv_key->version = a->version;
 
-    buf_len = (size_t)BN_num_bytes(a->priv_key);
+    bn_len = (size_t)BN_num_bytes(a->priv_key);
+
+    /* Octetstring may need leading zeros if BN is to short */
+
+    buf_len = (EC_GROUP_get_degree(a->group) + 7) / 8;
+
+    if (bn_len > buf_len) {
+        ECerr(EC_F_I2D_ECPRIVATEKEY, EC_R_BUFFER_TOO_SMALL);
+        goto err;
+    }
+
     buffer = OPENSSL_malloc(buf_len);
     if (buffer == NULL) {
         ECerr(EC_F_I2D_ECPRIVATEKEY, ERR_R_MALLOC_FAILURE);
         goto err;
     }
 
-    if (!BN_bn2bin(a->priv_key, buffer)) {
+    if (!BN_bn2bin(a->priv_key, buffer + buf_len - bn_len)) {
         ECerr(EC_F_I2D_ECPRIVATEKEY, ERR_R_BN_LIB);
         goto err;
+    }
+
+    if (buf_len - bn_len > 0) {
+        memset(buffer, 0, buf_len - bn_len);
     }
 
     if (!M_ASN1_OCTET_STRING_set(priv_key->privateKey, buffer, buf_len)) {
@@ -1266,8 +1310,10 @@ int i2o_ECPublicKey(EC_KEY *a, unsigned char **out)
     if (!EC_POINT_point2oct(a->group, a->pub_key, a->conv_form,
                             *out, buf_len, NULL)) {
         ECerr(EC_F_I2O_ECPUBLICKEY, ERR_R_EC_LIB);
-        OPENSSL_free(*out);
-        *out = NULL;
+        if (new_buffer) {
+            OPENSSL_free(*out);
+            *out = NULL;
+        }
         return 0;
     }
     if (!new_buffer)

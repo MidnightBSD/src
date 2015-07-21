@@ -115,8 +115,8 @@
 # define LDOUBLE double
 #endif
 
-#if HAVE_LONG_LONG
-# if defined(OPENSSL_SYS_WIN32) && !defined(__GNUC__)
+#ifdef HAVE_LONG_LONG
+# if defined(_WIN32) && !defined(__GNUC__)
 #  define LLONG __int64
 # else
 #  define LLONG long long
@@ -592,7 +592,6 @@ fmtfp(char **sbuffer,
     int fplace = 0;
     int padlen = 0;
     int zpadlen = 0;
-    int caps = 0;
     long intpart;
     long fracpart;
     long max10;
@@ -630,8 +629,7 @@ fmtfp(char **sbuffer,
 
     /* convert integer part */
     do {
-        iconvert[iplace++] =
-            (caps ? "0123456789ABCDEF" : "0123456789abcdef")[intpart % 10];
+        iconvert[iplace++] = "0123456789"[intpart % 10];
         intpart = (intpart / 10);
     } while (intpart && (iplace < (int)sizeof(iconvert)));
     if (iplace == sizeof iconvert)
@@ -640,8 +638,7 @@ fmtfp(char **sbuffer,
 
     /* convert fractional part */
     do {
-        fconvert[fplace++] =
-            (caps ? "0123456789ABCDEF" : "0123456789abcdef")[fracpart % 10];
+        fconvert[fplace++] = "0123456789"[fracpart % 10];
         fracpart = (fracpart / 10);
     } while (fplace < max);
     if (fplace == sizeof fconvert)
@@ -707,24 +704,29 @@ doapr_outch(char **sbuffer,
     /* If we haven't at least one buffer, someone has doe a big booboo */
     assert(*sbuffer != NULL || buffer != NULL);
 
-    if (buffer) {
-        while (*currlen >= *maxlen) {
-            if (*buffer == NULL) {
-                if (*maxlen == 0)
-                    *maxlen = 1024;
-                *buffer = OPENSSL_malloc(*maxlen);
-                if (*currlen > 0) {
-                    assert(*sbuffer != NULL);
-                    memcpy(*buffer, *sbuffer, *currlen);
-                }
-                *sbuffer = NULL;
-            } else {
-                *maxlen += 1024;
-                *buffer = OPENSSL_realloc(*buffer, *maxlen);
+    /* |currlen| must always be <= |*maxlen| */
+    assert(*currlen <= *maxlen);
+
+    if (buffer && *currlen == *maxlen) {
+        *maxlen += 1024;
+        if (*buffer == NULL) {
+            *buffer = OPENSSL_malloc(*maxlen);
+            if (!*buffer) {
+                /* Panic! Can't really do anything sensible. Just return */
+                return;
+            }
+            if (*currlen > 0) {
+                assert(*sbuffer != NULL);
+                memcpy(*buffer, *sbuffer, *currlen);
+            }
+            *sbuffer = NULL;
+        } else {
+            *buffer = OPENSSL_realloc(*buffer, *maxlen);
+            if (!*buffer) {
+                /* Panic! Can't really do anything sensible. Just return */
+                return;
             }
         }
-        /* What to do if *buffer is NULL? */
-        assert(*sbuffer != NULL || *buffer != NULL);
     }
 
     if (*currlen < *maxlen) {

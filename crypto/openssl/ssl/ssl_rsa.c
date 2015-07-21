@@ -677,6 +677,7 @@ int SSL_CTX_use_certificate_chain_file(SSL_CTX *ctx, const char *file)
     }
 
     ret = SSL_CTX_use_certificate(ctx, x);
+
     if (ERR_peek_error() != 0)
         ret = 0;                /* Key/certificate mismatch doesn't imply
                                  * ret==0 ... */
@@ -694,9 +695,9 @@ int SSL_CTX_use_certificate_chain_file(SSL_CTX *ctx, const char *file)
             ctx->extra_certs = NULL;
         }
 
-        while ((ca =
-                PEM_read_bio_X509(in, NULL, ctx->default_passwd_callback,
-                                  ctx->default_passwd_callback_userdata))
+        while ((ca = PEM_read_bio_X509(in, NULL,
+                                       ctx->default_passwd_callback,
+                                       ctx->default_passwd_callback_userdata))
                != NULL) {
             r = SSL_CTX_add_extra_chain_cert(ctx, ca);
             if (!r) {

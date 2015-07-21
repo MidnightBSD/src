@@ -109,6 +109,7 @@ int test_mod(BIO *bp, BN_CTX *ctx);
 int test_mod_mul(BIO *bp, BN_CTX *ctx);
 int test_mod_exp(BIO *bp, BN_CTX *ctx);
 int test_mod_exp_mont_consttime(BIO *bp, BN_CTX *ctx);
+int test_mod_exp_mont5(BIO *bp, BN_CTX *ctx);
 int test_exp(BIO *bp, BN_CTX *ctx);
 int test_gf2m_add(BIO *bp);
 int test_gf2m_mod(BIO *bp);
@@ -265,6 +266,8 @@ int main(int argc, char *argv[])
     message(out, "BN_mod_exp_mont_consttime");
     if (!test_mod_exp_mont_consttime(out, ctx))
         goto err;
+    if (!test_mod_exp_mont5(out, ctx))
+        goto err;
     (void)BIO_flush(out);
 
     message(out, "BN_exp");
@@ -281,7 +284,7 @@ int main(int argc, char *argv[])
     if (!test_sqrt(out, ctx))
         goto err;
     (void)BIO_flush(out);
-
+#ifndef OPENSSL_NO_EC2M
     message(out, "BN_GF2m_add");
     if (!test_gf2m_add(out))
         goto err;
@@ -326,7 +329,7 @@ int main(int argc, char *argv[])
     if (!test_gf2m_mod_solve_quad(out, ctx))
         goto err;
     (void)BIO_flush(out);
-
+#endif
     BN_CTX_free(ctx);
     BIO_free(out);
 
@@ -497,7 +500,7 @@ static void print_word(BIO *bp, BN_ULONG w)
         return;
     }
 #endif
-    BIO_printf(bp, "%lX", w);
+    BIO_printf(bp, BN_HEX_FMT1, w);
 }
 
 int test_div_word(BIO *bp)
@@ -722,15 +725,7 @@ int test_sqr(BIO *bp, BN_CTX *ctx)
     if (BN_cmp(c, d)) {
         fprintf(stderr, "Square test failed: BN_sqr and BN_mul produce "
                 "different results!\n");
-#ifdef OPENSSL_FIPS
-        /*
-         * This test fails if we are linked to the FIPS module. Unfortunately
-         * that can't be fixed so we print out the error but continue anyway.
-         */
-        fprintf(stderr, "    FIPS build: ignoring.\n");
-#else
         goto err;
-#endif
     }
 
     /* Regression test for a BN_sqr overflow bug. */
@@ -783,6 +778,8 @@ int test_mont(BIO *bp, BN_CTX *ctx)
     BN_init(&n);
 
     mont = BN_MONT_CTX_new();
+    if (mont == NULL)
+        return 0;
 
     BN_bntest_rand(&a, 100, 0, 0);
     BN_bntest_rand(&b, 100, 0, 0);
@@ -1038,6 +1035,78 @@ int test_mod_exp_mont_consttime(BIO *bp, BN_CTX *ctx)
     return (1);
 }
 
+/*
+ * Test constant-time modular exponentiation with 1024-bit inputs, which on
+ * x86_64 cause a different code branch to be taken.
+ */
+int test_mod_exp_mont5(BIO *bp, BN_CTX *ctx)
+{
+    BIGNUM *a, *p, *m, *d, *e;
+
+    BN_MONT_CTX *mont;
+
+    a = BN_new();
+    p = BN_new();
+    m = BN_new();
+    d = BN_new();
+    e = BN_new();
+
+    mont = BN_MONT_CTX_new();
+
+    BN_bntest_rand(m, 1024, 0, 1); /* must be odd for montgomery */
+    /* Zero exponent */
+    BN_bntest_rand(a, 1024, 0, 0);
+    BN_zero(p);
+    if (!BN_mod_exp_mont_consttime(d, a, p, m, ctx, NULL))
+        return 0;
+    if (!BN_is_one(d)) {
+        fprintf(stderr, "Modular exponentiation test failed!\n");
+        return 0;
+    }
+    /* Zero input */
+    BN_bntest_rand(p, 1024, 0, 0);
+    BN_zero(a);
+    if (!BN_mod_exp_mont_consttime(d, a, p, m, ctx, NULL))
+        return 0;
+    if (!BN_is_zero(d)) {
+        fprintf(stderr, "Modular exponentiation test failed!\n");
+        return 0;
+    }
+    /*
+     * Craft an input whose Montgomery representation is 1, i.e., shorter
+     * than the modulus m, in order to test the const time precomputation
+     * scattering/gathering.
+     */
+    BN_one(a);
+    BN_MONT_CTX_set(mont, m, ctx);
+    if (!BN_from_montgomery(e, a, mont, ctx))
+        return 0;
+    if (!BN_mod_exp_mont_consttime(d, e, p, m, ctx, NULL))
+        return 0;
+    if (!BN_mod_exp_simple(a, e, p, m, ctx))
+        return 0;
+    if (BN_cmp(a, d) != 0) {
+        fprintf(stderr, "Modular exponentiation test failed!\n");
+        return 0;
+    }
+    /* Finally, some regular test vectors. */
+    BN_bntest_rand(e, 1024, 0, 0);
+    if (!BN_mod_exp_mont_consttime(d, e, p, m, ctx, NULL))
+        return 0;
+    if (!BN_mod_exp_simple(a, e, p, m, ctx))
+        return 0;
+    if (BN_cmp(a, d) != 0) {
+        fprintf(stderr, "Modular exponentiation test failed!\n");
+        return 0;
+    }
+    BN_free(a);
+    BN_free(p);
+    BN_free(m);
+    BN_free(d);
+    BN_free(e);
+    return (1);
+}
+
 int test_exp(BIO *bp, BN_CTX *ctx)
 {
     BIGNUM *a, *b, *d, *e, *one;
@@ -1084,6 +1153,7 @@ int test_exp(BIO *bp, BN_CTX *ctx)
     return (1);
 }
 
+#ifndef OPENSSL_NO_EC2M
 int test_gf2m_add(BIO *bp)
 {
     BIGNUM a, b, c;
@@ -1099,7 +1169,7 @@ int test_gf2m_add(BIO *bp)
         a.neg = rand_neg();
         b.neg = rand_neg();
         BN_GF2m_add(&c, &a, &b);
-#if 0                           /* make test uses ouput in bc but bc can't
+# if 0                          /* make test uses ouput in bc but bc can't
                                  * handle GF(2^m) arithmetic */
         if (bp != NULL) {
             if (!results) {
@@ -1111,7 +1181,7 @@ int test_gf2m_add(BIO *bp)
             BN_print(bp, &c);
             BIO_puts(bp, "\n");
         }
-#endif
+# endif
         /* Test that two added values have the correct parity. */
         if ((BN_is_odd(&a) && BN_is_odd(&c))
             || (!BN_is_odd(&a) && !BN_is_odd(&c))) {
@@ -1137,8 +1207,8 @@ int test_gf2m_mod(BIO *bp)
 {
     BIGNUM *a, *b[2], *c, *d, *e;
     int i, j, ret = 0;
-    unsigned int p0[] = { 163, 7, 6, 3, 0 };
-    unsigned int p1[] = { 193, 15, 0 };
+    int p0[] = { 163, 7, 6, 3, 0, -1 };
+    int p1[] = { 193, 15, 0, -1 };
 
     a = BN_new();
     b[0] = BN_new();
@@ -1154,7 +1224,7 @@ int test_gf2m_mod(BIO *bp)
         BN_bntest_rand(a, 1024, 0, 0);
         for (j = 0; j < 2; j++) {
             BN_GF2m_mod(c, a, b[j]);
-#if 0                           /* make test uses ouput in bc but bc can't
+# if 0                          /* make test uses ouput in bc but bc can't
                                  * handle GF(2^m) arithmetic */
             if (bp != NULL) {
                 if (!results) {
@@ -1166,7 +1236,7 @@ int test_gf2m_mod(BIO *bp)
                     BIO_puts(bp, "\n");
                 }
             }
-#endif
+# endif
             BN_GF2m_add(d, a, c);
             BN_GF2m_mod(e, d, b[j]);
             /* Test that a + (a mod p) mod p == 0. */
@@ -1191,8 +1261,8 @@ int test_gf2m_mod_mul(BIO *bp, BN_CTX *ctx)
 {
     BIGNUM *a, *b[2], *c, *d, *e, *f, *g, *h;
     int i, j, ret = 0;
-    unsigned int p0[] = { 163, 7, 6, 3, 0 };
-    unsigned int p1[] = { 193, 15, 0 };
+    int p0[] = { 163, 7, 6, 3, 0, -1 };
+    int p1[] = { 193, 15, 0, -1 };
 
     a = BN_new();
     b[0] = BN_new();
@@ -1213,7 +1283,7 @@ int test_gf2m_mod_mul(BIO *bp, BN_CTX *ctx)
         BN_bntest_rand(d, 1024, 0, 0);
         for (j = 0; j < 2; j++) {
             BN_GF2m_mod_mul(e, a, c, b[j], ctx);
-#if 0                           /* make test uses ouput in bc but bc can't
+# if 0                          /* make test uses ouput in bc but bc can't
                                  * handle GF(2^m) arithmetic */
             if (bp != NULL) {
                 if (!results) {
@@ -1227,7 +1297,7 @@ int test_gf2m_mod_mul(BIO *bp, BN_CTX *ctx)
                     BIO_puts(bp, "\n");
                 }
             }
-#endif
+# endif
             BN_GF2m_add(f, a, d);
             BN_GF2m_mod_mul(g, f, c, b[j], ctx);
             BN_GF2m_mod_mul(h, d, c, b[j], ctx);
@@ -1259,8 +1329,8 @@ int test_gf2m_mod_sqr(BIO *bp, BN_CTX *ctx)
 {
     BIGNUM *a, *b[2], *c, *d;
     int i, j, ret = 0;
-    unsigned int p0[] = { 163, 7, 6, 3, 0 };
-    unsigned int p1[] = { 193, 15, 0 };
+    int p0[] = { 163, 7, 6, 3, 0, -1 };
+    int p1[] = { 193, 15, 0, -1 };
 
     a = BN_new();
     b[0] = BN_new();
@@ -1277,7 +1347,7 @@ int test_gf2m_mod_sqr(BIO *bp, BN_CTX *ctx)
             BN_GF2m_mod_sqr(c, a, b[j], ctx);
             BN_copy(d, a);
             BN_GF2m_mod_mul(d, a, d, b[j], ctx);
-#if 0                           /* make test uses ouput in bc but bc can't
+# if 0                          /* make test uses ouput in bc but bc can't
                                  * handle GF(2^m) arithmetic */
             if (bp != NULL) {
                 if (!results) {
@@ -1291,7 +1361,7 @@ int test_gf2m_mod_sqr(BIO *bp, BN_CTX *ctx)
                     BIO_puts(bp, "\n");
                 }
             }
-#endif
+# endif
             BN_GF2m_add(d, c, d);
             /* Test that a*a = a^2. */
             if (!BN_is_zero(d)) {
@@ -1314,8 +1384,8 @@ int test_gf2m_mod_inv(BIO *bp, BN_CTX *ctx)
 {
     BIGNUM *a, *b[2], *c, *d;
     int i, j, ret = 0;
-    unsigned int p0[] = { 163, 7, 6, 3, 0 };
-    unsigned int p1[] = { 193, 15, 0 };
+    int p0[] = { 163, 7, 6, 3, 0, -1 };
+    int p1[] = { 193, 15, 0, -1 };
 
     a = BN_new();
     b[0] = BN_new();
@@ -1331,7 +1401,7 @@ int test_gf2m_mod_inv(BIO *bp, BN_CTX *ctx)
         for (j = 0; j < 2; j++) {
             BN_GF2m_mod_inv(c, a, b[j], ctx);
             BN_GF2m_mod_mul(d, a, c, b[j], ctx);
-#if 0                           /* make test uses ouput in bc but bc can't
+# if 0                          /* make test uses ouput in bc but bc can't
                                  * handle GF(2^m) arithmetic */
             if (bp != NULL) {
                 if (!results) {
@@ -1343,7 +1413,7 @@ int test_gf2m_mod_inv(BIO *bp, BN_CTX *ctx)
                     BIO_puts(bp, "\n");
                 }
             }
-#endif
+# endif
             /* Test that ((1/a)*a) = 1. */
             if (!BN_is_one(d)) {
                 fprintf(stderr, "GF(2^m) modular inversion test failed!\n");
@@ -1365,8 +1435,8 @@ int test_gf2m_mod_div(BIO *bp, BN_CTX *ctx)
 {
     BIGNUM *a, *b[2], *c, *d, *e, *f;
     int i, j, ret = 0;
-    unsigned int p0[] = { 163, 7, 6, 3, 0 };
-    unsigned int p1[] = { 193, 15, 0 };
+    int p0[] = { 163, 7, 6, 3, 0, -1 };
+    int p1[] = { 193, 15, 0, -1 };
 
     a = BN_new();
     b[0] = BN_new();
@@ -1386,7 +1456,7 @@ int test_gf2m_mod_div(BIO *bp, BN_CTX *ctx)
             BN_GF2m_mod_div(d, a, c, b[j], ctx);
             BN_GF2m_mod_mul(e, d, c, b[j], ctx);
             BN_GF2m_mod_div(f, a, e, b[j], ctx);
-#if 0                           /* make test uses ouput in bc but bc can't
+# if 0                          /* make test uses ouput in bc but bc can't
                                  * handle GF(2^m) arithmetic */
             if (bp != NULL) {
                 if (!results) {
@@ -1400,7 +1470,7 @@ int test_gf2m_mod_div(BIO *bp, BN_CTX *ctx)
                     BIO_puts(bp, "\n");
                 }
             }
-#endif
+# endif
             /* Test that ((a/c)*c)/a = 1. */
             if (!BN_is_one(f)) {
                 fprintf(stderr, "GF(2^m) modular division test failed!\n");
@@ -1424,8 +1494,8 @@ int test_gf2m_mod_exp(BIO *bp, BN_CTX *ctx)
 {
     BIGNUM *a, *b[2], *c, *d, *e, *f;
     int i, j, ret = 0;
-    unsigned int p0[] = { 163, 7, 6, 3, 0 };
-    unsigned int p1[] = { 193, 15, 0 };
+    int p0[] = { 163, 7, 6, 3, 0, -1 };
+    int p1[] = { 193, 15, 0, -1 };
 
     a = BN_new();
     b[0] = BN_new();
@@ -1448,7 +1518,7 @@ int test_gf2m_mod_exp(BIO *bp, BN_CTX *ctx)
             BN_GF2m_mod_mul(e, e, f, b[j], ctx);
             BN_add(f, c, d);
             BN_GF2m_mod_exp(f, a, f, b[j], ctx);
-#if 0                           /* make test uses ouput in bc but bc can't
+# if 0                          /* make test uses ouput in bc but bc can't
                                  * handle GF(2^m) arithmetic */
             if (bp != NULL) {
                 if (!results) {
@@ -1466,7 +1536,7 @@ int test_gf2m_mod_exp(BIO *bp, BN_CTX *ctx)
                     BIO_puts(bp, "\n");
                 }
             }
-#endif
+# endif
             BN_GF2m_add(f, e, f);
             /* Test that a^(c+d)=a^c*a^d. */
             if (!BN_is_zero(f)) {
@@ -1492,8 +1562,8 @@ int test_gf2m_mod_sqrt(BIO *bp, BN_CTX *ctx)
 {
     BIGNUM *a, *b[2], *c, *d, *e, *f;
     int i, j, ret = 0;
-    unsigned int p0[] = { 163, 7, 6, 3, 0 };
-    unsigned int p1[] = { 193, 15, 0 };
+    int p0[] = { 163, 7, 6, 3, 0, -1 };
+    int p1[] = { 193, 15, 0, -1 };
 
     a = BN_new();
     b[0] = BN_new();
@@ -1512,7 +1582,7 @@ int test_gf2m_mod_sqrt(BIO *bp, BN_CTX *ctx)
             BN_GF2m_mod(c, a, b[j]);
             BN_GF2m_mod_sqrt(d, a, b[j], ctx);
             BN_GF2m_mod_sqr(e, d, b[j], ctx);
-#if 0                           /* make test uses ouput in bc but bc can't
+# if 0                          /* make test uses ouput in bc but bc can't
                                  * handle GF(2^m) arithmetic */
             if (bp != NULL) {
                 if (!results) {
@@ -1522,7 +1592,7 @@ int test_gf2m_mod_sqrt(BIO *bp, BN_CTX *ctx)
                     BIO_puts(bp, "\n");
                 }
             }
-#endif
+# endif
             BN_GF2m_add(f, c, e);
             /* Test that d^2 = a, where d = sqrt(a). */
             if (!BN_is_zero(f)) {
@@ -1547,8 +1617,8 @@ int test_gf2m_mod_solve_quad(BIO *bp, BN_CTX *ctx)
 {
     BIGNUM *a, *b[2], *c, *d, *e;
     int i, j, s = 0, t, ret = 0;
-    unsigned int p0[] = { 163, 7, 6, 3, 0 };
-    unsigned int p1[] = { 193, 15, 0 };
+    int p0[] = { 163, 7, 6, 3, 0, -1 };
+    int p1[] = { 193, 15, 0, -1 };
 
     a = BN_new();
     b[0] = BN_new();
@@ -1569,7 +1639,7 @@ int test_gf2m_mod_solve_quad(BIO *bp, BN_CTX *ctx)
                 BN_GF2m_mod_sqr(d, c, b[j], ctx);
                 BN_GF2m_add(d, c, d);
                 BN_GF2m_mod(e, a, b[j]);
-#if 0                           /* make test uses ouput in bc but bc can't
+# if 0                          /* make test uses ouput in bc but bc can't
                                  * handle GF(2^m) arithmetic */
                 if (bp != NULL) {
                     if (!results) {
@@ -1581,7 +1651,7 @@ int test_gf2m_mod_solve_quad(BIO *bp, BN_CTX *ctx)
                         BIO_puts(bp, "\n");
                     }
                 }
-#endif
+# endif
                 BN_GF2m_add(e, e, d);
                 /*
                  * Test that solution of quadratic c satisfies c^2 + c = a.
@@ -1593,7 +1663,7 @@ int test_gf2m_mod_solve_quad(BIO *bp, BN_CTX *ctx)
                 }
 
             } else {
-#if 0                           /* make test uses ouput in bc but bc can't
+# if 0                          /* make test uses ouput in bc but bc can't
                                  * handle GF(2^m) arithmetic */
                 if (bp != NULL) {
                     if (!results) {
@@ -1604,7 +1674,7 @@ int test_gf2m_mod_solve_quad(BIO *bp, BN_CTX *ctx)
                         BIO_puts(bp, "\n");
                     }
                 }
-#endif
+# endif
             }
         }
     }
@@ -1626,7 +1696,7 @@ int test_gf2m_mod_solve_quad(BIO *bp, BN_CTX *ctx)
     BN_free(e);
     return ret;
 }
-
+#endif
 static int genprime_cb(int p, int n, BN_GENCB *arg)
 {
     char c = '*';

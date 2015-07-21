@@ -85,57 +85,6 @@
 # include OPENSSL_UNISTD
 #endif
 
-#if !defined(OPENSSL_SYS_NETWARE) && !defined(OPENSSL_SYS_MSDOS) && !defined(OPENSSL_SYS_VXWORKS) && (!defined(OPENSSL_SYS_VMS) || defined(__DECC))
-# define TIMES
-#endif
-
-#ifndef _IRIX
-# include <time.h>
-#endif
-#ifdef TIMES
-# include <sys/types.h>
-# include <sys/times.h>
-#endif
-
-/*
- * Depending on the VMS version, the tms structure is perhaps defined. The
- * __TMS macro will show if it was.  If it wasn't defined, we should undefine
- * TIMES, since that tells the rest of the program how things should be
- * handled.  -- Richard Levitte
- */
-#if defined(OPENSSL_SYS_VMS_DECC) && !defined(__TMS)
-# undef TIMES
-#endif
-
-#if !defined(TIMES) && !defined(OPENSSL_SYS_VXWORKS) && !defined(OPENSSL_SYS_NETWARE)
-# include <sys/timeb.h>
-#endif
-
-#if defined(sun) || defined(__ultrix)
-# define _POSIX_SOURCE
-# include <limits.h>
-# include <sys/param.h>
-#endif
-
-/*
- * The following if from times(3) man page.  It may need to be changed
- */
-#ifndef HZ
-# ifdef _SC_CLK_TCK
-#  define HZ ((double)sysconf(_SC_CLK_TCK))
-# else
-#  ifndef CLK_TCK
-#   ifndef _BSD_CLK_TCK_        /* FreeBSD hack */
-#    define HZ  100.0
-#   else                        /* _BSD_CLK_TCK_ */
-#    define HZ ((double)_BSD_CLK_TCK_)
-#   endif
-#  else                         /* CLK_TCK */
-#   define HZ ((double)CLK_TCK)
-#  endif
-# endif
-#endif
-
 #undef PROG
 #define PROG s_time_main
 
@@ -183,7 +132,7 @@ static char *tm_cipher = NULL;
 static int tm_verify = SSL_VERIFY_NONE;
 static int maxTime = SECONDS;
 static SSL_CTX *tm_ctx = NULL;
-static SSL_METHOD *s_time_meth = NULL;
+static const SSL_METHOD *s_time_meth = NULL;
 static char *s_www_path = NULL;
 static long bytes_read = 0;
 static int st_bugs = 0;
@@ -353,6 +302,10 @@ static int parseArgs(int argc, char **argv)
             if (--argc < 1)
                 goto bad;
             maxTime = atoi(*(++argv));
+            if (maxTime <= 0) {
+                BIO_printf(bio_err, "time must be > 0\n");
+                badop = 1;
+            }
         } else {
             BIO_printf(bio_err, "unknown option %s\n", *argv);
             badop = 1;
@@ -383,56 +336,7 @@ static int parseArgs(int argc, char **argv)
 
 static double tm_Time_F(int s)
 {
-    static double ret;
-#ifdef TIMES
-    static struct tms tstart, tend;
-
-    if (s == START) {
-        times(&tstart);
-        return (0);
-    } else {
-        times(&tend);
-        ret = ((double)(tend.tms_utime - tstart.tms_utime)) / HZ;
-        return ((ret == 0.0) ? 1e-6 : ret);
-    }
-#elif defined(OPENSSL_SYS_NETWARE)
-    static clock_t tstart, tend;
-
-    if (s == START) {
-        tstart = clock();
-        return (0);
-    } else {
-        tend = clock();
-        ret = (double)((double)(tend) - (double)(tstart));
-        return ((ret < 0.001) ? 0.001 : ret);
-    }
-#elif defined(OPENSSL_SYS_VXWORKS)
-    {
-        static unsigned long tick_start, tick_end;
-
-        if (s == START) {
-            tick_start = tickGet();
-            return 0;
-        } else {
-            tick_end = tickGet();
-            ret = (double)(tick_end - tick_start) / (double)sysClkRateGet();
-            return ((ret == 0.0) ? 1e-6 : ret);
-        }
-    }
-#else                           /* !times() */
-    static struct timeb tstart, tend;
-    long i;
-
-    if (s == START) {
-        ftime(&tstart);
-        return (0);
-    } else {
-        ftime(&tend);
-        i = (long)tend.millitm - (long)tstart.millitm;
-        ret = ((double)(tend.time - tstart.time)) + ((double)i) / 1000.0;
-        return ((ret == 0.0) ? 1e-6 : ret);
-    }
-#endif
+    return app_tminterval(s, 1);
 }
 
 /***********************************************************************
@@ -457,13 +361,7 @@ int MAIN(int argc, char **argv)
     if (bio_err == NULL)
         bio_err = BIO_new_fp(stderr, BIO_NOCLOSE);
 
-#if !defined(OPENSSL_NO_SSL2) && !defined(OPENSSL_NO_SSL3)
     s_time_meth = SSLv23_client_method();
-#elif !defined(OPENSSL_NO_SSL3)
-    s_time_meth = SSLv3_client_method();
-#elif !defined(OPENSSL_NO_SSL2)
-    s_time_meth = SSLv2_client_method();
-#endif
 
     /* parse the command line arguments */
     if (parseArgs(argc, argv) < 0)
@@ -656,7 +554,8 @@ int MAIN(int argc, char **argv)
          nConn, totalTime, ((double)nConn / totalTime), bytes_read);
     printf
         ("%d connections in %ld real seconds, %ld bytes read per connection\n",
-         nConn, (long)time(NULL) - finishtime + maxTime, bytes_read / nConn);
+         nConn, (long)time(NULL) - finishtime + maxTime,
+         bytes_read / (nConn?nConn:1));
 
     ret = 0;
  end:
@@ -714,7 +613,7 @@ static SSL *doConnection(SSL *scon)
             i = SSL_get_fd(serverCon);
             width = i + 1;
             FD_ZERO(&readfds);
-            FD_SET(i, &readfds);
+            openssl_fdset(i, &readfds);
             /*
              * Note: under VMS with SOCKETSHR the 2nd parameter is currently
              * of type (int *) whereas under other systems it is (void *) if

@@ -5,7 +5,11 @@
   This file gives a brief overview of the major changes between each OpenSSL
   release. For more details please read the CHANGES file.
 
-  Major changes between OpenSSL 0.9.8zf and OpenSSL 0.9.8zg [11 Jun 2015]
+  Major changes between OpenSSL 1.0.1n and OpenSSL 1.0.1o [12 Jun 2015]
+
+      o Fix HMAC ABI incompatibility
+
+  Major changes between OpenSSL 1.0.1m and OpenSSL 1.0.1n [11 Jun 2015]
 
       o Malformed ECParameters causes infinite loop (CVE-2015-1788)
       o Exploitable out-of-bounds read in X509_cmp_time (CVE-2015-1789)
@@ -13,7 +17,7 @@
       o CMS verify infinite loop with unknown hash function (CVE-2015-1792)
       o Race condition handling NewSessionTicket (CVE-2015-1791)
 
-  Major changes between OpenSSL 0.9.8ze and OpenSSL 0.9.8zf [19 Mar 2015]
+  Major changes between OpenSSL 1.0.1l and OpenSSL 1.0.1m [19 Mar 2015]
 
       o Segmentation fault in ASN1_TYPE_cmp fix (CVE-2015-0286)
       o ASN.1 structure reuse memory corruption fix (CVE-2015-0287)
@@ -23,107 +27,175 @@
       o X509_to_X509_REQ NULL pointer deref fix (CVE-2015-0288)
       o Removed the export ciphers from the DEFAULT ciphers
 
-  Major changes between OpenSSL 0.9.8zd and OpenSSL 0.9.8ze [15 Jan 2015]
+  Major changes between OpenSSL 1.0.1k and OpenSSL 1.0.1l [15 Jan 2015]
 
       o Build fixes for the Windows and OpenVMS platforms
 
-  Major changes between OpenSSL 0.9.8zc and OpenSSL 0.9.8zd [8 Jan 2015]
+  Major changes between OpenSSL 1.0.1j and OpenSSL 1.0.1k [8 Jan 2015]
 
       o Fix for CVE-2014-3571
+      o Fix for CVE-2015-0206
       o Fix for CVE-2014-3569
       o Fix for CVE-2014-3572
       o Fix for CVE-2015-0204
+      o Fix for CVE-2015-0205
       o Fix for CVE-2014-8275
       o Fix for CVE-2014-3570
 
-  Major changes between OpenSSL 0.9.8zb and OpenSSL 0.9.8zc [15 Oct 2014]:
+  Major changes between OpenSSL 1.0.1i and OpenSSL 1.0.1j [15 Oct 2014]
 
       o Fix for CVE-2014-3513
       o Fix for CVE-2014-3567
       o Mitigation for CVE-2014-3566 (SSL protocol vulnerability)
       o Fix for CVE-2014-3568
 
-  Major changes between OpenSSL 0.9.8za and OpenSSL 0.9.8zb [6 Aug 2014]:
+  Major changes between OpenSSL 1.0.1h and OpenSSL 1.0.1i [6 Aug 2014]
 
+      o Fix for CVE-2014-3512
+      o Fix for CVE-2014-3511
       o Fix for CVE-2014-3510
       o Fix for CVE-2014-3507
       o Fix for CVE-2014-3506
       o Fix for CVE-2014-3505
+      o Fix for CVE-2014-3509
+      o Fix for CVE-2014-5139
       o Fix for CVE-2014-3508
 
-  Known issues in OpenSSL 0.9.8za:
-
-      o Compilation failure of s3_pkt.c on some platforms due to missing
-        <limits.h> include. Fixed in 0.9.8zb-dev.
-      o FIPS capable link failure with missing symbol BN_consttime_swap.
-        Fixed in 0.9.8zb-dev. Workaround is to compile with no-ec: the EC
-        algorithms are not FIPS approved in OpenSSL 0.9.8 anyway.
-
-  Major changes between OpenSSL 0.9.8y and OpenSSL 0.9.8za [5 Jun 2014]:
+  Major changes between OpenSSL 1.0.1g and OpenSSL 1.0.1h [5 Jun 2014]
 
       o Fix for CVE-2014-0224
       o Fix for CVE-2014-0221
+      o Fix for CVE-2014-0198
       o Fix for CVE-2014-0195
       o Fix for CVE-2014-3470
-      o Fix for CVE-2014-0076
       o Fix for CVE-2010-5298
-      o Fix to TLS alert handling.
 
-  Major changes between OpenSSL 0.9.8x and OpenSSL 0.9.8y [5 Feb 2013]:
+  Major changes between OpenSSL 1.0.1f and OpenSSL 1.0.1g [7 Apr 2014]
 
-      o Fix for SSL/TLS/DTLS CBC plaintext recovery attack CVE-2013-0169
+      o Fix for CVE-2014-0160
+      o Add TLS padding extension workaround for broken servers.
+      o Fix for CVE-2014-0076
+
+  Major changes between OpenSSL 1.0.1e and OpenSSL 1.0.1f [6 Jan 2014]
+
+      o Don't include gmt_unix_time in TLS server and client random values
+      o Fix for TLS record tampering bug CVE-2013-4353
+      o Fix for TLS version checking bug CVE-2013-6449
+      o Fix for DTLS retransmission bug CVE-2013-6450
+
+  Major changes between OpenSSL 1.0.1d and OpenSSL 1.0.1e [11 Feb 2013]:
+
+      o Corrected fix for CVE-2013-0169
+
+  Major changes between OpenSSL 1.0.1c and OpenSSL 1.0.1d [4 Feb 2013]:
+
+      o Fix renegotiation in TLS 1.1, 1.2 by using the correct TLS version.
+      o Include the fips configuration module.
       o Fix OCSP bad key DoS attack CVE-2013-0166
+      o Fix for SSL/TLS/DTLS CBC plaintext recovery attack CVE-2013-0169
+      o Fix for TLS AESNI record handling flaw CVE-2012-2686
 
-  Major changes between OpenSSL 0.9.8w and OpenSSL 0.9.8x [10 May 2012]:
+  Major changes between OpenSSL 1.0.1b and OpenSSL 1.0.1c [10 May 2012]:
 
-      o Fix DTLS record length checking bug CVE-2012-2333
+      o Fix TLS/DTLS record length checking bug CVE-2012-2333
+      o Don't attempt to use non-FIPS composite ciphers in FIPS mode.
 
-  Major changes between OpenSSL 0.9.8v and OpenSSL 0.9.8w [23 Apr 2012]:
+  Major changes between OpenSSL 1.0.1a and OpenSSL 1.0.1b [26 Apr 2012]:
 
-      o Fix for CVE-2012-2131 (corrected fix for 0.9.8 and CVE-2012-2110)
+      o Fix compilation error on non-x86 platforms.
+      o Make FIPS capable OpenSSL ciphers work in non-FIPS mode.
+      o Fix SSL_OP_NO_TLSv1_1 clash with SSL_OP_ALL in OpenSSL 1.0.0
 
-  Major changes between OpenSSL 0.9.8u and OpenSSL 0.9.8v [19 Apr 2012]:
+  Major changes between OpenSSL 1.0.1 and OpenSSL 1.0.1a [19 Apr 2012]:
 
       o Fix for ASN1 overflow bug CVE-2012-2110
+      o Workarounds for some servers that hang on long client hellos.
+      o Fix SEGV in AES code.
 
-  Major changes between OpenSSL 0.9.8t and OpenSSL 0.9.8u [12 Mar 2012]:
+  Major changes between OpenSSL 1.0.0h and OpenSSL 1.0.1 [14 Mar 2012]:
+
+      o TLS/DTLS heartbeat support.
+      o SCTP support.
+      o RFC 5705 TLS key material exporter.
+      o RFC 5764 DTLS-SRTP negotiation.
+      o Next Protocol Negotiation.
+      o PSS signatures in certificates, requests and CRLs.
+      o Support for password based recipient info for CMS.
+      o Support TLS v1.2 and TLS v1.1.
+      o Preliminary FIPS capability for unvalidated 2.0 FIPS module.
+      o SRP support.
+
+  Major changes between OpenSSL 1.0.0g and OpenSSL 1.0.0h [12 Mar 2012]:
 
       o Fix for CMS/PKCS#7 MMA CVE-2012-0884
       o Corrected fix for CVE-2011-4619
       o Various DTLS fixes.
 
-  Major changes between OpenSSL 0.9.8s and OpenSSL 0.9.8t [18 Jan 2012]:
+  Major changes between OpenSSL 1.0.0f and OpenSSL 1.0.0g [18 Jan 2012]:
 
       o Fix for DTLS DoS issue CVE-2012-0050
 
-  Major changes between OpenSSL 0.9.8r and OpenSSL 0.9.8s [4 Jan 2012]:
+  Major changes between OpenSSL 1.0.0e and OpenSSL 1.0.0f [4 Jan 2012]:
 
       o Fix for DTLS plaintext recovery attack CVE-2011-4108
-      o Fix policy check double free error CVE-2011-4109
       o Clear block padding bytes of SSL 3.0 records CVE-2011-4576
       o Only allow one SGC handshake restart for SSL/TLS CVE-2011-4619
+      o Check parameters are not NULL in GOST ENGINE CVE-2012-0027
       o Check for malformed RFC3779 data CVE-2011-4577
 
-  Major changes between OpenSSL 0.9.8q and OpenSSL 0.9.8r [8 Feb 2011]:
+  Major changes between OpenSSL 1.0.0d and OpenSSL 1.0.0e [6 Sep 2011]:
+
+      o Fix for CRL vulnerability issue CVE-2011-3207
+      o Fix for ECDH crashes CVE-2011-3210
+      o Protection against EC timing attacks.
+      o Support ECDH ciphersuites for certificates using SHA2 algorithms.
+      o Various DTLS fixes.
+
+  Major changes between OpenSSL 1.0.0c and OpenSSL 1.0.0d [8 Feb 2011]:
 
       o Fix for security issue CVE-2011-0014
 
-  Major changes between OpenSSL 0.9.8p and OpenSSL 0.9.8q [2 Dec 2010]:
+  Major changes between OpenSSL 1.0.0b and OpenSSL 1.0.0c [2 Dec 2010]:
 
       o Fix for security issue CVE-2010-4180
       o Fix for CVE-2010-4252
+      o Fix mishandling of absent EC point format extension.
+      o Fix various platform compilation issues.
+      o Corrected fix for security issue CVE-2010-3864.
 
-  Major changes between OpenSSL 0.9.8o and OpenSSL 0.9.8p [16 Nov 2010]:
+  Major changes between OpenSSL 1.0.0a and OpenSSL 1.0.0b [16 Nov 2010]:
 
       o Fix for security issue CVE-2010-3864.
+      o Fix for CVE-2010-2939
+      o Fix WIN32 build system for GOST ENGINE.
 
-  Major changes between OpenSSL 0.9.8n and OpenSSL 0.9.8o [1 Jun 2010]:
+  Major changes between OpenSSL 1.0.0 and OpenSSL 1.0.0a [1 Jun 2010]:
 
-      o Fix for security issue CVE-2010-0742.
-      o Various DTLS fixes.
-      o Recognise SHA2 certificates if only SSL algorithms added.
-      o Fix for no-rc4 compilation.
-      o Chil ENGINE unload workaround.
+      o Fix for security issue CVE-2010-1633.
+      o GOST MAC and CFB fixes.
+
+  Major changes between OpenSSL 0.9.8n and OpenSSL 1.0.0 [29 Mar 2010]:
+
+      o RFC3280 path validation: sufficient to process PKITS tests.
+      o Integrated support for PVK files and keyblobs.
+      o Change default private key format to PKCS#8.
+      o CMS support: able to process all examples in RFC4134
+      o Streaming ASN1 encode support for PKCS#7 and CMS.
+      o Multiple signer and signer add support for PKCS#7 and CMS.
+      o ASN1 printing support.
+      o Whirlpool hash algorithm added.
+      o RFC3161 time stamp support.
+      o New generalised public key API supporting ENGINE based algorithms.
+      o New generalised public key API utilities.
+      o New ENGINE supporting GOST algorithms.
+      o SSL/TLS GOST ciphersuite support.
+      o PKCS#7 and CMS GOST support.
+      o RFC4279 PSK ciphersuite support.
+      o Supported points format extension for ECC ciphersuites.
+      o ecdsa-with-SHA224/256/384/512 signature types.
+      o dsa-with-SHA224 and dsa-with-SHA256 signature types.
+      o Opaque PRF Input TLS extension support.
+      o Updated time routines to avoid OS limitations.
 
   Major changes between OpenSSL 0.9.8m and OpenSSL 0.9.8n [24 Mar 2010]:
 

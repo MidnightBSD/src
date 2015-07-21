@@ -73,11 +73,6 @@ static const char rnd_seed[] =
     "string to make the random number generator think it has entropy";
 
 /*
- * Disabled for FIPS capable builds because they use the FIPS BIGNUM library
- * which will fail this test.
- */
-#ifndef OPENSSL_FIPS
-/*
  * test_exp_mod_zero tests that x**0 mod 1 == 0. It returns zero on success.
  */
 static int test_exp_mod_zero()
@@ -115,7 +110,7 @@ static int test_exp_mod_zero()
 
     return ret;
 }
-#endif
+
 int main(int argc, char *argv[])
 {
     BN_CTX *ctx;
@@ -201,7 +196,7 @@ int main(int argc, char *argv[])
         } else {
             if (BN_cmp(r_simple, r_mont) != 0)
                 printf("\nsimple and mont results differ\n");
-            if (BN_cmp(r_simple, r_mont) != 0)
+            if (BN_cmp(r_simple, r_mont_const) != 0)
                 printf("\nsimple and mont const time results differ\n");
             if (BN_cmp(r_simple, r_recp) != 0)
                 printf("\nsimple and recp results differ\n");
@@ -232,14 +227,14 @@ int main(int argc, char *argv[])
     BN_free(b);
     BN_free(m);
     BN_CTX_free(ctx);
-    ERR_remove_state(0);
+    ERR_remove_thread_state(NULL);
     CRYPTO_mem_leaks(out);
     BIO_free(out);
     printf("\n");
-#ifndef OPENSSL_FIPS
+
     if (test_exp_mod_zero() != 0)
         goto err;
-#endif
+
     printf("done\n");
 
     EXIT(0);

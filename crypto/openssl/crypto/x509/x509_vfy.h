@@ -79,6 +79,7 @@
 extern "C" {
 #endif
 
+# if 0
 /* Outer object */
 typedef struct x509_hash_dir_st {
     int num_dirs;
@@ -86,6 +87,7 @@ typedef struct x509_hash_dir_st {
     int *dirs_type;
     int num_dirs_alloced;
 } X509_HASH_DIR_CTX;
+# endif
 
 typedef struct x509_file_st {
     int num_paths;              /* number of paths to files or directories */
@@ -202,6 +204,8 @@ struct x509_store_st {
     int (*check_crl) (X509_STORE_CTX *ctx, X509_CRL *crl);
     /* Check certificate against CRL */
     int (*cert_crl) (X509_STORE_CTX *ctx, X509_CRL *crl, X509 *x);
+    STACK_OF(X509) *(*lookup_certs) (X509_STORE_CTX *ctx, X509_NAME *nm);
+    STACK_OF(X509_CRL) *(*lookup_crls) (X509_STORE_CTX *ctx, X509_NAME *nm);
     int (*cleanup) (X509_STORE_CTX *ctx);
     CRYPTO_EX_DATA ex_data;
     int references;
@@ -258,6 +262,8 @@ struct x509_store_ctx_st {      /* X509_STORE_CTX */
     /* Check certificate against CRL */
     int (*cert_crl) (X509_STORE_CTX *ctx, X509_CRL *crl, X509 *x);
     int (*check_policy) (X509_STORE_CTX *ctx);
+    STACK_OF(X509) *(*lookup_certs) (X509_STORE_CTX *ctx, X509_NAME *nm);
+    STACK_OF(X509_CRL) *(*lookup_crls) (X509_STORE_CTX *ctx, X509_NAME *nm);
     int (*cleanup) (X509_STORE_CTX *ctx);
     /* The following is built up */
     /* if 0, rebuild chain */
@@ -278,6 +284,12 @@ struct x509_store_ctx_st {      /* X509_STORE_CTX */
     X509 *current_issuer;
     /* current CRL */
     X509_CRL *current_crl;
+    /* score of current CRL */
+    int current_crl_score;
+    /* Reason mask */
+    unsigned int current_reasons;
+    /* For CRL path validation: parent context */
+    X509_STORE_CTX *parent;
     CRYPTO_EX_DATA ex_data;
 } /* X509_STORE_CTX */ ;
 
@@ -345,8 +357,18 @@ void X509_STORE_CTX_set_depth(X509_STORE_CTX *ctx, int depth);
 # define         X509_V_ERR_INVALID_EXTENSION                    41
 # define         X509_V_ERR_INVALID_POLICY_EXTENSION             42
 # define         X509_V_ERR_NO_EXPLICIT_POLICY                   43
+# define         X509_V_ERR_DIFFERENT_CRL_SCOPE                  44
+# define         X509_V_ERR_UNSUPPORTED_EXTENSION_FEATURE        45
 
-# define         X509_V_ERR_UNNESTED_RESOURCE                    44
+# define         X509_V_ERR_UNNESTED_RESOURCE                    46
+
+# define         X509_V_ERR_PERMITTED_VIOLATION                  47
+# define         X509_V_ERR_EXCLUDED_VIOLATION                   48
+# define         X509_V_ERR_SUBTREE_MINMAX                       49
+# define         X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE          51
+# define         X509_V_ERR_UNSUPPORTED_CONSTRAINT_SYNTAX        52
+# define         X509_V_ERR_UNSUPPORTED_NAME_SYNTAX              53
+# define         X509_V_ERR_CRL_PATH_VALIDATION_ERROR            54
 
 /* The application is not happy */
 # define         X509_V_ERR_APPLICATION_VERIFICATION             50
@@ -377,9 +399,18 @@ void X509_STORE_CTX_set_depth(X509_STORE_CTX *ctx, int depth);
 # define X509_V_FLAG_INHIBIT_MAP                 0x400
 /* Notify callback that policy is OK */
 # define X509_V_FLAG_NOTIFY_POLICY               0x800
-
+/* Extended CRL features such as indirect CRLs, alternate CRL signing keys */
+# define X509_V_FLAG_EXTENDED_CRL_SUPPORT        0x1000
+/* Delta CRL support */
+# define X509_V_FLAG_USE_DELTAS                  0x2000
 /* Check selfsigned CA signature */
 # define X509_V_FLAG_CHECK_SS_SIGNATURE          0x4000
+/*
+ * If the initial chain is not trusted, do not attempt to build an alternative
+ * chain. Alternate chain checking was introduced in 1.0.1n/1.0.2b. Setting
+ * this flag will force the behaviour to match that of previous versions.
+ */
+# define X509_V_FLAG_NO_ALT_CHAINS               0x100000
 
 # define X509_VP_FLAG_DEFAULT                    0x1
 # define X509_VP_FLAG_OVERWRITE                  0x2
@@ -404,10 +435,15 @@ void X509_OBJECT_free_contents(X509_OBJECT *a);
 X509_STORE *X509_STORE_new(void);
 void X509_STORE_free(X509_STORE *v);
 
+STACK_OF(X509) *X509_STORE_get1_certs(X509_STORE_CTX *st, X509_NAME *nm);
+STACK_OF(X509_CRL) *X509_STORE_get1_crls(X509_STORE_CTX *st, X509_NAME *nm);
 int X509_STORE_set_flags(X509_STORE *ctx, unsigned long flags);
 int X509_STORE_set_purpose(X509_STORE *ctx, int purpose);
 int X509_STORE_set_trust(X509_STORE *ctx, int trust);
 int X509_STORE_set1_param(X509_STORE *ctx, X509_VERIFY_PARAM *pm);
+
+void X509_STORE_set_verify_cb(X509_STORE *ctx,
+                              int (*verify_cb) (int, X509_STORE_CTX *));
 
 X509_STORE_CTX *X509_STORE_CTX_new(void);
 
@@ -469,6 +505,9 @@ int X509_STORE_CTX_get_error(X509_STORE_CTX *ctx);
 void X509_STORE_CTX_set_error(X509_STORE_CTX *ctx, int s);
 int X509_STORE_CTX_get_error_depth(X509_STORE_CTX *ctx);
 X509 *X509_STORE_CTX_get_current_cert(X509_STORE_CTX *ctx);
+X509 *X509_STORE_CTX_get0_current_issuer(X509_STORE_CTX *ctx);
+X509_CRL *X509_STORE_CTX_get0_current_crl(X509_STORE_CTX *ctx);
+X509_STORE_CTX *X509_STORE_CTX_get0_parent_ctx(X509_STORE_CTX *ctx);
 STACK_OF(X509) *X509_STORE_CTX_get_chain(X509_STORE_CTX *ctx);
 STACK_OF(X509) *X509_STORE_CTX_get1_chain(X509_STORE_CTX *ctx);
 void X509_STORE_CTX_set_cert(X509_STORE_CTX *c, X509 *x);

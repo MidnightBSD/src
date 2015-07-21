@@ -78,11 +78,13 @@ typedef struct _CPUUTIL {
     ULONG ulIntrHigh;           /* High 32 bits of interrupt time */
 } CPUUTIL;
 
+# ifndef __KLIBC__
 APIRET APIENTRY(*DosPerfSysCall) (ULONG ulCommand, ULONG ulParm1,
                                   ULONG ulParm2, ULONG ulParm3) = NULL;
 APIRET APIENTRY(*DosQuerySysState) (ULONG func, ULONG arg1, ULONG pid,
                                     ULONG _res_, PVOID buf, ULONG bufsz) =
     NULL;
+# endif
 HMODULE hDoscalls = 0;
 
 int RAND_poll(void)
@@ -96,6 +98,7 @@ int RAND_poll(void)
             DosLoadModule(failed_module, sizeof(failed_module), "DOSCALLS",
                           &hDoscalls);
 
+# ifndef __KLIBC__
         if (rc == 0) {
             rc = DosQueryProcAddr(hDoscalls, 976, NULL,
                                   (PFN *) & DosPerfSysCall);
@@ -109,6 +112,7 @@ int RAND_poll(void)
             if (rc)
                 DosQuerySysState = NULL;
         }
+# endif
     }
 
     /* Sample the hi-res timer, runs at around 1.1 MHz */
@@ -132,7 +136,9 @@ int RAND_poll(void)
         if (DosPerfSysCall(CMD_KI_RDCNT, (ULONG) & util, 0, 0) == 0) {
             RAND_add(&util, sizeof(util), 10);
         } else {
+# ifndef __KLIBC__
             DosPerfSysCall = NULL;
+# endif
         }
     }
 
@@ -142,6 +148,9 @@ int RAND_poll(void)
      */
     if (DosQuerySysState) {
         char *buffer = OPENSSL_malloc(256 * 1024);
+
+        if (!buffer)
+            return 0;
 
         if (DosQuerySysState(0x1F, 0, 0, 0, buffer, 256 * 1024) == 0) {
             /*

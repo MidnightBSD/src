@@ -68,14 +68,13 @@ int ssl2_enc_init(SSL *s, int client)
     const EVP_MD *md;
     int num;
 
-    if (!ssl_cipher_get_evp(s->session, &c, &md, NULL)) {
+    if (!ssl_cipher_get_evp(s->session, &c, &md, NULL, NULL, NULL)) {
         ssl2_return_error(s, SSL2_PE_NO_CIPHER);
         SSLerr(SSL_F_SSL2_ENC_INIT, SSL_R_PROBLEMS_MAPPING_CIPHER_FUNCTIONS);
         return (0);
     }
-
-    s->read_hash = md;
-    s->write_hash = md;
+    ssl_replace_hash(&s->read_hash, md);
+    ssl_replace_hash(&s->write_hash, md);
 
     if ((s->enc_read_ctx == NULL) && ((s->enc_read_ctx = (EVP_CIPHER_CTX *)
                                        OPENSSL_malloc(sizeof(EVP_CIPHER_CTX)))
@@ -122,9 +121,10 @@ int ssl2_enc_init(SSL *s, int client)
 
 /*
  * read/writes from s->s2->mac_data using length for encrypt and decrypt.
- * It sets s->s2->padding and s->[rw]length if we are encrypting
+ * It sets s->s2->padding and s->[rw]length if we are encrypting Returns 0 on
+ * error and 1 on success
  */
-void ssl2_enc(SSL *s, int send)
+int ssl2_enc(SSL *s, int send)
 {
     EVP_CIPHER_CTX *ds;
     unsigned long l;
@@ -140,7 +140,7 @@ void ssl2_enc(SSL *s, int send)
 
     /* check for NULL cipher */
     if (ds == NULL)
-        return;
+        return 1;
 
     bs = ds->cipher->block_size;
     /*
@@ -150,7 +150,10 @@ void ssl2_enc(SSL *s, int send)
     if (bs == 8)
         l = (l + 7) / 8 * 8;
 
-    EVP_Cipher(ds, s->s2->mac_data, s->s2->mac_data, l);
+    if (EVP_Cipher(ds, s->s2->mac_data, s->s2->mac_data, l) < 1)
+        return 0;
+
+    return 1;
 }
 
 void ssl2_mac(SSL *s, unsigned char *md, int send)
@@ -177,7 +180,7 @@ void ssl2_mac(SSL *s, unsigned char *md, int send)
 
     /* There has to be a MAC algorithm. */
     EVP_MD_CTX_init(&c);
-    EVP_DigestInit_ex(&c, s->read_hash, NULL);
+    EVP_MD_CTX_copy(&c, s->read_hash);
     EVP_DigestUpdate(&c, sec, EVP_CIPHER_CTX_key_length(s->enc_read_ctx));
     EVP_DigestUpdate(&c, act, len);
     /* the above line also does the pad data */

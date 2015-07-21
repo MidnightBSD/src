@@ -162,12 +162,15 @@ static int test_ecdh_curve(int nid, const char *text, BN_CTX *ctx, BIO *out)
         if (!EC_POINT_get_affine_coordinates_GFp
             (group, EC_KEY_get0_public_key(a), x_a, y_a, ctx))
             goto err;
-    } else {
+    }
+# ifndef OPENSSL_NO_EC2M
+    else {
         if (!EC_POINT_get_affine_coordinates_GF2m(group,
                                                   EC_KEY_get0_public_key(a),
                                                   x_a, y_a, ctx))
             goto err;
     }
+# endif
 # ifdef NOISY
     BIO_puts(out, "  pri 1=");
     BN_print(out, a->priv_key);
@@ -189,12 +192,15 @@ static int test_ecdh_curve(int nid, const char *text, BN_CTX *ctx, BIO *out)
         if (!EC_POINT_get_affine_coordinates_GFp
             (group, EC_KEY_get0_public_key(b), x_b, y_b, ctx))
             goto err;
-    } else {
+    }
+# ifndef OPENSSL_NO_EC2M
+    else {
         if (!EC_POINT_get_affine_coordinates_GF2m(group,
                                                   EC_KEY_get0_public_key(b),
                                                   x_b, y_b, ctx))
             goto err;
     }
+# endif
 
 # ifdef NOISY
     BIO_puts(out, "  pri 2=");
@@ -343,6 +349,7 @@ int main(int argc, char *argv[])
         goto err;
     if (!test_ecdh_curve(NID_secp521r1, "NIST Prime-Curve P-521", ctx, out))
         goto err;
+# ifndef OPENSSL_NO_EC2M
     /* NIST BINARY CURVES TESTS */
     if (!test_ecdh_curve(NID_sect163k1, "NIST Binary-Curve K-163", ctx, out))
         goto err;
@@ -364,6 +371,7 @@ int main(int argc, char *argv[])
         goto err;
     if (!test_ecdh_curve(NID_sect571r1, "NIST Binary-Curve B-571", ctx, out))
         goto err;
+# endif
 
     ret = 0;
 
@@ -373,7 +381,7 @@ int main(int argc, char *argv[])
         BN_CTX_free(ctx);
     BIO_free(out);
     CRYPTO_cleanup_all_ex_data();
-    ERR_remove_state(0);
+    ERR_remove_thread_state(NULL);
     CRYPTO_mem_leaks_fp(stderr);
     EXIT(ret);
     return (ret);

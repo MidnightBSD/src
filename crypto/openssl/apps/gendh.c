@@ -80,7 +80,7 @@
 # include <openssl/x509.h>
 # include <openssl/pem.h>
 
-# define DEFBITS 512
+# define DEFBITS 2048
 # undef PROG
 # define PROG gendh_main
 
@@ -239,4 +239,10 @@ static int MS_CALLBACK dh_cb(int p, int n, BN_GENCB *cb)
 # endif
     return 1;
 }
+#else                           /* !OPENSSL_NO_DH */
+
+# if PEDANTIC
+static void *dummy = &dummy;
+# endif
+
 #endif

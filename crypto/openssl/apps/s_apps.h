@@ -118,7 +118,7 @@
 # include <conio.h>
 #endif
 
-#ifdef OPENSSL_SYS_MSDOS
+#if defined(OPENSSL_SYS_MSDOS) && !defined(_WIN32)
 # define _kbhit kbhit
 #endif
 

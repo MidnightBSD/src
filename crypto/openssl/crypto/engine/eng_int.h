@@ -138,6 +138,10 @@ ENGINE *engine_table_select_tmp(ENGINE_TABLE **table, int nid, const char *f,
                                 int l);
 #  define engine_table_select(t,n) engine_table_select_tmp(t,n,__FILE__,__LINE__)
 # endif
+typedef void (engine_table_doall_cb) (int nid, STACK_OF(ENGINE) *sk,
+                                      ENGINE *def, void *arg);
+void engine_table_doall(ENGINE_TABLE *table, engine_table_doall_cb *cb,
+                        void *arg);
 
 /*
  * Internal versions of API functions that have control over locking. These
@@ -160,6 +164,11 @@ void engine_set_all_null(ENGINE *e);
  * exposed in engine.h.
  */
 
+/* Free up dynamically allocated public key methods associated with ENGINE */
+
+void engine_pkey_meths_free(ENGINE *e);
+void engine_pkey_asn1_meths_free(ENGINE *e);
+
 /*
  * This is a structure for storing implementations of various crypto
  * algorithms and functions.
@@ -178,6 +187,10 @@ struct engine_st {
     ENGINE_CIPHERS_PTR ciphers;
     /* Digest handling is via this callback */
     ENGINE_DIGESTS_PTR digests;
+    /* Public key handling via this callback */
+    ENGINE_PKEY_METHS_PTR pkey_meths;
+    /* ASN1 public key handling via this callback */
+    ENGINE_PKEY_ASN1_METHS_PTR pkey_asn1_meths;
     ENGINE_GEN_INT_FUNC_PTR destroy;
     ENGINE_GEN_INT_FUNC_PTR init;
     ENGINE_GEN_INT_FUNC_PTR finish;

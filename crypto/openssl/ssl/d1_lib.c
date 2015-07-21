@@ -82,6 +82,7 @@ SSL3_ENC_METHOD DTLSv1_enc_data = {
     TLS_MD_CLIENT_FINISH_CONST, TLS_MD_CLIENT_FINISH_CONST_SIZE,
     TLS_MD_SERVER_FINISH_CONST, TLS_MD_SERVER_FINISH_CONST_SIZE,
     tls1_alert_code,
+    tls1_export_keying_material,
 };
 
 long dtls1_default_timeout(void)
@@ -92,10 +93,6 @@ long dtls1_default_timeout(void)
      */
     return (60 * 60 * 2);
 }
-
-IMPLEMENT_dtls1_meth_func(dtlsv1_base_method,
-                          ssl_undefined_function,
-                          ssl_undefined_function, ssl_bad_method)
 
 int dtls1_new(SSL *s)
 {
@@ -108,17 +105,6 @@ int dtls1_new(SSL *s)
     memset(d1, 0, sizeof *d1);
 
     /* d1->handshake_epoch=0; */
-#if defined(OPENSSL_SYS_VMS) || defined(VMS_TEST)
-    d1->bitmap.length = 64;
-#else
-    d1->bitmap.length = sizeof(d1->bitmap.map) * 8;
-#endif
-    pq_64bit_init(&(d1->bitmap.map));
-    pq_64bit_init(&(d1->bitmap.max_seq_num));
-
-    d1->next_bitmap.length = d1->bitmap.length;
-    pq_64bit_init(&(d1->next_bitmap.map));
-    pq_64bit_init(&(d1->next_bitmap.max_seq_num));
 
     d1->unprocessed_rcds.q = pqueue_new();
     d1->processed_rcds.q = pqueue_new();
@@ -129,6 +115,9 @@ int dtls1_new(SSL *s)
     if (s->server) {
         d1->cookie_len = sizeof(s->d1->cookie);
     }
+
+    d1->link_mtu = 0;
+    d1->mtu = 0;
 
     if (!d1->unprocessed_rcds.q || !d1->processed_rcds.q
         || !d1->buffered_messages || !d1->sent_messages
@@ -178,15 +167,13 @@ static void dtls1_clear_queues(SSL *s)
 
     while ((item = pqueue_pop(s->d1->buffered_messages)) != NULL) {
         frag = (hm_fragment *)item->data;
-        OPENSSL_free(frag->fragment);
-        OPENSSL_free(frag);
+        dtls1_hm_fragment_free(frag);
         pitem_free(item);
     }
 
     while ((item = pqueue_pop(s->d1->sent_messages)) != NULL) {
         frag = (hm_fragment *)item->data;
-        OPENSSL_free(frag->fragment);
-        OPENSSL_free(frag);
+        dtls1_hm_fragment_free(frag);
         pitem_free(item);
     }
 
@@ -212,12 +199,6 @@ void dtls1_free(SSL *s)
     pqueue_free(s->d1->sent_messages);
     pqueue_free(s->d1->buffered_app_data.q);
 
-    pq_64bit_free(&(s->d1->bitmap.map));
-    pq_64bit_free(&(s->d1->bitmap.max_seq_num));
-
-    pq_64bit_free(&(s->d1->next_bitmap.map));
-    pq_64bit_free(&(s->d1->next_bitmap.max_seq_num));
-
     OPENSSL_free(s->d1);
     s->d1 = NULL;
 }
@@ -230,6 +211,7 @@ void dtls1_clear(SSL *s)
     pqueue sent_messages;
     pqueue buffered_app_data;
     unsigned int mtu;
+    unsigned int link_mtu;
 
     if (s->d1) {
         unprocessed_rcds = s->d1->unprocessed_rcds.q;
@@ -238,14 +220,9 @@ void dtls1_clear(SSL *s)
         sent_messages = s->d1->sent_messages;
         buffered_app_data = s->d1->buffered_app_data.q;
         mtu = s->d1->mtu;
+        link_mtu = s->d1->link_mtu;
 
         dtls1_clear_queues(s);
-
-        pq_64bit_free(&(s->d1->bitmap.map));
-        pq_64bit_free(&(s->d1->bitmap.max_seq_num));
-
-        pq_64bit_free(&(s->d1->next_bitmap.map));
-        pq_64bit_free(&(s->d1->next_bitmap.max_seq_num));
 
         memset(s->d1, 0, sizeof(*(s->d1)));
 
@@ -255,6 +232,7 @@ void dtls1_clear(SSL *s)
 
         if (SSL_get_options(s) & SSL_OP_NO_QUERY_MTU) {
             s->d1->mtu = mtu;
+            s->d1->link_mtu = link_mtu;
         }
 
         s->d1->unprocessed_rcds.q = unprocessed_rcds;
@@ -262,18 +240,6 @@ void dtls1_clear(SSL *s)
         s->d1->buffered_messages = buffered_messages;
         s->d1->sent_messages = sent_messages;
         s->d1->buffered_app_data.q = buffered_app_data;
-
-#if defined(OPENSSL_SYS_VMS) || defined(VMS_TEST)
-        s->d1->bitmap.length = 64;
-#else
-        s->d1->bitmap.length = sizeof(s->d1->bitmap.map) * 8;
-#endif
-        pq_64bit_init(&(s->d1->bitmap.map));
-        pq_64bit_init(&(s->d1->bitmap.max_seq_num));
-
-        s->d1->next_bitmap.length = s->d1->bitmap.length;
-        pq_64bit_init(&(s->d1->next_bitmap.map));
-        pq_64bit_init(&(s->d1->next_bitmap.max_seq_num));
     }
 
     ssl3_clear(s);
@@ -313,7 +279,22 @@ long dtls1_ctrl(SSL *s, int cmd, long larg, void *parg)
          * version is not as expected.
          */
         return s->version == DTLS_MAX_VERSION;
-
+    case DTLS_CTRL_SET_LINK_MTU:
+        if (larg < (long)dtls1_link_min_mtu())
+            return 0;
+        s->d1->link_mtu = larg;
+        return 1;
+    case DTLS_CTRL_GET_LINK_MIN_MTU:
+        return (long)dtls1_link_min_mtu();
+    case SSL_CTRL_SET_MTU:
+        /*
+         *  We may not have a BIO set yet so can't call dtls1_min_mtu()
+         *  We'll have to make do with dtls1_link_min_mtu() and max overhead
+         */
+        if (larg < (long)dtls1_link_min_mtu() - DTLS1_MAX_MTU_OVERHEAD)
+            return 0;
+        s->d1->mtu = larg;
+        return larg;
     default:
         ret = ssl3_ctrl(s, cmd, larg, parg);
         break;
@@ -328,12 +309,12 @@ long dtls1_ctrl(SSL *s, int cmd, long larg, void *parg)
  * to explicitly list their SSL_* codes. Currently RC4 is the only one
  * available, but if new ones emerge, they will have to be added...
  */
-SSL_CIPHER *dtls1_get_cipher(unsigned int u)
+const SSL_CIPHER *dtls1_get_cipher(unsigned int u)
 {
-    SSL_CIPHER *ciph = ssl3_get_cipher(u);
+    const SSL_CIPHER *ciph = ssl3_get_cipher(u);
 
     if (ciph != NULL) {
-        if ((ciph->algorithms & SSL_ENC_MASK) == SSL_RC4)
+        if (ciph->algorithm_enc == SSL_RC4)
             return NULL;
     }
 
@@ -342,6 +323,14 @@ SSL_CIPHER *dtls1_get_cipher(unsigned int u)
 
 void dtls1_start_timer(SSL *s)
 {
+#ifndef OPENSSL_NO_SCTP
+    /* Disable timer for SCTP */
+    if (BIO_dgram_is_sctp(SSL_get_wbio(s))) {
+        memset(&(s->d1->next_timeout), 0, sizeof(struct timeval));
+        return;
+    }
+#endif
+
     /* If timer is not set, initialize duration with 1 second */
     if (s->d1->next_timeout.tv_sec == 0 && s->d1->next_timeout.tv_usec == 0) {
         s->d1->timeout_duration = 1;
@@ -436,13 +425,18 @@ void dtls1_stop_timer(SSL *s)
 
 int dtls1_check_timeout_num(SSL *s)
 {
+    unsigned int mtu;
+
     s->d1->timeout.num_alerts++;
 
     /* Reduce MTU after 2 unsuccessful retransmissions */
-    if (s->d1->timeout.num_alerts > 2) {
-        s->d1->mtu =
+    if (s->d1->timeout.num_alerts > 2
+        && !(SSL_get_options(s) & SSL_OP_NO_QUERY_MTU)) {
+        mtu =
             BIO_ctrl(SSL_get_wbio(s), BIO_CTRL_DGRAM_GET_FALLBACK_MTU, 0,
                      NULL);
+        if (mtu < s->d1->mtu)
+            s->d1->mtu = mtu;
     }
 
     if (s->d1->timeout.num_alerts > DTLS1_TMO_ALERT_COUNT) {
@@ -470,6 +464,12 @@ int dtls1_handle_timeout(SSL *s)
     if (s->d1->timeout.read_timeouts > DTLS1_TMO_READ_COUNT) {
         s->d1->timeout.read_timeouts = 1;
     }
+#ifndef OPENSSL_NO_HEARTBEATS
+    if (s->tlsext_hb_pending) {
+        s->tlsext_hb_pending = 0;
+        return dtls1_heartbeat(s);
+    }
+#endif
 
     dtls1_start_timer(s);
     return dtls1_retransmit_buffered_messages(s);

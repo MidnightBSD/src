@@ -89,7 +89,9 @@ static X509_TRUST trstandard[] = {
      NULL},
     {X509_TRUST_OCSP_SIGN, 0, trust_1oid, "OCSP responder", NID_OCSP_sign,
      NULL},
-    {X509_TRUST_OCSP_REQUEST, 0, trust_1oid, "OCSP request", NID_ad_OCSP, NULL}
+    {X509_TRUST_OCSP_REQUEST, 0, trust_1oid, "OCSP request", NID_ad_OCSP,
+     NULL},
+    {X509_TRUST_TSA, 0, trust_1oidany, "TSA server", NID_time_stamp, NULL}
 };
 
 #define X509_TRUST_COUNT        (sizeof(trstandard)/sizeof(X509_TRUST))

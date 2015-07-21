@@ -1,6 +1,6 @@
 /* crypto/cms/cms_err.c */
 /* ====================================================================
- * Copyright (c) 1999-2008 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 1999-2009 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -73,6 +73,8 @@ static ERR_STRING_DATA CMS_str_functs[] = {
     {ERR_FUNC(CMS_F_CHECK_CONTENT), "CHECK_CONTENT"},
     {ERR_FUNC(CMS_F_CMS_ADD0_CERT), "CMS_add0_cert"},
     {ERR_FUNC(CMS_F_CMS_ADD0_RECIPIENT_KEY), "CMS_add0_recipient_key"},
+    {ERR_FUNC(CMS_F_CMS_ADD0_RECIPIENT_PASSWORD),
+     "CMS_add0_recipient_password"},
     {ERR_FUNC(CMS_F_CMS_ADD1_RECEIPTREQUEST), "CMS_add1_ReceiptRequest"},
     {ERR_FUNC(CMS_F_CMS_ADD1_RECIPIENT_CERT), "CMS_add1_recipient_cert"},
     {ERR_FUNC(CMS_F_CMS_ADD1_SIGNER), "CMS_add1_signer"},
@@ -88,6 +90,7 @@ static ERR_STRING_DATA CMS_str_functs[] = {
     {ERR_FUNC(CMS_F_CMS_DATAINIT), "CMS_dataInit"},
     {ERR_FUNC(CMS_F_CMS_DECRYPT), "CMS_decrypt"},
     {ERR_FUNC(CMS_F_CMS_DECRYPT_SET1_KEY), "CMS_decrypt_set1_key"},
+    {ERR_FUNC(CMS_F_CMS_DECRYPT_SET1_PASSWORD), "CMS_decrypt_set1_password"},
     {ERR_FUNC(CMS_F_CMS_DECRYPT_SET1_PKEY), "CMS_decrypt_set1_pkey"},
     {ERR_FUNC(CMS_F_CMS_DIGESTALGORITHM_FIND_CTX),
      "cms_DigestAlgorithm_find_ctx"},
@@ -112,7 +115,7 @@ static ERR_STRING_DATA CMS_str_functs[] = {
      "CMS_GET0_CERTIFICATE_CHOICES"},
     {ERR_FUNC(CMS_F_CMS_GET0_CONTENT), "CMS_get0_content"},
     {ERR_FUNC(CMS_F_CMS_GET0_ECONTENT_TYPE), "CMS_GET0_ECONTENT_TYPE"},
-    {ERR_FUNC(CMS_F_CMS_GET0_ENVELOPED), "CMS_GET0_ENVELOPED"},
+    {ERR_FUNC(CMS_F_CMS_GET0_ENVELOPED), "cms_get0_enveloped"},
     {ERR_FUNC(CMS_F_CMS_GET0_REVOCATION_CHOICES),
      "CMS_GET0_REVOCATION_CHOICES"},
     {ERR_FUNC(CMS_F_CMS_GET0_SIGNED), "CMS_GET0_SIGNED"},
@@ -139,8 +142,12 @@ static ERR_STRING_DATA CMS_str_functs[] = {
      "CMS_RecipientInfo_ktri_get0_algs"},
     {ERR_FUNC(CMS_F_CMS_RECIPIENTINFO_KTRI_GET0_SIGNER_ID),
      "CMS_RecipientInfo_ktri_get0_signer_id"},
+    {ERR_FUNC(CMS_F_CMS_RECIPIENTINFO_PWRI_CRYPT),
+     "cms_RecipientInfo_pwri_crypt"},
     {ERR_FUNC(CMS_F_CMS_RECIPIENTINFO_SET0_KEY),
      "CMS_RecipientInfo_set0_key"},
+    {ERR_FUNC(CMS_F_CMS_RECIPIENTINFO_SET0_PASSWORD),
+     "CMS_RecipientInfo_set0_password"},
     {ERR_FUNC(CMS_F_CMS_RECIPIENTINFO_SET0_PKEY),
      "CMS_RecipientInfo_set0_pkey"},
     {ERR_FUNC(CMS_F_CMS_SET1_SIGNERIDENTIFIER), "cms_set1_SignerIdentifier"},
@@ -156,7 +163,7 @@ static ERR_STRING_DATA CMS_str_functs[] = {
     {ERR_FUNC(CMS_F_CMS_SIGNERINFO_VERIFY_CONTENT),
      "CMS_SignerInfo_verify_content"},
     {ERR_FUNC(CMS_F_CMS_SIGN_RECEIPT), "CMS_sign_receipt"},
-    {ERR_FUNC(CMS_F_CMS_STREAM), "CMS_STREAM"},
+    {ERR_FUNC(CMS_F_CMS_STREAM), "CMS_stream"},
     {ERR_FUNC(CMS_F_CMS_UNCOMPRESS), "CMS_uncompress"},
     {ERR_FUNC(CMS_F_CMS_VERIFY), "CMS_verify"},
     {0, NULL}
@@ -197,6 +204,8 @@ static ERR_STRING_DATA CMS_str_reasons[] = {
      "error setting recipientinfo"},
     {ERR_REASON(CMS_R_INVALID_ENCRYPTED_KEY_LENGTH),
      "invalid encrypted key length"},
+    {ERR_REASON(CMS_R_INVALID_KEY_ENCRYPTION_PARAMETER),
+     "invalid key encryption parameter"},
     {ERR_REASON(CMS_R_INVALID_KEY_LENGTH), "invalid key length"},
     {ERR_REASON(CMS_R_MD_BIO_INIT_ERROR), "md bio init error"},
     {ERR_REASON(CMS_R_MESSAGEDIGEST_ATTRIBUTE_WRONG_LENGTH),
@@ -213,6 +222,7 @@ static ERR_STRING_DATA CMS_str_reasons[] = {
     {ERR_REASON(CMS_R_NOT_ENCRYPTED_DATA), "not encrypted data"},
     {ERR_REASON(CMS_R_NOT_KEK), "not kek"},
     {ERR_REASON(CMS_R_NOT_KEY_TRANSPORT), "not key transport"},
+    {ERR_REASON(CMS_R_NOT_PWRI), "not pwri"},
     {ERR_REASON(CMS_R_NOT_SUPPORTED_FOR_THIS_KEY_TYPE),
      "not supported for this key type"},
     {ERR_REASON(CMS_R_NO_CIPHER), "no cipher"},
@@ -226,6 +236,7 @@ static ERR_STRING_DATA CMS_str_reasons[] = {
     {ERR_REASON(CMS_R_NO_MATCHING_RECIPIENT), "no matching recipient"},
     {ERR_REASON(CMS_R_NO_MATCHING_SIGNATURE), "no matching signature"},
     {ERR_REASON(CMS_R_NO_MSGSIGDIGEST), "no msgsigdigest"},
+    {ERR_REASON(CMS_R_NO_PASSWORD), "no password"},
     {ERR_REASON(CMS_R_NO_PRIVATE_KEY), "no private key"},
     {ERR_REASON(CMS_R_NO_PUBLIC_KEY), "no public key"},
     {ERR_REASON(CMS_R_NO_RECEIPT_REQUEST), "no receipt request"},
@@ -254,12 +265,15 @@ static ERR_STRING_DATA CMS_str_reasons[] = {
     {ERR_REASON(CMS_R_UNSUPPORTED_CONTENT_TYPE), "unsupported content type"},
     {ERR_REASON(CMS_R_UNSUPPORTED_KEK_ALGORITHM),
      "unsupported kek algorithm"},
+    {ERR_REASON(CMS_R_UNSUPPORTED_KEY_ENCRYPTION_ALGORITHM),
+     "unsupported key encryption algorithm"},
     {ERR_REASON(CMS_R_UNSUPPORTED_RECIPIENT_TYPE),
      "unsupported recipient type"},
     {ERR_REASON(CMS_R_UNSUPPORTED_RECPIENTINFO_TYPE),
      "unsupported recpientinfo type"},
     {ERR_REASON(CMS_R_UNSUPPORTED_TYPE), "unsupported type"},
     {ERR_REASON(CMS_R_UNWRAP_ERROR), "unwrap error"},
+    {ERR_REASON(CMS_R_UNWRAP_FAILURE), "unwrap failure"},
     {ERR_REASON(CMS_R_VERIFICATION_FAILURE), "verification failure"},
     {ERR_REASON(CMS_R_WRAP_ERROR), "wrap error"},
     {0, NULL}

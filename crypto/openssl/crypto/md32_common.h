@@ -142,8 +142,10 @@
  */
 #undef ROTATE
 #ifndef PEDANTIC
-# if defined(_MSC_VER) || defined(__ICC)
+# if defined(_MSC_VER)
 #  define ROTATE(a,n)   _lrotl(a,n)
+# elif defined(__ICC)
+#  define ROTATE(a,n)   _rotl(a,n)
 # elif defined(__MWERKS__)
 #  if defined(__POWERPC__)
 #   define ROTATE(a,n)  __rlwinm(a,n,0,31)
@@ -165,7 +167,7 @@
                                 asm (                   \
                                 "roll %1,%0"            \
                                 : "=r"(ret)             \
-                                : "I"(n), "0"(a)        \
+                                : "I"(n), "0"((unsigned int)(a))        \
                                 : "cc");                \
                            ret;                         \
                         })
@@ -231,7 +233,8 @@
 #  define HOST_l2c(l,c)   (*((c)++)=(unsigned char)(((l)>>24)&0xff),      \
                          *((c)++)=(unsigned char)(((l)>>16)&0xff),      \
                          *((c)++)=(unsigned char)(((l)>> 8)&0xff),      \
-                         *((c)++)=(unsigned char)(((l)    )&0xff)   )
+                         *((c)++)=(unsigned char)(((l)    )&0xff),      \
+                         l)
 # endif
 
 #elif defined(DATA_ORDER_IS_LITTLE_ENDIAN)
@@ -251,8 +254,8 @@
 # if defined(__i386) || defined(__i386__) || defined(__x86_64) || defined(__x86_64__)
 #  ifndef B_ENDIAN
    /* See comment in DATA_ORDER_IS_BIG_ENDIAN section. */
-#   define HOST_c2l(c,l) ((l)=*((const unsigned int *)(c)), (c)+=4)
-#   define HOST_l2c(l,c) (*((unsigned int *)(c))=(l), (c)+=4)
+#   define HOST_c2l(c,l) ((l)=*((const unsigned int *)(c)), (c)+=4, l)
+#   define HOST_l2c(l,c) (*((unsigned int *)(c))=(l), (c)+=4, l)
 #  endif
 # endif
 
@@ -266,7 +269,8 @@
 #  define HOST_l2c(l,c)   (*((c)++)=(unsigned char)(((l)    )&0xff),      \
                          *((c)++)=(unsigned char)(((l)>> 8)&0xff),      \
                          *((c)++)=(unsigned char)(((l)>>16)&0xff),      \
-                         *((c)++)=(unsigned char)(((l)>>24)&0xff)   )
+                         *((c)++)=(unsigned char)(((l)>>24)&0xff),      \
+                         l)
 # endif
 
 #endif
@@ -292,7 +296,8 @@ int HASH_UPDATE(HASH_CTX *c, const void *data_, size_t len)
      */
     if (l < c->Nl)              /* overflow */
         c->Nh++;
-    c->Nh += (len >> 29);       /* might cause compiler warning on 16-bit */
+    c->Nh += (HASH_LONG) (len >> 29); /* might cause compiler warning on
+                                       * 16-bit */
     c->Nl = l;
 
     n = c->num;
@@ -324,7 +329,7 @@ int HASH_UPDATE(HASH_CTX *c, const void *data_, size_t len)
 
     if (len != 0) {
         p = (unsigned char *)c->data;
-        c->num = len;
+        c->num = (unsigned int)len;
         memcpy(p, data, len);
     }
     return 1;
@@ -373,7 +378,8 @@ int HASH_FINAL(unsigned char *md, HASH_CTX *c)
 }
 
 #ifndef MD32_REG_T
-# define MD32_REG_T long
+# if defined(__alpha) || defined(__sparcv9) || defined(__mips)
+#  define MD32_REG_T long
 /*
  * This comment was originaly written for MD5, which is why it
  * discusses A-D. But it basically applies to all 32-bit digests,
@@ -390,9 +396,15 @@ int HASH_FINAL(unsigned char *md, HASH_CTX *c)
  * Well, to be honest it should say that this *prevents*
  * performance degradation.
  *                              <appro@fy.chalmers.se>
- * Apparently there're LP64 compilers that generate better
- * code if A-D are declared int. Most notably GCC-x86_64
- * generates better code.
+ */
+# else
+/*
+ * Above is not absolute and there are LP64 compilers that
+ * generate better code if MD32_REG_T is defined int. The above
+ * pre-processor condition reflects the circumstances under which
+ * the conclusion was made and is subject to further extension.
  *                              <appro@fy.chalmers.se>
  */
+#  define MD32_REG_T int
+# endif
 #endif

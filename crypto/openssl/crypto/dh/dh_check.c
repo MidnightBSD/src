@@ -71,8 +71,6 @@
  * should hold.
  */
 
-#ifndef OPENSSL_FIPS
-
 int DH_check(const DH *dh, int *ret)
 {
     int ok = 0;
@@ -93,13 +91,13 @@ int DH_check(const DH *dh, int *ret)
         if (l != 11)
             *ret |= DH_NOT_SUITABLE_GENERATOR;
     }
-# if 0
+#if 0
     else if (BN_is_word(dh->g, DH_GENERATOR_3)) {
         l = BN_mod_word(dh->p, 12);
         if (l != 5)
             *ret |= DH_NOT_SUITABLE_GENERATOR;
     }
-# endif
+#endif
     else if (BN_is_word(dh->g, DH_GENERATOR_5)) {
         l = BN_mod_word(dh->p, 10);
         if ((l != 3) && (l != 7))
@@ -147,5 +145,3 @@ int DH_check_pub_key(const DH *dh, const BIGNUM *pub_key, int *ret)
         BN_free(q);
     return (ok);
 }
-
-#endif

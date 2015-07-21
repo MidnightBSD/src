@@ -63,7 +63,7 @@
 
 # include <openssl/evp.h>
 # include <openssl/objects.h>
-# include <openssl/x509.h>
+# include <openssl/sha.h>
 # ifndef OPENSSL_NO_DSA
 #  include <openssl/dsa.h>
 # endif
@@ -89,7 +89,7 @@ static const EVP_MD dss1_md = {
     NID_dsa,
     NID_dsaWithSHA1,
     SHA_DIGEST_LENGTH,
-    0,
+    EVP_MD_FLAG_PKEY_DIGEST,
     init,
     update,
     final,

@@ -89,6 +89,12 @@ int ENGINE_set_default(ENGINE *e, unsigned int flags)
 #endif
     if ((flags & ENGINE_METHOD_RAND) && !ENGINE_set_default_RAND(e))
         return 0;
+    if ((flags & ENGINE_METHOD_PKEY_METHS)
+        && !ENGINE_set_default_pkey_meths(e))
+        return 0;
+    if ((flags & ENGINE_METHOD_PKEY_ASN1_METHS)
+        && !ENGINE_set_default_pkey_asn1_meths(e))
+        return 0;
     return 1;
 }
 
@@ -97,6 +103,8 @@ int ENGINE_set_default(ENGINE *e, unsigned int flags)
 static int int_def_cb(const char *alg, int len, void *arg)
 {
     unsigned int *pflags = arg;
+    if (alg == NULL)
+        return 0;
     if (!strncmp(alg, "ALL", len))
         *pflags |= ENGINE_METHOD_ALL;
     else if (!strncmp(alg, "RSA", len))
@@ -115,6 +123,12 @@ static int int_def_cb(const char *alg, int len, void *arg)
         *pflags |= ENGINE_METHOD_CIPHERS;
     else if (!strncmp(alg, "DIGESTS", len))
         *pflags |= ENGINE_METHOD_DIGESTS;
+    else if (!strncmp(alg, "PKEY", len))
+        *pflags |= ENGINE_METHOD_PKEY_METHS | ENGINE_METHOD_PKEY_ASN1_METHS;
+    else if (!strncmp(alg, "PKEY_CRYPTO", len))
+        *pflags |= ENGINE_METHOD_PKEY_METHS;
+    else if (!strncmp(alg, "PKEY_ASN1", len))
+        *pflags |= ENGINE_METHOD_PKEY_ASN1_METHS;
     else
         return 0;
     return 1;
@@ -152,6 +166,7 @@ int ENGINE_register_complete(ENGINE *e)
     ENGINE_register_ECDSA(e);
 #endif
     ENGINE_register_RAND(e);
+    ENGINE_register_pkey_meths(e);
     return 1;
 }
 
@@ -160,6 +175,7 @@ int ENGINE_register_all_complete(void)
     ENGINE *e;
 
     for (e = ENGINE_get_first(); e; e = ENGINE_get_next(e))
-        ENGINE_register_complete(e);
+        if (!(e->flags & ENGINE_FLAGS_NO_REGISTER_ALL))
+            ENGINE_register_complete(e);
     return 1;
 }

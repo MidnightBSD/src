@@ -65,7 +65,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include "apps.h"
 #include <openssl/err.h>
 #include <openssl/evp.h>
@@ -96,7 +95,7 @@ int MAIN(int argc, char **argv)
     PKCS7 *p7 = NULL;
     PKCS7_SIGNED *p7s = NULL;
     X509_CRL *crl = NULL;
-    STACK *certflst = NULL;
+    STACK_OF(OPENSSL_STRING) *certflst = NULL;
     STACK_OF(X509_CRL) *crl_stack = NULL;
     STACK_OF(X509) *cert_stack = NULL;
     int ret = 1, nocrl = 0;
@@ -138,11 +137,11 @@ int MAIN(int argc, char **argv)
             if (--argc < 1)
                 goto bad;
             if (!certflst)
-                certflst = sk_new_null();
+                certflst = sk_OPENSSL_STRING_new_null();
             if (!certflst)
                 goto end;
-            if (!sk_push(certflst, *(++argv))) {
-                sk_free(certflst);
+            if (!sk_OPENSSL_STRING_push(certflst, *(++argv))) {
+                sk_OPENSSL_STRING_free(certflst);
                 goto end;
             }
         } else {
@@ -228,8 +227,8 @@ int MAIN(int argc, char **argv)
     p7s->cert = cert_stack;
 
     if (certflst)
-        for (i = 0; i < sk_num(certflst); i++) {
-            certfile = sk_value(certflst, i);
+        for (i = 0; i < sk_OPENSSL_STRING_num(certflst); i++) {
+            certfile = sk_OPENSSL_STRING_value(certflst, i);
             if (add_certs_from_file(cert_stack, certfile) < 0) {
                 BIO_printf(bio_err, "error loading certificates\n");
                 ERR_print_errors(bio_err);
@@ -237,7 +236,7 @@ int MAIN(int argc, char **argv)
             }
         }
 
-    sk_free(certflst);
+    sk_OPENSSL_STRING_free(certflst);
 
     if (outfile == NULL) {
         BIO_set_fp(out, stdout, BIO_NOCLOSE);
@@ -294,17 +293,11 @@ int MAIN(int argc, char **argv)
  */
 static int add_certs_from_file(STACK_OF(X509) *stack, char *certfile)
 {
-    struct stat st;
     BIO *in = NULL;
     int count = 0;
     int ret = -1;
     STACK_OF(X509_INFO) *sk = NULL;
     X509_INFO *xi;
-
-    if ((stat(certfile, &st) != 0)) {
-        BIO_printf(bio_err, "unable to load the file, %s\n", certfile);
-        goto end;
-    }
 
     in = BIO_new(BIO_s_file());
     if ((in == NULL) || (BIO_read_filename(in, certfile) <= 0)) {

@@ -71,28 +71,50 @@
 
 #  include <wincrypt.h>
 
-#  undef X509_EXTENSIONS
-#  undef X509_CERT_PAIR
+/*
+ * This module uses several "new" interfaces, among which is
+ * CertGetCertificateContextProperty. CERT_KEY_PROV_INFO_PROP_ID is
+ * one of possible values you can pass to function in question. By
+ * checking if it's defined we can see if wincrypt.h and accompanying
+ * crypt32.lib are in shape. The native MingW32 headers up to and
+ * including __W32API_VERSION 3.14 lack of struct DSSPUBKEY and the
+ * defines CERT_STORE_PROV_SYSTEM_A and CERT_STORE_READONLY_FLAG,
+ * so we check for these too and avoid compiling.
+ * Yes, it's rather "weak" test and if compilation fails,
+ * then re-configure with -DOPENSSL_NO_CAPIENG.
+ */
+#  if defined(CERT_KEY_PROV_INFO_PROP_ID) && \
+    defined(CERT_STORE_PROV_SYSTEM_A) && \
+    defined(CERT_STORE_READONLY_FLAG)
+#   define __COMPILE_CAPIENG
+#  endif                        /* CERT_KEY_PROV_INFO_PROP_ID */
+# endif                         /* OPENSSL_NO_CAPIENG */
+#endif                          /* OPENSSL_SYS_WIN32 */
+
+#ifdef __COMPILE_CAPIENG
+
+# undef X509_EXTENSIONS
+# undef X509_CERT_PAIR
 
 /* Definitions which may be missing from earlier version of headers */
-#  ifndef CERT_STORE_OPEN_EXISTING_FLAG
-#   define CERT_STORE_OPEN_EXISTING_FLAG                   0x00004000
-#  endif
+# ifndef CERT_STORE_OPEN_EXISTING_FLAG
+#  define CERT_STORE_OPEN_EXISTING_FLAG                   0x00004000
+# endif
 
-#  ifndef CERT_STORE_CREATE_NEW_FLAG
-#   define CERT_STORE_CREATE_NEW_FLAG                      0x00002000
-#  endif
+# ifndef CERT_STORE_CREATE_NEW_FLAG
+#  define CERT_STORE_CREATE_NEW_FLAG                      0x00002000
+# endif
 
-#  ifndef CERT_SYSTEM_STORE_CURRENT_USER
-#   define CERT_SYSTEM_STORE_CURRENT_USER                  0x00010000
-#  endif
+# ifndef CERT_SYSTEM_STORE_CURRENT_USER
+#  define CERT_SYSTEM_STORE_CURRENT_USER                  0x00010000
+# endif
 
-#  include <openssl/engine.h>
-#  include <openssl/pem.h>
-#  include <openssl/x509v3.h>
+# include <openssl/engine.h>
+# include <openssl/pem.h>
+# include <openssl/x509v3.h>
 
-#  include "e_capi_err.h"
-#  include "e_capi_err.c"
+# include "e_capi_err.h"
+# include "e_capi_err.c"
 
 static const char *engine_capi_id = "capi";
 static const char *engine_capi_name = "CryptoAPI ENGINE";
@@ -137,9 +159,9 @@ static int capi_load_ssl_client_cert(ENGINE *e, SSL *ssl,
                                      void *callback_data);
 
 static int cert_select_simple(ENGINE *e, SSL *ssl, STACK_OF(X509) *certs);
-#  ifdef OPENSSL_CAPIENG_DIALOG
+# ifdef OPENSSL_CAPIENG_DIALOG
 static int cert_select_dialog(ENGINE *e, SSL *ssl, STACK_OF(X509) *certs);
-#  endif
+# endif
 
 typedef PCCERT_CONTEXT(WINAPI *CERTDLG) (HCERTSTORE, HWND, LPCWSTR,
                                          LPCWSTR, DWORD, DWORD, void *);
@@ -150,8 +172,8 @@ typedef HWND(WINAPI *GETCONSWIN) (void);
  * global options and affects how other functions behave.
  */
 
-#  define CAPI_DBG_TRACE  2
-#  define CAPI_DBG_ERROR  1
+# define CAPI_DBG_TRACE  2
+# define CAPI_DBG_ERROR  1
 
 struct CAPI_CTX_st {
     int debug_level;
@@ -167,25 +189,25 @@ struct CAPI_CTX_st {
     DWORD store_flags;
 /* Lookup string meanings in load_private_key */
 /* Substring of subject: uses "storename" */
-#  define CAPI_LU_SUBSTR          1
+# define CAPI_LU_SUBSTR          1
 /* Friendly name: uses storename */
-#  define CAPI_LU_FNAME           2
+# define CAPI_LU_FNAME           2
 /* Container name: uses cspname, keytype */
-#  define CAPI_LU_CONTNAME        3
+# define CAPI_LU_CONTNAME        3
     int lookup_method;
 /* Info to dump with dumpcerts option */
 /* Issuer and serial name strings */
-#  define CAPI_DMP_SUMMARY        0x1
+# define CAPI_DMP_SUMMARY        0x1
 /* Friendly name */
-#  define CAPI_DMP_FNAME          0x2
+# define CAPI_DMP_FNAME          0x2
 /* Full X509_print dump */
-#  define CAPI_DMP_FULL           0x4
+# define CAPI_DMP_FULL           0x4
 /* Dump PEM format certificate */
-#  define CAPI_DMP_PEM            0x8
+# define CAPI_DMP_PEM            0x8
 /* Dump pseudo key (if possible) */
-#  define CAPI_DMP_PSKEY          0x10
+# define CAPI_DMP_PSKEY          0x10
 /* Dump key info (if possible) */
-#  define CAPI_DMP_PKEYINFO       0x20
+# define CAPI_DMP_PKEYINFO       0x20
     DWORD dump_flags;
     int (*client_cert_select) (ENGINE *e, SSL *ssl, STACK_OF(X509) *certs);
     CERTDLG certselectdlg;
@@ -198,20 +220,20 @@ static int capi_ctx_set_provname(CAPI_CTX * ctx, LPSTR pname, DWORD type,
                                  int check);
 static int capi_ctx_set_provname_idx(CAPI_CTX * ctx, int idx);
 
-#  define CAPI_CMD_LIST_CERTS             ENGINE_CMD_BASE
-#  define CAPI_CMD_LOOKUP_CERT            (ENGINE_CMD_BASE + 1)
-#  define CAPI_CMD_DEBUG_LEVEL            (ENGINE_CMD_BASE + 2)
-#  define CAPI_CMD_DEBUG_FILE             (ENGINE_CMD_BASE + 3)
-#  define CAPI_CMD_KEYTYPE                (ENGINE_CMD_BASE + 4)
-#  define CAPI_CMD_LIST_CSPS              (ENGINE_CMD_BASE + 5)
-#  define CAPI_CMD_SET_CSP_IDX            (ENGINE_CMD_BASE + 6)
-#  define CAPI_CMD_SET_CSP_NAME           (ENGINE_CMD_BASE + 7)
-#  define CAPI_CMD_SET_CSP_TYPE           (ENGINE_CMD_BASE + 8)
-#  define CAPI_CMD_LIST_CONTAINERS        (ENGINE_CMD_BASE + 9)
-#  define CAPI_CMD_LIST_OPTIONS           (ENGINE_CMD_BASE + 10)
-#  define CAPI_CMD_LOOKUP_METHOD          (ENGINE_CMD_BASE + 11)
-#  define CAPI_CMD_STORE_NAME             (ENGINE_CMD_BASE + 12)
-#  define CAPI_CMD_STORE_FLAGS            (ENGINE_CMD_BASE + 13)
+# define CAPI_CMD_LIST_CERTS             ENGINE_CMD_BASE
+# define CAPI_CMD_LOOKUP_CERT            (ENGINE_CMD_BASE + 1)
+# define CAPI_CMD_DEBUG_LEVEL            (ENGINE_CMD_BASE + 2)
+# define CAPI_CMD_DEBUG_FILE             (ENGINE_CMD_BASE + 3)
+# define CAPI_CMD_KEYTYPE                (ENGINE_CMD_BASE + 4)
+# define CAPI_CMD_LIST_CSPS              (ENGINE_CMD_BASE + 5)
+# define CAPI_CMD_SET_CSP_IDX            (ENGINE_CMD_BASE + 6)
+# define CAPI_CMD_SET_CSP_NAME           (ENGINE_CMD_BASE + 7)
+# define CAPI_CMD_SET_CSP_TYPE           (ENGINE_CMD_BASE + 8)
+# define CAPI_CMD_LIST_CONTAINERS        (ENGINE_CMD_BASE + 9)
+# define CAPI_CMD_LIST_OPTIONS           (ENGINE_CMD_BASE + 10)
+# define CAPI_CMD_LOOKUP_METHOD          (ENGINE_CMD_BASE + 11)
+# define CAPI_CMD_STORE_NAME             (ENGINE_CMD_BASE + 12)
+# define CAPI_CMD_STORE_FLAGS            (ENGINE_CMD_BASE + 13)
 
 static const ENGINE_CMD_DEFN capi_cmd_defns[] = {
     {CAPI_CMD_LIST_CERTS,
@@ -441,7 +463,7 @@ static int capi_init(ENGINE *e)
 
     ENGINE_set_ex_data(e, capi_idx, ctx);
 
-#  ifdef OPENSSL_CAPIENG_DIALOG
+# ifdef OPENSSL_CAPIENG_DIALOG
     {
         HMODULE cryptui = LoadLibrary(TEXT("CRYPTUI.DLL"));
         HMODULE kernel = GetModuleHandle(TEXT("KERNEL32.DLL"));
@@ -455,7 +477,7 @@ static int capi_init(ENGINE *e)
         if (cryptui && !OPENSSL_isservice())
             ctx->client_cert_select = cert_select_dialog;
     }
-#  endif
+# endif
 
     return 1;
 
@@ -499,6 +521,7 @@ static int bind_capi(ENGINE *e)
 {
     if (!ENGINE_set_id(e, engine_capi_id)
         || !ENGINE_set_name(e, engine_capi_name)
+        || !ENGINE_set_flags(e, ENGINE_FLAGS_NO_REGISTER_ALL)
         || !ENGINE_set_init_function(e, capi_init)
         || !ENGINE_set_finish_function(e, capi_finish)
         || !ENGINE_set_destroy_function(e, capi_destroy)
@@ -516,7 +539,7 @@ static int bind_capi(ENGINE *e)
 
 }
 
-#  ifndef OPENSSL_NO_DYNAMIC_ENGINE
+# ifndef OPENSSL_NO_DYNAMIC_ENGINE
 static int bind_helper(ENGINE *e, const char *id)
 {
     if (id && (strcmp(id, engine_capi_id) != 0))
@@ -528,7 +551,7 @@ static int bind_helper(ENGINE *e, const char *id)
 
 IMPLEMENT_DYNAMIC_CHECK_FN()
     IMPLEMENT_DYNAMIC_BIND_FN(bind_helper)
-#  else
+# else
 static ENGINE *engine_capi(void)
 {
     ENGINE *ret = ENGINE_new();
@@ -551,7 +574,7 @@ void ENGINE_load_capi(void)
     ENGINE_free(toadd);
     ERR_clear_error();
 }
-#  endif
+# endif
 
 static int lend_tobn(BIGNUM *bn, unsigned char *bin, int binlen)
 {
@@ -1641,7 +1664,7 @@ static int cert_select_simple(ENGINE *e, SSL *ssl, STACK_OF(X509) *certs)
     return 0;
 }
 
-#  ifdef OPENSSL_CAPIENG_DIALOG
+# ifdef OPENSSL_CAPIENG_DIALOG
 
 /*
  * More complex cert selection function, using standard function
@@ -1653,14 +1676,14 @@ static int cert_select_simple(ENGINE *e, SSL *ssl, STACK_OF(X509) *certs)
  * versions of headers.
  */
 
-#   ifndef CRYPTUI_SELECT_LOCATION_COLUMN
-#    define CRYPTUI_SELECT_LOCATION_COLUMN                   0x000000010
-#    define CRYPTUI_SELECT_INTENDEDUSE_COLUMN                0x000000004
-#   endif
+#  ifndef CRYPTUI_SELECT_LOCATION_COLUMN
+#   define CRYPTUI_SELECT_LOCATION_COLUMN                   0x000000010
+#   define CRYPTUI_SELECT_INTENDEDUSE_COLUMN                0x000000004
+#  endif
 
-#   define dlg_title L"OpenSSL Application SSL Client Certificate Selection"
-#   define dlg_prompt L"Select a certificate to use for authentication"
-#   define dlg_columns      CRYPTUI_SELECT_LOCATION_COLUMN \
+#  define dlg_title L"OpenSSL Application SSL Client Certificate Selection"
+#  define dlg_prompt L"Select a certificate to use for authentication"
+#  define dlg_columns      CRYPTUI_SELECT_LOCATION_COLUMN \
                         |CRYPTUI_SELECT_INTENDEDUSE_COLUMN
 
 static int cert_select_dialog(ENGINE *e, SSL *ssl, STACK_OF(X509) *certs)
@@ -1725,12 +1748,13 @@ static int cert_select_dialog(ENGINE *e, SSL *ssl, STACK_OF(X509) *certs)
     return idx;
 
 }
-#  endif
-
 # endif
-#else                           /* !WIN32 */
+
+#else                           /* !__COMPILE_CAPIENG */
 # include <openssl/engine.h>
 # ifndef OPENSSL_NO_DYNAMIC_ENGINE
+OPENSSL_EXPORT
+    int bind_engine(ENGINE *e, const char *id, const dynamic_fns *fns);
 OPENSSL_EXPORT
     int bind_engine(ENGINE *e, const char *id, const dynamic_fns *fns)
 {
@@ -1738,5 +1762,9 @@ OPENSSL_EXPORT
 }
 
 IMPLEMENT_DYNAMIC_CHECK_FN()
+# else
+void ENGINE_load_capi(void)
+{
+}
 # endif
 #endif

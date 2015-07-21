@@ -71,10 +71,6 @@
  */
 # ifdef OPENSSL_SYS_VMS
 
-/* Hack a long name in crypto/cryptlib.c */
-#  undef int_CRYPTO_set_do_dynlock_callback
-#  define int_CRYPTO_set_do_dynlock_callback      int_CRYPTO_set_do_dynlock_cb
-
 /* Hack a long name in crypto/ex_data.c */
 #  undef CRYPTO_get_ex_data_implementation
 #  define CRYPTO_get_ex_data_implementation       CRYPTO_get_ex_data_impl
@@ -187,7 +183,6 @@
 #  define SSL_CTX_set_default_passwd_cb_userdata  SSL_CTX_set_def_passwd_cb_ud
 #  undef SSL_COMP_get_compression_methods
 #  define SSL_COMP_get_compression_methods        SSL_COMP_get_compress_methods
-
 #  undef ssl_add_clienthello_renegotiate_ext
 #  define ssl_add_clienthello_renegotiate_ext     ssl_add_clienthello_reneg_ext
 #  undef ssl_add_serverhello_renegotiate_ext
@@ -196,7 +191,26 @@
 #  define ssl_parse_clienthello_renegotiate_ext   ssl_parse_clienthello_reneg_ext
 #  undef ssl_parse_serverhello_renegotiate_ext
 #  define ssl_parse_serverhello_renegotiate_ext   ssl_parse_serverhello_reneg_ext
-
+#  undef SSL_srp_server_param_with_username
+#  define SSL_srp_server_param_with_username      SSL_srp_server_param_with_un
+#  undef SSL_CTX_set_srp_client_pwd_callback
+#  define SSL_CTX_set_srp_client_pwd_callback     SSL_CTX_set_srp_client_pwd_cb
+#  undef SSL_CTX_set_srp_verify_param_callback
+#  define SSL_CTX_set_srp_verify_param_callback   SSL_CTX_set_srp_vfy_param_cb
+#  undef SSL_CTX_set_srp_username_callback
+#  define SSL_CTX_set_srp_username_callback       SSL_CTX_set_srp_un_cb
+#  undef ssl_add_clienthello_use_srtp_ext
+#  define ssl_add_clienthello_use_srtp_ext        ssl_add_clihello_use_srtp_ext
+#  undef ssl_add_serverhello_use_srtp_ext
+#  define ssl_add_serverhello_use_srtp_ext        ssl_add_serhello_use_srtp_ext
+#  undef ssl_parse_clienthello_use_srtp_ext
+#  define ssl_parse_clienthello_use_srtp_ext      ssl_parse_clihello_use_srtp_ext
+#  undef ssl_parse_serverhello_use_srtp_ext
+#  define ssl_parse_serverhello_use_srtp_ext      ssl_parse_serhello_use_srtp_ext
+#  undef SSL_CTX_set_next_protos_advertised_cb
+#  define SSL_CTX_set_next_protos_advertised_cb   SSL_CTX_set_next_protos_adv_cb
+#  undef SSL_CTX_set_next_proto_select_cb
+#  define SSL_CTX_set_next_proto_select_cb        SSL_CTX_set_next_proto_sel_cb
 #  undef ssl3_cbc_record_digest_supported
 #  define ssl3_cbc_record_digest_supported        ssl3_cbc_record_digest_support
 #  undef ssl_check_clienthello_tlsext_late
@@ -213,6 +227,14 @@
 #  define ENGINE_set_load_privkey_function        ENGINE_set_load_privkey_fn
 #  undef ENGINE_get_load_privkey_function
 #  define ENGINE_get_load_privkey_function        ENGINE_get_load_privkey_fn
+#  undef ENGINE_unregister_pkey_asn1_meths
+#  define ENGINE_unregister_pkey_asn1_meths       ENGINE_unreg_pkey_asn1_meths
+#  undef ENGINE_register_all_pkey_asn1_meths
+#  define ENGINE_register_all_pkey_asn1_meths     ENGINE_reg_all_pkey_asn1_meths
+#  undef ENGINE_set_default_pkey_asn1_meths
+#  define ENGINE_set_default_pkey_asn1_meths      ENGINE_set_def_pkey_asn1_meths
+#  undef ENGINE_get_pkey_asn1_meth_engine
+#  define ENGINE_get_pkey_asn1_meth_engine        ENGINE_get_pkey_asn1_meth_eng
 #  undef ENGINE_set_load_ssl_client_cert_function
 #  define ENGINE_set_load_ssl_client_cert_function \
                                                 ENGINE_set_ld_ssl_clnt_cert_fn
@@ -238,6 +260,8 @@
 #  define OPENSSL_add_all_algorithms_noconf       OPENSSL_add_all_algo_noconf
 #  undef OPENSSL_add_all_algorithms_conf
 #  define OPENSSL_add_all_algorithms_conf         OPENSSL_add_all_algo_conf
+#  undef EVP_PKEY_meth_set_verify_recover
+#  define EVP_PKEY_meth_set_verify_recover        EVP_PKEY_meth_set_vrfy_recover
 
 /* Hack some long EC names */
 #  undef EC_GROUP_set_point_conversion_form
@@ -246,6 +270,9 @@
 #  define EC_GROUP_get_point_conversion_form      EC_GROUP_get_point_conv_form
 #  undef EC_GROUP_clear_free_all_extra_data
 #  define EC_GROUP_clear_free_all_extra_data      EC_GROUP_clr_free_all_xtra_data
+#  undef EC_KEY_set_public_key_affine_coordinates
+#  define EC_KEY_set_public_key_affine_coordinates \
+                                                EC_KEY_set_pub_key_aff_coords
 #  undef EC_POINT_set_Jprojective_coordinates_GFp
 #  define EC_POINT_set_Jprojective_coordinates_GFp \
                                                 EC_POINT_set_Jproj_coords_GFp
@@ -379,6 +406,14 @@
 #  undef STORE_method_get_unlock_store_function
 #  define STORE_method_get_unlock_store_function  STORE_meth_get_unlock_store_fn
 
+/* Hack some long TS names */
+#  undef TS_RESP_CTX_set_status_info_cond
+#  define TS_RESP_CTX_set_status_info_cond        TS_RESP_CTX_set_stat_info_cond
+#  undef TS_RESP_CTX_set_clock_precision_digits
+#  define TS_RESP_CTX_set_clock_precision_digits  TS_RESP_CTX_set_clk_prec_digits
+#  undef TS_CONF_set_clock_precision_digits
+#  define TS_CONF_set_clock_precision_digits      TS_CONF_set_clk_prec_digits
+
 /* Hack some long CMS names */
 #  undef CMS_RecipientInfo_ktri_get0_algs
 #  define CMS_RecipientInfo_ktri_get0_algs        CMS_RecipInfo_ktri_get0_algs
@@ -397,10 +432,22 @@
 #  undef dtls1_retransmit_buffered_messages
 #  define dtls1_retransmit_buffered_messages      dtls1_retransmit_buffered_msgs
 
+/* Hack some long SRP names */
+#  undef SRP_generate_server_master_secret
+#  define SRP_generate_server_master_secret       SRP_gen_server_master_secret
+#  undef SRP_generate_client_master_secret
+#  define SRP_generate_client_master_secret       SRP_gen_client_master_secret
+
+/* Hack some long UI names */
+#  undef UI_method_get_prompt_constructor
+#  define UI_method_get_prompt_constructor        UI_method_get_prompt_constructr
+#  undef UI_method_set_prompt_constructor
+#  define UI_method_set_prompt_constructor        UI_method_set_prompt_constructr
+
 # endif                         /* defined OPENSSL_SYS_VMS */
 
-/* Case insensiteve linking causes problems.... */
-# if defined(OPENSSL_SYS_WIN16) || defined(OPENSSL_SYS_VMS) || defined(OPENSSL_SYS_OS2)
+/* Case insensitive linking causes problems.... */
+# if defined(OPENSSL_SYS_VMS) || defined(OPENSSL_SYS_OS2)
 #  undef ERR_load_CRYPTO_strings
 #  define ERR_load_CRYPTO_strings                 ERR_load_CRYPTOlib_strings
 #  undef OCSP_crlID_new
@@ -430,9 +477,10 @@
 #  undef X509v3_add_standard_extensions
 #  define X509v3_add_standard_extensions          oX509v3_add_standard_extensions
 
+/* This one clashes with CMS_data_create */
+#  undef cms_Data_create
+#  define cms_Data_create                         priv_cms_Data_create
+
 # endif
 
 #endif                          /* ! defined HEADER_VMS_IDHACKS_H */
-/* This one clashes with CMS_data_create */
-#undef cms_Data_create
-#define cms_Data_create                         priv_cms_Data_create

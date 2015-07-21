@@ -61,11 +61,10 @@
 #include <stdio.h>
 #include "cryptlib.h"
 #include <openssl/bn.h>
+#include <openssl/sha.h>
 #include <openssl/dsa.h>
 #include <openssl/rand.h>
 #include <openssl/asn1.h>
-
-#ifndef OPENSSL_FIPS
 
 static DSA_SIG *dsa_do_sign(const unsigned char *dgst, int dlen, DSA *dsa);
 static int dsa_sign_setup(DSA *dsa, BN_CTX *ctx_in, BIGNUM **kinvp,
@@ -104,7 +103,7 @@ static DSA_METHOD openssl_dsa_meth = {
  *                 dsa->method_mont_p);
  */
 
-# define DSA_MOD_EXP(err_instr,dsa,rr,a1,p1,a2,p2,m,ctx,in_mont) \
+#define DSA_MOD_EXP(err_instr,dsa,rr,a1,p1,a2,p2,m,ctx,in_mont) \
         do { \
         int _tmp_res53; \
         if ((dsa)->meth->dsa_mod_exp) \
@@ -115,7 +114,7 @@ static DSA_METHOD openssl_dsa_meth = {
                                 (m), (ctx), (in_mont)); \
         if (!_tmp_res53) err_instr; \
         } while(0)
-# define DSA_BN_MOD_EXP(err_instr,dsa,r,a,p,m,ctx,m_ctx) \
+#define DSA_BN_MOD_EXP(err_instr,dsa,r,a,p,m,ctx,m_ctx) \
         do { \
         int _tmp_res53; \
         if ((dsa)->meth->bn_mod_exp) \
@@ -137,8 +136,9 @@ static DSA_SIG *dsa_do_sign(const unsigned char *dgst, int dlen, DSA *dsa)
     BIGNUM m;
     BIGNUM xr;
     BN_CTX *ctx = NULL;
-    int i, reason = ERR_R_BN_LIB;
+    int reason = ERR_R_BN_LIB;
     DSA_SIG *ret = NULL;
+    int noredo = 0;
 
     BN_init(&m);
     BN_init(&xr);
@@ -151,17 +151,10 @@ static DSA_SIG *dsa_do_sign(const unsigned char *dgst, int dlen, DSA *dsa)
     s = BN_new();
     if (s == NULL)
         goto err;
-
-    i = BN_num_bytes(dsa->q);   /* should be 20 */
-    if ((dlen > i) || (dlen > 50)) {
-        reason = DSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE;
-        goto err;
-    }
-
     ctx = BN_CTX_new();
     if (ctx == NULL)
         goto err;
-
+ redo:
     if ((dsa->kinv == NULL) || (dsa->r == NULL)) {
         if (!DSA_sign_setup(dsa, ctx, &kinv, &r))
             goto err;
@@ -170,8 +163,16 @@ static DSA_SIG *dsa_do_sign(const unsigned char *dgst, int dlen, DSA *dsa)
         dsa->kinv = NULL;
         r = dsa->r;
         dsa->r = NULL;
+        noredo = 1;
     }
 
+    if (dlen > BN_num_bytes(dsa->q))
+        /*
+         * if the digest length is greater than the size of q use the
+         * BN_num_bits(dsa->q) leftmost bits of the digest, see fips 186-3,
+         * 4.2
+         */
+        dlen = BN_num_bytes(dsa->q);
     if (BN_bin2bn(dgst, dlen, &m) == NULL)
         goto err;
 
@@ -189,6 +190,17 @@ static DSA_SIG *dsa_do_sign(const unsigned char *dgst, int dlen, DSA *dsa)
     ret = DSA_SIG_new();
     if (ret == NULL)
         goto err;
+    /*
+     * Redo if r or s is zero as required by FIPS 186-3: this is very
+     * unlikely.
+     */
+    if (BN_is_zero(r) || BN_is_zero(s)) {
+        if (noredo) {
+            reason = DSA_R_NEED_NEW_SETUP_VALUES;
+            goto err;
+        }
+        goto redo;
+    }
     ret->r = r;
     ret->s = s;
 
@@ -290,15 +302,11 @@ static int dsa_sign_setup(DSA *dsa, BN_CTX *ctx_in, BIGNUM **kinvp,
  err:
     if (!ret) {
         DSAerr(DSA_F_DSA_SIGN_SETUP, ERR_R_BN_LIB);
-        if (kinv != NULL)
-            BN_clear_free(kinv);
         if (r != NULL)
             BN_clear_free(r);
     }
     if (ctx_in == NULL)
         BN_CTX_free(ctx);
-    if (kinv != NULL)
-        BN_clear_free(kinv);
     BN_clear_free(&k);
     BN_clear_free(&kq);
     return (ret);
@@ -310,13 +318,15 @@ static int dsa_do_verify(const unsigned char *dgst, int dgst_len,
     BN_CTX *ctx;
     BIGNUM u1, u2, t1;
     BN_MONT_CTX *mont = NULL;
-    int ret = -1;
+    int ret = -1, i;
     if (!dsa->p || !dsa->q || !dsa->g) {
         DSAerr(DSA_F_DSA_DO_VERIFY, DSA_R_MISSING_PARAMETERS);
         return -1;
     }
 
-    if (BN_num_bits(dsa->q) != 160) {
+    i = BN_num_bits(dsa->q);
+    /* fips 186-3 allows only different sizes for q */
+    if (i != 160 && i != 224 && i != 256) {
         DSAerr(DSA_F_DSA_DO_VERIFY, DSA_R_BAD_Q_VALUE);
         return -1;
     }
@@ -325,7 +335,6 @@ static int dsa_do_verify(const unsigned char *dgst, int dgst_len,
         DSAerr(DSA_F_DSA_DO_VERIFY, DSA_R_MODULUS_TOO_LARGE);
         return -1;
     }
-
     BN_init(&u1);
     BN_init(&u2);
     BN_init(&t1);
@@ -351,6 +360,13 @@ static int dsa_do_verify(const unsigned char *dgst, int dgst_len,
         goto err;
 
     /* save M in u1 */
+    if (dgst_len > (i >> 3))
+        /*
+         * if the digest length is greater than the size of q use the
+         * BN_num_bits(dsa->q) leftmost bits of the digest, see fips 186-3,
+         * 4.2
+         */
+        dgst_len = (i >> 3);
     if (BN_bin2bn(dgst, dgst_len, &u1) == NULL)
         goto err;
 
@@ -408,5 +424,3 @@ static int dsa_finish(DSA *dsa)
         BN_MONT_CTX_free(dsa->method_mont_p);
     return (1);
 }
-
-#endif

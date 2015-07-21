@@ -56,7 +56,7 @@
  * [including the GNU Public Licence.]
  */
 /* ====================================================================
- * Copyright (c) 1998-2001 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 1998-2006 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -115,10 +115,13 @@
 #include <openssl/rand.h>
 #include <openssl/objects.h>
 #include <openssl/evp.h>
+#ifdef OPENSSL_FIPS
+# include <openssl/fips.h>
+#endif
 
-static SSL_METHOD *ssl23_get_server_method(int ver);
+static const SSL_METHOD *ssl23_get_server_method(int ver);
 int ssl23_get_client_hello(SSL *s);
-static SSL_METHOD *ssl23_get_server_method(int ver)
+static const SSL_METHOD *ssl23_get_server_method(int ver)
 {
 #ifndef OPENSSL_NO_SSL2
     if (ver == SSL2_VERSION)
@@ -130,6 +133,10 @@ static SSL_METHOD *ssl23_get_server_method(int ver)
 #endif
     if (ver == TLS1_VERSION)
         return (TLSv1_server_method());
+    else if (ver == TLS1_1_VERSION)
+        return (TLSv1_1_server_method());
+    else if (ver == TLS1_2_VERSION)
+        return (TLSv1_2_server_method());
     else
         return (NULL);
 }
@@ -181,6 +188,7 @@ int ssl23_accept(SSL *s)
                     goto end;
                 }
                 if (!BUF_MEM_grow(buf, SSL3_RT_MAX_PLAIN_LENGTH)) {
+                    BUF_MEM_free(buf);
                     ret = -1;
                     goto end;
                 }
@@ -280,7 +288,20 @@ int ssl23_get_client_hello(SSL *s)
                 v[1] = p[4];
                 /* SSLv3/TLSv1 */
                 if (p[4] >= TLS1_VERSION_MINOR) {
-                    if (!(s->options & SSL_OP_NO_TLSv1)) {
+                    if (p[4] >= TLS1_2_VERSION_MINOR &&
+                        !(s->options & SSL_OP_NO_TLSv1_2)) {
+                        s->version = TLS1_2_VERSION;
+                        s->state = SSL23_ST_SR_CLNT_HELLO_B;
+                    } else if (p[4] >= TLS1_1_VERSION_MINOR &&
+                               !(s->options & SSL_OP_NO_TLSv1_1)) {
+                        s->version = TLS1_1_VERSION;
+                        /*
+                         * type=2;
+                         *//*
+                         * done later to survive restarts
+                         */
+                        s->state = SSL23_ST_SR_CLNT_HELLO_B;
+                    } else if (!(s->options & SSL_OP_NO_TLSv1)) {
                         s->version = TLS1_VERSION;
                         /*
                          * type=2;
@@ -337,7 +358,15 @@ int ssl23_get_client_hello(SSL *s)
             else
                 v[1] = p[10];   /* minor version according to client_version */
             if (v[1] >= TLS1_VERSION_MINOR) {
-                if (!(s->options & SSL_OP_NO_TLSv1)) {
+                if (v[1] >= TLS1_2_VERSION_MINOR &&
+                    !(s->options & SSL_OP_NO_TLSv1_2)) {
+                    s->version = TLS1_2_VERSION;
+                    type = 3;
+                } else if (v[1] >= TLS1_1_VERSION_MINOR &&
+                           !(s->options & SSL_OP_NO_TLSv1_1)) {
+                    s->version = TLS1_1_VERSION;
+                    type = 3;
+                } else if (!(s->options & SSL_OP_NO_TLSv1)) {
                     s->version = TLS1_VERSION;
                     type = 3;
                 } else if (!(s->options & SSL_OP_NO_SSLv3)) {
@@ -369,6 +398,10 @@ int ssl23_get_client_hello(SSL *s)
             goto err;
         }
     }
+
+    /* ensure that TLS_MAX_VERSION is up-to-date */
+    OPENSSL_assert(s->version <= TLS_MAX_VERSION);
+
 #ifdef OPENSSL_FIPS
     if (FIPS_mode() && (s->version < TLS1_VERSION)) {
         SSLerr(SSL_F_SSL23_GET_CLIENT_HELLO,
@@ -376,9 +409,6 @@ int ssl23_get_client_hello(SSL *s)
         goto err;
     }
 #endif
-
-    /* ensure that TLS_MAX_VERSION is up-to-date */
-    OPENSSL_assert(s->version <= TLS_MAX_VERSION);
 
     if (s->state == SSL23_ST_SR_CLNT_HELLO_B) {
         /*
@@ -436,7 +466,14 @@ int ssl23_get_client_hello(SSL *s)
         n2s(p, sil);
         n2s(p, cl);
         d = (unsigned char *)s->init_buf->data;
-        if ((csl + sil + cl + 11) != s->packet_length) {
+        if ((csl + sil + cl + 11) != s->packet_length) { /* We can't have TLS
+                                                          * extensions in SSL
+                                                          * 2.0 format *
+                                                          * Client Hello, can
+                                                          * we? Error
+                                                          * condition should
+                                                          * be * '>'
+                                                          * otherweise */
             SSLerr(SSL_F_SSL23_GET_CLIENT_HELLO,
                    SSL_R_RECORD_LENGTH_MISMATCH);
             goto err;
@@ -478,6 +515,14 @@ int ssl23_get_client_hello(SSL *s)
         /* COMPRESSION */
         *(d++) = 1;
         *(d++) = 0;
+
+#if 0
+        /* copy any remaining data with may be extensions */
+        p = p + csl + sil + cl;
+        while (p < s->packet + s->packet_length) {
+            *(d++) = *(p++);
+        }
+#endif
 
         i = (d - (unsigned char *)s->init_buf->data) - 4;
         l2n3((long)i, d_len);
@@ -546,7 +591,7 @@ int ssl23_get_client_hello(SSL *s)
         /*
          * we have SSLv3/TLSv1 (type 2: SSL2 style, type 3: SSL3/TLS style)
          */
-        SSL_METHOD *new_method;
+        const SSL_METHOD *new_method;
         new_method = ssl23_get_server_method(s->version);
         if (new_method == NULL) {
             SSLerr(SSL_F_SSL23_GET_CLIENT_HELLO, SSL_R_UNSUPPORTED_PROTOCOL);
@@ -566,6 +611,10 @@ int ssl23_get_client_hello(SSL *s)
              */
             s->rstate = SSL_ST_READ_HEADER;
             s->packet_length = n;
+            if (s->s3->rbuf.buf == NULL)
+                if (!ssl3_setup_read_buffer(s))
+                    goto err;
+
             s->packet = &(s->s3->rbuf.buf[0]);
             memcpy(s->packet, buf, n);
             s->s3->rbuf.left = n;

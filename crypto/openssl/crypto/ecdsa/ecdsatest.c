@@ -261,6 +261,7 @@ int x9_62_tests(BIO *out)
                              "3238135532097973577080787768312505059318910517550078427819"
                              "78505179448783"))
         goto x962_err;
+# ifndef OPENSSL_NO_EC2M
     if (!x9_62_test_internal(out, NID_X9_62_c2tnb191v1,
                              "87194383164871543355722284926904419997237591535066528048",
                              "308992691965804947361541664549085895292153777025772063598"))
@@ -271,7 +272,7 @@ int x9_62_tests(BIO *out)
                              "1970303740007316867383349976549972270528498040721988191026"
                              "49413465737174"))
         goto x962_err;
-
+# endif
     ret = 1;
  x962_err:
     if (!restore_rand())
@@ -295,8 +296,8 @@ int test_builtin(BIO *out)
     int nid, ret = 0;
 
     /* fill digest values with some random data */
-    if (!RAND_pseudo_bytes(digest, 20) ||
-        !RAND_pseudo_bytes(wrong_digest, 20)) {
+    if (RAND_pseudo_bytes(digest, 20) <= 0 ||
+        RAND_pseudo_bytes(wrong_digest, 20) <= 0) {
         BIO_printf(out, "ERROR: unable to get random data\n");
         goto builtin_err;
     }
@@ -545,7 +546,7 @@ int main(void)
     if (ret)
         ERR_print_errors(out);
     CRYPTO_cleanup_all_ex_data();
-    ERR_remove_state(0);
+    ERR_remove_thread_state(NULL);
     ERR_free_strings();
     CRYPTO_mem_leaks(out);
     if (out != NULL)

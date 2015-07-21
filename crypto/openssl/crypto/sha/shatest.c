@@ -122,9 +122,9 @@ int main(int argc, char *argv[])
     R = ret;
     i = 1;
     while (*P != NULL) {
-        EVP_Digest(*P, strlen((char *)*P), md, NULL, EVP_sha(), NULL);
+        EVP_Digest(*P, strlen(*P), md, NULL, EVP_sha(), NULL);
         p = pt(md);
-        if (strcmp(p, (char *)*R) != 0) {
+        if (strcmp(p, *R) != 0) {
             printf("error calculating SHA on '%s'\n", *P);
             printf("got %s instead of %s\n", p, *R);
             err++;

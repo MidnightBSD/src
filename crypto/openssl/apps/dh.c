@@ -328,4 +328,10 @@ int MAIN(int argc, char **argv)
     apps_shutdown();
     OPENSSL_EXIT(ret);
 }
+#else                           /* !OPENSSL_NO_DH */
+
+# if PEDANTIC
+static void *dummy = &dummy;
+# endif
+
 #endif

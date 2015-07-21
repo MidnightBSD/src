@@ -94,7 +94,7 @@ static int cca_rsa_sign(int type, const unsigned char *m, unsigned int m_len,
                         unsigned char *sigret, unsigned int *siglen,
                         const RSA *rsa);
 static int cca_rsa_verify(int dtype, const unsigned char *m,
-                          unsigned int m_len, unsigned char *sigbuf,
+                          unsigned int m_len, const unsigned char *sigbuf,
                           unsigned int siglen, const RSA *rsa);
 
 /* utility functions */
@@ -476,10 +476,6 @@ static EVP_PKEY *ibm_4758_load_privkey(ENGINE *e, const char *key_id,
  err:
     if (keyToken)
         OPENSSL_free(keyToken);
-    if (res)
-        EVP_PKEY_free(res);
-    if (rtmp)
-        RSA_free(rtmp);
     return NULL;
 }
 
@@ -550,10 +546,6 @@ static EVP_PKEY *ibm_4758_load_pubkey(ENGINE *e, const char *key_id,
  err:
     if (keyToken)
         OPENSSL_free(keyToken);
-    if (res)
-        EVP_PKEY_free(res);
-    if (rtmp)
-        RSA_free(rtmp);
     return NULL;
 }
 
@@ -616,7 +608,7 @@ static int cca_rsa_priv_dec(int flen, const unsigned char *from,
 #   define SSL_SIG_LEN 36
 
 static int cca_rsa_verify(int type, const unsigned char *m,
-                          unsigned int m_len, unsigned char *sigbuf,
+                          unsigned int m_len, const unsigned char *sigbuf,
                           unsigned int siglen, const RSA *rsa)
 {
     long returnCode;
@@ -715,7 +707,7 @@ static int cca_rsa_verify(int type, const unsigned char *m,
     digitalSignatureVerify(&returnCode, &reasonCode, &exitDataLength,
                            exitData, &ruleArrayLength, ruleArray,
                            &keyTokenLength, keyToken, &length, hashBuffer,
-                           &lsiglen, sigbuf);
+                           &lsiglen, (unsigned char *)sigbuf);
 
     if (type == NID_sha1 || type == NID_md5) {
         OPENSSL_cleanse(hashBuffer, keyLength + 1);
