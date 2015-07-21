@@ -34,7 +34,7 @@ extern "C" {
 # ifdef OPENSSL_FIPS
 #  define OPENSSL_VERSION_TEXT    "OpenSSL 1.0.1o-fips 12 Jun 2015"
 # else
-#  define OPENSSL_VERSION_TEXT    "OpenSSL 1.0.1o 12 Jun 2015"
+#  define OPENSSL_VERSION_TEXT    "OpenSSL 1.0.1o-freebsd 12 Jun 2015"
 # endif
 # define OPENSSL_VERSION_PTEXT   " part of " OPENSSL_VERSION_TEXT
 
@@ -88,7 +88,7 @@ extern "C" {
  * should only keep the versions that are binary compatible with the current.
  */
 # define SHLIB_VERSION_HISTORY ""
-# define SHLIB_VERSION_NUMBER "1.0.0"
+# define SHLIB_VERSION_NUMBER "7"
 
 
 #ifdef  __cplusplus

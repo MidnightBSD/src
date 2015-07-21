@@ -222,7 +222,7 @@ int RAND_poll(void)
     }
     return 1;
 }
-# elif defined __OpenBSD__
+# elif defined(__FreeBSD__) || defined(__OpenBSD__)
 int RAND_poll(void)
 {
     u_int32_t rnd = 0, i;
@@ -239,7 +239,8 @@ int RAND_poll(void)
 
     return 1;
 }
-# else                          /* !defined(__OpenBSD__) */
+# else                          /* !(defined(__FreeBSD__) ||
+                                 * defined(__OpenBSD__)) */
 int RAND_poll(void)
 {
     unsigned long l;
@@ -431,7 +432,8 @@ int RAND_poll(void)
 #  endif
 }
 
-# endif                         /* defined(__OpenBSD__) */
+# endif                         /* defined(__FreeBSD__) ||
+                                 * defined(__OpenBSD__) */
 #endif                          /* !(defined(OPENSSL_SYS_WINDOWS) ||
                                  * defined(OPENSSL_SYS_WIN32) ||
                                  * defined(OPENSSL_SYS_VMS) ||
