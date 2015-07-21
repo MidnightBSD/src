@@ -51389,7 +51389,6 @@ share/doc/smm/01.setup/6.t -text
 share/doc/smm/01.setup/Makefile -text
 share/doc/smm/01.setup/spell.ok -text
 share/doc/smm/01.setup/stubs -text
-share/doc/smm/02.config/Makefile -text
 share/doc/smm/03.fsck/0.t -text
 share/doc/smm/03.fsck/1.t -text
 share/doc/smm/03.fsck/2.t -text

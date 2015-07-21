@@ -13,7 +13,6 @@
 SUBDIR=	title \
 	contents \
 	01.setup \
-	02.config \
 	03.fsck \
 	04.quotas \
 	05.fastfs \
