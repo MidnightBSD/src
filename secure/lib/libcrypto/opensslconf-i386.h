@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $FreeBSD: /usr/local/www/cvsroot/FreeBSD/src/secure/lib/libcrypto/opensslconf-i386.h,v 1.8.2.1 2010/11/28 13:45:51 simon Exp $ */
 /* opensslconf.h */
 /* WARNING: Generated automatically from opensslconf.h.in by Configure. */

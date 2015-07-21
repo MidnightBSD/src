@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: src/secure/lib/libcrypto/engines/Makefile.inc,v 1.1 2006/07/29 19:41:32 simon Exp $
+# $FreeBSD: stable/10/secure/lib/libcrypto/engines/Makefile.inc 238405 2012-07-12 19:30:53Z jkim $
 
 LCRYPTO_SRC=	${.CURDIR}/../../../../../crypto/openssl
-.PATH: ${LCRYPTO_SRC}/engines
+.PATH: ${LCRYPTO_SRC}/engines ${LCRYPTO_SRC}/engines/ccgost
 
 SHLIBDIR?= /usr/lib/engines

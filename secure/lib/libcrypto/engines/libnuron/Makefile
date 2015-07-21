@@ -1,4 +1,4 @@
-# $FreeBSD: src/secure/lib/libcrypto/engines/libnuron/Makefile,v 1.1 2006/07/29 19:41:33 simon Exp $
+# $FreeBSD: stable/10/secure/lib/libcrypto/engines/libnuron/Makefile 160819 2006-07-29 19:41:41Z simon $
 
 SHLIB_NAME?= libnuron.so
 SRCS=	e_nuron.c

@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: src/secure/lib/libcrypto/engines/Makefile,v 1.1 2006/07/29 19:41:32 simon Exp $
+# $FreeBSD: stable/10/secure/lib/libcrypto/engines/Makefile 238405 2012-07-12 19:30:53Z jkim $
 
-SUBDIR=	lib4758cca libaep libatalla libcswift libchil libnuron \
+SUBDIR=	lib4758cca libaep libatalla libchil libcswift libgost libnuron \
 	libsureware libubsec
 
 .include <bsd.subdir.mk>
