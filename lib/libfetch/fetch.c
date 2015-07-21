@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/10/lib/libfetch/fetch.c 252375 2013-06-29 15:51:27Z kientzle $");
 
 #include <sys/param.h>
 #include <sys/errno.h>

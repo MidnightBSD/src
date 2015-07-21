@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/lib/libfetch/fetch.h 268900 2014-07-20 00:29:41Z bapt $
  */
 
 #ifndef _FETCH_H_INCLUDED
@@ -102,6 +102,8 @@ FILE		*fetchGetHTTP(struct url *, const char *);
 FILE		*fetchPutHTTP(struct url *, const char *);
 int		 fetchStatHTTP(struct url *, struct url_stat *, const char *);
 struct url_ent	*fetchListHTTP(struct url *, const char *);
+FILE		*fetchReqHTTP(struct url *, const char *, const char *,
+		    const char *, const char *);
 
 /* FTP-specific functions */
 FILE		*fetchXGetFTP(struct url *, struct url_stat *, const char *);
