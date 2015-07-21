@@ -51407,7 +51407,9 @@ secure/lib/libssl/man/SSL_CTX_set_max_cert_list.3 -text
 secure/lib/libssl/man/SSL_CTX_set_mode.3 -text
 secure/lib/libssl/man/SSL_CTX_set_msg_callback.3 -text
 secure/lib/libssl/man/SSL_CTX_set_options.3 -text
+secure/lib/libssl/man/SSL_CTX_set_psk_client_callback.3 svneol=native#text/plain
 secure/lib/libssl/man/SSL_CTX_set_quiet_shutdown.3 -text
+secure/lib/libssl/man/SSL_CTX_set_read_ahead.3 svneol=native#text/plain
 secure/lib/libssl/man/SSL_CTX_set_session_cache_mode.3 -text
 secure/lib/libssl/man/SSL_CTX_set_session_id_context.3 -text
 secure/lib/libssl/man/SSL_CTX_set_ssl_version.3 -text
@@ -51417,6 +51419,7 @@ secure/lib/libssl/man/SSL_CTX_set_tmp_dh_callback.3 -text
 secure/lib/libssl/man/SSL_CTX_set_tmp_rsa_callback.3 -text
 secure/lib/libssl/man/SSL_CTX_set_verify.3 -text
 secure/lib/libssl/man/SSL_CTX_use_certificate.3 -text
+secure/lib/libssl/man/SSL_CTX_use_psk_identity_hint.3 svneol=native#text/plain
 secure/lib/libssl/man/SSL_SESSION_free.3 -text
 secure/lib/libssl/man/SSL_SESSION_get_ex_new_index.3 -text
 secure/lib/libssl/man/SSL_SESSION_get_time.3 -text
@@ -51437,6 +51440,7 @@ secure/lib/libssl/man/SSL_get_ex_new_index.3 -text
 secure/lib/libssl/man/SSL_get_fd.3 -text
 secure/lib/libssl/man/SSL_get_peer_cert_chain.3 -text
 secure/lib/libssl/man/SSL_get_peer_certificate.3 -text
+secure/lib/libssl/man/SSL_get_psk_identity.3 svneol=native#text/plain
 secure/lib/libssl/man/SSL_get_rbio.3 -text
 secure/lib/libssl/man/SSL_get_session.3 -text
 secure/lib/libssl/man/SSL_get_verify_result.3 -text
