@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20150722:
+	MidnightBSD 0.6.3 RELEASE
+
+	Fix a bug where TCP connections transitioning to LAST_ACK
+	state can get stuck. This can result in a denial of service.
+
 20150621:
 	MidnightBSD 0.6.2 RELEASE
 
