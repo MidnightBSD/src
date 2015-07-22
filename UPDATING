@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20150722:
+	Fix a bug where TCP connections transitioning to LAST_ACK
+	state can get stuck. This can result in a denial of service.
+
 20150715:
 	libmport now supports @shell and @sample in plists. This means that
 	a shell port can automatically add an entry to /etc/shells and remove
