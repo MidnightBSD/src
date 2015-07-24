@@ -40680,8 +40680,8 @@ crypto/heimdal/ChangeLog.2003 -text
 crypto/heimdal/ChangeLog.2004 -text
 crypto/heimdal/ChangeLog.2005 -text
 crypto/heimdal/ChangeLog.2006 -text
-crypto/heimdal/FREEBSD-Xlist -text
 crypto/heimdal/LICENSE -text
+crypto/heimdal/MIDNIGHTBSD-Xlist -text
 crypto/heimdal/Makefile.am -text
 crypto/heimdal/Makefile.am.common -text
 crypto/heimdal/Makefile.in -text
