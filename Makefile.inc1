@@ -110,13 +110,8 @@ CLEANDIR=	clean cleandepend
 CLEANDIR=	cleandir
 .endif
 
-CVS?=		cvs
-CVSFLAGS?=	-r . -P -d -I!
-SUP?=		/usr/local/bin/cvsup
-SUPFLAGS?=	-g -L 2
-.if defined(SUPHOST)
-SUPFLAGS+=	-h ${SUPHOST}
-.endif
+SVN?=		/usr/local/bin/svn
+SVNFLAGS?=	-r HEAD
 
 MAKEOBJDIRPREFIX?=	/usr/obj
 .if !defined(OSRELDATE)
