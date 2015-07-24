@@ -992,11 +992,11 @@ legacy:
 .endif
 .for _tool in tools/build
 	${_+_}@${ECHODIR} "===> ${_tool} (obj,includes,depend,all,install)"; \
-	    cd ${.CURDIR}/${_tool}; \
-	    ${MAKE} DIRPRFX=${_tool}/ obj; \
-	    ${MAKE} DIRPRFX=${_tool}/ DESTDIR=${MAKEOBJDIRPREFIX}/legacy includes; \
-	    ${MAKE} DIRPRFX=${_tool}/ depend; \
-	    ${MAKE} DIRPRFX=${_tool}/ all; \
+	    cd ${.CURDIR}/${_tool} && \
+	    ${MAKE} DIRPRFX=${_tool}/ obj && \
+	    ${MAKE} DIRPRFX=${_tool}/ DESTDIR=${MAKEOBJDIRPREFIX}/legacy includes && \
+	    ${MAKE} DIRPRFX=${_tool}/ depend && \
+	    ${MAKE} DIRPRFX=${_tool}/ all && \
 	    ${MAKE} DIRPRFX=${_tool}/ DESTDIR=${MAKEOBJDIRPREFIX}/legacy install
 .endfor
 
@@ -1027,12 +1027,17 @@ _mklocale=	usr.bin/mklocale
 _sed=		usr.bin/sed
 .endif
 
-.if ${BOOTSTRAPPING} < 4015
+.if ${BOOTSTRAPPING} < 7002
+_m4=		usr.bin/m4
+.endif
+
+.if ${BOOTSTRAPPING} < 7002
 _lex=		usr.bin/lex
 .endif
 
-.if ${BOOTSTRAPPING} < 4015
-_yacc=		usr.bin/yacc
+.if ${BOOTSTRAPPING} < 7002
+_yacc=		lib/liby \
+		usr.bin/yacc
 .endif
 
 .if ${MK_BSNMP} != "no" && \
