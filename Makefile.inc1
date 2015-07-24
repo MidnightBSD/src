@@ -986,8 +986,8 @@ update:
 # legacy: Build compatibility shims for the next three targets
 #
 legacy:
-.if ${BOOTSTRAPPING} < 1000 && ${BOOTSTRAPPING} != 0
-	@echo "ERROR: Source upgrades from versions prior to 0.1 not supported."; \
+.if ${BOOTSTRAPPING} < 4000 && ${BOOTSTRAPPING} != 0
+	@echo "ERROR: Source upgrades from versions prior to 0.4 not supported."; \
 	false
 .endif
 .for _tool in tools/build
