@@ -1,5 +1,5 @@
 #include "ftp_locl.h"
-RCSID("$Id: globals.c,v 1.1.1.3 2012-07-21 15:09:09 laffer1 Exp $");
+RCSID("$Id$");
 
 /*
  * Options and other state info.
@@ -74,6 +74,6 @@ char macbuf[4096];
 
 char username[32];
 
-/* these are set in ruserpass */
+/* these are set in ruserpassword */
 char myhostname[MaxHostNameLen];
 char *mydomain;

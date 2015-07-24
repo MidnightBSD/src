@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.1.1.3 2012-07-21 15:09:09 laffer1 Exp $
+# $Id$
 
 include $(top_srcdir)/Makefile.am.common
 
@@ -10,6 +10,6 @@ rcp_SOURCES  = rcp.c util.c rcp_locl.h extern.h
 
 man_MANS = rcp.1
 
-EXTRA_DIST = $(man_MANS)
+EXTRA_DIST = NTMakefile $(man_MANS)
 
 LDADD = $(LIB_roken)

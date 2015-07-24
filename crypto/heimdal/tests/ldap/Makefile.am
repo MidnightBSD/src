@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.1.1.1 2012-07-21 15:09:06 laffer1 Exp $
+# $Id$
 
 include $(top_srcdir)/Makefile.am.common
 
@@ -43,6 +43,7 @@ CLEANFILES= \
 	slapd.pid
 
 EXTRA_DIST = \
+	NTMakefile \
 	samba.schema \
 	slapd.conf \
 	slapd-stop \

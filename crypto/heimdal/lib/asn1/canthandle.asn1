@@ -1,4 +1,4 @@
--- $Id: canthandle.asn1,v 1.1.1.1 2012-07-21 15:09:08 laffer1 Exp $ --
+-- $Id$ --
 
 CANTHANDLE DEFINITIONS ::= BEGIN
 
@@ -7,7 +7,7 @@ CANTHANDLE DEFINITIONS ::= BEGIN
 -- Code the tag [2] but it should be primitive since KAKA3 is
 -- Workaround: use the INTEGER type directly
 
-Kaka2  ::= SEQUENCE { 
+Kaka2  ::= SEQUENCE {
         kaka2-1 [0] INTEGER
 }
 

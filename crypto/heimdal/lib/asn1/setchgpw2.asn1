@@ -1,4 +1,4 @@
--- $Id: setchgpw2.asn1,v 1.1.1.1 2012-07-21 15:09:08 laffer1 Exp $
+-- $Id$
 
 SETCHGPW2 DEFINITIONS ::=
 BEGIN
@@ -138,7 +138,7 @@ Op-req ::= CHOICE {
 	get-supported-etypes[5]	Req-get-supported-etypes,
 	...
 }
- 
+
 Op-rep ::= CHOICE {
 	null[0]			Rep-null,
 	change-pw[1]		Rep-change-pw,

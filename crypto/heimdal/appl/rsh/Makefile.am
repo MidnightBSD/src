@@ -1,8 +1,8 @@
-# $Id: Makefile.am,v 1.1.1.3 2012-07-21 15:09:09 laffer1 Exp $
+# $Id$
 
 include $(top_srcdir)/Makefile.am.common
 
-AM_CPPFLAGS += $(INCLUDE_krb4) -I$(srcdir)/../login
+AM_CPPFLAGS += -I$(srcdir)/../login $(INCLUDE_hcrypto)
 
 bin_PROGRAMS = rsh
 
@@ -22,8 +22,7 @@ limits_conf.c:
 
 LDADD = $(LIB_kafs) \
 	$(LIB_krb5) \
-	$(LIB_krb4) \
 	$(LIB_hcrypto) \
 	$(LIB_roken)
 
-EXTRA_DIST = $(man_MANS)
+EXTRA_DIST = NTMakefile $(man_MANS)

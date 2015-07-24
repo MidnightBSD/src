@@ -1,3 +1,5 @@
-# $Id: heimdal.acl,v 1.1.1.1 2012-07-21 15:09:06 laffer1 Exp $
 foo/admin@TEST.H5L.SE all
 bar@TEST.H5L.SE all
+baz@TEST.H5L.SE get,add *
+bez@TEST.H5L.SE get,add *@TEST.H5L.SE
+fez@TEST.H5L.SE get,add

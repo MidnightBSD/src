@@ -1,11 +1,13 @@
-# $Id: Makefile.am,v 1.1.1.1 2012-07-21 15:09:06 laffer1 Exp $
+# $Id$
 
 include $(top_srcdir)/Makefile.am.common
 
-SUBDIRS = db kdc gss ldap can java
+SUBDIRS = bin db kdc gss ldap can java
 
 if ENABLE_SHARED
 if HAVE_DLOPEN
 SUBDIRS += plugin
 endif
 endif
+
+EXTRA_DIST = NTMakefile

@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $
+# $Id$
 
 include $(top_srcdir)/Makefile.am.common
 
@@ -8,4 +8,4 @@ dist-hook:
 	$(mkinstalldirs) $(distdir)/arpa
 	$(INSTALL_DATA) $(srcdir)/arpa/telnet.h $(distdir)/arpa
 
-EXTRA_DIST = README.ORIG telnet.state
+EXTRA_DIST = NTMakefile README.ORIG telnet.state

@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $
+# $Id$
 
 include $(top_srcdir)/Makefile.am.common
 
@@ -19,7 +19,6 @@ kpasswdd_SOURCES = kpasswdd.c kpasswd_locl.h
 kpasswdd_LDADD = \
 	$(top_builddir)/lib/kadm5/libkadm5srv.la \
 	$(top_builddir)/lib/hdb/libhdb.la \
-	$(LIB_openldap) \
 	$(LDADD) \
 	$(LIB_pidfile) \
 	$(LIB_dlopen) \
@@ -30,4 +29,4 @@ LDADD = $(top_builddir)/lib/krb5/libkrb5.la \
 	$(top_builddir)/lib/asn1/libasn1.la \
 	$(LIB_roken)
 
-EXTRA_DIST = $(man_MANS)
+EXTRA_DIST = NTMakefile $(man_MANS)

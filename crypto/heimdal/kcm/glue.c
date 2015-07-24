@@ -32,7 +32,7 @@
 
 #include "kcm_locl.h"
 
-RCSID("$Id: glue.c,v 1.1.1.1 2012-07-21 15:09:06 laffer1 Exp $");
+RCSID("$Id$");
 
 /*
  * Server-side loopback glue for credentials cache operations; this
@@ -247,6 +247,7 @@ kcmss_get_version(krb5_context context,
 }
 
 static const krb5_cc_ops krb5_kcmss_ops = {
+    KRB5_CC_OPS_VERSION,
     "KCM",
     kcmss_get_name,
     kcmss_resolve,

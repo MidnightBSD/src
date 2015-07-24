@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  */
 
-/* $Id: cfx.h,v 1.1.1.1 2012-07-21 15:09:06 laffer1 Exp $ */
+/* $Id$ */
 
 #ifndef GSSAPI_CFX_H_
 #define GSSAPI_CFX_H_ 1

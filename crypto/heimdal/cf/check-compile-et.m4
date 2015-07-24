@@ -1,4 +1,4 @@
-dnl $Id: check-compile-et.m4,v 1.1.1.3 2012-07-21 15:09:06 laffer1 Exp $
+dnl $Id$
 dnl
 dnl CHECK_COMPILE_ET
 AC_DEFUN([CHECK_COMPILE_ET], [
@@ -67,6 +67,7 @@ elif test "${krb_cv_compile_et}" = "yes"; then
     const char *p;
     p = error_message(0);
     initialize_error_table_r(0,0,0,0);
+    com_right_r(0, 0, 0, 0);
   ]])],[krb_cv_com_err="yes"],[krb_cv_com_err="no"; CPPFLAGS="${save_CPPFLAGS}"])
   AC_MSG_RESULT(${krb_cv_com_err})
   LIBS="${krb_cv_save_LIBS}"
@@ -83,6 +84,7 @@ if test "${krb_cv_com_err}" = "yes"; then
     LIB_com_err_a=""
     LIB_com_err_so=""
     AC_MSG_NOTICE(Using the already-installed com_err)
+    COMPILE_ET="${ac_cv_prog_COMPILE_ET}"
     localcomerr=no
 elif test "${krb_cv_com_err}" = "cross"; then
     DIR_com_err="com_err"
@@ -90,6 +92,7 @@ elif test "${krb_cv_com_err}" = "cross"; then
     LIB_com_err_a="\$(top_builddir)/lib/com_err/.libs/libcom_err.a"
     LIB_com_err_so="\$(top_builddir)/lib/com_err/.libs/libcom_err.so"
     AC_MSG_NOTICE(Using our own com_err with toolchain compile_et)
+    COMPILE_ET="${ac_cv_prog_COMPILE_ET}"
     localcomerr=yes
 else
     COMPILE_ET="\$(top_builddir)/lib/com_err/compile_et"
@@ -101,6 +104,7 @@ else
     localcomerr=yes
 fi
 AM_CONDITIONAL(COM_ERR, test "$localcomerr" = yes)dnl
+AC_SUBST(COMPILE_ET)
 AC_SUBST(DIR_com_err)
 AC_SUBST(LIB_com_err)
 AC_SUBST(LIB_com_err_a)

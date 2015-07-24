@@ -33,7 +33,7 @@
 
 #include "telnetd.h"
 
-RCSID("$Id: slc.c,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $");
+RCSID("$Id$");
 
 /*
  * get_slc_defaults
@@ -44,14 +44,14 @@ void
 get_slc_defaults(void)
 {
     int i;
-    
+
     init_termbuf();
-    
+
     for (i = 1; i <= NSLC; i++) {
 	slctab[i].defset.flag =
 	    spcset(i, &slctab[i].defset.val, &slctab[i].sptr);
 	slctab[i].current.flag = SLC_NOSUPPORT;
 	slctab[i].current.val = 0;
     }
-    
+
 }

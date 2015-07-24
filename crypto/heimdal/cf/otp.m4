@@ -1,4 +1,4 @@
-dnl $Id: otp.m4,v 1.1.1.3 2012-07-21 15:09:06 laffer1 Exp $
+dnl $Id$
 dnl
 dnl check requirements for OTP library
 dnl

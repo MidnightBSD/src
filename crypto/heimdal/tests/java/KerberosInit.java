@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2007 Kungliga Tekniska Högskolan
+ * Copyright (c) 2007 Kungliga Tekniska HÃ¶gskolan
  * (Royal Institute of Technology, Stockholm, Sweden). 
  * All rights reserved. 
  *
@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
  *
- * $Id: KerberosInit.java,v 1.1.1.1 2012-07-21 15:09:06 laffer1 Exp $
+ * $Id$
  */
 
 import javax.security.auth.login.*;

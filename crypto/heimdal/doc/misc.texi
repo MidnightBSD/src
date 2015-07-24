@@ -1,4 +1,4 @@
-@c $Id: misc.texi,v 1.1.1.3 2012-07-21 15:09:06 laffer1 Exp $
+@c $Id$
 
 @node Things in search for a better place, Kerberos 4 issues, Applications, Top
 @chapter Things in search for a better place

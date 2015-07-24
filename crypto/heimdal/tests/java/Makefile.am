@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.1.1.1 2012-07-21 15:09:06 laffer1 Exp $
+# $Id: Makefile.am 20739 2007-05-31 16:53:21Z lha $
 
 include $(top_srcdir)/Makefile.am.common
 
@@ -37,6 +37,7 @@ CLEANFILES= \
 
 
 EXTRA_DIST = \
+	NTMakefile \
 	KerberosInit.java \
 	jaas.conf \
 	check-kinit.in \

@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.1.1.3 2012-07-21 15:09:09 laffer1 Exp $
+# $Id$
 
 include $(top_srcdir)/Makefile.am.common
 
@@ -40,3 +40,5 @@ LDADD = $(top_builddir)/lib/krb5/libkrb5.la \
 	$(LIB_hcrypto) \
 	$(top_builddir)/lib/asn1/libasn1.la \
 	$(LIB_roken)
+
+EXTRA_DIST = NTMakefile

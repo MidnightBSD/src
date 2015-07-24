@@ -1,10 +1,8 @@
-# $Id: Makefile.am,v 1.1.1.3 2012-07-21 15:09:09 laffer1 Exp $
+# $Id$
 
 include $(top_srcdir)/Makefile.am.common
 
 AM_CPPFLAGS += $(INCLUDE_readline) $(INCLUDE_hcrypto)
-
-SLC = $(top_builddir)/lib/sl/slc
 
 man_MANS = ktutil.8
 
@@ -14,6 +12,7 @@ dist_ktutil_SOURCES =				\
 	add.c					\
 	change.c				\
 	copy.c					\
+	destroy.c				\
 	get.c					\
 	ktutil.c				\
 	ktutil_locl.h				\
@@ -41,4 +40,4 @@ LDADD = \
 	$(LIB_readline) \
 	$(LIB_roken)
 
-EXTRA_DIST = $(man_MANS) ktutil-commands.in
+EXTRA_DIST = NTMakefile ktutil-version.rc $(man_MANS) ktutil-commands.in

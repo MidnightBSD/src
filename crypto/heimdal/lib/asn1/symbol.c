@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997 - 2005 Kungliga Tekniska Högskolan
+ * Copyright (c) 1997 - 2005 Kungliga Tekniska HÃ¶gskolan
  * (Royal Institute of Technology, Stockholm, Sweden).
  * All rights reserved.
  *
@@ -34,8 +34,6 @@
 #include "gen_locl.h"
 #include "lex.h"
 
-RCSID("$Id: symbol.c,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $");
-
 static Hashtab *htab;
 
 static int
@@ -68,7 +66,7 @@ output_name(char *s)
     char *p;
 
     for (p = s; *p; ++p)
-	if (*p == '-')
+	if (*p == '-' || *p == '.')
 	    *p = '_';
 }
 
@@ -95,7 +93,7 @@ checkfunc(void *ptr, void *arg)
 {
     Symbol *s = ptr;
     if (s->stype == SUndefined) {
-	error_message("%s is still undefined\n", s->name);
+	lex_error_message("%s is still undefined\n", s->name);
 	*(int *) arg = 1;
     }
     return 0;

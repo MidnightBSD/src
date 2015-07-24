@@ -1,6 +1,7 @@
-# $Id: Makefile.am,v 1.1.1.1 2012-07-21 15:09:09 laffer1 Exp $
+# $Id$
 
 include $(top_srcdir)/Makefile.am.common
 
-CLEANFILES = gssapi.h gssapi_krb5.h gssapi_spnego.h
+CLEANFILES = gssapi.h gssapi_krb5.h gssapi_spnego.h gssapi_ntlm.h gssapi_oid.h
 
+EXTRA_DIST = NTMakefile

@@ -1,5 +1,5 @@
 dnl
-dnl $Id: vararray.m4,v 1.1.1.1 2012-07-21 15:09:06 laffer1 Exp $
+dnl $Id$
 dnl
 dnl Test for variable size arrays.
 dnl

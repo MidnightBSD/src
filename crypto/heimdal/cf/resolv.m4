@@ -1,11 +1,11 @@
 dnl stuff used by DNS resolv code in roken
 dnl
-dnl $Id: resolv.m4,v 1.1.1.1 2012-07-21 15:09:06 laffer1 Exp $
+dnl $Id$
 dnl
 
 AC_DEFUN([rk_RESOLV],[
 
-AC_CHECK_HEADERS([arpa/nameser.h])
+AC_CHECK_HEADERS([arpa/nameser.h dns.h])
 
 AC_CHECK_HEADERS(resolv.h, , , [AC_INCLUDES_DEFAULT
 #ifdef HAVE_SYS_TYPES_H
@@ -72,6 +72,15 @@ AC_FIND_FUNC(res_ndestroy, resolv,
 #endif
 ],
 [0])
+
+AC_FIND_FUNC_NO_LIBS(dns_search,,
+[
+#ifdef HAVE_DNS_H
+#include <dns.h>
+#endif
+],
+[0,0,0,0,0,0,0,0])
+
 
 AC_FIND_FUNC(dn_expand, resolv,
 [

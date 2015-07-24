@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.1.1.1 2012-07-21 15:09:06 laffer1 Exp $
+# $Id$
 
 include $(top_srcdir)/Makefile.am.common
 
@@ -39,5 +39,6 @@ CLEANFILES= \
 	messages.log
 
 EXTRA_DIST = \
+	NTMakefile \
 	check-pac.in \
 	krb5.conf.in

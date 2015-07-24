@@ -33,7 +33,7 @@
 
 #include <config.h>
 
-RCSID("$Id: rsaencpwd.c,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $");
+RCSID("$Id$");
 
 #ifdef	RSA_ENCPWD
 /*
@@ -403,11 +403,10 @@ rsaencpwd_status(ap, name, name_sz, level)
 #define	ADDC(buf, len, c)	if ((len) > 0) {*(buf)++ = (c); --(len);}
 
 	void
-rsaencpwd_printsub(data, cnt, buf, buflen)
-	unsigned char *data, *buf;
-	int cnt, buflen;
+rsaencpwd_printsub(unsigned char *data, size_t cnt,
+		   unsigned char * buf, size_t buflen)
 {
-	int i;
+	size_t i;
 
 	buf[buflen-1] = '\0';		/* make sure it's NULL terminated */
 	buflen -= 1;

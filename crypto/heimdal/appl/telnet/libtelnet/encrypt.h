@@ -55,7 +55,7 @@
  * or implied warranty.
  */
 
-/* $Id: encrypt.h,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $ */
+/* $Id$ */
 
 #ifndef	__ENCRYPT__
 #define	__ENCRYPT__
@@ -85,7 +85,7 @@ typedef struct {
 	int	(*reply) (unsigned char *, int);
 	void	(*session) (Session_Key *, int);
 	int	(*keyid) (int, unsigned char *, int *);
-	void	(*printsub) (unsigned char *, int, unsigned char *, int);
+	void	(*printsub) (unsigned char *, size_t, unsigned char *, size_t);
 } Encryptions;
 
 #define	SK_DES		1	/* Matched Kerberos v5 KEYTYPE_DES */

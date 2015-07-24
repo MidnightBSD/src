@@ -1,4 +1,4 @@
-# $Id: mit-pkinit-20070607.xf,v 1.1.1.1 2012-07-21 15:09:06 laffer1 Exp $
+# $Id$
 
 [libdefaults]
 	default_realm = HEIMDAL.CITI.UMICH.EDU

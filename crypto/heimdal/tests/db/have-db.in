@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (c) 2006 Kungliga Tekniska Högskolan
+# Copyright (c) 2006 Kungliga Tekniska HÃ¶gskolan
 # (Royal Institute of Technology, Stockholm, Sweden). 
 # All rights reserved. 
 #
@@ -31,13 +31,12 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
 # SUCH DAMAGE. 
 #
-# $Id: have-db.in,v 1.1.1.1 2012-07-21 15:09:06 laffer1 Exp $
+# $Id$
 #
 
-srcdir="@srcdir@"
-base=`dirname "$0"`
+top_builddir="@top_builddir@"
 
-kdc="${base}/../../kdc/kdc"
+. ${top_builddir}/tests/bin/setup-env
 
 list=`${kdc} --builtin-hdb | sed 's/^builtin hdb backends: //'`
 oldIFS="$IFS"
@@ -48,7 +47,6 @@ IFS="$oldIFS"
 while [ $# != 0 ] ; do
     case $1 in
     db:*) exit 0 ;;
-    ndbm:*) exit 0 ;;
     gdbm:*) exit 0 ;;
     db4:*) exit 0 ;;
     db3:*) exit 0 ;;

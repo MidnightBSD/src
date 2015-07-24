@@ -1,4 +1,4 @@
-dnl $Id: krb-prog-ranlib.m4,v 1.1.1.3 2012-07-21 15:09:06 laffer1 Exp $
+dnl $Id$
 dnl
 dnl
 dnl Also look for EMXOMF for OS/2

@@ -1,5 +1,4 @@
-dnl $Id: acinclude.m4,v 1.1.1.1 2012-07-21 15:09:06 laffer1 Exp $
-dnl $FreeBSD$
+dnl $Id$
 dnl
 dnl Only put things that for some reason can't live in the `cf'
 dnl directory in this file.

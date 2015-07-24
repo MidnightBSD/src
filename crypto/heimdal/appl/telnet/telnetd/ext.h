@@ -33,7 +33,7 @@
  *	@(#)ext.h	8.2 (Berkeley) 12/15/93
  */
 
-/* $Id: ext.h,v 1.1.1.3 2012-07-21 15:09:08 laffer1 Exp $ */
+/* $Id$ */
 
 #ifndef __EXT_H__
 #define __EXT_H__
@@ -147,8 +147,8 @@ void putstr (char *s);
 void putchr (int cc);
 void putf (char *cp, char *where);
 void printoption (char *fmt, int option);
-void printsub (int direction, unsigned char *pointer, int length);
-void printdata (char *tag, char *ptr, int cnt);
+void printsub (int direction, unsigned char *pointer, size_t length);
+void printdata (char *tag, char *ptr, size_t cnt);
 int login_tty(int t);
 
 #ifdef ENCRYPTION

@@ -1,4 +1,4 @@
--- $Id: pkcs12.asn1,v 1.1.1.1 2012-07-21 15:09:08 laffer1 Exp $ --
+-- $Id$ --
 
 PKCS12 DEFINITIONS ::=
 
@@ -50,7 +50,7 @@ PKCS12-AuthenticatedSafe ::= SEQUENCE OF ContentInfo
 
 PKCS12-Attribute ::= SEQUENCE {
 	attrId	   	OBJECT IDENTIFIER,
-	attrValues 	-- SET OF -- heim_any_set 
+	attrValues 	-- SET OF -- heim_any_set
 }
 
 PKCS12-Attributes ::= SET OF PKCS12-Attribute

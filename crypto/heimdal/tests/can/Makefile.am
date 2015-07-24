@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.1.1.1 2012-07-21 15:09:06 laffer1 Exp $
+# $Id$
 
 include $(top_srcdir)/Makefile.am.common
 
@@ -14,7 +14,8 @@ port = 49188
 do_subst = sed -e 's,[@]srcdir[@],$(srcdir),g' \
 	-e 's,[@]port[@],$(port),g' \
 	-e 's,[@]objdir[@],$(top_builddir)/tests/can,g' \
-	-e 's,[@]EGREP[@],$(EGREP),g' 
+	-e 's,[@]EGREP[@],$(EGREP),g' \
+	-e 's,[@]env_setup[@],$(top_builddir)/tests/bin/setup-env,g'
 
 test_can: test_can.in Makefile
 	$(do_subst) < $(srcdir)/test_can.in > test_can.tmp
@@ -43,6 +44,7 @@ CLEANFILES= $(TESTS) *.tmp *.cf \
 	test_can
 
 EXTRA_DIST = \
+	NTMakefile \
 	apple-10.4.kadm \
 	apple-10.4.req \
 	check-can.in \

@@ -1,4 +1,4 @@
-dnl $Id: broken-getaddrinfo.m4,v 1.1.1.3 2012-07-21 15:09:06 laffer1 Exp $
+dnl $Id$
 dnl
 dnl test if getaddrinfo can handle numeric services
 
@@ -23,4 +23,4 @@ main(int argc, char **argv)
 		return 1;
 	return 0;
 }
-]])],[ac_cv_func_getaddrinfo_numserv=yes],[ac_cv_func_getaddrinfo_numserv=no]))])
+]])],[ac_cv_func_getaddrinfo_numserv=yes],[ac_cv_func_getaddrinfo_numserv=no],[ac_cv_func_getaddrinfo_numserv=yes]))])
