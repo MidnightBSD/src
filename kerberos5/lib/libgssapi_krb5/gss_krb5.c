@@ -23,16 +23,17 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$MidnightBSD$
+ *	$FreeBSD: stable/10/kerberos5/lib/libgssapi_krb5/gss_krb5.c 233294 2012-03-22 08:48:42Z stas $
  */
 
 #include <gssapi/gssapi.h>
 #include <gssapi/gssapi_krb5.h>
 
-/* RCSID("$Id: gss_krb5.c,v 1.2 2012-08-26 15:13:11 laffer1 Exp $"); */
+/* RCSID("$Id: gss_krb5.c 21889 2007-08-09 07:43:24Z lha $"); */
 
 #include <krb5.h>
 #include <roken.h>
+#include <der.h>
 
 OM_uint32
 gss_krb5_copy_ccache(OM_uint32 *minor_status,

@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/10/kerberos5/lib/libkadm5clnt/Makefile 236337 2012-05-30 22:21:25Z obrien $
 
 LIB=	kadm5clnt
 LDFLAGS=	-Wl,--no-undefined
@@ -8,6 +8,7 @@ DPADD=	${LIBCOM_ERR} ${LIBKRB5} ${LIBROKEN}
 INCS=	admin.h \
 	kadm5-private.h \
 	kadm5-protos.h \
+	kadm5-pwcheck.h \
 	kadm5_err.h \
 	private.h
 

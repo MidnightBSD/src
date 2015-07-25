@@ -1,13 +1,11 @@
-# $MidnightBSD: src/kerberos5/lib/libgssapi_krb5/Makefile,v 1.2 2012/08/26 15:13:11 laffer1 Exp $
+# $FreeBSD: stable/10/kerberos5/lib/libgssapi_krb5/Makefile 236337 2012-05-30 22:21:25Z obrien $
 
 LIB=	gssapi_krb5
 LDFLAGS= -Wl,-Bsymbolic -Wl,--no-undefined
 LDADD=	-lgssapi -lkrb5 -lhx509 -lcrypto -lroken -lasn1 -lcom_err -lcrypt
 DPADD=	${LIBGSSAPI} ${LIBKRB5} ${LIBHX509} ${LIBCRYPTO} ${LIBROKEN} ${LIBASN1} \
 	${LIBCOM_ERR} ${LIBCRYPT}
-
-WARNS?=	0
-NO_LINT=
+SHLIB_MAJOR=	10
 
 INCS=	${KRB5DIR}/lib/gssapi/gssapi/gssapi_krb5.h
 INCSDIR= ${INCLUDEDIR}/gssapi
@@ -17,7 +15,9 @@ SRCS=	8003.c \
 	acquire_cred.c \
 	add_cred.c \
 	address_to_krb5addr.c \
+	aeap.c \
 	arcfour.c \
+	authorize_localname.c \
 	canonicalize_name.c \
 	ccache_name.c \
 	cfx.c \
@@ -25,6 +25,7 @@ SRCS=	8003.c \
 	compat.c \
 	context_time.c \
 	copy_ccache.c \
+	creds.c \
 	decapsulate.c \
 	delete_sec_context.c \
 	display_name.c \
@@ -59,11 +60,13 @@ SRCS=	8003.c \
 	sequence.c \
 	set_cred_option.c \
 	set_sec_context_option.c \
+	store_cred.c \
+	ticket_flags.c \
 	unwrap.c \
-	v1.c \
 	verify_mic.c \
 	wrap.c \
-	gss_krb5.c
+	gss_krb5.c \
+	gss_oid.c
 
 #SRCS+=	gss_add_oid_set_member.c \
 #	gss_create_empty_oid_set.c \
@@ -74,6 +77,7 @@ SRCS=	8003.c \
 
 CFLAGS+=-I${KRB5DIR}/lib/gssapi
 CFLAGS+=-I${KRB5DIR}/lib/gssapi/krb5
+CFLAGS+=-I${KRB5DIR}/lib/gssapi/gssapi
 CFLAGS+=-I${KRB5DIR}/lib/krb5
 CFLAGS+=-I${KRB5DIR}/lib/asn1
 CFLAGS+=-I${KRB5DIR}/lib/roken -I.

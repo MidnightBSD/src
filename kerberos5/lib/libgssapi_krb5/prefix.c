@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/10/kerberos5/lib/libgssapi_krb5/prefix.c 178828 2008-05-07 13:53:12Z dfr $
  */
 
 const char *
