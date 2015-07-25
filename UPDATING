@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20160725:
+	Import reallocarray from OpenBSD's libc.  
+
+	The reallocarray() function is similar to realloc() except it operates on 
+	nmemb members of size size and checks for integer overflow in the 
+	calculation nmemb * size.
+
 20150722:
 	Fix a bug where TCP connections transitioning to LAST_ACK
 	state can get stuck. This can result in a denial of service.
