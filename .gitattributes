@@ -42324,21 +42324,13 @@ crypto/heimdal/kuser/kswitch.c -text
 crypto/heimdal/kuser/kswitch.cat1 -text
 crypto/heimdal/kuser/kuser_locl.h -text
 crypto/heimdal/kuser/kverify.c -text
-crypto/heimdal/lib/45/45_locl.h -text
-crypto/heimdal/lib/45/Makefile.am -text
-crypto/heimdal/lib/45/Makefile.in -text
-crypto/heimdal/lib/45/get_ad_tkt.c -text
-crypto/heimdal/lib/45/mk_req.c -text
 crypto/heimdal/lib/Makefile.am -text
 crypto/heimdal/lib/Makefile.in -text
-crypto/heimdal/lib/NTMakefile -text
 crypto/heimdal/lib/asn1/ChangeLog -text
 crypto/heimdal/lib/asn1/Makefile.am -text
 crypto/heimdal/lib/asn1/Makefile.in -text
-crypto/heimdal/lib/asn1/NTMakefile -text
 crypto/heimdal/lib/asn1/asn1-common.h -text
 crypto/heimdal/lib/asn1/asn1-template.h -text
-crypto/heimdal/lib/asn1/asn1_compile-version.rc -text
 crypto/heimdal/lib/asn1/asn1_err.et -text
 crypto/heimdal/lib/asn1/asn1_gen.c -text
 crypto/heimdal/lib/asn1/asn1_print.c -text
@@ -42347,12 +42339,10 @@ crypto/heimdal/lib/asn1/asn1parse.c -text
 crypto/heimdal/lib/asn1/asn1parse.h -text
 crypto/heimdal/lib/asn1/asn1parse.y -text
 crypto/heimdal/lib/asn1/canthandle.asn1 -text
-crypto/heimdal/lib/asn1/check-ber.c -text
 crypto/heimdal/lib/asn1/check-common.c -text
 crypto/heimdal/lib/asn1/check-common.h -text
 crypto/heimdal/lib/asn1/check-der.c -text
 crypto/heimdal/lib/asn1/check-gen.c -text
-crypto/heimdal/lib/asn1/check-template.c -text
 crypto/heimdal/lib/asn1/check-timegm.c -text
 crypto/heimdal/lib/asn1/cms.asn1 -text
 crypto/heimdal/lib/asn1/cms.opt -text
@@ -42389,10 +42379,7 @@ crypto/heimdal/lib/asn1/kx509.asn1 -text
 crypto/heimdal/lib/asn1/lex.c -text
 crypto/heimdal/lib/asn1/lex.h -text
 crypto/heimdal/lib/asn1/lex.l -text
-crypto/heimdal/lib/asn1/libasn1-exports.def -text
 crypto/heimdal/lib/asn1/main.c -text
-crypto/heimdal/lib/asn1/parse.c -text
-crypto/heimdal/lib/asn1/parse.h -text
 crypto/heimdal/lib/asn1/pkcs12.asn1 -text
 crypto/heimdal/lib/asn1/pkcs8.asn1 -text
 crypto/heimdal/lib/asn1/pkcs9.asn1 -text
@@ -43585,7 +43572,6 @@ crypto/heimdal/lib/otp/version-script.map -text
 crypto/heimdal/lib/roken/ChangeLog -text
 crypto/heimdal/lib/roken/Makefile.am -text
 crypto/heimdal/lib/roken/Makefile.in -text
-crypto/heimdal/lib/roken/NTMakefile -text
 crypto/heimdal/lib/roken/base64-test.c -text
 crypto/heimdal/lib/roken/base64.c -text
 crypto/heimdal/lib/roken/base64.h -text
@@ -43601,7 +43587,6 @@ crypto/heimdal/lib/roken/doxygen.c -text
 crypto/heimdal/lib/roken/dumpdata.c -text
 crypto/heimdal/lib/roken/ecalloc.3 -text
 crypto/heimdal/lib/roken/ecalloc.c -text
-crypto/heimdal/lib/roken/ecalloc.cat3 -text
 crypto/heimdal/lib/roken/emalloc.c -text
 crypto/heimdal/lib/roken/environment.c -text
 crypto/heimdal/lib/roken/eread.c -text
@@ -43626,7 +43611,6 @@ crypto/heimdal/lib/roken/getaddrinfo.c -text
 crypto/heimdal/lib/roken/getaddrinfo_hostspec.c -text
 crypto/heimdal/lib/roken/getarg.3 -text
 crypto/heimdal/lib/roken/getarg.c -text
-crypto/heimdal/lib/roken/getarg.cat3 -text
 crypto/heimdal/lib/roken/getarg.h -text
 crypto/heimdal/lib/roken/getcap.c -text
 crypto/heimdal/lib/roken/getcwd.c -text
@@ -43635,7 +43619,6 @@ crypto/heimdal/lib/roken/getegid.c -text
 crypto/heimdal/lib/roken/geteuid.c -text
 crypto/heimdal/lib/roken/getgid.c -text
 crypto/heimdal/lib/roken/gethostname.c -text
-crypto/heimdal/lib/roken/getifaddrs-test.c -text
 crypto/heimdal/lib/roken/getifaddrs.c -text
 crypto/heimdal/lib/roken/getipnodebyaddr.c -text
 crypto/heimdal/lib/roken/getipnodebyname.c -text
@@ -43683,7 +43666,6 @@ crypto/heimdal/lib/roken/parse_reply-test.c -text
 crypto/heimdal/lib/roken/parse_time-test.c -text
 crypto/heimdal/lib/roken/parse_time.3 -text
 crypto/heimdal/lib/roken/parse_time.c -text
-crypto/heimdal/lib/roken/parse_time.cat3 -text
 crypto/heimdal/lib/roken/parse_time.h -text
 crypto/heimdal/lib/roken/parse_units.c -text
 crypto/heimdal/lib/roken/parse_units.h -text
@@ -43704,7 +43686,6 @@ crypto/heimdal/lib/roken/roken.h.in -text
 crypto/heimdal/lib/roken/roken_gethostby.c -text
 crypto/heimdal/lib/roken/rtbl.3 -text
 crypto/heimdal/lib/roken/rtbl.c -text
-crypto/heimdal/lib/roken/rtbl.cat3 -text
 crypto/heimdal/lib/roken/rtbl.h -text
 crypto/heimdal/lib/roken/search.hin -text
 crypto/heimdal/lib/roken/sendmsg.c -text
@@ -43715,7 +43696,6 @@ crypto/heimdal/lib/roken/setprogname.c -text
 crypto/heimdal/lib/roken/signal.c -text
 crypto/heimdal/lib/roken/simple_exec.c -text
 crypto/heimdal/lib/roken/snprintf-test.c -text
-crypto/heimdal/lib/roken/snprintf-test.h -text
 crypto/heimdal/lib/roken/snprintf.c -text
 crypto/heimdal/lib/roken/socket.c -text
 crypto/heimdal/lib/roken/socket_wrapper.c -text
@@ -43747,7 +43727,6 @@ crypto/heimdal/lib/roken/test-readenv.c -text
 crypto/heimdal/lib/roken/timegm.c -text
 crypto/heimdal/lib/roken/timeval.c -text
 crypto/heimdal/lib/roken/tm2time.c -text
-crypto/heimdal/lib/roken/tsearch-test.c -text
 crypto/heimdal/lib/roken/tsearch.c -text
 crypto/heimdal/lib/roken/unsetenv.c -text
 crypto/heimdal/lib/roken/unvis.c -text
@@ -43756,7 +43735,6 @@ crypto/heimdal/lib/roken/verr.c -text
 crypto/heimdal/lib/roken/verrx.c -text
 crypto/heimdal/lib/roken/version-script.map -text
 crypto/heimdal/lib/roken/vis.c -text
-crypto/heimdal/lib/roken/vis.h -text
 crypto/heimdal/lib/roken/vis.hin -text
 crypto/heimdal/lib/roken/vsyslog.c -text
 crypto/heimdal/lib/roken/vwarn.c -text
