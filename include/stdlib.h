@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)stdlib.h	8.5 (Berkeley) 5/19/95
- * $MidnightBSD: src/include/stdlib.h,v 1.6 2012/10/20 17:17:25 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _STDLIB_H_
@@ -103,6 +103,9 @@ void	 qsort(void *, size_t, size_t,
 	    int (*)(const void *, const void *));
 int	 rand(void);
 void	*realloc(void *, size_t);
+#if __BSD_VISIBLE
+void    *reallocarray(void *, size_t, size_t);
+#endif
 void	 srand(unsigned);
 double	 strtod(const char * __restrict, char ** __restrict);
 float	 strtof(const char * __restrict, char ** __restrict);

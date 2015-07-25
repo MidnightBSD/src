@@ -30,13 +30,13 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)malloc.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD$
+.\" $MidnightBSD$
 .\"
-.Dd January 31, 2010
+.Dd July 25, 2015
 .Dt MALLOC 3
 .Os
 .Sh NAME
-.Nm malloc , calloc , realloc , free , reallocf , malloc_usable_size
+.Nm malloc , calloc , reallocarray, realloc , free , reallocf , malloc_usable_size
 .Nd general purpose memory allocation functions
 .Sh LIBRARY
 .Lb libc
@@ -46,6 +46,8 @@
 .Fn malloc "size_t size"
 .Ft void *
 .Fn calloc "size_t number" "size_t size"
+.Ft void *
+.Fn reallocarray "void *ptr" "size_t nmemb" "size_t size"
 .Ft void *
 .Fn realloc "void *ptr" "size_t size"
 .Ft void *
@@ -125,6 +127,13 @@ specific API designed to ease the problems with traditional coding styles
 for
 .Fn realloc
 causing memory leaks in libraries.
+.Pp
+The
+.Fn reallocarray
+function is similar to 
+.Fn realloc
+except it operates on nmemb members of size size and checks for integer overflow in
+the calculation nmemb * size.
 .Pp
 The
 .Fn free
@@ -589,3 +598,9 @@ The
 .Fn malloc_usable_size
 function first appeared in
 .Fx 7.0 .
+.Pp
+The
+.Fn reallocarray
+function first appeared in 
+OpenBSD 5.6 and was added to
+.Mx 0.7 .

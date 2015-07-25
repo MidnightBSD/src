@@ -9,7 +9,7 @@ MISRCS+=_Exit.c a64l.c abort.c abs.c atexit.c atof.c atoi.c atol.c atoll.c \
 	getsubopt.c hcreate.c heapsort.c imaxabs.c imaxdiv.c \
 	insque.c l64a.c labs.c ldiv.c llabs.c lldiv.c lsearch.c malloc.c \
 	merge.c ptsname.c qsort.c qsort_r.c quick_exit.c radixsort.c rand.c \
-	random.c reallocf.c realpath.c remque.c strfmon.c strtoimax.c \
+	random.c reallocarray.c reallocf.c realpath.c remque.c strfmon.c strtoimax.c \
 	strtol.c strtoll.c strtoq.c strtoul.c strtonum.c strtoull.c \
         strtoumax.c strtouq.c system.c tdelete.c tfind.c tsearch.c twalk.c
 
@@ -48,7 +48,7 @@ MLINKS+=strtod.3 strtof.3 strtod.3 strtold.3
 MLINKS+=strtol.3 strtoll.3 strtol.3 strtoq.3 strtol.3 strtoimax.3
 MLINKS+=strtoul.3 strtoull.3 strtoul.3 strtouq.3 strtoul.3 strtoumax.3
 MLINKS+=malloc.3 calloc.3 malloc.3 free.3 malloc.3 malloc.conf.5 \
-	malloc.3 realloc.3 malloc.3 reallocf.3 malloc.3 malloc_usable_size.3
+	malloc.3 realloc.3 malloc.3 reallocarray.3 malloc.3 reallocf.3 malloc.3 malloc_usable_size.3
 MLINKS+=tsearch.3 tdelete.3 tsearch.3 tfind.3 tsearch.3 twalk.3
 
 .if defined(MALLOC_PRODUCTION)
