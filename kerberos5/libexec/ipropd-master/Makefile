@@ -1,7 +1,7 @@
-# $MidnightBSD$
+# $FreeBSD: stable/10/kerberos5/libexec/ipropd-master/Makefile 233294 2012-03-22 08:48:42Z stas $
 
 PROG=	ipropd-master
-NO_MAN=
+MAN=	iprop.8
 SRCS=	ipropd_common.c ipropd_master.c kadm5_err.h
 CFLAGS+=-I${KRB5DIR}/lib/krb5 -I${KRB5DIR}/lib/asn1 -I${KRB5DIR}/lib/roken \
 	-I. ${LDAPCFLAGS}

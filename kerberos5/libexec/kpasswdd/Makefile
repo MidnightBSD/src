@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/10/kerberos5/libexec/kpasswdd/Makefile 178828 2008-05-07 13:53:12Z dfr $
 
 PROG=	kpasswdd
 MAN=	kpasswdd.8

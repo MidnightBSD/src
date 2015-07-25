@@ -1,7 +1,7 @@
-# $MidnightBSD$
+# $FreeBSD: stable/10/kerberos5/libexec/ipropd-slave/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
 PROG=	ipropd-slave
-NO_MAN=
+MAN=
 SRCS=	ipropd_common.c ipropd_slave.c kadm5_err.h
 CFLAGS+=-I${KRB5DIR}/lib/krb5 -I${KRB5DIR}/lib/asn1 -I${KRB5DIR}/lib/roken \
 	-I. ${LDAPCFLAGS}

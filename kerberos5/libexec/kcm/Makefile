@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/10/kerberos5/libexec/kcm/Makefile 255455 2013-09-10 18:40:43Z des $
 
 PROG=	kcm
 MAN=	kcm.8
@@ -9,23 +9,21 @@ SRCS=	acl.c \
 	client.c \
 	config.c \
 	connect.c \
-	cursor.c \
 	events.c \
 	glue.c \
-	headers.h \
-	kcm_locl.h \
-	kcm_protos.h \
 	log.c \
 	main.c \
 	protocol.c \
+	sessions.c \
 	renew.c
 
 CFLAGS+=-I${KRB5DIR}/lib/krb5 -I${KRB5DIR}/lib/asn1 -I${KRB5DIR}/lib/roken \
-	-I${KRB5DIR}/kcm ${LDAPCFLAGS}
-DPADD=	${LIBKRB5} ${LIBHX509} ${LIBROKEN} ${LIBVERS} \
-	${LIBASN1} ${LIBCRYPTO} ${LIBCRYPT} ${LIBCOM_ERR} ${LDAPDPADD}
-LDADD=	-lkrb5 -lhx509 -lroken ${LIBVERS} \
-	-lasn1 -lcrypto -lcrypt -lcom_err ${LDAPLDADD}
+	-I${KRB5DIR}/kcm -I${KRB5DIR}/lib/ipc ${LDAPCFLAGS}
+DPADD=	${LIBHDB} ${LIBKRB5} ${LIBROKEN} ${LIBASN1} ${LIBHEIMNTLM} \
+	${LIBHEIMIPCS} ${LIBCRYPTO} ${LIBCRYPT} ${LIBVERS} ${LDAPDPADD}
+LDADD=	-lhdb -lkrb5 -lroken -lasn1 -lheimntlm -lheimipcs \
+	-lcrypto -lcrypt ${LIBVERS} ${LDAPLDADD}
+USEPRIVATELIB= heimipcs
 LDFLAGS=${LDAPLDFLAGS}
 
 .include <bsd.prog.mk>
