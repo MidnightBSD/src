@@ -48431,11 +48431,8 @@ kerberos5/Makefile -text
 kerberos5/Makefile.inc -text
 kerberos5/README -text
 kerberos5/doc/Makefile -text
-kerberos5/include/NTMakefile -text
 kerberos5/include/config.h -text
 kerberos5/include/crypto-headers.h -text
-kerberos5/include/heim_threads.h -text
-kerberos5/include/krb5-types.cross -text
 kerberos5/include/krb5-types.h -text
 kerberos5/include/version.h -text
 kerberos5/lib/Makefile -text
