@@ -175,6 +175,7 @@ gss_OID_desc GSSAPI_LIB_VARIABLE __gss_iakerb_min_msg_mechanism_oid_desc =
  * Context for krb5 calls.
  */
 
+#if 0
 static gss_mo_desc krb5_mo[] = {
     {
 	GSS_C_MA_SASL_MECH_NAME,
@@ -265,6 +266,7 @@ static gss_mo_desc krb5_mo[] = {
 	GSS_MO_MA
     }
 };
+#endif
 
 /*
  *
@@ -309,9 +311,15 @@ static gssapi_mech_interface_desc krb5_mech = {
     _gsskrb5_set_sec_context_option,
     _gsskrb5_set_cred_option,
     _gsskrb5_pseudo_random,
+#if 0
     _gk_wrap_iov,
     _gk_unwrap_iov,
     _gk_wrap_iov_length,
+#else
+    NULL,
+    NULL,
+    NULL,
+#endif
     _gsskrb5_store_cred,
     _gsskrb5_export_cred,
     _gsskrb5_import_cred,
@@ -322,8 +330,13 @@ static gssapi_mech_interface_desc krb5_mech = {
     NULL,
     NULL,
     NULL,
+#if 0
     krb5_mo,
     sizeof(krb5_mo) / sizeof(krb5_mo[0]),
+#else
+    NULL,
+    0,
+#endif
     _gsskrb5_pname_to_uid,
     _gsskrb5_authorize_localname,
     NULL,
