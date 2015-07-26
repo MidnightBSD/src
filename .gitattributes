@@ -42431,7 +42431,6 @@ crypto/heimdal/lib/com_err/version-script.map -text
 crypto/heimdal/lib/gssapi/ChangeLog -text
 crypto/heimdal/lib/gssapi/Makefile.am -text
 crypto/heimdal/lib/gssapi/Makefile.in -text
-crypto/heimdal/lib/gssapi/NTMakefile -text
 crypto/heimdal/lib/gssapi/gss-commands.in -text
 crypto/heimdal/lib/gssapi/gss.c -text
 crypto/heimdal/lib/gssapi/gss_acquire_cred.3 -text
