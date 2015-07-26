@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.libnames.mk,v 1.94.2.1 2005/07/24 16:17:25 rwatson Exp $
-# $MidnightBSD: src/share/mk/bsd.libnames.mk,v 1.14 2012/04/01 16:22:20 laffer1 Exp $
+# $MidnightBSD$
 
 # The include file <bsd.libnames.mk> define library names.
 # Other include files (e.g. bsd.prog.mk, bsd.lib.mk) include this
@@ -63,7 +63,11 @@ LIBGSSAPI?=	${DESTDIR}${LIBDIR}/libgssapi.a
 LIBGSSAPI_KRB5?= ${DESTDIR}${LIBDIR}/libgssapi_krb5.a
 LIBHDB?=	${DESTDIR}${LIBDIR}/libhdb.a
 LIBHISTORY?=	${DESTDIR}${LIBDIR}/libhistory.a
+LIBHEIMBASE?=	${DESTDIR}${LIBDIR}/libheimbase.a
+LIBHEIMIPCC?=	${DESTDIR}${LIBDIR}/libheimipcc.a
+LIBHEIMIPCS?=	${DESTDIR}${LIBDIR}/libheimipcs.a
 LIBHEIMNTLM?=	${DESTDIR}${LIBDIR}/libheimntlm.a
+LIBHEIMSQLITE?=	${DESTDIR}${LIBDIR}/libheimsqlite.a
 LIBHX509?=	${DESTDIR}${LIBDIR}/libhx509.a
 LIBIPSEC?=	${DESTDIR}${LIBDIR}/libipsec.a
 .if ${MK_IPX} != "no"
@@ -78,6 +82,7 @@ LIBJAIL?=	${DESTDIR}${LIBDIR}/libjail.a
 LIBKADM5CLNT?=	${DESTDIR}${LIBDIR}/libkadm5clnt.a
 LIBKADM5SRV?=	${DESTDIR}${LIBDIR}/libkadm5srv.a
 LIBKAFS5?=	${DESTDIR}${LIBDIR}/libkafs5.a
+LIBKDC?=	${DESTDIR}${LIBDIR}/libkdc.a
 LIBKEYCAP?=	${DESTDIR}${LIBDIR}/libkeycap.a
 LIBKICONV?=	${DESTDIR}${LIBDIR}/libkiconv.a
 LIBKRB5?=	${DESTDIR}${LIBDIR}/libkrb5.a
@@ -140,6 +145,7 @@ LIBPANEL?=	${DESTDIR}${LIBDIR}/libpanel.a
 LIBPCAP?=	${DESTDIR}${LIBDIR}/libpcap.a
 LIBPMC?=	${DESTDIR}${LIBDIR}/libpmc.a
 LIBPROC?=	${DESTDIR}${LIBDIR}/libproc.a
+LIBPROCSTAT?=	${DESTDIR}${LIBDIR}/libprocstat.a
 LIBPTHREAD?=	${DESTDIR}${LIBDIR}/libpthread.a
 LIBRADIUS?=	${DESTDIR}${LIBDIR}/libradius.a
 LIBREADLINE?=	${DESTDIR}${LIBDIR}/libreadline.a
@@ -154,6 +160,7 @@ LIBSMB?=	${DESTDIR}${LIBDIR}/libsmb.a
 LIBSQLITE3?=	${DESTDIR}${LIBDIR}/libsqlite3.a
 LIBSSH?=	${DESTDIR}${LIBDIR}/libssh.a
 LIBSSL?=	${DESTDIR}${LIBDIR}/libssl.a
+LIBSSP_NONSHARED?=	${DESTDIR}${LIBDIR}/libssp_nonshared.a
 LIBSTAND?=	${DESTDIR}${LIBDIR}/libstand.a
 LIBSTDCPLUSPLUS?= ${DESTDIR}${LIBDIR}/libstdc++.a
 LIBTACPLUS?=	${DESTDIR}${LIBDIR}/libtacplus.a
@@ -169,10 +176,12 @@ LIBULOG?=	${DESTDIR}${LIBDIR}/libulog.a
 LIBUTIL?=	${DESTDIR}${LIBDIR}/libutil.a
 LIBUUTIL?=	${DESTDIR}${LIBDIR}/libuutil.a
 LIBVGL?=	${DESTDIR}${LIBDIR}/libvgl.a
+LIBWIND?=	${DESTDIR}${LIBDIR}/libwind.a
 LIBWRAP?=	${DESTDIR}${LIBDIR}/libwrap.a
 LIBXPG4?=	${DESTDIR}${LIBDIR}/libxpg4.a
 LIBY?=		${DESTDIR}${LIBDIR}/liby.a
 LIBYPCLNT?=	${DESTDIR}${LIBDIR}/libypclnt.a
 LIBZ?=		${DESTDIR}${LIBDIR}/libz.a
 LIBZFS?=	${DESTDIR}${LIBDIR}/libzfs.a
+LIBZFS_CORE?=	${DESTDIR}${LIBDIR}/libzfs_core.a
 LIBZPOOL?=	${DESTDIR}${LIBDIR}/libzpool.a

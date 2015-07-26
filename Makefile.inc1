@@ -1249,12 +1249,17 @@ gnu/lib/libgcc__L: lib/libc__L
 lib/libcxxrt__L: gnu/lib/libgcc__L
 .endif
 
-_prebuild_libs=	${_kerberos5_lib_libasn1} ${_kerberos5_lib_libhdb} \
+_prebuild_libs=	${_kerberos5_lib_libasn1} \
+		${_kerberos5_lib_libhdb} \
+		${_kerberos5_lib_libheimbase} \
 		${_kerberos5_lib_libheimntlm} \
+		${_kerberos5_lib_libheimsqlite} \
+		${_kerberos5_lib_libheimipcc} \
 		${_kerberos5_lib_libhx509} ${_kerberos5_lib_libkrb5} \
 		${_kerberos5_lib_libroken} \
+		${_kerberos5_lib_libwind} \
 		lib/libbz2 lib/libcom_err lib/libcrypt \
-		lib/libexpat \
+		lib/libelf lib/libexpat \
 		${_lib_libgssapi} ${_lib_libipx} \
 		lib/libkiconv lib/libkvm lib/liblzma lib/libmd \
 		lib/ncurses/ncurses lib/ncurses/ncursesw \
@@ -1307,14 +1312,21 @@ _secure_lib=	secure/lib
 .if ${MK_KERBEROS} != "no"
 kerberos5/lib/libasn1__L: lib/libcom_err__L kerberos5/lib/libroken__L
 kerberos5/lib/libhdb__L: kerberos5/lib/libasn1__L lib/libcom_err__L \
-    kerberos5/lib/libkrb5__L kerberos5/lib/libroken__L
-kerberos5/lib/libheimntlm__L: secure/lib/libcrypto__L kerberos5/lib/libkrb5__L
+    kerberos5/lib/libkrb5__L kerberos5/lib/libroken__L \
+    kerberos5/lib/libwind__L kerberos5/lib/libheimsqlite__L
+kerberos5/lib/libheimntlm__L: secure/lib/libcrypto__L kerberos5/lib/libkrb5__L \
+    kerberos5/lib/libroken__L lib/libcom_err__L
 kerberos5/lib/libhx509__L: kerberos5/lib/libasn1__L lib/libcom_err__L \
-    secure/lib/libcrypto__L kerberos5/lib/libroken__L
+    secure/lib/libcrypto__L kerberos5/lib/libroken__L kerberos5/lib/libwind__L
 kerberos5/lib/libkrb5__L: kerberos5/lib/libasn1__L lib/libcom_err__L \
     lib/libcrypt__L secure/lib/libcrypto__L kerberos5/lib/libhx509__L \
-    kerberos5/lib/libroken__L
+    kerberos5/lib/libroken__L kerberos5/lib/libwind__L \
+    kerberos5/lib/libheimbase__L kerberos5/lib/libheimipcc__L
 kerberos5/lib/libroken__L: lib/libcrypt__L
+kerberos5/lib/libwind__L: kerberos5/lib/libroken__L lib/libcom_err__L
+kerberos5/lib/libheimbase__L: lib/libthr__L
+kerberos5/lib/libheimipcc__L: kerberos5/lib/libroken__L kerberos5/lib/libheimbase__L lib/libthr__L
+kerberos5/lib/libheimsqlite__L: lib/libthr__L
 .endif
 
 .if ${MK_GSSAPI} != "no"
@@ -1326,13 +1338,18 @@ _lib_libipx=	lib/libipx
 .endif
 
 .if ${MK_KERBEROS} != "no"
-_kerberos5_lib=	kerberos5/lib
+_kerberos5_lib= kerberos5/lib
 _kerberos5_lib_libasn1= kerberos5/lib/libasn1
 _kerberos5_lib_libhdb= kerberos5/lib/libhdb
+_kerberos5_lib_libheimbase= kerberos5/lib/libheimbase
 _kerberos5_lib_libkrb5= kerberos5/lib/libkrb5
 _kerberos5_lib_libhx509= kerberos5/lib/libhx509
 _kerberos5_lib_libroken= kerberos5/lib/libroken
 _kerberos5_lib_libheimntlm= kerberos5/lib/libheimntlm
+_kerberos5_lib_libheimsqlite= kerberos5/lib/libheimsqlite
+_kerberos5_lib_libheimipcc= kerberos5/lib/libheimipcc
+_kerberos5_lib_libwind= kerberos5/lib/libwind
+_libcom_err= lib/libcom_err
 .endif
 
 .if ${MK_NIS} != "no"
@@ -1344,13 +1361,13 @@ lib/libradius__L: lib/libmd__L
 .endif
 
 .for _lib in ${_prereq_libs}
-${_lib}__PL: .PHONY
+${_lib}__PL: .PHONY .MAKE
 .if exists(${.CURDIR}/${_lib})
 	${_+_}@${ECHODIR} "===> ${_lib} (obj,depend,all,install)"; \
-		cd ${.CURDIR}/${_lib}; \
-		${MAKE} DIRPRFX=${_lib}/ obj; \
-		${MAKE} DIRPRFX=${_lib}/ depend; \
-		${MAKE} -DWITHOUT_PROFILE -DNO_PIC DIRPRFX=${_lib}/ all; \
+		cd ${.CURDIR}/${_lib} && \
+		${MAKE} DIRPRFX=${_lib}/ obj && \
+		${MAKE} DIRPRFX=${_lib}/ depend && \
+		${MAKE} -DWITHOUT_PROFILE -DNO_PIC DIRPRFX=${_lib}/ all && \
 		${MAKE} -DWITHOUT_PROFILE -DNO_PIC DIRPRFX=${_lib}/ install
 .endif
 .endfor
@@ -1359,10 +1376,10 @@ ${_lib}__PL: .PHONY
 ${_lib}__L: .PHONY
 .if exists(${.CURDIR}/${_lib})
 	${_+_}@${ECHODIR} "===> ${_lib} (obj,depend,all,install)"; \
-		cd ${.CURDIR}/${_lib}; \
-		${MAKE} DIRPRFX=${_lib}/ obj; \
-		${MAKE} DIRPRFX=${_lib}/ depend; \
-		${MAKE} DIRPRFX=${_lib}/ all; \
+		cd ${.CURDIR}/${_lib} && \
+		${MAKE} DIRPRFX=${_lib}/ obj && \
+		${MAKE} DIRPRFX=${_lib}/ depend && \
+		${MAKE} DIRPRFX=${_lib}/ all && \
 		${MAKE} DIRPRFX=${_lib}/ install
 .endif
 .endfor

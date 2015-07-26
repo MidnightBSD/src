@@ -1,4 +1,5 @@
-#$FreeBSD: stable/10/kerberos5/lib/libwind/Makefile 233294 2012-03-22 08:48:42Z stas $
+# $MidnightBSD$
+# $FreeBSD: stable/10/kerberos5/lib/libwind/Makefile 233294 2012-03-22 08:48:42Z stas $
 
 LIB=	wind
 LDFLAGS=	-Wl,--no-undefined

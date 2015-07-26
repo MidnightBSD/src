@@ -8498,8 +8498,6 @@ contrib/cflow/test/posixtest_nasm.s -text
 contrib/cflow/test/test.l -text
 contrib/cflow/test/test.y -text
 contrib/com_err/ChangeLog -text
-contrib/com_err/Makefile.am -text
-contrib/com_err/Makefile.in -text
 contrib/com_err/com_err.3 -text
 contrib/com_err/com_err.c -text
 contrib/com_err/com_err.h -text
@@ -8508,13 +8506,8 @@ contrib/com_err/compile_et.1 -text
 contrib/com_err/compile_et.c -text
 contrib/com_err/compile_et.h -text
 contrib/com_err/error.c -text
-contrib/com_err/getarg.c -text
-contrib/com_err/getarg.h -text
-contrib/com_err/lex.c -text
 contrib/com_err/lex.h -text
 contrib/com_err/lex.l -text
-contrib/com_err/parse.c -text
-contrib/com_err/parse.h -text
 contrib/com_err/parse.y -text
 contrib/com_err/roken_rename.h -text
 contrib/com_err/version-script.map -text
