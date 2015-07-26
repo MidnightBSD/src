@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004, PADL Software Pty Ltd.
  * All rights reserved.
@@ -29,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libgssapi/gss_inquire_cred_by_oid.c 178828 2008-05-07 13:53:12Z dfr $ */
 
 #include <gssapi/gssapi.h>
 
@@ -37,7 +38,7 @@
 #include "cred.h"
 #include "name.h"
 
-/* RCSID("$Id: gss_inquire_cred_by_oid.c,v 1.1 2013-01-13 17:34:37 laffer1 Exp $"); */
+/* RCSID("$Id: gss_inquire_cred_by_oid.c 19960 2007-01-17 15:09:24Z lha $"); */
 
 OM_uint32
 gss_inquire_cred_by_oid (OM_uint32 *minor_status,

@@ -24,7 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"	$MidnightBSD$
+.\"	$FreeBSD: stable/10/lib/libgssapi/gss_add_cred.3 236746 2012-06-08 12:09:00Z joel $
 .\"
 .\" The following commands are required for all man pages.
 .Dd January 26, 2010
@@ -170,7 +170,7 @@ a non-
 .Fa output_cred_handle
 must be supplied.
 .Sh PARAMETERS
-.Bl -tag
+.Bl -tag -width ".It output_cred_handle"
 .It minor_status
 Mechanism specific status code.
 .It input_cred_handle
@@ -270,7 +270,7 @@ Specify
 if not required.
 .El
 .Sh RETURN VALUES
-.Bl -tag
+.Bl -tag -width ".It GSS_S_CREDENTIALS_EXPIRED"
 .It GSS_S_COMPLETE
 Successful completion.
 .It GSS_S_BAD_MECH
@@ -296,7 +296,7 @@ No credentials were found for the specified name.
 .Xr gss_release_cred 3 ,
 .Xr gss_release_oid_set 3
 .Sh STANDARDS
-.Bl -tag
+.Bl -tag -width ".It RFC 2743"
 .It RFC 2743
 Generic Security Service Application Program Interface Version 2, Update 1
 .It RFC 2744

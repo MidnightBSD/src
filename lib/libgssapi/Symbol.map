@@ -1,6 +1,7 @@
 /*
  * $MidnightBSD$
- */	
+ * $FreeBSD: stable/10/lib/libgssapi/Symbol.map 233294 2012-03-22 08:48:42Z stas $
+ */
 
 FBSD_1.1 {
 	GSS_C_NT_ANONYMOUS;
@@ -73,4 +74,5 @@ FBSDprivate_1.0 {
 	_gss_copy_oid;
 	_gss_copy_buffer;
 	_gss_free_oid;
+	_gss_mg_collect_error;
 };

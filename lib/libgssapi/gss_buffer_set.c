@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004, PADL Software Pty Ltd.
  * All rights reserved.
@@ -29,14 +30,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libgssapi/gss_buffer_set.c 178828 2008-05-07 13:53:12Z dfr $ */
 
 #include <gssapi/gssapi.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
-/* RCSID("$Id: gss_buffer_set.c,v 1.1 2013-01-13 17:34:37 laffer1 Exp $"); */
+/* RCSID("$Id: gss_buffer_set.c 18885 2006-10-24 21:53:02Z lha $"); */
 
 OM_uint32 
 gss_create_empty_buffer_set(OM_uint32 * minor_status,

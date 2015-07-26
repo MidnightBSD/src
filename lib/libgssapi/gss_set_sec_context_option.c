@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004, PADL Software Pty Ltd.
  * All rights reserved.
@@ -29,8 +30,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $MidnightBSD$ */
-/* RCSID("$Id: gss_set_sec_context_option.c,v 1.1 2013-01-13 17:34:37 laffer1 Exp $"); */
+/* $FreeBSD: stable/10/lib/libgssapi/gss_set_sec_context_option.c 178828 2008-05-07 13:53:12Z dfr $ */
+/* RCSID("$Id: gss_set_sec_context_option.c 19928 2007-01-16 10:37:54Z lha $"); */
 
 #include <gssapi/gssapi.h>
 

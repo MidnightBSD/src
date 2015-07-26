@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2007 Kungliga Tekniska Högskolan
+/* $MidnightBSD$ */
+/*-
+ * Copyright (c) 2007 Kungliga Tekniska HÃ¶gskolan
  * (Royal Institute of Technology, Stockholm, Sweden). 
  * All rights reserved. 
  *
@@ -30,8 +31,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
  */
-/* $MidnightBSD$ */
-/* $Id: gss_pseudo_random.c,v 1.1 2013-01-13 17:34:37 laffer1 Exp $ */
+/* $FreeBSD: stable/10/lib/libgssapi/gss_pseudo_random.c 229784 2012-01-07 16:13:56Z uqs $ */
+/* $Id: gss_pseudo_random.c 20053 2007-01-24 01:31:35Z lha $ */
 
 #include <gssapi/gssapi.h>
 

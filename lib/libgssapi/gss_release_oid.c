@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2006 Kungliga Tekniska Högskolan
+ * Copyright (c) 2006 Kungliga Tekniska HÃ¶gskolan
  * (Royal Institute of Technology, Stockholm, Sweden). 
  * All rights reserved. 
  *
@@ -30,12 +31,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
  */
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/10/lib/libgssapi/gss_release_oid.c 229784 2012-01-07 16:13:56Z uqs $ */
 
 #include <gssapi/gssapi.h>
 #include <stdlib.h>
 
-/* RCSID("$Id: gss_release_oid.c,v 1.1 2013-01-13 17:34:37 laffer1 Exp $"); */
+/* RCSID("$Id: gss_release_oid.c 17747 2006-06-30 09:34:54Z lha $"); */
 
 OM_uint32
 gss_release_oid(OM_uint32 *minor_status, gss_OID *oid)
