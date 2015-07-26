@@ -33,9 +33,13 @@
 
 #include "kadmin_locl.h"
 
-#include <gssapi.h>
-#include <gssapi_krb5.h>
-#include <gssapi_spnego.h>
+#include <gssapi/gssapi.h>
+//#include <gssapi_krb5.h>
+//#include <gssapi_spnego.h>
+
+static gss_OID_desc krb5_mechanism =
+{9, (void *)(uintptr_t) "\x2a\x86\x48\x86\xf7\x12\x01\x02\x02"};
+#define GSS_KRB5_MECHANISM (&krb5_mechanism)
 
 #define CHECK(x)							\
 	do {								\
