@@ -45,6 +45,7 @@ __FBSDID("$FreeBSD: src/usr.sbin/powerd/powerd.c,v 1.21.2.2 2009/01/09 22:10:07 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sysexits.h>
 #include <unistd.h>
 
 #ifdef __i386__
@@ -72,7 +73,7 @@ typedef enum {
 	SRC_UNKNOWN,
 } power_src_t;
 
-const char *modes[] = {
+static const char *modes[] = {
 	"AC",
 	"battery",
 	"unknown"
@@ -127,6 +128,12 @@ static int	devd_pipe = -1;
 #define DEVD_RETRY_INTERVAL 60 /* seconds */
 static struct timeval tried_devd;
 
+/*
+ * This function returns summary load of all CPUs.  It was made so
+ * intentionally to not reduce performance in scenarios when several
+ * threads are processing requests as a pipeline -- running one at
+ * a time on different CPUs and waiting for each other.
+ */
 static int
 read_usage_times(int *load)
 {
@@ -532,7 +539,7 @@ main(int argc, char * argv[])
 		err(1, "lookup kern.cp_times");
 	len = 4;
 	if (sysctlnametomib("dev.cpu.0.freq", freq_mib, &len))
-		err(1, "lookup freq");
+		err(EX_UNAVAILABLE, "no cpufreq(4) support -- aborting");
 	len = 4;
 	if (sysctlnametomib("dev.cpu.0.freq_levels", levels_mib, &len))
 		err(1, "lookup freq_levels");
