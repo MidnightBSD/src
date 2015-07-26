@@ -43438,6 +43438,7 @@ crypto/openssh/kexgexc.c -text
 crypto/openssh/kexgexs.c -text
 crypto/openssh/key.c -text
 crypto/openssh/key.h -text
+crypto/openssh/krb5_config.h svneol=native#text/plain
 crypto/openssh/krl.c -text
 crypto/openssh/krl.h -text
 crypto/openssh/log.c -text
@@ -43453,6 +43454,7 @@ crypto/openssh/md-sha256.c -text
 crypto/openssh/md5crypt.c -text
 crypto/openssh/md5crypt.h -text
 crypto/openssh/mdoc2man.awk -text
+crypto/openssh/midnightbsd-configure.sh svneol=native#text/plain
 crypto/openssh/misc.c -text
 crypto/openssh/misc.h -text
 crypto/openssh/mkinstalldirs -text
