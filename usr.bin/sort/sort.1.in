@@ -1,5 +1,5 @@
 .\"	$OpenBSD: sort.1,v 1.31 2007/08/21 21:22:37 millert Exp $
-.\"	$FreeBSD: src/usr.bin/sort/sort.1.in,v 1.4 2012/07/04 16:25:11 gabor Exp $
+.\"	$FreeBSD: stable/10/usr.bin/sort/sort.1.in 269498 2014-08-04 03:59:48Z gjb $
 .\"
 .\" Copyright (c) 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
@@ -147,7 +147,7 @@ specifications, they apply globally to all sort keys.
 When attached to a specific key (see
 .Fl k ) ,
 the ordering options override all global ordering options for
-the key they are attahced to.
+the key they are attached to.
 .Bl -tag -width indent
 .It Fl b, Fl Fl ignore-leading-blanks
 Ignore leading blank characters when comparing lines.
@@ -194,7 +194,7 @@ This is a random permutation of the inputs except that
 the equal keys sort together.
 It is implemented by hashing the input keys and sorting
 the hash values.
-The hash function is choosen randomly.
+The hash function is chosen randomly.
 The hash function is randomized by
 .Cm /dev/random
 content, or by file content if it is specified by
@@ -212,7 +212,7 @@ The files are compared by their prefixes and versions (leading
 zeros are ignored in version numbers, see example below).
 If an input string does not match the pattern, then it is compared
 using the byte compare function.
-All string comparisions are performed in C locale, the locale
+All string comparisons are performed in C locale, the locale
 environment setting is ignored.
 .Bl -tag -width indent
 .It Example:
@@ -313,8 +313,8 @@ without arguments.
 When called with argument
 .Fl d
 it must decompress standard input to standard output.
-If PROGRAM fails, 
-.Nm 
+If PROGRAM fails,
+.Nm
 must exit with error.
 An example of PROGRAM that can be used here is bzip2.
 .It Fl Fl random-source Ns = Ns Ar filename
@@ -581,7 +581,7 @@ An error occurred.
 .Sh SEE ALSO
 .Xr comm 1 ,
 .Xr join 1 ,
-.Xr uniq 1 .
+.Xr uniq 1
 .Sh STANDARDS
 The
 .Nm
@@ -612,7 +612,7 @@ command first appeared in
 .Sh AUTHORS
 Gabor Kovesdan <gabor@FreeBSD.org>,
 .Pp
-Oleg Moskalenko <oleg.moskalenko@citrix.com>
+Oleg Moskalenko <mom040267@gmail.com>
 .Sh NOTES
 This implementation of
 .Nm
