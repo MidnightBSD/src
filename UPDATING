@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20160726:
+	BSD Sort updated
+
 20160725:
 	Import reallocarray from OpenBSD's libc.  
 
