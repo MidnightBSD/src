@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$FreeBSD: stable/10/usr.bin/sort/mem.h 265160 2014-04-30 20:39:08Z pfg $	*/
 
 /*-

@@ -1,7 +1,8 @@
-/*	$FreeBSD: src/usr.bin/sort/radixsort.h,v 1.1 2012/05/11 12:37:16 gabor Exp $	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/usr.bin/sort/radixsort.h 265160 2014-04-30 20:39:08Z pfg $	*/
 
 /*-
- * Copyright (C) 2012 Oleg Moskalenko <oleg.moskalenko@citrix.com>
+ * Copyright (C) 2012 Oleg Moskalenko <mom040267@gmail.com>
  * Copyright (C) 2012 Gabor Kovesdan <gabor@FreeBSD.org>
  * All rights reserved.
  *
@@ -28,7 +29,7 @@
  */
 
 #if !defined(__SORT_RADIX_H__)
-#define __SORT_RADIX_H__
+#define	__SORT_RADIX_H__
 
 #include "coll.h"
 #include "sort.h"

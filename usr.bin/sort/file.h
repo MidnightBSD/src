@@ -1,8 +1,9 @@
-/*	$FreeBSD: src/usr.bin/sort/file.h,v 1.3 2012/07/04 16:25:11 gabor Exp $	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/usr.bin/sort/file.h 281535 2015-04-14 18:57:50Z pfg $	*/
 
 /*-
  * Copyright (C) 2009 Gabor Kovesdan <gabor@FreeBSD.org>
- * Copyright (C) 2012 Oleg Moskalenko <oleg.moskalenko@citrix.com>
+ * Copyright (C) 2012 Oleg Moskalenko <mom040267@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,7 +29,7 @@
  */
 
 #if !defined(__SORT_FILE_H__)
-#define __SORT_FILE_H__
+#define	__SORT_FILE_H__
 
 #include "coll.h"
 #include "sort.h"
@@ -39,8 +40,8 @@
 #define	SORT_HEAPSORT	3
 #define	SORT_RADIXSORT  4
 
-#define DEFAULT_SORT_ALGORITHM SORT_HEAPSORT
-#define DEFAULT_SORT_FUNC heapsort
+#define	DEFAULT_SORT_ALGORITHM SORT_HEAPSORT
+#define	DEFAULT_SORT_FUNC heapsort
 
 /*
  * List of data to be sorted.
@@ -65,19 +66,9 @@ struct file_reader;
 struct file_list
 {
 	char			**fns;
-	int			 count;
-	int			 sz;
+	size_t			 count;
+	size_t			 sz;
 	bool			 tmp;
-};
-
-/*
- * Structure for zero-separated file reading (for input files list)
- */
-struct file0_reader
-{
-	char			*current_line;
-	FILE			*f;
-	size_t			 current_sz;
 };
 
 /* memory */
@@ -109,8 +100,6 @@ extern const char* compress_program;
 struct file_reader *file_reader_init(const char *fsrc);
 struct bwstring *file_reader_readline(struct file_reader *fr);
 void file_reader_free(struct file_reader *fr);
-
-char *read_file0_line(struct file0_reader *f0r);
 
 void init_tmp_files(void);
 void clear_tmp_files(void);

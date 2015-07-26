@@ -1,6 +1,7 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2009 Gabor Kovesdan <gabor@FreeBSD.org>
- * Copyright (C) 2012 Oleg Moskalenko <oleg.moskalenko@citrix.com>
+ * Copyright (C) 2012 Oleg Moskalenko <mom040267@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/sort/mem.c,v 1.1 2012/05/11 12:37:16 gabor Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.bin/sort/mem.c 251245 2013-06-02 09:43:48Z gabor $");
 
 #include <err.h>
 #include <stdint.h>

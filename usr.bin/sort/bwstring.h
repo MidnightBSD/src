@@ -1,8 +1,9 @@
-/*	$FreeBSD: src/usr.bin/sort/bwstring.h,v 1.1 2012/05/11 12:37:16 gabor Exp $	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/usr.bin/sort/bwstring.h 265160 2014-04-30 20:39:08Z pfg $	*/
 
 /*-
  * Copyright (C) 2009 Gabor Kovesdan <gabor@FreeBSD.org>
- * Copyright (C) 2012 Oleg Moskalenko <oleg.moskalenko@citrix.com>
+ * Copyright (C) 2012 Oleg Moskalenko <mom040267@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,7 +29,7 @@
  */
 
 #if !defined(__BWSTRING_H__)
-#define __BWSTRING_H__
+#define	__BWSTRING_H__
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -41,7 +42,7 @@
 extern bool byte_sort;
 
 /* wchar_t is of 4 bytes: */
-#define SIZEOF_WCHAR_STRING(LEN) ((LEN)*sizeof(wchar_t))
+#define	SIZEOF_WCHAR_STRING(LEN) ((LEN)*sizeof(wchar_t))
 
 /*
  * Binary "wide" string
@@ -64,7 +65,7 @@ struct reader_buffer
 
 typedef void *bwstring_iterator;
 
-#define BWSLEN(s) ((s)->len)
+#define	BWSLEN(s) ((s)->len)
 
 struct bwstring *bwsalloc(size_t sz);
 
@@ -93,7 +94,7 @@ struct bwstring *bwsnocpy(struct bwstring *dst, const struct bwstring *src, size
 int bwscmp(const struct bwstring *bws1, const struct bwstring *bws2, size_t offset);
 int bwsncmp(const struct bwstring *bws1, const struct bwstring *bws2, size_t offset, size_t len);
 int bwscoll(const struct bwstring *bws1, const struct bwstring *bws2, size_t offset);
-int bwsfwrite(struct bwstring *bws, FILE *f, bool zero_ended);
+size_t bwsfwrite(struct bwstring *bws, FILE *f, bool zero_ended);
 struct bwstring *bwsfgetln(FILE *file, size_t *len, bool zero_ended, struct reader_buffer *rb);
 
 static inline bwstring_iterator
@@ -135,7 +136,7 @@ bws_get_iter_value(bwstring_iterator iter)
 int
 bws_iterator_cmp(bwstring_iterator iter1, bwstring_iterator iter2, size_t len);
 
-#define BWS_GET(bws, pos) ((MB_CUR_MAX == 1) ? ((bws)->data.cstr[(pos)]) : (bws)->data.wstr[(pos)])
+#define	BWS_GET(bws, pos) ((MB_CUR_MAX == 1) ? ((bws)->data.cstr[(pos)]) : (bws)->data.wstr[(pos)])
 
 void initialise_months(void);
 

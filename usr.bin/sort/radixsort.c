@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*-
- * Copyright (C) 2012 Oleg Moskalenko <oleg.moskalenko@citrix.com>
+ * Copyright (C) 2012 Oleg Moskalenko <mom040267@gmail.com>
  * Copyright (C) 2012 Gabor Kovesdan <gabor@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/sort/radixsort.c,v 1.4 2012/07/04 16:25:11 gabor Exp $");
+__FBSDID("$FreeBSD: stable/10/usr.bin/sort/radixsort.c 259853 2013-12-25 00:53:48Z dim $");
 
 #include <errno.h>
 #include <err.h>
@@ -171,6 +172,8 @@ pop_ls_st(void)
 	return (sl);
 }
 
+#if defined(SORT_THREADS)
+
 /*
  * Pop sort level from the stack (multi-threaded style)
  */
@@ -180,9 +183,7 @@ pop_ls_mt(void)
 	struct level_stack *saved_ls;
 	struct sort_level *sl;
 
-#if defined(SORT_THREADS)
 	pthread_mutex_lock(&g_ls_mutex);
-#endif
 
 	if (g_ls) {
 		sl = g_ls->sl;
@@ -193,17 +194,17 @@ pop_ls_mt(void)
 		saved_ls = NULL;
 	}
 
-#if defined(SORT_THREADS)
 	pthread_mutex_unlock(&g_ls_mutex);
-#endif
 
 	sort_free(saved_ls);
 
 	return (sl);
 }
 
+#endif /* defined(SORT_THREADS) */
+
 static void
-add_to_sublevel(struct sort_level *sl, struct sort_list_item *item, int indx)
+add_to_sublevel(struct sort_level *sl, struct sort_list_item *item, size_t indx)
 {
 	struct sort_level *ssl;
 

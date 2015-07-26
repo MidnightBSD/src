@@ -1,8 +1,9 @@
-/*	$FreeBSD: src/usr.bin/sort/sort.h,v 1.7 2012/06/08 19:21:49 gabor Exp $	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/usr.bin/sort/sort.h 265160 2014-04-30 20:39:08Z pfg $	*/
 
 /*-
  * Copyright (C) 2009 Gabor Kovesdan <gabor@FreeBSD.org>
- * Copyright (C) 2012 Oleg Moskalenko <oleg.moskalenko@citrix.com>
+ * Copyright (C) 2012 Oleg Moskalenko <mom040267@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,7 +29,7 @@
  */
 
 #if !defined(__BSD_SORT_H__)
-#define __BSD_SORT_H__
+#define	__BSD_SORT_H__
 
 #include <errno.h>
 #include <stdbool.h>
@@ -39,7 +40,7 @@
 #include <sys/types.h>
 #include <md5.h>
 
-#define	VERSION	"2.3-FreeBSD"
+#define	VERSION	"2.3-MidnightBSD"
 
 #ifdef WITHOUT_NLS
 #define	getstr(n)	 nlsstr[n]
@@ -53,8 +54,8 @@ extern nl_catd catalog;
 extern const char *nlsstr[];
 
 #if defined(SORT_THREADS)
-#define MT_SORT_THRESHOLD (10000)
-extern size_t ncpu;
+#define	MT_SORT_THRESHOLD (10000)
+extern unsigned int ncpu;
 extern size_t nthreads;
 #endif
 
@@ -77,7 +78,7 @@ extern MD5_CTX md5_ctx;
  */
 struct sort_opts
 {
-	wchar_t		field_sep;
+	wint_t		field_sep;
 	int		sort_method;
 	bool		cflag;
 	bool		csilentflag;

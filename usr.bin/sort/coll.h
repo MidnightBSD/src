@@ -1,8 +1,9 @@
-/*	$FreeBSD: src/usr.bin/sort/coll.h,v 1.1 2012/05/11 12:37:16 gabor Exp $	*/
+/* $MidnightBSD$ */
+/*	$FreeBSD: stable/10/usr.bin/sort/coll.h 265160 2014-04-30 20:39:08Z pfg $	*/
 
 /*-
  * Copyright (C) 2009 Gabor Kovesdan <gabor@FreeBSD.org>
- * Copyright (C) 2012 Oleg Moskalenko <oleg.moskalenko@citrix.com>
+ * Copyright (C) 2012 Oleg Moskalenko <mom040267@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,7 +29,7 @@
  */
 
 #if !defined(__COLL_H__)
-#define __COLL_H__
+#define	__COLL_H__
 
 #include "bwstring.h"
 #include "sort.h"
@@ -133,12 +134,12 @@ extern struct key_specs *keys;
 extern size_t keys_num;
 
 /*
- * Main localised symbols
+ * Main localised symbols. These must be wint_t as they may hold WEOF.
  */
-extern wchar_t symbol_decimal_point;
-extern wchar_t symbol_thousands_sep;
-extern wchar_t symbol_negative_sign;
-extern wchar_t symbol_positive_sign;
+extern wint_t symbol_decimal_point;
+extern wint_t symbol_thousands_sep;
+extern wint_t symbol_negative_sign;
+extern wint_t symbol_positive_sign;
 
 /* funcs */
 
