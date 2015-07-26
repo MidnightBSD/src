@@ -117,14 +117,14 @@ static state_func_t death_single(void);
 
 static state_func_t run_script(const char *);
 
-enum { AUTOBOOT, FASTBOOT } runcom_mode = AUTOBOOT;
+static enum { AUTOBOOT, FASTBOOT } runcom_mode = AUTOBOOT;
 #define FALSE	0
 #define TRUE	1
 
-int Reboot = FALSE;
-int howto = RB_AUTOBOOT;
+static int Reboot = FALSE;
+static int howto = RB_AUTOBOOT;
 
-int devfs;
+static int devfs;
 
 static void transition(state_t);
 static state_t requested_transition;
@@ -685,7 +685,8 @@ single_user(void)
 					_exit(0);
 				password = crypt(clear, pp->pw_passwd);
 				bzero(clear, _PASSWORD_LEN);
-				if (strcmp(password, pp->pw_passwd) == 0)
+				if (password == NULL ||
+				    strcmp(password, pp->pw_passwd) == 0)
 					break;
 				warning("single-user login failed\n");
 			}
