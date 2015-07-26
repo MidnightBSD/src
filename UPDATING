@@ -3,6 +3,8 @@ Updating Information for MidnightBSD users.
 20160726:
 	BSD Sort updated
 
+	sqlite 3.8.10.2
+
 20160725:
 	Import reallocarray from OpenBSD's libc.  
 
