@@ -42570,7 +42570,6 @@ crypto/heimdal/lib/gssapi/ntlm/context_time.c -text
 crypto/heimdal/lib/gssapi/ntlm/creds.c -text
 crypto/heimdal/lib/gssapi/ntlm/crypto.c -text
 crypto/heimdal/lib/gssapi/ntlm/delete_sec_context.c -text
-crypto/heimdal/lib/gssapi/ntlm/digest.c -text
 crypto/heimdal/lib/gssapi/ntlm/display_name.c -text
 crypto/heimdal/lib/gssapi/ntlm/display_status.c -text
 crypto/heimdal/lib/gssapi/ntlm/duplicate_name.c -text
@@ -42582,7 +42581,6 @@ crypto/heimdal/lib/gssapi/ntlm/import_sec_context.c -text
 crypto/heimdal/lib/gssapi/ntlm/indicate_mechs.c -text
 crypto/heimdal/lib/gssapi/ntlm/init_sec_context.c -text
 crypto/heimdal/lib/gssapi/ntlm/inquire_context.c -text
-crypto/heimdal/lib/gssapi/ntlm/inquire_cred.c -text
 crypto/heimdal/lib/gssapi/ntlm/inquire_cred_by_mech.c -text
 crypto/heimdal/lib/gssapi/ntlm/inquire_mechs_for_name.c -text
 crypto/heimdal/lib/gssapi/ntlm/inquire_names_for_mech.c -text
@@ -42616,10 +42614,7 @@ crypto/heimdal/lib/gssapi/test_oid.c -text
 crypto/heimdal/lib/gssapi/version-script.map -text
 crypto/heimdal/lib/hdb/Makefile.am -text
 crypto/heimdal/lib/hdb/Makefile.in -text
-crypto/heimdal/lib/hdb/NTMakefile -text
 crypto/heimdal/lib/hdb/common.c -text
-crypto/heimdal/lib/hdb/data-mkey.mit.des3.be -text
-crypto/heimdal/lib/hdb/data-mkey.mit.des3.le -text
 crypto/heimdal/lib/hdb/db.c -text
 crypto/heimdal/lib/hdb/db3.c -text
 crypto/heimdal/lib/hdb/dbinfo.c -text
@@ -42638,14 +42633,10 @@ crypto/heimdal/lib/hdb/hdb_err.et -text
 crypto/heimdal/lib/hdb/hdb_locl.h -text
 crypto/heimdal/lib/hdb/keys.c -text
 crypto/heimdal/lib/hdb/keytab.c -text
-crypto/heimdal/lib/hdb/libhdb-exports.def -text
-crypto/heimdal/lib/hdb/libhdb-version.rc -text
 crypto/heimdal/lib/hdb/mkey.c -text
 crypto/heimdal/lib/hdb/ndbm.c -text
 crypto/heimdal/lib/hdb/print.c -text
 crypto/heimdal/lib/hdb/test_dbinfo.c -text
-crypto/heimdal/lib/hdb/test_hdbkeys.c -text
-crypto/heimdal/lib/hdb/test_mkey.c -text
 crypto/heimdal/lib/hdb/version-script.map -text
 crypto/heimdal/lib/heimdal/NTMakefile -text
 crypto/heimdal/lib/heimdal/dllmain.c -text
@@ -42816,8 +42807,6 @@ crypto/heimdal/lib/kadm5/version-script.map -text
 crypto/heimdal/lib/kafs/ChangeLog -text
 crypto/heimdal/lib/kafs/Makefile.am -text
 crypto/heimdal/lib/kafs/Makefile.in -text
-crypto/heimdal/lib/kafs/NTMakefile -text
-crypto/heimdal/lib/kafs/afskrb.c -text
 crypto/heimdal/lib/kafs/afskrb5.c -text
 crypto/heimdal/lib/kafs/afsl.exp -text
 crypto/heimdal/lib/kafs/afslib.c -text
@@ -42825,10 +42814,7 @@ crypto/heimdal/lib/kafs/afslib.exp -text
 crypto/heimdal/lib/kafs/afssys.c -text
 crypto/heimdal/lib/kafs/afssysdefs.h -text
 crypto/heimdal/lib/kafs/common.c -text
-crypto/heimdal/lib/kafs/dlfcn.c -text
-crypto/heimdal/lib/kafs/dlfcn.h -text
 crypto/heimdal/lib/kafs/kafs.3 -text
-crypto/heimdal/lib/kafs/kafs.cat3 -text
 crypto/heimdal/lib/kafs/kafs.h -text
 crypto/heimdal/lib/kafs/kafs_locl.h -text
 crypto/heimdal/lib/kafs/roken_rename.h -text
@@ -43104,11 +43090,8 @@ crypto/heimdal/lib/krb5/write_message.c -text
 crypto/heimdal/lib/ntlm/ChangeLog -text
 crypto/heimdal/lib/ntlm/Makefile.am -text
 crypto/heimdal/lib/ntlm/Makefile.in -text
-crypto/heimdal/lib/ntlm/NTMakefile -text
 crypto/heimdal/lib/ntlm/heimntlm-protos.h -text
 crypto/heimdal/lib/ntlm/heimntlm.h -text
-crypto/heimdal/lib/ntlm/libheimntlm-exports.def -text
-crypto/heimdal/lib/ntlm/libheimntlm-version.rc -text
 crypto/heimdal/lib/ntlm/ntlm.c -text
 crypto/heimdal/lib/ntlm/ntlm_err.et -text
 crypto/heimdal/lib/ntlm/test_ntlm.c -text
@@ -43293,12 +43276,6 @@ crypto/heimdal/lib/roken/xfree.c -text
 crypto/heimdal/lib/sl/ChangeLog -text
 crypto/heimdal/lib/sl/Makefile.am -text
 crypto/heimdal/lib/sl/Makefile.in -text
-crypto/heimdal/lib/sl/NTMakefile -text
-crypto/heimdal/lib/sl/lex.c -text
-crypto/heimdal/lib/sl/make_cmds.c -text
-crypto/heimdal/lib/sl/make_cmds.h -text
-crypto/heimdal/lib/sl/parse.c -text
-crypto/heimdal/lib/sl/parse.h -text
 crypto/heimdal/lib/sl/roken_rename.h -text
 crypto/heimdal/lib/sl/sl.c -text
 crypto/heimdal/lib/sl/sl.h -text
@@ -43309,8 +43286,6 @@ crypto/heimdal/lib/sl/slc-gram.y -text
 crypto/heimdal/lib/sl/slc-lex.c -text
 crypto/heimdal/lib/sl/slc-lex.l -text
 crypto/heimdal/lib/sl/slc.h -text
-crypto/heimdal/lib/sl/ss.c -text
-crypto/heimdal/lib/sl/ss.h -text
 crypto/heimdal/lib/sl/test_sl.c -text
 crypto/heimdal/lib/sqlite/Makefile.am -text
 crypto/heimdal/lib/sqlite/Makefile.in -text
@@ -43321,8 +43296,6 @@ crypto/heimdal/lib/sqlite/sqlite3ext.h -text
 crypto/heimdal/lib/vers/ChangeLog -text
 crypto/heimdal/lib/vers/Makefile.am -text
 crypto/heimdal/lib/vers/Makefile.in -text
-crypto/heimdal/lib/vers/NTMakefile -text
-crypto/heimdal/lib/vers/make-print-version.c -text
 crypto/heimdal/lib/vers/print_version.c -text
 crypto/heimdal/lib/vers/vers.h -text
 crypto/heimdal/lib/wind/ChangeLog -text
