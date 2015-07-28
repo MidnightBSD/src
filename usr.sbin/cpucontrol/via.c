@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2006, 2008 Stanislav Sedov <stas@FreeBSD.org>.
+ * Copyright (c) 2011 Fabien Thomas <fabient@FreeBSD.org>.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -46,12 +46,10 @@ __MBSDID("$MidnightBSD$");
 #include <machine/specialreg.h>
 
 #include "cpucontrol.h"
-#include "intel.h"
-
-#define	DEFAULT_UCODE_SIZE	2000 /* Size of update data if not specified. */
+#include "via.h"
 
 int
-intel_probe(int fd)
+via_probe(int fd)
 {
 	char vendor[13];
 	int error;
@@ -68,28 +66,25 @@ intel_probe(int fd)
 	((uint32_t *)vendor)[1] = idargs.data[3];
 	((uint32_t *)vendor)[2] = idargs.data[2];
 	vendor[12] = '\0';
-	if (strncmp(vendor, INTEL_VENDOR_ID, sizeof(INTEL_VENDOR_ID)) != 0)
+	if (strncmp(vendor, CENTAUR_VENDOR_ID, sizeof(CENTAUR_VENDOR_ID)) != 0)
 		return (1);
+
+	/* TODO: detect Nano CPU. */
 	return (0);
 }
 
 void
-intel_update(const char *dev, const char *path)
+via_update(const char *dev, const char *path)
 {
 	int fd, devfd;
 	struct stat st;
 	uint32_t *fw_image;
-	int have_ext_table;
 	uint32_t sum;
 	unsigned int i;
 	size_t payload_size;
-	intel_fw_header_t *fw_header;
-	intel_cpu_signature_t *ext_table;
-	intel_ext_header_t *ext_header;
+	via_fw_header_t *fw_header;
 	uint32_t signature, flags;
 	int32_t revision;
-	ssize_t ext_size;
-	size_t ext_table_size;
 	void *fw_data;
 	size_t data_size, total_size;
 	cpuctl_msr_args_t msrargs = {
@@ -105,9 +100,8 @@ intel_update(const char *dev, const char *path)
 	assert(dev);
 
 	fd = -1;
+	devfd = -1;
 	fw_image = MAP_FAILED;
-	ext_table = NULL;
-	ext_header = NULL;
 	devfd = open(dev, O_RDWR);
 	if (devfd < 0) {
 		WARN(0, "could not open %s for writing", dev);
@@ -166,24 +160,15 @@ intel_update(const char *dev, const char *path)
 		WARN(0, "mmap(%s)", path);
 		goto fail;
 	}
-	fw_header = (intel_fw_header_t *)fw_image;
-	if (fw_header->header_version != INTEL_HEADER_VERSION ||
-	    fw_header->loader_revision != INTEL_LOADER_REVISION) {
-		WARNX(2, "%s is not a valid intel firmware: version mismatch",
+	fw_header = (via_fw_header_t *)fw_image;
+	if (fw_header->signature != VIA_HEADER_SIGNATURE ||
+	    fw_header->loader_revision != VIA_LOADER_REVISION) {
+		WARNX(2, "%s is not a valid via firmware: version mismatch",
 		    path);
 		goto fail;
 	}
-	/*
-	 * According to spec, if data_size == 0, then size of ucode = 2000.
-	 */
-	if (fw_header->data_size == 0)
-		data_size = DEFAULT_UCODE_SIZE;
-	else
-		data_size = fw_header->data_size;
-	if (fw_header->total_size == 0)
-		total_size = data_size + sizeof(*fw_header);
-	else
-		total_size = fw_header->total_size;
+	data_size = fw_header->data_size;
+	total_size = fw_header->total_size;
 	if (total_size > (unsigned)st.st_size || st.st_size < 0) {
 		WARNX(2, "file too short: %s", path);
 		goto fail;
@@ -201,65 +186,18 @@ intel_update(const char *dev, const char *path)
 		goto fail;
 	}
 
-	/*
-	 * Check if there is an extended signature table.
-	 */
-	ext_size = total_size - payload_size;
-	have_ext_table = 0;
-
-	if (ext_size > (signed)sizeof(*ext_header)) {
-		ext_header =
-		    (intel_ext_header_t *)((char *)fw_image + payload_size);
-		ext_table = (intel_cpu_signature_t *)(ext_header + 1);
-
-		/*
-		 * Check the extended table size.
-		 */
-		ext_table_size = sizeof(*ext_header) +
-		    ext_header->sig_count * sizeof(*ext_table);
-		if (ext_table_size + payload_size > total_size) {
-			WARNX(2, "%s: broken extended signature table", path);
-			goto no_table;
-		}
-
-		/*
-		 * Check the extended table signature.
-		 */
-		sum = 0;
-		for (i = 0; i < (ext_table_size / sizeof(uint32_t)); i++)
-			sum += *((uint32_t *)ext_header + i);
-		if (sum != 0) {
-			WARNX(2, "%s: extended signature table checksum invalid",
-			    path);
-			goto no_table;
-		}
-		have_ext_table = 1;
-	}
-
-no_table:
 	fw_data = fw_header + 1; /* Pointer to the update data. */
 
 	/*
 	 * Check if the given image is ok for this cpu.
 	 */
-	if (signature == fw_header->cpu_signature &&
-	    (flags & fw_header->cpu_flags) != 0)
-			goto matched;
-	else if (have_ext_table != 0) {
-		for (i = 0; i < ext_header->sig_count; i++) {
-			uint32_t sig = ext_table[i].cpu_signature;
-			if (signature == sig &&
-			    (flags & ext_table[i].cpu_flags) != 0)
-				goto matched;
-		}
-	} else
+	if (signature != fw_header->cpu_signature)
 		goto fail;
 
-matched:
-	if (revision >= fw_header->revision) {
+	if (fw_header->revision != 0 && revision >= fw_header->revision) {
 		WARNX(1, "skipping %s of rev %#x: up to date",
 		    path, fw_header->revision);
-		return;
+		goto fail;
 	}
 	fprintf(stderr, "%s: updating cpu %s from rev %#x to rev %#x... ",
 			path, dev, revision, fw_header->revision);

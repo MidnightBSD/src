@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2006, 2008 Stanislav Sedov <stas@FreeBSD.org>.
+ * Copyright (c) 2011 Fabien Thomas <fabient@FreeBSD.org>.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,28 +23,42 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/usr.sbin/cpucontrol/amd.h 181430 2008-08-08 16:26:53Z stas $
+ * $FreeBSD: release/9.2.0/usr.sbin/cpucontrol/via.h 229471 2012-01-04 08:14:05Z fabient $
  */
 
-#ifndef AMD_H
-#define	AMD_H
+#ifndef VIA_H
+#define	VIA_H
 
 /*
  * Prototypes.
  */
-ucode_probe_t	amd_probe;
-ucode_update_t	amd_update;
+ucode_probe_t	via_probe;
+ucode_update_t	via_update;
 
-typedef struct amd_fw_header {
-	uint32_t	date;		/* Update creation date. */
-	uint32_t	xz0[2];
-	uint32_t	checksum;	/* ucode checksum. */
-	uint32_t	xz1[2];
-	uint32_t	signature;	/* Low byte of cpuid(0). */
-	uint32_t	magic;		/* 0x0Xaaaaaa */
-	uint32_t	xz2[8];
-} amd_fw_header_t;
+typedef struct via_fw_header {
+	uint32_t	signature;		/* Signature. */
+	int32_t		revision;		/* Unique version number. */
+	uint32_t	date;			/* Date of creation in BCD. */
+	uint32_t	cpu_signature;		/* Extended family, extended
+						   model, type, family, model
+						   and stepping. */
+	uint32_t	checksum;		/* Sum of all DWORDS should
+						   be 0. */
+	uint32_t	loader_revision;	/* Version of the loader
+						   required to load update. */
+	uint32_t	reserverd1;		/* Platform IDs encoded in
+						   the lower 8 bits. */
+	uint32_t	data_size;
+	uint32_t	total_size;
+	uint8_t		reserved2[12];
+} via_fw_header_t;
 
-#define	AMD_MAGIC	0xaaaaaa
+typedef struct via_cpu_signature {
+	uint32_t	cpu_signature;
+	uint32_t	checksum;
+} via_cpu_signature_t;
 
-#endif /* !AMD_H */
+#define VIA_HEADER_SIGNATURE	0x53415252
+#define VIA_LOADER_REVISION	0x00000001
+
+#endif /* !VIA_H */

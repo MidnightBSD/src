@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2008 Stanislav Sedov <stas@FreeBSD.org>.
+ * Copyright (c) 2008-2011 Stanislav Sedov <stas@FreeBSD.org>.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/cpucontrol/cpucontrol.c,v 1.1 2012/03/01 04:45:09 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <assert.h>
 #include <stdio.h>
@@ -51,6 +51,7 @@ __MBSDID("$MidnightBSD: src/usr.sbin/cpucontrol/cpucontrol.c,v 1.1 2012/03/01 04
 #include "cpucontrol.h"
 #include "amd.h"
 #include "intel.h"
+#include "via.h"
 
 int	verbosity_level = 0;
 
@@ -83,7 +84,7 @@ struct datadir {
 	const char		*path;
 	SLIST_ENTRY(datadir)	next;
 };
-static SLIST_HEAD(, datadir) datadirs = SLIST_HEAD_INITIALIZER(&datadirs);
+static SLIST_HEAD(, datadir) datadirs = SLIST_HEAD_INITIALIZER(datadirs);
 
 struct ucode_handler {
 	ucode_probe_t *probe;
@@ -91,6 +92,7 @@ struct ucode_handler {
 } handlers[] = {
 	{ intel_probe, intel_update },
 	{ amd_probe, amd_update },
+	{ via_probe, via_update },
 };
 #define NHANDLERS (sizeof(handlers) / sizeof(*handlers))
 
@@ -177,6 +179,7 @@ do_msr(const char *cmdarg, const char *dev)
 	unsigned long command;
 	int do_invert = 0, op;
 	int fd, error;
+	const char *command_name;
 	char *endptr;
 	char *p;
 
@@ -245,15 +248,19 @@ do_msr(const char *cmdarg, const char *dev)
 	switch (op) {
 	case OP_READ:
 		command = CPUCTL_RDMSR;
+		command_name = "RDMSR";
 		break;
 	case OP_WRITE:
 		command = CPUCTL_WRMSR;
+		command_name = "WRMSR";
 		break;
 	case OP_OR:
 		command = CPUCTL_MSRSBIT;
+		command_name = "MSRSBIT";
 		break;
 	case OP_AND:
 		command = CPUCTL_MSRCBIT;
+		command_name = "MSRCBIT";
 		break;
 	default:
 		abort();
@@ -266,7 +273,7 @@ do_msr(const char *cmdarg, const char *dev)
 	}
 	error = ioctl(fd, command, &args);
 	if (error < 0) {
-		WARN(0, "ioctl(%s, %lu)", dev, command);
+		WARN(0, "ioctl(%s, CPUCTL_%s (%lu))", dev, command_name, command);
 		close(fd);
 		return (1);
 	}

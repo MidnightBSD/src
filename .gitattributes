@@ -67172,6 +67172,8 @@ usr.sbin/cpucontrol/cpucontrol.c -text
 usr.sbin/cpucontrol/cpucontrol.h -text
 usr.sbin/cpucontrol/intel.c -text
 usr.sbin/cpucontrol/intel.h -text
+usr.sbin/cpucontrol/via.c svneol=native#text/plain
+usr.sbin/cpucontrol/via.h svneol=native#text/plain
 usr.sbin/crashinfo/Makefile -text
 usr.sbin/crashinfo/crashinfo.8 -text
 usr.sbin/crashinfo/crashinfo.sh -text
