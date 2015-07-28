@@ -1,4 +1,4 @@
-# $MidnightBSD: src/libexec/telnetd/Makefile,v 1.2 2012/04/11 00:58:36 laffer1 Exp $
+# $MidnightBSD$
 # $FreeBSD: src/libexec/telnetd/Makefile,v 1.26 2005/06/10 06:12:51 des Exp $
 
 # Do not define -DKLUDGELINEMODE, as it does not interact well with many
@@ -26,6 +26,7 @@ CFLAGS+=	-DINET6
 .endif
 
 CFLAGS+=	-I${TELNETDIR}
+CFLAGS+=	-I${TELNETDIR}/telnet
 
 LIBTELNET=	${.OBJDIR}/../../lib/libtelnet/libtelnet.a
 
