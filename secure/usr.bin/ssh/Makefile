@@ -17,6 +17,7 @@ LDADD=	-lssh -lutil -lz
 
 .if ${MK_KERBEROS_SUPPORT} != "no"
 CFLAGS+= -DGSSAPI -DHAVE_GSSAPI_GSSAPI_H=1 -DKRB5 -DHEIMDAL -DHAVE_KRB5_GET_ERROR_MESSAGE
+CFLAGS+= -include krb5_config.h
 DPADD+=	 ${LIBGSSAPI}
 LDADD+=	 -lgssapi
 .endif

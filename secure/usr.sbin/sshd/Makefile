@@ -34,13 +34,15 @@ LDADD+=  -lbsm
 .endif
 
 .if ${MK_KERBEROS_SUPPORT} != "no"
-CFLAGS+= -DGSSAPI -DHAVE_GSSAPI_GSSAPI_H=1 -DHAVE_GSSAPI_GSSAPI_KRB5_H=1 -DKRB5 -DHEIMDAL -DHAVE_KRB5_GET_ERROR_MESSAGE=1
-DPADD+=	 ${LIBGSSAPI_KRB5} ${LIBGSSAPI} ${LIBKRB5} ${LIBASN1}
-LDADD+=	 -lgssapi_krb5 -lgssapi -lkrb5 -lasn1
+CFLAGS+= -include krb5_config.h
+DPADD+=	 ${LIBGSSAPI_KRB5} ${LIBGSSAPI} ${LIBKRB5} ${LIBHX509} ${LIBASN1} \
+	${LIBCOM_ERR} ${LIBROKEN} ${LIBWIND} ${LIBHEIMBASE} ${LIBHEIMIPCC}
+LDADD+=	 -lgssapi_krb5 -lgssapi -lkrb5 -lhx509 -lasn1 \
+	-lcom_err -lroken -lwind -lheimbase -lheimipcc
 .endif
 
-DPADD+=	${LIBCRYPTO} ${LIBCRYPT}
-LDADD+=	-lcrypto -lcrypt
+DPADD+= ${LIBCRYPT} ${LIBCRYPTO} ${LIBZ}
+LDADD+= -lcrypt -lcrypto -lz
 
 # Fix the order of NEEDED entries for libthr and libc. The libthr
 # needs to interpose libc symbols, leaving the libthr loading as
@@ -61,3 +63,6 @@ CFLAGS+= -DXAUTH_PATH=\"${LOCALBASE}/bin/xauth\"
 .PATH:	${SSHDIR}
 
 ${OBJS} ${POBJS} ${SOBJS}: ssh_namespace.h
+.if ${MK_KERBEROS_SUPPORT} != "no"
+${OBJS} ${POBJS} ${SOBJS}: krb5_config.h
+.endif
