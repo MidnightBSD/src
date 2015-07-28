@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20160728:
+	Heimdal 1.5.2 (kerberos implementation)
+
+	OpenSSL 1.0.1o
+
+	cpucontrol(8) now supports VIA CPUs. Synced with FreeBSD 9.2.
+
 20160726:
 	BSD Sort updated
 
