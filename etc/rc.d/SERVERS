@@ -3,7 +3,7 @@
 # $MidnightBSD$
 
 # PROVIDE: SERVERS
-# REQUIRE: mountcritremote abi ldconfig savecore watchdogd
+# REQUIRE: mountcritremote abi ldconfig savecore watchdogd kdc
 
 #	This is a dummy dependency, for early-start servers relying on
 #	some basic configuration.

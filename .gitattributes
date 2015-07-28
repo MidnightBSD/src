@@ -46180,11 +46180,13 @@ etc/rc.d/ipfs -text
 etc/rc.d/ipfw -text
 etc/rc.d/ipmon -text
 etc/rc.d/ipnat -text
+etc/rc.d/ipropd_master -text
+etc/rc.d/ipropd_slave -text
 etc/rc.d/ipsec -text
 etc/rc.d/ipxrouted -text
 etc/rc.d/jail -text
 etc/rc.d/kadmind -text
-etc/rc.d/kerberos -text
+etc/rc.d/kdc -text
 etc/rc.d/keyserv -text
 etc/rc.d/kld -text
 etc/rc.d/kldxref -text

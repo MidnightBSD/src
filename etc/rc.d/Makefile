@@ -14,11 +14,11 @@ FILES=	DAEMON FILESYSTEMS LOGIN NETWORKING SERVERS \
 	gbde geli geli2 gptboot gssd \
 	hastd hcsecd \
 	hostapd hostid hostid_save hostname \
-	inetd initrandom \
+	ipropd_master ipropd_slave inetd initrandom \
 	ip6addrctl ipfilter ipfs ipfw ipmon \
 	ipnat ipsec \
 	jail \
-	kadmind kerberos keyserv kld kldxref kpasswdd \
+	kadmind kdc keyserv kld kldxref kpasswdd \
 	ldconfig local localpkg lockd lpd \
 	mdnsd mdnsresponder mixer motd \
 	mountcritlocal mountcritremote mountlate \
