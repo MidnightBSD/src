@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)telnet.h	8.2 (Berkeley) 12/15/93
- * $FreeBSD$
+ * $FreeBSD: stable/10/contrib/telnet/arpa/telnet.h 275508 2014-12-05 12:23:29Z ngie $
  */
 
 #ifndef _ARPA_TELNET_H_
@@ -127,6 +127,7 @@ extern char *telcmds[];
 #define	TELOPT_KERMIT	47	/* RFC2840 - Kermit */
 #define	TELOPT_EXOPL	255	/* extended-options-list */
 
+#define	COMPORT_SET_BAUDRATE	1	/* RFC2217 - Com Port Set Baud Rate */
 
 #define	NTELOPTS	(1+TELOPT_KERMIT)
 #ifdef TELOPTS

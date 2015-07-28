@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/contrib/telnet/libtelnet/encrypt.c 228843 2011-12-23 15:00:37Z cperciva $");
 
 #ifndef lint
 #if 0

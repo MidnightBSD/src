@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)externs.h	8.3 (Berkeley) 5/30/95
- *	$FreeBSD$
+ *	$FreeBSD: stable/10/contrib/telnet/telnet/externs.h 275508 2014-12-05 12:23:29Z ngie $
  */
 
 #ifndef	BSD
@@ -231,6 +231,10 @@ extern unsigned char
     NetTraceFile[];	/* Name of file where debugging output goes */
 extern void
     SetNetTrace(char *);	/* Function to change where debugging goes */
+extern unsigned char
+    ComPortBaudRate[];	/* Baud rate of the remote end */
+extern void
+    DoBaudRate(char *);	/* Function to set the baud rate of the remote end */
 
 extern jmp_buf
     toplevel;		/* For error conditions. */
@@ -475,6 +479,16 @@ extern cc_t termAytChar;
 # endif
 #endif
 
+typedef struct {
+    int
+	system,			/* what the current time is */
+	echotoggle,		/* last time user entered echo character */
+	modenegotiated,		/* last time operating mode negotiated */
+	didnetreceive,		/* last time we read data from network */
+	gotDM;			/* when did we last see a data mark */
+} Clocks;
+
+extern Clocks clocks;
 
 /* Ring buffer structures which are shared */
 

@@ -37,7 +37,7 @@ static const char sccsid[] = "@(#)main.c	8.3 (Berkeley) 5/30/95";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/contrib/telnet/telnet/main.c 275508 2014-12-05 12:23:29Z ngie $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -91,10 +91,10 @@ usage(void)
 	fprintf(stderr, "usage: %s %s%s%s%s\n",
 	    prompt,
 #ifdef	AUTHENTICATION
-	    "[-4] [-6] [-8] [-E] [-K] [-L] [-N] [-S tos] [-X atype] [-c] [-d]",
-	    "\n\t[-e char] [-k realm] [-l user] [-f/-F] [-n tracefile] ",
+	    "[-4] [-6] [-8] [-B baudrate] [-E] [-K] [-L] [-N] [-S tos] [-X atype]",
+	    "\n\t[-c] [-d] [-e char] [-k realm] [-l user] [-f/-F] [-n tracefile] ",
 #else
-	    "[-4] [-6] [-8] [-E] [-L] [-N] [-S tos] [-c] [-d]",
+	    "[-4] [-6] [-8] [-B baudrate] [-E] [-L] [-N] [-S tos] [-c] [-d]",
 	    "\n\t[-e char] [-l user] [-n tracefile] ",
 #endif
 	    "[-r] [-s src_addr] [-u] ",
@@ -154,7 +154,7 @@ main(int argc, char *argv[])
 #define IPSECOPT
 #endif
 	while ((ch = getopt(argc, argv,
-			    "468EKLNS:X:acde:fFk:l:n:rs:uxy" IPSECOPT)) != -1)
+			    "468B:EKLNS:X:acde:fFk:l:n:rs:uxy" IPSECOPT)) != -1)
 #undef IPSECOPT
 	{
 		switch(ch) {
@@ -168,6 +168,9 @@ main(int argc, char *argv[])
 #endif
 		case '8':
 			eight = 3;	/* binary output and input */
+			break;
+		case 'B':
+			DoBaudRate(optarg);
 			break;
 		case 'E':
 			rlogin = escape = _POSIX_VDISABLE;

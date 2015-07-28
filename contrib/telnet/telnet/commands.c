@@ -37,7 +37,7 @@ static const char sccsid[] = "@(#)commands.c	8.4 (Berkeley) 5/30/95";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/contrib/telnet/telnet/commands.c 275508 2014-12-05 12:23:29Z ngie $");
 
 #include <sys/param.h>
 #include <sys/un.h>
@@ -896,6 +896,7 @@ static struct setlist Setlist[] = {
     { "forw1",	"alternate end of line character", NULL, termForw1Charp },
     { "forw2",	"alternate end of line character", NULL, termForw2Charp },
     { "ayt",	"alternate AYT character", NULL, termAytCharp },
+    { "baudrate", "set remote baud rate", DoBaudRate, ComPortBaudRate },
     { NULL, NULL, NULL, NULL }
 };
 

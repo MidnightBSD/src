@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/10/contrib/telnet/libtelnet/read_password.c 87139 2001-11-30 21:06:38Z markm $");
 
 #ifndef lint
 #if 0
@@ -42,8 +42,8 @@ static char sccsid[] = "@(#)read_password.c	8.3 (Berkeley) 5/30/95";
 #endif /* not lint */
 
 /*
- * $Source: /home/cvs/src/contrib/telnet/libtelnet/read_password.c,v $
- * $Author: laffer1 $
+ * $Source: /mit/kerberos/src/lib/des/RCS/read_password.c,v $
+ * $Author: jon $
  *
  * Copyright 1985, 1986, 1987, 1988 by the Massachusetts Institute
  * of Technology.
