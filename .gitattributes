@@ -39411,6 +39411,7 @@ contrib/telnet/libtelnet/read_password.c -text
 contrib/telnet/libtelnet/rsaencpwd.c -text
 contrib/telnet/libtelnet/sra.c -text
 contrib/telnet/telnet/authenc.c -text
+contrib/telnet/telnet/baud.h svneol=native#text/plain
 contrib/telnet/telnet/commands.c -text
 contrib/telnet/telnet/defines.h -text
 contrib/telnet/telnet/externs.h -text

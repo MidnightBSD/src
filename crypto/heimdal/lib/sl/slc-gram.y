@@ -46,6 +46,7 @@
 #include "slc.h"
 extern FILE *yyin;
 extern struct assignment *assignment;
+extern int yyparse(void);
 
 /* Declarations for Bison:
  */

@@ -23,8 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
- *	$FreeBSD: src/lib/libgssapi/mech_switch.h,v 1.1 2005/12/29 14:40:20 dfr Exp $
+ *	$FreeBSD: stable/10/crypto/heimdal/lib/gssapi/gssapi_mech.h 233294 2012-03-22 08:48:42Z stas $
  */
 
 #ifndef GSSAPI_MECH_H
