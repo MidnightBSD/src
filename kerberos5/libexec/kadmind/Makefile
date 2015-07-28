@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: stable/10/kerberos5/libexec/kadmind/Makefile 236337 2012-05-30 22:21:25Z obrien $
 
 PROG=	kadmind
