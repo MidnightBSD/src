@@ -27,6 +27,9 @@ Updating Information for MidnightBSD users.
 	using PAM (default) would allow many password attempts. A bug allows
 	MaxAuthTries to be bypassed. [CVE-2015-5600]
 
+
+	Switch to bsdpatch (from FreeBSD & OpenBSD)
+
 20160726:
 	BSD Sort updated
 
