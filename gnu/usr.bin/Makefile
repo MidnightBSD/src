@@ -13,7 +13,6 @@ SUBDIR= ${_binutils} \
 	${_gperf} \
 	grep \
 	${_groff} \
-	patch \
 	${_rcs} \
 	sort \
 	${_texinfo}
