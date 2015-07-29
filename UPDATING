@@ -17,6 +17,16 @@ Updating Information for MidnightBSD users.
 	traffic would cease.
 	Obtained from: FreeBSD 8
 
+	OpenSSH
+
+	Fix two security vulnerabilities:
+	OpenSSH clients does not correctly verify DNS SSHFP records when a server
+	offers a certificate. [CVE-2014-2653]
+
+	OpenSSH servers which are configured to allow password authentication
+	using PAM (default) would allow many password attempts. A bug allows
+	MaxAuthTries to be bypassed. [CVE-2015-5600]
+
 20160726:
 	BSD Sort updated
 
