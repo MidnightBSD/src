@@ -5,7 +5,7 @@
 
 # XXX MISSING:		deroff diction graph learn plot
 #			spline struct xsend
-# XXX Use GNU versions: diff ld patch
+# XXX Use GNU versions: diff ld
 # Moved to secure: bdes
 #
 
@@ -128,6 +128,7 @@ SUBDIR=	alias \
 	pagesize \
 	passwd \
 	paste \
+	patch \
 	pathchk \
 	perl \
 	perror \
