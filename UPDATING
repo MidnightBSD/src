@@ -7,6 +7,16 @@ Updating Information for MidnightBSD users.
 
 	cpucontrol(8) now supports VIA CPUs. Synced with FreeBSD 9.2.
 
+	TCP Resassemly resource exhaustion bug:
+	There is a mistake with the introduction of VNET, which converted the
+	global limit on the number of segments that could belong to reassembly
+	queues into a per-VNET limit.  Because mbufs are allocated from a
+	global pool, in the presence of a sufficient number of VNETs, the
+	total number of mbufs attached to reassembly queues can grow to the
+	total number of mbufs in the system, at which point all network
+	traffic would cease.
+	Obtained from: FreeBSD 8
+
 20160726:
 	BSD Sort updated
 
