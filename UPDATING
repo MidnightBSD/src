@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20160802:
+	jansson 2.7 library added. (libjansson is a JSON library in C)
+
 20160728:
 	Heimdal 1.5.2 (kerberos implementation)
 
