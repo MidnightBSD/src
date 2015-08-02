@@ -50237,6 +50237,8 @@ lib/libjail/jail.3 -text
 lib/libjail/jail.c -text
 lib/libjail/jail.h -text
 lib/libjail/jail_getid.c -text
+lib/libjansson/Makefile svneol=native#text/plain
+lib/libjansson/jansson_config.h svneol=native#text/plain
 lib/libkiconv/Makefile -text
 lib/libkiconv/kiconv.3 -text
 lib/libkiconv/kiconv_sysctl.c -text
