@@ -36,8 +36,8 @@ __RCSID("$NetBSD$");
 #elif defined(__FreeBSD__)
 __RCSID("$MidnightBSD$");
 #else
-__RCSID("$Revision: 1.2 $");
-#ident "$Revision: 1.2 $"
+__RCSID("$Revision: 2.27 $");
+#ident "$Revision: 2.27 $"
 #endif
 
 static struct rt_spare *rts_better(struct rt_entry *);

@@ -36,8 +36,8 @@ __RCSID("$NetBSD$");
 #elif defined(__FreeBSD__)
 __RCSID("$MidnightBSD$");
 #else
-__RCSID("$Revision: 1.3 $");
-#ident "$Revision: 1.3 $"
+__RCSID("$Revision: 2.26 $");
+#ident "$Revision: 2.26 $"
 #endif
 
 static void input(struct sockaddr_in *, struct interface *, struct interface *,
@@ -159,6 +159,12 @@ input(struct sockaddr_in *from,		/* received from this IP address */
 		aifp->int_act_time = now.tv_sec;
 
 	trace_rip("Recv", "from", from, sifp, rip, cc);
+
+	if (sifp == 0) {
+		trace_pkt("    discard a request from an indirect router"
+		    " (possibly an attack)");
+		return;
+	}
 
 	if (rip->rip_vers == 0) {
 		msglim(&bad_router, FROM_NADDR,
