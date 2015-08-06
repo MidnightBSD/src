@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20160805:
+	MidnightBSD 0.6.5 RELEASE
+
+        routed - fix a potential security issue where traffic from outside
+        the network can disrupt routing.
+
 20150728:
 	MidnightBSD 0.6.4 RELEASE
 

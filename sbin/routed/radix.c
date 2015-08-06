@@ -42,8 +42,8 @@ __RCSID("$NetBSD$");
 #elif defined(__FreeBSD__)
 __RCSID("$MidnightBSD$");
 #else
-__RCSID("$Revision: 1.2 $");
-#ident "$Revision: 1.2 $"
+__RCSID("$Revision: 2.23 $");
+#ident "$Revision: 2.23 $"
 #endif
 
 #define log(x, msg) syslog(x, msg)

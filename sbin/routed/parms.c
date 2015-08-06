@@ -38,8 +38,8 @@ __RCSID("$NetBSD$");
 #elif defined(__FreeBSD__)
 __RCSID("$MidnightBSD$");
 #else
-__RCSID("$Revision: 1.2 $");
-#ident "$Revision: 1.2 $"
+__RCSID("$Revision: 2.26 $");
+#ident "$Revision: 2.26 $"
 #endif
 
 

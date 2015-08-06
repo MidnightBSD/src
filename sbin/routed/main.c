@@ -47,8 +47,8 @@ __RCSID("$NetBSD$");
 #elif defined(__FreeBSD__)
 __RCSID("$MidnightBSD$");
 #else
-__RCSID("$Revision: 1.3 $");
-#ident "$Revision: 1.3 $"
+__RCSID("$Revision: 2.31 $");
+#ident "$Revision: 2.31 $"
 #endif
 
 pid_t	mypid;
