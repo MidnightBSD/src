@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20160805:
+	routed - fix a potential security issue where traffic from outside
+	the network can disrupt routing.
+
+	bsd patch - fix a bug with ed(1) scripts allowing unsanitized input
+	to run.
+
 20160802:
 	jansson 2.7 library added. (libjansson is a JSON library in C)
 
