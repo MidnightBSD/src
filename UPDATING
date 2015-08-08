@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20160808:
+	libmport now logs installation and removal of packages to syslog.
+
 20160805:
 	routed - fix a potential security issue where traffic from outside
 	the network can disrupt routing.
