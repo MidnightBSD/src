@@ -36,9 +36,11 @@ __MBSDID("$MidnightBSD$");
 #include <md5.h>
 #include <stdlib.h>
 #include <libgen.h>
+#include <syslog.h>
+#include <stdarg.h>
+
 #include "mport.h"
 #include "mport_private.h"
-
 
 
 static int run_pkg_deinstall(mportInstance *, mportPackageMeta *, const char *);
@@ -242,6 +244,7 @@ while (1) {
   (mport->progress_free_cb)();
 
   mport_pkgmeta_logevent(mport, pack, "Package deleted");
+  syslog(LOG_NOTICE, "%s-%s deinstalled", pack->name, pack->version);
   
   return MPORT_OK;  
 } 

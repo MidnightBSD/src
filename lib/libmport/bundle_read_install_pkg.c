@@ -37,6 +37,8 @@ __MBSDID("$MidnightBSD$");
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <syslog.h>
+#include <stdarg.h>
 #include <archive_entry.h>
 
 
@@ -59,6 +61,8 @@ mport_bundle_read_install_pkg(mportInstance *mport, mportBundleRead *bundle, mpo
 
   if (do_post_install(mport, bundle, pkg) != MPORT_OK)
     RETURN_CURRENT_ERROR;
+
+  syslog(LOG_NOTICE, "%s-%s installed", pkg->name, pkg->version);
   
   return MPORT_OK;
 }  
