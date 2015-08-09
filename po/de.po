@@ -1,14 +1,14 @@
 # XZ Utils German translation
 # This file is put in the public domain.
-# Andre Noll <maan@systemlinux.org>, 2010.
+# Andre Noll <maan@tuebingen.mpg.de>, 2010.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: XZ Utils 4.999.9beta\n"
 "Report-Msgid-Bugs-To: lasse.collin@tukaani.org\n"
-"POT-Creation-Date: 2014-09-20 20:46+0300\n"
+"POT-Creation-Date: 2014-12-21 15:56+0200\n"
 "PO-Revision-Date: 2010-09-07 20:27+0200\n"
-"Last-Translator:  <maan@systemlinux.org>\n"
+"Last-Translator:  <maan@tuebingen.mpg.de>\n"
 "Language-Team: German\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
@@ -146,7 +146,7 @@ msgstr "Fehler beim Wiederherstellen des O_APPEND flags bei Standard Output: %s"
 #: src/xz/file_io.c:723
 #, c-format
 msgid "%s: Closing the file failed: %s"
-msgstr "%s: Fehler beim Schießen der Datei: %s"
+msgstr "%s: Fehler beim Schließen der Datei: %s"
 
 #: src/xz/file_io.c:759 src/xz/file_io.c:943
 #, c-format
@@ -754,7 +754,7 @@ msgstr ""
 msgid "Report bugs to <%s> (in English or Finnish).\n"
 msgstr ""
 "Melde Bugs an <%s> (in englisch oder finnisch).\n"
-"Melde Übersetzungsfehler an <maan@systemlinux.org> (in englisch oder deutsch).\n"
+"Melde Übersetzungsfehler an <maan@tuebingen.mpg.de> (in englisch oder deutsch).\n"
 
 #: src/xz/message.c:1245
 #, c-format

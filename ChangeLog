@@ -1,3 +1,189 @@
+commit 265e5ffb70d9c175b424621576294d28807efd9b
+Author: Adrien Nader <adrien@notk.org>
+Date:   2014-12-21 15:56:15 +0100
+
+    po/fr: improve wording for help for --lzma1/--lzma2.
+
+ po/fr.po | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+commit 3dfa915cd16c638ef077d216fd8b6d95340b15a8
+Author: Adrien Nader <adrien@notk.org>
+Date:   2014-12-21 15:55:48 +0100
+
+    po/fr: missing line in translation of --extreme.
+
+ po/fr.po | 1 +
+ 1 file changed, 1 insertion(+)
+
+commit 6b65e84bd4d5e51918772df539923e64860f0097
+Author: Lasse Collin <lasse.collin@tukaani.org>
+Date:   2014-12-21 14:07:54 +0200
+
+    xz: Fix a comment.
+
+ src/xz/options.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+commit 4da8e1d83388f419258e328563e69b9bf215a789
+Author: Lasse Collin <lasse.collin@tukaani.org>
+Date:   2014-12-21 13:50:08 +0200
+
+    Bump version and soname for 5.0.8.
+
+ src/liblzma/Makefile.am        | 2 +-
+ src/liblzma/api/lzma/version.h | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+commit f6dc9996b0f3e4d20b138285e5e8829a7a1dbd78
+Author: Lasse Collin <lasse.collin@tukaani.org>
+Date:   2014-12-21 13:48:45 +0200
+
+    Update NEWS for 5.0.8.
+
+ NEWS | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+commit 67d62a375aa0ea70e826f7aadad818041394222d
+Author: Lasse Collin <lasse.collin@tukaani.org>
+Date:   2014-12-20 20:49:49 +0200
+
+    Translations: Update the French translation.
+    
+    Thanks to Adrien Nader.
+
+ po/fr.po | 209 ++++++++++++++++++++++++++++-----------------------------------
+ 1 file changed, 93 insertions(+), 116 deletions(-)
+
+commit 283c03fe5b991a6d2ab912c522044c63c2ea2d05
+Author: Lasse Collin <lasse.collin@tukaani.org>
+Date:   2014-12-18 21:33:33 +0200
+
+    Update THANKS.
+
+ THANKS | 1 +
+ 1 file changed, 1 insertion(+)
+
+commit 0c7fe9f227719dcfef0394a94002f20a73dde50e
+Author: Lasse Collin <lasse.collin@tukaani.org>
+Date:   2014-11-28 20:07:18 +0200
+
+    Update INSTALL about a "make check" failure in test_scripts.sh.
+
+ INSTALL | 24 +++++++++++++++++-------
+ 1 file changed, 17 insertions(+), 7 deletions(-)
+
+commit b46fe3ced9889bc79ed272b106a8a454eba9a40e
+Author: Lasse Collin <lasse.collin@tukaani.org>
+Date:   2014-11-17 19:11:49 +0200
+
+    Build: Update m4/ax_pthread.m4 from Autoconf Archive.
+
+ m4/ax_pthread.m4 | 71 +++++++++++++++++++++++++++++++++++++-------------------
+ 1 file changed, 47 insertions(+), 24 deletions(-)
+
+commit 6ed0554a154b6314531cfb75aeff6b621035423f
+Author: Lasse Collin <lasse.collin@tukaani.org>
+Date:   2014-12-18 21:27:35 +0200
+
+    Build: Replace obsolete AC_HELP_STRING with AS_HELP_STRING.
+
+ configure.ac | 34 +++++++++++++++++-----------------
+ 1 file changed, 17 insertions(+), 17 deletions(-)
+
+commit 0ab300ec5240862c025dc3d313e10e69dbc69279
+Author: Lasse Collin <lasse.collin@tukaani.org>
+Date:   2014-12-18 21:26:20 +0200
+
+    Build: Fix Autoconf warnings about escaped backquotes.
+
+ configure.ac | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+commit b274ad02c4b8c45d3707a148a73b520b77519840
+Author: Lasse Collin <lasse.collin@tukaani.org>
+Date:   2014-10-09 19:42:26 +0300
+
+    Update THANKS.
+
+ THANKS | 1 +
+ 1 file changed, 1 insertion(+)
+
+commit 4fdcccd85e140acd99a1ef4684cd3a1957380376
+Author: Lasse Collin <lasse.collin@tukaani.org>
+Date:   2014-10-09 19:41:51 +0300
+
+    Add support for AmigaOS/AROS to tuklib_physmem().
+    
+    Thanks to Fredrik Wikstrom.
+
+ m4/tuklib_physmem.m4        | 3 ++-
+ src/common/tuklib_physmem.c | 7 +++++++
+ 2 files changed, 9 insertions(+), 1 deletion(-)
+
+commit f229fa32bf70bf9b109864d216719371af108364
+Author: Lasse Collin <lasse.collin@tukaani.org>
+Date:   2014-10-09 18:42:14 +0300
+
+    xzgrep: Avoid passing both -q and -l to grep.
+    
+    The behavior of grep -ql varies:
+      - GNU grep behaves like grep -q.
+      - OpenBSD grep behaves like grep -l.
+    
+    POSIX doesn't make it 100 % clear what behavior is expected.
+    Anyway, using both -q and -l at the same time makes no sense
+    so both options simply should never be used at the same time.
+    
+    Thanks to Christian Weisgerber.
+
+ src/scripts/xzgrep.in | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+commit 94a1a869ee1b8b854592327e04decd6f8441aaf5
+Author: Lasse Collin <lasse.collin@tukaani.org>
+Date:   2014-09-25 18:38:48 +0300
+
+    Build: Detect supported compiler warning flags better.
+    
+    Clang and nowadays also GCC accept any -Wfoobar option
+    but then may give a warning that an unknown warning option
+    was specified. To avoid adding unsupported warning options,
+    the options are now tested with -Werror.
+    
+    Thanks to Charles Diza.
+
+ configure.ac | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+commit 0e50ad7129910f9a4c16d0c447eb9e073f367917
+Author: Andre Noll <maan@tuebingen.mpg.de>
+Date:   2014-10-14 17:30:30 +0200
+
+    l10n: de.po: Change translator email address.
+    
+    Although the old address is still working, the new one should
+    be preferred. So this commit changes all three places in de.po
+    accordingly.
+    
+    Signed-off-by: Andre Noll <maan@tuebingen.mpg.de>
+
+ po/de.po | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+commit 9fd333d742427d5067ae6a77ac4b2f69546dc31b
+Author: Andre Noll <maan@tuebingen.mpg.de>
+Date:   2014-10-14 17:30:28 +0200
+
+    l10n: de.po: Fix typo: Schießen -> Schließen.
+    
+    That's a funny one since "schießen" means to shoot :)
+    
+    Signed-off-by: Andre Noll <maan@systemlinux.org>
+
+ po/de.po | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
 commit 495aaf3a5b7200a5d2bf449bbbcc0e18834607af
 Author: Lasse Collin <lasse.collin@tukaani.org>
 Date:   2014-09-20 20:44:32 +0300
