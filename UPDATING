@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20160809:
+	xz 5.0.8
+
 20160808:
 	libmport now logs installation and removal of packages to syslog.
 
