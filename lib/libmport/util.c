@@ -177,7 +177,7 @@ int mport_chdir(mportInstance *mport, const char *dir)
 }    
 
 
-/* deletes the entire directory tree at name.
+/* deletes the entire directory tree at filename.
  * think rm -r filename
  */
 int
@@ -275,7 +275,8 @@ mport_shell_unregister(const char *shell_file)
 /*
  * Quick test to see if a file exists.
  */
-MPORT_PUBLIC_API int mport_file_exists(const char *file) 
+MPORT_PUBLIC_API int
+mport_file_exists(const char *file) 
 {
   struct stat st;
   
@@ -291,7 +292,8 @@ MPORT_PUBLIC_API int mport_file_exists(const char *file)
  * If mport is non-NULL and has a root set, your command will run 
  * chroot'ed into mport->root.
  */
-int mport_xsystem(mportInstance *mport, const char *fmt, ...) 
+int
+mport_xsystem(mportInstance *mport, const char *fmt, ...) 
 {
   va_list args;
   char *cmnd;
@@ -351,7 +353,8 @@ int mport_xsystem(mportInstance *mport, const char *fmt, ...)
  * mport_parselist(input, &list);
  * list = {"foo", "bar", "baz"};
  */
-void mport_parselist(char *opt, char ***list) 
+void
+mport_parselist(char *opt, char ***list) 
 {
   size_t len;
   char *input;
@@ -405,7 +408,8 @@ void mport_parselist(char *opt, char ***list)
  * %B	Return the directory part ("dirname") of %D/%F
  * %f	Return the filename part of ("basename") %D/%F
  */
-int mport_run_asset_exec(mportInstance *mport, const char *fmt, const char *cwd, const char *last_file) 
+int
+mport_run_asset_exec(mportInstance *mport, const char *fmt, const char *cwd, const char *last_file) 
 {
   size_t l;
   char *cmnd;
@@ -505,7 +509,8 @@ void mport_free_vec(void *vec)
  *
  * Extract a bzip2 file such as an index
  */
-int mport_decompress_bzip2(const char *input, const char *output)
+int
+mport_decompress_bzip2(const char *input, const char *output)
 {
   FILE    *f;
   FILE    *fout;
