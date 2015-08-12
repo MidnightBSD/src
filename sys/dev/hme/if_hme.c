@@ -564,7 +564,7 @@ hme_add_rxbuf(struct hme_softc *sc, unsigned int ri, int keepold)
 		hme_discard_rxbuf(sc, ri);
 		return (0);
 	}
-	if ((m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR)) == NULL)
+	if ((m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR)) == NULL)
 		return (ENOBUFS);
 	m->m_len = m->m_pkthdr.len = m->m_ext.ext_size;
 	b = mtod(m, uintptr_t);
@@ -742,6 +742,10 @@ hme_init_locked(struct hme_softc *sc)
 	u_int32_t n, v;
 
 	HME_LOCK_ASSERT(sc, MA_OWNED);
+
+	if ((ifp->if_drv_flags & IFF_DRV_RUNNING) != 0)
+		return;
+
 	/*
 	 * Initialization sequence. The numbered steps below correspond
 	 * to the sequence outlined in section 6.3.5.1 in the Ethernet
@@ -951,7 +955,7 @@ hme_load_txmbuf(struct hme_softc *sc, struct mbuf **m0)
 	cflags = 0;
 	if (((*m0)->m_pkthdr.csum_flags & sc->sc_csum_features) != 0) {
 		if (M_WRITABLE(*m0) == 0) {
-			m = m_dup(*m0, M_DONTWAIT);
+			m = m_dup(*m0, M_NOWAIT);
 			m_freem(*m0);
 			*m0 = m;
 			if (m == NULL)
@@ -974,7 +978,7 @@ hme_load_txmbuf(struct hme_softc *sc, struct mbuf **m0)
 	error = bus_dmamap_load_mbuf_sg(sc->sc_tdmatag, htx->htx_dmamap,
 	    *m0, segs, &nsegs, 0);
 	if (error == EFBIG) {
-		m = m_collapse(*m0, M_DONTWAIT, HME_NTXSEGS);
+		m = m_collapse(*m0, M_NOWAIT, HME_NTXSEGS);
 		if (m == NULL) {
 			m_freem(*m0);
 			*m0 = NULL;
@@ -1324,6 +1328,7 @@ hme_eint(struct hme_softc *sc, u_int status)
 	/* check for fatal errors that needs reset to unfreeze DMA engine */
 	if ((status & HME_SEB_STAT_FATAL_ERRORS) != 0) {
 		HME_WHINE(sc->sc_dev, "error signaled, status=%#x\n", status);
+		sc->sc_ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 		hme_init_locked(sc);
 	}
 }
@@ -1370,6 +1375,7 @@ hme_watchdog(struct hme_softc *sc)
 		device_printf(sc->sc_dev, "device timeout (no link)\n");
 	++ifp->if_oerrors;
 
+	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 	hme_init_locked(sc);
 	hme_start_locked(ifp);
 	return (EJUSTRETURN);
