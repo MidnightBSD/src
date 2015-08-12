@@ -1,5 +1,16 @@
 Updating Information for MidnightBSD users.
 
+20160811:
+	ata(4) AMD Hudson2 SATA controller support.
+	Intel lynxpoint SATA.
+
+	Fix some const warnings when building several device drivers
+	with llvm/clang.
+
+	Sync cas(4) with FreeBSD 9-stable.
+
+	Fix some minor issues with ath(4).
+
 20160809:
 	xz 5.0.8
 
