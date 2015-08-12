@@ -281,7 +281,7 @@ ath_hal_v4kEepromAttach(struct ath_hal *ah)
 {
 #define	NW(a)	(sizeof(a) / sizeof(uint16_t))
 	HAL_EEPROM_v4k *ee = AH_PRIVATE(ah)->ah_eeprom;
-	uint16_t *eep_data, magic;
+	uint16_t *eep_data, magic = 0;
 	HAL_BOOL need_swap;
 	u_int w, off, len;
 	uint32_t sum;

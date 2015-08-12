@@ -4594,7 +4594,7 @@ ath_calibrate(void *arg)
 	struct ath_hal *ah = sc->sc_ah;
 	struct ifnet *ifp = sc->sc_ifp;
 	struct ieee80211com *ic = ifp->if_l2com;
-	HAL_BOOL longCal, isCalDone;
+	HAL_BOOL longCal, isCalDone = AH_FALSE;
 	HAL_BOOL aniCal, shortCal = AH_FALSE;
 	int nextcal;
 
