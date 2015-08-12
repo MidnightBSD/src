@@ -91,7 +91,7 @@ static const struct stge_product {
 	uint16_t	stge_vendorid;
 	uint16_t	stge_deviceid;
 	const char	*stge_name;
-} const stge_products[] = {
+} stge_products[] = {
 	{ VENDOR_SUNDANCETI,	DEVICEID_SUNDANCETI_ST1023,
 	  "Sundance ST-1023 Gigabit Ethernet" },
 
@@ -453,11 +453,11 @@ stge_attach(device_t dev)
 	pci_enable_busmaster(dev);
 	cmd = pci_read_config(dev, PCIR_COMMAND, 2);
 	val = pci_read_config(dev, PCIR_BAR(1), 4);
-	if ((val & 0x01) != 0)
+	if (PCI_BAR_IO(val))
 		sc->sc_spec = stge_res_spec_mem;
 	else {
 		val = pci_read_config(dev, PCIR_BAR(0), 4);
-		if ((val & 0x01) == 0) {
+		if (!PCI_BAR_IO(val)) {
 			device_printf(sc->sc_dev, "couldn't locate IO BAR\n");
 			error = ENXIO;
 			goto fail;
@@ -1082,7 +1082,7 @@ stge_encap(struct stge_softc *sc, struct mbuf **m_head)
 	error =  bus_dmamap_load_mbuf_sg(sc->sc_cdata.stge_tx_tag,
 	    txd->tx_dmamap, *m_head, txsegs, &nsegs, 0);
 	if (error == EFBIG) {
-		m = m_collapse(*m_head, M_DONTWAIT, STGE_MAXTXSEGS);
+		m = m_collapse(*m_head, M_NOWAIT, STGE_MAXTXSEGS);
 		if (m == NULL) {
 			m_freem(*m_head);
 			*m_head = NULL;
@@ -1610,7 +1610,7 @@ stge_fixup_rx(struct stge_softc *sc, struct mbuf *m)
 		m->m_data += ETHER_HDR_LEN;
 		n = m;
 	} else {
-		MGETHDR(n, M_DONTWAIT, MT_DATA);
+		MGETHDR(n, M_NOWAIT, MT_DATA);
 		if (n != NULL) {
 			bcopy(m->m_data, n->m_data, ETHER_HDR_LEN);
 			m->m_data += ETHER_HDR_LEN;
@@ -2440,7 +2440,7 @@ stge_newbuf(struct stge_softc *sc, int idx)
 	bus_dmamap_t map;
 	int nsegs;
 
-	m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+	m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 	if (m == NULL)
 		return (ENOBUFS);
 	m->m_len = m->m_pkthdr.len = MCLBYTES;
