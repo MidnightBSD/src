@@ -139,7 +139,7 @@ MODULE_DEPEND(bge, miibus, 1, 1, 1);
 static const struct bge_type {
 	uint16_t	bge_vid;
 	uint16_t	bge_did;
-} const bge_devs[] = {
+} bge_devs[] = {
 	{ ALTEON_VENDORID,	ALTEON_DEVICEID_BCM5700 },
 	{ ALTEON_VENDORID,	ALTEON_DEVICEID_BCM5701 },
 
@@ -239,7 +239,7 @@ static const struct bge_type {
 static const struct bge_vendor {
 	uint16_t	v_id;
 	const char	*v_name;
-} const bge_vendors[] = {
+} bge_vendors[] = {
 	{ ALTEON_VENDORID,	"Alteon" },
 	{ ALTIMA_VENDORID,	"Altima" },
 	{ APPLE_VENDORID,	"Apple" },
@@ -254,7 +254,7 @@ static const struct bge_vendor {
 static const struct bge_revision {
 	uint32_t	br_chipid;
 	const char	*br_name;
-} const bge_revisions[] = {
+} bge_revisions[] = {
 	{ BGE_CHIPID_BCM5700_A0,	"BCM5700 A0" },
 	{ BGE_CHIPID_BCM5700_A1,	"BCM5700 A1" },
 	{ BGE_CHIPID_BCM5700_B0,	"BCM5700 B0" },
@@ -2786,7 +2786,7 @@ bge_mbox_reorder(struct bge_softc *sc)
 		const uint16_t vendor;
 		const uint16_t device;
 		const char *desc;
-	} const mbox_reorder_lists[] = {
+	} mbox_reorder_lists[] = {
 		{ 0x1022, 0x7450, "AMD-8131 PCI-X Bridge" },
 	};
 	devclass_t pci, pcib;
