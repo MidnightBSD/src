@@ -328,7 +328,7 @@ static const struct bge_revision {
  * Some defaults for major revisions, so that newer steppings
  * that we don't know about have a shot at working.
  */
-static const struct bge_revision const bge_majorrevs[] = {
+static const struct bge_revision bge_majorrevs[] = {
 	{ BGE_ASICREV_BCM5700,		"unknown BCM5700" },
 	{ BGE_ASICREV_BCM5701,		"unknown BCM5701" },
 	{ BGE_ASICREV_BCM5703,		"unknown BCM5703" },
