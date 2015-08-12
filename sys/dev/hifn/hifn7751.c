@@ -180,7 +180,8 @@ READ_REG_1(struct hifn_softc *sc, bus_size_t reg)
 }
 #define	WRITE_REG_1(sc, reg, val)	hifn_write_reg_1(sc, reg, val)
 
-SYSCTL_NODE(_hw, OID_AUTO, hifn, CTLFLAG_RD, 0, "Hifn driver parameters");
+static SYSCTL_NODE(_hw, OID_AUTO, hifn, CTLFLAG_RD, 0,
+	    "Hifn driver parameters");
 
 #ifdef HIFN_DEBUG
 static	int hifn_debug = 0;
@@ -1877,14 +1878,14 @@ hifn_crypto(
 			totlen = cmd->src_mapsize;
 			if (cmd->src_m->m_flags & M_PKTHDR) {
 				len = MHLEN;
-				MGETHDR(m0, M_DONTWAIT, MT_DATA);
-				if (m0 && !m_dup_pkthdr(m0, cmd->src_m, M_DONTWAIT)) {
+				MGETHDR(m0, M_NOWAIT, MT_DATA);
+				if (m0 && !m_dup_pkthdr(m0, cmd->src_m, M_NOWAIT)) {
 					m_free(m0);
 					m0 = NULL;
 				}
 			} else {
 				len = MLEN;
-				MGET(m0, M_DONTWAIT, MT_DATA);
+				MGET(m0, M_NOWAIT, MT_DATA);
 			}
 			if (m0 == NULL) {
 				hifnstats.hst_nomem_mbuf++;
@@ -1892,7 +1893,7 @@ hifn_crypto(
 				goto err_srcmap;
 			}
 			if (totlen >= MINCLSIZE) {
-				MCLGET(m0, M_DONTWAIT);
+				MCLGET(m0, M_NOWAIT);
 				if ((m0->m_flags & M_EXT) == 0) {
 					hifnstats.hst_nomem_mcl++;
 					err = sc->sc_cmdu ? ERESTART : ENOMEM;
@@ -1906,7 +1907,7 @@ hifn_crypto(
 			mlast = m0;
 
 			while (totlen > 0) {
-				MGET(m, M_DONTWAIT, MT_DATA);
+				MGET(m, M_NOWAIT, MT_DATA);
 				if (m == NULL) {
 					hifnstats.hst_nomem_mbuf++;
 					err = sc->sc_cmdu ? ERESTART : ENOMEM;
@@ -1915,7 +1916,7 @@ hifn_crypto(
 				}
 				len = MLEN;
 				if (totlen >= MINCLSIZE) {
-					MCLGET(m, M_DONTWAIT);
+					MCLGET(m, M_NOWAIT);
 					if ((m->m_flags & M_EXT) == 0) {
 						hifnstats.hst_nomem_mcl++;
 						err = sc->sc_cmdu ? ERESTART : ENOMEM;
