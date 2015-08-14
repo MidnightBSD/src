@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/compat/freebsd32/freebsd32.h,v 1.4 2012/03/09 00:20:24 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Doug Rabson
  * All rights reserved.
@@ -78,6 +78,11 @@ struct rusage32 {
 	int32_t	ru_nsignals;
 	int32_t	ru_nvcsw;
 	int32_t	ru_nivcsw;
+};
+
+struct wrusage32 {
+	struct rusage32	wru_self;
+	struct rusage32 wru_children;
 };
 
 struct itimerval32 {

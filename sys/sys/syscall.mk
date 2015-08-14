@@ -395,4 +395,5 @@ MIASM =  \
 	rctl_add_rule.o \
 	rctl_remove_rule.o \
 	posix_fallocate.o \
-	posix_fadvise.o
+	posix_fadvise.o \
+	wait6.o

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/bsm/audit_kevents.h,v 1.5 2012/03/31 03:08:56 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005 Apple Inc.
  * All rights reserved.
@@ -29,7 +29,7 @@
  *
  * P4: //depot/projects/trustedbsd/audit3/sys/bsm/audit_kevents.h#34
  * $FreeBSD: src/sys/bsm/audit_kevents.h,v 1.12 2007/07/22 12:28:12 rwatson Exp $
- * $MidnightBSD: src/sys/bsm/audit_kevents.h,v 1.5 2012/03/31 03:08:56 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _BSM_AUDIT_KEVENTS_H_
@@ -604,6 +604,7 @@
 #define	AUE_PDKILL		43198	/* FreeBSD. */
 #define	AUE_PDGETPID		43199	/* FreeBSD. */
 #define	AUE_PDWAIT		43200	/* FreeBSD. */
+#define	AUE_WAIT6		43201	/* FreeBSD. */
 
 /*
  * Darwin BSM uses a number of AUE_O_* definitions, which are aliased to the

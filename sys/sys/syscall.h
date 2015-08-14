@@ -447,4 +447,5 @@
 #define	SYS_rctl_remove_rule	529
 #define	SYS_posix_fallocate	530
 #define	SYS_posix_fadvise	531
-#define	SYS_MAXSYSCALL	532
+#define	SYS_wait6	532
+#define	SYS_MAXSYSCALL	533
