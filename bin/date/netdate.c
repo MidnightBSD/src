@@ -26,7 +26,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/date/netdate.c,v 1.18 2004/04/06 20:06:45 markm Exp $ */
 
 #if 0
 #ifndef lint
@@ -35,7 +34,7 @@ static char sccsid[] = "@(#)netdate.c	8.1 (Berkeley) 5/31/93";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/date/netdate.c,v 1.3 2007/07/23 12:22:02 alex Exp $");
+__FBSDID("$FreeBSD: stable/10/bin/date/netdate.c 244538 2012-12-21 15:54:13Z kevlo $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -55,8 +54,6 @@ __MBSDID("$MidnightBSD: src/bin/date/netdate.c,v 1.3 2007/07/23 12:22:02 alex Ex
 
 #define	WAITACK		2	/* seconds */
 #define	WAITDATEACK	5	/* seconds */
-
-extern int retval;
 
 /*
  * Set the date in the machines controlled by timedaemons by communicating the
@@ -88,7 +85,7 @@ netsettime(time_t tval)
 	dest.sin_addr.s_addr = htonl((u_long)INADDR_ANY);
 	s = socket(AF_INET, SOCK_DGRAM, 0);
 	if (s < 0) {
-		if (errno != EPROTONOSUPPORT)
+		if (errno != EAFNOSUPPORT)
 			warn("timed");
 		return (retval = 2);
 	}
