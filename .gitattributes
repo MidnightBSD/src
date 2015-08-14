@@ -48416,6 +48416,7 @@ lib/libc/gen/vis.3 -text
 lib/libc/gen/vis.c -text
 lib/libc/gen/wait.c -text
 lib/libc/gen/wait3.c -text
+lib/libc/gen/waitid.c svneol=native#text/plain
 lib/libc/gen/waitpid.c -text
 lib/libc/gen/wordexp.3 -text
 lib/libc/gen/wordexp.c -text
