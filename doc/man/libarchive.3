@@ -1,11 +1,8 @@
-.TH LIBARCHIVE 3 "February 6, 2010" ""
+.TH LIBARCHIVE 3 "March 18, 2012" ""
 .SH NAME
 .ad l
 \fB\%libarchive\fP
 \- functions for reading and writing streaming archives
-.SH LIBRARY
-.ad l
-Lb libarchive
 .SH OVERVIEW
 .ad l
 The
@@ -41,15 +38,33 @@ most common cpio archive formats,
 .IP \(bu
 ISO9660 CD images (including RockRidge and Joliet extensions),
 .IP \(bu
-Zip archives.
+Zip archives,
+.IP \(bu
+ar archives (including GNU/SysV and BSD extensions),
+.IP \(bu
+Microsoft CAB archives,
+.IP \(bu
+LHA archives,
+.IP \(bu
+mtree file tree descriptions,
+.IP \(bu
+RAR archives,
+.IP \(bu
+XAR archives.
 .RE
 The library automatically detects archives compressed with
 \fBgzip\fP(1),
 \fBbzip2\fP(1),
 \fBxz\fP(1),
+\fBlzip\fP(1),
 or
 \fBcompress\fP(1)
 and decompresses them transparently.
+It can similarly detect and decode archives processed with
+\fBuuencode\fP(1)
+or which have an
+\fBrpm\fP(1)
+header.
 .PP
 When writing an archive, you can specify the compression
 to be used and the format to use.
@@ -68,7 +83,17 @@ POSIX octet-oriented cpio archives,
 .IP \(bu
 Zip archive,
 .IP \(bu
-two different variants of shar archives.
+two different variants of shar archives,
+.IP \(bu
+ISO9660 CD images,
+.IP \(bu
+7-Zip archives,
+.IP \(bu
+ar archives,
+.IP \(bu
+mtree file tree descriptions,
+.IP \(bu
+XAR archives.
 .RE
 Pax interchange format is an extension of the tar archive format that
 eliminates essentially all of the limitations of historic tar formats
@@ -121,9 +146,21 @@ operations.
 .ad l
 The
 \fBarchive_read_disk\fP(3)
-provides some support for populating
+supports for populating
 \fBarchive_entry\fP(3)
 objects from information in the filesystem.
+This includes the information accessible from the
+\fBstat\fP(2)
+system call as well as ACLs, extended attributes,
+and other metadata.
+The
+\fBarchive_read_disk\fP(3)
+API also supports iterating over directory trees,
+which allows directories of files to be read using
+an API compatible with
+the
+\fBarchive_read\fP(3)
+API.
 .SH DESCRIPTION
 .ad l
 Detailed descriptions of each function are provided by the
@@ -209,7 +246,7 @@ FreeBSD 5.3.
 -nosplit
 The
 \fB\%libarchive\fP
-library was written by
+library was originally written by
 Tim Kientzle \%<kientzle@acm.org.>
 .SH BUGS
 .ad l
@@ -227,13 +264,8 @@ is supported by all formats.
 For example, cpio formats do not support nanosecond timestamps;
 old tar formats do not support large device numbers.
 .PP
-The
-\fBarchive_read_disk\fP(3)
-API should support iterating over filesystems;
-that would make it possible to share code among
-disk-to-archive, archive-to-archive, archive-to-disk,
-and disk-to-disk operations.
-Currently, it only supports reading the
-information for a single file.
-(Which is still quite useful, as it hides a lot
-of system-specific details.)
+The ISO9660 reader cannot yet read all ISO9660 images;
+it should learn how to seek.
+.PP
+The AR writer requires the client program to use
+two passes, unlike all other libarchive writers.

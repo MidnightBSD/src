@@ -1,14 +1,37 @@
-Jan 10, 2012: Issue 223: Skip atime tests if atime not supported
-Jan 09, 2012: Issue 222: Errors saving sparse files to pax archives
-Jan 09, 2012: Issue 221: allow archive_*_free(NULL)
-Dec 31, 2011: Issue 212: configure script on Solaris
-Dec 30, 2011: Issue 218: empty contents extracting Zip files with bsdcpio
-Dec 30, 2011: Issue 217: fix compile warning
-Dec 30, 2011: Issue 216: truncated filenames in listings
-Dec 28, 2011: Issue 210: memory leak on Windows
-Dec 28, 2011: Issue 206: fix hardlink tests on Windows 2000
-Dec 27, 2011: Issue 208: Don't hang when using external compression
-   program on Windows
+Feb 09, 2013: libarchive 3.1.2 released
+
+Jan 28, 2013: libarchive's new website moved to http://www.libarchive.org.
+
+Jan 13, 2013: libarchive 3.1.1 released
+
+Jan 13, 2013: libarchive 3.1.0 released
+
+Dec 07, 2012: Implement functions to manually set the format and filters used.
+    
+Nov 11, 2012: Add support for __MACOSX directory in Zip archives, which resource
+    forks are stored in.
+
+Oct 20, 2012: Add support for writing v7 tar format.
+
+Oct 09, 2012: Add support for grzip compression.
+
+Oct 07, 2012: Introduce b64encode filter.    
+Oct 07, 2012: Introduce uuencode filter.
+
+Oct 06, 2012: Add support for lzop.
+    
+Sep 27, 2012: Implement function used to seek within data blocks.
+    (Currently only supported for uncompressed RAR archives).
+    
+Apr 22, 2012: Add basic archive read and write filter support for lrzip.
+
+Mar 27, 2012: libarchive 3.0.4 released
+
+Feb 05, 2012: libarchive development now hosted at GitHub.
+    http://libarchive.github.com/
+Feb 05, 2012: libarchive's issue tracker remains at Google Code.
+    http://code.google.com/p/libarchive/issues/list
+Feb 05, 2012: libarchive's mailing lists remain at Google Groups.
 
 Dec 24, 2011: libarchive 3.0.2 released
 Dec 23, 2011: Various fixes merged from FreeBSD

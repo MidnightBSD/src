@@ -137,10 +137,12 @@ acl_match(struct acl_t *acl, int type, int permset, int tag, int qual, const cha
 	if (name == NULL) {
 		if (acl->name == NULL || acl->name[0] == '\0')
 			return (1);
+		return (0);
 	}
 	if (acl->name == NULL) {
 		if (name[0] == '\0')
 			return (1);
+		return (0);
 	}
 	return (0 == strcmp(name, acl->name));
 }
@@ -193,7 +195,7 @@ compare_acls(struct archive_entry *ae, struct acl_t *acls, int n, int mode)
 		}
 	}
 	assertEqualInt(ARCHIVE_EOF, r);
-	assert((mode & 0777) == (archive_entry_mode(ae) & 0777));
+	assert((mode_t)(mode & 0777) == (archive_entry_mode(ae) & 0777));
 	failure("Could not find match for ACL "
 	    "(type=%d,permset=%d,tag=%d,qual=%d,name=``%s'')",
 	    acls[marker[0]].type, acls[marker[0]].permset,
@@ -263,7 +265,7 @@ DEFINE_TEST(test_acl_posix1e)
 	 * fail when added to existing POSIX.1e ACLs.
 	 */
 	set_acls(ae, acls2, sizeof(acls2)/sizeof(acls2[0]));
-	for (i = 0; i < sizeof(acls_nfs4)/sizeof(acls_nfs4[0]); ++i) {
+	for (i = 0; i < (int)(sizeof(acls_nfs4)/sizeof(acls_nfs4[0])); ++i) {
 		struct acl_t *p = &acls_nfs4[i];
 		failure("Malformed ACL test #%d", i);
 		assertEqualInt(ARCHIVE_FAILED,

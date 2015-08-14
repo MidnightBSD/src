@@ -1,10 +1,12 @@
-
 ARCHIVE_READ_OPTIONS(3)  BSD Library Functions Manual  ARCHIVE_READ_OPTIONS(3)
 
 NAME
      archive_read_set_filter_option, archive_read_set_format_option,
      archive_read_set_option, archive_read_set_options — functions controlling
      options for reading archives
+
+LIBRARY
+     Streaming Archive Library (libarchive, -larchive)
 
 SYNOPSIS
      int
@@ -27,7 +29,7 @@ DESCRIPTION
      cific read modules.
 
      archive_read_set_filter_option(), archive_read_set_format_option()
-	     Specifies an option that will be passed to currently‐registered
+	     Specifies an option that will be passed to currently-registered
 	     filters (including decompression filters) or format readers.
 
 	     If option and value are both NULL, these functions will do noth‐
@@ -53,7 +55,7 @@ DESCRIPTION
 	     erwise, greater of the two values will be returned.
 
      archive_read_set_options()
-	     options is a comma‐separated list of options.  If options is NULL
+	     options is a comma-separated list of options.  If options is NULL
 	     or empty, ARCHIVE_OK will be returned immediately.
 
 	     Calls archive_read_set_option() with each option in turn.	If any
@@ -89,4 +91,4 @@ ERRORS
 SEE ALSO
      tar(1), libarchive(3), archive_write_set_options(3), archive_read(3)
 
-BSD				April 13, 2009				   BSD
+BSD			       February 2, 2012 			   BSD

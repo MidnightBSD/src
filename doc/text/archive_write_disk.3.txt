@@ -1,4 +1,3 @@
-
 ARCHIVE_WRITE_DISK(3)	 BSD Library Functions Manual	 ARCHIVE_WRITE_DISK(3)
 
 NAME
@@ -9,6 +8,9 @@ NAME
      archive_write_data, archive_write_data_block, archive_write_finish_entry,
      archive_write_close, archive_write_finish archive_write_free — functions
      for creating objects on disk
+
+LIBRARY
+     Streaming Archive Library (libarchive, -larchive)
 
 SYNOPSIS
      #include <archive.h>
@@ -92,7 +94,7 @@ DESCRIPTION
 		     be restored if the user and group ID of the object on
 		     disk are correct.	If ARCHIVE_EXTRACT_OWNER is not speci‐
 		     fied, then SUID and SGID bits will only be restored if
-		     the default user and group IDs of newly‐created objects
+		     the default user and group IDs of newly-created objects
 		     on disk happen to match those specified in the archive
 		     entry.  By default, only basic permissions are restored,
 		     and umask is obeyed.
@@ -104,7 +106,7 @@ DESCRIPTION
 		     Existing files on disk will not be overwritten.  By
 		     default, existing regular files are truncated and over‐
 		     written; existing directories will have their permissions
-		     updated; other pre‐existing objects are unlinked and
+		     updated; other pre-existing objects are unlinked and
 		     recreated from scratch.
 	     ARCHIVE_EXTRACT_UNLINK
 		     Existing files on disk will be unlinked before any
@@ -170,7 +172,7 @@ DESCRIPTION
 
      archive_write_data()
 	     Write data corresponding to the header just written.  Returns
-	     number of bytes written or ‐1 on error.
+	     number of bytes written or -1 on error.
 
      archive_write_data_block()
 	     Write data corresponding to the header just written.  This is
@@ -178,7 +180,7 @@ DESCRIPTION
 	     file being written to the specified offset before writing the
 	     data.  This is useful when restoring sparse files from archive
 	     formats that support sparse files.  Returns number of bytes writ‐
-	     ten or ‐1 on error.  (Note: This is currently not supported for
+	     ten or -1 on error.  (Note: This is currently not supported for
 	     archive_write handles, only for archive_write_disk handles.)
 
      archive_write_finish_entry()
@@ -193,7 +195,7 @@ DESCRIPTION
 	     Set any attributes that could not be set during the initial
 	     restore.  For example, directory timestamps are not restored ini‐
 	     tially because restoring a subsequent file would alter that time‐
-	     stamp.  Similarly, non‐writable directories are initially created
+	     stamp.  Similarly, non-writable directories are initially created
 	     with write permissions (so that their contents can be restored).
 	     The archive_write_disk_new library maintains a list of all such
 	     deferred attributes and sets them when this function is invoked.
@@ -210,17 +212,17 @@ DESCRIPTION
 
 RETURN VALUES
      Most functions return ARCHIVE_OK (zero) on success, or one of several
-     non‐zero error codes for errors.  Specific error codes include:
+     non-zero error codes for errors.  Specific error codes include:
      ARCHIVE_RETRY for operations that might succeed if retried, ARCHIVE_WARN
      for unusual conditions that do not prevent further operations, and
      ARCHIVE_FATAL for serious errors that make remaining operations impossi‐
      ble.
 
-     archive_write_disk_new() returns a pointer to a newly‐allocated struct
+     archive_write_disk_new() returns a pointer to a newly-allocated struct
      archive object.
 
      archive_write_data() returns a count of the number of bytes actually
-     written, or ‐1 on error.
+     written, or -1 on error.
 
 ERRORS
      Detailed error codes and textual descriptions are available from the
@@ -241,12 +243,12 @@ BUGS
      Directories are actually extracted in two distinct phases.  Directories
      are created during archive_write_header(), but final permissions are not
      set until archive_write_close().  This separation is necessary to cor‐
-     rectly handle borderline cases such as a non‐writable directory contain‐
+     rectly handle borderline cases such as a non-writable directory contain‐
      ing files, but can cause unexpected results.  In particular, directory
      permissions are not fully restored until the archive is closed.  If you
      use chdir(2) to change the current directory between calls to
      archive_read_extract() or before calling archive_read_close(), you may
-     confuse the permission‐setting logic with the result that directory per‐
+     confuse the permission-setting logic with the result that directory per‐
      missions are restored incorrectly.
 
      The library attempts to create objects with filenames longer than
@@ -272,7 +274,7 @@ BUGS
      only if the user and group of the final object happen to match those
      specified in the entry.
 
-     The “standard” user‐id and group‐id lookup functions are not the defaults
+     The “standard” user-id and group-id lookup functions are not the defaults
      because getgrnam(3) and getpwnam(3) are sometimes too large for particu‐
      lar applications.	The current design allows the application author to
      use a more compact implementation when appropriate.
@@ -280,4 +282,4 @@ BUGS
      There should be a corresponding archive_read_disk interface that walks a
      directory hierarchy and returns archive entry objects.
 
-BSD				August 5, 2008				   BSD
+BSD			       February 2, 2012 			   BSD

@@ -1,5 +1,4 @@
-
-LIBARCHIVE(3)		 BSD Library Functions Manual		 LIBARCHIVE(3)
+LIBARCHIVE_INTERNALS(3)  BSD Library Functions Manual  LIBARCHIVE_INTERNALS(3)
 
 NAME
      libarchive_internals — description of libarchive internal interfaces
@@ -11,7 +10,7 @@ OVERVIEW
      chive and compression formats.
 
 GENERAL ARCHITECTURE
-     Externally, libarchive exposes most operations through an opaque, object‐
+     Externally, libarchive exposes most operations through an opaque, object-
      style interface.  The archive_entry(3) objects store information about a
      single filesystem object.	The rest of the library provides facilities to
      write archive_entry(3) objects to archive files, read them from archive
@@ -32,7 +31,7 @@ READ ARCHITECTURE
      From the outside, clients use the archive_read(3) API to manipulate an
      archive object to read entries and bodies from an archive stream.	Inter‐
      nally, the archive object is cast to an archive_read object, which holds
-     all read‐specific data.  The API has four layers: The lowest layer is the
+     all read-specific data.  The API has four layers: The lowest layer is the
      I/O layer.  This layer can be overridden by clients, but most clients use
      the packaged I/O callbacks provided, for example, by
      archive_read_open_memory(3), and archive_read_open_fd(3).	The compres‐
@@ -42,7 +41,7 @@ READ ARCHITECTURE
      layer tracks overall state (for example, it prevents clients from reading
      data before reading a header) and invokes the format and compression
      layer operations through registered function pointers.  In particular,
-     the API layer drives the format‐detection process: When opening the ar‐
+     the API layer drives the format-detection process: When opening the ar‐
      chive, it reads an initial block of data and offers it to each registered
      compression handler.  The one with the highest bid is initialized with
      the first block.  Similarly, the format handlers are polled to see which
@@ -55,18 +54,18 @@ READ ARCHITECTURE
      there are few restrictions on the behavior of the client callbacks.
 
      The client read callback is expected to provide a block of data on each
-     call.  A zero‐length return does indicate end of file, but otherwise
+     call.  A zero-length return does indicate end of file, but otherwise
      blocks may be as small as one byte or as large as the entire file.  In
      particular, blocks may be of different sizes.
 
      The client skip callback returns the number of bytes actually skipped,
      which may be much smaller than the skip requested.  The only requirement
      is that the skip not be larger.  In particular, clients are allowed to
-     return zero for any skip that they don’t want to handle.  The skip call‐
+     return zero for any skip that they don't want to handle.  The skip call‐
      back must never be invoked with a negative value.
 
      Keep in mind that not all clients are reading from disk: clients reading
-     from networks may provide different‐sized blocks on every request and
+     from networks may provide different-sized blocks on every request and
      cannot skip at all; advanced clients may use mmap(2) to read the entire
      file into memory at once and return the entire file to libarchive as a
      single block; other clients may begin asynchronous I/O operations for the
@@ -217,10 +216,10 @@ MISCELLANEOUS NOTES
      libarchive never seeks backwards in its input, which sometimes requires
      very different approaches.
 
-     For example, libarchive’s ISO9660 support operates very differently from
-     most ISO9660 readers.  The libarchive support utilizes a work‐queue
+     For example, libarchive's ISO9660 support operates very differently from
+     most ISO9660 readers.  The libarchive support utilizes a work-queue
      design that keeps a list of known entries sorted by their location in the
-     input.  Whenever libarchive’s ISO9660 implementation is asked for the
+     input.  Whenever libarchive's ISO9660 implementation is asked for the
      next header, checks this list to find the next item on the disk.  Direc‐
      tories are parsed when they are encountered and new items are added to
      the list.	This design relies heavily on the ISO9660 image being opti‐
@@ -245,4 +244,4 @@ HISTORY
 AUTHORS
      The libarchive library was written by Tim Kientzle ⟨kientzle@acm.org⟩.
 
-BSD				April 16, 2007				   BSD
+BSD			       January 26, 2011 			   BSD

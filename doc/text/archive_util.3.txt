@@ -1,4 +1,3 @@
-
 ARCHIVE_UTIL(3) 	 BSD Library Functions Manual	       ARCHIVE_UTIL(3)
 
 NAME
@@ -7,6 +6,9 @@ NAME
      archive_file_count, archive_filter_code, archive_filter_count,
      archive_filter_name, archive_format, archive_format_name,
      archive_position, archive_set_error — libarchive utility functions
+
+LIBRARY
+     Streaming Archive Library (libarchive, -larchive)
 
 SYNOPSIS
      #include <archive.h>
@@ -91,14 +93,14 @@ DESCRIPTION
 	     archive_write_add_filter_XXX() functions.	Filters in the result‐
 	     ing pipeline are numbered so that filter 0 is the filter closest
 	     to the format handler.  As a convenience, functions that expect a
-	     filter number will accept ‐1 as a synonym for the highest‐num‐
+	     filter number will accept -1 as a synonym for the highest-num‐
 	     bered filter.
 
 	     For example, when reading a uuencoded gzipped tar archive, there
 	     are three filters: filter 0 is the gunzip filter, filter 1 is the
-	     uudecode filter, and filter 2 is the pseudo‐filter that wraps the
+	     uudecode filter, and filter 2 is the pseudo-filter that wraps the
 	     archive read functions.  In this case, requesting
-	     archive_position(a,(‐1)) would be a synonym for
+	     archive_position(a,(-1)) would be a synonym for
 	     archive_position(a,(2)) which would return the number of bytes
 	     currently read from the archive, while archive_position(a,(1))
 	     would return the number of bytes after uudecoding, and
@@ -121,18 +123,18 @@ DESCRIPTION
 	     Returns the number of bytes read from or written to the indicated
 	     filter.  In particular, archive_position(a,(0)) returns the num‐
 	     ber of bytes read or written by the format handler, while
-	     archive_position(a,(‐1)) returns the number of bytes read or
+	     archive_position(a,(-1)) returns the number of bytes read or
 	     written to the archive.  See archive_filter_count() for details
 	     of the numbering here.
      archive_set_error()
 	     Sets the numeric error code and error description that will be
 	     returned by archive_errno() and archive_error_string().  This
-	     function should be used within I/O callbacks to set system‐spe‐
+	     function should be used within I/O callbacks to set system-spe‐
 	     cific error codes and error descriptions.	This function accepts
-	     a printf‐like format string and arguments.  However, you should
+	     a printf-like format string and arguments.  However, you should
 	     be careful to use only the following printf format specifiers:
 	     “%c”, “%d”, “%jd”, “%jo”, “%ju”, “%jx”, “%ld”, “%lo”, “%lu”,
-	     “%lx”, “%o”, “%u”, “%s”, “%x”, “%%”.  Field‐width specifiers and
+	     “%lx”, “%o”, “%u”, “%s”, “%x”, “%%”.  Field-width specifiers and
 	     other printf features are not uniformly supported and should not
 	     be used.
 
@@ -145,4 +147,4 @@ HISTORY
 AUTHORS
      The libarchive library was written by Tim Kientzle ⟨kientzle@acm.org⟩.
 
-BSD				January 8, 2005 			   BSD
+BSD			       February 2, 2012 			   BSD

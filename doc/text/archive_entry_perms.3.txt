@@ -1,4 +1,3 @@
-
 ARCHIVE_ENTRY_PERMS(3)	 BSD Library Functions Manual	ARCHIVE_ENTRY_PERMS(3)
 
 NAME
@@ -14,6 +13,9 @@ NAME
      archive_entry_copy_fflags_text, archive_entry_copy_fflags_text_w — func‐
      tions for manipulating ownership and permissions in archive entry
      descriptions
+
+LIBRARY
+     Streaming Archive Library (libarchive, -larchive)
 
 SYNOPSIS
      #include <archive_entry.h>
@@ -117,7 +119,7 @@ DESCRIPTION
      wchar_t *	Wide character strings in the current locale.  The accessor
 		functions are named XXX_w().
 
-     UTF‐8	Unicode strings encoded as UTF‐8.  This are convience func‐
+     UTF-8	Unicode strings encoded as UTF-8.  This are convience func‐
 		tions to update both the multibyte and wide character strings
 		at the same time.
 
@@ -128,7 +130,7 @@ DESCRIPTION
      and a textual format.  For example, if you set the bitmap and ask for
      text, the library will build a canonical text format.  However, if you
      set a text format and request a text format, you will get back the same
-     text, even if it is ill‐formed.  If you need to canonicalize a textual
+     text, even if it is ill-formed.  If you need to canonicalize a textual
      flags string, you should first set the text form, then request the bitmap
      form, then use that to set the bitmap form.  Setting the bitmap format
      will clear the internal text representation and force it to be recon‐
@@ -138,16 +140,16 @@ DESCRIPTION
      should be set, the other specifying bits that should be cleared.  Bits
      not mentioned in either bitmap will be ignored.  Usually, the bitmap of
      bits to be cleared will be set to zero.  In unusual circumstances, you
-     can force a fully‐specified set of file flags by setting the bitmap of
+     can force a fully-specified set of file flags by setting the bitmap of
      flags to clear to the complement of the bitmap of flags to set.  (This
      differs from fflagstostr(3), which only includes names for set bits.)
-     Converting a bitmap to a textual string is a platform‐specific operation;
+     Converting a bitmap to a textual string is a platform-specific operation;
      bits that are not meaningful on the current platform will be ignored.
 
-     The canonical text format is a comma‐separated list of flag names.  The
+     The canonical text format is a comma-separated list of flag names.  The
      archive_entry_copy_fflags_text() and archive_entry_copy_fflags_text_w()
      functions parse the provided text and sets the internal bitmap values.
-     This is a platform‐specific operation; names that are not meaningful on
+     This is a platform-specific operation; names that are not meaningful on
      the current platform will be ignored.  The function returns a pointer to
      the start of the first name that was not recognized, or NULL if every
      name was recognized.  Note that every name — including names that follow
@@ -164,4 +166,4 @@ BUGS
      case it is possible that the ids can not be correctly restored from ar‐
      chives and get truncated.
 
-BSD			       February 22, 2010			   BSD
+BSD			       February 2, 2012 			   BSD

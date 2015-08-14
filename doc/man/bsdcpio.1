@@ -1,4 +1,4 @@
-.TH CPIO 1 "December 21, 2007" ""
+.TH CPIO 1 "October 7, 2012" ""
 .SH NAME
 .ad l
 \fB\%cpio\fP
@@ -183,11 +183,23 @@ With this option, the target of the link will be archived or copied instead.
 Create links from the target directory to the original files,
 instead of copying.
 .TP
+\fB\-Fl\fP lrzip
+(o mode only)
+Compress the resulting archive with
+\fBlrzip\fP(1).
+In input mode, this option is ignored.
+.TP
 \fB\-Fl\fP lzma
 (o mode only)
 Compress the file with lzma-compatible compression before writing it.
 In input mode, this option is ignored; lzma compression is recognized
 automatically on input.
+.TP
+\fB\-Fl\fP lzop
+(o mode only)
+Compress the resulting archive with
+\fBlzop\fP(1).
+In input mode, this option is ignored.
 .TP
 \fB\-m\fP, \fB\-Fl\fP preserve-modification-time
 (i and p modes)

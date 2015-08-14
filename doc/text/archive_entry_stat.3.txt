@@ -1,5 +1,4 @@
-
-ARCHIVE_ENTRY(3)	 BSD Library Functions Manual	      ARCHIVE_ENTRY(3)
+ARCHIVE_ENTRY_STAT(3)	 BSD Library Functions Manual	 ARCHIVE_ENTRY_STAT(3)
 
 NAME
      archive_entry_stat, archive_entry_copy_stat, archive_entry_filetype,
@@ -14,6 +13,9 @@ NAME
      archive_entry_rdevmajor, archive_entry_set_rdevmajor,
      archive_entry_rdevminor, archive_entry_set_rdevminor, — accessor func‐
      tions for manipulating archive entry descriptions
+
+LIBRARY
+     Streaming Archive Library (libarchive, -larchive)
 
 SYNOPSIS
      #include <archive_entry.h>
@@ -116,11 +118,11 @@ DESCRIPTION
      is called.  It is not affected by calls to the set accessor functions.
      It currently sets the following values in struct stat: st_atime,
      st_ctime, st_dev, st_gid, st_ino, st_mode, st_mtime, st_nlink, st_rdev,
-     st_size, st_uid.  In addition, st_birthtime and high‐precision informa‐
-     tion for time‐related fields will be included on platforms that support
+     st_size, st_uid.  In addition, st_birthtime and high-precision informa‐
+     tion for time-related fields will be included on platforms that support
      it.
 
-     The function archive_entry_copy_stat() copies fields from the platform’s
+     The function archive_entry_copy_stat() copies fields from the platform's
      struct stat.  Fields not provided by struct stat are unchanged.
 
    General accessor functions
@@ -185,4 +187,4 @@ SEE ALSO
      archive(3), archive_entry_acl(3), archive_entry_perms(3),
      archive_entry_time(3), stat(2)
 
-BSD				 May 12, 2008				   BSD
+BSD			       February 2, 2012 			   BSD

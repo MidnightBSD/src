@@ -1,4 +1,4 @@
-.TH TAR 1 "Oct 12, 2009" ""
+.TH TAR 1 "November 1, 2012" ""
 .SH NAME
 .ad l
 \fB\%tar\fP
@@ -137,6 +137,37 @@ In this way,
 \fB\%tar\fP
 can be used to convert archives from one format to another.
 .TP
+\fB\-a\fP, \fB\-Fl\fP auto-compress
+(c mode only)
+Use the archive suffix to decide a set of the format and
+the compressions.
+As a simple example,
+.RS 4
+\fB\%tar\fP \fB\-a\fP \fB\-cf\fP \fIarchive.tgz\fP source.c source.h
+.RE
+creates a new archive with restricted pax format and gzip compression,
+.RS 4
+\fB\%tar\fP \fB\-a\fP \fB\-cf\fP \fIarchive.tar.bz2.uu\fP source.c source.h
+.RE
+creates a new archive with restricted pax format and bzip2 compression
+and uuencode compression,
+.RS 4
+\fB\%tar\fP \fB\-a\fP \fB\-cf\fP \fIarchive.zip\fP source.c source.h
+.RE
+creates a new archive with zip format,
+.RS 4
+\fB\%tar\fP \fB\-a\fP \fB\-jcf\fP \fIarchive.tgz\fP source.c source.h
+.RE
+ignores the
+``-j''
+option, and creates a new archive with restricted pax format
+and gzip compression,
+.RS 4
+\fB\%tar\fP \fB\-a\fP \fB\-jcf\fP \fIarchive.xxx\fP source.c source.h
+.RE
+if it is unknown suffix or no suffix, creates a new archive with
+restricted pax format and bzip2 compression.
+.TP
 \fB\-B\fP, \fB\-Fl\fP read-full-blocks
 Ignored for compatibility with other
 \fBtar\fP(1)
@@ -240,6 +271,10 @@ Synonym for
 \fB\-Fl\fP help
 Show usage.
 .TP
+\fB\-Fl\fP hfsCompression
+(x mode only)
+Mac OS X specific(v10.6 or later). Compress extracted regular files with HFS+ compression.
+.TP
 \fB\-Fl\fP include \fIpattern\fP
 Process only files or directories that match the specified pattern.
 Note that exclusions specified with
@@ -302,6 +337,12 @@ With this option, the target of the link will be archived instead.
 (c and r modes only)
 Issue a warning message unless all links to each file are archived.
 .TP
+\fB\-Fl\fP lrzip
+(c mode only)
+Compress the resulting archive with
+\fBlrzip\fP(1).
+In extract or list modes, this option is ignored.
+.TP
 \fB\-Fl\fP lzma
 (c mode only) Compress the resulting archive with the original LZMA algorithm.
 Use of this option is discouraged and new archives should be created with
@@ -311,6 +352,12 @@ Note that, unlike other
 \fB\%tar\fP
 implementations, this implementation recognizes LZMA compression
 automatically when reading archives.
+.TP
+\fB\-Fl\fP lzop
+(c mode only)
+Compress the resulting archive with
+\fBlzop\fP(1).
+In extract or list modes, this option is ignored.
 .TP
 \fB\-m\fP, \fB\-Fl\fP modification-time
 (x mode only)
@@ -346,6 +393,12 @@ except it compares mtime entries instead of ctime entries.
 \fB\-Fl\fP nodump
 (c and r modes only)
 Honor the nodump file flag by skipping this file.
+.TP
+\fB\-Fl\fP nopreserveHFSCompression
+(x mode only)
+Mac OS X specific(v10.6 or later). Do not compress extracted regular files
+which were compressed with HFS+ compression before archived.
+By default, compress the regular files again with HFS+ compression.
 .TP
 \fB\-Fl\fP null
 (use with
@@ -412,6 +465,28 @@ the archive will be discarded.
 A synonym for
 \fB\-Fl\fP format \fIustar\fP
 .TP
+\fB\-Fl\fP older \fIdate\fP
+(c, r, u modes only)
+Only include files and directories older than the specified date.
+This compares ctime entries.
+.TP
+\fB\-Fl\fP older-mtime \fIdate\fP
+(c, r, u modes only)
+Like
+\fB\-Fl\fP older,
+except it compares mtime entries instead of ctime entries.
+.TP
+\fB\-Fl\fP older-than \fIfile\fP
+(c, r, u modes only)
+Only include files and directories older than the specified file.
+This compares ctime entries.
+.TP
+\fB\-Fl\fP older-mtime-than \fIfile\fP
+(c, r, u modes only)
+Like
+\fB\-Fl\fP older-than,
+except it compares mtime entries instead of ctime entries.
+.TP
 \fB\-Fl\fP one-file-system
 (c, r, and u modes)
 Do not cross mount points.
@@ -462,7 +537,27 @@ or
 to disable.
 .TP
 \fBgzip:compression-level\fP
-A decimal integer from 0 to 9 specifying the gzip compression level.
+A decimal integer from 1 to 9 specifying the gzip compression level.
+.TP
+\fBgzip:timestamp\fP
+Store timestamp. This is enabled by default, use
+\fB!timestamp\fP
+or
+\fBgzip:!timestamp\fP
+to disable.
+.TP
+\fBlrzip:compression\fP=\fItype\fP
+Use
+\fItype\fP
+as compression method.
+Supported values are bzip2, gzip, lzo (ultra fast),
+and zpaq (best, extremely slow).
+.TP
+\fBlrzip:compression-level\fP
+A decimal integer from 1 to 9 specifying the lrzip compression level.
+.TP
+\fBlzop:compression-level\fP
+A decimal integer from 1 to 9 specifying the lzop compression level.
 .TP
 \fBxz:compression-level\fP
 A decimal integer from 0 to 9 specifying the xz compression level.
@@ -619,6 +714,11 @@ Note that
 \fB\-Fl\fP null
 also disables the special handling of lines containing
 ``-C''.
+Note:  If you are generating lists of files using
+\fBfind\fP(1),
+you probably want to use
+\fB\-n\fP
+as well.
 .TP
 \fB\-Fl\fP totals
 (c, r, u mode only)
@@ -727,6 +827,18 @@ automatically when reading archives.
 The following environment variables affect the execution of
 \fB\%tar\fP:
 .RS 5
+.TP
+.B TAR_READER_OPTIONS
+The default options for format readers and compression readers.
+The
+\fB\-Fl\fP options
+option overrides this.
+.TP
+.B TAR_WRITER_OPTIONS
+The default options for format writers and compression writers.
+The
+\fB\-Fl\fP options
+option overrides this.
 .TP
 .B LANG
 The locale to use.
