@@ -1,20 +1,21 @@
-# $MidnightBSD: src/usr.bin/cpio/Makefile,v 1.4 2012/01/14 03:40:17 laffer1 Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
 LIBARCHIVEDIR=	${.CURDIR}/../../contrib/libarchive
+LIBARCHIVECONFDIR=	${.CURDIR}/../../lib/libarchive
 
 PROG=	bsdcpio
-BSDCPIO_VERSION_STRING=3.0.3
+BSDCPIO_VERSION_STRING=	3.1.2
 
 .PATH:	${LIBARCHIVEDIR}/cpio
 SRCS=	cpio.c cmdline.c
 
 .PATH:	${LIBARCHIVEDIR}/libarchive_fe
-SRCS+=	err.c line_reader.c matching.c pathmatch.c
+SRCS+=	err.c line_reader.c
 
 CFLAGS+= -DBSDCPIO_VERSION_STRING=\"${BSDCPIO_VERSION_STRING}\"
-CFLAGS+= -DPLATFORM_CONFIG_H=\"${.CURDIR}/config_midnightbsd.h\"
+CFLAGS+= -DPLATFORM_CONFIG_H=\"${LIBARCHIVECONFDIR}/config.h\"
 CFLAGS+= -I${LIBARCHIVEDIR}/cpio -I${LIBARCHIVEDIR}/libarchive_fe
 
 .ifdef RELEASE_CRUNCH
@@ -28,6 +29,10 @@ LDADD+= -lcrypto
 .else
 DPADD+= ${LIBMD}
 LDADD+= -lmd
+.endif
+
+.if ${MK_ICONV} != "no"
+CFLAGS+=	-DHAVE_ICONV=1 -DHAVE_ICONV_H=1 -DICONV_CONST=const
 .endif
 
 SYMLINKS=bsdcpio ${BINDIR}/cpio
