@@ -26,8 +26,8 @@
 __FBSDID("$FreeBSD");
 
 /*
- * Extract a non-encorded file.
- * The header of the 7z archive files is not encdoed.
+ * Extract a non-encoded file.
+ * The header of the 7z archive files is not encoded.
  */
 static void
 test_copy()
@@ -46,7 +46,7 @@ test_copy()
 
 	/* Verify regular file1. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0777), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0666), archive_entry_mode(ae));
 	assertEqualString("file1", archive_entry_pathname(ae));
 	assertEqualInt(86401, archive_entry_mtime(ae));
 	assertEqualInt(60, archive_entry_size(ae));
@@ -59,7 +59,7 @@ test_copy()
 	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
 
 	/* Verify archive format. */
-	assertEqualIntA(a, ARCHIVE_COMPRESSION_NONE, archive_compression(a));
+	assertEqualIntA(a, ARCHIVE_FILTER_NONE, archive_filter_code(a, 0));
 	assertEqualIntA(a, ARCHIVE_FORMAT_7ZIP, archive_format(a));
 
 	/* Close the archive. */
@@ -90,7 +90,7 @@ test_empty_archive()
 	assertEqualInt(0, archive_file_count(a));
 
 	/* Verify archive format. */
-	assertEqualIntA(a, ARCHIVE_COMPRESSION_NONE, archive_compression(a));
+	assertEqualIntA(a, ARCHIVE_FILTER_NONE, archive_filter_code(a, 0));
 	assertEqualIntA(a, ARCHIVE_FORMAT_7ZIP, archive_format(a));
 
 	/* Close the archive. */
@@ -129,7 +129,7 @@ test_empty_file()
 	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
 
 	/* Verify archive format. */
-	assertEqualIntA(a, ARCHIVE_COMPRESSION_NONE, archive_compression(a));
+	assertEqualIntA(a, ARCHIVE_FILTER_NONE, archive_filter_code(a, 0));
 	assertEqualIntA(a, ARCHIVE_FORMAT_7ZIP, archive_format(a));
 
 	/* Close the archive. */
@@ -139,7 +139,7 @@ test_empty_file()
 
 /*
  * Extract an encoded file.
- * The header of the 7z archive files is not encdoed.
+ * The header of the 7z archive files is not encoded.
  */
 static void
 test_plain_header(const char *refname)
@@ -170,7 +170,7 @@ test_plain_header(const char *refname)
 	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
 
 	/* Verify archive format. */
-	assertEqualIntA(a, ARCHIVE_COMPRESSION_NONE, archive_compression(a));
+	assertEqualIntA(a, ARCHIVE_FILTER_NONE, archive_filter_code(a, 0));
 	assertEqualIntA(a, ARCHIVE_FORMAT_7ZIP, archive_format(a));
 
 	/* Close the archive. */
@@ -180,7 +180,7 @@ test_plain_header(const char *refname)
 
 /*
  * Extract multi files.
- * The header of the 7z archive files is encdoed with LZMA.
+ * The header of the 7z archive files is encoded with LZMA.
  */
 static void
 test_extract_all_files(const char *refname)
@@ -245,7 +245,7 @@ test_extract_all_files(const char *refname)
 	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
 
 	/* Verify archive format. */
-	assertEqualIntA(a, ARCHIVE_COMPRESSION_NONE, archive_compression(a));
+	assertEqualIntA(a, ARCHIVE_FILTER_NONE, archive_filter_code(a, 0));
 	assertEqualIntA(a, ARCHIVE_FORMAT_7ZIP, archive_format(a));
 
 	/* Close the archive. */
@@ -255,7 +255,7 @@ test_extract_all_files(const char *refname)
 
 /*
  * Extract last file.
- * The header of the 7z archive files is encdoed with LZMA.
+ * The header of the 7z archive files is encoded with LZMA.
  */
 static void
 test_extract_last_file(const char *refname)
@@ -314,7 +314,7 @@ test_extract_last_file(const char *refname)
 	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
 
 	/* Verify archive format. */
-	assertEqualIntA(a, ARCHIVE_COMPRESSION_NONE, archive_compression(a));
+	assertEqualIntA(a, ARCHIVE_FILTER_NONE, archive_filter_code(a, 0));
 	assertEqualIntA(a, ARCHIVE_FORMAT_7ZIP, archive_format(a));
 
 	/* Close the archive. */
@@ -323,7 +323,7 @@ test_extract_last_file(const char *refname)
 }
 
 /*
- * Extract a mixed archive file which has both  LZMA and LZMA2 encoded files.
+ * Extract a mixed archive file which has both LZMA and LZMA2 encoded files.
  *  LZMA: file1, file2, file3, file4
  *  LZMA2: zfile1, zfile2, zfile3, zfile4
  */
@@ -427,7 +427,7 @@ test_extract_all_files2(const char *refname)
 	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
 
 	/* Verify archive format. */
-	assertEqualIntA(a, ARCHIVE_COMPRESSION_NONE, archive_compression(a));
+	assertEqualIntA(a, ARCHIVE_FILTER_NONE, archive_filter_code(a, 0));
 	assertEqualIntA(a, ARCHIVE_FORMAT_7ZIP, archive_format(a));
 
 	/* Close the archive. */
@@ -481,7 +481,7 @@ test_delta_lzma(const char *refname)
 	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
 
 	/* Verify archive format. */
-	assertEqualIntA(a, ARCHIVE_COMPRESSION_NONE, archive_compression(a));
+	assertEqualIntA(a, ARCHIVE_FILTER_NONE, archive_filter_code(a, 0));
 	assertEqualIntA(a, ARCHIVE_FORMAT_7ZIP, archive_format(a));
 
 	/* Close the archive. */
@@ -510,7 +510,7 @@ test_bcj(const char *refname)
 
 	/* Verify regular x86exe. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0555), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0444), archive_entry_mode(ae) & ~0111);
 	assertEqualString("x86exe", archive_entry_pathname(ae));
 	assertEqualInt(172802, archive_entry_mtime(ae));
 	assertEqualInt(27328, archive_entry_size(ae));
@@ -535,7 +535,7 @@ test_bcj(const char *refname)
 	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
 
 	/* Verify archive format. */
-	assertEqualIntA(a, ARCHIVE_COMPRESSION_NONE, archive_compression(a));
+	assertEqualIntA(a, ARCHIVE_FILTER_NONE, archive_filter_code(a, 0));
 	assertEqualIntA(a, ARCHIVE_FORMAT_7ZIP, archive_format(a));
 
 	/* Close the archive. */
@@ -565,7 +565,7 @@ test_ppmd()
 
 	/* Verify regular file1. */
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
-	assertEqualInt((AE_IFREG | 0777), archive_entry_mode(ae));
+	assertEqualInt((AE_IFREG | 0666), archive_entry_mode(ae));
 	assertEqualString("ppmd_test.txt", archive_entry_pathname(ae));
 	assertEqualInt(1322464589, archive_entry_mtime(ae));
 	assertEqualInt(102400, archive_entry_size(ae));
@@ -590,7 +590,7 @@ test_ppmd()
 	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
 
 	/* Verify archive format. */
-	assertEqualIntA(a, ARCHIVE_COMPRESSION_NONE, archive_compression(a));
+	assertEqualIntA(a, ARCHIVE_FILTER_NONE, archive_filter_code(a, 0));
 	assertEqualIntA(a, ARCHIVE_FORMAT_7ZIP, archive_format(a));
 
 	/* Close the archive. */
@@ -635,7 +635,7 @@ test_symname()
 	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
 
 	/* Verify archive format. */
-	assertEqualIntA(a, ARCHIVE_COMPRESSION_NONE, archive_compression(a));
+	assertEqualIntA(a, ARCHIVE_FILTER_NONE, archive_filter_code(a, 0));
 	assertEqualIntA(a, ARCHIVE_FORMAT_7ZIP, archive_format(a));
 
 	/* Close the archive. */
@@ -648,13 +648,24 @@ DEFINE_TEST(test_read_format_7zip)
 {
 	struct archive *a;
 
-	test_copy();
-	test_empty_archive();
-	test_empty_file();
-	test_ppmd();
-	test_bcj("test_read_format_7zip_bcj_copy.7z");
-	test_bcj("test_read_format_7zip_bcj2_copy_1.7z");
-	test_bcj("test_read_format_7zip_bcj2_copy_2.7z");
+	assert((a = archive_read_new()) != NULL);
+
+	/* Extracting with liblzma */
+	if (ARCHIVE_OK != archive_read_support_filter_xz(a)) {
+		skipping("7zip:lzma decoding is not supported on this platform");
+	} else {
+		test_symname();
+		test_extract_all_files("test_read_format_7zip_copy_2.7z");
+		test_extract_last_file("test_read_format_7zip_copy_2.7z");
+		test_extract_all_files2("test_read_format_7zip_lzma1_lzma2.7z");
+		test_bcj("test_read_format_7zip_bcj2_copy_lzma.7z");
+	}
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+}
+
+DEFINE_TEST(test_read_format_7zip_bzip2)
+{
+	struct archive *a;
 
 	assert((a = archive_read_new()) != NULL);
 
@@ -667,37 +678,83 @@ DEFINE_TEST(test_read_format_7zip)
 		test_bcj("test_read_format_7zip_bcj2_bzip2.7z");
 	}
 
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+}
+
+DEFINE_TEST(test_read_format_7zip_copy)
+{
+	test_copy();
+	test_bcj("test_read_format_7zip_bcj_copy.7z");
+	test_bcj("test_read_format_7zip_bcj2_copy_1.7z");
+	test_bcj("test_read_format_7zip_bcj2_copy_2.7z");
+}
+
+DEFINE_TEST(test_read_format_7zip_deflate)
+{
+	struct archive *a;
+
+	assert((a = archive_read_new()) != NULL);
+
 	/* Extracting with libz */
 	if (ARCHIVE_OK != archive_read_support_filter_gzip(a)) {
-		skipping("7zip:deflate decoding is not supported on this platform");
+		skipping(
+		    "7zip:deflate decoding is not supported on this platform");
 	} else {
 		test_plain_header("test_read_format_7zip_deflate.7z");
 		test_bcj("test_read_format_7zip_bcj_deflate.7z");
 		test_bcj("test_read_format_7zip_bcj2_deflate.7z");
 	}
 
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+}
+
+DEFINE_TEST(test_read_format_7zip_empty)
+{
+	test_empty_archive();
+	test_empty_file();
+}
+
+DEFINE_TEST(test_read_format_7zip_lzma1)
+{
+	struct archive *a;
+
+	assert((a = archive_read_new()) != NULL);
+
 	/* Extracting with liblzma */
 	if (ARCHIVE_OK != archive_read_support_filter_xz(a)) {
 		skipping("7zip:lzma decoding is not supported on this platform");
 	} else {
-		test_symname();
 		test_plain_header("test_read_format_7zip_lzma1.7z");
-		test_plain_header("test_read_format_7zip_lzma2.7z");
-		test_extract_all_files("test_read_format_7zip_copy_2.7z");
 		test_extract_all_files("test_read_format_7zip_lzma1_2.7z");
-		test_extract_last_file("test_read_format_7zip_copy_2.7z");
 		test_extract_last_file("test_read_format_7zip_lzma1_2.7z");
-		test_extract_all_files2("test_read_format_7zip_lzma1_lzma2.7z");
 		test_bcj("test_read_format_7zip_bcj_lzma1.7z");
-		test_bcj("test_read_format_7zip_bcj_lzma2.7z");
-		test_bcj("test_read_format_7zip_bcj2_copy_lzma.7z");
 		test_bcj("test_read_format_7zip_bcj2_lzma1_1.7z");
 		test_bcj("test_read_format_7zip_bcj2_lzma1_2.7z");
+		test_delta_lzma("test_read_format_7zip_delta_lzma1.7z");
+	}
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+}
+
+DEFINE_TEST(test_read_format_7zip_lzma2)
+{
+	struct archive *a;
+
+	assert((a = archive_read_new()) != NULL);
+
+	/* Extracting with liblzma */
+	if (ARCHIVE_OK != archive_read_support_filter_xz(a)) {
+		skipping("7zip:lzma decoding is not supported on this platform");
+	} else {
+		test_plain_header("test_read_format_7zip_lzma2.7z");
+		test_bcj("test_read_format_7zip_bcj_lzma2.7z");
 		test_bcj("test_read_format_7zip_bcj2_lzma2_1.7z");
 		test_bcj("test_read_format_7zip_bcj2_lzma2_2.7z");
-		test_delta_lzma("test_read_format_7zip_delta_lzma1.7z");
 		test_delta_lzma("test_read_format_7zip_delta_lzma2.7z");
 	}
 	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }
 
+DEFINE_TEST(test_read_format_7zip_ppmd)
+{
+	test_ppmd();
+}

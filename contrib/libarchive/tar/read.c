@@ -77,12 +77,15 @@ struct progress_data {
 static void	list_item_verbose(struct bsdtar *, FILE *,
 		    struct archive_entry *);
 static void	read_archive(struct bsdtar *bsdtar, char mode, struct archive *);
+static int unmatched_inclusions_warn(struct archive *matching, const char *);
+
 
 void
 tar_mode_t(struct bsdtar *bsdtar)
 {
 	read_archive(bsdtar, 't', NULL);
-	if (lafe_unmatched_inclusions_warn(bsdtar->matching, "Not found in archive") != 0)
+	if (unmatched_inclusions_warn(bsdtar->matching,
+	    "Not found in archive") != 0)
 		bsdtar->return_value = 1;
 }
 
@@ -100,7 +103,8 @@ tar_mode_x(struct bsdtar *bsdtar)
 
 	read_archive(bsdtar, 'x', writer);
 
-	if (lafe_unmatched_inclusions_warn(bsdtar->matching, "Not found in archive") != 0)
+	if (unmatched_inclusions_warn(bsdtar->matching,
+	    "Not found in archive") != 0)
 		bsdtar->return_value = 1;
 	archive_write_free(writer);
 }
@@ -121,8 +125,8 @@ progress_func(void *cookie)
 	if (bsdtar->verbose)
 		fprintf(stderr, "\n");
 	if (a != NULL) {
-		comp = archive_position_compressed(a);
-		uncomp = archive_position_uncompressed(a);
+		comp = archive_filter_bytes(a, -1);
+		uncomp = archive_filter_bytes(a, 0);
 		if (comp > uncomp)
 			compression = 0;
 		else
@@ -151,28 +155,54 @@ read_archive(struct bsdtar *bsdtar, char mode, struct archive *writer)
 	FILE			 *out;
 	struct archive		 *a;
 	struct archive_entry	 *entry;
+	const char		 *reader_options;
 	int			  r;
-	time_t			  sec;
-	long			  nsec;
 
 	while (*bsdtar->argv) {
-		lafe_include(&bsdtar->matching, *bsdtar->argv);
+		if (archive_match_include_pattern(bsdtar->matching,
+		    *bsdtar->argv) != ARCHIVE_OK)
+			lafe_errc(1, 0, "Error inclusion pattern: %s",
+			    archive_error_string(bsdtar->matching));
 		bsdtar->argv++;
 	}
 
 	if (bsdtar->names_from_file != NULL)
-		lafe_include_from_file(&bsdtar->matching,
-		    bsdtar->names_from_file, bsdtar->option_null);
+		if (archive_match_include_pattern_from_file(
+		    bsdtar->matching, bsdtar->names_from_file,
+		    bsdtar->option_null) != ARCHIVE_OK)
+			lafe_errc(1, 0, "Error inclusion pattern: %s",
+			    archive_error_string(bsdtar->matching));
 
 	a = archive_read_new();
-	if (bsdtar->compress_program != NULL)
-		archive_read_support_filter_program(a, bsdtar->compress_program);
-	else
+	if (cset_read_support_filter_program(bsdtar->cset, a) == 0)
 		archive_read_support_filter_all(a);
 	archive_read_support_format_all(a);
+
+	reader_options = getenv(ENV_READER_OPTIONS);
+	if (reader_options != NULL) {
+		char *p;
+		/* Set default read options. */
+		p = malloc(sizeof(IGNORE_WRONG_MODULE_NAME)
+		    + strlen(reader_options) + 1);
+		if (p == NULL)
+			lafe_errc(1, errno, "Out of memory");
+		/* Prepend magic code to ignore options for
+		 * a format or  modules which are not added to
+		 *  the archive read object. */
+		strncpy(p, IGNORE_WRONG_MODULE_NAME,
+		    sizeof(IGNORE_WRONG_MODULE_NAME) -1);
+		strcpy(p + sizeof(IGNORE_WRONG_MODULE_NAME) -1, reader_options);
+		r = archive_read_set_options(a, p);
+		free(p);
+		if (r == ARCHIVE_FATAL)
+			lafe_errc(1, 0, "%s", archive_error_string(a));
+		else
+			archive_clear_error(a);
+	}
 	if (ARCHIVE_OK != archive_read_set_options(a, bsdtar->option_options))
 		lafe_errc(1, 0, "%s", archive_error_string(a));
-	if (archive_read_open_file(a, bsdtar->filename, bsdtar->bytes_per_block))
+	if (archive_read_open_filename(a, bsdtar->filename,
+					bsdtar->bytes_per_block))
 		lafe_errc(1, 0, "Error opening archive: %s",
 		    archive_error_string(a));
 
@@ -199,7 +229,7 @@ read_archive(struct bsdtar *bsdtar, char mode, struct archive *writer)
 	for (;;) {
 		/* Support --fast-read option */
 		if (bsdtar->option_fast_read &&
-		    lafe_unmatched_inclusions(bsdtar->matching) == 0)
+		    archive_match_path_unmatched_inclusions(bsdtar->matching) == 0)
 			break;
 
 		r = archive_read_next_header(a, &entry);
@@ -232,42 +262,6 @@ read_archive(struct bsdtar *bsdtar, char mode, struct archive *writer)
 			archive_entry_set_gname(entry, bsdtar->gname);
 
 		/*
-		 * Exclude entries that are too old.
-		 */
-		if (bsdtar->newer_ctime_filter) {
-			/* Use ctime if format provides, else mtime. */
-			if (archive_entry_ctime_is_set(entry)) {
-				sec = archive_entry_ctime(entry);
-				nsec = archive_entry_ctime_nsec(entry);
-			} else if (archive_entry_mtime_is_set(entry)) {
-				sec = archive_entry_mtime(entry);
-				nsec = archive_entry_mtime_nsec(entry);
-			} else {
-				sec = 0;
-				nsec = 0;
-			}
-			if (sec < bsdtar->newer_ctime_sec)
-				continue; /* Too old, skip it. */
-			if (sec == bsdtar->newer_ctime_sec
-			    && nsec <= bsdtar->newer_ctime_nsec)
-				continue; /* Too old, skip it. */
-		}
-		if (bsdtar->newer_mtime_filter) {
-			if (archive_entry_mtime_is_set(entry)) {
-				sec = archive_entry_mtime(entry);
-				nsec = archive_entry_mtime_nsec(entry);
-			} else {
-				sec = 0;
-				nsec = 0;
-			}
-			if (sec < bsdtar->newer_mtime_sec)
-				continue; /* Too old, skip it. */
-			if (sec == bsdtar->newer_mtime_sec
-			    && nsec <= bsdtar->newer_mtime_nsec)
-				continue; /* Too old, skip it. */
-		}
-
-		/*
 		 * Note that pattern exclusions are checked before
 		 * pathname rewrites are handled.  This gives more
 		 * control over exclusions, since rewrites always lose
@@ -276,7 +270,7 @@ read_archive(struct bsdtar *bsdtar, char mode, struct archive *writer)
 		 * rewrite, there would be no way to exclude foo1/bar
 		 * while allowing foo2/bar.)
 		 */
-		if (lafe_excluded(bsdtar->matching, archive_entry_pathname(entry)))
+		if (archive_match_excluded(bsdtar->matching, entry))
 			continue; /* Excluded by a pattern test. */
 
 		if (mode == 't') {
@@ -366,7 +360,7 @@ read_archive(struct bsdtar *bsdtar, char mode, struct archive *writer)
 
 	if (bsdtar->verbose > 2)
 		fprintf(stdout, "Archive Format: %s,  Compression: %s\n",
-		    archive_format_name(a), archive_compression_name(a));
+		    archive_format_name(a), archive_filter_name(a, 0));
 
 	archive_read_free(a);
 }
@@ -470,4 +464,22 @@ list_item_verbose(struct bsdtar *bsdtar, FILE *out, struct archive_entry *entry)
 		    archive_entry_hardlink(entry));
 	else if (archive_entry_symlink(entry)) /* Symbolic link */
 		safe_fprintf(out, " -> %s", archive_entry_symlink(entry));
+}
+
+static int
+unmatched_inclusions_warn(struct archive *matching, const char *msg)
+{
+	const char *p;
+	int r;
+
+	if (matching == NULL)
+		return (0);
+
+	while ((r = archive_match_path_unmatched_inclusions_next(
+	    matching, &p)) == ARCHIVE_OK)
+		lafe_warnc(0, "%s: %s", p, msg);
+	if (r == ARCHIVE_FATAL)
+		lafe_errc(1, errno, "Out of memory");
+
+	return (archive_match_path_unmatched_inclusions(matching));
 }

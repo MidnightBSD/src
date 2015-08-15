@@ -1,4 +1,3 @@
-
 ARCHIVE_READ_DISK(3)	 BSD Library Functions Manual	  ARCHIVE_READ_DISK(3)
 
 NAME
@@ -10,6 +9,9 @@ NAME
      archive_read_disk_set_standard_lookup, archive_read_close,
      archive_read_finish, archive_read_free — functions for reading objects
      from disk
+
+LIBRARY
+     Streaming Archive Library (libarchive, -larchive)
 
 SYNOPSIS
      #include <archive.h>
@@ -166,7 +168,7 @@ RETURN VALUES
      ARCHIVE_FATAL for serious errors that make remaining operations impossi‐
      ble.
 
-     archive_read_disk_new() returns a pointer to a newly‐allocated struct
+     archive_read_disk_new() returns a pointer to a newly-allocated struct
      archive object or NULL if the allocation failed for any reason.
 
      archive_read_disk_gname() and archive_read_disk_uname() return const char
@@ -199,7 +201,7 @@ BUGS
      author to use a more compact implementation when appropriate.
 
      The full list of metadata read from disk by
-     archive_read_disk_entry_from_file() is necessarily system‐dependent.
+     archive_read_disk_entry_from_file() is necessarily system-dependent.
 
      The archive_read_disk_entry_from_file() function reads as much informa‐
      tion as it can from disk.	Some method should be provided to limit this
@@ -211,4 +213,4 @@ BUGS
      such methods are implemented, the “hybrid” symbolic link mode will make
      sense.
 
-BSD				March 10, 2009				   BSD
+BSD			       February 2, 2012 			   BSD

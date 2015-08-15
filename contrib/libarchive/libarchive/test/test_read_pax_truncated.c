@@ -38,7 +38,7 @@ DEFINE_TEST(test_read_pax_truncated)
 	/* Create a new archive in memory. */
 	assert((a = archive_write_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_format_pax(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_compression_none(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_add_filter_none(a));
 	assertEqualIntA(a, ARCHIVE_OK,
 			archive_write_open_memory(a, buff, buff_size, &used));
 
@@ -71,10 +71,10 @@ DEFINE_TEST(test_read_pax_truncated)
 		assertEqualIntA(a, ARCHIVE_OK, archive_read_support_filter_all(a));
 		/* If it's truncated very early, the file type detection should fail. */
 		if (i < 512) {
-			assertEqualIntA(a, ARCHIVE_FATAL, read_open_memory2(a, buff, i, 13));
+			assertEqualIntA(a, ARCHIVE_FATAL, read_open_memory_minimal(a, buff, i, 13));
 			goto wrap_up;
 		} else {
-			assertEqualIntA(a, ARCHIVE_OK, read_open_memory2(a, buff, i, 13));
+			assertEqualIntA(a, ARCHIVE_OK, read_open_memory_minimal(a, buff, i, 13));
 		}
 
 		/* If it's truncated in a header, the header read should fail. */

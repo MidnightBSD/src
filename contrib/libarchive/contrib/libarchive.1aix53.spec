@@ -1,4 +1,4 @@
-# $LastChangedRevision: 4095 $, $LastChangedDate: 2012-01-07 16:47:52 -0800 (Sat, 07 Jan 2012) $
+# $LastChangedRevision$, $LastChangedDate$
 Summary:        Library to create and read several different archive formats
 Summary(pl):    Biblioteka do tworzenia i odczytu ró¿nych formatów archiwów
 Name:           libarchive
@@ -126,7 +126,7 @@ rm -fr %buildroot
 * %{date} PLD Team <feedback@pld-linux.org>
 All persons listed below can be reached at <cvs_login>@pld-linux.org
 
-$Log: not supported by cvs2svn $
+$Log: libarchive.spec,v $
 Release 1aix53  2006/12/12 rm1023@dcx.com
 - tweak for aix-5.3
 - added libarchive-0123457890.patch for "0123457890" error

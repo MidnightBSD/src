@@ -82,7 +82,6 @@ __FBSDID("$FreeBSD: src/usr.bin/cpio/cpio.c,v 1.15 2008/12/06 07:30:40 kientzle 
 #include "cpio.h"
 #include "err.h"
 #include "line_reader.h"
-#include "matching.h"
 
 /* Fixed size of uname/gname caches. */
 #define	name_cache_size 101
@@ -119,6 +118,7 @@ static void	mode_in(struct cpio *);
 static void	mode_list(struct cpio *);
 static void	mode_out(struct cpio *);
 static void	mode_pass(struct cpio *, const char *);
+static const char *remove_leading_slash(const char *);
 static int	restore_time(struct cpio *, struct archive_entry *,
 		    const char *, int fd);
 static void	usage(void);
@@ -155,9 +155,9 @@ main(int argc, char *argv[])
 	else {
 #if defined(_WIN32) && !defined(__CYGWIN__)
 		lafe_progname = strrchr(*argv, '\\');
-#else
-		lafe_progname = strrchr(*argv, '/');
+		if (strrchr(*argv, '/') > lafe_progname)
 #endif
+		lafe_progname = strrchr(*argv, '/');
 		if (lafe_progname != NULL)
 			lafe_progname++;
 		else
@@ -189,6 +189,10 @@ main(int argc, char *argv[])
 	cpio->bytes_per_block = 512;
 	cpio->filename = NULL;
 
+	cpio->matching = archive_match_new();
+	if (cpio->matching == NULL)
+		lafe_errc(1, 0, "Out of memory");
+
 	while ((opt = cpio_getopt(cpio)) != -1) {
 		switch (opt) {
 		case '0': /* GNU convention: --null, -0 */
@@ -203,6 +207,9 @@ main(int argc, char *argv[])
 		case 'B': /* POSIX 1997 */
 			cpio->bytes_per_block = 5120;
 			break;
+		case OPTION_B64ENCODE:
+			cpio->add_filter = opt;
+			break;
 		case 'C': /* NetBSD/OpenBSD */
 			cpio->bytes_per_block = atoi(cpio->argument);
 			if (cpio->bytes_per_block <= 0)
@@ -215,14 +222,23 @@ main(int argc, char *argv[])
 			cpio->extract_flags &= ~ARCHIVE_EXTRACT_NO_AUTODIR;
 			break;
 		case 'E': /* NetBSD/OpenBSD */
-			lafe_include_from_file(&cpio->matching,
-			    cpio->argument, cpio->option_null);
+			if (archive_match_include_pattern_from_file(
+			    cpio->matching, cpio->argument,
+			    cpio->option_null) != ARCHIVE_OK)
+				lafe_errc(1, 0, "Error : %s",
+				    archive_error_string(cpio->matching));
 			break;
 		case 'F': /* NetBSD/OpenBSD/GNU cpio */
 			cpio->filename = cpio->argument;
 			break;
 		case 'f': /* POSIX 1997 */
-			lafe_exclude(&cpio->matching, cpio->argument);
+			if (archive_match_exclude_pattern(cpio->matching,
+			    cpio->argument) != ARCHIVE_OK)
+				lafe_errc(1, 0, "Error : %s",
+				    archive_error_string(cpio->matching));
+			break;
+		case OPTION_GRZIP:
+			cpio->compress = opt;
 			break;
 		case 'H': /* GNU cpio (also --format) */
 			cpio->format = cpio->argument;
@@ -255,7 +271,9 @@ main(int argc, char *argv[])
 		case 'l': /* POSIX 1997 */
 			cpio->option_link = 1;
 			break;
+		case OPTION_LRZIP:
 		case OPTION_LZMA: /* GNU tar, others */
+		case OPTION_LZOP: /* GNU tar, others */
 			cpio->compress = opt;
 			break;
 		case 'm': /* POSIX 1997 */
@@ -316,6 +334,9 @@ main(int argc, char *argv[])
 			cpio->extract_flags
 			    &= ~ARCHIVE_EXTRACT_NO_OVERWRITE_NEWER;
 			break;
+		case OPTION_UUENCODE:
+			cpio->add_filter = opt;
+			break;
 		case 'v': /* POSIX 1997 */
 			cpio->verbose++;
 			break;
@@ -368,9 +389,6 @@ main(int argc, char *argv[])
 	/* -v overrides -V */
 	if (cpio->dot && cpio->verbose)
 		cpio->dot = 0;
-	/* -v overrides -V */
-	if (cpio->dot && cpio->verbose)
-		cpio->dot = 0;
 	/* TODO: Flag other nonsensical combinations. */
 
 	switch (cpio->mode) {
@@ -384,7 +402,10 @@ main(int argc, char *argv[])
 		break;
 	case 'i':
 		while (*cpio->argv != NULL) {
-			lafe_include(&cpio->matching, *cpio->argv);
+			if (archive_match_include_pattern(cpio->matching,
+			    *cpio->argv) != ARCHIVE_OK)
+				lafe_errc(1, 0, "Error : %s",
+				    archive_error_string(cpio->matching));
 			--cpio->argc;
 			++cpio->argv;
 		}
@@ -404,8 +425,10 @@ main(int argc, char *argv[])
 		    "Must specify at least one of -i, -o, or -p");
 	}
 
+	archive_match_free(cpio->matching);
 	free_cache(cpio->gname_cache);
 	free_cache(cpio->uname_cache);
+	free(cpio->destdir);
 	return (cpio->return_value);
 }
 
@@ -505,27 +528,49 @@ mode_out(struct cpio *cpio)
 	if (cpio->archive == NULL)
 		lafe_errc(1, 0, "Failed to allocate archive object");
 	switch (cpio->compress) {
+	case OPTION_GRZIP:
+		r = archive_write_add_filter_grzip(cpio->archive);
+		break;
 	case 'J':
-		r = archive_write_set_compression_xz(cpio->archive);
+		r = archive_write_add_filter_xz(cpio->archive);
+		break;
+	case OPTION_LRZIP:
+		r = archive_write_add_filter_lrzip(cpio->archive);
 		break;
 	case OPTION_LZMA:
-		r = archive_write_set_compression_lzma(cpio->archive);
+		r = archive_write_add_filter_lzma(cpio->archive);
+		break;
+	case OPTION_LZOP:
+		r = archive_write_add_filter_lzop(cpio->archive);
 		break;
 	case 'j': case 'y':
-		r = archive_write_set_compression_bzip2(cpio->archive);
+		r = archive_write_add_filter_bzip2(cpio->archive);
 		break;
 	case 'z':
-		r = archive_write_set_compression_gzip(cpio->archive);
+		r = archive_write_add_filter_gzip(cpio->archive);
 		break;
 	case 'Z':
-		r = archive_write_set_compression_compress(cpio->archive);
+		r = archive_write_add_filter_compress(cpio->archive);
 		break;
 	default:
-		r = archive_write_set_compression_none(cpio->archive);
+		r = archive_write_add_filter_none(cpio->archive);
 		break;
 	}
 	if (r < ARCHIVE_WARN)
 		lafe_errc(1, 0, "Requested compression not available");
+	switch (cpio->add_filter) {
+	case 0:
+		r = ARCHIVE_OK;
+		break;
+	case OPTION_B64ENCODE:
+		r = archive_write_add_filter_b64encode(cpio->archive);
+		break;
+	case OPTION_UUENCODE:
+		r = archive_write_add_filter_uuencode(cpio->archive);
+		break;
+	}
+	if (r < ARCHIVE_WARN)
+		lafe_errc(1, 0, "Requested filter not available");
 	r = archive_write_set_format_by_name(cpio->archive, cpio->format);
 	if (r != ARCHIVE_OK)
 		lafe_errc(1, 0, "%s", archive_error_string(cpio->archive));
@@ -537,7 +582,7 @@ mode_out(struct cpio *cpio)
 	/*
 	 * The main loop:  Copy each file into the output archive.
 	 */
-	r = archive_write_open_file(cpio->archive, cpio->filename);
+	r = archive_write_open_filename(cpio->archive, cpio->filename);
 	if (r != ARCHIVE_OK)
 		lafe_errc(1, 0, "%s", archive_error_string(cpio->archive));
 	lr = lafe_line_reader("-", cpio->option_null);
@@ -566,12 +611,55 @@ mode_out(struct cpio *cpio)
 
 	if (!cpio->quiet) {
 		int64_t blocks =
-			(archive_position_uncompressed(cpio->archive) + 511)
+			(archive_filter_bytes(cpio->archive, 0) + 511)
 			/ 512;
 		fprintf(stderr, "%lu %s\n", (unsigned long)blocks,
 		    blocks == 1 ? "block" : "blocks");
 	}
 	archive_write_free(cpio->archive);
+}
+
+static const char *
+remove_leading_slash(const char *p)
+{
+	const char *rp;
+
+	/* Remove leading "//./" or "//?/" or "//?/UNC/"
+	 * (absolute path prefixes used by Windows API) */
+	if ((p[0] == '/' || p[0] == '\\') &&
+	    (p[1] == '/' || p[1] == '\\') &&
+	    (p[2] == '.' || p[2] == '?') &&
+	    (p[3] == '/' || p[3] == '\\'))
+	{
+		if (p[2] == '?' &&
+		    (p[4] == 'U' || p[4] == 'u') &&
+		    (p[5] == 'N' || p[5] == 'n') &&
+		    (p[6] == 'C' || p[6] == 'c') &&
+		    (p[7] == '/' || p[7] == '\\'))
+			p += 8;
+		else
+			p += 4;
+	}
+	do {
+		rp = p;
+		/* Remove leading drive letter from archives created
+		 * on Windows. */
+		if (((p[0] >= 'a' && p[0] <= 'z') ||
+		     (p[0] >= 'A' && p[0] <= 'Z')) &&
+			 p[1] == ':') {
+			p += 2;
+		}
+		/* Remove leading "/../", "//", etc. */
+		while (p[0] == '/' || p[0] == '\\') {
+			if (p[1] == '.' && p[2] == '.' &&
+				(p[3] == '/' || p[3] == '\\')) {
+				p += 3; /* Remove "/..", leave "/"
+					 * for next pass. */
+			} else
+				p += 1; /* Remove "/". */
+		}
+	} while (rp != p);
+	return (p);
 }
 
 /*
@@ -585,7 +673,6 @@ file_to_archive(struct cpio *cpio, const char *srcpath)
 	const char *destpath;
 	struct archive_entry *entry, *spare;
 	size_t len;
-	const char *p;
 	int r;
 
 	/*
@@ -639,10 +726,7 @@ file_to_archive(struct cpio *cpio, const char *srcpath)
 				    "Can't allocate path buffer");
 		}
 		strcpy(cpio->pass_destpath, cpio->destdir);
-		p = srcpath;
-		while (p[0] == '/')
-			++p;
-		strcat(cpio->pass_destpath, p);
+		strcat(cpio->pass_destpath, remove_leading_slash(srcpath));
 		destpath = cpio->pass_destpath;
 	}
 	if (cpio->option_rename)
@@ -756,18 +840,21 @@ entry_to_archive(struct cpio *cpio, struct archive_entry *entry)
 		exit(1);
 
 	if (r >= ARCHIVE_WARN && archive_entry_size(entry) > 0 && fd >= 0) {
-		bytes_read = read(fd, cpio->buff, cpio->buff_size);
+		bytes_read = read(fd, cpio->buff, (unsigned)cpio->buff_size);
 		while (bytes_read > 0) {
-			r = archive_write_data(cpio->archive,
+			ssize_t bytes_write;
+			bytes_write = archive_write_data(cpio->archive,
 			    cpio->buff, bytes_read);
-			if (r < 0)
+			if (bytes_write < 0)
 				lafe_errc(1, archive_errno(cpio->archive),
 				    "%s", archive_error_string(cpio->archive));
-			if (r < bytes_read) {
+			if (bytes_write < bytes_read) {
 				lafe_warnc(0,
-				    "Truncated write; file may have grown while being archived.");
+				    "Truncated write; file may have "
+				    "grown while being archived.");
 			}
-			bytes_read = read(fd, cpio->buff, cpio->buff_size);
+			bytes_read = read(fd, cpio->buff,
+			    (unsigned)cpio->buff_size);
 		}
 	}
 
@@ -858,7 +945,8 @@ mode_in(struct cpio *cpio)
 	archive_read_support_filter_all(a);
 	archive_read_support_format_all(a);
 
-	if (archive_read_open_file(a, cpio->filename, cpio->bytes_per_block))
+	if (archive_read_open_filename(a, cpio->filename,
+					cpio->bytes_per_block))
 		lafe_errc(1, archive_errno(a),
 		    "%s", archive_error_string(a));
 	for (;;) {
@@ -869,7 +957,7 @@ mode_in(struct cpio *cpio)
 			lafe_errc(1, archive_errno(a),
 			    "%s", archive_error_string(a));
 		}
-		if (lafe_excluded(cpio->matching, archive_entry_pathname(entry)))
+		if (archive_match_path_excluded(cpio->matching, entry))
 			continue;
 		if (cpio->option_rename) {
 			destpath = cpio_rename(archive_entry_pathname(entry));
@@ -907,7 +995,7 @@ mode_in(struct cpio *cpio)
 	if (r != ARCHIVE_OK)
 		lafe_errc(1, 0, "%s", archive_error_string(ext));
 	if (!cpio->quiet) {
-		int64_t blocks = (archive_position_uncompressed(a) + 511)
+		int64_t blocks = (archive_filter_bytes(a, 0) + 511)
 			      / 512;
 		fprintf(stderr, "%lu %s\n", (unsigned long)blocks,
 		    blocks == 1 ? "block" : "blocks");
@@ -938,7 +1026,7 @@ extract_data(struct archive *ar, struct archive *aw)
 			    "%s", archive_error_string(ar));
 			exit(1);
 		}
-		r = archive_write_data_block(aw, block, size, offset);
+		r = (int)archive_write_data_block(aw, block, size, offset);
 		if (r != ARCHIVE_OK) {
 			lafe_warnc(archive_errno(aw),
 			    "%s", archive_error_string(aw));
@@ -960,7 +1048,8 @@ mode_list(struct cpio *cpio)
 	archive_read_support_filter_all(a);
 	archive_read_support_format_all(a);
 
-	if (archive_read_open_file(a, cpio->filename, cpio->bytes_per_block))
+	if (archive_read_open_filename(a, cpio->filename,
+					cpio->bytes_per_block))
 		lafe_errc(1, archive_errno(a),
 		    "%s", archive_error_string(a));
 	for (;;) {
@@ -971,7 +1060,7 @@ mode_list(struct cpio *cpio)
 			lafe_errc(1, archive_errno(a),
 			    "%s", archive_error_string(a));
 		}
-		if (lafe_excluded(cpio->matching, archive_entry_pathname(entry)))
+		if (archive_match_path_excluded(cpio->matching, entry))
 			continue;
 		if (cpio->verbose)
 			list_item_verbose(cpio, entry);
@@ -982,7 +1071,7 @@ mode_list(struct cpio *cpio)
 	if (r != ARCHIVE_OK)
 		lafe_errc(1, 0, "%s", archive_error_string(a));
 	if (!cpio->quiet) {
-		int64_t blocks = (archive_position_uncompressed(a) + 511)
+		int64_t blocks = (archive_filter_bytes(a, 0) + 511)
 			      / 512;
 		fprintf(stderr, "%lu %s\n", (unsigned long)blocks,
 		    blocks == 1 ? "block" : "blocks");
@@ -1117,7 +1206,7 @@ mode_pass(struct cpio *cpio, const char *destdir)
 
 	if (!cpio->quiet) {
 		int64_t blocks =
-			(archive_position_uncompressed(cpio->archive) + 511)
+			(archive_filter_bytes(cpio->archive, 0) + 511)
 			/ 512;
 		fprintf(stderr, "%lu %s\n", (unsigned long)blocks,
 		    blocks == 1 ? "block" : "blocks");
@@ -1139,12 +1228,24 @@ cpio_rename(const char *name)
 	static char buff[1024];
 	FILE *t;
 	char *p, *ret;
+#if defined(_WIN32) && !defined(__CYGWIN__)
+	FILE *to;
 
+	t = fopen("CONIN$", "r");
+	if (t == NULL)
+		return (name);
+	to = fopen("CONOUT$", "w");
+	if (to == NULL)
+		return (name);
+	fprintf(to, "%s (Enter/./(new name))? ", name);
+	fclose(to);
+#else
 	t = fopen("/dev/tty", "r+");
 	if (t == NULL)
 		return (name);
 	fprintf(t, "%s (Enter/./(new name))? ", name);
 	fflush(t);
+#endif
 
 	p = fgets(buff, sizeof(buff), t);
 	fclose(t);
@@ -1254,7 +1355,8 @@ lookup_uname_helper(struct cpio *cpio, const char **name, id_t id)
 	if (pwent == NULL) {
 		*name = NULL;
 		if (errno != 0 && errno != ENOENT)
-			lafe_warnc(errno, "getpwuid(%d) failed", id);
+			lafe_warnc(errno, "getpwuid(%s) failed",
+			    cpio_i64toa((int64_t)id));
 		return (errno);
 	}
 
@@ -1281,7 +1383,8 @@ lookup_gname_helper(struct cpio *cpio, const char **name, id_t id)
 	if (grent == NULL) {
 		*name = NULL;
 		if (errno != 0)
-			lafe_warnc(errno, "getgrgid(%d) failed", id);
+			lafe_warnc(errno, "getgrgid(%s) failed",
+			    cpio_i64toa((int64_t)id));
 		return (errno);
 	}
 

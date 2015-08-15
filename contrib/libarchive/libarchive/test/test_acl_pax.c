@@ -163,7 +163,7 @@ compare_acls(struct archive_entry *ae, struct acl_t *acls, int n, int mode)
 		}
 	}
 	assertEqualInt(ARCHIVE_EOF, r);
-	assert((mode & 0777) == (archive_entry_mode(ae) & 0777));
+	assert((mode_t)(mode & 0777) == (archive_entry_mode(ae) & 0777));
 	failure("Could not find match for ACL "
 	    "(type=%d,permset=%d,tag=%d,qual=%d,name=``%s'')",
 	    acls[marker[0]].type, acls[marker[0]].permset,
@@ -184,7 +184,7 @@ DEFINE_TEST(test_acl_pax)
 	/* Write an archive to memory. */
 	assert(NULL != (a = archive_write_new()));
 	assertA(0 == archive_write_set_format_pax(a));
-	assertA(0 == archive_write_set_compression_none(a));
+	assertA(0 == archive_write_add_filter_none(a));
 	assertA(0 == archive_write_set_bytes_per_block(a, 1));
 	assertA(0 == archive_write_set_bytes_in_last_block(a, 1));
 	assertA(0 == archive_write_open_memory(a, buff, sizeof(buff), &used));

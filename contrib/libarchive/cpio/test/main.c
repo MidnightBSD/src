@@ -24,12 +24,26 @@
  */
 
 #include "test.h"
+#include "test_utils.h"
+#ifdef HAVE_SYS_IOCTL_H
+#include <sys/ioctl.h>
+#endif
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
 #include <errno.h>
 #ifdef HAVE_ICONV_H
 #include <iconv.h>
+#endif
+/*
+ * Some Linux distributions have both linux/ext2_fs.h and ext2fs/ext2_fs.h.
+ * As the include guards don't agree, the order of include is important.
+ */
+#ifdef HAVE_LINUX_EXT2_FS_H
+#include <linux/ext2_fs.h>      /* for Linux file flags */
+#endif
+#if defined(HAVE_EXT2FS_EXT2_FS_H) && !defined(__CYGWIN__)
+#include <ext2fs/ext2_fs.h>     /* Linux file flags, broken on Cygwin */
 #endif
 #include <limits.h>
 #include <locale.h>
@@ -78,6 +92,7 @@ __FBSDID("$FreeBSD: src/usr.bin/cpio/test/main.c,v 1.3 2008/08/24 04:58:22 kient
  */
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #include <io.h>
+#include <direct.h>
 #include <windows.h>
 #ifndef F_OK
 #define F_OK (0)
@@ -116,7 +131,14 @@ __FBSDID("$FreeBSD: src/usr.bin/cpio/test/main.c,v 1.3 2008/08/24 04:58:22 kient
 #endif
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
-void *GetFunctionKernel32(const char *name)
+static void	*GetFunctionKernel32(const char *);
+static int	 my_CreateSymbolicLinkA(const char *, const char *, int);
+static int	 my_CreateHardLinkA(const char *, const char *);
+static int	 my_GetFileInformationByName(const char *,
+		     BY_HANDLE_FILE_INFORMATION *);
+
+static void *
+GetFunctionKernel32(const char *name)
 {
 	static HINSTANCE lib;
 	static int set;
@@ -155,7 +177,7 @@ my_CreateHardLinkA(const char *linkname, const char *target)
 	return f == NULL ? 0 : (*f)(linkname, target, NULL);
 }
 
-int
+static int
 my_GetFileInformationByName(const char *path, BY_HANDLE_FILE_INFORMATION *bhfi)
 {
 	HANDLE h;
@@ -369,7 +391,6 @@ failure_finish(void *extra)
 		fprintf(stderr,
 		    " *** forcing core dump so failure can be debugged ***\n");
 		abort();
-		exit(1);
 	}
 }
 
@@ -602,8 +623,8 @@ assertion_equal_string(const char *file, int line,
 	if (v1 == v2 || (v1 != NULL && v2 != NULL && strcmp(v1, v2) == 0))
 		return (1);
 	failure_start(file, line, "%s != %s", e1, e2);
-	l1 = strlen(e1);
-	l2 = strlen(e2);
+	l1 = (int)strlen(e1);
+	l2 = (int)strlen(e2);
 	if (l1 < l2)
 		l1 = l2;
 	strdump(e1, v1, l1, utf8);
@@ -726,6 +747,8 @@ assertion_equal_mem(const char *file, int line,
 	assertion_count(file, line);
 	if (v1 == v2 || (v1 != NULL && v2 != NULL && memcmp(v1, v2, l) == 0))
 		return (1);
+	if (v1 == NULL || v2 == NULL)
+		return (0);
 
 	failure_start(file, line, "%s != %s", e1, e2);
 	logprintf("      size %s = %d\n", ld, (int)l);
@@ -819,9 +842,14 @@ assertion_equal_file(const char *filename, int line, const char *fn1, const char
 
 	f1 = fopen(fn1, "rb");
 	f2 = fopen(fn2, "rb");
+	if (f1 == NULL || f2 == NULL) {
+		if (f1) fclose(f1);
+		if (f2) fclose(f2);
+		return (0);
+	}
 	for (;;) {
-		n1 = fread(buff1, 1, sizeof(buff1), f1);
-		n2 = fread(buff2, 1, sizeof(buff2), f2);
+		n1 = (int)fread(buff1, 1, sizeof(buff1), f1);
+		n2 = (int)fread(buff2, 1, sizeof(buff2), f2);
 		if (n1 != n2)
 			break;
 		if (n1 == 0 && n2 == 0) {
@@ -895,7 +923,7 @@ assertion_file_contents(const char *filename, int line, const void *buff, int s,
 		return (0);
 	}
 	contents = malloc(s * 2);
-	n = fread(contents, 1, s * 2, f);
+	n = (int)fread(contents, 1, s * 2, f);
 	fclose(f);
 	if (n == s && memcmp(buff, contents, s) == 0) {
 		free(contents);
@@ -931,9 +959,9 @@ assertion_text_file_contents(const char *filename, int line, const char *buff, c
 		failure_finish(NULL);
 		return (0);
 	}
-	s = strlen(buff);
+	s = (int)strlen(buff);
 	contents = malloc(s * 2 + 128);
-	n = fread(contents, 1, s * 2 + 128 - 1, f);
+	n = (int)fread(contents, 1, s * 2 + 128 - 1, f);
 	if (n >= 0)
 		contents[n] = '\0';
 	fclose(f);
@@ -984,8 +1012,8 @@ assertion_file_contains_lines_any_order(const char *file, int line,
 	char *buff;
 	size_t buff_size;
 	size_t expected_count, actual_count, i, j;
-	char **expected;
-	char *p, **actual;
+	char **expected = NULL;
+	char *p, **actual = NULL;
 	char c;
 	int expected_failure = 0, actual_failure = 0;
 
@@ -998,14 +1026,21 @@ assertion_file_contains_lines_any_order(const char *file, int line,
 		return (0);
 	}
 
-	/* Make a copy of the provided lines and count up the expected file size. */
-	expected_count = 0;
+	/* Make a copy of the provided lines and count up the expected
+	 * file size. */
 	for (i = 0; lines[i] != NULL; ++i) {
 	}
 	expected_count = i;
-	expected = malloc(sizeof(char *) * expected_count);
-	for (i = 0; lines[i] != NULL; ++i) {
-		expected[i] = strdup(lines[i]);
+	if (expected_count) {
+		expected = malloc(sizeof(char *) * expected_count);
+		if (expected == NULL) {
+			failure_start(pathname, line, "Can't allocate memory");
+			failure_finish(NULL);
+			return (0);
+		}
+		for (i = 0; lines[i] != NULL; ++i) {
+			expected[i] = strdup(lines[i]);
+		}
 	}
 
 	/* Break the file into lines */
@@ -1017,11 +1052,19 @@ assertion_file_contains_lines_any_order(const char *file, int line,
 			++actual_count;
 		c = *p;
 	}
-	actual = malloc(sizeof(char *) * actual_count);
-	for (j = 0, p = buff; p < buff + buff_size; p += 1 + strlen(p)) {
-		if (*p != '\0') {
-			actual[j] = p;
-			++j;
+	if (actual_count) {
+		actual = calloc(sizeof(char *), actual_count);
+		if (actual == NULL) {
+			failure_start(pathname, line, "Can't allocate memory");
+			failure_finish(NULL);
+			free(expected);
+			return (0);
+		}
+		for (j = 0, p = buff; p < buff + buff_size; p += 1 + strlen(p)) {
+			if (*p != '\0') {
+				actual[j] = p;
+				++j;
+			}
 		}
 	}
 
@@ -1156,11 +1199,11 @@ assertion_file_time(const char *file, int line,
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #define EPOC_TIME	(116444736000000000ULL)
-	FILETIME ftime, fbirthtime, fatime, fmtime;
+	FILETIME fxtime, fbirthtime, fatime, fmtime;
 	ULARGE_INTEGER wintm;
 	HANDLE h;
-	ftime.dwLowDateTime = 0;
-	ftime.dwHighDateTime = 0;
+	fxtime.dwLowDateTime = 0;
+	fxtime.dwHighDateTime = 0;
 
 	assertion_count(file, line);
 	/* Note: FILE_FLAG_BACKUP_SEMANTICS applies to open
@@ -1175,9 +1218,9 @@ assertion_file_time(const char *file, int line,
 	}
 	r = GetFileTime(h, &fbirthtime, &fatime, &fmtime);
 	switch (type) {
-	case 'a': ftime = fatime; break;
-	case 'b': ftime = fbirthtime; break;
-	case 'm': ftime = fmtime; break;
+	case 'a': fxtime = fatime; break;
+	case 'b': fxtime = fbirthtime; break;
+	case 'm': fxtime = fmtime; break;
 	}
 	CloseHandle(h);
 	if (r == 0) {
@@ -1185,8 +1228,8 @@ assertion_file_time(const char *file, int line,
 		failure_finish(NULL);
 		return (0);
 	}
-	wintm.LowPart = ftime.dwLowDateTime;
-	wintm.HighPart = ftime.dwHighDateTime;
+	wintm.LowPart = fxtime.dwLowDateTime;
+	wintm.HighPart = fxtime.dwHighDateTime;
 	filet = (wintm.QuadPart - EPOC_TIME) / 10000000;
 	filet_nsec = ((wintm.QuadPart - EPOC_TIME) % 10000000) * 100;
 	nsec = (nsec / 100) * 100; /* Round the request */
@@ -1316,7 +1359,7 @@ assertion_file_nlinks(const char *file, int line,
 
 	assertion_count(file, line);
 	r = lstat(pathname, &st);
-	if (r == 0 && st.st_nlink == nlinks)
+	if (r == 0 && (int)st.st_nlink == nlinks)
 			return (1);
 	failure_start(file, line, "File %s has %d links, expected %d",
 	    pathname, st.st_nlink, nlinks);
@@ -1380,7 +1423,7 @@ assertion_is_dir(const char *file, int line, const char *pathname, int mode)
 	/* Windows doesn't handle permissions the same way as POSIX,
 	 * so just ignore the mode tests. */
 	/* TODO: Can we do better here? */
-	if (mode >= 0 && mode != (st.st_mode & 07777)) {
+	if (mode >= 0 && (mode_t)mode != (st.st_mode & 07777)) {
 		failure_start(file, line, "Dir %s has wrong mode", pathname);
 		logprintf("  Expected: 0%3o\n", mode);
 		logprintf("  Found: 0%3o\n", st.st_mode & 07777);
@@ -1413,7 +1456,7 @@ assertion_is_reg(const char *file, int line, const char *pathname, int mode)
 	/* Windows doesn't handle permissions the same way as POSIX,
 	 * so just ignore the mode tests. */
 	/* TODO: Can we do better here? */
-	if (mode >= 0 && mode != (st.st_mode & 07777)) {
+	if (mode >= 0 && (mode_t)mode != (st.st_mode & 07777)) {
 		failure_start(file, line, "File %s has wrong mode", pathname);
 		logprintf("  Expected: 0%3o\n", mode);
 		logprintf("  Found: 0%3o\n", st.st_mode & 07777);
@@ -1507,7 +1550,7 @@ assertion_make_dir(const char *file, int line, const char *dirname, int mode)
 /* Create a file with the specified contents and report any failures. */
 int
 assertion_make_file(const char *file, int line,
-    const char *path, int mode, const char *contents)
+    const char *path, int mode, int csize, const void *contents)
 {
 #if defined(_WIN32) && !defined(__CYGWIN__)
 	/* TODO: Rework this to set file mode as well. */
@@ -1521,8 +1564,13 @@ assertion_make_file(const char *file, int line,
 		return (0);
 	}
 	if (contents != NULL) {
-		if (strlen(contents)
-		    != fwrite(contents, 1, strlen(contents), f)) {
+		size_t wsize;
+
+		if (csize < 0)
+			wsize = strlen(contents);
+		else
+			wsize = (size_t)csize;
+		if (wsize != fwrite(contents, 1, wsize, f)) {
 			fclose(f);
 			failure_start(file, line,
 			    "Could not write file %s", path);
@@ -1542,10 +1590,16 @@ assertion_make_file(const char *file, int line,
 		return (0);
 	}
 	if (contents != NULL) {
-		if ((ssize_t)strlen(contents)
-		    != write(fd, contents, strlen(contents))) {
+		ssize_t wsize;
+
+		if (csize < 0)
+			wsize = (ssize_t)strlen(contents);
+		else
+			wsize = (ssize_t)csize;
+		if (wsize != write(fd, contents, wsize)) {
 			close(fd);
-			failure_start(file, line, "Could not write to %s", path);
+			failure_start(file, line,
+			    "Could not write to %s", path);
 			failure_finish(NULL);
 			return (0);
 		}
@@ -1716,6 +1770,52 @@ assertion_utimes(const char *file, int line,
 #endif /* defined(_WIN32) && !defined(__CYGWIN__) */
 }
 
+/* Set nodump, report failures. */
+int
+assertion_nodump(const char *file, int line, const char *pathname)
+{
+#if defined(HAVE_STRUCT_STAT_ST_FLAGS) && defined(UF_NODUMP)
+	int r;
+
+	assertion_count(file, line);
+	r = chflags(pathname, UF_NODUMP);
+	if (r < 0) {
+		failure_start(file, line, "Can't set nodump %s\n", pathname);
+		failure_finish(NULL);
+		return (0);
+	}
+#elif defined(EXT2_IOC_GETFLAGS) && defined(HAVE_WORKING_EXT2_IOC_GETFLAGS)\
+	 && defined(EXT2_NODUMP_FL)
+	int fd, r, flags;
+
+	assertion_count(file, line);
+	fd = open(pathname, O_RDONLY | O_NONBLOCK);
+	if (fd < 0) {
+		failure_start(file, line, "Can't open %s\n", pathname);
+		failure_finish(NULL);
+		return (0);
+	}
+	r = ioctl(fd, EXT2_IOC_GETFLAGS, &flags);
+	if (r < 0) {
+		failure_start(file, line, "Can't get flags %s\n", pathname);
+		failure_finish(NULL);
+		return (0);
+	}
+	flags |= EXT2_NODUMP_FL;
+	r = ioctl(fd, EXT2_IOC_SETFLAGS, &flags);
+	if (r < 0) {
+		failure_start(file, line, "Can't set nodump %s\n", pathname);
+		failure_finish(NULL);
+		return (0);
+	}
+	close(fd);
+#else
+	(void)pathname; /* UNUSED */
+	assertion_count(file, line);
+#endif
+	return (1);
+}
+
 /*
  *
  *  UTILITIES for use by tests.
@@ -1744,7 +1844,7 @@ canSymlink(void)
 		return (value);
 
 	++tested;
-	assertion_make_file(__FILE__, __LINE__, "canSymlink.0", 0644, "a");
+	assertion_make_file(__FILE__, __LINE__, "canSymlink.0", 0644, 1, "a");
 	/* Note: Cygwin has its own symlink() emulation that does not
 	 * use the Win32 CreateSymbolicLink() function. */
 #if defined(_WIN32) && !defined(__CYGWIN__)
@@ -1757,15 +1857,45 @@ canSymlink(void)
 	return (value);
 }
 
-/*
- * Can this platform run the gzip program?
- */
 /* Platform-dependent options for hiding the output of a subcommand. */
 #if defined(_WIN32) && !defined(__CYGWIN__)
 static const char *redirectArgs = ">NUL 2>NUL"; /* Win32 cmd.exe */
 #else
 static const char *redirectArgs = ">/dev/null 2>/dev/null"; /* POSIX 'sh' */
 #endif
+/*
+ * Can this platform run the bzip2 program?
+ */
+int
+canBzip2(void)
+{
+	static int tested = 0, value = 0;
+	if (!tested) {
+		tested = 1;
+		if (systemf("bzip2 -d -V %s", redirectArgs) == 0)
+			value = 1;
+	}
+	return (value);
+}
+
+/*
+ * Can this platform run the grzip program?
+ */
+int
+canGrzip(void)
+{
+	static int tested = 0, value = 0;
+	if (!tested) {
+		tested = 1;
+		if (systemf("grzip -V %s", redirectArgs) == 0)
+			value = 1;
+	}
+	return (value);
+}
+
+/*
+ * Can this platform run the gzip program?
+ */
 int
 canGzip(void)
 {
@@ -1779,19 +1909,143 @@ canGzip(void)
 }
 
 /*
- * Can this platform run the gunzip program?
+ * Can this platform run the lrzip program?
  */
 int
-canGunzip(void)
+canLrzip(void)
 {
 	static int tested = 0, value = 0;
 	if (!tested) {
 		tested = 1;
-		if (systemf("gunzip -V %s", redirectArgs) == 0)
+		if (systemf("lrzip -V %s", redirectArgs) == 0)
 			value = 1;
 	}
 	return (value);
 }
+
+/*
+ * Can this platform run the lzip program?
+ */
+int
+canLzip(void)
+{
+	static int tested = 0, value = 0;
+	if (!tested) {
+		tested = 1;
+		if (systemf("lzip -V %s", redirectArgs) == 0)
+			value = 1;
+	}
+	return (value);
+}
+
+/*
+ * Can this platform run the lzma program?
+ */
+int
+canLzma(void)
+{
+	static int tested = 0, value = 0;
+	if (!tested) {
+		tested = 1;
+		if (systemf("lzma -V %s", redirectArgs) == 0)
+			value = 1;
+	}
+	return (value);
+}
+
+/*
+ * Can this platform run the lzop program?
+ */
+int
+canLzop(void)
+{
+	static int tested = 0, value = 0;
+	if (!tested) {
+		tested = 1;
+		if (systemf("lzop -V %s", redirectArgs) == 0)
+			value = 1;
+	}
+	return (value);
+}
+
+/*
+ * Can this platform run the xz program?
+ */
+int
+canXz(void)
+{
+	static int tested = 0, value = 0;
+	if (!tested) {
+		tested = 1;
+		if (systemf("xz -V %s", redirectArgs) == 0)
+			value = 1;
+	}
+	return (value);
+}
+
+/*
+ * Can this filesystem handle nodump flags.
+ */
+#if defined(HAVE_STRUCT_STAT_ST_FLAGS) && defined(UF_NODUMP)
+
+int
+canNodump(void)
+{
+	const char *path = "cannodumptest";
+	struct stat sb;
+
+	assertion_make_file(__FILE__, __LINE__, path, 0644, 0, NULL);
+	if (chflags(path, UF_NODUMP) < 0)
+		return (0);
+	if (stat(path, &sb) < 0)
+		return (0);
+	if (sb.st_flags & UF_NODUMP)
+		return (1);
+	return (0);
+}
+
+#elif defined(EXT2_IOC_GETFLAGS) && defined(HAVE_WORKING_EXT2_IOC_GETFLAGS)\
+	 && defined(EXT2_NODUMP_FL)
+
+int
+canNodump(void)
+{
+	const char *path = "cannodumptest";
+	int fd, r, flags;
+
+	assertion_make_file(__FILE__, __LINE__, path, 0644, 0, NULL);
+	fd = open(path, O_RDONLY | O_NONBLOCK);
+	if (fd < 0)
+		return (0);
+	r = ioctl(fd, EXT2_IOC_GETFLAGS, &flags);
+	if (r < 0)
+		return (0);
+	flags |= EXT2_NODUMP_FL;
+	r = ioctl(fd, EXT2_IOC_SETFLAGS, &flags);
+	if (r < 0)
+		return (0);
+	close(fd);
+	fd = open(path, O_RDONLY | O_NONBLOCK);
+	if (fd < 0)
+		return (0);
+	r = ioctl(fd, EXT2_IOC_GETFLAGS, &flags);
+	if (r < 0)
+		return (0);
+	close(fd);
+	if (flags & EXT2_NODUMP_FL)
+		return (1);
+	return (0);
+}
+
+#else
+
+int
+canNodump()
+{
+	return (0);
+}
+
+#endif
 
 /*
  * Sleep as needed; useful for verifying disk timestamp changes by
@@ -1983,7 +2237,7 @@ is_LargeInode(const char *file)
 /* Use "list.h" to create a list of all tests (functions and names). */
 #undef DEFINE_TEST
 #define	DEFINE_TEST(n) { n, #n, 0 },
-struct { void (*func)(void); const char *name; int failures; } tests[] = {
+struct test_list_t tests[] = {
 	#include "list.h"
 };
 
@@ -2240,13 +2494,14 @@ int
 main(int argc, char **argv)
 {
 	static const int limit = sizeof(tests) / sizeof(tests[0]);
-	int i = 0, j = 0, start, end, tests_run = 0, tests_failed = 0, option;
+	int test_set[sizeof(tests) / sizeof(tests[0])];
+	int i = 0, j = 0, tests_run = 0, tests_failed = 0, option;
 	time_t now;
 	char *refdir_alloc = NULL;
 	const char *progname;
 	char **saved_argv;
 	const char *tmp, *option_arg, *p;
-	char tmpdir[256], *pwd, *testprogdir, *tmp2 = NULL;
+	char tmpdir[256], *pwd, *testprogdir, *tmp2 = NULL, *vlevel = NULL;
 	char tmpdir_timestamp[256];
 
 	(void)argc; /* UNUSED */
@@ -2289,7 +2544,15 @@ main(int argc, char **argv)
 		j++;
 	}
 	testprogdir[i] = '\0';
+#if defined(_WIN32) && !defined(__CYGWIN__)
+	if (testprogdir[0] != '/' && testprogdir[0] != '\\' &&
+	    !(((testprogdir[0] >= 'a' && testprogdir[0] <= 'z') ||
+	       (testprogdir[0] >= 'A' && testprogdir[0] <= 'Z')) &&
+		testprogdir[1] == ':' &&
+		(testprogdir[2] == '/' || testprogdir[2] == '\\')))
+#else
 	if (testprogdir[0] != '/')
+#endif
 	{
 		/* Fixup path for relative directories. */
 		if ((testprogdir = (char *)realloc(testprogdir,
@@ -2298,8 +2561,9 @@ main(int argc, char **argv)
 			fprintf(stderr, "ERROR: Out of memory.");
 			exit(1);
 		}
-		strcpy(testprogdir + strlen(pwd) + 1, testprogdir);
-		strcpy(testprogdir, pwd);
+		memmove(testprogdir + strlen(pwd) + 1, testprogdir,
+		    strlen(testprogdir));
+		memcpy(testprogdir, pwd, strlen(pwd));
 		testprogdir[strlen(pwd)] = '/';
 	}
 
@@ -2322,6 +2586,19 @@ main(int argc, char **argv)
 	/* Allow -d to be controlled through the environment. */
 	if (getenv(ENVBASE "_DEBUG") != NULL)
 		dump_on_failure = 1;
+
+	/* Allow -v to be controlled through the environment. */
+	if (getenv("_VERBOSITY_LEVEL") != NULL)
+	{
+		vlevel = getenv("_VERBOSITY_LEVEL");
+		verbosity = atoi(vlevel);
+		if (verbosity < VERBOSITY_SUMMARY_ONLY || verbosity > VERBOSITY_FULL)
+		{
+			/* Unsupported verbosity levels are silently ignored */
+			vlevel = NULL;
+			verbosity = VERBOSITY_PASSFAIL;
+		}
+	}
 
 	/* Get the directory holding test files from environment. */
 	refdir = getenv(ENVBASE "_TEST_FILES");
@@ -2370,7 +2647,8 @@ main(int argc, char **argv)
 #endif
 				break;
 			case 'q':
-				verbosity--;
+				if (!vlevel)
+					verbosity--;
 				break;
 			case 'r':
 				refdir = option_arg;
@@ -2379,7 +2657,8 @@ main(int argc, char **argv)
 				until_failure++;
 				break;
 			case 'v':
-				verbosity++;
+				if (!vlevel)
+					verbosity++;
 				break;
 			default:
 				fprintf(stderr, "Unrecognized option '%c'\n",
@@ -2492,78 +2771,28 @@ main(int argc, char **argv)
 	saved_argv = argv;
 	do {
 		argv = saved_argv;
-		if (*argv == NULL) {
-			/* Default: Run all tests. */
-			for (i = 0; i < limit; i++) {
+		do {
+			int test_num;
+
+			test_num = get_test_set(test_set, limit, *argv, tests);
+			if (test_num < 0) {
+				printf("*** INVALID Test %s\n", *argv);
+				free(refdir_alloc);
+				free(testprogdir);
+				usage(progname);
+				return (1);
+			}
+			for (i = 0; i < test_num; i++) {
 				tests_run++;
-				if (test_run(i, tmpdir)) {
+				if (test_run(test_set[i], tmpdir)) {
 					tests_failed++;
 					if (until_failure)
 						goto finish;
 				}
 			}
-		} else {
-			while (*(argv) != NULL) {
-				if (**argv >= '0' && **argv <= '9') {
-					char *p = *argv;
-					start = 0;
-					while (*p >= '0' && *p <= '9') {
-						start *= 10;
-						start += *p - '0';
-						++p;
-					}
-					if (*p == '\0') {
-						end = start;
-					} else if (*p == '-') {
-						++p;
-						if (*p == '\0') {
-							end = limit - 1;
-						} else {
-							end = 0;
-							while (*p >= '0' && *p <= '9') {
-								end *= 10;
-								end += *p - '0';
-								++p;
-							}
-						}
-					} else {
-						printf("*** INVALID Test %s\n", *argv);
-						free(refdir_alloc);
-						usage(progname);
-						return (1);
-					}
-					if (start < 0 || end >= limit || start > end) {
-						printf("*** INVALID Test %s\n", *argv);
-						free(refdir_alloc);
-						usage(progname);
-						return (1);
-					}
-				} else {
-					for (start = 0; start < limit; ++start) {
-						if (strcmp(*argv, tests[start].name) == 0)
-							break;
-					}
-					end = start;
-					if (start >= limit) {
-						printf("*** INVALID Test ``%s''\n",
-						    *argv);
-						free(refdir_alloc);
-						usage(progname);
-						/* usage() never returns */
-					}
-				}
-				while (start <= end) {
-					tests_run++;
-					if (test_run(start, tmpdir)) {
-						tests_failed++;
-						if (until_failure)
-							goto finish;
-					}
-					++start;
-				}
+			if (*argv != NULL)
 				argv++;
-			}
-		}
+		} while (*argv != NULL);
 	} while (until_failure);
 
 finish:

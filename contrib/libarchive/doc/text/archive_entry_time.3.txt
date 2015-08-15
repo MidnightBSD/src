@@ -1,4 +1,3 @@
-
 ARCHIVE_ENTRY_TIME(3)	 BSD Library Functions Manual	 ARCHIVE_ENTRY_TIME(3)
 
 NAME
@@ -13,6 +12,9 @@ NAME
      archive_entry_mtime_is_set, archive_entry_set_mtime,
      archive_entry_unset_mtime, — functions for manipulating times in archive
      entry descriptions
+
+LIBRARY
+     Streaming Archive Library (libarchive, -larchive)
 
 SYNOPSIS
      #include <archive_entry.h>
@@ -87,7 +89,7 @@ DESCRIPTION
      (creation time), ctime (last time an inode property was changed) and
      mtime (modification time).
 
-     libarchive(3) provides a high‐resolution interface.  The timestamps are
+     libarchive(3) provides a high-resolution interface.  The timestamps are
      truncated automatically depending on the archive format (for archiving)
      or the filesystem capabilities (for restoring).
 
@@ -105,4 +107,4 @@ HISTORY
 AUTHORS
      The libarchive library was written by Tim Kientzle ⟨kientzle@acm.org⟩.
 
-BSD			       February 21, 2010			   BSD
+BSD			       February 2, 2012 			   BSD

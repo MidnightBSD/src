@@ -194,11 +194,15 @@
 #define assertMakeDir(dirname, mode)	\
   assertion_make_dir(__FILE__, __LINE__, dirname, mode)
 #define assertMakeFile(path, mode, contents) \
-  assertion_make_file(__FILE__, __LINE__, path, mode, contents)
+  assertion_make_file(__FILE__, __LINE__, path, mode, -1, contents)
+#define assertMakeBinFile(path, mode, csize, contents) \
+  assertion_make_file(__FILE__, __LINE__, path, mode, csize, contents)
 #define assertMakeHardlink(newfile, oldfile)	\
   assertion_make_hardlink(__FILE__, __LINE__, newfile, oldfile)
 #define assertMakeSymlink(newfile, linkto)	\
   assertion_make_symlink(__FILE__, __LINE__, newfile, linkto)
+#define assertNodump(path)	\
+  assertion_nodump(__FILE__, __LINE__, path)
 #define assertUmask(mask)	\
   assertion_umask(__FILE__, __LINE__, mask)
 #define assertUtimes(pathname, atime, atime_nsec, mtime, mtime_nsec)	\
@@ -241,9 +245,10 @@ int assertion_is_not_hardlink(const char *, int, const char *, const char *);
 int assertion_is_reg(const char *, int, const char *, int);
 int assertion_is_symlink(const char *, int, const char *, const char *);
 int assertion_make_dir(const char *, int, const char *, int);
-int assertion_make_file(const char *, int, const char *, int, const char *);
+int assertion_make_file(const char *, int, const char *, int, int, const void *);
 int assertion_make_hardlink(const char *, int, const char *newpath, const char *);
 int assertion_make_symlink(const char *, int, const char *newpath, const char *);
+int assertion_nodump(const char *, int, const char *);
 int assertion_non_empty_file(const char *, int, const char *);
 int assertion_text_file_contents(const char *, int, const char *buff, const char *f);
 int assertion_umask(const char *, int, int);
@@ -261,11 +266,35 @@ void sleepUntilAfter(time_t);
 /* Return true if this platform can create symlinks. */
 int canSymlink(void);
 
+/* Return true if this platform can run the "bzip2" program. */
+int canBzip2(void);
+
+/* Return true if this platform can run the "grzip" program. */
+int canGrzip(void);
+
 /* Return true if this platform can run the "gzip" program. */
 int canGzip(void);
 
-/* Return true if this platform can run the "gunzip" program. */
-int canGunzip(void);
+/* Return true if this platform can run the specified command. */
+int canRunCommand(const char *);
+
+/* Return true if this platform can run the "lrzip" program. */
+int canLrzip(void);
+
+/* Return true if this platform can run the "lzip" program. */
+int canLzip(void);
+
+/* Return true if this platform can run the "lzma" program. */
+int canLzma(void);
+
+/* Return true if this platform can run the "lzop" program. */
+int canLzop(void);
+
+/* Return true if this platform can run the "xz" program. */
+int canXz(void);
+
+/* Return true if this filesystem can handle nodump flags. */
+int canNodump(void);
 
 /* Return true if the file has large i-node number(>0xffffffff). */
 int is_LargeInode(const char *);
@@ -276,6 +305,11 @@ char *slurpfile(size_t *, const char *fmt, ...);
 
 /* Extracts named reference file to the current directory. */
 void extract_reference_file(const char *);
+
+/* Extracts a list of files to the current directory.
+ * List must be NULL terminated.
+ */
+void extract_reference_files(const char **);
 
 /* Path to working directory for current test */
 const char *testworkdir;
@@ -289,8 +323,8 @@ const char *testworkdir;
 
 /* Special customized read-from-memory interface. */
 int read_open_memory(struct archive *, void *, size_t, size_t);
-/* "2" version exercises a slightly different set of libarchive APIs. */
-int read_open_memory2(struct archive *, void *, size_t, size_t);
+/* _minimal version exercises a slightly different set of libarchive APIs. */
+int read_open_memory_minimal(struct archive *, void *, size_t, size_t);
 /* _seek version produces a seekable file. */
 int read_open_memory_seek(struct archive *, void *, size_t, size_t);
 

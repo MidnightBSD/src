@@ -91,7 +91,7 @@ verify_contents(struct archive *a, int expect_details)
 		assertEqualInt(0, archive_entry_size(ae));
 		assertEqualString("file1", archive_entry_symlink(ae));
 	} else {
-		assertEqualInt(AE_IFREG | 0777, archive_entry_mode(ae));
+		assertEqualInt(AE_IFREG | 0666, archive_entry_mode(ae));
 		assertEqualInt(0, archive_entry_size(ae));
 	}
 
@@ -136,7 +136,7 @@ DEFINE_TEST(test_write_format_zip)
 #endif
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_write_set_format_option(a, "zip", "compression", compression_type));
-	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_compression_none(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_add_filter_none(a));
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_write_open_memory(a, buff, buffsize, &used));
 
