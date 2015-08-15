@@ -120,6 +120,7 @@
 #define	HAVE_SELECT 1
 #define	HAVE_SETENV 1
 #define	HAVE_SIGNAL_H 1
+#define HAVE_STDARG_H 1
 #define	HAVE_STDINT_H 1
 #define	HAVE_STDLIB_H 1
 #define	HAVE_STRCHR 1
@@ -161,7 +162,7 @@
 #define	HAVE_ZLIB_H 1
 #define	TIME_WITH_SYS_TIME 1
 
-/* FreeBSD defines for archive_hash.h */
+/* BSD defines for archive_hash.h */
 #ifdef WITH_OPENSSL
 #define	ARCHIVE_HASH_MD5_OPENSSL 1
 #define	ARCHIVE_HASH_RMD160_OPENSSL 1
