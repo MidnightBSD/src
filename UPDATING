@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20160815:
+	libc changes:
+	setmode(3) now returns errno consistently on error.
+	libc will compile without error using clang
+
 20160814:
 	wait6 system call added.
 
