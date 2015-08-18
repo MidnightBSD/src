@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/bundle_read.c,v 1.6 2011/07/24 15:59:08 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -61,7 +61,7 @@ int mport_bundle_read_init(mportBundleRead *bundle, const char *filename)
   
   if (archive_read_support_format_tar(bundle->archive) != ARCHIVE_OK)
     RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
-  if (archive_read_support_compression_xz(bundle->archive) != ARCHIVE_OK)
+  if (archive_read_support_filter_xz(bundle->archive) != ARCHIVE_OK)
     RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
   
   if (archive_read_open_filename(bundle->archive, bundle->filename, 10240) != ARCHIVE_OK) {
@@ -81,7 +81,7 @@ int mport_bundle_read_finish(mportInstance *mport, mportBundleRead *bundle)
 {
   int ret = MPORT_OK;
     
-  if (archive_read_finish(bundle->archive) != ARCHIVE_OK)
+  if (archive_read_free(bundle->archive) != ARCHIVE_OK)
     ret = SET_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
 
   if (bundle->stub_attached && (mport != NULL)) {
