@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20160818:
+	MidnightBSD 0.6.6 RELEASE
+
+	Fix a security vulnerabiity in the expat XML parser.  
+
 20160805:
 	MidnightBSD 0.6.5 RELEASE
 
