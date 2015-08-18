@@ -467,23 +467,23 @@ static int extract_stub_db(const char *filename, const char *destfile)
 
   if (archive_read_support_format_tar(a) != ARCHIVE_OK)
     RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(a));
-  if (archive_read_support_compression_xz(a))
+  if (archive_read_support_filter_xz(a))
     RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(a));
     
   if (archive_read_open_filename(a, filename, 10240) != ARCHIVE_OK) {
     SET_ERRORX(MPORT_ERR_FATAL, "Could not open %s: %s", filename, archive_error_string(a));
-    archive_read_finish(a);
+    archive_read_free(a);
     RETURN_CURRENT_ERROR;
   }
   
   if (archive_read_next_header(a, &entry) != ARCHIVE_OK) {
     SET_ERROR(MPORT_ERR_FATAL, archive_error_string(a));
-    archive_read_finish(a);
+    archive_read_free(a);
     RETURN_CURRENT_ERROR;
   }
   
   if (strcmp(archive_entry_pathname(entry), MPORT_STUB_DB_FILE) != 0) {
-    archive_read_finish(a);
+    archive_read_free(a);
     RETURN_ERROR(MPORT_ERR_FATAL, "Invalid bundle file: stub database is not the first file");
   }
     
@@ -491,11 +491,11 @@ static int extract_stub_db(const char *filename, const char *destfile)
   
   if (archive_read_extract(a, entry, 0) != ARCHIVE_OK) {
     SET_ERROR(MPORT_ERR_FATAL, archive_error_string(a));
-    archive_read_finish(a);
+    archive_read_free(a);
     RETURN_CURRENT_ERROR;
   }
   
-  if (archive_read_finish(a) != ARCHIVE_OK)
+  if (archive_read_free(a) != ARCHIVE_OK)
     RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(a));
     
   return MPORT_OK;
