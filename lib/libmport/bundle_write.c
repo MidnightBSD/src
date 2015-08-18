@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/bundle_write.c,v 1.11 2011/07/24 15:59:08 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 /* Portions of this code (the hardlink handling) were inspired by and/or copied 
  * from write.c in bsdtar by Tim Kientzle. Copyright (c) 2003-2007 Tim Kientzle.
@@ -96,7 +96,7 @@ int mport_bundle_write_init(mportBundleWrite *bundle, const char *filename)
   if ((bundle->archive = archive_write_new()) == NULL) 
     RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate archive struct");
 
-  if (archive_write_set_compression_xz(bundle->archive) != ARCHIVE_OK)
+  if (archive_write_add_filter_xz(bundle->archive) != ARCHIVE_OK)
     RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
 
   if (archive_write_set_format_pax(bundle->archive) != ARCHIVE_OK)
@@ -124,7 +124,7 @@ int mport_bundle_write_finish(mportBundleWrite *bundle)
   if (bundle == NULL)
       RETURN_ERROR(MPORT_ERR_FATAL, "mport bundle is missing");
  
-  if (archive_write_finish(bundle->archive) != ARCHIVE_OK)
+  if (archive_write_free(bundle->archive) != ARCHIVE_OK)
     ret = SET_ERROR(MPORT_ERR_FATAL, strdup(archive_error_string(bundle->archive)));
 
   free_linktable(bundle->links);
