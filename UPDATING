@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20160818:
+	expat security fix
+
+	Multiple integer overflows have been discovered in the XML_GetBuffer()
+	function in the expat library.
+
 20160815:
 	libc changes:
 	setmode(3) now returns errno consistently on error.
