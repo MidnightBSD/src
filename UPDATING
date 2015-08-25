@@ -1,5 +1,22 @@
 Updating Information for MidnightBSD users.
 
+20150825:
+        kernel:
+	fix a security issue on amd64 where the GS segment CPU register can be changed via
+	userland value in kernel mode by using an IRET with #SS or #NP exceptions.
+
+	openssh:
+	A programming error in the privileged monitor process of the sshd(8)
+	service may allow the username of an already-authenticated user to be
+	overwritten by the unprivileged child process.
+
+	A use-after-free error in the privileged monitor process of he sshd(8)
+	service may be deterministically triggered by the actions of a
+	compromised unprivileged child process.
+
+	A use-after-free error in the session multiplexing code in the sshd(8)
+	service may result in unintended termination of the connection.
+
 20150818:
 	expat security fix
 
@@ -74,12 +91,12 @@ Updating Information for MidnightBSD users.
 
 	Switch to bsdpatch (from FreeBSD & OpenBSD)
 
-20160726:
+20150726:
 	BSD Sort updated
 
 	sqlite 3.8.10.2
 
-20160725:
+20150725:
 	Import reallocarray from OpenBSD's libc.  
 
 	The reallocarray() function is similar to realloc() except it operates on 
