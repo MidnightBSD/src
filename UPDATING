@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20160825:
+	fix a security issue on amd64 where the GS segment CPU register can be changed via 
+	userland value in kernel mode by using an IRET with #SS or #NP exceptions.
+
 20160818:
 	MidnightBSD 0.6.6 RELEASE
 
