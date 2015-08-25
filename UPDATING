@@ -1,23 +1,37 @@
 Updating Information for MidnightBSD users.
 
-20160818:
+20150825:
+        kernel:
+	fix a security issue on amd64 where the GS segment CPU register can be changed via
+	userland value in kernel mode by using an IRET with #SS or #NP exceptions.
+
+	openssh:
+	A programming error in the privileged monitor process of the sshd(8)
+	service may allow the username of an already-authenticated user to be
+	overwritten by the unprivileged child process.
+
+	A use-after-free error in the privileged monitor process of he sshd(8)
+	service may be deterministically triggered by the actions of a
+	compromised unprivileged child process.
+
+	A use-after-free error in the session multiplexing code in the sshd(8)
+	service may result in unintended termination of the connection.
+
+20150818:
 	expat security fix
 
-	Multiple integer overflows have been discovered in the XML_GetBuffer()
-	function in the expat library.
-
-20160815:
+20150815:
 	libc changes:
 	setmode(3) now returns errno consistently on error.
 	libc will compile without error using clang
 
-20160814:
+20150814:
 	wait6 system call added.
 
 	date(1) now handles non numeric numbers passed to -r 
 	like GNU coreutils for improved compatibility.
 
-20160811:
+20150811:
 	ata(4) AMD Hudson2 SATA controller support.
 	Intel lynxpoint SATA.
 
@@ -28,23 +42,23 @@ Updating Information for MidnightBSD users.
 
 	Fix some minor issues with ath(4).
 
-20160809:
+20150809:
 	xz 5.0.8
 
-20160808:
+20150808:
 	libmport now logs installation and removal of packages to syslog.
 
-20160805:
+20150805:
 	routed - fix a potential security issue where traffic from outside
 	the network can disrupt routing.
 
 	bsd patch - fix a bug with ed(1) scripts allowing unsanitized input
 	to run.
 
-20160802:
+20150802:
 	jansson 2.7 library added. (libjansson is a JSON library in C)
 
-20160728:
+20150728:
 	Heimdal 1.5.2 (kerberos implementation)
 
 	OpenSSL 1.0.1o
@@ -74,12 +88,12 @@ Updating Information for MidnightBSD users.
 
 	Switch to bsdpatch (from FreeBSD & OpenBSD)
 
-20160726:
+20150726:
 	BSD Sort updated
 
 	sqlite 3.8.10.2
 
-20160725:
+20150725:
 	Import reallocarray from OpenBSD's libc.  
 
 	The reallocarray() function is similar to realloc() except it operates on 
