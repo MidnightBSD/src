@@ -17,6 +17,9 @@ Updating Information for MidnightBSD users.
 	A use-after-free error in the session multiplexing code in the sshd(8)
 	service may result in unintended termination of the connection.
 
+20150823:
+	0.7 stable branch created.
+
 20150818:
 	expat security fix
 
