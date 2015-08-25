@@ -1,6 +1,6 @@
 Updating Information for MidnightBSD users.
 
-20160825:
+20150825:
 	MidnightBSD 0.6.7 RELEASE
 
 	kernel:
@@ -19,12 +19,12 @@ Updating Information for MidnightBSD users.
 	A use-after-free error in the session multiplexing code in the sshd(8)
 	service may result in unintended termination of the connection.
 
-20160818:
+20150818:
 	MidnightBSD 0.6.6 RELEASE
 
 	Fix a security vulnerabiity in the expat XML parser.  
 
-20160805:
+20150805:
 	MidnightBSD 0.6.5 RELEASE
 
         routed - fix a potential security issue where traffic from outside
