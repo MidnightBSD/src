@@ -36,6 +36,26 @@
 #ifndef	_SYS_CDEFS_H_
 #define	_SYS_CDEFS_H_
 
+/*
+ * Testing against Clang-specific extensions.
+ */
+
+#ifndef	__has_attribute
+#define	__has_attribute(x)	0
+#endif
+#ifndef	__has_extension
+#define	__has_extension		__has_feature
+#endif
+#ifndef	__has_feature
+#define	__has_feature(x)	0
+#endif
+#ifndef	__has_include
+#define	__has_include(x)	0
+#endif
+#ifndef	__has_builtin
+#define	__has_builtin(x)	0
+#endif
+
 #if defined(__cplusplus)
 #define	__BEGIN_DECLS	extern "C" {
 #define	__END_DECLS	}
@@ -46,7 +66,7 @@
 
 /*
  * This code has been put in place to help reduce the addition of
- * compiler specific defines in FreeBSD code.  It helps to aid in
+ * compiler specific defines in MidnightBSD code.  It helps to aid in
  * having a compiler-agnostic source tree.
  */
 
@@ -72,7 +92,7 @@
 #  undef __GNUCLIKE_BUILTIN_CONSTANT_P
 # endif
 
-#if (__GNUC_MINOR__ > 95 || __GNUC__ >= 3) && !defined(__INTEL_COMPILER)
+#if (__GNUC_MINOR__ > 95 || __GNUC__ >= 3)
 # define __GNUCLIKE_BUILTIN_VARARGS 1
 # define __GNUCLIKE_BUILTIN_STDARG 1
 # define __GNUCLIKE_BUILTIN_VAALIST 1
@@ -80,6 +100,13 @@
 
 #if defined(__GNUC__)
 # define __GNUC_VA_LIST_COMPATIBILITY 1
+#endif
+
+/*
+ * Compiler memory barriers, specific to gcc and clang.
+ */
+#if defined(__GNUC__)
+#define	__compiler_membar()	__asm __volatile(" " : : : "memory")
 #endif
 
 #ifndef __INTEL_COMPILER
@@ -186,7 +213,9 @@
 #define	__packed
 #define	__aligned(x)
 #define	__section(x)
+#define	__weak_symbol
 #else
+#define	__weak_symbol	__attribute__((__weak__))
 #if !__GNUC_PREREQ__(2, 5) && !defined(__INTEL_COMPILER)
 #define	__dead2
 #define	__pure2
@@ -230,29 +259,64 @@
 /*
  * Keywords added in C11.
  */
-#if defined(__cplusplus) && __cplusplus >= 201103L
-#define	_Alignas(e)		alignas(e)
-#define	_Alignof(e)		alignof(e)
-#define	_Noreturn		[[noreturn]]
-#define	_Static_assert(e, s)	static_assert(e, s)
-/* FIXME: change this to thread_local when clang in base supports it */
-#define	_Thread_local		__thread
-#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-/* Do nothing.  They are language keywords. */
+
+#if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 201112L || defined(lint)
+
+#if !__has_extension(c_alignas)
+#if (defined(__cplusplus) && __cplusplus >= 201103L) || \
+    __has_extension(cxx_alignas)
+#define	_Alignas(x)		alignas(x)
 #else
-/* Not supported.  Implement them using our versions. */
+/* XXX: Only emulates _Alignas(constant-expression); not _Alignas(type-name). */
 #define	_Alignas(x)		__aligned(x)
+#endif
+#endif
+
+#if defined(__cplusplus) && __cplusplus >= 201103L
+#define	_Alignof(x)		alignof(x)
+#else
 #define	_Alignof(x)		__alignof(x)
+#endif
+
+#if !__has_extension(c_atomic) && !__has_extension(cxx_atomic)
+/*
+ * No native support for _Atomic(). Place object in structure to prevent
+ * most forms of direct non-atomic access.
+ */
+#define	_Atomic(T)		struct { T volatile __val; }
+#endif
+
+#if defined(__cplusplus) && __cplusplus >= 201103L
+#define	_Noreturn		[[noreturn]]
+#else
 #define	_Noreturn		__dead2
-#define	_Thread_local		__thread
-#ifdef __COUNTER__
+#endif
+
+#if !__has_extension(c_static_assert)
+#if (defined(__cplusplus) && __cplusplus >= 201103L) || \
+    __has_extension(cxx_static_assert)
+#define	_Static_assert(x, y)	static_assert(x, y)
+#elif defined(__COUNTER__)
 #define	_Static_assert(x, y)	__Static_assert(x, __COUNTER__)
 #define	__Static_assert(x, y)	___Static_assert(x, y)
-#define	___Static_assert(x, y)	typedef char __assert_ ## y[(x) ? 1 : -1]
+#define	___Static_assert(x, y)	typedef char __assert_ ## y[(x) ? 1 : -1] \
+				__unused
 #else
 #define	_Static_assert(x, y)	struct __hack
 #endif
 #endif
+
+#if !__has_extension(c_thread_local)
+/* XXX: Change this to test against C++11 when clang in base supports it. */
+#if /* (defined(__cplusplus) && __cplusplus >= 201103L) || */ \
+    __has_extension(cxx_thread_local)
+#define	_Thread_local		thread_local
+#else
+#define	_Thread_local		__thread
+#endif
+#endif
+
+#endif /* __STDC_VERSION__ || __STDC_VERSION__ < 201112L */
 
 /*
  * Emulation of C11 _Generic().  Unlike the previously defined C11
@@ -300,8 +364,10 @@
 
 #if __GNUC_PREREQ__(3, 4)
 #define	__fastcall	__attribute__((__fastcall__))
+#define	__result_use_check	__attribute__((__warn_unused_result__))
 #else
 #define	__fastcall
+#define	__result_use_check
 #endif
 
 #if __GNUC_PREREQ__(4, 1)
@@ -380,7 +446,7 @@
 #define __predict_false(exp)    (exp)
 #endif
 
-#if __GNUC_PREREQ__(4, 2)
+#if __GNUC_PREREQ__(4, 0)
 #define	__hidden	__attribute__((__visibility__("hidden")))
 #define	__exported	__attribute__((__visibility__("default")))
 #else
@@ -409,6 +475,22 @@
 	(__offsetof(type, end) - __offsetof(type, start))
 
 /*
+ * Given the pointer x to the member m of the struct s, return
+ * a pointer to the containing structure.  When using GCC, we first
+ * assign pointer x to a local variable, to check that its type is
+ * compatible with member m.
+ */
+#if __GNUC_PREREQ__(3, 1)
+#define	__containerof(x, s, m) ({					\
+	const volatile __typeof(((s *)0)->m) *__x = (x);		\
+	__DEQUALIFY(s *, (const volatile char *)__x - __offsetof(s, m));\
+})
+#else
+#define	__containerof(x, s, m)						\
+	__DEQUALIFY(s *, (const volatile char *)(x) - __offsetof(s, m))
+#endif
+
+/*
  * Compiler-dependent macros to declare that functions take printf-like
  * or scanf-like arguments.  They are null except for versions of gcc
  * that are known to support the features properly (old versions of gcc-2
@@ -433,7 +515,8 @@
 #endif
 
 /* Compiler-dependent macros that rely on FreeBSD-specific extensions. */
-#if __FreeBSD_cc_version >= 300001 && defined(__GNUC__) && !defined(__INTEL_COMPILER)
+#if defined(__FreeBSD_cc_version) && __FreeBSD_cc_version >= 300001 && \
+    defined(__GNUC__) && !defined(__INTEL_COMPILER)
 #define	__printf0like(fmtarg, firstvararg) \
 	    __attribute__((__format__ (__printf0__, fmtarg, firstvararg)))
 #else
@@ -655,22 +738,21 @@
 #define	__XSI_VISIBLE		0
 #define	__BSD_VISIBLE		0
 #define	__ISO_C_VISIBLE		1999
+#elif defined(_C11_SOURCE)	/* Localism to specify strict C11 env. */
+#define	__POSIX_VISIBLE		0
+#define	__XSI_VISIBLE		0
+#define	__BSD_VISIBLE		0
+#define	__ISO_C_VISIBLE		2011
 #else				/* Default environment: show everything. */
 #define	__POSIX_VISIBLE		200809
 #define	__XSI_VISIBLE		700
 #define	__BSD_VISIBLE		1
-#define	__ISO_C_VISIBLE		1999
+#define	__ISO_C_VISIBLE		2011
 #endif
 #endif
 
-#ifndef	__has_feature
-#define	__has_feature(x) 0
-#endif
-#ifndef	__has_include
-#define	__has_include(x) 0
-#endif
-#ifndef	__has_builtin
-#define	__has_builtin(x) 0
+#if defined(__mips) || defined(__powerpc64__)
+#define __NO_TLS 1
 #endif
 
 #endif /* !_SYS_CDEFS_H_ */
