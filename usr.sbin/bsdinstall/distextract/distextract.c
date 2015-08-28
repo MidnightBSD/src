@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/usr.sbin/bsdinstall/distextract/distextract.c,v 1.2 2012/01/14 14:18:54 laffer1 Exp $
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/bsdinstall/distextract/distextract.c,v 1.4 2011/03/13 18:26:16 nwhitehorn Exp $
  */
 
@@ -33,6 +33,11 @@
 #include <limits.h>
 #include <archive.h>
 #include <dialog.h>
+
+#if __MidnightBSD_version <= 7004
+#define archive_read_support_filter_all(x) \
+	archive_read_support_compression_all(x)
+#endif
 
 static int extract_files(int nfiles, const char **files);
 
