@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20150829:
+	Fix a potential bootstrapping issue when upgrading from 0.6 to 0.7.
+	m4 and kerberos were updated and must be built in a certain sequence
+	or else the build will fail.
+
 20150825:
         kernel:
 	fix a security issue on amd64 where the GS segment CPU register can be changed via
