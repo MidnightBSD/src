@@ -1064,6 +1064,7 @@ _dtc= gnu/usr.bin/dtc
 bootstrap-tools:
 .for _tool in \
     ${_clang_tblgen} \
+    ${_kerberos5_bootstrap_tools} \
     ${_dtrace_tools} \
     ${_strfile} \
     ${_gperf} \
@@ -1077,7 +1078,9 @@ bootstrap-tools:
     usr.bin/rpcgen \
     ${_sed} \
     ${_yacc} \
+    ${_m4} \
     ${_lex} \
+    lib/libmd \
     usr.bin/xinstall \
     ${_gensnmptree} \
     usr.sbin/config \
