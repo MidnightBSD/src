@@ -34,11 +34,6 @@
 #include <archive.h>
 #include <dialog.h>
 
-#if __MidnightBSD_version <= 7004
-#define archive_read_support_filter_all(x) \
-	archive_read_support_compression_all(x)
-#endif
-
 static int extract_files(int nfiles, const char **files);
 
 int
@@ -132,7 +127,7 @@ count_files(const char *file)
 	/* Either we didn't have a manifest, or this archive wasn't there */
 	archive = archive_read_new();
 	archive_read_support_format_all(archive);
-	archive_read_support_compression_all(archive);
+	archive_read_support_filter_all(archive);
 	sprintf(path, "%s/%s", getenv("BSDINSTALL_DISTDIR"), file);
 	err = archive_read_open_filename(archive, path, 4096);
 	if (err != ARCHIVE_OK) {
@@ -194,7 +189,7 @@ extract_files(int nfiles, const char **files)
 	for (i = 0; i < nfiles; i++) {
 		archive = archive_read_new();
 		archive_read_support_format_all(archive);
-		archive_read_support_compression_all(archive);
+		archive_read_support_filter_all(archive);
 		sprintf(path, "%s/%s", getenv("BSDINSTALL_DISTDIR"), files[i]);
 		err = archive_read_open_filename(archive, path, 4096);
 
