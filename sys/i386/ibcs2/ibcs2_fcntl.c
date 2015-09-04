@@ -243,7 +243,7 @@ ibcs2_access(td, uap)
 	int error;
 
         CHECKALTEXIST(td, uap->path, &path);
-	error = kern_access(td, path, UIO_SYSSPACE, uap->amode);
+	error = kern_access(td, path, UIO_SYSSPACE, uap->flags);
 	free(path, M_TEMP);
 	return (error);
 }
