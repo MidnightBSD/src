@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/acpica/acpi_thermal.c 248796 2013-03-27 14:23:50Z mav $");
+__FBSDID("$FreeBSD: stable/9/sys/dev/acpica/acpi_thermal.c 260881 2014-01-19 13:51:46Z dumbbell $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -112,6 +112,7 @@ struct acpi_tz_softc {
 
     struct acpi_tz_zone 	tz_zone;	/*Thermal zone parameters*/
     int				tz_validchecks;
+    int				tz_insane_tmp_notified;
 
     /* passive cooling */
     struct proc			*tz_cooling_proc;
@@ -161,6 +162,8 @@ static driver_t acpi_tz_driver = {
     acpi_tz_methods,
     sizeof(struct acpi_tz_softc),
 };
+
+static char *acpi_tz_tmp_name = "_TMP";
 
 static devclass_t acpi_tz_devclass;
 DRIVER_MODULE(acpi_tz, acpi, acpi_tz_driver, acpi_tz_devclass, 0, 0);
@@ -457,12 +460,11 @@ acpi_tz_get_temperature(struct acpi_tz_softc *sc)
 {
     int		temp;
     ACPI_STATUS	status;
-    static char	*tmp_name = "_TMP";
 
     ACPI_FUNCTION_NAME ("acpi_tz_get_temperature");
 
     /* Evaluate the thermal zone's _TMP method. */
-    status = acpi_GetInteger(sc->tz_handle, tmp_name, &temp);
+    status = acpi_GetInteger(sc->tz_handle, acpi_tz_tmp_name, &temp);
     if (ACPI_FAILURE(status)) {
 	ACPI_VPRINT(sc->tz_dev, acpi_device_get_parent_softc(sc->tz_dev),
 	    "error fetching current temperature -- %s\n",
@@ -471,7 +473,7 @@ acpi_tz_get_temperature(struct acpi_tz_softc *sc)
     }
 
     /* Check it for validity. */
-    acpi_tz_sanity(sc, &temp, tmp_name);
+    acpi_tz_sanity(sc, &temp, acpi_tz_tmp_name);
     if (temp == -1)
 	return (FALSE);
 
@@ -697,10 +699,29 @@ static void
 acpi_tz_sanity(struct acpi_tz_softc *sc, int *val, char *what)
 {
     if (*val != -1 && (*val < TZ_ZEROC || *val > TZ_ZEROC + 2000)) {
-	device_printf(sc->tz_dev, "%s value is absurd, ignored (%d.%dC)\n",
-		      what, TZ_KELVTOC(*val));
+	/*
+	 * If the value we are checking is _TMP, warn the user only
+	 * once. This avoids spamming messages if, for instance, the
+	 * sensor is broken and always returns an invalid temperature.
+	 *
+	 * This is only done for _TMP; other values always emit a
+	 * warning.
+	 */
+	if (what != acpi_tz_tmp_name || !sc->tz_insane_tmp_notified) {
+	    device_printf(sc->tz_dev, "%s value is absurd, ignored (%d.%dC)\n",
+			  what, TZ_KELVTOC(*val));
+
+	    /* Don't warn the user again if the read value doesn't improve. */
+	    if (what == acpi_tz_tmp_name)
+		sc->tz_insane_tmp_notified = 1;
+	}
 	*val = -1;
+	return;
     }
+
+    /* This value is correct. Warn if it's incorrect again. */
+    if (what == acpi_tz_tmp_name)
+	sc->tz_insane_tmp_notified = 0;
 }
 
 /*
