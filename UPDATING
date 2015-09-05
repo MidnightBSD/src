@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20150905:
+	When upgrading from 0.6, you will need to install
+	src/kerberos5/lib/libroken before building world.
+
 20150829:
 	Fix a potential bootstrapping issue when upgrading from 0.6 to 0.7.
 	m4 and kerberos were updated and must be built in a certain sequence
