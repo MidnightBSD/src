@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20150917:
+	Fix kqueue write events for files > 2GB
+
 20150825:
         kernel:
 	fix a security issue on amd64 where the GS segment CPU register can be changed via
