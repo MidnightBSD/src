@@ -1,4 +1,5 @@
 /*-
+ * Copyright (c) 2015 Lucas Holt
  * Copyright (c) 2007 Chris Reinhardt
  * All rights reserved.
  *
@@ -23,13 +24,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.7 2011/06/14 02:26:38 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.7 2011/06/14 02:26:38 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 
 #include <stdlib.h>
@@ -59,11 +60,11 @@ int main(int argc, char *argv[])
         force = 1;
         break;
       case 'o':
-        where = "origin=%Q";
+        where = "LOWER(origin)=LOWER(%Q)";
         arg   = optarg;
         break;
       case 'n':
-        where = "pkg=%Q";
+        where = "LOWER(pkg)=LOWER(%Q)";
         arg   = optarg;
         break;
       case '?':
