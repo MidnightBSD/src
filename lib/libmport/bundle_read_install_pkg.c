@@ -45,7 +45,7 @@ __MBSDID("$MidnightBSD$");
 static int do_pre_install(mportInstance *, mportBundleRead *, mportPackageMeta *);
 static int do_actual_install(mportInstance *, mportBundleRead *, mportPackageMeta *);
 static int do_post_install(mportInstance *, mportBundleRead *, mportPackageMeta *);
-static int run_postexec(mportInstance *, mportBundleRead *, mportPackageMeta *);
+static int run_postexec(mportInstance *, mportPackageMeta *);
 static int run_pkg_install(mportInstance *, mportBundleRead *, mportPackageMeta *, const char *);
 static int run_mtree(mportInstance *, mportBundleRead *, mportPackageMeta *);
 static int display_pkg_msg(mportInstance *, mportBundleRead *, mportPackageMeta *);
@@ -444,7 +444,7 @@ do_post_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
 }
 
 static int
-run_postexec(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
+run_postexec(mportInstance *mport, mportPackageMeta *pkg)
 {
     int ret;
     char cwd[FILENAME_MAX];
@@ -457,9 +457,6 @@ run_postexec(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pk
     char *mode = NULL;
     uid_t owner = 0; /* root */
     gid_t group = 0; /* wheel */
-    mode_t *set;
-    mode_t newmode;
-    char *mode = NULL;
 
     db = mport->db;
 
