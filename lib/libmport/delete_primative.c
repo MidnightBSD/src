@@ -291,7 +291,7 @@ run_unexec(mportInstance *mport, mportPackageMeta *pkg, mportAssetListEntryType 
 
         if (ret != SQLITE_ROW) {
             SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-            goto ERROR;
+            goto POSTUN_ERROR;
         }
          data = sqlite3_column_text(assets, 0);
 
