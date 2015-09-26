@@ -43,11 +43,9 @@ __MBSDID("$MidnightBSD$");
 #include "mport.h"
 #include "mport_private.h"
 
-
+static int run_unexec(mportInstance *, mportPackageMeta *, mportAssetListEntryType);
 static int run_pkg_deinstall(mportInstance *, mportPackageMeta *, const char *);
-
 static int delete_pkg_infra(mportInstance *, mportPackageMeta *);
-
 static int check_for_upwards_depends(mportInstance *, mportPackageMeta *);
 
 
@@ -296,6 +294,16 @@ run_unexec(mportInstance *mport, mportPackageMeta *pkg, mportAssetListEntryType 
             goto ERROR;
         }
          data = sqlite3_column_text(assets, 0);
+
+        char file[FILENAME_MAX];
+        /* XXX TMP */
+        if (data == NULL) {
+            snprintf(file, sizeof(file), "%s", mport->root);
+        } else if (*data == '/') {
+            snprintf(file, sizeof(file), "%s%s", mport->root, data);
+        } else {
+            snprintf(file, sizeof(file), "%s%s/%s", mport->root, pack->prefix, data);
+        }
 
         if (mport_run_asset_exec(mport, data, cwd, file) != MPORT_OK)
             goto POSTUN_ERROR;
