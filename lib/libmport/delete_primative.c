@@ -281,7 +281,7 @@ run_unexec(mportInstance *mport, mportPackageMeta *pkg, mportAssetListEntryType 
     (void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
 
     if (mport_chdir(mport, cwd) != MPORT_OK)
-        goto ERROR;
+        goto POSTUN_ERROR;
 
     while (1) {
         ret = sqlite3_step(assets);
@@ -302,7 +302,7 @@ run_unexec(mportInstance *mport, mportPackageMeta *pkg, mportAssetListEntryType 
         } else if (*data == '/') {
             snprintf(file, sizeof(file), "%s%s", mport->root, data);
         } else {
-            snprintf(file, sizeof(file), "%s%s/%s", mport->root, pack->prefix, data);
+            snprintf(file, sizeof(file), "%s%s/%s", mport->root, pkg->prefix, data);
         }
 
         if (mport_run_asset_exec(mport, data, cwd, file) != MPORT_OK)
