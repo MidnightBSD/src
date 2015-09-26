@@ -445,6 +445,9 @@ static int run_postexec(mportInstance *mport, mportBundleRead *bundle, mportPack
     sqlite3 *db;
     mportAssetListEntryType type;
     const char *data, *checksum;
+    mode_t *set;
+    mode_t newmode;
+    char *mode = NULL;
 
     db = mport->db;
 
@@ -471,6 +474,15 @@ static int run_postexec(mportInstance *mport, mportBundleRead *bundle, mportPack
         type = (mportAssetListEntryType) sqlite3_column_int(assets, 0);
         data = sqlite3_column_text(assets, 1);
         checksum = sqlite3_column_text(assets, 2);
+
+        char file[FILENAME_MAX];
+        if (data == NULL) {
+            snprintf(file, sizeof(file), "%s", mport->root);
+        } else if (*data == '/') {
+            snprintf(file, sizeof(file), "%s%s", mport->root, data);
+        } else {
+            snprintf(file, sizeof(file), "%s%s/%s", mport->root, pkg->prefix, data);
+        }
 
         switch (type) {
             case ASSET_CWD:
