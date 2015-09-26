@@ -45,59 +45,56 @@ mport_pkgmeta_new(void)
 {
   /* we use calloc so any pointers that aren't set are NULL.
      (calloc zero's out the memory region. */
-  return (mportPackageMeta *)calloc(1, sizeof(mportPackageMeta));
+    return (mportPackageMeta *) calloc(1, sizeof(mportPackageMeta));
 }
 
 MPORT_PUBLIC_API void
 mport_pkgmeta_free(mportPackageMeta *pack)
 {
-  int i;
-  
-  free(pack->name);
-  pack->name = NULL;
-  free(pack->version);
-  pack->version = NULL;
-  free(pack->lang);
-  pack->lang = NULL;
-  free(pack->comment);
-  pack->comment = NULL;
-  free(pack->desc);
-  pack->desc = NULL;
-  free(pack->prefix);
-  pack->prefix = NULL;
-  free(pack->origin);
-  pack->origin = NULL;
-  free(pack->os_release);
-  pack->os_release = NULL;
-  free(pack->cpe);
-  pack->cpe = NULL;
- 
+    int i;
 
-  i = 0;
-  if (pack->categories != NULL) {
-    while (pack->categories[i] != NULL) {
-      free(pack->categories[i]);
-      pack->categories[i] = NULL;
-      i++;
+    free(pack->name);
+    pack->name = NULL;
+    free(pack->version);
+    pack->version = NULL;
+    free(pack->lang);
+    pack->lang = NULL;
+    free(pack->comment);
+    pack->comment = NULL;
+    free(pack->desc);
+    pack->desc = NULL;
+    free(pack->prefix);
+    pack->prefix = NULL;
+    free(pack->origin);
+    pack->origin = NULL;
+    free(pack->os_release);
+    pack->os_release = NULL;
+    free(pack->cpe);
+    pack->cpe = NULL;
+
+    i = 0;
+    if (pack->categories != NULL) {
+        while (pack->categories[i] != NULL) {
+            free(pack->categories[i]);
+            pack->categories[i] = NULL;
+            i++;
+        }
     }
-  }
-  
-  free(pack->categories);
 
-
-  free(pack);
+    free(pack->categories);
+    free(pack);
 }
 
 /* free a vector of mportPackageMeta pointers */
 MPORT_PUBLIC_API void
 mport_pkgmeta_vec_free(mportPackageMeta **vec)
 {
-  int i;
-  for (i=0; *(vec + i) != NULL; i++) {
-    mport_pkgmeta_free(*(vec + i));
-  }
-  
-  free(vec);
+    int i;
+    for (i = 0; *(vec + i) != NULL; i++) {
+        mport_pkgmeta_free(*(vec + i));
+    }
+
+    free(vec);
 }
 
 
@@ -110,36 +107,38 @@ mport_pkgmeta_vec_free(mportPackageMeta **vec)
 int
 mport_pkgmeta_read_stub(mportInstance *mport, mportPackageMeta ***ref)
 {
-  sqlite3_stmt *stmt;
-  sqlite3 *db = mport->db;
-  int len, ret;
-  
-  if (mport_db_prepare(db, &stmt, "SELECT COUNT(*) FROM stub.packages") != MPORT_OK)
-    RETURN_CURRENT_ERROR;
+    sqlite3_stmt *stmt;
+    sqlite3 *db = mport->db;
+    int len, ret;
 
-  if (sqlite3_step(stmt) != SQLITE_ROW) {
-    sqlite3_finalize(stmt);
-    RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-  }
-  
-  len = sqlite3_column_int(stmt, 0);
-  sqlite3_finalize(stmt);
+    if (mport_db_prepare(db, &stmt, "SELECT COUNT(*) FROM stub.packages") != MPORT_OK)
+        RETURN_CURRENT_ERROR;
 
-  if (len == 0) {
-    /* a stub should have packages! */
-    RETURN_ERROR(MPORT_ERR_FATAL, "stub database contains no packages.");
-  }
-    
-  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe FROM stub.packages") != MPORT_OK) {
+    if (sqlite3_step(stmt) != SQLITE_ROW) {
+        sqlite3_finalize(stmt);
+        RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+    }
+
+    len = sqlite3_column_int(stmt, 0);
     sqlite3_finalize(stmt);
-    RETURN_CURRENT_ERROR;
-  }
-  
-  ret = populate_vec_from_stmt(ref, len, db, stmt);
-  
-  sqlite3_finalize(stmt);
-  
-  return ret;
+
+    if (len == 0) {
+        /* a stub should have packages! */
+        RETURN_ERROR(MPORT_ERR_FATAL, "stub database contains no packages.");
+    }
+
+    if (mport_db_prepare(db, &stmt,
+                         "SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe FROM stub.packages") !=
+        MPORT_OK) {
+        sqlite3_finalize(stmt);
+        RETURN_CURRENT_ERROR;
+    }
+
+    ret = populate_vec_from_stmt(ref, len, db, stmt);
+
+    sqlite3_finalize(stmt);
+
+    return ret;
 }
 
 
@@ -166,50 +165,52 @@ mport_pkgmeta_read_stub(mportInstance *mport, mportPackageMeta ***ref)
 MPORT_PUBLIC_API int
 mport_pkgmeta_search_master(mportInstance *mport, mportPackageMeta ***ref, const char *fmt, ...)
 {
-  va_list args;
-  sqlite3_stmt *stmt;
-  int ret, len;
-  char *where;
-  sqlite3 *db = mport->db;
-  
-  va_start(args, fmt);
-  where = sqlite3_vmprintf(fmt, args);
-  va_end(args);
-    
-  if (where == NULL) 
-    RETURN_ERROR(MPORT_ERR_FATAL, "Could not build where clause");
-  
-  if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM packages WHERE %s", where) != MPORT_OK) {
+    va_list args;
+    sqlite3_stmt *stmt;
+    int ret, len;
+    char *where;
+    sqlite3 *db = mport->db;
+
+    va_start(args, fmt);
+    where = sqlite3_vmprintf(fmt, args);
+    va_end(args);
+
+    if (where == NULL)
+        RETURN_ERROR(MPORT_ERR_FATAL, "Could not build where clause");
+
+    if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM packages WHERE %s", where) != MPORT_OK) {
+        sqlite3_finalize(stmt);
+        RETURN_CURRENT_ERROR;
+    }
+
+    if (sqlite3_step(stmt) != SQLITE_ROW) {
+        sqlite3_finalize(stmt);
+        RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+    }
+
+
+    len = sqlite3_column_int(stmt, 0);
     sqlite3_finalize(stmt);
-    RETURN_CURRENT_ERROR;
-  }
 
-  if (sqlite3_step(stmt) != SQLITE_ROW) {
-    sqlite3_finalize(stmt);
-    RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-  }
+    if (len == 0) {
+        sqlite3_free(where);
+        *ref = NULL;
+        return MPORT_OK;
+    }
 
-    
-  len = sqlite3_column_int(stmt, 0);
-  sqlite3_finalize(stmt);
+    if (mport_db_prepare(db, &stmt,
+                         "SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe, locked FROM packages WHERE %s",
+                         where) != MPORT_OK) {
+        sqlite3_finalize(stmt);
+        RETURN_CURRENT_ERROR;
+    }
 
-  if (len == 0) {
+    ret = populate_vec_from_stmt(ref, len, db, stmt);
+
     sqlite3_free(where);
-    *ref = NULL;
-    return MPORT_OK;
-  }
-
-  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe, locked FROM packages WHERE %s", where) != MPORT_OK) {
     sqlite3_finalize(stmt);
-    RETURN_CURRENT_ERROR;
-  }
-    
-  ret = populate_vec_from_stmt(ref, len, db, stmt);
 
-  sqlite3_free(where);  
-  sqlite3_finalize(stmt);
-  
-  return ret;
+    return ret;
 }
 
 
@@ -222,38 +223,40 @@ mport_pkgmeta_search_master(mportInstance *mport, mportPackageMeta ***ref, const
 MPORT_PUBLIC_API int
 mport_pkgmeta_list(mportInstance *mport, mportPackageMeta ***ref)
 {
-  sqlite3_stmt *stmt;
-  int ret, len;
-  sqlite3 *db = mport->db;
-  
-  if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM packages") != MPORT_OK) {
+    sqlite3_stmt *stmt;
+    int ret, len;
+    sqlite3 *db = mport->db;
+
+    if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM packages") != MPORT_OK) {
+        sqlite3_finalize(stmt);
+        RETURN_CURRENT_ERROR;
+    }
+
+    if (sqlite3_step(stmt) != SQLITE_ROW) {
+        sqlite3_finalize(stmt);
+        RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+    }
+
+    len = sqlite3_column_int(stmt, 0);
     sqlite3_finalize(stmt);
-    RETURN_CURRENT_ERROR;
-  }
 
-  if (sqlite3_step(stmt) != SQLITE_ROW) {
+    if (len == 0) {
+        *ref = NULL;
+        return MPORT_OK;
+    }
+
+    if (mport_db_prepare(db, &stmt,
+                         "SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe, locked FROM packages ORDER BY pkg, version") !=
+        MPORT_OK) {
+        sqlite3_finalize(stmt);
+        RETURN_CURRENT_ERROR;
+    }
+
+    ret = populate_vec_from_stmt(ref, len, db, stmt);
+
     sqlite3_finalize(stmt);
-    RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-  }
-   
-  len = sqlite3_column_int(stmt, 0);
-  sqlite3_finalize(stmt);
 
-  if (len == 0) {
-    *ref = NULL;
-    return MPORT_OK;
-  }
-
-  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe, locked FROM packages ORDER BY pkg, version") != MPORT_OK) {
-    sqlite3_finalize(stmt);
-    RETURN_CURRENT_ERROR;
-  }
-   
-  ret = populate_vec_from_stmt(ref, len, db, stmt);
-
-  sqlite3_finalize(stmt);
- 
-  return ret;
+    return ret;
 }
 
 
