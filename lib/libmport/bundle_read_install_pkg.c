@@ -45,6 +45,7 @@ __MBSDID("$MidnightBSD$");
 static int do_pre_install(mportInstance *, mportBundleRead *, mportPackageMeta *);
 static int do_actual_install(mportInstance *, mportBundleRead *, mportPackageMeta *);
 static int do_post_install(mportInstance *, mportBundleRead *, mportPackageMeta *);
+static int run_postexec(mportInstance *, mportBundleRead *, mportPackageMeta *);
 static int run_pkg_install(mportInstance *, mportBundleRead *, mportPackageMeta *, const char *);
 static int run_mtree(mportInstance *, mportBundleRead *, mportPackageMeta *);
 static int display_pkg_msg(mportInstance *, mportBundleRead *, mportPackageMeta *);
@@ -80,6 +81,11 @@ do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *
     sqlite3 *db;
     mportAssetListEntryType type;
     const char *data, *checksum;
+    uid_t owner = 0; /* root */
+    gid_t group = 0; /* wheel */
+    mode_t *set;
+    mode_t newmode;
+    char *mode = NULL;
 
     db = mport->db;
 
@@ -437,7 +443,8 @@ do_post_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
     return run_pkg_install(mport, bundle, pkg, "POST-INSTALL");
 }
 
-static int run_postexec(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
+static int
+run_postexec(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
     int ret;
     char cwd[FILENAME_MAX];
@@ -445,6 +452,11 @@ static int run_postexec(mportInstance *mport, mportBundleRead *bundle, mportPack
     sqlite3 *db;
     mportAssetListEntryType type;
     const char *data, *checksum;
+    mode_t *set;
+    mode_t newmode;
+    char *mode = NULL;
+    uid_t owner = 0; /* root */
+    gid_t group = 0; /* wheel */
     mode_t *set;
     mode_t newmode;
     char *mode = NULL;
