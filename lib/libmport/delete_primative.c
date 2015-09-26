@@ -274,7 +274,7 @@ run_unexec(mportInstance *mport, mportPackageMeta *pkg, mportAssetListEntryType 
     db = mport->db;
 
     /* Process @postunexec steps */
-    if (mport_db_prepare(db, &assets, "SELECT data FROM assets WHERE pkg=%Q and type=%Q", pkg->name,
+    if (mport_db_prepare(db, &assets, "SELECT data FROM assets WHERE pkg=%Q and type=%d", pkg->name,
                          type) != MPORT_OK)
         goto POSTUN_ERROR;
 
