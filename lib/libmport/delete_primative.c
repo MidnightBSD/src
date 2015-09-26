@@ -26,6 +26,7 @@
  */
 
 #include <sys/cdefs.h>
+
 __MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
@@ -44,13 +45,14 @@ __MBSDID("$MidnightBSD$");
 
 
 static int run_pkg_deinstall(mportInstance *, mportPackageMeta *, const char *);
+
 static int delete_pkg_infra(mportInstance *, mportPackageMeta *);
+
 static int check_for_upwards_depends(mportInstance *, mportPackageMeta *);
 
 
 MPORT_PUBLIC_API int
-mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
-{
+mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force) {
     sqlite3_stmt *stmt;
     int ret, current, total;
     mportAssetListEntryType type;
@@ -112,6 +114,9 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
     }
 
     if (mport_db_do(mport->db, "UPDATE packages SET status='dirty' WHERE pkg=%Q", pack->name) != MPORT_OK)
+        RETURN_CURRENT_ERROR;
+
+    if (run_unexec(mport, pack, ASSET_PREUNEXEC) != MPORT_OK)
         RETURN_CURRENT_ERROR;
 
     if (run_pkg_deinstall(mport, pack, "DEINSTALL") != MPORT_OK)
@@ -222,6 +227,9 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 
     sqlite3_finalize(stmt);
 
+    if (run_unexec(mport, pack, ASSET_POSTUNEXEC) != MPORT_OK)
+        RETURN_CURRENT_ERROR;
+
     if (run_pkg_deinstall(mport, pack, "POST-DEINSTALL") != MPORT_OK)
         RETURN_CURRENT_ERROR;
 
@@ -255,12 +263,56 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
     syslog(LOG_NOTICE, "%s-%s deinstalled", pack->name, pack->version);
 
     return MPORT_OK;
-} 
-  
+}
 
 static int
-run_pkg_deinstall(mportInstance *mport, mportPackageMeta *pack, const char *mode)
-{
+run_unexec(mportInstance *mport, mportPackageMeta *pkg, mportAssetListEntryType type) {
+    int ret;
+    char cwd[FILENAME_MAX];
+    sqlite3_stmt *assets = NULL;
+    sqlite3 *db;
+    const char *data;
+
+    db = mport->db;
+
+    /* Process @postunexec steps */
+    if (mport_db_prepare(db, &assets, "SELECT data FROM assets WHERE pkg=%Q and type=%Q", pkg->name,
+                         type) != MPORT_OK)
+        goto POSTUN_ERROR;
+
+    (void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
+
+    if (mport_chdir(mport, cwd) != MPORT_OK)
+        goto ERROR;
+
+    while (1) {
+        ret = sqlite3_step(assets);
+
+        if (ret == SQLITE_DONE)
+            break;
+
+        if (ret != SQLITE_ROW) {
+            SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+            goto ERROR;
+        }
+         data = sqlite3_column_text(assets, 0);
+
+        if (mport_run_asset_exec(mport, data, cwd, file) != MPORT_OK)
+            goto POSTUN_ERROR;
+    }
+    sqlite3_finalize(assets);
+    mport_pkgmeta_logevent(mport, pkg, type == ASSET_POSTUNEXEC ? "postunexec" : "preunexec");
+
+    return MPORT_OK;
+
+    POSTUN_ERROR:
+    sqlite3_finalize(assets);
+    RETURN_CURRENT_ERROR;
+}
+
+
+static int
+run_pkg_deinstall(mportInstance *mport, mportPackageMeta *pack, const char *mode) {
     char file[FILENAME_MAX];
     int ret;
 
@@ -281,8 +333,7 @@ run_pkg_deinstall(mportInstance *mport, mportPackageMeta *pack, const char *mode
 
 /* delete this package's infrastructure dir. */
 static int
-delete_pkg_infra(mportInstance *mport, mportPackageMeta *pack)
-{
+delete_pkg_infra(mportInstance *mport, mportPackageMeta *pack) {
     char dir[FILENAME_MAX];
 
     (void) snprintf(dir, FILENAME_MAX, "%s%s/%s-%s", mport->root, MPORT_INST_INFRA_DIR, pack->name, pack->version);
@@ -296,10 +347,8 @@ delete_pkg_infra(mportInstance *mport, mportPackageMeta *pack)
 }
 
 
-
 static int
-check_for_upwards_depends(mportInstance *mport, mportPackageMeta *pack)
-{
+check_for_upwards_depends(mportInstance *mport, mportPackageMeta *pack) {
     sqlite3_stmt *stmt;
     const char *depends;
     char *msg;

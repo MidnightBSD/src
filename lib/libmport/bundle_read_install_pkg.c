@@ -74,6 +74,15 @@ mport_bundle_read_install_pkg(mportInstance *mport, mportBundleRead *bundle, mpo
 static int
 do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
+    int ret;
+    char cwd[FILENAME_MAX];
+    sqlite3_stmt *assets = NULL, *count, *insert = NULL;
+    sqlite3 *db;
+    mportAssetListEntryType type;
+    const char *data, *checksum;
+
+    db = mport->db;
+
     /* run mtree */
     if (run_mtree(mport, bundle, pkg) != MPORT_OK)
         RETURN_CURRENT_ERROR;
@@ -82,7 +91,70 @@ do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *
     if (run_pkg_install(mport, bundle, pkg, "PRE-INSTALL") != MPORT_OK)
         RETURN_CURRENT_ERROR;
 
+    /* Process @preexec steps */
+    if (mport_db_prepare(db, &assets, "SELECT type,data,checksum FROM stub.assets WHERE pkg=%Q", pkg->name) != MPORT_OK)
+        goto ERROR;
+
+    (void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
+
+    if (mport_chdir(mport, cwd) != MPORT_OK)
+        goto ERROR;
+
+    while (1) {
+        ret = sqlite3_step(assets);
+
+        if (ret == SQLITE_DONE)
+            break;
+
+        if (ret != SQLITE_ROW) {
+            SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+            goto ERROR;
+        }
+
+        type = (mportAssetListEntryType) sqlite3_column_int(assets, 0);
+        data = sqlite3_column_text(assets, 1);
+        checksum = sqlite3_column_text(assets, 2);
+
+        switch (type) {
+            case ASSET_CWD:
+                (void) strlcpy(cwd, data == NULL ? pkg->prefix : data, sizeof(cwd));
+                if (mport_chdir(mport, cwd) != MPORT_OK)
+                    goto ERROR;
+
+                break;
+            case ASSET_CHMOD:
+                printf("asset_chmod %s, %s\n", mode, data);
+                if (mode != NULL)
+                    free(mode);
+                /* TODO: should we reset the mode rather than NULL here */
+                if (data == NULL)
+                    mode = NULL;
+                else
+                    mode = strdup(data);
+                break;
+            case ASSET_CHOWN:
+                owner = mport_get_uid(data);
+                break;
+            case ASSET_CHGRP:
+                group = mport_get_gid(data);
+                break;
+            case ASSET_PREEXEC:
+                if (mport_run_asset_exec(mport, data, cwd, file) != MPORT_OK)
+                    goto ERROR;
+                break;
+            default:
+                /* do nothing */
+                break;
+        }
+    }
+    sqlite3_finalize(assets);
+    mport_pkgmeta_logevent(mport, pkg, "preexec");
+
     return MPORT_OK;
+
+    ERROR:
+        sqlite3_finalize(assets);
+        RETURN_CURRENT_ERROR;
 }
 
 static int
@@ -271,7 +343,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
                 break;
         }
 
-        /* insert this assest into the master database */
+        /* insert this asset into the master database */
         if (sqlite3_bind_int(insert, 1, (int) type) != SQLITE_OK) {
             SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
             goto ERROR;
@@ -349,19 +421,98 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 static int
 do_post_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
-  char to[FILENAME_MAX], from[FILENAME_MAX];
+    char to[FILENAME_MAX], from[FILENAME_MAX];
 
-  COPY_METAFILE(MPORT_MTREE_FILE);
-  COPY_METAFILE(MPORT_INSTALL_FILE);
-  COPY_METAFILE(MPORT_DEINSTALL_FILE);
-  COPY_METAFILE(MPORT_MESSAGE_FILE);
+    COPY_METAFILE(MPORT_MTREE_FILE);
+    COPY_METAFILE(MPORT_INSTALL_FILE);
+    COPY_METAFILE(MPORT_DEINSTALL_FILE);
+    COPY_METAFILE(MPORT_MESSAGE_FILE);
 
-  if (display_pkg_msg(mport, bundle, pkg) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-  
-  return run_pkg_install(mport, bundle, pkg, "POST-INSTALL");
+    if (run_postexec(mport, bundle, pkg) != MPORT_OK)
+        RETURN_CURRENT_ERROR;
+
+    if (display_pkg_msg(mport, bundle, pkg) != MPORT_OK)
+        RETURN_CURRENT_ERROR;
+
+    return run_pkg_install(mport, bundle, pkg, "POST-INSTALL");
 }
 
+static int run_postexec(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
+{
+    int ret;
+    char cwd[FILENAME_MAX];
+    sqlite3_stmt *assets = NULL, *count, *insert = NULL;
+    sqlite3 *db;
+    mportAssetListEntryType type;
+    const char *data, *checksum;
+
+    db = mport->db;
+
+    /* Process @postexec steps */
+    if (mport_db_prepare(db, &assets, "SELECT type,data,checksum FROM stub.assets WHERE pkg=%Q", pkg->name) != MPORT_OK)
+        goto ERROR;
+
+    (void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
+
+    if (mport_chdir(mport, cwd) != MPORT_OK)
+        goto ERROR;
+
+    while (1) {
+        ret = sqlite3_step(assets);
+
+        if (ret == SQLITE_DONE)
+            break;
+
+        if (ret != SQLITE_ROW) {
+            SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+            goto ERROR;
+        }
+
+        type = (mportAssetListEntryType) sqlite3_column_int(assets, 0);
+        data = sqlite3_column_text(assets, 1);
+        checksum = sqlite3_column_text(assets, 2);
+
+        switch (type) {
+            case ASSET_CWD:
+                (void) strlcpy(cwd, data == NULL ? pkg->prefix : data, sizeof(cwd));
+                if (mport_chdir(mport, cwd) != MPORT_OK)
+                    goto ERROR;
+
+                break;
+            case ASSET_CHMOD:
+                printf("asset_chmod %s, %s\n", mode, data);
+                if (mode != NULL)
+                    free(mode);
+                /* TODO: should we reset the mode rather than NULL here */
+                if (data == NULL)
+                    mode = NULL;
+                else
+                    mode = strdup(data);
+                break;
+            case ASSET_CHOWN:
+                owner = mport_get_uid(data);
+                break;
+            case ASSET_CHGRP:
+                group = mport_get_gid(data);
+                break;
+            case ASSET_POSTEXEC:
+                if (mport_run_asset_exec(mport, data, cwd, file) != MPORT_OK)
+                    goto ERROR;
+                break;
+            default:
+                /* do nothing */
+                break;
+        }
+    }
+    sqlite3_finalize(assets);
+    mport_pkgmeta_logevent(mport, pkg, "postexec");
+
+    return MPORT_OK;
+
+    ERROR:
+    sqlite3_finalize(assets);
+    RETURN_CURRENT_ERROR;
+}
 
 
 static int

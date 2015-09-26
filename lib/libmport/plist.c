@@ -161,12 +161,25 @@ static mportAssetListEntryType
 parse_command(const char *s) {
 
     /* This is in a rough frequency order */
+
     if (STRING_EQ(s, "comment"))
         return ASSET_COMMENT;
+
+    if (STRING_EQ(s, "preexec"))
+        return ASSET_PREEXEC;
+    if (STRING_EQ(s, "preunexec"))
+        return ASSET_PREUNEXEC;
+    if (STRING_EQ(s, "postexec"))
+        return ASSET_POSTEXEC;
+    if (STRING_EQ(s, "postunexec"))
+        return ASSET_POSTUNEXEC;
+
+    /* EXEC and UNEXEC are deprecated in favor of their pre/post variants */
     if (STRING_EQ(s, "exec"))
         return ASSET_EXEC;
     if (STRING_EQ(s, "unexec"))
         return ASSET_UNEXEC;
+
     if (STRING_EQ(s, "dirrm"))
         return ASSET_DIRRM;
     if (STRING_EQ(s, "dirrmtry"))
@@ -175,6 +188,7 @@ parse_command(const char *s) {
         return ASSET_DIR;
     if (STRING_EQ(s, "cwd") || STRING_EQ(s, "cd"))
         return ASSET_CWD;
+
     if (STRING_EQ(s, "srcdir"))
         return ASSET_SRC;
     if (STRING_EQ(s, "mode"))
