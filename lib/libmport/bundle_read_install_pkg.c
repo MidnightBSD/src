@@ -77,6 +77,7 @@ do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *
 {
     int ret;
     char cwd[FILENAME_MAX];
+    char file[FILENAME_MAX];
     sqlite3_stmt *assets = NULL, *count, *insert = NULL;
     sqlite3 *db;
     mportAssetListEntryType type;
@@ -434,7 +435,7 @@ do_post_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
     COPY_METAFILE(MPORT_DEINSTALL_FILE);
     COPY_METAFILE(MPORT_MESSAGE_FILE);
 
-    if (run_postexec(mport, bundle, pkg) != MPORT_OK)
+    if (run_postexec(mport, pkg) != MPORT_OK)
         RETURN_CURRENT_ERROR;
 
     if (display_pkg_msg(mport, bundle, pkg) != MPORT_OK)
@@ -448,12 +449,11 @@ run_postexec(mportInstance *mport, mportPackageMeta *pkg)
 {
     int ret;
     char cwd[FILENAME_MAX];
-    sqlite3_stmt *assets = NULL, *count, *insert = NULL;
+    char file[FILENAME_MAX];
+    sqlite3_stmt *assets = NULL;
     sqlite3 *db;
     mportAssetListEntryType type;
     const char *data, *checksum;
-    mode_t *set;
-    mode_t newmode;
     char *mode = NULL;
     uid_t owner = 0; /* root */
     gid_t group = 0; /* wheel */
