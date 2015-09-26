@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/setting.c,v 1.1 2011/07/24 15:59:08 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -36,48 +36,48 @@ __MBSDID("$MidnightBSD: src/lib/libmport/setting.c,v 1.1 2011/07/24 15:59:08 laf
 
 MPORT_PUBLIC_API char *
 mport_setting_get(mportInstance *mport, const char *name) {
-	sqlite3_stmt *stmt;
-	char *val;
+    sqlite3_stmt *stmt;
+    char *val;
 
-	if (name == NULL)
-		return NULL;
+    if (name == NULL)
+        return NULL;
 
-	if (mport_db_prepare(mport->db, &stmt, "SELECT val FROM settings WHERE name=%Q", name) != MPORT_OK)
-		return NULL;
+    if (mport_db_prepare(mport->db, &stmt, "SELECT val FROM settings WHERE name=%Q", name) != MPORT_OK)
+        return NULL;
 
-	switch (sqlite3_step(stmt)) {
-		case SQLITE_ROW:
-			val = strdup(sqlite3_column_text(stmt, 0));
-			sqlite3_finalize(stmt);
-			break;
-		case SQLITE_DONE:
-			SET_ERROR(MPORT_ERR_FATAL, "Setting not found.");
-			sqlite3_finalize(stmt);
-			return NULL;
-			break; /* NOT REACHED */
-		default:
-			SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-			sqlite3_finalize(stmt);
-			return NULL;
-	}
+    switch (sqlite3_step(stmt)) {
+        case SQLITE_ROW:
+            val = strdup(sqlite3_column_text(stmt, 0));
+            sqlite3_finalize(stmt);
+            break;
+        case SQLITE_DONE:
+            SET_ERROR(MPORT_ERR_FATAL, "Setting not found.");
+            sqlite3_finalize(stmt);
+            return NULL;
+            break; /* NOT REACHED */
+        default:
+            SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+            sqlite3_finalize(stmt);
+            return NULL;
+    }
 
-	return val;
+    return val;
 }
 
 MPORT_PUBLIC_API int
 mport_setting_set(mportInstance *mport, const char *name, const char *val) {
-	char *tmpval;
-	
-	tmpval = mport_setting_get(mport, name);
-	if (tmpval == NULL) {
-		if (mport_db_do(mport->db, "INSERT INTO settings (name, val) VALUES(%Q, %Q)", name, val) != MPORT_OK)
-			RETURN_CURRENT_ERROR;
-	} else {
-		free(tmpval);
-		if (mport_db_do(mport->db, "UPDATE settings set val=%Q where name=%Q", val, name) != MPORT_OK)
-			RETURN_CURRENT_ERROR;
-	}
+    char *tmpval;
 
-	return MPORT_OK;
+    tmpval = mport_setting_get(mport, name);
+    if (tmpval == NULL) {
+        if (mport_db_do(mport->db, "INSERT INTO settings (name, val) VALUES(%Q, %Q)", name, val) != MPORT_OK)
+            RETURN_CURRENT_ERROR;
+    } else {
+        free(tmpval);
+        if (mport_db_do(mport->db, "UPDATE settings set val=%Q where name=%Q", val, name) != MPORT_OK)
+            RETURN_CURRENT_ERROR;
+    }
+
+    return MPORT_OK;
 }
 
