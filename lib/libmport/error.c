@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/error.c,v 1.11 2011/07/24 15:59:08 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -33,30 +33,29 @@ __MBSDID("$MidnightBSD: src/lib/libmport/error.c,v 1.11 2011/07/24 15:59:08 laff
 #include <string.h>
 #include <stdarg.h>
 
-
 static int mport_err;
 static char err_msg[256];
 
 /* This goes with the error codes in mport.h */
 static char default_error_msg[] = "An error occured.";
-  
+
 
 /* mport_err_code()
  *
  * Return the current numeric error code. 
  */
-MPORT_PUBLIC_API int mport_err_code(void) 
-{
-  return mport_err;
+MPORT_PUBLIC_API int
+mport_err_code(void) {
+    return mport_err;
 }
 
 /* mport_err_string()
  *
  * Return the current error string (if any).  Do not free this memory, it is static. 
  */
-MPORT_PUBLIC_API const char * mport_err_string(void)
-{
-  return err_msg;
+MPORT_PUBLIC_API const char *
+mport_err_string(void) {
+    return err_msg;
 }
 
 
@@ -67,20 +66,20 @@ MPORT_PUBLIC_API const char * mport_err_string(void)
  * Set an error condition, with the given code and message.  A default message will
  * be used if msg is NULL
  */
-int mport_set_err(int code, const char *msg) 
-{
-  mport_err = code;
-  
-  if (code == MPORT_OK) {
-    bzero(err_msg, sizeof(err_msg));
-  } else {  
-    if (msg != NULL) {
-      strlcpy(err_msg, msg, sizeof(err_msg));
+int
+mport_set_err(int code, const char *msg) {
+    mport_err = code;
+
+    if (code == MPORT_OK) {
+        bzero(err_msg, sizeof(err_msg));
     } else {
-      strlcpy(err_msg, default_error_msg, sizeof(err_msg));
+        if (msg != NULL) {
+            strlcpy(err_msg, msg, sizeof(err_msg));
+        } else {
+            strlcpy(err_msg, default_error_msg, sizeof(err_msg));
+        }
     }
-  }
-  return code;
+    return code;
 }
 
 
@@ -90,22 +89,21 @@ int mport_set_err(int code, const char *msg)
  * There is no way to access the default error messages with this function,
  * use mport_set_err() for that.
  */
-int mport_set_errx(int code, const char *fmt, ...) 
-{
+int
+mport_set_errx(int code, const char *fmt, ...) {
     va_list args;
     char *err;
     int ret;
 
     va_start(args, fmt);
     if (vasprintf(&err, fmt, args) == -1) {
-	fprintf(stderr, "fatal error: mport_set_errx can't format the string.\n");
-	exit(255);
+        fprintf(stderr, "fatal error: mport_set_errx can't format the string.\n");
+        exit(255);
     }
     ret = mport_set_err(code, err);
-    
     free(err);
-    
+
     va_end(args);
-    
+
     return ret;
 }
