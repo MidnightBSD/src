@@ -16841,17 +16841,12 @@ contrib/libarchive/libarchive_fe/matching.c -text
 contrib/libarchive/libarchive_fe/matching.h -text
 contrib/libarchive/libarchive_fe/pathmatch.c -text
 contrib/libarchive/libarchive_fe/pathmatch.h -text
-contrib/libarchive/tar/CMakeLists.txt -text
 contrib/libarchive/tar/bsdtar.1 -text
 contrib/libarchive/tar/bsdtar.c -text
 contrib/libarchive/tar/bsdtar.h -text
 contrib/libarchive/tar/bsdtar_platform.h -text
-contrib/libarchive/tar/bsdtar_windows.c -text
-contrib/libarchive/tar/bsdtar_windows.h -text
 contrib/libarchive/tar/cmdline.c -text
-contrib/libarchive/tar/config_freebsd.h -text
 contrib/libarchive/tar/creation_set.c -text
-contrib/libarchive/tar/getdate.c -text
 contrib/libarchive/tar/read.c -text
 contrib/libarchive/tar/subst.c -text
 contrib/libarchive/tar/test/CMakeLists.txt -text
