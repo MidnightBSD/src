@@ -1,5 +1,18 @@
 Updating Information for MidnightBSD users.
 
+20150926:
+	libmport now supports @preexec, @postexec, @preunexec and @postunexec
+	to replace @exec and @unexec.  
+
+	pre exec runs afer pre-install scripts but before actual installation
+
+	post exec runs after install but before post install scripts and
+	pkg message.
+
+	pre unexec runs before pre uninstall scripts
+
+	post unexec runs before de-install scripts and after file removal.
+
 20150917:
 	Fix kqueue write events for files > 2GB
 
