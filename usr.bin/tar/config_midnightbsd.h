@@ -23,11 +23,12 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * $FreeBSD: src/usr.bin/tar/config_freebsd.h,v 1.1.4.3 2008/08/10 07:35:55 kientzle Exp $
+ * $MidnightBSD$
  */
 
-/* A default configuration for FreeBSD, used if there is no config.h. */
+/* A default configuration for BSD, used if there is no config.h. */
 
-#include <sys/param.h>  /* __FreeBSD_version */
+#include <sys/param.h>  /* __MidnightBSD_version */
 
 #define	HAVE_ACL_GET_PERM 0
 #define	HAVE_ACL_GET_PERM_NP 1
