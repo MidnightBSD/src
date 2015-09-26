@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/version_cmp.c,v 1.7 2011/07/24 15:59:08 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <string.h>
 #include <stdlib.h>
@@ -78,20 +78,20 @@ mport_version_cmp(const char *astr, const char *bstr)
 void
 mport_version_cmp_sqlite(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
-	char *a, *b;
+    char *a, *b;
 
-	assert(argc == 2);
-  
-	a = strdup(sqlite3_value_text(argv[0]));
-	b = strdup(sqlite3_value_text(argv[1]));
-  
-	assert(a != NULL);
-	assert(b != NULL);
-  
-	sqlite3_result_int(context, mport_version_cmp(a, b));
-  
-	free(a);
-	free(b);
+    assert(argc == 2);
+
+    a = strdup(sqlite3_value_text(argv[0]));
+    b = strdup(sqlite3_value_text(argv[1]));
+
+    assert(a != NULL);
+    assert(b != NULL);
+
+    sqlite3_result_int(context, mport_version_cmp(a, b));
+
+    free(a);
+    free(b);
 }  
 
 
@@ -105,104 +105,105 @@ mport_version_cmp_sqlite(sqlite3_context *context, int argc, sqlite3_value **arg
 int
 mport_version_require_check(const char *baseline, const char *require)
 {
-	int ret = 0;
-  
-	if (require[0] == '<') {
-		if (require[1] == '=') {
-			ret = (mport_version_cmp(baseline, &require[2]) <= 0) ? 0 : -1;
-		} else {
-			ret = (mport_version_cmp(baseline, &require[1]) < 0) ? 0 : -1;
-		}
-	} else if (require[0] == '>') {
-		if (require[1] == '=') {
-			ret = (mport_version_cmp(baseline, &require[2]) >= 0) ? 0 : -1;
-		} else {
-			ret = (mport_version_cmp(baseline, &require[1]) > 0) ? 0 : -1;
-		}
-	} else {
-		RETURN_ERRORX(MPORT_ERR_FATAL, "Malformed version requirement: %s", require);
-	}
-  
-	return (ret);
+    int ret = 0;
+
+    if (require[0] == '<') {
+        if (require[1] == '=') {
+            ret = (mport_version_cmp(baseline, &require[2]) <= 0) ? 0 : -1;
+        } else {
+            ret = (mport_version_cmp(baseline, &require[1]) < 0) ? 0 : -1;
+        }
+    } else if (require[0] == '>') {
+        if (require[1] == '=') {
+            ret = (mport_version_cmp(baseline, &require[2]) >= 0) ? 0 : -1;
+        } else {
+            ret = (mport_version_cmp(baseline, &require[1]) > 0) ? 0 : -1;
+        }
+    } else {
+        RETURN_ERRORX(MPORT_ERR_FATAL, "Malformed version requirement: %s", require);
+    }
+
+    return (ret);
 }
 
 static void
 parse_version(const char *in, struct version *v) 
 {
-	char *s = strdup(in);
-	char *underscore;
-	char *comma;
-  
-	underscore = rindex(s, '_');
-	comma      = rindex(s, ',');
-  
-	if (comma == NULL) {
-		v->epoch = 0;
-	} else {
-		*comma = '\0';
-		v->epoch = (int)strtol(comma + 1, NULL, 10);
-	}
-  
-	if (underscore == NULL) {
-		v->revision = 0;
-	} else {
-		*underscore = '\0';
-		v->revision = (int)strtol(underscore + 1, NULL, 10);
-	}
-  
-	v->version = s;
+    char *s = strdup(in);
+    char *underscore;
+    char *comma;
+
+    underscore = rindex(s, '_');
+    comma = rindex(s, ',');
+
+    if (comma == NULL) {
+        v->epoch = 0;
+    } else {
+        *comma = '\0';
+        v->epoch = (int) strtol(comma + 1, NULL, 10);
+    }
+
+    if (underscore == NULL) {
+        v->revision = 0;
+    } else {
+        *underscore = '\0';
+        v->revision = (int) strtol(underscore + 1, NULL, 10);
+    }
+
+    v->version = s;
 }
 
 static int
 cmp_ints(int a, int b) 
 {
-	if (a == b)
-		return 0;
-	if (a < b)
-		return -1;
-    
-	return 1;
+
+    if (a == b)
+        return 0;
+    if (a < b)
+        return -1;
+
+    return 1;
 }
 
 static int
 cmp_versions(char *a, char *b)
 {
-	int a_sub, b_sub, result = 0;
+    int a_sub, b_sub, result = 0;
 
-	while (*a || *b) {
-		if (*a) {
-			while (*a == '.' || *a == '+') 
-				a++;
-        
-			if (isdigit(*a)) {
-				a_sub  = (int)strtol(a, &a, 10);
-			} else {
-				a_sub  = (int)*a;
-				a++;
-			}
-		} else {
-			a_sub = 0;
-		}
-    
-		if (*b) {
-			while (*b == '.' || *b == '+')
-				b++;
-        
-			if (isdigit(*b)) { 
-				b_sub = (int)strtol(b, &b, 10);
-			} else {
-				b_sub = (int)*b;
-				b++;
-			}
-		} else {
-			b_sub = 0;
-		}
+    while (*a || *b) {
+        if (*a) {
+            while (*a == '.' || *a == '+')
+                a++;
 
-		result = cmp_ints(a_sub, b_sub);
-    
-		if (result != 0) 
-			break;
-	}
-  
-	return (result);
+            if (isdigit(*a)) {
+                a_sub = (int) strtol(a, &a, 10);
+            } else {
+                a_sub = (int) *a;
+                a++;
+            }
+        } else {
+            a_sub = 0;
+        }
+
+        if (*b) {
+            while (*b == '.' || *b == '+')
+                b++;
+
+            if (isdigit(*b)) {
+                b_sub = (int) strtol(b, &b, 10);
+            } else {
+                b_sub = (int) *b;
+                b++;
+            }
+        } else {
+            b_sub = 0;
+        }
+
+        result = cmp_ints(a_sub, b_sub);
+
+        if (result != 0)
+            break;
+    }
+
+    return (result);
 }    
