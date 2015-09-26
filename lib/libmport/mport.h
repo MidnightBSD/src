@@ -201,7 +201,7 @@ int mport_err_code(void);
 const char * mport_err_string(void);
 
 
-#define MPORT_OK			0
+#define MPORT_OK			    0
 #define MPORT_ERR_FATAL 		1
 #define MPORT_ERR_WARN			2
 
