@@ -1,5 +1,13 @@
 Updating Information for MidnightBSD users.
 
+20150930:
+	rpcbind(8) remote denial of service
+
+	In rpcbind(8), netbuf structures are copied directly, which would result in
+	two netbuf structures that reference to one shared address buffer.  When one
+	of the two netbuf structures is freed, access to the other netbuf structure
+	would result in an undefined result that may crash the rpcbind(8) daemon.	
+
 20150825:
 	MidnightBSD 0.6.7 RELEASE
 
