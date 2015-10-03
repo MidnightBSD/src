@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20151002:
+	Revised rpcbind(8) patch to fix issues with NIS
+
 20150930:
 	0.7.1 RELEASE
         rpcbind(8) remote denial of service
