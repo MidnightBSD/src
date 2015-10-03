@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20151002:
+	Revised rpcbind(8) patch to fix issues with NIS
+
 20150930:
 	In rpcbind(8), netbuf structures are copied directly, which would result in
 	two netbuf structures that reference to one shared address buffer.  When one
