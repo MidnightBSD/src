@@ -25,7 +25,7 @@
 .\"
 .\" $MidnightBSD$
 .\"
-.Dd June 14, 2015
+.Dd October 17, 2015
 .Dt MPORT 3
 .Os
 .Sh NAME
@@ -50,6 +50,9 @@
 .Nm mport_set_progress_step_cb ,
 .Nm mport_set_progress_free_cb ,
 .Nm mport_set_confirm_cb ,
+.Nm mport_stats ,
+.Nm mport_stats_free ,
+.Nm mport_stats_new ,
 .Nm mport_merge_primative ,
 .Nm mport_pkgmeta_new ,
 .Nm mport_pkgmeta_free ,
@@ -120,6 +123,12 @@
 .Fn mport_set_progress_free_cb "mportInstance *mport" "mport_progress_free_cb cb"
 .Ft void
 .Fn mport_set_confirm_cb "mportInstance *mport" "mport_confirm_cb cb"
+.Ft int
+.Fn mport_stats "mportInstance *mport" "mportStats **stats"
+.Ft int
+.Fn mport_stats_free "mportStats *stats"
+.Ft mportStats *
+.Fn mport_stats_new 
 .Ft int
 .Fn mport_merge_primative "const char **filenames" "const char *outfile"
 .Ft mportPackageMeta *
