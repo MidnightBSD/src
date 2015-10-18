@@ -231,5 +231,16 @@ int mport_lock_lock(mportInstance *, mportPackageMeta *);
 int mport_lock_unlock(mportInstance *, mportPackageMeta *);
 int mport_lock_islocked(mportPackageMeta *);
 
-#endif /* ! defined _MPORT_H */
+/* Statistics */
+typedef struct {
+    unsigned int pkg_installed;
+    unsigned int pkg_available;
+    /* off_t pkg_installed_size;
+       off_t pkg_available_size; */
+} mportStats;
 
+int mport_stats(mportInstance *, mportStats **);
+int mport_stats_free(mportStats *);
+mportStats * mport_stats_new(void);
+
+#endif /* ! defined _MPORT_H */

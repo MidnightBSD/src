@@ -38,7 +38,8 @@ __MBSDID("$MidnightBSD$");
 #include "mport_private.h"
 
 /* allocate mem for a mportInstance */
-MPORT_PUBLIC_API mportInstance * mport_instance_new(void) 
+MPORT_PUBLIC_API mportInstance *
+mport_instance_new(void)
 {
   return (mportInstance *)calloc(1, sizeof(mportInstance)); 
 }
