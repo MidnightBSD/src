@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20151017:
+	Add initial statistics api to libmport and a driver to print
+	it in mport(1).
+
 20151002:
 	Revised rpcbind(8) patch to fix issues with NIS
 
