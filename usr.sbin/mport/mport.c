@@ -203,6 +203,7 @@ usage(void) {
 		"       mport lock [package name]\n"
 		"       mport locks\n"
 		"       mport search [query ...]\n"
+		"       mport stats\n"
 		"       mport unlock [package name]\n"
 		"       mport update [package name]\n"
 		"       mport upgrade\n"
