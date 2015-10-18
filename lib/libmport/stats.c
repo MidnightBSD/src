@@ -24,12 +24,11 @@ mport_stats_free(mportStats *stats)
     return MPORT_OK;
 }
 
-MPORT_PUBLIC_API mport_stats *
+MPORT_PUBLIC_API int
 mport_stats(mportInstance *mport, mportStats **stats)
 {
     sqlite3_stmt *stmt;
     sqlite3 *db = mport->db;
-    int len, ret;
     mportStats *s;
 
     if ((s = mport_stats_new()) == NULL)
