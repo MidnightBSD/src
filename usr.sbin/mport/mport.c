@@ -51,6 +51,7 @@ static int update(mportInstance *, const char *);
 static int upgrade(mportInstance *);
 static int info(mportInstance *, const char *);
 static int search(mportInstance *, char **);
+static int stats(mportInstance *mport);
 static int clean(mportInstance *);
 static int indexCheck(mportInstance *, mportPackageMeta *);
 static int updateDown(mportInstance *, mportPackageMeta *);
@@ -163,6 +164,9 @@ main(int argc, char *argv[]) {
 			free(searchQuery[i-2]);
 		}
 		free(searchQuery);
+        } else if (!strcmp(argv[1], "stats")) {
+		loadIndex(mport);
+                resultCode = stats(mport);
 	} else if (!strcmp(argv[1], "clean")) {
 		resultCode = clean(mport);
 	} else if (!strcmp(argv[1], "cpe")) {
@@ -305,6 +309,22 @@ unlock(mportInstance *mport, const char *packageName) {
 	}
 
 	return (0);
+}
+
+static int
+stats(mportInstance *mport) {
+	mportStats *s;
+	if (mport_stats(mport, &s) != MPORT_OK) {
+                warnx("%s", mport_err_string());
+                return (1);
+        }
+
+	printf("Local package database:\n");
+	printf("\tInstalled packages: %d\n", s->pkg_installed);
+	printf("\nRemote package database:\n");
+	printf("\tPackages available: %d\n", s->pkg_available);
+
+	return(0);
 }
 
 int
