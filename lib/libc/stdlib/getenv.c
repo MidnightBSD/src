@@ -690,17 +690,8 @@ int
 clearenv(void)
 {
         int envNdx;
-
- 	if (envVars != NULL) {
-		for (envNdx = envVarsTotal - 1; envNdx >= 0; envNdx--)
-			if (! envVars[envNdx].putenv) {
-				free(envVars[envNdx].name);
-			}
-		free(envVars);
-		envVars = NULL;
-		*environ = NULL;
-	} else
-		*environ = NULL;
+	*environ = NULL;
+	__merge_environ();
 
 	return (0);
 }
