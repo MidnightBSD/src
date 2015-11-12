@@ -14,4 +14,11 @@ CFLAGS+=	-I${.CURDIR} -DHAVE_STDINT_H -DHAVE_SYS_PARAM_H
 
 WARNS?=		1
 
+.if !defined(COMPAT_32BIT)
+afterinstall:
+	${INSTALL} ${SHLINSTALLFLAGS} -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
+		${_INSTALLFLAGS} ${.CURDIR}/jansson.pc ${DESTDIR}/usr/libdata/pkgconfig/jansson.pc
+.endif
+
+
 .include <bsd.lib.mk>
