@@ -92,7 +92,7 @@ void mport_default_progress_step_cb(int current, int total, const char *msg)
   if (current > total)
     current = total;
 
-  if (!isatty(STDIN_FILENO) || (tcgetattr(STDIN_FILENO, &term) < 0) || (ioctl(STDIN_FILENO, TIOCGWINSZ, &win) < 0)) {
+  if (!isatty(STDIN_FILENO) || (tcgetattr(STDIN_FILENO, &term) < 0) || (ioctl(STDIN_FILENO, TIOCGWINSZ, &win) < 0) || getenv("MAGUS") != NULL) {
     /* not a terminal or couldn't get terminal width*/
     (void)printf("%s\n", msg);
     return;
