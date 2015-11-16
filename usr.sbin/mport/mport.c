@@ -548,7 +548,10 @@ update(mportInstance *mport, const char *packageName) {
 	}
 
 	if (!mport_verify_hash(path, (*indexEntry)->hash)) {
-		fprintf(stderr, "Package fails hash verification.\n");
+		if (unlink(path) == 0)  /* remove file so we can try again */
+			fprintf(stderr, "Package fails hash verification and was removed. Please try again.\n");
+		else
+			fprintf(stderr, "Package fails hash verification Please delete it manually at %s\n", path);
 		free(path);
 		return (1);
 	}
