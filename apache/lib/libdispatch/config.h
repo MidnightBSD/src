@@ -90,6 +90,8 @@
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
 
+#define HAVE_BLOCKS	1
+
 /* Define if __builtin_trap marked noreturn */
 #define HAVE_NORETURN_BUILTIN_TRAP 1
 

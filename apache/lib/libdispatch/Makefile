@@ -1,4 +1,4 @@
-# $MidnightBSD: src/apache/lib/libdispatch/Makefile,v 1.4 2010/08/16 00:04:23 laffer1 Exp $
+# $MidnightBSD$
 
 .PATH: ${.CURDIR}/../../../contrib/libdispatch/src
 SRCDIR=	${.CURDIR}/../../../contrib/libdispatch/src
@@ -11,6 +11,8 @@ SRCS=	apply.c benchmark.c legacy.c object.c once.c \
 
 WARNS?= 2
 CSTD=	gnu89
+
+CFLAGS+=	-fblocks -D__BLOCKS__=1
 
 .PATH:  ${.CURDIR}/../../../contrib/libdispatch/dispatch
 INCS=	base.h dispatch.h group.h object.h once.h \
@@ -75,7 +77,7 @@ MLINKS= dispatch_after.3 dispatch_after_f.3 \
         dispatch_source_create.3 dispatch_source_set_timer.3 \
         dispatch_time.3 dispatch_walltime.3
 
-DPADD=          ${LIBPTHREAD}
-LDADD=          -lpthread
+DPADD=          ${LIBPTHREAD} ${LIBBLOCKSRUNTIME}
+LDADD=          -lpthread -lBlocksRuntime
 
 .include <bsd.lib.mk>
