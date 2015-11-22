@@ -10,13 +10,15 @@ SRCS=		bundle_write.c bundle_read.c plist.c create_primative.c db.c \
 		stats.c verify.c lock.c
 INCS=		mport.h 
 
-CFLAGS+=	-I${.CURDIR} -g
+CFLAGS+=	-I${.CURDIR} -fblocks -g
 SHLIB_MAJOR=	1
 MAN=	mport.3
 
 NO_PROFILE=
 
-DPADD=	${LIBMD} ${LIBARCHIVE} ${LIBBZP2} ${LIBLZMA} ${LIBZ} ${LIBFETCH} ${LIBSQLITE3} ${LIBPTHREAD}
-LDADD=	-lmd -larchive -lbz2 -llzma -lz -lfetch -lsqlite3 -lpthread
+DPADD=	${LIBMD} ${LIBARCHIVE} ${LIBBZP2} ${LIBLZMA} ${LIBZ} ${LIBFETCH} \
+	${LIBSQLITE3} ${LIBPTHREAD} ${LIBDISPATCH} ${LIBBLOCKSRUNTIME}
+LDADD=	-lmd -larchive -lbz2 -llzma -lz -lfetch -lsqlite3 \
+	-lpthread -ldispatch -lBlocksRuntime
 
 .include <bsd.lib.mk>

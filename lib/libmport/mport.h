@@ -36,6 +36,7 @@
 #include <sqlite3.h>
 #include <sys/queue.h>
 #include <stdio.h>
+#include <dispatch/dispatch.h>
 
 typedef void (*mport_msg_cb)(const char *);
 typedef void (*mport_progress_init_cb)(const char *);
