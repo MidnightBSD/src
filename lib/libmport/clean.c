@@ -39,43 +39,54 @@ __MBSDID("$MidnightBSD$");
 
 MPORT_PUBLIC_API int 
 mport_clean_database(mportInstance *mport) {
-	if (mport_db_do(mport->db, "vacuum") != MPORT_OK)
-		RETURN_CURRENT_ERROR;
-	return MPORT_OK;
+    __block int error_code = MPORT_OK;
+
+    dispatch_sync(mportTaskSerial, ^(int){
+        if (mport_db_do(mport->db, "vacuum") != MPORT_OK)
+            error_code = mport_err_code();
+        error_code = MPORT_OK;
+    });
+
+    return error_code;
 }
 
 MPORT_PUBLIC_API int
 mport_clean_oldpackages(mportInstance *mport) {
-	mportIndexEntry **indexEntry;
-	struct dirent *de;
-	DIR *d;
-	char *path;
+    __block int error_code = MPORT_OK;
 
-	d = opendir(MPORT_FETCH_STAGING_DIR);
-	if (d == NULL)
-		RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open directory %s: %s", MPORT_FETCH_STAGING_DIR, strerror(errno));
+    dispatch_sync(mportTaskSerial, ^{
+        struct dirent *de;
+        DIR *d = opendir(MPORT_FETCH_STAGING_DIR);
 
-	while ((de = readdir(d)) != NULL) {
-		if (strcmp(".", de->d_name) == 0 || strcmp("..", de->d_name) == 0)
-			continue;
-		if (mport_index_search(mport, &indexEntry, "bundlefile=%Q", de->d_name) != MPORT_OK)
-			RETURN_CURRENT_ERROR;
+        if (d == NULL)
+            RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open directory %s: %s", MPORT_FETCH_STAGING_DIR, strerror(errno));
 
-		if (indexEntry == NULL || *indexEntry == NULL) {
-			asprintf(&path, "%s/%s", MPORT_FETCH_STAGING_DIR, de->d_name);
-			if (path != NULL)
-				if (unlink(path) < 0) {
-					closedir(d);
-					RETURN_ERRORX(MPORT_ERR_FATAL, "Could not delete file %s: %s", path, strerror(errno));
-				}
-			free(path);
-		} else {
-			 mport_index_entry_free_vec(indexEntry);
-		}
-	}
+        while ((de = readdir(d)) != NULL) {
+                mportIndexEntry **indexEntry;
+                char *path;
+                if (strcmp(".", de->d_name) == 0 || strcmp("..", de->d_name) == 0)
+                    continue;
 
-	closedir(d);
+                if (mport_index_search(mport, &indexEntry, "bundlefile=%Q", de->d_name) != MPORT_OK) {
+                    error_code = mport_err_code();
+                }
 
-	return MPORT_OK;
+                if (indexEntry == NULL || *indexEntry == NULL) {
+                    asprintf(&path, "%s/%s", MPORT_FETCH_STAGING_DIR, de->d_name);
+                    if (path != NULL) if (unlink(path) < 0) {
+                        error_code = SET_ERRORX(MPORT_ERR_FATAL, "Could not delete file %s: %s", path, strerror(errno));
+                    }
+                    free(path);
+                } else {
+                    mport_index_entry_free_vec(indexEntry);
+                }
+
+            }
+
+            closedir(d);
+
+        });
+
+    return error_code;
 }
 

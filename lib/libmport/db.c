@@ -41,41 +41,50 @@ static int mport_upgrade_master_schema_3to4(sqlite3 *);
 
 /* mport_db_do(sqlite3 *db, const char *sql, ...)
  * 
- * A wrapper for doing executing a single sql query.  Takes a sqlite3 struct
+ * A wrapper for executing a single sql query.  Takes a sqlite3 struct
  * pointer, a format string and a list of args.  See the documentation for 
  * sqlite3_vmprintf() for format information.
  */
-int mport_db_do(sqlite3 *db, const char *fmt, ...) 
-{
-  va_list args;
-  char *sql;
-  int sqlcode;
-  
-  va_start(args, fmt);
-  
-  sql = sqlite3_vmprintf(fmt, args);
-  
-  va_end(args);
-  
-  if (sql == NULL)
-    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate memory for sql statement");
-  
-  sqlcode = sqlite3_exec(db, sql, 0, 0, 0);
-  /* if we get an error code, we want to run it again in some cases */
-  if (sqlcode == SQLITE_BUSY || sqlcode == SQLITE_LOCKED) {
-    sleep(1);
-    if (sqlite3_exec(db, sql, 0, 0, 0) != SQLITE_OK) {
-      sqlite3_free(sql);
-      RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+int
+mport_db_do(sqlite3 *db, const char *fmt, ...) {
+    va_list args;
+    char *sql;
+    int sqlcode;
+    int result = MPORT_OK;
+    char *err;
+
+    va_start(args, fmt);
+
+    sql = sqlite3_vmprintf(fmt, args);
+
+    va_end(args);
+
+    if (sql == NULL)
+        RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate memory for sql statement");
+
+    dispatch_sync(mportSQLSerial, ^{
+        sqlcode = sqlite3_exec(db, sql, 0, 0, 0);
+        /* if we get an error code, we want to run it again in some cases */
+        if (sqlcode == SQLITE_BUSY || sqlcode == SQLITE_LOCKED) {
+            sleep(1);
+            if (sqlite3_exec(db, sql, 0, 0, 0) != SQLITE_OK) {
+                sqlite3_free(sql);
+                err = sqlite3_errmsg(db);
+                result = MPORT_ERR_FATAL;
+            }
+        } else if (sqlcode != SQLITE_OK) {
+            sqlite3_free(sql);
+            err = sqlite3_errmsg(db);
+            result = MPORT_ERR_FATAL;
+        }
+
+        sqlite3_free(sql);
+    });
+
+    if (result == MPORT_ERR_FATAL) {
+        RETURN_ERROR(MPORT_ERR_FATAL, err);
     }
-  } else if (sqlcode != SQLITE_OK) {
-    sqlite3_free(sql);
-    RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-  }
-  
-  sqlite3_free(sql);
-  
-  return MPORT_OK;
+    return result;
 }
 
 
@@ -86,7 +95,8 @@ int mport_db_do(sqlite3 *db, const char *fmt, ...)
  * This function returns MPORT_OK on success.  The sqlite3_stmt pointer 
  * may be null if this function does not return MPORT_OK.
  */
-int mport_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char * fmt, ...)
+int
+mport_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char * fmt, ...)
 {
   va_list args;
   char *sql;

@@ -44,7 +44,7 @@ mport_stats(mportInstance *mport, mportStats **stats)
         RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
     }
 
-    s->pkg_installed = sqlite3_column_int(stmt, 0);
+    s->pkg_installed = (unsigned int) sqlite3_column_int(stmt, 0);
     sqlite3_finalize(stmt);
 
     if (mport_db_prepare(db, &stmt, "SELECT COUNT(*) FROM idx.packages") != MPORT_OK)
@@ -55,7 +55,7 @@ mport_stats(mportInstance *mport, mportStats **stats)
         RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
     }
 
-    s->pkg_available = sqlite3_column_int(stmt, 0);
+    s->pkg_available = (unsigned int) sqlite3_column_int(stmt, 0);
     sqlite3_finalize(stmt);
 
     return (MPORT_OK);

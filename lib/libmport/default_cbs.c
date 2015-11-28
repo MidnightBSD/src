@@ -31,6 +31,7 @@ __MBSDID("$MidnightBSD$");
 #include <termios.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include "mport.h"
 #include "mport_private.h"
 
