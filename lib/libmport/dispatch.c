@@ -27,8 +27,32 @@
 #include <sys/cdefs.h>
 __MBSDID("$MidnightBSD$");
 
+#include "mport.h"
 #include "mport_dispatch.h"
 #include "mport_private.h"
+
+/**
+ * package task queue
+ */
+dispatch_queue_t mportTaskSerial = NULL;
+
+/**
+ * libarchive operations queue
+ */
+dispatch_queue_t mportArchiveSerial = NULL;
+
+/**
+ * print callbacks queue
+ */
+dispatch_queue_t mportPrintSerial = NULL;
+
+/**
+ * sqlite operations queue
+ */
+dispatch_queue_t mportSQLSerial = NULL;
+
+//static dispatch_once_t mportInitializeOnce;
+
 
 void
 mport_init_queues(void)

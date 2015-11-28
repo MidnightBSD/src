@@ -36,26 +36,24 @@ typedef void (^completion_block_t)(int error_code);
 /**
  * package task queue
  */
-static dispatch_queue_t mportTaskSerial = NULL;
+extern dispatch_queue_t mportTaskSerial;
 
 /**
  * libarchive operations queue
  */
-static dispatch_queue_t mportArchiveSerial = NULL;
+extern dispatch_queue_t mportArchiveSerial;
 
 /**
  * print callbacks queue
  */
-static dispatch_queue_t mportPrintSerial = NULL;
+extern dispatch_queue_t mportPrintSerial;
 
 /**
  * sqlite operations queue
  */
-static dispatch_queue_t mportSQLSerial = NULL;
-
-static dispatch_once_t mportInitializeOnce;
+extern dispatch_queue_t mportSQLSerial;
 
 
-void mport_init_queues();
+void mport_init_queues(void);
 
 #endif
