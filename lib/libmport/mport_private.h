@@ -38,6 +38,7 @@
 #endif
 
 #include <osreldate.h>
+#include <sqlite3.h>
 #include "bzlib.h"
 
 #define MPORT_PUBLIC_API 
