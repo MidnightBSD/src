@@ -174,6 +174,13 @@ main(int argc, char *argv[]) {
 		loadIndex(mport);
 		resultCode = info(mport, argv[2]);
 		});
+	} else if (!strcmp(argv[1], "index")) {
+		dispatch_group_async(grp, q, ^{
+                	resultCode = mport_index_get(mport);
+			if (resultCode != MPORT_OK) {
+				fprintf(stderr, "Unable to fetch index: %s\n", mport_err_string());
+			}
+                });
 	} else if (!strcmp(argv[1], "search")) {
 		dispatch_group_async(grp, q, ^{
 		loadIndex(mport);
@@ -235,6 +242,7 @@ usage(void) {
 		"       mport delete [package name]\n"
 		"       mport deleteall\n"
 		"       mport download [package name]\n"
+		"       mport index\n"
 		"       mport info [package name]\n"
 		"       mport install [package name]\n"
 		"       mport list [updates]\n"
