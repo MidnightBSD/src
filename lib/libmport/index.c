@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/index.c,v 1.18 2013/01/22 02:26:09 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -58,6 +58,7 @@ mport_index_load(mportInstance *mport)
 {
 
   if (mport_file_exists(MPORT_INDEX_FILE)) {
+puts("attach");
     if (mport_db_do(mport->db, "ATTACH %Q AS idx", MPORT_INDEX_FILE) != MPORT_OK)
       RETURN_CURRENT_ERROR;
 

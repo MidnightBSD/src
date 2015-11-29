@@ -80,9 +80,6 @@ mport_db_do(sqlite3 *db, const char *fmt, ...) {
         sqlite3_free(sql);
     });
 
-    if (result == MPORT_ERR_FATAL) {
-        RETURN_ERROR(MPORT_ERR_FATAL, err);
-    }
     return result;
 }
 
