@@ -42,9 +42,12 @@ mport_clean_database(mportInstance *mport) {
     __block int error_code = MPORT_OK;
 
     dispatch_sync(mportTaskSerial, ^{
-        if (mport_db_do(mport->db, "vacuum") != MPORT_OK)
+        if (mport_db_do(mport->db, "vacuum") != MPORT_OK) {
             error_code = mport_err_code();
-        error_code = MPORT_OK;
+            mport_call_msg_cb(mport, "Database maintenance failed: %s\n", mport_err_string());
+	} else {
+            mport_call_msg_cb(mport, "Database maintenance complete.\n");
+	}
     });
 
     return error_code;
@@ -55,6 +58,7 @@ mport_clean_oldpackages(mportInstance *mport) {
     __block int error_code = MPORT_OK;
 
     dispatch_sync(mportTaskSerial, ^{
+	int deleted = 0;
         struct dirent *de;
         DIR *d = opendir(MPORT_FETCH_STAGING_DIR);
 
@@ -79,7 +83,9 @@ mport_clean_oldpackages(mportInstance *mport) {
 			if (unlink(path) < 0) {
                        		error_code = SET_ERRORX(MPORT_ERR_FATAL, "Could not delete file %s: %s", path, strerror(errno));
 				mport_call_msg_cb(mport, "%s\n", mport_err_string());
-                    	}
+                    	} else {
+				deleted++;
+			}
                     	free(path);
 		    }
                 } else {
@@ -89,6 +95,7 @@ mport_clean_oldpackages(mportInstance *mport) {
 
             closedir(d);
 
+		mport_call_msg_cb(mport, "Cleaned up %d packages.\n", deleted);
         });
 
 	return error_code;
