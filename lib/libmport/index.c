@@ -58,7 +58,7 @@ mport_index_load(mportInstance *mport)
 {
 
   if (mport_file_exists(MPORT_INDEX_FILE)) {
-puts("attach");
+    
     if (mport_db_do(mport->db, "ATTACH %Q AS idx", MPORT_INDEX_FILE) != MPORT_OK)
       RETURN_CURRENT_ERROR;
 
