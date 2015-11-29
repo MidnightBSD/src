@@ -49,9 +49,8 @@ int
 mport_db_do(sqlite3 *db, const char *fmt, ...) {
     va_list args;
     char *sql;
-    int sqlcode;
-    int result = MPORT_OK;
-    char *err;
+    __block int result = MPORT_OK;
+    __block char *err;
 
     va_start(args, fmt);
 
@@ -63,7 +62,7 @@ mport_db_do(sqlite3 *db, const char *fmt, ...) {
         RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate memory for sql statement");
 
     dispatch_sync(mportSQLSerial, ^{
-        sqlcode = sqlite3_exec(db, sql, 0, 0, 0);
+        int sqlcode = sqlite3_exec(db, sql, 0, 0, 0);
         /* if we get an error code, we want to run it again in some cases */
         if (sqlcode == SQLITE_BUSY || sqlcode == SQLITE_LOCKED) {
             sleep(1);

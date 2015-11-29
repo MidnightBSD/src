@@ -53,9 +53,8 @@ mport_instance_new(void) {
  */
 MPORT_PUBLIC_API int
 mport_instance_init(mportInstance *mport, const char *root) {
-    char dir[FILENAME_MAX];
 
-    dispatch_once(&mportInitializeOnce, ^{
+	char dir[FILENAME_MAX];
         mport->flags = 0;
 
         if (root != NULL) {
@@ -68,13 +67,16 @@ mport_instance_init(mportInstance *mport, const char *root) {
 
         (void) snprintf(dir, FILENAME_MAX, "%s/%s", mport->root, MPORT_INST_DIR);
 
-        if (mport_mkdir(dir) != MPORT_OK)
-            RETURN_CURRENT_ERROR;
+        if (mport_mkdir(dir) != MPORT_OK) {
+		RETURN_CURRENT_ERROR;
+	}
 
         (void) snprintf(dir, FILENAME_MAX, "%s/%s", mport->root, MPORT_INST_INFRA_DIR);
 
-        if (mport_mkdir(dir) != MPORT_OK)
-            RETURN_CURRENT_ERROR;
+        if (mport_mkdir(dir) != MPORT_OK) {
+		RETURN_CURRENT_ERROR;
+	}
+
 
         /* dir is a file here, just trying to save memory */
         (void) snprintf(dir, FILENAME_MAX, "%s/%s", mport->root, MPORT_MASTER_DB_FILE);
@@ -90,6 +92,7 @@ mport_instance_init(mportInstance *mport, const char *root) {
             RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
         }
 
+
         /* set the default UI callbacks */
         mport->msg_cb = &mport_default_msg_cb;
         mport->progress_init_cb = &mport_default_progress_init_cb;
@@ -98,7 +101,6 @@ mport_instance_init(mportInstance *mport, const char *root) {
         mport->confirm_cb = &mport_default_confirm_cb;
 
         mport_upgrade_master_schema(mport->db, mport_get_database_version(mport->db));
-    });
 
     /* create tables */
     return mport_generate_master_schema(mport->db);
@@ -109,10 +111,10 @@ mport_instance_init(mportInstance *mport, const char *root) {
  */
 int
 mport_get_database_version(sqlite3 *db) {
-    sqlite3_stmt *stmt_version;
-    int databaseVersion = -1; /* ERROR condition */
+    __block int databaseVersion = -1; /* ERROR condition */
 
     dispatch_sync(mportSQLSerial, ^{
+	sqlite3_stmt *stmt_version;
         if (sqlite3_prepare_v2(db, "PRAGMA user_version;", -1, &stmt_version, NULL) == SQLITE_OK) {
             while (sqlite3_step(stmt_version) == SQLITE_ROW) {
                 databaseVersion = sqlite3_column_int(stmt_version, 0);
@@ -176,7 +178,7 @@ void
 mport_call_msg_cb(mportInstance *mport, const char *fmt, ...) {
     va_list args;
 
-    char *msg;
+    __block char *msg;
     va_start(args, fmt);
     (void) vasprintf(&msg, fmt, args);
     va_end(args);

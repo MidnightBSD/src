@@ -41,7 +41,7 @@ MPORT_PUBLIC_API int
 mport_clean_database(mportInstance *mport) {
     __block int error_code = MPORT_OK;
 
-    dispatch_sync(mportTaskSerial, ^(int){
+    dispatch_sync(mportTaskSerial, ^{
         if (mport_db_do(mport->db, "vacuum") != MPORT_OK)
             error_code = mport_err_code();
         error_code = MPORT_OK;
@@ -58,35 +58,39 @@ mport_clean_oldpackages(mportInstance *mport) {
         struct dirent *de;
         DIR *d = opendir(MPORT_FETCH_STAGING_DIR);
 
-        if (d == NULL)
-            RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open directory %s: %s", MPORT_FETCH_STAGING_DIR, strerror(errno));
+        if (d == NULL) {
+		error_code = SET_ERRORX(MPORT_ERR_FATAL, "Couldn't open directory %s: %s", MPORT_FETCH_STAGING_DIR, strerror(errno));
+		return;
+	}
 
-        while ((de = readdir(d)) != NULL) {
+            while ((de = readdir(d)) != NULL) {
                 mportIndexEntry **indexEntry;
                 char *path;
                 if (strcmp(".", de->d_name) == 0 || strcmp("..", de->d_name) == 0)
                     continue;
 
                 if (mport_index_search(mport, &indexEntry, "bundlefile=%Q", de->d_name) != MPORT_OK) {
-                    error_code = mport_err_code();
+			continue;
                 }
 
                 if (indexEntry == NULL || *indexEntry == NULL) {
                     asprintf(&path, "%s/%s", MPORT_FETCH_STAGING_DIR, de->d_name);
-                    if (path != NULL) if (unlink(path) < 0) {
-                        error_code = SET_ERRORX(MPORT_ERR_FATAL, "Could not delete file %s: %s", path, strerror(errno));
-                    }
-                    free(path);
+                    if (path != NULL)  {
+			if (unlink(path) < 0) {
+                       		error_code = SET_ERRORX(MPORT_ERR_FATAL, "Could not delete file %s: %s", path, strerror(errno));
+				mport_call_msg_cb(mport, "%s\n", mport_err_string());
+                    	}
+                    	free(path);
+		    }
                 } else {
                     mport_index_entry_free_vec(indexEntry);
                 }
-
             }
 
             closedir(d);
 
         });
 
-    return error_code;
+	return error_code;
 }
 
