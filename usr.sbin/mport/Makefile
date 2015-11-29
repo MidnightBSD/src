@@ -2,7 +2,7 @@
 
 PROG= mport
 
-CFLAGS= -I${.CURDIR}/../../lib/libmport/ -g
+CFLAGS= -I${.CURDIR}/../../lib/libmport/ -fblocks -g
 
 DPADD=  ${LIBMPORT}
 LDADD=  -lmport
