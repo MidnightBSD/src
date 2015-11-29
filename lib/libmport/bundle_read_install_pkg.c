@@ -81,14 +81,9 @@ do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *
     char cwd[FILENAME_MAX];
     char file[FILENAME_MAX];
     sqlite3_stmt *assets = NULL;
-    sqlite3 *db;
+    sqlite3 *db = mport->db;
     mportAssetListEntryType type;
     const char *data;
-    uid_t owner = 0; /* root */
-    gid_t group = 0; /* wheel */
-    char *mode = NULL;
-
-    db = mport->db;
 
     /* run mtree */
     if (run_mtree(mport, bundle, pkg) != MPORT_OK)
@@ -127,22 +122,6 @@ do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *
                 if (mport_chdir(mport, cwd) != MPORT_OK)
                     goto ERROR;
 
-                break;
-            case ASSET_CHMOD:
-                printf("asset_chmod %s, %s\n", mode, data);
-                if (mode != NULL)
-                    free(mode);
-                /* TODO: should we reset the mode rather than NULL here */
-                if (data == NULL)
-                    mode = NULL;
-                else
-                    mode = strdup(data);
-                break;
-            case ASSET_CHOWN:
-                owner = mport_get_uid(data);
-                break;
-            case ASSET_CHGRP:
-                group = mport_get_gid(data);
                 break;
             case ASSET_PREEXEC:
                 if (mport_run_asset_exec(mport, data, cwd, file) != MPORT_OK)
