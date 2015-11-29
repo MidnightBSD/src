@@ -48,6 +48,9 @@ int main(int argc, char *argv[])
 {
   int ch;
   int plist_seen = 0;
+  dispatch_queue_t mainq = dispatch_get_main_queue();
+  dispatch_group_t grp = dispatch_group_create();
+  dispatch_queue_t q = dispatch_queue_create("print", NULL);
   mportPackageMeta *pack    = mport_pkgmeta_new();
   mportCreateExtras *extra  = mport_createextras_new();
   mportAssetList *assetlist = mport_assetlist_new();
@@ -126,6 +129,7 @@ int main(int argc, char *argv[])
     }
   } 
 
+dispatch_group_async(grp, q, ^{
   check_for_required_args(pack, extra);
   if (plist_seen == 0) {
     warnx("Required arg missing: plist");
@@ -134,10 +138,16 @@ int main(int argc, char *argv[])
 
   if (mport_create_primative(assetlist, pack, extra) != MPORT_OK) {
     warnx("%s", mport_err_string());
-    return 1;
+    exit(1);
   }
-  
-  return 0;
+});
+
+     dispatch_group_wait(grp, DISPATCH_TIME_FOREVER);
+        dispatch_async(mainq, ^{
+                exit(0);
+        });
+
+        dispatch_main();
 }
 
 

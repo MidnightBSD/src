@@ -1,11 +1,11 @@
 PROG= mport.create
 
-CFLAGS+=	-g -I${.CURDIR}/../../lib/libmport/
+CFLAGS+=	-fblocks -I${.CURDIR}/../../lib/libmport/
 WARNS?= 	6
 
 NO_MAN=		yes
 
-LDADD= 	-lmport
-DPADD= 	${LIBMPORT} 
+LDADD= 	-lmport -ldispatch -lBlocksRuntime
+DPADD= 	${LIBMPORT} ${LIBDISPATCH} ${LIBBLOCKSRUNTIME}
 
 .include <bsd.prog.mk>
