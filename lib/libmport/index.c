@@ -68,22 +68,7 @@ mport_index_load(mportInstance *mport)
       if (index_last_checked_recentish(mport))
           return MPORT_OK;
 
-      if (mport_fetch_index(mport) != MPORT_OK) {
-        SET_ERROR(MPORT_ERR_WARN, "Could not fetch updated index; previous index used.");
-        RETURN_CURRENT_ERROR;
-      } else {
-        if (mport_db_do(mport->db, "DETACH idx") != MPORT_OK)
-          RETURN_CURRENT_ERROR;
-
-        mport->flags &= ~MPORT_INST_HAVE_INDEX;
- 
-        if (mport_db_do(mport->db, "ATTACH %Q AS idx", MPORT_INDEX_FILE) != MPORT_OK)
-          RETURN_CURRENT_ERROR;
-        
-        mport->flags |= MPORT_INST_HAVE_INDEX;
-        if (index_update_last_checked(mport) != MPORT_OK)
-		RETURN_CURRENT_ERROR;
-      }
+	return mport_index_get(mport);
     }
   } else {
     if (mport_fetch_bootstrap_index(mport) != MPORT_OK)
@@ -100,7 +85,45 @@ mport_index_load(mportInstance *mport)
 		RETURN_CURRENT_ERROR;
   }
   
-  return MPORT_OK;
+  return (MPORT_OK);
+}
+
+
+/**
+ * mport_index_load is typically preferred.  This function is only used to force
+ * a download of the index manually by the user.
+ */
+MPORT_PUBLIC_API int
+mport_index_get(mportInstance *mport) 
+{
+
+	if (!(mport->flags & MPORT_INST_HAVE_INDEX)) {
+		if (mport_fetch_bootstrap_index(mport) != MPORT_OK)
+			RETURN_CURRENT_ERROR;
+	} else {
+		if (mport_fetch_index(mport) != MPORT_OK) {
+			SET_ERROR(MPORT_ERR_WARN, "Could not fetch updated index; previous index used.");
+			RETURN_CURRENT_ERROR;
+		} 
+	}
+
+	/* if we were already attached, reconnect refreshed index. */
+	if (mport->flags & MPORT_INST_HAVE_INDEX) {
+		if (mport_db_do(mport->db, "DETACH idx") != MPORT_OK)
+			RETURN_CURRENT_ERROR;
+
+		mport->flags &= ~MPORT_INST_HAVE_INDEX;
+
+		if (mport_db_do(mport->db, "ATTACH %Q AS idx", MPORT_INDEX_FILE) != MPORT_OK)
+			RETURN_CURRENT_ERROR;
+
+		mport->flags |= MPORT_INST_HAVE_INDEX;
+	}
+        
+	if (index_update_last_checked(mport) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	return (MPORT_OK);
 }
 
 
