@@ -1,4 +1,5 @@
 /*-
+ * Copyright (c) 2015 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/install_primative.c,v 1.6 2011/07/24 15:59:08 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -66,7 +67,8 @@ mport_install_primative(mportInstance *mport, const char *filename, const char *
         (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK)) 
     {
       mport_call_msg_cb(mport, "Unable to install %s-%s: %s", pkg->name, pkg->version, mport_err_string());
-      mport_set_err(MPORT_OK, NULL);
+      /* TODO: WHY WAS THIS HERE mport_set_err(MPORT_OK, NULL); */
+		break; /* do not keep going if we have a package failure! */
     }
   }
 

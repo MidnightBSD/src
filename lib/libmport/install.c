@@ -33,7 +33,8 @@ __MBSDID("$MidnightBSD$");
 #include <string.h>
 #include <unistd.h>
 
-MPORT_PUBLIC_API int mport_install(mportInstance *mport, const char *pkgname, const char *version, const char *prefix)
+MPORT_PUBLIC_API int
+mport_install(mportInstance *mport, const char *pkgname, const char *version, const char *prefix)
 {
   mportIndexEntry **e;
   char *filename;
