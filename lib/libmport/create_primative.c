@@ -60,6 +60,8 @@ mport_create_primative(mportAssetList *assetlist, mportPackageMeta *pack, mportC
 {
 	__block int error_code = MPORT_OK;
 
+	mport_init_queues(); /* this code path doesn't have queues up */
+	
 	dispatch_sync(mportTaskSerial, ^{
 		sqlite3 *db = NULL;
 
@@ -99,12 +101,11 @@ mport_create_primative(mportAssetList *assetlist, mportPackageMeta *pack, mportC
 static int
 create_stub_db(sqlite3 **db, const char *tmpdir)
 {
-	char file[FILENAME_MAX];
 	__block int error_code = MPORT_OK;
 
-	(void) snprintf(file, FILENAME_MAX, "%s/%s", tmpdir, MPORT_STUB_DB_FILE);
-
 	dispatch_sync(mportSQLSerial, ^{
+		char file[FILENAME_MAX];
+		(void) snprintf(file, FILENAME_MAX, "%s/%s", tmpdir, MPORT_STUB_DB_FILE);
 		if (sqlite3_open(file, db) != SQLITE_OK) {
 			sqlite3_close(*db);
 			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(*db));
@@ -271,7 +272,7 @@ insert_meta(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
   if (insert_categories(db, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
-  return MPORT_OK;
+  return error_code;
 }
 
 
