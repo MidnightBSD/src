@@ -68,12 +68,12 @@ mport_db_do(sqlite3 *db, const char *fmt, ...) {
             sleep(1);
             if (sqlite3_exec(db, sql, 0, 0, 0) != SQLITE_OK) {
                 sqlite3_free(sql);
-                err = sqlite3_errmsg(db);
+                err = (char *)sqlite3_errmsg(db);
                 result = MPORT_ERR_FATAL;
             }
         } else if (sqlcode != SQLITE_OK) {
             sqlite3_free(sql);
-            err = sqlite3_errmsg(db);
+            err = (char *)sqlite3_errmsg(db);
             result = MPORT_ERR_FATAL;
         }
 
