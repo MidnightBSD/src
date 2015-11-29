@@ -357,27 +357,28 @@ static int lookup_hardlink(mportBundleWrite *bundle, struct archive_entry *entry
 }
 
 
-static void free_linktable(struct links_table *links)
+static void
+free_linktable(struct links_table *links)
 {
-  size_t i;
-  struct link_node *node;
-  
-  if ((links == NULL) || (links->buckets == NULL))
-    return;
+	size_t i;
+	struct link_node *node;
 
-  for (i = 0; i < links->nbuckets; i++) {
-    while (links->buckets[i] != NULL) {
-      node = links->buckets[i];
-      links->buckets[i] = node->next;
-      
-      if (node->name != NULL)
-        free(node->name);
-      
-      free(node);
-    }
-  }
-  
-  free(links->buckets);
-  links->buckets = NULL;
+	if ((links == NULL) || (links->buckets == NULL))
+		return;
+
+	for (i = 0; i < links->nbuckets; i++) {
+		while (links->buckets[i] != NULL) {
+			node = links->buckets[i];
+			links->buckets[i] = node->next;
+
+			if (node->name != NULL)
+				free(node->name);
+
+			free(node);
+		}
+	}
+
+	free(links->buckets);
+	links->buckets = NULL;
 }
 
