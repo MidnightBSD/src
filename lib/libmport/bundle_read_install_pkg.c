@@ -50,7 +50,9 @@ static int run_pkg_install(mportInstance *, mportBundleRead *, mportPackageMeta 
 static int run_mtree(mportInstance *, mportBundleRead *, mportPackageMeta *);
 static int display_pkg_msg(mportInstance *, mportBundleRead *, mportPackageMeta *);
 
-
+/**
+ * This is a wrapper for all bund read install operations
+ */
 int
 mport_bundle_read_install_pkg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
@@ -81,7 +83,7 @@ do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *
     sqlite3_stmt *assets = NULL;
     sqlite3 *db;
     mportAssetListEntryType type;
-    const char *data, *checksum;
+    const char *data;
     uid_t owner = 0; /* root */
     gid_t group = 0; /* wheel */
     char *mode = NULL;
@@ -97,7 +99,7 @@ do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *
         RETURN_CURRENT_ERROR;
 
     /* Process @preexec steps */
-    if (mport_db_prepare(db, &assets, "SELECT type,data,checksum FROM stub.assets WHERE pkg=%Q", pkg->name) != MPORT_OK)
+    if (mport_db_prepare(db, &assets, "SELECT type, data FROM stub.assets WHERE pkg=%Q", pkg->name) != MPORT_OK)
         goto ERROR;
 
     (void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
@@ -118,7 +120,6 @@ do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *
 
         type = (mportAssetListEntryType) sqlite3_column_int(assets, 0);
         data = sqlite3_column_text(assets, 1);
-        checksum = sqlite3_column_text(assets, 2);
 
         switch (type) {
             case ASSET_CWD:
