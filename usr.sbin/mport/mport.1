@@ -24,7 +24,7 @@
 .\"
 .\" $MidnightBSD$
 .\"
-.Dd October 17, 2015
+.Dd November 29, 2015
 .Dt MPORT 1
 .Os
 .Sh NAME
@@ -49,6 +49,8 @@
 .Nm
 .Cm download
 .Op Ar name
+.Nm
+.Cm index
 .Nm
 .Cm install
 .Op Ar name
@@ -88,6 +90,9 @@ Delete or uninstall all packages on the system.  Useful for major OS upgrades,
 or testing.
 .It Cm download
 Download a package, but do not install it. Useful for later offline installations.
+.It Cm index
+Force a download of the index to refresh it without waiting for the timeout interval. This
+allows the user to get the latest list of packages.
 .It Cm install
 Fetch and install a package
 .It Cm search
