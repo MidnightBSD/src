@@ -208,7 +208,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
                     pkg->name) != MPORT_OK)
         goto ERROR;
 
-    if (mport_db_prepare(db, &assets, "SELECT type,data,checksum FROM stub.assets WHERE pkg=%Q", pkg->name) != MPORT_OK)
+    if (mport_db_prepare(db, &assets, "SELECT type,data,checksum FROM stub.assets WHERE pkg=%Q and type not in (%Q, %Q)", pkg->name, ASSET_PREEXEC, ASSET_POSTEXEC) != MPORT_OK)
         goto ERROR;
 
     (void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
@@ -228,8 +228,8 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
         }
 
         type     = (mportAssetListEntryType) sqlite3_column_int(assets, 0);
-        data     = sqlite3_column_text(assets, 1);
-        checksum = sqlite3_column_text(assets, 2);
+        data     = (char *) sqlite3_column_text(assets, 1);
+        checksum = (char *) sqlite3_column_text(assets, 2);
 
         switch (type) {
             case ASSET_CWD:
