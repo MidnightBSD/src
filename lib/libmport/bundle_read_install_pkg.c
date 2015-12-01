@@ -430,15 +430,12 @@ run_postexec(mportInstance *mport, mportPackageMeta *pkg)
     sqlite3_stmt *assets = NULL;
     sqlite3 *db;
     mportAssetListEntryType type;
-    const char *data, *checksum;
-    char *mode = NULL;
-    uid_t owner = 0; /* root */
-    gid_t group = 0; /* wheel */
+    const char *data;
 
     db = mport->db;
 
     /* Process @postexec steps */
-    if (mport_db_prepare(db, &assets, "SELECT type,data,checksum FROM stub.assets WHERE pkg=%Q", pkg->name) != MPORT_OK)
+    if (mport_db_prepare(db, &assets, "SELECT type, data FROM stub.assets WHERE pkg=%Q and type in (%Q, %Q)", pkg->name, ASSET_CWD, ASSET_POSTEXEC) != MPORT_OK)
         goto ERROR;
 
     (void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
@@ -458,8 +455,7 @@ run_postexec(mportInstance *mport, mportPackageMeta *pkg)
         }
 
         type = (mportAssetListEntryType) sqlite3_column_int(assets, 0);
-        data = sqlite3_column_text(assets, 1);
-        checksum = sqlite3_column_text(assets, 2);
+        data = (char *) sqlite3_column_text(assets, 1);
 
         char file[FILENAME_MAX];
         if (data == NULL) {
@@ -475,23 +471,6 @@ run_postexec(mportInstance *mport, mportPackageMeta *pkg)
                 (void) strlcpy(cwd, data == NULL ? pkg->prefix : data, sizeof(cwd));
                 if (mport_chdir(mport, cwd) != MPORT_OK)
                     goto ERROR;
-
-                break;
-            case ASSET_CHMOD:
-                printf("asset_chmod %s, %s\n", mode, data);
-                if (mode != NULL)
-                    free(mode);
-                /* TODO: should we reset the mode rather than NULL here */
-                if (data == NULL)
-                    mode = NULL;
-                else
-                    mode = strdup(data);
-                break;
-            case ASSET_CHOWN:
-                owner = mport_get_uid(data);
-                break;
-            case ASSET_CHGRP:
-                group = mport_get_gid(data);
                 break;
             case ASSET_POSTEXEC:
                 if (mport_run_asset_exec(mport, data, cwd, file) != MPORT_OK)
