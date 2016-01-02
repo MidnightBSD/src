@@ -10,6 +10,7 @@
 #include <sys/cdefs.h>
 __FBSDID("$MidnightBSD$");
 
+#include "opt_compat.h"
 #include "opt_ntp.h"
 
 #include <sys/param.h>
@@ -99,7 +100,7 @@ SYSCTL_PROC(_kern, KERN_BOOTTIME, boottime, CTLTYPE_STRUCT|CTLFLAG_RD,
     NULL, 0, sysctl_kern_boottime, "S,timeval", "System boottime");
 
 SYSCTL_NODE(_kern, OID_AUTO, timecounter, CTLFLAG_RW, 0, "");
-SYSCTL_NODE(_kern_timecounter, OID_AUTO, tc, CTLFLAG_RW, 0, "");
+static SYSCTL_NODE(_kern_timecounter, OID_AUTO, tc, CTLFLAG_RW, 0, "");
 
 static int timestepwarnings;
 SYSCTL_INT(_kern_timecounter, OID_AUTO, stepwarnings, CTLFLAG_RW,
@@ -493,10 +494,10 @@ tc_windup(void)
 	/* Now is a good time to change timecounters. */
 	if (th->th_counter != timecounter) {
 #ifndef __arm__
-		if ((timecounter->tc_flags & TC_FLAGS_C3STOP) != 0)
-			cpu_disable_deep_sleep++;
-		if ((th->th_counter->tc_flags & TC_FLAGS_C3STOP) != 0)
-			cpu_disable_deep_sleep--;
+		if ((timecounter->tc_flags & TC_FLAGS_C2STOP) != 0)
+			cpu_disable_c2_sleep++;
+		if ((th->th_counter->tc_flags & TC_FLAGS_C2STOP) != 0)
+			cpu_disable_c2_sleep--;
 #endif
 		th->th_counter = timecounter;
 		th->th_offset_count = ncount;

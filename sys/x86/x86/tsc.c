@@ -449,12 +449,12 @@ init_TSC_tc(void)
 	 * Currently only Intel CPUs are known for this problem unless
 	 * the invariant TSC bit is set.
 	 */
-	if (cpu_can_deep_sleep && cpu_vendor_id == CPU_VENDOR_INTEL &&
+	if (cpu_deepest_sleep >= 2 && cpu_vendor_id == CPU_VENDOR_INTEL &&
 	    (amd_pminfo & AMDPM_TSC_INVARIANT) == 0) {
 		tsc_timecounter.tc_quality = -1000;
-		tsc_timecounter.tc_flags |= TC_FLAGS_C3STOP;
+		tsc_timecounter.tc_flags |= TC_FLAGS_C2STOP;
 		if (bootverbose)
-			printf("TSC timecounter disabled: C3 enabled.\n");
+			printf("TSC timecounter disabled: C2/C3 enabled.\n");
 		goto init;
 	}
 
