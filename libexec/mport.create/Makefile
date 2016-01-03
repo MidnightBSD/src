@@ -1,3 +1,5 @@
+# $MidnightBSD$
+
 PROG= mport.create
 
 CFLAGS+=	-fblocks -I${.CURDIR}/../../lib/libmport/

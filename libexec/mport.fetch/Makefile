@@ -1,11 +1,11 @@
 PROG= mport.fetch
 
-CFLAGS=	-I${.CURDIR}/../../lib/libmport/ -g
+CFLAGS=	-I${.CURDIR}/../../lib/libmport/ -fblocks
 WARNS?= 	4
 
 NO_MAN=		yes
 
-LDADD= 	-lmport
-DPADD= 	${LIBMPORT} 
+LDADD= 	-lmport -ldispatch -lBlocksRuntime
+DPADD= 	${LIBMPORT} ${LIBDISPATCH} ${LIBBLOCKSRUNTIME}
 
 .include <bsd.prog.mk>
