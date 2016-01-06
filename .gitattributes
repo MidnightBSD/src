@@ -50289,6 +50289,8 @@ lib/libcrypt/crypt.3 -text
 lib/libcrypt/crypt.c -text
 lib/libcrypt/crypt.h -text
 lib/libcrypt/misc.c -text
+lib/libcxxrt/Makefile svneol=native#text/plain
+lib/libcxxrt/Version.map -text
 lib/libdevinfo/Makefile -text
 lib/libdevinfo/devinfo.3 -text
 lib/libdevinfo/devinfo.c -text
