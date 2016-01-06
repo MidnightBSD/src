@@ -49779,6 +49779,7 @@ lib/libc/stdlib/abort.3 -text
 lib/libc/stdlib/abort.c -text
 lib/libc/stdlib/abs.3 -text
 lib/libc/stdlib/abs.c -text
+lib/libc/stdlib/aligned_alloc.3 svneol=native#text/plain
 lib/libc/stdlib/alloca.3 -text
 lib/libc/stdlib/at_quick_exit.3 -text
 lib/libc/stdlib/atexit.3 -text

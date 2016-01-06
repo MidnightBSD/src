@@ -123,7 +123,9 @@
  * defaults the A and J runtime options to off.  These settings are appropriate
  * for production systems.
  */
+#ifndef MALLOC_PRODUCTION
 #define	MALLOC_PRODUCTION
+#endif
 
 #ifndef MALLOC_PRODUCTION
    /*
@@ -158,7 +160,8 @@
 #define	MALLOC_DSS
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__MBSDID("$MidnightBSD$");
+/* $FreeBSD: release/9.2.0/lib/libc/stdlib/malloc.c 252699 2013-07-04 14:26:42Z des $ */
 
 #include "libc_private.h"
 #ifdef MALLOC_DEBUG
@@ -6043,6 +6046,20 @@ posix_memalign(void **memptr, size_t alignment, size_t size)
 RETURN:
 	UTRACE(0, size, result);
 	return (ret);
+}
+
+void *
+aligned_alloc(size_t alignment, size_t size)
+{
+	void *memptr;
+	int ret;
+
+	ret = posix_memalign(&memptr, alignment, size);
+	if (ret != 0) {
+		errno = ret;
+		return (NULL);
+	}
+	return (memptr);
 }
 
 void *
