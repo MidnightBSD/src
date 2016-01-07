@@ -16928,7 +16928,9 @@ contrib/libarchive/test_utils/test_utils.h -text
 contrib/libbegemot/rpoll.c -text
 contrib/libbegemot/rpoll.h -text
 contrib/libbegemot/rpoll.man -text
-contrib/libc++/FREEBSD-upgrade -text
+contrib/libc++/CREDITS.TXT svneol=native#text/plain
+contrib/libc++/LICENSE.TXT svneol=native#text/plain
+contrib/libc++/MIDNIGHTBSD-upgrade -text
 contrib/libc++/include/__bit_reference -text
 contrib/libc++/include/__config -text
 contrib/libc++/include/__debug -text
@@ -17046,8 +17048,6 @@ contrib/libc++/src/regex.cpp -text
 contrib/libc++/src/stdexcept.cpp -text
 contrib/libc++/src/string.cpp -text
 contrib/libc++/src/strstream.cpp -text
-contrib/libc++/src/support/win32/locale_win32.cpp -text
-contrib/libc++/src/support/win32/support.cpp -text
 contrib/libc++/src/system_error.cpp -text
 contrib/libc++/src/thread.cpp -text
 contrib/libc++/src/typeinfo.cpp -text
