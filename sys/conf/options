@@ -905,3 +905,7 @@ RCTL		opt_global.h
 # defined, this option will suffice in overriding what Redboot says.
 AR71XX_REALMEM    opt_global.h
 
+# Mach support options
+COMPAT_MACH_STATIC
+COMPAT_MACH_PORT_DEBUG opt_compat_mach.h
+
