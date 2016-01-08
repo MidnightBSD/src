@@ -312,7 +312,8 @@ struct thread {
 	struct vnet	*td_vnet;	/* (k) Effective vnet. */
 	const char	*td_vnet_lpush;	/* (k) Debugging vnet push / pop. */
 	struct trapframe *td_intr_frame;/* (k) Frame of the current irq */
-	struct proc *td_rfppwait_p;	/* (k) The vforked child */
+	struct proc	*td_rfppwait_p;	/* (k) The vforked child */
+	void		*td_machdata;   /* (k) mach state. */
 };
 
 struct mtx *thread_lock_block(struct thread *);
@@ -588,6 +589,8 @@ struct proc {
 	 */
 	LIST_ENTRY(proc) p_orphan;	/* (e) List of orphan processes. */
 	LIST_HEAD(, proc) p_orphans;	/* (e) Pointer to list of orphans. */
+
+	void		*p_machdata;	/* (c) Mach state data. */
 };
 
 #define	p_session	p_pgrp->pg_session
