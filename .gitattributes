@@ -62450,6 +62450,7 @@ sys/modules/mac_portacl/Makefile -text
 sys/modules/mac_seeotheruids/Makefile -text
 sys/modules/mac_stub/Makefile -text
 sys/modules/mac_test/Makefile -text
+sys/modules/mach/Makefile svneol=native#text/plain
 sys/modules/malo/Makefile -text
 sys/modules/mcd/Makefile -text
 sys/modules/md/Makefile -text
