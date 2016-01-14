@@ -8,6 +8,11 @@
 #include <sys/types.h>
 #include <sys/systm.h>
 
+int sys___proc_info(struct thread *td __unused, struct __proc_info_args *uap);
+int sys___iopolicysys(struct thread *td __unused, struct __iopolicysys_args *uap
+ __unused);
+
+
 extern struct filterops machport_filtops;
 
 static struct syscall_helper_data osx_syscalls[] = {

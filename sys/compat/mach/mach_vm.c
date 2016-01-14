@@ -750,11 +750,11 @@ kern_return_t	vm_map_copyin(
 		offset = 0;
 		vm_map_clip_start(src_map, tmp_entry, src_start);
 		vm_map_clip_end(src_map, tmp_entry, src_end);
-		VM_OBJECT_WLOCK(object);
+		VM_OBJECT_LOCK(object);
 		vm_object_reference_locked(object);
 		vm_object_split(tmp_entry);
 		object = tmp_entry->object.vm_object;
-		VM_OBJECT_WUNLOCK(object);
+		VM_OBJECT_UNLOCK(object);
 		vm_map_delete(src_map, src_start, src_end);
 		vm_map_unlock(src_map);
 	} else {

@@ -35,8 +35,11 @@ __FBSDID("$FreeBSD$");
 #define PRIVATE
 #include <sys/proc_info.h>
 
+#include <sys/sysproto.h>
 
 int set_security_token(task_t);
+int sys___proc_info(struct thread *td __unused, struct __proc_info_args *uap);
+int sys___iopolicysys(struct thread *td __unused, struct __iopolicysys_args *uap __unused);
 
 
 static int
@@ -473,6 +476,7 @@ set_security_token(task_t task)
 
 	return (0);
 }
+
 
 int
 sys___proc_info(struct thread *td __unused, struct __proc_info_args *uap)
