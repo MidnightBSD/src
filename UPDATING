@@ -8,6 +8,12 @@ Updating Information for MidnightBSD users.
 	A programming error in processing a TCP connection with both TCP_MD5SIG
 	and TCP_NOOPT socket options may lead to kernel crash.
 
+	SCTP
+
+	A lack of proper input checks in the ICMPv6 processing in the SCTP stack
+	can lead to either a failed kernel assertion or to a NULL pointer
+	dereference.  In either case, a kernel panic will follow.
+
 20160102:
 	Happy New Year
 
