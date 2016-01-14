@@ -42,7 +42,9 @@
 #define EVFILT_FS		(-9)	/* filesystem events */
 #define EVFILT_LIO		(-10)	/* attached to lio requests */
 #define EVFILT_USER		(-11)	/* User events */
-#define EVFILT_SYSCOUNT		11
+#define EVFILT_SENDFILE		(-12)	/* not available yet */
+#define EVFILT_MACHPORT		(-13)	/* Mach portsets */
+#define EVFILT_SYSCOUNT		13
 
 #define EV_SET(kevp_, a, b, c, d, e, f) do {	\
 	struct kevent *kevp = (kevp_);		\
