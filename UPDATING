@@ -4,6 +4,11 @@ Updating Information for MidnightBSD users.
 	0.7.2 RELEASE
 	Fix a security issue with bsnmpd configuration file installation.
 
+	TCP MD5 signature denial of service
+
+        A programming error in processing a TCP connection with both TCP_MD5SIG
+        and TCP_NOOPT socket options may lead to kernel crash.
+
 20151002:
 	Revised rpcbind(8) patch to fix issues with NIS
 
@@ -15,7 +20,6 @@ Updating Information for MidnightBSD users.
         two netbuf structures that reference to one shared address buffer.  When one
         of the two netbuf structures is freed, access to the other netbuf structure
         would result in an undefined result that may crash the rpcbind(8) daemon.
-
 
 20150919:	
 	0.7 RELEASE
