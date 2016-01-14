@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20160114:
+	0.7.2 RELEASE
+	Fix a security issue with bsnmpd configuration file installation.
+
 20151002:
 	Revised rpcbind(8) patch to fix issues with NIS
 

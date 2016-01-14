@@ -1,5 +1,5 @@
 #	from: @(#)Makefile	5.11 (Berkeley) 5/21/91
-# $MidnightBSD: src/etc/Makefile,v 1.26 2013/01/09 04:14:06 laffer1 Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
@@ -78,10 +78,6 @@ BIN1+= amd.map
 
 .if ${MK_APM} != "no"
 BIN1+= apmd.conf
-.endif
-
-.if ${MK_BSNMP} != "no"
-BIN1+= snmpd.config
 .endif
 
 .if ${MK_LOCATE} != "no"
@@ -188,6 +184,11 @@ distribution:
 		${BIN2} ${DESTDIR}/etc; \
 	    ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 600 \
 		master.passwd nsmb.conf opieaccess ${DESTDIR}/etc;
+.if ${MK_BSNMP} != "no"
+	cd ${.CURDIR}; \
+	    ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 600 \
+		snmpd.config ${DESTDIR}/etc;
+.endif
 .if ${MK_AT} == "no"
 	sed -i "" -e 's;.*/usr/libexec/atrun;#&;' ${DESTDIR}/etc/crontab
 .endif
