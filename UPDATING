@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20160114:
+	Fix security on bsnmpd configuration file during installation.
+
+	
+
 20160102:
 	Happy New Year
 
