@@ -3,7 +3,10 @@ Updating Information for MidnightBSD users.
 20160114:
 	Fix security on bsnmpd configuration file during installation.
 
-	
+	TCP MD5 signature denial of service
+
+	A programming error in processing a TCP connection with both TCP_MD5SIG
+	and TCP_NOOPT socket options may lead to kernel crash.
 
 20160102:
 	Happy New Year
