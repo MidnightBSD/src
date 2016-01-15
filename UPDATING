@@ -1,6 +1,10 @@
 Updating Information for MidnightBSD users.
 
 20160114:
+	OpenSSH
+	
+	Disable roaming to mitigate a security issue with OpenSSH.
+
 	0.7.3 RELEASE
 
 	OpenSSL
