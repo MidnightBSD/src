@@ -783,7 +783,7 @@ linux_get_robust_list(struct thread *td, struct linux_get_robust_list_args *args
 	if (error)
 		return (EFAULT);
 
-	error = copyout(head, args->head, sizeof(struct linux_robust_list_head));
+	error = copyout(&head, args->head, sizeof(head));
 
 	return (error);
 }

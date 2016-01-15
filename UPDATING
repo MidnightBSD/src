@@ -1,6 +1,17 @@
 Updating Information for MidnightBSD users.
 
 20160114:
+	0.7.3 RELEASE
+	
+	linuxolator
+
+	A programming error in the Linux compatibility layer setgroups(2) system
+	call can lead to an unexpected results, such as overwriting random kernel
+	memory contents.
+
+	A programming error in the handling of Linux futex robust lists may result
+	in incorrect memory locations being accessed.
+
 	0.7.2 RELEASE
 	Fix a security issue with bsnmpd configuration file installation.
 
