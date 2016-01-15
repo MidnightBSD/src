@@ -1,6 +1,18 @@
 Updating Information for MidnightBSD users.
 
 20160114:
+	OpenSSL
+
+	The signature verification routines will crash with a NULL pointer dereference
+        if presented with an ASN.1 signature using the RSA PSS algorithm and absent
+        mask generation function parameter. [CVE-2015-3194]
+
+        When presented with a malformed X509_ATTRIBUTE structure, OpenSSL will leak
+        memory. [CVE-2015-3195]
+
+        If PSK identity hints are received by a multi-threaded client then the values
+        are incorrectly updated in the parent SSL_CTX structure.  [CVE-2015-3196]
+
 	Fix security on bsnmpd configuration file during installation.
 
 	TCP MD5 signature denial of service
