@@ -332,7 +332,7 @@ insert_conflicts(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 
 	/* we have a conflict like apache-1.4.  We want to do a m/(.*)-(.*)/ */
 	while (*conflict != NULL) {
-		dispatch_async(mportSQLSerial, ^{
+		dispatch_sync(mportSQLSerial, ^{
 			char *version = rindex(*conflict, '-');
 
 			if (sqlite3_bind_text(stmnt, 1, pack->name, -1, SQLITE_STATIC) != SQLITE_OK) {
