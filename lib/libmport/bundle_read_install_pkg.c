@@ -94,7 +94,7 @@ do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *
         RETURN_CURRENT_ERROR;
 
     /* Process @preexec steps */
-    if (mport_db_prepare(db, &assets, "SELECT type, data FROM stub.assets WHERE pkg=%Q and type in (%Q, %Q)", pkg->name, ASSET_CWD, ASSET_PREEXEC) != MPORT_OK)
+    if (mport_db_prepare(db, &assets, "SELECT type, data FROM stub.assets WHERE pkg=%Q and type in (%d, %d)", pkg->name, ASSET_CWD, ASSET_PREEXEC) != MPORT_OK)
         goto ERROR;
 
     (void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
@@ -435,7 +435,7 @@ run_postexec(mportInstance *mport, mportPackageMeta *pkg)
     db = mport->db;
 
     /* Process @postexec steps */
-    if (mport_db_prepare(db, &assets, "SELECT type, data FROM stub.assets WHERE pkg=%Q and type in (%Q, %Q)", pkg->name, ASSET_CWD, ASSET_POSTEXEC) != MPORT_OK)
+    if (mport_db_prepare(db, &assets, "SELECT type, data FROM stub.assets WHERE pkg=%Q and type in (%d, %d)", pkg->name, ASSET_CWD, ASSET_POSTEXEC) != MPORT_OK)
         goto ERROR;
 
     (void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
