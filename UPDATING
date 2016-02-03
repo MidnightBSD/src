@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20160202:
+	A programming error in the Linux compatibility layer could cause the
+	issetugid(2) system call to return incorrect information.
+
 20160130:
 	MidnightBSD 0.7.4 RELEASE
 
