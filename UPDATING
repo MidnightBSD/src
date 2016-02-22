@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20160222:
+	Introduce pipe2 to linux emulation layer.
+
 20160114:
 	OpenSSL
 
