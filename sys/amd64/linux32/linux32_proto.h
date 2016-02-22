@@ -152,7 +152,7 @@ struct linux_rmdir_args {
 	char path_l_[PADL_(char *)]; char * path; char path_r_[PADR_(char *)];
 };
 struct linux_pipe_args {
-	char pipefds_l_[PADL_(l_ulong *)]; l_ulong * pipefds; char pipefds_r_[PADR_(l_ulong *)];
+	char pipefds_l_[PADL_(l_int *)]; l_int * pipefds; char pipefds_r_[PADR_(l_int *)];
 };
 struct linux_times_args {
 	char buf_l_[PADL_(struct l_times_argv *)]; struct l_times_argv * buf; char buf_r_[PADR_(struct l_times_argv *)];
@@ -1044,7 +1044,8 @@ struct linux_dup3_args {
 	register_t dummy;
 };
 struct linux_pipe2_args {
-	register_t dummy;
+	char pipefds_l_[PADL_(l_int *)]; l_int * pipefds; char pipefds_r_[PADR_(l_int *)];
+	char flags_l_[PADL_(l_int)]; l_int flags; char flags_r_[PADR_(l_int)];
 };
 struct linux_inotify_init1_args {
 	register_t dummy;
