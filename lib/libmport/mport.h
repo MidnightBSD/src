@@ -139,6 +139,7 @@ typedef struct {
 int mport_index_load(mportInstance *);
 int mport_index_lookup_pkgname(mportInstance *, const char *, mportIndexEntry ***);
 int mport_index_search(mportInstance *, mportIndexEntry ***, const char *, ...);
+int mport_index_list(mportInstance *, mportIndexEntry ***);
 void mport_index_entry_free_vec(mportIndexEntry **);
 void mport_index_entry_free(mportIndexEntry *);
 

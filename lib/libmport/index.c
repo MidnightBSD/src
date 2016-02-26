@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/index.c,v 1.18 2013/01/22 02:26:09 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -401,6 +401,77 @@ MPORT_PUBLIC_API int mport_index_search(mportInstance *mport, mportIndexEntry **
   }
 
   sqlite3_free(where);
+  sqlite3_finalize(stmt);
+
+  return ret;
+}
+
+
+MPORT_PUBLIC_API int 
+mport_index_list(mportInstance *mport, mportIndexEntry ***entry_vec)
+{
+  sqlite3_stmt *stmt;
+  int ret = MPORT_OK, len;
+  int i = 0, step;
+  sqlite3 *db = mport->db;
+  mportIndexEntry **e;
+
+  if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM idx.packages") != MPORT_OK) {
+    sqlite3_finalize(stmt);
+    RETURN_CURRENT_ERROR;
+  }
+
+  if (sqlite3_step(stmt) != SQLITE_ROW) {
+    sqlite3_finalize(stmt);
+    RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+  }
+
+  len = sqlite3_column_int(stmt, 0);
+  sqlite3_finalize(stmt);
+
+  e = (mportIndexEntry **)calloc(len + 1, sizeof(mportIndexEntry *));
+  *entry_vec = e;
+
+  if (len == 0) {
+    return MPORT_OK;
+  }
+
+  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, comment, bundlefile, license, hash FROM idx.packages") != MPORT_OK) {
+    sqlite3_finalize(stmt);
+    RETURN_CURRENT_ERROR;
+  }
+
+  while (1) {
+    step = sqlite3_step(stmt);
+
+    if (step == SQLITE_ROW) {
+      if ((e[i] = (mportIndexEntry *)calloc(1, sizeof(mportIndexEntry))) == NULL) {
+        ret = MPORT_ERR_FATAL;
+        break;
+      }
+
+      e[i]->pkgname    = strdup(sqlite3_column_text(stmt, 0));
+      e[i]->version    = strdup(sqlite3_column_text(stmt, 1));
+      e[i]->comment    = strdup(sqlite3_column_text(stmt, 2));
+      e[i]->bundlefile = strdup(sqlite3_column_text(stmt, 3));
+      e[i]->license    = strdup(sqlite3_column_text(stmt, 4));
+      e[i]->hash       = strdup(sqlite3_column_text(stmt, 5));
+
+      if (e[i]->pkgname == NULL || e[i]->version == NULL || e[i]->comment == NULL || e[i]->license == NULL || e[i]->bundlefile == NULL) {
+        ret = MPORT_ERR_FATAL;
+        break;
+      }
+
+      i++;
+    } else if (step == SQLITE_DONE) {
+      e[i] = NULL;
+      break;
+    } else {
+      ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+      break;
+    }
+  }
+
   sqlite3_finalize(stmt);
 
   return ret;
