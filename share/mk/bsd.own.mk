@@ -323,6 +323,7 @@ __DEFAULT_YES_OPTIONS = \
     BZIP2 \
     CALENDAR \
     CDDL \
+    CLANG_IS_CC \
     CPP \
     CRYPT \
     CTM \
@@ -357,6 +358,7 @@ __DEFAULT_YES_OPTIONS = \
     KVM \
     LEGACY_CONSOLE \
     LIB32 \
+    LIBCPLUSPLUS \
     LIBPTHREAD \
     LIBTHR \
     LOCALES \
@@ -416,10 +418,8 @@ __DEFAULT_NO_OPTIONS = \
     BIND_SIGCHASE \
     BIND_XML \
     CLANG_EXTRAS \
-    CLANG_IS_CC \
     HESIOD \
     IDEA \
-    LIBCPLUSPLUS \
     OFED \
     SHARED_TOOLCHAIN \
     SVN
@@ -439,9 +439,9 @@ __T=${MACHINE_ARCH}
 .endif
 # Clang is only for x86 right now, by default.
 .if ${__T} == "amd64" || ${__T} == "i386"
-__DEFAULT_YES_OPTIONS+=CLANG
+__DEFAULT_YES_OPTIONS+=CLANG CLANG_FULL
 .else
-__DEFAULT_NO_OPTIONS+=CLANG
+__DEFAULT_NO_OPTIONS+=CLANG CLANG_FULL
 .endif
 __DEFAULT_NO_OPTIONS+=FDT
 .undef __T
@@ -566,11 +566,8 @@ MK_GDB:=	no
 
 .if ${MK_CLANG} == "no"
 MK_CLANG_IS_CC:= no
+MK_CLANG_FULL:= no
 .endif
-
-MK_LIBCPLUSPLUS?= no
-
-MK_LIBCPLUSPLUS?= no
 
 #
 # Set defaults for the MK_*_SUPPORT variables.
