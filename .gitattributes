@@ -17053,9 +17053,10 @@ contrib/libc++/src/thread.cpp -text
 contrib/libc++/src/typeinfo.cpp -text
 contrib/libc++/src/utility.cpp -text
 contrib/libc++/src/valarray.cpp -text
-contrib/libcxxrt/FREEBSD-upgrade -text
 contrib/libcxxrt/LICENSE -text
+contrib/libcxxrt/MIDNIGHTBSD-upgrade -text
 contrib/libcxxrt/abi_namespace.h -text
+contrib/libcxxrt/atomic.h svneol=native#text/plain
 contrib/libcxxrt/auxhelper.cc -text
 contrib/libcxxrt/cxxabi.h -text
 contrib/libcxxrt/dwarf_eh.h -text
