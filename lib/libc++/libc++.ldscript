@@ -1,0 +1,2 @@
+/* $MidnightBSD$ */
+GROUP ( @@SHLIB@@ @@LIBDIR@@/libcxxrt.so )

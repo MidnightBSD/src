@@ -48473,6 +48473,7 @@ lib/libbsnmp/Makefile.inc -text
 lib/libbsnmp/libbsnmp/Makefile -text
 lib/libbz2/Makefile -text
 lib/libc++/Makefile svneol=native#text/plain
+lib/libc++/libc++.ldscript -text
 lib/libc/Makefile -text
 lib/libc/Versions.def -text
 lib/libc/amd64/Makefile.inc -text
