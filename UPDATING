@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20160229:
+	top now displays information on ZFS arc cache.
+
+20160228:
+	llvm + clang 3.3 is now the default compiler in MidnightBSD. 
+
 20160222:
 	Introduce pipe2 to linux emulation layer.
 
