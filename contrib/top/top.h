@@ -1,5 +1,5 @@
 /*
- * $MidnightBSD$
+ * $FreeBSD: releng/9.2/contrib/top/top.h 223342 2011-06-20 16:48:00Z delphij $
  */
 /*
  *  Top - a top users display for Berkeley Unix

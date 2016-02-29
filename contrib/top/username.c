@@ -8,7 +8,7 @@
  *  Copyright (c) 1984, 1989, William LeFebvre, Rice University
  *  Copyright (c) 1989, 1990, 1992, William LeFebvre, Northwestern University
  *
- * $MidnightBSD$
+ * $FreeBSD: releng/9.2/contrib/top/username.c 200979 2009-12-25 09:02:41Z ed $
  */
 
 /*

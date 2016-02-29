@@ -8,7 +8,7 @@
  *  Copyright (c) 1984, 1989, William LeFebvre, Rice University
  *  Copyright (c) 1989, 1990, 1992, William LeFebvre, Northwestern University
  *
- * $MidnightBSD$
+ * $FreeBSD: releng/9.2/contrib/top/display.c 239750 2012-08-27 19:55:19Z jhb $
  */
 
 /*
@@ -66,6 +66,7 @@ char *screenbuf = NULL;
 static char **procstate_names;
 static char **cpustate_names;
 static char **memory_names;
+static char **arc_names;
 static char **swap_names;
 
 static int num_procstates;
@@ -100,6 +101,8 @@ int  x_brkdn =		15;
 int  y_brkdn =		1;
 int  x_mem =		5;
 int  y_mem =		3;
+int  x_arc =		5;
+int  y_arc =		4;
 int  x_swap =		6;
 int  y_swap =		4;
 int  y_message =	5;
@@ -216,6 +219,8 @@ struct statics *statics;
 	num_memory = string_count(memory_names);
 	lmemory = (int *)malloc(num_memory * sizeof(int));
 
+	arc_names = statics->arc_names;
+	
 	/* calculate starting columns where needed */
 	cpustate_total_length = 0;
 	pp = cpustate_names;
@@ -626,6 +631,46 @@ int *stats;
     line_update(memory_buffer, new, x_mem, y_mem);
 }
 
+/*
+ *  *_arc(stats) - print "ARC: " followed by the ARC summary string
+ *
+ *  Assumptions:  cursor is on "lastline"
+ *                for i_arc ONLY: cursor is on the previous line
+ */
+char arc_buffer[MAX_COLS];
+
+i_arc(stats)
+
+int *stats;
+
+{
+    if (arc_names == NULL)
+	return (0);
+
+    fputs("\nARC: ", stdout);
+    lastline++;
+
+    /* format and print the memory summary */
+    summary_format(arc_buffer, stats, arc_names);
+    fputs(arc_buffer, stdout);
+}
+
+u_arc(stats)
+
+int *stats;
+
+{
+    static char new[MAX_COLS];
+
+    if (arc_names == NULL)
+	return (0);
+
+    /* format the new line */
+    summary_format(new, stats, arc_names);
+    line_update(arc_buffer, new, x_arc, y_arc);
+}
+
+ 
 /*
  *  *_swap(stats) - print "Swap: " followed by the swap summary string
  *

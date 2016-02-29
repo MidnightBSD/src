@@ -1,5 +1,5 @@
 /*
- * $MidnightBSD$
+ * $FreeBSD: releng/9.2/contrib/top/machine.h 239750 2012-08-27 19:55:19Z jhb $
  */
 
 /*
@@ -16,6 +16,7 @@ struct statics
     char **procstate_names;
     char **cpustate_names;
     char **memory_names;
+    char **arc_names;
     char **swap_names;
 #ifdef ORDER
     char **order_names;
@@ -42,6 +43,7 @@ struct system_info
     int    *procstates;
     int    *cpustates;
     int    *memory;
+    int    *arc;
     int    *swap;
     struct timeval boottime;
     int    ncpus;

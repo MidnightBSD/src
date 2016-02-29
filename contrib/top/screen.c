@@ -8,7 +8,7 @@
  *  Copyright (c) 1984, 1989, William LeFebvre, Rice University
  *  Copyright (c) 1989, 1990, 1992, William LeFebvre, Northwestern University
  *
- * $MidnightBSD$
+ * $FreeBSD: releng/9.2/contrib/top/screen.c 210386 2010-07-22 18:52:29Z rpaulo $
  */
 
 /*  This file contains the routines that interface to termcap and stty/gtty.
