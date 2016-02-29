@@ -1,5 +1,6 @@
+# $FreeBSD: stable/10/lib/libc++/Makefile 289079 2015-10-09 19:38:53Z dim $
 # $MidnightBSD$
-# $FreeBSD: release/9.2.0/lib/libc++/Makefile 242600 2012-11-05 07:44:00Z dim $
+.include <bsd.own.mk>
 
 LIBCXXRTDIR=	${.CURDIR}/../../contrib/libcxxrt
 HDRDIR=		${.CURDIR}/../../contrib/libc++/include
@@ -10,6 +11,7 @@ CXXINCLUDEDIR=	${INCLUDEDIR}/c++/v${SHLIB_MAJOR}
 
 LIB=		c++
 SHLIB_MAJOR=	1
+SHLIB_LDSCRIPT=	libc++.ldscript
 
 SRCS+=		algorithm.cpp\
 		bind.cpp\
@@ -25,8 +27,10 @@ SRCS+=		algorithm.cpp\
 		memory.cpp\
 		mutex.cpp\
 		new.cpp\
+		optional.cpp\
 		random.cpp\
 		regex.cpp\
+		shared_mutex.cpp\
 		stdexcept.cpp\
 		string.cpp\
 		strstream.cpp\
@@ -55,13 +59,12 @@ cxxrt_${_S}:
 WARNS=		0
 CFLAGS+=	-I${HDRDIR} -I${LIBCXXRTDIR} -nostdlib -DLIBCXXRT
 .if empty(CXXFLAGS:M-std=*)
-CXXFLAGS+=	-std=c++0x
+CXXFLAGS+=	-std=c++11
 .endif
 
 DPADD=		${LIBCXXRT}
 LDADD=		-lcxxrt
-LDFLAGS+=	--verbose
-INCSGROUPS=	STD EXT
+INCSGROUPS=	STD EXP EXT
 
 STD_HEADERS=	__bit_reference\
 		__config\
@@ -72,6 +75,7 @@ STD_HEADERS=	__bit_reference\
 		__hash_table\
 		__locale\
 		__mutex_base\
+		__refstring\
 		__split_buffer\
 		__sso_allocator\
 		__std_stream\
@@ -140,6 +144,7 @@ STD_HEADERS=	__bit_reference\
 		regex\
 		scoped_allocator\
 		set\
+		shared_mutex\
 		sstream\
 		stack\
 		stdexcept\
@@ -165,11 +170,24 @@ RT_HEADERS=	cxxabi.h\
 
 .for hdr in ${STD_HEADERS}
 STD+=		${HDRDIR}/${hdr}
+INCSLINKS+=	${CXXINCLUDEDIR}/${hdr} ${CXXINCLUDEDIR}/tr1/${hdr}
 .endfor
 .for hdr in ${RT_HEADERS}
 STD+=		${LIBCXXRTDIR}/${hdr}
 .endfor
 STDDIR=		${CXXINCLUDEDIR}
+
+EXP_HEADERS=	__config\
+		dynarray\
+		optional\
+		string_view\
+		type_traits\
+		utility
+
+.for hdr in ${EXP_HEADERS}
+EXP+=		${HDRDIR}/experimental/${hdr}
+.endfor
+EXPDIR=		${CXXINCLUDEDIR}/experimental
 
 EXT_HEADERS=	__hash\
 		hash_map\
@@ -179,5 +197,13 @@ EXT_HEADERS=	__hash\
 EXT+=		${HDRDIR}/ext/${hdr}
 .endfor
 EXTDIR=		${CXXINCLUDEDIR}/ext
+
+CLEANFILES+=	libstdc++.so libstdc++.a
+
+afterinstall:
+	ln -sf ${DESTDIR}${LIBDIR}/lib${LIB}.so \
+		${.OBJDIR}/libstdc++.so
+	ln -sf ${DESTDIR}${LIBDIR}/lib${LIB}.a \
+		${.OBJDIR}/libstdc++.a
 
 .include <bsd.lib.mk>

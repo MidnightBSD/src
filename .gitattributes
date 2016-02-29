@@ -16940,6 +16940,7 @@ contrib/libc++/include/__functional_base_03 -text
 contrib/libc++/include/__hash_table -text
 contrib/libc++/include/__locale -text
 contrib/libc++/include/__mutex_base -text
+contrib/libc++/include/__refstring -text
 contrib/libc++/include/__split_buffer -text
 contrib/libc++/include/__sso_allocator -text
 contrib/libc++/include/__std_stream -text
@@ -16982,6 +16983,12 @@ contrib/libc++/include/cwchar -text
 contrib/libc++/include/cwctype -text
 contrib/libc++/include/deque -text
 contrib/libc++/include/exception -text
+contrib/libc++/include/experimental/__config -text
+contrib/libc++/include/experimental/dynarray -text
+contrib/libc++/include/experimental/optional -text
+contrib/libc++/include/experimental/string_view -text
+contrib/libc++/include/experimental/type_traits -text
+contrib/libc++/include/experimental/utility -text
 contrib/libc++/include/ext/__hash -text
 contrib/libc++/include/ext/hash_map -text
 contrib/libc++/include/ext/hash_set -text
@@ -17001,6 +17008,7 @@ contrib/libc++/include/list -text
 contrib/libc++/include/locale -text
 contrib/libc++/include/map -text
 contrib/libc++/include/memory -text
+contrib/libc++/include/module.modulemap -text
 contrib/libc++/include/mutex -text
 contrib/libc++/include/new -text
 contrib/libc++/include/numeric -text
@@ -17011,6 +17019,7 @@ contrib/libc++/include/ratio -text
 contrib/libc++/include/regex -text
 contrib/libc++/include/scoped_allocator -text
 contrib/libc++/include/set -text
+contrib/libc++/include/shared_mutex -text
 contrib/libc++/include/sstream -text
 contrib/libc++/include/stack -text
 contrib/libc++/include/stdexcept -text
@@ -17043,8 +17052,10 @@ contrib/libc++/src/locale.cpp -text
 contrib/libc++/src/memory.cpp -text
 contrib/libc++/src/mutex.cpp -text
 contrib/libc++/src/new.cpp -text
+contrib/libc++/src/optional.cpp svneol=native#text/plain
 contrib/libc++/src/random.cpp -text
 contrib/libc++/src/regex.cpp -text
+contrib/libc++/src/shared_mutex.cpp svneol=native#text/plain
 contrib/libc++/src/stdexcept.cpp -text
 contrib/libc++/src/string.cpp -text
 contrib/libc++/src/strstream.cpp -text
