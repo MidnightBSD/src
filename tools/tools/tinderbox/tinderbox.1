@@ -1,5 +1,5 @@
 .\"-
-.\" Copyright (c) 2003-2012 Dag-Erling Smørgrav
+.\" Copyright (c) 2003-2014 Dag-Erling Smørgrav
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -23,10 +23,10 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD: src/tools/tools/tinderbox/tinderbox.1,v 1.2 2008/03/07 04:28:13 laffer1 Exp $
-.\" $FreeBSD: projects/tinderbox/tinderbox.1,v 1.18 2008/01/26 19:34:31 des Exp $
+.\" $FreeBSD: user/des/tinderbox/tinderbox.1 268719 2014-07-15 22:34:54Z des $
+.\" $MidnightBSD$
 .\"
-.Dd March 29, 2013
+.Dd May 24, 2014
 .Dt TINDERBOX 1
 .Os
 .Sh NAME
@@ -41,7 +41,7 @@
 The
 .Nm
 script tests the
-.Fx
+.Mx
 build and release system by performing a cross-build (and optionally a
 cross-release) of an arbitrary branch of the source tree for an
 arbitrary target platform.
@@ -49,20 +49,18 @@ arbitrary target platform.
 The following options are recognized:
 .Bl -tag -width 12n
 .It Fl -arch Ns = Ns Ar ARCH
-Specifies the target architecture.
+Specifies the target architecture
+.Pq Va $arch .
 The default value is whatever the host system's
 .Xr uname 1
 reports.
 .It Fl -branch Ns = Ns Ar BRANCH
 The branch to check out from
-.Xr svn 1 ,
-.Xr cvs 1
-or
-.Xr cvsup 1
-when updating the source tree.
+.Xr svn 1
+when updating the source tree
+.Pq Va $branch .
 The default is to check out HEAD.
-When using
-.Xr svn 1 ,
+For historical compatibility,
 .Xr cvs 1 Ns -style
 branch names are translated to
 .Xr svn 1
@@ -74,15 +72,6 @@ and
 .Dv RELENG_9_1
 becomes
 .Pa releng/9.1 .
-.It Fl -cvsup Ns = Ns Ar NAME
-The name of the
-.Xr cvsup 1
-server from which to update the source tree
-.Cm update
-command is specified.
-The default is to use
-.Xr cvs 1
-instead.
 .It Fl -destdir Ns = Ns Ar DIR
 The directory (aka
 .Dv DESTDIR )
@@ -99,7 +88,9 @@ option of the
 .Xr uname 1
 command, and is only used for cosmetic purposes.
 .It Fl -jobs Ns = Ns Ar NUM
-The maximum number of paralell jobs, as specified to
+The maximum number of paralell jobs
+.Pq Va $jobs ,
+as specified to
 .Xr make 1
 using the
 .Fl j
@@ -112,14 +103,16 @@ Note that this file can grow quite large.
 The default is to redirect all output to
 .Pa /dev/stdout .
 .It Fl -machine Ns = Ns Ar MACHINE
-Specifies the target machine.
+Specifies the target machine
+.Pq Va $machine .
 The default value is whatever the host system's
 .Xr uname 1
 reports, unless a target architecture was specified with the
 .Fl -arch
 option, in which case the target machine is set to the same value.
 .It Fl -objdir Ns = Ns Ar DIR
-Specifies the object directory prefix.
+Specifies the object directory prefix
+.Pq Va $objdir .
 .It Fl -patch Ns = Ns Ar PATCH
 The file name of a patch to apply to the source tree before building
 if the
@@ -135,20 +128,13 @@ for more information), regardless of whether the
 .Cm patch
 command was specified.
 The default is to not apply any patches.
-.It Fl -repository Ns = Ns Ar DIR
-The location of the
-.Xr cvs 1
-repository from which to update the source tree if the
-.Cm update
-command is specified.
-The default is
-.Pa /home/ncvs .
 .It Fl -sandbox Ns = Ns Ar DIR
 The location of the sandbox in which the builds are to take place.
 This directory should reside on a reasonably fast disk with at least
 1.5 GB available (3 GB if building a release).
 .It Fl -srcdir Ns = Ns Ar DIR
-Specifies the source directory.
+Specifies the source directory
+.Pq Va $srcdir .
 Normally, the
 .Nm
 script creates a separate source directory within the sandbox for each
@@ -167,6 +153,9 @@ or
 commands.
 .It Fl -svnbase Ns = Ns Ar URL
 The URL to the base of the Subversion repository.
+The default is
+.\" There does not seem to be an mdoc macro for URLs; use Pa instead.
+.Pa svn://svn.freebsd.org/base .
 .It Fl -timeout Ns = Ns Ar NUM
 The maximum wall-time duration of the run, in seconds.
 The default is to continue until all targets are completed.
@@ -213,12 +202,11 @@ Delete the object tree at the start of each job.
 Delete the installation tree at the start of each job.
 .It Cm precleanroot
 Delete the release chroot tree at the start of each job.
+.It Cm revert
+Revert the source tree to a clean state.
 .It Cm update
-Update the sources using
-.Xr cvs 1 .
-This is highly recommended, for obvious reasons, if the
-.Cm clean
-command is specified.
+Update the source tree using
+.Xr svn 1 .
 .It Cm patch
 Apply the patch specified with the
 .Fl -patch
@@ -226,6 +214,9 @@ option to the source tree.
 If the specified patch file does not exist, the
 .Cm patch
 command will fail gracefully.
+.It Cm version
+After updating and patching the source tree but before doing anything
+else, log information about the current state of the source tree.
 .It Cm world
 Build the world.
 .It Cm lint
@@ -289,9 +280,6 @@ but at the end of each job.
 As
 .Cm precleanroot ,
 but at the end of each job.
-.It Cm version
-After updating and patching the source tree but before doing anything
-else, log information about the current state of the source tree.
 .El
 .Pp
 The commands are executed in the order in which they are listed above,
@@ -322,35 +310,41 @@ processes with a tailored environment.
 The following variables are set for all builds:
 .Bl -tag -width 18n
 .It PATH
-.Va /usr/bin:/usr/sbin:/bin:/sbin
+.Ar /usr/bin:/usr/sbin:/bin:/sbin
 .It TZ
-.Va UTC
+.Ar UTC
 .It __MAKE_CONF
-.Va /dev/null
+.Ar /dev/null
+.It SRCCONF
+.Ar /dev/null
+.It MAKEOBJDIRPREFIX
+.Ar $objdir
+.It TARGET
+.Ar $machine
+.It TARGET_ARCH
+.Ar $arch
+.It CROSS_BUILD_TESTING
+.Ar YES
 .El
 .Pp
 The following additional variables are set for release builds:
 .Bl -tag -width 18n
 .It CHROOTDIR
-.Va $SANDBOX/root
-.It CVSROOT
-As specified with the
-.Fl -repository
-option.
+.Ar $SANDBOX/root
 .It RELEASETAG
-.Va -rBRANCH
-if
-.Fl -branch Ns = Ns Ar BRANCH
-was specified, or
-.Va -A
+.Ar -r$branch
+if specified using the
+.Fl -branch
+option, or
+.Ar -A
 otherwise.
 .It WORLD_FLAGS , KERNEL_FLAGS
 Both of these are set to
-.Va -jN
-if
-.Fl -jobs Ns = Ns Ar N
-was specified, or
-.Va -B
+.Ar -j$jobs
+if specified using the
+.Fl -jobs
+option, or
+.Ar -B
 otherwise.
 .It LOCAL_PATCHES
 Set to the path of the patch that was specified with the
@@ -358,21 +352,21 @@ Set to the path of the patch that was specified with the
 option, if any.
 .It PATCH_FLAGS
 Set to
-.Va -fs
+.Ar -fs
 if a patch was specified.
 .It NOCDROM
-.Va YES
+.Ar YES
 .It NODOC
-.Va YES
+.Ar YES
 .It NOPORTS
-.Va YES
+.Ar YES
 .El
 .Pp
 None of these variables may be overridden by command-line arguments.
 .Sh SEE ALSO
-.Xr cvs 1 ,
 .Xr make 1 ,
 .Xr patch 1 ,
+.Xr svn 1 ,
 .Xr tbmaster 1 ,
 .Xr build 7 ,
 .Xr release 7

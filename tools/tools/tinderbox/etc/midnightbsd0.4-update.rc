@@ -4,7 +4,7 @@
 
 branches	 = RELENG_0_4
 platforms	 = none
-srcdir		 = %%SANDBOX%%/%%BRANCH%%/src
+srcdir		 = ${SANDBOX}/${BRANCH}/src
 targets		 = update, version
 recipient	+= <luke@midnightbsd.org>
 subject		= [%%COMMENT%%] source tree update failure

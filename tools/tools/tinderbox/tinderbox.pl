@@ -1,6 +1,6 @@
 #!/usr/bin/perl -Tw
 #-
-# Copyright (c) 2003-2012 Dag-Erling Smørgrav
+# Copyright (c) 2003-2014 Dag-Erling Smørgrav
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,8 +24,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/tools/tools/tinderbox/tinderbox.pl,v 1.42 2005/04/30 18:22:12 des Exp $
-# $MidnightBSD: src/tools/tools/tinderbox/tinderbox.pl,v 1.3 2008/03/07 04:20:26 laffer1 Exp $
+# $FreeBSD: user/des/tinderbox/tinderbox.pl 268719 2014-07-15 22:34:54Z des $
+# $MidnightBSD$
 #
 
 use v5.10.1;
@@ -33,22 +33,23 @@ use strict;
 use Fcntl qw(:DEFAULT :flock);
 use POSIX;
 use Getopt::Long;
+use Scalar::Util qw(tainted);
 
-my $VERSION	= "2.10";
-my $COPYRIGHT	= "Copyright (c) 2003-2012 Dag-Erling Smørgrav. " .
+my $VERSION	= "2.22";
+my $COPYRIGHT	= "Copyright (c) 2003-2014 Dag-Erling Smørgrav. " .
 		  "All rights reserved.";
 
 my $arch;			# Target architecture
 my $branch;			# CVS branch to check out
-my $cvsup;			# Name of CVSup server
 my $destdir;			# Destination directory
 my $jobs;			# Number of paralell jobs
 my $hostname;			# Name of the host running the tinderbox
 my $logfile;			# Path to log file
 my $machine;			# Target machine
 my $objdir;			# Location of object tree
+my $objpath;			# Full path to object tree
+my $obj32path;			# Full path to 32-bit object tree
 my $patch;			# Patch to apply before building
-my $repository;			# Location of CVS repository
 my $sandbox;			# Location of sandbox
 my $srcdir;			# Location of source tree
 my $svnbase;			# Subversion base URL
@@ -65,6 +66,7 @@ my %cmds = (
     'cleanobj'	=> 0, 'precleanobj'	=> 0, 'postcleanobj'	=> 0,
     'cleaninst'	=> 0, 'precleaninst'	=> 0, 'postcleaninst'	=> 0,
     'cleanobj'	=> 0, 'precleanobj'	=> 0, 'postcleanobj'	=> 0,
+    'revert'	=> 0,
     'update'	=> 0,
     'patch'	=> 0,
     'world'	=> 0,
@@ -80,17 +82,6 @@ my %lint;
 my $starttime;
 
 my $unamecmd = '/usr/bin/uname';
-
-my @cvscmds = (
-    '/usr/bin/cvs',
-    '/usr/local/bin/cvs',
-);
-
-my @cvsupcmds = (
-    '/usr/bin/csup',
-    '/usr/local/bin/csup',
-    '/usr/local/bin/cvsup'
-);
 
 my @svncmds = (
     '/usr/bin/svn',
@@ -181,6 +172,34 @@ sub logenv() {
     foreach my $key (sort(keys(%ENV))) {
 	message("$key=$ENV{$key}");
     }
+}
+
+#
+# Expand a path
+#
+sub realpath($;$);
+sub realpath($;$) {
+    my $path = shift;
+    my $base = shift || "";
+
+    my $realpath = ($path =~ m|^/|) ? "" : $base;
+    foreach my $part (split('/', $path)) {
+	if ($part eq '' || $part eq '.') {
+	    # nothing
+	} elsif ($part eq '..') {
+	    $realpath =~ s|/[^/]+$||
+		or die("'$path' is not a valid path relative to '$base'\n");
+	} elsif (-l "$realpath/$part") {
+	    my $target = readlink("$realpath/$part")
+		or die("unable to resolve symlink '$realpath/$part': $!\n");
+	    $realpath = realpath($target, $realpath);
+	} else {
+	    $part =~ m/^([\w.-]+)$/
+		or die("unsafe path '$realpath/$part'\n");
+	    $realpath .= "/$1";
+	}
+    }
+    return $realpath;
 }
 
 #
@@ -294,6 +313,14 @@ sub spawn($@) {
     my @args = @_;		# Arguments
 
     message($cmd, @args);
+    # Check command and arguments for taint.  The build will die
+    # anyway, but at least we'll have a starting point for debugging.
+    warning("command name is tainted\n")
+	if tainted($cmd);
+    for (my $i = 0; $i < @args; ++$i) {
+	warning("argv\[$i\] is tainted\n")
+	    if tainted($args[$i]);
+    }
     my $pid = fork();
     if (!defined($pid)) {
 	return warning("fork(): $!");
@@ -376,7 +403,7 @@ sub do_clean(;$) {
 
 sub usage() {
 
-    print(STDERR "This is the BSD tinderbox script, version $VERSION.
+    print(STDERR "This is the MidnightBSD tinderbox script, version $VERSION.
 $COPYRIGHT
 
 Usage:
@@ -387,15 +414,13 @@ Options:
 
 Parameters:
   --arch=ARCH                   Target architecture (e.g. i386)
-  --branch=BRANCH               CVS branch to check out
-  --cvsup                       CVSup server
+  --branch=BRANCH               Source branch to check out
   --destdir=DIR                 Destination directory when installing
   --jobs=NUM                    Maximum number of paralell jobs
   --hostname=NAME               Name of the host running the tinderbox
   --logfile=FILE                Path to log file
   --machine=MACHINE             Target machine (e.g. pc98)
   --patch=PATCH                 Patch to apply before building
-  --repository=DIR              Location of CVS repository
   --sandbox=DIR                 Location of sandbox
   --svnbase=URL                 Subversion base URL
   --timeout=SECONDS             Maximum allowed build time
@@ -432,15 +457,14 @@ MAIN:{
     chomp($hostname);
     $branch = "HEAD";
     $jobs = 0;
-    $repository = "/home/cvs";
     $sandbox = "/tmp/tinderbox";
+    $svnbase = "svn://svn.midnightbsd.org/svn/src/";
     $timeout = 0;
 
     # Get options
     GetOptions(
 	"arch=s"		=> \$arch,
 	"branch=s"		=> \$branch,
-	"cvsup=s"		=> \$cvsup,
 	"destdir=s"		=> \$destdir,
 	"jobs=i"		=> \$jobs,
 	"hostname=s"		=> \$hostname,
@@ -448,7 +472,6 @@ MAIN:{
 	"machine=s"		=> \$machine,
 	"objdir=s"		=> \$objdir,
 	"patch=s"		=> \$patch,
-	"repository=s"		=> \$repository,
 	"sandbox=s"		=> \$sandbox,
 	"srcdir=s"		=> \$srcdir,
 	"svnbase=s"		=> \$svnbase,
@@ -456,16 +479,18 @@ MAIN:{
 	"verbose+"		=> \$verbose,
 	) or usage();
 
-    if ($jobs < 0) {
+    if ($jobs !~ m/^(\d+)$/) {
 	error("invalid number of jobs");
     }
-    if ($timeout < 0) {
+    $jobs = $1;
+    if ($timeout !~ m/^(\d+)$/) {
 	error("invalid timeout");
     }
+    $timeout = $1;
     if ($branch !~ m|^(\w+)$|) {
 	error("invalid source branch");
     }
-    $branch = ($1 eq 'CURRENT') ? 'HEAD' : $1;
+    $branch = ($1 eq 'CURRENT') ? 'trunk' : $1;
     if (!defined($arch)) {
 	$arch = `$unamecmd -p`;
 	chomp($arch);
@@ -488,6 +513,11 @@ MAIN:{
     if (!defined($destdir)) {
 	$destdir = "$sandbox/inst";
     }
+    if ($svnbase &&
+	$svnbase !~ m@^((?:svn(?:\+ssh)?://(?:[a-z][0-9a-z-]*)(?:\.[a-z][0-9a-z-]*)*(?::\d+)?|file://)/[\w./-]*)@) {
+	error("invalid SVN base URL");
+    }
+    $svnbase = $1;
 
     if (!@ARGV) {
 	usage();
@@ -501,7 +531,7 @@ MAIN:{
 
     # Find out what we're expected to do
     foreach my $cmd (@ARGV) {
-	if ($cmd =~ m/^([0-9A-Z_]+)=(.*)\s*$/) {
+	if ($cmd =~ m/^(\w+)=(.*)\s*$/) {
 	    $userenv{$1} = $2;
 	    next;
 	}
@@ -556,6 +586,7 @@ MAIN:{
     truncate($lockfile, 0);
     print($lockfile "$$\n");
 
+    # Validate source directory
     if (defined($srcdir)) {
 	if ($srcdir !~ m|^(/[\w./-]+)$|) {
 	    error("invalid source directory");
@@ -564,7 +595,9 @@ MAIN:{
     } else {
 	$srcdir = "$sandbox/src";
     }
+    $srcdir = realpath($srcdir);
 
+    # Validate object directory
     if (defined($objdir)) {
 	if ($objdir !~ m|^(/[\w./-]+)$|) {
 	    error("invalid object directory");
@@ -573,96 +606,88 @@ MAIN:{
     } else {
 	$objdir = "$sandbox/obj";
     }
+    $objdir = realpath($objdir);
+
+    # Construct full path to object directory
+    $objpath = "$objdir/$machine.$arch$srcdir";
+    $obj32path = "$objdir/$machine.$arch/lib32$srcdir";
 
     # Clean up remains from old runs
     do_clean(); # no prefix for backward compatibility
     do_clean('pre');
 
+    # Locate svn
+    my $svncmd = '/usr/bin/false';
+    if ($cmds{'revert'} || $cmds{'version'} || $cmds{'update'}) {
+	$svncmd = [grep({ -x } @svncmds)]->[0]
+	    or error("unable to locate svn binary");
+    }
+
+    # Upgrade and unlock the working copy
+    if (($cmds{'revert'} || $cmds{'update'}) && -d "$srcdir/.svn") {
+	spawn($svncmd, "upgrade", $srcdir);
+	spawn($svncmd, "cleanup", $srcdir);
+    }
+
+    # Revert sources
+    if ($cmds{'revert'} && -d "$srcdir/.svn") {
+	my @svnargs;
+	push(@svnargs, "--quiet")
+	    unless ($verbose);
+	logstage("reverting $srcdir");
+	spawn($svncmd, @svnargs, "revert", "-R", $srcdir)
+	    or error("unable to revert the source tree");
+	# remove leftovers...  ugly!
+	open(my $pipe, '-|', $svncmd, "stat", "--no-ignore", $srcdir)
+	    or error("unable to stat source tree");
+	while (<$pipe>) {
+	    m/^[I?]\s+(\S.*)$/ or next;
+	    if (-d $1) {
+		remove_dir($1)
+		    or error("unable to remove $1");
+	    } elsif (-f $1 || -l $1) {
+		unlink($1)
+		    or error("unable to remove $1");
+	    } else {
+		warning("ignoring $1");
+	    }
+	}
+	close($pipe);
+    }
+
     # Check out new source tree
     if ($cmds{'update'}) {
-	if (defined($svnbase)) {
-	    my @svnargs;
-	    push(@svnargs, "--quiet")
-		unless ($verbose);
-	    # ugly-bugly magic required because CVS to SVN conversion
-	    # smashed branch names
-	    $svnbase =~ s/\/$//;
-	    if ($branch eq 'HEAD') {
-		$svnbase .= '/head';
-	    } elsif ($branch =~ m/^RELENG_(\d+)_(\d+)$/) {
-		$svnbase .= "/releng/$1.$2";
-	    } elsif ($branch =~ m/^RELENG_(\d+)$/) {
-		$svnbase .= "/stable/$1";
-	    } else {
-		error("unrecognized branch: $branch");
-	    }
-	    logstage("checking out $srcdir from $svnbase");
-	    my $svncmd = [grep({ -x } @svncmds)]->[0]
-		or error("unable to locate svn binary");
-	    cd("$sandbox");
-	    if (-d $srcdir) {
-		spawn($svncmd, "cleanup", $srcdir);
-		push(@svnargs, "update", $srcdir);
-	    } else {
-		push(@svnargs, "checkout", $svnbase, $srcdir);
-	    }
-	    for (0..$svnattempts) {
-		last if spawn($svncmd, @svnargs);
-		error("unable to check out the source tree")
-		    if ($_ == $svnattempts);
-		my $delay = 30 * ($_ + 1);
-		warning("sleeping $delay s and retrying...");
-		sleep($delay);
-	    }
-	} elsif (defined($cvsup)) {
-	    logstage("cvsupping the source tree");
-	    open(my $fh, ">", "$sandbox/supfile")
-		or error("$sandbox/supfile: $!");
-	    print($fh "*default base=$sandbox\n");
-	    print($fh "*default prefix=$sandbox\n");
-	    print($fh "*default delete use-rel-suffix\n");
-	    print($fh "src-all release=cvs");
-	    if ($branch eq 'HEAD') {
-		print($fh " tag=.");
-	    } else {
-		print($fh " tag=$branch");
-	    }
-	    print($fh "\n");
-	    close($fh);
-	    my @cvsupargs = (
-		"-z",
-		"-r 3",
-		"-g",
-		"-L", ($verbose ? 1 : 0),
-		"-h",
-		split(' ', $cvsup),
-		"$sandbox/supfile"
-	    );
-	    my $cvsupcmd = [grep({ -x } @cvsupcmds)]->[0]
-		or error("unable to locate cvsup / csup binary");
-	    spawn($cvsupcmd, @cvsupargs)
-		or error("unable to cvsup the source tree");
+	error("no svn base URL defined")
+	    unless defined($svnbase);
+	my @svnargs;
+	push(@svnargs, "--quiet")
+	    unless ($verbose);
+	# ugly-bugly magic required because CVS to SVN conversion
+	# smashed branch names
+	$svnbase =~ s/\/$//;
+	if ($branch eq 'HEAD') {
+	    $svnbase .= '/head';
+	} elsif ($branch =~ m/^RELENG_(\d+)_(\d+)$/) {
+	    $svnbase .= "/releng/$1.$2";
+	} elsif ($branch =~ m/^RELENG_(\d+)$/) {
+	    $svnbase .= "/stable/$1";
 	} else {
-	    logstage("checking out the source tree from $repository");
-	    cd("$sandbox");
-	    my @cvsargs = (
-		"-f",
-		"-R",
-		$verbose ? "-q" : "-Q",
-		"-d$repository",
-	    );
-	    if (-d $srcdir) {
-		push(@cvsargs, "update", "-Pd");
+	    error("unrecognized branch: $branch");
+	}
+	logstage("checking out $srcdir from $svnbase");
+	cd("$sandbox");
+	for (0..$svnattempts) {
+	    if (-d "$srcdir/.svn") {
+		last if spawn($svncmd, @svnargs, "update", $srcdir);
 	    } else {
-		push(@cvsargs, "checkout", "-P");
-	    };
-	    push(@cvsargs, ($branch eq 'HEAD') ? "-A" : "-r$branch")
-		if defined($branch);
-	    push(@cvsargs, "src");
-	    my $cvscmd = [grep({ -x } @cvscmds)]->[0]
-		or error("unable to locate cvs binary");
-	    spawn($cvscmd, @cvsargs)
-		or error("unable to check out the source tree");
+		last if spawn($svncmd, @svnargs, "checkout", $svnbase, $srcdir);
+	    }
+	    error("unable to check out the source tree")
+		if ($_ == $svnattempts);
+	    my $delay = 30 * ($_ + 1);
+	    warning("sleeping $delay s and retrying...");
+	    sleep($delay);
+	    spawn($svncmd, "cleanup", $srcdir);
 	}
     }
 
@@ -691,12 +716,10 @@ MAIN:{
     # Print source tree version information
     if ($cmds{'version'}) {
 	if (defined($svnbase)) {
-	    my $svncmd = [grep({ -x } @svncmds)]->[0]
-		or error("unable to locate svn binary");
 	    my $svnversioncmd = [grep({ -x } @svnversioncmds)]->[0]
 		or error("unable to locate svnversion binary");
 	    if ($verbose) {
-		spawn($svncmd, "stat", $srcdir)
+		spawn($svncmd, "stat", "--no-ignore", $srcdir)
 		    or error("unable to stat source tree");
 	    }
 	    my $svnversion = `$svnversioncmd $srcdir`; # XXX
@@ -804,7 +827,10 @@ MAIN:{
 	# Check that the config is appropriate for this target.
 	cd("$srcdir/sys/$machine/conf");
 	local *PIPE;
-	my @cmdline = ("/usr/sbin/config", "-m", "$kernel");
+	# ugh, we really shouldn't need to know that.
+	my $cmd = "$objpath/tmp/legacy/usr/sbin/config";
+	$cmd = "/usr/sbin/config" unless -x $cmd;
+	my @cmdline = ($cmd, "-m", $kernel);
 	message(@cmdline);
 	if (open(PIPE, "-|", @cmdline)) {
 	    local $/;
@@ -849,7 +875,6 @@ MAIN:{
     # Build a release if requested
     if ($cmds{'release'}) {
 	$ENV{'CHROOTDIR'} = "$sandbox/root";
-	$ENV{'CVSROOT'} = $repository;
 	$ENV{'RELEASETAG'} = $branch
 	    if $branch ne 'HEAD';
 	$ENV{'WORLD_FLAGS'} = $ENV{'KERNEL_FLAGS'} =

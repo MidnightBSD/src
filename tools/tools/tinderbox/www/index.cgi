@@ -24,8 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
-# $FreeBSD: projects/tinderbox/www/index.cgi,v 1.32 2008/02/10 17:04:26 des Exp $
+# $FreeBSD: user/des/tinderbox/www/index.cgi 256311 2013-10-11 08:53:27Z des $
 #
 
 use v5.10.1;
@@ -33,7 +32,7 @@ use strict;
 use POSIX qw(strftime);
 use Sys::Hostname;
 
-my %CONFIGS;
+my %BRANCHES;
 my %ARCHES;
 
 my $DIR = ".";
@@ -80,15 +79,16 @@ sub inverse_branch_sort($$) {
     return branch_rank($b) cmp branch_rank($a);
 }
 
-sub do_config($) {
-    my ($config) = @_;
+sub do_branch($) {
+    my ($branch) = @_;
 
-    my %branches = %{$CONFIGS{$config}};
+    my $prettybranch = $branch;
+    $prettybranch =~ s@^HEAD$@head@;
+    $prettybranch =~ s@^RELENG_(\d+)_(\d+)$@releng/$1.$2@;
+    $prettybranch =~ s@^RELENG_(\d+)$@stable/$1@;
 
-    my $prettyconfig = $config;
-    $prettyconfig =~ s/^(.*?)-build$/$1/;
     print "      <tr class='header'>
-        <th>$prettyconfig</th>
+        <th>&nbsp;</th>
 ";
     foreach my $arch (sort(keys(%ARCHES))) {
 	foreach my $machine (sort(keys(%{$ARCHES{$arch}}))) {
@@ -103,13 +103,11 @@ sub do_config($) {
 
     my $now = time();
 
-    foreach my $branch (sort(inverse_branch_sort keys(%branches))) {
-	my $prettybranch = $branch;
-	$prettybranch =~ s@^HEAD$@/head@;
-	$prettybranch =~ s@^RELENG_(\d+)_(\d+)$@/releng/$1.$2@;
-	$prettybranch =~ s@^RELENG_(\d+)$@/stable/$1@;
+    foreach my $config (sort(keys(%{$BRANCHES{$branch}}))) {
+	$config =~ m/^(\w+)((?:-\w+)*?)(-build)?$/;
+	my $variant = $2 =~ s/^-//r;
 	print "      <tr>
-	<th>$prettybranch</th>
+	<th>$prettybranch" . ($variant ? "<br/>($variant)" : "") . "</th>
 ";
 	foreach my $arch (sort(keys(%ARCHES))) {
 	    foreach my $machine (sort(keys(%{$ARCHES{$arch}}))) {
@@ -148,16 +146,16 @@ MAIN:{
     $| = 1;
     if ($ENV{'GATEWAY_INTERFACE'}) {
 	print "Content-Type: text/html; charset=utf-8\n\n";
-	$realthing = ($ENV{'SERVER_NAME'} eq 'tinderbox.midnightbsd.org');
+	$realthing = ($ENV{'SERVER_NAME'} eq 'tinderbox.freebsd.org');
     } else {
 	my $host = hostname();
-	$realthing = ($host eq 'defiant.midnightbsd.org');
+	$realthing = ($host eq 'dma.des.no');
     }
 
     if ($realthing) {
-	$greeting = "<a href='http://tinderbox.midnightbsd.org/'>tinderbox.midnightbsd.org</a>";
+	$greeting = "<a href='http://tinderbox.freebsd.org/'>tinderbox.freebsd.org</a>";
     } else {
-	$greeting = "For official Tinderbox logs, see <a href='http://tinderbox.midnightbsd.org/'>here</a>";
+	$greeting = "For official Tinderbox logs, see <a href='http://tinderbox.freebsd.org/'>here</a>";
     }
 
     local *DIR;
@@ -165,7 +163,7 @@ MAIN:{
 	or die("$DIR: $!\n");
     foreach (readdir(DIR)) {
 	next unless m/^tinderbox-([\w-]+)-(\w+)-(\w+)-(\w+)\.(brief|full)$/;
-	$CONFIGS{$1}->{$2} = $ARCHES{$3}->{$4} = 1;
+	$BRANCHES{$2}->{$1} = $ARCHES{$3}->{$4} = 1;
     }
     closedir(DIR);
 
@@ -175,13 +173,14 @@ MAIN:{
      'http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd'>
 <html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'>
   <head>
-    <title>MidnightBSD tinderbox logs</title>
+    <title>FreeBSD tinderbox logs</title>
     <meta name='robots' content='nofollow' />
     <meta http-equiv='refresh' content='600' />
     <link rel='stylesheet' type='text/css' media='screen' href='tb.css' />
+    <link rel='shortcut icon' type='image/x-icon' href='favicon.ico' />
   </head>
   <body>
-    <!-- h1>MidnightBSD tinderbox logs</h1 -->
+    <!-- h1>FreeBSD tinderbox logs</h1 -->
 
     <table border='1'>
 ";
@@ -197,9 +196,8 @@ MAIN:{
     }
 
     # Generate rows
-    foreach my $config (sort(inverse_branch_sort keys(%CONFIGS))) {
-	next if $config =~ m/^update_/;
-	do_config($config);
+    foreach my $branch (sort(inverse_branch_sort keys(%BRANCHES))) {
+	do_branch($branch);
     }
 
     print "
@@ -210,6 +208,14 @@ MAIN:{
         </td>
       </tr>
     </table>
+    <!-- p>
+      <a href='http://validator.w3.org/check/referer'><img
+          src='valid-xhtml10.png'
+          alt='Valid XHTML 1.0!' height='31' width='88' /></a>
+      <a href='http://jigsaw.w3.org/css-validator/check/referer'><img
+          src='valid-css.png'
+          alt='Valid CSS!' height='31' width='88' /></a>
+    </p -->
   </body>
 </html>
 ";

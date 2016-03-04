@@ -66027,6 +66027,7 @@ tools/tools/tinderbox/Makefile -text
 tools/tools/tinderbox/etc/Makefile -text
 tools/tools/tinderbox/etc/default.rc -text
 tools/tools/tinderbox/etc/head-build.rc -text
+tools/tools/tinderbox/etc/head-noclang-build.rc -text
 tools/tools/tinderbox/etc/head-update.rc -text
 tools/tools/tinderbox/etc/midnightbsd0.4-build.rc -text
 tools/tools/tinderbox/etc/midnightbsd0.4-update.rc -text

@@ -1,9 +1,11 @@
+#
 # HEAD tinderbox setup, shared source - build stage
 #
+# $FreeBSD: user/des/tinderbox/etc/head-build.rc 268247 2014-07-04 09:32:22Z des $
 # $MidnightBSD$
 
 branches	 = HEAD
-platforms	 = amd64, i386, sparc64
+platforms	 = amd64, i386
 targets		 = precleanobj, version, world, lint, kernels, postcleanobj
-srcdir		 = %%SANDBOX%%/%%BRANCH%%/src
-recipient	+= <luke@midnightbsd.org>,%%SENDER%%
+srcdir		 = ${SANDBOX}/${BRANCH}/src
+recipient	+= <luke@midnightbsd.org>

@@ -1,15 +1,14 @@
 #
 # Tinderbox defaults
 #
-# $MidnightBSD: src/tools/tools/tinderbox/etc/default.rc,v 1.3 2008/03/07 04:32:06 laffer1 Exp $
-# $FreeBSD: src/tools/tools/tinderbox/etc/default.rc,v 1.9 2005/04/30 18:26:05 des Exp $
+# $MidnightBSD$
+# $FreeBSD: user/des/tinderbox/etc/default.rc 256000 2013-10-02 18:23:46Z des $
 #
 
-comment		= %%branch%% tinderbox
+comment		= ${branch} tinderbox
 
 # Paths
-sandbox		= %%HOME%%
-logdir		= %%HOME%%/logs
+sandbox		= ${HOME}
 
 # Tinderbox options
 options		= --verbose
@@ -18,6 +17,6 @@ targets		= precleanobj, update, world, lint, kernels, postcleanobj
 
 # Reporting
 sender		= MidnightBSD Tinderbox <tinderbox@midnightbsd.org>
-recipient	= %%SENDER%%
-subject		= [%%COMMENT%%] failure on %%arch%%/%%machine%%
+recipient	= ${SENDER}
+subject		= [${COMMENT}] failure on ${arch}/${machine}
 urlbase		= http://tinderbox.midnightbsd.org/

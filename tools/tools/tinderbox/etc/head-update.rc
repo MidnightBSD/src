@@ -1,10 +1,12 @@
+#
 # HEAD tinderbox setup, shared source - update stage
 #
+# $FreeBSD: user/des/tinderbox/etc/head-update.rc 266156 2014-05-15 16:24:20Z des $
 # $MidnightBSD$
 
 branches	 = HEAD
 platforms	 = none
-srcdir		 = %%SANDBOX%%/%%BRANCH%%/src
-targets		 = update, version
+srcdir		 = ${SANDBOX}/${BRANCH}/src
+targets		 = revert, update, version
 recipient	+= <luke@midnightbsd.org>
-subject		= [%%COMMENT%%] source tree update failure
+subject		= [${COMMENT}] source tree update failure

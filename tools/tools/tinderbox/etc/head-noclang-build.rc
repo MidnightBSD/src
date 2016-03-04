@@ -1,0 +1,8 @@
+#
+# HEAD tinderbox setup, shared source - build without clang
+#
+# $FreeBSD: user/des/tinderbox/etc/head-noclang-build.rc 257786 2013-11-07 10:32:37Z des $
+# $MidnightBSD$
+
+include head-build
+env += WITHOUT_CLANG=YES, WITHOUT_CLANG_IS_CC=YES, WITH_GCC=YES, WITH_GNUCXX=YES
