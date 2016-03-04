@@ -35,7 +35,7 @@ TYPE="MidnightBSD"
 REVISION="0.8"
 RELEASE="${REVISION}"
 VERSION="${TYPE} ${RELEASE}"
-SYSDIR=$(dirname $0)/..
+SYSDIR=$(/usr/bin/dirname $0)/..
 
 if [ "X${PARAMFILE}" != "X" ]; then
 	RELDATE=$(awk '/__MidnightBSD_version.*propagated to newvers/ {print $3}' \
@@ -80,8 +80,8 @@ then
 	echo 0 > version
 fi
 
-touch version
-v=`cat version` u=${USER:-root} d=`pwd` h=${HOSTNAME:-`hostname`} t=`date`
+/usr/bin/touch version
+v=`/bin/cat version` u=${USER:-root} d=`pwd` h=${HOSTNAME:-`hostname`} t=`date`
 i=`${MAKE:-make} -V KERN_IDENT`
 compiler_v=$($(${MAKE:-make} -V CC) -v 2>&1 | grep 'version')
 
