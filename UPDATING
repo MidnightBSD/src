@@ -1,6 +1,8 @@
 Updating Information for MidnightBSD users.
 
 20160310:
+	MidnightBSD 0.7.5 RELEASE
+
 	Security patch for OpenSSL to stop DROWN [CVE-2016-0800]
 	[CVE-2016-0705] [CVE-2016-0798]  [CVE-2016-0797]
 	[CVE-2016-0799] [CVE-2016-0702] [CVE-2016-0704]
