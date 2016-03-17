@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20160317:
+	OpenSSH doesn't have the luck of the Irish. 
+
+	Fix a security issue with OpenSSH X11 forwarding that can allow an attacker
+	run shell commands on the call to xauth.
+
 20160229:
 	top now displays information on ZFS arc cache.
 
