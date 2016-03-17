@@ -6,6 +6,17 @@ Updating Information for MidnightBSD users.
 	Fix a security issue with OpenSSH X11 forwarding that can allow an attacker
 	run shell commands on the call to xauth.
 
+	Incorrect argument validation in sysarch(2)
+
+	A special combination of sysarch(2) arguments, specify a request to
+	uninstall a set of descriptors from the LDT.  The start descriptor
+	is cleared and the number of descriptors are provided.  Due to invalid
+	use of a signed intermediate value in the bounds checking during argument
+	validity verification, unbound zero'ing of the process LDT and adjacent
+	memory can be initiated from usermode.
+
+	Patch obtained from FreeBSD.
+
 20160229:
 	top now displays information on ZFS arc cache.
 
