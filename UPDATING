@@ -1,5 +1,13 @@
 Updating Information for MidnightBSD users.
 
+20160317:
+	MidnightBSD 0.7.6 RELEASE
+
+	OpenSSH doesn't have the luck of the Irish.
+
+	Fix a security issue with OpenSSH X11 forwarding that can allow an attacker
+	run shell commands on the call to xauth.
+
 20160310:
 	MidnightBSD 0.7.5 RELEASE
 
