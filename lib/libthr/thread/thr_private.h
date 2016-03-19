@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/9/lib/libthr/thread/thr_private.h 258767 2013-11-30 14:39:56Z kib $
  */
 
 #ifndef _THR_PRIVATE_H
@@ -430,6 +430,9 @@ struct pthread {
 
 	/* the sigaction should be used for deferred signal. */
 	struct sigaction	deferred_sigact;
+
+	/* deferred signal delivery is performed, do not reenter. */
+	int			deferred_run;
 
 	/* Force new thread to exit. */
 	int			force_exit;
