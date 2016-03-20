@@ -30,6 +30,7 @@
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/signalvar.h>
+#include <sys/ucontext.h>
 #include <signal.h>
 #include <errno.h>
 #include <stdlib.h>
