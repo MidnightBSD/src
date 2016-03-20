@@ -51219,10 +51219,6 @@ lib/libthr/arch/i386/Makefile.inc -text
 lib/libthr/arch/i386/i386/_umtx_op_err.S -text
 lib/libthr/arch/i386/i386/pthread_md.c -text
 lib/libthr/arch/i386/include/pthread_md.h -text
-lib/libthr/arch/sparc64/Makefile.inc -text
-lib/libthr/arch/sparc64/include/pthread_md.h -text
-lib/libthr/arch/sparc64/sparc64/_umtx_op_err.S -text
-lib/libthr/arch/sparc64/sparc64/pthread_md.c -text
 lib/libthr/libthr.3 -text
 lib/libthr/pthread.map -text
 lib/libthr/support/Makefile.inc -text
