@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2010, 2011, 2013, 2014 Lucas Holt
+ * Copyright (c) 2010-2016 Lucas Holt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -644,6 +644,7 @@ upgrade(mportInstance *mport) {
 int
 cpeList(mportInstance *mport) {
 	mportPackageMeta **packs;
+	int cpe_total = 0;
 
 	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
 		warnx("%s", mport_err_string());
@@ -656,9 +657,15 @@ cpeList(mportInstance *mport) {
 	}
 
 	while (*packs != NULL) {
-		if ((*packs)->cpe != NULL)
+		if ((*packs)->cpe != NULL && strlen((*packs)->cpe) > 0) {
 			printf("%s\n", (*packs)->cpe);
+			cpe_total++;
+		}
 		packs++;
+	}
+
+	if (cpe_total == 0) {
+		puts("No packages contained CPE information.");
 	}
 
 	mport_pkgmeta_vec_free(packs);
