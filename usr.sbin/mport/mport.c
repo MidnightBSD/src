@@ -31,6 +31,7 @@ __MBSDID("$MidnightBSD$");
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <sysexits.h>
 #include <unistd.h>
 #include <err.h>
 #include <mport.h>
@@ -205,7 +206,7 @@ main(int argc, char *argv[]) {
 		});
 	} else if (!strcmp(argv[1], "cpe")) {
 		dispatch_group_async(grp, q, ^{
-		resultCode = cpeList(mport);
+			resultCode = cpeList(mport);
 		});
 	} else if (!strcmp(argv[1], "deleteall")) {
 		dispatch_group_async(grp, q, ^{
@@ -663,12 +664,11 @@ cpeList(mportInstance *mport) {
 		}
 		packs++;
 	}
+	mport_pkgmeta_vec_free(packs);
 
 	if (cpe_total == 0) {
-		puts("No packages contained CPE information.");
+		errx(EX_SOFTWARE, "No packages contained CPE information.");
 	}
-
-	mport_pkgmeta_vec_free(packs);
 
 	return (0);
 }
