@@ -60,7 +60,8 @@ static int unlock(mportInstance *, const char *);
 
 int 
 main(int argc, char *argv[]) {
-	char *flag, *buf = NULL;
+	char *flag = NULL;
+	char *buf = NULL;
 	mportInstance *mport;
 	int resultCode = MPORT_ERR_FATAL;
 	int tempResultCode;
@@ -314,7 +315,7 @@ info(mportInstance *mport, const char *packageName) {
 	char *status, *origin;
 	char *os_release;
 	char *cpe;
-	int locked;
+	int locked = 0;
 
 	if (packageName == NULL) {
 		warnx("%s", "Specify package name");
