@@ -34,6 +34,7 @@ __MBSDID("$MidnightBSD$");
 #include <sysexits.h>
 #include <unistd.h>
 #include <err.h>
+#include <dispatch/dispatch.h>
 #include <mport.h>
 
 #define MPORT_TOOLS_PATH "/usr/libexec/"
@@ -73,7 +74,7 @@ main(int argc, char *argv[]) {
 		usage();
 
 	dispatch_queue_t mainq = dispatch_get_main_queue();
-        dispatch_group_t grp = dispatch_group_create();
+	dispatch_group_t grp = dispatch_group_create();
 	dispatch_queue_t q = dispatch_queue_create("org.midnightbsd.mport.q", NULL);
 	mport = mport_instance_new();
 
@@ -185,7 +186,7 @@ main(int argc, char *argv[]) {
 	} else if (!strcmp(argv[1], "search")) {
 		dispatch_group_async(grp, q, ^{
 		loadIndex(mport);
-		searchQuery = calloc(argc - 1, sizeof(char*));
+		searchQuery = calloc((size_t)argc - 1, sizeof(char*));
 		for (i = 2; i < argc; i++) {
 			searchQuery[i-2] = strdup(argv[i]);
 		}
@@ -377,62 +378,20 @@ stats(mportInstance *mport) {
 
 int
 info(mportInstance *mport, const char *packageName) {
-	mportIndexEntry **indexEntry;
-	mportPackageMeta **packs;
-	char *status, *origin;
-	char *os_release;
-	char *cpe;
-	int locked = 0;
-
 	if (packageName == NULL) {
 		warnx("%s", "Specify package name");
 		return (1);
 	}
 
-	indexEntry = lookupIndex(mport, packageName);
-	if (indexEntry == NULL || *indexEntry == NULL) {
-		warnx("%s not found in index.", packageName);
-		return (1);
-	}
-
-	if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", packageName) != MPORT_OK) {
+	char *out = mport_info(mport, packageName);
+	if (out == NULL) {
 		warnx("%s", mport_err_string());
 		return (1);
 	}
 
-	if (packs == NULL) {
-		status = strdup("N/A");
-		origin = strdup("");
-		os_release = strdup("");
-		cpe = strdup("");
-	} else {
-		status = (*packs)->version;
-		origin = (*packs)->origin;
-		os_release = (*packs)->os_release;
-		cpe = (*packs)->cpe;
-		locked = (*packs)->locked;
-	}
+	printf("%s", out);
+	free(out);
 
-	printf("%s\nlatest: %s\ninstalled: %s\nlicense: %s\norigin: %s\nos: %s\n\n%s\ncpe: %s\nlocked: %s\n",
-		(*indexEntry)->pkgname,
-		(*indexEntry)->version,
-		status,
-		(*indexEntry)->license,
-		origin,
-		os_release,
-		(*indexEntry)->comment,
-		cpe,
-		locked ? "yes" : "no");
-
-	if (packs == NULL) {
-		free(status);
-		free(origin);
-		free(os_release);
-		free(cpe);
-	} else
-		mport_pkgmeta_vec_free(packs);
-
-	mport_index_entry_free_vec(indexEntry);
 	return (0);
 }
 
