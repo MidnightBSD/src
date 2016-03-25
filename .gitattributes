@@ -50840,6 +50840,7 @@ lib/libmport/error.c -text
 lib/libmport/fetch.c -text
 lib/libmport/index.c -text
 lib/libmport/index_depends.c -text
+lib/libmport/info.c -text
 lib/libmport/install.c -text
 lib/libmport/install_primative.c -text
 lib/libmport/instance.c -text

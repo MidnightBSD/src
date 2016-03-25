@@ -160,6 +160,10 @@ int mport_index_depends_list(mportInstance *, const char *, const char *, mportD
 void mport_index_depends_free_vec(mportDependsEntry **);
 void mport_index_depends_free(mportDependsEntry *);
 
+
+/* Info */
+char * mport_info(mportInstance *mport, const char *packageName);
+
 /* Package creation */
 
 typedef struct {
