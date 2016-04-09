@@ -37,6 +37,7 @@ __MBSDID("$MidnightBSD$");
 static int mport_upgrade_master_schema_0to2(sqlite3 *);
 static int mport_upgrade_master_schema_2to3(sqlite3 *);
 static int mport_upgrade_master_schema_3to4(sqlite3 *);
+static int mport_upgrade_master_schema_4to6(sqlite3 *);
 
 
 /* mport_db_do(sqlite3 *db, const char *sql, ...)
@@ -179,7 +180,7 @@ mport_generate_stub_schema(sqlite3 *db)
 	RUN_SQL(db, "CREATE TABLE meta (field text NOT NULL, value text NOT NULL)");
 	RUN_SQL(db, "INSERT INTO meta VALUES (\"bundle_format_version\", " MPORT_BUNDLE_VERSION_STR ")");
 	RUN_SQL(db, sql);
-	RUN_SQL(db, "CREATE TABLE assets (pkg text not NULL, type int NOT NULL, data text, checksum text)");
+	RUN_SQL(db, "CREATE TABLE assets (pkg text not NULL, type int NOT NULL, data text, checksum text, owner text, grp text, mode text)");
 	RUN_SQL(db, "CREATE TABLE packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, lang text, options text, prefix text NOT NULL, comment text, os_release text NOT NULL, cpe text NOT NULL)");
 	RUN_SQL(db, "CREATE TABLE conflicts (pkg text NOT NULL, conflict_pkg text NOT NULL, conflict_version text NOT NULL)");
 	RUN_SQL(db, "CREATE TABLE depends (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
@@ -201,9 +202,13 @@ mport_upgrade_master_schema(sqlite3 *db, int databaseVersion)
 			mport_upgrade_master_schema_2to3(db);
 		case 3:
 			mport_upgrade_master_schema_3to4(db);
-			mport_set_database_version(db);
 			break;
 		case 4:
+		case 5:
+			mport_upgrade_master_schema_4to6(db);
+			mport_set_database_version(db);
+			break;
+		case 6:
 			break;
 		default:
 			RETURN_ERROR(MPORT_ERR_FATAL, "Invalid master database version");
@@ -217,7 +222,7 @@ mport_upgrade_master_schema_0to2(sqlite3 *db)
 {
 
 	RUN_SQL(db, "ALTER TABLE packages ADD COLUMN os_release text;");
-	RUN_SQL(db, "update packages set os_release='0.4'");
+	RUN_SQL(db, "update packages set os_release='0.4';");
 
 	return (MPORT_OK);
 }
@@ -234,8 +239,18 @@ mport_upgrade_master_schema_2to3(sqlite3 *db)
 static int
 mport_upgrade_master_schema_3to4(sqlite3 *db)
 {
-	RUN_SQL(db, "ALTER TABLE Packages ADD COLUMN locked int");
-	RUN_SQL(db, "update packages set locked=0");
+	RUN_SQL(db, "ALTER TABLE Packages ADD COLUMN locked int;");
+	RUN_SQL(db, "update packages set locked=0;");
+
+	return (MPORT_OK);
+}
+
+static int
+mport_upgrade_master_schema_4to6(sqlite3 *db)
+{
+	RUN_SQL(db, "ALTER TABLE assets ADD COLUMN owner text;");
+	RUN_SQL(db, "ALTER TABLE assets ADD COLUMN grp text;");
+	RUN_SQL(db, "ALTER TABLE assets ADD COLUMN mode text;");
 
 	return (MPORT_OK);
 }
@@ -255,7 +270,7 @@ mport_generate_master_schema(sqlite3 *db)
 	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS log (pkg text NOT NULL, version text NOT NULL, date int NOT NULL, msg text NOT NULL)");
 	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS log_pkg ON log (pkg, version)");
 
-	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS assets (pkg text NOT NULL, type int NOT NULL, data text, checksum text)");
+	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS assets (pkg text NOT NULL, type int NOT NULL, data text, checksum text, owner text, grp text, mode text)");
 	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS assets_pkg ON assets (pkg)");
   
 	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS categories (pkg text NOT NULL, category text NOT NULL)");

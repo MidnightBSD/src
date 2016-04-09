@@ -82,15 +82,20 @@ enum _AssetListEntryType {
     ASSET_DIRRM, ASSET_DIRRMTRY, ASSET_IGNORE_INST, ASSET_OPTION, ASSET_ORIGIN,
     ASSET_DEPORIGIN, ASSET_NOINST, ASSET_DISPLAY, ASSET_DIR,
     ASSET_SAMPLE, ASSET_SHELL,
-    ASSET_PREEXEC, ASSET_PREUNEXEC, ASSET_POSTEXEC, ASSET_POSTUNEXEC
+    ASSET_PREEXEC, ASSET_PREUNEXEC, ASSET_POSTEXEC, ASSET_POSTUNEXEC,
+    ASSET_FILE_OWNER_MODE
 };
 
 typedef enum _AssetListEntryType mportAssetListEntryType;
 
 struct _AssetListEntry {
-  mportAssetListEntryType type;
-  char *data;
-  STAILQ_ENTRY(_AssetListEntry) next;
+	mportAssetListEntryType type;
+	char *data;
+	char *owner;
+	char *group;
+	char *mode;
+
+	STAILQ_ENTRY(_AssetListEntry) next;
 };
 
 STAILQ_HEAD(_AssetList, _AssetListEntry);

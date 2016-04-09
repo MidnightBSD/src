@@ -41,6 +41,7 @@ __MBSDID("$MidnightBSD$");
 #define STRING_EQ(r, l) (strcmp((r),(l)) == 0)
 
 static mportAssetListEntryType parse_command(const char *);
+static int parse_file_owner_mode(mportAssetListEntry **, char *);
 
 /* Do everything needed to set up a new plist.  Always use this to create a plist,
  * don't go off and do it yourself.
@@ -114,7 +115,9 @@ mport_parse_plistfile(FILE *fp, mportAssetList *list) {
             if (cmnd == NULL)
                 RETURN_ERROR(MPORT_ERR_FATAL, "Malformed plist file.");
 
-            entry->type = parse_command(cmnd);
+		entry->type = parse_command(cmnd);
+		if (entry->type == ASSET_FILE_OWNER_MODE)
+			parse_file_owner_mode(&entry, cmnd);
         } else {
             entry->type = ASSET_FILE;
         }
@@ -155,6 +158,37 @@ mport_parse_plistfile(FILE *fp, mportAssetList *list) {
 
     return MPORT_OK;
 }
+
+/**
+ * Parse the file owner, group and mode.
+ */
+static int 
+parse_file_owner_mode(mportAssetListEntry **entry, char *cmdLine) {
+	char *start;
+        char *op = start = strdup(cmdLine);
+	char *tok;
+	char *permissions[3] = {NULL, NULL, NULL};
+	int i = 0;
+
+	while((tok = strsep(&op, ",)")) != NULL) {
+		if (i == 3)
+			break;
+		permissions[i] = op;
+		i++;
+	}
+
+	if (permissions[0] != NULL)
+		(*entry)->owner = strdup(permissions[0]);
+	if (permissions[1] != NULL)
+		(*entry)->group = strdup(permissions[1]);
+	if (permissions[2] != NULL)
+		(*entry)->mode = strdup(permissions[2]);
+
+	free(start);
+
+	return MPORT_OK;
+}
+
 
 
 static mportAssetListEntryType
@@ -219,6 +253,10 @@ parse_command(const char *s) {
         return ASSET_SAMPLE;
     if (STRING_EQ(s, "shell"))
         return ASSET_SHELL;
+
+    /* special case, starts with ( as in @(root,wheel,0755) */
+    if (s[0] == '(')
+	return ASSET_FILE_OWNER_MODE;
 
     return ASSET_INVALID;
 }

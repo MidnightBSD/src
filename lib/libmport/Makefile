@@ -12,7 +12,7 @@ SRCS=	bundle_write.c bundle_read.c plist.c create_primative.c db.c \
 INCS=	mport.h mport_dispatch.h
 
 CFLAGS+=	-I${.CURDIR} -fblocks -g
-SHLIB_MAJOR=	1
+SHLIB_MAJOR=	2
 MAN=	mport.3
 
 NO_PROFILE=

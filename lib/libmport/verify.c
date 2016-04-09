@@ -75,13 +75,17 @@ mport_verify_package(mportInstance *mport, mportPackageMeta *pack)
             /* XXX data is null when ASSET_CHMOD (mode) or similar commands are in plist */
             snprintf(file, sizeof(file), "%s", mport->root);
         } else if (*data == '/') {
-            snprintf(file, sizeof(file), "%s%s", mport->root, data);
+	    /* we don't use mport->root because it's an absolute path like /var */
+            snprintf(file, sizeof(file), "%s", data);
         } else {
             snprintf(file, sizeof(file), "%s%s/%s", mport->root, pack->prefix, data);
         }
 
         switch (type) {
+	    case ASSET_FILE_OWNER_MODE:  
+		/* FALLS THROUGH */
             case ASSET_FILE:
+		/* FALLS THROUGH */
             case ASSET_SAMPLE:
                 if (lstat(file, &st) != 0) {
                     mport_call_msg_cb(mport, "Can't stat %s: %s", file, strerror(errno));

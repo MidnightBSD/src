@@ -43,9 +43,9 @@
 
 #define MPORT_PUBLIC_API 
 
-#define MPORT_MASTER_VERSION 5
-#define MPORT_BUNDLE_VERSION 3
-#define MPORT_BUNDLE_VERSION_STR "3"
+#define MPORT_MASTER_VERSION 6
+#define MPORT_BUNDLE_VERSION 4
+#define MPORT_BUNDLE_VERSION_STR "4"
 
 /* callback syntaxtic sugar */
 void mport_call_msg_cb(mportInstance *, const char *, ...);

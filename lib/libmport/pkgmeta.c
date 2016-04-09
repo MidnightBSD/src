@@ -361,7 +361,7 @@ int mport_pkgmeta_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mpo
 
   *alist_p = alist;
   
-  if (mport_db_prepare(mport->db, &stmt, "SELECT type, data FROM assets WHERE pkg=%Q", pkg->name) != MPORT_OK) {
+  if (mport_db_prepare(mport->db, &stmt, "SELECT type, data, owner, grp, mode FROM assets WHERE pkg=%Q", pkg->name) != MPORT_OK) {
     sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
   }
@@ -386,6 +386,9 @@ int mport_pkgmeta_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mpo
     
     e->type = sqlite3_column_int(stmt, 0);
     e->data = strdup(sqlite3_column_text(stmt, 1));
+    e->owner = strdup(sqlite3_column_text(stmt, 2));
+    e->group = strdup(sqlite3_column_text(stmt, 3));
+    e->mode = strdup(sqlite3_column_text(stmt, 4));
     
     if (e->data == NULL) {
       sqlite3_finalize(stmt);

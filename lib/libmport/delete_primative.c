@@ -89,8 +89,8 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force) 
 
     /* get the file count for the progress meter */
     if (mport_db_prepare(mport->db, &stmt,
-                         "SELECT COUNT(*) FROM assets WHERE (type=%i or type=%i or type=%i) AND pkg=%Q", ASSET_FILE,
-                         ASSET_SAMPLE, ASSET_SHELL, pack->name) != MPORT_OK)
+                         "SELECT COUNT(*) FROM assets WHERE (type=%i or type=%i or type=%i or type=%i) AND pkg=%Q", ASSET_FILE,
+                         ASSET_SAMPLE, ASSET_SHELL, ASSET_FILE_OWNER_MODE, pack->name) != MPORT_OK)
         RETURN_CURRENT_ERROR;
 
     switch (sqlite3_step(stmt)) {
@@ -149,12 +149,15 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force) 
             /* XXX data is null when ASSET_CHMOD (mode) or similar commands are in plist */
             snprintf(file, sizeof(file), "%s", mport->root);
         } else if (*data == '/') {
-            snprintf(file, sizeof(file), "%s%s", mport->root, data);
+	    /* TODO: do we still want to support mport->root here? seems to fail for /var entries */
+            snprintf(file, sizeof(file), "%s", data);
         } else {
             snprintf(file, sizeof(file), "%s%s/%s", mport->root, pack->prefix, data);
         }
 
         switch (type) {
+	    case ASSET_FILE_OWNER_MODE:
+		/* falls through */
             case ASSET_FILE:
                 /* falls through */
             case ASSET_SHELL:
