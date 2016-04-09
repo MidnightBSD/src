@@ -219,7 +219,7 @@ int mport_bundle_read_next_entry(mportBundleRead *bundle, struct archive_entry *
 /*
  * mport_bundle_read_extract_next_file(bundle, entry)
  *
- * extract the next file int he bundle, based on the settings in entry.  
+ * extract the next file in the bundle, based on the settings in entry.  
  * If you need to change things like perms or paths, you can do so by 
  * modifing the entry struct before you pass it to this function
  */
