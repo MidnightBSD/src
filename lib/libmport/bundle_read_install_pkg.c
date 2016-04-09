@@ -158,6 +158,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
     char *mode = NULL;
     struct stat sb;
     char file[FILENAME_MAX], cwd[FILENAME_MAX], dir[FILENAME_MAX];
+    char *fm_owner, *fm_group, *fm_mode;
     sqlite3_stmt *assets = NULL, *count, *insert = NULL;
     sqlite3 *db;
 
@@ -195,7 +196,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 
     /* Insert the assets into the master table (We do this one by one because we want to insert file
      * assets as absolute paths. */
-    if (mport_db_prepare(db, &insert, "INSERT INTO assets (pkg, type, data, checksum) values (%Q,?,?,?)", pkg->name) !=
+    if (mport_db_prepare(db, &insert, "INSERT INTO assets (pkg, type, data, checksum, owner, grp, mode) values (%Q,?,?,?,?,?,?)", pkg->name) !=
         MPORT_OK)
         goto ERROR;
     /* Insert the depends into the master table */
@@ -208,7 +209,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
                     pkg->name) != MPORT_OK)
         goto ERROR;
 
-    if (mport_db_prepare(db, &assets, "SELECT type,data,checksum FROM stub.assets WHERE pkg=%Q and type not in (%d, %d)", pkg->name, ASSET_PREEXEC, ASSET_POSTEXEC) != MPORT_OK)
+    if (mport_db_prepare(db, &assets, "SELECT type,data,checksum,owner,grp,mode FROM stub.assets WHERE pkg=%Q and type not in (%d, %d)", pkg->name, ASSET_PREEXEC, ASSET_POSTEXEC) != MPORT_OK)
         goto ERROR;
 
     (void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
@@ -230,6 +231,9 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
         type     = (mportAssetListEntryType) sqlite3_column_int(assets, 0);
         data     = (char *) sqlite3_column_text(assets, 1);
         checksum = (char *) sqlite3_column_text(assets, 2);
+	fm_owner = (char *) sqlite3_column_text(assets, 3);
+	fm_group = (char *) sqlite3_column_text(assets, 4);
+	fm_mode = (char *) sqlite3_column_text(assets, 5);
 
         switch (type) {
             case ASSET_CWD:
@@ -265,6 +269,8 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
                 if (mport_run_asset_exec(mport, data, cwd, file) != MPORT_OK)
                     goto ERROR;
                 break;
+            case ASSET_FILE_OWNER_MODE:
+		/* FALLS THROUGH */
             case ASSET_FILE:
                 /* FALLS THROUGH */
             case ASSET_SHELL:
@@ -283,16 +289,35 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
                     goto ERROR;
 
                 if (S_ISREG(sb.st_mode)) {
-                    /* Set the owner and group */
-                    if (chown(file, owner, group) == -1)
-                        goto ERROR;
+		    if (type == ASSET_FILE_OWNER_MODE) {
+			/* Test for owner and group settings, otherwise roll with our default. */
+			if (fm_owner != NULL && fm_group != NULL) {
+				if (chown(file, mport_get_uid(fm_owner), mport_get_gid(fm_group)) == -1)
+					goto ERROR;
+			} else if (fm_owner != NULL) {
+				if (chown(file, mport_get_uid(fm_owner), group) == -1)
+					goto ERROR;
+			} else if (fm_group != NULL) {
+				if (chown(file, owner, mport_get_gid(fm_group)) == -1)
+					goto ERROR;
+			}
+		    } else {
+			/* Set the owner and group */
+			if (chown(file, owner, group) == -1)
+				goto ERROR;
+		    }
 
                     /* Set the file permissions, assumes non NFSv4 */
                     if (mode != NULL) {
                         if (stat(file, &sb))
                             goto ERROR;
-                        if ((set = setmode(mode)) == NULL)
-                            goto ERROR;
+			if (type == ASSET_FILE_OWNER_MODE && fm_mode != NULL) {
+                        	if ((set = setmode(fm_mode)) == NULL)
+					goto ERROR;
+			} else {
+                        	if ((set = setmode(mode)) == NULL)
+                            		goto ERROR;
+			}
                         newmode = getmode(set, sb.st_mode);
                         free(set);
                         if (chmod(file, newmode))
@@ -333,7 +358,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
             SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
             goto ERROR;
         }
-        if (type == ASSET_FILE || type == ASSET_SAMPLE || type == ASSET_SHELL) {
+        if (type == ASSET_FILE || type == ASSET_SAMPLE || type == ASSET_SHELL || type == ASSET_FILE_OWNER_MODE) {
             /* don't put the root in the database! */
             if (sqlite3_bind_text(insert, 2, file + strlen(mport->root), -1, SQLITE_STATIC) != SQLITE_OK) {
                 SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
