@@ -72,9 +72,10 @@ mport_assetlist_free(mportAssetList *list) {
 }
 
 
-/* Parses the contents of the given plistfile pointer.  Returns MPORT_OK on success, 
+/**
+ * Parses the contents of the given plistfile pointer.  
+ * Returns MPORT_OK on success, 
  * an error code on failure.
- *
  */
 MPORT_PUBLIC_API int
 mport_parse_plistfile(FILE *fp, mportAssetList *list) {
