@@ -169,8 +169,8 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 
     /* get the file count for the progress meter */
     if (mport_db_prepare(db, &count,
-                         "SELECT COUNT(*) FROM stub.assets WHERE (type=%i or type=%i or type=%i) AND pkg=%Q",
-                         ASSET_FILE, ASSET_SAMPLE, ASSET_SHELL, pkg->name) != MPORT_OK)
+                         "SELECT COUNT(*) FROM stub.assets WHERE (type=%i or type=%i or type=%i or type=%i) AND pkg=%Q",
+                         ASSET_FILE, ASSET_SAMPLE, ASSET_SHELL, ASSET_FILE_OWNER_MODE, pkg->name) != MPORT_OK)
         RETURN_CURRENT_ERROR;
 
     switch (sqlite3_step(count)) {
@@ -233,7 +233,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
         checksum = (char *) sqlite3_column_text(assets, 2);
 	fm_owner = (char *) sqlite3_column_text(assets, 3);
 	fm_group = (char *) sqlite3_column_text(assets, 4);
-	fm_mode = (char *) sqlite3_column_text(assets, 5);
+	fm_mode  = (char *) sqlite3_column_text(assets, 5);
 
         switch (type) {
             case ASSET_CWD:
@@ -243,7 +243,6 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 
                 break;
             case ASSET_CHMOD:
-                printf("asset_chmod %s, %s\n", mode, data);
                 if (mode != NULL)
                     free(mode);
                 /* TODO: should we reset the mode rather than NULL here */
@@ -279,7 +278,12 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
                 if (mport_bundle_read_next_entry(bundle, &entry) != MPORT_OK)
                     goto ERROR;
 
-                (void) snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, data);
+		(void) snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, data);
+		if (entry == NULL) {
+			SET_ERROR(MPORT_ERR_FATAL, "Unexpected EOF with archive file");
+			goto ERROR;
+		}
+
                 archive_entry_set_pathname(entry, file);
 
                 if (mport_bundle_read_extract_next_file(bundle, entry) != MPORT_OK)
@@ -291,14 +295,21 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
                 if (S_ISREG(sb.st_mode)) {
 		    if (type == ASSET_FILE_OWNER_MODE) {
 			/* Test for owner and group settings, otherwise roll with our default. */
-			if (fm_owner != NULL && fm_group != NULL) {
+			if (fm_owner != NULL && fm_group != NULL && fm_owner[0] != '\0' && fm_group[0] != '\0') {
+				fprintf(stderr, "owner %s and group %s\n", fm_owner, fm_group);
 				if (chown(file, mport_get_uid(fm_owner), mport_get_gid(fm_group)) == -1)
 					goto ERROR;
-			} else if (fm_owner != NULL) {
+			} else if (fm_owner != NULL && fm_owner[0] != '\0') {
+				fprintf(stderr, "owner %s\n", fm_owner);
 				if (chown(file, mport_get_uid(fm_owner), group) == -1)
 					goto ERROR;
-			} else if (fm_group != NULL) {
+			} else if (fm_group != NULL && fm_group[0] != '\0') {
+				fprintf(stderr, "group %s\n", fm_group);
 				if (chown(file, owner, mport_get_gid(fm_group)) == -1)
+					goto ERROR;
+			} else {
+				// use default.
+				 if (chown(file, owner, group) == -1)
 					goto ERROR;
 			}
 		    } else {
@@ -368,14 +379,42 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
                 SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
                 goto ERROR;
             }
+            if (sqlite3_bind_text(insert, 4, fm_owner, -1, SQLITE_STATIC) != SQLITE_OK) {
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+                goto ERROR;
+            }
+            if (sqlite3_bind_text(insert, 5, fm_group, -1, SQLITE_STATIC) != SQLITE_OK) {
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+                goto ERROR;
+            }
+            if (sqlite3_bind_text(insert, 6, fm_mode, -1, SQLITE_STATIC) != SQLITE_OK) {
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+                goto ERROR;
+            }
         } else if (type == ASSET_DIR || type == ASSET_DIRRM || type == ASSET_DIRRMTRY) {
             (void) snprintf(dir, FILENAME_MAX, "%s/%s", cwd, data);
+
             if (sqlite3_bind_text(insert, 2, dir, -1, SQLITE_STATIC) != SQLITE_OK) {
                 SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
                 goto ERROR;
             }
 
             if (sqlite3_bind_null(insert, 3) != SQLITE_OK) {
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+                goto ERROR;
+            }
+
+            if (sqlite3_bind_null(insert, 4) != SQLITE_OK) {
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+                goto ERROR;
+            }
+
+            if (sqlite3_bind_null(insert, 5) != SQLITE_OK) {
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+                goto ERROR;
+            }
+
+            if (sqlite3_bind_null(insert, 6) != SQLITE_OK) {
                 SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
                 goto ERROR;
             }
@@ -386,6 +425,21 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
             }
 
             if (sqlite3_bind_null(insert, 3) != SQLITE_OK) {
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+                goto ERROR;
+            }
+
+            if (sqlite3_bind_null(insert, 4) != SQLITE_OK) {
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+                goto ERROR;
+            }
+
+            if (sqlite3_bind_null(insert, 5) != SQLITE_OK) {
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+                goto ERROR;
+            }
+
+            if (sqlite3_bind_null(insert, 6) != SQLITE_OK) {
                 SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
                 goto ERROR;
             }
