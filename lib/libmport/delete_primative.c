@@ -150,7 +150,7 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force) 
             snprintf(file, sizeof(file), "%s", mport->root);
         } else if (*data == '/') {
 	    /* TODO: do we still want to support mport->root here? seems to fail for /var entries */
-            snprintf(file, sizeof(file), "%s", data);
+            snprintf(file, sizeof(file), "%s%s", mport->root, data);
         } else {
             snprintf(file, sizeof(file), "%s%s/%s", mport->root, pack->prefix, data);
         }
@@ -174,7 +174,7 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force) 
                     if (MD5File(file, md5) == NULL)
                         mport_call_msg_cb(mport, "Can't md5 %s: %s", file, strerror(errno));
 
-                    if (strcmp(md5, checksum) != 0)
+                    if (checksum == NULL || md5 == NULL || strcmp(md5, checksum) != 0)
                         mport_call_msg_cb(mport, "Checksum mismatch: %s", file);
 
                     if (type == ASSET_SAMPLE) {
