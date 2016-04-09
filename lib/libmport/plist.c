@@ -119,6 +119,9 @@ mport_parse_plistfile(FILE *fp, mportAssetList *list) {
 		entry->type = parse_command(cmnd);
 		if (entry->type == ASSET_FILE_OWNER_MODE)
 			parse_file_owner_mode(&entry, cmnd);
+		if (entry->type == ASSET_DIR_OWNER_MODE) {
+			parse_file_owner_mode(&entry, &cmnd[3]);
+		}
         } else {
             entry->type = ASSET_FILE;
         }
@@ -227,12 +230,15 @@ parse_command(const char *s) {
     if (STRING_EQ(s, "unexec"))
         return ASSET_UNEXEC;
 
+    /* dir is preferred to dirrm and dirrmtry */
+    if (STRING_EQ(s, "dir"))
+        return ASSET_DIR;
+    if (strncmp(s, "dir(", 4) == 0)
+	return ASSET_DIR_OWNER_MODE;
     if (STRING_EQ(s, "dirrm"))
         return ASSET_DIRRM;
     if (STRING_EQ(s, "dirrmtry"))
         return ASSET_DIRRMTRY;
-    if (STRING_EQ(s, "dir"))
-        return ASSET_DIR;
     if (STRING_EQ(s, "cwd") || STRING_EQ(s, "cd"))
         return ASSET_CWD;
 
