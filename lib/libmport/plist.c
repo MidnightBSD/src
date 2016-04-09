@@ -170,19 +170,31 @@ parse_file_owner_mode(mportAssetListEntry **entry, char *cmdLine) {
 	char *permissions[3] = {NULL, NULL, NULL};
 	int i = 0;
 
-	while((tok = strsep(&op, ",)")) != NULL) {
+	while((tok = strsep(&op, "(,)")) != NULL) {
 		if (i == 3)
 			break;
 		permissions[i] = op;
 		i++;
 	}
 
-	if (permissions[0] != NULL)
+	if (permissions[0] != NULL) {
+#ifdef DEBUG
+		fprintf(stderr, "owner %s -", permissions[0]);
+#endif
 		(*entry)->owner = strdup(permissions[0]);
-	if (permissions[1] != NULL)
+	}
+	if (permissions[1] != NULL) {
+#ifdef DEBUG
+		fprintf(stderr, "; group %s -", permissions[1]);
+#endif
 		(*entry)->group = strdup(permissions[1]);
-	if (permissions[2] != NULL)
+	}
+	if (permissions[2] != NULL) {
+#ifdef DEBUG
+		fprintf(stderr, "; mode %s -", permissions[2]);
+#endif
 		(*entry)->mode = strdup(permissions[2]);
+	}
 
 	free(start);
 
