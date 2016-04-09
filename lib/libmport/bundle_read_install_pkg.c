@@ -296,15 +296,21 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 		    if (type == ASSET_FILE_OWNER_MODE) {
 			/* Test for owner and group settings, otherwise roll with our default. */
 			if (fm_owner != NULL && fm_group != NULL && fm_owner[0] != '\0' && fm_group[0] != '\0') {
+#ifdef DEBUG
 				fprintf(stderr, "owner %s and group %s\n", fm_owner, fm_group);
+#endif
 				if (chown(file, mport_get_uid(fm_owner), mport_get_gid(fm_group)) == -1)
 					goto ERROR;
 			} else if (fm_owner != NULL && fm_owner[0] != '\0') {
+#ifdef DEBUG
 				fprintf(stderr, "owner %s\n", fm_owner);
+#endif
 				if (chown(file, mport_get_uid(fm_owner), group) == -1)
 					goto ERROR;
 			} else if (fm_group != NULL && fm_group[0] != '\0') {
+#ifdef DEBUG
 				fprintf(stderr, "group %s\n", fm_group);
+#endif
 				if (chown(file, owner, mport_get_gid(fm_group)) == -1)
 					goto ERROR;
 			} else {
