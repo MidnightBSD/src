@@ -123,7 +123,7 @@ insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack,
 {
   mportAssetListEntry *e = NULL;
   sqlite3_stmt *stmnt = NULL;
-  char sql[]  = "INSERT INTO assets (pkg, type, data, checksum) VALUES (?,?,?,?)";
+  char sql[]  = "INSERT INTO assets (pkg, type, data, checksum, owner, grp, mode) VALUES (?,?,?,?,?,?,?)";
   char md5[33];
   char file[FILENAME_MAX];
   char cwd[FILENAME_MAX];
@@ -157,10 +157,20 @@ insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack,
     if (sqlite3_bind_text(stmnt, 3, e->data, -1, SQLITE_STATIC) != SQLITE_OK) {
       RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
     }
-    
-    if (e->type == ASSET_FILE || e->type == ASSET_SAMPLE || e->type == ASSET_SHELL) {
+    // 4 is computed below 
+    if (sqlite3_bind_text(stmnt, 5, e->owner, -1, SQLITE_STATIC) != SQLITE_OK) { 
+      RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+    }
+    if (sqlite3_bind_text(stmnt, 6, e->group, -1, SQLITE_STATIC) != SQLITE_OK) {
+       RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+    }
+    if (sqlite3_bind_text(stmnt, 7, e->mode, -1, SQLITE_STATIC) != SQLITE_OK) {
+       RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+    }
+
+    if (e->type == ASSET_FILE || e->type == ASSET_SAMPLE || e->type == ASSET_SHELL || e->type == ASSET_FILE_OWNER_MODE) {
       /* Don't prepend cwd onto absolute file paths (this is useful for update) */
-      if (*(e->data) == '/') {
+      if (e->data[0] == '/') {
         (void)strlcpy(file, e->data, FILENAME_MAX);
       } else {
         (void)snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data);
