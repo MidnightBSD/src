@@ -397,8 +397,7 @@ insert_depends(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 		return MPORT_OK;
 
 	if (mport_db_prepare(db, &stmnt,
-						 "INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) VALUES (?,?,?,?)") !=
-		MPORT_OK)
+	 	"INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) VALUES (?,?,?,?)") != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
 	/* depends look like this.  break'em up into port, pkgversion and pkgname
