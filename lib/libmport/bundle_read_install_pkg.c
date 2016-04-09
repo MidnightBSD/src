@@ -398,7 +398,11 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
                 goto ERROR;
             }
         } else if (type == ASSET_DIR || type == ASSET_DIRRM || type == ASSET_DIRRMTRY) {
-            (void) snprintf(dir, FILENAME_MAX, "%s/%s", cwd, data);
+		/* if data starts with /, it's most likely an absolute path. Don't prepend cwd */
+		if (data != NULL && data[0] == '/')
+ 			(void) snprintf(dir, FILENAME_MAX, "%s", data);
+		else
+ 			(void) snprintf(dir, FILENAME_MAX, "%s/%s", cwd, data);
 
             if (sqlite3_bind_text(insert, 2, dir, -1, SQLITE_STATIC) != SQLITE_OK) {
                 SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
