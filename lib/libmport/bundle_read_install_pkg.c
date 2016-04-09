@@ -155,6 +155,8 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
     gid_t group = 0; /* wheel */
     mode_t *set;
     mode_t newmode;
+    mode_t *dirset;
+    mode_t dirnewmode;
     char *mode = NULL;
     struct stat sb;
     char file[FILENAME_MAX], cwd[FILENAME_MAX], dir[FILENAME_MAX];
@@ -260,10 +262,32 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
             case ASSET_DIR:
             case ASSET_DIRRM:
             case ASSET_DIRRMTRY:
-                /* TODO: handle mode properly */
-                if (stat(data, &sb) == -1)
+	    case ASSET_DIR_OWNER_MODE:
+		if (stat(data, &sb) == -1)
                     mkdir(data, 0755); /* XXX: we ignore error because it's most likely already there */
-                break;
+
+		if (stat(data, &sb))
+			goto ERROR;
+                if (fm_mode != NULL && fm_mode[0] != '\0') {
+                       if ((dirset = setmode(fm_mode)) == NULL)
+                             goto ERROR;
+                       dirnewmode = getmode(dirset, sb.st_mode);
+                       free(dirset);
+                       if (chmod(data, dirnewmode))
+                           goto ERROR;
+		}
+	        if (fm_owner != NULL && fm_group != NULL && fm_owner[0] != '\0' && fm_group[0] != '\0') {
+			if (chown(data, mport_get_uid(fm_owner), mport_get_gid(fm_group)) == -1)
+				goto ERROR;
+                } else if (fm_owner != NULL && fm_owner[0] != '\0') {
+			if (chown(data, mport_get_uid(fm_owner), group) == -1)
+				goto ERROR;
+                } else if (fm_group != NULL && fm_group[0] != '\0') {
+			if (chown(data, owner, mport_get_gid(fm_group)) == -1)
+				goto ERROR;
+                }
+	
+		break;
             case ASSET_EXEC:
                 if (mport_run_asset_exec(mport, data, cwd, file) != MPORT_OK)
                     goto ERROR;
