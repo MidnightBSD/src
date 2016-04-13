@@ -32,7 +32,7 @@
 # $MidnightBSD$
 
 TYPE="MidnightBSD"
-REVISION="0.8"
+REVISION="0.9"
 RELEASE="${REVISION}"
 VERSION="${TYPE} ${RELEASE}"
 SYSDIR=$(/usr/bin/dirname $0)/..
