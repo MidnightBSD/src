@@ -14,7 +14,8 @@
 #
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
-
+#20160412
+OLD_LIBS+=lib/libmport.so.1
 #20150815
 OLD_LIBS+=lib/libarchive.so.5
 OLD_LIBS+=lib/libasn1.so.10
