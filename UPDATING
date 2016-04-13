@@ -1,5 +1,17 @@
 Updating Information for MidnightBSD users.
 
+20160412:
+	0.8 stable branch created. Continue development as 0.9.
+
+	Fix several issues with wait6 system call addition.
+
+20160409:
+	libmport now supports two new plist formats:
+	@(root,wheel,4775) myfile
+	@dir(root,wheel,775) mydir
+
+	On delete, absoluate paths are now handled properly.
+
 20160317:
 	OpenSSH doesn't have the luck of the Irish. 
 
