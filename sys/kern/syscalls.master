@@ -1,4 +1,4 @@
- $FreeBSD$
+ $MidnightBSD$
 ;	from: @(#)syscalls.master	8.2 (Berkeley) 1/13/94
 ;
 ; System call name/number master file.
@@ -957,7 +957,7 @@
 				    off_t offset, off_t len); }
 531	AUE_NULL	STD	{ int posix_fadvise(int fd, off_t offset, \
 				    off_t len, int advice); }
-532	AUE_WAIT6	STD	{ int wait6(int idtype, int id, \
+532	AUE_WAIT6	STD	{ int wait6(int idtype, id_t id, \
 				    int *status, int options, \
 				    struct __wrusage *wrusage, \
 				    siginfo_t *info); }
