@@ -28,7 +28,7 @@
 .\"	@(#)systat.1	8.2 (Berkeley) 12/30/93
 .\" $MidnightBSD$
 .\"
-.Dd October 14, 2007
+.Dd September 17, 2012
 .Dt SYSTAT 1
 .Os
 .Sh NAME
@@ -97,6 +97,7 @@ to be one of:
 .Ic mbufs ,
 .Ic netstat ,
 .Ic pigs ,
+.Ic sensors ,
 .Ic swap ,
 .Ic tcp ,
 or
@@ -109,6 +110,7 @@ full detail below.
 The
 .Ar refresh-value
 specifies the screen refresh time interval in seconds.
+Time interval can be fractional.
 .El
 .Pp
 Certain characters cause immediate action by
@@ -282,6 +284,11 @@ Areas known to the kernel, but not in use are shown as not available.
 .It Ic mbufs
 Display, in the lower window, the number of mbufs allocated
 for particular uses, i.e., data, socket structures, etc.
+.It Ic sensors
+Display, in the lower window,
+the current values of available hardware sensors,
+in a format similar to that of
+.Xr sysctl 8 .
 .It Ic vmstat
 Take over the entire display and show a (rather crowded) compendium
 of statistics related to virtual memory usage, process scheduling,
@@ -603,6 +610,7 @@ For port names.
 .Xr udp 4 ,
 .Xr gstat 8 ,
 .Xr iostat 8 ,
+.Xr sysctl 8 ,
 .Xr vmstat 8
 .Sh HISTORY
 The
