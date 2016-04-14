@@ -67027,7 +67027,6 @@ usr.bin/netstat/ipsec.c -text
 usr.bin/netstat/ipx.c -text
 usr.bin/netstat/main.c -text
 usr.bin/netstat/mbuf.c -text
-usr.bin/netstat/mcast.c -text
 usr.bin/netstat/mroute.c -text
 usr.bin/netstat/mroute6.c -text
 usr.bin/netstat/netgraph.c -text
