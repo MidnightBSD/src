@@ -78,6 +78,7 @@ static char _rcsid[] = "$KAME: route6d.c,v 1.104 2003/10/31 00:30:20 itojun Exp 
 #include "route6d.h"
 
 #define	MAXFILTER	40
+define RT_DUMP_MAXRETRY	15
 
 #ifdef	DEBUG
 #define	INIT_INTERVAL6	6
@@ -2580,7 +2581,7 @@ krtread(again)
 			errmsg = "sysctl NET_RT_DUMP";
 			continue;
 		}
-	} while (retry < 5 && errmsg != NULL);
+	} while (retry < RT_DUMP_MAXRETRY && errmsg != NULL);
 	if (errmsg) {
 		fatal("%s (with %d retries, msize=%lu)", errmsg, retry,
 		    (u_long)msize);
