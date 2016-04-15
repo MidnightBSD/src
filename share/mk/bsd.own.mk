@@ -44,6 +44,11 @@
 # LIBMODE	Library mode. [${NOBINMODE}]
 #
 #
+# DEBUGDIR	Base path for standalone debug files. [/usr/lib/debug]
+#
+# DEBUGMODE	Mode for debug files. [${NOBINMODE}]
+#
+#
 # KMODDIR	Base path for loadable kernel modules
 #		(see kld(4)). [/boot/kernel]
 #
@@ -148,6 +153,9 @@ LIBOWN?=	${BINOWN}
 LIBGRP?=	${BINGRP}
 LIBMODE?=	${NOBINMODE}
 
+DEBUGDIR?=	/usr/lib/debug
+DEBUGMODE?=	${NOBINMODE}
+
 
 # Share files
 SHAREDIR?=	/usr/share
@@ -182,6 +190,15 @@ NLSMODE?=	${NOBINMODE}
 
 INCLUDEDIR?=	/usr/include
 
+#
+# install(1) parameters.
+#
+HRDLINK?=	-l h
+SYMLINK?=	-l s
+
+INSTALL_LINK?=		${INSTALL} ${HRDLINK}
+INSTALL_SYMLINK?=	${INSTALL} ${SYMLINK}
+
 # Common variables
 .if !defined(DEBUG_FLAGS)
 STRIP?=		-s
@@ -204,10 +221,19 @@ COMPRESS_EXT?=	.gz
 # regardless of user's setting).
 #
 .for var in \
+    CTF \
+    DEBUG_FILES \
     INSTALLLIB \
     MAN \
     PROFILE
 .if defined(NO_${var})
+.if defined(WITH_${var})
+.warning unsetting WITH_${var}
+.undef WITH_${var}
+.if defined(WITH_${var})
+.error wtf
+.endif
+.endif
 WITHOUT_${var}=
 .endif
 .endfor
@@ -314,6 +340,7 @@ __DEFAULT_YES_OPTIONS = \
     BIND_UTILS \
     BINUTILS \
     BLUETOOTH \
+    BMAKE \
     BOOT \
     BSD_CPIO \
     BSNMP \
@@ -358,7 +385,6 @@ __DEFAULT_YES_OPTIONS = \
     KVM \
     LEGACY_CONSOLE \
     LIB32 \
-    LIBCPLUSPLUS \
     LIBPTHREAD \
     LIBTHR \
     LOCALES \
@@ -410,7 +436,6 @@ __DEFAULT_YES_OPTIONS = \
     ZONEINFO
 
 __DEFAULT_NO_OPTIONS = \
-    BMAKE \
     BSD_GREP \
     BIND_IDN \
     BIND_LARGE_FILE \
@@ -418,11 +443,14 @@ __DEFAULT_NO_OPTIONS = \
     BIND_SIGCHASE \
     BIND_XML \
     CLANG_EXTRAS \
+    CTF \
+    DEBUG_FILES \
     HESIOD \
     IDEA \
     OFED \
     SHARED_TOOLCHAIN \
-    SVN
+    SVN \
+    TESTS
 
 #
 # Default behaviour of some options depends on the architecture.  Unfortunately
@@ -621,6 +649,41 @@ MK_${vv:H}:=	no
 MK_${vv:H}:=	${MK_${vv:T}}
 .endif
 .endfor
+
+#
+# MK_* options that default to "yes" if the compiler is a C++11 compiler.
+#
+.include <bsd.compiler.mk>
+.for var in \
+    LIBCPLUSPLUS
+.if defined(WITH_${var}) && defined(WITHOUT_${var})
+.error WITH_${var} and WITHOUT_${var} can't both be set.
+.endif
+.if defined(MK_${var})
+.error MK_${var} can't be set by a user.
+.endif
+.if ${COMPILER_FEATURES:Mc++11}
+.if defined(WITHOUT_${var})
+MK_${var}:=	no
+.else
+MK_${var}:=	yes
+.endif
+.else
+.if defined(WITH_${var})
+MK_${var}:=	yes
+.else
+MK_${var}:=	no
+.endif
+.endif
+.endfor
+
+.if ${MK_CTF} != "no"
+CTFCONVERT_CMD=	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.elif defined(.PARSEDIR) || ${MAKE_VERSION} >= 9201210220
+CTFCONVERT_CMD=
+.else
+CTFCONVERT_CMD=	@:
+.endif 
 
 .endif # !_WITHOUT_SRCCONF
 
