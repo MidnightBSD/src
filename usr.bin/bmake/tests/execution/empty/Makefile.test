@@ -1,0 +1,13 @@
+# $FreeBSD: stable/10/usr.bin/bmake/tests/execution/empty/Makefile.test 263346 2014-03-19 12:29:20Z jmmv $
+
+EMPTY=
+
+check-empty:
+	@${MAKE} -f ${MAKEFILE} do-$@
+	@${MAKE} -f ${MAKEFILE} -j2 do-$@
+	@${MAKE} -f ${MAKEFILE} -j2 -B do-$@
+
+do-check-empty:
+	${EMPTY}
+	@${EMPTY}
+	@-${EMPTY}
