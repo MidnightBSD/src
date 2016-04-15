@@ -16,7 +16,7 @@ NO_SHARED?=	YES
 .endif
 
 # Version has the RYYYYMMDDX format, where R is from RELENG_<R>
-CFLAGS+=-DMAKE_VERSION=\"9201210220\"
+CFLAGS+=-DMAKE_VERSION=\"10201205300\"
 
 # There is no obvious performance improvement currently.
 # CFLAGS+=-DUSE_KQUEUE
@@ -55,9 +55,9 @@ EMITC	?= ${LOCALBASE}/bin/emitc
 hash:
 	( echo '/*' ;							\
 	  echo ' * DO NOT EDIT' ;					\
-	  echo ' * $$''FreeBSD$$' ;					\
+	  echo ' * $$''MidnightBSD$$' ;					\
 	  echo -n ' * auto-generated from ' ;				\
-	  sed -nEe '/\$$FreeBSD/s/^.*\$$(.*)\$$.*$$/\1/p'		\
+	  sed -nEe '/\$$MidnightBSD/s/^.*\$$(.*)\$$.*$$/\1/p'		\
 		${.CURDIR}/parse.c ;					\
 	  echo ' * DO NOT EDIT' ;					\
 	  echo ' */' ;							\
@@ -118,6 +118,5 @@ PROG=	fmake
 fmake.1: make.1
 	cp ${.ALLSRC} ${.TARGET}
 .endif
-
 
 .include <bsd.prog.mk>
