@@ -1,3 +1,4 @@
+/* $FreeBSD: stable/10/usr.bin/bmake/config.h 276305 2014-12-27 16:43:22Z ngie $ */
 /* config.h.  Generated from config.h.in by configure.  */
 /* config.h.in.  Generated from configure.in by autoheader.  */
 

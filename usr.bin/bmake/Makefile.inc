@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/usr.bin/bmake/Makefile.inc 250755 2013-05-17 22:18:27Z sjg $ 
+# $FreeBSD: stable/10/usr.bin/bmake/Makefile.inc 288403 2015-09-29 22:00:03Z bdrewery $ 
 
 .include "bsd.own.mk"
 
@@ -13,12 +13,19 @@
 MK_BMAKE= yes
 .endif
 
-.if defined(MK_BMAKE) && ${MK_BMAKE} != "no"
+.if defined(MK_BMAKE) && ${MK_BMAKE} != "no" && exists(${.CURDIR}/tests)
 PROG= make
 .endif
 
 .if !defined(MK_SHARED_TOOLCHAIN) || ${MK_SHARED_TOOLCHAIN} == "no"
 NO_SHARED?=     YES
+.endif
+
+# hack to not add tests to tests subdir since this is included from
+# there and to avoid renaming things that require changes to generated
+# files.
+.if defined(MK_TESTS) && ${MK_TESTS} != no && exists(${.CURDIR}/tests)
+SUBDIR+= tests
 .endif
 
 WARNS=3
