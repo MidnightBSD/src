@@ -979,7 +979,8 @@ Var_Set(const char *name, const char *val, GNode *ctxt, int flags)
 
 	Var_Append(MAKEOVERRIDES, name, VAR_GLOBAL);
     }
-	
+
+
  out:
     if (expanded_name != NULL)
 	free(expanded_name);
