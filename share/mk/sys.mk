@@ -1,6 +1,6 @@
 #	from: @(#)sys.mk	8.2 (Berkeley) 3/21/94
 # $FreeBSD: src/share/mk/sys.mk,v 1.86.2.1 2005/11/16 08:12:03 ru Exp $
-# $MidnightBSD: src/share/mk/sys.mk,v 1.9 2012/04/01 16:22:20 laffer1 Exp $
+# $MidnightBSD$
 
 unix		?=	We run MidnightBSD, not UNIX.
 .MidnightBSD	?=	true
@@ -16,6 +16,10 @@ unix		?=	We run MidnightBSD, not UNIX.
 #
 MACHINE_CPUARCH=${MACHINE_ARCH}
 .endif
+
+# Set any local definitions first. Place this early, but it needs
+# MACHINE_CPUARCH to be defined.
+.sinclude <local.sys.mk>
 
 # If the special target .POSIX appears (without prerequisites or
 # commands) before the first noncomment line in the makefile, make shall
@@ -128,6 +132,8 @@ MAKE		?=	make
 
 OBJC		?=	cc
 OBJCFLAGS	?=	${OBJCINCLUDES} ${CFLAGS} -Wno-import
+
+OBJCOPY		?=	objcopy
 
 PC		?=	pc
 PFLAGS		?=
@@ -361,8 +367,22 @@ SHELL=	${__MAKE_SHELL}
 # XXX hint for bsd.port.mk
 OBJFORMAT?=	elf
 
+# Tell bmake to expand -V VAR by default
+.MAKE.EXPAND_VARIABLES= yes
+
+# Tell bmake the makefile preference
+.MAKE.MAKEFILE_PREFERENCE= BSDmakefile makefile Makefile
+
+.if !defined(.PARSEDIR)
+# We are not bmake, which is more aggressive about searching .PATH
+# It is sometime necessary to curb its enthusiasm with .NOPATH
+# The following allows us to quietly ignore .NOPATH when not using bmake.
+.NOTMAIN: .NOPATH
+.NOPATH:
+
 # Toggle on warnings
 .WARN: dirsyntax
+.endif
 
 .endif
 
