@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/lib/libpam/modules/pam_unix/pam_unix.c 247568 2013-03-01 19:42:50Z des $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -96,13 +96,13 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags __unused,
 	const char *pass, *user, *realpw, *prompt;
 
 	if (openpam_get_option(pamh, PAM_OPT_AUTH_AS_SELF)) {
-		pwd = getpwnam(getlogin());
+		user = getlogin();
 	} else {
 		retval = pam_get_user(pamh, &user, NULL);
 		if (retval != PAM_SUCCESS)
 			return (retval);
-		pwd = getpwnam(user);
 	}
+	pwd = getpwnam(user);
 
 	PAM_LOG("Got user: %s", user);
 
