@@ -1,5 +1,25 @@
 Updating Information for MidnightBSD users.
 
+20160505:
+	OpenSSL security patch
+
+	The padding check in AES-NI CBC MAC was rewritten to be in constant time
+	by making sure that always the same bytes are read and compared against
+	either the MAC or padding bytes. But it no longer checked that there was
+	enough data to have both the MAC and padding bytes. [CVE-2016-2107]
+
+	An overflow can occur in the EVP_EncodeUpdate() function which is used for
+	Base64 encoding of binary data. [CVE-2016-2105]
+
+	An overflow can occur in the EVP_EncryptUpdate() function, however it is
+	believed that there can be no overflows in internal code due to this problem.
+	[CVE-2016-2106]
+
+	When ASN.1 data is read from a BIO using functions such as d2i_CMS_bio()
+	a short invalid encoding can casuse allocation of large amounts of memory
+	potentially consuming excessive resources or exhausting memory.
+	[CVE-2016-2109]
+
 20160412:
 	0.8 stable branch created. Continue development as 0.9.
 
