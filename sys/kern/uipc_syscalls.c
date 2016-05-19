@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD: src/sys/kern/uipc_syscalls.c,v 1.7 2012/10/09 04:08:16 laffer1 Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include "opt_capsicum.h"
 #include "opt_inet.h"
@@ -1653,6 +1653,9 @@ sockargs(mp, buf, buflen, type)
 	struct sockaddr *sa;
 	struct mbuf *m;
 	int error;
+
+	if (buflen < 0)
+		return (EINVAL);
 
 	if ((u_int)buflen > MLEN) {
 #ifdef COMPAT_OLDSOCK
