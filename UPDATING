@@ -1,5 +1,16 @@
 Updating Information for MidnightBSD users.
 
+20160519:
+	Kernel Security updates
+
+	atkbd(4) - Incorrect signedness comparison in the ioctl(2) handler allows a malicious
+	local user to overwrite a portion of the kernel memory.
+
+	Incorrect argument handling in sendmsg(2)
+
+	Incorrect argument handling in the socket code allows malicious local
+	user to overwrite large portion of the kernel memory.
+
 20160505:
 	OpenSSL security patch
 
