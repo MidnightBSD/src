@@ -104,6 +104,7 @@ static int getsockname1(struct thread *td, struct getsockname_args *uap,
 			int compat);
 static int getpeername1(struct thread *td, struct getpeername_args *uap,
 			int compat);
+static int sockargs(struct mbuf **, char *, socklen_t, int);
 
 /*
  * NSFBUFS-related variables and associated sysctls
@@ -1644,18 +1645,12 @@ ogetpeername(td, uap)
 }
 #endif /* COMPAT_OLDSOCK */
 
-int
-sockargs(mp, buf, buflen, type)
-	struct mbuf **mp;
-	caddr_t buf;
-	int buflen, type;
+static int
+sockargs(struct mbuf **mp, char *buf, socklen_t buflen, int type)
 {
 	struct sockaddr *sa;
 	struct mbuf *m;
 	int error;
-
-	if (buflen < 0)
-		return (EINVAL);
 
 	if ((u_int)buflen > MLEN) {
 #ifdef COMPAT_OLDSOCK
@@ -1670,7 +1665,7 @@ sockargs(mp, buf, buflen, type)
 	if ((u_int)buflen > MLEN)
 		MCLGET(m, M_WAIT);
 	m->m_len = buflen;
-	error = copyin(buf, mtod(m, caddr_t), (u_int)buflen);
+	error = copyin(buf, mtod(m, void *), buflen);
 	if (error)
 		(void) m_free(m);
 	else {
