@@ -32,7 +32,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: release/9.2.0/lib/libpam/modules/pam_unix/Makefile 247568 2013-03-01 19:42:50Z des $
 
 .include <bsd.init.mk>
 

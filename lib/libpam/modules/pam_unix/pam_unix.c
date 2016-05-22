@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/9/lib/libpam/modules/pam_unix/pam_unix.c 247568 2013-03-01 19:42:50Z des $");
+__FBSDID("$FreeBSD: release/9.2.0/lib/libpam/modules/pam_unix/pam_unix.c 247568 2013-03-01 19:42:50Z des $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -80,8 +80,6 @@ static char password_hash[] =		PASSWORD_HASH;
 
 #define PAM_OPT_LOCAL_PASS	"local_pass"
 #define PAM_OPT_NIS_PASS	"nis_pass"
-
-char *tempname = NULL;
 
 /*
  * authentication management

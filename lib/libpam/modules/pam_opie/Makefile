@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: release/9.2.0/lib/libpam/modules/pam_opie/Makefile 112044 2003-03-09 20:06:38Z obrien $
 
 LIB=	pam_opie
 SRCS=	pam_opie.c
