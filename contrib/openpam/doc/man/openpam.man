@@ -1,5 +1,5 @@
 .\"
-.\" $Id: openpam.man,v 1.1.1.2 2012-07-21 14:57:34 laffer1 Exp $
+.\" $Id: openpam.man 320 2006-02-16 20:33:19Z des $
 .\"
 .Sh DESCRIPTION
 These functions are OpenPAM extensions to the PAM API.

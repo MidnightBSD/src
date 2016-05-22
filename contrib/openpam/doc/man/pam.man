@@ -1,5 +1,5 @@
 .\"
-.\" $Id: pam.man,v 1.1.1.2 2012-07-21 14:57:34 laffer1 Exp $
+.\" $Id: pam.man 320 2006-02-16 20:33:19Z des $
 .\"
 .Sh DESCRIPTION
 The Pluggable Authentication Modules (PAM) library abstracts a number

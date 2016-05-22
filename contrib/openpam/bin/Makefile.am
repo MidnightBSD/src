@@ -1,6 +1,10 @@
-# $Id: Makefile.am,v 1.1.1.2 2012-07-21 14:57:34 laffer1 Exp $
+# $Id: Makefile.am 538 2012-03-31 17:04:29Z des $
 
-SUBDIRS =
+SUBDIRS = openpam_dump_policy
+
+if WITH_PAMTEST
+SUBDIRS += pamtest
+endif
 
 if WITH_SU
 SUBDIRS += su
