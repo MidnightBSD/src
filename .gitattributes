@@ -51661,12 +51661,6 @@ lib/msun/man/sqrt.3 -text
 lib/msun/man/tan.3 -text
 lib/msun/man/tanh.3 -text
 lib/msun/man/trunc.3 -text
-lib/msun/sparc64/Makefile.inc -text
-lib/msun/sparc64/Symbol.map -text
-lib/msun/sparc64/e_sqrt.S -text
-lib/msun/sparc64/e_sqrtf.S -text
-lib/msun/sparc64/fenv.c -text
-lib/msun/sparc64/fenv.h -text
 lib/msun/src/e_acos.c -text
 lib/msun/src/e_acosf.c -text
 lib/msun/src/e_acosh.c -text
