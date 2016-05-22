@@ -1,4 +1,4 @@
-# $Id: pam_passwdqc.spec,v 1.1.1.2 2006-02-25 02:33:52 laffer1 Exp $
+# $Id: pam_passwdqc.spec,v 1.11 2002/04/16 16:56:52 solar Exp $
 
 Summary: Pluggable password "quality check".
 Name: pam_passwdqc

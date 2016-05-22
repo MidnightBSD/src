@@ -1,4 +1,4 @@
-# $FreeBSD: src/lib/libpam/modules/modules.inc,v 1.20 2006/03/17 18:54:27 ru Exp $
+# $FreeBSD: release/9.2.0/lib/libpam/modules/modules.inc 156813 2006-03-17 18:54:44Z ru $
 
 .include <bsd.own.mk>
 

@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: release/9.2.0/lib/libpam/modules/pam_ftpusers/Makefile 112044 2003-03-09 20:06:38Z obrien $
 
 LIB=	pam_ftpusers
 SRCS=	pam_ftpusers.c

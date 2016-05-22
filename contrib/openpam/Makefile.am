@@ -1,10 +1,14 @@
-# $Id: Makefile.am,v 1.1.1.2 2012-07-21 14:57:34 laffer1 Exp $
+# $Id: Makefile.am 549 2012-04-01 20:38:30Z des $
+
+ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = lib bin modules include
 
 if WITH_DOC
 SUBDIRS += doc
 endif
+
+SUBDIRS += t
 
 EXTRA_DIST = \
 	CREDITS \
