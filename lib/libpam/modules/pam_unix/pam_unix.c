@@ -91,7 +91,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags __unused,
 	login_cap_t *lc;
 	struct passwd *pwd;
 	int retval;
-	const char *pass, *user, *realpw, *prompt;
+	const char *pass, *user = NULL, *realpw, *prompt;
 
 	if (openpam_get_option(pamh, PAM_OPT_AUTH_AS_SELF)) {
 		user = getlogin();
