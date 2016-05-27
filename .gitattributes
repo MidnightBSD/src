@@ -51032,7 +51032,11 @@ lib/libpmc/pmc.core2.3 -text
 lib/libpmc/pmc.corei7.3 -text
 lib/libpmc/pmc.corei7uc.3 -text
 lib/libpmc/pmc.h -text
+lib/libpmc/pmc.haswell.3 svneol=native#text/plain
+lib/libpmc/pmc.haswelluc.3 svneol=native#text/plain
 lib/libpmc/pmc.iaf.3 -text
+lib/libpmc/pmc.ivybridge.3 svneol=native#text/plain
+lib/libpmc/pmc.ivybridgexeon.3 svneol=native#text/plain
 lib/libpmc/pmc.k7.3 -text
 lib/libpmc/pmc.k8.3 -text
 lib/libpmc/pmc.mips.3 -text
@@ -51041,6 +51045,7 @@ lib/libpmc/pmc.p5.3 -text
 lib/libpmc/pmc.p6.3 -text
 lib/libpmc/pmc.sandybridge.3 -text
 lib/libpmc/pmc.sandybridgeuc.3 -text
+lib/libpmc/pmc.sandybridgexeon.3 svneol=native#text/plain
 lib/libpmc/pmc.soft.3 -text
 lib/libpmc/pmc.tsc.3 -text
 lib/libpmc/pmc.ucf.3 -text

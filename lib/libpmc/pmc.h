@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003,2004 Joseph Koshy
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: release/9.2.0/lib/libpmc/pmc.h 229392 2012-01-03 16:35:00Z fabient $
  */
 
 #ifndef _PMC_H_
