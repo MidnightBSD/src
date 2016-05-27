@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 George V. Neville-Neil <gnn@freebsd.org>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: release/9.2.0/sys/dev/hwpmc/hwpmc_mips24k.h 204635 2010-03-03 15:05:58Z gnn $
  */
 
 #ifndef _DEV_HWPMC_MIPS24K_H_

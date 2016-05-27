@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005,2008 Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/hwpmc/hwpmc_x86.c 250581 2013-05-12 22:01:22Z hiren $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -161,15 +162,13 @@ pmc_save_kernel_callchain(uintptr_t *cc, int nframes, struct trapframe *tf)
 	KASSERT(TRAPF_USERMODE(tf) == 0,("[x86,%d] not a kernel backtrace",
 	    __LINE__));
 
+	td = curthread;
 	pc = PMC_TRAPFRAME_TO_PC(tf);
 	fp = PMC_TRAPFRAME_TO_FP(tf);
 	sp = PMC_TRAPFRAME_TO_KERNEL_SP(tf);
 
 	*cc++ = pc;
 	r = fp + sizeof(uintptr_t); /* points to return address */
-
-	if ((td = curthread) == NULL)
-		return (1);
 
 	if (nframes <= 1)
 		return (1);
@@ -252,7 +251,7 @@ pmc_md_initialize()
 		return (NULL);
 
 	/* disallow sampling if we do not have an LAPIC */
-	if (!lapic_enable_pmc())
+	if (md != NULL && !lapic_enable_pmc())
 		for (i = 0; i < md->pmd_nclass; i++) {
 			if (i == PMC_CLASS_INDEX_SOFT)
 				continue;

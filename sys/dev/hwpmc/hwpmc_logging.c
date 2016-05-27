@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2007 Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
@@ -34,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/hwpmc/hwpmc_logging.c 236238 2012-05-29 14:50:21Z fabient $");
 
 #include <sys/param.h>
 #include <sys/capability.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005, Joseph Koshy
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/hwpmc/hwpmc_arm.c 250581 2013-05-12 22:01:22Z hiren $");
 
 #include <sys/param.h>
 #include <sys/pmc.h>
@@ -75,11 +76,9 @@ pmc_save_kernel_callchain(uintptr_t *cc, int maxsamples,
 	KASSERT(TRAPF_USERMODE(tf) == 0,("[arm,%d] not a kernel backtrace",
 	    __LINE__));
 
+	td = curthread;
 	pc = PMC_TRAPFRAME_TO_PC(tf);
 	*cc++ = pc;
-
-	if ((td = curthread) == NULL)
-		return (1);
 
 	if (maxsamples <= 1)
 		return (1);
@@ -126,11 +125,9 @@ pmc_save_user_callchain(uintptr_t *cc, int maxsamples,
 	KASSERT(TRAPF_USERMODE(tf), ("[x86,%d] Not a user trap frame tf=%p",
 	    __LINE__, (void *) tf));
 
+	td = curthread;
 	pc = PMC_TRAPFRAME_TO_PC(tf);
 	*cc++ = pc;
-
-	if ((td = curthread) == NULL)
-		return (1);
 
 	if (maxsamples <= 1)
 		return (1);

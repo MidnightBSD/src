@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Joseph Koshy
  * All rights reserved.
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/hwpmc/hwpmc_intel.c 250373 2013-05-08 16:43:52Z hiren $");
 
 #include <sys/param.h>
 #include <sys/pmc.h>
@@ -68,7 +69,7 @@ intel_switch_out(struct pmc_cpu *pc, struct pmc_process *pp)
 	    (uintmax_t) rcr4());
 
 	/* always turn off the RDPMC instruction */
- 	load_cr4(rcr4() & ~CR4_PCE);
+	load_cr4(rcr4() & ~CR4_PCE);
 
 	return 0;
 }
@@ -131,8 +132,14 @@ pmc_intel_initialize(void)
 			nclasses = 3;
 			break;
 		case 0x1A:
-		case 0x1E:	/* Per Intel document 253669-032 9/2009, pages A-2 and A-57 */
-		case 0x1F:	/* Per Intel document 253669-032 9/2009, pages A-2 and A-57 */
+		case 0x1E:	/*
+				 * Per Intel document 253669-032 9/2009,
+				 * pages A-2 and A-57
+				 */
+		case 0x1F:	/*
+				 * Per Intel document 253669-032 9/2009,
+				 * pages A-2 and A-57
+				 */
 		case 0x2E:
 			cputype = PMC_CPU_INTEL_COREI7;
 			nclasses = 5;
@@ -144,6 +151,22 @@ pmc_intel_initialize(void)
 			break;
 		case 0x2A:	/* Per Intel document 253669-039US 05/2011. */
 			cputype = PMC_CPU_INTEL_SANDYBRIDGE;
+			nclasses = 5;
+			break;
+		case 0x2D:	/* Per Intel document 253669-044US 08/2012. */
+			cputype = PMC_CPU_INTEL_SANDYBRIDGE_XEON;
+			nclasses = 3;
+			break;
+		case 0x3A:	/* Per Intel document 253669-043US 05/2012. */
+			cputype = PMC_CPU_INTEL_IVYBRIDGE;
+			nclasses = 3;
+			break;
+		case 0x3E:	/* Per Intel document 325462-045US 01/2013. */
+			cputype = PMC_CPU_INTEL_IVYBRIDGE_XEON;
+			nclasses = 3;
+			break;
+		case 0x3C:	/* Per Intel document 325462-045US 01/2013. */
+			cputype = PMC_CPU_INTEL_HASWELL;
 			nclasses = 5;
 			break;
 		}
@@ -164,7 +187,7 @@ pmc_intel_initialize(void)
 	/* Allocate base class and initialize machine dependent struct */
 	pmc_mdep = pmc_mdep_alloc(nclasses);
 
-	pmc_mdep->pmd_cputype 	 = cputype;
+	pmc_mdep->pmd_cputype	 = cputype;
 	pmc_mdep->pmd_switch_in	 = intel_switch_in;
 	pmc_mdep->pmd_switch_out = intel_switch_out;
 
@@ -184,8 +207,12 @@ pmc_intel_initialize(void)
 	case PMC_CPU_INTEL_CORE2:
 	case PMC_CPU_INTEL_CORE2EXTREME:
 	case PMC_CPU_INTEL_COREI7:
+	case PMC_CPU_INTEL_IVYBRIDGE:
 	case PMC_CPU_INTEL_SANDYBRIDGE:
 	case PMC_CPU_INTEL_WESTMERE:
+	case PMC_CPU_INTEL_SANDYBRIDGE_XEON:
+	case PMC_CPU_INTEL_IVYBRIDGE_XEON:
+	case PMC_CPU_INTEL_HASWELL:
 		error = pmc_core_initialize(pmc_mdep, ncpus);
 		break;
 
@@ -224,6 +251,9 @@ pmc_intel_initialize(void)
 		KASSERT(0, ("[intel,%d] Unknown CPU type", __LINE__));
 	}
 
+	if (error)
+		goto error;
+
 	/*
 	 * Init the uncore class.
 	 */
@@ -233,6 +263,7 @@ pmc_intel_initialize(void)
 		 * Intel Corei7 and Westmere processors.
 		 */
 	case PMC_CPU_INTEL_COREI7:
+	case PMC_CPU_INTEL_HASWELL:
 	case PMC_CPU_INTEL_SANDYBRIDGE:
 	case PMC_CPU_INTEL_WESTMERE:
 		error = pmc_uncore_initialize(pmc_mdep, ncpus);
@@ -263,8 +294,12 @@ pmc_intel_finalize(struct pmc_mdep *md)
 	case PMC_CPU_INTEL_CORE2:
 	case PMC_CPU_INTEL_CORE2EXTREME:
 	case PMC_CPU_INTEL_COREI7:
+	case PMC_CPU_INTEL_HASWELL:
+	case PMC_CPU_INTEL_IVYBRIDGE:
 	case PMC_CPU_INTEL_SANDYBRIDGE:
 	case PMC_CPU_INTEL_WESTMERE:
+	case PMC_CPU_INTEL_SANDYBRIDGE_XEON:
+	case PMC_CPU_INTEL_IVYBRIDGE_XEON:
 		pmc_core_finalize(md);
 		break;
 
@@ -294,6 +329,7 @@ pmc_intel_finalize(struct pmc_mdep *md)
 #if	defined(__i386__) || defined(__amd64__)
 	switch (md->pmd_cputype) {
 	case PMC_CPU_INTEL_COREI7:
+	case PMC_CPU_INTEL_HASWELL:
 	case PMC_CPU_INTEL_SANDYBRIDGE:
 	case PMC_CPU_INTEL_WESTMERE:
 		pmc_uncore_finalize(md);

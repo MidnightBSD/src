@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Joseph Koshy
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: release/9.2.0/sys/dev/hwpmc/hwpmc_core.h 241609 2012-10-16 13:27:20Z fabient $
  */
 
 #ifndef _DEV_HWPMC_CORE_H_
@@ -46,7 +47,7 @@ struct pmc_md_iaf_op_pmcallocate {
  */
 struct pmc_md_iap_op_pmcallocate {
 	uint32_t	pm_iap_config;
-	uint32_t	pm_iap_rsp;
+	uint64_t	pm_iap_rsp;
 };
 
 #define	IAP_EVSEL(C)	((C) & 0xFF)
@@ -60,7 +61,8 @@ struct pmc_md_iap_op_pmcallocate {
 #define	IAP_INV		(1 << 23)
 #define	IAP_CMASK(C)	(((C) & 0xFF) << 24)
 
-#define	IA_OFFCORE_RSP_MASK	0xF7FF
+#define	IA_OFFCORE_RSP_MASK_I7WM	0x000000F7FF
+#define	IA_OFFCORE_RSP_MASK_SBIB	0x3F807F8FFF
 
 #ifdef	_KERNEL
 
@@ -167,7 +169,7 @@ struct pmc_md_iaf_pmc {
 
 struct pmc_md_iap_pmc {
 	uint32_t	pm_iap_evsel;
-	uint32_t	pm_iap_rsp;
+	uint64_t	pm_iap_rsp;
 };
 
 /*

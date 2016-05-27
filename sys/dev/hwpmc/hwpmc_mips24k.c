@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 George V. Neville-Neil <gnn@freebsd.org>
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/hwpmc/hwpmc_mips24k.c 204635 2010-03-03 15:05:58Z gnn $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

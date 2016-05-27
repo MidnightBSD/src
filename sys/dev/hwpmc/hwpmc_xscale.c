@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Rui Paulo <rpaulo@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/hwpmc/hwpmc_xscale.c 236238 2012-05-29 14:50:21Z fabient $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

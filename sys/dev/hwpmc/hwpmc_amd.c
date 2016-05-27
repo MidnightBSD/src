@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2008 Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/hwpmc/hwpmc_amd.c 241272 2012-10-06 18:59:12Z avg $");
 
 /* Support for the AMD K7 and later processors */
 
@@ -839,7 +840,7 @@ amd_pcpu_fini(struct pmc_mdep *md, int cpu)
 	for (i = 0; i < AMD_NPMCS; i++) {
 		KASSERT(pac->pc_amdpmcs[i].phw_pmc == NULL,
 		    ("[amd,%d] CPU%d/PMC%d in use", __LINE__, cpu, i));
-		KASSERT(AMD_PMC_IS_STOPPED(AMD_PMC_EVSEL_0 + (i-1)),
+		KASSERT(AMD_PMC_IS_STOPPED(AMD_PMC_EVSEL_0 + i),
 		    ("[amd,%d] CPU%d/PMC%d not stopped", __LINE__, cpu, i));
 	}
 #endif

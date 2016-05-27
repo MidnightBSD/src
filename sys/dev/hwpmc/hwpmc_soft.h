@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Fabien Thomas
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: release/9.2.0/sys/dev/hwpmc/hwpmc_soft.h 236238 2012-05-29 14:50:21Z fabient $
  */
 
 #ifndef _DEV_HWPMC_SOFT_H_
