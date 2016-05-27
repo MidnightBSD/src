@@ -256,7 +256,6 @@ SUBDIR=	\
 	${_pflog} \
 	${_pfsync} \
 	plip \
-	${_pmc} \
 	portalfs \
 	ppbus \
 	ppc \
