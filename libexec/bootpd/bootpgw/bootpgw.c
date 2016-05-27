@@ -451,7 +451,7 @@ main(argc, argv)
 			continue;
 		}
 		if (!(readfds & (1 << s))) {
-			report(LOG_INFO, "exiting after %ld minutes of inactivity",
+			report(LOG_INFO, "exiting after %d minutes of inactivity",
 				   actualtimeout.tv_sec / 60);
 			exit(0);
 		}
