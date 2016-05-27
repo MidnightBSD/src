@@ -19,7 +19,7 @@ NETPGP_SRC=	${.CURDIR}/../../../crypto/netpgp
 
 CFLAGS+= -I${.CURDIR} -I${NETPGP_SRC}/include
 MAN= libnetpgp.3
-WARNS=4
+WARNS=2
 
 .if ${MK_IDEA} == "no"
 CFLAGS+=	-DOPENSSL_NO_IDEA
