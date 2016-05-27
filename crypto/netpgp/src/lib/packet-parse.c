@@ -1282,11 +1282,6 @@ __ops_pubkey_free(__ops_pubkey_t *p)
 		free_BN(&p->key.elgamal.g);
 		free_BN(&p->key.elgamal.y);
 		break;
-
-	case 0:
-		/* nothing to free */
-		break;
-
 	default:
 		(void) fprintf(stderr, "__ops_pubkey_free: bad alg\n");
 	}
