@@ -5,6 +5,8 @@ LIB=	pmc
 SRCS=	libpmc.c pmclog.c
 INCS=	pmc.h pmclog.h
 
+WARNS=	3
+
 MAN=	pmc.3
 MAN+=	pmc_allocate.3
 MAN+=	pmc_attach.3
@@ -23,7 +25,6 @@ MAN+=	pmclog.3
 MAN+=	pmc.soft.3
 
 # PMC-dependent manual pages
-.if ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "amd64"
 MAN+=	pmc.atom.3
 MAN+=	pmc.core.3
 MAN+=	pmc.core2.3
@@ -41,9 +42,6 @@ MAN+=	pmc.sandybridgeuc.3
 MAN+=	pmc.westmere.3
 MAN+=	pmc.westmereuc.3
 MAN+=	pmc.tsc.3
-.elif ${MACHINE_CPUARCH} == "arm" && ${CPUTYPE} == "xscale"
-MAN+=	pmc.xscale.3
-.endif
 
 MLINKS+= \
 	pmc_allocate.3 pmc_release.3 \

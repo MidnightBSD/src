@@ -51046,7 +51046,6 @@ lib/libpmc/pmc.tsc.3 -text
 lib/libpmc/pmc.ucf.3 -text
 lib/libpmc/pmc.westmere.3 -text
 lib/libpmc/pmc.westmereuc.3 -text
-lib/libpmc/pmc.xscale.3 -text
 lib/libpmc/pmc_allocate.3 -text
 lib/libpmc/pmc_attach.3 -text
 lib/libpmc/pmc_capabilities.3 -text
