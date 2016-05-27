@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20160526:
+	Add support for Ivybridge and Haswell Intel CPUs to hwpmc(4).
+
+	Fix libpmc(3) build with clang compiler.
+
 20160519:
 	Kernel Security updates
 
