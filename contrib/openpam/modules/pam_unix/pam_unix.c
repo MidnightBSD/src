@@ -73,7 +73,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
 	struct pam_response *resp;
 #endif
 	struct passwd *pwd;
-	const char *user;
+	const char *user = NULL;
 	char *crypt_password, *password;
 	int pam_err, retry;
 
