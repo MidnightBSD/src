@@ -18,8 +18,4 @@ SRCS+=	hwpmc_pentium.c hwpmc_tsc.c hwpmc_x86.c hwpmc_uncore.c
 SRCS+=	device_if.h bus_if.h
 .endif
 
-.if ${MACHINE_CPUARCH} == "sparc64"
-SRCS+=	hwpmc_sparc64.c
-.endif
-
 .include <bsd.kmod.mk>
