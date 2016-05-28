@@ -13,6 +13,8 @@ XSYM=	ipAddrTable ifTable ifRcvAddressEntry ifMIB ipMIB tcpMIB udpMIB	\
 	ipForward ifIndex linkDown linkUp
 MAN=	snmp_mibII.3
 
+WARNS=	3
+
 CFLAGS+= -I${CONTRIB}/lib -I${CONTRIB}/snmpd
 CFLAGS+= -DHAVE_ERR_H -DHAVE_GETADDRINFO -DHAVE_STRLCPY -DHAVE_SYS_TREE_H
 
