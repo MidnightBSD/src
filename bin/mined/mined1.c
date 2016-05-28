@@ -448,7 +448,7 @@
  *  ========================================================================  */
 
 #include <sys/param.h>
-__MBSDID("$MidnightBSD: src/bin/mined/mined1.c,v 1.1 2008/08/17 03:26:36 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "mined.h"
 #include <signal.h>

@@ -5,4 +5,6 @@
 PROG=	mined
 SRCS=	mined1.c mined2.c
 
+WARNS=	3
+
 .include <bsd.prog.mk>
