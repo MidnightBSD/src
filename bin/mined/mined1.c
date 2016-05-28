@@ -448,7 +448,7 @@
  *  ========================================================================  */
 
 #include <sys/param.h>
-__MBSDID("$MidnightBSD: src/bin/mined/mined1.c,v 1.1 2008/08/17 03:26:36 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "mined.h"
 #include <signal.h>
@@ -1215,10 +1215,10 @@ panic(const char *message)
 #endif /* UNIX */
 }
 
-char *
+void *
 alloc(int bytes)
 {
-  char *p;
+  void *p;
 
   p = malloc((unsigned) bytes);
   if (p == NIL_PTR) {

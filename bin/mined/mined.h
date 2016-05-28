@@ -310,7 +310,7 @@ void	 catch(int sig);
 void	 abort_mined(void);
 void	 raw_mode(FLAG state);
 void	 panic(const char *message);
-char	*alloc(int bytes);
+void	*alloc(int bytes);
 void	 free_space(char *p);
 void	 initialize(void);
 char	*basename(char *path);
