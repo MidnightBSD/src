@@ -1215,10 +1215,10 @@ panic(const char *message)
 #endif /* UNIX */
 }
 
-char *
+void *
 alloc(int bytes)
 {
-  char *p;
+  void *p;
 
   p = malloc((unsigned) bytes);
   if (p == NIL_PTR) {
