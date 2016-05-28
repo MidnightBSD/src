@@ -131,7 +131,7 @@ g_gate_xlog(const char *message, ...)
 off_t
 g_gate_mediasize(int fd)
 {
-	off_t mediasize;
+	off_t mediasize = 0;
 	struct stat sb;
 
 	if (fstat(fd, &sb) == -1)
