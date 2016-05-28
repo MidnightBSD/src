@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.bin/msearch/msearch.c,v 1.6 2011/08/06 23:02:26 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -101,15 +101,17 @@ main(int argc, char *argv[]) {
 		while (current != NULL) {
 			if (current->path != NULL) {
 				if (tflag && rflag) {
+					printf("%0.2f %s", current->weight, current->path);
 					if (zeroflag)
-						printf("%0.2f %s\0", current->weight, current->path);
+						fputc('\0', stdout);
 					else
-						printf("%0.2f %s\n", current->weight, current->path);
+						fputc('\n', stdout);
 				} else {
+					printf("%s", current->path);
 					if (zeroflag)
-						printf("%s\0", current->path);
+						fputc('\0', stdout);
 					else
-						printf("%s\n", current->path);
+						fputc('\n', stdout);
 				}
 			}
 			current = current->next;
