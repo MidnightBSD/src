@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/usr.sbin/ndiscvt/Makefile,v 1.7 2005/04/24 20:21:22 wpaul Exp $
 
 .PATH:	${.CURDIR}/../../sys/compat/ndis
@@ -10,7 +11,7 @@ SRCS+=	inf.c inf-token.l inf-parse.y y.tab.h
 MAN=	ndiscvt.8
 MAN+=	ndisgen.8
 
-WARNS?=	4
+WARNS?=	3
 
 DPADD=  ${LIBL}
 LDADD=  -ll
