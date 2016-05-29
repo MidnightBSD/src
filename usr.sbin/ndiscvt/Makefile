@@ -10,7 +10,7 @@ SRCS+=	inf.c inf-token.l inf-parse.y y.tab.h
 MAN=	ndiscvt.8
 MAN+=	ndisgen.8
 
-WARNS?=	4
+WARNS?=	3
 
 DPADD=  ${LIBL}
 LDADD=  -ll
