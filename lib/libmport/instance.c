@@ -102,8 +102,11 @@ mport_instance_init(mportInstance *mport, const char *root) {
 
         mport_upgrade_master_schema(mport->db, mport_get_database_version(mport->db));
 
-    /* create tables */
-    return mport_generate_master_schema(mport->db);
+	if (MPORT_MASTER_VERSION == mport_get_database_version(mport->db))
+		return (MPORT_OK);
+
+	/* create tables */
+	return mport_generate_master_schema(mport->db);
 }
 
 /**

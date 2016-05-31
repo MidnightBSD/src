@@ -192,18 +192,26 @@ mport_generate_stub_schema(sqlite3 *db)
 int
 mport_upgrade_master_schema(sqlite3 *db, int databaseVersion) 
 {
+	if (databaseVersion == MPORT_MASTER_VERSION)
+		return MPORT_OK;
 
 	switch (databaseVersion) {
 		case 0:
 		case 1:
 			mport_upgrade_master_schema_0to2(db);
 			mport_upgrade_master_schema_2to3(db);
+			mport_upgrade_master_schema_4to6(db);
+			mport_set_database_version(db);
+			break;
 		case 2:
 			mport_upgrade_master_schema_2to3(db);
 		case 3:
 			mport_upgrade_master_schema_3to4(db);
+			mport_upgrade_master_schema_4to6(db);
+			mport_set_database_version(db);
 			break;
 		case 4:
+			/* falls through */
 		case 5:
 			mport_upgrade_master_schema_4to6(db);
 			mport_set_database_version(db);
