@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20160528:
+	Fixed minor issues with mined(1) and msearch(1).
+
 20160526:
 	Add support for Ivybridge and Haswell Intel CPUs to hwpmc(4).
 
