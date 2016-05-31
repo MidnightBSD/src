@@ -1,5 +1,18 @@
 Updating Information for MidnightBSD users.
 
+20160531:
+        Fix four security issues with MidnightBSD.
+
+        The implementation of TIOCGSERIAL ioctl(2) does not clear the output
+        struct before sending to userland in the linux emulation layer.
+
+        The compat 43 stat(2) system call exposes kernel stack to userland.
+
+        libarchive - CVE-2015-2304 and CVE-2013-0211 fix issues with
+        cpio directory traversal and an integer signedness error in the archive
+        write zip data routine.
+
+
 20160528:
 	Fixed minor issues with mined(1) and msearch(1).
 
