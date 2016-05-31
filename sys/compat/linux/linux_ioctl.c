@@ -29,7 +29,7 @@
 #include "opt_compat.h"
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/compat/linux/linux_ioctl.c,v 1.4 2013/01/08 00:27:47 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -911,6 +911,8 @@ linux_ioctl_termio(struct thread *td, struct linux_ioctl_args *args)
 
 	case LINUX_TIOCGSERIAL: {
 		struct linux_serial_struct lss;
+
+		bzero(&lss, sizeof(lss));
 		lss.type = LINUX_PORT_16550A;
 		lss.flags = 0;
 		lss.close_delay = 0;
