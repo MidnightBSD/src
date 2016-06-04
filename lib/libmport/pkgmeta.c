@@ -430,15 +430,27 @@ mport_pkgmeta_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mportAs
  *
  * Create an entry in the log table for this pkg (and version), using the given message.
  */
-int mport_pkgmeta_logevent(mportInstance *mport, mportPackageMeta *pkg, const char *msg) 
+int
+mport_pkgmeta_logevent(mportInstance *mport, mportPackageMeta *pkg, const char *msg) 
 {
-  struct timespec now;
+	struct timespec now;
   
-  if (clock_gettime(CLOCK_REALTIME, &now) != 0) {
-    RETURN_ERROR(MPORT_ERR_FATAL, strerror(errno));
-  }
+	if (clock_gettime(CLOCK_REALTIME, &now) != 0) {
+		RETURN_ERROR(MPORT_ERR_FATAL, strerror(errno));
+	}
+
+	if (pkg == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "pkg is null");
+
+	if (pkg->name == NULL || pkg->version == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "pkg is not initialized");
+
+	if (msg == NULL)
+		RETURN_ERROR(MPORT_ERR_WARN, "null message to log");
           
-  return mport_db_do(mport->db, "INSERT INTO log (pkg, version, date, msg) VALUES (%Q,%Q,%i,%Q)", pkg->name, pkg->version, now.tv_sec, msg);
+	return mport_db_do(mport->db, 
+	  "INSERT INTO log (pkg, version, date, msg) VALUES (%s,%s,%i,%s)", 
+		pkg->name, pkg->version, now.tv_sec, msg);
 }
 
 
