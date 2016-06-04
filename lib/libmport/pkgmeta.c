@@ -349,7 +349,8 @@ MPORT_PUBLIC_API int mport_pkgmeta_get_updepends(mportInstance *mport, mportPack
 }  
 
 
-int mport_pkgmeta_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mportAssetList **alist_p)
+int
+mport_pkgmeta_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mportAssetList **alist_p)
 {
   mportAssetList *alist;
   sqlite3_stmt *stmt;
@@ -365,6 +366,9 @@ int mport_pkgmeta_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mpo
     sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
   }
+
+  if (stmt == NULL)
+	RETURN_CURRENT_ERROR;
     
   while (1) {
     ret = sqlite3_step(stmt);
@@ -383,13 +387,31 @@ int mport_pkgmeta_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mpo
       sqlite3_finalize(stmt);
       RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
     }
+
+    const unsigned char *data;
+    const unsigned char *owner;
+    const unsigned char *group;
+    const unsigned char *mode;
     
     e->type = sqlite3_column_int(stmt, 0);
-    e->data = strdup(sqlite3_column_text(stmt, 1));
-    e->owner = strdup(sqlite3_column_text(stmt, 2));
-    e->group = strdup(sqlite3_column_text(stmt, 3));
-    e->mode = strdup(sqlite3_column_text(stmt, 4));
-    
+    data = sqlite3_column_text(stmt, 1);
+    owner = sqlite3_column_text(stmt, 2);
+    group = sqlite3_column_text(stmt, 3);
+    mode = sqlite3_column_text(stmt, 4);
+     
+    if (data == NULL) {
+      sqlite3_finalize(stmt);
+      RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+    }
+
+    e->data = strdup(data);
+    if (owner != NULL)
+        e->owner = strdup(owner);
+    if (group != NULL)
+        e->group = strdup(group);
+    if (mode != NULL)
+        e->mode = strdup(mode);
+
     if (e->data == NULL) {
       sqlite3_finalize(stmt);
       RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
@@ -399,6 +421,7 @@ int mport_pkgmeta_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mpo
   }
   
   sqlite3_finalize(stmt);
+
   return MPORT_OK;
 }
 
