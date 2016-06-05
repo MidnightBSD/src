@@ -18,6 +18,7 @@
 #20150815
 OLD_LIBS+=lib/libarchive.so.5
 OLD_LIBS+=lib/libasn1.so.10
+OLD_LIBS+=lib/libcrypto.so.6
 OLD_LIBS+=lib/libhdb.so.10
 OLD_LIBS+=lib/libheimntlm.so.10
 OLD_LIBS+=lib/libhx509.so.10
