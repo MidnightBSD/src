@@ -16,6 +16,8 @@
 #
 
 #20160603
+OLD_FILES+=libexec/makekey
+OLD_FILES+=usr/libexec/makekey
 OLD_FILES+=usr/bin/dprofpp
 OLD_FILES+=usr/bin/nsupdate
 OLD_FILES+=usr/bin/perl5.14.2
