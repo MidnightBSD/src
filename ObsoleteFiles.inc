@@ -27,6 +27,17 @@ OLD_LIBS+=lib/libkafs5.so.10
 OLD_LIBS+=lib/libkrb5.so.10
 OLD_LIBS+=lib/libroken.so.10
 OLD_LIBS+=lib/libssl.so.6
+OLD_LIBS+=usr/lib/libarchive.so.5
+OLD_LIBS+=usr/lib/libasn1.so.10
+OLD_LIBS+=usr/lib/libhdb.so.10
+OLD_LIBS+=usr/lib/libheimntlm.so.10
+OLD_LIBS+=usr/lib/libhx509.so.10
+OLD_LIBS+=usr/lib/libkadm5clnt.so.10
+OLD_LIBS+=usr/lib/libkadm5srv.so.10
+OLD_LIBS+=usr/lib/libkafs5.so.10
+OLD_LIBS+=usr/lib/libkrb5.so.10
+OLD_LIBS+=usr/lib/libroken.so.10
+OLD_LIBS+=usr/lib/libssl.so.6
 #20140829
 OLD_FILES+=sbin/mount_nfs4
 OLD_FILES+=usr/lib/libmport_p.a
