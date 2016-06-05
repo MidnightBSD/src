@@ -15,6 +15,13 @@
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
 
+#20160603
+OLD_FILES+=usr/bin/dprofpp
+OLD_FILES+=usr/bin/nsupdate
+OLD_FILES+=usr/bin/perl5.14.2
+OLD_FILES+=usr/sbin/dnssec-keygen
+OLD_FILES+=usr/sbin/dnssec-settime
+OLD_FILES+=usr/sbin/dnssec-signzone
 #20150815
 OLD_LIBS+=lib/libarchive.so.5
 OLD_LIBS+=lib/libasn1.so.10
