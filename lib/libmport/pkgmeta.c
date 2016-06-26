@@ -415,7 +415,7 @@ int mport_pkgmeta_logevent(mportInstance *mport, mportPackageMeta *pkg, const ch
     RETURN_ERROR(MPORT_ERR_FATAL, strerror(errno));
   }
           
-  return mport_db_do(mport->db, "INSERT INTO log (pkg, version, date, msg) VALUES (%Q,%Q,%i,%Q)", pkg->name, pkg->version, now.tv_sec, msg);
+  return mport_db_do(mport->db, "INSERT INTO log (pkg, version, date, msg) VALUES (%s,%s,%i,%s)", pkg->name, pkg->version, now.tv_sec, msg);
 }
 
 
