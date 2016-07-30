@@ -101,7 +101,6 @@ mport_instance_init(mportInstance *mport, const char *root) {
         mport->confirm_cb = &mport_default_confirm_cb;
 
 	int db_version = mport_get_database_version(mport->db);
-	fprintf(stderr, "db version is %d", db_version);
 	if (db_version < 1) {
 		/* new, create tables */
 		mport_generate_master_schema(mport->db);
