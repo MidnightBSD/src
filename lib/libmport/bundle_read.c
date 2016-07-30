@@ -52,12 +52,15 @@ mportBundleRead * mport_bundle_read_new(void) {
  */
 int mport_bundle_read_init(mportBundleRead *bundle, const char *filename)
 {
-  if ((bundle->filename = strdup(filename)) == NULL) 
-    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't dup filename");
+  if (filename == NULL)
+    RETURN_ERROR(MPORT_ERR_FATAL, "Filename is null");
+
+  if ((bundle->filename = strdup(filename)) == NULL)  {
+    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't dup filename"); 
+  }
     
   if ((bundle->archive = archive_read_new()) == NULL)
-    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't dup filename");
-    
+    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't initialize archive read");
   
   if (archive_read_support_format_tar(bundle->archive) != ARCHIVE_OK)
     RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
