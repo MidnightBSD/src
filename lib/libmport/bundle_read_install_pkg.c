@@ -161,6 +161,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
     mode_t *dirset;
     mode_t dirnewmode;
     char *mode = NULL;
+    char *mkdirp = NULL;
     struct stat sb;
     char file[FILENAME_MAX], cwd[FILENAME_MAX], dir[FILENAME_MAX];
     char *fm_owner, *fm_group, *fm_mode;
@@ -266,11 +267,13 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
             case ASSET_DIRRM:
             case ASSET_DIRRMTRY:
 	    case ASSET_DIR_OWNER_MODE:
-		if (stat(data, &sb) == -1)
-                    mkdir(data, 0755); /* XXX: we ignore error because it's most likely already there */
-
-		if (stat(data, &sb))
+		mkdirp = strdup(data); /* need a char * here */
+		if (mport_mkdirp(mkdirp, S_IRWXU | S_IRWXG | S_IRWXO) == 0) {
+			SET_ERRORX(MPORT_ERR_FATAL, "Unable to create directory %s", data);
 			goto ERROR;
+		}
+		free(mkdirp);
+
                 if (fm_mode != NULL && fm_mode[0] != '\0') {
                        if ((dirset = setmode(fm_mode)) == NULL)
                              goto ERROR;

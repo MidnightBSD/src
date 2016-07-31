@@ -86,6 +86,7 @@ uid_t mport_get_uid(const char *);
 gid_t mport_get_gid(const char *);
 int mport_rmtree(const char *);
 int mport_mkdir(const char *);
+int mport_mkdirp(char *, mode_t);
 int mport_rmdir(const char *, int);
 int mport_chdir(mportInstance *, const char *);
 int mport_xsystem(mportInstance *, const char *, ...);
@@ -180,7 +181,6 @@ int mport_set_errx(int , const char *, ...);
 #else
 #error "libmport only supports MidnightBSD versions 0.7 and greater."
 #endif
-
 
 /* fetch stuff */
 #define MPORT_URL_PATH			MPORT_ARCH "/" MPORT_OSVERSION
