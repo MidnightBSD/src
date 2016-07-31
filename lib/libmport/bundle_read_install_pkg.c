@@ -56,14 +56,17 @@ static int display_pkg_msg(mportInstance *, mportBundleRead *, mportPackageMeta 
 int
 mport_bundle_read_install_pkg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
-    if (do_pre_install(mport, bundle, pkg) != MPORT_OK)
+    if (do_pre_install(mport, bundle, pkg) != MPORT_OK) {
         RETURN_CURRENT_ERROR;
+    }
 
-    if (do_actual_install(mport, bundle, pkg) != MPORT_OK)
+    if (do_actual_install(mport, bundle, pkg) != MPORT_OK) {
         RETURN_CURRENT_ERROR;
+    }
 
-    if (do_post_install(mport, bundle, pkg) != MPORT_OK)
+    if (do_post_install(mport, bundle, pkg) != MPORT_OK) {
         RETURN_CURRENT_ERROR;
+    }
 
     syslog(LOG_NOTICE, "%s-%s installed", pkg->name, pkg->version);
 
@@ -277,14 +280,20 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
                            goto ERROR;
 		}
 	        if (fm_owner != NULL && fm_group != NULL && fm_owner[0] != '\0' && fm_group[0] != '\0') {
-			if (chown(data, mport_get_uid(fm_owner), mport_get_gid(fm_group)) == -1)
+			if (chown(data, mport_get_uid(fm_owner), mport_get_gid(fm_group)) == -1) {
+				SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
 				goto ERROR;
+			}
                 } else if (fm_owner != NULL && fm_owner[0] != '\0') {
-			if (chown(data, mport_get_uid(fm_owner), group) == -1)
+			if (chown(data, mport_get_uid(fm_owner), group) == -1) {
+				SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
 				goto ERROR;
+			}
                 } else if (fm_group != NULL && fm_group[0] != '\0') {
-			if (chown(data, owner, mport_get_gid(fm_group)) == -1)
+			if (chown(data, owner, mport_get_gid(fm_group)) == -1) {
+				SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
 				goto ERROR;
+			}
                 }
 	
 		break;
@@ -313,8 +322,10 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
                 if (mport_bundle_read_extract_next_file(bundle, entry) != MPORT_OK)
                     goto ERROR;
 
-                if (lstat(file, &sb))
+                if (lstat(file, &sb)) {
+		    SET_ERRORX(MPORT_ERR_FATAL, "Unable to stat file %s", file);
                     goto ERROR;
+		}
 
                 if (S_ISREG(sb.st_mode)) {
 		    if (type == ASSET_FILE_OWNER_MODE) {
@@ -323,46 +334,64 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 #ifdef DEBUG
 				fprintf(stderr, "owner %s and group %s\n", fm_owner, fm_group);
 #endif
-				if (chown(file, mport_get_uid(fm_owner), mport_get_gid(fm_group)) == -1)
+				if (chown(file, mport_get_uid(fm_owner), mport_get_gid(fm_group)) == -1) {
+					SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
 					goto ERROR;
+				}
 			} else if (fm_owner != NULL && fm_owner[0] != '\0') {
 #ifdef DEBUG
 				fprintf(stderr, "owner %s\n", fm_owner);
 #endif
-				if (chown(file, mport_get_uid(fm_owner), group) == -1)
+				if (chown(file, mport_get_uid(fm_owner), group) == -1) {
+					SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
 					goto ERROR;
+				}
 			} else if (fm_group != NULL && fm_group[0] != '\0') {
 #ifdef DEBUG
 				fprintf(stderr, "group %s\n", fm_group);
 #endif
-				if (chown(file, owner, mport_get_gid(fm_group)) == -1)
+				if (chown(file, owner, mport_get_gid(fm_group)) == -1) {
+					SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
 					goto ERROR;
+				}
 			} else {
 				// use default.
-				 if (chown(file, owner, group) == -1)
+				if (chown(file, owner, group) == -1) {
+					SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
 					goto ERROR;
+				}
 			}
 		    } else {
 			/* Set the owner and group */
-			if (chown(file, owner, group) == -1)
+			if (chown(file, owner, group) == -1) {
+				SET_ERRORX(MPORT_ERR_FATAL, "Unable to set permissions on file %s", file);
 				goto ERROR;
+			}
 		    }
 
                     /* Set the file permissions, assumes non NFSv4 */
                     if (mode != NULL) {
-                        if (stat(file, &sb))
+                        if (stat(file, &sb)) {
+			    SET_ERRORX(MPORT_ERR_FATAL, "Unable to stat file %s", file);
                             goto ERROR;
+			}
 			if (type == ASSET_FILE_OWNER_MODE && fm_mode != NULL) {
-                        	if ((set = setmode(fm_mode)) == NULL)
+                        	if ((set = setmode(fm_mode)) == NULL) {
+					SET_ERROR(MPORT_ERR_FATAL, "Unable to set mode");
 					goto ERROR;
+				}
 			} else {
-                        	if ((set = setmode(mode)) == NULL)
+                        	if ((set = setmode(mode)) == NULL) {
+					SET_ERROR(MPORT_ERR_FATAL, "Unable to set mode");
                             		goto ERROR;
+				}
 			}
                         newmode = getmode(set, sb.st_mode);
                         free(set);
-                        if (chmod(file, newmode))
+                        if (chmod(file, newmode)) {
+			    SET_ERROR(MPORT_ERR_FATAL, "Unable to set file permissions");
                             goto ERROR;
+			}
                     }
 
                     /* shell registration */
@@ -486,10 +515,13 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 
         sqlite3_reset(insert);
     }
+
     sqlite3_finalize(assets);
     sqlite3_finalize(insert);
-    if (mport_db_do(db, "UPDATE packages SET status='clean' WHERE pkg=%Q", pkg->name) != MPORT_OK)
+    if (mport_db_do(db, "UPDATE packages SET status='clean' WHERE pkg=%Q", pkg->name) != MPORT_OK) {
+        SET_ERROR(MPORT_ERR_FATAL, "Unable to mark package clean");
         goto ERROR;
+    }
     mport_pkgmeta_logevent(mport, pkg, "Installed");
 
     (mport->progress_free_cb)();
