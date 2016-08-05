@@ -100,13 +100,14 @@ mport_instance_init(mportInstance *mport, const char *root) {
         mport->progress_free_cb = &mport_default_progress_free_cb;
         mport->confirm_cb = &mport_default_confirm_cb;
 
-        mport_upgrade_master_schema(mport->db, mport_get_database_version(mport->db));
+	int db_version = mport_get_database_version(mport->db);
+	if (db_version < 1) {
+		/* new, create tables */
+		mport_generate_master_schema(mport->db);
+		db_version = mport_get_database_version(mport->db);
+	}
 
-	if (MPORT_MASTER_VERSION == mport_get_database_version(mport->db))
-		return (MPORT_OK);
-
-	/* create tables */
-	return mport_generate_master_schema(mport->db);
+	return mport_upgrade_master_schema(mport->db, db_version);
 }
 
 /**

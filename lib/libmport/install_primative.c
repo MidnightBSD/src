@@ -39,6 +39,7 @@ mport_install_primative(mportInstance *mport, const char *filename, const char *
   mportBundleRead *bundle;
   mportPackageMeta **pkgs, *pkg;
   int i;
+  bool error = false;
   
   if ((bundle = mport_bundle_read_new()) == NULL)
     RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
@@ -68,12 +69,16 @@ mport_install_primative(mportInstance *mport, const char *filename, const char *
     {
       mport_call_msg_cb(mport, "Unable to install %s-%s: %s", pkg->name, pkg->version, mport_err_string());
       /* TODO: WHY WAS THIS HERE mport_set_err(MPORT_OK, NULL); */
+		error = true;
 		break; /* do not keep going if we have a package failure! */
     }
   }
 
   if (mport_bundle_read_finish(mport, bundle) != MPORT_OK)
     RETURN_CURRENT_ERROR;
+
+  if (error)
+     return MPORT_ERR_FATAL;
     
   return MPORT_OK;  
 }

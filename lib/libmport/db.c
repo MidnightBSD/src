@@ -287,5 +287,7 @@ mport_generate_master_schema(sqlite3 *db)
 	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS settings (name text NOT NULL, val text NOT NULL)");
 	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS settings_name ON settings (name)");
 
+	mport_set_database_version(db);
+
 	return (MPORT_OK);
 }
