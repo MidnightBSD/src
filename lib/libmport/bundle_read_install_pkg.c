@@ -49,6 +49,7 @@ static int run_postexec(mportInstance *, mportPackageMeta *);
 static int run_pkg_install(mportInstance *, mportBundleRead *, mportPackageMeta *, const char *);
 static int run_mtree(mportInstance *, mportBundleRead *, mportPackageMeta *);
 static int display_pkg_msg(mportInstance *, mportBundleRead *, mportPackageMeta *);
+static int get_file_count(mportInstance *, char *, int *);
 
 /**
  * This is a wrapper for all bund read install operations
@@ -117,7 +118,7 @@ do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *
         }
 
         type = (mportAssetListEntryType) sqlite3_column_int(assets, 0);
-        data = sqlite3_column_text(assets, 1);
+        data = (const char *) sqlite3_column_text(assets, 1);
 
         switch (type) {
             case ASSET_CWD:
@@ -145,6 +146,31 @@ do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *
         RETURN_CURRENT_ERROR;
 }
 
+/* get the file count for the progress meter */
+static int
+get_file_count(mportInstance *mport, char *pkg_name, int *file_total)
+{
+	sqlite3_stmt *count;
+
+	if (mport_db_prepare(mport->db, &count,
+						 "SELECT COUNT(*) FROM stub.assets WHERE (type=%i or type=%i or type=%i or type=%i) AND pkg=%Q",
+						 ASSET_FILE, ASSET_SAMPLE, ASSET_SHELL, ASSET_FILE_OWNER_MODE, pkg_name) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	switch (sqlite3_step(count)) {
+		case SQLITE_ROW:
+			*file_total = sqlite3_column_int(count, 0);
+			sqlite3_finalize(count);
+			break;
+		default:
+			SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+			sqlite3_finalize(count);
+			RETURN_CURRENT_ERROR;
+	}
+
+	return MPORT_OK;
+}
+
 static int
 do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
@@ -165,7 +191,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
     struct stat sb;
     char file[FILENAME_MAX], cwd[FILENAME_MAX], dir[FILENAME_MAX];
     char *fm_owner, *fm_group, *fm_mode;
-    sqlite3_stmt *assets = NULL, *count, *insert = NULL;
+    sqlite3_stmt *assets = NULL, *insert = NULL;
     sqlite3 *db;
 
     db = mport->db;
@@ -173,22 +199,8 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
     /* sadly, we can't just use abs pathnames, because it will break hardlinks */
     orig_cwd = getcwd(NULL, 0);
 
-    /* get the file count for the progress meter */
-    if (mport_db_prepare(db, &count,
-                         "SELECT COUNT(*) FROM stub.assets WHERE (type=%i or type=%i or type=%i or type=%i) AND pkg=%Q",
-                         ASSET_FILE, ASSET_SAMPLE, ASSET_SHELL, ASSET_FILE_OWNER_MODE, pkg->name) != MPORT_OK)
-        RETURN_CURRENT_ERROR;
-
-    switch (sqlite3_step(count)) {
-        case SQLITE_ROW:
-            file_total = sqlite3_column_int(count, 0);
-            sqlite3_finalize(count);
-            break;
-        default:
-            SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-            sqlite3_finalize(count);
-            RETURN_CURRENT_ERROR;
-    }
+	if (get_file_count(mport, pkg->name, &file_total) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
 
     mport_call_progress_init_cb(mport, "Installing %s-%s", pkg->name, pkg->version);
 
@@ -697,10 +709,10 @@ display_pkg_msg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
     if ((file = fopen(filename, "r")) == NULL)
         RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open %s: %s", filename, strerror(errno));
 
-    if ((buf = (char *) calloc((st.st_size + 1), sizeof(char))) == NULL)
+    if ((buf = (char *) calloc((size_t)(st.st_size + 1), sizeof(char))) == NULL)
         RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 
-    if (fread(buf, 1, st.st_size, file) != (size_t) st.st_size) {
+    if (fread(buf, 1, (size_t)st.st_size, file) != (size_t) st.st_size) {
         free(buf);
         RETURN_ERRORX(MPORT_ERR_FATAL, "Read error: %s", strerror(errno));
     }
