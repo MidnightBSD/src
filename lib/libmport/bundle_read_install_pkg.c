@@ -237,16 +237,15 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
         type     = (mportAssetListEntryType) sqlite3_column_int(assets, 0);
         data     = (char *) sqlite3_column_text(assets, 1);
         checksum = (char *) sqlite3_column_text(assets, 2);
-	fm_owner = (char *) sqlite3_column_text(assets, 3);
-	fm_group = (char *) sqlite3_column_text(assets, 4);
-	fm_mode  = (char *) sqlite3_column_text(assets, 5);
+		fm_owner = (char *) sqlite3_column_text(assets, 3);
+		fm_group = (char *) sqlite3_column_text(assets, 4);
+		fm_mode  = (char *) sqlite3_column_text(assets, 5);
 
         switch (type) {
             case ASSET_CWD:
                 (void) strlcpy(cwd, data == NULL ? pkg->prefix : data, sizeof(cwd));
                 if (mport_chdir(mport, cwd) != MPORT_OK)
                     goto ERROR;
-
                 break;
             case ASSET_CHMOD:
                 if (mode != NULL)
@@ -266,14 +265,14 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
             case ASSET_DIR:
             case ASSET_DIRRM:
             case ASSET_DIRRMTRY:
-	    case ASSET_DIR_OWNER_MODE:
-		mkdirp = strdup(data); /* need a char * here */
-		if (mport_mkdirp(mkdirp, S_IRWXU | S_IRWXG | S_IRWXO) == 0) {
-			free(mkdirp);
-			SET_ERRORX(MPORT_ERR_FATAL, "Unable to create directory %s", data);
-			goto ERROR;
-		}
-		free(mkdirp);
+	    	case ASSET_DIR_OWNER_MODE:
+				mkdirp = strdup(data); /* need a char * here */
+				if (mport_mkdirp(mkdirp, S_IRWXU | S_IRWXG | S_IRWXO) == 0) {
+					free(mkdirp);
+					SET_ERRORX(MPORT_ERR_FATAL, "Unable to create directory %s", data);
+					goto ERROR;
+				}
+				free(mkdirp);
 
                 if (fm_mode != NULL && fm_mode[0] != '\0') {
                        if ((dirset = setmode(fm_mode)) == NULL)
@@ -282,31 +281,31 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
                        free(dirset);
                        if (chmod(data, dirnewmode))
                            goto ERROR;
-		}
-	        if (fm_owner != NULL && fm_group != NULL && fm_owner[0] != '\0' && fm_group[0] != '\0') {
-			if (chown(data, mport_get_uid(fm_owner), mport_get_gid(fm_group)) == -1) {
-				SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
-				goto ERROR;
-			}
+				}
+	        	if (fm_owner != NULL && fm_group != NULL && fm_owner[0] != '\0' && fm_group[0] != '\0') {
+					if (chown(data, mport_get_uid(fm_owner), mport_get_gid(fm_group)) == -1) {
+						SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
+						goto ERROR;
+					}
                 } else if (fm_owner != NULL && fm_owner[0] != '\0') {
-			if (chown(data, mport_get_uid(fm_owner), group) == -1) {
-				SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
-				goto ERROR;
-			}
+					if (chown(data, mport_get_uid(fm_owner), group) == -1) {
+						SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
+						goto ERROR;
+					}
                 } else if (fm_group != NULL && fm_group[0] != '\0') {
-			if (chown(data, owner, mport_get_gid(fm_group)) == -1) {
-				SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
-				goto ERROR;
-			}
+					if (chown(data, owner, mport_get_gid(fm_group)) == -1) {
+						SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
+						goto ERROR;
+					}
                 }
 	
-		break;
+				break;
             case ASSET_EXEC:
                 if (mport_run_asset_exec(mport, data, cwd, file) != MPORT_OK)
                     goto ERROR;
                 break;
             case ASSET_FILE_OWNER_MODE:
-		/* FALLS THROUGH */
+				/* FALLS THROUGH */
             case ASSET_FILE:
                 /* FALLS THROUGH */
             case ASSET_SHELL:
@@ -315,11 +314,11 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
                 if (mport_bundle_read_next_entry(bundle, &entry) != MPORT_OK)
                     goto ERROR;
 
-		(void) snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, data);
-		if (entry == NULL) {
-			SET_ERROR(MPORT_ERR_FATAL, "Unexpected EOF with archive file");
-			goto ERROR;
-		}
+				(void) snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, data);
+				if (entry == NULL) {
+					SET_ERROR(MPORT_ERR_FATAL, "Unexpected EOF with archive file");
+					goto ERROR;
+				}
 
                 archive_entry_set_pathname(entry, file);
 
@@ -327,81 +326,80 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
                     goto ERROR;
 
                 if (lstat(file, &sb)) {
-		    SET_ERRORX(MPORT_ERR_FATAL, "Unable to stat file %s", file);
+		    		SET_ERRORX(MPORT_ERR_FATAL, "Unable to stat file %s", file);
                     goto ERROR;
-		}
+				}
 
                 if (S_ISREG(sb.st_mode)) {
-		    if (type == ASSET_FILE_OWNER_MODE) {
-			/* Test for owner and group settings, otherwise roll with our default. */
-			if (fm_owner != NULL && fm_group != NULL && fm_owner[0] != '\0' && fm_group[0] != '\0') {
+		    		if (type == ASSET_FILE_OWNER_MODE) {
+						/* Test for owner and group settings, otherwise roll with our default. */
+						if (fm_owner != NULL && fm_group != NULL && fm_owner[0] != '\0' && fm_group[0] != '\0') {
 #ifdef DEBUG
-				fprintf(stderr, "owner %s and group %s\n", fm_owner, fm_group);
+							fprintf(stderr, "owner %s and group %s\n", fm_owner, fm_group);
 #endif
-				if (chown(file, mport_get_uid(fm_owner), mport_get_gid(fm_group)) == -1) {
-					SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
-					goto ERROR;
-				}
-			} else if (fm_owner != NULL && fm_owner[0] != '\0') {
+							if (chown(file, mport_get_uid(fm_owner), mport_get_gid(fm_group)) == -1) {
+								SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
+								goto ERROR;
+							}
+						} else if (fm_owner != NULL && fm_owner[0] != '\0') {
 #ifdef DEBUG
-				fprintf(stderr, "owner %s\n", fm_owner);
+							fprintf(stderr, "owner %s\n", fm_owner);
 #endif
-				if (chown(file, mport_get_uid(fm_owner), group) == -1) {
-					SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
-					goto ERROR;
-				}
-			} else if (fm_group != NULL && fm_group[0] != '\0') {
+							if (chown(file, mport_get_uid(fm_owner), group) == -1) {
+								SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
+								goto ERROR;
+							}
+						} else if (fm_group != NULL && fm_group[0] != '\0') {
 #ifdef DEBUG
-				fprintf(stderr, "group %s\n", fm_group);
+							fprintf(stderr, "group %s\n", fm_group);
 #endif
-				if (chown(file, owner, mport_get_gid(fm_group)) == -1) {
-					SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
-					goto ERROR;
-				}
-			} else {
-				// use default.
-				if (chown(file, owner, group) == -1) {
-					SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
-					goto ERROR;
-				}
-			}
-		    } else {
-			/* Set the owner and group */
-			if (chown(file, owner, group) == -1) {
-				SET_ERRORX(MPORT_ERR_FATAL, "Unable to set permissions on file %s", file);
-				goto ERROR;
-			}
-		    }
+							if (chown(file, owner, mport_get_gid(fm_group)) == -1) {
+								SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
+								goto ERROR;
+							}
+						} else {
+							// use default.
+							if (chown(file, owner, group) == -1) {
+								SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
+								goto ERROR;
+							}
+						}
+		    		} else {
+						/* Set the owner and group */
+						if (chown(file, owner, group) == -1) {
+							SET_ERRORX(MPORT_ERR_FATAL, "Unable to set permissions on file %s", file);
+							goto ERROR;
+						}
+		    		}
 
                     /* Set the file permissions, assumes non NFSv4 */
                     if (mode != NULL) {
                         if (stat(file, &sb)) {
-			    SET_ERRORX(MPORT_ERR_FATAL, "Unable to stat file %s", file);
+			    			SET_ERRORX(MPORT_ERR_FATAL, "Unable to stat file %s", file);
                             goto ERROR;
-			}
-			if (type == ASSET_FILE_OWNER_MODE && fm_mode != NULL) {
+						}
+						if (type == ASSET_FILE_OWNER_MODE && fm_mode != NULL) {
                         	if ((set = setmode(fm_mode)) == NULL) {
-					SET_ERROR(MPORT_ERR_FATAL, "Unable to set mode");
-					goto ERROR;
-				}
-			} else {
+								SET_ERROR(MPORT_ERR_FATAL, "Unable to set mode");
+								goto ERROR;
+							}
+						} else {
                         	if ((set = setmode(mode)) == NULL) {
-					SET_ERROR(MPORT_ERR_FATAL, "Unable to set mode");
-                            		goto ERROR;
-				}
-			}
-                        newmode = getmode(set, sb.st_mode);
-                        free(set);
-                        if (chmod(file, newmode)) {
-			    SET_ERROR(MPORT_ERR_FATAL, "Unable to set file permissions");
-                            goto ERROR;
-			}
+								SET_ERROR(MPORT_ERR_FATAL, "Unable to set mode");
+								goto ERROR;
+							}
+						}
+						newmode = getmode(set, sb.st_mode);
+                    	free(set);
+						if (chmod(file, newmode)) {
+			    			SET_ERROR(MPORT_ERR_FATAL, "Unable to set file permissions");
+							goto ERROR;
+						}
                     }
 
                     /* shell registration */
-                    if (type == ASSET_SHELL) {
-                        if (mport_shell_register(file) != MPORT_OK)
-                            goto ERROR;
+                    if (type == ASSET_SHELL && mport_shell_register(file) != MPORT_OK) {
+						goto ERROR;
                     }
 
                     /* for sample files, if we don't have an existing file
@@ -456,10 +454,10 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
             }
         } else if (type == ASSET_DIR || type == ASSET_DIRRM || type == ASSET_DIRRMTRY) {
 		/* if data starts with /, it's most likely an absolute path. Don't prepend cwd */
-		if (data != NULL && data[0] == '/')
- 			(void) snprintf(dir, FILENAME_MAX, "%s", data);
-		else
- 			(void) snprintf(dir, FILENAME_MAX, "%s/%s", cwd, data);
+			if (data != NULL && data[0] == '/')
+				(void) snprintf(dir, FILENAME_MAX, "%s", data);
+			else
+				(void) snprintf(dir, FILENAME_MAX, "%s/%s", cwd, data);
 
             if (sqlite3_bind_text(insert, 2, dir, -1, SQLITE_STATIC) != SQLITE_OK) {
                 SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
