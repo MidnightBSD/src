@@ -54,6 +54,7 @@ static int create_package_row(mportInstance *, mportPackageMeta *);
 static int create_categories(mportInstance *mport, mportPackageMeta *pkg);
 static int create_depends(mportInstance *mport, mportPackageMeta *pkg);
 static int create_sample_file(char *file);
+static int mark_complete(mportInstance *, mportPackageMeta *);
 
 /**
  * This is a wrapper for all bund read install operations
@@ -574,11 +575,6 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 
     sqlite3_finalize(assets);
     sqlite3_finalize(insert);
-    if (mport_db_do(db, "UPDATE packages SET status='clean' WHERE pkg=%Q", pkg->name) != MPORT_OK) {
-        SET_ERROR(MPORT_ERR_FATAL, "Unable to mark package clean");
-        goto ERROR;
-    }
-    mport_pkgmeta_logevent(mport, pkg, "Installed");
 
     (mport->progress_free_cb)();
     (void) mport_chdir(NULL, orig_cwd);
@@ -606,6 +602,19 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
                                 }
                                 
 static int
+mark_complete(mportInstance *mport, mportPackageMeta *pkg)
+{
+	if (mport_db_do(mport->db, "UPDATE packages SET status='clean' WHERE pkg=%Q", pkg->name) != MPORT_OK) {
+		SET_ERROR(MPORT_ERR_FATAL, "Unable to mark package clean");
+		RETURN_CURRENT_ERROR;
+	}
+	mport_pkgmeta_logevent(mport, pkg, "Installed");
+
+	return MPORT_OK;
+}
+
+
+static int
 do_post_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
     char to[FILENAME_MAX], from[FILENAME_MAX];
@@ -621,7 +630,10 @@ do_post_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
     if (display_pkg_msg(mport, bundle, pkg) != MPORT_OK)
         RETURN_CURRENT_ERROR;
 
-    return run_pkg_install(mport, bundle, pkg, "POST-INSTALL");
+    if (run_pkg_install(mport, bundle, pkg, "POST-INSTALL") != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	return mark_complete(mport, pkg);
 }
 
 static int
