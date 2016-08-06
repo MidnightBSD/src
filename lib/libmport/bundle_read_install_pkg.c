@@ -330,7 +330,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
             case ASSET_DIRRMTRY:
 	    	case ASSET_DIR_OWNER_MODE:
 				mkdirp = strdup(data); /* need a char * here */
-				if (mport_mkdirp(mkdirp, S_IRWXU | S_IRWXG | S_IRWXO) == 0) {
+				if (mkdirp == NULL || mport_mkdirp(mkdirp, S_IRWXU | S_IRWXG | S_IRWXO) == 0) {
 					free(mkdirp);
 					SET_ERRORX(MPORT_ERR_FATAL, "Unable to create directory %s", data);
 					goto ERROR;
