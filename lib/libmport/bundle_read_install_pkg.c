@@ -50,6 +50,10 @@ static int run_pkg_install(mportInstance *, mportBundleRead *, mportPackageMeta 
 static int run_mtree(mportInstance *, mportBundleRead *, mportPackageMeta *);
 static int display_pkg_msg(mportInstance *, mportBundleRead *, mportPackageMeta *);
 static int get_file_count(mportInstance *, char *, int *);
+static int create_package_row(mportInstance *, mportPackageMeta *);
+static int create_categories(mportInstance *mport, mportPackageMeta *pkg);
+static int create_depends(mportInstance *mport, mportPackageMeta *pkg);
+static int create_sample_file(char *file);
 
 /**
  * This is a wrapper for all bund read install operations
@@ -172,6 +176,60 @@ get_file_count(mportInstance *mport, char *pkg_name, int *file_total)
 }
 
 static int
+create_package_row(mportInstance *mport, mportPackageMeta *pkg)
+{
+	/* Insert the package meta row into the packages table (We use pack here because things might have been twiddled) */
+	/* Note that this will be marked as dirty by default */
+	if (mport_db_do(mport->db,
+					"INSERT INTO packages (pkg, version, origin, prefix, lang, options, comment, os_release, cpe, locked) VALUES (%Q,%Q,%Q,%Q,%Q,%Q,%Q,%Q,%Q,0)",
+					pkg->name, pkg->version, pkg->origin, pkg->prefix, pkg->lang, pkg->options, pkg->comment,
+					pkg->os_release, pkg->cpe) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	return MPORT_OK;
+}
+
+static int
+create_depends(mportInstance *mport, mportPackageMeta *pkg)
+{
+	/* Insert the depends into the master table */
+	if (mport_db_do(mport->db,
+					"INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) SELECT pkg,depend_pkgname,depend_pkgversion,depend_port FROM stub.depends WHERE pkg=%Q",
+					pkg->name) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	return MPORT_OK;
+}
+
+static int
+create_categories(mportInstance *mport, mportPackageMeta *pkg)
+{
+	/* Insert the categories into the master table */
+	if (mport_db_do(mport->db, "INSERT INTO categories (pkg, category) SELECT pkg, category FROM stub.categories WHERE pkg=%Q",
+					pkg->name) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	return MPORT_OK;
+}
+
+static int
+create_sample_file(char *file)
+{
+	char nonSample[FILENAME_MAX];
+	strlcpy(nonSample, file, FILENAME_MAX);
+	char *sptr = strcasestr(nonSample, ".sample");
+	if (sptr != NULL) {
+		sptr[0] = '\0'; /* hack off .sample */
+		if (!mport_file_exists(nonSample)) {
+			if (mport_copy_file(file, nonSample) != MPORT_OK)
+				RETURN_CURRENT_ERROR;
+		}
+	}
+
+	return MPORT_OK;
+}
+
+static int
 do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
     int file_total, ret;
@@ -200,31 +258,23 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
     orig_cwd = getcwd(NULL, 0);
 
 	if (get_file_count(mport, pkg->name, &file_total) != MPORT_OK)
-		RETURN_CURRENT_ERROR;
+		goto ERROR;
 
     mport_call_progress_init_cb(mport, "Installing %s-%s", pkg->name, pkg->version);
 
-    /* Insert the package meta row into the packages table (We use pack here because things might have been twiddled) */
-    /* Note that this will be marked as dirty by default */
-    if (mport_db_do(db,
-                    "INSERT INTO packages (pkg, version, origin, prefix, lang, options, comment, os_release, cpe, locked) VALUES (%Q,%Q,%Q,%Q,%Q,%Q,%Q,%Q,%Q,0)",
-                    pkg->name, pkg->version, pkg->origin, pkg->prefix, pkg->lang, pkg->options, pkg->comment,
-                    pkg->os_release, pkg->cpe) != MPORT_OK)
-        goto ERROR;
+	if (create_package_row(mport, pkg) != MPORT_OK)
+		goto ERROR;
+
+	if (create_depends(mport, pkg) != MPORT_OK)
+		goto ERROR;
+
+	if (create_categories(mport, pkg) != MPORT_OK)
+		goto ERROR;
 
     /* Insert the assets into the master table (We do this one by one because we want to insert file
      * assets as absolute paths. */
     if (mport_db_prepare(db, &insert, "INSERT INTO assets (pkg, type, data, checksum, owner, grp, mode) values (%Q,?,?,?,?,?,?)", pkg->name) !=
         MPORT_OK)
-        goto ERROR;
-    /* Insert the depends into the master table */
-    if (mport_db_do(db,
-                    "INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) SELECT pkg,depend_pkgname,depend_pkgversion,depend_port FROM stub.depends WHERE pkg=%Q",
-                    pkg->name) != MPORT_OK)
-        goto ERROR;
-    /* Insert the categories into the master table */
-    if (mport_db_do(db, "INSERT INTO categories (pkg, category) SELECT pkg, category FROM stub.categories WHERE pkg=%Q",
-                    pkg->name) != MPORT_OK)
         goto ERROR;
 
     if (mport_db_prepare(db, &assets, "SELECT type,data,checksum,owner,grp,mode FROM stub.assets WHERE pkg=%Q and type not in (%d, %d)", pkg->name, ASSET_PREEXEC, ASSET_POSTEXEC) != MPORT_OK)
@@ -414,19 +464,11 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 						goto ERROR;
                     }
 
-                    /* for sample files, if we don't have an existing file
-                       make a new one */
-                    if (type == ASSET_SAMPLE) {
-                        char nonSample[FILENAME_MAX];
-                        strlcpy(nonSample, file, FILENAME_MAX);
-                        char *sptr = strcasestr(nonSample, ".sample");
-                        if (sptr != NULL) {
-                            sptr[0] = '\0'; /* hack off .sample */
-                            if (!mport_file_exists(nonSample)) {
-                                mport_copy_file(file, nonSample);
-                            }
-                        }
-                    }
+                    /* for sample files, if we don't have an existing file, make a new one */
+					if (type == ASSET_SAMPLE && create_sample_file(file) != MPORT_OK) {
+						SET_ERRORX(MPORT_ERR_FATAL, "Unable to create sample file from %s", file);
+						goto ERROR;
+					}
                 }
 
                 (mport->progress_step_cb)(++file_count, file_total, file);
@@ -544,6 +586,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
     return MPORT_OK;
 
     ERROR:
+		mport_pkgmeta_logevent(mport, pkg, "Failed to Install");
         sqlite3_finalize(assets);
         sqlite3_finalize(insert);
         (mport->progress_free_cb)();
