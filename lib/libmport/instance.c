@@ -107,6 +107,8 @@ mport_instance_init(mportInstance *mport, const char *root) {
 		db_version = mport_get_database_version(mport->db);
 	}
 
+	mport_db_do(mport->db, "PRAGMA journal_mode=WAL");
+
 	return mport_upgrade_master_schema(mport->db, db_version);
 }
 
