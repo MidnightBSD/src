@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20160806:
+	sqlite3 3.13.0
+
+20160805:
+	Merged fixes for libmport that improve error handling when installing packages. Also
+	support mkdir -p like behavior for plist entries.
+
 20160531:
         Fix four security issues with MidnightBSD.
 
