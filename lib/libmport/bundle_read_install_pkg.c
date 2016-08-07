@@ -320,7 +320,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 {
 	mportAssetList *alist;
 	mportAssetListEntry *e = NULL;
-    int file_total, ret;
+    int file_total;
     int file_count = 0;
     struct archive_entry *entry;
     char *orig_cwd;
