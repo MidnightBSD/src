@@ -27,40 +27,56 @@ mport_stats_free(mportStats *stats)
 MPORT_PUBLIC_API int
 mport_stats(mportInstance *mport, mportStats **stats)
 {
-    sqlite3_stmt *stmt;
-    sqlite3 *db = mport->db;
-    mportStats *s;
+	__block sqlite3_stmt *stmt;
+	__block sqlite3 *db = mport->db;
+	__block mportStats *s;
+	__block int result = MPORT_OK;
+	__block char *err;
 
-    if ((s = mport_stats_new()) == NULL)
-        RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+	if ((s = mport_stats_new()) == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 
-    *stats = s;
+	*stats = s;
 
-    if (mport_db_prepare(db, &stmt, "SELECT COUNT(*) FROM packages") != MPORT_OK) {
+	if (mport_db_prepare(db, &stmt, "SELECT COUNT(*) FROM packages") != MPORT_OK) {
 		sqlite3_finalize(stmt);
 		RETURN_CURRENT_ERROR;
 	}
 
-    if (sqlite3_step(stmt) != SQLITE_ROW) {
-        sqlite3_finalize(stmt);
-        RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-    }
+	dispatch_sync(mportSQLSerial, ^{
+		if (sqlite3_step(stmt) != SQLITE_ROW) {
+			sqlite3_finalize(stmt);
+			err = (char *) sqlite3_errmsg(db);
+			result = MPORT_ERR_FATAL;
+			return;
+		}
 
-    s->pkg_installed = (unsigned int) sqlite3_column_int(stmt, 0);
-    sqlite3_finalize(stmt);
+		s->pkg_installed = (unsigned int) sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+	});
+	if (result == MPORT_ERR_FATAL) {
+		SET_ERRORX(result, "%s", err);
+		return result;
+	}
 
     if (mport_db_prepare(db, &stmt, "SELECT COUNT(*) FROM idx.packages") != MPORT_OK) {
 		sqlite3_finalize(stmt);
 		RETURN_CURRENT_ERROR;
 	}
 
-    if (sqlite3_step(stmt) != SQLITE_ROW) {
-        sqlite3_finalize(stmt);
-        RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-    }
+	dispatch_sync(mportSQLSerial, ^{
+		if (sqlite3_step(stmt) != SQLITE_ROW) {
+			sqlite3_finalize(stmt);
+			err = (char *) sqlite3_errmsg(db);
+			result = MPORT_ERR_FATAL;
+			return;
+		}
 
-    s->pkg_available = (unsigned int) sqlite3_column_int(stmt, 0);
-    sqlite3_finalize(stmt);
+		s->pkg_available = (unsigned int) sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+	});
 
-    return (MPORT_OK);
+	if (result == MPORT_ERR_FATAL)
+		SET_ERRORX(result, "%s", err);
+	return result;
 }
