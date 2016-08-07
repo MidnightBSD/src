@@ -42,6 +42,8 @@ __MBSDID("$MidnightBSD$");
 #include <archive_entry.h>
 
 
+enum phase { PREINSTALL, ACTUALINSTALL, POSTINSTALL};
+
 static int do_pre_install(mportInstance *, mportBundleRead *, mportPackageMeta *);
 static int do_actual_install(mportInstance *, mportBundleRead *, mportPackageMeta *);
 static int do_post_install(mportInstance *, mportBundleRead *, mportPackageMeta *);
@@ -56,8 +58,6 @@ static int create_depends(mportInstance *mport, mportPackageMeta *pkg);
 static int create_sample_file(const char *file);
 static int mark_complete(mportInstance *, mportPackageMeta *);
 static int mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mportAssetList **alist_p, enum phase);
-
-enum phase { PREINSTALL, ACTUALINSTALL, POSTINSTALL};
 
 /**
  * This is a wrapper for all bund read install operations
