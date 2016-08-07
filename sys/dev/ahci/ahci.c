@@ -489,7 +489,7 @@ ahci_attach(device_t dev)
 	/* Get the HW capabilities */
 	version = ATA_INL(ctlr->r_mem, AHCI_VS);
 	ctlr->caps = ATA_INL(ctlr->r_mem, AHCI_CAP);
-	if (version >= 0x00010020)
+	if (version >= 0x00010200)
 		ctlr->caps2 = ATA_INL(ctlr->r_mem, AHCI_CAP2);
 	if (ctlr->caps & AHCI_CAP_EMS)
 		ctlr->capsem = ATA_INL(ctlr->r_mem, AHCI_EM_CTL);
