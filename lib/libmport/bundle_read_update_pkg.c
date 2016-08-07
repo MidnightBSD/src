@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/bundle_read_update_pkg.c,v 1.8 2011/07/24 15:59:08 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -170,8 +170,10 @@ static int build_create_extras_depends(mportInstance *mport, mportPackageMeta *p
   sqlite3_stmt *stmt;
   char *entry;
  
-  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM depends WHERE pkg=%Q", pkg->name) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
+  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM depends WHERE pkg=%Q", pkg->name) != MPORT_OK) {
+	  sqlite3_finalize(stmt);
+	  RETURN_CURRENT_ERROR;
+  }
     
   ret = sqlite3_step(stmt);
    
@@ -193,8 +195,10 @@ static int build_create_extras_depends(mportInstance *mport, mportPackageMeta *p
   if ((extra->depends = (char **)calloc(count + 1, sizeof(char *))) == NULL)
     RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
  
-  if (mport_db_prepare(mport->db, &stmt, "SELECT depend_pkgname, depend_pkgversion, depend_port FROM depends WHERE pkg=%Q", pkg->name) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
+  if (mport_db_prepare(mport->db, &stmt, "SELECT depend_pkgname, depend_pkgversion, depend_port FROM depends WHERE pkg=%Q", pkg->name) != MPORT_OK) {
+	  sqlite3_finalize(stmt);
+	  RETURN_CURRENT_ERROR;
+  }
   
   i = 0;
   while (1) {

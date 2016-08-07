@@ -271,8 +271,10 @@ static int archive_metafiles(mportBundleWrite *bundle, sqlite3 *db, struct table
   
   ret = MPORT_OK;
         
-  if (mport_db_prepare(db, &stmt, "SELECT pkg FROM packages") != MPORT_OK)
-    RETURN_CURRENT_ERROR;
+  if (mport_db_prepare(db, &stmt, "SELECT pkg FROM packages") != MPORT_OK) {
+	  sqlite3_finalize(stmt);
+	  RETURN_CURRENT_ERROR;
+  }
     
   while (1) {
     sret = sqlite3_step(stmt);
@@ -357,8 +359,10 @@ static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct t
   mportBundleRead *inbundle;
   struct archive_entry *entry;
   
-  if (mport_db_prepare(db, &stmt, "SELECT pkg FROM packages") != MPORT_OK)
-    RETURN_CURRENT_ERROR;
+  if (mport_db_prepare(db, &stmt, "SELECT pkg FROM packages") != MPORT_OK) {
+	  sqlite3_finalize(stmt);
+	  RETURN_CURRENT_ERROR;
+  }
   
   while (1) {
     ret = sqlite3_step(stmt);

@@ -81,8 +81,10 @@ static int check_if_installed(sqlite3 *db, mportPackageMeta *pack)
   char *system_os_release;
   
   /* check if the package is already installed */
-  if (mport_db_prepare(db, &stmt, "SELECT version, os_release FROM packages WHERE pkg=%Q", pack->name) != MPORT_OK) 
-    RETURN_CURRENT_ERROR;
+  if (mport_db_prepare(db, &stmt, "SELECT version, os_release FROM packages WHERE pkg=%Q", pack->name) != MPORT_OK) {
+	  sqlite3_finalize(stmt);
+	  RETURN_CURRENT_ERROR;
+  }
 
   switch (sqlite3_step(stmt)) {
     case SQLITE_DONE:
@@ -123,15 +125,19 @@ static int check_conflicts(sqlite3 *db, mportPackageMeta *pack)
   int ret;
   const char *inst_name, *inst_version;
   
-  if (mport_db_prepare(db, &stmt, "SELECT packages.pkg, packages.version FROM stub.conflicts LEFT JOIN packages ON packages.pkg GLOB stub.conflicts.conflict_pkg AND packages.version GLOB stub.conflicts.conflict_version WHERE stub.conflicts.pkg=%Q AND packages.pkg IS NOT NULL", pack->name) != MPORT_OK) 
-    RETURN_CURRENT_ERROR;
+  if (mport_db_prepare(db, &stmt,
+					   "SELECT packages.pkg, packages.version FROM stub.conflicts LEFT JOIN packages ON packages.pkg GLOB stub.conflicts.conflict_pkg AND packages.version GLOB stub.conflicts.conflict_version WHERE stub.conflicts.pkg=%Q AND packages.pkg IS NOT NULL", pack->name) != MPORT_OK) {
+	  sqlite3_finalize(stmt);
+	  RETURN_CURRENT_ERROR;
+  }
+
   
   while (1) {
     ret = sqlite3_step(stmt);
     
     if (ret == SQLITE_ROW) {
-        inst_name    = sqlite3_column_text(stmt, 0);
-        inst_version = sqlite3_column_text(stmt, 1);
+        inst_name    = (const char *) sqlite3_column_text(stmt, 0);
+        inst_version = (const char *) sqlite3_column_text(stmt, 1);
         
         SET_ERRORX(MPORT_ERR_FATAL, "Installed package %s-%s conflicts with %s", inst_name, inst_version, pack->name);
         sqlite3_finalize(stmt);

@@ -196,8 +196,10 @@ int mport_index_get_mirror_list(mportInstance *mport, char ***list_p, int *list_
   sqlite3_stmt *stmt;
   
   /* XXX the country is hard coded until a configuration system is created */    
-  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM idx.mirrors WHERE country='us'") != MPORT_OK)
-    RETURN_CURRENT_ERROR;
+  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM idx.mirrors WHERE country='us'") != MPORT_OK) {
+	  sqlite3_finalize(stmt);
+	  RETURN_CURRENT_ERROR;
+  }
 
   switch (sqlite3_step(stmt)) {
     case SQLITE_ROW:
@@ -220,8 +222,10 @@ int mport_index_get_mirror_list(mportInstance *mport, char ***list_p, int *list_
   *list_p = list;  
   i = 0;
     
-  if (mport_db_prepare(mport->db, &stmt, "SELECT mirror FROM idx.mirrors WHERE country='us'") != MPORT_OK)
-    RETURN_CURRENT_ERROR;
+  if (mport_db_prepare(mport->db, &stmt, "SELECT mirror FROM idx.mirrors WHERE country='us'") != MPORT_OK) {
+	  sqlite3_finalize(stmt);
+	  RETURN_CURRENT_ERROR;
+  }
     
   while (1) {
     ret = sqlite3_step(stmt);
@@ -271,8 +275,10 @@ mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndex
   if (lookup_alias(mport, pkgname, &lookup) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
-  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM idx.packages WHERE pkg GLOB %Q", lookup) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
+  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM idx.packages WHERE pkg GLOB %Q", lookup) != MPORT_OK) {
+	  sqlite3_finalize(stmt);
+	  RETURN_CURRENT_ERROR;
+  }
  
   switch (sqlite3_step(stmt)) {
     case SQLITE_ROW:

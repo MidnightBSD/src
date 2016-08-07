@@ -104,8 +104,10 @@ do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *
         RETURN_CURRENT_ERROR;
 
     /* Process @preexec steps */
-    if (mport_db_prepare(db, &assets, "SELECT type, data FROM stub.assets WHERE pkg=%Q and type in (%d, %d)", pkg->name, ASSET_CWD, ASSET_PREEXEC) != MPORT_OK)
-        goto ERROR;
+    if (mport_db_prepare(db, &assets, "SELECT type, data FROM stub.assets WHERE pkg=%Q and type in (%d, %d)", pkg->name, ASSET_CWD, ASSET_PREEXEC) != MPORT_OK) {
+		sqlite3_finalize(assets);
+		goto ERROR;
+	}
 
     (void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
 
@@ -160,8 +162,10 @@ get_file_count(mportInstance *mport, char *pkg_name, int *file_total)
 
 	if (mport_db_prepare(mport->db, &count,
 						 "SELECT COUNT(*) FROM stub.assets WHERE (type=%i or type=%i or type=%i or type=%i) AND pkg=%Q",
-						 ASSET_FILE, ASSET_SAMPLE, ASSET_SHELL, ASSET_FILE_OWNER_MODE, pkg_name) != MPORT_OK)
+						 ASSET_FILE, ASSET_SAMPLE, ASSET_SHELL, ASSET_FILE_OWNER_MODE, pkg_name) != MPORT_OK) {
+		sqlite3_finalize(count);
 		RETURN_CURRENT_ERROR;
+	}
 
 	switch (sqlite3_step(count)) {
 		case SQLITE_ROW:
@@ -253,8 +257,9 @@ mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mpo
 		RETURN_CURRENT_ERROR;
 	}
 
-	if (stmt == NULL)
-		RETURN_CURRENT_ERROR;
+	if (stmt == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "Statement was null");
+	}
 
 	while (1) {
 		ret = sqlite3_step(stmt);
@@ -649,8 +654,8 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
     return MPORT_OK;
 
     ERROR:
+		sqlite3_finalize(insert);
 		mport_pkgmeta_logevent(mport, pkg, "Failed to Install");
-        sqlite3_finalize(insert);
         (mport->progress_free_cb)();
         free(orig_cwd);
 		mport_assetlist_free(alist);
@@ -716,8 +721,10 @@ run_postexec(mportInstance *mport, mportPackageMeta *pkg)
     db = mport->db;
 
     /* Process @postexec steps */
-    if (mport_db_prepare(db, &assets, "SELECT type, data FROM stub.assets WHERE pkg=%Q and type in (%d, %d)", pkg->name, ASSET_CWD, ASSET_POSTEXEC) != MPORT_OK)
-        goto ERROR;
+    if (mport_db_prepare(db, &assets, "SELECT type, data FROM stub.assets WHERE pkg=%Q and type in (%d, %d)", pkg->name, ASSET_CWD, ASSET_POSTEXEC) != MPORT_OK) {
+		sqlite3_finalize(assets);
+		goto ERROR;
+	}
 
     (void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
 

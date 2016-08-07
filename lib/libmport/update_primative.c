@@ -86,8 +86,10 @@ set_prefix_to_installed(mportInstance *mport, mportPackageMeta *pkg)
     int ret = MPORT_OK;
     const char *prefix;
 
-    if (mport_db_prepare(mport->db, &stmt, "SELECT prefix FROM packages WHERE pkg=%Q", pkg->name) != MPORT_OK)
-        RETURN_CURRENT_ERROR;
+    if (mport_db_prepare(mport->db, &stmt, "SELECT prefix FROM packages WHERE pkg=%Q", pkg->name) != MPORT_OK) {
+		sqlite3_finalize(stmt);
+		RETURN_CURRENT_ERROR;
+	}
 
     switch (sqlite3_step(stmt)) {
         case SQLITE_ROW:

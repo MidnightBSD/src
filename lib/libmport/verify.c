@@ -49,8 +49,10 @@ mport_verify_package(mportInstance *mport, mportPackageMeta *pack)
 	char md5[33];
 	
 	mport_call_msg_cb(mport, "Verifying %s-%s", pack->name, pack->version);
-	if (mport_db_prepare(mport->db, &stmt, "SELECT type,data,checksum FROM assets WHERE pkg=%Q", pack->name) != MPORT_OK)
+	if (mport_db_prepare(mport->db, &stmt, "SELECT type,data,checksum FROM assets WHERE pkg=%Q", pack->name) != MPORT_OK) {
+		sqlite3_finalize(stmt);
 		RETURN_CURRENT_ERROR;
+	}
 	
 	while (1) {
         ret = sqlite3_step(stmt);
