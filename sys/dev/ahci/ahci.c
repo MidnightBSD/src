@@ -101,7 +101,7 @@ static void ahci_process_request_sense(device_t dev, union ccb *ccb);
 static void ahciaction(struct cam_sim *sim, union ccb *ccb);
 static void ahcipoll(struct cam_sim *sim);
 
-MALLOC_DEFINE(M_AHCI, "AHCI driver", "AHCI driver data buffers");
+static MALLOC_DEFINE(M_AHCI, "AHCI driver", "AHCI driver data buffers");
 
 static struct {
 	uint32_t	id;
@@ -120,14 +120,36 @@ static struct {
 #define AHCI_Q_NOAA	512
 #define AHCI_Q_NOCOUNT	1024
 #define AHCI_Q_ALTSIG	2048
+#define AHCI_Q_NOMSI	4096
+
+#define AHCI_Q_BIT_STRING	\
+	"\020"			\
+	"\001NOFORCE"		\
+	"\002NOPMP"		\
+	"\003NONCQ"		\
+	"\0041CH"		\
+	"\0052CH"		\
+	"\0064CH"		\
+	"\007EDGEIS"		\
+	"\010SATA2"		\
+	"\011NOBSYRES"		\
+	"\012NOAA"		\
+	"\013NOCOUNT"		\
+	"\014ALTSIG"		\
+	"\015NOMSI"
 } ahci_ids[] = {
-	{0x43801002, 0x00, "ATI IXP600",	0},
+	{0x43801002, 0x00, "ATI IXP600",	AHCI_Q_NOMSI},
 	{0x43901002, 0x00, "ATI IXP700",	0},
 	{0x43911002, 0x00, "ATI IXP700",	0},
 	{0x43921002, 0x00, "ATI IXP700",	0},
 	{0x43931002, 0x00, "ATI IXP700",	0},
 	{0x43941002, 0x00, "ATI IXP800",	0},
 	{0x43951002, 0x00, "ATI IXP800",	0},
+	{0x78001022, 0x00, "AMD Hudson-2",	0},
+	{0x78011022, 0x00, "AMD Hudson-2",	0},
+	{0x78021022, 0x00, "AMD Hudson-2",	0},
+	{0x78031022, 0x00, "AMD Hudson-2",	0},
+	{0x78041022, 0x00, "AMD Hudson-2",	0},
 	{0x06121b21, 0x00, "ASMedia ASM1061",	0},
 	{0x26528086, 0x00, "Intel ICH6",	AHCI_Q_NOFORCE},
 	{0x26538086, 0x00, "Intel ICH6M",	AHCI_Q_NOFORCE},
@@ -180,8 +202,18 @@ static struct {
 	{0x1e078086, 0x00, "Intel Panther Point",	0},
 	{0x1e0e8086, 0x00, "Intel Panther Point",	0},
 	{0x1e0f8086, 0x00, "Intel Panther Point",	0},
+	{0x8c028086, 0x00, "Intel Lynx Point",	0},
+	{0x8c038086, 0x00, "Intel Lynx Point",	0},
+	{0x8c048086, 0x00, "Intel Lynx Point",	0},
+	{0x8c058086, 0x00, "Intel Lynx Point",	0},
+	{0x8c068086, 0x00, "Intel Lynx Point",	0},
+	{0x8c078086, 0x00, "Intel Lynx Point",	0},
+	{0x8c0e8086, 0x00, "Intel Lynx Point",	0},
+	{0x8c0f8086, 0x00, "Intel Lynx Point",	0},
 	{0x23238086, 0x00, "Intel DH89xxCC",	0},
+	{0x2360197b, 0x00, "JMicron JMB360",	0},
 	{0x2361197b, 0x00, "JMicron JMB361",	AHCI_Q_NOFORCE},
+	{0x2362197b, 0x00, "JMicron JMB362",	0},
 	{0x2363197b, 0x00, "JMicron JMB363",	AHCI_Q_NOFORCE},
 	{0x2365197b, 0x00, "JMicron JMB365",	AHCI_Q_NOFORCE},
 	{0x2366197b, 0x00, "JMicron JMB366",	AHCI_Q_NOFORCE},
@@ -202,6 +234,8 @@ static struct {
 	{0x91301b4b, 0x00, "Marvell 88SE9130",  AHCI_Q_NOBSYRES|AHCI_Q_ALTSIG},
 	{0x91721b4b, 0x00, "Marvell 88SE9172",	AHCI_Q_NOBSYRES},
 	{0x91821b4b, 0x00, "Marvell 88SE9182",	AHCI_Q_NOBSYRES},
+	{0x91a01b4b, 0x00, "Marvell 88SE91Ax",	AHCI_Q_NOBSYRES},
+	{0x92151b4b, 0x00, "Marvell 88SE9215",  AHCI_Q_NOBSYRES},
 	{0x92201b4b, 0x00, "Marvell 88SE9220",  AHCI_Q_NOBSYRES|AHCI_Q_ALTSIG},
 	{0x92301b4b, 0x00, "Marvell 88SE9230",  AHCI_Q_NOBSYRES|AHCI_Q_ALTSIG},
 	{0x92351b4b, 0x00, "Marvell 88SE9235",  AHCI_Q_NOBSYRES},
@@ -213,6 +247,9 @@ static struct {
 	{0x06401b4b, 0x00, "HighPoint RocketRAID 640",	AHCI_Q_NOBSYRES},
 	{0x06441103, 0x00, "HighPoint RocketRAID 644",	AHCI_Q_NOBSYRES},
 	{0x06441b4b, 0x00, "HighPoint RocketRAID 644",	AHCI_Q_NOBSYRES},
+	{0x06411103, 0x00, "HighPoint RocketRAID 640L",	AHCI_Q_NOBSYRES},
+	{0x06421103, 0x00, "HighPoint RocketRAID 642L",	AHCI_Q_NOBSYRES},
+	{0x06451103, 0x00, "HighPoint RocketRAID 644L",	AHCI_Q_NOBSYRES},
 	{0x044c10de, 0x00, "NVIDIA MCP65",	AHCI_Q_NOAA},
 	{0x044d10de, 0x00, "NVIDIA MCP65",	AHCI_Q_NOAA},
 	{0x044e10de, 0x00, "NVIDIA MCP65",	AHCI_Q_NOAA},
