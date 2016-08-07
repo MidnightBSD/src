@@ -42,6 +42,8 @@ __MBSDID("$MidnightBSD$");
 #include <archive_entry.h>
 
 
+enum phase { PREINSTALL, ACTUALINSTALL, POSTINSTALL};
+
 static int do_pre_install(mportInstance *, mportBundleRead *, mportPackageMeta *);
 static int do_actual_install(mportInstance *, mportBundleRead *, mportPackageMeta *);
 static int do_post_install(mportInstance *, mportBundleRead *, mportPackageMeta *);
@@ -49,6 +51,13 @@ static int run_postexec(mportInstance *, mportPackageMeta *);
 static int run_pkg_install(mportInstance *, mportBundleRead *, mportPackageMeta *, const char *);
 static int run_mtree(mportInstance *, mportBundleRead *, mportPackageMeta *);
 static int display_pkg_msg(mportInstance *, mportBundleRead *, mportPackageMeta *);
+static int get_file_count(mportInstance *, char *, int *);
+static int create_package_row(mportInstance *, mportPackageMeta *);
+static int create_categories(mportInstance *mport, mportPackageMeta *pkg);
+static int create_depends(mportInstance *mport, mportPackageMeta *pkg);
+static int create_sample_file(const char *file);
+static int mark_complete(mportInstance *, mportPackageMeta *);
+static int mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mportAssetList **alist_p, enum phase);
 
 /**
  * This is a wrapper for all bund read install operations
@@ -80,142 +89,296 @@ mport_bundle_read_install_pkg(mportInstance *mport, mportBundleRead *bundle, mpo
 static int
 do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
-    int ret;
-    char cwd[FILENAME_MAX];
-    char file[FILENAME_MAX];
-    sqlite3_stmt *assets = NULL;
-    sqlite3 *db = mport->db;
-    mportAssetListEntryType type;
-    const char *data;
+	char cwd[FILENAME_MAX];
+	char file[FILENAME_MAX];
+	mportAssetList *alist;
+	mportAssetListEntry *e = NULL;
 
-    /* run mtree */
-    if (run_mtree(mport, bundle, pkg) != MPORT_OK)
-        RETURN_CURRENT_ERROR;
+	/* run mtree */
+	if (run_mtree(mport, bundle, pkg) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
 
-    /* run pkg-install PRE-INSTALL */
-    if (run_pkg_install(mport, bundle, pkg, "PRE-INSTALL") != MPORT_OK)
-        RETURN_CURRENT_ERROR;
+	/* run pkg-install PRE-INSTALL */
+	if (run_pkg_install(mport, bundle, pkg, "PRE-INSTALL") != MPORT_OK)
+		RETURN_CURRENT_ERROR;
 
-    /* Process @preexec steps */
-    if (mport_db_prepare(db, &assets, "SELECT type, data FROM stub.assets WHERE pkg=%Q and type in (%d, %d)", pkg->name, ASSET_CWD, ASSET_PREEXEC) != MPORT_OK)
-        goto ERROR;
+	/* Process @preexec steps */
+	if (mport_bundle_read_get_assetlist(mport, pkg, &alist, PREINSTALL) != MPORT_OK)
+		goto ERROR;
 
-    (void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
+	(void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
 
-    if (mport_chdir(mport, cwd) != MPORT_OK)
-        goto ERROR;
+	if (mport_chdir(mport, cwd) != MPORT_OK)
+		goto ERROR;
 
-    while (1) {
-        ret = sqlite3_step(assets);
+	STAILQ_FOREACH(e, alist, next) {
+		switch (e->type) {
+			case ASSET_CWD:
+				(void) strlcpy(cwd, e->data == NULL ? pkg->prefix : e->data, sizeof(cwd));
+				if (mport_chdir(mport, cwd) != MPORT_OK)
+					goto ERROR;
 
-        if (ret == SQLITE_DONE)
-            break;
+				break;
+			case ASSET_PREEXEC:
+				if (mport_run_asset_exec(mport, e->data, cwd, file) != MPORT_OK)
+					goto ERROR;
+				break;
+			default:
+				/* do nothing */
+				break;
+		}
+	}
 
-        if (ret != SQLITE_ROW) {
-            SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-            goto ERROR;
-        }
+	mport_assetlist_free(alist);
+	mport_pkgmeta_logevent(mport, pkg, "preexec");
 
-        type = (mportAssetListEntryType) sqlite3_column_int(assets, 0);
-        data = sqlite3_column_text(assets, 1);
+	return MPORT_OK;
 
-        switch (type) {
-            case ASSET_CWD:
-                (void) strlcpy(cwd, data == NULL ? pkg->prefix : data, sizeof(cwd));
-                if (mport_chdir(mport, cwd) != MPORT_OK)
-                    goto ERROR;
+	ERROR:
+		// TODO: asset list free
+	RETURN_CURRENT_ERROR;
+}
 
-                break;
-            case ASSET_PREEXEC:
-                if (mport_run_asset_exec(mport, data, cwd, file) != MPORT_OK)
-                    goto ERROR;
-                break;
-            default:
-                /* do nothing */
-                break;
-        }
-    }
-    sqlite3_finalize(assets);
-    mport_pkgmeta_logevent(mport, pkg, "preexec");
+/* get the file count for the progress meter */
+static int
+get_file_count(mportInstance *mport, char *pkg_name, int *file_total)
+{
+	__block sqlite3_stmt *count;
+	__block int result = MPORT_OK;
+	__block char *err;
 
-    return MPORT_OK;
+	if (mport_db_prepare(mport->db, &count,
+						 "SELECT COUNT(*) FROM stub.assets WHERE (type=%i or type=%i or type=%i or type=%i) AND pkg=%Q",
+						 ASSET_FILE, ASSET_SAMPLE, ASSET_SHELL, ASSET_FILE_OWNER_MODE, pkg_name) != MPORT_OK) {
+		sqlite3_finalize(count);
+		RETURN_CURRENT_ERROR;
+	}
 
-    ERROR:
-        sqlite3_finalize(assets);
-        RETURN_CURRENT_ERROR;
+	dispatch_sync(mportSQLSerial, ^{
+		switch (sqlite3_step(count)) {
+			case SQLITE_ROW:
+				*file_total = sqlite3_column_int(count, 0);
+				sqlite3_finalize(count);
+				break;
+			default:
+				err = (char *) sqlite3_errmsg(mport->db);
+				result = MPORT_ERR_FATAL;
+				sqlite3_finalize(count);
+		}
+	});
+
+	if (result == MPORT_ERR_FATAL)
+		SET_ERRORX(result, "Error reading file count %s", err);
+	return result;
+}
+
+static int
+create_package_row(mportInstance *mport, mportPackageMeta *pkg)
+{
+	/* Insert the package meta row into the packages table (We use pack here because things might have been twiddled) */
+	/* Note that this will be marked as dirty by default */
+	if (mport_db_do(mport->db,
+					"INSERT INTO packages (pkg, version, origin, prefix, lang, options, comment, os_release, cpe, locked) VALUES (%Q,%Q,%Q,%Q,%Q,%Q,%Q,%Q,%Q,0)",
+					pkg->name, pkg->version, pkg->origin, pkg->prefix, pkg->lang, pkg->options, pkg->comment,
+					pkg->os_release, pkg->cpe) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	return MPORT_OK;
+}
+
+static int
+create_depends(mportInstance *mport, mportPackageMeta *pkg)
+{
+	/* Insert the depends into the master table */
+	if (mport_db_do(mport->db,
+					"INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) SELECT pkg,depend_pkgname,depend_pkgversion,depend_port FROM stub.depends WHERE pkg=%Q",
+					pkg->name) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	return MPORT_OK;
+}
+
+static int
+create_categories(mportInstance *mport, mportPackageMeta *pkg)
+{
+	/* Insert the categories into the master table */
+	if (mport_db_do(mport->db, "INSERT INTO categories (pkg, category) SELECT pkg, category FROM stub.categories WHERE pkg=%Q",
+					pkg->name) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	return MPORT_OK;
+}
+
+static int
+create_sample_file(const char *file)
+{
+	char nonSample[FILENAME_MAX];
+	strlcpy(nonSample, file, FILENAME_MAX);
+	char *sptr = strcasestr(nonSample, ".sample");
+	if (sptr != NULL) {
+		sptr[0] = '\0'; /* hack off .sample */
+		if (!mport_file_exists(nonSample)) {
+			if (mport_copy_file(file, nonSample) != MPORT_OK)
+				RETURN_CURRENT_ERROR;
+		}
+	}
+
+	return MPORT_OK;
+}
+
+/**
+ * Get the list of assets (plist entries) from the stub attached database (package we are installing)
+ * filtered on entries that are not pre/post exec.
+ */
+static int
+mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mportAssetList **alist_p, enum phase state)
+{
+	__block mportAssetList *alist;
+	__block sqlite3_stmt *stmt = NULL;
+	__block int result = MPORT_OK;
+	__block char *err;
+
+	if ((alist = mport_assetlist_new()) == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+
+	*alist_p = alist;
+
+	if (state == PREINSTALL) {
+		if (mport_db_prepare(mport->db, &stmt, "SELECT type,data,checksum,owner,grp,mode FROM stub.assets WHERE pkg=%Q and type in (%d, %d)", pkg->name, ASSET_CWD, ASSET_PREEXEC) != MPORT_OK) {
+			sqlite3_finalize(stmt);
+			RETURN_CURRENT_ERROR;
+		}
+	} else if (state == ACTUALINSTALL) {
+		if (mport_db_prepare(mport->db, &stmt,
+							 "SELECT type,data,checksum,owner,grp,mode FROM stub.assets WHERE pkg=%Q and type not in (%d, %d)",
+							 pkg->name, ASSET_PREEXEC, ASSET_POSTEXEC) != MPORT_OK) {
+			sqlite3_finalize(stmt);
+			RETURN_CURRENT_ERROR;
+		}
+	} else if (state == POSTINSTALL) {
+		if (mport_db_prepare(mport->db, &stmt, "SELECT type,data,checksum,owner,grp,mode FROM stub.assets WHERE pkg=%Q and type in (%d, %d)", pkg->name, ASSET_CWD, ASSET_POSTEXEC) != MPORT_OK) {
+			sqlite3_finalize(stmt);
+			RETURN_CURRENT_ERROR;
+		}
+	}
+
+	if (stmt == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "Statement was null");
+	}
+
+	dispatch_sync(mportSQLSerial, ^{
+		while (1) {
+			mportAssetListEntry *e;
+
+			int ret = sqlite3_step(stmt);
+
+			if (ret == SQLITE_BUSY || ret == SQLITE_LOCKED) {
+				sleep(1);
+				ret = sqlite3_step(stmt);
+			}
+
+			if (ret == SQLITE_DONE)
+				break;
+
+			if (ret != SQLITE_ROW) {
+				err = (char *) sqlite3_errmsg(mport->db);
+				result = MPORT_ERR_FATAL;
+				break; // we finalize below
+			}
+
+			e = (mportAssetListEntry *) calloc(1, sizeof(mportAssetListEntry));
+
+			if (e == NULL) {
+				err = "Out of memory";
+				result = MPORT_ERR_FATAL;
+				break; // we finalize below
+			}
+
+			e->type = (mportAssetListEntryType) sqlite3_column_int(stmt, 0);
+			const unsigned char *data = sqlite3_column_text(stmt, 1);
+			const unsigned char *checksum = sqlite3_column_text(stmt, 2);
+			const unsigned char *owner = sqlite3_column_text(stmt, 3);
+			const unsigned char *group = sqlite3_column_text(stmt, 4);
+			const unsigned char *mode = sqlite3_column_text(stmt, 5);
+
+			if (data == NULL) {
+				err = "Out of memory";
+				result = MPORT_ERR_FATAL;
+				break; // we finalize below
+			}
+
+			e->data = strdup((char *) data);
+			if (checksum != NULL)
+				e->checksum = strdup((char *) checksum);
+			if (owner != NULL)
+				e->owner = strdup((char *) owner);
+			if (group != NULL)
+				e->group = strdup((char *) group);
+			if (mode != NULL)
+				e->mode = strdup((char *) mode);
+
+			if (e->data == NULL) {
+				err = "Out of memory";
+				result = MPORT_ERR_FATAL;
+				break;
+			}
+
+			STAILQ_INSERT_TAIL(alist, e, next);
+		}
+
+		sqlite3_finalize(stmt);
+	});
+
+	if (result == MPORT_ERR_FATAL)
+		SET_ERRORX(result, "Error reading assets %s", err);
+	return result;
 }
 
 static int
 do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
-    int file_total, ret;
+	mportAssetList *alist = NULL;
+	mportAssetListEntry *e = NULL;
+    int file_total;
     int file_count = 0;
-    mportAssetListEntryType type;
     struct archive_entry *entry;
-    const char *data, *checksum;
-    char *orig_cwd;
+    char *orig_cwd = NULL;
     uid_t owner = 0; /* root */
     gid_t group = 0; /* wheel */
-    mode_t *set;
+    mode_t *set = NULL;
     mode_t newmode;
-    mode_t *dirset;
+    mode_t *dirset = NULL;
     mode_t dirnewmode;
     char *mode = NULL;
     char *mkdirp = NULL;
     struct stat sb;
     char file[FILENAME_MAX], cwd[FILENAME_MAX], dir[FILENAME_MAX];
-    char *fm_owner, *fm_group, *fm_mode;
-    sqlite3_stmt *assets = NULL, *count, *insert = NULL;
-    sqlite3 *db;
-
-    db = mport->db;
+    sqlite3_stmt *insert = NULL;
 
     /* sadly, we can't just use abs pathnames, because it will break hardlinks */
     orig_cwd = getcwd(NULL, 0);
 
-    /* get the file count for the progress meter */
-    if (mport_db_prepare(db, &count,
-                         "SELECT COUNT(*) FROM stub.assets WHERE (type=%i or type=%i or type=%i or type=%i) AND pkg=%Q",
-                         ASSET_FILE, ASSET_SAMPLE, ASSET_SHELL, ASSET_FILE_OWNER_MODE, pkg->name) != MPORT_OK)
-        RETURN_CURRENT_ERROR;
-
-    switch (sqlite3_step(count)) {
-        case SQLITE_ROW:
-            file_total = sqlite3_column_int(count, 0);
-            sqlite3_finalize(count);
-            break;
-        default:
-            SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-            sqlite3_finalize(count);
-            RETURN_CURRENT_ERROR;
-    }
+	if (get_file_count(mport, pkg->name, &file_total) != MPORT_OK)
+		goto ERROR;
 
     mport_call_progress_init_cb(mport, "Installing %s-%s", pkg->name, pkg->version);
 
-    /* Insert the package meta row into the packages table (We use pack here because things might have been twiddled) */
-    /* Note that this will be marked as dirty by default */
-    if (mport_db_do(db,
-                    "INSERT INTO packages (pkg, version, origin, prefix, lang, options, comment, os_release, cpe, locked) VALUES (%Q,%Q,%Q,%Q,%Q,%Q,%Q,%Q,%Q,0)",
-                    pkg->name, pkg->version, pkg->origin, pkg->prefix, pkg->lang, pkg->options, pkg->comment,
-                    pkg->os_release, pkg->cpe) != MPORT_OK)
-        goto ERROR;
+	if (mport_bundle_read_get_assetlist(mport, pkg, &alist, ACTUALINSTALL) != MPORT_OK)
+		goto ERROR;
+
+	if (create_package_row(mport, pkg) != MPORT_OK)
+		goto ERROR;
+
+	if (create_depends(mport, pkg) != MPORT_OK)
+		goto ERROR;
+
+	if (create_categories(mport, pkg) != MPORT_OK)
+		goto ERROR;
 
     /* Insert the assets into the master table (We do this one by one because we want to insert file
      * assets as absolute paths. */
-    if (mport_db_prepare(db, &insert, "INSERT INTO assets (pkg, type, data, checksum, owner, grp, mode) values (%Q,?,?,?,?,?,?)", pkg->name) !=
+    if (mport_db_prepare(mport->db, &insert, "INSERT INTO assets (pkg, type, data, checksum, owner, grp, mode) values (%Q,?,?,?,?,?,?)", pkg->name) !=
         MPORT_OK)
-        goto ERROR;
-    /* Insert the depends into the master table */
-    if (mport_db_do(db,
-                    "INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) SELECT pkg,depend_pkgname,depend_pkgversion,depend_port FROM stub.depends WHERE pkg=%Q",
-                    pkg->name) != MPORT_OK)
-        goto ERROR;
-    /* Insert the categories into the master table */
-    if (mport_db_do(db, "INSERT INTO categories (pkg, category) SELECT pkg, category FROM stub.categories WHERE pkg=%Q",
-                    pkg->name) != MPORT_OK)
-        goto ERROR;
-
-    if (mport_db_prepare(db, &assets, "SELECT type,data,checksum,owner,grp,mode FROM stub.assets WHERE pkg=%Q and type not in (%d, %d)", pkg->name, ASSET_PREEXEC, ASSET_POSTEXEC) != MPORT_OK)
         goto ERROR;
 
     (void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
@@ -223,90 +386,72 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
     if (mport_chdir(mport, cwd) != MPORT_OK)
         goto ERROR;
 
-    while (1) {
-        ret = sqlite3_step(assets);
-
-        if (ret == SQLITE_DONE)
-            break;
-
-        if (ret != SQLITE_ROW) {
-            SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-            goto ERROR;
-        }
-
-        type     = (mportAssetListEntryType) sqlite3_column_int(assets, 0);
-        data     = (char *) sqlite3_column_text(assets, 1);
-        checksum = (char *) sqlite3_column_text(assets, 2);
-	fm_owner = (char *) sqlite3_column_text(assets, 3);
-	fm_group = (char *) sqlite3_column_text(assets, 4);
-	fm_mode  = (char *) sqlite3_column_text(assets, 5);
-
-        switch (type) {
+	STAILQ_FOREACH(e, alist, next) {
+        switch (e->type) {
             case ASSET_CWD:
-                (void) strlcpy(cwd, data == NULL ? pkg->prefix : data, sizeof(cwd));
+                (void) strlcpy(cwd, e->data == NULL ? pkg->prefix : e->data, sizeof(cwd));
                 if (mport_chdir(mport, cwd) != MPORT_OK)
                     goto ERROR;
-
                 break;
             case ASSET_CHMOD:
                 if (mode != NULL)
                     free(mode);
                 /* TODO: should we reset the mode rather than NULL here */
-                if (data == NULL)
+                if (e->data == NULL)
                     mode = NULL;
                 else
-                    mode = strdup(data);
+                    mode = strdup(e->data);
                 break;
             case ASSET_CHOWN:
-                owner = mport_get_uid(data);
+                owner = mport_get_uid(e->data);
                 break;
             case ASSET_CHGRP:
-                group = mport_get_gid(data);
+                group = mport_get_gid(e->data);
                 break;
             case ASSET_DIR:
             case ASSET_DIRRM:
             case ASSET_DIRRMTRY:
-	    case ASSET_DIR_OWNER_MODE:
-		mkdirp = strdup(data); /* need a char * here */
-		if (mport_mkdirp(mkdirp, S_IRWXU | S_IRWXG | S_IRWXO) == 0) {
-			free(mkdirp);
-			SET_ERRORX(MPORT_ERR_FATAL, "Unable to create directory %s", data);
-			goto ERROR;
-		}
-		free(mkdirp);
+	    	case ASSET_DIR_OWNER_MODE:
+				mkdirp = strdup(e->data); /* need a char * here */
+				if (mkdirp == NULL || mport_mkdirp(mkdirp, S_IRWXU | S_IRWXG | S_IRWXO) == 0) {
+					free(mkdirp);
+					SET_ERRORX(MPORT_ERR_FATAL, "Unable to create directory %s", e->data);
+					goto ERROR;
+				}
+				free(mkdirp);
 
-                if (fm_mode != NULL && fm_mode[0] != '\0') {
-                       if ((dirset = setmode(fm_mode)) == NULL)
+                if (e->mode != NULL && e->mode[0] != '\0') {
+                       if ((dirset = setmode(e->mode)) == NULL)
                              goto ERROR;
                        dirnewmode = getmode(dirset, sb.st_mode);
                        free(dirset);
-                       if (chmod(data, dirnewmode))
+                       if (chmod(e->data, dirnewmode))
                            goto ERROR;
-		}
-	        if (fm_owner != NULL && fm_group != NULL && fm_owner[0] != '\0' && fm_group[0] != '\0') {
-			if (chown(data, mport_get_uid(fm_owner), mport_get_gid(fm_group)) == -1) {
-				SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
-				goto ERROR;
-			}
-                } else if (fm_owner != NULL && fm_owner[0] != '\0') {
-			if (chown(data, mport_get_uid(fm_owner), group) == -1) {
-				SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
-				goto ERROR;
-			}
-                } else if (fm_group != NULL && fm_group[0] != '\0') {
-			if (chown(data, owner, mport_get_gid(fm_group)) == -1) {
-				SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
-				goto ERROR;
-			}
+				}
+	        	if (e->owner != NULL && e->group != NULL && e->owner[0] != '\0' && e->group[0] != '\0') {
+					if (chown(e->data, mport_get_uid(e->owner), mport_get_gid(e->group)) == -1) {
+						SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
+						goto ERROR;
+					}
+                } else if (e->owner != NULL && e->owner[0] != '\0') {
+					if (chown(e->data, mport_get_uid(e->owner), group) == -1) {
+						SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
+						goto ERROR;
+					}
+                } else if (e->group != NULL && e->group[0] != '\0') {
+					if (chown(e->data, owner, mport_get_gid(e->group)) == -1) {
+						SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
+						goto ERROR;
+					}
                 }
 	
-		break;
+				break;
             case ASSET_EXEC:
-                if (mport_run_asset_exec(mport, data, cwd, file) != MPORT_OK)
+                if (mport_run_asset_exec(mport, e->data, cwd, file) != MPORT_OK)
                     goto ERROR;
                 break;
             case ASSET_FILE_OWNER_MODE:
-		/* FALLS THROUGH */
+				/* FALLS THROUGH */
             case ASSET_FILE:
                 /* FALLS THROUGH */
             case ASSET_SHELL:
@@ -315,11 +460,11 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
                 if (mport_bundle_read_next_entry(bundle, &entry) != MPORT_OK)
                     goto ERROR;
 
-		(void) snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, data);
-		if (entry == NULL) {
-			SET_ERROR(MPORT_ERR_FATAL, "Unexpected EOF with archive file");
-			goto ERROR;
-		}
+				(void) snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, e->data);
+				if (entry == NULL) {
+					SET_ERROR(MPORT_ERR_FATAL, "Unexpected EOF with archive file");
+					goto ERROR;
+				}
 
                 archive_entry_set_pathname(entry, file);
 
@@ -327,96 +472,87 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
                     goto ERROR;
 
                 if (lstat(file, &sb)) {
-		    SET_ERRORX(MPORT_ERR_FATAL, "Unable to stat file %s", file);
+		    		SET_ERRORX(MPORT_ERR_FATAL, "Unable to stat file %s", file);
                     goto ERROR;
-		}
+				}
 
                 if (S_ISREG(sb.st_mode)) {
-		    if (type == ASSET_FILE_OWNER_MODE) {
-			/* Test for owner and group settings, otherwise roll with our default. */
-			if (fm_owner != NULL && fm_group != NULL && fm_owner[0] != '\0' && fm_group[0] != '\0') {
+		    		if (e->type == ASSET_FILE_OWNER_MODE) {
+						/* Test for owner and group settings, otherwise roll with our default. */
+						if (e->owner != NULL && e->group != NULL && e->owner[0] != '\0' && e->group[0] != '\0') {
 #ifdef DEBUG
-				fprintf(stderr, "owner %s and group %s\n", fm_owner, fm_group);
+							fprintf(stderr, "owner %s and group %s\n", fm_owner, fm_group);
 #endif
-				if (chown(file, mport_get_uid(fm_owner), mport_get_gid(fm_group)) == -1) {
-					SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
-					goto ERROR;
-				}
-			} else if (fm_owner != NULL && fm_owner[0] != '\0') {
+							if (chown(file, mport_get_uid(e->owner), mport_get_gid(e->group)) == -1) {
+								SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
+								goto ERROR;
+							}
+						} else if (e->owner != NULL && e->owner[0] != '\0') {
 #ifdef DEBUG
-				fprintf(stderr, "owner %s\n", fm_owner);
+							fprintf(stderr, "owner %s\n", e->owner);
 #endif
-				if (chown(file, mport_get_uid(fm_owner), group) == -1) {
-					SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
-					goto ERROR;
-				}
-			} else if (fm_group != NULL && fm_group[0] != '\0') {
+							if (chown(file, mport_get_uid(e->owner), group) == -1) {
+								SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
+								goto ERROR;
+							}
+						} else if (e->group != NULL && e->group[0] != '\0') {
 #ifdef DEBUG
-				fprintf(stderr, "group %s\n", fm_group);
+							fprintf(stderr, "group %s\n", e->group);
 #endif
-				if (chown(file, owner, mport_get_gid(fm_group)) == -1) {
-					SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
-					goto ERROR;
-				}
-			} else {
-				// use default.
-				if (chown(file, owner, group) == -1) {
-					SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
-					goto ERROR;
-				}
-			}
-		    } else {
-			/* Set the owner and group */
-			if (chown(file, owner, group) == -1) {
-				SET_ERRORX(MPORT_ERR_FATAL, "Unable to set permissions on file %s", file);
-				goto ERROR;
-			}
-		    }
+							if (chown(file, owner, mport_get_gid(e->group)) == -1) {
+								SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
+								goto ERROR;
+							}
+						} else {
+							// use default.
+							if (chown(file, owner, group) == -1) {
+								SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
+								goto ERROR;
+							}
+						}
+		    		} else {
+						/* Set the owner and group */
+						if (chown(file, owner, group) == -1) {
+							SET_ERRORX(MPORT_ERR_FATAL, "Unable to set permissions on file %s", file);
+							goto ERROR;
+						}
+		    		}
 
                     /* Set the file permissions, assumes non NFSv4 */
                     if (mode != NULL) {
                         if (stat(file, &sb)) {
-			    SET_ERRORX(MPORT_ERR_FATAL, "Unable to stat file %s", file);
+			    			SET_ERRORX(MPORT_ERR_FATAL, "Unable to stat file %s", file);
                             goto ERROR;
-			}
-			if (type == ASSET_FILE_OWNER_MODE && fm_mode != NULL) {
-                        	if ((set = setmode(fm_mode)) == NULL) {
-					SET_ERROR(MPORT_ERR_FATAL, "Unable to set mode");
-					goto ERROR;
-				}
-			} else {
+						}
+						if (e->type == ASSET_FILE_OWNER_MODE && e->mode != NULL) {
+                        	if ((set = setmode(e->mode)) == NULL) {
+								SET_ERROR(MPORT_ERR_FATAL, "Unable to set mode");
+								goto ERROR;
+							}
+						} else {
                         	if ((set = setmode(mode)) == NULL) {
-					SET_ERROR(MPORT_ERR_FATAL, "Unable to set mode");
-                            		goto ERROR;
-				}
-			}
-                        newmode = getmode(set, sb.st_mode);
-                        free(set);
-                        if (chmod(file, newmode)) {
-			    SET_ERROR(MPORT_ERR_FATAL, "Unable to set file permissions");
-                            goto ERROR;
-			}
+								SET_ERROR(MPORT_ERR_FATAL, "Unable to set mode");
+								goto ERROR;
+							}
+						}
+						newmode = getmode(set, sb.st_mode);
+                    	free(set);
+						if (chmod(file, newmode)) {
+			    			SET_ERROR(MPORT_ERR_FATAL, "Unable to set file permissions");
+							goto ERROR;
+						}
                     }
 
                     /* shell registration */
-                    if (type == ASSET_SHELL) {
-                        if (mport_shell_register(file) != MPORT_OK)
-                            goto ERROR;
+                    if (e->type == ASSET_SHELL && mport_shell_register(file) != MPORT_OK) {
+						goto ERROR;
                     }
 
-                    /* for sample files, if we don't have an existing file
-                       make a new one */
-                    if (type == ASSET_SAMPLE) {
-                        char nonSample[FILENAME_MAX];
-                        strlcpy(nonSample, file, FILENAME_MAX);
-                        char *sptr = strcasestr(nonSample, ".sample");
-                        if (sptr != NULL) {
-                            sptr[0] = '\0'; /* hack off .sample */
-                            if (!mport_file_exists(nonSample)) {
-                                mport_copy_file(file, nonSample);
-                            }
-                        }
-                    }
+                    /* for sample files, if we don't have an existing file, make a new one */
+					if (e->type == ASSET_SAMPLE && create_sample_file(file) != MPORT_OK) {
+						SET_ERRORX(MPORT_ERR_FATAL, "Unable to create sample file from %s", file);
+						goto ERROR;
+					}
                 }
 
                 (mport->progress_step_cb)(++file_count, file_total, file);
@@ -428,116 +564,113 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
         }
 
         /* insert this asset into the master database */
-        if (sqlite3_bind_int(insert, 1, (int) type) != SQLITE_OK) {
-            SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+        if (sqlite3_bind_int(insert, 1, (int) e->type) != SQLITE_OK) {
+            SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
             goto ERROR;
         }
-        if (type == ASSET_FILE || type == ASSET_SAMPLE || type == ASSET_SHELL || type == ASSET_FILE_OWNER_MODE) {
+        if (e->type == ASSET_FILE || e->type == ASSET_SAMPLE || e->type == ASSET_SHELL || e->type == ASSET_FILE_OWNER_MODE) {
             /* don't put the root in the database! */
             if (sqlite3_bind_text(insert, 2, file + strlen(mport->root), -1, SQLITE_STATIC) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
                 goto ERROR;
             }
-            if (sqlite3_bind_text(insert, 3, checksum, -1, SQLITE_STATIC) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+            if (sqlite3_bind_text(insert, 3, e->checksum, -1, SQLITE_STATIC) != SQLITE_OK) {
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
                 goto ERROR;
             }
-            if (sqlite3_bind_text(insert, 4, fm_owner, -1, SQLITE_STATIC) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+            if (sqlite3_bind_text(insert, 4, e->owner, -1, SQLITE_STATIC) != SQLITE_OK) {
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
                 goto ERROR;
             }
-            if (sqlite3_bind_text(insert, 5, fm_group, -1, SQLITE_STATIC) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+            if (sqlite3_bind_text(insert, 5, e->group, -1, SQLITE_STATIC) != SQLITE_OK) {
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
                 goto ERROR;
             }
-            if (sqlite3_bind_text(insert, 6, fm_mode, -1, SQLITE_STATIC) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+            if (sqlite3_bind_text(insert, 6, e->mode, -1, SQLITE_STATIC) != SQLITE_OK) {
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
                 goto ERROR;
             }
-        } else if (type == ASSET_DIR || type == ASSET_DIRRM || type == ASSET_DIRRMTRY) {
+        } else if (e->type == ASSET_DIR || e->type == ASSET_DIRRM || e->type == ASSET_DIRRMTRY) {
 		/* if data starts with /, it's most likely an absolute path. Don't prepend cwd */
-		if (data != NULL && data[0] == '/')
- 			(void) snprintf(dir, FILENAME_MAX, "%s", data);
-		else
- 			(void) snprintf(dir, FILENAME_MAX, "%s/%s", cwd, data);
+			if (e->data != NULL && e->data[0] == '/')
+				(void) snprintf(dir, FILENAME_MAX, "%s", e->data);
+			else
+				(void) snprintf(dir, FILENAME_MAX, "%s/%s", cwd, e->data);
 
             if (sqlite3_bind_text(insert, 2, dir, -1, SQLITE_STATIC) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
                 goto ERROR;
             }
 
             if (sqlite3_bind_null(insert, 3) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
                 goto ERROR;
             }
 
             if (sqlite3_bind_null(insert, 4) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
                 goto ERROR;
             }
 
             if (sqlite3_bind_null(insert, 5) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
                 goto ERROR;
             }
 
             if (sqlite3_bind_null(insert, 6) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
                 goto ERROR;
             }
         } else {
-            if (sqlite3_bind_text(insert, 2, data, -1, SQLITE_STATIC) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+            if (sqlite3_bind_text(insert, 2, e->data, -1, SQLITE_STATIC) != SQLITE_OK) {
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
                 goto ERROR;
             }
 
             if (sqlite3_bind_null(insert, 3) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
                 goto ERROR;
             }
 
             if (sqlite3_bind_null(insert, 4) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
                 goto ERROR;
             }
 
             if (sqlite3_bind_null(insert, 5) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
                 goto ERROR;
             }
 
             if (sqlite3_bind_null(insert, 6) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
                 goto ERROR;
             }
         }
 
         if (sqlite3_step(insert) != SQLITE_DONE) {
-            SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+            SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
             goto ERROR;
         }
 
         sqlite3_reset(insert);
     }
 
-    sqlite3_finalize(assets);
     sqlite3_finalize(insert);
-    if (mport_db_do(db, "UPDATE packages SET status='clean' WHERE pkg=%Q", pkg->name) != MPORT_OK) {
-        SET_ERROR(MPORT_ERR_FATAL, "Unable to mark package clean");
-        goto ERROR;
-    }
-    mport_pkgmeta_logevent(mport, pkg, "Installed");
+
+	mport_pkgmeta_logevent(mport, pkg, "Installed");
 
     (mport->progress_free_cb)();
     (void) mport_chdir(NULL, orig_cwd);
     free(orig_cwd);
+	mport_assetlist_free(alist);
     return MPORT_OK;
 
     ERROR:
-        sqlite3_finalize(assets);
-        sqlite3_finalize(insert);
+		sqlite3_finalize(insert);
         (mport->progress_free_cb)();
         free(orig_cwd);
+		mport_assetlist_free(alist);
         //rollback();
         RETURN_CURRENT_ERROR;
 }           
@@ -552,6 +685,18 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
                                     RETURN_CURRENT_ERROR; \
                                 }
                                 
+static int
+mark_complete(mportInstance *mport, mportPackageMeta *pkg)
+{
+	if (mport_db_do(mport->db, "UPDATE packages SET status='clean' WHERE pkg=%Q", pkg->name) != MPORT_OK) {
+		SET_ERROR(MPORT_ERR_FATAL, "Unable to mark package clean");
+		RETURN_CURRENT_ERROR;
+	}
+
+	return MPORT_OK;
+}
+
+
 static int
 do_post_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
@@ -568,61 +713,47 @@ do_post_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
     if (display_pkg_msg(mport, bundle, pkg) != MPORT_OK)
         RETURN_CURRENT_ERROR;
 
-    return run_pkg_install(mport, bundle, pkg, "POST-INSTALL");
+    if (run_pkg_install(mport, bundle, pkg, "POST-INSTALL") != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	return mark_complete(mport, pkg);
 }
+
 
 static int
 run_postexec(mportInstance *mport, mportPackageMeta *pkg)
 {
-    int ret;
-    char cwd[FILENAME_MAX];
-    sqlite3_stmt *assets = NULL;
-    sqlite3 *db;
-    mportAssetListEntryType type;
-    const char *data;
-
-    db = mport->db;
+	mportAssetList *alist;
+	mportAssetListEntry *e = NULL;
+	char cwd[FILENAME_MAX];
 
     /* Process @postexec steps */
-    if (mport_db_prepare(db, &assets, "SELECT type, data FROM stub.assets WHERE pkg=%Q and type in (%d, %d)", pkg->name, ASSET_CWD, ASSET_POSTEXEC) != MPORT_OK)
-        goto ERROR;
+	if (mport_bundle_read_get_assetlist(mport, pkg, &alist, POSTINSTALL) != MPORT_OK)
+		goto ERROR;
 
     (void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
 
     if (mport_chdir(mport, cwd) != MPORT_OK)
         goto ERROR;
 
-    while (1) {
-        ret = sqlite3_step(assets);
-
-        if (ret == SQLITE_DONE)
-            break;
-
-        if (ret != SQLITE_ROW) {
-            SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-            goto ERROR;
-        }
-
-        type = (mportAssetListEntryType) sqlite3_column_int(assets, 0);
-        data = (char *) sqlite3_column_text(assets, 1);
-
+	STAILQ_FOREACH(e, alist, next) {
         char file[FILENAME_MAX];
-        if (data == NULL) {
+        if (e->data == NULL) {
             snprintf(file, sizeof(file), "%s", mport->root);
-        } else if (*data == '/') {
-            snprintf(file, sizeof(file), "%s%s", mport->root, data);
+        } else if (e->data[0] == '/') {
+            snprintf(file, sizeof(file), "%s%s", mport->root, e->data);
         } else {
-            snprintf(file, sizeof(file), "%s%s/%s", mport->root, pkg->prefix, data);
+            snprintf(file, sizeof(file), "%s%s/%s", mport->root, pkg->prefix, e->data);
         }
 
-        switch (type) {
+        switch (e->type) {
             case ASSET_CWD:
-                (void) strlcpy(cwd, data == NULL ? pkg->prefix : data, sizeof(cwd));
+                (void) strlcpy(cwd, e->data == NULL ? pkg->prefix : e->data, sizeof(cwd));
                 if (mport_chdir(mport, cwd) != MPORT_OK)
                     goto ERROR;
                 break;
             case ASSET_POSTEXEC:
-                if (mport_run_asset_exec(mport, data, cwd, file) != MPORT_OK)
+                if (mport_run_asset_exec(mport, e->data, cwd, file) != MPORT_OK)
                     goto ERROR;
                 break;
             default:
@@ -630,13 +761,14 @@ run_postexec(mportInstance *mport, mportPackageMeta *pkg)
                 break;
         }
     }
-    sqlite3_finalize(assets);
+
+	mport_assetlist_free(alist);
     mport_pkgmeta_logevent(mport, pkg, "postexec");
 
     return MPORT_OK;
 
     ERROR:
-    sqlite3_finalize(assets);
+	// TODO: asset list free
     RETURN_CURRENT_ERROR;
 }
 
@@ -699,10 +831,10 @@ display_pkg_msg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
     if ((file = fopen(filename, "r")) == NULL)
         RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open %s: %s", filename, strerror(errno));
 
-    if ((buf = (char *) calloc((st.st_size + 1), sizeof(char))) == NULL)
+    if ((buf = (char *) calloc((size_t)(st.st_size + 1), sizeof(char))) == NULL)
         RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 
-    if (fread(buf, 1, st.st_size, file) != (size_t) st.st_size) {
+    if (fread(buf, 1, (size_t)st.st_size, file) != (size_t) st.st_size) {
         free(buf);
         RETURN_ERRORX(MPORT_ERR_FATAL, "Read error: %s", strerror(errno));
     }

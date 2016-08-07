@@ -107,6 +107,8 @@ mport_instance_init(mportInstance *mport, const char *root) {
 		db_version = mport_get_database_version(mport->db);
 	}
 
+	mport_db_do(mport->db, "PRAGMA journal_mode=WAL");
+
 	return mport_upgrade_master_schema(mport->db, db_version);
 }
 
@@ -118,7 +120,7 @@ mport_get_database_version(sqlite3 *db) {
     __block int databaseVersion = -1; /* ERROR condition */
 
     dispatch_sync(mportSQLSerial, ^{
-	sqlite3_stmt *stmt_version;
+		sqlite3_stmt *stmt_version;
         if (sqlite3_prepare_v2(db, "PRAGMA user_version;", -1, &stmt_version, NULL) == SQLITE_OK) {
             while (sqlite3_step(stmt_version) == SQLITE_ROW) {
                 databaseVersion = sqlite3_column_int(stmt_version, 0);

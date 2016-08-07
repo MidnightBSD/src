@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/index_depends.c,v 1.1 2013/03/17 18:06:18 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -57,8 +57,10 @@ mport_index_depends_list(mportInstance *mport, const char *pkgname, const char *
 
 	if (mport_db_prepare(mport->db, &stmt,
 	    "SELECT COUNT(*) FROM idx.depends WHERE pkg = %Q and version = %Q",
-	    pkgname, version) != MPORT_OK)
+	    pkgname, version) != MPORT_OK) {
+		sqlite3_finalize(stmt);
 		RETURN_CURRENT_ERROR;
+	}
  
 	switch (sqlite3_step(stmt)) {
 	case SQLITE_ROW:

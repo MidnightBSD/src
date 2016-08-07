@@ -42,8 +42,10 @@ mport_setting_get(mportInstance *mport, const char *name) {
     if (name == NULL)
         return NULL;
 
-    if (mport_db_prepare(mport->db, &stmt, "SELECT val FROM settings WHERE name=%Q", name) != MPORT_OK)
-        return NULL;
+    if (mport_db_prepare(mport->db, &stmt, "SELECT val FROM settings WHERE name=%Q", name) != MPORT_OK) {
+		sqlite3_finalize(stmt);
+		return NULL;
+	}
 
     switch (sqlite3_step(stmt)) {
         case SQLITE_ROW:

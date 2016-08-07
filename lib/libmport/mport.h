@@ -91,6 +91,7 @@ typedef enum _AssetListEntryType mportAssetListEntryType;
 struct _AssetListEntry {
 	mportAssetListEntryType type;
 	char *data;
+	char *checksum;
 	char *owner;
 	char *group;
 	char *mode;
