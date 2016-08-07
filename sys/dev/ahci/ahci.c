@@ -103,7 +103,7 @@ static void ahcipoll(struct cam_sim *sim);
 
 static MALLOC_DEFINE(M_AHCI, "AHCI driver", "AHCI driver data buffers");
 
-static struct {
+static const struct {
 	uint32_t	id;
 	uint8_t		rev;
 	const char	*name;
@@ -138,18 +138,19 @@ static struct {
 	"\014ALTSIG"		\
 	"\015NOMSI"
 } ahci_ids[] = {
-	{0x43801002, 0x00, "ATI IXP600",	AHCI_Q_NOMSI},
-	{0x43901002, 0x00, "ATI IXP700",	0},
-	{0x43911002, 0x00, "ATI IXP700",	0},
-	{0x43921002, 0x00, "ATI IXP700",	0},
-	{0x43931002, 0x00, "ATI IXP700",	0},
-	{0x43941002, 0x00, "ATI IXP800",	0},
-	{0x43951002, 0x00, "ATI IXP800",	0},
+	{0x43801002, 0x00, "AMD SB600",	AHCI_Q_NOMSI},
+	{0x43901002, 0x00, "AMD SB7x0/SB8x0/SB9x0",	0},
+	{0x43911002, 0x00, "AMD SB7x0/SB8x0/SB9x0",	0},
+	{0x43921002, 0x00, "AMD SB7x0/SB8x0/SB9x0",	0},
+	{0x43931002, 0x00, "AMD SB7x0/SB8x0/SB9x0",	0},
+	{0x43941002, 0x00, "AMD SB7x0/SB8x0/SB9x0",	0},
+	{0x43951002, 0x00, "AMD SB8x0/SB9x0",	0},
 	{0x78001022, 0x00, "AMD Hudson-2",	0},
 	{0x78011022, 0x00, "AMD Hudson-2",	0},
 	{0x78021022, 0x00, "AMD Hudson-2",	0},
 	{0x78031022, 0x00, "AMD Hudson-2",	0},
 	{0x78041022, 0x00, "AMD Hudson-2",	0},
+	{0x06111b21, 0x00, "ASMedia ASM2106",	0},
 	{0x06121b21, 0x00, "ASMedia ASM1061",	0},
 	{0x26528086, 0x00, "Intel ICH6",	AHCI_Q_NOFORCE},
 	{0x26538086, 0x00, "Intel ICH6M",	AHCI_Q_NOFORCE},
@@ -196,20 +197,62 @@ static struct {
 	{0x28268086, 0x00, "Intel Patsburg (RAID)",	0},
 	{0x1e028086, 0x00, "Intel Panther Point",	0},
 	{0x1e038086, 0x00, "Intel Panther Point",	0},
-	{0x1e048086, 0x00, "Intel Panther Point",	0},
-	{0x1e058086, 0x00, "Intel Panther Point",	0},
-	{0x1e068086, 0x00, "Intel Panther Point",	0},
-	{0x1e078086, 0x00, "Intel Panther Point",	0},
-	{0x1e0e8086, 0x00, "Intel Panther Point",	0},
-	{0x1e0f8086, 0x00, "Intel Panther Point",	0},
+	{0x1e048086, 0x00, "Intel Panther Point (RAID)",	0},
+	{0x1e058086, 0x00, "Intel Panther Point (RAID)",	0},
+	{0x1e068086, 0x00, "Intel Panther Point (RAID)",	0},
+	{0x1e078086, 0x00, "Intel Panther Point (RAID)",	0},
+	{0x1e0e8086, 0x00, "Intel Panther Point (RAID)",	0},
+	{0x1e0f8086, 0x00, "Intel Panther Point (RAID)",	0},
+	{0x1f228086, 0x00, "Intel Avoton",	0},
+	{0x1f238086, 0x00, "Intel Avoton",	0},
+	{0x1f248086, 0x00, "Intel Avoton (RAID)",	0},
+	{0x1f258086, 0x00, "Intel Avoton (RAID)",	0},
+	{0x1f268086, 0x00, "Intel Avoton (RAID)",	0},
+	{0x1f278086, 0x00, "Intel Avoton (RAID)",	0},
+	{0x1f2e8086, 0x00, "Intel Avoton (RAID)",	0},
+	{0x1f2f8086, 0x00, "Intel Avoton (RAID)",	0},
+	{0x1f328086, 0x00, "Intel Avoton",	0},
+	{0x1f338086, 0x00, "Intel Avoton",	0},
+	{0x1f348086, 0x00, "Intel Avoton (RAID)",	0},
+	{0x1f358086, 0x00, "Intel Avoton (RAID)",	0},
+	{0x1f368086, 0x00, "Intel Avoton (RAID)",	0},
+	{0x1f378086, 0x00, "Intel Avoton (RAID)",	0},
+	{0x1f3e8086, 0x00, "Intel Avoton (RAID)",	0},
+	{0x1f3f8086, 0x00, "Intel Avoton (RAID)",	0},
+	{0x23a38086, 0x00, "Intel Coleto Creek",        0},
+	{0x28238086, 0x00, "Intel Wellsburg (RAID)",	0},
+	{0x28278086, 0x00, "Intel Wellsburg (RAID)",	0},
 	{0x8c028086, 0x00, "Intel Lynx Point",	0},
 	{0x8c038086, 0x00, "Intel Lynx Point",	0},
-	{0x8c048086, 0x00, "Intel Lynx Point",	0},
-	{0x8c058086, 0x00, "Intel Lynx Point",	0},
-	{0x8c068086, 0x00, "Intel Lynx Point",	0},
-	{0x8c078086, 0x00, "Intel Lynx Point",	0},
-	{0x8c0e8086, 0x00, "Intel Lynx Point",	0},
-	{0x8c0f8086, 0x00, "Intel Lynx Point",	0},
+	{0x8c048086, 0x00, "Intel Lynx Point (RAID)",	0},
+	{0x8c058086, 0x00, "Intel Lynx Point (RAID)",	0},
+	{0x8c068086, 0x00, "Intel Lynx Point (RAID)",	0},
+	{0x8c078086, 0x00, "Intel Lynx Point (RAID)",	0},
+	{0x8c0e8086, 0x00, "Intel Lynx Point (RAID)",	0},
+	{0x8c0f8086, 0x00, "Intel Lynx Point (RAID)",	0},
+	{0x8c828086, 0x00, "Intel Wildcat Point",	0},
+	{0x8c838086, 0x00, "Intel Wildcat Point",	0},
+	{0x8c848086, 0x00, "Intel Wildcat Point (RAID)",	0},
+	{0x8c858086, 0x00, "Intel Wildcat Point (RAID)",	0},
+	{0x8c868086, 0x00, "Intel Wildcat Point (RAID)",	0},
+	{0x8c878086, 0x00, "Intel Wildcat Point (RAID)",	0},
+	{0x8c8e8086, 0x00, "Intel Wildcat Point (RAID)",	0},
+	{0x8c8f8086, 0x00, "Intel Wildcat Point (RAID)",	0},
+	{0x8d028086, 0x00, "Intel Wellsburg",	0},
+	{0x8d048086, 0x00, "Intel Wellsburg (RAID)",	0},
+	{0x8d068086, 0x00, "Intel Wellsburg (RAID)",	0},
+	{0x8d628086, 0x00, "Intel Wellsburg",	0},
+	{0x8d648086, 0x00, "Intel Wellsburg (RAID)",	0},
+	{0x8d668086, 0x00, "Intel Wellsburg (RAID)",	0},
+	{0x8d6e8086, 0x00, "Intel Wellsburg (RAID)",	0},
+	{0x9c028086, 0x00, "Intel Lynx Point-LP",	0},
+	{0x9c038086, 0x00, "Intel Lynx Point-LP",	0},
+	{0x9c048086, 0x00, "Intel Lynx Point-LP (RAID)",	0},
+	{0x9c058086, 0x00, "Intel Lynx Point-LP (RAID)",	0},
+	{0x9c068086, 0x00, "Intel Lynx Point-LP (RAID)",	0},
+	{0x9c078086, 0x00, "Intel Lynx Point-LP (RAID)",	0},
+	{0x9c0e8086, 0x00, "Intel Lynx Point-LP (RAID)",	0},
+	{0x9c0f8086, 0x00, "Intel Lynx Point-LP (RAID)",	0},
 	{0x23238086, 0x00, "Intel DH89xxCC",	0},
 	{0x2360197b, 0x00, "JMicron JMB360",	0},
 	{0x2361197b, 0x00, "JMicron JMB361",	AHCI_Q_NOFORCE},
@@ -226,30 +269,31 @@ static struct {
 	    AHCI_Q_EDGEIS | AHCI_Q_NONCQ | AHCI_Q_NOCOUNT},
 	{0x614511ab, 0x00, "Marvell 88SE6145",	AHCI_Q_NOFORCE | AHCI_Q_4CH |
 	    AHCI_Q_EDGEIS | AHCI_Q_NONCQ | AHCI_Q_NOCOUNT},
-	{0x91201b4b, 0x00, "Marvell 88SE912x",	AHCI_Q_EDGEIS|AHCI_Q_NOBSYRES},
-	{0x91231b4b, 0x11, "Marvell 88SE912x",	AHCI_Q_NOBSYRES|AHCI_Q_ALTSIG},
-	{0x91231b4b, 0x00, "Marvell 88SE912x",	AHCI_Q_EDGEIS|AHCI_Q_SATA2|AHCI_Q_NOBSYRES},
-	{0x91251b4b, 0x00, "Marvell 88SE9125",	AHCI_Q_NOBSYRES},
-	{0x91281b4b, 0x00, "Marvell 88SE9128",	AHCI_Q_NOBSYRES|AHCI_Q_ALTSIG},
-	{0x91301b4b, 0x00, "Marvell 88SE9130",  AHCI_Q_NOBSYRES|AHCI_Q_ALTSIG},
-	{0x91721b4b, 0x00, "Marvell 88SE9172",	AHCI_Q_NOBSYRES},
-	{0x91821b4b, 0x00, "Marvell 88SE9182",	AHCI_Q_NOBSYRES},
-	{0x91a01b4b, 0x00, "Marvell 88SE91Ax",	AHCI_Q_NOBSYRES},
-	{0x92151b4b, 0x00, "Marvell 88SE9215",  AHCI_Q_NOBSYRES},
-	{0x92201b4b, 0x00, "Marvell 88SE9220",  AHCI_Q_NOBSYRES|AHCI_Q_ALTSIG},
-	{0x92301b4b, 0x00, "Marvell 88SE9230",  AHCI_Q_NOBSYRES|AHCI_Q_ALTSIG},
-	{0x92351b4b, 0x00, "Marvell 88SE9235",  AHCI_Q_NOBSYRES},
-	{0x06201103, 0x00, "HighPoint RocketRAID 620",	AHCI_Q_NOBSYRES},
-	{0x06201b4b, 0x00, "HighPoint RocketRAID 620",	AHCI_Q_NOBSYRES},
-	{0x06221103, 0x00, "HighPoint RocketRAID 622",	AHCI_Q_NOBSYRES},
-	{0x06221b4b, 0x00, "HighPoint RocketRAID 622",	AHCI_Q_NOBSYRES},
-	{0x06401103, 0x00, "HighPoint RocketRAID 640",	AHCI_Q_NOBSYRES},
-	{0x06401b4b, 0x00, "HighPoint RocketRAID 640",	AHCI_Q_NOBSYRES},
-	{0x06441103, 0x00, "HighPoint RocketRAID 644",	AHCI_Q_NOBSYRES},
-	{0x06441b4b, 0x00, "HighPoint RocketRAID 644",	AHCI_Q_NOBSYRES},
-	{0x06411103, 0x00, "HighPoint RocketRAID 640L",	AHCI_Q_NOBSYRES},
-	{0x06421103, 0x00, "HighPoint RocketRAID 642L",	AHCI_Q_NOBSYRES},
-	{0x06451103, 0x00, "HighPoint RocketRAID 644L",	AHCI_Q_NOBSYRES},
+	{0x91201b4b, 0x00, "Marvell 88SE912x",	AHCI_Q_EDGEIS},
+	{0x91231b4b, 0x11, "Marvell 88SE912x",	AHCI_Q_ALTSIG},
+	{0x91231b4b, 0x00, "Marvell 88SE912x",	AHCI_Q_EDGEIS|AHCI_Q_SATA2},
+	{0x91251b4b, 0x00, "Marvell 88SE9125",	0},
+	{0x91281b4b, 0x00, "Marvell 88SE9128",	AHCI_Q_ALTSIG},
+	{0x91301b4b, 0x00, "Marvell 88SE9130",	AHCI_Q_ALTSIG},
+	{0x91721b4b, 0x00, "Marvell 88SE9172",	0},
+	{0x91821b4b, 0x00, "Marvell 88SE9182",	0},
+	{0x91831b4b, 0x00, "Marvell 88SS9183",	0},
+	{0x91a01b4b, 0x00, "Marvell 88SE91Ax",	0},
+	{0x92151b4b, 0x00, "Marvell 88SE9215",	0},
+	{0x92201b4b, 0x00, "Marvell 88SE9220",	AHCI_Q_ALTSIG},
+	{0x92301b4b, 0x00, "Marvell 88SE9230",	AHCI_Q_ALTSIG},
+	{0x92351b4b, 0x00, "Marvell 88SE9235",	0},
+	{0x06201103, 0x00, "HighPoint RocketRAID 620",	0},
+	{0x06201b4b, 0x00, "HighPoint RocketRAID 620",	0},
+	{0x06221103, 0x00, "HighPoint RocketRAID 622",	0},
+	{0x06221b4b, 0x00, "HighPoint RocketRAID 622",	0},
+	{0x06401103, 0x00, "HighPoint RocketRAID 640",	0},
+	{0x06401b4b, 0x00, "HighPoint RocketRAID 640",	0},
+	{0x06441103, 0x00, "HighPoint RocketRAID 644",	0},
+	{0x06441b4b, 0x00, "HighPoint RocketRAID 644",	0},
+	{0x06411103, 0x00, "HighPoint RocketRAID 640L",	0},
+	{0x06421103, 0x00, "HighPoint RocketRAID 642L",	0},
+	{0x06451103, 0x00, "HighPoint RocketRAID 644L",	0},
 	{0x044c10de, 0x00, "NVIDIA MCP65",	AHCI_Q_NOAA},
 	{0x044d10de, 0x00, "NVIDIA MCP65",	AHCI_Q_NOAA},
 	{0x044e10de, 0x00, "NVIDIA MCP65",	AHCI_Q_NOAA},
@@ -319,6 +363,7 @@ static struct {
 	{0x0d8d10de, 0x00, "NVIDIA MCP89",	AHCI_Q_NOAA},
 	{0x0d8e10de, 0x00, "NVIDIA MCP89",	AHCI_Q_NOAA},
 	{0x0d8f10de, 0x00, "NVIDIA MCP89",	AHCI_Q_NOAA},
+	{0x3781105a, 0x00, "Promise TX8660",	0},
 	{0x33491106, 0x00, "VIA VT8251",	AHCI_Q_NOPMP|AHCI_Q_NONCQ},
 	{0x62871106, 0x00, "VIA VT8251",	AHCI_Q_NOPMP|AHCI_Q_NONCQ},
 	{0x11841039, 0x00, "SiS 966",		0},
@@ -451,10 +496,9 @@ ahci_attach(device_t dev)
 	ctlr->ichannels = ATA_INL(ctlr->r_mem, AHCI_PI);
 
 	/* Identify and set separate quirks for HBA and RAID f/w Marvells. */
-	if ((ctlr->quirks & AHCI_Q_NOBSYRES) &&
-	    (ctlr->quirks & AHCI_Q_ALTSIG) &&
+	if ((ctlr->quirks & AHCI_Q_ALTSIG) &&
 	    (ctlr->caps & AHCI_CAP_SPM) == 0)
-		ctlr->quirks &= ~AHCI_Q_NOBSYRES;
+		ctlr->quirks |= AHCI_Q_NOBSYRES;
 
 	if (ctlr->quirks & AHCI_Q_1CH) {
 		ctlr->caps &= ~AHCI_CAP_NPMASK;
@@ -500,6 +544,10 @@ ahci_attach(device_t dev)
 		    "supported" : "not supported",
 		    (ctlr->caps & AHCI_CAP_FBSS) ?
 		    " with FBS" : "");
+	if (ctlr->quirks != 0) {
+		device_printf(dev, "quirks=0x%b\n", ctlr->quirks,
+		    AHCI_Q_BIT_STRING);
+	}
 	if (bootverbose) {
 		device_printf(dev, "Caps:%s%s%s%s%s%s%s%s %sGbps",
 		    (ctlr->caps & AHCI_CAP_64BIT) ? " 64bit":"",
@@ -525,7 +573,7 @@ ahci_attach(device_t dev)
 		    (ctlr->caps & AHCI_CAP_SXS) ? " eSATA":"",
 		    (ctlr->caps & AHCI_CAP_NPMASK) + 1);
 	}
-	if (bootverbose && version >= 0x00010020) {
+	if (bootverbose && version >= 0x00010200) {
 		device_printf(dev, "Caps2:%s%s%s\n",
 		    (ctlr->caps2 & AHCI_CAP2_APST) ? " APST":"",
 		    (ctlr->caps2 & AHCI_CAP2_NVMP) ? " NVMP":"",
@@ -668,6 +716,8 @@ ahci_setup_interrupt(device_t dev)
 	int i, msi = 1;
 
 	/* Process hints. */
+	if (ctlr->quirks & AHCI_Q_NOMSI)
+		msi = 0;
 	resource_int_value(device_get_name(dev),
 	    device_get_unit(dev), "msi", &msi);
 	if (msi < 0)
@@ -907,7 +957,7 @@ static driver_t ahci_driver = {
         ahci_methods,
         sizeof(struct ahci_controller)
 };
-DRIVER_MODULE(ahci, pci, ahci_driver, ahci_devclass, 0, 0);
+DRIVER_MODULE(ahci, pci, ahci_driver, ahci_devclass, NULL, NULL);
 static device_method_t ahci_ata_methods[] = {
 	DEVMETHOD(device_probe,     ahci_ata_probe),
 	DEVMETHOD(device_attach,    ahci_attach),
@@ -920,14 +970,14 @@ static device_method_t ahci_ata_methods[] = {
 	DEVMETHOD(bus_setup_intr,   ahci_setup_intr),
 	DEVMETHOD(bus_teardown_intr,ahci_teardown_intr),
 	DEVMETHOD(bus_child_location_str, ahci_child_location_str),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 static driver_t ahci_ata_driver = {
         "ahci",
         ahci_ata_methods,
         sizeof(struct ahci_controller)
 };
-DRIVER_MODULE(ahci, atapci, ahci_ata_driver, ahci_devclass, 0, 0);
+DRIVER_MODULE(ahci, atapci, ahci_ata_driver, ahci_devclass, NULL, NULL);
 MODULE_VERSION(ahci, 1);
 MODULE_DEPEND(ahci, cam, 1, 1, 1);
 
@@ -1010,7 +1060,7 @@ ahci_ch_attach(device_t dev)
 	}
 	ch->chcaps = ATA_INL(ch->r_mem, AHCI_P_CMD);
 	version = ATA_INL(ctlr->r_mem, AHCI_VS);
-	if (version < 0x00010020 && (ctlr->caps & AHCI_CAP_FBSS))
+	if (version < 0x00010200 && (ctlr->caps & AHCI_CAP_FBSS))
 		ch->chcaps |= AHCI_P_CMD_FBSCP;
 	if (bootverbose) {
 		device_printf(dev, "Caps:%s%s%s%s%s\n",
@@ -1213,14 +1263,14 @@ static device_method_t ahcich_methods[] = {
 	DEVMETHOD(device_detach,    ahci_ch_detach),
 	DEVMETHOD(device_suspend,   ahci_ch_suspend),
 	DEVMETHOD(device_resume,    ahci_ch_resume),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 static driver_t ahcich_driver = {
         "ahcich",
         ahcich_methods,
         sizeof(struct ahci_channel)
 };
-DRIVER_MODULE(ahcich, ahci, ahcich_driver, ahcich_devclass, 0, 0);
+DRIVER_MODULE(ahcich, ahci, ahcich_driver, ahcich_devclass, NULL, NULL);
 
 static void
 ahci_ch_setleds(device_t dev)
@@ -1912,9 +1962,15 @@ ahci_execute_transaction(struct ahci_slot *slot)
 			}
 		}
 
-		/* Marvell controllers do not wait for readyness. */
-		if ((ch->quirks & AHCI_Q_NOBSYRES) && softreset == 2 &&
-		    et == AHCI_ERR_NONE) {
+		/*
+		 * Marvell HBAs with non-RAID firmware do not wait for
+		 * readiness after soft reset, so we have to wait here.
+		 * Marvell RAIDs do not have this problem, but instead
+		 * sometimes forget to update FIS receive area, breaking
+		 * this wait.
+		 */
+		if ((ch->quirks & AHCI_Q_NOBSYRES) == 0 &&
+		    softreset == 2 && et == AHCI_ERR_NONE) {
 			while ((val = fis[2]) & ATA_S_BUSY) {
 				DELAY(10);
 				if (count++ >= timeout)
