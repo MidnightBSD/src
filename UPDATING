@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20160807:
+	Implement several changes to libmport to fix some memory corruption issues.
+
 20160806:
 	sqlite3 3.13.0
 
