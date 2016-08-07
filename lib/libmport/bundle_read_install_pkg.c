@@ -55,7 +55,9 @@ static int create_categories(mportInstance *mport, mportPackageMeta *pkg);
 static int create_depends(mportInstance *mport, mportPackageMeta *pkg);
 static int create_sample_file(const char *file);
 static int mark_complete(mportInstance *, mportPackageMeta *);
-static int mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mportAssetList **alist_p);
+static int mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mportAssetList **alist_p, enum phase);
+
+enum phase { PREINSTALL, ACTUALINSTALL, POSTINSTALL};
 
 /**
  * This is a wrapper for all bund read install operations
@@ -87,78 +89,63 @@ mport_bundle_read_install_pkg(mportInstance *mport, mportBundleRead *bundle, mpo
 static int
 do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
-    int ret;
-    char cwd[FILENAME_MAX];
-    char file[FILENAME_MAX];
-    sqlite3_stmt *assets = NULL;
-    sqlite3 *db = mport->db;
-    mportAssetListEntryType type;
-    const char *data;
+	char cwd[FILENAME_MAX];
+	char file[FILENAME_MAX];
+	mportAssetList *alist;
+	mportAssetListEntry *e = NULL;
 
-    /* run mtree */
-    if (run_mtree(mport, bundle, pkg) != MPORT_OK)
-        RETURN_CURRENT_ERROR;
+	/* run mtree */
+	if (run_mtree(mport, bundle, pkg) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
 
-    /* run pkg-install PRE-INSTALL */
-    if (run_pkg_install(mport, bundle, pkg, "PRE-INSTALL") != MPORT_OK)
-        RETURN_CURRENT_ERROR;
+	/* run pkg-install PRE-INSTALL */
+	if (run_pkg_install(mport, bundle, pkg, "PRE-INSTALL") != MPORT_OK)
+		RETURN_CURRENT_ERROR;
 
-    /* Process @preexec steps */
-    if (mport_db_prepare(db, &assets, "SELECT type, data FROM stub.assets WHERE pkg=%Q and type in (%d, %d)", pkg->name, ASSET_CWD, ASSET_PREEXEC) != MPORT_OK) {
-		sqlite3_finalize(assets);
+	/* Process @preexec steps */
+	if (mport_bundle_read_get_assetlist(mport, pkg, &alist, PREINSTALL) != MPORT_OK)
 		goto ERROR;
+
+	(void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
+
+	if (mport_chdir(mport, cwd) != MPORT_OK)
+		goto ERROR;
+
+	STAILQ_FOREACH(e, alist, next) {
+		switch (e->type) {
+			case ASSET_CWD:
+				(void) strlcpy(cwd, e->data == NULL ? pkg->prefix : e->data, sizeof(cwd));
+				if (mport_chdir(mport, cwd) != MPORT_OK)
+					goto ERROR;
+
+				break;
+			case ASSET_PREEXEC:
+				if (mport_run_asset_exec(mport, e->data, cwd, file) != MPORT_OK)
+					goto ERROR;
+				break;
+			default:
+				/* do nothing */
+				break;
+		}
 	}
 
-    (void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
+	mport_assetlist_free(alist);
+	mport_pkgmeta_logevent(mport, pkg, "preexec");
 
-    if (mport_chdir(mport, cwd) != MPORT_OK)
-        goto ERROR;
+	return MPORT_OK;
 
-    while (1) {
-        ret = sqlite3_step(assets);
-
-        if (ret == SQLITE_DONE)
-            break;
-
-        if (ret != SQLITE_ROW) {
-            SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-            goto ERROR;
-        }
-
-        type = (mportAssetListEntryType) sqlite3_column_int(assets, 0);
-        data = (const char *) sqlite3_column_text(assets, 1);
-
-        switch (type) {
-            case ASSET_CWD:
-                (void) strlcpy(cwd, data == NULL ? pkg->prefix : data, sizeof(cwd));
-                if (mport_chdir(mport, cwd) != MPORT_OK)
-                    goto ERROR;
-
-                break;
-            case ASSET_PREEXEC:
-                if (mport_run_asset_exec(mport, data, cwd, file) != MPORT_OK)
-                    goto ERROR;
-                break;
-            default:
-                /* do nothing */
-                break;
-        }
-    }
-    sqlite3_finalize(assets);
-    mport_pkgmeta_logevent(mport, pkg, "preexec");
-
-    return MPORT_OK;
-
-    ERROR:
-        sqlite3_finalize(assets);
-        RETURN_CURRENT_ERROR;
+	ERROR:
+		// TODO: asset list free
+	RETURN_CURRENT_ERROR;
 }
 
 /* get the file count for the progress meter */
 static int
 get_file_count(mportInstance *mport, char *pkg_name, int *file_total)
 {
-	sqlite3_stmt *count;
+	__block sqlite3_stmt *count;
+	__block int result = MPORT_OK;
+	__block char *err;
 
 	if (mport_db_prepare(mport->db, &count,
 						 "SELECT COUNT(*) FROM stub.assets WHERE (type=%i or type=%i or type=%i or type=%i) AND pkg=%Q",
@@ -167,18 +154,22 @@ get_file_count(mportInstance *mport, char *pkg_name, int *file_total)
 		RETURN_CURRENT_ERROR;
 	}
 
-	switch (sqlite3_step(count)) {
-		case SQLITE_ROW:
-			*file_total = sqlite3_column_int(count, 0);
-			sqlite3_finalize(count);
-			break;
-		default:
-			SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-			sqlite3_finalize(count);
-			RETURN_CURRENT_ERROR;
-	}
+	dispatch_sync(mportSQLSerial, ^{
+		switch (sqlite3_step(count)) {
+			case SQLITE_ROW:
+				*file_total = sqlite3_column_int(count, 0);
+				sqlite3_finalize(count);
+				break;
+			default:
+				err = (char *) sqlite3_errmsg(mport->db);
+				result = MPORT_ERR_FATAL;
+				sqlite3_finalize(count);
+		}
+	});
 
-	return MPORT_OK;
+	if (result == MPORT_ERR_FATAL)
+		SET_ERRORX(result, "Error reading file count %s", err);
+	return result;
 }
 
 static int
@@ -240,10 +231,10 @@ create_sample_file(const char *file)
  * filtered on entries that are not pre/post exec.
  */
 static int
-mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mportAssetList **alist_p)
+mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mportAssetList **alist_p, enum phase state)
 {
 	__block mportAssetList *alist;
-	__block sqlite3_stmt *stmt;
+	__block sqlite3_stmt *stmt = NULL;
 	__block int result = MPORT_OK;
 	__block char *err;
 
@@ -252,9 +243,23 @@ mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mpo
 
 	*alist_p = alist;
 
-	if (mport_db_prepare(mport->db, &stmt, "SELECT type,data,checksum,owner,grp,mode FROM stub.assets WHERE pkg=%Q and type not in (%d, %d)", pkg->name, ASSET_PREEXEC, ASSET_POSTEXEC) != MPORT_OK) {
-		sqlite3_finalize(stmt);
-		RETURN_CURRENT_ERROR;
+	if (state == PREINSTALL) {
+		if (mport_db_prepare(mport->db, &stmt, "SELECT type,data,checksum,owner,grp,mode FROM stub.assets WHERE pkg=%Q and type in (%d, %d)", pkg->name, ASSET_CWD, ASSET_PREEXEC) != MPORT_OK) {
+			sqlite3_finalize(stmt);
+			RETURN_CURRENT_ERROR;
+		}
+	} else if (state == ACTUALINSTALL) {
+		if (mport_db_prepare(mport->db, &stmt,
+							 "SELECT type,data,checksum,owner,grp,mode FROM stub.assets WHERE pkg=%Q and type not in (%d, %d)",
+							 pkg->name, ASSET_PREEXEC, ASSET_POSTEXEC) != MPORT_OK) {
+			sqlite3_finalize(stmt);
+			RETURN_CURRENT_ERROR;
+		}
+	} else if (state == POSTINSTALL) {
+		if (mport_db_prepare(mport->db, &stmt, "SELECT type,data,checksum,owner,grp,mode FROM stub.assets WHERE pkg=%Q and type in (%d, %d)", pkg->name, ASSET_CWD, ASSET_POSTEXEC) != MPORT_OK) {
+			sqlite3_finalize(stmt);
+			RETURN_CURRENT_ERROR;
+		}
 	}
 
 	if (stmt == NULL) {
@@ -371,7 +376,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
         MPORT_OK)
         goto ERROR;
 
-	if (mport_bundle_read_get_assetlist(mport, pkg, &alist) != MPORT_OK)
+	if (mport_bundle_read_get_assetlist(mport, pkg, &alist, ACTUALINSTALL) != MPORT_OK)
 		goto ERROR;
 
     (void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
@@ -713,60 +718,41 @@ do_post_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
 	return mark_complete(mport, pkg);
 }
 
+
 static int
 run_postexec(mportInstance *mport, mportPackageMeta *pkg)
 {
-    int ret;
-    char cwd[FILENAME_MAX];
-    sqlite3_stmt *assets = NULL;
-    sqlite3 *db;
-    mportAssetListEntryType type;
-    const char *data;
-
-    db = mport->db;
+	mportAssetList *alist;
+	mportAssetListEntry *e = NULL;
+	char cwd[FILENAME_MAX];
 
     /* Process @postexec steps */
-    if (mport_db_prepare(db, &assets, "SELECT type, data FROM stub.assets WHERE pkg=%Q and type in (%d, %d)", pkg->name, ASSET_CWD, ASSET_POSTEXEC) != MPORT_OK) {
-		sqlite3_finalize(assets);
+	if (mport_bundle_read_get_assetlist(mport, pkg, &alist, POSTINSTALL) != MPORT_OK)
 		goto ERROR;
-	}
 
     (void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
 
     if (mport_chdir(mport, cwd) != MPORT_OK)
         goto ERROR;
 
-    while (1) {
-        ret = sqlite3_step(assets);
-
-        if (ret == SQLITE_DONE)
-            break;
-
-        if (ret != SQLITE_ROW) {
-            SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-            goto ERROR;
-        }
-
-        type = (mportAssetListEntryType) sqlite3_column_int(assets, 0);
-        data = (char *) sqlite3_column_text(assets, 1);
-
+	STAILQ_FOREACH(e, alist, next) {
         char file[FILENAME_MAX];
-        if (data == NULL) {
+        if (e->data == NULL) {
             snprintf(file, sizeof(file), "%s", mport->root);
-        } else if (*data == '/') {
-            snprintf(file, sizeof(file), "%s%s", mport->root, data);
+        } else if (e->data[0] == '/') {
+            snprintf(file, sizeof(file), "%s%s", mport->root, e->data);
         } else {
-            snprintf(file, sizeof(file), "%s%s/%s", mport->root, pkg->prefix, data);
+            snprintf(file, sizeof(file), "%s%s/%s", mport->root, pkg->prefix, e->data);
         }
 
-        switch (type) {
+        switch (e->type) {
             case ASSET_CWD:
-                (void) strlcpy(cwd, data == NULL ? pkg->prefix : data, sizeof(cwd));
+                (void) strlcpy(cwd, e->data == NULL ? pkg->prefix : e->data, sizeof(cwd));
                 if (mport_chdir(mport, cwd) != MPORT_OK)
                     goto ERROR;
                 break;
             case ASSET_POSTEXEC:
-                if (mport_run_asset_exec(mport, data, cwd, file) != MPORT_OK)
+                if (mport_run_asset_exec(mport, e->data, cwd, file) != MPORT_OK)
                     goto ERROR;
                 break;
             default:
@@ -774,13 +760,14 @@ run_postexec(mportInstance *mport, mportPackageMeta *pkg)
                 break;
         }
     }
-    sqlite3_finalize(assets);
+
+	mport_assetlist_free(alist);
     mport_pkgmeta_logevent(mport, pkg, "postexec");
 
     return MPORT_OK;
 
     ERROR:
-    sqlite3_finalize(assets);
+	// TODO: asset list free
     RETURN_CURRENT_ERROR;
 }
 
