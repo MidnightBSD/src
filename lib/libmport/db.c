@@ -113,11 +113,12 @@ mport_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char *fmt, ...)
 		if (sqlcode == SQLITE_BUSY || sqlcode == SQLITE_LOCKED) {
 			sleep(1);
 			if (sqlite3_prepare_v2(db, sql, -1, stmt, NULL) != SQLITE_OK) {
-				sqlite3_free(sql);
 				err = (char *) sqlite3_errmsg(db);
 				result = MPORT_ERR_FATAL;
-				return;
 			}
+		} else if (sqlcode != SQLITE_OK) {
+			err = (char *) sqlite3_errmsg(db);
+			result = MPORT_ERR_FATAL;
 		}
 
 		sqlite3_free(sql);
