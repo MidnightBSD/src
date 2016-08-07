@@ -363,6 +363,9 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 
     mport_call_progress_init_cb(mport, "Installing %s-%s", pkg->name, pkg->version);
 
+	if (mport_bundle_read_get_assetlist(mport, pkg, &alist, ACTUALINSTALL) != MPORT_OK)
+		goto ERROR;
+
 	if (create_package_row(mport, pkg) != MPORT_OK)
 		goto ERROR;
 
@@ -377,9 +380,6 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
     if (mport_db_prepare(mport->db, &insert, "INSERT INTO assets (pkg, type, data, checksum, owner, grp, mode) values (%Q,?,?,?,?,?,?)", pkg->name) !=
         MPORT_OK)
         goto ERROR;
-
-	if (mport_bundle_read_get_assetlist(mport, pkg, &alist, ACTUALINSTALL) != MPORT_OK)
-		goto ERROR;
 
     (void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
 
