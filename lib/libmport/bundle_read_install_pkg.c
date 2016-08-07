@@ -53,7 +53,7 @@ static int get_file_count(mportInstance *, char *, int *);
 static int create_package_row(mportInstance *, mportPackageMeta *);
 static int create_categories(mportInstance *mport, mportPackageMeta *pkg);
 static int create_depends(mportInstance *mport, mportPackageMeta *pkg);
-static int create_sample_file(char *file);
+static int create_sample_file(const char *file);
 static int mark_complete(mportInstance *, mportPackageMeta *);
 static int mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mportAssetList **alist_p);
 
@@ -219,7 +219,7 @@ create_categories(mportInstance *mport, mportPackageMeta *pkg)
 }
 
 static int
-create_sample_file(char *file)
+create_sample_file(const char *file)
 {
 	char nonSample[FILENAME_MAX];
 	strlcpy(nonSample, file, FILENAME_MAX);
@@ -242,10 +242,10 @@ create_sample_file(char *file)
 static int
 mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mportAssetList **alist_p)
 {
-	mportAssetList *alist;
-	sqlite3_stmt *stmt;
-	int ret;
-	mportAssetListEntry *e;
+	__block mportAssetList *alist;
+	__block sqlite3_stmt *stmt;
+	__block int result = MPORT_OK;
+	__block char *err;
 
 	if ((alist = mport_assetlist_new()) == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
@@ -261,63 +261,67 @@ mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mpo
 		RETURN_ERROR(MPORT_ERR_FATAL, "Statement was null");
 	}
 
-	while (1) {
-		ret = sqlite3_step(stmt);
+	dispatch_sync(mportSQLSerial, ^{
+		while (1) {
+			mportAssetListEntry *e;
 
-		if (ret == SQLITE_DONE)
-			break;
+			int ret = sqlite3_step(stmt);
 
-		if (ret != SQLITE_ROW) {
-			sqlite3_finalize(stmt);
-			RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+			if (ret == SQLITE_DONE)
+				break;
+
+			if (ret != SQLITE_ROW) {
+				err = (char *) sqlite3_errmsg(mport->db);
+				result = MPORT_ERR_FATAL;
+				break; // we finalize below
+			}
+
+			e = (mportAssetListEntry *) calloc(1, sizeof(mportAssetListEntry));
+
+			if (e == NULL) {
+				err = "Out of memory";
+				result = MPORT_ERR_FATAL;
+				break; // we finalize below
+			}
+
+			e->type = (mportAssetListEntryType) sqlite3_column_int(stmt, 0);
+			const unsigned char *data = sqlite3_column_text(stmt, 1);
+			const unsigned char *checksum = sqlite3_column_text(stmt, 2);
+			const unsigned char *owner = sqlite3_column_text(stmt, 3);
+			const unsigned char *group = sqlite3_column_text(stmt, 4);
+			const unsigned char *mode = sqlite3_column_text(stmt, 5);
+
+			if (data == NULL) {
+				err = "Out of memory";
+				result = MPORT_ERR_FATAL;
+				break; // we finalize below
+			}
+
+			e->data = strdup((char *) data);
+			if (checksum != NULL)
+				e->checksum = strdup((char *) checksum);
+			if (owner != NULL)
+				e->owner = strdup((char *) owner);
+			if (group != NULL)
+				e->group = strdup((char *) group);
+			if (mode != NULL)
+				e->mode = strdup((char *) mode);
+
+			if (e->data == NULL) {
+				err = "Out of memory";
+				result = MPORT_ERR_FATAL;
+				break;
+			}
+
+			STAILQ_INSERT_TAIL(alist, e, next);
 		}
 
-		e = (mportAssetListEntry *)calloc(1, sizeof(mportAssetListEntry));
+		sqlite3_finalize(stmt);
+	});
 
-		if (e == NULL) {
-			sqlite3_finalize(stmt);
-			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
-		}
-
-		const unsigned char *data;
-		const unsigned char *checksum;
-		const unsigned char *owner;
-		const unsigned char *group;
-		const unsigned char *mode;
-
-		e->type = (mportAssetListEntryType) sqlite3_column_int(stmt, 0);
-		data = sqlite3_column_text(stmt, 1);
-		checksum = sqlite3_column_text(stmt, 2);
-		owner = sqlite3_column_text(stmt, 3);
-		group = sqlite3_column_text(stmt, 4);
-		mode = sqlite3_column_text(stmt, 5);
-
-		if (data == NULL) {
-			sqlite3_finalize(stmt);
-			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
-		}
-
-		e->data = strdup((char *) data);
-		if (checksum != NULL)
-			e->checksum = strdup((char *) checksum);
-		if (owner != NULL)
-			e->owner = strdup((char *) owner);
-		if (group != NULL)
-			e->group = strdup((char *) group);
-		if (mode != NULL)
-			e->mode = strdup((char *) mode);
-
-		if (e->data == NULL) {
-			sqlite3_finalize(stmt);
-			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
-		}
-
-		STAILQ_INSERT_TAIL(alist, e, next);
-	}
-
-	sqlite3_finalize(stmt);
-
-	return MPORT_OK;
+	if (result == MPORT_ERR_FATAL)
+		SET_ERRORX(result, "Error reading assets %s", err);
+	return result;
 }
 
 static int
@@ -647,6 +651,8 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 
     sqlite3_finalize(insert);
 
+	mport_pkgmeta_logevent(mport, pkg, "Installed");
+
     (mport->progress_free_cb)();
     (void) mport_chdir(NULL, orig_cwd);
     free(orig_cwd);
@@ -680,7 +686,6 @@ mark_complete(mportInstance *mport, mportPackageMeta *pkg)
 		SET_ERROR(MPORT_ERR_FATAL, "Unable to mark package clean");
 		RETURN_CURRENT_ERROR;
 	}
-	mport_pkgmeta_logevent(mport, pkg, "Installed");
 
 	return MPORT_OK;
 }
