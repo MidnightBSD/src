@@ -272,6 +272,11 @@ mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mpo
 
 			int ret = sqlite3_step(stmt);
 
+			if (ret == SQLITE_BUSY || ret == SQLITE_LOCKED) {
+				sleep(1);
+				ret = sqlite3_step(stmt);
+			}
+
 			if (ret == SQLITE_DONE)
 				break;
 
