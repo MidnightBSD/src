@@ -666,7 +666,6 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 
     ERROR:
 		sqlite3_finalize(insert);
-		mport_pkgmeta_logevent(mport, pkg, "Failed to Install");
         (mport->progress_free_cb)();
         free(orig_cwd);
 		mport_assetlist_free(alist);
