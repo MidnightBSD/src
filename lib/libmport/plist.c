@@ -65,6 +65,11 @@ mport_assetlist_free(mportAssetList *list) {
         n = STAILQ_FIRST(list);
         STAILQ_REMOVE_HEAD(list, next);
         free(n->data);
+		free(n->checksum);
+		free(n->owner);
+		free(n->group);
+		free(n->mode);
+		/* type is not a pointer */
         free(n);
     }
 
@@ -116,7 +121,8 @@ mport_parse_plistfile(FILE *fp, mportAssetList *list) {
             if (cmnd == NULL)
                 RETURN_ERROR(MPORT_ERR_FATAL, "Malformed plist file.");
 
-		entry->type = parse_command(cmnd);
+			entry->checksum = NULL; /* checksum is only used by bundle read install */
+			entry->type = parse_command(cmnd);
 		if (entry->type == ASSET_FILE_OWNER_MODE)
 			parse_file_owner_mode(&entry, cmnd);
 		if (entry->type == ASSET_DIR_OWNER_MODE) {
