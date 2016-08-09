@@ -42,6 +42,7 @@ static int index_last_checked_recentish(mportInstance *);
 static int index_update_last_checked(mportInstance *);
 static time_t get_time(void);
 static int lookup_alias(mportInstance *, const char *, char **);
+static int attach_index_db(sqlite3 *db);
 
 /*
  * Loads the index database.  The index contains a list of bundles that are
@@ -57,35 +58,46 @@ MPORT_PUBLIC_API int
 mport_index_load(mportInstance *mport)
 {
 
-  if (mport_file_exists(MPORT_INDEX_FILE)) {
-    
-    if (mport_db_do(mport->db, "ATTACH %Q AS idx", MPORT_INDEX_FILE) != MPORT_OK)
-      RETURN_CURRENT_ERROR;
+	if (mport_file_exists(MPORT_INDEX_FILE)) {
 
-    mport->flags |= MPORT_INST_HAVE_INDEX;
+		if (attach_index_db(mport->db) != MPORT_OK)
+			RETURN_CURRENT_ERROR;
 
-    if (!index_is_recentish()) {
-      if (index_last_checked_recentish(mport))
-          return MPORT_OK;
+		mport->flags |= MPORT_INST_HAVE_INDEX;
 
-	return mport_index_get(mport);
-    }
-  } else {
-    if (mport_fetch_bootstrap_index(mport) != MPORT_OK)
-      RETURN_CURRENT_ERROR;
+		if (!index_is_recentish()) {
+			if (index_last_checked_recentish(mport))
+				return MPORT_OK;
 
-    if (!mport_file_exists(MPORT_INDEX_FILE))
-      RETURN_ERROR(MPORT_ERR_FATAL, "Index file could not be extracted");
-    
-    if (mport_db_do(mport->db, "ATTACH %Q AS idx", MPORT_INDEX_FILE) != MPORT_OK)
-      RETURN_CURRENT_ERROR;
-      
-    mport->flags |= MPORT_INST_HAVE_INDEX;
-    if (index_update_last_checked(mport) != MPORT_OK)
+			return mport_index_get(mport);
+		}
+	} else {
+		if (mport_fetch_bootstrap_index(mport) != MPORT_OK)
+			RETURN_CURRENT_ERROR;
+
+		if (!mport_file_exists(MPORT_INDEX_FILE))
+			RETURN_ERROR(MPORT_ERR_FATAL, "Index file could not be extracted");
+
+		if (attach_index_db(mport->db) != MPORT_OK)
+			RETURN_CURRENT_ERROR;
+
+		mport->flags |= MPORT_INST_HAVE_INDEX;
+		if (index_update_last_checked(mport) != MPORT_OK)
+			RETURN_CURRENT_ERROR;
+	}
+
+	return (MPORT_OK);
+}
+
+int
+attach_index_db(sqlite3 *db)
+{
+
+	if (mport_db_do(db, "ATTACH %Q AS stub", MPORT_INDEX_FILE) != MPORT_OK) {
 		RETURN_CURRENT_ERROR;
-  }
-  
-  return (MPORT_OK);
+	}
+
+	return (MPORT_OK);
 }
 
 
@@ -114,7 +126,7 @@ mport_index_get(mportInstance *mport)
 
 		mport->flags &= ~MPORT_INST_HAVE_INDEX;
 
-		if (mport_db_do(mport->db, "ATTACH %Q AS idx", MPORT_INDEX_FILE) != MPORT_OK)
+		if (attach_index_db(mport->db) != MPORT_OK)
 			RETURN_CURRENT_ERROR;
 
 		mport->flags |= MPORT_INST_HAVE_INDEX;
