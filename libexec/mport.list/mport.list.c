@@ -90,7 +90,12 @@ main(int argc, char *argv[])
 		warnx("%s", mport_err_string());
 		exit(1);
 	}
-	
+
+	if (update && mport_index_load(mport) != MPORT_OK) {
+                warnx("Unable to load updates index, %s", mport_err_string());
+		exit(8);
+	}
+
 	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
 		warnx("%s", mport_err_string());
 		mport_instance_free(mport);
@@ -102,11 +107,6 @@ main(int argc, char *argv[])
 			warnx("No packages installed matching.");
 		mport_instance_free(mport);
 		exit(3);
-	}
-	
-	if (update) {
-		if (mport_index_load(mport) != MPORT_OK)
-			errx(4, "Unable to load updates index");
 	}
 	
 	while (*packs != NULL) {
