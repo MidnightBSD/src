@@ -93,7 +93,7 @@ int
 attach_index_db(sqlite3 *db)
 {
 
-	if (mport_db_do(db, "ATTACH %Q AS stub", MPORT_INDEX_FILE) != MPORT_OK) {
+	if (mport_db_do(db, "ATTACH %Q AS idx", MPORT_INDEX_FILE) != MPORT_OK) {
 		RETURN_CURRENT_ERROR;
 	}
 
