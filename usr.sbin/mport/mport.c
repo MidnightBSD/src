@@ -159,7 +159,6 @@ main(int argc, char *argv[]) {
 		if (argc > 2) {
 			if (!strcmp(argv[2], "updates") || 
 			    !strcmp(argv[2], "up")) {
-				loadIndex(mport);
 				flag = strdup("-u");
 			} else {
 				mport_instance_free(mport);
