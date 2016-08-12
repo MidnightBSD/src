@@ -7,12 +7,15 @@ SHLIB_MAJOR=	0
 LIB=		dispatch
 SRCS=	apply.c benchmark.c legacy.c object.c once.c \
 	queue.c queue_kevent.c semaphore.c source.c \
-	source_kevent.c time.c
+	source_kevent.c time.c 
 
 WARNS?= 2
 CSTD=	gnu89
 
 CFLAGS+=	-fblocks -D__BLOCKS__=1
+
+.PATH: ${.CURDIR}/../../../contrib/libdispatch/src/shims
+SRCS+=	tsd.c time_2.c
 
 .PATH:  ${.CURDIR}/../../../contrib/libdispatch/dispatch
 INCS=	base.h dispatch.h group.h object.h once.h \

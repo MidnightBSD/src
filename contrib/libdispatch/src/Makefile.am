@@ -19,7 +19,8 @@ libdispatch_la_SOURCES=	\
 
 libshims_la_SOURCES=	\
 	shims/mach.c	\
-	shims/time.c
+	shims/time.c	\
+	shims/tsd.c
 
 libdispatch_la_CFLAGS=-Wall
 INCLUDES=-I$(top_builddir) -I$(top_srcdir) \
@@ -34,6 +35,10 @@ endif
 
 libdispatch_la_LIBADD=libshims.la $(KQUEUE_LIBS)
 libdispatch_la_DEPENDENCIES=libshims.la
+
+if USE_LIBPTHREAD_WORKQUEUE
+libdispatch_la_LIBADD+=-lpthread_workqueue
+endif
 
 if USE_MIG
 libdispatch_la_SOURCES+=	\

@@ -17112,6 +17112,7 @@ contrib/libdispatch/dispatch/queue.h -text
 contrib/libdispatch/dispatch/semaphore.h -text
 contrib/libdispatch/dispatch/source.h -text
 contrib/libdispatch/dispatch/time.h -text
+contrib/libdispatch/libdispatch.plist -text
 contrib/libdispatch/libdispatch.xcodeproj/project.pbxproj -text
 contrib/libdispatch/m4/atomic.m4 -text
 contrib/libdispatch/m4/blocks.m4 -text
@@ -17158,11 +17159,14 @@ contrib/libdispatch/src/queue_kevent.c -text
 contrib/libdispatch/src/queue_private.h -text
 contrib/libdispatch/src/semaphore.c -text
 contrib/libdispatch/src/semaphore_internal.h -text
+contrib/libdispatch/src/shims/getprogname.h svneol=native#text/plain
 contrib/libdispatch/src/shims/mach.c -text
 contrib/libdispatch/src/shims/malloc_zone.h -text
 contrib/libdispatch/src/shims/perfmon.h -text
 contrib/libdispatch/src/shims/time.c -text
 contrib/libdispatch/src/shims/time.h -text
+contrib/libdispatch/src/shims/time_2.c svneol=native#text/plain
+contrib/libdispatch/src/shims/tsd.c svneol=native#text/plain
 contrib/libdispatch/src/shims/tsd.h -text
 contrib/libdispatch/src/source.c -text
 contrib/libdispatch/src/source_internal.h -text
@@ -17200,7 +17204,14 @@ contrib/libdispatch/testing/func.c -text
 contrib/libdispatch/testing/harness.c -text
 contrib/libdispatch/testing/leaks-wrapper -text
 contrib/libdispatch/testing/nsoperation.m -text
+contrib/libdispatch/testing/os_shims.h svneol=native#text/plain
 contrib/libdispatch/testing/queue_finalizer.c -text
+contrib/libdispatch/testing/shims/arc4random.c svneol=native#text/plain
+contrib/libdispatch/testing/shims/arc4random.h svneol=native#text/plain
+contrib/libdispatch/testing/shims/asprintf.c svneol=native#text/plain
+contrib/libdispatch/testing/shims/asprintf.h svneol=native#text/plain
+contrib/libdispatch/testing/shims/fgetln.c svneol=native#text/plain
+contrib/libdispatch/testing/shims/fgetln.h svneol=native#text/plain
 contrib/libdispatch/testing/summarize.c -text
 contrib/libpcap/.cvsignore -text
 contrib/libpcap/CHANGES -text

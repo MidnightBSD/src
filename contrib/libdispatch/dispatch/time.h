@@ -42,7 +42,11 @@ struct timespec;
 #ifdef NSEC_PER_USEC
 #undef NSEC_PER_USEC
 #endif
+#ifdef NSEC_PER_MSEC
+#undef NSEC_PER_MSEC
+#endif
 #define NSEC_PER_SEC 1000000000ull
+#define NSEC_PER_MSEC 1000000ull
 #define USEC_PER_SEC 1000000ull
 #define NSEC_PER_USEC 1000ull
 
@@ -79,7 +83,7 @@ typedef uint64_t dispatch_time_t;
  * @result
  * A new dispatch_time_t.
  */
-__OSX_AVAILABLE_STARTING(__MAC_10_6,__IPHONE_NA)
+__OSX_AVAILABLE_STARTING(__MAC_10_6,__IPHONE_4_0)
 DISPATCH_EXPORT DISPATCH_NOTHROW
 dispatch_time_t
 dispatch_time(dispatch_time_t when, int64_t delta);
@@ -103,7 +107,7 @@ dispatch_time(dispatch_time_t when, int64_t delta);
  * @result
  * A new dispatch_time_t.
  */
-__OSX_AVAILABLE_STARTING(__MAC_10_6,__IPHONE_NA)
+__OSX_AVAILABLE_STARTING(__MAC_10_6,__IPHONE_4_0)
 DISPATCH_EXPORT DISPATCH_NOTHROW
 dispatch_time_t
 dispatch_walltime(const struct timespec *when, int64_t delta);

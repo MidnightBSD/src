@@ -98,7 +98,7 @@ struct dispatch_source_s {
 };
 
 
-void _dispatch_source_legacy_xref_release(dispatch_source_t ds);
+void _dispatch_source_xref_release(dispatch_source_t ds);
 dispatch_queue_t _dispatch_source_invoke(dispatch_source_t ds);
 bool _dispatch_source_probe(dispatch_source_t ds);
 void _dispatch_source_dispose(dispatch_source_t ds);
@@ -147,7 +147,7 @@ extern const struct dispatch_source_type_s _dispatch_source_type_signal;
 extern const struct dispatch_source_type_s _dispatch_source_type_vnode;
 extern const struct dispatch_source_type_s _dispatch_source_type_vfs;
 
-#ifdef HAVE_MACH
+#if HAVE_MACH
 extern const struct dispatch_source_type_s _dispatch_source_type_mach_send;
 extern const struct dispatch_source_type_s _dispatch_source_type_mach_recv;
 #endif

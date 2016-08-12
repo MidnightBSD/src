@@ -23,6 +23,8 @@
 #include "protocol.h"
 #endif
 
+static void _dispatch_queue_cleanup2(void);
+
 void
 dummy_function(void)
 {
@@ -377,7 +379,7 @@ _dispatch_queue_concurrent_drain_one(dispatch_queue_t dq)
 		// The first xchg on the tail will tell the enqueueing thread that it
 		// is safe to blindly write out to the head pointer. A cmpxchg honors
 		// the algorithm.
-		dispatch_atomic_cmpxchg(&dq->dq_items_head, mediator, NULL);
+		(void)dispatch_atomic_cmpxchg(&dq->dq_items_head, mediator, NULL);
 		_dispatch_debug("no work on global work queue");
 		return NULL;
 	}
@@ -474,12 +476,13 @@ _dispatch_queue_set_width_init(void)
 	    _dispatch_hw_config.cc_max_physical =
 	    _dispatch_hw_config.cc_max_active;
 #elif HAVE_SYSCONF && defined(_SC_NPROCESSORS_ONLN)
-	_dispatch_hw_config.cc_max_active = (int)sysconf(_SC_NPROCESSORS_ONLN);
-	if (_dispatch_hw_config.cc_max_active < 0)
-		_dispatch_hw_config.cc_max_active = 1;
+	int ret;
+
+	ret = (int)sysconf(_SC_NPROCESSORS_ONLN);
+
 	_dispatch_hw_config.cc_max_logical =
 	    _dispatch_hw_config.cc_max_physical =
-	    _dispatch_hw_config.cc_max_active;
+	    _dispatch_hw_config.cc_max_active = (ret < 0) ? 1 : ret;
 #else
 #warning "_dispatch_queue_set_width_init: no supported way to query CPU count"
 	_dispatch_hw_config.cc_max_logical =
@@ -528,7 +531,7 @@ dispatch_queue_set_width(dispatch_queue_t dq, long width)
 // 3 - _unused_
 // 4,5,6,7,8,9 - global queues
 // we use 'xadd' on Intel, so the initial value == next assigned
-static unsigned long _dispatch_queue_serial_numbers = 10;
+unsigned long volatile _dispatch_queue_serial_numbers = 10;
 
 // Note to later developers: ensure that any initialization changes are
 // made for statically allocated queues (i.e. _dispatch_main_q).
@@ -941,6 +944,14 @@ dispatch_main(void)
 	if (pthread_main_np()) {
 #endif
 		_dispatch_program_is_probably_callback_driven = true;
+#if defined(__linux__)
+		// Workaround for a GNU/Linux bug that causes the process to become a
+		// zombie when the main thread calls pthread_exit().
+		void *p = _dispatch_thread_getspecific(dispatch_sema4_key);
+		if (p) dispatch_release(p);
+		_dispatch_force_cache_cleanup();
+		_dispatch_queue_cleanup2();
+#endif // defined(__linux__)
 		pthread_exit(NULL);
 		DISPATCH_CRASH("pthread_exit() returned");
 #if HAVE_PTHREAD_MAIN_NP
@@ -973,8 +984,13 @@ _dispatch_queue_cleanup2(void)
 	// similar non-POSIX API was called
 	// this has to run before the DISPATCH_COCOA_COMPAT below
 	if (_dispatch_program_is_probably_callback_driven) {
+#if defined(__linux__)
+		// Use the main thread as the signal handler thread on GNU/Linux
+		_dispatch_sigsuspend(NULL);
+#else
 		dispatch_async_f(_dispatch_get_root_queue(0, 0), NULL, _dispatch_sigsuspend);
 		sleep(1);	// workaround 6778970
+#endif // defined(__linux__)
 	}
 
 #if DISPATCH_COCOA_COMPAT
@@ -1171,18 +1187,17 @@ _dispatch_root_queues_init(void *context __attribute__((unused)))
 #endif
 
 	for (i = 0; i < DISPATCH_ROOT_QUEUE_COUNT; i++) {
-#if HAVE_PTHREAD_WORKQUEUES
-		r = pthread_workqueue_attr_setqueuepriority_np(&pwq_attr, _dispatch_rootq2wq_pri(i));
-		(void)dispatch_assume_zero(r);
-		r = pthread_workqueue_attr_setovercommit_np(&pwq_attr, i & 1);
-		(void)dispatch_assume_zero(r);
 // some software hangs if the non-overcommitting queues do not overcommit when threads block
 #if 0
 		if (!(i & 1)) {
 			dispatch_root_queue_contexts[i].dgq_thread_pool_size = _dispatch_hw_config.cc_max_active;
 		}
 #endif
-
+#if HAVE_PTHREAD_WORKQUEUES
+		r = pthread_workqueue_attr_setqueuepriority_np(&pwq_attr, _dispatch_rootq2wq_pri(i));
+		(void)dispatch_assume_zero(r);
+		r = pthread_workqueue_attr_setovercommit_np(&pwq_attr, i & 1);
+		(void)dispatch_assume_zero(r);
 		r = 0;
 		if (disable_wq || (r = pthread_workqueue_create_np(&_dispatch_root_queue_contexts[i].dgq_kworkqueue, &pwq_attr))) {
 			if (r != ENOTSUP) {
@@ -1201,9 +1216,13 @@ _dispatch_root_queues_init(void *context __attribute__((unused)))
 			ret = sem_init(&_dispatch_thread_mediator[i].dsema_sem, 0, 0);
 			(void)dispatch_assume_zero(ret);
 #endif
+#if USE_WIN32_SEM
+			_dispatch_thread_mediator[i].dsema_handle = CreateSemaphore(NULL, 0, LONG_MAX, NULL);
+			dispatch_assume(_dispatch_thread_mediator[i].dsema_handle);
+#endif
 #if HAVE_PTHREAD_WORKQUEUES
 		} else {
-			dispatch_assume(_dispatch_root_queue_contexts[i].dgq_kworkqueue);
+			(void)dispatch_assume(_dispatch_root_queue_contexts[i].dgq_kworkqueue);
 		}
 #endif
 	}

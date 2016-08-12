@@ -31,8 +31,19 @@
 #error "Please #include <dispatch/dispatch.h> instead of this file directly."
 #endif
 
-#if defined(__i386__) || defined(__x86_64__) || !defined(HAVE_MACH_ABSOLUTE_TIME)
-// these architectures always return mach_absolute_time() in nanoseconds
+uint64_t _dispatch_get_nanoseconds(void);
+
+#if TARGET_OS_WIN32
+static inline unsigned int
+sleep(unsigned int seconds)
+{
+	Sleep(seconds * 1000); // milliseconds
+	return 0;
+}
+#endif
+
+#if (defined(__i386__) || defined(__x86_64__)) && HAVE_MACH_ABSOLUTE_TIME
+// x86 currently implements mach time in nanoseconds; this is NOT likely to change
 #define _dispatch_time_mach2nano(x) (x)
 #define _dispatch_time_nano2mach(x) (x)
 #else
@@ -50,7 +61,7 @@ _dispatch_time_mach2nano(uint64_t machtime)
 	_dispatch_host_time_data_s *const data = &_dispatch_host_time_data;
 	dispatch_once_f(&data->pred, NULL, _dispatch_get_host_time_init);
 
-	return machtime * data->frac;
+	return (uint64_t)(machtime * data->frac);
 }
 
 static inline int64_t
@@ -63,7 +74,7 @@ _dispatch_time_nano2mach(int64_t nsec)
 		return nsec;
 	}
 
-	long double big_tmp = nsec;
+	long double big_tmp = (long double)nsec;
 
 	// Divide by tbi.numer/tbi.denom to convert nsec to Mach absolute time
 	big_tmp /= data->frac;
@@ -75,14 +86,22 @@ _dispatch_time_nano2mach(int64_t nsec)
 	if (slowpath(big_tmp < INT64_MIN)) {
 		return INT64_MIN;
 	}
-	return big_tmp;
+	return (int64_t)big_tmp;
 }
 #endif
 
 static inline uint64_t
 _dispatch_absolute_time(void)
 {
-#ifndef HAVE_MACH_ABSOLUTE_TIME
+#if HAVE_MACH_ABSOLUTE_TIME
+	return mach_absolute_time();
+#elif TARGET_OS_WIN32
+	LARGE_INTEGER now;
+	if (!QueryPerformanceCounter(&now)) {
+		return 0;
+	}
+	return now.QuadPart;
+#else
 	struct timespec ts;
 	int ret;
 
@@ -97,8 +116,6 @@ _dispatch_absolute_time(void)
 
 	/* XXXRW: Some kind of overflow detection needed? */
 	return (ts.tv_sec * NSEC_PER_SEC + ts.tv_nsec);
-#else
-	return mach_absolute_time();
 #endif
 }
 

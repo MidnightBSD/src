@@ -8,6 +8,8 @@ AC_REVISION([$$])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADER([config/config.h])
 AC_CONFIG_MACRO_DIR([m4])
+AC_PROG_CC([clang gcc cc])
+AC_USE_SYSTEM_EXTENSIONS
 AM_MAINTAINER_MODE
 
 #
@@ -110,8 +112,6 @@ AS_IF([test "x$enable_apple_semaphore_optimizations" = "xyes"],
     [Define to use non-portablesemaphore optimizations for Mac OS X])]
 )
 
-AC_USE_SYSTEM_EXTENSIONS
-AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_INSTALL
 AC_PROG_LIBTOOL
@@ -137,7 +137,18 @@ esac
 # Find libraries we will need
 #
 AC_SEARCH_LIBS(clock_gettime, rt)
-AC_SEARCH_LIBS(pthread_create, pthread)
+
+#
+# Find how to enable threads
+#
+case $host in
+*freebsd*)
+	LIBS="${LIBS} -pthread"
+	;;
+*)
+	AC_SEARCH_LIBS(pthread_create, pthread)
+	;;
+esac
 
 #
 # Prefer native kqueue(2); otherwise use libkqueue if present.
@@ -182,6 +193,13 @@ AC_CHECK_HEADER([pthread_workqueue.h],
 )
 
 #
+# Check if libpthread_workqueue.so exists
+#
+AC_CHECK_LIB(pthread_workqueue, pthread_workqueue_init_np,
+        have_lpwq=true, have_lpwq=false)
+AM_CONDITIONAL(USE_LIBPTHREAD_WORKQUEUE, $have_lpwq)
+
+#
 # Find functions and declarations we care about.
 #
 AC_CHECK_DECLS([CLOCK_UPTIME, CLOCK_MONOTONIC, CLOCK_REALTIME], [], [],
@@ -192,7 +210,8 @@ AC_CHECK_DECLS([EVFILT_LIO, EVFILT_SESSION, NOTE_NONE, NOTE_REAP, NOTE_REVOKE, N
 AC_CHECK_DECLS([FD_COPY], [], [], [[#include <sys/select.h>]])
 AC_CHECK_DECLS([SIGEMT], [], [], [[#include <signal.h>]])
 AC_CHECK_DECLS([VQ_UPDATE, VQ_VERYLOWDISK], [], [], [[#include <sys/mount.h>]])
-AC_CHECK_FUNCS([pthread_key_init_np pthread_main_np mach_absolute_time malloc_create_zone sysconf])
+AC_CHECK_DECLS([program_invocation_short_name], [], [], [[#include <errno.h>]])
+AC_CHECK_FUNCS([pthread_key_init_np pthread_main_np mach_absolute_time malloc_create_zone sysconf getprogname getexecname vasprintf asprintf arc4random fgetln])
 
 AC_CHECK_DECLS([POSIX_SPAWN_START_SUSPENDED],
   [have_posix_spawn_start_suspended=true],
