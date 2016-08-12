@@ -65,6 +65,6 @@ inline size_t strlcpy(char *dst, const char *src, size_t size) {
 #include "shims/malloc_zone.h"
 #include "shims/tsd.h"
 #include "shims/perfmon.h"
-#include "shims/time.h"
+#include "shims/time_2.h"
 
 #endif

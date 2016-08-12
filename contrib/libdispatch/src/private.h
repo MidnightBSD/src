@@ -31,6 +31,11 @@
 #include <TargetConditionals.h>
 #endif
 
+#if HAVE_MACH
+#include <mach/boolean.h>
+#include <mach/mach.h>
+#include <mach/message.h>
+#endif
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -81,12 +86,54 @@ libdispatch_init(void) __attribute__ ((constructor));
 libdispatch_init(void);
 #endif
 
+#if HAVE_MACH
+#define DISPATCH_COCOA_COMPAT 1
+#if DISPATCH_COCOA_COMPAT
+
+__OSX_AVAILABLE_STARTING(__MAC_10_6,__IPHONE_4_0)
+DISPATCH_EXPORT DISPATCH_NOTHROW
+mach_port_t
+_dispatch_get_main_queue_port_4CF(void);
+
+__OSX_AVAILABLE_STARTING(__MAC_10_6,__IPHONE_4_0)
+DISPATCH_EXPORT DISPATCH_NOTHROW
+void
+_dispatch_main_queue_callback_4CF(mach_msg_header_t *msg);
+
+__OSX_AVAILABLE_STARTING(__MAC_10_6,__IPHONE_4_0)
+DISPATCH_EXPORT
+void (*dispatch_begin_thread_4GC)(void);
+
+__OSX_AVAILABLE_STARTING(__MAC_10_6,__IPHONE_4_0)
+DISPATCH_EXPORT
+void (*dispatch_end_thread_4GC)(void);
+
+__OSX_AVAILABLE_STARTING(__MAC_10_6,__IPHONE_4_0)
+DISPATCH_EXPORT
+void *(*_dispatch_begin_NSAutoReleasePool)(void);
+
+__OSX_AVAILABLE_STARTING(__MAC_10_6,__IPHONE_4_0)
+DISPATCH_EXPORT
+void (*_dispatch_end_NSAutoReleasePool)(void *);
+
+#endif
+#endif /* HAVE_MACH */
+
 /* pthreads magic */
 
 DISPATCH_NOTHROW void dispatch_atfork_prepare(void);
 DISPATCH_NOTHROW void dispatch_atfork_parent(void);
 DISPATCH_NOTHROW void dispatch_atfork_child(void);
 DISPATCH_NOTHROW void dispatch_init_pthread(pthread_t);
+
+#if HAVE_MACH
+/*
+ * Extract the context pointer from a mach message trailer.
+ */
+__OSX_AVAILABLE_STARTING(__MAC_10_6,__IPHONE_4_0)
+void *
+dispatch_mach_msg_get_context(mach_msg_header_t *msg);
+#endif
 
 __DISPATCH_END_DECLS
 

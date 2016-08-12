@@ -531,7 +531,7 @@ dispatch_queue_set_width(dispatch_queue_t dq, long width)
 // 3 - _unused_
 // 4,5,6,7,8,9 - global queues
 // we use 'xadd' on Intel, so the initial value == next assigned
-unsigned long volatile _dispatch_queue_serial_numbers = 10;
+static unsigned long _dispatch_queue_serial_numbers = 10;
 
 // Note to later developers: ensure that any initialization changes are
 // made for statically allocated queues (i.e. _dispatch_main_q).
