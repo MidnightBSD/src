@@ -1,16 +1,16 @@
 #	@(#)Makefile	8.2 (Berkeley) 1/4/94
-# $MidnightBSD: src/include/Makefile,v 1.15 2012/10/20 17:17:25 laffer1 Exp $
+# $MidnightBSD$
 #
 # Doing a "make install" builds /usr/include.
 
 .include <bsd.own.mk>
 
 CLEANFILES= osreldate.h version vers.c
-SUBDIR= arpa gssapi protocols rpcsvc rpc xlocale
+SUBDIR= arpa mach mach_debug protocols rpcsvc rpc xlocale
 INCS=	a.out.h ar.h assert.h bitstring.h complex.h cpio.h _ctype.h ctype.h \
 	db.h \
 	dirent.h dlfcn.h elf.h elf-hints.h err.h fmtmsg.h fnmatch.h fstab.h \
-	fts.h ftw.h getopt.h glob.h grp.h gssapi.h \
+	fts.h ftw.h getopt.h glob.h grp.h \
 	ieeefp.h ifaddrs.h \
 	inttypes.h iso646.h kenv.h langinfo.h libgen.h limits.h link.h \
 	locale.h malloc.h malloc_np.h memory.h monetary.h mpool.h mqueue.h \
@@ -25,6 +25,27 @@ INCS=	a.out.h ar.h assert.h bitstring.h complex.h cpio.h _ctype.h ctype.h \
 	time.h timeconv.h timers.h ttyent.h \
 	ulimit.h unistd.h utime.h utmpx.h uuid.h varargs.h vis.h \
 	wchar.h wctype.h wordexp.h xlocale.h
+
+# APSL headers
+INCS+=	Availability.h \
+	AvailabilityInternal.h \
+	AvailabilityMacros.h \
+	CrashReporterClient.h \
+	MacTypes.h \
+	NSSystemDirectories.h \
+	TargetConditionals.h \
+	_simple.h \
+	_types.h \
+	aliasdb.h \
+	ils.h \
+	libinfo.h \
+	si_data.h \
+	si_module.h \
+	util.h \
+	utmp.h
+
+SUBDIR+= apple
+
 
 MHDRS=	float.h floatingpoint.h stdarg.h
 
@@ -52,18 +73,26 @@ LSUBDIRS=	cam/ata cam/scsi \
 	security/audit \
 	security/mac_biba security/mac_bsdextended security/mac_lomac \
 	security/mac_mls security/mac_partition \
-	ufs/ffs ufs/ufs
+	ufs/ffs ufs/ufs \
+	sys/mach sys/mach_debug
 
-LSUBSUBDIRS=	dev/mpt/mpilib
+LSUBSUBDIRS=	dev/mpt/mpilib sys/mach/ipc sys/mach/device
+
 .if ${MK_GPIB} != "no"
 _dev_ieee488=	dev/ieee488
+.endif
+
+.if ${MK_GSSAPI} != "no"
+SUBDIR+=	gssapi
+INCS+=		gssapi.h
 .endif
 
 .if ${MK_HESIOD} != "no"
 INCS+=	hesiod.h
 .endif
 
-.if ${MK_ICONV} != "no"
+# Handle the #define aliases for libiconv
+.if ${MK_ICONV} == "yes"
 INCS+=	iconv.h
 .endif
 
@@ -138,7 +167,7 @@ compat:
 .endif
 
 copies:
-.for i in ${LDIRS} ${LSUBDIRS} ${LSUBSUBDIRS} altq crypto machine machine/pc \
+.for i in ${LDIRS} ${LSUBDIRS} ${LSUBSUBDIRS} altq crypto machine machine/pc machine/mach \
 	${_MARCHS}
 .if exists(${DESTDIR}${INCLUDEDIR}/$i)
 	cd ${DESTDIR}${INCLUDEDIR}/$i; \
@@ -147,17 +176,25 @@ copies:
 	done
 .endif
 .endfor
-.for i in ${LDIRS} ${LSUBDIRS:Ndev/acpica:Ndev/bktr} ${LSUBSUBDIRS}
+.for i in ${LDIRS} ${LSUBDIRS:Ndev/agp:Ndev/acpica:Ndev/bktr:Ndev/pci} ${LSUBSUBDIRS}
 	cd ${.CURDIR}/../sys; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 $i/*.h \
 	    ${DESTDIR}${INCLUDEDIR}/$i
 .endfor
 	cd ${.CURDIR}/../sys/dev/acpica; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 acpiio.h \
+	    ${DESTDIR}${INCLUDEDIR}/dev/acpica; \
+	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 acpi_hpet.h \
 	    ${DESTDIR}${INCLUDEDIR}/dev/acpica
+	cd ${.CURDIR}/../sys/dev/agp; \
+	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 agpreg.h \
+	    ${DESTDIR}${INCLUDEDIR}/dev/agp
 	cd ${.CURDIR}/../sys/dev/bktr; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 ioctl_*.h \
 	    ${DESTDIR}${INCLUDEDIR}/dev/bktr
+	cd ${.CURDIR}/../sys/dev/pci; \
+	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 pcireg.h \
+	    ${DESTDIR}${INCLUDEDIR}/dev/pci
 	cd ${.CURDIR}/../sys/contrib/altq/altq; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 *.h \
 	    ${DESTDIR}${INCLUDEDIR}/altq
@@ -205,30 +242,70 @@ copies:
 	cd ${.CURDIR}/../sys/rpc; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 types.h \
 	    ${DESTDIR}${INCLUDEDIR}/rpc
+.if exists(${.CURDIR}/../sys/sys/mach)
+	${INSTALL} -d -o ${BINOWN} -g ${BINGRP} -m 755 \
+		${DESTDIR}${INCLUDEDIR}/sys/mach
+	cd ${.CURDIR}/../sys/sys/mach ; \
+	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 *.h *.defs \
+		${DESTDIR}${INCLUDEDIR}/sys/mach
+.endif
+.if exists(${.CURDIR}/../sys/sys/mach/ipc)
+	${INSTALL} -d -o ${BINOWN} -g ${BINGRP} -m 755 \
+		${DESTDIR}${INCLUDEDIR}/sys/mach/ipc
+	cd ${.CURDIR}/../sys/sys/mach/ipc ; \
+	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 *.h \
+		${DESTDIR}${INCLUDEDIR}/sys/mach/ipc
+.endif
+.if exists(${.CURDIR}/../sys/sys/mach_debug)
+	${INSTALL} -d -o ${BINOWN} -g ${BINGRP} -m 755 \
+		${DESTDIR}${INCLUDEDIR}/sys/mach_debug
+	cd ${.CURDIR}/../sys/sys/mach_debug ; \
+		${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 *.h *.defs \
+		${DESTDIR}${INCLUDEDIR}/sys/mach_debug
+.endif
+.if exists(${.CURDIR}/../sys/sys/mach/device)
+	${INSTALL} -d -o ${BINOWN} -g ${BINGRP} -m 755 \
+		${DESTDIR}${INCLUDEDIR}/sys/mach/device
+	cd ${.CURDIR}/../sys/sys/mach/device ; \
+		${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 *.h *.defs \
+		${DESTDIR}${INCLUDEDIR}/sys/mach/device
+.endif
 
 symlinks:
 	@${ECHO} "Setting up symlinks to kernel source tree..."
+	mkdir -p ${DESTDIR}${INCLUDEDIR}/apple/System
+	ln -fs ../sys ${DESTDIR}${INCLUDEDIR}/apple/System/sys
 .for i in ${LDIRS}
 	cd ${.CURDIR}/../sys/$i; \
 	for h in *.h; do \
 		ln -fs ../../../sys/$i/$$h ${DESTDIR}${INCLUDEDIR}/$i; \
 	done
 .endfor
-.for i in ${LSUBDIRS:Ndev/acpica:Ndev/bktr}
+.for i in ${LSUBDIRS:Ndev/agp:Ndev/acpica:Ndev/bktr:Ndev/pci}
 	cd ${.CURDIR}/../sys/$i; \
 	for h in *.h; do \
 		ln -fs ../../../../sys/$i/$$h ${DESTDIR}${INCLUDEDIR}/$i; \
 	done
 .endfor
 	cd ${.CURDIR}/../sys/dev/acpica; \
-	for h in acpiio.h; do \
+	for h in acpiio.h acpi_hpet.h; do \
 		ln -fs ../../../../sys/dev/acpica/$$h \
 		    ${DESTDIR}${INCLUDEDIR}/dev/acpica; \
+	done
+	cd ${.CURDIR}/../sys/dev/agp; \
+	for h in agpreg.h; do \
+		ln -fs ../../../../sys/dev/agp/$$h \
+		    ${DESTDIR}${INCLUDEDIR}/dev/agp; \
 	done
 	cd ${.CURDIR}/../sys/dev/bktr; \
 	for h in ioctl_*.h; do \
 		ln -fs ../../../../sys/dev/bktr/$$h \
 		    ${DESTDIR}${INCLUDEDIR}/dev/bktr; \
+	done
+	cd ${.CURDIR}/../sys/dev/pci; \
+	for h in pcireg.h; do \
+		ln -fs ../../../../sys/dev/pci/$$h \
+		    ${DESTDIR}${INCLUDEDIR}/dev/pci; \
 	done
 .for i in ${LSUBSUBDIRS}
 	cd ${.CURDIR}/../sys/$i; \
@@ -274,6 +351,18 @@ symlinks:
 		ln -fs ../../../../sys/${MACHINE}/include/pc/$$h \
 		    ${DESTDIR}${INCLUDEDIR}/machine/pc; \
 	done
+.endif
+.if exists(${.CURDIR}/../sys/${MACHINE}/include/mach)
+	cd ${.CURDIR}/../sys/${MACHINE}/include/mach; \
+	for h in *.h; do \
+		ln -fs ../../../../sys/${MACHINE}/include/mach/$$h \
+		    ${DESTDIR}${INCLUDEDIR}/machine/mach; \
+	done
+	for d in *.defs; do \
+		ln -fs ../../../../sys/${MACHINE}/include/mach/$$d \
+		    ${DESTDIR}${INCLUDEDIR}/machine/mach; \
+	done
+
 .endif
 .for _MARCH in ${_MARCHS}
 .if exists(${.CURDIR}/../sys/${_MARCH}/include)

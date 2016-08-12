@@ -69,7 +69,7 @@ typedef struct {
 #define	EXIT_FAILURE	1
 #define	EXIT_SUCCESS	0
 
-#define	RAND_MAX	0x7fffffff
+#define	RAND_MAX	0x7ffffffd
 
 __BEGIN_DECLS
 #ifdef _XLOCALE_H_
@@ -159,6 +159,7 @@ _Noreturn void	 _Exit(int);
  * If we're in a mode greater than C99, expose C1x functions.
  */
 #if __ISO_C_VISIBLE >= 2011 || __cplusplus >= 201103L
+void *	aligned_alloc(size_t, size_t);
 _Noreturn void
 	quick_exit(int);
 int	at_quick_exit(void (*)(void));
