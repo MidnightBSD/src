@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/misc/usb_hid_usages,v 1.2 2008/03/02 20:39:32 laffer1 Exp $
+# $MidnightBSD$
 #
 # USB HID usage table
 # Syntax:

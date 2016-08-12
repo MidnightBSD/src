@@ -1,4 +1,4 @@
-.\" $MidnightBSD: src/share/misc/mdoc.template,v 1.2 2007/04/10 06:24:54 laffer1 Exp $
+.\" $MidnightBSD$
 .\"
 .\" The following requests are required for all man pages.
 .Dd Month day, year
