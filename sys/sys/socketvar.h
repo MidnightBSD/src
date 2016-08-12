@@ -313,6 +313,7 @@ struct uio;
 /*
  * From uipc_socket and friends
  */
+int	sockargs(struct mbuf **mp, caddr_t buf, int buflen, int type);
 int	getsockaddr(struct sockaddr **namp, caddr_t uaddr, size_t len);
 void	soabort(struct socket *so);
 int	soaccept(struct socket *so, struct sockaddr **nam);
