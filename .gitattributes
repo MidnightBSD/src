@@ -17091,7 +17091,6 @@ contrib/libdispatch/Makefile.in -text
 contrib/libdispatch/aclocal.m4 -text
 contrib/libdispatch/autogen.sh -text
 contrib/libdispatch/config/config.guess -text
-contrib/libdispatch/config/config.h -text
 contrib/libdispatch/config/config.h.in -text
 contrib/libdispatch/config/config.sub -text
 contrib/libdispatch/config/depcomp -text
@@ -17163,7 +17162,6 @@ contrib/libdispatch/src/shims/getprogname.h svneol=native#text/plain
 contrib/libdispatch/src/shims/mach.c -text
 contrib/libdispatch/src/shims/malloc_zone.h -text
 contrib/libdispatch/src/shims/perfmon.h -text
-contrib/libdispatch/src/shims/time.c -text
 contrib/libdispatch/src/shims/time.h -text
 contrib/libdispatch/src/shims/time_2.c svneol=native#text/plain
 contrib/libdispatch/src/shims/tsd.c svneol=native#text/plain
