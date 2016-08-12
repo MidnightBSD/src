@@ -1645,7 +1645,7 @@ ogetpeername(td, uap)
 #endif /* COMPAT_OLDSOCK */
 
 int
-sockargs(struct mbuf **mp, char *buf, socklen_t buflen, int type)
+sockargs(struct mbuf **mp, char *buf, int buflen, int type)
 {
 	struct sockaddr *sa;
 	struct mbuf *m;
