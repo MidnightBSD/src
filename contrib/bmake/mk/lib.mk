@@ -129,7 +129,7 @@ LD_shared=${SHLIB_SHFLAGS}
 
 .endif # NetBSD
 
-.if ${TARGET_OSNAME} == "FreeBSD"
+.if ${TARGET_OSNAME} == "FreeBSD" || ${TARGET_OSNAME} == "MidnightBSD"
 .if ${OBJECT_FMT} == "ELF"
 SHLIB_SOVERSION=	${SHLIB_MAJOR}
 SHLIB_SHFLAGS=		-soname lib${LIB}.so.${SHLIB_SOVERSION}
@@ -172,7 +172,7 @@ DLLIB=
 LD_sobjs=`${LORDER} ${OBJS} | ${TSORT} | sed 's,\.o,.so,'`
 LD_pobjs=`${LORDER} ${OBJS} | ${TSORT} | sed 's,\.o,.po,'`
 AR_cq= -cqs
-.elif ${TARGET_OSNAME} == "FreeBSD"
+.elif ${TARGET_OSNAME} == "FreeBSD" ||  ${TARGET_OSNAME} == "MidnightBSD"
 LD_solib= lib${LIB}_pic.a
 .elif ${TARGET_OSNAME} == "Linux"
 SHLIB_LD = ${CC}
@@ -456,7 +456,7 @@ lib${LIB}_pic.a:: ${SOBJS}
 lib${LIB}.${LD_so}: ${SOLIB} ${DPADD}
 	@echo building shared ${LIB} library \(version ${SHLIB_FULLVERSION}\)
 	@rm -f ${.TARGET}
-.if ${TARGET_OSNAME} == "NetBSD" || ${TARGET_OSNAME} == "FreeBSD"
+.if ${TARGET_OSNAME} == "NetBSD" || ${TARGET_OSNAME} == "FreeBSD" || ${TARGET_OSNAME} == "MidnightBSD"
 .if ${OBJECT_FMT} == "ELF"
 	${SHLIB_LD} -x -shared ${SHLIB_SHFLAGS} -o ${.TARGET} \
 	    ${SHLIB_LDSTARTFILE} \
