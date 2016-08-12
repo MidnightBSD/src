@@ -302,12 +302,10 @@ mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mpo
 			const unsigned char *mode = sqlite3_column_text(stmt, 5);
 
 			if (data == NULL) {
-				err = "Out of memory";
-				result = MPORT_ERR_FATAL;
-				break; // we finalize below
+				e->data = strdup(""); /* needs to be empty string */	
+			} else {
+				e->data = strdup((char *) data);
 			}
-
-			e->data = strdup((char *) data);
 			if (checksum != NULL)
 				e->checksum = strdup((char *) checksum);
 			if (owner != NULL)
@@ -574,22 +572,47 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
                 SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
                 goto ERROR;
             }
+
             if (sqlite3_bind_text(insert, 3, e->checksum, -1, SQLITE_STATIC) != SQLITE_OK) {
                 SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
                 goto ERROR;
             }
-            if (sqlite3_bind_text(insert, 4, e->owner, -1, SQLITE_STATIC) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-                goto ERROR;
-            }
-            if (sqlite3_bind_text(insert, 5, e->group, -1, SQLITE_STATIC) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-                goto ERROR;
-            }
-            if (sqlite3_bind_text(insert, 6, e->mode, -1, SQLITE_STATIC) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-                goto ERROR;
-            }
+
+		if (e->owner != NULL) {
+	            if (sqlite3_bind_text(insert, 4, e->owner, -1, SQLITE_STATIC) != SQLITE_OK) {
+			SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+			goto ERROR;
+			}
+		} else {
+			if (sqlite3_bind_null(insert, 4) != SQLITE_OK) {
+				SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+				goto ERROR;
+			}
+		}
+
+		if (e->group != NULL) {
+			if (sqlite3_bind_text(insert, 5, e->group, -1, SQLITE_STATIC) != SQLITE_OK) {
+				SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+				goto ERROR;
+			}
+		} else {
+			if (sqlite3_bind_null(insert, 5) != SQLITE_OK) {
+				SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+				goto ERROR;
+			}
+		}
+
+	    if (e->mode != NULL) {
+	            if (sqlite3_bind_text(insert, 6, e->mode, -1, SQLITE_STATIC) != SQLITE_OK) {
+       		         SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+               		 goto ERROR;
+            	    }
+            } else {
+	            if (sqlite3_bind_null(insert, 6) != SQLITE_OK) {
+	                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+	                goto ERROR;
+	            }
+	   }
         } else if (e->type == ASSET_DIR || e->type == ASSET_DIRRM || e->type == ASSET_DIRRMTRY) {
 		/* if data starts with /, it's most likely an absolute path. Don't prepend cwd */
 			if (e->data != NULL && e->data[0] == '/')
