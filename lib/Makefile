@@ -83,7 +83,9 @@ SUBDIR=	${SUBDIR_ORDERED} \
 	libjail \
 	libjansson \
 	libkiconv \
+	liblaunch \
 	liblzma \
+	libmach \
 	libmagic \
 	libmemstat \
 	${_libmilter} \
@@ -91,7 +93,9 @@ SUBDIR=	${SUBDIR_ORDERED} \
 	${_libncp} \
 	libnetbsd \
 	${_libngatm} \
+	libnotify \
 	libopie \
+	libosxsupport \
 	libpam \
 	libpcap \
 	${_libpmc} \
@@ -106,6 +110,7 @@ SUBDIR=	${SUBDIR_ORDERED} \
 	${_libsmutil} \
 	libstand \
 	libstdbuf \
+	libSystem \
 	${_libtelnet} \
 	${_libthr} \
 	libthread_db \
