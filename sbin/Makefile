@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.5 (Berkeley) 3/31/94
 # $FreeBSD: src/sbin/Makefile,v 1.168 2007/07/24 15:35:00 scottl Exp $
-# $MidnightBSD: src/sbin/Makefile,v 1.12 2012/10/28 19:22:30 laffer1 Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
@@ -41,6 +41,7 @@ SUBDIR=	adjkerntz \
 	kldload \
 	kldstat \
 	kldunload \
+	launchd \
 	ldconfig \
 	md5 \
 	mdconfig \
