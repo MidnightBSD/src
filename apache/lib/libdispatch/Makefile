@@ -9,8 +9,8 @@ SRCS=	apply.c benchmark.c legacy.c object.c once.c \
 	queue.c queue_kevent.c semaphore.c source.c \
 	source_kevent.c time.c 
 
-WARNS?= 2
-CSTD=	gnu89
+WARNS?= 0
+CSTD=	gnu99
 
 CFLAGS+=	-fblocks -D__BLOCKS__=1
 
