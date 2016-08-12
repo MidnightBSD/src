@@ -1,5 +1,16 @@
 Updating Information for MidnightBSD users.
 
+20160811:
+	libdispatch 210
+
+	Added quirks for several models of SSDs to enable advanced format/4k mode. List includes
+	Samsung 830, 840, 850 and 750 series, Intel x25 and a few Toshiba models. Also
+	added WD Red drives.
+
+	Updated list of pci device vendors.
+
+	Updated list of usb devices. 
+
 20160807:
 	Implement several changes to libmport to fix some memory corruption issues.
 
