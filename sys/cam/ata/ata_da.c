@@ -446,6 +446,14 @@ static struct ada_quirk_entry ada_quirk_table[] =
 	},
 	{
 		/*
+		 * Samsung 750 Series SSDs
+		 * 4k optimised
+		 */
+		{ T_DIRECT, SIP_MEDIA_FIXED, "*", "Samsung SSD 750*", "*" },
+		/*quirks*/ADA_Q_4K
+	},
+	{
+		/*
 		 * Samsung 830 Series SSDs
 		 * 4k optimised
 		 */
@@ -490,6 +498,22 @@ static struct ada_quirk_entry ada_quirk_table[] =
 		 * 4k optimised & trim only works in 4k requests + 4k aligned
 		 */
 		{ T_DIRECT, SIP_MEDIA_FIXED, "*", "FTM??CT25H*", "*" },
+		/*quirks*/ADA_Q_4K
+	},
+	{
+		/*
+		 * Toshiba SSDs
+		 * 4k optimised  (some of these are 8k, but this is what we support now)
+		 */
+		{ T_DIRECT, SIP_MEDIA_FIXED, "*", "TOSHIBA THNSNH*", "*" },
+		/*quirks*/ADA_Q_4K
+	},
+	{
+		/*
+		 * Toshiba SSDs
+		 * 4k optimised
+		 */
+		{ T_DIRECT, SIP_MEDIA_FIXED, "*", "TOSHIBA THNSNJ???GCSU*", "*" },
 		/*quirks*/ADA_Q_4K
 	},
 	{
