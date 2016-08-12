@@ -175,7 +175,7 @@ block
 need not be reentrant safe, as it is not resubmitted to the target
 .Fa queue
 until any prior invocation for that dispatch source has completed.
-When the hander is set, the dispatch source will perform a
+When the handler is set, the dispatch source will perform a
 .Fn Block_copy
 on the
 .Fa handler
@@ -205,7 +205,7 @@ a cancellation handler is required for file descriptor and mach port based
 sources in order to safely close the descriptor or destroy the port. Closing the
 descriptor or port before the cancellation handler has run may result in a race
 condition: if a new descriptor is allocated with the same value as the recently
-cosed descriptor while the source's event handler is still running, the event
+closed descriptor while the source's event handler is still running, the event
 handler may read/write data to the wrong descriptor.
 .Pp
 .Sh DISPATCH SOURCE TYPES
@@ -221,11 +221,11 @@ handler via a call to
 The data will be merged with the source's pending data via an atomic add or
 logic OR (based on the source's type), and the event handler block will be
 submitted to the source's target queue. The
-.Fa mask
-and
 .Fa data
-are application defined. These sources have no
+is application defined. These sources have no
 .Fa handle
+or
+.Fa mask
 and zero should be used.
 .Pp
 .Vt DISPATCH_SOURCE_TYPE_MACH_SEND
@@ -309,7 +309,7 @@ will be performed.
 .Pp
 Users of this source type are strongly encouraged to perform non-blocking I/O
 and handle any truncated reads or error conditions that may occur. See
-.Xr fnctl 2
+.Xr fcntl 2
 for additional information about setting the
 .Vt O_NONBLOCK
 flag on a file descriptor.
@@ -445,7 +445,7 @@ is unused and should be zero.
 .Pp
 Users of this source type are strongly encouraged to perform non-blocking I/O
 and handle any truncated reads or error conditions that may occur. See
-.Xr fnctl 2
+.Xr fcntl 2
 for additional information about setting the
 .Vt O_NONBLOCK
 flag on a file descriptor.

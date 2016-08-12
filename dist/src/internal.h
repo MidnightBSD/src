@@ -29,6 +29,37 @@
 
 #include "config/config.h"
 
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
+
+#if TARGET_OS_WIN32
+// Include Win32 headers early in order to minimize the
+// likelihood of name pollution from dispatch headers.
+
+#ifndef WINVER
+#define WINVER 0x502
+#endif
+
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x502
+#endif
+
+#ifndef _MSC_VER
+#define _MSC_VER 1400
+#pragma warning(disable:4159)
+#endif
+
+#define WIN32_LEAN_AND_MEAN 1
+#define _CRT_SECURE_NO_DEPRECATE 1
+#define _CRT_SECURE_NO_WARNINGS 1
+
+#define BOOL WINBOOL
+#include <Windows.h>
+#undef BOOL
+
+#endif /* TARGET_OS_WIN32 */
+
 #define __DISPATCH_BUILDING_DISPATCH__
 #define __DISPATCH_INDIRECT__
 
@@ -96,6 +127,9 @@
 #include <netinet/in.h>
 
 #ifdef __BLOCKS__
+#if TARGET_OS_WIN32
+#define BLOCK_EXPORT extern "C" __declspec(dllexport)
+#endif /* TARGET_OS_WIN32 */
 #include <Block_private.h>
 #include <Block.h>
 #endif /* __BLOCKS__ */
@@ -137,8 +171,13 @@
 #define NSEC_PER_USEC 1000ull
 
 /* I wish we had __builtin_expect_range() */
+#if __GNUC__
 #define fastpath(x)	((typeof(x))__builtin_expect((long)(x), ~0l))
 #define slowpath(x)	((typeof(x))__builtin_expect((long)(x), 0l))
+#else
+#define fastpath(x) (x)
+#define slowpath(x) (x)
+#endif
 
 void _dispatch_bug(size_t line, long val) __attribute__((__noinline__));
 void _dispatch_abort(size_t line, long val) __attribute__((__noinline__,__noreturn__));
@@ -215,7 +254,11 @@ void _dispatch_logv(const char *msg, va_list) __attribute__((__noinline__,__form
 		}	\
 	} while (0)
 
-
+#if __GNUC__
+#define DO_CAST(x) ((struct dispatch_object_s *)(x)._do)
+#else
+#define DO_CAST(x) ((struct dispatch_object_s *)(x))
+#endif
 
 #ifdef __BLOCKS__
 dispatch_block_t _dispatch_Block_copy(dispatch_block_t block);
