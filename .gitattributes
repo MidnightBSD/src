@@ -11,7 +11,6 @@ apache/Makefile.inc -text
 apache/lib/Makefile -text
 apache/lib/Makefile.inc -text
 apache/lib/libdispatch/Makefile -text
-apache/lib/libdispatch/config.h -text
 apache/lib/libdispatch/config/config.h svneol=native#text/plain
 apache/lib/libdns_sd/Makefile -text
 apache/lib/libnss_mdns/Makefile -text
