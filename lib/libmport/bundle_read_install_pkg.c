@@ -301,11 +301,7 @@ mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mpo
 			const unsigned char *group = sqlite3_column_text(stmt, 4);
 			const unsigned char *mode = sqlite3_column_text(stmt, 5);
 
-			if (data == NULL) {
-				e->data = strdup(""); /* needs to be empty string */	
-			} else {
-				e->data = strdup((char *) data);
-			}
+			e->data = data == NULL ? NULL : strdup((char *) data);
 			if (checksum != NULL)
 				e->checksum = strdup((char *) checksum);
 			if (owner != NULL)
