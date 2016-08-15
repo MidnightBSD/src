@@ -40430,6 +40430,7 @@ contrib/tzcode/zic/zic.8 -text
 contrib/tzcode/zic/zic.c -text
 contrib/tzcode/zic/zic/Makefile -text
 contrib/tzdata/CONTRIBUTING -text
+contrib/tzdata/LICENSE -text
 contrib/tzdata/Makefile -text
 contrib/tzdata/NEWS -text
 contrib/tzdata/README -text
@@ -40440,6 +40441,7 @@ contrib/tzdata/asia -text
 contrib/tzdata/australasia -text
 contrib/tzdata/backward -text
 contrib/tzdata/backzone -text
+contrib/tzdata/checklinks.awk -text
 contrib/tzdata/checktab.awk -text
 contrib/tzdata/etcetera -text
 contrib/tzdata/europe -text
