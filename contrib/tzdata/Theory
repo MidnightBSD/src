@@ -173,7 +173,7 @@ like 'EST' to be compatible with human tradition and POSIX.
 Here are the general rules used for choosing time zone abbreviations,
 in decreasing order of importance:
 
-	Use three or more characters that are ASCII alphanumerics or '+' or '-'.
+	Use abbreviations that consist of three or more ASCII letters.
 		Previous editions of this database also used characters like
 		' ' and '?', but these characters have a special meaning to
 		the shell and cause commands like
@@ -181,16 +181,19 @@ in decreasing order of importance:
 		to have unexpected effects.
 		Previous editions of this rule required upper-case letters,
 		but the Congressman who introduced Chamorro Standard Time
-		preferred "ChST", so lower-case letters are now allowed.
-		Also, POSIX from 2001 on relaxed the rule to allow '-', '+',
-		and alphanumeric characters from the portable character set
-		in the current locale.  In practice ASCII alphanumerics and
-		'+' and '-' are safe in all locales.
+		preferred "ChST", so the rule has been relaxed.
 
-		In other words, in the C locale the POSIX extended regular
-		expression [-+[:alnum:]]{3,} should match the abbreviation.
-		This guarantees that all abbreviations could have been
-		specified by a POSIX TZ string.
+		This rule guarantees that all abbreviations could have
+		been specified by a POSIX TZ string.  POSIX
+		requires at least three characters for an
+		abbreviation.  POSIX through 2000 says that an abbreviation
+		cannot start with ':', and cannot contain ',', '-',
+		'+', NUL, or a digit.  POSIX from 2001 on changes this
+		rule to say that an abbreviation can contain only '-', '+',
+		and alphanumeric characters from the portable character set
+		in the current locale.  To be portable to both sets of
+		rules, an abbreviation must therefore use only ASCII
+		letters.
 
 	Use abbreviations that are in common use among English-speakers,
 		e.g. 'EST' for Eastern Standard Time in North America.
@@ -227,10 +230,9 @@ in decreasing order of importance:
 			name identifying each zone and append 'T', 'ST', etc.
 			as before; e.g. 'VLAST' for VLAdivostok Summer Time.
 
-	Use UT (with time zone abbreviation '-00') for locations while
-		uninhabited.  The leading '-' is a flag that the time
-		zone is in some sense undefined; this notation is
-		derived from Internet RFC 3339.
+	Use UT (with time zone abbreviation 'zzz') for locations while
+		uninhabited.  The 'zzz' mnemonic is that these locations are,
+		in some sense, asleep.
 
 Application writers should note that these abbreviations are ambiguous
 in practice: e.g. 'CST' has a different meaning in China than
