@@ -4,7 +4,7 @@ Updating Information for MidnightBSD users.
 	switched default desktop port to midnightbsd-desktop. This gives us flexibility to change it
 	in the release after the fact.
 
-	tzdata 2016f
+	tzdata 2016a
 
 20160811:
 	libdispatch 210
