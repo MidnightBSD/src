@@ -1,5 +1,6 @@
 * text=auto !eol
 /CONTRIBUTING -text
+/LICENSE -text
 /Makefile -text
 /NEWS -text
 /README -text
@@ -10,6 +11,7 @@
 /australasia -text
 /backward -text
 /backzone -text
+/checklinks.awk -text
 /checktab.awk -text
 /etcetera -text
 /europe -text
