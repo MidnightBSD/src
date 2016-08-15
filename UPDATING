@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20160814:
+	switched default desktop port to midnightbsd-desktop. This gives us flexibility to change it
+	in the release after the fact.
+
 20160811:
 	libdispatch 210
 
