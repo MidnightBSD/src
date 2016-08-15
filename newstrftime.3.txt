@@ -1,17 +1,13 @@
-NEWSTRFTIME(3)                                                  NEWSTRFTIME(3)
+NEWSTRFTIME(3)             Library Functions Manual             NEWSTRFTIME(3)
 
 NAME
        strftime - format date and time
 
 SYNOPSIS
-       #include <sys/types.h>
        #include <time.h>
 
-       size_t strftime(buf, maxsize, format, timeptr)
-       char *buf;
-       size_t maxsize;
-       const char *format;
-       const struct tm *timeptr
+       size_t strftime(char *restrict buf, size_t maxsize,
+           char const *restrict format, struct tm const *restrict timeptr);
 
        cc ... -ltz
 
@@ -24,7 +20,7 @@ DESCRIPTION
        into the buffer.  A conversion specification consists of a percent sign
        and one other character.
 
-       No more than maxsize characters are be placed into the array.  If the
+       No more than maxsize characters are placed into the array.  If the
        total number of resulting characters, including the terminating null
        character, is not more than maxsize, strftime returns the number of
        characters in the array, not counting the terminating null.  Otherwise,
@@ -93,8 +89,8 @@ DESCRIPTION
 
        %S     is replaced by the second as a decimal number (00-60).
 
-       %s     is replaced by the number of seconds since the Epoch, UTC (see
-              mktime(3)).
+       %s     is replaced by the number of seconds since the Epoch (see
+              newctime(3)).
 
        %T     is replaced by the time in the format %H:%M:%S.
 
@@ -130,10 +126,10 @@ DESCRIPTION
        %Z     is replaced by the time zone name, or by the empty string if
               this is not determinable.
 
-       %z     is replaced by the offset from UTC in the format +HHMM or -HHMM
-              as appropriate, with positive values representing locations east
-              of Greenwich, or by the empty string if this is not
-              determinable.
+       %z     is replaced by the offset from the Prime Meridian in the format
+              +HHMM or -HHMM as appropriate, with positive values representing
+              locations east of Greenwich, or by the empty string if this is
+              not determinable.
 
        %%     is replaced by a single %.
 

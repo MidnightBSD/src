@@ -1,17 +1,15 @@
-ZIC(8)                                                                  ZIC(8)
+ZIC(8)                      System Manager's Manual                     ZIC(8)
 
 NAME
        zic - time zone compiler
 
 SYNOPSIS
-       zic [ --version ] [ -v ] [ -d directory ] [ -l localtime ] [ -p
-       posixrules ] [ -L leapsecondfilename ] [ -s ] [ -y command ] [ filename
-       ... ]
+       zic [ option ... ] [ filename ... ]
 
 DESCRIPTION
        Zic reads text from the file(s) named on the command line and creates
        the time conversion information files specified in this input.  If a
-       filename is -, the standard input is read.
+       filename is "-", the standard input is read.
 
        These options are available:
 
@@ -40,28 +38,66 @@ DESCRIPTION
               If this option is not used, no leap second information appears
               in output files.
 
-       -v     Complain if a year that appears in a data file is outside the
-              range of years representable by time(2) values.  Also complain
-              if a time of 24:00 (which cannot be handled by pre-1998 versions
-              of zic) appears in the input.
+       -v     Be more verbose, and complain about the following situations:
+
+              The input specifies a link to a link.
+
+              A year that appears in a data file is outside the range of years
+              representable by time(2) values.
+
+              A time of 24:00 or more appears in the input.  Pre-1998 versions
+              of zic prohibit 24:00, and pre-2007 versions prohibit times
+              greater than 24:00.
+
+              A rule goes past the start or end of the month.  Pre-2004
+              versions of zic prohibit this.
+
+              The output file does not contain all the information about the
+              long-term future of a zone, because the future cannot be
+              summarized as an extended POSIX TZ string.  For example, as of
+              2013 this problem occurs for Iran's daylight-saving rules for
+              the predicted future, as these rules are based on the Iranian
+              calendar, which cannot be represented.
+
+              The output contains data that may not be handled properly by
+              client code designed for older zic output formats.  These
+              compatibility issues affect only time stamps before 1970 or
+              after the start of 2038.
+
+              A time zone abbreviation has fewer than 3 characters.  POSIX
+              requires at least 3.
+
+              An output file name contains a byte that is not an ASCII letter,
+              "-", "/", or "_"; or it contains a file name component that
+              contains more than 14 bytes or that starts with "-".
 
        -s     Limit time values stored in output files to values that are the
               same whether they're taken to be signed or unsigned.  You can
               use this option to generate SVVS-compatible files.
 
-       -y command
-              Use the given command rather than yearistype when checking year
-              types (see below).
+       Input files should be text files, that is, they should be a series of
+       zero or more lines, each ending in a newline byte and containing at
+       most 511 bytes, and without any NUL bytes.  The input text's encoding
+       is typically UTF-8 or ASCII; it should have a unibyte representation
+       for the POSIX Portable Character Set (PPCS) <http://pubs.opengroup.org/
+       onlinepubs/9699919799/basedefs/V1_chap06.html> and the encoding's non-
+       unibyte characters should consist entirely of non-PPCS bytes.  Non-PPCS
+       characters typically occur only in comments: although output file names
+       and time zone abbreviations can contain nearly any character, other
+       software will work better if these are limited to the restricted syntax
+       described under the -v option.
 
        Input lines are made up of fields.  Fields are separated from one
-       another by any number of white space characters.  Leading and trailing
-       white space on input lines is ignored.  An unquoted sharp character (#)
-       in the input introduces a comment which extends to the end of the line
-       the sharp character appears on.  White space characters and sharp
-       characters may be enclosed in double quotes (") if they're to be used
-       as part of a field.  Any line that is blank (after comment stripping)
-       is ignored.  Non-blank lines are expected to be of one of three types:
-       rule lines, zone lines, and link lines.
+       another by one or more white space characters.  The white space
+       characters are space, form feed, carriage return, newline, tab, and
+       vertical tab.  Leading and trailing white space on input lines is
+       ignored.  An unquoted sharp character (#) in the input introduces a
+       comment which extends to the end of the line the sharp character
+       appears on.  White space characters and sharp characters may be
+       enclosed in double quotes (") if they're to be used as part of a field.
+       Any line that is blank (after comment stripping) is ignored.  Non-blank
+       lines are expected to be of one of three types: rule lines, zone lines,
+       and link lines.
 
        Names (such as month names) must be in English and are case
        insensitive.  Abbreviations, if used, must be unambiguous in context.
@@ -80,10 +116,10 @@ DESCRIPTION
                part of.
 
        FROM    Gives the first year in which the rule applies.  Any integer
-               year can be supplied; the Gregorian calendar is assumed.  The
-               word minimum (or an abbreviation) means the minimum year
-               representable as an integer.  The word maximum (or an
-               abbreviation) means the maximum year representable as an
+               year can be supplied; the proleptic Gregorian calendar is
+               assumed.  The word minimum (or an abbreviation) means the
+               minimum year representable as an integer.  The word maximum (or
+               an abbreviation) means the maximum year representable as an
                integer.  Rules can describe times that are not representable
                as time values, with the unrepresentable times ignored; this
                allows rules to be portable among hosts with differing time
@@ -94,14 +130,8 @@ DESCRIPTION
                abbreviation) may be used to repeat the value of the FROM
                field.
 
-       TYPE    Gives the type of year in which the rule applies.  If TYPE is -
-               then the rule applies in all years between FROM and TO
-               inclusive.  If TYPE is something else, then zic executes the
-               command
-                    yearistype year type
-               to check the type of a year: an exit status of zero is taken to
-               mean that the year is of the given type; an exit status of one
-               is taken to mean that the year is not of the given type.
+       TYPE    should be "-" and is present for compatibility with older
+               versions of zic in which it could contain year types.
 
        IN      Names the month in which the rule takes effect.  Month names
                may be abbreviated.
@@ -132,17 +162,22 @@ DESCRIPTION
                followed by the letter w if the given time is local "wall
                clock" time, s if the given time is local "standard" time, or u
                (or g or z) if the given time is universal time; in the absence
-               of an indicator, wall clock time is assumed.
+               of an indicator, wall clock time is assumed.  The intent is
+               that a rule line describes the instants when a clock/calendar
+               set to the type of time specified in the AT field would show
+               the specified date and time of day.
 
        SAVE    Gives the amount of time to be added to local standard time
                when the rule is in effect.  This field has the same format as
                the AT field (although, of course, the w and s suffixes are not
-               used).
+               used).  Only the sum of standard time and this amount matters;
+               for example, zic does not distinguish a 10:30 standard time
+               plus an 0:30 SAVE from a 10:00 standard time plus a 1:00 SAVE.
 
        LETTER/S
                Gives the "variable part" (for example, the "S" or "D" in "EST"
                or "EDT") of time zone abbreviations to be used when this rule
-               is in effect.  If this field is -, the variable part is null.
+               is in effect.  If this field is "-", the variable part is null.
 
        A zone line has the form
 
@@ -150,40 +185,50 @@ DESCRIPTION
 
        For example:
 
-            Zone  Australia/Adelaide  9:30    Aus         CST     1971 Oct 31 2:00
+            Zone  Australia/Adelaide  9:30    Aus         AC%sT   1971 Oct 31  2:00
 
        The fields that make up a zone line are:
 
        NAME  The name of the time zone.  This is the name used in creating the
-             time conversion information file for the zone.
+             time conversion information file for the zone.  It should not
+             contain a file name component "." or ".."; a file name component
+             is a maximal substring that does not contain "/".
 
        GMTOFF
-             The amount of time to add to UTC to get standard time in this
+             The amount of time to add to UT to get standard time in this
              zone.  This field has the same format as the AT and SAVE fields
              of rule lines; begin the field with a minus sign if time must be
-             subtracted from UTC.
+             subtracted from UT.
 
        RULES/SAVE
              The name of the rule(s) that apply in the time zone or,
              alternately, an amount of time to add to local standard time.  If
              this field is - then standard time always applies in the time
-             zone.
+             zone.  When an amount of time is given, only the sum of standard
+             time and this amount matters.
 
        FORMAT
              The format for time zone abbreviations in this time zone.  The
              pair of characters %s is used to show where the "variable part"
-             of the time zone abbreviation goes.  Alternately, a slash (/)
-             separates standard and daylight abbreviations.
+             of the time zone abbreviation goes.  Alternately, a format can
+             use the pair of characters %z to stand for the UTC offset in the
+             form +-hh, +-hhmm, or +-hhmmss, using the shortest form that does
+             not lose information, where hh, mm, and ss are the hours,
+             minutes, and seconds east (+) or west (-) of UTC.  Alternately, a
+             slash (/) separates standard and daylight abbreviations.  To
+             conform to POSIX, a time zone abbreviation should contain only
+             alphanumeric ASCII characters, "+" and "-".
 
        UNTILYEAR [MONTH [DAY [TIME]]]
-             The time at which the UTC offset or the rule(s) change for a
+             The time at which the UT offset or the rule(s) change for a
              location.  It is specified as a year, a month, a day, and a time
              of day.  If this is specified, the time zone information is
-             generated from the given UTC offset and rule change until the
-             time specified.  The month, day, and time of day have the same
-             format as the IN, ON, and AT fields of a rule; trailing fields
-             can be omitted, and default to the earliest possible value for
-             the missing fields.
+             generated from the given UT offset and rule change until the time
+             specified, which is interpreted using the rules in effect just
+             before the transition.  The month, day, and time of day have the
+             same format as the IN, ON, and AT fields of a rule; trailing
+             fields can be omitted, and default to the earliest possible value
+             for the missing fields.
 
              The next line must be a "continuation" line; this has the same
              form as a zone line except that the string "Zone" and the name
@@ -194,19 +239,27 @@ DESCRIPTION
              lines do, indicating that the next line is a further
              continuation.
 
+       If a zone changes at the same instant that a rule would otherwise take
+       effect in the earlier zone or continuation line, the rule is ignored.
+       In a single zone it is an error if two rules take effect at the same
+       instant, or if two zone changes take effect at the same instant.
+
        A link line has the form
 
-            Link  LINK-FROM        LINK-TO
+            Link  TARGET           LINK-NAME
 
        For example:
 
             Link  Europe/Istanbul  Asia/Istanbul
 
-       The LINK-FROM field should appear as the NAME field in some zone line;
-       the LINK-TO field is used as an alternate name for that zone.
+       The TARGET field should appear as the NAME field in some zone line.
+       The LINK-NAME field is used as an alternate name for that zone; it has
+       the same syntax as a zone line's NAME field.
 
        Except for continuation lines, lines may appear in any order in the
-       input.
+       input.  However, the behavior is unspecified if multiple zone or link
+       lines define the same name, or if the source of one link line is the
+       target of another.
 
        Lines in the file that describes leap seconds have the following form:
 
@@ -229,10 +282,8 @@ EXTENDED EXAMPLE
        of its features.
 
          # Rule  NAME  FROM  TO    TYPE  IN   ON       AT    SAVE  LETTER/S
-         Rule    Swiss 1940  only  -     Nov  2        0:00  1:00  S
-         Rule    Swiss 1940  only  -     Dec  31       0:00  0     -
-         Rule    Swiss 1941  1942  -     May  Sun>=1   2:00  1:00  S
-         Rule    Swiss 1941  1942  -     Oct  Sun>=1   0:00  0
+         Rule    Swiss 1941  1942  -     May  Mon>=1   1:00  1:00  S
+         Rule    Swiss 1941  1942  -     Oct  Mon>=1   2:00  0     -
          Rule    EU    1977  1980  -     Apr  Sun>=1   1:00u 1:00  S
          Rule    EU    1977  only  -     Sep  lastSun  1:00u 0     -
          Rule    EU    1978  only  -     Oct   1       1:00u 0     -
@@ -240,34 +291,35 @@ EXTENDED EXAMPLE
          Rule    EU    1981  max   -     Mar  lastSun  1:00u 1:00  S
          Rule    EU    1996  max   -     Oct  lastSun  1:00u 0     -
 
-         # Zone  NAME           GMTOFF   RULES       FORMAT  UNTIL
-         Zone    Europe/Zurich  0:34:08  -           LMT     1848 Sep 12
-                                0:29:44  -           BMT     1894 Jun
-                                1:00     Swiss       CE%sT   1981
-                                1:00     EU          CE%sT
+         # Zone  NAME           GMTOFF  RULES/SAVE  FORMAT  UNTIL
+         Zone    Europe/Zurich  0:34:08 -           LMT     1853 Jul 16
+                                0:29:46 -           BMT     1894 Jun
+                                1:00    Swiss       CE%sT   1981
+                                1:00    EU          CE%sT
 
          Link    Europe/Zurich  Switzerland
 
        In this example, the zone is named Europe/Zurich but it has an alias as
-       Switzerland.  Zurich was 34 minutes and 8 seconds west of GMT until
-       1848-09-12 at 00:00, when the offset changed to 29 minutes and 44
-       seconds.  After 1894-06-01 at 00:00 Swiss daylight saving rules
-       (defined with lines beginning with "Rule Swiss") apply, and the GMT
-       offset became one hour.  From 1981 to the present, EU daylight saving
-       rules have applied, and the UTC offset has remained at one hour.
+       Switzerland.  This example says that Zurich was 34 minutes and 8
+       seconds west of UT until 1853-07-16 at 00:00, when the legal offset was
+       changed to 7o26'22.50''; although this works out to 0:29:45.50, the
+       input format cannot represent fractional seconds so it is rounded here.
+       After 1894-06-01 at 00:00 Swiss daylight saving rules (defined with
+       lines beginning with "Rule Swiss") apply, and the UT offset became one
+       hour.  From 1981 to the present, EU daylight saving rules have applied,
+       and the UTC offset has remained at one hour.
 
-       In 1940, daylight saving time applied from November 2 at 00:00 to
-       December 31 at 00:00.  In 1941 and 1942, daylight saving time applied
-       from the first Sunday in May at 02:00 to the first Sunday in October at
-       00:00.  The pre-1981 EU daylight-saving rules have no effect here, but
-       are included for completeness.  Since 1981, daylight saving has begun
-       on the last Sunday in March at 01:00 UTC.  Until 1995 it ended the last
-       Sunday in September at 01:00 UTC, but this changed to the last Sunday
-       in October starting in 1996.
+       In 1941 and 1942, daylight saving time applied from the first Monday in
+       May at 01:00 to the first Monday in October at 02:00.  The pre-1981 EU
+       daylight-saving rules have no effect here, but are included for
+       completeness.  Since 1981, daylight saving has begun on the last Sunday
+       in March at 01:00 UTC.  Until 1995 it ended the last Sunday in
+       September at 01:00 UTC, but this changed to the last Sunday in October
+       starting in 1996.
 
        For purposes of display, "LMT" and "BMT" were initially used,
        respectively.  Since Swiss rules and later EU rules were applied, the
-       display name for the timezone has been CET for standard time and CEST
+       display name for the time zone has been CET for standard time and CEST
        for daylight saving time.
 
 NOTES
@@ -278,13 +330,19 @@ NOTES
 
        If, for a particular zone, a clock advance caused by the start of
        daylight saving coincides with and is equal to a clock retreat caused
-       by a change in UTC offset, zic produces a single transition to daylight
-       saving at the new UTC offset (without any change in wall clock time).
+       by a change in UT offset, zic produces a single transition to daylight
+       saving at the new UT offset (without any change in wall clock time).
        To get separate transitions use multiple zone continuation lines
        specifying transition instants using universal time.
 
+       Time stamps well before the Big Bang are silently omitted from the
+       output.  This works around bugs in software that mishandles large
+       negative time stamps.  Call it sour grapes, but pre-Big-Bang time
+       stamps are physically suspect anyway.  The pre-Big-Bang cutoff time is
+       approximate and may change in future versions.
+
 FILE
-       /usr/local/etc/zoneinfo         standard directory used for created
+       /usr/local/etc/zoneinfo        standard directory used for created
        files
 
 SEE ALSO
