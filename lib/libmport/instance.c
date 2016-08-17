@@ -55,50 +55,49 @@ MPORT_PUBLIC_API int
 mport_instance_init(mportInstance *mport, const char *root) {
 
 	char dir[FILENAME_MAX];
-        mport->flags = 0;
+	mport->flags = 0;
 
-        if (root != NULL) {
-            mport->root = strdup(root);
-        } else {
-            mport->root = strdup("");
-        }
+	if (root != NULL) {
+		mport->root = strdup(root);
+	} else {
+		mport->root = strdup("");
+	}
 
-        mport_init_queues();
+	mport_init_queues();
 
-        (void) snprintf(dir, FILENAME_MAX, "%s/%s", mport->root, MPORT_INST_DIR);
+	(void) snprintf(dir, FILENAME_MAX, "%s/%s", mport->root, MPORT_INST_DIR);
 
-        if (mport_mkdir(dir) != MPORT_OK) {
+	if (mport_mkdir(dir) != MPORT_OK) {
 		RETURN_CURRENT_ERROR;
 	}
 
-        (void) snprintf(dir, FILENAME_MAX, "%s/%s", mport->root, MPORT_INST_INFRA_DIR);
+	(void) snprintf(dir, FILENAME_MAX, "%s/%s", mport->root, MPORT_INST_INFRA_DIR);
 
-        if (mport_mkdir(dir) != MPORT_OK) {
+	if (mport_mkdir(dir) != MPORT_OK) {
 		RETURN_CURRENT_ERROR;
 	}
 
+	/* dir is a file here, just trying to save memory */
+	(void) snprintf(dir, FILENAME_MAX, "%s/%s", mport->root, MPORT_MASTER_DB_FILE);
+	if (sqlite3_open(dir, &(mport->db)) != 0) {
+		sqlite3_close(mport->db);
+		RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+	}
 
-        /* dir is a file here, just trying to save memory */
-        (void) snprintf(dir, FILENAME_MAX, "%s/%s", mport->root, MPORT_MASTER_DB_FILE);
-        if (sqlite3_open(dir, &(mport->db)) != 0) {
-            sqlite3_close(mport->db);
-            RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-        }
-
-        if (sqlite3_create_function(mport->db, "mport_version_cmp", 2, SQLITE_ANY, NULL, &mport_version_cmp_sqlite,
-                                    NULL,
-                                    NULL) != SQLITE_OK) {
-            sqlite3_close(mport->db);
-            RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-        }
+	if (sqlite3_create_function(mport->db, "mport_version_cmp", 2, SQLITE_ANY, NULL, &mport_version_cmp_sqlite,
+								NULL,
+								NULL) != SQLITE_OK) {
+		sqlite3_close(mport->db);
+		RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+	}
 
 
-        /* set the default UI callbacks */
-        mport->msg_cb = &mport_default_msg_cb;
-        mport->progress_init_cb = &mport_default_progress_init_cb;
-        mport->progress_step_cb = &mport_default_progress_step_cb;
-        mport->progress_free_cb = &mport_default_progress_free_cb;
-        mport->confirm_cb = &mport_default_confirm_cb;
+	/* set the default UI callbacks */
+	mport->msg_cb = &mport_default_msg_cb;
+	mport->progress_init_cb = &mport_default_progress_init_cb;
+	mport->progress_step_cb = &mport_default_progress_step_cb;
+	mport->progress_free_cb = &mport_default_progress_free_cb;
+	mport->confirm_cb = &mport_default_confirm_cb;
 
 	int db_version = mport_get_database_version(mport->db);
 	if (db_version < 1) {

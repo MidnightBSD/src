@@ -332,7 +332,7 @@ static int
 do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
 	mportAssetList *alist = NULL;
-	mportAssetListEntry *e = NULL;
+	__block mportAssetListEntry *e = NULL;
     int file_total;
     int file_count = 0;
     struct archive_entry *entry;
@@ -347,7 +347,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
     char *mkdirp = NULL;
     struct stat sb;
     char file[FILENAME_MAX], cwd[FILENAME_MAX], dir[FILENAME_MAX];
-    sqlite3_stmt *insert = NULL;
+    __block sqlite3_stmt *insert = NULL;
 
     /* sadly, we can't just use abs pathnames, because it will break hardlinks */
     orig_cwd = getcwd(NULL, 0);
@@ -557,122 +557,152 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
                 break;
         }
 
-        /* insert this asset into the master database */
-        if (sqlite3_bind_int(insert, 1, (int) e->type) != SQLITE_OK) {
-            SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-            goto ERROR;
-        }
-        if (e->type == ASSET_FILE || e->type == ASSET_SAMPLE || e->type == ASSET_SHELL || e->type == ASSET_FILE_OWNER_MODE) {
-            /* don't put the root in the database! */
-            if (sqlite3_bind_text(insert, 2, file + strlen(mport->root), -1, SQLITE_STATIC) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-                goto ERROR;
-            }
+		/* insert this asset into the master database */
+		__block int code = MPORT_OK;
+		__block const char *err;
+		dispatch_sync(mportSQLSerial, ^{
+			if (sqlite3_bind_int(insert, 1, (int) e->type) != SQLITE_OK) {
+				code = MPORT_ERR_FATAL;
+				err = sqlite3_errmsg(mport->db);
+				return;
+			}
+			if (e->type == ASSET_FILE || e->type == ASSET_SAMPLE || e->type == ASSET_SHELL ||
+				e->type == ASSET_FILE_OWNER_MODE) {
+				/* don't put the root in the database! */
+				if (sqlite3_bind_text(insert, 2, file + strlen(mport->root), -1, SQLITE_STATIC) != SQLITE_OK) {
+					code = MPORT_ERR_FATAL;
+					err = sqlite3_errmsg(mport->db);
+					return;
+				}
 
-            if (sqlite3_bind_text(insert, 3, e->checksum, -1, SQLITE_STATIC) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-                goto ERROR;
-            }
+				if (sqlite3_bind_text(insert, 3, e->checksum, -1, SQLITE_STATIC) != SQLITE_OK) {
+					code = MPORT_ERR_FATAL;
+					err = sqlite3_errmsg(mport->db);
+					return;
+				}
 
-		if (e->owner != NULL) {
-	            if (sqlite3_bind_text(insert, 4, e->owner, -1, SQLITE_STATIC) != SQLITE_OK) {
-			SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+				if (e->owner != NULL) {
+					if (sqlite3_bind_text(insert, 4, e->owner, -1, SQLITE_STATIC) != SQLITE_OK) {
+						code = MPORT_ERR_FATAL;
+						err = sqlite3_errmsg(mport->db);
+						return;
+					}
+				} else {
+					if (sqlite3_bind_null(insert, 4) != SQLITE_OK) {
+						code = MPORT_ERR_FATAL;
+						err = sqlite3_errmsg(mport->db);
+						return;
+					}
+				}
+
+				if (e->group != NULL) {
+					if (sqlite3_bind_text(insert, 5, e->group, -1, SQLITE_STATIC) != SQLITE_OK) {
+						code = MPORT_ERR_FATAL;
+						err = sqlite3_errmsg(mport->db);
+						return;
+					}
+				} else {
+					if (sqlite3_bind_null(insert, 5) != SQLITE_OK) {
+						code = MPORT_ERR_FATAL;
+						err = sqlite3_errmsg(mport->db);
+						return;
+					}
+				}
+
+				if (e->mode != NULL) {
+					if (sqlite3_bind_text(insert, 6, e->mode, -1, SQLITE_STATIC) != SQLITE_OK) {
+						code = MPORT_ERR_FATAL;
+						err = sqlite3_errmsg(mport->db);
+						return;
+					}
+				} else {
+					if (sqlite3_bind_null(insert, 6) != SQLITE_OK) {
+						code = MPORT_ERR_FATAL;
+						err = sqlite3_errmsg(mport->db);
+						return;
+					}
+				}
+			} else if (e->type == ASSET_DIR || e->type == ASSET_DIRRM || e->type == ASSET_DIRRMTRY) {
+				/* if data starts with /, it's most likely an absolute path. Don't prepend cwd */
+				if (e->data != NULL && e->data[0] == '/')
+					(void) snprintf(dir, FILENAME_MAX, "%s", e->data);
+				else
+					(void) snprintf(dir, FILENAME_MAX, "%s/%s", cwd, e->data);
+
+				if (sqlite3_bind_text(insert, 2, dir, -1, SQLITE_STATIC) != SQLITE_OK) {
+					code = MPORT_ERR_FATAL;
+					err = sqlite3_errmsg(mport->db);
+					return;
+				}
+
+				if (sqlite3_bind_null(insert, 3) != SQLITE_OK) {
+					code = MPORT_ERR_FATAL;
+					err = sqlite3_errmsg(mport->db);
+					return;
+				}
+
+				if (sqlite3_bind_null(insert, 4) != SQLITE_OK) {
+					code = MPORT_ERR_FATAL;
+					err = sqlite3_errmsg(mport->db);
+					return;
+				}
+
+				if (sqlite3_bind_null(insert, 5) != SQLITE_OK) {
+					code = MPORT_ERR_FATAL;
+					err = sqlite3_errmsg(mport->db);
+					return;
+				}
+
+				if (sqlite3_bind_null(insert, 6) != SQLITE_OK) {
+					code = MPORT_ERR_FATAL;
+					err = sqlite3_errmsg(mport->db);
+					return;
+				}
+			} else {
+				if (sqlite3_bind_text(insert, 2, e->data, -1, SQLITE_STATIC) != SQLITE_OK) {
+					code = MPORT_ERR_FATAL;
+					err = sqlite3_errmsg(mport->db);
+					return;
+				}
+
+				if (sqlite3_bind_null(insert, 3) != SQLITE_OK) {
+					code = MPORT_ERR_FATAL;
+					err = sqlite3_errmsg(mport->db);
+					return;
+				}
+
+				if (sqlite3_bind_null(insert, 4) != SQLITE_OK) {
+					code = MPORT_ERR_FATAL;
+					err = sqlite3_errmsg(mport->db);
+					return;
+				}
+
+				if (sqlite3_bind_null(insert, 5) != SQLITE_OK) {
+					code = MPORT_ERR_FATAL;
+					err = sqlite3_errmsg(mport->db);
+					return;
+				}
+
+				if (sqlite3_bind_null(insert, 6) != SQLITE_OK) {
+					code = MPORT_ERR_FATAL;
+					err = sqlite3_errmsg(mport->db);
+					return;
+				}
+			}
+
+			if (sqlite3_step(insert) != SQLITE_DONE) {
+				code = MPORT_ERR_FATAL;
+				err = sqlite3_errmsg(mport->db);
+				return;
+			}
+
+			sqlite3_reset(insert);
+		});
+
+		if (code != MPORT_OK) {
+			SET_ERROR(code, err);
 			goto ERROR;
-			}
-		} else {
-			if (sqlite3_bind_null(insert, 4) != SQLITE_OK) {
-				SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-				goto ERROR;
-			}
 		}
-
-		if (e->group != NULL) {
-			if (sqlite3_bind_text(insert, 5, e->group, -1, SQLITE_STATIC) != SQLITE_OK) {
-				SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-				goto ERROR;
-			}
-		} else {
-			if (sqlite3_bind_null(insert, 5) != SQLITE_OK) {
-				SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-				goto ERROR;
-			}
-		}
-
-	    if (e->mode != NULL) {
-	            if (sqlite3_bind_text(insert, 6, e->mode, -1, SQLITE_STATIC) != SQLITE_OK) {
-       		         SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-               		 goto ERROR;
-            	    }
-            } else {
-	            if (sqlite3_bind_null(insert, 6) != SQLITE_OK) {
-	                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-	                goto ERROR;
-	            }
-	   }
-        } else if (e->type == ASSET_DIR || e->type == ASSET_DIRRM || e->type == ASSET_DIRRMTRY) {
-		/* if data starts with /, it's most likely an absolute path. Don't prepend cwd */
-			if (e->data != NULL && e->data[0] == '/')
-				(void) snprintf(dir, FILENAME_MAX, "%s", e->data);
-			else
-				(void) snprintf(dir, FILENAME_MAX, "%s/%s", cwd, e->data);
-
-            if (sqlite3_bind_text(insert, 2, dir, -1, SQLITE_STATIC) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-                goto ERROR;
-            }
-
-            if (sqlite3_bind_null(insert, 3) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-                goto ERROR;
-            }
-
-            if (sqlite3_bind_null(insert, 4) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-                goto ERROR;
-            }
-
-            if (sqlite3_bind_null(insert, 5) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-                goto ERROR;
-            }
-
-            if (sqlite3_bind_null(insert, 6) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-                goto ERROR;
-            }
-        } else {
-            if (sqlite3_bind_text(insert, 2, e->data, -1, SQLITE_STATIC) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-                goto ERROR;
-            }
-
-            if (sqlite3_bind_null(insert, 3) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-                goto ERROR;
-            }
-
-            if (sqlite3_bind_null(insert, 4) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-                goto ERROR;
-            }
-
-            if (sqlite3_bind_null(insert, 5) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-                goto ERROR;
-            }
-
-            if (sqlite3_bind_null(insert, 6) != SQLITE_OK) {
-                SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-                goto ERROR;
-            }
-        }
-
-        if (sqlite3_step(insert) != SQLITE_DONE) {
-            SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-            goto ERROR;
-        }
-
-        sqlite3_reset(insert);
     }
 
     sqlite3_finalize(insert);
