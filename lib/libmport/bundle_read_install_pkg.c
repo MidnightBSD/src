@@ -346,7 +346,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
     char *mode = NULL;
     char *mkdirp = NULL;
     struct stat sb;
-    char file[FILENAME_MAX], cwd[FILENAME_MAX], dir[FILENAME_MAX];
+    __block char file[FILENAME_MAX], cwd[FILENAME_MAX];
     __block sqlite3_stmt *insert = NULL;
 
     /* sadly, we can't just use abs pathnames, because it will break hardlinks */
@@ -379,6 +379,8 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 
     if (mport_chdir(mport, cwd) != MPORT_OK)
         goto ERROR;
+
+	mport_db_do(mport->db, "BEGIN TRANSACTION");
 
 	STAILQ_FOREACH(e, alist, next) {
         switch (e->type) {
@@ -560,7 +562,10 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 		/* insert this asset into the master database */
 		__block int code = MPORT_OK;
 		__block const char *err;
+		__block char *filePtr = strdup(file);
+		__block char *cwdPtr = strdup(cwd);
 		dispatch_sync(mportSQLSerial, ^{
+			char dir[FILENAME_MAX];
 			if (sqlite3_bind_int(insert, 1, (int) e->type) != SQLITE_OK) {
 				code = MPORT_ERR_FATAL;
 				err = sqlite3_errmsg(mport->db);
@@ -569,7 +574,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 			if (e->type == ASSET_FILE || e->type == ASSET_SAMPLE || e->type == ASSET_SHELL ||
 				e->type == ASSET_FILE_OWNER_MODE) {
 				/* don't put the root in the database! */
-				if (sqlite3_bind_text(insert, 2, file + strlen(mport->root), -1, SQLITE_STATIC) != SQLITE_OK) {
+				if (sqlite3_bind_text(insert, 2, filePtr + strlen(mport->root), -1, SQLITE_STATIC) != SQLITE_OK) {
 					code = MPORT_ERR_FATAL;
 					err = sqlite3_errmsg(mport->db);
 					return;
@@ -627,7 +632,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 				if (e->data != NULL && e->data[0] == '/')
 					(void) snprintf(dir, FILENAME_MAX, "%s", e->data);
 				else
-					(void) snprintf(dir, FILENAME_MAX, "%s/%s", cwd, e->data);
+					(void) snprintf(dir, FILENAME_MAX, "%s/%s", cwdPtr, e->data);
 
 				if (sqlite3_bind_text(insert, 2, dir, -1, SQLITE_STATIC) != SQLITE_OK) {
 					code = MPORT_ERR_FATAL;
@@ -699,29 +704,34 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 			sqlite3_reset(insert);
 		});
 
+		free(filePtr);
+		free(cwdPtr);
 		if (code != MPORT_OK) {
 			SET_ERROR(code, err);
 			goto ERROR;
 		}
-    }
+	}
 
-    sqlite3_finalize(insert);
+	if (mport_db_do(mport->db, "COMMIT") != MPORT_OK) {
+		SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+		goto ERROR;
+	}
+	sqlite3_finalize(insert);
 
 	mport_pkgmeta_logevent(mport, pkg, "Installed");
 
-    (mport->progress_free_cb)();
-    (void) mport_chdir(NULL, orig_cwd);
-    free(orig_cwd);
+	(mport->progress_free_cb)();
+	(void) mport_chdir(NULL, orig_cwd);
+	free(orig_cwd);
 	mport_assetlist_free(alist);
-    return MPORT_OK;
+	return (MPORT_OK);
 
-    ERROR:
-		sqlite3_finalize(insert);
-        (mport->progress_free_cb)();
-        free(orig_cwd);
-		mport_assetlist_free(alist);
-        //rollback();
-        RETURN_CURRENT_ERROR;
+ERROR:
+	sqlite3_finalize(insert);
+	(mport->progress_free_cb)();
+	free(orig_cwd);
+	mport_assetlist_free(alist);
+	RETURN_CURRENT_ERROR;
 }           
 
 
