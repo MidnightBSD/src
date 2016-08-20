@@ -771,6 +771,7 @@ mark_complete(mportInstance *mport, mportPackageMeta *pkg)
 static int
 do_post_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
+	char to[FILENAME_MAX], from[FILENAME_MAX]; /* keep these for COPY_METAFILE */
 
 	COPY_METAFILE(MPORT_MTREE_FILE);
 	COPY_METAFILE(MPORT_INSTALL_FILE);
