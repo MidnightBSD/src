@@ -316,12 +316,6 @@ mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mpo
 		    if (mode != NULL)
 			    e->mode = strdup((char *) mode);
 
-		    if (e->data == NULL) {
-			    err = "Out of memory";
-			    result = MPORT_ERR_FATAL;
-			    break;
-		    }
-
 		    STAILQ_INSERT_TAIL(alist, e, next);
 	    }
 
