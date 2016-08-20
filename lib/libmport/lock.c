@@ -36,7 +36,8 @@ __MBSDID("$MidnightBSD$");
 #include "mport_private.h"
 
 MPORT_PUBLIC_API int
-mport_lock_lock(mportInstance *mport, mportPackageMeta *pkg) {
+mport_lock_lock(mportInstance *mport, mportPackageMeta *pkg)
+{
 
 	/* we are already locked, just return */
 	if (mport_lock_islocked(pkg) == MPORT_LOCKED) {
@@ -47,14 +48,15 @@ mport_lock_lock(mportInstance *mport, mportPackageMeta *pkg) {
 		RETURN_CURRENT_ERROR;
 	}
 
-        return (MPORT_OK);
+	return (MPORT_OK);
 }
 
 MPORT_PUBLIC_API int
-mport_lock_unlock(mportInstance *mport, mportPackageMeta *pkg) {
+mport_lock_unlock(mportInstance *mport, mportPackageMeta *pkg)
+{
 	if (mport_lock_islocked(pkg) == MPORT_LOCKED) {
 		if (mport_db_do(mport->db, "update packages set locked=0 where pkg=%Q", pkg->name) != MPORT_OK) {
-			 RETURN_CURRENT_ERROR;
+			RETURN_CURRENT_ERROR;
 		}
 	}
 
@@ -66,7 +68,8 @@ mport_lock_unlock(mportInstance *mport, mportPackageMeta *pkg) {
  * MPORT_LOCKED is returned for an unknown package or a locked package as we can't do anything.
  */
 MPORT_PUBLIC_API int
-mport_lock_islocked(mportPackageMeta *pkg) {
+mport_lock_islocked(mportPackageMeta *pkg)
+{
 	if (pkg == NULL)
 		return MPORT_LOCKED;
 

@@ -36,66 +36,68 @@ __MBSDID("$MidnightBSD$");
 
 
 MPORT_PUBLIC_API char *
-mport_info(mportInstance *mport, const char *packageName) {
-    mportIndexEntry **indexEntry;
-    mportPackageMeta **packs;
-    char *status, *origin;
-    char *os_release;
-    char *cpe;
-    int locked = 0;
-    char *info_text = NULL;
+mport_info(mportInstance *mport, const char *packageName)
+{
+	mportIndexEntry **indexEntry;
+	mportPackageMeta **packs;
+	char *status, *origin;
+	char *os_release;
+	char *cpe;
+	int locked = 0;
+	char *info_text = NULL;
 
-    if (packageName == NULL) {
-        SET_ERROR(MPORT_ERR_FATAL, "Package name not found.");
-        return (NULL);
-    }
+	if (packageName == NULL) {
+		SET_ERROR(MPORT_ERR_FATAL, "Package name not found.");
+		return (NULL);
+	}
 
 
-    if (mport_index_lookup_pkgname(mport, packageName, &indexEntry) != MPORT_OK) {
-       return (NULL);
-    }
+	if (mport_index_lookup_pkgname(mport, packageName, &indexEntry) != MPORT_OK) {
+		return (NULL);
+	}
 
-    if (indexEntry == NULL || *indexEntry == NULL) {
-        SET_ERROR(MPORT_ERR_FATAL, "Could not resolve package.");
-        return (NULL);
-    }
+	if (indexEntry == NULL || *indexEntry == NULL) {
+		SET_ERROR(MPORT_ERR_FATAL, "Could not resolve package.");
+		return (NULL);
+	}
 
-    if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", packageName) != MPORT_OK) {
-        return (NULL);
-    }
+	if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", packageName) != MPORT_OK) {
+		return (NULL);
+	}
 
-    if (packs == NULL) {
-        status = strdup("N/A");
-        origin = strdup("");
-        os_release = strdup("");
-        cpe = strdup("");
-    } else {
-        status = (*packs)->version;
-        origin = (*packs)->origin;
-        os_release = (*packs)->os_release;
-        cpe = (*packs)->cpe;
-        locked = (*packs)->locked;
-    }
+	if (packs == NULL) {
+		status = strdup("N/A");
+		origin = strdup("");
+		os_release = strdup("");
+		cpe = strdup("");
+	} else {
+		status = (*packs)->version;
+		origin = (*packs)->origin;
+		os_release = (*packs)->os_release;
+		cpe = (*packs)->cpe;
+		locked = (*packs)->locked;
+	}
 
-    asprintf(&info_text, "%s\nlatest: %s\ninstalled: %s\nlicense: %s\norigin: %s\nos: %s\n\n%s\ncpe: %s\nlocked: %s\n",
-           (*indexEntry)->pkgname,
-           (*indexEntry)->version,
-           status,
-           (*indexEntry)->license,
-           origin,
-           os_release,
-           (*indexEntry)->comment,
-           cpe,
-           locked ? "yes" : "no");
+	asprintf(&info_text,
+	         "%s\nlatest: %s\ninstalled: %s\nlicense: %s\norigin: %s\nos: %s\n\n%s\ncpe: %s\nlocked: %s\n",
+	         (*indexEntry)->pkgname,
+	         (*indexEntry)->version,
+	         status,
+	         (*indexEntry)->license,
+	         origin,
+	         os_release,
+	         (*indexEntry)->comment,
+	         cpe,
+	         locked ? "yes" : "no");
 
-    if (packs == NULL) {
-        free(status);
-        free(origin);
-        free(os_release);
-        free(cpe);
-    } else
-        mport_pkgmeta_vec_free(packs);
+	if (packs == NULL) {
+		free(status);
+		free(origin);
+		free(os_release);
+		free(cpe);
+	} else
+		mport_pkgmeta_vec_free(packs);
 
-    mport_index_entry_free_vec(indexEntry);
-    return info_text;
+	mport_index_entry_free_vec(indexEntry);
+	return info_text;
 }

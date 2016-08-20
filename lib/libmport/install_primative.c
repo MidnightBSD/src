@@ -34,51 +34,52 @@ __MBSDID("$MidnightBSD$");
 #include <string.h>
 
 MPORT_PUBLIC_API int
-mport_install_primative(mportInstance *mport, const char *filename, const char *prefix) 
+mport_install_primative(mportInstance *mport, const char *filename, const char *prefix)
 {
-  mportBundleRead *bundle;
-  mportPackageMeta **pkgs, *pkg;
-  int i;
-  bool error = false;
-  
-  if ((bundle = mport_bundle_read_new()) == NULL)
-    RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
-  
-  if (mport_bundle_read_init(bundle, filename) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
+	mportBundleRead *bundle;
+	mportPackageMeta **pkgs, *pkg;
+	int i;
+	bool error = false;
 
-  if (mport_bundle_read_prep_for_install(mport, bundle) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-  
-  if (mport_pkgmeta_read_stub(mport, &pkgs) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-  
-  for (i=0; *(pkgs + i) != NULL; i++) {
-    pkg = pkgs[i];
-    
-    if (prefix != NULL) {
-      /* override the default prefix with the given prefix */
-      free(pkg->prefix);
-      if ((pkg->prefix = strdup(prefix)) == NULL) /* all hope is lost! bail */
-        RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
-    }
+	if ((bundle = mport_bundle_read_new()) == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 
-    if ((mport_check_preconditions(mport, pkg, MPORT_PRECHECK_INSTALLED|MPORT_PRECHECK_DEPENDS|MPORT_PRECHECK_CONFLICTS) != MPORT_OK) 
-                      || 
-        (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK)) 
-    {
-      mport_call_msg_cb(mport, "Unable to install %s-%s: %s", pkg->name, pkg->version, mport_err_string());
-      /* TODO: WHY WAS THIS HERE mport_set_err(MPORT_OK, NULL); */
-		error = true;
-		break; /* do not keep going if we have a package failure! */
-    }
-  }
+	if (mport_bundle_read_init(bundle, filename) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
 
-  if (mport_bundle_read_finish(mport, bundle) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
+	if (mport_bundle_read_prep_for_install(mport, bundle) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
 
-  if (error)
-     return MPORT_ERR_FATAL;
-    
-  return MPORT_OK;  
+	if (mport_pkgmeta_read_stub(mport, &pkgs) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	for (i = 0; *(pkgs + i) != NULL; i++) {
+		pkg = pkgs[i];
+
+		if (prefix != NULL) {
+			/* override the default prefix with the given prefix */
+			free(pkg->prefix);
+			if ((pkg->prefix = strdup(prefix)) == NULL) /* all hope is lost! bail */
+				RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+		}
+
+		if ((mport_check_preconditions(mport, pkg, MPORT_PRECHECK_INSTALLED | MPORT_PRECHECK_DEPENDS |
+		                                           MPORT_PRECHECK_CONFLICTS) != MPORT_OK)
+		    ||
+		    (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK)) {
+			mport_call_msg_cb(mport, "Unable to install %s-%s: %s", pkg->name, pkg->version,
+			                  mport_err_string());
+			/* TODO: WHY WAS THIS HERE mport_set_err(MPORT_OK, NULL); */
+			error = true;
+			break; /* do not keep going if we have a package failure! */
+		}
+	}
+
+	if (mport_bundle_read_finish(mport, bundle) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	if (error)
+		return MPORT_ERR_FATAL;
+
+	return MPORT_OK;
 }
