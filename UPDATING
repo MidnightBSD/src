@@ -1,5 +1,21 @@
 Updating Information for MidnightBSD users.
 
+20160821:
+	Do to an issue with the sensors framework and coretemp, the
+	coretemp module was imported from FreeBSD 9 stable for now. This allows
+	users of Intel CPUs to monitor the temperature of their processor
+	in the FreeBSD locations dev.cpu.0.temperature ... 
+
+	Bug fixes for the package manager locking have been merged from current
+	and should resolve some of the installation problems when commands
+	have no data, or some locking patterns. There are still a few edge cases
+	with recursively installing packages that need to be addressed. 
+
+	A bug was fixed where cpu frequency was not reported when an Intel processor
+	was in Turbo Boost at system boot. As the frequency was checked to be
+	+/- 25Mhz and frequencies are several hundred MHz above that it would
+	assume to be a misreport from base clock and ignored previously.
+
 20160531:
 	Fix four security issues with MidnightBSD.
 
