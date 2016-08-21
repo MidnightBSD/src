@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/coretemp/coretemp.c,v 1.5 2010/03/05 03:40:43 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007, 2008 Rui Paulo <rpaulo@FreeBSD.org>
  * All rights reserved.
@@ -46,6 +46,7 @@ __FBSDID("$FreeBSD: src/sys/dev/coretemp/coretemp.c,v 1.2.4.3.2.1 2008/11/25 02:
 
 #include <machine/specialreg.h>
 #include <machine/cpufunc.h>
+#include <machine/cputypes.h>
 #include <machine/md_var.h>
 
 extern int smp_cpus;
@@ -98,7 +99,7 @@ coretemp_identify(driver_t *driver, device_t parent)
 		return;
 
 	/* Check that CPUID 0x06 is supported and the vendor is Intel.*/
-	if (cpu_high < 6 || strcmp(cpu_vendor, "GenuineIntel"))
+	if (cpu_high < 6 || cpu_vendor_id != CPU_VENDOR_INTEL)
 		return;
 	/*
 	 * CPUID 0x06 returns 1 if the processor has on-die thermal
