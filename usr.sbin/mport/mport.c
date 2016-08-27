@@ -426,11 +426,11 @@ install_depends(mportInstance *mport, const char *packageName, const char *versi
 			warnx("%s", mport_err_string());
 			return mport_err_code();
 		}
-		mport_index_depends_free_vec(depends);
+		//mport_index_depends_free_vec(depends);
 	} else {
 		/* already installed */
 		mport_pkgmeta_vec_free(packs);
-		mport_index_depends_free_vec(depends);
+		//mport_index_depends_free_vec(depends);
 	}
 
 	return (0);
