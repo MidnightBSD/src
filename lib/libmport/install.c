@@ -71,6 +71,7 @@ mport_install(mportInstance *mport, const char *pkgname, const char *version, co
           if (strcmp(e[e_loc]->version, version) == 0) {
             break;
           }
+          e_loc++;
         }
         if (e[e_loc] == NULL) {
           mport_index_entry_free_vec(e);
@@ -110,7 +111,7 @@ mport_install(mportInstance *mport, const char *pkgname, const char *version, co
   ret = mport_install_primative(mport, filename, prefix);
 
   free(filename);
-  /* TODO: fix mport_index_entry_free_vec(e); */
+  mport_index_entry_free_vec(e);
   
   return ret;
 }
