@@ -494,12 +494,12 @@ mport_index_list(mportInstance *mport, mportIndexEntry ***entry_vec)
         break;
       }
 
-      e[i]->pkgname    = strdup(sqlite3_column_text(stmt, 0));
-      e[i]->version    = strdup(sqlite3_column_text(stmt, 1));
-      e[i]->comment    = strdup(sqlite3_column_text(stmt, 2));
-      e[i]->bundlefile = strdup(sqlite3_column_text(stmt, 3));
-      e[i]->license    = strdup(sqlite3_column_text(stmt, 4));
-      e[i]->hash       = strdup(sqlite3_column_text(stmt, 5));
+      e[i]->pkgname    = strdup((const char *) sqlite3_column_text(stmt, 0));
+      e[i]->version    = strdup((const char *) sqlite3_column_text(stmt, 1));
+      e[i]->comment    = strdup((const char *) sqlite3_column_text(stmt, 2));
+      e[i]->bundlefile = strdup((const char *) sqlite3_column_text(stmt, 3));
+      e[i]->license    = strdup((const char *) sqlite3_column_text(stmt, 4));
+      e[i]->hash       = strdup((const char *) sqlite3_column_text(stmt, 5));
 
       if (e[i]->pkgname == NULL || e[i]->version == NULL || e[i]->comment == NULL || e[i]->license == NULL || e[i]->bundlefile == NULL) {
         ret = MPORT_ERR_FATAL;
@@ -522,51 +522,57 @@ mport_index_list(mportInstance *mport, mportIndexEntry ***entry_vec)
 }
 
 
-static int lookup_alias(mportInstance *mport, const char *query, char **result) 
+static int lookup_alias(mportInstance *mport, const char *query, char **result)
 {
-  sqlite3_stmt *stmt;
-  int ret = MPORT_OK;
-  
-  if (mport_db_prepare(mport->db, &stmt, "SELECT pkg FROM idx.aliases WHERE alias=%Q", query) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-  
-  switch (sqlite3_step(stmt)) {
-    case SQLITE_ROW:
-      *result = strdup(sqlite3_column_text(stmt, 0));
-      break;
-    case SQLITE_DONE:
-      *result = strdup(query);
-      break;
-    default:
-      ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-      break;
-  }
-  
-  sqlite3_finalize(stmt);
-  return ret;   
+	sqlite3_stmt *stmt;
+	int ret = MPORT_OK;
+
+	if (mport_db_prepare(mport->db, &stmt, "SELECT pkg FROM idx.aliases WHERE alias=%Q", query) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	switch (sqlite3_step(stmt)) {
+		case SQLITE_ROW:
+			*result = strdup((const char *) sqlite3_column_text(stmt, 0));
+			break;
+		case SQLITE_DONE:
+			*result = strdup(query);
+			break;
+		default:
+			ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+			break;
+	}
+
+	sqlite3_finalize(stmt);
+	return ret;
 }
 
 
 /* free a vector of mportIndexEntry structs */
 MPORT_PUBLIC_API void mport_index_entry_free_vec(mportIndexEntry **e)
 {
-  int i;
-  
-  for (i=0; e[i] != NULL; i++) 
-    mport_index_entry_free(e[i]);
-  
-  free(e);
+
+	if (e == NULL)
+		return;
+
+	for (int i = 0; e[i] != NULL; i++)
+		mport_index_entry_free(e[i]);
+
+	free(e);
 }
 
 
 /* free a mportIndexEntry struct */
-MPORT_PUBLIC_API void mport_index_entry_free(mportIndexEntry *e) 
+MPORT_PUBLIC_API void mport_index_entry_free(mportIndexEntry *e)
 {
-  free(e->pkgname);
-  free(e->comment);
-  free(e->version);
-  free(e->bundlefile);
-  free(e->license);
-  free(e->hash);
-  free(e);
+
+	if (e == NULL)
+		return;
+
+	free(e->pkgname);
+	free(e->comment);
+	free(e->version);
+	free(e->bundlefile);
+	free(e->license);
+	free(e->hash);
+	free(e);
 }
