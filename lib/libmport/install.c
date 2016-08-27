@@ -110,7 +110,7 @@ mport_install(mportInstance *mport, const char *pkgname, const char *version, co
   ret = mport_install_primative(mport, filename, prefix);
 
   free(filename);
-  mport_index_entry_free_vec(e);
+  /* TODO: fix mport_index_entry_free_vec(e); */
   
   return ret;
 }
