@@ -129,6 +129,54 @@ mport_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char *fmt, ...)
 	return result;
 }
 
+int
+mport_db_count(sqlite3 *db, int *count, const char *fmt, ...) {
+	va_list args;
+	char *sql;
+	__block int result = MPORT_OK;
+	__block char *err;
+	__block int realCount = 0;
+
+	va_start(args, fmt);
+	sql = sqlite3_vmprintf(fmt, args);
+	va_end(args);
+
+	if (sql == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate memory for sql statement");
+
+	dispatch_sync(mportSQLSerial, ^{
+		sqlite3_stmt *stmt;
+		int sqlcode = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+		if (sqlcode == SQLITE_BUSY || sqlcode == SQLITE_LOCKED) {
+			sleep(1);
+			if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+				err = (char *) sqlite3_errmsg(db);
+				result = MPORT_ERR_FATAL;
+				return;
+			}
+		} else if (sqlcode != SQLITE_OK) {
+			err = (char *) sqlite3_errmsg(db);
+			result = MPORT_ERR_FATAL;
+			return;
+		}
+
+		sqlite3_free(sql);
+
+		if (sqlite3_step(stmt) != SQLITE_ROW) {
+			sqlite3_finalize(stmt);
+			return;
+		}
+
+		realCount = sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+	});
+	*count = realCount;
+
+	if (result == MPORT_ERR_FATAL)
+		SET_ERRORX(result, "sql error preparing '%s' : %s", sql, err);
+	return result;
+}
+
   
 
 /* mport_attach_stub_db(sqlite *db, const char *tmpdir) 
