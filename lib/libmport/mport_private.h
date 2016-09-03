@@ -177,10 +177,8 @@ int mport_set_errx(int , const char *, ...);
 #define MPORT_OSVERSION "0.9"
 #elif __MidnightBSD_version >= 8000
 #define MPORT_OSVERSION "0.8"
-#elif __MidnightBSD_version >= 7000
-#define MPORT_OSVERSION "0.7"
 #else
-#error "libmport only supports MidnightBSD versions 0.7 and greater."
+#error "libmport only supports MidnightBSD versions 0.8 and greater."
 #endif
 
 /* fetch stuff */
