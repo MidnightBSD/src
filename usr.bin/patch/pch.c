@@ -1,5 +1,4 @@
 /* $MidnightBSD$ */
-
 /*-
  * Copyright 1986, Larry Wall
  * 
@@ -26,7 +25,7 @@
  * behaviour
  *
  * $OpenBSD: pch.c,v 1.43 2014/11/18 17:03:35 tobias Exp $
- * $FreeBSD: stable/10/usr.bin/patch/pch.c 286348 2015-08-05 22:05:02Z delphij $
+ * $FreeBSD: stable/11/usr.bin/patch/pch.c 298530 2016-04-24 04:08:36Z pfg $
  */
 
 #include <sys/types.h>
@@ -35,6 +34,7 @@
 #include <ctype.h>
 #include <libgen.h>
 #include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -500,7 +500,7 @@ another_hunk(void)
 	LINENUM	fillcnt;			/* #lines of missing ptrn or repl */
 	LINENUM	fillsrc;			/* index of first line to copy */
 	LINENUM	filldst;			/* index of first missing line */
-	bool	ptrn_spaces_eaten;		/* ptrn was slightly misformed */
+	bool	ptrn_spaces_eaten;		/* ptrn was slightly malformed */
 	bool	repl_could_be_missing;		/* no + or ! lines in this hunk */
 	bool	repl_missing;			/* we are now backtracking */
 	off_t	repl_backtrack_position;	/* file pos of first repl line */
@@ -1143,7 +1143,7 @@ hunk_done:
 			say("Not enough memory to swap next hunk!\n");
 #ifdef DEBUGGING
 	if (debug & 2) {
-		int	i;
+		LINENUM	i;
 		char	special;
 
 		for (i = 0; i <= p_end; i++) {
@@ -1151,7 +1151,7 @@ hunk_done:
 				special = '^';
 			else
 				special = ' ';
-			fprintf(stderr, "%3d %c %c %s", i, p_char[i],
+			fprintf(stderr, "%3ld %c %c %s", i, p_char[i],
 			    special, p_line[i]);
 			fflush(stderr);
 		}
@@ -1502,17 +1502,8 @@ posix_name(const struct file_name *names, bool assume_exists)
 	}
 	if (path == NULL && !assume_exists) {
 		/*
-		 * No files found, look for something we can checkout from
-		 * RCS/SCCS dirs.  Same order as above.
-		 */
-		for (i = 0; i < MAX_FILE; i++) {
-			if (names[i].path != NULL &&
-			    (path = checked_in(names[i].path)) != NULL)
-				break;
-		}
-		/*
-		 * Still no match?  Check to see if the diff could be creating
-		 * a new file.
+		 * No files found, check to see if the diff could be
+		 * creating a new file.
 		 */
 		if (path == NULL && ok_to_create_file &&
 		    names[NEW_FILE].path != NULL)
@@ -1523,7 +1514,7 @@ posix_name(const struct file_name *names, bool assume_exists)
 }
 
 static char *
-compare_names(const struct file_name *names, bool assume_exists, int phase)
+compare_names(const struct file_name *names, bool assume_exists)
 {
 	size_t min_components, min_baselen, min_len, tmp;
 	char *best = NULL;
@@ -1540,9 +1531,7 @@ compare_names(const struct file_name *names, bool assume_exists, int phase)
 	min_components = min_baselen = min_len = SIZE_MAX;
 	for (i = INDEX_FILE; i >= OLD_FILE; i--) {
 		path = names[i].path;
-		if (path == NULL ||
-		    (phase == 1 && !names[i].exists && !assume_exists) ||
-		    (phase == 2 && checked_in(path) == NULL))
+		if (path == NULL || (!names[i].exists && !assume_exists))
 			continue;
 		if ((tmp = num_components(path)) > min_components)
 			continue;
@@ -1573,17 +1562,11 @@ best_name(const struct file_name *names, bool assume_exists)
 {
 	char *best;
 
-	best = compare_names(names, assume_exists, 1);
-	if (best == NULL) {
-		best = compare_names(names, assume_exists, 2);
-		/*
-		 * Still no match?  Check to see if the diff could be creating
-		 * a new file.
-		 */
-		if (best == NULL && ok_to_create_file &&
-		    names[NEW_FILE].path != NULL)
-			best = names[NEW_FILE].path;
-	}
+	best = compare_names(names, assume_exists);
+
+	/* No match?  Check to see if the diff could be creating a new file. */
+	if (best == NULL && ok_to_create_file)
+		best = names[NEW_FILE].path;
 
 	return best ? xstrdup(best) : NULL;
 }
