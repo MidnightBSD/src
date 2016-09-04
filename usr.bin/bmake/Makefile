@@ -84,7 +84,7 @@ SRCS+= ${LIBOBJS:T:.o=.c}
 prefix?= /usr
 srcdir?= ${.CURDIR}
 
-DEFAULT_SYS_PATH?= ${prefix}/share/mk
+DEFAULT_SYS_PATH?= .../share/mk:${prefix}/share/mk
 
 CPPFLAGS+= -DUSE_META
 CFLAGS+= ${CPPFLAGS}
