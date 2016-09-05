@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20160905:
+	Add a resource limit for the total number of kqueues
+	available to the user. Kqueue now saves the ucred of the
+	allocating thread, to correctly decrement the counter on close.
+	Based on FreeBSD SVN 256849
+
 20160814:
 	switched default desktop port to midnightbsd-desktop. This gives us flexibility to change it
 	in the release after the fact.
