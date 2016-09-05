@@ -6,6 +6,10 @@ Updating Information for MidnightBSD users.
 	allocating thread, to correctly decrement the counter on close.
 	Based on FreeBSD SVN 256849
 
+20160904:
+	Introduced experimental TCP sysctls starting with
+	net.inet.tcp.experimental.initcwnd10
+
 20160814:
 	switched default desktop port to midnightbsd-desktop. This gives us flexibility to change it
 	in the release after the fact.
