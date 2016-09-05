@@ -6,6 +6,8 @@ Updating Information for MidnightBSD users.
 	allocating thread, to correctly decrement the counter on close.
 	Based on FreeBSD SVN 256849
 
+	Import netcat from OpenBSD 5.2
+
 20160904:
 	Introduced experimental TCP sysctls starting with
 	net.inet.tcp.experimental.initcwnd10
