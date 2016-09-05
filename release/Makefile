@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.39 2013/04/06 04:25:45 laffer1 Exp $
+# $MidnightBSD$
 #
 # Makefile for building releases and release media.
 # 
@@ -73,6 +73,7 @@ src.txz:
 	-mkdir -p ${DISTDIR}/usr
 	ln -fs ${WORLDDIR} ${DISTDIR}/usr/src
 	cd ${DISTDIR} && tar cLvJf ${OUTPUT}/src.txz --exclude .svn \
+   	    --exclude .zfs --exclude @ --exclude usr/src/release/dist \
 	    --exclude "release/*.txz" --exclude CVS usr/src
 
 mports.txz:
