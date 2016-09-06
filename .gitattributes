@@ -2277,6 +2277,7 @@ cddl/lib/libavl/Makefile -text
 cddl/lib/libctf/Makefile -text
 cddl/lib/libdtrace/Makefile -text
 cddl/lib/libdtrace/errno.d -text
+cddl/lib/libdtrace/io.d svneol=native#text/plain
 cddl/lib/libdtrace/libproc_compat.h -text
 cddl/lib/libdtrace/net.d -text
 cddl/lib/libdtrace/nfs.d -text
@@ -61924,6 +61925,7 @@ sys/kern/capabilities.conf -text
 sys/kern/clock_if.m -text
 sys/kern/cpufreq_if.m -text
 sys/kern/device_if.m -text
+sys/kern/dtio_kdtrace.c svneol=native#text/plain
 sys/kern/genassym.sh -text
 sys/kern/imgact_aout.c -text
 sys/kern/imgact_elf.c -text
@@ -62407,6 +62409,7 @@ sys/modules/drm2/drm2/Makefile -text
 sys/modules/drm2/i915kms/Makefile -text
 sys/modules/dtrace/Makefile -text
 sys/modules/dtrace/Makefile.inc -text
+sys/modules/dtrace/dtio/Makefile svneol=native#text/plain
 sys/modules/dtrace/dtmalloc/Makefile -text
 sys/modules/dtrace/dtnfscl/Makefile -text
 sys/modules/dtrace/dtnfsclient/Makefile -text

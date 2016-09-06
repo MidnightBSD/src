@@ -1,4 +1,4 @@
-# $MidnightBSD: src/cddl/lib/libdtrace/Makefile,v 1.1 2012/04/06 02:23:54 laffer1 Exp $
+# $MidnightBSD$
 
 .PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libdtrace/common
 .PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libgen/common
@@ -46,6 +46,7 @@ SRCS=		dt_aggregate.c \
 		dis_tables.c
 
 DSRCS=		errno.d			\
+		io.d			\
 		psinfo.d		\
 		signal.d		\
 		unistd.d

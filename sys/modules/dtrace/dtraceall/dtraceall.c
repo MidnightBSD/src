@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/modules/dtrace/dtraceall/dtraceall.c,v 1.1 2012/03/28 21:16:38 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (C) 2008 John Birrell <jb@freebsd.org>
  * 
@@ -66,6 +66,7 @@ MODULE_VERSION(dtraceall, 1);
 MODULE_DEPEND(dtraceall, cyclic, 1, 1, 1);
 MODULE_DEPEND(dtraceall, opensolaris, 1, 1, 1);
 MODULE_DEPEND(dtraceall, dtrace, 1, 1, 1);
+MODULE_DEPEND(dtraceall, dtio, 1, 1, 1);
 MODULE_DEPEND(dtraceall, dtmalloc, 1, 1, 1);
 MODULE_DEPEND(dtraceall, dtnfscl, 1, 1, 1);
 MODULE_DEPEND(dtraceall, dtnfsclient, 1, 1, 1);
