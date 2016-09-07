@@ -55,7 +55,7 @@
 
 /* Version of FreeBSD we're compatible with */
 #undef __FreeBSD_version
-#define __FreeBSD_version 901000
+#define __FreeBSD_version 901502
 
 /*
  * It is tempting to use this macro in userland code when we want to enable
