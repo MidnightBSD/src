@@ -30,6 +30,11 @@ Updating Information for MidnightBSD users.
 
 	chkgrp(8) add support for q flag
 
+	Fix problem with the Samsung 840 PRO series SSD detection.
+	The device reports support for SATA Asynchronous Notification in its
+	IDENTIFY data, but returns error on attempt to enable that feature.
+	Make SATA XPT of CAM only report these errors, but not fail the device.
+
 20160905:
 	Add a resource limit for the total number of kqueues
 	available to the user. Kqueue now saves the ucred of the
