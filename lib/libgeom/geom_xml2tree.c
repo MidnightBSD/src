@@ -57,6 +57,8 @@ struct mystate {
 	struct sbuf		*sbuf[20];
 	struct gconf		*config;
 	int			nident;
+	XML_Parser		parser;
+	int			error;
 };
 
 static void
@@ -86,6 +88,8 @@ StartElement(void *userData, const char *name, const char **attr)
 	if (!strcmp(name, "class") && mt->class == NULL) {
 		mt->class = calloc(1, sizeof *mt->class);
 		if (mt->class == NULL) {
+			mt->error = errno;
+			XML_StopParser(mt->parser, 0);
 			warn("Cannot allocate memory during processing of '%s' "
 			    "element", name);
 			return;
@@ -99,6 +103,8 @@ StartElement(void *userData, const char *name, const char **attr)
 	if (!strcmp(name, "geom") && mt->geom == NULL) {
 		mt->geom = calloc(1, sizeof *mt->geom);
 		if (mt->geom == NULL) {
+			mt->error = errno;
+			XML_StopParser(mt->parser, 0);
 			warn("Cannot allocate memory during processing of '%s' "
 			    "element", name);
 			return;
@@ -117,6 +123,8 @@ StartElement(void *userData, const char *name, const char **attr)
 	if (!strcmp(name, "consumer") && mt->consumer == NULL) {
 		mt->consumer = calloc(1, sizeof *mt->consumer);
 		if (mt->consumer == NULL) {
+			mt->error = errno;
+			XML_StopParser(mt->parser, 0);
 			warn("Cannot allocate memory during processing of '%s' "
 			    "element", name);
 			return;
@@ -138,6 +146,8 @@ StartElement(void *userData, const char *name, const char **attr)
 	if (!strcmp(name, "provider") && mt->provider == NULL) {
 		mt->provider = calloc(1, sizeof *mt->provider);
 		if (mt->provider == NULL) {
+			mt->error = errno;
+			XML_StopParser(mt->parser, 0);
 			warn("Cannot allocate memory during processing of '%s' "
 			    "element", name);
 			return;
@@ -181,16 +191,19 @@ EndElement(void *userData, const char *name)
 	char *p;
 
 	mt = userData;
-	sbuf_finish(mt->sbuf[mt->level]);
-	p = strdup(sbuf_data(mt->sbuf[mt->level]));
+	p = NULL;
+	if (sbuf_finish(mt->sbuf[mt->level]) == 0)
+		p = strdup(sbuf_data(mt->sbuf[mt->level]));
+	sbuf_delete(mt->sbuf[mt->level]);
+	mt->sbuf[mt->level] = NULL;
+	mt->level--;
 	if (p == NULL) {
+		mt->error = errno;
+		XML_StopParser(mt->parser, 0);
 		warn("Cannot allocate memory during processing of '%s' "
 		    "element", name);
 		return;
 	}
-	sbuf_delete(mt->sbuf[mt->level]);
-	mt->sbuf[mt->level] = NULL;
-	mt->level--;
 	if (strlen(p) == 0) {
 		free(p);
 		p = NULL;
@@ -250,12 +263,16 @@ EndElement(void *userData, const char *name)
 	if (mt->config != NULL) {
 		gc = calloc(1, sizeof *gc);
 		if (gc == NULL) {
+			mt->error = errno;
+			XML_StopParser(mt->parser, 0);
 			warn("Cannot allocate memory during processing of '%s' "
 			    "element", name);
 			return;
 		}
 		gc->lg_name = strdup(name);
 		if (gc->lg_name == NULL) {
+			mt->error = errno;
+			XML_StopParser(mt->parser, 0);
 			warn("Cannot allocate memory during processing of '%s' "
 			    "element", name);
 			return;
@@ -335,7 +352,7 @@ geom_xml2tree(struct gmesh *gmp, char *p)
 	struct ggeom *ge;
 	struct gprovider *pr;
 	struct gconsumer *co;
-	int i;
+	int error, i;
 
 	memset(gmp, 0, sizeof *gmp);
 	LIST_INIT(&gmp->lg_class);
@@ -348,14 +365,22 @@ geom_xml2tree(struct gmesh *gmp, char *p)
 		return (ENOMEM);
 	}
 	mt->mesh = gmp;
+	mt->parser = parser;
+	error = 0;
 	XML_SetUserData(parser, mt);
 	XML_SetElementHandler(parser, StartElement, EndElement);
 	XML_SetCharacterDataHandler(parser, CharData);
 	i = XML_Parse(parser, p, strlen(p), 1);
+	if (mt->error != 0)
+		error = mt->error;
+	else if (i != 1) {
+		error = XML_GetErrorCode(parser) == XML_ERROR_NO_MEMORY ?
+		    ENOMEM : EILSEQ;
+	}
 	XML_ParserFree(parser);
-	if (i != 1) {
+	if (error != 0) {
 		free(mt);
-		return (-1);
+		return (error);
 	}
 	gmp->lg_ident = calloc(sizeof *gmp->lg_ident, mt->nident + 1);
 	free(mt);
