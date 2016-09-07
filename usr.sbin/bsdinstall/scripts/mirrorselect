@@ -46,7 +46,18 @@ MIRROR=`dialog --backtitle "MidnightBSD Installer" \
 MIRROR_BUTTON=$?
 exec 3>&-
 
-BSDINSTALL_DISTSITE="$MIRROR/pub/MidnightBSD/releases/`uname -m`/`uname -p`/"
+_UNAME_R=`uname -r`
+
+case ${_UNAME_R} in
+	*-CURRENT|*-STABLE|*-PRERELEASE)
+		RELDIR="snapshots"
+		;;
+	*)
+		RELDIR="releases"
+		;;
+esac
+
+BSDINSTALL_DISTSITE="$MIRROR/pub/MidnightBSD/${RELDIR}/`uname -m`/`uname -p`/${_UNAME_R}"
 
 case $MIRROR_BUTTON in
 $DIALOG_CANCEL)
