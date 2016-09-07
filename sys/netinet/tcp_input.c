@@ -581,9 +581,7 @@ tcp_input(struct mbuf *m, int off0)
 	uint8_t sig_checked = 0;
 #endif
 	uint8_t iptos = 0;
-#ifdef IPFIREWALL_FORWARD
-	struct m_tag *fwd_tag;
-#endif
+	struct m_tag *fwd_tag = NULL;
 #ifdef INET6
 	struct ip6_hdr *ip6 = NULL;
 	int isipv6;
@@ -831,6 +829,8 @@ findpcb:
 		}
 		/* Remove the tag from the packet.  We don't need it anymore. */
 		m_tag_delete(m, fwd_tag);
+		m->m_flags &= ~M_IP6_NEXTHOP;
+		fwd_tag = NULL;
 	} else
 #endif /* IPFIREWALL_FORWARD */
 	if (isipv6) {
@@ -870,6 +870,8 @@ findpcb:
 		}
 		/* Remove the tag from the packet.  We don't need it anymore. */
 		m_tag_delete(m, fwd_tag);
+		m->m_flags &= ~M_IP_NEXTHOP;
+		fwd_tag = NULL;
 	} else
 #endif /* IPFIREWALL_FORWARD */
 		inp = in_pcblookup_mbuf(&V_tcbinfo, ip->ip_src,
