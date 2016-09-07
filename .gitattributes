@@ -58358,6 +58358,7 @@ sys/dev/aic7xxx/aic7xxx_inline.h -text
 sys/dev/aic7xxx/aic7xxx_osm.c -text
 sys/dev/aic7xxx/aic7xxx_osm.h -text
 sys/dev/aic7xxx/aic7xxx_pci.c -text
+sys/dev/aic7xxx/aic7xxx_reg.h svneol=native#text/plain
 sys/dev/aic7xxx/aic_osm_lib.c -text
 sys/dev/aic7xxx/aic_osm_lib.h -text
 sys/dev/aic7xxx/aicasm/Makefile -text
