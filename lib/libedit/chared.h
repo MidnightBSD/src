@@ -70,7 +70,7 @@ typedef struct c_macro_t {
  * Undo information for vi - no undo in emacs (yet)
  */
 typedef struct c_undo_t {
-	int	 len;			/* length of saved line */
+	ssize_t	 len;			/* length of saved line */
 	int	 cursor;		/* position of saved cursor */
 	char	*buf;			/* full saved text */
 } c_undo_t;
