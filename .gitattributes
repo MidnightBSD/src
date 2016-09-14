@@ -66168,6 +66168,8 @@ tools/test/posixshm/shm_test.c -text
 tools/test/ppsapi/Makefile -text
 tools/test/ppsapi/README -text
 tools/test/ppsapi/ppsapitest.c -text
+tools/test/upsdl/Makefile svneol=native#text/plain
+tools/test/upsdl/upsdl.c svneol=native#text/plain
 tools/tools/README -text
 tools/tools/aac/Makefile -text
 tools/tools/aac/aac_checkq.c -text
