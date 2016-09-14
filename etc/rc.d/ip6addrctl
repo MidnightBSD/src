@@ -97,6 +97,9 @@ ip6addrctl_start()
 	[Nn][Oo][Nn][Ee])
 		${IP6ADDRCTL_CMD} flush >/dev/null 2>&1
 	;;
+	[Nn][Oo][Nn][Ee])
+		ip6addrctl flush >/dev/null 2>&1
+	;;
 	*)
 		warn "\$ip6addrctl_policy is invalid: ${ip6addrctl_policy}. " \
 		    " \"ipv4_prefer\" is used instead."
