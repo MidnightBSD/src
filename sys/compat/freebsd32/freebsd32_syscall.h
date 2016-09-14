@@ -132,8 +132,8 @@
 #define	FREEBSD32_SYS_setreuid	126
 #define	FREEBSD32_SYS_setregid	127
 #define	FREEBSD32_SYS_rename	128
-				/* 129 is obsolete otruncate */
-				/* 130 is obsolete ftruncate */
+				/* 129 is old truncate */
+				/* 130 is old ftruncate */
 #define	FREEBSD32_SYS_flock	131
 #define	FREEBSD32_SYS_mkfifo	132
 #define	FREEBSD32_SYS_sendto	133
