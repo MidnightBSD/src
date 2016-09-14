@@ -1090,6 +1090,7 @@ cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/grammar/err.D_ADDROF_LVAL.d 
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/grammar/err.D_EMPTY.empty.d -text
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/grammar/tst.clauses.d -text
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/grammar/tst.stmts.d -text
+cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/include/tst.includefirst.ksh -text
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/inline/err.D_DECL_IDRED.redef1.d -text
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/inline/err.D_DECL_IDRED.redef2.d -text
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/inline/err.D_IDENT_UNDEF.recur.d -text
@@ -1372,6 +1373,7 @@ cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/pragma/err.invalidlibdep.ksh
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/pragma/tst.libchain.ksh -text
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/pragma/tst.libdep.ksh -text
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/pragma/tst.libdepfullyconnected.ksh -text
+cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/pragma/tst.libdepsepdir.ksh -text
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/predicates/err.D_PRED_SCALAR.NonScalarPred.d -text
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/predicates/err.D_SYNTAX.invalid.d -text
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/predicates/err.D_SYNTAX.operr.d -text
@@ -1701,6 +1703,7 @@ cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/sdt/tst.sdtargs.c -text
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/sdt/tst.sdtargs.d -text
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/sizeof/err.D_IDENT_BADREF.SizeofAssoc.d -text
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/sizeof/err.D_IDENT_UNDEF.UnknownSymbol.d -text
+cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/sizeof/err.D_SIZEOF_TYPE.badstruct.d svneol=native#text/plain
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/sizeof/err.D_SIZEOF_TYPE.d -text
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/sizeof/err.D_SYNTAX.SizeofBadType.d -text
 cddl/contrib/opensolaris/cmd/dtrace/test/tst/common/sizeof/tst.SizeofArray.d -text
