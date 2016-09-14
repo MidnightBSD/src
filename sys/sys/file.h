@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)file.h	8.3 (Berkeley) 1/9/95
- * $MidnightBSD: src/sys/sys/file.h,v 1.5 2012/10/09 04:05:36 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYS_FILE_H_
@@ -126,6 +126,8 @@ struct fadvise_info {
 	int		fa_advice;	/* (f) FADV_* type. */
 	off_t		fa_start;	/* (f) Region start. */
 	off_t		fa_end;		/* (f) Region end. */
+	off_t		fa_prevstart;	/* (f) Previous NOREUSE start. */
+	off_t		fa_prevend;	/* (f) Previous NOREUSE end. */
 };
 
 struct file {
