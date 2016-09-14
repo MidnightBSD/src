@@ -54715,6 +54715,7 @@ share/man/man4/amdsmb.4 -text
 share/man/man4/amdtemp.4 -text
 share/man/man4/amr.4 -text
 share/man/man4/an.4 -text
+share/man/man4/aout.4 svneol=native#text/plain
 share/man/man4/apic.4 -text
 share/man/man4/arcmsr.4 -text
 share/man/man4/asmc.4 -text
