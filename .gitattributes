@@ -49192,6 +49192,7 @@ lib/libc/locale/isspace.3 -text
 lib/libc/locale/isspecial.3 -text
 lib/libc/locale/isupper.3 -text
 lib/libc/locale/iswalnum.3 -text
+lib/libc/locale/iswalnum_l.3 svneol=native#text/plain
 lib/libc/locale/iswctype.c -text
 lib/libc/locale/isxdigit.3 -text
 lib/libc/locale/ldpart.c -text
