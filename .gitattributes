@@ -61991,6 +61991,7 @@ sys/kern/kern_priv.c -text
 sys/kern/kern_proc.c -text
 sys/kern/kern_prot.c -text
 sys/kern/kern_racct.c -text
+sys/kern/kern_rangelock.c svneol=native#text/plain
 sys/kern/kern_rctl.c -text
 sys/kern/kern_resource.c -text
 sys/kern/kern_rmlock.c -text
@@ -64519,6 +64520,7 @@ sys/sys/ptrace.h -text
 sys/sys/queue.h -text
 sys/sys/racct.h -text
 sys/sys/random.h -text
+sys/sys/rangelock.h svneol=native#text/plain
 sys/sys/rctl.h -text
 sys/sys/reboot.h -text
 sys/sys/refcount.h -text
