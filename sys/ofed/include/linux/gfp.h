@@ -2,6 +2,7 @@
  * Copyright (c) 2010 Isilon Systems, Inc.
  * Copyright (c) 2010 iX Systems, Inc.
  * Copyright (c) 2010 Panasas, Inc.
+ * Copyright (c) 2013 Mellanox Technologies, Ltd.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,11 +30,14 @@
 #ifndef	_LINUX_GFP_H_
 #define	_LINUX_GFP_H_
 
+#include <sys/cdefs.h>
+#include <sys/types.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
 
 #include <linux/page.h>
 
+#include <vm/vm_param.h>
 #include <vm/vm_object.h>
 #include <vm/vm_extern.h>
 #include <vm/vm_kern.h>
@@ -101,6 +105,13 @@ __free_pages(void *p, unsigned int order)
 	kmem_free(kmem_map, (vm_offset_t)p, size);
 }
 
+static inline void free_pages(uintptr_t addr, unsigned int order)
+{
+	if (addr == 0)
+		return;
+	__free_pages(virt_to_page((void *)addr), order);
+}
+
 /*
  * Alloc pages allocates directly from the buddy allocator on linux so
  * order specifies a power of two bucket of pages and the results
@@ -119,5 +130,19 @@ alloc_pages(gfp_t gfp_mask, unsigned int order)
 		return (NULL);
         return (virt_to_page(page));
 }
+
+static inline uintptr_t __get_free_pages(gfp_t gfp_mask, unsigned int order)
+{
+	struct page *page;
+
+	page = alloc_pages(gfp_mask, order);
+	if (page == NULL)
+		return (0);
+	return ((uintptr_t)page_address(page));
+}
+
+#define alloc_pages_node(node, mask, order)     alloc_pages(mask, order)
+
+#define kmalloc_node(chunk, mask, node)         kmalloc(chunk, mask)
 
 #endif	/* _LINUX_GFP_H_ */

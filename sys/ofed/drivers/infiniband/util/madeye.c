@@ -30,7 +30,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $Id: madeye.c,v 1.1.1.1 2012-07-21 15:17:36 laffer1 Exp $
+ * $Id$
  */
 #include <linux/module.h>
 #include <linux/device.h>

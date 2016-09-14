@@ -2,6 +2,7 @@
  * Copyright (c) 2010 Isilon Systems, Inc.
  * Copyright (c) 2010 iX Systems, Inc.
  * Copyright (c) 2010 Panasas, Inc.
+ * Copyright (c) 2013, 2014 Mellanox Technologies, Ltd.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -49,7 +50,7 @@
  * however it should be fairly fast.  It is basically a radix tree with
  * a builtin bitmap for allocation.
  */
-MALLOC_DEFINE(M_IDR, "idr", "Linux IDR compat");
+static MALLOC_DEFINE(M_IDR, "idr", "Linux IDR compat");
 
 static inline int
 idr_max(struct idr *idr)
@@ -76,6 +77,7 @@ idr_destroy(struct idr *idr)
 {
 	struct idr_layer *il, *iln;
 
+	idr_remove_all(idr);
 	mtx_lock(&idr->lock);
 	for (il = idr->free; il != NULL; il = iln) {
 		iln = il->ary[0];

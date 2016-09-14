@@ -36,7 +36,7 @@
 #include <linux/scatterlist.h>
 #include <linux/sched.h>
 
-#include <asm/page.h>
+#include <linux/page.h>
 
 #include "mthca_memfree.h"
 #include "mthca_dev.h"
@@ -447,6 +447,7 @@ static u64 mthca_uarc_virt(struct mthca_dev *dev, struct mthca_uar *uar, int pag
 		uar->index * dev->uar_table.uarc_size +
 		page * MTHCA_ICM_PAGE_SIZE;
 }
+
 
 #include <vm/vm_map.h>
 #include <vm/vm_pageout.h>

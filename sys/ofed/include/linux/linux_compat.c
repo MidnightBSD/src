@@ -2,6 +2,7 @@
  * Copyright (c) 2010 Isilon Systems, Inc.
  * Copyright (c) 2010 iX Systems, Inc.
  * Copyright (c) 2010 Panasas, Inc.
+ * Copyright (c) 2013, 2014 Mellanox Technologies, Ltd.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,6 +32,9 @@
 #include <sys/malloc.h>
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
+#include <sys/proc.h>
+#include <sys/sglist.h>
+#include <sys/sleepqueue.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/bus.h>
@@ -54,6 +58,8 @@
 #include <linux/mm.h>
 #include <linux/io.h>
 #include <linux/vmalloc.h>
+#include <linux/timer.h>
+#include <linux/netdevice.h>
 
 #include <vm/vm_pager.h>
 
@@ -65,19 +71,16 @@ MALLOC_DEFINE(M_KMALLOC, "linux", "Linux kmalloc compat");
 #undef file
 #undef cdev
 #define	RB_ROOT(head)	(head)->rbh_root
-#undef LIST_HEAD
-/* From sys/queue.h */
-#define LIST_HEAD(name, type)						\
-struct name {								\
-	struct type *lh_first;	/* first element */			\
-}
 
 struct kobject class_root;
 struct device linux_rootdev;
 struct class miscclass;
 struct list_head pci_drivers;
 struct list_head pci_devices;
+struct net init_net;
 spinlock_t pci_lock;
+
+unsigned long linux_timer_hz_mask;
 
 int
 panic_cmp(struct rb_node *one, struct rb_node *two)
@@ -159,11 +162,25 @@ kobject_release(struct kref *kref)
 static void
 kobject_kfree(struct kobject *kobj)
 {
-
 	kfree(kobj);
 }
 
+static void
+kobject_kfree_name(struct kobject *kobj)
+{
+	if (kobj) {
+		kfree(kobj->name);
+	}
+}
+
 struct kobj_type kfree_type = { .release = kobject_kfree };
+
+static void
+dev_release(struct device *dev)
+{
+	pr_debug("dev_release: %s\n", dev_name(dev));
+	kfree(dev);
+}
 
 struct device *
 device_create(struct class *class, struct device *parent, dev_t devt,
@@ -177,6 +194,7 @@ device_create(struct class *class, struct device *parent, dev_t devt,
 	dev->class = class;
 	dev->devt = devt;
 	dev->driver_data = drvdata;
+	dev->release = dev_release;
 	va_start(args, fmt);
 	kobject_set_name_vargs(&dev->kobj, fmt, args);
 	va_end(args);
@@ -211,7 +229,8 @@ linux_file_dtor(void *cdp)
 	struct linux_file *filp;
 
 	filp = cdp;
-	filp->f_op->release(curthread->td_fpop->f_vnode, filp);
+	filp->f_op->release(filp->f_vnode, filp);
+	vdrop(filp->f_vnode);
 	kfree(filp);
 }
 
@@ -231,6 +250,8 @@ linux_dev_open(struct cdev *dev, int oflags, int devtype, struct thread *td)
 	filp->f_dentry = &filp->f_dentry_store;
 	filp->f_op = ldev->ops;
 	filp->f_flags = file->f_flag;
+	vhold(file->f_vnode);
+	filp->f_vnode = file->f_vnode;
 	if (filp->f_op->open) {
 		error = -filp->f_op->open(file->f_vnode, filp);
 		if (error) {
@@ -263,7 +284,8 @@ linux_dev_close(struct cdev *dev, int fflag, int devtype, struct thread *td)
 	if ((error = devfs_get_cdevpriv((void **)&filp)) != 0)
 		return (error);
 	filp->f_flags = file->f_flag;
-	devfs_clear_cdevpriv();
+        devfs_clear_cdevpriv();
+        
 
 	return (0);
 }
@@ -392,16 +414,6 @@ linux_dev_poll(struct cdev *dev, int events, struct thread *td)
 }
 
 static int
-linux_dev_mmap(struct cdev *dev, vm_ooffset_t offset, vm_paddr_t *paddr,
-    int nprot, vm_memattr_t *memattr)
-{
-
-	/* XXX memattr not honored. */
-	*paddr = offset;
-	return (0);
-}
-
-static int
 linux_dev_mmap_single(struct cdev *dev, vm_ooffset_t *offset,
     vm_size_t size, struct vm_object **object, int nprot)
 {
@@ -409,36 +421,41 @@ linux_dev_mmap_single(struct cdev *dev, vm_ooffset_t *offset,
 	struct linux_file *filp;
 	struct file *file;
 	struct vm_area_struct vma;
-	vm_paddr_t paddr;
-	vm_page_t m;
 	int error;
 
 	file = curthread->td_fpop;
 	ldev = dev->si_drv1;
 	if (ldev == NULL)
 		return (ENODEV);
-	if (size != PAGE_SIZE)
-		return (EINVAL);
 	if ((error = devfs_get_cdevpriv((void **)&filp)) != 0)
 		return (error);
 	filp->f_flags = file->f_flag;
 	vma.vm_start = 0;
-	vma.vm_end = PAGE_SIZE;
+	vma.vm_end = size;
 	vma.vm_pgoff = *offset / PAGE_SIZE;
 	vma.vm_pfn = 0;
-	vma.vm_page_prot = 0;
+	vma.vm_page_prot = VM_MEMATTR_DEFAULT;
 	if (filp->f_op->mmap) {
 		error = -filp->f_op->mmap(filp, &vma);
 		if (error == 0) {
-			paddr = (vm_paddr_t)vma.vm_pfn << PAGE_SHIFT;
-			*offset = paddr;
-			m = PHYS_TO_VM_PAGE(paddr);
-			*object = vm_pager_allocate(OBJT_DEVICE, dev,
-			    PAGE_SIZE, nprot, *offset, curthread->td_ucred);
-		        if (*object == NULL)
-               			 return (EINVAL);
-			if (vma.vm_page_prot != VM_MEMATTR_DEFAULT)
-				pmap_page_set_memattr(m, vma.vm_page_prot);
+			struct sglist *sg;
+
+			sg = sglist_alloc(1, M_WAITOK);
+			sglist_append_phys(sg,
+			    (vm_paddr_t)vma.vm_pfn << PAGE_SHIFT, vma.vm_len);
+			*object = vm_pager_allocate(OBJT_SG, sg, vma.vm_len,
+			    nprot, 0, curthread->td_ucred);
+		        if (*object == NULL) {
+				sglist_free(sg);
+				return (EINVAL);
+			}
+			*offset = 0;
+			if (vma.vm_page_prot != VM_MEMATTR_DEFAULT) {
+				VM_OBJECT_LOCK(*object);
+				vm_object_set_memattr(*object,
+				    vma.vm_page_prot);
+				VM_OBJECT_UNLOCK(*object);
+			}
 		}
 	} else
 		error = ENODEV;
@@ -455,7 +472,6 @@ struct cdevsw linuxcdevsw = {
 	.d_write = linux_dev_write,
 	.d_ioctl = linux_dev_ioctl,
 	.d_mmap_single = linux_dev_mmap_single,
-	.d_mmap = linux_dev_mmap,
 	.d_poll = linux_dev_poll,
 };
 
@@ -575,7 +591,9 @@ struct vmmap {
 	unsigned long		vm_size;
 };
 
-LIST_HEAD(vmmaphd, vmmap);
+struct vmmaphd {
+	struct vmmap *lh_first;
+};
 #define	VMMAP_HASH_SIZE	64
 #define	VMMAP_HASH_MASK	(VMMAP_HASH_SIZE - 1)
 #define	VM_HASH(addr)	((uintptr_t)(addr) >> PAGE_SHIFT) & VMMAP_HASH_MASK
@@ -666,8 +684,204 @@ vunmap(void *addr)
 	kfree(vmmap);
 }
 
+char *
+kvasprintf(gfp_t gfp, const char *fmt, va_list ap)
+{
+	unsigned int len;
+	char *p;
+	va_list aq;
+
+	va_copy(aq, ap);
+	len = vsnprintf(NULL, 0, fmt, aq);
+	va_end(aq);
+
+	p = kmalloc(len + 1, gfp);
+	if (p != NULL)
+		vsnprintf(p, len + 1, fmt, ap);
+
+	return (p);
+}
+
+char *
+kasprintf(gfp_t gfp, const char *fmt, ...)
+{
+	va_list ap;
+	char *p;
+
+	va_start(ap, fmt);
+	p = kvasprintf(gfp, fmt, ap);
+	va_end(ap);
+
+	return (p);
+}
+
+static int
+linux_timer_jiffies_until(unsigned long expires)
+{
+	int delta = expires - jiffies;
+	/* guard against already expired values */
+	if (delta < 1)
+		delta = 1;
+	return (delta);
+}
+
 static void
-linux_compat_init(void)
+linux_timer_callback_wrapper(void *context)
+{
+	struct timer_list *timer;
+
+	timer = context;
+	timer->function(timer->data);
+}
+
+void
+mod_timer(struct timer_list *timer, unsigned long expires)
+{
+
+	timer->expires = expires;
+	callout_reset(&timer->timer_callout,		      
+	    linux_timer_jiffies_until(expires),
+	    &linux_timer_callback_wrapper, timer);
+}
+
+void
+add_timer(struct timer_list *timer)
+{
+
+	callout_reset(&timer->timer_callout,
+	    linux_timer_jiffies_until(timer->expires),
+	    &linux_timer_callback_wrapper, timer);
+}
+
+static void
+linux_timer_init(void *arg)
+{
+
+	/*
+	 * Compute an internal HZ value which can divide 2**32 to
+	 * avoid timer rounding problems when the tick value wraps
+	 * around 2**32:
+	 */
+	linux_timer_hz_mask = 1;
+	while (linux_timer_hz_mask < (unsigned long)hz)
+		linux_timer_hz_mask *= 2;
+	linux_timer_hz_mask--;
+}
+SYSINIT(linux_timer, SI_SUB_DRIVERS, SI_ORDER_FIRST, linux_timer_init, NULL);
+
+void
+linux_complete_common(struct completion *c, int all)
+{
+	int wakeup_swapper;
+
+	sleepq_lock(c);
+	c->done++;
+	if (all)
+		wakeup_swapper = sleepq_broadcast(c, SLEEPQ_SLEEP, 0, 0);
+	else
+		wakeup_swapper = sleepq_signal(c, SLEEPQ_SLEEP, 0, 0);
+	sleepq_release(c);
+	if (wakeup_swapper)
+		kick_proc0();
+}
+
+/*
+ * Indefinite wait for done != 0 with or without signals.
+ */
+long
+linux_wait_for_common(struct completion *c, int flags)
+{
+
+	if (flags != 0)
+		flags = SLEEPQ_INTERRUPTIBLE | SLEEPQ_SLEEP;
+	else
+		flags = SLEEPQ_SLEEP;
+	for (;;) {
+		sleepq_lock(c);
+		if (c->done)
+			break;
+		sleepq_add(c, NULL, "completion", flags, 0);
+		if (flags & SLEEPQ_INTERRUPTIBLE) {
+			if (sleepq_wait_sig(c, 0) != 0)
+				return (-ERESTARTSYS);
+		} else
+			sleepq_wait(c, 0);
+	}
+	c->done--;
+	sleepq_release(c);
+
+	return (0);
+}
+
+/*
+ * Time limited wait for done != 0 with or without signals.
+ */
+long
+linux_wait_for_timeout_common(struct completion *c, long timeout, int flags)
+{
+	long end = jiffies + timeout;
+
+	if (flags != 0)
+		flags = SLEEPQ_INTERRUPTIBLE | SLEEPQ_SLEEP;
+	else
+		flags = SLEEPQ_SLEEP;
+	for (;;) {
+		int ret;
+
+		sleepq_lock(c);
+		if (c->done)
+			break;
+		sleepq_add(c, NULL, "completion", flags, 0);
+		sleepq_set_timeout(c, linux_timer_jiffies_until(end));
+		if (flags & SLEEPQ_INTERRUPTIBLE)
+			ret = sleepq_timedwait_sig(c, 0);
+		else
+			ret = sleepq_timedwait(c, 0);
+		if (ret != 0) {
+			/* check for timeout or signal */
+			if (ret == EWOULDBLOCK)
+				return (0);
+			else
+				return (-ERESTARTSYS);
+		}
+	}
+	c->done--;
+	sleepq_release(c);
+
+	/* return how many jiffies are left */
+	return (linux_timer_jiffies_until(end));
+}
+
+int
+linux_try_wait_for_completion(struct completion *c)
+{
+	int isdone;
+
+	isdone = 1;
+	sleepq_lock(c);
+	if (c->done)
+		c->done--;
+	else
+		isdone = 0;
+	sleepq_release(c);
+	return (isdone);
+}
+
+int
+linux_completion_done(struct completion *c)
+{
+	int isdone;
+
+	isdone = 1;
+	sleepq_lock(c);
+	if (c->done == 0)
+		isdone = 0;
+	sleepq_release(c);
+	return (isdone);
+}
+
+static void
+linux_compat_init(void *arg)
 {
 	struct sysctl_oid *rootoid;
 	int i;
@@ -695,3 +909,12 @@ linux_compat_init(void)
 }
 
 SYSINIT(linux_compat, SI_SUB_DRIVERS, SI_ORDER_SECOND, linux_compat_init, NULL);
+
+static void
+linux_compat_uninit(void *arg)
+{
+	kobject_kfree_name(&class_root);
+	kobject_kfree_name(&linux_rootdev.kobj);
+	kobject_kfree_name(&miscclass.kobj);
+}
+SYSUNINIT(linux_compat, SI_SUB_DRIVERS, SI_ORDER_SECOND, linux_compat_uninit, NULL);

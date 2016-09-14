@@ -67,8 +67,6 @@
 #include <netinet/in_var.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip_var.h>
-#include <netinet/ip_fw.h>
-#include <netinet/ipfw/ip_fw_private.h>
 #endif
 #ifdef INET6
 #include <netinet6/nd6.h>
@@ -111,7 +109,8 @@ enum {
 	IPOIB_ENCAP_LEN		  = 4,
 	IPOIB_HEADER_LEN	  = IPOIB_ENCAP_LEN + INFINIBAND_ALEN,
 	IPOIB_UD_MAX_MTU	  = 4 * 1024,
-	IPOIB_UD_RX_SG		  = (IPOIB_UD_MAX_MTU / MJUMPAGESIZE),
+//	IPOIB_UD_RX_SG		  = (IPOIB_UD_MAX_MTU / MJUMPAGESIZE),
+	IPOIB_UD_RX_SG		  = 2,
 	IPOIB_UD_TX_SG		  = (IPOIB_UD_MAX_MTU / MCLBYTES) + 2,
 	IPOIB_CM_MAX_MTU	  = (64 * 1024),
 	IPOIB_CM_TX_SG		  = (IPOIB_CM_MAX_MTU / MCLBYTES) + 2,
@@ -319,6 +318,8 @@ struct ipoib_dev_priv {
 	u8 broadcastaddr[INFINIBAND_ALEN];
 
 	unsigned long flags;
+
+	int gone;
 
 	struct mutex vlan_mutex;
 

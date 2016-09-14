@@ -85,7 +85,7 @@ RW_SYSINIT(sdplockinit, &sdp_lock, "SDP lock");
 #define	SDP_LIST_RLOCK_ASSERT()	rw_assert(&sdp_lock, RW_RLOCKED)
 #define	SDP_LIST_LOCK_ASSERT()	rw_assert(&sdp_lock, RW_LOCKED)
 
-MALLOC_DEFINE(M_SDP, "sdp", "Socket Direct Protocol");
+static MALLOC_DEFINE(M_SDP, "sdp", "Socket Direct Protocol");
 
 static void sdp_stop_keepalive_timer(struct socket *so);
 
@@ -1267,7 +1267,7 @@ sdp_sorecv(struct socket *so, struct sockaddr **psa, struct uio *uio,
 
 	/* Socket buffer is empty and we shall not block. */
 	if (sb->sb_cc == 0 &&
-	    ((sb->sb_flags & SS_NBIO) || (flags & (MSG_DONTWAIT|MSG_NBIO)))) {
+	    ((so->so_state & SS_NBIO) || (flags & (MSG_DONTWAIT|MSG_NBIO)))) {
 		error = EAGAIN;
 		goto out;
 	}
@@ -1297,7 +1297,7 @@ restart:
 
 	/* Socket buffer got some data that we shall deliver now. */
 	if (sb->sb_cc > 0 && !(flags & MSG_WAITALL) &&
-	    ((sb->sb_flags & SS_NBIO) ||
+	    ((so->so_state & SS_NBIO) ||
 	     (flags & (MSG_DONTWAIT|MSG_NBIO)) ||
 	     sb->sb_cc >= sb->sb_lowat ||
 	     sb->sb_cc >= uio->uio_resid ||
@@ -1878,7 +1878,7 @@ next:
 	return (error);
 }
 
-SYSCTL_NODE(_net_inet, -1,  sdp,    CTLFLAG_RW, 0,  "SDP");
+static SYSCTL_NODE(_net_inet, -1,  sdp,    CTLFLAG_RW, 0,  "SDP");
 
 SYSCTL_PROC(_net_inet_sdp, TCPCTL_PCBLIST, pcblist,
     CTLFLAG_RD | CTLTYPE_STRUCT, 0, 0, sdp_pcblist, "S,xtcpcb",

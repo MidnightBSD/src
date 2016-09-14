@@ -40,7 +40,6 @@ static	int ipoib_resolvemulti(struct ifnet *, struct sockaddr **,
 
 #include <linux/module.h>
 
-#include <linux/init.h>
 #include <linux/slab.h>
 #include <linux/kernel.h>
 #include <linux/vmalloc.h>
@@ -258,6 +257,10 @@ ipoib_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 	struct ifaddr *ifa = (struct ifaddr *) data;
 	struct ifreq *ifr = (struct ifreq *) data;
 	int error = 0;
+
+	/* check if detaching */
+	if (priv == NULL || priv->gone != 0)
+		return (ENXIO);
 
 	switch (command) {
 	case SIOCSIFFLAGS:
@@ -795,6 +798,7 @@ ipoib_detach(struct ipoib_dev_priv *priv)
 
 	dev = priv->dev;
 	if (!test_bit(IPOIB_FLAG_SUBINTERFACE, &priv->flags)) {
+		priv->gone = 1;
 		bpfdetach(dev);
 		if_detach(dev);
 		if_free(dev);
@@ -1072,6 +1076,8 @@ ipoib_remove_one(struct ib_device *device)
 	list_for_each_entry_safe(priv, tmp, dev_list, list) {
 		if (rdma_port_get_link_layer(device, priv->port) != IB_LINK_LAYER_INFINIBAND)
 			continue;
+
+		ipoib_stop(priv);
 
 		ib_unregister_event_handler(&priv->event_handler);
 
@@ -1537,3 +1543,20 @@ ipoib_resolvemulti(struct ifnet *ifp, struct sockaddr **llsa,
 
 module_init(ipoib_init_module);
 module_exit(ipoib_cleanup_module);
+
+#undef MODULE_VERSION
+#include <sys/module.h>
+static int
+ipoib_evhand(module_t mod, int event, void *arg)
+{
+	                return (0);
+}
+
+static moduledata_t ipoib_mod = {
+	                .name = "ipoib",
+			                .evhand = ipoib_evhand,
+};
+
+DECLARE_MODULE(ipoib, ipoib_mod, SI_SUB_SMP, SI_ORDER_ANY);
+MODULE_DEPEND(ipoib, ibcore, 1, 1, 1);
+
