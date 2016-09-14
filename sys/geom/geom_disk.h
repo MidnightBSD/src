@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/geom_disk.h,v 1.4 2012/03/31 16:58:04 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Poul-Henning Kamp
  * All rights reserved.
@@ -79,7 +79,6 @@ struct disk {
 	disk_ioctl_t		*d_ioctl;
 	dumper_t		*d_dump;
 	disk_getattr_t		*d_getattr;
-	disk_gone_t		*d_gone;
 
 	/* Info fields from driver to geom_disk.c. Valid when open */
 	u_int			d_sectorsize;
@@ -98,12 +97,16 @@ struct disk {
 
 	/* Fields private to the driver */
 	void			*d_drv1;
+
+	/* new fields in stable - don't use if DISKFLAG_LACKS_GONE is set */
+	disk_gone_t		*d_gone;
 };
 
 #define DISKFLAG_NEEDSGIANT	0x1
 #define DISKFLAG_OPEN		0x2
 #define DISKFLAG_CANDELETE	0x4
 #define DISKFLAG_CANFLUSHCACHE	0x8
+#define DISKFLAG_LACKS_GONE	0x10
 
 struct disk *disk_alloc(void);
 void disk_create(struct disk *disk, int version);

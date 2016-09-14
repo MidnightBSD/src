@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/geom_disk.c,v 1.5 2012/03/31 16:58:04 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -510,7 +510,14 @@ g_disk_providergone(struct g_provider *pp)
 
 	dp = sc->dp;
 
-	if (dp->d_gone != NULL)
+	/*
+	 * FreeBSD 9 started with VERSION_01 of the struct disk structure.
+	 * However, g_gone was added in the middle of the branch.  To
+	 * cope with version being missing from struct disk, we set a flag
+	 * in g_disk_create for VERSION_01 and avoid touching the d_gone
+	 * field for old consumers.
+	 */
+	if (!(dp->d_flags & DISKFLAG_LACKS_GONE) && dp->d_gone != NULL)
 		dp->d_gone(dp);
 }
 
@@ -578,7 +585,7 @@ disk_alloc()
 void
 disk_create(struct disk *dp, int version)
 {
-	if (version != DISK_VERSION_02) {
+	if (version != DISK_VERSION_02 && version != DISK_VERSION_01) {
 		printf("WARNING: Attempt to add disk %s%d %s",
 		    dp->d_name, dp->d_unit,
 		    " using incompatible ABI version of disk(9)\n");
@@ -586,6 +593,8 @@ disk_create(struct disk *dp, int version)
 		    dp->d_name, dp->d_unit);
 		return;
 	}
+	if (version == DISK_VERSION_01)
+		dp->d_flags |= DISKFLAG_LACKS_GONE;
 	KASSERT(dp->d_strategy != NULL, ("disk_create need d_strategy"));
 	KASSERT(dp->d_name != NULL, ("disk_create need d_name"));
 	KASSERT(*dp->d_name != 0, ("disk_create need d_name"));
