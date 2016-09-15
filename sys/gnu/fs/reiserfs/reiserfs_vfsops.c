@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/gnu/fs/reiserfs/reiserfs_vfsops.c,v 1.2 2008/12/03 00:25:53 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright 2000 Hans Reiser
  * See README for licensing and copyright details
@@ -228,7 +228,7 @@ reiserfs_unmount(struct mount *mp, int mntflags)
 
 	DROP_GIANT();
 	g_topology_lock();
-	g_wither_geom_close(rmp->rm_cp->geom, ENXIO);
+	g_vfs_close(rmp->rm_cp);
 	g_topology_unlock();
 	PICKUP_GIANT();
 	vrele(rmp->rm_devvp);
@@ -612,7 +612,7 @@ out:
 	if (cp != NULL) {
 		DROP_GIANT();
 		g_topology_lock();
-		g_wither_geom_close(cp->geom, ENXIO);
+		g_vfs_close(cp);
 		g_topology_unlock();
 		PICKUP_GIANT();
 	}
