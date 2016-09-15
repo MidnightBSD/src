@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/aac/aac_disk.c,v 1.4 2012/04/12 01:20:08 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
@@ -332,9 +332,6 @@ aac_disk_dump(void *arg, void *virtual, vm_offset_t physical, off_t offset, size
 void
 aac_biodone(struct bio *bp)
 {
-	struct aac_disk	*sc;
-
-	sc = (struct aac_disk *)bp->bio_disk->d_drv1;
 	fwprintf(NULL, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
 	if (bp->bio_flags & BIO_ERROR)
