@@ -64611,6 +64611,7 @@ sys/sys/unpcb.h -text
 sys/sys/user.h -text
 sys/sys/utsname.h -text
 sys/sys/uuid.h -text
+sys/sys/vdso.h svneol=native#text/plain
 sys/sys/vmmeter.h -text
 sys/sys/vnode.h -text
 sys/sys/vtoc.h -text
@@ -64746,6 +64747,7 @@ sys/x86/include/bus.h -text
 sys/x86/include/mca.h -text
 sys/x86/include/mptable.h -text
 sys/x86/include/pci_cfgreg.h -text
+sys/x86/include/vdso.h svneol=native#text/plain
 sys/x86/isa/atpic.c -text
 sys/x86/isa/atrtc.c -text
 sys/x86/isa/clock.c -text
