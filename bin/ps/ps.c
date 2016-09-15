@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/ps/ps.c,v 1.3 2011/02/16 14:28:33 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -890,8 +890,8 @@ add_list(struct listinfo *inf, const char *argp)
 	int toolong;
 	char elemcopy[PATH_MAX];
 
-	if (*argp == 0)
-		inf->addelem(inf, elemcopy);
+	if (*argp == '\0')
+		inf->addelem(inf, argp);
 	while (*argp != '\0') {
 		while (*argp != '\0' && strchr(W_SEP, *argp) != NULL)
 			argp++;
