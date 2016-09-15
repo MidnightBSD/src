@@ -56544,6 +56544,7 @@ sys/amd64/include/trap.h -text
 sys/amd64/include/tss.h -text
 sys/amd64/include/ucontext.h -text
 sys/amd64/include/varargs.h -text
+sys/amd64/include/vdso.h svneol=native#text/plain
 sys/amd64/include/vm.h -text
 sys/amd64/include/vmparam.h -text
 sys/amd64/include/xen/hypercall.h -text
@@ -61853,6 +61854,7 @@ sys/i386/include/trap.h -text
 sys/i386/include/tss.h -text
 sys/i386/include/ucontext.h -text
 sys/i386/include/varargs.h -text
+sys/i386/include/vdso.h svneol=native#text/plain
 sys/i386/include/vm.h -text
 sys/i386/include/vm86.h -text
 sys/i386/include/vmparam.h -text
@@ -62038,6 +62040,7 @@ sys/kern/subr_bus.c -text
 sys/kern/subr_clock.c -text
 sys/kern/subr_devstat.c -text
 sys/kern/subr_disk.c -text
+sys/kern/subr_dummy_vdso_tc.c svneol=native#text/plain
 sys/kern/subr_eventhandler.c -text
 sys/kern/subr_fattime.c -text
 sys/kern/subr_firmware.c -text
