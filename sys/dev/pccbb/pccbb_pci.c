@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/pccbb/pccbb_pci.c,v 1.2 2008/12/02 02:47:53 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2004 M. Warner Losh.
  * Copyright (c) 2000-2001 Jonathan Chen.
@@ -465,6 +465,11 @@ cbb_chipinit(struct cbb_softc *sc)
 	/* Set PCI latency timer */
 	if (pci_read_config(sc->dev, PCIR_LATTIMER, 1) < 0x20)
 		pci_write_config(sc->dev, PCIR_LATTIMER, 0x20, 1);
+
+	/* Restore bus configuration */
+	pci_write_config(sc->dev, PCIR_PRIBUS_2, sc->pribus, 1);
+	pci_write_config(sc->dev, PCIR_SECBUS_2, sc->secbus, 1);
+	pci_write_config(sc->dev, PCIR_SUBBUS_2, sc->subbus, 1);
 
 	/* Enable memory access */
 	PCI_MASK_CONFIG(sc->dev, PCIR_COMMAND,
