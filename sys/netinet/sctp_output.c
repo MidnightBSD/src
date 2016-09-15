@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/netinet/sctp_output.c,v 1.5 2013/01/17 23:29:40 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <netinet/sctp_os.h>
 #include <sys/proc.h>
@@ -4163,10 +4163,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			SCTPDBG(SCTP_DEBUG_OUTPUT3, "IP output returns %d\n", ret);
 			if (net == NULL) {
 				/* free tempy routes */
-				if (ro->ro_rt) {
-					RTFREE(ro->ro_rt);
-					ro->ro_rt = NULL;
-				}
+				RO_RTFREE(ro);
 			} else {
 				/*
 				 * PMTU check versus smallest asoc MTU goes
@@ -4520,9 +4517,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			}
 			if (net == NULL) {
 				/* Now if we had a temp route free it */
-				if (ro->ro_rt) {
-					RTFREE(ro->ro_rt);
-				}
+				RO_RTFREE(ro);
 			} else {
 				/*
 				 * PMTU check versus smallest asoc MTU goes
@@ -10910,7 +10905,6 @@ sctp_send_resp_msg(struct mbuf *m, struct sctphdr *sh, uint32_t vtag,
 	int len, cause_len, padding_len, ret;
 
 #ifdef INET
-	sctp_route_t ro;
 	struct ip *iph_out;
 
 #endif
@@ -11074,8 +11068,6 @@ sctp_send_resp_msg(struct mbuf *m, struct sctphdr *sh, uint32_t vtag,
 	SCTP_ATTACH_CHAIN(o_pak, mout, len);
 #ifdef INET
 	if (iph_out != NULL) {
-		/* zap the stack pointer to the route */
-		bzero(&ro, sizeof(sctp_route_t));
 		if (port) {
 			if (V_udp_cksum) {
 				udp->uh_sum = in_pseudo(iph_out->ip_src.s_addr, iph_out->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
@@ -11108,11 +11100,7 @@ sctp_send_resp_msg(struct mbuf *m, struct sctphdr *sh, uint32_t vtag,
 			SCTP_STAT_INCR(sctps_sendhwcrc);
 #endif
 		}
-		SCTP_IP_OUTPUT(ret, o_pak, &ro, NULL, vrf_id);
-		/* Free the route if we got one back */
-		if (ro.ro_rt) {
-			RTFREE(ro.ro_rt);
-		}
+		SCTP_IP_OUTPUT(ret, o_pak, NULL, NULL, vrf_id);
 	}
 #endif
 #ifdef INET6
