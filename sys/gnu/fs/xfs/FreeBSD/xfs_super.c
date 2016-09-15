@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/gnu/fs/xfs/FreeBSD/xfs_super.c,v 1.2 2008/12/03 00:25:55 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000-2005 Silicon Graphics, Inc.
  * All Rights Reserved.
@@ -252,7 +252,7 @@ xfs_blkdev_issue_flush(
 int
 init_xfs_fs( void )
 {
-	static char		message[] =
+	static const char	message[] =
 		XFS_VERSION_STRING " with " XFS_BUILD_OPTIONS " enabled\n";
 
 	printf(message);

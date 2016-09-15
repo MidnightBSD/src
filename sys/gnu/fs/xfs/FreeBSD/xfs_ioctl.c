@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/gnu/fs/xfs/FreeBSD/xfs_ioctl.c,v 1.2 2008/12/03 00:25:55 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000-2005 Silicon Graphics, Inc.
  * All Rights Reserved.
@@ -1250,7 +1250,6 @@ xfs_ioc_xattr(
 				 XFS_AT_NEXTENTS | XFS_AT_PROJID;
 		XVOP_GETATTR(vp, vattr, 0, NULL, error);
 		if (unlikely(error)) {
-			error = error;
 			break;
 		}
 
@@ -1288,7 +1287,6 @@ xfs_ioc_xattr(
 		if (likely(!error))
 			__vn_revalidate(vp, vattr);	/* update flags */
 #endif
-		error = error;
 		break;
 	}
 
@@ -1297,7 +1295,6 @@ xfs_ioc_xattr(
 				 XFS_AT_ANEXTENTS | XFS_AT_PROJID;
 		XVOP_GETATTR(vp, vattr, 0, NULL, error);
 		if (unlikely(error)) {
-			error = error;
 			break;
 		}
 
@@ -1348,7 +1345,6 @@ xfs_ioc_xattr(
 		if (likely(!error))
 			__vn_revalidate(vp, vattr);	/* update flags */
 #endif
-		error = error;
 		break;
 	}
 
