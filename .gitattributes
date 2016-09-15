@@ -48586,6 +48586,7 @@ lib/libc/amd64/string/strcat.S -text
 lib/libc/amd64/string/strcmp.S -text
 lib/libc/amd64/string/strcpy.c -text
 lib/libc/amd64/sys/Makefile.inc -text
+lib/libc/amd64/sys/__vdso_gettc.c svneol=native#text/plain
 lib/libc/amd64/sys/amd64_get_fsbase.c -text
 lib/libc/amd64/sys/amd64_get_gsbase.c -text
 lib/libc/amd64/sys/amd64_set_fsbase.c -text
@@ -49025,6 +49026,7 @@ lib/libc/i386/string/wcslen.S -text
 lib/libc/i386/string/wmemchr.S -text
 lib/libc/i386/sys/Makefile.inc -text
 lib/libc/i386/sys/Ovfork.S -text
+lib/libc/i386/sys/__vdso_gettc.c svneol=native#text/plain
 lib/libc/i386/sys/brk.S -text
 lib/libc/i386/sys/cerror.S -text
 lib/libc/i386/sys/exect.S -text
@@ -50090,6 +50092,7 @@ lib/libc/string/wmemset.c -text
 lib/libc/sys/Makefile.inc -text
 lib/libc/sys/Symbol.map -text
 lib/libc/sys/__error.c -text
+lib/libc/sys/__vdso_gettimeofday.c svneol=native#text/plain
 lib/libc/sys/_exit.2 -text
 lib/libc/sys/abort2.2 -text
 lib/libc/sys/accept.2 -text
@@ -50113,6 +50116,7 @@ lib/libc/sys/chmod.2 -text
 lib/libc/sys/chown.2 -text
 lib/libc/sys/chroot.2 -text
 lib/libc/sys/clock_gettime.2 -text
+lib/libc/sys/clock_gettime.c svneol=native#text/plain
 lib/libc/sys/close.2 -text
 lib/libc/sys/closefrom.2 -text
 lib/libc/sys/connect.2 -text
@@ -50147,6 +50151,7 @@ lib/libc/sys/getsid.2 -text
 lib/libc/sys/getsockname.2 -text
 lib/libc/sys/getsockopt.2 -text
 lib/libc/sys/gettimeofday.2 -text
+lib/libc/sys/gettimeofday.c svneol=native#text/plain
 lib/libc/sys/getuid.2 -text
 lib/libc/sys/intro.2 -text
 lib/libc/sys/ioctl.2 -text
