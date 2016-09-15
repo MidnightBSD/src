@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/examples/Makefile,v 1.15 2012/12/28 17:49:19 laffer1 Exp $
+# $MidnightBSD$
 #
 # Doing a make install builds /usr/share/examples
 

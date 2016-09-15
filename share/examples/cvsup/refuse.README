@@ -56,6 +56,9 @@ foreign-language documentation or ports, use the following patterns:
     mports/ukrainian
     mports/vietnamese
 
+Note that this is *not* a supported configuration and may result
+in ports builds breaking.
+
 Use refuse files with care.  Some parts of the src distribution
 depend on files in completely different parts.
 
