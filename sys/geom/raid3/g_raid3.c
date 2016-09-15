@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/raid3/g_raid3.c,v 1.7 2012/10/06 18:52:49 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -3448,6 +3448,11 @@ g_raid3_dumpconf(struct sbuf *sb, const char *indent, struct g_geom *gp,
 				    (sc->sc_mediasize / (sc->sc_ndisks - 1))));
 			}
 			sbuf_printf(sb, "</Synchronized>\n");
+			if (disk->d_sync.ds_offset > 0) {
+				sbuf_printf(sb, "%s<BytesSynced>%jd"
+				    "</BytesSynced>\n", indent,
+				    (intmax_t)disk->d_sync.ds_offset);
+			}
 		}
 		sbuf_printf(sb, "%s<SyncID>%u</SyncID>\n", indent,
 		    disk->d_sync.ds_syncid);
