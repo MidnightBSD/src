@@ -61,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/netinet6/in6.c,v 1.9 2013/01/17 23:29:40 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "opt_compat.h"
 #include "opt_inet.h"
@@ -2433,25 +2433,6 @@ struct in6_llentry {
 	struct sockaddr_in6	l3_addr6;
 };
 
-static struct llentry *
-in6_lltable_new(const struct sockaddr *l3addr, u_int flags)
-{
-	struct in6_llentry *lle;
-
-	lle = malloc(sizeof(struct in6_llentry), M_LLTABLE,
-	    M_DONTWAIT | M_ZERO);
-	if (lle == NULL)		/* NB: caller generates msg */
-		return NULL;
-
-	lle->l3_addr6 = *(const struct sockaddr_in6 *)l3addr;
-	lle->base.lle_refcnt = 1;
-	LLE_LOCK_INIT(&lle->base);
-	callout_init_rw(&lle->base.ln_timer_ch, &lle->base.lle_lock,
-	    CALLOUT_RETURNUNLOCKED);
-
-	return &lle->base;
-}
-
 /*
  * Deletes an address from the address table.
  * This function is called by the timer functions
@@ -2464,6 +2445,26 @@ in6_lltable_free(struct lltable *llt, struct llentry *lle)
 	LLE_WUNLOCK(lle);
 	LLE_LOCK_DESTROY(lle);
 	free(lle, M_LLTABLE);
+}
+
+static struct llentry *
+in6_lltable_new(const struct sockaddr *l3addr, u_int flags)
+{
+	struct in6_llentry *lle;
+
+	lle = malloc(sizeof(struct in6_llentry), M_LLTABLE,
+	    M_DONTWAIT | M_ZERO);
+	if (lle == NULL)		/* NB: caller generates msg */
+		return NULL;
+
+	lle->l3_addr6 = *(const struct sockaddr_in6 *)l3addr;
+	lle->base.lle_refcnt = 1;
+	lle->base.lle_free = in6_lltable_free;
+	LLE_LOCK_INIT(&lle->base);
+	callout_init_rw(&lle->base.ln_timer_ch, &lle->base.lle_lock,
+	    CALLOUT_RETURNUNLOCKED);
+
+	return &lle->base;
 }
 
 static void
@@ -2707,7 +2708,6 @@ in6_domifattach(struct ifnet *ifp)
 	ext->scope6_id = scope6_ifattach(ifp);
 	ext->lltable = lltable_init(ifp, AF_INET6);
 	if (ext->lltable != NULL) {
-		ext->lltable->llt_free = in6_lltable_free;
 		ext->lltable->llt_prefix_free = in6_lltable_prefix_free;
 		ext->lltable->llt_lookup = in6_lltable_lookup;
 		ext->lltable->llt_dump = in6_lltable_dump;
