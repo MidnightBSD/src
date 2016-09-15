@@ -1,6 +1,6 @@
 #	from: @(#)bsd.prog.mk	5.26 (Berkeley) 6/25/91
 # $FreeBSD: src/share/mk/bsd.prog.mk,v 1.144.2.1 2005/11/28 19:08:51 ru Exp $
-# $MidnightBSD: src/share/mk/bsd.prog.mk,v 1.9 2012/06/13 01:46:00 laffer1 Exp $
+# $MidnightBSD$
 
 .include <bsd.init.mk>
 
@@ -147,7 +147,11 @@ _EXTRADEPEND:
 .else
 	echo ${PROG}: ${LIBC} ${DPADD} >> ${DEPENDFILE}
 .if defined(PROG_CXX)
+.if !empty(CXXFLAGS:M-stdlib=libc++)
+	echo ${PROG}: ${LIBCPLUSPLUS} >> ${DEPENDFILE}
+.else
 	echo ${PROG}: ${LIBSTDCPLUSPLUS} >> ${DEPENDFILE}
+.endif
 .endif
 .endif
 .endif

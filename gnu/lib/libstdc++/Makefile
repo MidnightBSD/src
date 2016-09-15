@@ -1,4 +1,4 @@
-# $MidnightBSD: src/gnu/lib/libstdc++/Makefile,v 1.4 2009/05/22 00:27:26 laffer1 Exp $
+# $MidnightBSD$
 # $FreeBSD: src/gnu/lib/libstdc++/Makefile,v 1.61 2007/08/16 23:02:00 kan Exp $
 
 GCCVER=	4.2
@@ -20,6 +20,7 @@ CFLAGS+=	-I${GCCLIB}/include -I${SRCDIR}/include -I.
 CFLAGS+=	-frandom-seed=RepeatabilityConsideredGood
 CXXFLAGS+=	-fno-implicit-templates -ffunction-sections -fdata-sections \
 		-Wno-deprecated
+CXXFLAGS:=	${CXXFLAGS:N-stdlib=libc++:N-std=c++[01][13x]:N-std=gnu++[01][13x]}
 PO_CXXFLAGS=	${CXXFLAGS:N-ffunction-sections}
 
 DPADD=		${LIBM}

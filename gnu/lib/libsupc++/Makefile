@@ -1,4 +1,4 @@
-# $MidnightBSD: src/gnu/lib/libsupc++/Makefile,v 1.4 2009/05/22 00:27:28 laffer1 Exp $
+# $MidnightBSD$
 # $FreeBSD: src/gnu/lib/libsupc++/Makefile,v 1.9 2007/05/19 04:25:56 kan Exp $
 
 GCCVER=	4.2
@@ -25,6 +25,7 @@ CFLAGS+=	-I${GCCLIB}/include -I${SRCDIR} -I${GCCDIR}
 CFLAGS+=	-I${.CURDIR}/../libstdc++ -I.
 CFLAGS+=	-frandom-seed=RepeatabilityConsideredGood
 CXXFLAGS+=	-fno-implicit-templates -ffunction-sections -fdata-sections
+CXXFLAGS:=	${CXXFLAGS:N-stdlib=libc++:N-std=c++[01][13x]:N-std=gnu++[01][13x]}
 PO_CXXFLAGS=    ${CXXFLAGS:N-ffunction-sections}
 
 HDRS=	exception new typeinfo cxxabi.h exception_defines.h
