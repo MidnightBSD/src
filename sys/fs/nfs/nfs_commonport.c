@@ -49,7 +49,6 @@ __MBSDID("$MidnightBSD$");
 #include <vm/vm_kern.h>
 #include <vm/vm_extern.h>
 #include <vm/uma.h>
-#include <vm/uma_int.h>
 
 extern int nfscl_ticks;
 extern int nfsrv_nfsuserd;
