@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/buslogic/bt.c,v 1.2 2008/12/02 02:24:37 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Generic driver for the BusLogic MultiMaster SCSI host adapters
  * Product specific probe and attach routines can be found in:
@@ -1946,7 +1946,7 @@ bt_cmd(struct bt_softc *bt, bt_op_t opcode, u_int8_t *params, u_int param_len,
 	bt_outb(bt, COMMAND_REG, opcode);
 
 	/*
-	 * Wait for up to 1sec for each byte of the the
+	 * Wait for up to 1sec for each byte of the
 	 * parameter list sent to be sent.
 	 */
 	timeout = 10000;
