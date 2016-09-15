@@ -58900,6 +58900,7 @@ sys/dev/cxgbe/t4_main.c -text
 sys/dev/cxgbe/t4_sge.c -text
 sys/dev/cxgbe/tom/t4_connect.c -text
 sys/dev/cxgbe/tom/t4_cpl_io.c -text
+sys/dev/cxgbe/tom/t4_ddp.c svneol=native#text/plain
 sys/dev/cxgbe/tom/t4_listen.c -text
 sys/dev/cxgbe/tom/t4_tom.c -text
 sys/dev/cxgbe/tom/t4_tom.h -text
