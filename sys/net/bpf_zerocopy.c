@@ -50,6 +50,7 @@ __MBSDID("$MidnightBSD$");
 #include <net/bpfdesc.h>
 
 #include <vm/vm.h>
+#include <vm/vm_param.h>
 #include <vm/pmap.h>
 #include <vm/vm_extern.h>
 #include <vm/vm_map.h>
