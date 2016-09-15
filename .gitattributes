@@ -62002,6 +62002,7 @@ sys/kern/kern_rwlock.c -text
 sys/kern/kern_sdt.c -text
 sys/kern/kern_sema.c -text
 sys/kern/kern_sensors.c -text
+sys/kern/kern_sharedpage.c svneol=native#text/plain
 sys/kern/kern_shutdown.c -text
 sys/kern/kern_sig.c -text
 sys/kern/kern_subr.c -text
