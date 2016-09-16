@@ -8,7 +8,6 @@ LDIRS=	IPv6 \
 	MidnightBSD_version \
 	bootforth \
 	csh \
-	cvsup \
 	diskless \
 	drivers \
 	etc \
@@ -45,11 +44,6 @@ XFILES=	IPv6/USAGE \
 	bootforth/menuconf.4th \
 	bootforth/screen.4th \
 	csh/dot.cshrc \
-	cvsup/README \
-	cvsup/mports-supfile \
-	cvsup/refuse \
-	cvsup/refuse.README \
-	cvsup/standard-supfile \
 	diskless/ME \
 	diskless/README.BOOTP \
 	diskless/README.TEMPLATING \
