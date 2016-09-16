@@ -1,4 +1,4 @@
-# $MidnightBSD: src/cddl/sbin/zfs/Makefile,v 1.2 2008/11/11 19:33:42 laffer1 Exp $
+# $MidnightBSD$
 # $FreeBSD: src/cddl/sbin/zfs/Makefile,v 1.3 2007/10/01 18:17:23 ru Exp $
 
 .PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/cmd/zfs
@@ -22,8 +22,8 @@ CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common/fs/zfs
 CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common/sys
 CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/common/zfs
 
-DPADD=	${LIBBSDXML} ${LIBGEOM} ${LIBM} ${LIBNVPAIR} ${LIBSBUF} ${LIBUMEM} \
+DPADD=	${LIBGEOM} ${LIBNVPAIR} ${LIBUMEM} \
 	${LIBUTIL} ${LIBUUTIL} ${LIBZFS}
-LDADD=	-lbsdxml -lgeom -lm -lnvpair -lsbuf -lumem -lutil -luutil -lzfs
+LDADD=	-lgeom -lnvpair -lumem -lutil -luutil -lzfs
 
 .include <bsd.prog.mk>
