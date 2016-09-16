@@ -64999,9 +64999,6 @@ tools/debugscripts/gdbinit.kernel -text
 tools/debugscripts/kgdb -text
 tools/debugscripts/kld_deb.py -text
 tools/diag/README -text
-tools/diag/ac/README -text
-tools/diag/ac/cknames.pl -text
-tools/diag/ac/ent.sh -text
 tools/diag/dumpvfscache/Makefile -text
 tools/diag/dumpvfscache/README -text
 tools/diag/dumpvfscache/dumpvfscache.c -text
