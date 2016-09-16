@@ -1,5 +1,14 @@
 Updating Information for MidnightBSD users.
 
+20160916:
+	The random(4) support for the VIA hardware random number
+	generator (`PADLOCK') is no longer enabled unconditionally.
+	Add the PADLOCK_RNG option in the custom kernel config if
+	needed.  The GENERIC kernels on i386 and amd64 do include the
+	option, so the change only affects the custom kernel
+	configurations.
+
+
 20160906:
 	Add support for the MosChip MCS9904 four serial ports
 	controller.
