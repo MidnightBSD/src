@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/fs/nfsserver/nfs_nfsdport.c,v 1.2 2013/01/17 23:29:36 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/capability.h>
 
@@ -2440,7 +2440,8 @@ nfsv4_sattr(struct nfsrv_descript *nd, struct nfsvattr *nvap,
 				goto nfsmout;
 			}
 			if (!nd->nd_repstat) {
-				nd->nd_repstat = nfsv4_strtouid(cp,j,&uid,p);
+				nd->nd_repstat = nfsv4_strtouid(nd, cp, j, &uid,
+				    p);
 				if (!nd->nd_repstat)
 					nvap->na_uid = uid;
 			}
@@ -2466,7 +2467,8 @@ nfsv4_sattr(struct nfsrv_descript *nd, struct nfsvattr *nvap,
 				goto nfsmout;
 			}
 			if (!nd->nd_repstat) {
-				nd->nd_repstat = nfsv4_strtogid(cp,j,&gid,p);
+				nd->nd_repstat = nfsv4_strtogid(nd, cp, j, &gid,
+				    p);
 				if (!nd->nd_repstat)
 					nvap->na_gid = gid;
 			}
