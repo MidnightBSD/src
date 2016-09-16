@@ -61,6 +61,7 @@ __MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/taskqueue.h>
+#include "opt_mfi.h"
 
 /*
  * SCSI structures and definitions are used from here, but no linking
