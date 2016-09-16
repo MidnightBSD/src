@@ -30,7 +30,7 @@
 .\" $FreeBSD: /repoman/r/ncvs/src/bin/ps/ps.1,v 1.86.2.1 2006/08/22 08:25:17 yar Exp $
 .\" $MidnightBSD: src/bin/ps/ps.1,v 1.3 2007/07/26 20:13:00 laffer1 Exp $
 .\"
-.Dd May 20, 2012
+.Dd September 18, 2012
 .Dt PS 1
 .Os
 .Sh NAME
@@ -497,6 +497,8 @@ command and arguments
 number of copy-on-write faults
 .It Cm cpu
 short-term CPU usage factor (for scheduling)
+.It Cm dsiz
+data size (in Kbytes)
 .It Cm emul
 system-call emulation environment
 .It Cm etime
@@ -607,6 +609,8 @@ blocked signals (alias
 .Cm blocked )
 .It Cm sl
 sleep time (in seconds; 127 = infinity)
+.It Cm ssiz
+stack size (in Kbytes)
 .It Cm start
 time started
 .It Cm state

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/ps/keyword.c,v 1.3 2007/07/26 20:13:00 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -80,6 +80,7 @@ static VAR var[] = {
 	{"cow", "COW", NULL, 0, kvar, KOFF(ki_cow), UINT, "u", 0},
 	{"cpu", "CPU", NULL, 0, kvar, KOFF(ki_estcpu), UINT, "d", 0},
 	{"cputime", "", "time", 0, NULL, 0, CHAR, NULL, 0},
+	{"dsiz", "DSIZ", NULL, 0, kvar, KOFF(ki_dsize), PGTOK, "ld", 0},
 	{"egid", "", "gid", 0, NULL, 0, CHAR, NULL, 0},
 	{"egroup", "", "group", 0, NULL, 0, CHAR, NULL, 0},
 	{"emul", "EMUL", NULL, LJUST, emulname, 0, CHAR, NULL, 0},
@@ -142,6 +143,7 @@ static VAR var[] = {
 		UINT, "x", 0},
 	{"sigmask", "BLOCKED", NULL, 0, kvar, KOFF(ki_sigmask), UINT, "x", 0},
 	{"sl", "SL", NULL, INF127, kvar, KOFF(ki_slptime), UINT, "d", 0},
+	{"ssiz", "SSIZ", NULL, 0, kvar, KOFF(ki_ssize), PGTOK, "ld", 0},
 	{"start", "STARTED", NULL, LJUST|USER, started, 0, CHAR, NULL, 0},
 	{"stat", "", "state", 0, NULL, 0, CHAR, NULL, 0},
 	{"state", "STAT", NULL, LJUST, state, 0, CHAR, NULL, 0},
