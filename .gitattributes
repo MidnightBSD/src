@@ -65475,6 +65475,7 @@ tools/regression/net80211/wep/Makefile -text
 tools/regression/net80211/wep/test_wep.c -text
 tools/regression/netatalk/simple_send/Makefile -text
 tools/regression/netatalk/simple_send/simple_send.c -text
+tools/regression/netinet/ip_id_period/ip_id_period.py svneol=native#text/plain
 tools/regression/netinet/ipsockopt/Makefile -text
 tools/regression/netinet/ipsockopt/ipsockopt.c -text
 tools/regression/netinet/ipsockopt/ipsockopt.t -text
