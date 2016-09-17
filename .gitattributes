@@ -17273,6 +17273,8 @@ contrib/libpcap/pcap-bt-linux.c -text
 contrib/libpcap/pcap-bt-linux.h -text
 contrib/libpcap/pcap-can-linux.c -text
 contrib/libpcap/pcap-can-linux.h -text
+contrib/libpcap/pcap-canusb-linux.c svneol=native#text/plain
+contrib/libpcap/pcap-canusb-linux.h svneol=native#text/plain
 contrib/libpcap/pcap-common.c -text
 contrib/libpcap/pcap-common.h -text
 contrib/libpcap/pcap-config.1 -text
