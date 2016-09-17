@@ -1,7 +1,5 @@
 # $FreeBSD: src/tools/tools/sysdoc/Makefile,v 1.1 2005/03/01 05:48:37 trhodes Exp $
 
-MAINTAINER=	trhodes@FreeBSD.org
-
 sysctl.5:
 	sh ${.CURDIR}/sysdoc.sh -k /boot/kernel
 
