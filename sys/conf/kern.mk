@@ -121,10 +121,3 @@ CFLAGS+=	-ffreestanding
 .if ${MK_SSP} != "no" 
 CFLAGS+=	-fstack-protector
 .endif
-
-#
-# Enable CTF conversation on request
-#
-.if defined(WITH_CTF)
-.undef NO_CTF
-.endif

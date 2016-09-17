@@ -541,6 +541,7 @@ MK_SOURCELESS_UCODE:= no
 
 .if ${MK_CDDL} == "no"
 MK_ZFS:=	no
+MK_CTF:=	no
 .endif
 
 .if ${MK_CLANG} == "no"
@@ -680,6 +681,14 @@ MK_${var}:=	no
 .if ${MK_CTF} != "no"
 CTFCONVERT_CMD=	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
 .elif defined(.PARSEDIR) || ${MAKE_VERSION} >= 9201210220
+CTFCONVERT_CMD=
+.else
+CTFCONVERT_CMD=	@:
+.endif 
+
+.if ${MK_CTF} != "no"
+CTFCONVERT_CMD=	${CTFCONVERT} ${CTFFLAGS} ${.TARGET}
+.elif ${MAKE_VERSION} >= 5201111300
 CTFCONVERT_CMD=
 .else
 CTFCONVERT_CMD=	@:

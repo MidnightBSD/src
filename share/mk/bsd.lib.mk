@@ -1,6 +1,6 @@
 #	from: @(#)bsd.lib.mk	5.26 (Berkeley) 5/2/91
 # $FreeBSD: src/share/mk/bsd.lib.mk,v 1.168.2.1 2005/11/28 19:08:51 ru Exp $
-# $MidnightBSD: src/share/mk/bsd.lib.mk,v 1.10 2012/06/13 04:13:56 laffer1 Exp $
+# $MidnightBSD$
 
 .include <bsd.init.mk>
 
@@ -33,15 +33,10 @@ CFLAGS+= -DNDEBUG
 NO_WERROR=
 .endif
 
-# Enable CTF conversion on request.
-.if defined(WITH_CTF)
-.undef NO_CTF
-.endif
-
 .if defined(DEBUG_FLAGS)
 CFLAGS+= ${DEBUG_FLAGS}
 
-.if !defined(NO_CTF) && (${DEBUG_FLAGS:M-g} != "")
+.if ${MK_CTF} != "no" && ${DEBUG_FLAGS:M-g} != ""
 CTFFLAGS+= -g
 .endif
 .endif
@@ -69,21 +64,15 @@ PO_FLAG=-pg
 
 .c.o:
 	${CC} ${STATIC_CFLAGS} ${CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
-	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
-		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
-		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
+	${CTFCONVERT_CMD}
 
 .c.po:
 	${CC} ${PO_FLAG} ${STATIC_CFLAGS} ${PO_CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
-	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
-		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
-		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
+	${CTFCONVERT_CMD}
 
 .c.So:
 	${CC} ${PICFLAG} -DPIC ${SHARED_CFLAGS} ${CFLAGS} -c ${.IMPSRC} -o ${.TARGET}
-	@[ -z "${CTFCONVERT}" -o -n "${NO_CTF}" ] || \
-		(${ECHO} ${CTFCONVERT} ${CTFFLAGS} ${.TARGET} && \
-		${CTFCONVERT} ${CTFFLAGS} ${.TARGET})
+	${CTFCONVERT_CMD}
 
 .cc.o .C.o .cpp.o .cxx.o:
 	${CXX} ${STATIC_CXXFLAGS} ${CXXFLAGS} -c ${.IMPSRC} -o ${.TARGET}
@@ -221,9 +210,9 @@ ${SHLIB_NAME}: ${SOBJS}
 	    -o ${.TARGET} -Wl,-soname,${SONAME} \
 	    `NM='${NM}' lorder ${SOBJS} | tsort -q` ${LDADD}
 .endif
-	@[ -z "${CTFMERGE}" -o -n "${NO_CTF}" ] || \
-		(${ECHO} ${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${SOBJS} && \
-		${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${SOBJS})
+.if ${MK_CTF} != "no"
+	${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${SOBJS}
+.endif
 .endif
 
 .if defined(INSTALL_PIC_ARCHIVE) && defined(LIB) && !empty(LIB) && ${MK_TOOLCHAIN} != "no"
