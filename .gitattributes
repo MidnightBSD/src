@@ -55237,6 +55237,7 @@ share/man/man4/vlan.4 -text
 share/man/man4/vpo.4 -text
 share/man/man4/vr.4 -text
 share/man/man4/vte.4 -text
+share/man/man4/vtnet.4 svneol=native#text/plain
 share/man/man4/vxge.4 -text
 share/man/man4/watchdog.4 -text
 share/man/man4/wb.4 -text
