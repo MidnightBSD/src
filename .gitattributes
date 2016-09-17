@@ -69736,6 +69736,7 @@ usr.sbin/tcpdump/Makefile -text
 usr.sbin/tcpdump/Makefile.inc -text
 usr.sbin/tcpdump/tcpdump/Makefile -text
 usr.sbin/tcpdump/tcpdump/config.h -text
+usr.sbin/tcpdump/tcpdump/tcpdump.1 svneol=native#text/plain
 usr.sbin/timed/Makefile -text
 usr.sbin/timed/timed/CHANGES -text
 usr.sbin/timed/timed/Makefile -text
