@@ -4692,6 +4692,11 @@ void darwin::Link::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-undefined");
       CmdArgs.push_back("dynamic_lookup");
     }
+    llvm::Triple::ArchType Arch = getToolChain().getArch();
+    if (Arch == llvm::Triple::arm || Arch == llvm::Triple::sparc ||
+        Arch == llvm::Triple::x86 || Arch == llvm::Triple::x86_64)
+      CmdArgs.push_back("--hash-style=both");
+    CmdArgs.push_back("--enable-new-dtags");
   }
 
   if (Args.hasArg(options::OPT_fopenmp))
