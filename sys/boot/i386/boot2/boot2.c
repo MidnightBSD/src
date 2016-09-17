@@ -14,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/boot/i386/boot2/boot2.c,v 1.3 2011/12/18 19:09:49 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 /* $FreeBSD: src/sys/boot/i386/boot2/boot2.c,v 1.83.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 #include <sys/param.h>
@@ -418,8 +418,10 @@ parse()
 	    }
 	    ioctrl = OPT_CHECK(RBX_DUAL) ? (IO_SERIAL|IO_KEYBOARD) :
 		     OPT_CHECK(RBX_SERIAL) ? IO_SERIAL : IO_KEYBOARD;
-	    if (ioctrl & IO_SERIAL)
-	        sio_init(115200 / comspeed);
+	    if (ioctrl & IO_SERIAL) {
+	        if (sio_init(115200 / comspeed) != 0)
+		    ioctrl &= ~IO_SERIAL;
+	    }
 	} else {
 	    for (q = arg--; *q && *q != '('; q++);
 	    if (*q) {
