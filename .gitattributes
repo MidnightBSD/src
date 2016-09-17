@@ -46959,7 +46959,6 @@ etc/root/dot.mkshrc -text
 etc/root/dot.profile -text
 etc/rpc -text
 etc/sendmail/Makefile -text
-etc/sendmail/freefall.mc -text
 etc/sendmail/midnightbsd.mc -text
 etc/sendmail/midnightbsd.submit.mc -text
 etc/sensorsd.conf -text
