@@ -1,4 +1,4 @@
-/* @(#) $Header: /home/cvs/src/contrib/tcpdump/nfsfh.h,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $ (LBL) */
+/* @(#) $Header: /tcpdump/master/tcpdump/nfsfh.h,v 1.13 2002-04-24 06:27:05 guy Exp $ (LBL) */
 
 /*
  * Copyright (c) 1993, 1994 Jeffrey C. Mogul, Digital Equipment Corporation,
@@ -39,7 +39,7 @@
  * Jeffrey C. Mogul
  * Digital Equipment Corporation
  * Western Research Laboratory
- *	$FreeBSD: src/contrib/tcpdump/nfsfh.h,v 1.8 2004/03/31 14:57:24 bms Exp $
+ *	$FreeBSD: release/9.2.0/contrib/tcpdump/nfsfh.h 190207 2009-03-21 18:30:25Z rpaulo $
  *	$NetBSD: nfsfh.h,v 1.1.1.2 1997/10/03 17:25:13 christos Exp $
  */
 

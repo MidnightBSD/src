@@ -18,7 +18,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * @(#) $Header: /home/cvs/src/contrib/tcpdump/lbl/os-ultrix4.h,v 1.1.1.2 2006-02-25 02:34:04 laffer1 Exp $ (LBL)
+ * @(#) $Header: /tcpdump/master/tcpdump/lbl/os-ultrix4.h,v 1.19 1999-10-07 23:47:13 mcr Exp $ (LBL)
  */
 
 /* Prototypes missing in Ultrix 4 */

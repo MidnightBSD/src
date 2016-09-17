@@ -18,7 +18,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * @(#) $Header: /home/cvs/src/contrib/tcpdump/machdep.h,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $ (LBL)
+ * @(#) $Header: /tcpdump/master/tcpdump/machdep.h,v 1.2 2000-01-17 06:24:24 itojun Exp $ (LBL)
  */
 #ifndef tcpdump_machdep_h
 #define tcpdump_machdep_h

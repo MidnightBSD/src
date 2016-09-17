@@ -1,4 +1,4 @@
-/* @(#) $Header: /home/cvs/src/contrib/tcpdump/rpc_auth.h,v 1.1.1.2 2006-02-25 02:34:04 laffer1 Exp $ (LBL) */
+/* @(#) $Header: /tcpdump/master/tcpdump/rpc_auth.h,v 1.2 2005-04-27 21:43:48 guy Exp $ (LBL) */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
  * unrestricted use provided that this legend is included on all tape
@@ -29,7 +29,8 @@
  *
  *	from: @(#)auth.h 1.17 88/02/08 SMI
  *	from: @(#)auth.h	2.3 88/08/07 4.0 RPCSRC
- * $FreeBSD: src/contrib/tcpdump/rpc_auth.h,v 1.1.1.2 2005/07/11 03:54:15 sam Exp $
+ * $FreeBSD: release/9.2.0/contrib/tcpdump/rpc_auth.h 190207 2009-03-21 18:30:25Z rpaulo $
+ * FreeBSD: src/include/rpc/auth.h,v 1.14.2.1 1999/08/29 14:39:02 peter Exp
  */
 
 /*

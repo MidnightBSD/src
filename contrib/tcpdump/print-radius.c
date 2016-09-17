@@ -44,7 +44,7 @@
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "$Id: print-radius.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $";
+    "$Id: print-radius.c,v 1.28 2005-09-26 01:01:55 guy Exp $";
 #endif
 
 #ifdef HAVE_CONFIG_H

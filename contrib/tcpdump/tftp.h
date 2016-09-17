@@ -1,4 +1,4 @@
-/* @(#) $Header: /home/cvs/src/contrib/tcpdump/tftp.h,v 1.1.1.1 2009-03-25 16:54:05 laffer1 Exp $ (LBL) */
+/* @(#) $Header: /tcpdump/master/tcpdump/tftp.h,v 1.2 2008-04-11 16:47:38 gianluca Exp $ (LBL) */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -49,7 +49,7 @@
 #define	WRQ	02			/* write request */
 #define	DATA	03			/* data packet */
 #define	ACK	04			/* acknowledgement */
-#define	ERROR	05			/* error code */
+#define	TFTP_ERROR	05			/* error code */
 #define OACK	06			/* option acknowledgement */
 
 struct	tftphdr {

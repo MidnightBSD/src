@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* YIPS @(#)$Id: ipsec_doi.h,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $ */
+/* YIPS @(#)$Id: ipsec_doi.h,v 1.7 2002-12-11 07:13:53 guy Exp $ */
 
 /* refer to RFC 2407 */
 

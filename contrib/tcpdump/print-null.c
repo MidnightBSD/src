@@ -18,12 +18,12 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: src/contrib/tcpdump/print-null.c,v 1.12.2.1 2007/10/19 03:03:59 mlaier Exp $
+ * $FreeBSD: release/9.2.0/contrib/tcpdump/print-null.c 236192 2012-05-28 19:13:21Z delphij $
  */
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-null.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /tcpdump/master/tcpdump/print-null.c,v 1.57 2006-03-23 14:58:44 hannes Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -38,12 +38,12 @@ static const char rcsid[] _U_ =
 
 #include "interface.h"
 #include "addrtoname.h"
-#include "af.h"
 
 #include "ip.h"
 #ifdef INET6
 #include "ip6.h"
 #endif
+#include "af.h"
 
 /*
  * The DLT_NULL packet header is 4 bytes long. It contains a host-byte-order
@@ -56,7 +56,6 @@ static const char rcsid[] _U_ =
  * is in network byte order.
  */
 #define	NULL_HDRLEN 4
-
 
 /*
  * Byte-swap a 32-bit number.
@@ -128,7 +127,7 @@ null_if_print(const struct pcap_pkthdr *h, const u_char *p)
 	case BSD_AFNUM_INET6_BSD:
 	case BSD_AFNUM_INET6_FREEBSD:
 	case BSD_AFNUM_INET6_DARWIN:
-		ip6_print(p, length);
+		ip6_print(gndo, p, length);
 		break;
 #endif
 

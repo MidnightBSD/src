@@ -1,6 +1,6 @@
-/* $FreeBSD: src/contrib/tcpdump/ieee802_11_radio.h,v 1.2.2.1 2007/10/19 03:03:58 mlaier Exp $ */
-/* $NetBSD: ieee802_11_radio.h,v 1.2 2006/02/26 03:04:03 dyoung Exp $ */
-/* $Header: /home/cvs/src/contrib/tcpdump/ieee802_11_radio.h,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ */
+/* $FreeBSD: release/9.2.0/contrib/tcpdump/ieee802_11_radio.h 236192 2012-05-28 19:13:21Z delphij $ */
+/* NetBSD: ieee802_11_radio.h,v 1.2 2006/02/26 03:04:03 dyoung Exp  */
+/* $Header: /tcpdump/master/tcpdump/ieee802_11_radio.h,v 1.3 2007-08-29 02:31:44 mcr Exp $ */
 
 /*-
  * Copyright (c) 2003, 2004 David Young.  All rights reserved.
@@ -33,11 +33,11 @@
 #ifndef _NET_IF_IEEE80211RADIOTAP_H_
 #define _NET_IF_IEEE80211RADIOTAP_H_
 
-/* A generic radio capture format is desirable. There is one for
- * Linux, but it is neither rigidly defined (there were not even
- * units given for some fields) nor easily extensible.
+/* A generic radio capture format is desirable. It must be
+ * rigidly defined (e.g., units for fields should be given),
+ * and easily extensible.
  *
- * I suggest the following extensible radio capture format. It is
+ * The following is an extensible radio capture format. It is
  * based on a bitmap indicating which fields are present.
  *
  * I am trying to describe precisely what the application programmer
@@ -47,11 +47,6 @@
  * function of...") that I cannot set false expectations for lawyerly
  * readers.
  */
-#if defined(__KERNEL__) || defined(_KERNEL)
-#ifndef DLT_IEEE802_11_RADIO
-#define	DLT_IEEE802_11_RADIO	127	/* 802.11 plus WLAN header */
-#endif
-#endif /* defined(__KERNEL__) || defined(_KERNEL) */
 
 /*
  * The radio capture header precedes the 802.11 header.
@@ -77,7 +72,7 @@ struct ieee80211_radiotap_header {
 					 * Additional extensions are made
 					 * by setting bit 31.
 					 */
-} __attribute__((__packed__));
+};
 
 /* Name                                 Data type       Units
  * ----                                 ---------       -----
@@ -163,6 +158,10 @@ struct ieee80211_radiotap_header {
  *      Unitless indication of the Rx/Tx antenna for this packet.
  *      The first antenna is antenna 0.
  *
+ * IEEE80211_RADIOTAP_RX_FLAGS          u_int16_t       bitmap
+ *
+ *     Properties of received frames. See flags defined below.
+ *
  * IEEE80211_RADIOTAP_XCHANNEL          u_int32_t	bitmap
  *					u_int16_t	MHz
  *					u_int8_t	channel number
@@ -174,9 +173,24 @@ struct ieee80211_radiotap_header {
  *	units.  This property supersedes IEEE80211_RADIOTAP_CHANNEL
  *	and only one of the two should be present.
  *
- * IEEE80211_RADIOTAP_FCS           	u_int32_t       data
+ * IEEE80211_RADIOTAP_MCS		u_int8_t	known
+ *					u_int8_t	flags
+ *					u_int8_t	mcs
  *
- *	FCS from frame in network byte order.
+ *	Bitset indicating which fields have known values, followed
+ *	by bitset of flag values, followed by the MCS rate index as
+ *	in IEEE 802.11n.
+ *
+ * IEEE80211_RADIOTAP_VENDOR_NAMESPACE
+ *					u_int8_t  OUI[3]
+ *                                   u_int8_t  subspace
+ *                                   u_int16_t length
+ *
+ *     The Vendor Namespace Field contains three sub-fields. The first
+ *     sub-field is 3 bytes long. It contains the vendor's IEEE 802
+ *     Organizationally Unique Identifier (OUI). The fourth byte is a
+ *     vendor-specific "namespace selector."
+ *
  */
 enum ieee80211_radiotap_type {
 	IEEE80211_RADIOTAP_TSFT = 0,
@@ -193,12 +207,16 @@ enum ieee80211_radiotap_type {
 	IEEE80211_RADIOTAP_ANTENNA = 11,
 	IEEE80211_RADIOTAP_DB_ANTSIGNAL = 12,
 	IEEE80211_RADIOTAP_DB_ANTNOISE = 13,
-	IEEE80211_RADIOTAP_XCHANNEL = 14,
+	IEEE80211_RADIOTAP_RX_FLAGS = 14,
+	/* NB: gap for netbsd definitions */
+	IEEE80211_RADIOTAP_XCHANNEL = 18,
+	IEEE80211_RADIOTAP_MCS = 19,
+	IEEE80211_RADIOTAP_NAMESPACE = 29,
+	IEEE80211_RADIOTAP_VENDOR_NAMESPACE = 30,
 	IEEE80211_RADIOTAP_EXT = 31
 };
 
-#ifndef _KERNEL
-/* Channel flags; some are used only with XCHANNEL */
+/* channel attributes */
 #define	IEEE80211_CHAN_TURBO	0x00010	/* Turbo channel */
 #define	IEEE80211_CHAN_CCK	0x00020	/* CCK channel */
 #define	IEEE80211_CHAN_OFDM	0x00040	/* OFDM channel */
@@ -214,7 +232,19 @@ enum ieee80211_radiotap_type {
 #define	IEEE80211_CHAN_HT20	0x10000	/* HT 20 channel */
 #define	IEEE80211_CHAN_HT40U	0x20000	/* HT 40 channel w/ ext above */
 #define	IEEE80211_CHAN_HT40D	0x40000	/* HT 40 channel w/ ext below */
-#endif /* !_KERNEL */
+
+/* Useful combinations of channel characteristics, borrowed from Ethereal */
+#define IEEE80211_CHAN_A \
+        (IEEE80211_CHAN_5GHZ | IEEE80211_CHAN_OFDM)
+#define IEEE80211_CHAN_B \
+        (IEEE80211_CHAN_2GHZ | IEEE80211_CHAN_CCK)
+#define IEEE80211_CHAN_G \
+        (IEEE80211_CHAN_2GHZ | IEEE80211_CHAN_DYN)
+#define IEEE80211_CHAN_TA \
+        (IEEE80211_CHAN_5GHZ | IEEE80211_CHAN_OFDM | IEEE80211_CHAN_TURBO)
+#define IEEE80211_CHAN_TG \
+        (IEEE80211_CHAN_2GHZ | IEEE80211_CHAN_DYN  | IEEE80211_CHAN_TURBO)
+
 
 /* For IEEE80211_RADIOTAP_FLAGS */
 #define	IEEE80211_RADIOTAP_F_CFP	0x01	/* sent/received
@@ -236,5 +266,26 @@ enum ieee80211_radiotap_type {
 						 * (to 32-bit boundary)
 						 */
 #define	IEEE80211_RADIOTAP_F_BADFCS	0x40	/* does not pass FCS check */
+
+/* For IEEE80211_RADIOTAP_RX_FLAGS */
+#define IEEE80211_RADIOTAP_F_RX_BADFCS	0x0001	/* frame failed crc check */
+#define IEEE80211_RADIOTAP_F_RX_PLCP_CRC	0x0002	/* frame failed PLCP CRC check */
+
+/* For IEEE80211_RADIOTAP_MCS known */
+#define IEEE80211_RADIOTAP_MCS_BANDWIDTH_KNOWN		0x01
+#define IEEE80211_RADIOTAP_MCS_MCS_INDEX_KNOWN		0x02	/* MCS index field */
+#define IEEE80211_RADIOTAP_MCS_GUARD_INTERVAL_KNOWN	0x04
+#define IEEE80211_RADIOTAP_MCS_HT_FORMAT_KNOWN		0x08
+#define IEEE80211_RADIOTAP_MCS_FEC_TYPE_KNOWN		0x10
+
+/* For IEEE80211_RADIOTAP_MCS flags */
+#define IEEE80211_RADIOTAP_MCS_BANDWIDTH_MASK	0x03
+#define IEEE80211_RADIOTAP_MCS_BANDWIDTH_20	0
+#define IEEE80211_RADIOTAP_MCS_BANDWIDTH_40	1
+#define IEEE80211_RADIOTAP_MCS_BANDWIDTH_20L	2
+#define IEEE80211_RADIOTAP_MCS_BANDWIDTH_20U	3
+#define IEEE80211_RADIOTAP_MCS_SHORT_GI		0x04 /* short guard interval */
+#define IEEE80211_RADIOTAP_MCS_HT_GREENFIELD	0x08
+#define IEEE80211_RADIOTAP_MCS_FEC_LDPC		0x10
 
 #endif /* _NET_IF_IEEE80211RADIOTAP_H_ */

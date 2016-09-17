@@ -29,8 +29,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *
- * $FreeBSD: src/contrib/tcpdump/tcpdump-stdinc.h,v 1.4.2.1 2007/10/19 03:04:00 mlaier Exp $
- * @(#) $Header: /home/cvs/src/contrib/tcpdump/tcpdump-stdinc.h,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL)
+ * @(#) $Header: /tcpdump/master/tcpdump/tcpdump-stdinc.h,v 1.18 2007-11-24 18:13:33 mcr Exp $ (LBL)
  */
 
 /*
@@ -55,6 +54,10 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <net/netdb.h>  /* in wpcap's Win32/include */
+
+#ifndef NBBY
+#define NBBY	8
+#endif
 
 #if !defined(__MINGW32__) && !defined(__WATCOMC__)
 #undef toascii
@@ -128,9 +131,42 @@ typedef char* caddr_t;
 
 #endif /* WIN32 */
 
-#ifdef INET6
-#include "ip6.h"
+#ifndef HAVE___ATTRIBUTE__
+#define __attribute__(x)
 #endif
+
+/*
+ * Used to declare a structure unaligned, so that the C compiler,
+ * if necessary, generates code that doesn't assume alignment.
+ * This is required because there is no guarantee that the packet
+ * data we get from libpcap/WinPcap is properly aligned.
+ *
+ * This assumes that, for all compilers that support __attribute__:
+ *
+ *	1) they support __attribute__((packed));
+ *
+ *	2) for all instruction set architectures requiring strict
+ *	   alignment, declaring a structure with that attribute
+ *	   causes the compiler to generate code that handles
+ *	   misaligned 2-byte, 4-byte, and 8-byte integral
+ *	   quantities.
+ *
+ * It does not (yet) handle compilers where you can get the compiler
+ * to generate code of that sort by some other means.
+ *
+ * This is required in order to, for example, keep the compiler from
+ * generating, for
+ *
+ *	if (bp->bp_htype == 1 && bp->bp_hlen == 6 && bp->bp_op == BOOTPREQUEST) {
+ *
+ * in print-bootp.c, code that loads the first 4-byte word of a
+ * "struct bootp", masking out the bp_hops field, and comparing the result
+ * against 0x01010600.
+ *
+ * Note: this also requires that padding be put into the structure,
+ * at least for compilers where it's implemented as __attribute__((packed)).
+ */
+#define UNALIGNED	__attribute__((packed))
 
 #if defined(WIN32) || defined(MSDOS)
   #define FOPEN_READ_TXT   "rt"
@@ -142,6 +178,37 @@ typedef char* caddr_t;
   #define FOPEN_READ_BIN   FOPEN_READ_TXT
   #define FOPEN_WRITE_TXT  "w"
   #define FOPEN_WRITE_BIN  FOPEN_WRITE_TXT
+#endif
+
+#if defined(__GNUC__) && defined(__i386__) && !defined(__APPLE__) && !defined(__ntohl) 
+  #undef ntohl
+  #undef ntohs
+  #undef htonl
+  #undef htons
+
+  static __inline__ unsigned long __ntohl (unsigned long x);
+  static __inline__ unsigned short __ntohs (unsigned short x);
+
+  #define ntohl(x)  __ntohl(x)
+  #define ntohs(x)  __ntohs(x)
+  #define htonl(x)  __ntohl(x)
+  #define htons(x)  __ntohs(x)
+
+  static __inline__ unsigned long __ntohl (unsigned long x)
+  {
+    __asm__ ("xchgb %b0, %h0\n\t"   /* swap lower bytes  */
+             "rorl  $16, %0\n\t"    /* swap words        */
+             "xchgb %b0, %h0"       /* swap higher bytes */
+            : "=q" (x) : "0" (x));
+    return (x);
+  }
+
+  static __inline__ unsigned short __ntohs (unsigned short x)
+  {
+    __asm__ ("xchgb %b0, %h0"       /* swap bytes */
+            : "=q" (x) : "0" (x));
+    return (x);
+  }
 #endif
 
 #ifndef INET_ADDRSTRLEN

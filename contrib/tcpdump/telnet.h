@@ -1,6 +1,6 @@
-/* @(#) $Header: /home/cvs/src/contrib/tcpdump/telnet.h,v 1.1.1.2 2006-02-25 02:34:04 laffer1 Exp $ (LBL) */
+/* @(#) $Header: /tcpdump/master/tcpdump/telnet.h,v 1.5 2007-08-29 02:31:44 mcr Exp $ (LBL) */
 
-/*	$NetBSD: telnet.h,v 1.9 2001/06/11 01:50:50 wiz Exp $	*/
+/*	NetBSD: telnet.h,v 1.9 2001/06/11 01:50:50 wiz Exp 	*/
 
 /*
  * Copyright (c) 1983, 1993

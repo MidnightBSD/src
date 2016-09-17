@@ -21,7 +21,7 @@
  * Extensively modified by Motonori Shindo (mshindo@mshindo.net) for more
  * complete PPP support.
  *
- * $FreeBSD: src/contrib/tcpdump/print-ppp.c,v 1.16.10.1 2007/10/19 03:03:59 mlaier Exp $
+ * $FreeBSD: release/9.2.0/contrib/tcpdump/print-ppp.c 236192 2012-05-28 19:13:21Z delphij $
  */
 
 /*
@@ -33,7 +33,7 @@
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-ppp.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /tcpdump/master/tcpdump/print-ppp.c,v 1.114 2005-12-05 11:35:58 hannes Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -1305,11 +1305,11 @@ ppp_hdlc(const u_char *p, int length)
 		goto cleanup;
 #ifdef INET6
         case PPP_IPV6:
-            ip6_print(b+1, t - b - 1);
-            goto cleanup;
+		ip6_print(gndo, b+1, t - b - 1);
+		goto cleanup;
 #endif
         default: /* no luck - try next guess */
-            break;
+		break;
         }
 
         proto = EXTRACT_16BITS(b); /* next guess - load two octets */
@@ -1370,7 +1370,7 @@ handle_ppp(u_int proto, const u_char *p, int length)
 #ifdef INET6
 	case ETHERTYPE_IPV6:	/*XXX*/
 	case PPP_IPV6:
-		ip6_print(p, length);
+		ip6_print(gndo, p, length);
 		break;
 #endif
 	case ETHERTYPE_IPX:	/*XXX*/
@@ -1631,7 +1631,7 @@ ppp_bsdos_if_print(const struct pcap_pkthdr *h _U_, register const u_char *p _U_
 		hdrlength += 1;
 	} else {
 		/* Un-compressed protocol field */
-		ptype = ntohs(*(u_int16_t *)p);
+		ptype = EXTRACT_16BITS(p);
 		if (eflag)
 			printf("%04x ", ptype);
 		p += 2;
@@ -1651,7 +1651,7 @@ ppp_bsdos_if_print(const struct pcap_pkthdr *h _U_, register const u_char *p _U_
 		 && ph->phdr_ctl == PPP_CONTROL) {
 			if (eflag)
 				printf("%02x %02x ", q[0], q[1]);
-			ptype = ntohs(ph->phdr_type);
+			ptype = EXTRACT_16BITS(&ph->phdr_type);
 			if (eflag && (ptype == PPP_VJC || ptype == PPP_VJNC)) {
 				printf("%s ", tok2str(ppptype2str,
 						"proto-#%d", ptype));
@@ -1677,11 +1677,11 @@ ppp_bsdos_if_print(const struct pcap_pkthdr *h _U_, register const u_char *p _U_
 			p += hdrlength;
 			switch (ptype) {
 			case PPP_IP:
-				ip_print(p, length);
+				ip_print(gndo, p, length);
 				break;
 #ifdef INET6
 			case PPP_IPV6:
-				ip6_print(p, length);
+				ip6_print(gndo, p, length);
 				break;
 #endif
 			case PPP_MPLS_UCAST:
@@ -1696,11 +1696,11 @@ ppp_bsdos_if_print(const struct pcap_pkthdr *h _U_, register const u_char *p _U_
 			p += hdrlength;
 			switch (ptype) {
 			case PPP_IP:
-				ip_print(p, length);
+				ip_print(gndo, p, length);
 				break;
 #ifdef INET6
 			case PPP_IPV6:
-				ip6_print(p, length);
+				ip6_print(gndo, p, length);
 				break;
 #endif
 			case PPP_MPLS_UCAST:
@@ -1732,12 +1732,12 @@ ppp_bsdos_if_print(const struct pcap_pkthdr *h _U_, register const u_char *p _U_
 		break;
 #ifdef INET6
 	case PPP_IPV6:
-		ip6_print(p, length);
+		ip6_print(gndo, p, length);
 		break;
 #endif
         case PPP_MPLS_UCAST:
         case PPP_MPLS_MCAST:
-                mpls_print(p, length);
+                mpls_print(gndo, p, length);
                 break;
 	default:
 		printf("%s ", tok2str(ppptype2str, "unknown PPP protocol (0x%04x)", ptype));

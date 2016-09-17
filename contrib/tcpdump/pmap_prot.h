@@ -1,4 +1,4 @@
-/* @(#) $Header: /home/cvs/src/contrib/tcpdump/pmap_prot.h,v 1.1.1.2 2006-02-25 02:34:04 laffer1 Exp $ (LBL) */
+/* @(#) $Header: /tcpdump/master/tcpdump/pmap_prot.h,v 1.3 2005-04-27 21:43:48 guy Exp $ (LBL) */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
  * unrestricted use provided that this legend is included on all tape
@@ -29,7 +29,8 @@
  *
  *	from: @(#)pmap_prot.h 1.14 88/02/08 SMI
  *	from: @(#)pmap_prot.h	2.1 88/07/29 4.0 RPCSRC
- * $FreeBSD: src/contrib/tcpdump/pmap_prot.h,v 1.1.1.2 2005/07/11 03:53:37 sam Exp $
+ * $FreeBSD: release/9.2.0/contrib/tcpdump/pmap_prot.h 190207 2009-03-21 18:30:25Z rpaulo $
+ * FreeBSD: src/include/rpc/pmap_prot.h,v 1.9.2.1 1999/08/29 14:39:05 peter Exp
  */
 
 /*

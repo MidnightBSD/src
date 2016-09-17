@@ -39,12 +39,12 @@
  * Digital Equipment Corporation
  * Western Research Laboratory
  *
- * $FreeBSD: src/contrib/tcpdump/parsenfsfh.c,v 1.9.10.1 2007/10/19 03:03:58 mlaier Exp $
+ * $FreeBSD: release/9.2.0/contrib/tcpdump/parsenfsfh.c 190207 2009-03-21 18:30:25Z rpaulo $
  */
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/parsenfsfh.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /tcpdump/master/tcpdump/parsenfsfh.c,v 1.29 2006-06-13 22:21:38 guy Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H

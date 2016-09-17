@@ -15,7 +15,7 @@
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-sip.c,v 1.1.1.2 2006-02-25 02:34:04 laffer1 Exp $";
+    "@(#) $Header: /tcpdump/master/tcpdump/print-sip.c,v 1.1 2004-07-27 17:04:20 hannes Exp $";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -44,6 +44,7 @@ sip_print(register const u_char *pptr, register u_int len)
         return;
 
     for (idx = 0; idx < len; idx++) {
+        TCHECK2(*(pptr+idx), 2);
         if (EXTRACT_16BITS(pptr+idx) != 0x0d0a) { /* linefeed ? */
             safeputchar(*(pptr+idx));
         } else {
@@ -57,4 +58,7 @@ sip_print(register const u_char *pptr, register u_int len)
         print_unknown_data(pptr,"\n\t",len);
 
     return;
+
+trunc:
+    printf("[|sip]");
 }

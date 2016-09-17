@@ -22,12 +22,12 @@
  *	By Jeffrey Mogul/DECWRL
  *	loosely based on print-bootp.c
  *
- * $FreeBSD: src/contrib/tcpdump/print-ntp.c,v 1.11 2005/07/11 04:14:02 sam Exp $
+ * $FreeBSD: release/9.2.0/contrib/tcpdump/print-ntp.c 252283 2013-06-27 00:37:59Z delphij $
  */
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-ntp.c,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /tcpdump/master/tcpdump/print-ntp.c,v 1.43 2007-11-30 13:45:10 hannes Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -74,6 +74,12 @@ static struct tok ntp_leapind_values[] = {
     { 0, NULL }
 };
 
+static struct tok ntp_stratum_values[] = {
+	{ UNSPECIFIED,	"unspecified" },
+	{ PRIM_REF, 	"primary reference" },
+	{ 0, NULL }
+};
+
 /*
  * Print ntp requests
  */
@@ -108,10 +114,12 @@ ntp_print(register const u_char *cp, u_int length)
                 leapind);
 
 	TCHECK(bp->stratum);
-	printf(", Stratum %u", bp->stratum);
+	printf(", Stratum %u (%s)", 	
+		bp->stratum,
+		tok2str(ntp_stratum_values, (bp->stratum >=2 && bp->stratum<=15) ? "secondary reference" : "reserved", bp->stratum));
 
 	TCHECK(bp->ppoll);
-	printf(", poll %us", bp->ppoll);
+	printf(", poll %u (%us)", bp->ppoll, 1 << bp->ppoll);
 
 	/* Can't TCHECK bp->precision bitfield so bp->distance + 0 instead */
 	TCHECK2(bp->root_delay, 0);
@@ -176,8 +184,19 @@ ntp_print(register const u_char *cp, u_int length)
 	fputs("\n\t    Originator - Transmit Timestamp: ", stdout);
 	p_ntp_delta(&(bp->org_timestamp), &(bp->xmt_timestamp));
 
-        /* FIXME key-id, authentication */
-
+	if ( (sizeof(struct ntpdata) - length) == 16) { 	/* Optional: key-id */
+		TCHECK(bp->key_id);
+		printf("\n\tKey id: %u", bp->key_id);
+	} else if ( (sizeof(struct ntpdata) - length) == 0) { 	/* Optional: key-id + authentication */
+		TCHECK(bp->key_id);
+		printf("\n\tKey id: %u", bp->key_id);
+		TCHECK2(bp->message_digest, sizeof (bp->message_digest));
+                printf("\n\tAuthentication: %08x%08x%08x%08x",
+        		       EXTRACT_32BITS(bp->message_digest),
+		               EXTRACT_32BITS(bp->message_digest + 4),
+		               EXTRACT_32BITS(bp->message_digest + 8),
+		               EXTRACT_32BITS(bp->message_digest + 12));
+        }
 	return;
 
 trunc:

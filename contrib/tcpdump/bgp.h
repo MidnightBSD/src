@@ -1,4 +1,4 @@
-/* @(#) $Header: /home/cvs/src/contrib/tcpdump/bgp.h,v 1.1.1.2 2006-02-25 02:34:04 laffer1 Exp $ (LBL) */
+/* @(#) $Header: /tcpdump/master/tcpdump/bgp.h,v 1.3 2004-06-16 08:45:15 hannes Exp $ (LBL) */
 /* 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that: (1) source code

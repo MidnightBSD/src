@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  */
 /*
- * $Header: /home/cvs/src/contrib/tcpdump/route6d.h,v 1.1.1.2 2006-02-25 02:34:04 laffer1 Exp $
+ * $Header: /tcpdump/master/tcpdump/route6d.h,v 1.5 2002-12-11 07:14:10 guy Exp $
  */
 
 #define	RIP6_VERSION	1

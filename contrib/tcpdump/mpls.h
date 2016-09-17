@@ -1,4 +1,4 @@
-/* @(#) $Header: /home/cvs/src/contrib/tcpdump/mpls.h,v 1.1.1.2 2006-02-25 02:34:04 laffer1 Exp $ (LBL)
+/* @(#) $Header: /tcpdump/master/tcpdump/mpls.h,v 1.1 2004-06-14 14:47:58 hannes Exp $ (LBL)
  * Copyright (C) 2001 WIDE Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

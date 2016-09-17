@@ -1,4 +1,4 @@
-/* @(#) $Header: /home/cvs/src/contrib/tcpdump/smb.h,v 1.1.1.2 2006-02-25 02:34:04 laffer1 Exp $ (LBL) */
+/* @(#) $Header: /tcpdump/master/tcpdump/smb.h,v 1.9 2004-12-28 22:29:44 guy Exp $ (LBL) */
 /*
  * Copyright (C) Andrew Tridgell 1995-1999
  *

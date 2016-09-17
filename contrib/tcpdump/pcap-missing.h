@@ -18,7 +18,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * @(#) $Header: /home/cvs/src/contrib/tcpdump/pcap-missing.h,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $ (LBL)
+ * @(#) $Header: /tcpdump/master/tcpdump/pcap-missing.h,v 1.3 2005-06-03 22:08:52 guy Exp $ (LBL)
  */
 
 #ifndef tcpdump_pcap_missing_h

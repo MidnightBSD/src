@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  */
 
-/* $Id: addrinfo.h,v 1.1.1.2 2006-02-25 02:34:04 laffer1 Exp $ */
+/* $Id: addrinfo.h,v 1.4 2002-06-11 17:13:36 itojun Exp $ */
 
 #ifndef HAVE_ADDRINFO
 
@@ -81,9 +81,6 @@ struct addrinfo {
 
 extern void freeaddrinfo (struct addrinfo *);
 extern void freehostent (struct hostent *);
-extern char *gai_strerror (int);
-extern int getaddrinfo (const char *, const char *,
-			    const struct addrinfo *, struct addrinfo **);
 extern int getnameinfo (const struct sockaddr *, size_t, char *,
 			    size_t, char *, size_t, int);
 extern struct hostent *getipnodebyaddr (const void *, size_t, int, int *);

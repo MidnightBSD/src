@@ -1,4 +1,4 @@
-/* @(#) $Header: /home/cvs/src/contrib/tcpdump/token.h,v 1.1.1.2 2006-02-25 02:34:04 laffer1 Exp $ (LBL) */
+/* @(#) $Header: /tcpdump/master/tcpdump/token.h,v 1.6 2002-12-11 07:14:12 guy Exp $ (LBL) */
 /*
  * Copyright (c) 1998, Larry Lile
  * All rights reserved.
@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/contrib/tcpdump/token.h,v 1.4 2004/03/31 14:57:24 bms Exp $
+ * $FreeBSD: release/9.2.0/contrib/tcpdump/token.h 214478 2010-10-28 19:06:17Z rpaulo $
  */
 
 #define TOKEN_HDRLEN		14
@@ -35,12 +35,12 @@
 #define FRAME_TYPE(trp)		(((trp)->token_fc & 0xC0) >> 6)
 #define TOKEN_FC_LLC		1
 
-#define BROADCAST(trp)		((ntohs((trp)->token_rcf) & 0xE000) >> 13)
-#define RIF_LENGTH(trp)		((ntohs((trp)->token_rcf) & 0x1f00) >> 8)
-#define DIRECTION(trp)		((ntohs((trp)->token_rcf) & 0x0080) >> 7)
-#define LARGEST_FRAME(trp)	((ntohs((trp)->token_rcf) & 0x0070) >> 4)
-#define RING_NUMBER(trp, x)	((ntohs((trp)->token_rseg[x]) & 0xfff0) >> 4)
-#define BRIDGE_NUMBER(trp, x)	((ntohs((trp)->token_rseg[x]) & 0x000f))
+#define BROADCAST(trp)		((EXTRACT_16BITS(&(trp)->token_rcf) & 0xE000) >> 13)
+#define RIF_LENGTH(trp)		((EXTRACT_16BITS(&(trp)->token_rcf) & 0x1f00) >> 8)
+#define DIRECTION(trp)		((EXTRACT_16BITS(&(trp)->token_rcf) & 0x0080) >> 7)
+#define LARGEST_FRAME(trp)	((EXTRACT_16BITS(&(trp)->token_rcf) & 0x0070) >> 4)
+#define RING_NUMBER(trp, x)	((EXTRACT_16BITS(&(trp)->token_rseg[x]) & 0xfff0) >> 4)
+#define BRIDGE_NUMBER(trp, x)	((EXTRACT_16BITS(&(trp)->token_rseg[x]) & 0x000f))
 #define SEGMENT_COUNT(trp)	((int)((RIF_LENGTH(trp) - 2) / 2))
 
 struct token_header {

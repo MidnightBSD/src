@@ -18,7 +18,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * @(#) $Header: /home/cvs/src/contrib/tcpdump/decnet.h,v 1.1.1.2 2006-02-25 02:34:01 laffer1 Exp $ (LBL)
+ * @(#) $Header: /tcpdump/master/tcpdump/decnet.h,v 1.11 2002-12-11 07:13:50 guy Exp $ (LBL)
  */
 
 #ifndef WIN32

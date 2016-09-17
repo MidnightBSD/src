@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcpdump/ntp.h,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $ */
+/* $Header: /tcpdump/master/tcpdump/ntp.h,v 1.8 2004-01-28 14:34:50 hannes Exp $ */
 
 /*
  * Based on ntp.h from the U of MD implementation

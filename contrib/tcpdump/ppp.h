@@ -1,4 +1,4 @@
-/* @(#) $Header: /home/cvs/src/contrib/tcpdump/ppp.h,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL) */
+/* @(#) $Header: /tcpdump/master/tcpdump/ppp.h,v 1.16 2004-10-20 16:14:16 hannes Exp $ (LBL) */
 /*
  * Point to Point Protocol (PPP) RFC1331
  *
@@ -15,7 +15,7 @@
  * suitability of this software for any purpose.  It is provided "as is"
  * without express or implied warranty.
  *
- * $FreeBSD: src/contrib/tcpdump/ppp.h,v 1.8 2006/09/04 20:25:04 sam Exp $
+ * $FreeBSD: release/9.2.0/contrib/tcpdump/ppp.h 190207 2009-03-21 18:30:25Z rpaulo $
  */
 #define PPP_HDRLEN	4	/* length of PPP header */
 

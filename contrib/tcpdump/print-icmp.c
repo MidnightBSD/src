@@ -18,12 +18,12 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: src/contrib/tcpdump/print-icmp.c,v 1.11.10.1 2007/10/19 03:03:58 mlaier Exp $
+ * $FreeBSD: release/9.2.0/contrib/tcpdump/print-icmp.c 236192 2012-05-28 19:13:21Z delphij $
  */
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-icmp.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /tcpdump/master/tcpdump/print-icmp.c,v 1.87 2007-09-13 17:42:31 guy Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -348,6 +348,7 @@ icmp_print(const u_char *bp, u_int plen, const u_char *bp2, int fragmented)
 	const struct icmp_mpls_ext_object_header_t *icmp_mpls_ext_object_header;
 	u_int hlen, dport, mtu, obj_tlen, obj_class_num, obj_ctype;
 	char buf[MAXHOSTNAMELEN + 100];
+	struct cksum_vec vec[1];
 
 	dp = (struct icmp *)bp;
         ext_dp = (struct icmp_ext_t *)bp;
@@ -414,7 +415,7 @@ icmp_print(const u_char *bp, u_int plen, const u_char *bp2, int fragmented)
 		case ICMP_UNREACH_NEEDFRAG:
 		    {
 			register const struct mtu_discovery *mp;
-			mp = (struct mtu_discovery *)&dp->icmp_void;
+			mp = (struct mtu_discovery *)(u_char *)&dp->icmp_void;
 			mtu = EXTRACT_16BITS(&mp->nexthopmtu);
 			if (mtu) {
 				(void)snprintf(buf, sizeof(buf),
@@ -562,8 +563,11 @@ icmp_print(const u_char *bp, u_int plen, const u_char *bp2, int fragmented)
 	(void)printf("ICMP %s, length %u", str, plen);
 	if (vflag && !fragmented) { /* don't attempt checksumming if this is a frag */
 		u_int16_t sum, icmp_sum;
+		struct cksum_vec vec[1];
 		if (TTEST2(*bp, plen)) {
-			sum = in_cksum((u_short*)dp, plen, 0);
+			vec[0].ptr = (const u_int8_t *)(void *)dp;
+			vec[0].len = plen;
+			sum = in_cksum(vec, 1);
 			if (sum != 0) {
 				icmp_sum = EXTRACT_16BITS(&dp->icmp_cksum);
 				(void)printf(" (wrong icmp cksum %x (->%x)!)",
@@ -600,10 +604,12 @@ icmp_print(const u_char *bp, u_int plen, const u_char *bp2, int fragmented)
              * to check if an extension header is present. This is expedient,
              * however not all implementations set the length field proper.
              */
-            if (!ext_dp->icmp_length &&
-                in_cksum((const u_short *)&ext_dp->icmp_ext_version_res,
-                         plen - ICMP_EXTD_MINLEN, 0)) {
-                return;
+            if (!ext_dp->icmp_length) {
+                vec[0].ptr = (const u_int8_t *)(void *)&ext_dp->icmp_ext_version_res;
+                vec[0].len = plen - ICMP_EXTD_MINLEN;
+                if (in_cksum(vec, 1)) {
+                    return;
+                }
             }
 
             printf("\n\tMPLS extension v%u",
@@ -619,10 +625,11 @@ icmp_print(const u_char *bp, u_int plen, const u_char *bp2, int fragmented)
             }
 
             hlen = plen - ICMP_EXTD_MINLEN;
+            vec[0].ptr = (const u_int8_t *)(void *)&ext_dp->icmp_ext_version_res;
+            vec[0].len = hlen;
             printf(", checksum 0x%04x (%scorrect), length %u",
                    EXTRACT_16BITS(ext_dp->icmp_ext_checksum),
-                   in_cksum((const u_short *)&ext_dp->icmp_ext_version_res,
-                            plen - ICMP_EXTD_MINLEN, 0) ? "in" : "",
+                   in_cksum(vec, 1) ? "in" : "",
                    hlen);
 
             hlen -= 4; /* subtract common header size */

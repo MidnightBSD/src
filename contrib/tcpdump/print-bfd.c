@@ -15,7 +15,7 @@
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-bfd.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $";
+    "@(#) $Header: /tcpdump/master/tcpdump/print-bfd.c,v 1.10 2006-02-02 06:35:52 hannes Exp $";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -171,13 +171,17 @@ bfd_print(register const u_char *pptr, register u_int len, register u_int port)
 {
         const struct bfd_header_t *bfd_header;
         const struct bfd_auth_header_t *bfd_auth_header;
-        u_int8_t version;
+        u_int8_t version = 0;
 
         bfd_header = (const struct bfd_header_t *)pptr;
-        TCHECK(*bfd_header);
-        version = BFD_EXTRACT_VERSION(bfd_header->version_diag);
-
-        switch (port << 8 | version) {
+        if (port == BFD_CONTROL_PORT) {
+            TCHECK(*bfd_header);
+            version = BFD_EXTRACT_VERSION(bfd_header->version_diag);
+        } else if (port == BFD_ECHO_PORT) {
+            /* Echo is BFD v1 only */
+            version = 1;
+        }
+        switch ((port << 8) | version) {
 
             /* BFDv0 */
         case (BFD_CONTROL_PORT << 8):
