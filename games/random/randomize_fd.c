@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/games/random/randomize_fd.c,v 1.3 2007/08/08 02:20:32 laffer1 Exp $
+ * $MidnightBSD$
  * $FreeBSD: src/games/random/randomize_fd.c,v 1.2 2003/02/15 10:26:10 seanc Exp $
  */
 
@@ -213,6 +213,8 @@ randomize_fd(int fd, int type, int unique, double denom)
 
 	for( i = 0, n = rand_root; n != NULL; n = n->next, i++ ) 
 		rand_node_table[i] = n;
+
+	free(buf);
 
 	for (i = numnode; i > 0; i--) {
 again:
