@@ -66202,6 +66202,11 @@ tools/tools/crypto/hifnstats.c -text
 tools/tools/crypto/ipsecstats.c -text
 tools/tools/crypto/safestats.c -text
 tools/tools/crypto/ubsecstats.c -text
+tools/tools/cxgbetool/Makefile svneol=native#text/plain
+tools/tools/cxgbetool/cxgbetool.c svneol=native#text/plain
+tools/tools/cxgbetool/reg_defs_t4.c svneol=native#text/plain
+tools/tools/cxgbetool/reg_defs_t4vf.c svneol=native#text/plain
+tools/tools/cxgbetool/reg_defs_t5.c svneol=native#text/plain
 tools/tools/editing/freebsd.el -text
 tools/tools/epfe/epfe.pl -text
 tools/tools/find-sb/Makefile -text
