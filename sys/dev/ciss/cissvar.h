@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/ciss/cissvar.h,v 1.2 2008/12/02 02:24:38 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Michael Smith
  * All rights reserved.
@@ -47,7 +47,7 @@ typedef STAILQ_HEAD(, ciss_request)	cr_qhead_t;
 /*
  * Maximum number of logical drives we support.
  */
-#define CISS_MAX_LOGICAL	15
+#define CISS_MAX_LOGICAL	63
 
 /*
  * Maximum number of physical devices we support.
