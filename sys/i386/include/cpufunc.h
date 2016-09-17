@@ -104,13 +104,6 @@ clts(void)
 }
 
 static __inline void
-clts(void)
-{
-
-	__asm __volatile("clts");
-}
-
-static __inline void
 disable_intr(void)
 {
 #ifdef XEN
