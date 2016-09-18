@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/aac/aac.c,v 1.5 2012/08/06 01:15:26 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
@@ -290,6 +290,15 @@ aac_attach(struct aac_softc *sc)
 	 * Print a little information about the controller.
 	 */
 	aac_describe_controller(sc);
+
+	/*
+	 * Add sysctls.
+	 */
+	SYSCTL_ADD_INT(device_get_sysctl_ctx(sc->aac_dev),
+	    SYSCTL_CHILDREN(device_get_sysctl_tree(sc->aac_dev)),
+	    OID_AUTO, "firmware_build", CTLFLAG_RD,
+	    &sc->aac_revision.buildNumber, 0,
+	    "firmware build number");
 
 	/*
 	 * Register to probe our containers later.
