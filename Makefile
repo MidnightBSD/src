@@ -102,6 +102,10 @@ TGTS=	all all-man buildenv buildenvvars buildkernel buildworld \
 
 TGTS+=	${SUBDIR_TARGETS}
 
+# XXX: clang integrated-as doesn't grok .codeNN directives yet
+CFLAGS.cdboot.S=	${CLANG_NO_IAS}
+CFLAGS+=		${CFLAGS.${.IMPSRC:T}}
+
 BITGTS=	files includes
 BITGTS:=${BITGTS} ${BITGTS:S/^/build/} ${BITGTS:S/^/install/}
 TGTS+=	${BITGTS}
