@@ -54812,7 +54812,6 @@ share/man/man4/ichwd.4 -text
 share/man/man4/icmp.4 -text
 share/man/man4/icmp6.4 -text
 share/man/man4/ida.4 -text
-share/man/man4/idt.4 -text
 share/man/man4/ieee80211.4 -text
 share/man/man4/if_bridge.4 -text
 share/man/man4/ifmib.4 -text
