@@ -68399,6 +68399,7 @@ usr.sbin/asf/asf_kvm.c -text
 usr.sbin/asf/asf_prog.c -text
 usr.sbin/audit/Makefile -text
 usr.sbin/auditd/Makefile -text
+usr.sbin/auditdistd/Makefile svneol=native#text/plain
 usr.sbin/auditreduce/Makefile -text
 usr.sbin/authpf/Makefile -text
 usr.sbin/bluetooth/Makefile -text
