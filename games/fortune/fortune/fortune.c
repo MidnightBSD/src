@@ -47,7 +47,7 @@ static const char sccsid[] = "@(#)fortune.c   8.1 (Berkeley) 5/31/93";
 #endif
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/games/fortune/fortune/fortune.c,v 1.27 2005/02/17 18:06:37 ru Exp $");
-__MBSDID("$MidnightBSD: src/games/fortune/fortune/fortune.c,v 1.2 2007/07/17 10:10:13 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 # include	<sys/stat.h>
 # include	<sys/endian.h>
@@ -59,6 +59,7 @@ __MBSDID("$MidnightBSD: src/games/fortune/fortune/fortune.c,v 1.2 2007/07/17 10:
 # include	<stdio.h>
 # include	<ctype.h>
 # include	<stdlib.h>
+# include	<stdbool.h>
 # include	<string.h>
 # include       <locale.h>
 # include       <time.h>
@@ -66,9 +67,8 @@ __MBSDID("$MidnightBSD: src/games/fortune/fortune/fortune.c,v 1.2 2007/07/17 10:
 # include	"strfile.h"
 # include	"pathnames.h"
 
-# define	TRUE	1
-# define	FALSE	0
-# define	bool	short
+# define	TRUE	true
+# define	FALSE	false
 
 # define	MINW	6		/* minimum wait if desired */
 # define	CPERS	20		/* # of chars for each sec */
