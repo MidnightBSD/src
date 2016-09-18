@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/bsm/audit_record.h,v 1.5 2012/03/31 03:08:56 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005 Apple Inc.
  * All rights reserved.
@@ -29,7 +29,7 @@
  *
  * P4: //depot/projects/trustedbsd/audit3/sys/bsm/audit_record.h#26
  * $FreeBSD: src/sys/bsm/audit_record.h,v 1.10 2007/07/22 12:28:13 rwatson Exp $
- * $MidnightBSD: src/sys/bsm/audit_record.h,v 1.5 2012/03/31 03:08:56 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _BSM_AUDIT_RECORD_H_
@@ -236,6 +236,7 @@ token_t	*au_to_ipc_perm(struct ipc_perm *perm);
 token_t	*au_to_iport(uint16_t iport);
 token_t	*au_to_opaque(const char *data, uint16_t bytes);
 token_t	*au_to_path(const char *path);
+token_t	*au_to_privset(char *privtypestr, char *privstr);
 token_t	*au_to_process(au_id_t auid, uid_t euid, gid_t egid, uid_t ruid,
 	    gid_t rgid, pid_t pid, au_asid_t sid, au_tid_t *tid);
 token_t	*au_to_process32(au_id_t auid, uid_t euid, gid_t egid, uid_t ruid,
@@ -281,6 +282,7 @@ token_t	*au_to_exec_env(char **envp);
 token_t	*au_to_text(const char *text);
 token_t	*au_to_kevent(struct kevent *kev);
 token_t	*au_to_trailer(int rec_size);
+token_t	*au_to_upriv(char sorf, char *priv);
 token_t	*au_to_zonename(const char *zonename);
 
 /*
