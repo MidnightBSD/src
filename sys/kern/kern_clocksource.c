@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/kern/kern_clocksource.c 250600 2013-05-13 15:18:36Z fabient $");
 
 /*
  * Common routines to manage event timers hardware.
@@ -59,9 +59,8 @@ __FBSDID("$MidnightBSD$");
 cyclic_clock_func_t	cyclic_clock_func = NULL;
 #endif
 
-int			cpu_deepest_sleep = 0;    /* Deepest Cx state available. */
-int			cpu_disable_c2_sleep = 0; /* Timer dies in C2. */
-int			cpu_disable_c3_sleep = 0; /* Timer dies in C3. */
+int			cpu_can_deep_sleep = 0;	/* C3 state is available. */
+int			cpu_disable_deep_sleep = 0; /* Timer dies in C3. */
 
 static void		setuptimer(void);
 static void		loadtimer(struct bintime *now, int first);
@@ -656,7 +655,7 @@ cpu_initclocks_bsp(void)
 	else if (!periodic && (timer->et_flags & ET_FLAGS_ONESHOT) == 0)
 		periodic = 1;
 	if (timer->et_flags & ET_FLAGS_C3STOP)
-		cpu_disable_c3_sleep++;
+		cpu_disable_deep_sleep++;
 
 	/*
 	 * We honor the requested 'hz' value.
@@ -733,12 +732,15 @@ cpu_startprofclock(void)
 {
 
 	ET_LOCK();
-	if (periodic) {
-		configtimer(0);
-		profiling = 1;
-		configtimer(1);
+	if (profiling == 0) {
+		if (periodic) {
+			configtimer(0);
+			profiling = 1;
+			configtimer(1);
+		} else
+			profiling = 1;
 	} else
-		profiling = 1;
+		profiling++;
 	ET_UNLOCK();
 }
 
@@ -750,12 +752,15 @@ cpu_stopprofclock(void)
 {
 
 	ET_LOCK();
-	if (periodic) {
-		configtimer(0);
+	if (profiling == 1) {
+		if (periodic) {
+			configtimer(0);
+			profiling = 0;
+			configtimer(1);
+		} else
 		profiling = 0;
-		configtimer(1);
 	} else
-		profiling = 0;
+		profiling--;
 	ET_UNLOCK();
 }
 
@@ -934,9 +939,9 @@ sysctl_kern_eventtimer_timer(SYSCTL_HANDLER_ARGS)
 	configtimer(0);
 	et_free(timer);
 	if (et->et_flags & ET_FLAGS_C3STOP)
-		cpu_disable_c3_sleep++;
+		cpu_disable_deep_sleep++;
 	if (timer->et_flags & ET_FLAGS_C3STOP)
-		cpu_disable_c3_sleep--;
+		cpu_disable_deep_sleep--;
 	periodic = want_periodic;
 	timer = et;
 	et_init(timer, timercb, NULL, NULL);

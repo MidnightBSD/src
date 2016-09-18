@@ -49,6 +49,7 @@ extern int cold;		/* nonzero if we are doing a cold boot */
 extern int rebooting;		/* kern_reboot() has been called. */
 extern const char *panicstr;	/* panic message */
 extern char version[];		/* system version */
+extern char compiler_version[];	/* compiler version */
 extern char copyright[];	/* system copyright */
 extern int kstack_pages;	/* number of kernel stack pages */
 
@@ -135,6 +136,7 @@ extern char **kenvp;
 
 extern const void *zero_region;	/* address space maps to a zeroed page	*/
 
+extern int unmapped_buf_allowed;
 extern int iosize_max_clamp;
 #define	IOSIZE_MAX	(iosize_max_clamp ? INT_MAX : SSIZE_MAX)
 
@@ -266,9 +268,7 @@ void	cpu_startprofclock(void);
 void	cpu_stopprofclock(void);
 void	cpu_idleclock(void);
 void	cpu_activeclock(void);
-extern int	cpu_deepest_sleep;
-extern int	cpu_disable_c2_sleep;
-extern int	cpu_disable_c3_sleep;
+extern int	cpu_can_deep_sleep;
 extern int	cpu_disable_deep_sleep;
 
 int	cr_cansee(struct ucred *u1, struct ucred *u2);
