@@ -1,4 +1,4 @@
-# $MidnightBSD: src/sys/boot/i386/loader/Makefile,v 1.5 2012/07/21 16:23:10 laffer1 Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 MK_SSP=		no
@@ -49,9 +49,6 @@ CFLAGS+=	-DLOADER_BZIP2_SUPPORT
 .endif
 .if !defined(LOADER_NO_GZIP_SUPPORT)
 CFLAGS+=	-DLOADER_GZIP_SUPPORT
-.endif
-.if !defined(LOADER_NO_GPT_SUPPORT)
-CFLAGS+=	-DLOADER_GPT_SUPPORT
 .endif
 
 # Always add MI sources 
@@ -126,6 +123,7 @@ LDADD=	${LIBFICL} ${LIBFIREWIRE} ${LIBZFSBOOT} ${LIBI386} ${LIBSTAND}
 .if ${MACHINE_CPUARCH} == "amd64"
 beforedepend ${OBJS}: machine
 CLEANFILES+=	machine
+CFLAGS+=	-DLOADER_PREFER_AMD64
 machine:
 	ln -sf ${.CURDIR}/../../../i386/include machine
 .endif
