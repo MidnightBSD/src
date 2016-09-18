@@ -66165,6 +66165,12 @@ tools/tools/ath/athstats/athstats.h -text
 tools/tools/ath/athstats/main.c -text
 tools/tools/ath/athstats/statfoo.c -text
 tools/tools/ath/athstats/statfoo.h -text
+tools/tools/bootparttest/Makefile svneol=native#text/plain
+tools/tools/bootparttest/Makefile.orig svneol=native#text/plain
+tools/tools/bootparttest/bootparttest.c svneol=native#text/plain
+tools/tools/bootparttest/bootparttest.c.orig -text
+tools/tools/bootparttest/malloc.c svneol=native#text/plain
+tools/tools/bootparttest/malloc.c.orig -text
 tools/tools/commitsdb/make_commit_db -text
 tools/tools/commitsdb/query_commit_db -text
 tools/tools/crypto/Makefile -text
