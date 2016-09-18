@@ -2322,6 +2322,7 @@ cddl/usr.sbin/lockstat/Makefile -text
 cddl/usr.sbin/plockstat/Makefile -text
 cddl/usr.sbin/plockstat/plockstat.1 -text
 cddl/usr.sbin/zdb/Makefile -text
+cddl/usr.sbin/zhack/Makefile svneol=native#text/plain
 contrib/amd/AUTHORS -text
 contrib/amd/BUGS -text
 contrib/amd/COPYING -text
