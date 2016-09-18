@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/ehci_pci.c 278279 2015-02-05 20:15:42Z hselasky $");
 
 /*
  * USB Enhanced Host Controller Driver, a.k.a. USB 2.0 controller.
@@ -120,10 +120,16 @@ ehci_pci_match(device_t self)
 	case 0x43961002:
 		return ("AMD SB7x0/SB8x0/SB9x0 USB 2.0 controller");
 
+	case 0x1d268086:
+		return ("Intel Patsburg USB 2.0 controller");
+	case 0x1d2d8086:
+		return ("Intel Patsburg USB 2.0 controller");
 	case 0x1e268086:
 		return ("Intel Panther Point USB 2.0 controller");
 	case 0x1e2d8086:
 		return ("Intel Panther Point USB 2.0 controller");
+	case 0x1f2c8086:
+		return ("Intel Avoton USB 2.0 controller");
 	case 0x25ad8086:
 		return "Intel 6300ESB USB 2.0 controller";
 	case 0x24cd8086:
@@ -152,6 +158,14 @@ ehci_pci_match(device_t self)
 		return ("Intel PCH USB 2.0 controller USB-A");
 	case 0x3b3c8086:
 		return ("Intel PCH USB 2.0 controller USB-B");
+	case 0x8c268086:
+		return ("Intel Lynx Point USB 2.0 controller USB-A");
+	case 0x8c2d8086:
+		return ("Intel Lynx Point USB 2.0 controller USB-B");
+	case 0x8ca68086:
+		return ("Intel Wildcat Point USB 2.0 controller USB-A");
+	case 0x8cad8086:
+		return ("Intel Wildcat Point USB 2.0 controller USB-B");
 
 	case 0x00e01033:
 		return ("NEC uPD 720100 USB 2.0 controller");
@@ -165,7 +179,7 @@ ehci_pci_match(device_t self)
 	case 0x00e810de:
 		return "NVIDIA nForce3 250 USB 2.0 controller";
 	case 0x005b10de:
-		return "NVIDIA nForce4 USB 2.0 controller";
+		return "NVIDIA nForce CK804 USB 2.0 controller";
 	case 0x036d10de:
 		return "NVIDIA nForce MCP55 USB 2.0 controller";
 	case 0x03f210de:
@@ -264,6 +278,7 @@ ehci_pci_attach(device_t self)
 	sc->sc_bus.parent = self;
 	sc->sc_bus.devices = sc->sc_devices;
 	sc->sc_bus.devices_max = EHCI_MAX_DEVICES;
+	sc->sc_bus.dma_bits = 32;
 
 	/* get all DMA memory */
 	if (usb_bus_mem_alloc_all(&sc->sc_bus,
