@@ -30248,10 +30248,16 @@ contrib/openbsm/bsm/audit_uevents.h -text
 contrib/openbsm/bsm/auditd_lib.h -text
 contrib/openbsm/bsm/libbsm.h -text
 contrib/openbsm/compat/clock_gettime.h -text
+contrib/openbsm/compat/closefrom.h svneol=native#text/plain
+contrib/openbsm/compat/compat.h svneol=native#text/plain
 contrib/openbsm/compat/endian.h -text
+contrib/openbsm/compat/endian_enc.h svneol=native#text/plain
+contrib/openbsm/compat/flopen.h svneol=native#text/plain
+contrib/openbsm/compat/pidfile.h svneol=native#text/plain
 contrib/openbsm/compat/queue.h -text
 contrib/openbsm/compat/strlcat.h -text
 contrib/openbsm/compat/strlcpy.h -text
+contrib/openbsm/compat/vis.h svneol=native#text/plain
 contrib/openbsm/config/config.guess -text
 contrib/openbsm/config/config.h -text
 contrib/openbsm/config/config.h.in -text
