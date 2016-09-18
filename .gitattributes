@@ -56581,6 +56581,8 @@ sys/boot/common/misc.c -text
 sys/boot/common/module.c -text
 sys/boot/common/newvers.sh -text
 sys/boot/common/panic.c -text
+sys/boot/common/part.c svneol=native#text/plain
+sys/boot/common/part.h svneol=native#text/plain
 sys/boot/common/pnp.c -text
 sys/boot/common/reloc_elf.c -text
 sys/boot/common/reloc_elf32.c -text
