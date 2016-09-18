@@ -2089,6 +2089,7 @@ cddl/contrib/opensolaris/cmd/zinject/translate.c -text
 cddl/contrib/opensolaris/cmd/zinject/zinject.c -text
 cddl/contrib/opensolaris/cmd/zinject/zinject.h -text
 cddl/contrib/opensolaris/cmd/zlook/zlook.c -text
+cddl/contrib/opensolaris/cmd/zpool/zpool-features.7 svneol=native#text/plain
 cddl/contrib/opensolaris/cmd/zpool/zpool.8 -text
 cddl/contrib/opensolaris/cmd/zpool/zpool_iter.c -text
 cddl/contrib/opensolaris/cmd/zpool/zpool_main.c -text
@@ -56976,6 +56977,7 @@ sys/cddl/compat/opensolaris/kern/opensolaris_vfs.c -text
 sys/cddl/compat/opensolaris/kern/opensolaris_zone.c -text
 sys/cddl/compat/opensolaris/rpc/xdr.h -text
 sys/cddl/compat/opensolaris/sys/acl.h -text
+sys/cddl/compat/opensolaris/sys/assfail.h svneol=native#text/plain
 sys/cddl/compat/opensolaris/sys/atomic.h -text
 sys/cddl/compat/opensolaris/sys/bitmap.h -text
 sys/cddl/compat/opensolaris/sys/byteorder.h -text
@@ -57039,9 +57041,12 @@ sys/cddl/contrib/opensolaris/common/atomic/amd64/opensolaris_atomic.S -text
 sys/cddl/contrib/opensolaris/common/atomic/i386/opensolaris_atomic.S -text
 sys/cddl/contrib/opensolaris/common/atomic/sparc64/opensolaris_atomic.S -text
 sys/cddl/contrib/opensolaris/common/avl/avl.c -text
+sys/cddl/contrib/opensolaris/common/nvpair/fnvpair.c svneol=native#text/plain
 sys/cddl/contrib/opensolaris/common/nvpair/nvpair.c -text
 sys/cddl/contrib/opensolaris/common/nvpair/nvpair_alloc_fixed.c -text
 sys/cddl/contrib/opensolaris/common/unicode/u8_textprep.c -text
+sys/cddl/contrib/opensolaris/common/zfs/zfeature_common.c svneol=native#text/plain
+sys/cddl/contrib/opensolaris/common/zfs/zfeature_common.h svneol=native#text/plain
 sys/cddl/contrib/opensolaris/common/zfs/zfs_comutil.c -text
 sys/cddl/contrib/opensolaris/common/zfs/zfs_comutil.h -text
 sys/cddl/contrib/opensolaris/common/zfs/zfs_deleg.c -text
@@ -57072,6 +57077,7 @@ sys/cddl/contrib/opensolaris/uts/common/fs/zfs/THIRDPARTYLICENSE.lz4.descrip -te
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/arc.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/bplist.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/bpobj.c -text
+sys/cddl/contrib/opensolaris/uts/common/fs/zfs/bptree.c svneol=native#text/plain
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/dbuf.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/ddt.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/ddt_zap.c -text
@@ -57110,6 +57116,7 @@ sys/cddl/contrib/opensolaris/uts/common/fs/zfs/space_map.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/arc.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/bplist.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/bpobj.h -text
+sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/bptree.h svneol=native#text/plain
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/dbuf.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/ddt.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/dmu.h -text
@@ -57150,6 +57157,7 @@ sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/vdev_impl.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/zap.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/zap_impl.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/zap_leaf.h -text
+sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/zfeature.h svneol=native#text/plain
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/zfs_acl.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/zfs_context.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/zfs_ctldir.h -text
@@ -57189,6 +57197,7 @@ sys/cddl/contrib/opensolaris/uts/common/fs/zfs/vdev_root.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/zap.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/zap_leaf.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/zap_micro.c -text
+sys/cddl/contrib/opensolaris/uts/common/fs/zfs/zfeature.c svneol=native#text/plain
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/zfs.conf -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/zfs_acl.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/zfs_byteswap.c -text
