@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD: src/sys/geom/part/g_part.h,v 1.6 2012/01/29 19:11:09 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _GEOM_PART_H_
@@ -46,6 +46,7 @@ enum g_part_alias {
 	G_PART_ALIAS_EFI,		/* A EFI system partition entry. */
 	G_PART_ALIAS_FREEBSD,		/* A FreeBSD labeled partition entry. */
 	G_PART_ALIAS_FREEBSD_BOOT,	/* A FreeBSD boot partition entry. */
+	G_PART_ALIAS_FREEBSD_NANDFS,	/* A FreeBSD nandfs partition entry. */
 	G_PART_ALIAS_FREEBSD_SWAP,	/* A swap partition entry. */
 	G_PART_ALIAS_FREEBSD_UFS,	/* A UFS/UFS2 file system entry. */
 	G_PART_ALIAS_FREEBSD_VINUM,	/* A Vinum partition entry. */
@@ -57,6 +58,7 @@ enum g_part_alias {
 	G_PART_ALIAS_LINUX_SWAP,	/* A Linux swap partition entry. */
 	G_PART_ALIAS_MIDNIGHTBSD,       /* A BSD labeled partition entry. */
 	G_PART_ALIAS_MIDNIGHTBSD_BOOT,  /* A MidnightBSD boot partition entry. */
+	G_PART_ALIAS_MIDNIGHTBSD_NANDFS,/* A MidnightBSD nandfs partition entry. */
 	G_PART_ALIAS_MIDNIGHTBSD_SWAP,  /* A swap partition entry. */
 	G_PART_ALIAS_MIDNIGHTBSD_UFS,   /* A UFS/UFS2 file system entry. */
 	G_PART_ALIAS_MIDNIGHTBSD_VINUM, /* A Vinum partition entry. */
