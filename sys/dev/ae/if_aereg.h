@@ -23,6 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/dev/ae/if_aereg.h 258960 2013-12-05 07:16:24Z yongari $
  */
 
 /*
@@ -104,6 +105,8 @@
 #define	AE_RXD_COUNT_MIN	16
 #define	AE_RXD_COUNT_MAX	512
 #define	AE_RXD_COUNT_DEFAULT	64
+/* Padding to align frames on a 128-byte boundary. */
+#define	AE_RXD_PADDING		120
 
 #define	AE_TXD_BUFSIZE_MIN	4096
 #define	AE_TXD_BUFSIZE_MAX	65536
