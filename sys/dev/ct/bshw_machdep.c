@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/ct/bshw_machdep.c,v 1.3 2012/08/06 01:22:08 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*	$NecBSD: bshw_machdep.c,v 1.8.12.6 2001/06/29 06:28:05 honda Exp $	*/
 
 #include <sys/cdefs.h>
@@ -113,9 +113,7 @@ typedef	unsigned long vaddr_t;
  * GENERIC MACHDEP FUNCTIONS
  *********************************************************/
 void
-bshw_synch_setup(ct, ti)
-	struct ct_softc *ct;
-	struct targ_info *ti;
+bshw_synch_setup(struct ct_softc *ct, struct targ_info *ti)
 {
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
 	struct ct_targ_info *cti = (void *) ti;
@@ -134,8 +132,7 @@ bshw_synch_setup(ct, ti)
 }
 
 void
-bshw_bus_reset(ct)
-	struct ct_softc *ct;
+bshw_bus_reset(struct ct_softc *ct)
 {
 	struct scsi_low_softc *slp = &ct->sc_sclow;
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
@@ -183,9 +180,7 @@ bshw_bus_reset(ct)
 
 /* probe */
 int
-bshw_read_settings(chp, bs)
-	struct ct_bus_access_handle *chp;
-	struct bshw_softc *bs;
+bshw_read_settings(struct ct_bus_access_handle *chp, struct bshw_softc *bs)
 {
 	static int irq_tbl[] = { 3, 5, 6, 9, 12, 13 };
 
@@ -217,8 +212,7 @@ static __inline void bshw_lc_smit_stop(struct ct_softc *);
 static int bshw_lc_smit_fstat(struct ct_softc *, int, int);
 
 static __inline void
-bshw_lc_smit_stop(ct)
-	struct ct_softc *ct;
+bshw_lc_smit_stop(struct ct_softc *ct)
 {
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
 
@@ -227,10 +221,7 @@ bshw_lc_smit_stop(ct)
 }
 
 static __inline void
-bshw_lc_smit_start(ct, count, direction)
-	struct ct_softc *ct;
-	int count;
-	u_int direction;
+bshw_lc_smit_start(struct ct_softc *ct, int count, u_int direction)
 {
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
 	u_int8_t pval, val;
@@ -246,9 +237,7 @@ bshw_lc_smit_start(ct, count, direction)
 }
 
 static int
-bshw_lc_smit_fstat(ct, wc, read)
-	struct ct_softc *ct;
-	int wc, read;
+bshw_lc_smit_fstat(struct ct_softc *ct, int wc, int read)
 {
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
 	u_int8_t stat;
@@ -278,8 +267,7 @@ bshw_lc_smit_fstat(ct, wc, read)
 }
 
 void
-bshw_smit_xfer_stop(ct)
-	struct ct_softc *ct;
+bshw_smit_xfer_stop(struct ct_softc *ct)
 {
 	struct scsi_low_softc *slp = &ct->sc_sclow;
 	struct bshw_softc *bs = ct->ct_hw;
@@ -325,8 +313,7 @@ bad:
 }
 
 int
-bshw_smit_xfer_start(ct)
-	struct ct_softc *ct;
+bshw_smit_xfer_start(struct ct_softc *ct)
 {
 	struct scsi_low_softc *slp = &ct->sc_sclow;
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
@@ -429,8 +416,7 @@ static void bshw_dmastart(struct ct_softc *);
 static void bshw_dmadone(struct ct_softc *);
 
 int
-bshw_dma_xfer_start(ct)
-	struct ct_softc *ct;
+bshw_dma_xfer_start(struct ct_softc *ct)
 {
 	struct scsi_low_softc *slp = &ct->sc_sclow;
 	struct sc_p *sp = &slp->sl_scp;
@@ -491,8 +477,7 @@ bshw_dma_xfer_start(ct)
 }
 
 void
-bshw_dma_xfer_stop(ct)
-	struct ct_softc *ct;
+bshw_dma_xfer_stop(struct ct_softc *ct)
 {
 	struct scsi_low_softc *slp = &ct->sc_sclow;
 	struct sc_p *sp = &slp->sl_scp;
@@ -555,10 +540,8 @@ bshw_dma_xfer_stop(ct)
 static bus_addr_t dmapageport[4] = { 0x27, 0x21, 0x23, 0x25 };
 
 static __inline void 
-bshw_dma_write_1(chp, port, val)
-	struct ct_bus_access_handle *chp;
-	bus_addr_t port;
-	u_int8_t val;
+bshw_dma_write_1(struct ct_bus_access_handle *chp, bus_addr_t port, 
+    u_int8_t val)
 {
 
 	CT_BUS_WEIGHT(chp);
@@ -566,8 +549,7 @@ bshw_dma_write_1(chp, port, val)
 }
 
 static void
-bshw_dmastart(ct)
-	struct ct_softc *ct;
+bshw_dmastart(struct ct_softc *ct)
 {
 	struct scsi_low_softc *slp = &ct->sc_sclow;
 	struct bshw_softc *bs = ct->ct_hw;
@@ -613,8 +595,7 @@ bshw_dmastart(ct)
 }
 
 static void
-bshw_dmadone(ct)
-	struct ct_softc *ct;
+bshw_dmadone(struct ct_softc *ct)
 {
 	struct bshw_softc *bs = ct->ct_hw;
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
@@ -641,8 +622,7 @@ static void bshw_dma_start_elecom(struct ct_softc *);
 static void bshw_dma_stop_elecom(struct ct_softc *);
 
 static int
-bshw_dma_init_texa(ct)
-	struct ct_softc *ct;
+bshw_dma_init_texa(struct ct_softc *ct)
 {
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
 	u_int8_t regval;
@@ -657,8 +637,7 @@ bshw_dma_init_texa(ct)
 }
 
 static int
-bshw_dma_init_sc98(ct)
-	struct ct_softc *ct;
+bshw_dma_init_sc98(struct ct_softc *ct)
 {
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
 
@@ -684,8 +663,7 @@ bshw_dma_init_sc98(ct)
 }
 
 static void
-bshw_dma_start_sc98(ct)
-	struct ct_softc *ct;
+bshw_dma_start_sc98(struct ct_softc *ct)
 {
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
 
@@ -694,8 +672,7 @@ bshw_dma_start_sc98(ct)
 }
 
 static void
-bshw_dma_stop_sc98(ct)
-	struct ct_softc *ct;
+bshw_dma_stop_sc98(struct ct_softc *ct)
 {
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
 
@@ -704,8 +681,7 @@ bshw_dma_stop_sc98(ct)
 }
 
 static void
-bshw_dma_start_elecom(ct)
-	struct ct_softc *ct;
+bshw_dma_start_elecom(struct ct_softc *ct)
 {
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
 	u_int8_t tmp = ct_cr_read_1(chp, 0x4c);
@@ -714,8 +690,7 @@ bshw_dma_start_elecom(ct)
 }
 
 static void
-bshw_dma_stop_elecom(ct)
-	struct ct_softc *ct;
+bshw_dma_stop_elecom(struct ct_softc *ct)
 {
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
 	u_int8_t tmp = ct_cr_read_1(chp, 0x4c);

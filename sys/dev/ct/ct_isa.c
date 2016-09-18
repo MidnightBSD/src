@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/ct/ct_isa.c,v 1.3 2012/08/06 01:22:08 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*	$NecBSD: ct_isa.c,v 1.6 1999/07/26 06:32:01 honda Exp $	*/
 
 #include <sys/cdefs.h>
@@ -395,16 +395,14 @@ ct_dmamap(void *arg, bus_dma_segment_t *seg, int nseg, int error)
 }
 
 static void
-ct_isa_bus_access_weight(chp)
-	struct ct_bus_access_handle *chp;
+ct_isa_bus_access_weight(struct ct_bus_access_handle *chp)
 {
 
 	outb(0x5f, 0);
 }
 
 static void
-ct_isa_dmasync_before(ct)
-	struct ct_softc *ct;
+ct_isa_dmasync_before(struct ct_softc *ct)
 {
 
 	if (need_pre_dma_flush)
@@ -412,8 +410,7 @@ ct_isa_dmasync_before(ct)
 }
 
 static void
-ct_isa_dmasync_after(ct)
-	struct ct_softc *ct;
+ct_isa_dmasync_after(struct ct_softc *ct)
 {
 
 	if (need_post_dma_flush)

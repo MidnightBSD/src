@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/ct/ct.c,v 1.3 2012/08/06 01:22:08 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*	$NecBSD: ct.c,v 1.13.12.5 2001/06/26 07:31:53 honda Exp $	*/
 
 #include <sys/cdefs.h>
@@ -193,9 +193,7 @@ struct scsi_low_funcs ct_funcs = {
  * HW functions
  **************************************************/
 static __inline void
-cthw_phase_bypass(ct, ph)
-	struct ct_softc *ct;
-	u_int8_t ph;
+cthw_phase_bypass(struct ct_softc *ct, u_int8_t ph)
 {
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
 
@@ -204,8 +202,7 @@ cthw_phase_bypass(ct, ph)
 }
 
 static void
-cthw_bus_reset(ct)
-	struct ct_softc *ct;
+cthw_bus_reset(struct ct_softc *ct)
 {
 
 	/*
@@ -216,10 +213,8 @@ cthw_bus_reset(ct)
 }
 
 static int
-cthw_chip_reset(chp, chiprevp, chipclk, hostid)
-	struct ct_bus_access_handle *chp;
-	int *chiprevp;
-	int chipclk, hostid;
+cthw_chip_reset(struct ct_bus_access_handle *chp, int *chiprevp, int chipclk,
+    int hostid)
 {
 #define	CT_SELTIMEOUT_20MHz_REGV	(0x80)
 	u_int8_t aux, regv;
@@ -314,8 +309,7 @@ out:
 }
 
 static struct ct_synch_data *
-ct_make_synch_table(ct)
-	struct ct_softc *ct;
+ct_make_synch_table(struct ct_softc *ct)
 {
 	struct ct_synch_data *sdtp, *sdp;
 	u_int base, i, period;
@@ -358,11 +352,8 @@ ct_make_synch_table(ct)
  * Attach & Probe
  **************************************************/
 int
-ctprobesubr(chp, dvcfg, hsid, chipclk, chiprevp)
-	struct ct_bus_access_handle *chp;
-	u_int dvcfg, chipclk;
-	int hsid;
-	int *chiprevp;
+ctprobesubr(struct ct_bus_access_handle *chp, u_int dvcfg, int hsid,
+    u_int chipclk, int *chiprevp)
 {
 
 #if	0
@@ -386,8 +377,7 @@ ctprint(aux, name)
 }
 
 void
-ctattachsubr(ct)
-	struct ct_softc *ct;
+ctattachsubr(struct ct_softc *ct)
 {
 	struct scsi_low_softc *slp = &ct->sc_sclow;
 
@@ -402,8 +392,7 @@ ctattachsubr(ct)
  * SCSI LOW interface functions
  **************************************************/
 static void
-cthw_attention(ct)
-	struct ct_softc *ct;
+cthw_attention(struct ct_softc *ct)
 {
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
 
@@ -420,8 +409,7 @@ cthw_attention(ct)
 }
 
 static void
-ct_attention(ct)
-	struct ct_softc *ct;
+ct_attention(struct ct_softc *ct)
 {
 	struct scsi_low_softc *slp = &ct->sc_sclow;
 
@@ -438,10 +426,7 @@ ct_attention(ct)
 }
 
 static int
-ct_targ_init(ct, ti, action)
-	struct ct_softc *ct;
-	struct targ_info *ti;
-	int action;
+ct_targ_init(struct ct_softc *ct, struct targ_info *ti, int action)
 {
 	struct ct_targ_info *cti = (void *) ti;
 
@@ -478,9 +463,7 @@ ct_targ_init(ct, ti, action)
 }	
 
 static int
-ct_world_start(ct, fdone)
-	struct ct_softc *ct;
-	int fdone;
+ct_world_start(struct ct_softc *ct, int fdone)
 {
 	struct scsi_low_softc *slp = &ct->sc_sclow;
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
@@ -511,9 +494,7 @@ ct_world_start(ct, fdone)
 }
 
 static int
-ct_start_selection(ct, cb)
-	struct ct_softc *ct;
-	struct slccb *cb;
+ct_start_selection(struct ct_softc *ct, struct slccb *cb)
 {
 	struct scsi_low_softc *slp = &ct->sc_sclow;
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
@@ -585,10 +566,7 @@ ct_start_selection(ct, cb)
 }
 
 static int
-ct_msg(ct, ti, msg)
-	struct ct_softc *ct;
-	struct targ_info *ti;
-	u_int msg;
+ct_msg(struct ct_softc *ct, struct targ_info *ti, u_int msg)
 {
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
 	struct ct_targ_info *cti = (void *) ti;
@@ -640,11 +618,8 @@ ct_msg(ct, ti, msg)
  * <DATA PHASE>
  *************************************************/
 static int
-ct_xfer(ct, data, len, direction, statp)
-	struct ct_softc *ct;
-	u_int8_t *data;
-	int len, direction;
-	u_int *statp;
+ct_xfer(struct ct_softc *ct, u_int8_t *data, int len, int direction,
+    u_int *statp)
 {
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
 	int wc;
@@ -704,8 +679,7 @@ ct_xfer(ct, data, len, direction, statp)
 #define	CT_PADDING_BUF_SIZE 32
 
 static void
-ct_io_xfer(ct)
-	struct ct_softc *ct;
+ct_io_xfer(struct ct_softc *ct)
 {
 	struct scsi_low_softc *slp = &ct->sc_sclow;
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
@@ -757,9 +731,7 @@ struct ct_err ct_cmderr[] = {
 };
 
 static void
-ct_phase_error(ct, scsi_status)
-	struct ct_softc *ct;
-	u_int8_t scsi_status;
+ct_phase_error(struct ct_softc *ct, u_int8_t scsi_status)
 {
 	struct scsi_low_softc *slp = &ct->sc_sclow;
 	struct targ_info *ti = slp->sl_Tnexus;
@@ -805,9 +777,7 @@ ct_phase_error(ct, scsi_status)
  * ### SCSI PHASE SEQUENCER ###
  **************************************************/
 static int
-ct_reselected(ct, scsi_status)
-	struct ct_softc *ct;
-	u_int8_t scsi_status;
+ct_reselected(struct ct_softc *ct, u_int8_t scsi_status)
 {
 	struct scsi_low_softc *slp = &ct->sc_sclow;
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
@@ -850,9 +820,7 @@ ct_reselected(ct, scsi_status)
 }
 
 static int
-ct_target_nexus_establish(ct, lun, dir)
-	struct ct_softc *ct;
-	int lun, dir;
+ct_target_nexus_establish(struct ct_softc *ct, int lun, int dir)
 {
 	struct scsi_low_softc *slp = &ct->sc_sclow;
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
@@ -872,8 +840,7 @@ ct_target_nexus_establish(ct, lun, dir)
 }
 
 static int
-ct_lun_nexus_establish(ct)
-	struct ct_softc *ct;
+ct_lun_nexus_establish(struct ct_softc *ct)
 {
 	struct scsi_low_softc *slp = &ct->sc_sclow;
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
@@ -884,8 +851,7 @@ ct_lun_nexus_establish(ct)
 }
 
 static int
-ct_ccb_nexus_establish(ct)
-	struct ct_softc *ct;
+ct_ccb_nexus_establish(struct ct_softc *ct)
 {
 	struct scsi_low_softc *slp = &ct->sc_sclow;
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
@@ -911,8 +877,7 @@ ct_ccb_nexus_establish(ct)
 }
 
 static int
-ct_unbusy(ct)
-	struct ct_softc *ct;
+ct_unbusy(struct ct_softc *ct)
 {
 	struct scsi_low_softc *slp = &ct->sc_sclow;
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
@@ -935,8 +900,7 @@ ct_unbusy(ct)
 }
 	
 static int
-ct_catch_intr(ct)
-	struct ct_softc *ct;
+ct_catch_intr(struct ct_softc *ct)
 {
 	struct ct_bus_access_handle *chp = &ct->sc_ch;
 	int wc;
@@ -954,8 +918,7 @@ ct_catch_intr(ct)
 }
 
 int
-ctintr(arg)
-	void *arg;
+ctintr(void *arg)
 {
 	struct ct_softc *ct = arg;
 	struct scsi_low_softc *slp = &ct->sc_sclow;
