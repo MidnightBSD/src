@@ -155,6 +155,7 @@ static struct uuid gpt_uuid_bios_boot = GPT_ENT_TYPE_BIOS_BOOT;
 static struct uuid gpt_uuid_efi = GPT_ENT_TYPE_EFI;
 static struct uuid gpt_uuid_freebsd = GPT_ENT_TYPE_FREEBSD;
 static struct uuid gpt_uuid_freebsd_boot = GPT_ENT_TYPE_FREEBSD_BOOT;
+static struct uuid gpt_uuid_freebsd_nandfs = GPT_ENT_TYPE_FREEBSD_NANDFS;
 static struct uuid gpt_uuid_freebsd_swap = GPT_ENT_TYPE_FREEBSD_SWAP;
 static struct uuid gpt_uuid_freebsd_ufs = GPT_ENT_TYPE_FREEBSD_UFS;
 static struct uuid gpt_uuid_freebsd_vinum = GPT_ENT_TYPE_FREEBSD_VINUM;
@@ -164,6 +165,7 @@ static struct uuid gpt_uuid_linux_lvm = GPT_ENT_TYPE_LINUX_LVM;
 static struct uuid gpt_uuid_linux_raid = GPT_ENT_TYPE_LINUX_RAID;
 static struct uuid gpt_uuid_midnightbsd = GPT_ENT_TYPE_MIDNIGHTBSD;
 static struct uuid gpt_uuid_midnightbsd_boot = GPT_ENT_TYPE_MIDNIGHTBSD_BOOT;
+static struct uuid gpt_uuid_midnightbsd_nandfs = GPT_ENT_TYPE_MIDNIGHTBSD_NANDFS;
 static struct uuid gpt_uuid_midnightbsd_swap = GPT_ENT_TYPE_MIDNIGHTBSD_SWAP;
 static struct uuid gpt_uuid_midnightbsd_ufs = GPT_ENT_TYPE_MIDNIGHTBSD_UFS;
 static struct uuid gpt_uuid_midnightbsd_vinum = GPT_ENT_TYPE_MIDNIGHTBSD_VINUM;
@@ -201,6 +203,7 @@ static struct g_part_uuid_alias {
 	{ &gpt_uuid_efi, 		G_PART_ALIAS_EFI,		 0xee },
 	{ &gpt_uuid_freebsd,		G_PART_ALIAS_FREEBSD,		 0xa5 },
 	{ &gpt_uuid_freebsd_boot, 	G_PART_ALIAS_FREEBSD_BOOT,	 0 },
+	{ &gpt_uuid_freebsd_nandfs, 	G_PART_ALIAS_FREEBSD_NANDFS,	 0 },
 	{ &gpt_uuid_freebsd_swap,	G_PART_ALIAS_FREEBSD_SWAP,	 0 },
 	{ &gpt_uuid_freebsd_ufs,	G_PART_ALIAS_FREEBSD_UFS,	 0 },
 	{ &gpt_uuid_freebsd_vinum,	G_PART_ALIAS_FREEBSD_VINUM,	 0 },
@@ -215,6 +218,7 @@ static struct g_part_uuid_alias {
 	{ &gpt_uuid_mbr,		G_PART_ALIAS_MBR,		 0 },
 	{ &gpt_uuid_midnightbsd,       G_PART_ALIAS_MIDNIGHTBSD,	 0xa5},
 	{ &gpt_uuid_midnightbsd_boot,  G_PART_ALIAS_MIDNIGHTBSD_BOOT,	 0 },
+	{ &gpt_uuid_midnightbsd_nandfs, 	G_PART_ALIAS_MIDNIGHTBSD_NANDFS,	 0 },
 	{ &gpt_uuid_midnightbsd_swap,  G_PART_ALIAS_MIDNIGHTBSD_SWAP,	 0 },
 	{ &gpt_uuid_midnightbsd_ufs,   G_PART_ALIAS_MIDNIGHTBSD_UFS,	 0 },
 	{ &gpt_uuid_midnightbsd_vinum, G_PART_ALIAS_MIDNIGHTBSD_VINUM,	 0 },
