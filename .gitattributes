@@ -65046,6 +65046,7 @@ tools/regression/atm/proto_cc/RunTest.sh -text
 tools/regression/atm/proto_sscfu/RunTest.sh -text
 tools/regression/atm/proto_sscop/RunTest.sh -text
 tools/regression/atm/proto_uni/RunTest.sh -text
+tools/regression/bin/sh/parser/alias10.0 -text
 tools/regression/ccd/layout/Makefile -text
 tools/regression/ccd/layout/a.c -text
 tools/regression/ccd/layout/b.c -text
