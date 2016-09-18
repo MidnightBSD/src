@@ -2084,6 +2084,7 @@ cddl/contrib/opensolaris/cmd/zfs/zfs_iter.c -text
 cddl/contrib/opensolaris/cmd/zfs/zfs_iter.h -text
 cddl/contrib/opensolaris/cmd/zfs/zfs_main.c -text
 cddl/contrib/opensolaris/cmd/zfs/zfs_util.h -text
+cddl/contrib/opensolaris/cmd/zhack/zhack.c svneol=native#text/plain
 cddl/contrib/opensolaris/cmd/zinject/translate.c -text
 cddl/contrib/opensolaris/cmd/zinject/zinject.c -text
 cddl/contrib/opensolaris/cmd/zinject/zinject.h -text
