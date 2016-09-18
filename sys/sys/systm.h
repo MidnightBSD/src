@@ -269,6 +269,7 @@ void	cpu_activeclock(void);
 extern int	cpu_deepest_sleep;
 extern int	cpu_disable_c2_sleep;
 extern int	cpu_disable_c3_sleep;
+extern int	cpu_disable_deep_sleep;
 
 int	cr_cansee(struct ucred *u1, struct ucred *u2);
 int	cr_canseesocket(struct ucred *cred, struct socket *so);
