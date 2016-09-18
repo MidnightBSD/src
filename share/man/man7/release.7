@@ -84,7 +84,7 @@ The release procedure on some architectures may also require that the
 This document does not cover source code management, quality
 assurance, or other aspects of the release engineering process.
 .Sh CLEAN RELEASE GENERATION
-Official releases of FreeBSD are produced in a totally clean environment to
+Official releases of MidnightBSD are produced in a totally clean environment to
 ensure consistency between the versions of the src, ports, and doc trees
 and to avoid contamination from the host system (e.g. local patches, changes
 to
@@ -123,16 +123,14 @@ This environment variable can be set to pass flags (e.g. -j) to
 .Xr make 1
 when invoked by the script.
 .It Ev SVNROOT
-The location of the FreeBSD SVN source, doc, and ports repositories.
+The location of the MidnightBSD SVN source and mports repositories.
 Defaults to
-.Pa svn://svn.freebsd.org/base
+.Pa svn://svn.midnightbsd.org/svn/src
 for the source tree,
-.Pa svn://svn.freebsd.org/ports/head
-for the Ports Collection, and
-.Pa svn://svn.freebsd.org/doc/head
-for the Documentation Project source.
+.Pa svn://svn.midnightbsd.org/svn/mports/trunk
+for the Ports Tree source.
 .It Ev RELSTRING
-Optional base name for generated media images (e.g. FreeBSD-9.0-RC2-amd64).
+Optional base name for generated media images (e.g. MidnightBSD-0.9-amd64).
 Defaults to the output of
 .Ic `uname -s`-`uname -r`-`uname -p`
 within the chroot.
@@ -319,18 +317,6 @@ directory.
 .Xr chroot 8 ,
 .Xr mtree 8 ,
 .Xr sysctl 8
-.Rs
-.%T "FreeBSD Release Engineering"
-.%U http://www.FreeBSD.org/doc/en_US.ISO8859-1/articles/releng/
-.Re
-.Rs
-.%T "FreeBSD Release Engineering of Third Party Packages"
-.%U http://www.FreeBSD.org/doc/en_US.ISO8859-1/articles/releng-packages/
-.Re
-.Rs
-.%T "FreeBSD Developers' Handbook"
-.%U http://www.FreeBSD.org/doc/en_US.ISO8859-1/books/developers-handbook/
-.Re
 .Sh HISTORY
 .Fx
 1.x
