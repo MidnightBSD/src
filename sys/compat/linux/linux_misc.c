@@ -233,8 +233,7 @@ linux_uselib(struct thread *td, struct linux_uselib_args *args)
 	unsigned long bss_size;
 	char *library;
 	ssize_t aresid;
-	int error;
-	int locked, vfslocked;
+	int error, locked, vfslocked, writecount;
 
 	LCONVPATHEXIST(td, args->library, &library);
 
@@ -266,7 +265,10 @@ linux_uselib(struct thread *td, struct linux_uselib_args *args)
 	locked = 1;
 
 	/* Writable? */
-	if (vp->v_writecount) {
+	error = VOP_GET_WRITECOUNT(vp, &writecount);
+	if (error != 0)
+		goto cleanup;
+	if (writecount != 0) {
 		error = ETXTBSY;
 		goto cleanup;
 	}
