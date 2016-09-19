@@ -385,11 +385,13 @@ namei(struct nameidata *ndp)
 }
 
 static int
-compute_cn_lkflags(struct mount *mp, int lkflags)
+compute_cn_lkflags(struct mount *mp, int lkflags, int cnflags)
 {
 
-	if (mp == NULL || 
-	    ((lkflags & LK_SHARED) && !(mp->mnt_kern_flag & MNTK_LOOKUP_SHARED))) {
+	if (mp == NULL || ((lkflags & LK_SHARED) &&
+	    (!(mp->mnt_kern_flag & MNTK_LOOKUP_SHARED) ||
+	    ((cnflags & ISDOTDOT) &&
+	    (mp->mnt_kern_flag & MNTK_LOOKUP_EXCL_DOTDOT))))) {
 		lkflags &= ~LK_SHARED;
 		lkflags |= LK_EXCLUSIVE;
 	}
@@ -518,7 +520,8 @@ lookup(struct nameidata *ndp)
 	dp = ndp->ni_startdir;
 	ndp->ni_startdir = NULLVP;
 	vn_lock(dp,
-	    compute_cn_lkflags(dp->v_mount, cnp->cn_lkflags | LK_RETRY));
+	    compute_cn_lkflags(dp->v_mount, cnp->cn_lkflags | LK_RETRY,
+	    cnp->cn_flags));
 
 dirloop:
 	/*
@@ -675,7 +678,7 @@ dirloop:
 			VFS_UNLOCK_GIANT(tvfslocked);
 			vn_lock(dp,
 			    compute_cn_lkflags(dp->v_mount, cnp->cn_lkflags |
-			    LK_RETRY));
+			    LK_RETRY, ISDOTDOT));
 		}
 	}
 
@@ -713,7 +716,8 @@ unionlookup:
 	vprint("lookup in", dp);
 #endif
 	lkflags_save = cnp->cn_lkflags;
-	cnp->cn_lkflags = compute_cn_lkflags(dp->v_mount, cnp->cn_lkflags);
+	cnp->cn_lkflags = compute_cn_lkflags(dp->v_mount, cnp->cn_lkflags,
+	    cnp->cn_flags);
 	if ((error = VOP_LOOKUP(dp, &ndp->ni_vp, cnp)) != 0) {
 		cnp->cn_lkflags = lkflags_save;
 		KASSERT(ndp->ni_vp == NULL, ("leaf should be empty"));
@@ -732,7 +736,7 @@ unionlookup:
 			VFS_UNLOCK_GIANT(tvfslocked);
 			vn_lock(dp,
 			    compute_cn_lkflags(dp->v_mount, cnp->cn_lkflags |
-			    LK_RETRY));
+			    LK_RETRY, cnp->cn_flags));
 			goto unionlookup;
 		}
 
@@ -804,8 +808,8 @@ unionlookup:
 		dvfslocked = 0;
 		vref(vp_crossmp);
 		ndp->ni_dvp = vp_crossmp;
-		error = VFS_ROOT(mp, compute_cn_lkflags(mp, cnp->cn_lkflags),
-		    &tdp);
+		error = VFS_ROOT(mp, compute_cn_lkflags(mp, cnp->cn_lkflags,
+		    cnp->cn_flags), &tdp);
 		vfs_unbusy(mp);
 		if (vn_lock(vp_crossmp, LK_SHARED | LK_NOWAIT))
 			panic("vp_crossmp exclusively locked or reclaimed");
