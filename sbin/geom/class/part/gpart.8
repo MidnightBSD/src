@@ -24,7 +24,7 @@
 .\"
 .\" $MidnightBSD: src/sbin/geom/class/part/gpart.8,v 1.4 2012/11/04 01:55:18 laffer1 Exp $
 .\"
-.Dd March 19, 2012
+.Dd January 3, 2013
 .Dt GPART 8
 .Os
 .Sh NAME
@@ -451,8 +451,14 @@ about its use.
 .El
 .\" ==== SHOW ====
 .It Cm show
-Show the current partition information of the specified geoms
-or all geoms if none are specified.
+Show current partition information for the specified geoms, or all
+geoms if none are specified.
+The default output includes the logical starting block of each
+partition, the partition size in blocks, the partition index number,
+the partition type, and a human readable partition size.
+Block sizes and locations are based on the device's Sectorsize
+as shown by
+.Cm gpart list .
 Additional options include:
 .Bl -tag -width 10n
 .It Fl l
@@ -598,7 +604,7 @@ partition dedicated to bootstrap code.
 The scheme-specific type is
 .Qq Li "!83bd6b9d-7f41-11dc-be0b-001560b84f0f"
 for GPT.
-.It Cm freebsd-swap
+.It Cm mnbsd-swap
 A
 .Fx
 partition dedicated to swap space.
@@ -616,7 +622,7 @@ The scheme-specific types are
 for APM,
 .Qq Li "!516e7cb6-6ecf-11d6-8ff8-00022d09712b"
 for GPT, and tag 0x0902 for VTOC8.
-.It Cm freebsd-vinum
+.It Cm mnbsd-vinum
 A
 .Fx
 partition that contains a Vinum volume.
@@ -625,7 +631,7 @@ The scheme-specific types are
 for APM,
 .Qq Li "!516e7cb8-6ecf-11d6-8ff8-00022d09712b"
 for GPT, and tag 0x0903 for VTOC8.
-.It Cm freebsd-zfs
+.It Cm mnbsd-zfs
 A
 .Fx
 partition that contains a ZFS volume.
@@ -800,12 +806,12 @@ First, a protective MBR is embedded into the first disk sector from the
 .Pa /boot/pmbr
 image.
 It searches the GPT
-.Cm freebsd-boot
+.Cm mnbsd-boot
 partition (see the
 .Sx "PARTITION TYPES"
 section) in the GPT and runs the next bootstrap stage from it.
 The
-.Cm freebsd-boot
+.Cm mnbsd-boot
 partition should be smaller than 545 KB.
 There are two variants of bootstrap code to write to this partition:
 .Pa /boot/gptboot
@@ -814,7 +820,7 @@ and
 .Pa /boot/gptboot
 is used to boot from UFS.
 It searches
-.Cm freebsd-ufs
+.Cm mnbsd-ufs
 GPT partitions and starts
 .Pa /boot/loader
 .Pq the third bootstrap stage
@@ -823,7 +829,7 @@ The
 .Pa /boot/gptzfsboot
 is used to boot from ZFS.
 It searches
-.Cm freebsd-zfs
+.Cm mnbsd-zfs
 GPT partitions and starts
 .Pa /boot/zfsloader
 if found.
@@ -846,7 +852,7 @@ Instead, the 800 KBytes bootstrap code image
 should be written with the
 .Cm gpart bootcode
 command to a partition of type
-.Cm freebsd-boot ,
+.Cm mnbsd-boot ,
 which should also be 800 KB in size.
 .Sh OPERATIONAL FLAGS
 Actions other than the
@@ -917,7 +923,7 @@ and
 .Cm list
 will report about corrupt tables.
 .Pp
-If the size of the device has changed (e.g.\& volume expansion) the
+If the size of the device has changed (e.g.,\& volume expansion) the
 secondary GPT header will no longer be located in the last sector.
 This is not a metadata corruption, but it is dangerous because any
 corruption of the primary GPT will lead to loss of the partition table.
@@ -977,22 +983,22 @@ This may break a mirrored volume and lead to data damage.
 Exit status is 0 on success, and 1 if the command fails.
 .Sh EXAMPLES
 Create a GPT scheme on
-.Pa ad0 :
+.Pa ada0 :
 .Bd -literal -offset indent
-/sbin/gpart create -s GPT ad0
+/sbin/gpart create -s GPT ada0
 .Ed
 .Pp
 Embed GPT bootstrap code into a protective MBR:
 .Bd -literal -offset indent
-/sbin/gpart bootcode -b /boot/pmbr ad0
+/sbin/gpart bootcode -b /boot/pmbr ada0
 .Ed
 .Pp
 Create a dedicated
-.Cm freebsd-boot
+.Cm mnbsd-boot
 partition that can boot
 .Fx
 from a
-.Cm freebsd-ufs
+.Cm mnbsd-ufs
 partition, and install bootstrap code into it.
 This partition must be larger than the bootstrap code
 .Po
@@ -1009,15 +1015,15 @@ aligned on a 64 kB boundary without the need to specify an explicit
 offset or alignment.
 The boot partition itself is aligned on a 4 kB boundary.
 .Bd -literal -offset indent
-/sbin/gpart add -b 40 -s 88 -t midnightbsd-boot ad0
-/sbin/gpart bootcode -p /boot/gptboot -i 1 ad0
+/sbin/gpart add -b 40 -s 88 -t midnightbsd-boot ada0
+/sbin/gpart bootcode -p /boot/gptboot -i 1 ada0
 .Ed
 .Pp
 Create a 512MB-sized
-.Cm freebsd-ufs
+.Cm mnbsd-ufs
 partition to contain a UFS filesystem from which the system can boot.
 .Bd -literal -offset indent
-/sbin/gpart add -s 512M -t freebsd-ufs ad0
+/sbin/gpart add -s 512M -t mnbsd-ufs ada0
 .Ed
 .Pp
 Create an MBR scheme on
@@ -1046,8 +1052,8 @@ label) with space for up to 20 partitions:
 .Pp
 Create a 1GB-sized UFS partition and a 4GB-sized swap partition:
 .Bd -literal -offset indent
-/sbin/gpart add -t freebsd-ufs -s 1G ada0s1
-/sbin/gpart add -t freebsd-swap -s 4G ada0s1
+/sbin/gpart add -t mnbsd-ufs -s 1G ada0s1
+/sbin/gpart add -t mnbsd-swap -s 4G ada0s1
 .Ed
 .Pp
 Install bootstrap code for the
@@ -1064,17 +1070,17 @@ Create a VTOC8 scheme on
 .Ed
 .Pp
 Create a 512MB-sized
-.Cm freebsd-ufs
+.Cm mnbsd-ufs
 partition to contain a UFS filesystem from which the system can boot.
 .Bd -literal -offset indent
-/sbin/gpart add -s 512M -t freebsd-ufs da0
+/sbin/gpart add -s 512M -t mnbsd-ufs da0
 .Ed
 .Pp
 Create a 15GB-sized
-.Cm freebsd-ufs
+.Cm mnbsd-ufs
 partition to contain a UFS filesystem and aligned on 4KB boundaries:
 .Bd -literal -offset indent
-/sbin/gpart add -s 15G -t freebsd-ufs -a 4k da0
+/sbin/gpart add -s 15G -t mnbsd-ufs -a 4k da0
 .Ed
 .Pp
 After creating all required partitions, embed bootstrap code into them:
