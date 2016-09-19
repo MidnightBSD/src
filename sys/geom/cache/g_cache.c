@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/cache/g_cache.c,v 1.2 2008/12/03 00:25:47 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Ruslan Ermilov <ru@FreeBSD.org>
  * All rights reserved.
@@ -502,7 +502,7 @@ g_cache_create(struct g_class *mp, struct g_provider *pp,
 		return (NULL);
 	}
 
-	gp = g_new_geomf(mp, md->md_name);
+	gp = g_new_geomf(mp, "%s", md->md_name);
 	sc = g_malloc(sizeof(*sc), M_WAITOK | M_ZERO);
 	sc->sc_type = type;
 	sc->sc_bshift = bshift;

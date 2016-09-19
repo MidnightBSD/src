@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/nop/g_nop.c,v 1.3 2008/12/03 00:25:49 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -190,7 +190,7 @@ g_nop_create(struct gctl_req *req, struct g_class *mp, struct g_provider *pp,
 			return (EEXIST);
 		}
 	}
-	gp = g_new_geomf(mp, name);
+	gp = g_new_geomf(mp, "%s", name);
 	sc = g_malloc(sizeof(*sc), M_WAITOK);
 	sc->sc_offset = offset;
 	sc->sc_error = ioerror;
@@ -206,7 +206,7 @@ g_nop_create(struct gctl_req *req, struct g_class *mp, struct g_provider *pp,
 	gp->access = g_nop_access;
 	gp->dumpconf = g_nop_dumpconf;
 
-	newpp = g_new_providerf(gp, gp->name);
+	newpp = g_new_providerf(gp, "%s", gp->name);
 	newpp->mediasize = size;
 	newpp->sectorsize = secsize;
 

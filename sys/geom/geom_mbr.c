@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/geom_mbr.c,v 1.3 2008/12/03 00:25:46 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -484,8 +484,8 @@ g_mbrext_taste(struct g_class *mp, struct g_provider *pp, int insist __unused)
 				    ((off_t)dp[0].dp_size) << 9ULL,
 				    sectorsize,
 				    "%*.*s%d",
-				    strlen(gp->name) - 1,
-				    strlen(gp->name) - 1,
+				    (int)strlen(gp->name) - 1,
+				    (int)strlen(gp->name) - 1,
 				    gp->name,
 				    slice + 5);
 				g_topology_unlock();

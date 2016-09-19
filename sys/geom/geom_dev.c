@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/geom_dev.c,v 1.7 2012/04/01 04:19:13 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -165,7 +165,7 @@ g_dev_taste(struct g_class *mp, struct g_provider *pp, int insist __unused)
 	LIST_FOREACH(cp, &pp->consumers, consumers)
 		if (cp->geom->class == mp)
 			return (NULL);
-	gp = g_new_geomf(mp, pp->name);
+	gp = g_new_geomf(mp, "%s", pp->name);
 	cp = g_new_consumer(gp);
 	error = g_attach(cp, pp);
 	KASSERT(error == 0,

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/bde/g_bde.c,v 1.2 2008/12/03 00:25:46 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -189,7 +189,7 @@ g_bde_create_geom(struct gctl_req *req, struct g_class *mp, struct g_provider *p
 		/* XXX: error check */
 		kproc_create(g_bde_worker, gp, &sc->thread, 0, 0,
 			"g_bde %s", gp->name);
-		pp = g_new_providerf(gp, gp->name);
+		pp = g_new_providerf(gp, "%s", gp->name);
 #if 0
 		/*
 		 * XXX: Disable this for now.  Appearantly UFS no longer
