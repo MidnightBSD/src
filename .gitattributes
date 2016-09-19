@@ -1,0 +1,4 @@
+* text=auto !eol
+dist/pwcache.3 -text
+dist/pwcache.c -text
+dist/pwcache.h -text
