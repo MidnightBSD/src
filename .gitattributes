@@ -17071,6 +17071,9 @@ contrib/libc++/src/thread.cpp -text
 contrib/libc++/src/typeinfo.cpp -text
 contrib/libc++/src/utility.cpp -text
 contrib/libc++/src/valarray.cpp -text
+contrib/libc-pwcache/pwcache.3 -text
+contrib/libc-pwcache/pwcache.c -text
+contrib/libc-pwcache/pwcache.h -text
 contrib/libcxxrt/LICENSE -text
 contrib/libcxxrt/MIDNIGHTBSD-upgrade -text
 contrib/libcxxrt/abi_namespace.h -text
