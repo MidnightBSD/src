@@ -5,6 +5,10 @@ Updating Information for MidnightBSD users.
 	depended on during installworld.  "mergemaster -p" can be used to add
 	the user prior to installworld.
 
+	The VFS KBI was changed with the merge of several nullfs
+	optimizations and fixes.  All filesystem modules must be
+	recompiled.
+
 20160916:
 	The random(4) support for the VIA hardware random number
 	generator (`PADLOCK') is no longer enabled unconditionally.
