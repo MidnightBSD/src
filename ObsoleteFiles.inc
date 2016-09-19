@@ -14,6 +14,10 @@
 #
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
+
+# 20160919: remove wrongly created directories for auditdistd
+OLD_DIRS+=var/dist
+OLD_DIRS+=var/remote
 #20160412
 OLD_LIBS+=lib/libmport.so.1
 #20160603
