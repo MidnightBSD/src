@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/http.c,v 1.4 2008/09/02 01:30:29 laffer1 Exp $ 
+ * $MidnightBSD$ 
  * $FreeBSD: src/usr.sbin/sysinstall/http.c,v 1.7 2002/11/01 02:05:05 kuriyama Exp $
  */
 
@@ -254,7 +254,7 @@ mediaGetHTTP(Device *dev, char *file, Boolean probe)
 		    msgConfirm("Client error %s, you could try an other server",buf);
 		    return NULL;
 		} else if (rv >= 300) {
-		    msgConfirm("Error %s,",buf);
+		    msgConfirm("Error %s",buf);
 		    return NULL;
 		} else if (rv != 200) {
 		    msgConfirm("Error %s when sending %s, you could try an other server",buf, req);
