@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/ftp.c,v 1.6 2009/05/20 21:35:09 laffer1 Exp $
+ * $MidnightBSD$
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -107,7 +107,7 @@ try:
     hostname = variable_get(VAR_FTP_HOST);
     dir = variable_get(VAR_FTP_DIR);
     if (!hostname || !dir) {
-	msgConfirm("Missing FTP host or directory specification.  FTP media not initialized,");
+	msgConfirm("Missing FTP host or directory specification.  FTP media not initialized.");
 	netDown(dev);
 	return FALSE;
     }
