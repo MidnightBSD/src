@@ -1,5 +1,65 @@
 Updating Information for MidnightBSD users.
 
+20160923:
+	Security update for OpenSSL
+
+	A malicious client can send an excessively large OCSP Status Request extension.
+	If that client continually requests renegotiation, sending a large OCSP Status
+	Request extension each time, then there will be unbounded memory growth on the
+	server. [CVE-2016-6304]
+
+	An overflow can occur in MDC2_Update() either if called directly or through
+	the EVP_DigestUpdate() function using MDC2. If an attacker is able to supply
+	very large amounts of input data after a previous call to EVP_EncryptUpdate()
+	with a partial block then a length check can overflow resulting in a heap
+	corruption. [CVE-2016-6303]
+
+	If a server uses SHA512 for TLS session ticket HMAC it is vulnerable to a
+	DoS attack where a malformed ticket will result in an OOB read which will
+	ultimately crash. [CVE-2016-6302]
+
+	The function BN_bn2dec() does not check the return value of BN_div_word().
+	This can cause an OOB write if an application uses this function with an
+	overly large BIGNUM. This could be a problem if an overly large certificate
+	or CRL is printed out from an untrusted source. TLS is not affected because
+	record limits will reject an oversized certificate before it is parsed.
+	[CVE-2016-2182]
+
+	The function TS_OBJ_print_bio() misuses OBJ_obj2txt(): the return value is
+	the total length the OID text representation would use and not the amount
+	of data written. This will result in OOB reads when large OIDs are presented.
+	[CVE-2016-2180]
+
+	Some calculations of limits in OpenSSL have used undefined pointer arithmetic. 
+	This could cause problems with some malloc implementations. [CVE-2016-2177]
+
+	Operations in the DSA signing algorithm should run in constant time in order to
+	avoid side channel attacks. A flaw in the OpenSSL DSA implementation means that
+	a non-constant time codepath is followed for certain operations. [CVE-2016-2178]
+
+	In a DTLS connection where handshake messages are delivered out-of-order those
+	messages that OpenSSL is not yet ready to process will be buffered for later
+	use. Under certain circumstances, a flaw in the logic means that those messages
+	do not get removed from the buffer even though the handshake has been completed.
+	An attacker could force up to approx. 15 messages to remain in the buffer when
+	they are no longer required. These messages will be cleared when the DTLS
+	connection is closed. The default maximum size for a message is 100k. Therefore
+	the attacker could force an additional 1500k to be consumed per connection.
+	[CVE-2016-2179]
+
+	A flaw in the DTLS replay attack protection mechanism means that records that
+	arrive for future epochs update the replay protection "window" before the MAC
+	for the record has been validated. This could be exploited by an attacker by
+	sending a record for the next epoch (which does not have to decrypt or have a
+	valid MAC), with a very large sequence number. This means that all subsequent
+	legitimate packets are dropped causing a denial of service for a specific
+	DTLS connection. [CVE-2016-2181]
+
+	In OpenSSL 1.0.2 and earlier some missing message length checks can result in
+	OOB reads of up to 2 bytes beyond an allocated buffer. There is a theoretical
+	DoS risk but this has not been observed in practice on common platforms.
+	[CVE-2016-6306]
+
 20160918:
 	With the addition of auditdistd(8), a new auditdistd user is now
 	depended on during installworld.  "mergemaster -p" can be used to add
