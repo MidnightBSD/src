@@ -48237,7 +48237,6 @@ include/utmp.h svneol=native#text/plain
 include/utmpx.h -text
 include/uuid.h -text
 include/varargs.h -text
-include/vis.h -text
 include/wchar.h -text
 include/wctype.h -text
 include/wordexp.h -text
@@ -48975,8 +48974,7 @@ lib/libc/gen/ulimit.3 -text
 lib/libc/gen/ulimit.c -text
 lib/libc/gen/uname.3 -text
 lib/libc/gen/uname.c -text
-lib/libc/gen/unvis.3 -text
-lib/libc/gen/unvis.c -text
+lib/libc/gen/unvis-compat.c svneol=native#text/plain
 lib/libc/gen/usleep.3 -text
 lib/libc/gen/usleep.c -text
 lib/libc/gen/utime.3 -text
@@ -48985,8 +48983,6 @@ lib/libc/gen/utxdb.c -text
 lib/libc/gen/utxdb.h -text
 lib/libc/gen/valloc.3 -text
 lib/libc/gen/valloc.c -text
-lib/libc/gen/vis.3 -text
-lib/libc/gen/vis.c -text
 lib/libc/gen/wait.c -text
 lib/libc/gen/wait3.c -text
 lib/libc/gen/waitid.c svneol=native#text/plain
