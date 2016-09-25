@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20160925:
+	Import NetBSD vis(3) and unvis(3) as well as mtree.
+
 20160923:
 	Security update for OpenSSL
 
