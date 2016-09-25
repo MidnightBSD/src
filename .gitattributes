@@ -1,0 +1,6 @@
+* text=auto !eol
+dist/unvis.3 -text
+dist/unvis.c -text
+dist/vis.3 -text
+dist/vis.c -text
+dist/vis.h -text
