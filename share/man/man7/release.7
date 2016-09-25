@@ -49,7 +49,7 @@ This command is aptly named
 For some users, it may be desirable to provide an absolutely clean
 build environment, with no local modifications to the source tree or to
 .Xr make.conf 5 ,
-and with clean checkouts of specific versions of the doc, src, and ports
+and with clean checkouts of specific versions of the doc, src, and mports
 trees. For this purpose, a script
 .Pq Pa src/release/generate-release.sh
 is provided to automate these checkouts and then execute
@@ -85,7 +85,7 @@ This document does not cover source code management, quality
 assurance, or other aspects of the release engineering process.
 .Sh CLEAN RELEASE GENERATION
 Official releases of MidnightBSD are produced in a totally clean environment to
-ensure consistency between the versions of the src, ports, and doc trees
+ensure consistency between the versions of the src, mports, and doc trees
 and to avoid contamination from the host system (e.g. local patches, changes
 to
 .Xr make.conf 5 ,
@@ -183,7 +183,7 @@ and suitable for upload to an FTP mirror.
 Major subtargets called by targets above:
 .Bl -tag -width ".Cm packagesystem"
 .It Cm packagesystem
-Generates all the distribution archives (e.g. base, kernel, ports, doc)
+Generates all the distribution archives (e.g. base, kernel, mports, doc)
 applicable on this platform.
 .It Cm system
 Builds a bootable installation system containing all the distribution files
@@ -211,9 +211,9 @@ Location of a directory containing the src tree. By default, the directory
 above the one containing the makefile
 .Pq Pa src .
 .It Va PORTSDIR
-Location of a directory containing the ports tree. By default,
-.Pa /usr/ports .
-If it is unset or cannot be found, ports will not be included in the release.
+Location of a directory containing the mports tree. By default,
+.Pa /usr/mports .
+If it is unset or cannot be found, mports will not be included in the release.
 .It Va DOCDIR
 Location of a directory containing the doc tree. By default,
 .Pa /usr/doc .
@@ -266,8 +266,8 @@ Typically, one only needs to set
 .Bl -tag -compact
 .It Pa /usr/doc/Makefile
 .It Pa /usr/doc/share/mk/doc.project.mk
-.It Pa /usr/ports/Mk/bsd.port.mk
-.It Pa /usr/ports/Mk/bsd.sites.mk
+.It Pa /usr/mports/Mk/bsd.port.mk
+.It Pa /usr/mports/Mk/components/sites.mk
 .It Pa /usr/share/examples/etc/make.conf
 .It Pa /usr/src/Makefile
 .It Pa /usr/src/Makefile.inc1
@@ -279,17 +279,17 @@ The following sequence of commands can be used to build a
 .Dq "-CURRENT snapshot":
 .Bd -literal -offset indent
 cd /usr
-svn co svn://svn.freebsd.org/base/head src
+svn co svn://svn.midnightbsd.org/svn/src/trunk src
 cd src
 make buildworld buildkernel
 cd release
 make release
-make install DESTDIR=/var/freebsd-snapshot
+make install DESTDIR=/var/midnightbsd-snapshot
 .Ed
 .Pp
 After running these commands, all produced distribution files (tarballs
 for FTP, CD-ROM images, etc.) are available in the
-.Pa /var/freebsd-snapshot
+.Pa /var/midnightbsd-snapshot
 directory.
 .Pp
 The following sequence of commands can be used to build a
@@ -297,7 +297,7 @@ The following sequence of commands can be used to build a
 in a clean environment, including ports and documentation:
 .Bd -literal -offset indent
 cd /usr/src/release
-export SVNROOT=svn://svn.freebsd.org/base
+export SVNROOT=svn://svn.midnightbsd.org/svn/src/
 sh generate-release.sh head /local3/release
 .Ed
 .Pp
@@ -308,7 +308,7 @@ directory.
 .Xr cc 1 ,
 .Xr install 1 ,
 .Xr make 1 ,
-.Xr svn 1 Pq Pa ports/devel/subversion ,
+.Xr svn 1 Pq Pa mports/devel/subversion ,
 .Xr uname 1 ,
 .Xr md 4 ,
 .Xr make.conf 5 ,
