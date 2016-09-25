@@ -17074,6 +17074,11 @@ contrib/libc++/src/valarray.cpp -text
 contrib/libc-pwcache/pwcache.3 -text
 contrib/libc-pwcache/pwcache.c -text
 contrib/libc-pwcache/pwcache.h -text
+contrib/libc-vis/unvis.3 -text
+contrib/libc-vis/unvis.c -text
+contrib/libc-vis/vis.3 -text
+contrib/libc-vis/vis.c -text
+contrib/libc-vis/vis.h -text
 contrib/libcxxrt/LICENSE -text
 contrib/libcxxrt/MIDNIGHTBSD-upgrade -text
 contrib/libcxxrt/abi_namespace.h -text
