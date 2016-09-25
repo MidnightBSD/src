@@ -64722,6 +64722,7 @@ sys/ufs/ffs/ffs_rawread.c -text
 sys/ufs/ffs/ffs_snapshot.c -text
 sys/ufs/ffs/ffs_softdep.c -text
 sys/ufs/ffs/ffs_subr.c -text
+sys/ufs/ffs/ffs_suspend.c svneol=native#text/plain
 sys/ufs/ffs/ffs_tables.c -text
 sys/ufs/ffs/ffs_vfsops.c -text
 sys/ufs/ffs/ffs_vnops.c -text
@@ -65114,6 +65115,7 @@ tools/regression/atm/proto_sscfu/RunTest.sh -text
 tools/regression/atm/proto_sscop/RunTest.sh -text
 tools/regression/atm/proto_uni/RunTest.sh -text
 tools/regression/bin/sh/parser/alias10.0 -text
+tools/regression/bin/sh/parser/empty-braces1.0 -text
 tools/regression/ccd/layout/Makefile -text
 tools/regression/ccd/layout/a.c -text
 tools/regression/ccd/layout/b.c -text
