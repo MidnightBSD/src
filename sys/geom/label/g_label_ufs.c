@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/label/g_label_ufs.c,v 1.5 2011/12/10 15:46:15 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002, 2003 Gordon Tetlow
  * Copyright (c) 2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
@@ -87,7 +87,8 @@ g_label_ufs_taste_common(struct g_consumer *cp, char *label, size_t size, int wh
 		    pp->mediasize / fs->fs_fsize == fs->fs_old_size) {
 		    	/* Valid UFS1. */
 		} else if (fs->fs_magic == FS_UFS2_MAGIC && fs->fs_fsize > 0 &&
-		    pp->mediasize / fs->fs_fsize == fs->fs_size) {
+		    ((pp->mediasize / fs->fs_fsize == fs->fs_size) ||
+		    (pp->mediasize / fs->fs_fsize == fs->fs_providersize))) {
 		    	/* Valid UFS2. */
 		} else {
 			g_free(fs);
