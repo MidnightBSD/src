@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/ciss/cissreg.h,v 1.2 2008/12/02 02:24:38 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Michael Smith
  * All rights reserved.
@@ -426,6 +426,15 @@ struct ciss_config_table
 #define CISS_DRIVER_DAUGHTER_ATTACHED		(1<<8)
 #define CISS_DRIVER_SCSI_PREFETCH		(1<<9)
     u_int32_t	max_sg_length;		/* 31 in older firmware */
+/*
+ * these fields appear in OpenCISS Spec 1.06
+ * http://cciss.sourceforge.net/#docs
+ */
+    u_int32_t	max_logical_supported;
+    u_int32_t	max_physical_supported;
+    u_int32_t	max_physical_per_logical;
+    u_int32_t	max_perfomant_mode_cmds;
+    u_int32_t	max_block_fetch_count;
 } __packed;
 
 /*
