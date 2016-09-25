@@ -27,8 +27,8 @@
 # SUCH DAMAGE.
 #
 #	@(#)vnode_if.src	8.12 (Berkeley) 5/14/95
+# $FreeBSD: releng/9.2/sys/kern/vnode_if.src 244660 2012-12-24 13:29:22Z kib $
 # $MidnightBSD$
-#
 
 #
 # Above each of the vop descriptors in lines starting with %%
@@ -656,20 +656,6 @@ vop_unp_connect {
 
 vop_unp_detach {
 	IN struct vnode *vp;
-};
-
-%% get_writecount	vp	L L L
-
-vop_get_writecount {
-	IN struct vnode *vp;
-	OUT int *writecount;
-};
-
-%% add_writecount	vp	E E E
-
-vop_add_writecount {
-	IN struct vnode *vp;
-	IN int inc;
 };
 
 %% is_text	vp	L L L
