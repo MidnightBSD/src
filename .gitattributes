@@ -69323,6 +69323,7 @@ usr.sbin/ngctl/write.c -text
 usr.sbin/nghook/Makefile -text
 usr.sbin/nghook/main.c -text
 usr.sbin/nghook/nghook.8 -text
+usr.sbin/nmtree/Makefile svneol=native#text/plain
 usr.sbin/nologin/Makefile -text
 usr.sbin/nologin/nologin.5 -text
 usr.sbin/nologin/nologin.8 -text

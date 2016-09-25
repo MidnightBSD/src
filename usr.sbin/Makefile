@@ -59,6 +59,7 @@ SUBDIR=	adduser \
 	nfsdumpstate \
 	nfsrevoke \
 	nfsuserd \
+	nmtree \
 	nologin \
 	pciconf \
 	periodic \
