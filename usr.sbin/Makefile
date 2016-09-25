@@ -61,6 +61,7 @@ SUBDIR=	adduser \
 	nfsuserd \
 	nmtree \
 	nologin \
+	${_pc_sysinstall} \
 	pciconf \
 	periodic \
 	powerd \
@@ -233,6 +234,10 @@ SUBDIR+=	rdate
 
 .if ${MK_OPENSSL} != "no"
 SUBDIR+=	keyserv
+.endif
+
+.if ${MK_PC_SYSINSTALL} != "no"
+_pc_sysinstall=	pc-sysinstall
 .endif
 
 .if ${MK_PF} != "no"
