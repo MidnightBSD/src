@@ -57419,6 +57419,9 @@ sys/compat/ia32/ia32_sysvec.c -text
 sys/compat/ia32/ia32_util.h -text
 sys/compat/linprocfs/linprocfs.c -text
 sys/compat/linsysfs/linsysfs.c -text
+sys/compat/linux/check_error.d svneol=native#text/plain
+sys/compat/linux/check_internal_locks.d svneol=native#text/plain
+sys/compat/linux/linux_dtrace.h svneol=native#text/plain
 sys/compat/linux/linux_emul.c -text
 sys/compat/linux/linux_emul.h -text
 sys/compat/linux/linux_file.c -text
@@ -57450,6 +57453,8 @@ sys/compat/linux/linux_videodev.h -text
 sys/compat/linux/linux_videodev2.h -text
 sys/compat/linux/linux_videodev2_compat.h -text
 sys/compat/linux/linux_videodev_compat.h -text
+sys/compat/linux/stats_timing.d svneol=native#text/plain
+sys/compat/linux/trace_futexes.d svneol=native#text/plain
 sys/compat/mach/Makefile svneol=native#text/plain
 sys/compat/mach/clock_server.c svneol=native#text/plain
 sys/compat/mach/defs/clock.defs -text
