@@ -544,10 +544,6 @@ MK_ZFS:=	no
 MK_CTF:=	no
 .endif
 
-.if ${MK_CLANG} == "no"
-MK_CLANG_EXTRAS:= no
-.endif
-
 .if ${MK_CRYPT} == "no"
 MK_OPENSSL:=	no
 MK_OPENSSH:=	no
@@ -594,6 +590,7 @@ MK_GDB:=	no
 .endif
 
 .if ${MK_CLANG} == "no"
+MK_CLANG_EXTRAS:= no
 MK_CLANG_IS_CC:= no
 MK_CLANG_FULL:= no
 .endif
