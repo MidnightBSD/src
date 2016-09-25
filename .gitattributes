@@ -65054,9 +65054,11 @@ tools/build/options/WITH_BSD_GREP -text
 tools/build/options/WITH_CLANG -text
 tools/build/options/WITH_CLANG_EXTRAS -text
 tools/build/options/WITH_CLANG_IS_CC -text
+tools/build/options/WITH_CTF svneol=native#text/plain
 tools/build/options/WITH_HESIOD -text
 tools/build/options/WITH_ICONV -text
 tools/build/options/WITH_IDEA -text
+tools/build/options/WITH_LIBCPLUSPLUS svneol=native#text/plain
 tools/build/options/WITH_NMTREE svneol=native#text/plain
 tools/build/options/WITH_SHARED_TOOLCHAIN -text
 tools/build/options/makeman -text
