@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/if_ndis/if_ndis.c 271714 2014-09-17 18:17:18Z jhb $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1175,7 +1175,7 @@ ndis_rxeof_eth(adapter, ctx, addr, hdr, hdrlen, lookahead, lookaheadlen, pktlen)
 
 	block = adapter;
 
-	m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+	m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 	if (m == NULL)
 		return;
 
@@ -1419,7 +1419,7 @@ ndis_rxeof(adapter, packets, pktcnt)
 		} else {
 #ifdef notdef
 			if (p->np_oob.npo_status == NDIS_STATUS_RESOURCES) {
-				m = m_dup(m0, M_DONTWAIT);
+				m = m_dup(m0, M_NOWAIT);
 				/*
 				 * NOTE: we want to destroy the mbuf here, but
 				 * we don't actually want to return it to the
@@ -1437,7 +1437,7 @@ ndis_rxeof(adapter, packets, pktcnt)
 			} else
 				p->np_oob.npo_status = NDIS_STATUS_PENDING;
 #endif
-			m = m_dup(m0, M_DONTWAIT);
+			m = m_dup(m0, M_NOWAIT);
 			if (p->np_oob.npo_status == NDIS_STATUS_RESOURCES)
 				p->np_refcnt++;
 			else
@@ -1628,7 +1628,6 @@ ndis_linksts_done(adapter)
 		IoQueueWorkItem(sc->ndis_tickitem, 
 		    (io_workitem_func)ndis_ticktask_wrap,
 		    WORKQUEUE_CRITICAL, sc);
-		/* XXX: startitem might be handled before tickitem */
 		IoQueueWorkItem(sc->ndis_startitem,
 		    (io_workitem_func)ndis_starttask_wrap,
 		    WORKQUEUE_CRITICAL, ifp);
@@ -1711,23 +1710,26 @@ ndis_ticktask(d, xsc)
 	if (sc->ndis_link == 0 &&
 	    sc->ndis_sts == NDIS_STATUS_MEDIA_CONNECT) {
 		sc->ndis_link = 1;
-		NDIS_UNLOCK(sc);
 		if ((sc->ndis_80211 != 0) && (vap != NULL)) {
+			NDIS_UNLOCK(sc);
 			ndis_getstate_80211(sc);
 			ieee80211_new_state(vap, IEEE80211_S_RUN, -1);
-		}
-		NDIS_LOCK(sc);
-		if_link_state_change(sc->ifp, LINK_STATE_UP);
+			NDIS_LOCK(sc);
+			if_link_state_change(vap->iv_ifp, LINK_STATE_UP);
+		} else
+			if_link_state_change(sc->ifp, LINK_STATE_UP);
 	}
 
 	if (sc->ndis_link == 1 &&
 	    sc->ndis_sts == NDIS_STATUS_MEDIA_DISCONNECT) {
 		sc->ndis_link = 0;
-		NDIS_UNLOCK(sc);
-		if ((sc->ndis_80211 != 0) && (vap != NULL))
+		if ((sc->ndis_80211 != 0) && (vap != NULL)) {
+			NDIS_UNLOCK(sc);
 			ieee80211_new_state(vap, IEEE80211_S_SCAN, 0);
-		NDIS_LOCK(sc);
-		if_link_state_change(sc->ifp, LINK_STATE_DOWN);
+			NDIS_LOCK(sc);
+			if_link_state_change(vap->iv_ifp, LINK_STATE_DOWN);
+		} else
+			if_link_state_change(sc->ifp, LINK_STATE_DOWN);
 	}
 
 	NDIS_UNLOCK(sc);
