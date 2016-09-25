@@ -60158,7 +60158,6 @@ sys/dev/netmap/if_re_netmap.h -text
 sys/dev/netmap/ixgbe_netmap.h -text
 sys/dev/netmap/netmap.c -text
 sys/dev/netmap/netmap_kern.h -text
-sys/dev/netmap/netmap_mem1.c -text
 sys/dev/netmap/netmap_mem2.c -text
 sys/dev/nfe/if_nfe.c -text
 sys/dev/nfe/if_nfereg.h -text
