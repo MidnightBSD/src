@@ -61137,14 +61137,12 @@ sys/dev/xen/console/console.c -text
 sys/dev/xen/console/xencons_ring.c -text
 sys/dev/xen/console/xencons_ring.h -text
 sys/dev/xen/control/control.c -text
-sys/dev/xen/evtchn/evtchn_dev.c -text
 sys/dev/xen/netback/netback.c -text
 sys/dev/xen/netback/netback_unit_tests.c -text
 sys/dev/xen/netfront/mbufq.h -text
 sys/dev/xen/netfront/netfront.c -text
 sys/dev/xen/pcifront/pcifront.c -text
 sys/dev/xen/xenpci/evtchn.c -text
-sys/dev/xen/xenpci/machine_reboot.c -text
 sys/dev/xen/xenpci/xenpci.c -text
 sys/dev/xen/xenpci/xenpcivar.h -text
 sys/dev/xl/if_xl.c -text
