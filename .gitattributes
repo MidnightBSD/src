@@ -65023,6 +65023,7 @@ tools/build/options/WITHOUT_OPENSSH -text
 tools/build/options/WITHOUT_OPENSSL -text
 tools/build/options/WITHOUT_PAM -text
 tools/build/options/WITHOUT_PAM_SUPPORT -text
+tools/build/options/WITHOUT_PC_SYSINSTALL svneol=native#text/plain
 tools/build/options/WITHOUT_PF -text
 tools/build/options/WITHOUT_PROFILE -text
 tools/build/options/WITHOUT_RCMDS -text
