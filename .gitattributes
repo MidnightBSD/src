@@ -60281,8 +60281,6 @@ sys/dev/pdq/pdq_freebsd.h -text
 sys/dev/pdq/pdq_ifsubr.c -text
 sys/dev/pdq/pdqreg.h -text
 sys/dev/pdq/pdqvar.h -text
-sys/dev/powermac_nvram/powermac_nvram.c -text
-sys/dev/powermac_nvram/powermac_nvramvar.h -text
 sys/dev/ppbus/if_plip.c -text
 sys/dev/ppbus/immio.c -text
 sys/dev/ppbus/lpbb.c -text
@@ -62826,7 +62824,6 @@ sys/modules/pflog/Makefile -text
 sys/modules/pfsync/Makefile -text
 sys/modules/plip/Makefile -text
 sys/modules/portalfs/Makefile -text
-sys/modules/powermac_nvram/Makefile -text
 sys/modules/ppbus/Makefile -text
 sys/modules/ppc/Makefile -text
 sys/modules/ppi/Makefile -text
