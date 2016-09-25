@@ -114,6 +114,7 @@ enum zio_stage {
 
 	ZIO_STAGE_CHECKSUM_GENERATE	= 1 << 5,	/* -W--- */
 
+	ZIO_STAGE_NOP_WRITE		= 1 << 6,	/* -W--- */
 	ZIO_STAGE_DDT_READ_START	= 1 << 6,	/* R---- */
 	ZIO_STAGE_DDT_READ_DONE		= 1 << 7,	/* R---- */
 	ZIO_STAGE_DDT_WRITE		= 1 << 8,	/* -W--- */
