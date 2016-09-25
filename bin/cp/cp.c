@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)cp.c	8.2 (Berkeley) 4/1/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/cp/cp.c,v 1.5 2008/06/30 02:20:01 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * Cp copies source files to target files.
@@ -100,30 +100,28 @@ main(int argc, char *argv[])
 {
 	struct stat to_stat, tmp_stat;
 	enum op type;
-	int Hflag, Lflag, Pflag, ch, fts_options, r, have_trailing_slash;
+	int Hflag, Lflag, ch, fts_options, r, have_trailing_slash;
 	char *target;
 
 	fts_options = FTS_NOCHDIR | FTS_PHYSICAL;
-	Hflag = Lflag = Pflag = 0;
+	Hflag = Lflag = 0;
 	while ((ch = getopt(argc, argv, "HLPRafilnprvx")) != -1)
 		switch (ch) {
 		case 'H':
 			Hflag = 1;
-			Lflag = Pflag = 0;
+			Lflag = 0;
 			break;
 		case 'L':
 			Lflag = 1;
-			Hflag = Pflag = 0;
+			Hflag = 0;
 			break;
 		case 'P':
-			Pflag = 1;
 			Hflag = Lflag = 0;
 			break;
 		case 'R':
 			Rflag = 1;
 			break;
 		case 'a':
-			Pflag = 1;
 			pflag = 1;
 			Rflag = 1;
 			Hflag = Lflag = 0;
@@ -148,7 +146,7 @@ main(int argc, char *argv[])
 			break;
 		case 'r':
 			rflag = Lflag = 1;
-			Hflag = Pflag = 0;
+			Hflag = 0;
 			break;
 		case 'v':
 			vflag = 1;
