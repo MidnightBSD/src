@@ -1,4 +1,4 @@
-# $MidnightBSD: src/sys/modules/linux/Makefile,v 1.3 2012/06/15 20:11:44 laffer1 Exp $
+# $MidnightBSD$
 # $FreeBSD: src/sys/modules/linux/Makefile,v 1.72 2007/05/23 15:45:52 kib Exp $
 
 .if ${MACHINE_CPUARCH} == "amd64"
@@ -14,8 +14,8 @@ SRCS=	linux_fork.c linux${SFX}_dummy.c linux_emul.c linux_file.c \
 	linux${SFX}_machdep.c linux_mib.c linux_misc.c linux_signal.c \
 	linux_socket.c linux_stats.c linux_sysctl.c linux${SFX}_sysent.c \
 	linux${SFX}_sysvec.c linux_uid16.c linux_util.c linux_time.c \
-	opt_inet6.h opt_compat.h opt_posix.h opt_usb.h vnode_if.h \
-	device_if.h bus_if.h assym.s
+	opt_inet6.h opt_compat.h opt_kdtrace.h opt_posix.h opt_usb.h \
+	vnode_if.h device_if.h bus_if.h assym.s
 
 # XXX: for assym.s
 SRCS+=  opt_kstack_pages.h opt_nfs.h opt_compat.h opt_hwpmc_hooks.h

@@ -65883,6 +65883,7 @@ tools/regression/usr.bin/printf/regress.m4.out -text
 tools/regression/usr.bin/printf/regress.s.out -text
 tools/regression/usr.bin/printf/regress.sh -text
 tools/regression/usr.bin/printf/regress.t -text
+tools/regression/usr.bin/printf/regress.zero.out -text
 tools/regression/usr.bin/regress.m4 -text
 tools/regression/usr.bin/sed/Makefile -text
 tools/regression/usr.bin/sed/regress.G.out -text
