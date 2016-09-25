@@ -1,0 +1,15 @@
+* text=auto !eol
+dist/Makefile -text
+dist/compare.c -text
+dist/crc.c -text
+dist/create.c -text
+dist/excludes.c -text
+dist/extern.h -text
+dist/getid.c -text
+dist/misc.c -text
+dist/mtree.8 -text
+dist/mtree.c -text
+dist/mtree.h -text
+dist/spec.c -text
+dist/specspec.c -text
+dist/verify.c -text
