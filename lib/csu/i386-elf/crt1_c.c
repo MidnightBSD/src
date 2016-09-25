@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/csu/i386-elf/crt1_c.c,v 1.2 2012/02/12 21:14:24 laffer1 Exp $
+ * $MidnightBSD$
  * $FreeBSD: src/lib/csu/i386-elf/crt1_c.c,v 1.1.4.2 2010/01/19 20:19:52 kib Exp $
  */
 
@@ -68,7 +68,8 @@ _start1(fptr cleanup, int argc, char *argv[])
 	const char *s;
 
 	env = argv + argc + 1;
-	environ = env;
+	if (environ == NULL)
+		environ = env;
 	if (argc > 0 && argv[0] != NULL) {
 		__progname = argv[0];
 		for (s = __progname; *s != '\0'; s++)

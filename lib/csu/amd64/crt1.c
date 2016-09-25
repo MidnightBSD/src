@@ -68,7 +68,8 @@ _start(char **ap, void (*cleanup)(void))
 	argc = *(long *)(void *)ap;
 	argv = ap + 1;
 	env = ap + 2 + argc;
-	environ = env;
+	if (environ == NULL)
+		environ = env;
 	if (argc > 0 && argv[0] != NULL) {
 		__progname = argv[0];
 		for (s = __progname; *s != '\0'; s++)
@@ -93,4 +94,4 @@ __asm__("eprol:");
 	exit( main(argc, argv, env) );
 }
 
-__asm__(".ident\t\"$MidnightBSD: src/lib/csu/amd64/crt1.c,v 1.4 2012/02/12 21:14:24 laffer1 Exp $\"");
+__asm__(".ident\t\"$MidnightBSD$\"");
