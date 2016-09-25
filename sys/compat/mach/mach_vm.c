@@ -116,7 +116,8 @@ mach_vm_map(vm_map_t map, mach_vm_address_t *address, mach_vm_size_t _size,
 	if (!(_mask & (_mask + 1)) && _mask != 0)
 		_mask++;
 
-	find_space = _mask ? VMFS_ALIGNED_SPACE(ffs(_mask)) : VMFS_ANY_SPACE;
+	//find_space = _mask ? VMFS_ALIGNED_SPACE(ffs(_mask)) : VMFS_ANY_SPACE;
+	find_space = VMFS_ALIGNED_SPACE;
 	flags = MAP_ANON;
 	if ((_flags & VM_FLAGS_ANYWHERE) == 0) {
 		flags |= MAP_FIXED;
@@ -140,7 +141,7 @@ mach_vm_map(vm_map_t map, mach_vm_address_t *address, mach_vm_size_t _size,
 		break;
 	}
 
-	if (vm_map_find(map, NULL, 0, &addr, size, 0, find_space,
+	if (vm_map_find(map, NULL, 0, &addr, size, find_space,
 	    cur_protection, max_protection, docow) != KERN_SUCCESS) {
 		error = ENOMEM;
 		goto done;
@@ -807,7 +808,7 @@ vm_map_copyout(
 	if (copy->type == VM_MAP_COPY_OBJECT) {
 		cow = copy->cpy_object->ref_count > 1 ? MAP_COPY_ON_WRITE : 0;
 		return vm_map_find(dst_map, copy->cpy_object, copy->offset,
-		    dst_addr, round_page(copy->size), 0, VMFS_ANY_SPACE,
+		    dst_addr, round_page(copy->size), VMFS_ANY_SPACE,
 		    VM_PROT_READ|VM_PROT_WRITE, VM_PROT_READ|VM_PROT_WRITE,
 		    cow);
 	}

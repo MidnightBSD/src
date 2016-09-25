@@ -87,14 +87,12 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
-//TODO: LAH include "opt_capsicum.h"
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
+#include <sys/limits.h>
 #include <sys/eventhandler.h>
-// TODO: LAH include <sys/capsicum.h>
 #include <sys/file.h>
 #include <sys/filedesc.h>
 #include <sys/fcntl.h>
@@ -126,10 +124,9 @@ static void fdunused(struct filedesc *fdp, int fd);
 static int kern_fdalloc(struct thread *td, int minfd, int *result);
 static void kern_fddealloc(struct thread *td, int fd);
 static inline void kern_fdfree(struct filedesc *fdp, int fd);
-static int kern_finstall(struct thread *td, struct file *fp, int *fd, int flags,
-			 struct filecaps *fcaps);
+static int kern_finstall(struct thread *td, struct file *fp, int *fd, int flags);
+			 
 
-#define MODERN (__FreeBSD_version >= 1100000)
 #define FNOFDALLOC    0x80000000
 
 static void
@@ -172,16 +169,10 @@ ipc_entry_hash_delete(
 
 static fo_close_t mach_port_close;
 static fo_stat_t mach_port_stat;
-#if MODERN
-static fo_fill_kinfo_t mach_port_fill_kinfo;
-#endif
 
 struct fileops mach_fileops  = {
 	.fo_close = mach_port_close,
 	.fo_stat = mach_port_stat,
-#if MODERN
-	.fo_fill_kinfo = mach_port_fill_kinfo,
-#endif
 	.fo_flags = 0,
 };
 
@@ -241,27 +232,6 @@ mach_port_stat(struct file *fp __unused, struct stat *sb,
 	}
 	return (0);
 }
-
-#if MODERN
-static int
-mach_port_fill_kinfo(struct file *fp, struct kinfo_file *kif,
-					 struct filedesc *fdp __unused)
-{
-	ipc_entry_t entry;
-
-	/* assume it's a port first */
-	kif->kf_type = KF_TYPE_PORT;
-
-	if ((entry = fp->f_data) == NULL)
-		return (0);
-	/* What else do we want from it? */
-	if (entry->ie_bits & MACH_PORT_TYPE_PORT_SET) {
-		kif->kf_type = KF_TYPE_PORTSET;
-	}
-
-	return (0);
-}
-#endif
 
 /*
  *	Routine:	ipc_entry_release
@@ -357,7 +327,7 @@ ipc_entry_port_to_file(ipc_space_t space, mach_port_name_t *namep, ipc_object_t 
 	ipc_port_dealloc_special(port, space);
 
 	/* Are sent file O_CLOEXEC? */
-	if (kern_finstall(curthread, fp, namep, 0, NULL) != 0) {
+	if (kern_finstall(curthread, fp, namep, 0) != 0) {
 		fdrop(fp, curthread);
 		printf("finstall failed\n");
 		return (KERN_RESOURCE_SHORTAGE);
@@ -405,7 +375,7 @@ ipc_entry_get(
 		log(LOG_WARNING, "%s:%d failed to allocate fp\n", __FILE__, __LINE__);
 		return (KERN_RESOURCE_SHORTAGE);
 	}
-	if (kern_finstall(td, fp, &fd, FNOFDALLOC, NULL)) {
+	if (kern_finstall(td, fp, &fd, FNOFDALLOC)) {
 		log(LOG_WARNING, "%s:%d failed to allocate fp:%p at fd:%d \n", __FILE__, __LINE__, fp, fd);
 		kern_fddealloc(td, fd);
 		fdrop(fp, td);
@@ -514,7 +484,7 @@ ipc_entry_alloc_name(
 		kern_fddealloc(td, newname);
 		return (KERN_RESOURCE_SHORTAGE);
 	}
-	if (kern_finstall(td, fp, &name, FNOFDALLOC, NULL)) {
+	if (kern_finstall(td, fp, &name, FNOFDALLOC)) {
 		kern_fddealloc(td, newname);
 		fdrop(fp, td);
 		return (KERN_RESOURCE_SHORTAGE);
@@ -629,7 +599,6 @@ static void
 ipc_entry_list_close(void *arg __unused, struct proc *p)
 {
 	struct filedesc *fdp;
-	struct filedescent *fde;
 	struct file *fp;
 	struct thread *td;
 #if 0
@@ -651,8 +620,7 @@ ipc_entry_list_close(void *arg __unused, struct proc *p)
 	KASSERT(fdp->fd_refcnt == 1, ("the fdtable should not be shared"));
 
 	for (i = 0; i <= fdp->fd_lastfile; i++) {
-		fde = &fdp->fd_ofiles[i];
-		fp = fde->fde_file;
+		fp = fdp->fd_ofiles[i];
 		if (fp == NULL || (fp->f_type != DTYPE_MACH_IPC))
 			continue;
 		MPASS(fp->f_count > 0);
@@ -671,8 +639,7 @@ ipc_entry_list_close(void *arg __unused, struct proc *p)
 
 	for (i = 0; i <= fdp->fd_lastfile; i++) {
 
-		fde = &fdp->fd_ofiles[i];
-		fp = fde->fde_file;
+		fp = fdp->fd_ofiles[i];
 		if (fp == NULL || (fp->f_type != DTYPE_MACH_IPC))
 			continue;
 		MPASS(fp->f_count > 0);
@@ -690,8 +657,7 @@ ipc_entry_list_close(void *arg __unused, struct proc *p)
 
 #ifdef INVARIANTS
 	for (i = 0; i <= fdp->fd_lastfile; i++) {
-		fde = &fdp->fd_ofiles[i];
-		fp = fde->fde_file;
+		fp = &fdp->fd_ofiles[i];
 		if (fp != NULL)
 			MPASS(fp->f_type != DTYPE_MACH_IPC);
 	}
@@ -811,38 +777,19 @@ kern_fddealloc(struct thread *td, int fd)
 static inline void
 kern_fdfree(struct filedesc *fdp, int fd)
 {
-	struct filedescent *fde;
 
-	fde = &fdp->fd_ofiles[fd];
-#ifdef CAPABILITIES
-	seq_write_begin(&fde->fde_seq);
-#endif
-	bzero(fde, fde_change_size);
+	// TODO: this is sketchy
+	//bzero(fdp->fd_ofileflags[fd], fde_change_size);
 	fdunused(fdp, fd);
-#ifdef CAPABILITIES
-	seq_write_end(&fde->fde_seq);
-#endif
-}
-
-static void
-filecaps_fill(struct filecaps *fcaps)
-{
-
-	CAP_ALL(&fcaps->fc_rights);
-	fcaps->fc_ioctls = NULL;
-	fcaps->fc_nioctls = -1;
-	fcaps->fc_fcntls = CAP_FCNTL_ALL;
 }
 
 /*
  * Install a file in a file descriptor table.
  */
 static int
-kern_finstall(struct thread *td, struct file *fp, int *fd, int flags,
-    struct filecaps *fcaps)
+kern_finstall(struct thread *td, struct file *fp, int *fd, int flags)
 {
 	struct filedesc *fdp = td->td_proc->p_fd;
-	struct filedescent *fde;
 	int error, min;
 
 	KASSERT(fd != NULL, ("%s: fd == NULL", __func__));
@@ -858,17 +805,10 @@ kern_finstall(struct thread *td, struct file *fp, int *fd, int flags,
 		}
 	}
 	fhold(fp);
-	fde = &fdp->fd_ofiles[*fd];
-#ifdef CAPABILITIES
-	seq_write_begin(&fde->fde_seq);
-#endif
-	fde->fde_file = fp;
-	if ((flags & O_CLOEXEC) != 0)
-		fde->fde_flags |= UF_EXCLOSE;
-	filecaps_fill(&fde->fde_caps);
-#ifdef CAPABILITIES
-	seq_write_end(&fde->fde_seq);
-#endif
+	if ((flags & O_CLOEXEC) != 0) {
+                fdp->fd_ofileflags[*fd] |= UF_EXCLOSE;
+	}
+
 	FILEDESC_XUNLOCK(fdp);
 	return (0);
 }
