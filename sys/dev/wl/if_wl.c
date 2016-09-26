@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/wl/if_wl.c,v 1.2 2008/12/02 22:43:17 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -1095,7 +1095,7 @@ wlread(struct wl_softc *sc, u_short fd_p)
     /*
      * Allocate a cluster'd mbuf to receive the packet.
      */
-    m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+    m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
     if (m == NULL) {
 	if (wlhwrst(sc) != TRUE) {
 	    sc->hacr &= ~HACR_INTRON;
