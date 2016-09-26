@@ -1024,22 +1024,27 @@ kern_wait(struct thread *td, pid_t pid, int *status, int options,
 	id_t id;
 	int ret;
 
+	/*
+	 * Translate the special pid values into the (idtype, pid)
+	 * pair for kern_wait6.  The WAIT_MYPGRP case is handled by
+	 * kern_wait6() on its own.
+	 */
 	if (pid == WAIT_ANY) {
 		idtype = P_ALL;
 		id = 0;
-	}
-	else if (pid <= 0) {
+	} else if (pid < 0) {
 		idtype = P_PGID;
 		id = (id_t)-pid;
-	}
-	else {
+	} else {
 		idtype = P_PID;
 		id = (id_t)pid;
 	}
+
 	if (rusage != NULL)
 		wrup = &wru;
 	else
 		wrup = NULL;
+
 	/*
 	 *  For backward compatibility we implicitly add flags WEXITED
 	 *  and WTRAPPED here.
