@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/usr.sbin/bsdinstall/partedit/part_wizard.c,v 1.2 2012/01/27 04:53:26 laffer1 Exp $
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/bsdinstall/partedit/part_wizard.c,v 1.6 2011/10/07 01:40:30 nwhitehorn Exp $
  */
 
@@ -43,7 +43,6 @@
 
 static char *boot_disk(struct gmesh *mesh);
 static char *wizard_partition(struct gmesh *mesh, const char *disk);
-static int wizard_makeparts(struct gmesh *mesh, const char *disk);
 
 int
 part_wizard(void) {
@@ -72,7 +71,7 @@ startwizard:
 	dlg_put_backtitle();
 	error = geom_gettree(&mesh);
 
-	error = wizard_makeparts(&mesh, schemeroot);
+	error = wizard_makeparts(&mesh, schemeroot, 1);
 	if (error)
 		goto startwizard;
 	free(schemeroot);
@@ -169,12 +168,6 @@ provider_for_name(struct gmesh *mesh, const char *name)
 	struct ggeom *gp;
 
 	LIST_FOREACH(classp, &mesh->lg_class, lg_class) {
-		if (strcmp(classp->lg_name, "DISK") != 0 &&
-		    strcmp(classp->lg_name, "PART") != 0 &&
-		    strcmp(classp->lg_name, "RAID") != 0 &&
-		    strcmp(classp->lg_name, "MD") != 0)
-			continue;
-
 		LIST_FOREACH(gp, &classp->lg_geom, lg_geom) {
 			if (LIST_EMPTY(&gp->lg_provider))
 				continue;
@@ -289,8 +282,8 @@ query:
 	return (retval);
 }
 
-static int
-wizard_makeparts(struct gmesh *mesh, const char *disk)
+int
+wizard_makeparts(struct gmesh *mesh, const char *disk, int interactive)
 {
 	struct gmesh submesh;
 	struct gclass *classp;
@@ -311,7 +304,7 @@ wizard_makeparts(struct gmesh *mesh, const char *disk)
 	pp = provider_for_name(mesh, disk);
 
 	available = gpart_max_free(gp, NULL)*pp->lg_sectorsize;
-	if (available < MIN_FREE_SPACE) {
+	if (interactive && available < MIN_FREE_SPACE) {
 		char availablestr[10], neededstr[10], message[512];
 		humanize_number(availablestr, 7, available, "B", HN_AUTOSCALE,
 		    HN_DECIMAL);
