@@ -64984,6 +64984,7 @@ tools/build/options/WITHOUT_BZIP2 -text
 tools/build/options/WITHOUT_BZIP2_SUPPORT -text
 tools/build/options/WITHOUT_CALENDAR -text
 tools/build/options/WITHOUT_CDDL -text
+tools/build/options/WITHOUT_CLANG_FULL svneol=native#text/plain
 tools/build/options/WITHOUT_CPP -text
 tools/build/options/WITHOUT_CRYPT -text
 tools/build/options/WITHOUT_CVS -text
@@ -65056,6 +65057,7 @@ tools/build/options/WITH_BIND_LIBS -text
 tools/build/options/WITH_BSD_GREP -text
 tools/build/options/WITH_CLANG -text
 tools/build/options/WITH_CLANG_EXTRAS -text
+tools/build/options/WITH_CLANG_FULL svneol=native#text/plain
 tools/build/options/WITH_CLANG_IS_CC -text
 tools/build/options/WITH_CTF svneol=native#text/plain
 tools/build/options/WITH_HESIOD -text
