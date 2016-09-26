@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/amd64/amd64/mp_machdep.c,v 1.7 2012/11/23 06:02:40 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "opt_cpu.h"
 #include "opt_kstack_pages.h"
@@ -1430,12 +1430,12 @@ cpususpend_handler(void)
 	while (!CPU_ISSET(cpu, &started_cpus))
 		ia32_pause();
 
-	CPU_CLR_ATOMIC(cpu, &started_cpus);
-	CPU_CLR_ATOMIC(cpu, &stopped_cpus);
-
 	/* Resume MCA and local APIC */
 	mca_resume();
 	lapic_setup(0);
+
+	CPU_CLR_ATOMIC(cpu, &started_cpus);
+	CPU_CLR_ATOMIC(cpu, &stopped_cpus);
 }
 
 /*
