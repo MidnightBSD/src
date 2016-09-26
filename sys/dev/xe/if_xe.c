@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/xe/if_xe.c,v 1.2 2008/12/02 22:43:18 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998, 1999, 2003  Scott Mitchell
  * All rights reserved.
@@ -758,14 +758,14 @@ xe_rxintr(struct xe_softc *scp, uint8_t rst0)
 			 * read 16-bit words).  XXX - Surely there's a
 			 * better way to do this alignment?
 			 */
-			MGETHDR(mbp, M_DONTWAIT, MT_DATA);
+			MGETHDR(mbp, M_NOWAIT, MT_DATA);
 			if (mbp == NULL) {
 				ifp->if_iqdrops++;
 				continue;
 			}
 
 			if (len + 3 > MHLEN) {
-				MCLGET(mbp, M_DONTWAIT);
+				MCLGET(mbp, M_NOWAIT);
 				if ((mbp->m_flags & M_EXT) == 0) {
 					m_freem(mbp);
 					ifp->if_iqdrops++;
