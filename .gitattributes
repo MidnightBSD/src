@@ -68626,6 +68626,7 @@ usr.sbin/bsdinstall/partedit/partedit.h -text
 usr.sbin/bsdinstall/partedit/partedit_generic.c -text
 usr.sbin/bsdinstall/partedit/partedit_sparc64.c -text
 usr.sbin/bsdinstall/partedit/partedit_x86.c -text
+usr.sbin/bsdinstall/partedit/scripted.c svneol=native#text/plain
 usr.sbin/bsdinstall/scripts/Makefile -text
 usr.sbin/bsdinstall/scripts/adduser -text
 usr.sbin/bsdinstall/scripts/auto -text
@@ -68640,6 +68641,7 @@ usr.sbin/bsdinstall/scripts/netconfig -text
 usr.sbin/bsdinstall/scripts/netconfig_ipv4 -text
 usr.sbin/bsdinstall/scripts/netconfig_ipv6 -text
 usr.sbin/bsdinstall/scripts/rootpass -text
+usr.sbin/bsdinstall/scripts/script -text
 usr.sbin/bsdinstall/scripts/services -text
 usr.sbin/bsdinstall/scripts/time -text
 usr.sbin/bsdinstall/scripts/umount -text
