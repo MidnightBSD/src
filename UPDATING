@@ -3,6 +3,25 @@ Updating Information for MidnightBSD users.
 20160925:
 	Import NetBSD vis(3) and unvis(3) as well as mtree.
 
+	one-true-awk 20121220
+
+	inetd now honors kern.ipc.somaxconn value.
+
+	netmap synced with FreeBSD 9.2
+
+	linuxolator now has dtrace probes.
+
+	bsdgrep now correctly handles -m to exclude only one file.
+
+	UFS file systems can now be resized in read-write mode due to the new
+	write suspension feature.
+
+	Basic support added for Intel Raid Recover Technology.
+
+	GMIRROR & GRAID3 now mark volumes clean on shutdown earlier to help with ZFS issues.
+
+	Highpoint hpt27xx now in GENERIC kernel.
+
 20160923:
 	Security update for OpenSSL
 
