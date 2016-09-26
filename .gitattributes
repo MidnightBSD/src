@@ -55434,6 +55434,7 @@ share/man/man9/BUF_TIMELOCK.9 -text
 share/man/man9/BUF_UNLOCK.9 -text
 share/man/man9/BUS_ADD_CHILD.9 -text
 share/man/man9/BUS_BIND_INTR.9 -text
+share/man/man9/BUS_CHILD_DELETED.9 svneol=native#text/plain
 share/man/man9/BUS_CONFIG_INTR.9 -text
 share/man/man9/BUS_DESCRIBE_INTR.9 -text
 share/man/man9/BUS_NEW_PASS.9 -text
