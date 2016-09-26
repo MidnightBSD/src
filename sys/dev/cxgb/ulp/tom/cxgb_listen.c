@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/cxgb/ulp/tom/cxgb_listen.c 240169 2012-09-06 17:28:47Z np $");
 
 #include "opt_inet.h"
 

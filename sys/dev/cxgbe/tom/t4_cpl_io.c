@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/cxgbe/tom/t4_cpl_io.c 252495 2013-07-02 04:27:16Z np $");
 
 #include "opt_inet.h"
 
@@ -88,7 +88,7 @@ send_flowc_wr(struct toepcb *toep, struct flowc_tx_params *ftxp)
 
 	flowclen = sizeof(*flowc) + nparams * sizeof(struct fw_flowc_mnemval);
 
-	wr = alloc_wrqe(roundup(flowclen, 16), toep->ofld_txq);
+	wr = alloc_wrqe(roundup2(flowclen, 16), toep->ofld_txq);
 	if (wr == NULL) {
 		/* XXX */
 		panic("%s: allocation failure.", __func__);
@@ -632,7 +632,7 @@ unlocked:
 
 			/* Immediate data tx */
 
-			wr = alloc_wrqe(roundup(sizeof(*txwr) + plen, 16),
+			wr = alloc_wrqe(roundup2(sizeof(*txwr) + plen, 16),
 					toep->ofld_txq);
 			if (wr == NULL) {
 				/* XXX: how will we recover from this? */
@@ -651,7 +651,7 @@ unlocked:
 
 			wr_len = sizeof(*txwr) + sizeof(struct ulptx_sgl) +
 			    ((3 * (nsegs - 1)) / 2 + ((nsegs - 1) & 1)) * 8;
-			wr = alloc_wrqe(roundup(wr_len, 16), toep->ofld_txq);
+			wr = alloc_wrqe(roundup2(wr_len, 16), toep->ofld_txq);
 			if (wr == NULL) {
 				/* XXX: how will we recover from this? */
 				toep->flags |= TPF_TX_SUSPENDED;
@@ -786,6 +786,29 @@ do_peer_close(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 	KASSERT(opcode == CPL_PEER_CLOSE,
 	    ("%s: unexpected opcode 0x%x", __func__, opcode));
 	KASSERT(m == NULL, ("%s: wasn't expecting payload", __func__));
+
+	if (__predict_false(toep->flags & TPF_SYNQE)) {
+#ifdef INVARIANTS
+		struct synq_entry *synqe = (void *)toep;
+
+		INP_WLOCK(synqe->lctx->inp);
+		if (synqe->flags & TPF_SYNQE_HAS_L2TE) {
+			KASSERT(synqe->flags & TPF_ABORT_SHUTDOWN,
+			    ("%s: listen socket closed but tid %u not aborted.",
+			    __func__, tid));
+		} else {
+			/*
+			 * do_pass_accept_req is still running and will
+			 * eventually take care of this tid.
+			 */
+		}
+		INP_WUNLOCK(synqe->lctx->inp);
+#endif
+		CTR4(KTR_CXGBE, "%s: tid %u, synqe %p (0x%x)", __func__, tid,
+		    toep, toep->flags);
+		return (0);
+	}
+
 	KASSERT(toep->tid == tid, ("%s: toep tid mismatch", __func__));
 
 	INP_INFO_WLOCK(&V_tcbinfo);
@@ -804,15 +827,8 @@ do_peer_close(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 	sb = &so->so_rcv;
 	SOCKBUF_LOCK(sb);
 	if (__predict_false(toep->ddp_flags & (DDP_BUF0_ACTIVE | DDP_BUF1_ACTIVE))) {
-		m = m_get(M_NOWAIT, MT_DATA);
-		if (m == NULL)
-			CXGBE_UNIMPLEMENTED("mbuf alloc failure");
-
-		m->m_len = be32toh(cpl->rcv_nxt) - tp->rcv_nxt;
-		m->m_flags |= M_DDP;	/* Data is already where it should be */
-		m->m_data = "nothing to see here";
+		m = get_ddp_mbuf(be32toh(cpl->rcv_nxt) - tp->rcv_nxt);
 		tp->rcv_nxt = be32toh(cpl->rcv_nxt);
-
 		toep->ddp_flags &= ~(DDP_BUF0_ACTIVE | DDP_BUF1_ACTIVE);
 
 		KASSERT(toep->sb_cc >= sb->sb_cc,
@@ -1089,15 +1105,27 @@ do_rx_data(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 	struct socket *so;
 	struct sockbuf *sb;
 	int len;
+	uint32_t ddp_placed = 0;
 
 	if (__predict_false(toep->flags & TPF_SYNQE)) {
-		/*
-		 * do_pass_establish failed and must be attempting to abort the
-		 * synqe's tid.  Meanwhile, the T4 has sent us data for such a
-		 * connection.
-		 */
-		KASSERT(toep->flags & TPF_ABORT_SHUTDOWN,
-		    ("%s: synqe and tid isn't being aborted.", __func__));
+#ifdef INVARIANTS
+		struct synq_entry *synqe = (void *)toep;
+
+		INP_WLOCK(synqe->lctx->inp);
+		if (synqe->flags & TPF_SYNQE_HAS_L2TE) {
+			KASSERT(synqe->flags & TPF_ABORT_SHUTDOWN,
+			    ("%s: listen socket closed but tid %u not aborted.",
+			    __func__, tid));
+		} else {
+			/*
+			 * do_pass_accept_req is still running and will
+			 * eventually take care of this tid.
+			 */
+		}
+		INP_WUNLOCK(synqe->lctx->inp);
+#endif
+		CTR4(KTR_CXGBE, "%s: tid %u, synqe %p (0x%x)", __func__, tid,
+		    toep, toep->flags);
 		m_freem(m);
 		return (0);
 	}
@@ -1119,13 +1147,8 @@ do_rx_data(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 
 	tp = intotcpcb(inp);
 
-#ifdef INVARIANTS
-	if (__predict_false(tp->rcv_nxt != be32toh(cpl->seq))) {
-		log(LOG_ERR,
-		    "%s: unexpected seq# %x for TID %u, rcv_nxt %x\n",
-		    __func__, be32toh(cpl->seq), toep->tid, tp->rcv_nxt);
-	}
-#endif
+	if (__predict_false(tp->rcv_nxt != be32toh(cpl->seq)))
+		ddp_placed = be32toh(cpl->seq) - tp->rcv_nxt;
 
 	tp->rcv_nxt += len;
 	KASSERT(tp->rcv_wnd >= len, ("%s: negative window size", __func__));
@@ -1172,12 +1195,20 @@ do_rx_data(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 		int changed = !(toep->ddp_flags & DDP_ON) ^ cpl->ddp_off;
 
 		if (changed) {
-			if (__predict_false(!(toep->ddp_flags & DDP_SC_REQ))) {
-				/* XXX: handle this if legitimate */
-				panic("%s: unexpected DDP state change %d",
-				    __func__, cpl->ddp_off);
+			if (toep->ddp_flags & DDP_SC_REQ)
+				toep->ddp_flags ^= DDP_ON | DDP_SC_REQ;
+			else {
+				KASSERT(cpl->ddp_off == 1,
+				    ("%s: DDP switched on by itself.",
+				    __func__));
+
+				/* Fell out of DDP mode */
+				toep->ddp_flags &= ~(DDP_ON | DDP_BUF0_ACTIVE |
+				    DDP_BUF1_ACTIVE);
+
+				if (ddp_placed)
+					insert_ddp_data(toep, ddp_placed);
 			}
-			toep->ddp_flags ^= DDP_ON | DDP_SC_REQ;
 		}
 
 		if ((toep->ddp_flags & DDP_OK) == 0 &&
@@ -1379,13 +1410,13 @@ do_set_tcb_rpl(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 }
 
 void
-t4_set_tcb_field(struct adapter *sc, struct toepcb *toep, uint16_t word,
-    uint64_t mask, uint64_t val)
+t4_set_tcb_field(struct adapter *sc, struct toepcb *toep, int ctrl,
+    uint16_t word, uint64_t mask, uint64_t val)
 {
 	struct wrqe *wr;
 	struct cpl_set_tcb_field *req;
 
-	wr = alloc_wrqe(sizeof(*req), toep->ctrlq);
+	wr = alloc_wrqe(sizeof(*req), ctrl ? toep->ctrlq : toep->ofld_txq);
 	if (wr == NULL) {
 		/* XXX */
 		panic("%s: allocation failure.", __func__);

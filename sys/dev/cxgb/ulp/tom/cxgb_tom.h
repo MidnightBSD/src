@@ -26,7 +26,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 
-$MidnightBSD$
+$FreeBSD: release/9.2.0/sys/dev/cxgb/ulp/tom/cxgb_tom.h 247434 2013-02-28 00:44:54Z np $
 
 ***************************************************************************/
 #ifndef CXGB_TOM_H_

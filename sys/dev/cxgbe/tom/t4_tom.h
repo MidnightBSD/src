@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: release/9.2.0/sys/dev/cxgbe/tom/t4_tom.h 252814 2013-07-05 18:27:38Z np $
  *
  */
 
@@ -49,8 +49,6 @@
 #define	DDP_RSVD_WIN (16 * 1024U)
 #define	SB_DDP_INDICATE	SB_IN_TOE	/* soreceive must respond to indicate */
 
-#define	M_DDP	M_PROTO1
-
 #define USE_DDP_RX_FLOW_CONTROL
 
 /* TOE PCB flags */
@@ -67,6 +65,7 @@ enum {
 	TPF_SYNQE_NEEDFREE = (1 << 9),	/* synq_entry was malloc'd separately */
 	TPF_SYNQE_TCPDDP   = (1 << 10),	/* ulp_mode TCPDDP in toepcb */
 	TPF_SYNQE_EXPANDED = (1 << 11),	/* toepcb ready, tid context updated */
+	TPF_SYNQE_HAS_L2TE = (1 << 12),	/* we've replied to PASS_ACCEPT_REQ */
 };
 
 enum {
@@ -181,6 +180,7 @@ struct clip_entry {
 	u_int refcount;
 };
 
+TAILQ_HEAD(clip_head, clip_entry);
 struct tom_data {
 	struct toedev tod;
 
@@ -200,7 +200,8 @@ struct tom_data {
 	struct ppod_head ppods;
 
 	struct mtx clip_table_lock;
-	TAILQ_HEAD(, clip_entry) clip_table;
+	struct clip_head clip_table;
+	int clip_gen;
 };
 
 static inline struct tom_data *
@@ -233,7 +234,7 @@ u_long select_rcv_wnd(struct socket *);
 int select_rcv_wscale(void);
 uint64_t calc_opt0(struct socket *, struct port_info *, struct l2t_entry *,
     int, int, int, int);
-uint32_t select_ntuple(struct port_info *, struct l2t_entry *, uint32_t);
+uint64_t select_ntuple(struct port_info *, struct l2t_entry *);
 void set_tcpddp_ulp_mode(struct toepcb *);
 int negative_advice(int);
 struct clip_entry *hold_lip(struct tom_data *, struct in6_addr *);
@@ -268,14 +269,16 @@ void t4_rcvd(struct toedev *, struct tcpcb *);
 int t4_tod_output(struct toedev *, struct tcpcb *);
 int t4_send_fin(struct toedev *, struct tcpcb *);
 int t4_send_rst(struct toedev *, struct tcpcb *);
-void t4_set_tcb_field(struct adapter *, struct toepcb *, uint16_t, uint64_t,
-    uint64_t);
+void t4_set_tcb_field(struct adapter *, struct toepcb *, int, uint16_t,
+    uint64_t, uint64_t);
 
 /* t4_ddp.c */
 void t4_init_ddp(struct adapter *, struct tom_data *);
 void t4_uninit_ddp(struct adapter *, struct tom_data *);
 int t4_soreceive_ddp(struct socket *, struct sockaddr **, struct uio *,
     struct mbuf **, struct mbuf **, int *);
+struct mbuf *get_ddp_mbuf(int);
 void enable_ddp(struct adapter *, struct toepcb *toep);
 void release_ddp_resources(struct toepcb *toep);
+void insert_ddp_data(struct toepcb *, uint32_t);
 #endif

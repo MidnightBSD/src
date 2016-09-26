@@ -26,7 +26,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 
-$MidnightBSD$
+$FreeBSD: release/9.2.0/sys/dev/cxgb/t3c_tp_eeprom.h 189643 2009-03-10 19:22:45Z gnn $
 
 ***************************************************************************/
 

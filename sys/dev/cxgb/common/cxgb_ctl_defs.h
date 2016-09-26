@@ -6,7 +6,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the LICENSE file included in this
  * release for licensing terms and conditions.
  *
- * $MidnightBSD$
+ * $FreeBSD: release/9.2.0/sys/dev/cxgb/common/cxgb_ctl_defs.h 237920 2012-07-01 12:00:36Z np $
  */
 
 #ifndef _CXGB3_OFFLOAD_CTL_DEFS_H

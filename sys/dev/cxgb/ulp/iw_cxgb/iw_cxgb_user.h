@@ -29,7 +29,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $MidnightBSD$
+ * $FreeBSD: release/9.2.0/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb_user.h 237920 2012-07-01 12:00:36Z np $
  */
 #ifndef __IWCH_USER_H__
 #define __IWCH_USER_H__

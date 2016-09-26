@@ -28,7 +28,7 @@ POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/cxgb/common/cxgb_t3_hw.c 219945 2011-03-24 01:13:28Z np $");
 
 
 #include <cxgb_include.h>

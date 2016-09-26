@@ -58940,10 +58940,14 @@ sys/dev/cxgbe/common/t4_msg.h -text
 sys/dev/cxgbe/common/t4_regs.h -text
 sys/dev/cxgbe/common/t4_regs_values.h -text
 sys/dev/cxgbe/common/t4_tcb.h -text
-sys/dev/cxgbe/firmware/t4fw-1.8.4.0.bin.uu -text
+sys/dev/cxgbe/firmware/t4fw-1.8.11.0.bin.uu -text
 sys/dev/cxgbe/firmware/t4fw_cfg.txt -text
 sys/dev/cxgbe/firmware/t4fw_cfg_uwire.txt -text
 sys/dev/cxgbe/firmware/t4fw_interface.h -text
+sys/dev/cxgbe/firmware/t5fw-1.8.22.0.bin.uu -text
+sys/dev/cxgbe/firmware/t5fw_cfg.txt svneol=native#text/plain
+sys/dev/cxgbe/firmware/t5fw_cfg_fpga.txt svneol=native#text/plain
+sys/dev/cxgbe/firmware/t5fw_cfg_uwire.txt svneol=native#text/plain
 sys/dev/cxgbe/offload.h -text
 sys/dev/cxgbe/osdep.h -text
 sys/dev/cxgbe/t4_ioctl.h -text
@@ -62432,6 +62436,8 @@ sys/modules/cxgb/tom/Makefile -text
 sys/modules/cxgbe/Makefile -text
 sys/modules/cxgbe/firmware/Makefile -text
 sys/modules/cxgbe/if_cxgbe/Makefile -text
+sys/modules/cxgbe/t4_firmware/Makefile svneol=native#text/plain
+sys/modules/cxgbe/t5_firmware/Makefile svneol=native#text/plain
 sys/modules/cxgbe/tom/Makefile -text
 sys/modules/cyclic/Makefile -text
 sys/modules/dc/Makefile -text

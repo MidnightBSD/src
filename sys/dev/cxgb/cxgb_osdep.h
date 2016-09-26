@@ -26,7 +26,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 
-$MidnightBSD$
+$FreeBSD: release/9.2.0/sys/dev/cxgb/cxgb_osdep.h 242015 2012-10-24 19:04:17Z gavin $
 
 ***************************************************************************/
 

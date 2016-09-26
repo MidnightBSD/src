@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/cxgb/sys/uipc_mvec.c 248078 2013-03-09 00:39:54Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -98,7 +98,7 @@ retry:
 			printf("mbuf chain too long: %d max allowed %d\n",
 			    seg_count, TX_MAX_SEGS);
 		if (!defragged) {
-			n = m_defrag(*m, M_DONTWAIT);
+			n = m_defrag(*m, M_NOWAIT);
 			if (n == NULL) {
 				err = ENOBUFS;
 				goto err_out;

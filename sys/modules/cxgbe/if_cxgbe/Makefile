@@ -1,5 +1,5 @@
 #
-# $FreeBSD$
+# $FreeBSD: release/9.2.0/sys/modules/cxgbe/if_cxgbe/Makefile 240169 2012-09-06 17:28:47Z np $
 #
 
 .include <bsd.own.mk>

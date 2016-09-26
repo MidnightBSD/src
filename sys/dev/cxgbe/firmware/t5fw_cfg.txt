@@ -12,12 +12,19 @@
 	rss_glb_config_mode = basicvirtual
 	rss_glb_config_options = tnlmapen, hashtoeplitz, tnlalllkp
 
+	# PL_TIMEOUT register
+	pl_timeout_value = 200		# the timeout value in units of us
+
 	sge_timer_value = 1, 5, 10, 50, 100, 200	# usecs
 
 	# TP_SHIFT_CNT
 	reg[0x7dc0] = 0x62f8849
 
+	# TP_GLOBAL_CONFIG
+	reg[0x7d08] = 0x00000800/0x00000800 # set IssFromCplEnable
+
 	filterMode = fragmentation, mpshittype, protocol, vlan, port, fcoe
+	filterMask = protocol, fcoe
 
 	# TP rx and tx channels (0 = auto).
 	tp_nrxch = 0
@@ -79,7 +86,7 @@
 	# TCAM iff there is room left (that is, the rest don't add up to 2048).
 	nroute = 32
 	nclip = 32
-	nfilter = 1456
+	nfilter = 1008
 	nserver = 512
 	nhash = 16384
 
@@ -141,7 +148,7 @@
 
 [fini]
 	version = 0x1
-	checksum = 0x6cc2514b
+	checksum = 0x93f11b53
 #
-# $FreeBSD: release/9.2.0/sys/dev/cxgbe/firmware/t4fw_cfg.txt 252814 2013-07-05 18:27:38Z np $
+# $FreeBSD: release/9.2.0/sys/dev/cxgbe/firmware/t5fw_cfg.txt 253777 2013-07-29 19:21:54Z np $
 #

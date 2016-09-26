@@ -28,7 +28,7 @@ POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/cxgb/cxgb_main.c 252495 2013-07-02 04:27:16Z np $");
 
 #include "opt_inet.h"
 
@@ -149,6 +149,7 @@ static devclass_t	cxgb_controller_devclass;
 DRIVER_MODULE(cxgbc, pci, cxgb_controller_driver, cxgb_controller_devclass,
     cxgbc_mod_event, 0);
 MODULE_VERSION(cxgbc, 1);
+MODULE_DEPEND(cxgbc, firmware, 1, 1, 1);
 
 /*
  * Attachment glue for the ports.  Attachment is done directly to the
@@ -1442,7 +1443,7 @@ send_pktsched_cmd(struct adapter *adap, int sched, int qidx, int lo,
 	struct mbuf *m;
 	struct mngt_pktsched_wr *req;
 
-	m = m_gethdr(M_DONTWAIT, MT_DATA);
+	m = m_gethdr(M_NOWAIT, MT_DATA);
 	if (m) {	
 		req = mtod(m, struct mngt_pktsched_wr *);
 		req->wr.wrh_hi = htonl(V_WR_OP(FW_WROPCODE_MNGT));

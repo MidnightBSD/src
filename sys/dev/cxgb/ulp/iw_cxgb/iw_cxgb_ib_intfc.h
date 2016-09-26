@@ -1,7 +1,7 @@
 #ifndef  __IB_INTFC_H__
 #define  __IB_INTFC_H__
 
-/* $MidnightBSD$ */
+/* $FreeBSD: release/9.2.0/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb_ib_intfc.h 237920 2012-07-01 12:00:36Z np $ */
 
 #undef prefetch
 #undef WARN_ON

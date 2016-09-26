@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/dev/cxgbe/tom/t4_tom_l2t.c 247434 2013-02-28 00:44:54Z np $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
