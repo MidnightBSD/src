@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/wi/if_wi.c,v 1.2 2008/12/02 22:43:17 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*	$NetBSD: wi.c,v 1.109 2003/01/09 08:52:19 dyoung Exp $	*/
 
 /*-
@@ -1360,9 +1360,9 @@ wi_rx_intr(struct wi_softc *sc)
 	}
 
 	if (off + len > MHLEN)
-		m = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
+		m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 	else
-		m = m_gethdr(M_DONTWAIT, MT_DATA);
+		m = m_gethdr(M_NOWAIT, MT_DATA);
 	if (m == NULL) {
 		CSR_WRITE_2(sc, WI_EVENT_ACK, WI_EV_RX);
 		ifp->if_ierrors++;
