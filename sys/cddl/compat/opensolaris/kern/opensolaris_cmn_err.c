@@ -18,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD$
+ * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/kern/opensolaris_cmn_err.c 252460 2013-07-01 08:24:14Z smh $
  */
 /*
  * Copyright 2007 John Birrell <jb@FreeBSD.org>. All rights reserved.
@@ -75,7 +75,8 @@ cmn_err(int type, const char *fmt, ...)
 }
 
 int
-assfail(const char *a, const char *f, int l) {
+assfail(const char *a, const char *f, int l)
+{
 
 	panic("solaris assert: %s, file: %s, line: %d", a, f, l);
 
@@ -84,7 +85,8 @@ assfail(const char *a, const char *f, int l) {
 
 void
 assfail3(const char *a, uintmax_t lv, const char *op, uintmax_t rv,
-    const char *f, int l) {
+    const char *f, int l)
+{
 
 	panic("solaris assert: %s (0x%jx %s 0x%jx), file: %s, line: %d",
 	    a, lv, op, rv, f, l);

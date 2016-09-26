@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/kern/opensolaris_vfs.c 243491 2012-11-24 12:56:07Z avg $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

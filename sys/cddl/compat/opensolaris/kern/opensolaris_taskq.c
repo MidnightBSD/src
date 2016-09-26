@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/kern/opensolaris_taskq.c 222267 2011-05-24 20:07:15Z pjd $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
