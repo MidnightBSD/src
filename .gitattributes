@@ -4,18 +4,14 @@
 /MANIFEST -text
 /Makefile.in -text
 /README -text
-/configure -text
 /configure.in -text
 doc/expat.png -text svneol=unset#unset
 doc/reference.html -text
 doc/style.css -text
-doc/valid-xhtml10.png -text svneol=unset#unset
 doc/xmlwf.1 -text
 doc/xmlwf.sgml -text
 examples/elements.c -text
-examples/elements.dsp -text
 examples/outline.c -text
-examples/outline.dsp -text
 /expat_config.h.in -text
 lib/ascii.h -text
 lib/asciitab.h -text
@@ -26,7 +22,6 @@ lib/internal.h -text
 lib/latin1tab.h -text
 lib/nametab.h -text
 lib/utf8tab.h -text
-lib/winconfig.h -text
 lib/xmlparse.c -text
 lib/xmlrole.c -text
 lib/xmlrole.h -text
@@ -36,10 +31,6 @@ lib/xmltok_impl.c -text
 lib/xmltok_impl.h -text
 lib/xmltok_ns.c -text
 tests/README.txt -text
-tests/benchmark/README.txt -text
-tests/benchmark/benchmark.c -text
-tests/benchmark/benchmark.dsp -text
-tests/benchmark/benchmark.dsw -text
 tests/chardata.c -text
 tests/chardata.h -text
 tests/minicheck.c -text
