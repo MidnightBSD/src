@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/twe/twe_compat.h,v 1.2 2009/11/28 22:44:33 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2003 Paul Saab
@@ -44,9 +44,13 @@
 #include <sys/systm.h>
 #include <sys/malloc.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/sysctl.h>
+#include <sys/sx.h>
 
+#include <sys/bio.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/disk.h>
@@ -59,6 +63,8 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
+#include <geom/geom_disk.h>
+
 #define TWE_DRIVER_NAME		twe
 #define TWED_DRIVER_NAME	twed
 #define TWE_MALLOC_CLASS	M_TWE
@@ -66,10 +72,10 @@
 /* 
  * Wrappers for bus-space actions
  */
-#define TWE_CONTROL(sc, val)		bus_space_write_4((sc)->twe_btag, (sc)->twe_bhandle, 0x0, (u_int32_t)val)
-#define TWE_STATUS(sc)			(u_int32_t)bus_space_read_4((sc)->twe_btag, (sc)->twe_bhandle, 0x4)
-#define TWE_COMMAND_QUEUE(sc, val)	bus_space_write_4((sc)->twe_btag, (sc)->twe_bhandle, 0x8, (u_int32_t)val)
-#define TWE_RESPONSE_QUEUE(sc)		(TWE_Response_Queue)bus_space_read_4((sc)->twe_btag, (sc)->twe_bhandle, 0xc)
+#define TWE_CONTROL(sc, val)		bus_write_4((sc)->twe_io, 0x0, (u_int32_t)val)
+#define TWE_STATUS(sc)			(u_int32_t)bus_read_4((sc)->twe_io, 0x4)
+#define TWE_COMMAND_QUEUE(sc, val)	bus_write_4((sc)->twe_io, 0x8, (u_int32_t)val)
+#define TWE_RESPONSE_QUEUE(sc)		(TWE_Response_Queue)bus_read_4((sc)->twe_io, 0xc)
 
 /*
  * FreeBSD-specific softc elements
@@ -80,8 +86,6 @@
     device_t			twe_dev;		/* bus device */		\
     struct cdev *twe_dev_t;		/* control device */		\
     struct resource		*twe_io;		/* register interface window */	\
-    bus_space_handle_t		twe_bhandle;		/* bus space handle */		\
-    bus_space_tag_t		twe_btag;		/* bus space tag */		\
     bus_dma_tag_t		twe_parent_dmat;	/* parent DMA tag */		\
     bus_dma_tag_t		twe_buffer_dmat;	/* data buffer DMA tag */	\
     bus_dma_tag_t		twe_cmd_dmat;		/* command buffer DMA tag */	\
@@ -92,8 +96,8 @@
     void			*twe_cmd;		/* command structures */	\
     void			*twe_immediate;		/* immediate commands */	\
     bus_dmamap_t		twe_immediate_map;					\
-    struct sysctl_ctx_list	sysctl_ctx;						\
-    struct sysctl_oid		*sysctl_tree;
+    struct mtx			twe_io_lock;						\
+    struct sx			twe_config_lock;
 
 /*
  * FreeBSD-specific request elements
