@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/concat/g_concat.c,v 1.6 2012/10/06 04:54:38 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -46,7 +46,8 @@ FEATURE(geom_concat, "GEOM concatenation support");
 static MALLOC_DEFINE(M_CONCAT, "concat_data", "GEOM_CONCAT Data");
 
 SYSCTL_DECL(_kern_geom);
-SYSCTL_NODE(_kern_geom, OID_AUTO, concat, CTLFLAG_RW, 0, "GEOM_CONCAT stuff");
+static SYSCTL_NODE(_kern_geom, OID_AUTO, concat, CTLFLAG_RW, 0,
+    "GEOM_CONCAT stuff");
 static u_int g_concat_debug = 0;
 TUNABLE_INT("kern.geom.concat.debug", &g_concat_debug);
 SYSCTL_UINT(_kern_geom_concat, OID_AUTO, debug, CTLFLAG_RW, &g_concat_debug, 0,

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/pccbb/pccbb.c,v 1.2 2008/12/02 02:47:53 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2004 M. Warner Losh.
  * Copyright (c) 2000-2001 Jonathan Chen.
@@ -130,7 +130,7 @@ __FBSDID("$FreeBSD$");
 devclass_t cbb_devclass;
 
 /* sysctl vars */
-SYSCTL_NODE(_hw, OID_AUTO, cbb, CTLFLAG_RD, 0, "CBB parameters");
+static SYSCTL_NODE(_hw, OID_AUTO, cbb, CTLFLAG_RD, 0, "CBB parameters");
 
 /* There's no way to say TUNEABLE_LONG to get the right types */
 u_long cbb_start_mem = CBB_START_MEM;

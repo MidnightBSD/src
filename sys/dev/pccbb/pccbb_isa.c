@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/pccbb/pccbb_isa.c,v 1.2 2008/12/02 02:47:53 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2004 M. Warner Losh.
  * All rights reserved.
@@ -69,7 +69,7 @@ __FBSDID("$FreeBSD$");
  *****************************************************************************/
 
 /* sysctl vars */
-SYSCTL_NODE(_hw, OID_AUTO, pcic, CTLFLAG_RD, 0, "PCIC parameters");
+static SYSCTL_NODE(_hw, OID_AUTO, pcic, CTLFLAG_RD, 0, "PCIC parameters");
 
 static int isa_intr_mask = EXCA_INT_MASK_ALLOWED;
 TUNABLE_INT("hw.cbb.intr_mask", &isa_intr_mask);

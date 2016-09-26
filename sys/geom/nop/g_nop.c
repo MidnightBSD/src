@@ -43,7 +43,7 @@ __FBSDID("$FreeBSD: src/sys/geom/nop/g_nop.c,v 1.19 2006/09/08 13:46:18 pjd Exp 
 
 
 SYSCTL_DECL(_kern_geom);
-SYSCTL_NODE(_kern_geom, OID_AUTO, nop, CTLFLAG_RW, 0, "GEOM_NOP stuff");
+static SYSCTL_NODE(_kern_geom, OID_AUTO, nop, CTLFLAG_RW, 0, "GEOM_NOP stuff");
 static u_int g_nop_debug = 0;
 SYSCTL_UINT(_kern_geom_nop, OID_AUTO, debug, CTLFLAG_RW, &g_nop_debug, 0,
     "Debug level");

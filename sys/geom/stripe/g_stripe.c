@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/stripe/g_stripe.c,v 1.5 2012/03/31 16:58:05 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -69,7 +69,8 @@ struct g_class g_stripe_class = {
 };
 
 SYSCTL_DECL(_kern_geom);
-SYSCTL_NODE(_kern_geom, OID_AUTO, stripe, CTLFLAG_RW, 0, "GEOM_STRIPE stuff");
+static SYSCTL_NODE(_kern_geom, OID_AUTO, stripe, CTLFLAG_RW, 0,
+    "GEOM_STRIPE stuff");
 static u_int g_stripe_debug = 0;
 TUNABLE_INT("kern.geom.stripe.debug", &g_stripe_debug);
 SYSCTL_UINT(_kern_geom_stripe, OID_AUTO, debug, CTLFLAG_RW, &g_stripe_debug, 0,

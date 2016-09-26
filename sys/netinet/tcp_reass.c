@@ -77,7 +77,7 @@ __MBSDID("$MidnightBSD$");
 static int tcp_reass_sysctl_maxseg(SYSCTL_HANDLER_ARGS);
 static int tcp_reass_sysctl_qsize(SYSCTL_HANDLER_ARGS);
 
-SYSCTL_NODE(_net_inet_tcp, OID_AUTO, reass, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_net_inet_tcp, OID_AUTO, reass, CTLFLAG_RW, 0,
     "TCP Segment Reassembly Queue");
 
 static int tcp_reass_maxseg = 0;
