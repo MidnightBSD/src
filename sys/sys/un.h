@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/sys/un.h,v 1.2 2008/12/03 00:11:23 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -54,9 +54,12 @@ struct sockaddr_un {
 #if __BSD_VISIBLE
 
 /* Socket options. */
-#define	LOCAL_PEERCRED		0x001	/* retrieve peer credentials */
-#define	LOCAL_CREDS		0x002	/* pass credentials to receiver */
-#define	LOCAL_CONNWAIT		0x004	/* connects block until accepted */
+#define	LOCAL_PEERCRED		1	/* retrieve peer credentials */
+#define	LOCAL_CREDS		2	/* pass credentials to receiver */
+#define	LOCAL_CONNWAIT		4	/* connects block until accepted */
+
+/* Start of reserved space for third-party socket options. */
+#define	LOCAL_VENDOR		SO_VENDOR
 
 #ifndef _KERNEL
 
