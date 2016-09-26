@@ -28,7 +28,7 @@
  *
  *	@(#)extern.h	8.3 (Berkeley) 4/2/94
  * $FreeBSD: src/bin/ps/extern.h,v 1.37 2004/06/23 23:48:09 gad Exp $
- * $MidnightBSD: src/bin/ps/extern.h,v 1.2 2007/07/26 20:13:00 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 struct kinfo;
@@ -52,7 +52,7 @@ char	 *elapsed(KINFO *, VARENT *);
 char	 *elapseds(KINFO *, VARENT *);
 char	 *emulname(KINFO *, VARENT *);
 VARENT	*find_varentry(VAR *);
-const	 char *fmt_argv(char **, char *, size_t);
+const	 char *fmt_argv(char **, char *, char *, size_t);
 double	 getpcpu(const KINFO *);
 char	 *kvar(KINFO *, VARENT *);
 char	 *label(KINFO *, VARENT *);
