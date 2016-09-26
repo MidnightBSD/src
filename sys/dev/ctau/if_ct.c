@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/ctau/if_ct.c,v 1.2 2008/12/02 02:24:40 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Cronyx-Tau adapter driver for FreeBSD.
  * Supports PPP/HDLC and Cisco/HDLC protocol in synchronous mode,
@@ -206,10 +206,10 @@ static struct mbuf *makembuf (void *buf, u_int len)
 {
 	struct mbuf *m;
 
-	MGETHDR (m, M_DONTWAIT, MT_DATA);
+	MGETHDR (m, M_NOWAIT, MT_DATA);
 	if (! m)
 		return 0;
-	MCLGET (m, M_DONTWAIT);
+	MCLGET (m, M_NOWAIT);
 	if (! (m->m_flags & M_EXT)) {
 		m_freem (m);
 		return 0;

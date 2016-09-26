@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/cm/smc90cx6.c,v 1.2 2008/12/02 02:24:38 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*	$NetBSD: smc90cx6.c,v 1.38 2001/07/07 15:57:53 thorpej Exp $ */
 
 #include <sys/cdefs.h>
@@ -503,7 +503,7 @@ cm_srint_locked(vsc)
 	buffer = sc->sc_rx_act ^ 1;
 
 	/* Allocate header mbuf */
-	MGETHDR(m, M_DONTWAIT, MT_DATA);
+	MGETHDR(m, M_NOWAIT, MT_DATA);
 
 	if (m == 0) {
 		/*
@@ -540,7 +540,7 @@ cm_srint_locked(vsc)
 	 */
 	if ((len + 2 + 2) > MHLEN) {
 		/* attach an mbuf cluster */
-		MCLGET(m, M_DONTWAIT);
+		MCLGET(m, M_NOWAIT);
 
 		/* Insist on getting a cluster */
 		if ((m->m_flags & M_EXT) == 0) {

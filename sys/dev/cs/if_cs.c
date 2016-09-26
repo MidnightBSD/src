@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/cs/if_cs.c,v 1.2 2008/12/02 02:24:39 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997,1998 Maxim Bolotin and Oleg Sharoiko.
  * All rights reserved.
@@ -727,12 +727,12 @@ cs_get_packet(struct cs_softc *sc)
 		return (-1);
 	}
 
-	MGETHDR(m, M_DONTWAIT, MT_DATA);
+	MGETHDR(m, M_NOWAIT, MT_DATA);
 	if (m==NULL)
 		return (-1);
 
 	if (length > MHLEN) {
-		MCLGET(m, M_DONTWAIT);
+		MCLGET(m, M_NOWAIT);
 		if (!(m->m_flags & M_EXT)) {
 			m_freem(m);
 			return (-1);
