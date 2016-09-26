@@ -56989,6 +56989,11 @@ sys/cam/scsi/scsi_ch.h -text
 sys/cam/scsi/scsi_da.c -text
 sys/cam/scsi/scsi_da.h -text
 sys/cam/scsi/scsi_dvcfg.h -text
+sys/cam/scsi/scsi_enc.c svneol=native#text/plain
+sys/cam/scsi/scsi_enc.h svneol=native#text/plain
+sys/cam/scsi/scsi_enc_internal.h svneol=native#text/plain
+sys/cam/scsi/scsi_enc_safte.c svneol=native#text/plain
+sys/cam/scsi/scsi_enc_ses.c svneol=native#text/plain
 sys/cam/scsi/scsi_iu.h -text
 sys/cam/scsi/scsi_low.c -text
 sys/cam/scsi/scsi_low.h -text
@@ -57001,7 +57006,6 @@ sys/cam/scsi/scsi_pt.c -text
 sys/cam/scsi/scsi_pt.h -text
 sys/cam/scsi/scsi_sa.c -text
 sys/cam/scsi/scsi_sa.h -text
-sys/cam/scsi/scsi_ses.c -text
 sys/cam/scsi/scsi_ses.h -text
 sys/cam/scsi/scsi_sg.c -text
 sys/cam/scsi/scsi_sg.h -text
