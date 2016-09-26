@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated for what's essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/options.c,v 1.5 2009/10/24 05:13:57 laffer1 Exp $
+ * $MidnightBSD$
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -74,6 +74,9 @@ mediaCheck(Option *opt)
 
 	case DEVICE_TYPE_FTP:
 	    return "FTP";
+
+	case DEVICE_TYPE_HTTP:
+	    return "HTTP Proxy";
 
 	case DEVICE_TYPE_CDROM:
 	    return "CDROM";
