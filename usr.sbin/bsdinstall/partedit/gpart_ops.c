@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/usr.sbin/bsdinstall/partedit/gpart_ops.c,v 1.5 2013/04/06 04:41:31 laffer1 Exp $
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/bsdinstall/partedit/gpart_ops.c,v 1.10 2011/10/23 16:57:10 nwhitehorn Exp $
  */
 
@@ -146,7 +146,7 @@ newfs_command(const char *fstype, char *command, int use_default)
 				strcat(command, "-F 32 ");
 			else if (strcmp(items[i].name, "FAT16") == 0)
 				strcat(command, "-F 16 ");
-			else if (strcmp(items[i].name, "SUJ") == 0)
+			else if (strcmp(items[i].name, "FAT12") == 0)
 				strcat(command, "-F 12 ");
 		}
 	} else {
