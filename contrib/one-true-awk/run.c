@@ -23,6 +23,8 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ****************************************************************/
 
+#include <sys/cdefs.h>
+
 #define DEBUG
 #include <stdio.h>
 #include <ctype.h>
@@ -655,7 +657,7 @@ Cell *relop(Node **a, int n)	/* a[0 < a[1], etc. */
 		j = x->fval - y->fval;
 		i = j<0? -1: (j>0? 1: 0);
 	} else {
-		i = strcmp(getsval(x), getsval(y));
+		i = strcoll(getsval(x), getsval(y));
 	}
 	tempfree(x);
 	tempfree(y);
@@ -1211,13 +1213,13 @@ Cell *dopa2(Node **a, int n)	/* a[0], a[1] { a[2] } */
 Cell *split(Node **a, int nnn)	/* split(a[0], a[1], a[2]); a[3] is type */
 {
 	Cell *x = 0, *y, *ap;
-	char *s;
+	char *s, *origs;
 	int sep;
 	char *t, temp, num[50], *fs = 0;
 	int n, tempstat, arg3type;
 
 	y = execute(a[0]);	/* source string */
-	s = getsval(y);
+	origs = s = strdup(getsval(y));
 	arg3type = ptoi(a[3]);
 	if (a[2] == 0)		/* fs string */
 		fs = *FS;
@@ -1337,6 +1339,7 @@ Cell *split(Node **a, int nnn)	/* split(a[0], a[1], a[2]); a[3] is type */
 	}
 	tempfree(ap);
 	tempfree(y);
+	free(origs);
 	if (a[2] != 0 && arg3type == STRING) {
 		tempfree(x);
 	}
@@ -1518,8 +1521,10 @@ Cell *bltin(Node **a, int n)	/* builtin functions. a[0] is type, a[1] is arg lis
 		u = (Awkfloat) system(getsval(x)) / 256;   /* 256 is unix-dep */
 		break;
 	case FRAND:
-		/* in principle, rand() returns something in 0..RAND_MAX */
-		u = (Awkfloat) (rand() % RAND_MAX) / RAND_MAX;
+		/* random() returns numbers in [0..2^31-1]
+		 * in order to get a number in [0, 1), divide it by 2^31
+		 */
+		u = (Awkfloat) random() / (0x7fffffffL + 0x1UL);
 		break;
 	case FSRAND:
 		if (isrec(x))	/* no argument provided */
@@ -1527,7 +1532,7 @@ Cell *bltin(Node **a, int n)	/* builtin functions. a[0] is type, a[1] is arg lis
 		else
 			u = getfval(x);
 		tmp = u;
-		srand((unsigned int) u);
+		srandom((unsigned long) u);
 		u = srand_seed;
 		srand_seed = tmp;
 		break;

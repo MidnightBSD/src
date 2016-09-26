@@ -25,6 +25,8 @@ THIS SOFTWARE.
 
 /* lasciate ogne speranza, voi ch'intrate. */
 
+#include <sys/cdefs.h>
+
 #define	DEBUG
 
 #include <ctype.h>
@@ -286,9 +288,21 @@ int quoted(uschar **pp)	/* pick up next thing after a \\ */
 	return c;
 }
 
+static int collate_range_cmp(int a, int b)
+{
+	static char s[2][2];
+
+	if ((uschar)a == (uschar)b)
+		return 0;
+	s[0][0] = a;
+	s[1][0] = b;
+	return (strcoll(s[0], s[1]));
+}
+
 char *cclenter(const char *argp)	/* add a character class */
 {
 	int i, c, c2;
+	int j;
 	uschar *p = (uschar *) argp;
 	uschar *op, *bp;
 	static uschar *buf = 0;
@@ -307,15 +321,18 @@ char *cclenter(const char *argp)	/* add a character class */
 				c2 = *p++;
 				if (c2 == '\\')
 					c2 = quoted(&p);
-				if (c > c2) {	/* empty; ignore */
+				if (collate_range_cmp(c, c2) > 0) {
 					bp--;
 					i--;
 					continue;
 				}
-				while (c < c2) {
+				for (j = 0; j < NCHARS; j++) {
+					if ((collate_range_cmp(c, j) > 0) ||
+					    collate_range_cmp(j, c2) > 0)
+						continue;
 					if (!adjbuf((char **) &buf, &bufsz, bp-buf+2, 100, (char **) &bp, "cclenter1"))
 						FATAL("out of space for character class [%.10s...] 2", p);
-					*bp++ = ++c;
+					*bp++ = j;
 					i++;
 				}
 				continue;
@@ -824,7 +841,7 @@ int relex(void)		/* lexical analyzer for reparse */
 				if (cc->cc_name != NULL && prestr[1 + cc->cc_namelen] == ':' &&
 				    prestr[2 + cc->cc_namelen] == ']') {
 					prestr += cc->cc_namelen + 3;
-					for (i = 0; i < NCHARS; i++) {
+					for (i = 1; i < NCHARS; i++) {
 						if (!adjbuf((char **) &buf, &bufsz, bp-buf+1, 100, (char **) &bp, "relex2"))
 						    FATAL("out of space for reg expr %.10s...", lastre);
 						if (cc->cc_func(i)) {

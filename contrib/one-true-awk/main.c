@@ -23,7 +23,9 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ****************************************************************/
 
-const char	*version = "version 20110810 (MidnightBSD)";
+#include <sys/cdefs.h>
+
+const char	*version = "version 20121220 (MidnightBSD)";
 
 #define DEBUG
 #include <stdio.h>
@@ -60,6 +62,7 @@ int main(int argc, char *argv[])
 	const char *fs = NULL;
 
 	setlocale(LC_CTYPE, "");
+	setlocale(LC_COLLATE, "");
 	setlocale(LC_NUMERIC, "C"); /* for parsing cmdline & prog */
 	cmdname = argv[0];
 	if (argc == 1) {
@@ -71,7 +74,7 @@ int main(int argc, char *argv[])
 	signal(SIGFPE, fpecatch);
 
 	srand_seed = 1;
-	srand(srand_seed);
+	srandom((unsigned long) srand_seed);
 
 	yyin = NULL;
 	symtab = makesymtab(NSYMTAB/NSYMTAB);
