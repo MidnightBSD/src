@@ -58934,14 +58934,13 @@ sys/dev/cxgb/ulp/tom/cxgb_tom.c -text
 sys/dev/cxgb/ulp/tom/cxgb_tom.h -text
 sys/dev/cxgbe/adapter.h -text
 sys/dev/cxgbe/common/common.h -text
-sys/dev/cxgbe/common/jhash.h -text
 sys/dev/cxgbe/common/t4_hw.c -text
 sys/dev/cxgbe/common/t4_hw.h -text
 sys/dev/cxgbe/common/t4_msg.h -text
 sys/dev/cxgbe/common/t4_regs.h -text
 sys/dev/cxgbe/common/t4_regs_values.h -text
 sys/dev/cxgbe/common/t4_tcb.h -text
-sys/dev/cxgbe/firmware/t4fw-1.6.2.0.bin.uu -text
+sys/dev/cxgbe/firmware/t4fw-1.8.4.0.bin.uu -text
 sys/dev/cxgbe/firmware/t4fw_cfg.txt -text
 sys/dev/cxgbe/firmware/t4fw_cfg_uwire.txt -text
 sys/dev/cxgbe/firmware/t4fw_interface.h -text
