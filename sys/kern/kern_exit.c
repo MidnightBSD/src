@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD$");
 
 #include "opt_compat.h"
 #include "opt_kdtrace.h"
