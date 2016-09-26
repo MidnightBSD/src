@@ -33,6 +33,10 @@
  *	or calls one of them based on argv[1].   This allows the testing of
  *	the crunched binary without creating all the links.
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,7 +49,8 @@ struct stub {
 extern char *__progname;
 extern struct stub entry_points[];
 
-int main(int argc, char **argv, char **envp)
+int
+main(int argc, char **argv, char **envp)
 {
     char *slash, *basename;
     struct stub *ep;
@@ -68,7 +73,8 @@ int main(int argc, char **argv, char **envp)
 }
 
 
-int crunched_here(char *path)
+int
+crunched_here(char *path)
 {
     char *slash, *basename;
     struct stub *ep;
@@ -83,7 +89,8 @@ int crunched_here(char *path)
 }
 
 
-int crunched_main(int argc, char **argv, char **envp)
+int
+crunched_main(int argc, char **argv, char **envp)
 {
     char *slash;
     struct stub *ep;
@@ -99,7 +106,8 @@ int crunched_main(int argc, char **argv, char **envp)
 }
 
 
-int crunched_usage()
+int
+crunched_usage()
 {
     int columns, len;
     struct stub *ep;
@@ -122,4 +130,3 @@ int crunched_usage()
 }
 
 /* end of crunched_main.c */
-
