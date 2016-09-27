@@ -29195,6 +29195,8 @@ contrib/mDNSResponder/mDNSWindows/mdnsNSP/mdnsNSP.vcproj -text svneol=unset#appl
 contrib/mDNSResponder/mDNSWindows/mdnsNSP/mdnsNSP.vcxproj -text svneol=unset#application/xml
 contrib/mDNSResponder/mDNSWindows/mdnsNSP/mdnsNSP.vcxproj.filters -text svneol=unset#application/xml
 contrib/mDNSResponder/mDNSWindows/mdnsNSP/resource.h -text
+contrib/mknod/pack_dev.c -text
+contrib/mknod/pack_dev.h -text
 contrib/mksh/Build.sh -text
 contrib/mksh/MIDNIGHTBSD-upgrade -text
 contrib/mksh/Makefile -text
