@@ -448,6 +448,7 @@ __DEFAULT_NO_OPTIONS = \
     DEBUG_FILES \
     HESIOD \
     IDEA \
+    NMTREE \
     OFED \
     SHARED_TOOLCHAIN \
     SVN \
