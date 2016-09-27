@@ -236,10 +236,6 @@ SUBDIR+=	rdate
 SUBDIR+=	keyserv
 .endif
 
-.if ${MK_PC_SYSINSTALL} != "no"
-_pc_sysinstall=	pc-sysinstall
-.endif
-
 .if ${MK_PF} != "no"
 SUBDIR+=	ftp-proxy
 .endif
