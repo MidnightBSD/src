@@ -63637,6 +63637,8 @@ sys/netinet/tcp_timewait.c -text
 sys/netinet/tcp_usrreq.c -text
 sys/netinet/tcp_var.h -text
 sys/netinet/tcpip.h -text
+sys/netinet/toecore.c svneol=native#text/plain
+sys/netinet/toecore.h svneol=native#text/plain
 sys/netinet/toedev.h -text
 sys/netinet/udp.h -text
 sys/netinet/udp_usrreq.c -text
