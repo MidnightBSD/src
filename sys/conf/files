@@ -2051,8 +2051,8 @@ dev/usb/net/if_rue.c		optional rue
 dev/usb/net/if_udav.c		optional udav
 dev/usb/net/if_usie.c		optional usie
 dev/usb/net/ruephy.c		optional rue
-dev/usb/net/usb_ethernet.c	optional aue | axe | cdce | cue | kue | mos | \
-					 rue | udav | ipheth
+dev/usb/net/usb_ethernet.c	optional aue | axe | cdce | cue | kue | \
+					 mos | rue | udav | ipheth
 dev/usb/net/uhso.c		optional uhso
 #
 # USB WLAN drivers
@@ -2939,7 +2939,7 @@ netinet/tcp_hostcache.c		optional inet | inet6
 netinet/tcp_input.c		optional inet | inet6
 netinet/tcp_lro.c		optional inet | inet6
 netinet/tcp_output.c		optional inet | inet6
-netinet/tcp_offload.c		optional inet | inet6
+netinet/tcp_offload.c		optional tcp_offload inet | tcp_offload inet6
 netinet/tcp_reass.c		optional inet | inet6
 netinet/tcp_sack.c		optional inet | inet6
 netinet/tcp_subr.c		optional inet | inet6
