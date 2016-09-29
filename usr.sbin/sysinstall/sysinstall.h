@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.264.2.2 2006/01/31 22:03:19 jkim Exp $
- * $MidnightBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.10 2011/03/26 16:53:46 laffer1 Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYSINSTALL_H_INCLUDE
@@ -119,6 +119,7 @@
 #define VAR_FTP_STATE			"ftpState"
 #define VAR_FTP_USER			"ftpUser"
 #define VAR_FTP_HOST			"ftpHost"
+#define VAR_HTTP_DIR			"httpDirectory"
 #define VAR_HTTP_PATH			"_httpPath"
 #define VAR_HTTP_PROXY			"httpProxy"
 #define VAR_HTTP_PORT			"httpPort"
@@ -274,6 +275,7 @@ typedef enum {
     DEVICE_TYPE_NFS,
     DEVICE_TYPE_ANY,
     DEVICE_TYPE_HTTP,
+    DEVICE_TYPE_HTTP_DIRECT,
 } DeviceType;
 
 /* CDROM mount codes */
@@ -444,6 +446,7 @@ extern DMenu		MenuMediaUSB;		/* USB media menu				*/
 extern DMenu		MenuMediaDOS;		/* DOS media menu				*/
 extern DMenu		MenuMediaFloppy;	/* Floppy media menu				*/
 extern DMenu		MenuMediaFTP;		/* FTP media menu				*/
+extern DMenu		MenuMediaHTTPDirect;	/* HTTP Direct media menu			*/
 extern DMenu		MenuNetworkDevice;	/* Network device menu				*/
 extern DMenu		MenuNTP;		/* NTP time server menu				*/
 extern DMenu		MenuSecurity;		/* System security options menu			*/
@@ -644,8 +647,13 @@ extern FILE	*mediaGetFTP(Device *dev, char *file, Boolean probe);
 extern void	mediaShutdownFTP(Device *dev);
 
 /* http.c */
+extern Boolean	checkAccess(Boolean connectCheckOnly, Boolean isProxy);
 extern Boolean	mediaInitHTTP(Device *dev);
 extern FILE	*mediaGetHTTP(Device *dev, char *file, Boolean probe);
+
+/* httpdirect.c */
+extern Boolean	mediaInitHTTPDirect(Device *dev);
+extern FILE	*mediaGetHTTPDirect(Device *dev, char *file, Boolean probe);
 
 /* globals.c */
 extern void	globalsInit(void);
@@ -720,6 +728,7 @@ extern int	mediaSetFTP(dialogMenuItem *self);
 extern int	mediaSetFTPActive(dialogMenuItem *self);
 extern int	mediaSetFTPPassive(dialogMenuItem *self);
 extern int	mediaSetHTTP(dialogMenuItem *self);
+extern int	mediaSetHTTPDirect(dialogMenuItem *self);
 extern int	mediaSetUFS(dialogMenuItem *self);
 extern int	mediaSetNFS(dialogMenuItem *self);
 extern int	mediaSetFTPUserPass(dialogMenuItem *self);

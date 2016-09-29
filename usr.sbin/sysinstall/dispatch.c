@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/dispatch.c,v 1.4 2011/03/26 16:53:46 laffer1 Exp $
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sysinstall/dispatch.c,v 1.47.2.1 2006/01/31 22:03:18 jkim Exp $
  *
  * Copyright (c) 1995
@@ -103,6 +103,7 @@ static struct _word {
     { "mediaSetFTPActive",	mediaSetFTPActive	},
     { "mediaSetFTPPassive",	mediaSetFTPPassive	},
     { "mediaSetHTTP",		mediaSetHTTP		},
+    { "mediaSetHTTPDirect",	mediaSetHTTPDirect	},
     { "mediaSetUFS",		mediaSetUFS		},
     { "mediaSetNFS",		mediaSetNFS		},
     { "mediaSetFTPUserPass",	mediaSetFTPUserPass	},

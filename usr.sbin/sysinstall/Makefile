@@ -1,13 +1,13 @@
-# $MidnightBSD: src/usr.sbin/sysinstall/Makefile,v 1.10 2011/12/18 03:50:50 laffer1 Exp $
+# $MidnightBSD$
 # $FreeBSD: src/usr.sbin/sysinstall/Makefile,v 1.134.2.1 2005/10/07 15:56:30 nyan Exp $
 
 PROG=	sysinstall
 MAN=	sysinstall.8
 SRCS=	anonFTP.c cdrom.c command.c config.c devices.c dhcp.c \
 	disks.c dispatch.c dist.c dmenu.c doc.c dos.c floppy.c \
-	ftp.c globals.c http.c index.c install.c installUpgrade.c keymap.c \
-	label.c main.c makedevs.c media.c menus.c misc.c modules.c \
-	mouse.c msg.c network.c nfs.c options.c package.c \
+	ftp.c globals.c http.c httpdirect.c index.c install.c \
+	installUpgrade.c keymap.c label.c main.c makedevs.c media.c menus.c \
+	misc.c modules.c mouse.c msg.c network.c nfs.c options.c package.c \
 	system.c tcpip.c termcap.c ttys.c ufs.c usb.c user.c \
 	variable.c wizard.c keymap.h countries.h
 

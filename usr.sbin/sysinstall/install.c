@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/install.c,v 1.9 2011/03/26 16:53:46 laffer1 Exp $
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sysinstall/install.c,v 1.363.2.1 2006/01/06 20:10:41 ceri Exp $
  *
  * Copyright (c) 1995
@@ -303,7 +303,7 @@ installFixitUSB(dialogMenuItem *self)
 		msgConfirm("No USB devices found!");
 		return (DITEM_FAILURE);
 	} else if (!file_readable("/dist/rescue/ldconfig")) {
-		msgConfirm("Unable to find a FreeBSD live filesystem.");
+		msgConfirm("Unable to find a BSD live filesystem.");
 		return (DITEM_FAILURE);
 	}
 

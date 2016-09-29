@@ -37,18 +37,9 @@
 
 extern const char *ftp_dirs[]; /* defined in ftp.c */
 
-static Boolean
-checkAccess(Boolean proxyCheckOnly)
+Boolean
+checkAccess(Boolean connectCheckOnly, Boolean isProxy)
 {
-/* 
- * Some proxies fetch files with certain extensions in "ascii mode" instead
- * of "binary mode" for FTP. The FTP server then translates all LF to CRLF.
- *
- * You can force Squid to use binary mode by appending ";type=i" to the URL,
- * which is what I do here. For other proxies, the LF->CRLF substitution
- * is reverted in distExtract().
- */
-
     int rv, s, af;
     bool el, found=FALSE;		    /* end of header line */
     char *cp, buf[PATH_MAX], req[BUFSIZ];
@@ -77,18 +68,26 @@ checkAccess(Boolean proxyCheckOnly)
     }
     freeaddrinfo(res0);
     if (s == -1) {
-	msgConfirm("Couldn't connect to proxy %s:%s",
-		    variable_get(VAR_HTTP_HOST),variable_get(VAR_HTTP_PORT));
+	if (isProxy) {
+		msgConfirm("Couldn't connect to proxy %s:%s",
+			    variable_get(VAR_HTTP_HOST),variable_get(VAR_HTTP_PORT));
+	} else {
+		msgConfirm("Couldn't connect to server http://%s:%s/",
+			    variable_get(VAR_HTTP_HOST),variable_get(VAR_HTTP_PORT));
+	}
 	variable_unset(VAR_HTTP_HOST);
 	return FALSE;
     }
-    if (proxyCheckOnly) {
+    if (connectCheckOnly) {
        close(s);
        return TRUE;
     }
 
     msgNotify("Checking access to\n %s", variable_get(VAR_HTTP_PATH));
-    sprintf(req, "GET %s/ HTTP/1.0\r\n\r\n", variable_get(VAR_HTTP_PATH));
+    if (isProxy)
+	sprintf(req,"GET %s/ HTTP/1.0\r\n\r\n", variable_get(VAR_HTTP_PATH));
+    else
+	sprintf(req,"GET /%s/ HTTP/1.0\r\n\r\n", variable_get(VAR_HTTP_PATH));
     write(s,req,strlen(req));
 /*
  *  scan the headers of the response
@@ -109,7 +108,16 @@ checkAccess(Boolean proxyCheckOnly)
 		}
 	    }
 
-	    if (!strncmp(buf,"Server: ",8)) {
+	    /* 
+	     * Some proxies fetch files with certain extensions in "ascii mode"
+	     * instead of "binary mode" for FTP. The FTP server then translates
+	     * all LF to CRLF.
+	     *
+	     * You can force Squid to use binary mode by appending ";type=i" to
+	     * the URL, which is what I do here. For other proxies, the
+	     * LF->CRLF substitution is reverted in distExtract().
+	     */
+	    if (isProxy && !strncmp(buf,"Server: ",8)) {
 		if (!strncmp(buf,"Server: Squid",13)) {
 		    variable_set2(VAR_HTTP_FTP_MODE,";type=i",0);
 		} else {
@@ -144,11 +152,11 @@ mediaInitHTTP(Device *dev)
     /* 
      * First verify the proxy access
      */
-    checkAccess(TRUE);
+    checkAccess(TRUE, TRUE);
     while (variable_get(VAR_HTTP_HOST) == NULL) {
         if (DITEM_STATUS(mediaSetHTTP(NULL)) == DITEM_FAILURE)
             return FALSE;
-        checkAccess(TRUE);
+        checkAccess(TRUE, TRUE);
     }
 again:
     /* If the release is specified as "__RELEASE" or "any", then just
@@ -164,14 +172,14 @@ again:
             sprintf(req, "%s/%s/%s", variable_get(VAR_FTP_PATH),
                 ftp_dirs[fdir], rel);
             variable_set2(VAR_HTTP_PATH, req, 0);
-            if (checkAccess(FALSE)) {
+            if (checkAccess(FALSE, TRUE)) {
                 found = TRUE;
                 break;
             }
         }
     } else {
         variable_set2(VAR_HTTP_PATH, variable_get(VAR_FTP_PATH), 0);
-        found = checkAccess(FALSE);
+        found = checkAccess(FALSE, TRUE);
     }
     if (!found) {
     	msgConfirm("No such directory: %s\n"
@@ -220,7 +228,7 @@ mediaGetHTTP(Device *dev, char *file, Boolean probe)
 	return NULL;
     }
 						   
-    sprintf(req, "GET %s/%s%s HTTP/1.0\r\n\r\n",
+    sprintf(req,"GET %s/%s%s HTTP/1.0\r\n\r\n",
 	    variable_get(VAR_HTTP_PATH), file, variable_get(VAR_HTTP_FTP_MODE));
 
     if (isDebug()) {
