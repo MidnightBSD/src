@@ -69870,6 +69870,7 @@ usr.sbin/sysinstall/help/tcp.hlp -text
 usr.sbin/sysinstall/help/usage.hlp -text
 usr.sbin/sysinstall/help/usermgmt.hlp -text
 usr.sbin/sysinstall/http.c -text
+usr.sbin/sysinstall/httpdirect.c svneol=native#text/plain
 usr.sbin/sysinstall/index.c -text
 usr.sbin/sysinstall/install.c -text
 usr.sbin/sysinstall/install.cfg -text
