@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1999
  *	Philipp Mergenthaler <philipp.mergenthaler@stud.uni-karlsruhe.de>
