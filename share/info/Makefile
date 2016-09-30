@@ -1,5 +1,5 @@
 #       @(#)Makefile    8.1 (Berkeley) 6/5/93
-# $MidnightBSD: src/share/info/Makefile,v 1.2 2009/04/15 02:22:13 laffer1 Exp $
+# $MidnightBSD$
 
 NO_OBJ=
 
@@ -17,6 +17,6 @@ beforeinstall:
 	@exit 3;
 .endif
 .if !exists(${DESTDIR}${INFODIR}/dir)
-	${INSTALL} -o ${INFOOWN} -g ${INFOGRP} -m ${INFOMODE} \
+	${INSTALL} -o ${INFOOWN} -g ${INFOGRP} -m 644 \
 		 dir-tmpl ${DESTDIR}${INFODIR}/dir
 .endif
