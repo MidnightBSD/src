@@ -1,4 +1,4 @@
-# $MidnightBSD: src/lib/ncurses/menu/Makefile,v 1.2 2008/10/02 17:05:38 laffer1 Exp $
+# $MidnightBSD$
 
 .include "${.CURDIR}/../config.mk"
 
@@ -45,7 +45,6 @@ LDADD=	-lncurses${LIB_SUFFIX}
 
 .if defined(ENABLE_WIDEC)
 INCS=	menu.h eti.h
-.endif
 
 .PATH: ${NCURSES_DIR}/man
 MAN=	\
@@ -130,6 +129,9 @@ MLINKS=	menu_attributes.3 menu_back.3 \
 	mitem_value.3 item_value.3 \
 	mitem_value.3 set_item_value.3 \
 	mitem_visible.3 item_visible.3
+.else
+NO_MAN=
+.endif
 
 .include <bsd.lib.mk>
 
