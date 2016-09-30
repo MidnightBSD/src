@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)route.c	8.3.1.1 (Berkeley) 2/23/95
- * $MidnightBSD: src/sys/net/route.c,v 1.7 2013/01/17 23:29:37 laffer1 Exp $
+ * $MidnightBSD$
  */
 /************************************************************************
  * Note: In this file a 'fib' is a "forwarding information base"	*
@@ -1495,7 +1495,7 @@ rtinit1(struct ifaddr *ifa, int cmd, int flags, int fibnum)
 			if (rnh == NULL)
 				/* this table doesn't exist but others might */
 				continue;
-			RADIX_NODE_HEAD_LOCK(rnh);
+			RADIX_NODE_HEAD_RLOCK(rnh);
 #ifdef RADIX_MPATH
 			if (rn_mpath_capable(rnh)) {
 
@@ -1524,7 +1524,7 @@ rtinit1(struct ifaddr *ifa, int cmd, int flags, int fibnum)
 			    (rn->rn_flags & RNF_ROOT) ||
 			    RNTORT(rn)->rt_ifa != ifa ||
 			    !sa_equal((struct sockaddr *)rn->rn_key, dst));
-			RADIX_NODE_HEAD_UNLOCK(rnh);
+			RADIX_NODE_HEAD_RUNLOCK(rnh);
 			if (error) {
 				/* this is only an error if bad on ALL tables */
 				continue;
