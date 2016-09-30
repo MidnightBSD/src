@@ -314,7 +314,7 @@ device		isa		# Required by npx(4)
 # versions.
 #
 # MAXMEM specifies the amount of RAM on the machine; if this is not
-# specified, FreeBSD will first read the amount of memory from the CMOS
+# specified, BSD will first read the amount of memory from the CMOS
 # RAM, so the amount of memory will initially be limited to 64MB or 16MB
 # depending on the BIOS.  If the BIOS reports 64MB, a memory probe will
 # then attempt to detect the installed amount of RAM.  If this probe
@@ -774,6 +774,13 @@ device		glxsb		# AMD Geode LX Security Block
 
 #
 # VirtIO support
+#
+# The virtio entry provides a generic bus for use by the device drivers.
+# It must be combined with an interface that communicates with the host.
+# Multiple such interfaces defined by the VirtIO specification. BSD
+# only has support for PCI. Therefore, virtio_pci must be statically
+# compiled in or loaded as a module for the device drivers to function.
+#
 device		virtio		# Generic VirtIO bus (required)
 device		virtio_pci	# VirtIO PCI Interface
 device		vtnet		# VirtIO Ethernet device
