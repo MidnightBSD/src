@@ -770,8 +770,6 @@
 /set uname=man
             cat1
             ..
-            cat1aout
-            ..
             cat2
             ..
             cat3
@@ -802,8 +800,6 @@
             ..
             en.ISO8859-1    uname=root
                 cat1
-                ..
-                cat1aout
                 ..
                 cat2
                 ..
@@ -836,8 +832,6 @@
             ..
             en.UTF-8        uname=root
                 cat1
-                ..
-                cat1aout
                 ..
                 cat2
                 ..
@@ -908,8 +902,6 @@
                 ..
             ..
             man1
-            ..
-            man1aout
             ..
             man2
             ..
