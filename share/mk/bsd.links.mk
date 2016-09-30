@@ -16,7 +16,7 @@ _installlinks:
 		t=${DESTDIR}$$1; \
 		shift; \
 		${ECHO} $$t -\> $$l; \
-		ln -f $$l $$t; \
+		${INSTALL_LINK} $$l $$t; \
 	done; true
 .endif
 .if defined(SYMLINKS) && !empty(SYMLINKS)
@@ -27,6 +27,6 @@ _installlinks:
 		t=${DESTDIR}$$1; \
 		shift; \
 		${ECHO} $$t -\> $$l; \
-		ln -fs $$l $$t; \
+		${INSTALL_SYMLINK} $$l $$t; \
 	done; true
 .endif

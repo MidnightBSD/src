@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.incs.mk,v 1.4 2005/04/11 07:13:29 harti Exp $
-# $MidnightBSD: src/share/mk/bsd.incs.mk,v 1.2 2006/05/22 06:03:21 laffer1 Exp $
+# $MidnightBSD$
 
 .if !target(__<bsd.init.mk>__)
 .error bsd.incs.mk cannot be included directly.
@@ -74,7 +74,7 @@ installincludes:
 		t=${DESTDIR}$$1; \
 		shift; \
 		${ECHO} $$t -\> $$l; \
-		ln -fs $$l $$t; \
+		${INSTALL_SYMLINK} $$l $$t; \
 	done; true
 .endif
 .endif # !target(installincludes)
