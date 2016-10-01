@@ -1,4 +1,4 @@
-/*	$NetBSD: unvis.c,v 1.40 2012/12/14 21:31:01 christos Exp $	*/
+/*	$NetBSD: unvis.c,v 1.41 2012/12/15 04:29:53 matt Exp $	*/
 
 /*-
  * Copyright (c) 1989, 1993
@@ -34,10 +34,10 @@
 #if 0
 static char sccsid[] = "@(#)unvis.c	8.1 (Berkeley) 6/4/93";
 #else
-__RCSID("$NetBSD: unvis.c,v 1.40 2012/12/14 21:31:01 christos Exp $");
+__RCSID("$NetBSD: unvis.c,v 1.41 2012/12/15 04:29:53 matt Exp $");
 #endif
 #endif /* LIBC_SCCS and not lint */
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/contrib/libc-vis/unvis.c 249560 2013-04-16 19:27:09Z brooks $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -90,7 +90,7 @@ __weak_alias(strnunvisx,_strnunvisx)
  * RFC 1866
  */
 static const struct nv {
-	const char name[7];
+	char name[7];
 	uint8_t value;
 } nv[] = {
 	{ "AElig",	198 }, /* capital AE diphthong (ligature)  */
