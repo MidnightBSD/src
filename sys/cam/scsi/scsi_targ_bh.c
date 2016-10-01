@@ -51,7 +51,7 @@ __MBSDID("$MidnightBSD$");
 #include <cam/scsi/scsi_all.h>
 #include <cam/scsi/scsi_message.h>
 
-MALLOC_DEFINE(M_SCSIBH, "SCSI bh", "SCSI blackhole buffers");
+static MALLOC_DEFINE(M_SCSIBH, "SCSI bh", "SCSI blackhole buffers");
 
 typedef enum {
 	TARGBH_STATE_NORMAL,

@@ -35,7 +35,7 @@
 
 SND_DECLARE_FILE("$MidnightBSD$");
 
-MALLOC_DEFINE(M_FEEDER, "feeder", "pcm feeder");
+static MALLOC_DEFINE(M_FEEDER, "feeder", "pcm feeder");
 
 #define MAXFEEDERS 	256
 #undef FEEDER_DEBUG

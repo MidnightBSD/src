@@ -50,7 +50,8 @@
 
 #include "opt_netgraph.h"
 
-MALLOC_DEFINE(M_NETGRAPH_DEFLATE, "netgraph_deflate", "netgraph deflate node ");
+static MALLOC_DEFINE(M_NETGRAPH_DEFLATE, "netgraph_deflate",
+    "netgraph deflate node");
 
 /* DEFLATE header length */
 #define DEFLATE_HDRLEN		2

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/gnu/fs/xfs/FreeBSD/xfs_mountops.c,v 1.2 2008/12/03 00:25:55 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001,2006 Alexander Kabaev, Russell Cattelan Digital Elves Inc.
  * All rights reserved.
@@ -72,7 +72,7 @@
 
 #include <xfs_mountops.h>
 
-MALLOC_DEFINE(M_XFSNODE, "XFS node", "XFS vnode private part");
+static MALLOC_DEFINE(M_XFSNODE, "XFS node", "XFS vnode private part");
 
 static vfs_mount_t	_xfs_mount;
 static vfs_unmount_t	_xfs_unmount;
