@@ -1,0 +1,4 @@
+* text=auto !eol
+dist/Makefile -text
+dist/unvis.1 -text
+dist/unvis.c -text
