@@ -1,0 +1,6 @@
+* text=auto !eol
+dist/Makefile -text
+dist/extern.h -text
+dist/foldit.c -text
+dist/vis.1 -text
+dist/vis.c -text
