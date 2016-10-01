@@ -113,6 +113,7 @@ DECLARE_GEOM_CLASS(g_disk_class, g_disk);
 static void __inline
 g_disk_lock_giant(struct disk *dp)
 {
+
 	if (dp->d_flags & DISKFLAG_NEEDSGIANT)
 		mtx_lock(&Giant);
 }
@@ -120,6 +121,7 @@ g_disk_lock_giant(struct disk *dp)
 static void __inline
 g_disk_unlock_giant(struct disk *dp)
 {
+
 	if (dp->d_flags & DISKFLAG_NEEDSGIANT)
 		mtx_unlock(&Giant);
 }
@@ -255,9 +257,9 @@ g_disk_done(struct bio *bp)
 	if (bp2->bio_error == 0)
 		bp2->bio_error = bp->bio_error;
 	bp2->bio_completed += bp->bio_completed;
-	if ((bp->bio_cmd & (BIO_READ|BIO_WRITE|BIO_DELETE)) &&
-	    (sc = bp2->bio_to->geom->softc) &&
-	    (dp = sc->dp)) {
+	if ((bp->bio_cmd & (BIO_READ|BIO_WRITE|BIO_DELETE)) != 0 &&
+	    (sc = bp2->bio_to->geom->softc) != NULL &&
+	    (dp = sc->dp) != NULL) {
 		devstat_end_transaction_bio(dp->d_devstat, bp);
 	}
 	g_destroy_bio(bp);
@@ -286,7 +288,7 @@ g_disk_ioctl(struct g_provider *pp, u_long cmd, void * data, int fflag, struct t
 	g_disk_lock_giant(dp);
 	error = dp->d_ioctl(dp, cmd, data, fflag, td);
 	g_disk_unlock_giant(dp);
-	return(error);
+	return (error);
 }
 
 static void
@@ -584,6 +586,7 @@ disk_alloc(void)
 void
 disk_create(struct disk *dp, int version)
 {
+
 	if (version != DISK_VERSION_02 && version != DISK_VERSION_01) {
 		printf("WARNING: Attempt to add disk %s%d %s",
 		    dp->d_name, dp->d_unit,
@@ -675,4 +678,3 @@ sysctl_disks(SYSCTL_HANDLER_ARGS)
 SYSCTL_PROC(_kern, OID_AUTO, disks,
     CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, 0,
     sysctl_disks, "A", "names of available disks");
-
