@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)unvis.c	8.1 (Berkeley) 6/4/93";
 __RCSID("$NetBSD: unvis.c,v 1.41 2012/12/15 04:29:53 matt Exp $");
 #endif
 #endif /* LIBC_SCCS and not lint */
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: release/9.2.0/contrib/libc-vis/unvis.c 249560 2013-04-16 19:27:09Z brooks $");
 
 #include "namespace.h"
 #include <sys/types.h>

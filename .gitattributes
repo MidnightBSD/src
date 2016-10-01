@@ -40663,6 +40663,14 @@ contrib/tzdata/yearistype.sh -text
 contrib/tzdata/zone.tab -text
 contrib/tzdata/zone1970.tab -text
 contrib/tzdata/zoneinfo2tdf.pl -text
+contrib/unvis/Makefile -text
+contrib/unvis/unvis.1 -text
+contrib/unvis/unvis.c -text
+contrib/vis/Makefile -text
+contrib/vis/extern.h -text
+contrib/vis/foldit.c -text
+contrib/vis/vis.1 -text
+contrib/vis/vis.c -text
 contrib/wide-dhcpv6/CHANGES -text
 contrib/wide-dhcpv6/COPYRIGHT -text
 contrib/wide-dhcpv6/Makefile.in -text
