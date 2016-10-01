@@ -13,7 +13,6 @@ divert(-1)
 #  This is the MidnightBSD configuration for a set-group-ID sm-msp sendmail
 #  that acts as a initial mail submission program.
 #
-#
 
 divert(0)dnl
 VERSIONID(`$MidnightBSD$')
