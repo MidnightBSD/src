@@ -930,7 +930,13 @@ bufwrite(struct buf *bp)
 	else
 		vp_md = 0;
 
-	/* Mark the buffer clean */
+	/*
+	 * Mark the buffer clean.  Increment the bufobj write count
+	 * before bundirty() call, to prevent other thread from seeing
+	 * empty dirty list and zero counter for writes in progress,
+	 * falsely indicating that the bufobj is clean.
+	 */
+	bufobj_wref(bp->b_bufobj);
 	bundirty(bp);
 
 	bp->b_flags &= ~B_DONE;
@@ -938,7 +944,6 @@ bufwrite(struct buf *bp)
 	bp->b_flags |= B_CACHE;
 	bp->b_iocmd = BIO_WRITE;
 
-	bufobj_wref(bp->b_bufobj);
 	vfs_busy_pages(bp, 1);
 
 	/*
