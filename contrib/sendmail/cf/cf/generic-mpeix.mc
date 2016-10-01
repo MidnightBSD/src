@@ -1,6 +1,6 @@
 divert(-1)
 #
-# Copyright (c) 2001 Sendmail, Inc. and its suppliers.
+# Copyright (c) 2001 Proofpoint, Inc. and its suppliers.
 #	All rights reserved.
 #
 # By using this file, you agree to the terms and conditions set
@@ -17,7 +17,7 @@ divert(-1)
 #
 
 divert(0)dnl
-VERSIONID(`$Id: generic-mpeix.mc,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $')
+VERSIONID(`$Id: generic-mpeix.mc,v 8.2 2013-11-22 20:51:08 ca Exp $')
 OSTYPE(mpeix)dnl
 DOMAIN(generic)dnl
 define(`confFORWARD_PATH', `$z/.forward')dnl

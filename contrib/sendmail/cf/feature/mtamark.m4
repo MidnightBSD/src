@@ -1,6 +1,6 @@
 divert(-1)
 #
-# Copyright (c) 2004, 2005 Sendmail, Inc. and its suppliers.
+# Copyright (c) 2004, 2005 Proofpoint, Inc. and its suppliers.
 #	All rights reserved.
 #
 # By using this file, you agree to the terms and conditions set
@@ -11,7 +11,7 @@ divert(-1)
 
 divert(0)
 ifdef(`_MTAMARK_R',`dnl',`dnl
-VERSIONID(`$Id: mtamark.m4,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $')
+VERSIONID(`$Id: mtamark.m4,v 1.3 2013-11-22 20:51:11 ca Exp $')
 LOCAL_CONFIG
 define(`_MTAMARK_R',`')dnl
 # map for MTA mark

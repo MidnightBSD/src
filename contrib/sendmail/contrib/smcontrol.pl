@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# $Id: smcontrol.pl,v 1.1.1.2 2010-01-10 20:14:37 laffer1 Exp $
+# $Id: smcontrol.pl,v 8.8 2008-07-21 21:31:43 ca Exp $
 
 use strict;
 use Getopt::Std;

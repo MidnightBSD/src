@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1999-2002, 2004, 2006 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 1999-2002, 2004, 2006 Proofpoint, Inc. and its suppliers.
  *	All rights reserved.
  *
  * By using this file, you agree to the terms and conditions set
@@ -18,7 +18,7 @@
 */
 
 #include <sm/gen.h>
-SM_RCSID("@(#)$Id: bf.c,v 1.1.1.3 2006-08-04 02:03:04 laffer1 Exp $")
+SM_RCSID("@(#)$Id: bf.c,v 8.63 2013-11-22 20:51:55 ca Exp $")
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -695,7 +695,8 @@ sm_bfcommit(fp)
 			sm_dprintf("bfcommit(%s): to disk\n", bfp->bf_filename);
 			if (tTd(58, 32))
 				sm_dprintf("bfcommit(): filemode %o flags %ld\n",
-					   bfp->bf_filemode, bfp->bf_flags);
+					   (unsigned int) bfp->bf_filemode,
+					   bfp->bf_flags);
 		}
 
 		if (stat(bfp->bf_filename, &st) == 0)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000-2005 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 2000-2005 Proofpoint, Inc. and its suppliers.
  *      All rights reserved.
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -13,7 +13,7 @@
  */
 
 #include <sm/gen.h>
-SM_RCSID("@(#)$Id: stdio.c,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $")
+SM_RCSID("@(#)$Id: stdio.c,v 1.72 2013-11-22 20:51:43 ca Exp $")
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -317,7 +317,7 @@ sm_stdsetinfo(fp, what, valp)
 }
 
 /*
-**  SM_GETINFO -- get information about the open file
+**  SM_STDGETINFO -- get information about the open file
 **
 **	Parameters:
 **		fp -- file to get info for

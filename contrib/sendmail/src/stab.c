@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2001, 2003 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 1998-2001, 2003 Proofpoint, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1983, 1995-1997 Eric P. Allman.  All rights reserved.
  * Copyright (c) 1988, 1993
@@ -13,7 +13,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: stab.c,v 1.1.1.4 2013-08-14 22:35:48 laffer1 Exp $")
+SM_RCSID("@(#)$Id: stab.c,v 8.92 2013-11-22 20:51:56 ca Exp $")
 
 /*
 **  STAB -- manage the symbol table

@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 1999-2007 Sendmail, Inc. and its suppliers.
+ *  Copyright (c) 1999-2007 Proofpoint, Inc. and its suppliers.
  *	All rights reserved.
  *
  * By using this file, you agree to the terms and conditions set
@@ -9,7 +9,7 @@
  */
 
 #include <sm/gen.h>
-SM_RCSID("@(#)$Id: smfi.c,v 1.1.1.4 2007-11-23 22:10:30 laffer1 Exp $")
+SM_RCSID("@(#)$Id: smfi.c,v 8.84 2013-11-22 20:51:36 ca Exp $")
 #include <sm/varargs.h>
 #include "libmilter.h"
 
@@ -325,7 +325,7 @@ smfi_setsymlist(ctx, where, macros)
 {
 	SM_ASSERT(ctx != NULL);
 
-	if (macros == NULL || *macros == '\0')
+	if (macros == NULL)
 		return MI_FAILURE;
 	if (where < SMFIM_FIRST || where > SMFIM_LAST)
 		return MI_FAILURE;

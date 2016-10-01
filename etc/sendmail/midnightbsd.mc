@@ -34,7 +34,7 @@ divert(-1)
 #
 
 #
-#  This is a generic configuration file for MidnightBSD 0.7 and later systems.
+#  This is a generic configuration file for MidnightBSD 0.8 and later systems.
 #  If you want to customize it, copy it to a name appropriate for your
 #  environment and do the modifications there.
 #

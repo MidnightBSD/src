@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 2001 Proofpoint, Inc. and its suppliers.
  *	All rights reserved.
  *
  * By using this file, you agree to the terms and conditions set
@@ -12,7 +12,7 @@
 #include <sysexits.h>
 
 #ifndef lint
-static char id[] = "@(#)$Id: t_snprintf.c,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $";
+static char id[] = "@(#)$Id: t_snprintf.c,v 8.5 2013-11-22 20:52:01 ca Exp $";
 #endif /* ! lint */
 
 #define TEST_STRING	"1234567890"

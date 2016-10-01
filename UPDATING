@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20161001:
+	MidnightBSD 0.8.2 RELEASE
+
+	Fix a regression with OpenSSL security.
+
+	Sendmail 8.15.2
+
 20160923:
 	MidnightBSD 0.8.1 RELEASE
 

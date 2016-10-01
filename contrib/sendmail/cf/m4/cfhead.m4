@@ -1,5 +1,5 @@
 #
-# Copyright (c) 1998-2004, 2009, 2010 Sendmail, Inc. and its suppliers.
+# Copyright (c) 1998-2004, 2009, 2010 Proofpoint, Inc. and its suppliers.
 #	All rights reserved.
 # Copyright (c) 1983, 1995 Eric P. Allman.  All rights reserved.
 # Copyright (c) 1988, 1993
@@ -16,7 +16,7 @@
 #####
 #####		SENDMAIL CONFIGURATION FILE
 #####
-ifdef(`__win32__', `dnl', `dnl
+ifdef(`_NO_MAKEINFO_', `dnl', `dnl
 ifdef(`TEMPFILE', `dnl', `define(`TEMPFILE', maketemp(/tmp/cfXXXXXX))dnl
 syscmd(sh _CF_DIR_`'sh/makeinfo.sh _CF_DIR_ > TEMPFILE)dnl
 include(TEMPFILE)dnl
@@ -307,4 +307,4 @@ define(`confMILTER_MACROS_EOM', `{msg_id}')
 
 
 divert(0)dnl
-VERSIONID(`$Id: cfhead.m4,v 1.1.1.5 2011-05-17 22:19:51 laffer1 Exp $')
+VERSIONID(`$Id: cfhead.m4,v 8.122 2013-11-22 20:51:13 ca Exp $')

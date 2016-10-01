@@ -1,6 +1,6 @@
 divert(-1)
 #
-# Copyright (c) 1998-2001, 2004, 2005 Sendmail, Inc. and its suppliers.
+# Copyright (c) 1998-2001, 2004, 2005 Proofpoint, Inc. and its suppliers.
 #	All rights reserved.
 # Copyright (c) 1983 Eric P. Allman.  All rights reserved.
 # Copyright (c) 1988, 1993
@@ -19,7 +19,7 @@ divert(-1)
 #
 
 divert(0)
-VERSIONID(`$Id: knecht.mc,v 1.1.1.4 2007-11-23 22:10:30 laffer1 Exp $')
+VERSIONID(`$Id: knecht.mc,v 8.63 2013-11-22 20:51:08 ca Exp $')
 OSTYPE(bsd4.4)
 DOMAIN(generic)
 

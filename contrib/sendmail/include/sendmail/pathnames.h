@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998-2001 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 1998-2001 Proofpoint, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -9,7 +9,7 @@
  * the sendmail distribution.
  *
  *
- *	$Id: pathnames.h,v 1.1.1.2 2006-02-25 02:33:55 laffer1 Exp $
+ *	$Id: pathnames.h,v 8.37 2013-11-22 20:51:30 ca Exp $
  */
 
 #ifndef SM_PATHNAMES_H
