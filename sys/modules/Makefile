@@ -76,7 +76,6 @@ SUBDIR=	\
 	${_cryptodev} \
 	${_cs} \
 	${_ctau} \
-	ctl \
 	${_cxgb} \
 	cxgbe \
 	${_cyclic} \
