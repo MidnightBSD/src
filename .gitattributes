@@ -68376,8 +68376,6 @@ usr.bin/units/units.1 -text
 usr.bin/units/units.c -text
 usr.bin/units/units.lib -text
 usr.bin/unvis/Makefile -text
-usr.bin/unvis/unvis.1 -text
-usr.bin/unvis/unvis.c -text
 usr.bin/unzip/Makefile -text
 usr.bin/unzip/unzip.1 -text
 usr.bin/unzip/unzip.c -text
@@ -68415,10 +68413,6 @@ usr.bin/vi/config.h -text
 usr.bin/vi/pathnames.h -text
 usr.bin/vi/port.h -text
 usr.bin/vis/Makefile -text
-usr.bin/vis/extern.h -text
-usr.bin/vis/foldit.c -text
-usr.bin/vis/vis.1 -text
-usr.bin/vis/vis.c -text
 usr.bin/vmstat/Makefile -text
 usr.bin/vmstat/vmstat.8 -text
 usr.bin/vmstat/vmstat.c -text
