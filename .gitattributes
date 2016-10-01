@@ -54967,6 +54967,7 @@ share/man/man4/coretemp.4 -text
 share/man/man4/cpuctl.4 -text
 share/man/man4/cpufreq.4 -text
 share/man/man4/crypto.4 -text
+share/man/man4/ctl.4 svneol=native#text/plain
 share/man/man4/cue.4 -text
 share/man/man4/cxgb.4 -text
 share/man/man4/cxgbe.4 -text
