@@ -595,6 +595,7 @@ struct proc {
 	LIST_ENTRY(proc) p_orphan;	/* (e) List of orphan processes. */
 	LIST_HEAD(, proc) p_orphans;	/* (e) Pointer to list of orphans. */
 
+	u_char          p_throttled;    /* (c) Flag for racct pcpu throttling */
 	void		*p_machdata;	/* (c) Mach state data. */
 };
 
