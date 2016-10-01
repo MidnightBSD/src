@@ -1,5 +1,5 @@
 #
-# Copyright (c) 1998-2004 Sendmail, Inc. and its suppliers.
+# Copyright (c) 1998-2004, 2009, 2010 Proofpoint, Inc. and its suppliers.
 #	All rights reserved.
 # Copyright (c) 1983, 1995 Eric P. Allman.  All rights reserved.
 # Copyright (c) 1988, 1993
@@ -16,8 +16,8 @@
 #####
 #####		SENDMAIL CONFIGURATION FILE
 #####
-##### built by ca@wiz.smi.sendmail.com on Fri May 2 20:38:59 PDT 2008
-##### in /extra/home/ca/sm-8.14.3/OpenSource/sendmail-8.14.3/cf/cf
+##### built by ca@sandman.dev-lab.sendmail.com on Thu Jul 2 05:24:31 PDT 2015
+##### in /x/ca/smi.git/sendmail/OpenSource/sendmail-8.15.2/cf/cf
 ##### using ../ as configuration include directory
 #####
 ######################################################################
@@ -27,21 +27,21 @@
 ######################################################################
 ######################################################################
 
-#####  $Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $  #####
-#####  $Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $  #####
-#####  $Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $  #####
+#####  $Id: cfhead.m4,v 8.122 2013-11-22 20:51:13 ca Exp $  #####
+#####  $Id: cf.m4,v 8.33 2013-11-22 20:51:13 ca Exp $  #####
+#####  $Id: generic-bsd4.4.mc,v 8.11 2013-11-22 20:51:08 ca Exp $  #####
 
-#####  $Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $  #####
+#####  $Id: bsd4.4.m4,v 8.15 2013-11-22 20:51:15 ca Exp $  #####
 
-#####  $Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $  #####
+#####  $Id: generic.m4,v 8.16 2013-11-22 20:51:10 ca Exp $  #####
 
-#####  $Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $  #####
+#####  $Id: redirect.m4,v 8.16 2013-11-22 20:51:11 ca Exp $  #####
 
-#####  $Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $  #####
+#####  $Id: use_cw_file.m4,v 8.12 2013-11-22 20:51:11 ca Exp $  #####
 
 
 
-#####  $Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $  #####
+#####  $Id: proto.m4,v 8.762 2013-11-22 20:51:13 ca Exp $  #####
 
 # level 10 config file format
 V10/Berkeley
@@ -122,7 +122,7 @@ DnMAILER-DAEMON
 CPREDIRECT
 
 # Configuration version number
-DZ8.14.3
+DZ8.15.2
 
 
 ###############
@@ -210,6 +210,9 @@ O ConnectionCacheTimeout=5m
 # use Errors-To: header?
 O UseErrorsTo=False
 
+# use compressed IPv6 address format?
+#O UseCompressedIPv6Addresses
+
 # log level
 O LogLevel=9
 
@@ -258,6 +261,9 @@ O PrivacyOptions=authwarnings
 
 # minimum time in queue before retry
 #O MinQueueAge=30m
+
+# maximum time in queue before retry (if > 0; only for exponential delay)
+#O MaxQueueAge
 
 # how many jobs can you process in the queue?
 #O MaxQueueRunSize=0
@@ -448,6 +454,7 @@ O OperatorChars=.:%@!^/[]+
 # once the threshold number of recipients have been rejected
 #O BadRcptThrottle=0
 
+
 # shall we get local names from our installed interfaces?
 #O DontProbeInterfaces=False
 
@@ -508,6 +515,13 @@ O MaxHeadersLength=32768
 # SMTP STARTTLS server options
 #O TLSSrvOptions
 
+# SSL cipherlist
+#O CipherList
+# server side SSL options
+#O ServerSSLOptions
+# client side SSL options
+#O ClientSSLOptions
+
 # Input mail filters
 #O InputMailFilters
 
@@ -530,12 +544,16 @@ O MaxHeadersLength=32768
 #O DHParameters
 # Random data source (required for systems without /dev/urandom under OpenSSL)
 #O RandFile
+# fingerprint algorithm (digest) to use for the presented cert
+#O CertFingerprintAlgorithm
 
 # Maximum number of "useless" commands before slowing down
 #O MaxNOOPCommands=20
 
 # Name to use for EHLO (defaults to $j)
 #O HeloName
+
+
 
 ############################
 # QUEUE GROUP DEFINITIONS  #
@@ -647,6 +665,7 @@ R$+ ! $+		$@ $>Canonify2 $2 < @ $1 .UUCP >	uucp subdomains
 # if we have % signs, take the rightmost one
 R$* % $*		$1 @ $2				First make them all @s.
 R$* @ $* @ $*		$1 % $2 @ $3			Undo all but the last.
+
 R$* @ $*		$@ $>Canonify2 $1 < @ $2 >	Insert < > and finish
 
 # else we must be a local name
@@ -781,6 +800,7 @@ R$* $=O $* < @ *LOCAL* >
 			$@ $>Parse0 $>canonify $1 $2 $3	...@*LOCAL* -> ...
 R$* < @ *LOCAL* >	$: $1
 
+
 #
 #  Parse1 -- the bottom half of ruleset 0.
 #
@@ -817,6 +837,8 @@ R$* < @$* > $*		$#esmtp $@ $2 $: $1 < @ $2 > $3	user@host.domain
 # handle locally delivered names
 R$=L			$#local $: @ $1		special local names
 R$+			$#local $: $1			regular local names
+
+
 
 ###########################################################################
 ###   Ruleset 5 -- special rewriting after aliases have been expanded   ###
@@ -932,6 +954,8 @@ R$* < @ $+ .REDIRECT. > < $- >	$#error $@ 5.1.1 $: "551 User has moved; please t
 
 
 
+
+
 ######################################################################
 ###  CanonAddr --	Convert an address into a standard form for
 ###			relay checking.  Route address syntax is
@@ -998,7 +1022,6 @@ R< $* > $*		$: $2
 
 
 
-
 ######################################################################
 ###  check_mail -- check SMTP `MAIL FROM:' command argument
 ######################################################################
@@ -1032,6 +1055,10 @@ R$* $| $*		$: $2
 R<@> < $* @ localhost >	$: < ? $&{client_name} > < $1 @ localhost >
 R<@> < $* @ [127.0.0.1] >
 			$: < ? $&{client_name} > < $1 @ [127.0.0.1] >
+R<@> < $* @ [IPv6:0:0:0:0:0:0:0:1] >
+			$: < ? $&{client_name} > < $1 @ [IPv6:0:0:0:0:0:0:0:1] >
+R<@> < $* @ [IPv6:::1] >
+			$: < ? $&{client_name} > < $1 @ [IPv6:::1] >
 R<@> < $* @ localhost.$m >
 			$: < ? $&{client_name} > < $1 @ localhost.$m >
 R<@> < $* @ localhost.UUCP >
@@ -1146,6 +1173,7 @@ R$*			$: $&{client_addr}
 R$@			$@ RELAY		originated locally
 R0			$@ RELAY		originated locally
 R127.0.0.1		$@ RELAY		originated locally
+RIPv6:0:0:0:0:0:0:0:1	$@ RELAY		originated locally
 RIPv6:::1		$@ RELAY		originated locally
 R$=R $*			$@ RELAY		relayable IP address
 R$*			$: [ $1 ]		put brackets around it...
@@ -1250,6 +1278,8 @@ STLS_connection
 RSOFTWARE	$#error $@ 4.7.0 $: "403 TLS handshake."
 
 
+
+
 ######################################################################
 ###  RelayTLS: allow relaying based on TLS authentication
 ###
@@ -1295,7 +1325,7 @@ Sauthinfo
 ###   Local and Program Mailer specification   ###
 ##################################################
 
-#####  $Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $  #####
+#####  $Id: local.m4,v 8.60 2013-11-22 20:51:14 ca Exp $  #####
 
 #
 #  Envelope sender rewriting
@@ -1347,7 +1377,7 @@ Mprog,		P=/bin/sh, F=lsDFMoqeu9, S=EnvFromL/HdrFromL, R=EnvToL/HdrToL, D=$z:/,
 ###   SMTP Mailer specification   ###
 #####################################
 
-#####  $Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $  #####
+#####  $Id: smtp.m4,v 8.66 2013-11-22 20:51:14 ca Exp $  #####
 
 #
 #  common sender and masquerading recipient rewriting
@@ -1438,7 +1468,7 @@ Mrelay,		P=[IPC], F=mDFMuXa8, S=EnvFromSMTP/HdrFromSMTP, R=MasqSMTP, E=\r\n, L=2
 ### generic-bsd4.4.mc ###
 # divert(-1)
 # #
-# # Copyright (c) 1998, 1999 Sendmail, Inc. and its suppliers.
+# # Copyright (c) 1998, 1999 Proofpoint, Inc. and its suppliers.
 # #	All rights reserved.
 # # Copyright (c) 1983 Eric P. Allman.  All rights reserved.
 # # Copyright (c) 1988, 1993
@@ -1459,7 +1489,7 @@ Mrelay,		P=[IPC], F=mDFMuXa8, S=EnvFromSMTP/HdrFromSMTP, R=MasqSMTP, E=\r\n, L=2
 # #
 # 
 # divert(0)dnl
-# VERSIONID(`$Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $')
+# VERSIONID(`$Id: generic-bsd4.4.mc,v 8.11 2013-11-22 20:51:08 ca Exp $')
 # OSTYPE(bsd4.4)dnl
 # DOMAIN(generic)dnl
 # MAILER(local)dnl

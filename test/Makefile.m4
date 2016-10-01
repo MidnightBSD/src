@@ -1,4 +1,4 @@
-dnl $Id: Makefile.m4,v 1.1.1.3 2013-08-14 22:35:47 laffer1 Exp $
+dnl $Id: Makefile.m4,v 1.6 2013-04-01 21:04:29 ca Exp $
 include(confBUILDTOOLSDIR`/M4/switch.m4')
 
 bldPRODUCT_START(`executable', `test')
