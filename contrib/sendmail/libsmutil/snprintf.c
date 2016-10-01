@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2001 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 1998-2001 Proofpoint, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1997 Eric P. Allman.  All rights reserved.
  * Copyright (c) 1988, 1993
@@ -13,7 +13,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: snprintf.c,v 1.1.1.2 2006-02-25 02:33:57 laffer1 Exp $")
+SM_RCSID("@(#)$Id: snprintf.c,v 8.45 2013-11-22 20:51:50 ca Exp $")
 
 /*
 **  SHORTENSTRING -- return short version of a string

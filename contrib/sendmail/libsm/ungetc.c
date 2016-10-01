@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000-2001, 2004 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 2000-2001, 2004 Proofpoint, Inc. and its suppliers.
  *      All rights reserved.
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -13,7 +13,7 @@
  */
 
 #include <sm/gen.h>
-SM_IDSTR(id, "@(#)$Id: ungetc.c,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $")
+SM_IDSTR(id, "@(#)$Id: ungetc.c,v 1.31 2013-11-22 20:51:44 ca Exp $")
 
 #include <stdlib.h>
 #include <string.h>

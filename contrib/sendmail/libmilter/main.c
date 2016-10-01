@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 1999-2003, 2006, 2007 Sendmail, Inc. and its suppliers.
+ *  Copyright (c) 1999-2003, 2006, 2007 Proofpoint, Inc. and its suppliers.
  *	All rights reserved.
  *
  * By using this file, you agree to the terms and conditions set
@@ -9,7 +9,7 @@
  */
 
 #include <sm/gen.h>
-SM_RCSID("@(#)$Id: main.c,v 1.1.1.4 2010-01-10 20:14:37 laffer1 Exp $")
+SM_RCSID("@(#)$Id: main.c,v 8.85 2013-11-22 20:51:36 ca Exp $")
 
 #define _DEFINE	1
 #include "libmilter.h"

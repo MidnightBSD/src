@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000-2002, 2004, 2013 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 2000-2002, 2004, 2013 Proofpoint, Inc. and its suppliers.
  *      All rights reserved.
  * Copyright (c) 1990
  * 	 The Regents of the University of California.  All rights reserved.
@@ -11,7 +11,7 @@
  * forth in the LICENSE file which can be found at the top level of
  * the sendmail distribution.
  *
- *	$Id: io.h,v 1.1.1.3 2013-08-14 22:35:47 laffer1 Exp $
+ *	$Id: io.h,v 1.26 2013-11-22 20:51:31 ca Exp $
  */
 
 /*-
