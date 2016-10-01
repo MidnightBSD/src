@@ -295,7 +295,7 @@ LIB32CPUFLAGS=	-march=${TARGET_CPUTYPE}
 LIB32WMAKEENV=	MACHINE=i386 MACHINE_ARCH=i386 \
 		MACHINE_CPU="i686 mmx sse sse2" 
 LIB32WMAKEFLAGS=	\
-		AS="${AS} --32"
+		AS="${AS} --32" \
 		LD="${LD} -m elf_i386_fbsd -Y P,${LIB32TMP}/usr/lib32"
 .endif
 
