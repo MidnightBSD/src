@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/geom_event.c,v 1.5 2011/12/10 22:55:34 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -203,14 +203,12 @@ g_orphan_register(struct g_provider *pp)
 	 * Tell all consumers the bad news.
 	 * Don't be surprised if they self-destruct.
 	 */
-	cp = LIST_FIRST(&pp->consumers);
-	while (cp != NULL) {
-		cp2 = LIST_NEXT(cp, consumers);
+	LIST_FOREACH_SAFE(cp, &pp->consumers, consumers, cp2) {
 		KASSERT(cp->geom->orphan != NULL,
 		    ("geom %s has no orphan, class %s",
 		    cp->geom->name, cp->geom->class->name));
+		cp->flags |= G_CF_ORPHAN;
 		cp->geom->orphan(cp);
-		cp = cp2;
 	}
 	if (LIST_EMPTY(&pp->consumers) && wf)
 		g_destroy_provider(pp);
