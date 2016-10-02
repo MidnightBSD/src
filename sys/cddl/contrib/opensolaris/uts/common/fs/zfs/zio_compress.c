@@ -134,7 +134,7 @@ zio_decompress_data(enum zio_compress c, void *src, void *dst,
 	zio_compress_info_t *ci = &zio_compress_table[c];
 
 	if ((uint_t)c >= ZIO_COMPRESS_FUNCTIONS || ci->ci_decompress == NULL)
-		return (EINVAL);
+		return (SET_ERROR(EINVAL));
 
 	return (ci->ci_decompress(src, dst, s_len, d_len, ci->ci_level));
 }
