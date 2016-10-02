@@ -1,5 +1,6 @@
+# $MidnightBSD$
 #
-# $FreeBSD: release/9.2.0/sys/modules/cxgbe/tom/Makefile 247434 2013-02-28 00:44:54Z np $
+# $FreeBSD: stable/9/sys/modules/cxgbe/tom/Makefile 247434 2013-02-28 00:44:54Z np $
 #
 
 .include <bsd.own.mk>

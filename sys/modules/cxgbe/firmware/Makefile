@@ -1,5 +1,6 @@
+# $MidnightBSD$
 #
-# $FreeBSD$
+# $FreeBSD: stable/9/sys/modules/cxgbe/firmware/Makefile 247434 2013-02-28 00:44:54Z np $
 #
 
 T4FW = ${.CURDIR}/../../../dev/cxgbe/firmware
