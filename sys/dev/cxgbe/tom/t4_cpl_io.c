@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/cxgbe/tom/t4_cpl_io.c 252495 2013-07-02 04:27:16Z np $");
+__FBSDID("$FreeBSD: stable/9/sys/dev/cxgbe/tom/t4_cpl_io.c 247434 2013-02-28 00:44:54Z np $");
 
 #include "opt_inet.h"
 
@@ -88,7 +88,7 @@ send_flowc_wr(struct toepcb *toep, struct flowc_tx_params *ftxp)
 
 	flowclen = sizeof(*flowc) + nparams * sizeof(struct fw_flowc_mnemval);
 
-	wr = alloc_wrqe(roundup2(flowclen, 16), toep->ofld_txq);
+	wr = alloc_wrqe(roundup(flowclen, 16), toep->ofld_txq);
 	if (wr == NULL) {
 		/* XXX */
 		panic("%s: allocation failure.", __func__);
@@ -632,7 +632,7 @@ unlocked:
 
 			/* Immediate data tx */
 
-			wr = alloc_wrqe(roundup2(sizeof(*txwr) + plen, 16),
+			wr = alloc_wrqe(roundup(sizeof(*txwr) + plen, 16),
 					toep->ofld_txq);
 			if (wr == NULL) {
 				/* XXX: how will we recover from this? */
@@ -651,7 +651,7 @@ unlocked:
 
 			wr_len = sizeof(*txwr) + sizeof(struct ulptx_sgl) +
 			    ((3 * (nsegs - 1)) / 2 + ((nsegs - 1) & 1)) * 8;
-			wr = alloc_wrqe(roundup2(wr_len, 16), toep->ofld_txq);
+			wr = alloc_wrqe(roundup(wr_len, 16), toep->ofld_txq);
 			if (wr == NULL) {
 				/* XXX: how will we recover from this? */
 				toep->flags |= TPF_TX_SUSPENDED;
@@ -827,8 +827,15 @@ do_peer_close(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 	sb = &so->so_rcv;
 	SOCKBUF_LOCK(sb);
 	if (__predict_false(toep->ddp_flags & (DDP_BUF0_ACTIVE | DDP_BUF1_ACTIVE))) {
-		m = get_ddp_mbuf(be32toh(cpl->rcv_nxt) - tp->rcv_nxt);
+		m = m_get(M_NOWAIT, MT_DATA);
+		if (m == NULL)
+			CXGBE_UNIMPLEMENTED("mbuf alloc failure");
+
+		m->m_len = be32toh(cpl->rcv_nxt) - tp->rcv_nxt;
+		m->m_flags |= M_DDP;	/* Data is already where it should be */
+		m->m_data = "nothing to see here";
 		tp->rcv_nxt = be32toh(cpl->rcv_nxt);
+
 		toep->ddp_flags &= ~(DDP_BUF0_ACTIVE | DDP_BUF1_ACTIVE);
 
 		KASSERT(toep->sb_cc >= sb->sb_cc,
@@ -1410,13 +1417,13 @@ do_set_tcb_rpl(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 }
 
 void
-t4_set_tcb_field(struct adapter *sc, struct toepcb *toep, int ctrl,
-    uint16_t word, uint64_t mask, uint64_t val)
+t4_set_tcb_field(struct adapter *sc, struct toepcb *toep, uint16_t word,
+    uint64_t mask, uint64_t val)
 {
 	struct wrqe *wr;
 	struct cpl_set_tcb_field *req;
 
-	wr = alloc_wrqe(sizeof(*req), ctrl ? toep->ctrlq : toep->ofld_txq);
+	wr = alloc_wrqe(sizeof(*req), toep->ctrlq);
 	if (wr == NULL) {
 		/* XXX */
 		panic("%s: allocation failure.", __func__);

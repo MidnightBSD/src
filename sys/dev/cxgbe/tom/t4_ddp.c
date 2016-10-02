@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/cxgbe/tom/t4_ddp.c 252495 2013-07-02 04:27:16Z np $");
+__FBSDID("$FreeBSD: stable/9/sys/dev/cxgbe/tom/t4_ddp.c 248078 2013-03-09 00:39:54Z marius $");
 
 #include "opt_inet.h"
 
@@ -217,7 +217,13 @@ insert_ddp_data(struct toepcb *toep, uint32_t n)
 	INP_WLOCK_ASSERT(inp);
 	SOCKBUF_LOCK_ASSERT(sb);
 
-	m = get_ddp_mbuf(n);
+	m = m_get(M_NOWAIT, MT_DATA);
+	if (m == NULL)
+		CXGBE_UNIMPLEMENTED("mbuf alloc failure");
+	m->m_len = n;
+	m->m_flags |= M_DDP;	/* Data is already where it should be */
+	m->m_data = "nothing to see here";
+
 	tp->rcv_nxt += n;
 #ifndef USE_DDP_RX_FLOW_CONTROL
 	KASSERT(tp->rcv_wnd >= n, ("%s: negative window size", __func__));
@@ -352,8 +358,8 @@ mk_update_tcb_for_ddp(struct adapter *sc, struct toepcb *toep, int db_idx,
 	 * The ULPTX master commands that follow must all end at 16B boundaries
 	 * too so we round up the size to 16.
 	 */
-	len = sizeof(*wrh) + 3 * roundup2(LEN__SET_TCB_FIELD_ULP, 16) +
-	    roundup2(LEN__RX_DATA_ACK_ULP, 16);
+	len = sizeof(*wrh) + 3 * roundup(LEN__SET_TCB_FIELD_ULP, 16) +
+	    roundup(LEN__RX_DATA_ACK_ULP, 16);
 
 	wr = alloc_wrqe(len, toep->ctrlq);
 	if (wr == NULL)
@@ -451,7 +457,13 @@ handle_ddp_data(struct toepcb *toep, __be32 ddp_report, __be32 rcv_nxt, int len)
 	KASSERT(tp->rcv_wnd >= len, ("%s: negative window size", __func__));
 	tp->rcv_wnd -= len;
 #endif
-	m = get_ddp_mbuf(len);
+
+	m = m_get(M_NOWAIT, MT_DATA);
+	if (m == NULL)
+		CXGBE_UNIMPLEMENTED("mbuf alloc failure");
+	m->m_len = len;
+	m->m_flags |= M_DDP;	/* Data is already where it should be */
+	m->m_data = "nothing to see here";
 
 	SOCKBUF_LOCK(sb);
 	if (report & F_DDP_BUF_COMPLETE)
@@ -541,12 +553,12 @@ enable_ddp(struct adapter *sc, struct toepcb *toep)
 	    __func__, toep->tid, time_uptime);
 
 	toep->ddp_flags |= DDP_SC_REQ;
-	t4_set_tcb_field(sc, toep, 1, W_TCB_RX_DDP_FLAGS,
+	t4_set_tcb_field(sc, toep, W_TCB_RX_DDP_FLAGS,
 	    V_TF_DDP_OFF(1) | V_TF_DDP_INDICATE_OUT(1) |
 	    V_TF_DDP_BUF0_INDICATE(1) | V_TF_DDP_BUF1_INDICATE(1) |
 	    V_TF_DDP_BUF0_VALID(1) | V_TF_DDP_BUF1_VALID(1),
 	    V_TF_DDP_BUF0_INDICATE(1) | V_TF_DDP_BUF1_INDICATE(1));
-	t4_set_tcb_field(sc, toep, 1, W_TCB_T_FLAGS,
+	t4_set_tcb_field(sc, toep, W_TCB_T_FLAGS,
 	    V_TF_RCV_COALESCE_ENABLE(1), 0);
 }
 
@@ -562,9 +574,9 @@ disable_ddp(struct adapter *sc, struct toepcb *toep)
 	    __func__, toep->tid, time_uptime);
 
 	toep->ddp_flags |= DDP_SC_REQ;
-	t4_set_tcb_field(sc, toep, 1, W_TCB_T_FLAGS,
+	t4_set_tcb_field(sc, toep, W_TCB_T_FLAGS,
 	    V_TF_RCV_COALESCE_ENABLE(1), V_TF_RCV_COALESCE_ENABLE(1));
-	t4_set_tcb_field(sc, toep, 1, W_TCB_RX_DDP_FLAGS, V_TF_DDP_OFF(1),
+	t4_set_tcb_field(sc, toep, W_TCB_RX_DDP_FLAGS, V_TF_DDP_OFF(1),
 	    V_TF_DDP_OFF(1));
 }
 
@@ -735,13 +747,7 @@ write_page_pods(struct adapter *sc, struct toepcb *toep, struct ddp_buffer *db)
 	struct ulptx_idata *ulpsc;
 	struct pagepod *ppod;
 	int i, j, k, n, chunk, len, ddp_pgsz, idx, ppod_addr;
-	uint32_t cmd;
 
-	cmd = htobe32(V_ULPTX_CMD(ULP_TX_MEM_WRITE));
-	if (is_t4(sc))
-		cmd |= htobe32(F_ULP_MEMIO_ORDER);
-	else
-		cmd |= htobe32(F_T5_ULP_MEMIO_IMM);
 	ddp_pgsz = t4_ddp_pgsz[G_PPOD_PGSZ(db->tag)];
 	ppod_addr = sc->vres.ddp.start + G_PPOD_TAG(db->tag) * PPOD_SIZE;
 	for (i = 0; i < db->nppods; ppod_addr += chunk) {
@@ -749,7 +755,7 @@ write_page_pods(struct adapter *sc, struct toepcb *toep, struct ddp_buffer *db)
 		/* How many page pods are we writing in this cycle */
 		n = min(db->nppods - i, NUM_ULP_TX_SC_IMM_PPODS);
 		chunk = PPOD_SZ(n);
-		len = roundup2(sizeof(*ulpmc) + sizeof(*ulpsc) + chunk, 16);
+		len = roundup(sizeof(*ulpmc) + sizeof(*ulpsc) + chunk, 16);
 
 		wr = alloc_wrqe(len, toep->ctrlq);
 		if (wr == NULL)
@@ -757,7 +763,8 @@ write_page_pods(struct adapter *sc, struct toepcb *toep, struct ddp_buffer *db)
 		ulpmc = wrtod(wr);
 
 		INIT_ULPTX_WR(ulpmc, len, 0, 0);
-		ulpmc->cmd = cmd;
+		ulpmc->cmd = htobe32(V_ULPTX_CMD(ULP_TX_MEM_WRITE) |
+		    F_ULP_MEMIO_ORDER);
 		ulpmc->dlen = htobe32(V_ULP_MEMIO_DATA_LEN(chunk / 32));
 		ulpmc->len16 = htobe32(howmany(len - sizeof(ulpmc->wr), 16));
 		ulpmc->lock_addr = htobe32(V_ULP_MEMIO_ADDR(ppod_addr >> 5));
@@ -1010,29 +1017,6 @@ soreceive_rcvoob(struct socket *so, struct uio *uio, int flags)
 	CXGBE_UNIMPLEMENTED(__func__);
 }
 
-static char ddp_magic_str[] = "nothing to see here";
-
-struct mbuf *
-get_ddp_mbuf(int len)
-{
-	struct mbuf *m;
-
-	m = m_get(M_NOWAIT, MT_DATA);
-	if (m == NULL)
-		CXGBE_UNIMPLEMENTED("mbuf alloc failure");
-	m->m_len = len;
-	m->m_data = &ddp_magic_str[0];
-
-	return (m);
-}
-
-static inline int
-is_ddp_mbuf(struct mbuf *m)
-{
-
-	return (m->m_data == &ddp_magic_str[0]);
-}
-
 /*
  * Copy an mbuf chain into a uio limited by len if set.
  */
@@ -1051,7 +1035,7 @@ m_mbuftouio_ddp(struct uio *uio, struct mbuf *m, int len)
 	for (; m != NULL; m = m->m_next) {
 		length = min(m->m_len, total - progress);
 
-		if (is_ddp_mbuf(m)) {
+		if (m->m_flags & M_DDP) {
 			enum uio_seg segflag = uio->uio_segflg;
 
 			uio->uio_segflg	= UIO_NOCOPY;

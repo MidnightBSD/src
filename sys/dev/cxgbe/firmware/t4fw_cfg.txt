@@ -15,13 +15,9 @@
 	sge_timer_value = 1, 5, 10, 50, 100, 200	# usecs
 
 	# TP_SHIFT_CNT
-	reg[0x7dc0] = 0x62f8849
+	reg[0x7dc0] = 0x64f8849
 
 	filterMode = fragmentation, mpshittype, protocol, vlan, port, fcoe
-
-	# TP rx and tx channels (0 = auto).
-	tp_nrxch = 0
-	tp_ntxch = 0
 
 	# TP rx and tx payload memory (% of the total EDRAM + DDR3).
 	tp_pmrx = 38
@@ -141,7 +137,7 @@
 
 [fini]
 	version = 0x1
-	checksum = 0x6cc2514b
+	checksum = 0xfdebb6ef
 #
-# $FreeBSD: release/9.2.0/sys/dev/cxgbe/firmware/t4fw_cfg.txt 252814 2013-07-05 18:27:38Z np $
+# $FreeBSD: stable/9/sys/dev/cxgbe/firmware/t4fw_cfg.txt 247434 2013-02-28 00:44:54Z np $
 #

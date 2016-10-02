@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/dev/cxgbe/osdep.h 252495 2013-07-02 04:27:16Z np $
+ * $FreeBSD: stable/9/sys/dev/cxgbe/osdep.h 242015 2012-10-24 19:04:17Z gavin $
  *
  */
 
@@ -64,11 +64,8 @@ typedef uint64_t __be64;
 
 #if BYTE_ORDER == BIG_ENDIAN
 #define __BIG_ENDIAN_BITFIELD
-#define htobe32_const(x) (x)
 #elif BYTE_ORDER == LITTLE_ENDIAN
 #define __LITTLE_ENDIAN_BITFIELD
-#define htobe32_const(x) (((x) >> 24) | (((x) >> 8) & 0xff00) |	\
-    ((((x) & 0xffffff) << 8) & 0xff0000) | ((((x) & 0xff) << 24) & 0xff000000))
 #else
 #error "Must set BYTE_ORDER"
 #endif
@@ -109,7 +106,6 @@ typedef boolean_t bool;
 #define SPEED_100	100
 #define SPEED_1000	1000
 #define SPEED_10000	10000
-#define SPEED_40000	40000
 #define DUPLEX_HALF	0
 #define DUPLEX_FULL	1
 #define AUTONEG_DISABLE	0
@@ -129,7 +125,7 @@ typedef boolean_t bool;
 #define PCI_EXP_LNKSTA		PCIER_LINK_STA
 #define PCI_EXP_LNKSTA_CLS	PCIEM_LINK_STA_SPEED
 #define PCI_EXP_LNKSTA_NLW	PCIEM_LINK_STA_WIDTH
-#define PCI_EXP_DEVCTL2		PCIER_DEVICE_CTL2
+#define PCI_EXP_DEVCTL2		0x28
 
 static inline int
 ilog2(long x)

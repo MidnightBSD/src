@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/dev/cxgbe/tom/t4_tom_l2t.h 237263 2012-06-19 07:34:13Z np $
+ * $FreeBSD: stable/9/sys/dev/cxgbe/tom/t4_tom_l2t.h 237263 2012-06-19 07:34:13Z np $
  *
  */
 

@@ -59112,6 +59112,7 @@ sys/dev/cxgbe/common/t4_regs.h -text
 sys/dev/cxgbe/common/t4_regs_values.h -text
 sys/dev/cxgbe/common/t4_tcb.h -text
 sys/dev/cxgbe/firmware/t4fw-1.8.11.0.bin.uu -text
+sys/dev/cxgbe/firmware/t4fw-1.8.4.0.bin.uu -text
 sys/dev/cxgbe/firmware/t4fw_cfg.txt -text
 sys/dev/cxgbe/firmware/t4fw_cfg_uwire.txt -text
 sys/dev/cxgbe/firmware/t4fw_interface.h -text

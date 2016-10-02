@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/cxgbe/tom/t4_listen.c 252814 2013-07-05 18:27:38Z np $");
+__FBSDID("$FreeBSD: stable/9/sys/dev/cxgbe/tom/t4_listen.c 248078 2013-03-09 00:39:54Z marius $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -125,7 +125,7 @@ alloc_stid(struct adapter *sc, struct listen_ctx *lctx, int isipv6)
 		TAILQ_FOREACH(s, &t->stids, link) {
 			stid += s->used + s->free;
 			f = stid & mask;
-			if (s->free >= n + f) {
+			if (n <= s->free - f) {
 				stid -= n + f;
 				s->free -= n + f;
 				TAILQ_INSERT_AFTER(&t->stids, s, sr, link);
@@ -360,13 +360,13 @@ send_reset_synqe(struct toedev *tod, struct synq_entry *synqe)
 	/* The wrqe will have two WRs - a flowc followed by an abort_req */
 	flowclen = sizeof(*flowc) + nparams * sizeof(struct fw_flowc_mnemval);
 
-	wr = alloc_wrqe(roundup2(flowclen, EQ_ESIZE) + sizeof(*req), ofld_txq);
+	wr = alloc_wrqe(roundup(flowclen, EQ_ESIZE) + sizeof(*req), ofld_txq);
 	if (wr == NULL) {
 		/* XXX */
 		panic("%s: allocation failure.", __func__);
 	}
 	flowc = wrtod(wr);
-	req = (void *)((caddr_t)flowc + roundup2(flowclen, EQ_ESIZE));
+	req = (void *)((caddr_t)flowc + roundup(flowclen, EQ_ESIZE));
 
 	/* First the flowc ... */
 	memset(flowc, 0, wr->wr_len);
@@ -674,12 +674,6 @@ t4_syncache_respond(struct toedev *tod, void *arg, struct mbuf *m)
 	synqe->iss = be32toh(th->th_seq);
 	synqe->ts = to.to_tsval;
 
-	if (is_t5(sc)) {
-		struct cpl_t5_pass_accept_rpl *rpl5 = wrtod(wr);
-
-		rpl5->iss = th->th_seq;
-	}
-
 	e = &sc->l2t->l2tab[synqe->l2e_idx];
 	t4_l2t_send(sc, wr, e);
 
@@ -950,7 +944,7 @@ get_qids_from_mbuf(struct mbuf *m, int *txqid, int *rxqid)
 static struct synq_entry *
 mbuf_to_synqe(struct mbuf *m)
 {
-	int len = roundup2(sizeof (struct synq_entry), 8);
+	int len = roundup(sizeof (struct synq_entry), 8);
 	int tspace = M_TRAILINGSPACE(m);
 	struct synq_entry *synqe = NULL;
 
@@ -996,11 +990,8 @@ static uint32_t
 calc_opt2p(struct adapter *sc, struct port_info *pi, int rxqid,
     const struct tcp_options *tcpopt, struct tcphdr *th, int ulp_mode)
 {
+	uint32_t opt2 = 0;
 	struct sge_ofld_rxq *ofld_rxq = &sc->sge.ofld_rxq[rxqid];
-	uint32_t opt2;
-
-	opt2 = V_TX_QUEUE(sc->params.tp.tx_modq[pi->tx_chan]) |
-	    F_RSS_QUEUE_VALID | V_RSS_QUEUE(ofld_rxq->iq.abs_id);
 
 	if (V_tcp_do_rfc1323) {
 		if (tcpopt->tstamp)
@@ -1014,15 +1005,9 @@ calc_opt2p(struct adapter *sc, struct port_info *pi, int rxqid,
 	if (V_tcp_do_ecn && th->th_flags & (TH_ECE | TH_CWR))
 		opt2 |= F_CCTRL_ECN;
 
-	/* RX_COALESCE is always a valid value (0 or M_RX_COALESCE). */
-	if (is_t4(sc))
-		opt2 |= F_RX_COALESCE_VALID;
-	else {
-		opt2 |= F_T5_OPT_2_VALID;
-		opt2 |= F_CONG_CNTRL_VALID; /* OPT_2_ISS really, for T5 */
-	}
-	if (sc->tt.rx_coalesce)
-		opt2 |= V_RX_COALESCE(M_RX_COALESCE);
+	opt2 |= V_TX_QUEUE(sc->params.tp.tx_modq[pi->tx_chan]);
+	opt2 |= F_RX_COALESCE_VALID | V_RX_COALESCE(M_RX_COALESCE);
+	opt2 |= F_RSS_QUEUE_VALID | V_RSS_QUEUE(ofld_rxq->iq.abs_id);
 
 #ifdef USE_DDP_RX_FLOW_CONTROL
 	if (ulp_mode == ULP_MODE_TCPDDP)
@@ -1296,8 +1281,7 @@ do_pass_accept_req(struct sge_iq *iq, const struct rss_header *rss,
 	if (synqe == NULL)
 		REJECT_PASS_ACCEPT();
 
-	wr = alloc_wrqe(is_t4(sc) ? sizeof(struct cpl_pass_accept_rpl) :
-	    sizeof(struct cpl_t5_pass_accept_rpl), &sc->sge.ctrlq[pi->port_id]);
+	wr = alloc_wrqe(sizeof(*rpl), &sc->sge.ctrlq[pi->port_id]);
 	if (wr == NULL)
 		REJECT_PASS_ACCEPT();
 	rpl = wrtod(wr);
@@ -1338,13 +1322,7 @@ do_pass_accept_req(struct sge_iq *iq, const struct rss_header *rss,
 	save_qids_in_mbuf(m, pi);
 	get_qids_from_mbuf(m, NULL, &rxqid);
 
-	if (is_t4(sc))
-		INIT_TP_WR_MIT_CPL(rpl, CPL_PASS_ACCEPT_RPL, tid);
-	else {
-		struct cpl_t5_pass_accept_rpl *rpl5 = (void *)rpl;
-
-		INIT_TP_WR_MIT_CPL(rpl5, CPL_PASS_ACCEPT_RPL, tid);
-	}
+	INIT_TP_WR_MIT_CPL(rpl, CPL_PASS_ACCEPT_RPL, tid);
 	if (sc->tt.ddp && (so->so_options & SO_NO_DDP) == 0) {
 		ulp_mode = ULP_MODE_TCPDDP;
 		synqe->flags |= TPF_SYNQE_TCPDDP;

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/dev/cxgbe/offload.h 252814 2013-07-05 18:27:38Z np $
+ * $FreeBSD: stable/9/sys/dev/cxgbe/offload.h 247434 2013-02-28 00:44:54Z np $
  *
  */
 
@@ -59,8 +59,8 @@ struct listen_ctx;
 
 struct stid_region {
 	TAILQ_ENTRY(stid_region) link;
-	u_int used;	/* # of stids used by this region */
-	u_int free;	/* # of contiguous stids free right after this region */
+	int used;	/* # of stids used by this region */
+	int free;	/* # of contiguous stids free right after this region */
 };
 
 /*
@@ -140,7 +140,6 @@ struct tom_tunables {
 	int ddp;
 	int indsz;
 	int ddp_thres;
-	int rx_coalesce;
 };
 
 int t4_register_uld(struct uld_info *);
