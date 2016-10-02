@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1990, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -30,9 +31,8 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_timer.c 247498 2013-02-28 21:24:10Z jhb $");
 
-#include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_tcpdebug.h"
 
@@ -637,11 +637,6 @@ tcp_timer_activate(struct tcpcb *tp, int timer_type, u_int delta)
 	void *f_callout;
 	struct inpcb *inp = tp->t_inpcb;
 	int cpu = INP_CPU(inp);
-
-#ifdef TCP_OFFLOAD
-	if (tp->t_flags & TF_TOE)
-		return;
-#endif
 
 	switch (timer_type) {
 		case TT_DELACK:

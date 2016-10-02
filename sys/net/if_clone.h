@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	From: @(#)if.h	8.1 (Berkeley) 6/10/93
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/net/if_clone.h 195837 2009-07-23 20:46:49Z rwatson $
  */
 
 #ifndef	_NET_IF_CLONE_H_

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/sctp.h 237898 2012-07-01 08:04:10Z tuexen $");
 
 #ifndef _NETINET_SCTP_H_
 #define _NETINET_SCTP_H_

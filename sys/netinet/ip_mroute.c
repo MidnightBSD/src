@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989 Stephen Deering
  * Copyright (c) 1992, 1993
@@ -67,7 +68,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/ip_mroute.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_inet.h"
 #include "opt_mrouting.h"

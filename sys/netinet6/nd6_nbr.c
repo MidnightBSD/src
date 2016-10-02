@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet6/nd6_nbr.c 240305 2012-09-10 11:38:02Z glebius $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"

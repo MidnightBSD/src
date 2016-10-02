@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_seq.h	8.3 (Berkeley) 6/21/95
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/netinet/tcp_seq.h 235657 2012-05-19 18:32:31Z bz $
  */
 
 #ifndef _NETINET_TCP_SEQ_H_

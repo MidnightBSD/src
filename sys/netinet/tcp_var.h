@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993, 1994, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_var.h	8.4 (Berkeley) 5/24/95
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/netinet/tcp_var.h 235051 2012-05-05 07:55:50Z glebius $
  */
 
 #ifndef _NETINET_TCP_VAR_H_
@@ -194,7 +195,7 @@ struct tcpcb {
 	int	t_rttlow;		/* smallest observerved RTT */
 	u_int32_t	rfbuf_ts;	/* recv buffer autoscaling timestamp */
 	int	rfbuf_cnt;		/* recv buffer autoscaling byte count */
-	struct toedev	*tod;		/* toedev handling this connection */
+	struct toe_usrreqs *t_tu;	/* offload operations vector */
 	int	t_sndrexmitpack;	/* retransmit packets sent */
 	int	t_rcvoopack;		/* out-of-order packets received */
 	void	*t_toe;			/* TOE pcb pointer */
@@ -611,7 +612,6 @@ VNET_DECLARE(int, tcp_mssdflt);	/* XXX */
 VNET_DECLARE(int, tcp_minmss);
 VNET_DECLARE(int, tcp_delack_enabled);
 VNET_DECLARE(int, tcp_do_rfc3390);
-VNET_DECLARE(int, tcp_do_initcwnd10);
 VNET_DECLARE(int, path_mtu_discovery);
 VNET_DECLARE(int, ss_fltsz);
 VNET_DECLARE(int, ss_fltsz_local);
@@ -624,7 +624,6 @@ VNET_DECLARE(int, tcp_abc_l_var);
 #define	V_tcp_minmss		VNET(tcp_minmss)
 #define	V_tcp_delack_enabled	VNET(tcp_delack_enabled)
 #define	V_tcp_do_rfc3390	VNET(tcp_do_rfc3390)
-#define	V_tcp_do_initcwnd10	VNET(tcp_do_initcwnd10)
 #define	V_path_mtu_discovery	VNET(path_mtu_discovery)
 #define	V_ss_fltsz		VNET(ss_fltsz)
 #define	V_ss_fltsz_local	VNET(ss_fltsz_local)
@@ -669,8 +668,11 @@ char	*tcp_log_addrs(struct in_conninfo *, struct tcphdr *, void *,
 char	*tcp_log_vain(struct in_conninfo *, struct tcphdr *, void *,
 	    const void *);
 int	 tcp_reass(struct tcpcb *, struct tcphdr *, int *, struct mbuf *);
-void	 tcp_reass_global_init(void);
+void	 tcp_reass_init(void);
 void	 tcp_reass_flush(struct tcpcb *);
+#ifdef VIMAGE
+void	 tcp_reass_destroy(void);
+#endif
 void	 tcp_input(struct mbuf *, int);
 u_long	 tcp_maxmtu(struct in_conninfo *, int *);
 u_long	 tcp_maxmtu6(struct in_conninfo *, int *);

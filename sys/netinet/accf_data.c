@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Alfred Perlstein <alfred@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/accf_data.c 193272 2009-06-01 21:17:03Z jhb $");
 
 #define ACCEPT_FILTER_MOD
 

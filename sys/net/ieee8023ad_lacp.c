@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ieee8023ad_lacp.c,v 1.3 2005/12/11 12:24:54 christos Exp $	*/
 
 /*-
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/net/ieee8023ad_lacp.c 237669 2012-06-27 22:06:42Z thompsa $");
 
 #include <sys/param.h>
 #include <sys/callout.h>

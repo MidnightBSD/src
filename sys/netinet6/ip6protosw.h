@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -59,7 +60,7 @@
  *
  *	@(#)protosw.h	8.1 (Berkeley) 6/2/93
  *	BSDI protosw.h,v 2.3 1996/10/11 16:02:40 pjd Exp
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/netinet6/ip6protosw.h 244524 2012-12-21 00:41:52Z delphij $
  */
 
 #ifndef _NETINET6_IP6PROTOSW_H_

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009 Bruce Simpson.
  * Copyright (c) 1988 Stephen Deering.
@@ -48,7 +49,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/igmp.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1533,7 +1534,8 @@ igmp_input(struct mbuf *m, int off)
 		case IGMP_VERSION_3: {
 				struct igmpv3 *igmpv3;
 				uint16_t igmpv3len;
-				uint16_t nsrc;
+				uint16_t srclen;
+				int nsrc;
 
 				IGMPSTAT_INC(igps_rcv_v3_queries);
 				igmpv3 = (struct igmpv3 *)igmp;
@@ -1541,8 +1543,8 @@ igmp_input(struct mbuf *m, int off)
 				 * Validate length based on source count.
 				 */
 				nsrc = ntohs(igmpv3->igmp_numsrc);
-				if (nsrc * sizeof(in_addr_t) >
-				    UINT16_MAX - iphlen - IGMP_V3_QUERY_MINLEN) {
+				srclen = sizeof(struct in_addr) * nsrc;
+				if (nsrc * sizeof(in_addr_t) > srclen) {
 					IGMPSTAT_INC(igps_rcv_tooshort);
 					return;
 				}
@@ -1551,7 +1553,7 @@ igmp_input(struct mbuf *m, int off)
 				 * this scope.
 				 */
 				igmpv3len = iphlen + IGMP_V3_QUERY_MINLEN +
-				    sizeof(struct in_addr) * nsrc;
+				    srclen;
 				if ((m->m_flags & M_EXT ||
 				     m->m_len < igmpv3len) &&
 				    (m = m_pullup(m, igmpv3len)) == NULL) {

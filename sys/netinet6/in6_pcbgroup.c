@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2011 Juniper Networks, Inc.
  * All rights reserved.
@@ -29,7 +30,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet6/in6_pcbgroup.c 222748 2011-06-06 12:55:02Z rwatson $");
 
 #include "opt_inet6.h"
 

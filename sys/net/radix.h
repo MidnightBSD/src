@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)radix.h	8.2 (Berkeley) 10/31/94
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/net/radix.h 225698 2011-09-20 20:27:26Z kmacy $
  */
 
 #ifndef _RADIX_H_

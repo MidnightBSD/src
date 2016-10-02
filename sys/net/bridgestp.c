@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: bridgestp.c,v 1.5 2003/11/28 08:56:48 keihan Exp $	*/
 
 /*
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/net/bridgestp.c 236052 2012-05-26 07:43:17Z thompsa $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

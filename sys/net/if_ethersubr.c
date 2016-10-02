@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_ethersubr.c	8.1 (Berkeley) 6/10/93
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/net/if_ethersubr.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 #include "opt_atalk.h"

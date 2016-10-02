@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/if_ether.c 248852 2013-03-28 20:48:40Z emaste $");
 
 #include "opt_inet.h"
 
@@ -177,16 +178,6 @@ arptimer(void *arg)
 
 	ifp = lle->lle_tbl->llt_ifp;
 	CURVNET_SET(ifp->if_vnet);
-
-	if ((lle->la_flags & LLE_DELETED) == 0) {
-		int evt;
-
-		if (lle->la_flags & LLE_VALID)
-			evt = LLENTRY_EXPIRED;
-		else
-			evt = LLENTRY_TIMEDOUT;
-		EVENTHANDLER_INVOKE(lle_event, lle, evt);
-	}
 
 	callout_stop(&lle->la_timer);
 
@@ -740,7 +731,7 @@ match:
 		(void)memcpy(&la->ll_addr, ar_sha(ah), ifp->if_addrlen);
 		la->la_flags |= LLE_VALID;
 
-		EVENTHANDLER_INVOKE(lle_event, la, LLENTRY_RESOLVED);
+		EVENTHANDLER_INVOKE(arp_update_event, la);
 
 		if (!(la->la_flags & LLE_STATIC)) {
 			int canceled;

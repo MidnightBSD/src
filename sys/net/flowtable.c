@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /**************************************************************************
 
 Copyright (c) 2008-2010, BitGravity Inc.
@@ -34,7 +35,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "opt_inet6.h"
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/net/flowtable.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/param.h>  
 #include <sys/types.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (C) 2011 Matteo Landi, Luigi Rizzo. All rights reserved.
  * 
@@ -31,8 +32,8 @@
  */
 
 /*
- * $MidnightBSD$
- * $Id: netmap.h,v 1.2 2013-01-17 23:29:37 laffer1 Exp $
+ * $FreeBSD: stable/9/sys/net/netmap.h 247230 2013-02-24 18:26:17Z luigi $
+ * $Id: netmap.h 11997 2013-01-17 21:59:12Z luigi $
  *
  * Definitions of constants and the structures used by the netmap
  * framework, for the part visible to both kernel and userspace.

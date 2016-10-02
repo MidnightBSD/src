@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/libalias/alias_nbt.c 190938 2009-04-11 15:19:09Z piso $");
 
 /*
     alias_nbt.c performs special processing for NetBios over TCP/IP

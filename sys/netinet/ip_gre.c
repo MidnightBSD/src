@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ip_gre.c,v 1.29 2003/09/05 23:02:43 itojun Exp $ */
 
 /*-
@@ -38,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/ip_gre.c 204522 2010-03-01 17:05:46Z joel $");
 
 #include "opt_inet.h"
 #include "opt_atalk.h"

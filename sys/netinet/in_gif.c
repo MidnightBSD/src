@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: in_gif.c,v 1.54 2001/05/14 14:02:16 itojun Exp $	*/
 
 /*-
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/in_gif.c 223637 2011-06-28 11:57:25Z bz $");
 
 #include "opt_mrouting.h"
 #include "opt_inet.h"

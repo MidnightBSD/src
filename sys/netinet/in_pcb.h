@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1990, 1993
  *	The Regents of the University of California.
@@ -32,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in_pcb.h	8.1 (Berkeley) 6/10/93
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/netinet/in_pcb.h 241435 2012-10-11 01:32:51Z glebius $
  */
 
 #ifndef _NETINET_IN_PCB_H_

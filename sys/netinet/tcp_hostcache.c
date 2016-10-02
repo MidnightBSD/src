@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Andre Oppermann, Internet Business Solutions AG
  * All rights reserved.
@@ -63,7 +64,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_hostcache.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_inet6.h"
 

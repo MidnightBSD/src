@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -61,7 +62,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet6/in6.c 244524 2012-12-21 00:41:52Z delphij $");
 
 #include "opt_compat.h"
 #include "opt_inet.h"
@@ -421,18 +422,6 @@ in6_control(struct socket *so, u_long cmd, caddr_t data,
 	case SIOCGIFSTAT_ICMP6:
 		sa6 = &ifr->ifr_addr;
 		break;
-	case SIOCSIFADDR:
-	case SIOCSIFBRDADDR:
-	case SIOCSIFDSTADDR:
-	case SIOCSIFNETMASK:
-		/*
-		 * Although we should pass any non-INET6 ioctl requests
-		 * down to driver, we filter some legacy INET requests.
-		 * Drivers trust SIOCSIFADDR et al to come from an already
-		 * privileged layer, and do not perform any credentials
-		 * checks or input validation.
-		 */
-		return (EINVAL);
 	default:
 		sa6 = NULL;
 		break;

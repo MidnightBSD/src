@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@
  *
  *      @(#)bpfdesc.h	8.1 (Berkeley) 6/10/93
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/net/bpfdesc.h 247629 2013-03-02 15:11:20Z melifaro $
  */
 
 #ifndef _NET_BPFDESC_H_

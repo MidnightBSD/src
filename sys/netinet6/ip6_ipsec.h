@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1993
  *      The Regents of the University of California.  All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/netinet6/ip6_ipsec.h 177166 2008-03-14 11:44:30Z bz $
  */
 
 #ifndef _NETINET_IP6_IPSEC_H_

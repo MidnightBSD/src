@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2001 WIDE Project.
  * All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	$KAME: raw_ip6.h,v 1.2 2001/05/27 13:28:35 itojun Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/netinet6/raw_ip6.h 195727 2009-07-16 21:13:04Z rwatson $
  */
 
 #ifndef _NETINET6_RAW_IP6_H_

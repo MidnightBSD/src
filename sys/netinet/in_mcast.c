@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009 Bruce Simpson.
  * Copyright (c) 2005 Robert N. M. Watson.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/in_mcast.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1614,8 +1615,6 @@ inp_get_source_filters(struct inpcb *inp, struct sockopt *sopt)
 	 * has asked for, but we always tell userland how big the
 	 * buffer really needs to be.
 	 */
-	if (msfr.msfr_nsrcs > in_mcast_maxsocksrc)
-		msfr.msfr_nsrcs = in_mcast_maxsocksrc;
 	tss = NULL;
 	if (msfr.msfr_srcs != NULL && msfr.msfr_nsrcs > 0) {
 		tss = malloc(sizeof(struct sockaddr_storage) * msfr.msfr_nsrcs,

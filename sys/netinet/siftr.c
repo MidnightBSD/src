@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009
  * 	Swinburne University of Technology, Melbourne, Australia.
@@ -59,7 +60,7 @@
  ******************************************************/
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/siftr.c 248144 2013-03-11 06:09:08Z lstewart $");
 
 #include <sys/param.h>
 #include <sys/alq.h>

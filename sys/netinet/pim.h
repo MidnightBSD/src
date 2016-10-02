@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996-2000
  * University of Southern California/Information Sciences Institute.
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/netinet/pim.h 139823 2005-01-07 01:45:51Z imp $
  */
 
 #ifndef _NETINET_PIM_H_

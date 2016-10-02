@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	$KAME: nd6.h,v 1.76 2001/12/18 02:10:31 itojun Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/netinet6/nd6.h 245555 2013-01-17 16:39:21Z ume $
  */
 
 #ifndef _NETINET6_ND6_H_

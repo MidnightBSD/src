@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.
@@ -28,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)udp_var.h	8.1 (Berkeley) 6/10/93
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/netinet/udp_var.h 234780 2012-04-29 08:50:50Z bz $
  */
 
 #ifndef _NETINET_UDP_VAR_H_

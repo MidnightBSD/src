@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_auth.c 237896 2012-07-01 07:59:00Z tuexen $");
 
 #include <netinet/sctp_os.h>
 #include <netinet/sctp.h>
@@ -1876,7 +1877,6 @@ sctp_notify_authentication(struct sctp_tcb *stcb, uint32_t indication,
 
 	SCTP_BUF_LEN(m_notify) = 0;
 	auth = mtod(m_notify, struct sctp_authkey_event *);
-	memset(auth, 0, sizeof(struct sctp_authkey_event));
 	auth->auth_type = SCTP_AUTHENTICATION_EVENT;
 	auth->auth_flags = 0;
 	auth->auth_length = sizeof(*auth);

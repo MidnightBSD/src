@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2002-2003 NetGroup, Politecnico di Torino (Italy)
  * Copyright (C) 2005-2009 Jung-uk Kim <jkim@FreeBSD.org>
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/net/bpf_jitter.c 199615 2009-11-20 21:12:40Z jkim $");
 
 #ifdef _KERNEL
 #include "opt_bpf.h"

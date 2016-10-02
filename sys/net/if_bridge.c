@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: if_bridge.c,v 1.31 2005/06/01 19:45:34 jdc Exp $	*/
 
 /*
@@ -75,7 +76,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/net/if_bridge.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: ip_encap.c,v 1.41 2001/03/15 08:35:08 itojun Exp $	*/
 
 /*-
@@ -57,7 +58,7 @@
 /* XXX is M_NETADDR correct? */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/ip_encap.c 201145 2009-12-28 22:56:30Z antoine $");
 
 #include "opt_mrouting.h"
 #include "opt_inet.h"

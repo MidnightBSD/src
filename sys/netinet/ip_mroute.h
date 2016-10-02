@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989 Stephen Deering.
  * Copyright (c) 1992, 1993
@@ -31,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ip_mroute.h	8.1 (Berkeley) 6/10/93
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/netinet/ip_mroute.h 240305 2012-09-10 11:38:02Z glebius $
  */
 
 #ifndef _NETINET_IP_MROUTE_H_

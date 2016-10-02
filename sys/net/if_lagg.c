@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: if_trunk.c,v 1.30 2007/01/31 06:20:19 reyk Exp $	*/
 
 /*
@@ -18,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/net/if_lagg.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"

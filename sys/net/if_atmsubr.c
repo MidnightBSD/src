@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*      $NetBSD: if_atmsubr.c,v 1.10 1997/03/11 23:19:51 chuck Exp $       */
 
 /*-
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/net/if_atmsubr.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"

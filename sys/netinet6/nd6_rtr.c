@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet6/nd6_rtr.c 244524 2012-12-21 00:41:52Z delphij $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -296,16 +297,8 @@ nd6_ra_input(struct mbuf *m, int off, int icmp6len)
 	}
 	if (nd_ra->nd_ra_retransmit)
 		ndi->retrans = ntohl(nd_ra->nd_ra_retransmit);
-	if (nd_ra->nd_ra_curhoplimit) {
-		if (ndi->chlim < nd_ra->nd_ra_curhoplimit)
-			ndi->chlim = nd_ra->nd_ra_curhoplimit;
-		else if (ndi->chlim != nd_ra->nd_ra_curhoplimit) {
-			log(LOG_ERR, "RA with a lower CurHopLimit sent from "
-			    "%s on %s (current = %d, received = %d). "
-			    "Ignored.\n", ip6_sprintf(ip6bufs, &ip6->ip6_src),
-			    if_name(ifp), ndi->chlim, nd_ra->nd_ra_curhoplimit);
-		}
-	}
+	if (nd_ra->nd_ra_curhoplimit)
+		ndi->chlim = nd_ra->nd_ra_curhoplimit;
 	dr = defrtrlist_update(&dr0);
     }
 

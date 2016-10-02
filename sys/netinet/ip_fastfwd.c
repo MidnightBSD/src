@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Andre Oppermann, Internet Business Solutions AG
  * All rights reserved.
@@ -74,7 +75,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/ip_fastfwd.c 243586 2012-11-27 01:59:51Z ae $");
 
 #include "opt_ipfw.h"
 #include "opt_ipstealth.h"

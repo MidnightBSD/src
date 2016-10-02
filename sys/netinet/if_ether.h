@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_ether.h	8.3 (Berkeley) 5/2/95
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/netinet/if_ether.h 196995 2009-09-08 21:17:17Z np $
  */
 
 #ifndef _NETINET_IF_ETHER_H_
@@ -117,6 +118,11 @@ int	arpresolve(struct ifnet *ifp, struct rtentry *rt,
 		    struct llentry **lle);
 void	arp_ifinit(struct ifnet *, struct ifaddr *);
 void	arp_ifinit2(struct ifnet *, struct ifaddr *, u_char *);
+
+#include <sys/eventhandler.h>
+typedef void (*llevent_arp_update_fn)(void *, struct llentry *);
+EVENTHANDLER_DECLARE(arp_update_event, llevent_arp_update_fn);
+
 #endif
 
 #endif

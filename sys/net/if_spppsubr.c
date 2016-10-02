@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Synchronous PPP/Cisco/Frame Relay link level subroutines.
  * Keepalive protocol implemented in both Cisco and PPP modes.
@@ -18,7 +19,7 @@
  *
  * From: Version 2.4, Thu Apr 30 17:17:21 MSD 1997
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/net/if_spppsubr.c 249132 2013-04-05 08:22:11Z mav $
  */
 
 #include <sys/param.h>

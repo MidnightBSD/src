@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ip_gre.h,v 1.5 2002/06/09 16:33:40 itojun Exp $ */
-/*	 $MidnightBSD$ */
+/*	 $FreeBSD: stable/9/sys/netinet/ip_gre.h 204522 2010-03-01 17:05:46Z joel $ */
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.

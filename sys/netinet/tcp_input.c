@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1990, 1993, 1994, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -48,7 +49,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_input.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_ipfw.h"		/* for ipfw_fwd	*/
 #include "opt_inet.h"
@@ -105,9 +106,6 @@ __MBSDID("$MidnightBSD$");
 #ifdef TCPDEBUG
 #include <netinet/tcp_debug.h>
 #endif /* TCPDEBUG */
-#ifdef TCP_OFFLOAD
-#include <netinet/tcp_offload.h>
-#endif
 
 #ifdef IPSEC
 #include <netipsec/ipsec.h>
@@ -157,14 +155,6 @@ VNET_DEFINE(int, tcp_do_rfc3390) = 1;
 SYSCTL_VNET_INT(_net_inet_tcp, OID_AUTO, rfc3390, CTLFLAG_RW,
     &VNET_NAME(tcp_do_rfc3390), 0,
     "Enable RFC 3390 (Increasing TCP's Initial Congestion Window)");
-
-SYSCTL_NODE(_net_inet_tcp, OID_AUTO, experimental, CTLFLAG_RW, 0,
-    "Experimental TCP extensions");
-
-VNET_DEFINE(int, tcp_do_initcwnd10) = 1;
-SYSCTL_VNET_INT(_net_inet_tcp_experimental, OID_AUTO, initcwnd10, CTLFLAG_RW,
-    &VNET_NAME(tcp_do_initcwnd10), 0,
-    "Enable draft-ietf-tcpm-initcwnd-05 (Increasing initial CWND to 10)");
 
 VNET_DEFINE(int, tcp_do_rfc3465) = 1;
 SYSCTL_VNET_INT(_net_inet_tcp, OID_AUTO, rfc3465, CTLFLAG_RW,
@@ -367,12 +357,14 @@ cc_conn_init(struct tcpcb *tp)
 	 * RFC3390 says only do this if SYN or SYN/ACK didn't got lost.
 	 * We currently check only in syncache_socket for that.
 	 */
-	if (tp->snd_cwnd == 1)
-		tp->snd_cwnd = tp->t_maxseg;		/* SYN(-ACK) lost */
-	else if (V_tcp_do_initcwnd10)
-		tp->snd_cwnd = min(10 * tp->t_maxseg,
-		    max(2 * tp->t_maxseg, 14600));
-	else if (V_tcp_do_rfc3390)
+/* #define TCP_METRICS_CWND */
+#ifdef TCP_METRICS_CWND
+	if (metrics.rmx_cwnd)
+		tp->snd_cwnd = max(tp->t_maxseg, min(metrics.rmx_cwnd / 2,
+		    min(tp->snd_wnd, so->so_snd.sb_hiwat)));
+	else
+#endif
+	if (V_tcp_do_rfc3390)
 		tp->snd_cwnd = min(4 * tp->t_maxseg,
 		    max(2 * tp->t_maxseg, 4380));
 #ifdef INET6
@@ -879,6 +871,7 @@ findpcb:
 		/* Remove the tag from the packet.  We don't need it anymore. */
 		m_tag_delete(m, fwd_tag);
 		m->m_flags &= ~M_IP_NEXTHOP;
+		fwd_tag = NULL;
 	} else
 		inp = in_pcblookup_mbuf(&V_tcbinfo, ip->ip_src,
 		    th->th_sport, ip->ip_dst, th->th_dport,
@@ -1002,14 +995,6 @@ relocked:
 		rstreason = BANDLIM_RST_CLOSEDPORT;
 		goto dropwithreset;
 	}
-
-#ifdef TCP_OFFLOAD
-	if (tp->t_flags & TF_TOE) {
-		tcp_offload_input(tp, m);
-		m = NULL;	/* consumed by the TOE driver */
-		goto dropunlock;
-	}
-#endif
 
 	/*
 	 * We've identified a valid inpcb, but it could be that we need an
@@ -2183,7 +2168,11 @@ tcp_do_segment(struct mbuf *m, struct tcphdr *th, struct socket *so,
 
 	todrop = tp->rcv_nxt - th->th_seq;
 	if (todrop > 0) {
-		if (thflags & TH_SYN) {
+		/*
+		 * If this is a duplicate SYN for our current connection,
+		 * advance over it and pretend and it's not a SYN.
+		 */
+		if (thflags & TH_SYN && th->th_seq == tp->irs) {
 			thflags &= ~TH_SYN;
 			th->th_seq++;
 			if (th->th_urp > 1)

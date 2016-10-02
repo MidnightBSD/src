@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1999-2000 by Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -31,8 +32,8 @@
  */
 
 /*
- * $MidnightBSD$
- * $Id: if_tap.c,v 1.6 2013-01-17 23:29:37 laffer1 Exp $
+ * $FreeBSD: stable/9/sys/net/if_tap.c 248085 2013-03-09 02:36:32Z marius $
+ * $Id: if_tap.c,v 0.21 2000/07/23 21:46:02 max Exp $
  */
 
 #include "opt_compat.h"

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: ip_ecn.c,v 1.12 2002/01/07 11:34:47 kjc Exp $	*/
 
 /*-
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/ip_ecn.c 172467 2007-10-07 20:44:24Z silby $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"

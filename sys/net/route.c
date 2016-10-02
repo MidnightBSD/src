@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1986, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)route.c	8.3.1.1 (Berkeley) 2/23/95
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/net/route.c 248895 2013-03-29 16:24:20Z melifaro $
  */
 /************************************************************************
  * Note: In this file a 'fib' is a "forwarding information base"	*
@@ -68,7 +69,8 @@
 
 #include <vm/uma.h>
 
-#define	RT_MAXFIBS	UINT16_MAX
+/* We use 4 bits in the mbuf flags, thus we are limited to 16 FIBS. */
+#define	RT_MAXFIBS	16
 
 /* Kernel config default option. */
 #ifdef ROUTETABLES
@@ -85,10 +87,17 @@
 #define	RT_NUMFIBS	1
 #endif
 
-/* This is read-only.. */
 u_int rt_numfibs = RT_NUMFIBS;
 SYSCTL_UINT(_net, OID_AUTO, fibs, CTLFLAG_RD, &rt_numfibs, 0, "");
-/* and this can be set too big but will be fixed before it is used */
+/*
+ * Allow the boot code to allow LESS than RT_MAXFIBS to be used.
+ * We can't do more because storage is statically allocated for now.
+ * (for compatibility reasons.. this will change. When this changes, code should
+ * be refactored to protocol independent parts and protocol dependent parts,
+ * probably hanging of domain(9) specific storage to not need the full
+ * fib * af RNH allocation etc. but allow tuning the number of tables per
+ * address family).
+ */
 TUNABLE_INT("net.fibs", &rt_numfibs);
 
 /*

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 
 /*-
  * Copyright (c) 2008 Michael J. Silbersack.
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/ip_id.c 185571 2008-12-02 21:37:28Z bz $");
 
 /*
  * IP ID generation is a fascinating topic.

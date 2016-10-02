@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1993
  *	The Regents of the University of California.
@@ -36,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_usrreq.c 241132 2012-10-02 12:57:47Z glebius $");
 
 #include "opt_ddb.h"
 #include "opt_inet.h"
@@ -87,9 +88,7 @@ __MBSDID("$MidnightBSD$");
 #ifdef TCPDEBUG
 #include <netinet/tcp_debug.h>
 #endif
-#ifdef TCP_OFFLOAD
 #include <netinet/tcp_offload.h>
-#endif
 
 /*
  * TCP protocol interface to socket abstraction.
@@ -369,10 +368,7 @@ tcp_usr_listen(struct socket *so, int backlog, struct thread *td)
 	if (error == 0) {
 		tp->t_state = TCPS_LISTEN;
 		solisten_proto(so, backlog);
-#ifdef TCP_OFFLOAD
-		if ((so->so_options & SO_NO_OFFLOAD) == 0)
-			tcp_offload_listen_start(tp);
-#endif
+		tcp_offload_listen_open(tp);
 	}
 	SOCK_UNLOCK(so);
 
@@ -414,10 +410,6 @@ tcp6_usr_listen(struct socket *so, int backlog, struct thread *td)
 	if (error == 0) {
 		tp->t_state = TCPS_LISTEN;
 		solisten_proto(so, backlog);
-#ifdef TCP_OFFLOAD
-		if ((so->so_options & SO_NO_OFFLOAD) == 0)
-			tcp_offload_listen_start(tp);
-#endif
 	}
 	SOCK_UNLOCK(so);
 
@@ -468,14 +460,7 @@ tcp_usr_connect(struct socket *so, struct sockaddr *nam, struct thread *td)
 	TCPDEBUG1();
 	if ((error = tcp_connect(tp, nam, td)) != 0)
 		goto out;
-#ifdef TCP_OFFLOAD
-	if (registered_toedevs > 0 &&
-	    (so->so_options & SO_NO_OFFLOAD) == 0 &&
-	    (error = tcp_offload_connect(so, nam)) == 0)
-		goto out;
-#endif
-	tcp_timer_activate(tp, TT_KEEP, TP_KEEPINIT(tp));
-	error = tcp_output(tp);
+	error = tcp_output_connect(so, nam);
 out:
 	TCPDEBUG2(PRU_CONNECT);
 	INP_WUNLOCK(inp);
@@ -535,13 +520,7 @@ tcp6_usr_connect(struct socket *so, struct sockaddr *nam, struct thread *td)
 			goto out;
 		if ((error = tcp_connect(tp, (struct sockaddr *)&sin, td)) != 0)
 			goto out;
-#ifdef TCP_OFFLOAD
-		if (registered_toedevs > 0 &&
-		    (so->so_options & SO_NO_OFFLOAD) == 0 &&
-		    (error = tcp_offload_connect(so, nam)) == 0)
-			goto out;
-#endif
-		error = tcp_output(tp);
+		error = tcp_output_connect(so, nam);
 		goto out;
 	}
 #endif
@@ -552,14 +531,7 @@ tcp6_usr_connect(struct socket *so, struct sockaddr *nam, struct thread *td)
 		goto out;
 	if ((error = tcp6_connect(tp, nam, td)) != 0)
 		goto out;
-#ifdef TCP_OFFLOAD
-	if (registered_toedevs > 0 &&
-	    (so->so_options & SO_NO_OFFLOAD) == 0 &&
-	    (error = tcp_offload_connect(so, nam)) == 0)
-		goto out;
-#endif
-	tcp_timer_activate(tp, TT_KEEP, TP_KEEPINIT(tp));
-	error = tcp_output(tp);
+	error = tcp_output_connect(so, nam);
 
 out:
 	TCPDEBUG2(PRU_CONNECT);
@@ -738,7 +710,7 @@ tcp_usr_shutdown(struct socket *so)
 	socantsendmore(so);
 	tcp_usrclosed(tp);
 	if (!(inp->inp_flags & INP_DROPPED))
-		error = tcp_output(tp);
+		error = tcp_output_disconnect(tp);
 
 out:
 	TCPDEBUG2(PRU_SHUTDOWN);
@@ -768,12 +740,7 @@ tcp_usr_rcvd(struct socket *so, int flags)
 	}
 	tp = intotcpcb(inp);
 	TCPDEBUG1();
-#ifdef TCP_OFFLOAD
-	if (tp->t_flags & TF_TOE)
-		tcp_offload_rcvd(tp);
-	else
-#endif
-	tcp_output(tp);
+	tcp_output_rcvd(tp);
 
 out:
 	TCPDEBUG2(PRU_RCVD);
@@ -869,7 +836,7 @@ tcp_usr_send(struct socket *so, int flags, struct mbuf *m,
 		if (!(inp->inp_flags & INP_DROPPED)) {
 			if (flags & PRUS_MORETOCOME)
 				tp->t_flags |= TF_MORETOCOME;
-			error = tcp_output(tp);
+			error = tcp_output_send(tp);
 			if (flags & PRUS_MORETOCOME)
 				tp->t_flags &= ~TF_MORETOCOME;
 		}
@@ -918,7 +885,7 @@ tcp_usr_send(struct socket *so, int flags, struct mbuf *m,
 		}
 		tp->snd_up = tp->snd_una + so->so_snd.sb_cc;
 		tp->t_flags |= TF_FORCEDATA;
-		error = tcp_output(tp);
+		error = tcp_output_send(tp);
 		tp->t_flags &= ~TF_FORCEDATA;
 	}
 out:
@@ -1153,6 +1120,7 @@ tcp_connect(struct tcpcb *tp, struct sockaddr *nam, struct thread *td)
 	soisconnecting(so);
 	TCPSTAT_INC(tcps_connattempt);
 	tp->t_state = TCPS_SYN_SENT;
+	tcp_timer_activate(tp, TT_KEEP, TP_KEEPINIT(tp));
 	tp->iss = tcp_new_isn(tp);
 	tcp_sendseqinit(tp);
 
@@ -1225,6 +1193,7 @@ tcp6_connect(struct tcpcb *tp, struct sockaddr *nam, struct thread *td)
 	soisconnecting(so);
 	TCPSTAT_INC(tcps_connattempt);
 	tp->t_state = TCPS_SYN_SENT;
+	tcp_timer_activate(tp, TT_KEEP, TP_KEEPINIT(tp));
 	tp->iss = tcp_new_isn(tp);
 	tcp_sendseqinit(tp);
 
@@ -1355,9 +1324,9 @@ tcp_ctloutput(struct socket *so, struct sockopt *sopt)
 				tp->t_flags |= TF_SIGNATURE;
 			else
 				tp->t_flags &= ~TF_SIGNATURE;
-			goto unlock_and_done;
+			INP_WUNLOCK(inp);
+			break;
 #endif /* TCP_SIGNATURE */
-
 		case TCP_NODELAY:
 		case TCP_NOOPT:
 			INP_WUNLOCK(inp);
@@ -1383,13 +1352,6 @@ tcp_ctloutput(struct socket *so, struct sockopt *sopt)
 				tp->t_flags |= opt;
 			else
 				tp->t_flags &= ~opt;
-unlock_and_done:
-#ifdef TCP_OFFLOAD
-			if (tp->t_flags & TF_TOE) {
-				tcp_offload_ctloutput(tp, sopt->sopt_dir,
-				    sopt->sopt_name);
-			}
-#endif
 			INP_WUNLOCK(inp);
 			break;
 
@@ -1408,7 +1370,8 @@ unlock_and_done:
 				if (TCPS_HAVEESTABLISHED(tp->t_state))
 					error = tcp_output(tp);
 			}
-			goto unlock_and_done;
+			INP_WUNLOCK(inp);
+			break;
 
 		case TCP_MAXSEG:
 			INP_WUNLOCK(inp);
@@ -1423,7 +1386,8 @@ unlock_and_done:
 				tp->t_maxseg = optval;
 			else
 				error = EINVAL;
-			goto unlock_and_done;
+			INP_WUNLOCK(inp);
+			break;
 
 		case TCP_INFO:
 			INP_WUNLOCK(inp);
@@ -1475,7 +1439,8 @@ unlock_and_done:
 				}
 			}
 			CC_LIST_RUNLOCK();
-			goto unlock_and_done;
+			INP_WUNLOCK(inp);
+			break;
 
 		case TCP_KEEPIDLE:
 		case TCP_KEEPINTVL:
@@ -1519,7 +1484,8 @@ unlock_and_done:
 					    TP_KEEPINIT(tp));
 				break;
 			}
-			goto unlock_and_done;
+			INP_WUNLOCK(inp);
+			break;
 
 		case TCP_KEEPCNT:
 			INP_WUNLOCK(inp);
@@ -1689,7 +1655,7 @@ tcp_disconnect(struct tcpcb *tp)
 		sbflush(&so->so_rcv);
 		tcp_usrclosed(tp);
 		if (!(inp->inp_flags & INP_DROPPED))
-			tcp_output(tp);
+			tcp_output_disconnect(tp);
 	}
 }
 
@@ -1712,9 +1678,7 @@ tcp_usrclosed(struct tcpcb *tp)
 
 	switch (tp->t_state) {
 	case TCPS_LISTEN:
-#ifdef TCP_OFFLOAD
-		tcp_offload_listen_stop(tp);
-#endif
+		tcp_offload_listen_close(tp);
 		/* FALLTHROUGH */
 	case TCPS_CLOSED:
 		tp->t_state = TCPS_CLOSED;

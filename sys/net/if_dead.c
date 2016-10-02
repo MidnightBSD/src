@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Robert N. M. Watson
  * All rights reserved.
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/net/if_dead.c 199975 2009-11-30 21:25:57Z jhb $");
 
 #include <sys/param.h>
 #include <sys/mbuf.h>

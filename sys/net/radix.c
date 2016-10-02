@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)radix.c	8.5 (Berkeley) 5/19/95
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/net/radix.c 210122 2010-07-15 14:41:59Z luigi $
  */
 
 /*

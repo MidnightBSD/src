@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1985, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in_var.h	8.2 (Berkeley) 1/9/95
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/netinet/in_var.h 242640 2012-11-06 00:49:52Z melifaro $
  */
 
 #ifndef _NETINET_IN_VAR_H_

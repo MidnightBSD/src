@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	$KAME: in6_ifattach.h,v 1.14 2001/02/08 12:48:39 jinmei Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/netinet6/in6_ifattach.h 244524 2012-12-21 00:41:52Z delphij $
  */
 
 #ifndef _NETINET6_IN6_IFATTACH_H_

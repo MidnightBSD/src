@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: radix_mpath.c,v 1.17 2004/11/08 10:29:39 itojun Exp $	*/
 
 /*
@@ -34,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/net/radix_mpath.c 225163 2011-08-25 04:31:20Z qingli $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1990, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_output.c 240307 2012-09-10 11:43:28Z glebius $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -74,9 +75,6 @@ __MBSDID("$MidnightBSD$");
 #include <netinet/tcpip.h>
 #ifdef TCPDEBUG
 #include <netinet/tcp_debug.h>
-#endif
-#ifdef TCP_OFFLOAD
-#include <netinet/tcp_offload.h>
 #endif
 
 #ifdef IPSEC
@@ -198,11 +196,6 @@ tcp_output(struct tcpcb *tp)
 #endif
 
 	INP_WLOCK_ASSERT(tp->t_inpcb);
-
-#ifdef TCP_OFFLOAD
-	if (tp->t_flags & TF_TOE)
-		return (tcp_offload_output(tp));
-#endif
 
 	/*
 	 * Determine length of data that should be transmitted,
@@ -402,7 +395,7 @@ after_sack_rexmit:
 		flags &= ~TH_FIN;
 	}
 
-	if (len <= 0) {
+	if (len < 0) {
 		/*
 		 * If FIN has been sent but not acked,
 		 * but we haven't been called to retransmit,
@@ -412,16 +405,9 @@ after_sack_rexmit:
 		 * to (closed) window, and set the persist timer
 		 * if it isn't already going.  If the window didn't
 		 * close completely, just wait for an ACK.
-		 *
-		 * We also do a general check here to ensure that
-		 * we will set the persist timer when we have data
-		 * to send, but a 0-byte window. This makes sure
-		 * the persist timer is set even if the packet
-		 * hits one of the "goto send" lines below.
 		 */
 		len = 0;
-		if ((sendwin == 0) && (TCPS_HAVEESTABLISHED(tp->t_state)) &&
-			(off < (int) so->so_snd.sb_cc)) {
+		if (sendwin == 0) {
 			tcp_timer_activate(tp, TT_REXMT, 0);
 			tp->t_rxtshift = 0;
 			tp->snd_nxt = tp->snd_una;
@@ -685,8 +671,8 @@ send:
 	 * segments.  Options for SYN-ACK segments are handled in TCP
 	 * syncache.
 	 */
-	to.to_flags = 0;
 	if ((tp->t_flags & TF_NOOPT) == 0) {
+		to.to_flags = 0;
 		/* Maximum segment size. */
 		if (flags & TH_SYN) {
 			tp->snd_nxt = tp->iss;
@@ -1056,7 +1042,7 @@ send:
 		tp->snd_up = tp->snd_una;		/* drag it along */
 
 #ifdef TCP_SIGNATURE
-	if (to.to_flags & TOF_SIGNATURE) {
+	if (tp->t_flags & TF_SIGNATURE) {
 		int sigoff = to.to_signature - opt;
 		tcp_signature_compute(m, 0, len, optlen,
 		    (u_char *)(th + 1) + sigoff, IPSEC_DIR_OUTBOUND);
@@ -1475,7 +1461,6 @@ tcp_addoptions(struct tcpopt *to, u_char *optp)
 			bcopy((u_char *)&to->to_tsecr, optp, sizeof(to->to_tsecr));
 			optp += sizeof(to->to_tsecr);
 			break;
-#ifdef TCP_SIGNATURE
 		case TOF_SIGNATURE:
 			{
 			int siglen = TCPOLEN_SIGNATURE - 2;
@@ -1494,7 +1479,6 @@ tcp_addoptions(struct tcpopt *to, u_char *optp)
 				 *optp++ = 0;
 			break;
 			}
-#endif
 		case TOF_SACK:
 			{
 			int sackblks = 0;

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_output.c 240305 2012-09-10 11:38:02Z glebius $");
 
 #include <netinet/sctp_os.h>
 #include <sys/proc.h>
@@ -5453,14 +5454,6 @@ do_a_abort:
 		return;
 	}
 	SCTP_BUF_LEN(m) = sizeof(struct sctp_init_chunk);
-
-	/*
-	 * We might not overwrite the identification[] completely and on
-	 * some platforms time_entered will contain some padding. Therefore
-	 * zero out the cookie to avoid putting uninitialized memory on the
-	 * wire.
-	 */
-	memset(&stc, 0, sizeof(struct sctp_state_cookie));
 
 	/* the time I built cookie */
 	(void)SCTP_GETTIME_TIMEVAL(&stc.time_entered);

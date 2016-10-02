@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2002-2003 NetGroup, Politecnico di Torino (Italy)
  * Copyright (C) 2005-2009 Jung-uk Kim <jkim@FreeBSD.org>
@@ -28,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/net/bpf_jitter.h 199603 2009-11-20 18:49:20Z jkim $
  */
 
 #ifndef _NET_BPF_JITTER_H_

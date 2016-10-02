@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/khelp/h_ertt.c 239474 2012-08-21 02:17:06Z lstewart $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

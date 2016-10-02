@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.
@@ -28,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/netinet/ip_options.h 189343 2009-03-04 02:51:22Z bms $
  */
 
 #ifndef _NETINET_IP_OPTIONS_H_

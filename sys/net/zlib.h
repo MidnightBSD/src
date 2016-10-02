@@ -1,4 +1,5 @@
-/* $MidnightBSD$	*/
+/* $MidnightBSD$ */
+/* $FreeBSD: stable/9/sys/net/zlib.h 204552 2010-03-02 06:58:58Z alfred $	*/
 
 /*
  * This file is derived from zlib.h and zconf.h from the zlib-1.0.4

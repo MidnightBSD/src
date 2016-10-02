@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (C) 2011 Matteo Landi, Luigi Rizzo. All rights reserved.
  * 
@@ -31,8 +32,8 @@
  */
 
 /*
- * $MidnightBSD$
- * $Id: netmap_user.h,v 1.2 2013-01-17 23:29:37 laffer1 Exp $
+ * $FreeBSD: stable/9/sys/net/netmap_user.h 246355 2013-02-05 09:40:31Z luigi $
+ * $Id: netmap_user.h 10597 2012-02-21 05:08:32Z luigi $
  *
  * This header contains the macros used to manipulate netmap structures
  * and packets in userspace. See netmap(4) for more information.

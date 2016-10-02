@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)route.h	8.4 (Berkeley) 1/9/95
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/net/route.h 248895 2013-03-29 16:24:20Z melifaro $
  */
 
 #ifndef _NET_ROUTE_H_

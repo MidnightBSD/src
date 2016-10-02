@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * This file is derived from various .h and .c files from the zlib-1.0.4
  * distribution by Jean-loup Gailly and Mark Adler, with some additions
@@ -10,7 +11,7 @@
  * - added inflateIncomp and deflateOutputPending
  * - allow strm->next_out to be NULL, meaning discard the output
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/net/zlib.c 149993 2005-09-11 16:13:02Z rodrigc $
  */
 
 /* 

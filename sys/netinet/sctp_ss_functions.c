@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2012, by Michael Tuexen. All rights reserved.
  * Copyright (c) 2010-2012, by Randall Stewart. All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_ss_functions.c 237896 2012-07-01 07:59:00Z tuexen $");
 
 #include <netinet/sctp_pcb.h>
 

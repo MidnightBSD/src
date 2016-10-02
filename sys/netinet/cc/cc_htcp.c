@@ -48,7 +48,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/cc/cc_htcp.c 220592 2011-04-13 11:28:46Z pluknet $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

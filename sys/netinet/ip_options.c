@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 1982, 1986, 1988, 1993
  *      The Regents of the University of California.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/ip_options.c 213832 2010-10-14 12:32:49Z bz $");
 
 #include "opt_ipstealth.h"
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1991, 1993, 1995
  *	The Regents of the University of California.
@@ -36,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/in_pcb.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_ddb.h"
 #include "opt_ipsec.h"

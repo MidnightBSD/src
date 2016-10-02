@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007, Myricom Inc.
  * Copyright (c) 2008, Intel Corporation.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_lro.c 247470 2013-02-28 16:32:36Z gallatin $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"

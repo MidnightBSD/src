@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Bruce Simpson.
  *
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/netinet6/mld6_var.h 200871 2009-12-22 20:40:22Z bms $
  */
 #ifndef _NETINET6_MLD6_VAR_H_
 #define _NETINET6_MLD6_VAR_H_

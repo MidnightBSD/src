@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 The FreeBSD Foundation
  * Copyright (c) 2009-2010 Bjoern A. Zeeb <bz@FreeBSD.org>
@@ -48,7 +49,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/net/if_epair.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

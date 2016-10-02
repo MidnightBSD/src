@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: if_gre.h,v 1.13 2003/11/10 08:51:52 wiz Exp $ */
-/*	 $MidnightBSD$ */
+/*	 $FreeBSD: stable/9/sys/net/if_gre.h 223223 2011-06-18 09:34:03Z bz $ */
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1998 WIDE Project.
  * All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	$KAME: pim6_var.h,v 1.8 2000/06/06 08:07:43 jinmei Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/netinet6/pim6_var.h 244524 2012-12-21 00:41:52Z delphij $
  */
 
 /*

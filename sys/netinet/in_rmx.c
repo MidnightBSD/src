@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 1994, 1995 Massachusetts Institute of Technology
  *
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/in_rmx.c 242646 2012-11-06 01:18:53Z melifaro $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/sctp_indata.c 238253 2012-07-08 16:14:42Z tuexen $");
 
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
@@ -250,11 +251,6 @@ sctp_build_ctl_nchunk(struct sctp_inpcb *inp, struct sctp_sndrcvinfo *sinfo)
 
 	/* We need a CMSG header followed by the struct */
 	cmh = mtod(ret, struct cmsghdr *);
-	/*
-	 * Make sure that there is no un-initialized padding between the
-	 * cmsg header and cmsg data and after the cmsg data.
-	 */
-	memset(cmh, 0, len);
 	if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_RECVRCVINFO)) {
 		cmh->cmsg_level = IPPROTO_SCTP;
 		cmh->cmsg_len = CMSG_LEN(sizeof(struct sctp_rcvinfo));

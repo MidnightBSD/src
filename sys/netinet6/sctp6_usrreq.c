@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet6/sctp6_usrreq.c 238613 2012-07-19 09:32:59Z tuexen $");
 
 #include <netinet/sctp_os.h>
 #ifdef INET6
@@ -502,16 +503,13 @@ sctp6_ctlinput(int cmd, struct sockaddr *pktdst, void *d)
 		 * XXX: We assume that when IPV6 is non NULL, M and OFF are
 		 * valid.
 		 */
+		/* check if we can safely examine src and dst ports */
 		struct sctp_inpcb *inp = NULL;
 		struct sctp_tcb *stcb = NULL;
 		struct sctp_nets *net = NULL;
 		struct sockaddr_in6 final;
 
 		if (ip6cp->ip6c_m == NULL)
-			return;
-
-		/* Check if we can safely examine the SCTP header. */
-		if (ip6cp->ip6c_m->m_pkthdr.len < ip6cp->ip6c_off + sizeof(sh))
 			return;
 
 		bzero(&sh, sizeof(sh));

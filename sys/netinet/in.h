@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in.h	8.3 (Berkeley) 1/3/94
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/netinet/in.h 239430 2012-08-20 14:42:29Z emaste $
  */
 
 #ifndef _NETINET_IN_H_

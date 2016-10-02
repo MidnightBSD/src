@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ppp_defs.h - PPP definitions.
  */
@@ -25,7 +26,7 @@
  * OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS,
  * OR MODIFICATIONS.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/net/ppp_defs.h 139823 2005-01-07 01:45:51Z imp $
  */
 
 #ifndef _PPP_DEFS_H_

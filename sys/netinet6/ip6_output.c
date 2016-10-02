@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -61,7 +62,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet6/ip6_output.c 245067 2013-01-05 20:07:28Z ae $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -1129,7 +1130,7 @@ passout:
 				goto sendorfree;
 			}
 			m->m_pkthdr.rcvif = NULL;
-			m->m_flags = m0->m_flags & M_COPYFLAGS;
+			m->m_flags = m0->m_flags & M_COPYFLAGS;	/* incl. FIB */
 			*mnext = m;
 			mnext = &m->m_nextpkt;
 			m->m_data += max_linkhdr;
@@ -1155,7 +1156,6 @@ passout:
 			}
 			m_cat(m, m_frgpart);
 			m->m_pkthdr.len = len + hlen + sizeof(*ip6f);
-			m->m_pkthdr.fibnum = m0->m_pkthdr.fibnum;
 			m->m_pkthdr.rcvif = NULL;
 			ip6f->ip6f_reserved = 0;
 			ip6f->ip6f_ident = id;

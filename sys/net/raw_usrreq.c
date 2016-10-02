@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.
@@ -28,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)raw_usrreq.c	8.1 (Berkeley) 6/10/93
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/net/raw_usrreq.c 225970 2011-10-04 11:35:18Z bz $
  */
 
 #include <sys/param.h>

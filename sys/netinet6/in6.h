@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -58,7 +59,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in.h	8.3 (Berkeley) 1/3/94
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/netinet6/in6.h 244524 2012-12-21 00:41:52Z delphij $
  */
 
 #ifndef __KAME_NETINET_IN_H_INCLUDED_

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2000 WIDE Project.
  * All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	$KAME: scope6_var.h,v 1.4 2000/05/18 15:03:27 jinmei Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/netinet6/scope6_var.h 244524 2012-12-21 00:41:52Z delphij $
  */
 
 #ifndef _NETINET6_SCOPE6_VAR_H_

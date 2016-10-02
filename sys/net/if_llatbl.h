@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 Luigi Rizzo, Alessandro Cerri. All rights reserved.
  * Copyright (c) 2004-2008 Qing Li. All rights reserved.
@@ -25,7 +26,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/net/if_llatbl.h 240313 2012-09-10 12:25:57Z glebius $");
 
 #ifndef	_NET_IF_LLATBL_H_
 #define	_NET_IF_LLATBL_H_
@@ -205,14 +206,4 @@ lla_lookup(struct lltable *llt, u_int flags, const struct sockaddr *l3addr)
 }
 
 int		lla_rt_output(struct rt_msghdr *, struct rt_addrinfo *);
-
-#include <sys/eventhandler.h>
-enum {
-	LLENTRY_RESOLVED,
-	LLENTRY_TIMEDOUT,
-	LLENTRY_DELETED,
-	LLENTRY_EXPIRED,
-};
-typedef void (*lle_event_fn)(void *, struct llentry *, int);
-EVENTHANDLER_DECLARE(lle_event, lle_event_fn);
 #endif  /* _NET_IF_LLATBL_H_ */

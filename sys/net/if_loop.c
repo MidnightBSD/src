@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_loop.c	8.2 (Berkeley) 1/9/95
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/net/if_loop.c 238876 2012-07-28 23:11:09Z bz $
  */
 
 /*
@@ -88,7 +89,7 @@
 #elif defined(LARGE_LOMTU)
 #define LOMTU	131072
 #else
-#define LOMTU	32768
+#define LOMTU	16384
 #endif
 
 #define	LO_CSUM_FEATURES	(CSUM_IP | CSUM_TCP | CSUM_UDP | CSUM_SCTP)

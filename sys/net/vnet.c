@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2009 University of Zagreb
  * Copyright (c) 2006-2009 FreeBSD Foundation
@@ -34,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/net/vnet.c 249132 2013-04-05 08:22:11Z mav $");
 
 #include "opt_ddb.h"
 #include "opt_kdb.h"

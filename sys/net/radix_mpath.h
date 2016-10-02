@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: radix_mpath.h,v 1.10 2004/11/06 15:44:28 itojun Exp $	*/
 
 /*
@@ -32,7 +33,7 @@
  * BE LIABLE FOR ANY INFRINGEMENT OF ANY OTHERS' INTELLECTUAL
  * PROPERTIES.
  */
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/9/sys/net/radix_mpath.h 179426 2008-05-30 09:34:35Z qingli $ */
 
 #ifndef _NET_RADIX_MPATH_H_
 #define	_NET_RADIX_MPATH_H_

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ip_var.h	8.2 (Berkeley) 1/9/95
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/netinet/ip_var.h 243586 2012-11-27 01:59:51Z ae $
  */
 
 #ifndef _NETINET_IP_VAR_H_

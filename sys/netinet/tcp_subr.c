@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1990, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_subr.c 238247 2012-07-08 14:21:36Z bz $");
 
 #include "opt_compat.h"
 #include "opt_inet.h"
@@ -85,6 +86,7 @@ __MBSDID("$MidnightBSD$");
 #include <netinet/tcp_timer.h>
 #include <netinet/tcp_var.h>
 #include <netinet/tcp_syncache.h>
+#include <netinet/tcp_offload.h>
 #ifdef INET6
 #include <netinet6/tcp6_var.h>
 #endif
@@ -94,9 +96,6 @@ __MBSDID("$MidnightBSD$");
 #endif
 #ifdef INET6
 #include <netinet6/ip6protosw.h>
-#endif
-#ifdef TCP_OFFLOAD
-#include <netinet/tcp_offload.h>
 #endif
 
 #ifdef IPSEC
@@ -314,6 +313,7 @@ tcp_init(void)
 	tcp_tw_init();
 	syncache_init();
 	tcp_hc_init();
+	tcp_reass_init();
 
 	TUNABLE_INT_FETCH("net.inet.tcp.sack.enable", &V_tcp_do_sack);
 	V_sack_hole_zone = uma_zcreate("sackhole", sizeof(struct sackhole),
@@ -322,8 +322,6 @@ tcp_init(void)
 	/* Skip initialization of globals for non-default instances. */
 	if (!IS_DEFAULT_VNET(curvnet))
 		return;
-
-	tcp_reass_global_init();
 
 	/* XXX virtualize those bellow? */
 	tcp_delacktime = TCPTV_DELACK;
@@ -372,6 +370,7 @@ void
 tcp_destroy(void)
 {
 
+	tcp_reass_destroy();
 	tcp_hc_destroy();
 	syncache_destroy();
 	tcp_tw_destroy();
@@ -826,7 +825,7 @@ tcp_drop(struct tcpcb *tp, int errno)
 
 	if (TCPS_HAVERCVDSYN(tp->t_state)) {
 		tp->t_state = TCPS_CLOSED;
-		(void) tcp_output(tp);
+		(void) tcp_output_reset(tp);
 		TCPSTAT_INC(tcps_drops);
 	} else
 		TCPSTAT_INC(tcps_conndrops);
@@ -926,12 +925,8 @@ tcp_discardcb(struct tcpcb *tp)
 
 	/* free the reassembly queue, if any */
 	tcp_reass_flush(tp);
-
-#ifdef TCP_OFFLOAD
 	/* Disconnect offload device, if any. */
-	if (tp->t_flags & TF_TOE)
-		tcp_offload_detach(tp);
-#endif
+	tcp_offload_detach(tp);
 		
 	tcp_free_sackholes(tp);
 
@@ -960,10 +955,9 @@ tcp_close(struct tcpcb *tp)
 	INP_INFO_WLOCK_ASSERT(&V_tcbinfo);
 	INP_WLOCK_ASSERT(inp);
 
-#ifdef TCP_OFFLOAD
+	/* Notify any offload devices of listener close */
 	if (tp->t_state == TCPS_LISTEN)
-		tcp_offload_listen_stop(tp);
-#endif
+		tcp_offload_listen_close(tp);
 	in_pcbdrop(inp);
 	TCPSTAT_INC(tcps_closed);
 	KASSERT(inp->inp_socket != NULL, ("tcp_close: inp_socket NULL"));
@@ -1702,7 +1696,7 @@ tcp_mtudisc(struct inpcb *inp, int mtuoffer)
 	tp->snd_recover = tp->snd_max;
 	if (tp->t_flags & TF_SACK_PERMIT)
 		EXIT_FASTRECOVERY(tp->t_flags);
-	tcp_output(tp);
+	tcp_output_send(tp);
 	return (inp);
 }
 
