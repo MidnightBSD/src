@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/netinet/tcp_syncache.c 248085 2013-03-09 02:36:32Z marius $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -81,11 +81,9 @@ __MBSDID("$MidnightBSD$");
 #include <netinet/tcp_timer.h>
 #include <netinet/tcp_var.h>
 #include <netinet/tcp_syncache.h>
+#include <netinet/tcp_offload.h>
 #ifdef INET6
 #include <netinet6/tcp6_var.h>
-#endif
-#ifdef TCP_OFFLOAD
-#include <netinet/toecore.h>
 #endif
 
 #ifdef IPSEC
@@ -112,8 +110,10 @@ SYSCTL_VNET_INT(_net_inet_tcp, OID_AUTO, syncookies_only, CTLFLAG_RW,
     &VNET_NAME(tcp_syncookiesonly), 0,
     "Use only TCP SYN cookies");
 
-#ifdef TCP_OFFLOAD
-#define ADDED_BY_TOE(sc) ((sc)->sc_tod != NULL)
+#ifdef TCP_OFFLOAD_DISABLE
+#define TOEPCB_ISSET(sc) (0)
+#else
+#define TOEPCB_ISSET(sc) ((sc)->sc_toepcb != NULL)
 #endif
 
 static void	 syncache_drop(struct syncache *, struct syncache_head *);
@@ -332,14 +332,6 @@ syncache_insert(struct syncache *sc, struct syncache_head *sch)
 	TAILQ_INSERT_HEAD(&sch->sch_bucket, sc, sc_hash);
 	sch->sch_length++;
 
-#ifdef TCP_OFFLOAD
-	if (ADDED_BY_TOE(sc)) {
-		struct toedev *tod = sc->sc_tod;
-
-		tod->tod_syncache_added(tod, sc->sc_todctx);
-	}
-#endif
-
 	/* Reinitialize the bucket row's timer. */
 	if (sch->sch_length == 1)
 		sch->sch_nextc = ticks + INT_MAX;
@@ -364,14 +356,10 @@ syncache_drop(struct syncache *sc, struct syncache_head *sch)
 	TAILQ_REMOVE(&sch->sch_bucket, sc, sc_hash);
 	sch->sch_length--;
 
-#ifdef TCP_OFFLOAD
-	if (ADDED_BY_TOE(sc)) {
-		struct toedev *tod = sc->sc_tod;
-
-		tod->tod_syncache_removed(tod, sc->sc_todctx);
-	}
-#endif
-
+#ifndef TCP_OFFLOAD_DISABLE
+	if (sc->sc_tu)
+		sc->sc_tu->tu_syncache_event(TOE_SC_DROP, sc->sc_toepcb);
+#endif		    
 	syncache_free(sc);
 	V_tcp_syncache.cache_count--;
 }
@@ -858,18 +846,6 @@ syncache_socket(struct syncache *sc, struct socket *lso, struct mbuf *m)
 	if (sc->sc_rxmits > 1)
 		tp->snd_cwnd = tp->t_maxseg;
 
-#ifdef TCP_OFFLOAD
-	/*
-	 * Allow a TOE driver to install its hooks.  Note that we hold the
-	 * pcbinfo lock too and that prevents tcp_usr_accept from accepting a
-	 * new connection before the TOE driver has done its thing.
-	 */
-	if (ADDED_BY_TOE(sc)) {
-		struct toedev *tod = sc->sc_tod;
-
-		tod->tod_offload_socket(tod, sc->sc_todctx, so);
-	}
-#endif
 	/*
 	 * Copy and activate timers.
 	 */
@@ -950,13 +926,6 @@ syncache_expand(struct in_conninfo *inc, struct tcpopt *to, struct tcphdr *th,
 		/* Pull out the entry to unlock the bucket row. */
 		TAILQ_REMOVE(&sch->sch_bucket, sc, sc_hash);
 		sch->sch_length--;
-#ifdef TCP_OFFLOAD
-		if (ADDED_BY_TOE(sc)) {
-			struct toedev *tod = sc->sc_tod;
-
-			tod->tod_syncache_removed(tod, sc->sc_todctx);
-		}
-#endif
 		V_tcp_syncache.cache_count--;
 		SCH_UNLOCK(sch);
 	}
@@ -965,7 +934,7 @@ syncache_expand(struct in_conninfo *inc, struct tcpopt *to, struct tcphdr *th,
 	 * Segment validation:
 	 * ACK must match our initial sequence number + 1 (the SYN|ACK).
 	 */
-	if (th->th_ack != sc->sc_iss + 1) {
+	if (th->th_ack != sc->sc_iss + 1 && !TOEPCB_ISSET(sc)) {
 		if ((s = tcp_log_addrs(inc, th, NULL, NULL)))
 			log(LOG_DEBUG, "%s; %s: ACK %u != ISS+1 %u, segment "
 			    "rejected\n", s, __func__, th->th_ack, sc->sc_iss);
@@ -976,8 +945,9 @@ syncache_expand(struct in_conninfo *inc, struct tcpopt *to, struct tcphdr *th,
 	 * The SEQ must fall in the window starting at the received
 	 * initial receive sequence number + 1 (the SYN).
 	 */
-	if (SEQ_LEQ(th->th_seq, sc->sc_irs) ||
-	    SEQ_GT(th->th_seq, sc->sc_irs + sc->sc_wnd)) {
+	if ((SEQ_LEQ(th->th_seq, sc->sc_irs) ||
+	    SEQ_GT(th->th_seq, sc->sc_irs + sc->sc_wnd)) &&
+	    !TOEPCB_ISSET(sc)) {
 		if ((s = tcp_log_addrs(inc, th, NULL, NULL)))
 			log(LOG_DEBUG, "%s; %s: SEQ %u != IRS+1 %u, segment "
 			    "rejected\n", s, __func__, th->th_seq, sc->sc_irs);
@@ -994,7 +964,8 @@ syncache_expand(struct in_conninfo *inc, struct tcpopt *to, struct tcphdr *th,
 	 * If timestamps were negotiated the reflected timestamp
 	 * must be equal to what we actually sent in the SYN|ACK.
 	 */
-	if ((to->to_flags & TOF_TS) && to->to_tsecr != sc->sc_ts) {
+	if ((to->to_flags & TOF_TS) && to->to_tsecr != sc->sc_ts &&
+	    !TOEPCB_ISSET(sc)) {
 		if ((s = tcp_log_addrs(inc, th, NULL, NULL)))
 			log(LOG_DEBUG, "%s; %s: TSECR %u != TS %u, "
 			    "segment rejected\n",
@@ -1022,6 +993,25 @@ failed:
 	return (0);
 }
 
+int
+tcp_offload_syncache_expand(struct in_conninfo *inc, struct toeopt *toeo,
+    struct tcphdr *th, struct socket **lsop, struct mbuf *m)
+{
+	struct tcpopt to;
+	int rc;
+
+	bzero(&to, sizeof(struct tcpopt));
+	to.to_mss = toeo->to_mss;
+	to.to_wscale = toeo->to_wscale;
+	to.to_flags = toeo->to_flags;
+	
+	INP_INFO_WLOCK(&V_tcbinfo);
+	rc = syncache_expand(inc, &to, th, lsop, m);
+	INP_INFO_WUNLOCK(&V_tcbinfo);
+
+	return (rc);
+}
+
 /*
  * Given a LISTEN socket and an inbound SYN request, add
  * this to the syn cache, and send back a segment:
@@ -1037,8 +1027,8 @@ failed:
  */
 static void
 _syncache_add(struct in_conninfo *inc, struct tcpopt *to, struct tcphdr *th,
-    struct inpcb *inp, struct socket **lsop, struct mbuf *m, void *tod,
-    void *todctx)
+    struct inpcb *inp, struct socket **lsop, struct mbuf *m,
+    struct toe_usrreqs *tu, void *toepcb)
 {
 	struct tcpcb *tp;
 	struct socket *so;
@@ -1124,6 +1114,11 @@ _syncache_add(struct in_conninfo *inc, struct tcpopt *to, struct tcphdr *th,
 	sc = syncache_lookup(inc, &sch);	/* returns locked entry */
 	SCH_LOCK_ASSERT(sch);
 	if (sc != NULL) {
+#ifndef TCP_OFFLOAD_DISABLE
+		if (sc->sc_tu)
+			sc->sc_tu->tu_syncache_event(TOE_SC_ENTRY_PRESENT,
+			    sc->sc_toepcb);
+#endif		    
 		TCPSTAT_INC(tcps_sc_dupsyn);
 		if (ipopts) {
 			/*
@@ -1156,7 +1151,7 @@ _syncache_add(struct in_conninfo *inc, struct tcpopt *to, struct tcphdr *th,
 			    s, __func__);
 			free(s, M_TCPLOG);
 		}
-		if (syncache_respond(sc) == 0) {
+		if (!TOEPCB_ISSET(sc) && syncache_respond(sc) == 0) {
 			sc->sc_rxmits = 0;
 			syncache_timeout(sc, sch, 1);
 			TCPSTAT_INC(tcps_sndacks);
@@ -1207,9 +1202,9 @@ _syncache_add(struct in_conninfo *inc, struct tcpopt *to, struct tcphdr *th,
 		sc->sc_ip_tos = ip_tos;
 		sc->sc_ip_ttl = ip_ttl;
 	}
-#ifdef TCP_OFFLOAD
-	sc->sc_tod = tod;
-	sc->sc_todctx = todctx;
+#ifndef TCP_OFFLOAD_DISABLE	
+	sc->sc_tu = tu;
+	sc->sc_toepcb = toepcb;
 #endif
 	sc->sc_irs = th->th_seq;
 	sc->sc_iss = arc4random();
@@ -1304,7 +1299,7 @@ _syncache_add(struct in_conninfo *inc, struct tcpopt *to, struct tcphdr *th,
 	/*
 	 * Do a standard 3-way handshake.
 	 */
-	if (syncache_respond(sc) == 0) {
+	if (TOEPCB_ISSET(sc) || syncache_respond(sc) == 0) {
 		if (V_tcp_syncookies && V_tcp_syncookiesonly && sc != &scs)
 			syncache_free(sc);
 		else if (sc != &scs)
@@ -1485,15 +1480,6 @@ syncache_respond(struct syncache *sc)
 		th->th_sum = in6_cksum_pseudo(ip6, tlen + optlen - hlen,
 		    IPPROTO_TCP, 0);
 		ip6->ip6_hlim = in6_selecthlim(NULL, NULL);
-#ifdef TCP_OFFLOAD
-		if (ADDED_BY_TOE(sc)) {
-			struct toedev *tod = sc->sc_tod;
-
-			error = tod->tod_syncache_respond(tod, sc->sc_todctx, m);
-
-			return (error);
-		}
-#endif
 		error = ip6_output(m, NULL, NULL, 0, NULL, NULL, NULL);
 	}
 #endif
@@ -1505,15 +1491,6 @@ syncache_respond(struct syncache *sc)
 		m->m_pkthdr.csum_flags = CSUM_TCP;
 		th->th_sum = in_pseudo(ip->ip_src.s_addr, ip->ip_dst.s_addr,
 		    htons(tlen + optlen - hlen + IPPROTO_TCP));
-#ifdef TCP_OFFLOAD
-		if (ADDED_BY_TOE(sc)) {
-			struct toedev *tod = sc->sc_tod;
-
-			error = tod->tod_syncache_respond(tod, sc->sc_todctx, m);
-
-			return (error);
-		}
-#endif
 		error = ip_output(m, sc->sc_ipopts, NULL, 0, NULL, NULL);
 	}
 #endif
@@ -1528,12 +1505,23 @@ syncache_add(struct in_conninfo *inc, struct tcpopt *to, struct tcphdr *th,
 }
 
 void
-tcp_offload_syncache_add(struct in_conninfo *inc, struct tcpopt *to, struct tcphdr *th,
-    struct inpcb *inp, struct socket **lsop, void *tod, void *todctx)
+tcp_offload_syncache_add(struct in_conninfo *inc, struct toeopt *toeo,
+    struct tcphdr *th, struct inpcb *inp, struct socket **lsop,
+    struct toe_usrreqs *tu, void *toepcb)
 {
+	struct tcpopt to;
 
-	_syncache_add(inc, to, th, inp, lsop, NULL, tod, todctx);
+	bzero(&to, sizeof(struct tcpopt));
+	to.to_mss = toeo->to_mss;
+	to.to_wscale = toeo->to_wscale;
+	to.to_flags = toeo->to_flags;
+
+	INP_INFO_WLOCK(&V_tcbinfo);
+	INP_WLOCK(inp);
+
+	_syncache_add(inc, &to, th, inp, lsop, NULL, tu, toepcb);
 }
+
 /*
  * The purpose of SYN cookies is to avoid keeping track of all SYN's we
  * receive and to be able to handle SYN floods from bogus source addresses
