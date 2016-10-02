@@ -63154,7 +63154,6 @@ sys/modules/sysvipc/sysvshm/Makefile -text
 sys/modules/ti/Makefile -text
 sys/modules/tl/Makefile -text
 sys/modules/tmpfs/Makefile -text
-sys/modules/toecore/Makefile svneol=native#text/plain
 sys/modules/tpm/Makefile -text
 sys/modules/trm/Makefile -text
 sys/modules/twa/Makefile -text
