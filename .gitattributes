@@ -2209,6 +2209,8 @@ cddl/contrib/opensolaris/lib/libuutil/common/uu_string.c -text
 cddl/contrib/opensolaris/lib/libuutil/common/uu_strtoint.c -text
 cddl/contrib/opensolaris/lib/libzfs/common/libzfs.h -text
 cddl/contrib/opensolaris/lib/libzfs/common/libzfs_changelist.c -text
+cddl/contrib/opensolaris/lib/libzfs/common/libzfs_compat.c svneol=native#text/plain
+cddl/contrib/opensolaris/lib/libzfs/common/libzfs_compat.h svneol=native#text/plain
 cddl/contrib/opensolaris/lib/libzfs/common/libzfs_config.c -text
 cddl/contrib/opensolaris/lib/libzfs/common/libzfs_dataset.c -text
 cddl/contrib/opensolaris/lib/libzfs/common/libzfs_diff.c -text
@@ -2225,6 +2227,7 @@ cddl/contrib/opensolaris/lib/libzpool/common/kernel.c -text
 cddl/contrib/opensolaris/lib/libzpool/common/sys/zfs_context.h -text
 cddl/contrib/opensolaris/lib/libzpool/common/taskq.c -text
 cddl/contrib/opensolaris/lib/libzpool/common/util.c -text
+cddl/contrib/opensolaris/lib/libzpool/common/zfs.d svneol=native#text/plain
 cddl/contrib/opensolaris/lib/pyzfs/common/__init__.py -text
 cddl/contrib/opensolaris/lib/pyzfs/common/allow.py -text
 cddl/contrib/opensolaris/lib/pyzfs/common/dataset.py -text
@@ -2295,6 +2298,11 @@ cddl/lib/libnvpair/Makefile -text
 cddl/lib/libumem/Makefile -text
 cddl/lib/libuutil/Makefile -text
 cddl/lib/libzfs/Makefile -text
+cddl/lib/libzfs_core/Makefile svneol=native#text/plain
+cddl/lib/libzfs_core/libzfs_core.c svneol=native#text/plain
+cddl/lib/libzfs_core/libzfs_core.h svneol=native#text/plain
+cddl/lib/libzfs_core/libzfs_core_compat.c svneol=native#text/plain
+cddl/lib/libzfs_core/libzfs_core_compat.h svneol=native#text/plain
 cddl/lib/libzpool/Makefile -text
 cddl/sbin/Makefile -text
 cddl/sbin/Makefile.inc -text
@@ -57331,11 +57339,13 @@ sys/cddl/contrib/opensolaris/uts/common/fs/zfs/dnode_sync.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/dsl_dataset.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/dsl_deadlist.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/dsl_deleg.c -text
+sys/cddl/contrib/opensolaris/uts/common/fs/zfs/dsl_destroy.c svneol=native#text/plain
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/dsl_dir.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/dsl_pool.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/dsl_prop.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/dsl_scan.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/dsl_synctask.c -text
+sys/cddl/contrib/opensolaris/uts/common/fs/zfs/dsl_userhold.c svneol=native#text/plain
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/gzip.c -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/lz4.c svneol=native#text/plain
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/lzjb.c -text
@@ -57359,6 +57369,7 @@ sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/ddt.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/dmu.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/dmu_impl.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/dmu_objset.h -text
+sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/dmu_send.h svneol=native#text/plain
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/dmu_traverse.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/dmu_tx.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/dmu_zfetch.h -text
@@ -57366,11 +57377,13 @@ sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/dnode.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/dsl_dataset.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/dsl_deadlist.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/dsl_deleg.h -text
+sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/dsl_destroy.h svneol=native#text/plain
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/dsl_dir.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/dsl_pool.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/dsl_prop.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/dsl_scan.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/dsl_synctask.h -text
+sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/dsl_userhold.h svneol=native#text/plain
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/metaslab.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/metaslab_impl.h -text
 sys/cddl/contrib/opensolaris/uts/common/fs/zfs/sys/refcount.h -text
