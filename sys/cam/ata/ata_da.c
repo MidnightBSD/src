@@ -1971,11 +1971,10 @@ adaflush(void)
 {
 	struct cam_periph *periph;
 	struct ada_softc *softc;
+	union ccb *ccb;
 	int error;
 
 	CAM_PERIPH_FOREACH(periph, &adadriver) {
-		union ccb ccb;
-
 		/* If we paniced with lock held - not recurse here. */
 		if (cam_periph_owned(periph))
 			continue;
@@ -1991,10 +1990,8 @@ adaflush(void)
 			continue;
 		}
 
-		xpt_setup_ccb(&ccb.ccb_h, periph->path, CAM_PRIORITY_NORMAL);
-
-		ccb.ccb_h.ccb_state = ADA_CCB_DUMP;
-		cam_fill_ataio(&ccb.ataio,
+		ccb = cam_periph_getccb(periph, CAM_PRIORITY_NORMAL);
+		cam_fill_ataio(&ccb->ataio,
 				    0,
 				    adadone,
 				    CAM_DIR_NONE,
@@ -2002,20 +1999,17 @@ adaflush(void)
 				    NULL,
 				    0,
 				    ada_default_timeout*1000);
-
 		if (softc->flags & ADA_FLAG_CAN_48BIT)
-			ata_48bit_cmd(&ccb.ataio, ATA_FLUSHCACHE48, 0, 0, 0);
+			ata_48bit_cmd(&ccb->ataio, ATA_FLUSHCACHE48, 0, 0, 0);
 		else
-			ata_28bit_cmd(&ccb.ataio, ATA_FLUSHCACHE, 0, 0, 0);
-		xpt_polled_action(&ccb);
+			ata_28bit_cmd(&ccb->ataio, ATA_FLUSHCACHE, 0, 0, 0);
 
-		error = cam_periph_error(&ccb,
-		    0, SF_NO_RECOVERY | SF_NO_RETRY, NULL);
-		if ((ccb.ccb_h.status & CAM_DEV_QFRZN) != 0)
-			cam_release_devq(ccb.ccb_h.path, /*relsim_flags*/0,
-			    /*reduction*/0, /*timeout*/0, /*getcount_only*/0);
+		error = cam_periph_runccb(ccb, adaerror, /*cam_flags*/0,
+		    /*sense_flags*/ SF_NO_RECOVERY | SF_NO_RETRY,
+		    softc->disk->d_devstat);
 		if (error != 0)
 			xpt_print(periph->path, "Synchronize cache failed\n");
+		xpt_release_ccb(ccb);
 		cam_periph_unlock(periph);
 	}
 }
@@ -2025,11 +2019,10 @@ adaspindown(uint8_t cmd, int flags)
 {
 	struct cam_periph *periph;
 	struct ada_softc *softc;
+	union ccb *ccb;
 	int error;
 
 	CAM_PERIPH_FOREACH(periph, &adadriver) {
-		union ccb ccb;
-
 		/* If we paniced with lock held - not recurse here. */
 		if (cam_periph_owned(periph))
 			continue;
@@ -2046,10 +2039,8 @@ adaspindown(uint8_t cmd, int flags)
 		if (bootverbose)
 			xpt_print(periph->path, "spin-down\n");
 
-		xpt_setup_ccb(&ccb.ccb_h, periph->path, CAM_PRIORITY_NORMAL);
-
-		ccb.ccb_h.ccb_state = ADA_CCB_DUMP;
-		cam_fill_ataio(&ccb.ataio,
+		ccb = cam_periph_getccb(periph, CAM_PRIORITY_NORMAL);
+		cam_fill_ataio(&ccb->ataio,
 				    0,
 				    adadone,
 				    CAM_DIR_NONE | flags,
@@ -2057,17 +2048,14 @@ adaspindown(uint8_t cmd, int flags)
 				    NULL,
 				    0,
 				    ada_default_timeout*1000);
+		ata_28bit_cmd(&ccb->ataio, cmd, 0, 0, 0);
 
-		ata_28bit_cmd(&ccb.ataio, cmd, 0, 0, 0);
-		xpt_polled_action(&ccb);
-
-		error = cam_periph_error(&ccb,
-		    0, SF_NO_RECOVERY | SF_NO_RETRY, NULL);
-		if ((ccb.ccb_h.status & CAM_DEV_QFRZN) != 0)
-			cam_release_devq(ccb.ccb_h.path, /*relsim_flags*/0,
-			    /*reduction*/0, /*timeout*/0, /*getcount_only*/0);
+		error = cam_periph_runccb(ccb, adaerror, /*cam_flags*/0,
+		    /*sense_flags*/ SF_NO_RECOVERY | SF_NO_RETRY,
+		    softc->disk->d_devstat);
 		if (error != 0)
 			xpt_print(periph->path, "Spin-down disk failed\n");
+		xpt_release_ccb(ccb);
 		cam_periph_unlock(periph);
 	}
 }
