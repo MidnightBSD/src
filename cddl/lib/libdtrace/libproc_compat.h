@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010 The FreeBSD Foundation 
  * All rights reserved. 
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
  *
- * $FreeBSD$
+ * $FreeBSD: release/9.2.0/cddl/lib/libdtrace/libproc_compat.h 211554 2010-08-21 11:50:53Z rpaulo $
  */
 
 /*

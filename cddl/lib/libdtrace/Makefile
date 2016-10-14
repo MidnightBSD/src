@@ -1,4 +1,5 @@
 # $MidnightBSD$
+# $FreeBSD: release/9.2.0/cddl/lib/libdtrace/Makefile 249856 2013-04-24 20:10:52Z pfg $
 
 .PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libdtrace/common
 .PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libgen/common
@@ -32,6 +33,7 @@ SRCS=		dt_aggregate.c \
 		dt_pcb.c \
 		dt_pid.c \
 		dt_pragma.c \
+		dt_print.c \
 		dt_printf.c \
 		dt_proc.c \
 		dt_program.c \

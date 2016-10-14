@@ -2289,6 +2289,7 @@ cddl/lib/libdtrace/io.d svneol=native#text/plain
 cddl/lib/libdtrace/libproc_compat.h -text
 cddl/lib/libdtrace/net.d -text
 cddl/lib/libdtrace/nfs.d -text
+cddl/lib/libdtrace/nfssrv.d svneol=native#text/plain
 cddl/lib/libdtrace/psinfo.d -text
 cddl/lib/libdtrace/regs_x86.d -text
 cddl/lib/libdtrace/sched.d -text
