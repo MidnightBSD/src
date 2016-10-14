@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -60,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/ufs/ffs/ffs_alloc.c 248667 2013-03-23 22:41:48Z kib $");
 
 #include "opt_quota.h"
 
@@ -1813,7 +1814,6 @@ gotit:
 	/*
 	 * Check to see if we need to initialize more inodes.
 	 */
-	ibp = NULL;
 	if (fs->fs_magic == FS_UFS2_MAGIC &&
 	    ipref + INOPB(fs) > cgp->cg_initediblk &&
 	    cgp->cg_initediblk < cgp->cg_niblk) {
@@ -1855,37 +1855,38 @@ gotit:
 			dp2++;
 		}
 		/*
- 		 * Rather than adding a soft updates dependency to ensure
- 		 * that the new inode block is written before it is claimed
- 		 * by the cylinder group map, we just do a barrier write
- 		 * here. The barrier write will ensure that the inode block
- 		 * gets written before the updated cylinder group map can be
- 		 * written. The barrier write should only slow down bulk
- 		 * loading of newly created filesystems.
- 		 */
- 		babarrierwrite(ibp);
- 
- 		/*
- 		 * After the inode block is written, try to update the
- 		 * cg initediblk pointer.  If another thread beat us
- 		 * to it, then leave it unchanged as the other thread
- 		 * has already set it correctly.
- 		 */
- 		error = bread(ip->i_devvp, fsbtodb(fs, cgtod(fs, cg)),
- 		    (int)fs->fs_cgsize, NOCRED, &bp);
- 		UFS_LOCK(ump);
- 		ACTIVECLEAR(fs, cg);
- 		UFS_UNLOCK(ump);
- 		if (error != 0) {
- 			brelse(bp);
- 			return (error);
- 		}
- 		cgp = (struct cg *)bp->b_data;
- 		if (cgp->cg_initediblk == old_initediblk)
- 			cgp->cg_initediblk += INOPB(fs);
- 		goto restart;
+		 * Rather than adding a soft updates dependency to ensure
+		 * that the new inode block is written before it is claimed
+		 * by the cylinder group map, we just do a barrier write
+		 * here. The barrier write will ensure that the inode block
+		 * gets written before the updated cylinder group map can be
+		 * written. The barrier write should only slow down bulk
+		 * loading of newly created filesystems.
+		 */
+		babarrierwrite(ibp);
 
+		/*
+		 * After the inode block is written, try to update the
+		 * cg initediblk pointer.  If another thread beat us
+		 * to it, then leave it unchanged as the other thread
+		 * has already set it correctly.
+		 */
+		error = bread(ip->i_devvp, fsbtodb(fs, cgtod(fs, cg)),
+		    (int)fs->fs_cgsize, NOCRED, &bp);
+		UFS_LOCK(ump);
+		ACTIVECLEAR(fs, cg);
+		UFS_UNLOCK(ump);
+		if (error != 0) {
+			brelse(bp);
+			return (error);
+		}
+		cgp = (struct cg *)bp->b_data;
+		if (cgp->cg_initediblk == old_initediblk)
+			cgp->cg_initediblk += INOPB(fs);
+		goto restart;
 	}
+	cgp->cg_old_time = cgp->cg_time = time_second;
+	cgp->cg_irotor = ipref;
 	UFS_LOCK(ump);
 	ACTIVECLEAR(fs, cg);
 	setbit(inosused, ipref);
@@ -1902,8 +1903,6 @@ gotit:
 	if (DOINGSOFTDEP(ITOV(ip)))
 		softdep_setup_inomapdep(bp, ip, cg * fs->fs_ipg + ipref, mode);
 	bdwrite(bp);
-	if (ibp != NULL)
-		bawrite(ibp);
 	return ((ino_t)(cg * fs->fs_ipg + ipref));
 }
 
