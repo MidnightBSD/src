@@ -3,7 +3,7 @@
 # dtruss - print process system call time details.
 #          Written using DTrace (Solaris 10 3/05).
 #
-# $Id: dtruss,v 1.1.1.1 2012-07-21 15:08:09 laffer1 Exp $
+# $Id: dtruss 9 2007-08-07 10:21:07Z brendan $
 #
 # USAGE: dtruss [-acdeflhoLs] [-t syscall] { -p PID | -n name | command }
 #
