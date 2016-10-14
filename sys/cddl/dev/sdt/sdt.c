@@ -21,7 +21,7 @@
  *
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
  *
- * $FreeBSD: src/sys/cddl/dev/sdt/sdt.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD: release/9.2.0/sys/cddl/dev/sdt/sdt.c 252858 2013-07-06 02:49:56Z markj $
  *
  */
 
@@ -53,6 +53,8 @@ static void	sdt_destroy(void *, dtrace_id_t, void *);
 static void	sdt_enable(void *, dtrace_id_t, void *);
 static void	sdt_disable(void *, dtrace_id_t, void *);
 static void	sdt_load(void *);
+static int	sdt_provider_unreg_callback(struct sdt_provider *prov, 
+		    void *arg);
 
 static struct cdevsw sdt_cdevsw = {
 	.d_version	= D_VERSION,
@@ -133,7 +135,7 @@ sdt_probe_callback(struct sdt_probe *probe, void *arg __unused)
 		return (0);
 
 	(void) dtrace_probe_create(prov->id, probe->mod, probe->func,
-	    probe->name, 0, probe);
+	    probe->name, 1, probe);
 
 	return (0);
 }
@@ -191,7 +193,8 @@ sdt_load(void *dummy)
 
 	sdt_probe_func = dtrace_probe;
 
-	(void) sdt_provider_listall(sdt_provider_reg_callback, NULL);
+	sdt_register_callbacks(sdt_provider_reg_callback, NULL,
+	    sdt_provider_unreg_callback, NULL, sdt_probe_callback, NULL);
 }
 
 static int
@@ -207,7 +210,7 @@ sdt_unload()
 
 	sdt_probe_func = sdt_probe_stub;
 
-	(void) sdt_provider_listall(sdt_provider_unreg_callback, NULL);
+	sdt_deregister_callbacks();
 	
 	destroy_dev(sdt_cdev);
 
