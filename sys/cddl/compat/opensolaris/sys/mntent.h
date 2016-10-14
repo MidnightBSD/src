@@ -19,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD$
+ * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/mntent.h 185029 2008-11-17 20:49:29Z pjd $
  */
 /*
  * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.

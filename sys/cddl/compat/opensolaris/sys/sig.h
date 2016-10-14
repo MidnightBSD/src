@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/sig.h 195702 2009-07-14 22:52:46Z kib $
  */
 
 #ifndef _OPENSOLARIS_SYS_SIG_H_

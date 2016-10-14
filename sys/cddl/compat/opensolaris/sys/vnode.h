@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/vnode.h 233353 2012-03-23 11:26:54Z kib $
  */
 
 #ifndef _OPENSOLARIS_SYS_VNODE_H_

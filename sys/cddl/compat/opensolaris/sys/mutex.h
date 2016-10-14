@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/mutex.h 252308 2013-06-27 18:20:19Z smh $
  */
 
 #ifndef _OPENSOLARIS_SYS_MUTEX_H_
@@ -71,8 +71,7 @@ typedef struct sx	kmutex_t;
 #define	mutex_tryenter(lock)	sx_try_xlock(lock)
 #define	mutex_exit(lock)	sx_xunlock(lock)
 #define	mutex_owned(lock)	sx_xlocked(lock)
-/* TODO: Change to sx_xholder() once it is moved from kern_sx.c to sx.h. */
-#define	mutex_owner(lock)	((lock)->sx_lock & SX_LOCK_SHARED ? NULL : (struct thread *)SX_OWNER((lock)->sx_lock))
+#define	mutex_owner(lock)	sx_xholder(lock)
 
 #endif	/* _KERNEL */
 

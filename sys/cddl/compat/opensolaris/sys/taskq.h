@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/taskq.h 222267 2011-05-24 20:07:15Z pjd $
  */
 
 #ifndef _OPENSOLARIS_SYS_TASKQ_H_

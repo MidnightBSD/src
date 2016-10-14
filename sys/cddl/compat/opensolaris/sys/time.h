@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/time.h 251419 2013-06-05 13:03:47Z smh $
  */
 
 #ifndef _OPENSOLARIS_SYS_TIME_H_

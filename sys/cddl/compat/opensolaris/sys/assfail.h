@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
+ * $FreeBSD: release/9.2.0/sys/cddl/compat/opensolaris/sys/assfail.h 243674 2012-11-29 14:05:04Z mm $
  */
 
 #ifndef _OPENSOLARIS_SYS_ASSFAIL_H_
