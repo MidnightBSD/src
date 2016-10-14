@@ -7,6 +7,10 @@
 /NEWS -text
 /README -text
 /aclocal.m4 -text
+build/autoconf/ax_append_compile_flags.m4 -text
+build/autoconf/ax_append_flag.m4 -text
+build/autoconf/ax_check_compile_flag.m4 -text
+build/autoconf/ax_require_defined.m4 -text
 build/autoconf/check_stdcall_func.m4 -text
 build/autoconf/compile -text
 build/autoconf/config.guess -text
@@ -21,6 +25,7 @@ build/autoconf/lib-link.m4 -text
 build/autoconf/lib-prefix.m4 -text
 build/autoconf/ltmain.sh -text
 build/autoconf/missing -text
+build/autoconf/test-driver -text
 build/autogen.sh -text
 build/bump-version.sh -text
 build/clean.sh -text
@@ -31,15 +36,51 @@ build/cmake/CheckFuncs_stub.c.in -text
 build/cmake/CheckHeaderDirent.cmake -text
 build/cmake/CheckStructMember.cmake -text
 build/cmake/CheckTypeExists.cmake -text
+build/cmake/CreatePkgConfigFile.cmake -text
 build/cmake/FindLZMA.cmake -text
 build/cmake/FindLibGCC.cmake -text
 build/cmake/FindNettle.cmake -text
 build/cmake/FindPCREPOSIX.cmake -text
 build/cmake/LibarchiveCheckCSourceCompiles.cmake -text
 build/cmake/LibarchiveCheckCSourceRuns.cmake -text
+build/cmake/LibarchiveCodeCoverage.cmake -text
 build/cmake/config.h.in -text
 build/pkgconfig/libarchive.pc.in -text
 build/version -text
+cat/CMakeLists.txt -text
+cat/bsdcat.1 -text
+cat/bsdcat.c -text
+cat/bsdcat.h -text
+cat/bsdcat_platform.h -text
+cat/cmdline.c -text
+cat/test/CMakeLists.txt -text
+cat/test/list.h -text
+cat/test/main.c -text
+cat/test/test.h -text
+cat/test/test_0.c -text
+cat/test/test_empty.gz.uu -text
+cat/test/test_empty.lz4.uu -text
+cat/test/test_empty.xz.uu -text
+cat/test/test_empty_gz.c -text
+cat/test/test_empty_lz4.c -text
+cat/test/test_empty_xz.c -text
+cat/test/test_error.c -text
+cat/test/test_error_mixed.c -text
+cat/test/test_expand.Z.uu -text
+cat/test/test_expand.bz2.uu -text
+cat/test/test_expand.gz.uu -text
+cat/test/test_expand.lz4.uu -text
+cat/test/test_expand.plain.uu -text
+cat/test/test_expand.xz.uu -text
+cat/test/test_expand_Z.c -text
+cat/test/test_expand_bz2.c -text
+cat/test/test_expand_gz.c -text
+cat/test/test_expand_lz4.c -text
+cat/test/test_expand_mixed.c -text
+cat/test/test_expand_plain.c -text
+cat/test/test_expand_xz.c -text
+cat/test/test_help.c -text
+cat/test/test_version.c -text
 /config.h.in -text
 /configure -text
 /configure.ac -text
@@ -77,6 +118,7 @@ cpio/test/test_extract.cpio.grz.uu -text
 cpio/test/test_extract.cpio.gz.uu -text
 cpio/test/test_extract.cpio.lrz.uu -text
 cpio/test/test_extract.cpio.lz.uu -text
+cpio/test/test_extract.cpio.lz4.uu -text
 cpio/test/test_extract.cpio.lzma.uu -text
 cpio/test/test_extract.cpio.lzo.uu -text
 cpio/test/test_extract.cpio.xz.uu -text
@@ -86,6 +128,7 @@ cpio/test/test_extract_cpio_grz.c -text
 cpio/test/test_extract_cpio_gz.c -text
 cpio/test/test_extract_cpio_lrz.c -text
 cpio/test/test_extract_cpio_lz.c -text
+cpio/test/test_extract_cpio_lz4.c -text
 cpio/test/test_extract_cpio_lzma.c -text
 cpio/test/test_extract_cpio_lzo.c -text
 cpio/test/test_extract_cpio_xz.c -text
@@ -99,6 +142,7 @@ cpio/test/test_gcpio_compat_ref_nosym.bin.uu -text
 cpio/test/test_gcpio_compat_ref_nosym.crc.uu -text
 cpio/test/test_gcpio_compat_ref_nosym.newc.uu -text
 cpio/test/test_gcpio_compat_ref_nosym.ustar.uu -text
+cpio/test/test_missing_file.c -text
 cpio/test/test_option_0.c -text
 cpio/test/test_option_B_upper.c -text
 cpio/test/test_option_C_upper.c -text
@@ -115,10 +159,13 @@ cpio/test/test_option_grzip.c -text
 cpio/test/test_option_help.c -text
 cpio/test/test_option_l.c -text
 cpio/test/test_option_lrzip.c -text
+cpio/test/test_option_lz4.c -text
 cpio/test/test_option_lzma.c -text
 cpio/test/test_option_lzop.c -text
 cpio/test/test_option_m.c -text
 cpio/test/test_option_m.cpio.uu -text
+cpio/test/test_option_passphrase.c -text
+cpio/test/test_option_passphrase.zip.uu -text
 cpio/test/test_option_t.c -text
 cpio/test/test_option_t.cpio.uu -text
 cpio/test/test_option_t.stdout.uu -text
@@ -142,6 +189,7 @@ doc/html/archive_entry_perms.3.html -text
 doc/html/archive_entry_stat.3.html -text
 doc/html/archive_entry_time.3.html -text
 doc/html/archive_read.3.html -text
+doc/html/archive_read_add_passphrase.3.html -text
 doc/html/archive_read_data.3.html -text
 doc/html/archive_read_disk.3.html -text
 doc/html/archive_read_extract.3.html -text
@@ -165,6 +213,7 @@ doc/html/archive_write_header.3.html -text
 doc/html/archive_write_new.3.html -text
 doc/html/archive_write_open.3.html -text
 doc/html/archive_write_set_options.3.html -text
+doc/html/archive_write_set_passphrase.3.html -text
 doc/html/bsdcpio.1.html -text
 doc/html/bsdtar.1.html -text
 doc/html/cpio.5.html -text
@@ -184,6 +233,7 @@ doc/man/archive_entry_perms.3 -text
 doc/man/archive_entry_stat.3 -text
 doc/man/archive_entry_time.3 -text
 doc/man/archive_read.3 -text
+doc/man/archive_read_add_passphrase.3 -text
 doc/man/archive_read_data.3 -text
 doc/man/archive_read_disk.3 -text
 doc/man/archive_read_extract.3 -text
@@ -207,6 +257,7 @@ doc/man/archive_write_header.3 -text
 doc/man/archive_write_new.3 -text
 doc/man/archive_write_open.3 -text
 doc/man/archive_write_set_options.3 -text
+doc/man/archive_write_set_passphrase.3 -text
 doc/man/bsdcpio.1 -text
 doc/man/bsdtar.1 -text
 doc/man/cpio.5 -text
@@ -218,6 +269,50 @@ doc/man/mtree.5 -text
 doc/man/tar.5 -text
 doc/mdoc2man.awk -text
 doc/mdoc2wiki.awk -text
+doc/pdf/.ignore_me -text
+doc/pdf/Makefile -text
+doc/pdf/archive_entry.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_entry_acl.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_entry_linkify.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_entry_paths.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_entry_perms.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_entry_stat.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_entry_time.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_read.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_read_add_passphrase.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_read_data.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_read_disk.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_read_extract.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_read_filter.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_read_format.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_read_free.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_read_header.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_read_new.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_read_open.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_read_set_options.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_util.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_write.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_write_blocksize.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_write_data.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_write_disk.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_write_filter.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_write_finish_entry.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_write_format.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_write_free.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_write_header.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_write_new.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_write_open.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_write_set_options.3.pdf -text svneol=unset#application/pdf
+doc/pdf/archive_write_set_passphrase.3.pdf -text svneol=unset#application/pdf
+doc/pdf/bsdcpio.1.pdf -text svneol=unset#application/pdf
+doc/pdf/bsdtar.1.pdf -text svneol=unset#application/pdf
+doc/pdf/cpio.5.pdf -text svneol=unset#application/pdf
+doc/pdf/libarchive-formats.5.pdf -text svneol=unset#application/pdf
+doc/pdf/libarchive.3.pdf -text svneol=unset#application/pdf
+doc/pdf/libarchive_changes.3.pdf -text svneol=unset#application/pdf
+doc/pdf/libarchive_internals.3.pdf -text svneol=unset#application/pdf
+doc/pdf/mtree.5.pdf -text svneol=unset#application/pdf
+doc/pdf/tar.5.pdf -text svneol=unset#application/pdf
 doc/text/.ignore_me -text
 doc/text/Makefile -text
 doc/text/archive_entry.3.txt -text
@@ -228,6 +323,7 @@ doc/text/archive_entry_perms.3.txt -text
 doc/text/archive_entry_stat.3.txt -text
 doc/text/archive_entry_time.3.txt -text
 doc/text/archive_read.3.txt -text
+doc/text/archive_read_add_passphrase.3.txt -text
 doc/text/archive_read_data.3.txt -text
 doc/text/archive_read_disk.3.txt -text
 doc/text/archive_read_extract.3.txt -text
@@ -251,6 +347,7 @@ doc/text/archive_write_header.3.txt -text
 doc/text/archive_write_new.3.txt -text
 doc/text/archive_write_open.3.txt -text
 doc/text/archive_write_set_options.3.txt -text
+doc/text/archive_write_set_passphrase.3.txt -text
 doc/text/bsdcpio.1.txt -text
 doc/text/bsdtar.1.txt -text
 doc/text/cpio.5.txt -text
@@ -271,6 +368,7 @@ doc/wiki/ManPageArchiveEntryPerms3.wiki -text
 doc/wiki/ManPageArchiveEntryStat3.wiki -text
 doc/wiki/ManPageArchiveEntryTime3.wiki -text
 doc/wiki/ManPageArchiveRead3.wiki -text
+doc/wiki/ManPageArchiveReadAddPassphrase3.wiki -text
 doc/wiki/ManPageArchiveReadData3.wiki -text
 doc/wiki/ManPageArchiveReadDisk3.wiki -text
 doc/wiki/ManPageArchiveReadExtract3.wiki -text
@@ -294,6 +392,7 @@ doc/wiki/ManPageArchiveWriteHeader3.wiki -text
 doc/wiki/ManPageArchiveWriteNew3.wiki -text
 doc/wiki/ManPageArchiveWriteOpen3.wiki -text
 doc/wiki/ManPageArchiveWriteSetOptions3.wiki -text
+doc/wiki/ManPageArchiveWriteSetPassphrase3.wiki -text
 doc/wiki/ManPageBsdcpio1.wiki -text
 doc/wiki/ManPageBsdtar1.wiki -text
 doc/wiki/ManPageCpio5.wiki -text
@@ -317,6 +416,10 @@ libarchive/archive_cmdline_private.h -text
 libarchive/archive_crc32.h -text
 libarchive/archive_crypto.c -text
 libarchive/archive_crypto_private.h -text
+libarchive/archive_cryptor.c -text
+libarchive/archive_cryptor_private.h -text
+libarchive/archive_digest.c -text
+libarchive/archive_digest_private.h -text
 libarchive/archive_endian.h -text
 libarchive/archive_entry.3 -text
 libarchive/archive_entry.c -text
@@ -337,9 +440,14 @@ libarchive/archive_entry_strmode.c -text
 libarchive/archive_entry_time.3 -text
 libarchive/archive_entry_xattr.c -text
 libarchive/archive_getdate.c -text
+libarchive/archive_getdate.h -text
+libarchive/archive_hmac.c -text
+libarchive/archive_hmac_private.h -text
 libarchive/archive_match.c -text
 libarchive/archive_options.c -text
 libarchive/archive_options_private.h -text
+libarchive/archive_pack_dev.c -text
+libarchive/archive_pack_dev.h -text
 libarchive/archive_pathmatch.c -text
 libarchive/archive_pathmatch.h -text
 libarchive/archive_platform.h -text
@@ -347,10 +455,14 @@ libarchive/archive_ppmd7.c -text
 libarchive/archive_ppmd7_private.h -text
 libarchive/archive_ppmd_private.h -text
 libarchive/archive_private.h -text
+libarchive/archive_random.c -text
+libarchive/archive_random_private.h -text
 libarchive/archive_rb.c -text
 libarchive/archive_rb.h -text
 libarchive/archive_read.3 -text
 libarchive/archive_read.c -text
+libarchive/archive_read_add_passphrase.3 -text
+libarchive/archive_read_add_passphrase.c -text
 libarchive/archive_read_append_filter.c -text
 libarchive/archive_read_data.3 -text
 libarchive/archive_read_data_into_fd.c -text
@@ -362,6 +474,7 @@ libarchive/archive_read_disk_set_standard_lookup.c -text
 libarchive/archive_read_disk_windows.c -text
 libarchive/archive_read_extract.3 -text
 libarchive/archive_read_extract.c -text
+libarchive/archive_read_extract2.c -text
 libarchive/archive_read_filter.3 -text
 libarchive/archive_read_format.3 -text
 libarchive/archive_read_free.3 -text
@@ -382,6 +495,7 @@ libarchive/archive_read_support_filter_compress.c -text
 libarchive/archive_read_support_filter_grzip.c -text
 libarchive/archive_read_support_filter_gzip.c -text
 libarchive/archive_read_support_filter_lrzip.c -text
+libarchive/archive_read_support_filter_lz4.c -text
 libarchive/archive_read_support_filter_lzop.c -text
 libarchive/archive_read_support_filter_none.c -text
 libarchive/archive_read_support_filter_program.c -text
@@ -401,6 +515,7 @@ libarchive/archive_read_support_format_mtree.c -text
 libarchive/archive_read_support_format_rar.c -text
 libarchive/archive_read_support_format_raw.c -text
 libarchive/archive_read_support_format_tar.c -text
+libarchive/archive_read_support_format_warc.c -text
 libarchive/archive_read_support_format_xar.c -text
 libarchive/archive_read_support_format_zip.c -text
 libarchive/archive_string.c -text
@@ -422,6 +537,7 @@ libarchive/archive_write_add_filter_compress.c -text
 libarchive/archive_write_add_filter_grzip.c -text
 libarchive/archive_write_add_filter_gzip.c -text
 libarchive/archive_write_add_filter_lrzip.c -text
+libarchive/archive_write_add_filter_lz4.c -text
 libarchive/archive_write_add_filter_lzop.c -text
 libarchive/archive_write_add_filter_none.c -text
 libarchive/archive_write_add_filter_program.c -text
@@ -453,17 +569,23 @@ libarchive/archive_write_set_format_ar.c -text
 libarchive/archive_write_set_format_by_name.c -text
 libarchive/archive_write_set_format_cpio.c -text
 libarchive/archive_write_set_format_cpio_newc.c -text
+libarchive/archive_write_set_format_filter_by_ext.c -text
 libarchive/archive_write_set_format_gnutar.c -text
 libarchive/archive_write_set_format_iso9660.c -text
 libarchive/archive_write_set_format_mtree.c -text
 libarchive/archive_write_set_format_pax.c -text
+libarchive/archive_write_set_format_raw.c -text
 libarchive/archive_write_set_format_shar.c -text
 libarchive/archive_write_set_format_ustar.c -text
 libarchive/archive_write_set_format_v7tar.c -text
+libarchive/archive_write_set_format_warc.c -text
 libarchive/archive_write_set_format_xar.c -text
 libarchive/archive_write_set_format_zip.c -text
 libarchive/archive_write_set_options.3 -text
 libarchive/archive_write_set_options.c -text
+libarchive/archive_write_set_passphrase.3 -text
+libarchive/archive_write_set_passphrase.c -text
+libarchive/archive_xxhash.h -text
 libarchive/config_freebsd.h -text
 libarchive/cpio.5 -text
 libarchive/filter_fork.h -text
@@ -491,11 +613,13 @@ libarchive/test/test_archive_api_feature.c -text
 libarchive/test/test_archive_clear_error.c -text
 libarchive/test/test_archive_cmdline.c -text
 libarchive/test/test_archive_crypto.c -text
+libarchive/test/test_archive_digest.c -text
 libarchive/test/test_archive_getdate.c -text
 libarchive/test/test_archive_match_owner.c -text
 libarchive/test/test_archive_match_path.c -text
 libarchive/test/test_archive_match_time.c -text
 libarchive/test/test_archive_pathmatch.c -text
+libarchive/test/test_archive_read_add_passphrase.c -text
 libarchive/test/test_archive_read_close_twice.c -text
 libarchive/test/test_archive_read_close_twice_open_fd.c -text
 libarchive/test/test_archive_read_close_twice_open_filename.c -text
@@ -515,9 +639,11 @@ libarchive/test/test_archive_string_conversion.txt.Z.uu -text
 libarchive/test/test_archive_write_add_filter_by_name.c -text
 libarchive/test/test_archive_write_set_filter_option.c -text
 libarchive/test/test_archive_write_set_format_by_name.c -text
+libarchive/test/test_archive_write_set_format_filter_by_ext.c -text
 libarchive/test/test_archive_write_set_format_option.c -text
 libarchive/test/test_archive_write_set_option.c -text
 libarchive/test/test_archive_write_set_options.c -text
+libarchive/test/test_archive_write_set_passphrase.c -text
 libarchive/test/test_bad_fd.c -text
 libarchive/test/test_compat_bzip2.c -text
 libarchive/test/test_compat_bzip2_1.tbz.uu -text
@@ -529,6 +655,19 @@ libarchive/test/test_compat_gtar_1.tar.uu -text
 libarchive/test/test_compat_gzip.c -text
 libarchive/test/test_compat_gzip_1.tgz.uu -text
 libarchive/test/test_compat_gzip_2.tgz.uu -text
+libarchive/test/test_compat_lz4.c -text
+libarchive/test/test_compat_lz4_1.tar.lz4.uu -text
+libarchive/test/test_compat_lz4_2.tar.lz4.uu -text
+libarchive/test/test_compat_lz4_3.tar.lz4.uu -text
+libarchive/test/test_compat_lz4_B4.tar.lz4.uu -text
+libarchive/test/test_compat_lz4_B4BD.tar.lz4.uu -text
+libarchive/test/test_compat_lz4_B4BDBX.tar.lz4.uu -text
+libarchive/test/test_compat_lz4_B5.tar.lz4.uu -text
+libarchive/test/test_compat_lz4_B5BD.tar.lz4.uu -text
+libarchive/test/test_compat_lz4_B6.tar.lz4.uu -text
+libarchive/test/test_compat_lz4_B6BD.tar.lz4.uu -text
+libarchive/test/test_compat_lz4_B7.tar.lz4.uu -text
+libarchive/test/test_compat_lz4_B7BD.tar.lz4.uu -text
 libarchive/test/test_compat_lzip.c -text
 libarchive/test/test_compat_lzip_1.tlz.uu -text
 libarchive/test/test_compat_lzip_2.tlz.uu -text
@@ -553,6 +692,8 @@ libarchive/test/test_compat_solaris_tar_acl.tar.uu -text
 libarchive/test/test_compat_tar_hardlink.c -text
 libarchive/test/test_compat_tar_hardlink_1.tar.uu -text
 libarchive/test/test_compat_uudecode.c -text
+libarchive/test/test_compat_uudecode_large.c -text
+libarchive/test/test_compat_uudecode_large.tar.Z.uu -text
 libarchive/test/test_compat_xz.c -text
 libarchive/test/test_compat_xz_1.txz.uu -text
 libarchive/test/test_compat_zip.c -text
@@ -605,6 +746,7 @@ libarchive/test/test_read_disk_directory_traversals.c -text
 libarchive/test/test_read_disk_entry_from_file.c -text
 libarchive/test/test_read_extract.c -text
 libarchive/test/test_read_file_nonexistent.c -text
+libarchive/test/test_read_filter_compress.c -text
 libarchive/test/test_read_filter_grzip.c -text
 libarchive/test/test_read_filter_grzip.tar.grz.uu -text
 libarchive/test/test_read_filter_lrzip.c -text
@@ -639,10 +781,19 @@ libarchive/test/test_read_format_7zip_delta_lzma1.7z.uu -text
 libarchive/test/test_read_format_7zip_delta_lzma2.7z.uu -text
 libarchive/test/test_read_format_7zip_empty_archive.7z.uu -text
 libarchive/test/test_read_format_7zip_empty_file.7z.uu -text
+libarchive/test/test_read_format_7zip_encryption.7z.uu -text
+libarchive/test/test_read_format_7zip_encryption_data.c -text
+libarchive/test/test_read_format_7zip_encryption_header.7z.uu -text
+libarchive/test/test_read_format_7zip_encryption_header.c -text
+libarchive/test/test_read_format_7zip_encryption_partially.7z.uu -text
+libarchive/test/test_read_format_7zip_encryption_partially.c -text
 libarchive/test/test_read_format_7zip_lzma1.7z.uu -text
 libarchive/test/test_read_format_7zip_lzma1_2.7z.uu -text
 libarchive/test/test_read_format_7zip_lzma1_lzma2.7z.uu -text
 libarchive/test/test_read_format_7zip_lzma2.7z.uu -text
+libarchive/test/test_read_format_7zip_malformed.7z.uu -text
+libarchive/test/test_read_format_7zip_malformed.c -text
+libarchive/test/test_read_format_7zip_malformed2.7z.uu -text
 libarchive/test/test_read_format_7zip_ppmd.7z.uu -text
 libarchive/test/test_read_format_7zip_symbolic_name.7z.uu -text
 libarchive/test/test_read_format_ar.ar.uu -text
@@ -660,6 +811,8 @@ libarchive/test/test_read_format_cpio_bin_be.c -text
 libarchive/test/test_read_format_cpio_bin_be.cpio.uu -text
 libarchive/test/test_read_format_cpio_bin_bz2.c -text
 libarchive/test/test_read_format_cpio_bin_gz.c -text
+libarchive/test/test_read_format_cpio_bin_le.c -text
+libarchive/test/test_read_format_cpio_bin_le.cpio.uu -text
 libarchive/test/test_read_format_cpio_bin_lzip.c -text
 libarchive/test/test_read_format_cpio_bin_lzma.c -text
 libarchive/test/test_read_format_cpio_bin_xz.c -text
@@ -690,6 +843,8 @@ libarchive/test/test_read_format_gtar_sparse_1_17_posix00.tar.uu -text
 libarchive/test/test_read_format_gtar_sparse_1_17_posix01.tar.uu -text
 libarchive/test/test_read_format_gtar_sparse_1_17_posix10.tar.uu -text
 libarchive/test/test_read_format_gtar_sparse_1_17_posix10_modified.tar.uu -text
+libarchive/test/test_read_format_gtar_sparse_skip_entry.c -text
+libarchive/test/test_read_format_gtar_sparse_skip_entry.tar.Z.uu -text
 libarchive/test/test_read_format_iso.iso.Z.uu -text
 libarchive/test/test_read_format_iso_2.iso.Z.uu -text
 libarchive/test/test_read_format_iso_Z.c -text
@@ -716,6 +871,8 @@ libarchive/test/test_read_format_isorr_new_bz2.c -text
 libarchive/test/test_read_format_isorr_rr_moved.c -text
 libarchive/test/test_read_format_isozisofs_bz2.c -text
 libarchive/test/test_read_format_lha.c -text
+libarchive/test/test_read_format_lha_bugfix_0.c -text
+libarchive/test/test_read_format_lha_bugfix_0.lzh.uu -text
 libarchive/test/test_read_format_lha_filename.c -text
 libarchive/test/test_read_format_lha_filename_cp932.lzh.uu -text
 libarchive/test/test_read_format_lha_header0.lzh.uu -text
@@ -737,6 +894,14 @@ libarchive/test/test_read_format_rar.rar.uu -text
 libarchive/test/test_read_format_rar_binary_data.rar.uu -text
 libarchive/test/test_read_format_rar_compress_best.rar.uu -text
 libarchive/test/test_read_format_rar_compress_normal.rar.uu -text
+libarchive/test/test_read_format_rar_encryption_data.c -text
+libarchive/test/test_read_format_rar_encryption_data.rar.uu -text
+libarchive/test/test_read_format_rar_encryption_header.c -text
+libarchive/test/test_read_format_rar_encryption_header.rar.uu -text
+libarchive/test/test_read_format_rar_encryption_partially.c -text
+libarchive/test/test_read_format_rar_encryption_partially.rar.uu -text
+libarchive/test/test_read_format_rar_invalid1.c -text
+libarchive/test/test_read_format_rar_invalid1.rar.uu -text
 libarchive/test/test_read_format_rar_multi_lzss_blocks.rar.uu -text
 libarchive/test/test_read_format_rar_multivolume.part0001.rar.uu -text
 libarchive/test/test_read_format_rar_multivolume.part0002.rar.uu -text
@@ -752,8 +917,12 @@ libarchive/test/test_read_format_raw.c -text
 libarchive/test/test_read_format_raw.data.Z.uu -text
 libarchive/test/test_read_format_raw.data.uu -text
 libarchive/test/test_read_format_tar.c -text
+libarchive/test/test_read_format_tar_concatenated.c -text
+libarchive/test/test_read_format_tar_concatenated.tar.uu -text
 libarchive/test/test_read_format_tar_empty_filename.c -text
 libarchive/test/test_read_format_tar_empty_filename.tar.uu -text
+libarchive/test/test_read_format_tar_empty_pax.c -text
+libarchive/test/test_read_format_tar_empty_pax.tar.Z.uu -text
 libarchive/test/test_read_format_tar_filename.c -text
 libarchive/test/test_read_format_tar_filename_koi8r.tar.Z.uu -text
 libarchive/test/test_read_format_tbz.c -text
@@ -765,12 +934,20 @@ libarchive/test/test_read_format_ustar_filename.c -text
 libarchive/test/test_read_format_ustar_filename_cp866.tar.Z.uu -text
 libarchive/test/test_read_format_ustar_filename_eucjp.tar.Z.uu -text
 libarchive/test/test_read_format_ustar_filename_koi8r.tar.Z.uu -text
+libarchive/test/test_read_format_warc.c -text
+libarchive/test/test_read_format_warc.warc.uu -text
 libarchive/test/test_read_format_xar.c -text
 libarchive/test/test_read_format_zip.c -text
 libarchive/test/test_read_format_zip.zip.uu -text
 libarchive/test/test_read_format_zip_comment_stored.c -text
 libarchive/test/test_read_format_zip_comment_stored_1.zip.uu -text
 libarchive/test/test_read_format_zip_comment_stored_2.zip.uu -text
+libarchive/test/test_read_format_zip_encryption_data.c -text
+libarchive/test/test_read_format_zip_encryption_data.zip.uu -text
+libarchive/test/test_read_format_zip_encryption_header.c -text
+libarchive/test/test_read_format_zip_encryption_header.zip.uu -text
+libarchive/test/test_read_format_zip_encryption_partially.c -text
+libarchive/test/test_read_format_zip_encryption_partially.zip.uu -text
 libarchive/test/test_read_format_zip_filename.c -text
 libarchive/test/test_read_format_zip_filename_cp866.zip.uu -text
 libarchive/test/test_read_format_zip_filename_cp932.zip.uu -text
@@ -781,10 +958,33 @@ libarchive/test/test_read_format_zip_filename_utf8_ru2.zip.uu -text
 libarchive/test/test_read_format_zip_length_at_end.zip.uu -text
 libarchive/test/test_read_format_zip_mac_metadata.c -text
 libarchive/test/test_read_format_zip_mac_metadata.zip.uu -text
+libarchive/test/test_read_format_zip_malformed.c -text
+libarchive/test/test_read_format_zip_malformed1.zip.uu -text
+libarchive/test/test_read_format_zip_msdos.c -text
+libarchive/test/test_read_format_zip_msdos.zip.uu -text
+libarchive/test/test_read_format_zip_nested.c -text
+libarchive/test/test_read_format_zip_nested.zip.uu -text
+libarchive/test/test_read_format_zip_nofiletype.c -text
+libarchive/test/test_read_format_zip_nofiletype.zip.uu -text
+libarchive/test/test_read_format_zip_padded.c -text
+libarchive/test/test_read_format_zip_padded1.zip.uu -text
+libarchive/test/test_read_format_zip_padded2.zip.uu -text
+libarchive/test/test_read_format_zip_padded3.zip.uu -text
 libarchive/test/test_read_format_zip_sfx.c -text
 libarchive/test/test_read_format_zip_sfx.uu -text
 libarchive/test/test_read_format_zip_symlink.zip.uu -text
+libarchive/test/test_read_format_zip_traditional_encryption_data.c -text
+libarchive/test/test_read_format_zip_traditional_encryption_data.zip.uu -text
 libarchive/test/test_read_format_zip_ux.zip.uu -text
+libarchive/test/test_read_format_zip_winzip_aes.c -text
+libarchive/test/test_read_format_zip_winzip_aes128.zip.uu -text
+libarchive/test/test_read_format_zip_winzip_aes256.zip.uu -text
+libarchive/test/test_read_format_zip_winzip_aes256_large.zip.uu -text
+libarchive/test/test_read_format_zip_winzip_aes256_stored.zip.uu -text
+libarchive/test/test_read_format_zip_winzip_aes_large.c -text
+libarchive/test/test_read_format_zip_zip64.c -text
+libarchive/test/test_read_format_zip_zip64a.zip.uu -text
+libarchive/test/test_read_format_zip_zip64b.zip.uu -text
 libarchive/test/test_read_large.c -text
 libarchive/test/test_read_large_splitted_rar_aa.uu -text
 libarchive/test/test_read_large_splitted_rar_ab.uu -text
@@ -798,6 +998,8 @@ libarchive/test/test_read_splitted_rar_aa.uu -text
 libarchive/test/test_read_splitted_rar_ab.uu -text
 libarchive/test/test_read_splitted_rar_ac.uu -text
 libarchive/test/test_read_splitted_rar_ad.uu -text
+libarchive/test/test_read_too_many_filters.c -text
+libarchive/test/test_read_too_many_filters.gz.uu -text
 libarchive/test/test_read_truncated.c -text
 libarchive/test/test_read_truncated_filter.c -text
 libarchive/test/test_sparse_basic.c -text
@@ -808,6 +1010,7 @@ libarchive/test/test_tar_filenames.c -text
 libarchive/test/test_tar_large.c -text
 libarchive/test/test_ustar_filename_encoding.c -text
 libarchive/test/test_ustar_filenames.c -text
+libarchive/test/test_warn_missing_hardlink_target.c -text
 libarchive/test/test_write_disk.c -text
 libarchive/test/test_write_disk_appledouble.c -text
 libarchive/test/test_write_disk_appledouble.cpio.gz.uu -text
@@ -831,6 +1034,7 @@ libarchive/test/test_write_filter_compress.c -text
 libarchive/test/test_write_filter_gzip.c -text
 libarchive/test/test_write_filter_gzip_timestamp.c -text
 libarchive/test/test_write_filter_lrzip.c -text
+libarchive/test/test_write_filter_lz4.c -text
 libarchive/test/test_write_filter_lzip.c -text
 libarchive/test/test_write_filter_lzma.c -text
 libarchive/test/test_write_filter_lzop.c -text
@@ -846,6 +1050,7 @@ libarchive/test/test_write_format_cpio_empty.c -text
 libarchive/test/test_write_format_cpio_newc.c -text
 libarchive/test/test_write_format_cpio_odc.c -text
 libarchive/test/test_write_format_gnutar.c -text
+libarchive/test/test_write_format_gnutar_filenames.c -text
 libarchive/test/test_write_format_iso9660.c -text
 libarchive/test/test_write_format_iso9660_boot.c -text
 libarchive/test/test_write_format_iso9660_empty.c -text
@@ -859,25 +1064,39 @@ libarchive/test/test_write_format_mtree_fflags.c -text
 libarchive/test/test_write_format_mtree_no_separator.c -text
 libarchive/test/test_write_format_mtree_quoted_filename.c -text
 libarchive/test/test_write_format_pax.c -text
+libarchive/test/test_write_format_raw.c -text
+libarchive/test/test_write_format_raw_b64.c -text
 libarchive/test/test_write_format_shar_empty.c -text
 libarchive/test/test_write_format_tar.c -text
 libarchive/test/test_write_format_tar_empty.c -text
 libarchive/test/test_write_format_tar_sparse.c -text
 libarchive/test/test_write_format_tar_ustar.c -text
 libarchive/test/test_write_format_tar_v7tar.c -text
+libarchive/test/test_write_format_warc.c -text
+libarchive/test/test_write_format_warc_empty.c -text
 libarchive/test/test_write_format_xar.c -text
 libarchive/test/test_write_format_xar_empty.c -text
 libarchive/test/test_write_format_zip.c -text
+libarchive/test/test_write_format_zip_compression_store.c -text
 libarchive/test/test_write_format_zip_empty.c -text
+libarchive/test/test_write_format_zip_empty_zip64.c -text
+libarchive/test/test_write_format_zip_file.c -text
+libarchive/test/test_write_format_zip_file_zip64.c -text
+libarchive/test/test_write_format_zip_large.c -text
 libarchive/test/test_write_format_zip_no_compression.c -text
+libarchive/test/test_write_format_zip_zip64.c -text
 libarchive/test/test_write_open_memory.c -text
+libarchive/test/test_write_read_format_zip.c -text
 libarchive/test/test_write_zip_set_compression_store.c -text
 libarchive/test/test_zip_filename_encoding.c -text
+libarchive/xxhash.c -text
 libarchive_fe/err.c -text
 libarchive_fe/err.h -text
 libarchive_fe/lafe_platform.h -text
 libarchive_fe/line_reader.c -text
 libarchive_fe/line_reader.h -text
+libarchive_fe/passphrase.c -text
+libarchive_fe/passphrase.h -text
 tar/CMakeLists.txt -text
 tar/bsdtar.1 -text
 tar/bsdtar.c -text
@@ -904,6 +1123,7 @@ tar/test/test_extract.tar.grz.uu -text
 tar/test/test_extract.tar.gz.uu -text
 tar/test/test_extract.tar.lrz.uu -text
 tar/test/test_extract.tar.lz.uu -text
+tar/test/test_extract.tar.lz4.uu -text
 tar/test/test_extract.tar.lzma.uu -text
 tar/test/test_extract.tar.lzo.uu -text
 tar/test/test_extract.tar.xz.uu -text
@@ -913,11 +1133,15 @@ tar/test/test_extract_tar_grz.c -text
 tar/test/test_extract_tar_gz.c -text
 tar/test/test_extract_tar_lrz.c -text
 tar/test/test_extract_tar_lz.c -text
+tar/test/test_extract_tar_lz4.c -text
 tar/test/test_extract_tar_lzma.c -text
 tar/test/test_extract_tar_lzo.c -text
 tar/test/test_extract_tar_xz.c -text
 tar/test/test_format_newc.c -text
 tar/test/test_help.c -text
+tar/test/test_leading_slash.c -text
+tar/test/test_leading_slash.tar.uu -text
+tar/test/test_missing_file.c -text
 tar/test/test_option_C_upper.c -text
 tar/test/test_option_H_upper.c -text
 tar/test/test_option_L_upper.c -text
@@ -936,12 +1160,15 @@ tar/test/test_option_k.c -text
 tar/test/test_option_keep_newer_files.c -text
 tar/test/test_option_keep_newer_files.tar.Z.uu -text
 tar/test/test_option_lrzip.c -text
+tar/test/test_option_lz4.c -text
 tar/test/test_option_lzma.c -text
 tar/test/test_option_lzop.c -text
 tar/test/test_option_n.c -text
 tar/test/test_option_newer_than.c -text
 tar/test/test_option_nodump.c -text
 tar/test/test_option_older_than.c -text
+tar/test/test_option_passphrase.c -text
+tar/test/test_option_passphrase.zip.uu -text
 tar/test/test_option_q.c -text
 tar/test/test_option_r.c -text
 tar/test/test_option_s.c -text
