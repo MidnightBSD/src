@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -18,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $MidnightBSD$
+ * $FreeBSD: release/9.2.0/sys/cddl/dev/dtrace/dtrace_load.c 212093 2010-09-01 12:08:32Z rpaulo $
  *
  */
 
