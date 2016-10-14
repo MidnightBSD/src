@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -21,6 +22,7 @@
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
  * Copyright (c) 2013 by Delphix. All rights reserved.
+ * Copyright (c) 2013 Steven Hartland. All rights reserved.
  */
 
 #include <sys/zfs_context.h>
@@ -127,6 +129,7 @@ dsl_destroy_snapshot_check(void *arg, dmu_tx_t *tx)
 	pair = nvlist_next_nvpair(dsda->dsda_errlist, NULL);
 	if (pair != NULL)
 		return (fnvpair_value_int32(pair));
+
 	return (0);
 }
 
@@ -753,12 +756,16 @@ dsl_destroy_head_sync_impl(dsl_dataset_t *ds, dmu_tx_t *tx)
 		zil_destroy_sync(dmu_objset_zil(os), tx);
 
 		if (!spa_feature_is_active(dp->dp_spa, async_destroy)) {
+			dsl_scan_t *scn = dp->dp_scan;
+
 			spa_feature_incr(dp->dp_spa, async_destroy, tx);
 			dp->dp_bptree_obj = bptree_alloc(mos, tx);
 			VERIFY0(zap_add(mos,
 			    DMU_POOL_DIRECTORY_OBJECT,
 			    DMU_POOL_BPTREE_OBJ, sizeof (uint64_t), 1,
 			    &dp->dp_bptree_obj, tx));
+			ASSERT(!scn->scn_async_destroying);
+			scn->scn_async_destroying = B_TRUE;
 		}
 
 		used = ds->ds_dir->dd_phys->dd_used_bytes;

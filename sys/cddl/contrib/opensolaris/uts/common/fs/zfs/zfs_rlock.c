@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -28,7 +29,7 @@
 
 /*
  * This file contains the code to implement file range locking in
- * ZFS, although there isn't much specific to ZFS (all that comes to mind
+ * ZFS, although there isn't much specific to ZFS (all that comes to mind is
  * support for growing the blocksize).
  *
  * Interface

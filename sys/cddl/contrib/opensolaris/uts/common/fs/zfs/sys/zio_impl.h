@@ -115,27 +115,28 @@ enum zio_stage {
 	ZIO_STAGE_CHECKSUM_GENERATE	= 1 << 5,	/* -W--- */
 
 	ZIO_STAGE_NOP_WRITE		= 1 << 6,	/* -W--- */
-	ZIO_STAGE_DDT_READ_START	= 1 << 6,	/* R---- */
-	ZIO_STAGE_DDT_READ_DONE		= 1 << 7,	/* R---- */
-	ZIO_STAGE_DDT_WRITE		= 1 << 8,	/* -W--- */
-	ZIO_STAGE_DDT_FREE		= 1 << 9,	/* --F-- */
 
-	ZIO_STAGE_GANG_ASSEMBLE		= 1 << 10,	/* RWFC- */
-	ZIO_STAGE_GANG_ISSUE		= 1 << 11,	/* RWFC- */
+	ZIO_STAGE_DDT_READ_START	= 1 << 7,	/* R---- */
+	ZIO_STAGE_DDT_READ_DONE		= 1 << 8,	/* R---- */
+	ZIO_STAGE_DDT_WRITE		= 1 << 9,	/* -W--- */
+	ZIO_STAGE_DDT_FREE		= 1 << 10,	/* --F-- */
 
-	ZIO_STAGE_DVA_ALLOCATE		= 1 << 12,	/* -W--- */
-	ZIO_STAGE_DVA_FREE		= 1 << 13,	/* --F-- */
-	ZIO_STAGE_DVA_CLAIM		= 1 << 14,	/* ---C- */
+	ZIO_STAGE_GANG_ASSEMBLE		= 1 << 11,	/* RWFC- */
+	ZIO_STAGE_GANG_ISSUE		= 1 << 12,	/* RWFC- */
 
-	ZIO_STAGE_READY			= 1 << 15,	/* RWFCI */
+	ZIO_STAGE_DVA_ALLOCATE		= 1 << 13,	/* -W--- */
+	ZIO_STAGE_DVA_FREE		= 1 << 14,	/* --F-- */
+	ZIO_STAGE_DVA_CLAIM		= 1 << 15,	/* ---C- */
 
-	ZIO_STAGE_VDEV_IO_START		= 1 << 16,	/* RWF-I */
-	ZIO_STAGE_VDEV_IO_DONE		= 1 << 17,	/* RWF-- */
-	ZIO_STAGE_VDEV_IO_ASSESS	= 1 << 18,	/* RWF-I */
+	ZIO_STAGE_READY			= 1 << 16,	/* RWFCI */
 
-	ZIO_STAGE_CHECKSUM_VERIFY	= 1 << 19,	/* R---- */
+	ZIO_STAGE_VDEV_IO_START		= 1 << 17,	/* RWF-I */
+	ZIO_STAGE_VDEV_IO_DONE		= 1 << 18,	/* RWF-- */
+	ZIO_STAGE_VDEV_IO_ASSESS	= 1 << 19,	/* RWF-I */
 
-	ZIO_STAGE_DONE			= 1 << 20	/* RWFCI */
+	ZIO_STAGE_CHECKSUM_VERIFY	= 1 << 20,	/* R---- */
+
+	ZIO_STAGE_DONE			= 1 << 21	/* RWFCI */
 };
 
 #define	ZIO_INTERLOCK_STAGES			\
@@ -212,6 +213,7 @@ enum zio_stage {
 #define	ZIO_FREE_PIPELINE			\
 	(ZIO_INTERLOCK_STAGES |			\
 	ZIO_STAGE_FREE_BP_INIT |		\
+	ZIO_STAGE_ISSUE_ASYNC |			\
 	ZIO_STAGE_DVA_FREE |			\
 	ZIO_STAGE_VDEV_IO_START |		\
 	ZIO_STAGE_VDEV_IO_ASSESS)

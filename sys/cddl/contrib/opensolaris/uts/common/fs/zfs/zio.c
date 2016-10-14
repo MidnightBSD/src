@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -771,6 +772,9 @@ zio_free_sync(zio_t *pio, spa_t *spa, uint64_t txg, const blkptr_t *bp,
 	ASSERT(spa_syncing_txg(spa) == txg);
 	ASSERT(spa_sync_pass(spa) < zfs_sync_pass_deferred_free);
 
+	metaslab_check_free(spa, bp);
+	arc_freed(spa, bp);
+
 	zio = zio_create(pio, spa, txg, bp, NULL, size,
 	    NULL, NULL, ZIO_TYPE_FREE, ZIO_PRIORITY_FREE, flags,
 	    NULL, 0, NULL, ZIO_STAGE_OPEN, ZIO_FREE_PIPELINE);
@@ -799,8 +803,6 @@ zio_claim(zio_t *pio, spa_t *spa, uint64_t txg, const blkptr_t *bp,
 	ASSERT3U(spa->spa_uberblock.ub_rootbp.blk_birth, <, spa_first_txg(spa));
 	ASSERT(txg == spa_first_txg(spa) || txg == 0);
 	ASSERT(!BP_GET_DEDUP(bp) || !spa_writeable(spa));	/* zdb(1M) */
-
-	metaslab_check_free(spa, bp);
 
 	zio = zio_create(pio, spa, txg, bp, NULL, BP_GET_PSIZE(bp),
 	    done, private, ZIO_TYPE_CLAIM, ZIO_PRIORITY_NOW, flags,
@@ -1247,13 +1249,16 @@ zio_interrupt(zio_t *zio)
 
 /*
  * Execute the I/O pipeline until one of the following occurs:
- * (1) the I/O completes; (2) the pipeline stalls waiting for
- * dependent child I/Os; (3) the I/O issues, so we're waiting
- * for an I/O completion interrupt; (4) the I/O is delegated by
- * vdev-level caching or aggregation; (5) the I/O is deferred
- * due to vdev-level queueing; (6) the I/O is handed off to
- * another thread.  In all cases, the pipeline stops whenever
- * there's no CPU work; it never burns a thread in cv_wait().
+ *
+ *	(1) the I/O completes
+ *	(2) the pipeline stalls waiting for dependent child I/Os
+ *	(3) the I/O issues, so we're waiting for an I/O completion interrupt
+ *	(4) the I/O is delegated by vdev-level caching or aggregation
+ *	(5) the I/O is deferred due to vdev-level queueing
+ *	(6) the I/O is handed off to another thread.
+ *
+ * In all cases, the pipeline stops whenever there's no CPU work; it never
+ * burns a thread in cv_wait().
  *
  * There's no locking on io_stage because there's no legitimate way
  * for multiple threads to be attempting to process the same I/O.
@@ -2553,7 +2558,13 @@ zio_vdev_io_start(zio_t *zio)
 		}
 	}
 
-	if (vd->vdev_ops->vdev_op_leaf && zio->io_type == ZIO_TYPE_WRITE) {
+	/*
+	 * Note that we ignore repair writes for TRIM because they can conflict
+	 * with normal writes. This isn't an issue because, by definition, we
+	 * only repair blocks that aren't freed.
+	 */
+	if (vd->vdev_ops->vdev_op_leaf && zio->io_type == ZIO_TYPE_WRITE &&
+	    !(zio->io_flags & ZIO_FLAG_IO_REPAIR)) {
 		if (!trim_map_write_start(zio))
 			return (ZIO_PIPELINE_STOP);
 	}
@@ -2575,12 +2586,11 @@ zio_vdev_io_done(zio_t *zio)
 	    zio->io_type == ZIO_TYPE_WRITE || zio->io_type == ZIO_TYPE_FREE);
 
 	if (vd != NULL && vd->vdev_ops->vdev_op_leaf &&
-	    zio->io_type == ZIO_TYPE_WRITE) {
-		trim_map_write_done(zio);
-	}
-
-	if (vd != NULL && vd->vdev_ops->vdev_op_leaf &&
 	    (zio->io_type == ZIO_TYPE_READ || zio->io_type == ZIO_TYPE_WRITE)) {
+
+		if (zio->io_type == ZIO_TYPE_WRITE &&
+		    !(zio->io_flags & ZIO_FLAG_IO_REPAIR))
+			trim_map_write_done(zio);
 
 		vdev_queue_io_done(zio);
 

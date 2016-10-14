@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -972,12 +973,18 @@ dsl_dir_set_quota_sync(void *arg, dmu_tx_t *tx)
 
 	VERIFY0(dsl_dataset_hold(dp, ddsqra->ddsqra_name, FTAG, &ds));
 
-	dsl_prop_set_sync_impl(ds, zfs_prop_to_name(ZFS_PROP_QUOTA),
-	    ddsqra->ddsqra_source, sizeof (ddsqra->ddsqra_value), 1,
-	    &ddsqra->ddsqra_value, tx);
+	if (spa_version(dp->dp_spa) >= SPA_VERSION_RECVD_PROPS) {
+		dsl_prop_set_sync_impl(ds, zfs_prop_to_name(ZFS_PROP_QUOTA),
+		    ddsqra->ddsqra_source, sizeof (ddsqra->ddsqra_value), 1,
+		    &ddsqra->ddsqra_value, tx);
 
-	VERIFY0(dsl_prop_get_int_ds(ds,
-	    zfs_prop_to_name(ZFS_PROP_QUOTA), &newval));
+		VERIFY0(dsl_prop_get_int_ds(ds,
+		    zfs_prop_to_name(ZFS_PROP_QUOTA), &newval));
+	} else {
+		newval = ddsqra->ddsqra_value;
+		spa_history_log_internal_ds(ds, "set", tx, "%s=%lld",
+		    zfs_prop_to_name(ZFS_PROP_QUOTA), (longlong_t)newval);
+	}
 
 	dmu_buf_will_dirty(ds->ds_dir->dd_dbuf, tx);
 	mutex_enter(&ds->ds_dir->dd_lock);
@@ -1087,12 +1094,20 @@ dsl_dir_set_reservation_sync(void *arg, dmu_tx_t *tx)
 
 	VERIFY0(dsl_dataset_hold(dp, ddsqra->ddsqra_name, FTAG, &ds));
 
-	dsl_prop_set_sync_impl(ds, zfs_prop_to_name(ZFS_PROP_RESERVATION),
-	    ddsqra->ddsqra_source, sizeof (ddsqra->ddsqra_value), 1,
-	    &ddsqra->ddsqra_value, tx);
+	if (spa_version(dp->dp_spa) >= SPA_VERSION_RECVD_PROPS) {
+		dsl_prop_set_sync_impl(ds,
+		    zfs_prop_to_name(ZFS_PROP_RESERVATION),
+		    ddsqra->ddsqra_source, sizeof (ddsqra->ddsqra_value), 1,
+		    &ddsqra->ddsqra_value, tx);
 
-	VERIFY0(dsl_prop_get_int_ds(ds,
-	    zfs_prop_to_name(ZFS_PROP_RESERVATION), &newval));
+		VERIFY0(dsl_prop_get_int_ds(ds,
+		    zfs_prop_to_name(ZFS_PROP_RESERVATION), &newval));
+	} else {
+		newval = ddsqra->ddsqra_value;
+		spa_history_log_internal_ds(ds, "set", tx, "%s=%lld",
+		    zfs_prop_to_name(ZFS_PROP_RESERVATION),
+		    (longlong_t)newval);
+	}
 
 	dsl_dir_set_reservation_sync_impl(ds->ds_dir, newval, tx);
 	dsl_dataset_rele(ds, FTAG);
@@ -1243,8 +1258,6 @@ dsl_dir_rename_sync(void *arg, dmu_tx_t *tx)
 	const char *mynewname;
 	int error;
 	objset_t *mos = dp->dp_meta_objset;
-
-	ASSERT(dmu_buf_refcount(dd->dd_dbuf) <= 2);
 
 	VERIFY0(dsl_dir_hold(dp, ddra->ddra_oldname, FTAG, &dd, NULL));
 	VERIFY0(dsl_dir_hold(dp, ddra->ddra_newname, FTAG, &newparent,
