@@ -116,7 +116,9 @@ __MBSDID("$MidnightBSD$");
  * the U/L bit and tracking addresses in a byte; it would be
  * worthwhile to allow more for applications like proxy sta.
  */
+#ifdef CTASSERT
 CTASSERT(ATH_BCBUF <= 8);
+#endif
 
 static struct ieee80211vap *ath_vap_create(struct ieee80211com *,
 		    const char [IFNAMSIZ], int, enum ieee80211_opmode, int,
