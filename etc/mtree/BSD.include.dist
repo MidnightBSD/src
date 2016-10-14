@@ -8,6 +8,14 @@
 .
     altq
     ..
+    apple
+        sys
+            _pthread
+            ..
+            _types
+            ..
+        ..
+    ..
     arpa
     ..
     bsm
@@ -256,8 +264,18 @@
     ..
     lzma
     ..
+    mach
+        device
+        ..
+        i386
+        ..
+    ..
+    mach_debug
+    ..
     machine
         pc
+        ..
+        mach
         ..
     ..
     net
@@ -337,6 +355,14 @@
     ssp
     ..
     sys
+        mach
+            ipc
+            ..
+            device
+            ..
+        ..
+        mach_debug
+        ..
     ..
     ufs
         ffs
