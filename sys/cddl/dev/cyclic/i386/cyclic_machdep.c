@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: release/9.2.0/sys/cddl/dev/cyclic/i386/cyclic_machdep.c 222813 2011-06-07 08:46:13Z attilio $
  *
  */
 

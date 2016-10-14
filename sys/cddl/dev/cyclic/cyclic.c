@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -21,7 +22,7 @@
  *
  * Portions Copyright 2008 John Birrell <jb@freebsd.org>
  *
- * $MidnightBSD$
+ * $FreeBSD: release/9.2.0/sys/cddl/dev/cyclic/cyclic.c 249132 2013-04-05 08:22:11Z mav $
  *
  * This is a simplified version of the cyclic timer subsystem from
  * OpenSolaris. In the FreeBSD version, we don't use interrupt levels.

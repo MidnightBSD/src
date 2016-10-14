@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -21,7 +20,7 @@
  *
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
  *
- * $FreeBSD: src/sys/cddl/dev/dtmalloc/dtmalloc.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
+ * $FreeBSD: release/9.2.0/sys/cddl/dev/dtmalloc/dtmalloc.c 252860 2013-07-06 03:39:40Z markj $
  *
  */
 
@@ -29,6 +28,7 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/conf.h>
+#include <sys/ctype.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
@@ -112,8 +112,17 @@ dtmalloc_type_cb(struct malloc_type *mtp, void *arg __unused)
 {
 	char name[DTRACE_FUNCNAMELEN];
 	struct malloc_type_internal *mtip = mtp->ks_handle;
+	int i;
 
+	/*
+	 * malloc_type descriptions are allowed to contain whitespace, but
+	 * DTrace probe identifiers are not, so replace the whitespace with
+	 * underscores.
+	 */
 	strlcpy(name, mtp->ks_shortdesc, sizeof(name));
+	for (i = 0; name[i] != 0; i++)
+		if (isspace(name[i]))
+			name[i] = '_';
 
 	if (dtrace_probe_lookup(dtmalloc_id, NULL, name, "malloc") != 0)
 		return;

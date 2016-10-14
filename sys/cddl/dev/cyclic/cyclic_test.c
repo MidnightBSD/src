@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2007 John Birrell <jb@FreeBSD.org>
  *
@@ -22,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: release/9.2.0/sys/cddl/dev/cyclic/cyclic_test.c 179260 2008-05-23 22:21:58Z jb $
  *
  */
 
