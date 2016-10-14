@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -18,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $MidnightBSD$
+ * $FreeBSD: release/9.2.0/sys/cddl/dev/dtrace/amd64/dis_tables.c 238503 2012-07-15 20:38:02Z avg $
  */
 /*
  * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.

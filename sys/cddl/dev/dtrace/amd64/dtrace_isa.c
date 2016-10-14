@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -19,7 +20,7 @@
  *
  * CDDL HEADER END
  *
- * $MidnightBSD$
+ * $FreeBSD: release/9.2.0/sys/cddl/dev/dtrace/amd64/dtrace_isa.c 252858 2013-07-06 02:49:56Z markj $
  */
 /*
  * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
@@ -398,7 +399,7 @@ dtrace_getarg(int arg, int aframes)
 	}
 
 	arg -= (inreg + 1);
-	stack = (uintptr_t *)&fp[1];
+	stack = (uintptr_t *)fp + 2;
 
 load:
 	DTRACE_CPUFLAG_SET(CPU_DTRACE_NOFAULT);
