@@ -20,55 +20,28 @@
  */
 
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2013 by Martin Matuska <mm@FreeBSD.org>. All rights reserved.
  */
 
-/*
- * ASSERTION:
- *     Test multiple aggregations and overriding default order with
- *     printa() statements.
- *
- * SECTION: Aggregations/Aggregations;
- *     Aggregations/Output
- *
- * NOTES: This is a simple verifiable test.
- *
- */
+#ifndef	_LIBZFS_CORE_COMPAT_H
+#define	_LIBZFS_CORE_COMPAT_H
 
-#pragma D option quiet
+#include <libnvpair.h>
+#include <sys/param.h>
+#include <sys/types.h>
+#include <sys/fs/zfs.h>
+#include <sys/zfs_ioctl.h>
 
-BEGIN
-{
-	i = 0;
+#ifdef	__cplusplus
+extern "C" {
+#endif
+
+int lzc_compat_pre(zfs_cmd_t *, zfs_ioc_t *, nvlist_t **);
+void lzc_compat_post(zfs_cmd_t *, const zfs_ioc_t);
+int lzc_compat_outnvl(zfs_cmd_t *, const zfs_ioc_t, nvlist_t **);
+
+#ifdef	__cplusplus
 }
+#endif
 
-tick-10ms
-/i < 1000/
-{
-	@a = count();
-	@b = avg(i);
-	@c = sum(i);
-	@d = min(i);
-	@e = max(i);
-	@f = quantize(i);
-	@g = lquantize(i, 0, 1000, 100);
-	@h = stddev(i);
-
-	i += 100;
-}
-
-tick-10ms
-/i == 1000/
-{
-	printa("%@d\n", @h);
-	printa("%@d\n", @g);
-	printa("%@d\n", @f);
-	printa("%@d\n", @e);
-	printa("%@d\n", @d);
-	printa("%@d\n", @c);
-	printa("%@d\n", @b);
-	printa("%@d\n", @a);
-
-	exit(0);
-}
+#endif	/* _LIBZFS_CORE_COMPAT_H */

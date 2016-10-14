@@ -19,13 +19,16 @@
 .\"
 .\" Copyright (c) 2010, Sun Microsystems, Inc. All Rights Reserved.
 .\" Copyright (c) 2012 by Delphix. All rights reserved.
-.\" Copyright (c) 2012 Nexenta Systems, Inc. All Rights Reserved.
 .\" Copyright (c) 2012, Joyent, Inc. All rights reserved.
 .\" Copyright (c) 2011, Pawel Jakub Dawidek <pjd@FreeBSD.org>
+.\" Copyright (c) 2012, Bryan Drewery <bdrewery@FreeBSD.org>
+.\" Copyright (c) 2012, Glen Barber <gjb@FreeBSD.org>
+.\" Copyright (c) 2013 by Saso Kiselkov. All rights reserved.
+.\" Copyright (c) 2013 Nexenta Systems, Inc. All Rights Reserved.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: release/9.2.0/cddl/contrib/opensolaris/cmd/zfs/zfs.8 250277 2013-05-05 16:42:06Z gavin $
 .\"
-.Dd March 31, 2013
+.Dd March 21, 2013
 .Dt ZFS 8
 .Os
 .Sh NAME
@@ -1190,7 +1193,7 @@ When the
 .Sy sharenfs
 property is changed for a dataset, the
 .Xr mountd 8
-dameon is reloaded.
+daemon is reloaded.
 .It Sy logbias Ns = Ns Cm latency | throughput
 Provide a hint to
 .Tn ZFS

@@ -2162,6 +2162,7 @@ cddl/contrib/opensolaris/lib/libdtrace/common/dt_pcb.h -text
 cddl/contrib/opensolaris/lib/libdtrace/common/dt_pid.c -text
 cddl/contrib/opensolaris/lib/libdtrace/common/dt_pid.h -text
 cddl/contrib/opensolaris/lib/libdtrace/common/dt_pragma.c -text
+cddl/contrib/opensolaris/lib/libdtrace/common/dt_print.c svneol=native#text/plain
 cddl/contrib/opensolaris/lib/libdtrace/common/dt_printf.c -text
 cddl/contrib/opensolaris/lib/libdtrace/common/dt_printf.h -text
 cddl/contrib/opensolaris/lib/libdtrace/common/dt_proc.c -text
@@ -2223,6 +2224,10 @@ cddl/contrib/opensolaris/lib/libzfs/common/libzfs_pool.c -text
 cddl/contrib/opensolaris/lib/libzfs/common/libzfs_sendrecv.c -text
 cddl/contrib/opensolaris/lib/libzfs/common/libzfs_status.c -text
 cddl/contrib/opensolaris/lib/libzfs/common/libzfs_util.c -text
+cddl/contrib/opensolaris/lib/libzfs_core/common/libzfs_core.c svneol=native#text/plain
+cddl/contrib/opensolaris/lib/libzfs_core/common/libzfs_core.h svneol=native#text/plain
+cddl/contrib/opensolaris/lib/libzfs_core/common/libzfs_core_compat.c svneol=native#text/plain
+cddl/contrib/opensolaris/lib/libzfs_core/common/libzfs_core_compat.h svneol=native#text/plain
 cddl/contrib/opensolaris/lib/libzpool/common/kernel.c -text
 cddl/contrib/opensolaris/lib/libzpool/common/sys/zfs_context.h -text
 cddl/contrib/opensolaris/lib/libzpool/common/taskq.c -text

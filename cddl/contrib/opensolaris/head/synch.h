@@ -2,9 +2,8 @@
  * CDDL HEADER START
  *
  * The contents of this file are subject to the terms of the
- * Common Development and Distribution License, Version 1.0 only
- * (the "License").  You may not use this file except in compliance
- * with the License.
+ * Common Development and Distribution License (the "License").
+ * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
@@ -19,15 +18,13 @@
  *
  * CDDL HEADER END
  */
+
 /*
- * Copyright 2003 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 1992, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef	_SYNCH_H
 #define	_SYNCH_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 /*
  * synch.h:
@@ -81,12 +78,12 @@ typedef lwp_cond_t cond_t;
  * Because we have to deal with C++, we cannot redefine this one as that one.
  */
 typedef struct _rwlock {
-	int32_t		readers;	/* -1 == writer else # of readers */
+	int32_t		readers;	/* rwstate word */
 	uint16_t	type;
 	uint16_t	magic;
-	mutex_t		mutex;		/* used to indicate ownership */
-	cond_t		readercv;	/* unused */
-	cond_t		writercv;	/* unused */
+	mutex_t		mutex;		/* used with process-shared rwlocks */
+	cond_t		readercv;	/* used only to indicate ownership */
+	cond_t		writercv;	/* used only to indicate ownership */
 } rwlock_t;
 
 #ifdef	__STDC__
@@ -111,6 +108,7 @@ int	cond_signal(cond_t *);
 int	cond_broadcast(cond_t *);
 int	mutex_init(mutex_t *, int, void *);
 int	mutex_destroy(mutex_t *);
+int	mutex_consistent(mutex_t *);
 int	mutex_lock(mutex_t *);
 int	mutex_trylock(mutex_t *);
 int	mutex_unlock(mutex_t *);
@@ -152,6 +150,7 @@ int	cond_signal();
 int	cond_broadcast();
 int	mutex_init();
 int	mutex_destroy();
+int	mutex_consistent();
 int	mutex_lock();
 int	mutex_trylock();
 int	mutex_unlock();
@@ -241,10 +240,17 @@ int	sema_trywait();
 
 #ifdef	__STDC__
 
-int _sema_held(sema_t *);
-int _rw_read_held(rwlock_t *);
-int _rw_write_held(rwlock_t *);
-int _mutex_held(mutex_t *);
+/*
+ * The *_held() functions apply equally well to Solaris threads
+ * and to Posix threads synchronization objects, but the formal
+ * type declarations are different, so we just declare the argument
+ * to each *_held() function to be a void *, expecting that they will
+ * be called with the proper type of argument in each case.
+ */
+int _sema_held(void *);			/* sema_t or sem_t */
+int _rw_read_held(void *);		/* rwlock_t or pthread_rwlock_t */
+int _rw_write_held(void *);		/* rwlock_t or pthread_rwlock_t */
+int _mutex_held(void *);		/* mutex_t or pthread_mutex_t */
 
 #else	/* __STDC__ */
 
@@ -253,6 +259,13 @@ int _rw_read_held();
 int _rw_write_held();
 int _mutex_held();
 
+#endif	/* __STDC__ */
+
+/* Pause API */
+#ifdef	__STDC__
+void smt_pause(void);
+#else	/* __STDC__ */
+void smt_pause();
 #endif	/* __STDC__ */
 
 #endif /* _ASM */
