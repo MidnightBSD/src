@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,7 +21,7 @@
  *
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
  *
- * $FreeBSD$
+ * $FreeBSD: release/9.2.0/sys/cddl/dev/systrace/systrace.c 220437 2011-04-08 06:27:43Z art $
  *
  */
 
