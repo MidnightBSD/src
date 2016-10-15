@@ -1,9 +1,11 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/lib/liblzma/Versions.def 278433 2015-02-09 06:20:34Z rpaulo $
 
 XZ_5.0 {
 };
 
+XZ_5.2 {
+} XZ_5.0;
 
 XZprivate_1.0 {
-} XZ_5.0;
+} XZ_5.2;
 
