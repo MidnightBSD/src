@@ -17843,6 +17843,8 @@ contrib/libarchive/libarchive/test/test_read_format_lha_lh7.lzh.uu -text
 contrib/libarchive/libarchive/test/test_read_format_lha_withjunk.lzh.uu -text
 contrib/libarchive/libarchive/test/test_read_format_mtree.c -text
 contrib/libarchive/libarchive/test/test_read_format_mtree.mtree.uu -text
+contrib/libarchive/libarchive/test/test_read_format_mtree_crash747.c svneol=native#text/plain
+contrib/libarchive/libarchive/test/test_read_format_mtree_crash747.mtree.bz2.uu -text
 contrib/libarchive/libarchive/test/test_read_format_mtree_nomagic.mtree.uu -text
 contrib/libarchive/libarchive/test/test_read_format_mtree_nomagic2.mtree.uu -text
 contrib/libarchive/libarchive/test/test_read_format_mtree_nomagic3.mtree.uu -text
@@ -17913,6 +17915,8 @@ contrib/libarchive/libarchive/test/test_read_format_zip_filename_koi8r.zip.uu -t
 contrib/libarchive/libarchive/test/test_read_format_zip_filename_utf8_jp.zip.uu -text
 contrib/libarchive/libarchive/test/test_read_format_zip_filename_utf8_ru.zip.uu -text
 contrib/libarchive/libarchive/test/test_read_format_zip_filename_utf8_ru2.zip.uu -text
+contrib/libarchive/libarchive/test/test_read_format_zip_high_compression.c svneol=native#text/plain
+contrib/libarchive/libarchive/test/test_read_format_zip_high_compression.zip.uu -text
 contrib/libarchive/libarchive/test/test_read_format_zip_length_at_end.zip.uu -text
 contrib/libarchive/libarchive/test/test_read_format_zip_mac_metadata.c -text
 contrib/libarchive/libarchive/test/test_read_format_zip_mac_metadata.zip.uu -text
@@ -17991,6 +17995,9 @@ contrib/libarchive/libarchive/test/test_write_disk_no_hfs_compression.c -text
 contrib/libarchive/libarchive/test/test_write_disk_no_hfs_compression.tgz.uu -text
 contrib/libarchive/libarchive/test/test_write_disk_perms.c -text
 contrib/libarchive/libarchive/test/test_write_disk_secure.c -text
+contrib/libarchive/libarchive/test/test_write_disk_secure744.c svneol=native#text/plain
+contrib/libarchive/libarchive/test/test_write_disk_secure745.c svneol=native#text/plain
+contrib/libarchive/libarchive/test/test_write_disk_secure746.c svneol=native#text/plain
 contrib/libarchive/libarchive/test/test_write_disk_sparse.c -text
 contrib/libarchive/libarchive/test/test_write_disk_symlink.c -text
 contrib/libarchive/libarchive/test/test_write_disk_times.c -text
