@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_entry_strmode.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_entry_strmode.c 228763 2011-12-21 11:13:29Z mm $");
 
 DEFINE_TEST(test_entry_strmode)
 {

@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_compat_solaris_tar_acl.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_compat_solaris_tar_acl.c 232153 2012-02-25 10:58:02Z mm $");
 
 /*
  * Exercise support for reading Solaris-style ACL data

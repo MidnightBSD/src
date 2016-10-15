@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_disk_secure.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_write_disk_secure.c 299529 2016-05-12 10:16:16Z mm $");
 
 #define UMASK 022
 
@@ -242,31 +242,6 @@ DEFINE_TEST(test_write_disk_secure)
 	assertFileNotExists("/tmp/libarchive_test-test_write_disk_secure-absolute_path.tmp");
 
 	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
-
-        /*
-        * Without security checks, we should be able to
-        * extract an absolute path.
-        */
-       assert((ae = archive_entry_new()) != NULL);
-       archive_entry_copy_pathname(ae, "/tmp/libarchive_test-test_write_disk_secure-absolute_path.tmp");
-       archive_entry_set_mode(ae, S_IFREG | 0777);
-       assert(0 == archive_write_header(a, ae));
-       assert(0 == archive_write_finish_entry(a));
-       assertFileExists("/tmp/libarchive_test-test_write_disk_secure-absolute_path.tmp");
-       assert(0 == unlink("/tmp/libarchive_test-test_write_disk_secure-absolute_path.tmp"));
-
-       /* But with security checks enabled, this should fail. */
-       assert(archive_entry_clear(ae) != NULL);
-       archive_entry_copy_pathname(ae, "/tmp/libarchive_test-test_write_disk_secure-absolute_path.tmp");
-       archive_entry_set_mode(ae, S_IFREG | 0777);
-       archive_write_disk_set_options(a, ARCHIVE_EXTRACT_SECURE_NOABSOLUTEPATHS);
-       failure("Extracting an absolute path should fail here.");
-       assertEqualInt(ARCHIVE_FAILED, archive_write_header(a, ae));
-       archive_entry_free(ae);
-       assert(0 == archive_write_finish_entry(a));
-       assertFileNotExists("/tmp/libarchive_test-test_write_disk_secure-absolute_path.tmp");
-
-
 
 	/* Test the entries on disk. */
 	assert(0 == lstat("dir", &st));

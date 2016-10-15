@@ -26,7 +26,7 @@
 
 
 #include "cpio_platform.h"
-__FBSDID("$FreeBSD: src/usr.bin/cpio/cmdline.c,v 1.5 2008/12/06 07:30:40 kientzle Exp $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/cpio/cmdline.c 305188 2016-09-01 07:53:59Z mm $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -63,6 +63,7 @@ static const struct option {
 } cpio_longopts[] = {
 	{ "b64encode",			0, OPTION_B64ENCODE },
 	{ "create",			0, 'o' },
+	{ "dereference",		0, 'L' },
 	{ "dot",			0, 'V' },
 	{ "extract",			0, 'i' },
 	{ "file",			1, 'F' },

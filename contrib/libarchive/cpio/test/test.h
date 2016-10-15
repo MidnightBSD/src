@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/cpio/test/test.h,v 1.2 2008/06/21 02:17:18 kientzle Exp $
+ * $FreeBSD: stable/11/contrib/libarchive/cpio/test/test.h 307138 2016-10-12 10:28:22Z mm $
  */
 
 /* Every test program should #include "test.h" as the first thing. */
@@ -241,6 +241,7 @@ int assertion_file_birthtime_recent(const char *, int, const char *);
 int assertion_file_contains_lines_any_order(const char *, int, const char *, const char **);
 int assertion_file_contents(const char *, int, const void *, int, const char *);
 int assertion_file_exists(const char *, int, const char *);
+int assertion_file_mode(const char *, int, const char *, int);
 int assertion_file_mtime(const char *, int, const char *, long, long);
 int assertion_file_mtime_recent(const char *, int, const char *);
 int assertion_file_nlinks(const char *, int, const char *, int);

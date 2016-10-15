@@ -25,7 +25,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_util.c 201098 2009-12-28 02:58:14Z kientzle $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_util.c 305188 2016-09-01 07:53:59Z mm $");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -580,7 +580,7 @@ void
 __archive_ensure_cloexec_flag(int fd)
 {
 #if defined(_WIN32) && !defined(__CYGWIN__)
-	(void)fd; /* UNSED */
+	(void)fd; /* UNUSED */
 #else
 	int flags;
 

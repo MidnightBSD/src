@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "archive_platform.h"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_read_support_format_xar.c 299529 2016-05-12 10:16:16Z mm $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>

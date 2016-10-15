@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_empty.c 189308 2009-03-03 17:02:51Z kientzle $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_read_format_empty.c 299529 2016-05-12 10:16:16Z mm $");
 
 static unsigned char archive[] = { 0 };
 

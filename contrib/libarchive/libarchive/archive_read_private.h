@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: head/lib/libarchive/archive_read_private.h 201088 2009-12-28 02:18:55Z kientzle $
+ * $FreeBSD: stable/11/contrib/libarchive/libarchive/archive_read_private.h 305188 2016-09-01 07:53:59Z mm $
  */
 
 #ifndef __LIBARCHIVE_BUILD
@@ -221,7 +221,7 @@ struct archive_read {
 	struct {
 		struct archive_read_passphrase *first;
 		struct archive_read_passphrase **last;
-		int candiate;
+		int candidate;
 		archive_passphrase_callback *callback;
 		void *client_data;
 	}		passphrases;

@@ -25,7 +25,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_format_mtree.c 201171 2009-12-29 06:39:07Z kientzle $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_write_set_format_mtree.c 299529 2016-05-12 10:16:16Z mm $");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>

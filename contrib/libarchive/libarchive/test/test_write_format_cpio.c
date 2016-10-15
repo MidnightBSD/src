@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_format_cpio.c 185672 2008-12-06 06:02:26Z kientzle $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_write_format_cpio.c 248616 2013-03-22 13:36:03Z mm $");
 
 static void
 test_format(int	(*set_format)(struct archive *))

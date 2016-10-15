@@ -28,7 +28,7 @@
  */
 
 #include "bsdtar_platform.h"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/tar/cmdline.c 305188 2016-09-01 07:53:59Z mm $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -68,6 +68,7 @@ static const struct bsdtar_option {
 	{ "auto-compress",        0, 'a' },
 	{ "b64encode",            0, OPTION_B64ENCODE },
 	{ "block-size",           1, 'b' },
+	{ "blocking-factor",	  1, 'b' },
 	{ "bunzip2",              0, 'j' },
 	{ "bzip",                 0, 'j' },
 	{ "bzip2",                0, 'j' },

@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: head/lib/libarchive/test/test.h 201247 2009-12-30 05:59:21Z kientzle $
+ * $FreeBSD: stable/11/contrib/libarchive/libarchive/test/test.h 305188 2016-09-01 07:53:59Z mm $
  */
 
 /* Every test program should #include "test.h" as the first thing. */
@@ -182,6 +182,8 @@
   assertion_file_nlinks(__FILE__, __LINE__, pathname, nlinks)
 #define assertFileSize(pathname, size)  \
   assertion_file_size(__FILE__, __LINE__, pathname, size)
+#define assertFileMode(pathname, mode)  \
+  assertion_file_mode(__FILE__, __LINE__, pathname, mode)
 #define assertTextFileContents(text, pathname) \
   assertion_text_file_contents(__FILE__, __LINE__, text, pathname)
 #define assertFileContainsLinesAnyOrder(pathname, lines)	\
@@ -246,6 +248,7 @@ int assertion_file_mtime_recent(const char *, int, const char *);
 int assertion_file_nlinks(const char *, int, const char *, int);
 int assertion_file_not_exists(const char *, int, const char *);
 int assertion_file_size(const char *, int, const char *, long);
+int assertion_file_mode(const char *, int, const char *, int);
 int assertion_is_dir(const char *, int, const char *, int);
 int assertion_is_hardlink(const char *, int, const char *, const char *);
 int assertion_is_not_hardlink(const char *, int, const char *, const char *);

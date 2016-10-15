@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_read_format_iso_gz.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_read_format_iso_Z.c 299529 2016-05-12 10:16:16Z mm $");
 
 static void
 test1(void)

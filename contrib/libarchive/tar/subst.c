@@ -24,7 +24,7 @@
  */
 
 #include "bsdtar_platform.h"
-__FBSDID("$FreeBSD: src/usr.bin/tar/subst.c,v 1.4 2008/06/15 10:08:16 kientzle Exp $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/tar/subst.c 307138 2016-10-12 10:28:22Z mm $");
 
 #if defined(HAVE_REGEX_H) || defined(HAVE_PCREPOSIX_H)
 #include "bsdtar.h"
@@ -84,6 +84,7 @@ add_substitution(struct bsdtar *bsdtar, const char *rule_text)
 	if (rule == NULL)
 		lafe_errc(1, errno, "Out of memory");
 	rule->next = NULL;
+	rule->result = NULL;
 
 	if (subst->last_rule == NULL)
 		subst->first_rule = rule;

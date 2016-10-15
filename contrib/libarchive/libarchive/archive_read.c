@@ -32,7 +32,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read.c 201157 2009-12-29 05:30:23Z kientzle $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_read.c 299529 2016-05-12 10:16:16Z mm $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>

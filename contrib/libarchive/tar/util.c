@@ -24,7 +24,7 @@
  */
 
 #include "bsdtar_platform.h"
-__FBSDID("$FreeBSD: src/usr.bin/tar/util.c,v 1.23 2008/12/15 06:00:25 kientzle Exp $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/tar/util.c 305188 2016-09-01 07:53:59Z mm $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -182,7 +182,7 @@ safe_fprintf(FILE *f, const char *fmt, ...)
 		}
 
 		/* If our output buffer is full, dump it and keep going. */
-		if (i > (sizeof(outbuff) - 20)) {
+		if (i > (sizeof(outbuff) - 128)) {
 			outbuff[i] = '\0';
 			fprintf(f, "%s", outbuff);
 			i = 0;

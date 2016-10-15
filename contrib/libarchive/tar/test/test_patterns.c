@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/usr.bin/tar/test/test_patterns.c,v 1.6 2008/08/21 22:28:00 kientzle Exp $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/tar/test/test_patterns.c 232153 2012-02-25 10:58:02Z mm $");
 
 DEFINE_TEST(test_patterns)
 {

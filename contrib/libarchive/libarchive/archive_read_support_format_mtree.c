@@ -26,7 +26,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_format_mtree.c 201165 2009-12-29 05:52:13Z kientzle $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_read_support_format_mtree.c 307138 2016-10-12 10:28:22Z mm $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -301,6 +301,15 @@ get_line_size(const char *b, ssize_t avail, ssize_t *nlsize)
 	return (avail);
 }
 
+/*
+ *  <---------------- ravail --------------------->
+ *  <-- diff ------> <---  avail ----------------->
+ *                   <---- len ----------->
+ * | Previous lines | line being parsed  nl extra |
+ *                  ^
+ *                  b
+ *
+ */
 static ssize_t
 next_line(struct archive_read *a,
     const char **b, ssize_t *avail, ssize_t *ravail, ssize_t *nl)
@@ -339,7 +348,7 @@ next_line(struct archive_read *a,
 		*b += diff;
 		*avail -= diff;
 		tested = len;/* Skip some bytes we already determinated. */
-		len = get_line_size(*b, *avail, nl);
+		len = get_line_size(*b + len, *avail - len, nl);
 		if (len >= 0)
 			len += tested;
 	}

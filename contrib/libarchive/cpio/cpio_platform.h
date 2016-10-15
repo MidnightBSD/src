@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/cpio/cpio_platform.h,v 1.2 2008/12/06 07:15:42 kientzle Exp $
+ * $FreeBSD: stable/11/contrib/libarchive/cpio/cpio_platform.h 299529 2016-05-12 10:16:16Z mm $
  */
 
 /*

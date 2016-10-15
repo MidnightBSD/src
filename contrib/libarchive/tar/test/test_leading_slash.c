@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/tar/test/test_leading_slash.c 299529 2016-05-12 10:16:16Z mm $");
 
 DEFINE_TEST(test_leading_slash)
 {

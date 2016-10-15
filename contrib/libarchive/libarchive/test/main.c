@@ -60,7 +60,7 @@
  * TODO: Move this into a separate configuration header, have all test
  * suites share one copy of this file.
  */
-__FBSDID("$FreeBSD: head/lib/libarchive/test/main.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/main.c 307138 2016-10-12 10:28:22Z mm $");
 #define KNOWNREF	"test_compat_gtar_1.tar.uu"
 #define	ENVBASE "LIBARCHIVE" /* Prefix for environment variables. */
 #undef	PROGRAM              /* Testing a library, not a program. */
@@ -1292,6 +1292,11 @@ assertion_file_time(const char *file, int line,
 	switch (type) {
 	case 'a': filet_nsec = st.st_atimespec.tv_nsec; break;
 	case 'b': filet = st.st_birthtime;
+		/* FreeBSD filesystems that don't support birthtime
+		 * (e.g., UFS1) always return -1 here. */
+		if (filet == -1) {
+			return (1);
+		}
 		filet_nsec = st.st_birthtimespec.tv_nsec; break;
 	case 'm': filet_nsec = st.st_mtimespec.tv_nsec; break;
 	default: fprintf(stderr, "INTERNAL: Bad type %c for file time", type);
@@ -1431,6 +1436,31 @@ assertion_file_size(const char *file, int line, const char *pathname, long size)
 			return (1);
 	failure_start(file, line, "File %s has size %ld, expected %ld",
 	    pathname, (long)filesize, (long)size);
+	failure_finish(NULL);
+	return (0);
+}
+
+/* Verify mode of 'pathname'. */
+int
+assertion_file_mode(const char *file, int line, const char *pathname, int expected_mode)
+{
+	int mode;
+	int r;
+
+	assertion_count(file, line);
+#if defined(_WIN32) && !defined(__CYGWIN__)
+	failure_start(file, line, "assertFileMode not yet implemented for Windows");
+#else
+	{
+		struct stat st;
+		r = lstat(pathname, &st);
+		mode = (int)(st.st_mode & 0777);
+	}
+	if (r == 0 && mode == expected_mode)
+			return (1);
+	failure_start(file, line, "File %s has mode %o, expected %o",
+	    pathname, mode, expected_mode);
+#endif
 	failure_finish(NULL);
 	return (0);
 }
@@ -1577,8 +1607,12 @@ assertion_make_dir(const char *file, int line, const char *dirname, int mode)
 	if (0 == _mkdir(dirname))
 		return (1);
 #else
-	if (0 == mkdir(dirname, mode))
-		return (1);
+	if (0 == mkdir(dirname, mode)) {
+		if (0 == chmod(dirname, mode)) {
+			assertion_file_mode(file, line, dirname, mode);
+			return (1);
+		}
+	}
 #endif
 	failure_start(file, line, "Could not create directory %s", dirname);
 	failure_finish(NULL);
@@ -1627,6 +1661,11 @@ assertion_make_file(const char *file, int line,
 		failure_finish(NULL);
 		return (0);
 	}
+	if (0 != chmod(path, mode)) {
+		failure_start(file, line, "Could not chmod %s", path);
+		failure_finish(NULL);
+		return (0);
+	}
 	if (contents != NULL) {
 		ssize_t wsize;
 
@@ -1643,6 +1682,7 @@ assertion_make_file(const char *file, int line,
 		}
 	}
 	close(fd);
+	assertion_file_mode(file, line, path, mode);
 	return (1);
 #endif
 }

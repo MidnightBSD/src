@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/usr.bin/tar/test/test_version.c,v 1.2 2008/05/26 17:10:10 kientzle Exp $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/tar/test/test_version.c 305188 2016-09-01 07:53:59Z mm $");
 
 /*
  * Test that --version option works and generates reasonable output.
@@ -88,7 +88,7 @@ DEFINE_TEST(test_version)
 	if (*q == 'a' || *q == 'b' || *q == 'c' || *q == 'd')
 		++q;
 	/* Skip arbitrary third-party version numbers. */
-	while (s > 0 && (*q == ' ' || *q == '/' || *q == '.' || isalnum(*q))) {
+	while (s > 0 && (*q == ' ' || *q == '-' || *q == '/' || *q == '.' || isalnum(*q))) {
 		++q;
 		--s;
 	}

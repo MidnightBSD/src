@@ -25,7 +25,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_format_ustar.c 191579 2009-04-27 18:35:03Z kientzle $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_write_set_format_ustar.c 305188 2016-09-01 07:53:59Z mm $");
 
 
 #ifdef HAVE_ERRNO_H
@@ -307,7 +307,7 @@ archive_write_ustar_header(struct archive_write *a, struct archive_entry *entry)
 		 * case getting WCS failed. On POSIX, this is a
 		 * normal operation.
 		 */
-		if (p != NULL && p[strlen(p) - 1] != '/') {
+		if (p != NULL && p[0] != '\0' && p[strlen(p) - 1] != '/') {
 			struct archive_string as;
 
 			archive_string_init(&as);

@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/usr.bin/cpio/test/test_passthrough_dotdot.c,v 1.4 2008/08/24 06:21:00 kientzle Exp $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/cpio/test/test_passthrough_dotdot.c 228763 2011-12-21 11:13:29Z mm $");
 
 /*
  * Verify that "cpio -p .." works.

@@ -29,7 +29,7 @@
  */
 
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_write_format_zip.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_write_format_zip_file_zip64.c 299529 2016-05-12 10:16:16Z mm $");
 
 /*
  * Detailed byte-for-byte verification of the format of a zip archive

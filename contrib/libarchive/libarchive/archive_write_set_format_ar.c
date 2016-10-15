@@ -26,7 +26,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_write_set_format_ar.c 201108 2009-12-28 03:28:21Z kientzle $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_write_set_format_ar.c 248616 2013-03-22 13:36:03Z mm $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>

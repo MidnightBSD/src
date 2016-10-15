@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_fuzz.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_fuzz.c 305188 2016-09-01 07:53:59Z mm $");
 
 /*
  * This was inspired by an ISO fuzz tester written by Michal Zalewski
@@ -110,13 +110,17 @@ test_fuzz(const struct files *filesets)
 			for (i = 0; filesets[n].names[i] != NULL; ++i)
 			{
 				tmp = slurpfile(&size, filesets[n].names[i]);
-				rawimage = (char *)realloc(rawimage, oldsize + size);
+				char *newraw = (char *)realloc(rawimage, oldsize + size);
+				if (!assert(newraw != NULL))
+				{
+					free(rawimage);
+					continue;
+				}
+				rawimage = newraw;
 				memcpy(rawimage + oldsize, tmp, size);
 				oldsize += size;
 				size = oldsize;
 				free(tmp);
-				if (!assert(rawimage != NULL))
-					continue;
 			}
 		}
 		if (size == 0)

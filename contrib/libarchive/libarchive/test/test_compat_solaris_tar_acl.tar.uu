@@ -1,4 +1,4 @@
-$FreeBSD: head/lib/libarchive/test/test_compat_solaris_tar_acl.tar.uu 191576 2009-04-27 18:27:54Z kientzle $
+$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_compat_solaris_tar_acl.tar.uu 228763 2011-12-21 11:13:29Z mm $
 begin 644 test_acl_solaris.tar
 M9FEL92UW:71H+7!O<VEX+6%C;',`````````````````````````````````
 M````````````````````````````````````````````````````````````
