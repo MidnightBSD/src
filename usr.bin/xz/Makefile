@@ -23,6 +23,7 @@ SRCS=	args.c \
 	list.c \
 	main.c \
 	message.c \
+	mytime.c \
 	options.c \
 	signals.c \
 	suffix.c \
