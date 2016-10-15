@@ -326,6 +326,8 @@
     ..
     openssl
     ..
+    os
+    ..
     pcap
     ..
     protocols
