@@ -3,6 +3,8 @@ Updating Information for MidnightBSD users.
 20161015:
 	libarchive 3.2.1
 
+	xz 5.2.2
+
 20161013:
 	Sync ZFS code with Illuminos/FreeBSD 9.2. Added support for
 	feature flags, pool version 5000. This also includes some
