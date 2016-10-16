@@ -71,6 +71,7 @@ SUBDIR=	${SUBDIR_ORDERED} \
 	libdwarf \
 	libedit \
 	${_libefi} \
+	libexecinfo \
 	libexpat \
 	libfetch \
 	libftpio \
