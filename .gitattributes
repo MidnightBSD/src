@@ -18459,6 +18459,15 @@ contrib/libdispatch/testing/shims/asprintf.h svneol=native#text/plain
 contrib/libdispatch/testing/shims/fgetln.c svneol=native#text/plain
 contrib/libdispatch/testing/shims/fgetln.h svneol=native#text/plain
 contrib/libdispatch/testing/summarize.c -text
+contrib/libexecinfo/backtrace.3 svneol=native#text/plain
+contrib/libexecinfo/backtrace.c svneol=native#text/plain
+contrib/libexecinfo/builtin.c svneol=native#text/plain
+contrib/libexecinfo/execinfo.h svneol=native#text/plain
+contrib/libexecinfo/symtab.c svneol=native#text/plain
+contrib/libexecinfo/symtab.h svneol=native#text/plain
+contrib/libexecinfo/unwind.c svneol=native#text/plain
+contrib/libexecinfo/unwind.h svneol=native#text/plain
+contrib/libexecinfo/unwind_arm_ehabi_stub.c svneol=native#text/plain
 contrib/libpcap/.cvsignore -text
 contrib/libpcap/CHANGES -text
 contrib/libpcap/CREDITS -text
@@ -51939,6 +51948,7 @@ lib/libelf/libelf_msize.m4 -text
 lib/libelf/libelf_phdr.c -text
 lib/libelf/libelf_shdr.c -text
 lib/libelf/libelf_xlate.c -text
+lib/libexecinfo/Makefile svneol=native#text/plain
 lib/libexpat/Makefile -text
 lib/libexpat/expat_config.h -text
 lib/libexpat/libbsdxml.3 -text
