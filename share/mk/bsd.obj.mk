@@ -45,6 +45,8 @@ __<bsd.obj.mk>__:
 
 .if defined(MAKEOBJDIRPREFIX)
 CANONICALOBJDIR:=${MAKEOBJDIRPREFIX}${.CURDIR}
+.elif defined(MAKEOBJDIR) &&${MAKEOBJDIR:M/*} != ""
+CANONICALOBJDIR:=${MAKEOBJDIR}
 .else
 CANONICALOBJDIR:=/usr/obj${.CURDIR}
 .endif
@@ -116,6 +118,11 @@ cleanobj:
 cleanobj: clean cleandepend
 .endif
 	@if [ -L ${.CURDIR}/obj ]; then rm -f ${.CURDIR}/obj; fi
+
+# Tell bmake not to look for generated files via .PATH
+.if !empty(CLEANFILES)
+.NOPATH: ${CLEANFILES}
+.endif
 
 .if !target(clean)
 clean:
