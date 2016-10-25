@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20161025:
+	MidnightBSD 0.8.3 RELEASE
+
+	Revised patch to address a problem pointed out by
+        ahaha from Chaitin Tech.
+
 20161001:
 	MidnightBSD 0.8.2 RELEASE
 
