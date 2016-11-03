@@ -8,7 +8,6 @@
 /Makefile.in -text
 /README -text
 /acconfig.h -text
-/aclocal.m4 -text
 bin/Makefile.in -text
 bin/check/Makefile.in -text
 bin/check/check-tool.c -text
@@ -284,11 +283,8 @@ bin/tools/win32/nsec3hash.vcxproj.in -text svneol=unset#application/xml
 bin/tools/win32/nsec3hash.vcxproj.user -text svneol=unset#application/xml
 /bind.keys -text
 /config.guess -text
-/config.h.in -text
-/config.h.win32 -text
 /config.sub -text
 /config.threads.in -text
-/configure -text
 /configure.in -text
 doc/Makefile.in -text
 doc/arm/Bv9ARM-book.xml -text
