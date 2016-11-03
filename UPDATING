@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20161103:
+	OpenSSL security patch
+
+	Due to improper handling of alert packets, OpenSSL would consume an excessive
+	amount of CPU time processing undefined alert messages.
+
 20161015:
 	libarchive 3.2.1
 
