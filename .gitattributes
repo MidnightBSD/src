@@ -1184,6 +1184,11 @@ lib/lwres/unix/include/Makefile.in -text
 lib/lwres/unix/include/lwres/Makefile.in -text
 lib/lwres/unix/include/lwres/net.h -text
 lib/lwres/version.c -text
+libtool.m4/libtool.m4 -text
+libtool.m4/ltoptions.m4 -text
+libtool.m4/ltsugar.m4 -text
+libtool.m4/ltversion.m4 -text
+libtool.m4/lt~obsolete.m4 -text
 /ltmain.sh -text
 make/Makefile.in -text
 make/includes.in -text
