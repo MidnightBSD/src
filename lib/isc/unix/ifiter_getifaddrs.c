@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007-2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007-2009, 2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: ifiter_getifaddrs.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: ifiter_getifaddrs.c,v 1.13 2009/09/24 23:48:13 tbox Exp $ */
 
 /*! \file
  * \brief
@@ -159,7 +159,7 @@ internal_current(isc_interfaceiter_t *iter) {
 		namelen = sizeof(iter->current.name) - 1;
 
 	memset(iter->current.name, 0, sizeof(iter->current.name));
-	memcpy(iter->current.name, ifa->ifa_name, namelen);
+	memmove(iter->current.name, ifa->ifa_name, namelen);
 
 	iter->current.flags = 0;
 

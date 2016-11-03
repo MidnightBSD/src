@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009, 2010, 2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2009, 2010, 2012, 2013  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: namespace.h,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
+/* $Id$ */
 
 #ifndef ISCAPI_NAMESPACE_H
 #define ISCAPI_NAMESPACE_H 1
@@ -104,6 +104,7 @@
 #define isc_socket_sendv isc__socket_sendv
 #define isc_socket_sendtov isc__socket_sendtov
 #define isc_socket_sendto2 isc__socket_sendto2
+#define isc_socket_sendtov2 isc__socket_sendtov2
 #define isc_socket_cleanunix isc__socket_cleanunix
 #define isc_socket_permunix isc__socket_permunix
 #define isc_socket_bind isc__socket_bind

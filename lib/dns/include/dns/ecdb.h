@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: ecdb.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: ecdb.h,v 1.3 2009/09/02 23:48:02 tbox Exp $ */
 
 #ifndef DNS_ECDB_H
 #define DNS_ECDB_H 1

@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: acache.c,v 1.1.1.2 2013-08-22 22:51:58 laffer1 Exp $ */
+/* $Id: acache.c,v 1.22 2008/02/07 23:46:54 tbox Exp $ */
 
 #include <config.h>
 
@@ -1669,12 +1669,13 @@ dns_acache_cancelentry(dns_acacheentry_t *entry) {
 	REQUIRE(DNS_ACACHEENTRY_VALID(entry));
 
 	acache = entry->acache;
-	callback_active = ISC_TF(entry->cbarg != NULL);
 
 	INSIST(DNS_ACACHE_VALID(entry->acache));
 
 	LOCK(&acache->lock);
 	ACACHE_LOCK(&acache->entrylocks[entry->locknum], isc_rwlocktype_write);
+
+	callback_active = ISC_TF(entry->cbarg != NULL);
 
 	/*
 	 * Release dependencies stored in this entry as much as possible.

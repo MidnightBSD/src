@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: stats.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id$ */
 
 #ifndef DNS_STATS_H
 #define DNS_STATS_H 1

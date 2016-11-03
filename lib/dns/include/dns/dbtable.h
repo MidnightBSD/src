@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dbtable.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: dbtable.h,v 1.23 2007/06/19 23:47:16 tbox Exp $ */
 
 #ifndef DNS_DBTABLE_H
 #define DNS_DBTABLE_H 1

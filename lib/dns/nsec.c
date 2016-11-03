@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007-2009, 2011-2013  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007-2009, 2011-2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001, 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: nsec.c,v 1.1.1.2 2013-08-22 22:51:59 laffer1 Exp $ */
+/* $Id$ */
 
 /*! \file */
 
@@ -63,7 +63,7 @@ bit_isset(unsigned char *array, unsigned int index) {
 	shift = 7 - (index % 8);
 	mask = 1 << shift;
 
-	return ((byte & mask) != 0);
+	return (ISC_TF(byte & mask));
 }
 
 isc_result_t
@@ -83,7 +83,7 @@ dns_nsec_buildrdata(dns_db_t *db, dns_dbversion_t *version,
 
 	memset(buffer, 0, DNS_NSEC_BUFFERSIZE);
 	dns_name_toregion(target, &r);
-	memcpy(buffer, r.base, r.length);
+	memmove(buffer, r.base, r.length);
 	r.base = buffer;
 	/*
 	 * Use the end of the space for a raw bitmap leaving enough
@@ -146,7 +146,7 @@ dns_nsec_buildrdata(dns_db_t *db, dns_dbversion_t *version,
 		memmove(&nsec_bits[2], &bm[window * 32], octet + 1);
 		nsec_bits += 3 + octet;
 	}
-	r.length = nsec_bits - r.base;
+	r.length = (unsigned int)(nsec_bits - r.base);
 	INSIST(r.length <= DNS_NSEC_BUFFERSIZE);
 	dns_rdata_fromregion(rdata,
 			     dns_db_class(db),
@@ -421,7 +421,7 @@ dns_nsec_noexistnodata(dns_rdatatype_t type, dns_name_t *name,
 						  nlabels, &common);
 		}
 		result = dns_name_concatenate(dns_wildcardname, &common,
-					       wild, NULL);
+					      wild, NULL);
 		if (result != ISC_R_SUCCESS) {
 			dns_rdata_freestruct(&nsec);
 			(*logit)(arg, ISC_LOG_DEBUG(3),

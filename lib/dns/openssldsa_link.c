@@ -29,7 +29,7 @@
  * IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: openssldsa_link.c,v 1.1.1.2 2013-08-22 22:51:59 laffer1 Exp $ */
+/* $Id$ */
 
 #ifdef OPENSSL
 #ifndef USE_EVP

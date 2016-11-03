@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: proforma.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: proforma.c,v 1.38 2009/12/04 22:06:37 tbox Exp $ */
 
 #ifndef RDATA_GENERIC_#_#_C
 #define RDATA_GENERIC_#_#_C

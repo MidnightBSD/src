@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dst_openssl.h,v 1.1.1.2 2013-08-22 22:51:58 laffer1 Exp $ */
+/* $Id$ */
 
 #ifndef DST_OPENSSL_H
 #define DST_OPENSSL_H 1

@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: version.c,v 1.1.1.1 2013-01-30 01:44:59 laffer1 Exp $ */
+/* $Id: version.c,v 1.15 2007/06/19 23:47:16 tbox Exp $ */
 
 /*! \file */
 

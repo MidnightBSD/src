@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2001, 2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: getaddresses.c,v 1.1.1.1 2013-01-30 01:44:59 laffer1 Exp $ */
+/* $Id: getaddresses.c,v 1.22 2007/06/19 23:47:16 tbox Exp $ */
 
 /*! \file */
 
@@ -107,7 +107,7 @@ bind9_getaddresses(const char *hostname, in_port_t port,
 
 				result = isc_netscope_pton(AF_INET6, d + 1,
 							   &in6, &zone);
-				    
+
 				if (result != ISC_R_SUCCESS)
 					return (result);
 #else
@@ -129,7 +129,6 @@ bind9_getaddresses(const char *hostname, in_port_t port,
 
 			*addrcount = 1;
 			return (ISC_R_SUCCESS);
-			
 		}
 	}
 #ifdef USE_GETADDRINFO

@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: stdtime.h,v 1.1.1.1 2013-01-30 01:45:01 laffer1 Exp $ */
+/* $Id$ */
 
 #ifndef ISC_STDTIME_H
 #define ISC_STDTIME_H 1

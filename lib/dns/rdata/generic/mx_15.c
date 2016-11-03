@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: mx_15.c,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
+/* $Id: mx_15.c,v 1.58 2009/12/04 22:06:37 tbox Exp $ */
 
 /* reviewed: Wed Mar 15 18:05:46 PST 2000 by brister */
 

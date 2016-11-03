@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -14,8 +14,6 @@
  * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
-
-/* $Id: nslookup.c,v 1.1.1.1 2013-01-30 01:44:56 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -434,8 +432,7 @@ printmessage(dig_query_t *query, dns_message_t *msg, isc_boolean_t headers) {
 		dns_name_format(query->lookup->name,
 				nametext, sizeof(nametext));
 		printf("** server can't find %s: %s\n",
-		       (msg->rcode != dns_rcode_nxdomain) ? nametext :
-		       query->lookup->textname, rcode_totext(msg->rcode));
+		       nametext, rcode_totext(msg->rcode));
 		debug("returning with rcode == 0");
 
 		/* the lookup failed */
@@ -494,8 +491,8 @@ show_settings(isc_boolean_t full, isc_boolean_t serv_only) {
 	printf("  %s\t\t%s\n",
 	       usesearch ? "search" : "nosearch",
 	       recurse ? "recurse" : "norecurse");
-	printf("  timeout = %d\t\tretry = %d\tport = %d\n",
-	       timeout, tries, port);
+	printf("  timeout = %d\t\tretry = %d\tport = %d\tndots = %d\n",
+	       timeout, tries, port, ndots);
 	printf("  querytype = %-8s\tclass = %s\n", deftype, defclass);
 	printf("  srchlist = ");
 	for (listent = ISC_LIST_HEAD(search_list);
@@ -564,6 +561,19 @@ set_tries(const char *value) {
 	isc_result_t result = parse_uint(&n, value, INT_MAX, "tries");
 	if (result == ISC_R_SUCCESS)
 		tries = n;
+}
+
+static void
+set_ndots(const char *value) {
+	isc_uint32_t n;
+	isc_result_t result = parse_uint(&n, value, 128, "ndots");
+	if (result == ISC_R_SUCCESS)
+		ndots = n;
+}
+
+static void
+version(void) {
+	fputs("nslookup " VERSION "\n", stderr);
 }
 
 static void
@@ -646,6 +656,8 @@ setoption(char *opt) {
 		nofail=ISC_FALSE;
 	} else if (strncasecmp(opt, "nofail", 3) == 0) {
 		nofail=ISC_TRUE;
+	} else if (strncasecmp(opt, "ndots=", 6) == 0) {
+		set_ndots(&opt[6]);
 	} else {
 		printf("*** Invalid option: %s\n", opt);
 	}
@@ -775,9 +787,12 @@ parse_args(int argc, char **argv) {
 	for (argc--, argv++; argc > 0; argc--, argv++) {
 		debug("main parsing %s", argv[0]);
 		if (argv[0][0] == '-') {
-			if (argv[0][1] != 0)
+			if (strncasecmp(argv[0], "-ver", 4) == 0) {
+				version();
+				exit(0);
+			} else if (argv[0][1] != 0) {
 				setoption(&argv[0][1]);
-			else
+			} else
 				have_lookup = ISC_TRUE;
 		} else {
 			if (!have_lookup) {

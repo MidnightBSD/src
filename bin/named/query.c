@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2013  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: query.c,v 1.1.1.2 2013-08-22 22:51:52 laffer1 Exp $ */
+/* $Id: query.c,v 1.353.8.24 2012/02/07 01:14:39 marka Exp $ */
 
 /*! \file */
 
@@ -773,7 +773,7 @@ query_validatezonedb(ns_client_t *client, dns_name_t *name,
 		if (queryonacl == NULL)
 			queryonacl = client->view->queryonacl;
 
-		result = ns_client_checkaclsilent(client, NULL,
+		result = ns_client_checkaclsilent(client, &client->destaddr,
 						  queryonacl, ISC_TRUE);
 		if ((options & DNS_GETDB_NOLOG) == 0 &&
 		    result != ISC_R_SUCCESS)
@@ -2237,7 +2237,7 @@ query_dns64(ns_client_t *client, dns_name_t **namep, dns_rdataset_t *rdataset,
 		     dns64 != NULL; dns64 = dns_dns64_next(dns64)) {
 
 			dns_rdataset_current(rdataset, &rdata);
-			isc__buffer_availableregion(buffer, &r);
+			isc_buffer_availableregion(buffer, &r);
 			INSIST(r.length >= 16);
 			result = dns_dns64_aaaafroma(dns64, &netaddr,
 						     client->signer,
@@ -2477,11 +2477,12 @@ query_addrrset(ns_client_t *client, dns_name_t **namep,
 	if (result == ISC_R_SUCCESS) {
 		/*
 		 * We've already got an RRset of the given name and type.
-		 * There's nothing else to do;
 		 */
 		CTRACE("query_addrrset: dns_message_findname succeeded: done");
 		if (dbuf != NULL)
 			query_releasename(client, namep);
+		if ((rdataset->attributes & DNS_RDATASETATTR_REQUIRED) != 0)
+			mrdataset->attributes |= DNS_RDATASETATTR_REQUIRED;
 		return;
 	} else if (result == DNS_R_NXDOMAIN) {
 		/*
@@ -2521,7 +2522,8 @@ query_addrrset(ns_client_t *client, dns_name_t **namep,
 
 static inline isc_result_t
 query_addsoa(ns_client_t *client, dns_db_t *db, dns_dbversion_t *version,
-	     unsigned int override_ttl, isc_boolean_t isassociated)
+	     unsigned int override_ttl, isc_boolean_t isassociated,
+	     dns_section_t section)
 {
 	dns_name_t *name;
 	dns_dbnode_t *node;
@@ -2624,8 +2626,11 @@ query_addsoa(ns_client_t *client, dns_db_t *db, dns_dbversion_t *version,
 			sigrdatasetp = &sigrdataset;
 		else
 			sigrdatasetp = NULL;
+
+		if (section == DNS_SECTION_ADDITIONAL)
+			rdataset->attributes |= DNS_RDATASETATTR_REQUIRED;
 		query_addrrset(client, &name, &rdataset, sigrdatasetp, NULL,
-			       DNS_SECTION_AUTHORITY);
+			       section);
 	}
 
  cleanup:
@@ -4863,7 +4868,7 @@ rpz_add_cname(ns_client_t *client, dns_rpz_st_t *st,
 	 * response policy zone cannot verify.
 	 */
 	client->attributes &= ~(NS_CLIENTATTR_WANTDNSSEC |
-				DNS_MESSAGEFLAG_AD);
+				NS_CLIENTATTR_WANTAD);
 	return (ISC_R_SUCCESS);
 }
 
@@ -4900,12 +4905,12 @@ rdata_tonetaddr(const dns_rdata_t *rdata, isc_netaddr_t *netaddr) {
 	switch (rdata->type) {
 	case dns_rdatatype_a:
 		INSIST(rdata->length == 4);
-		memcpy(&ina.s_addr, rdata->data, 4);
+		memmove(&ina.s_addr, rdata->data, 4);
 		isc_netaddr_fromin(netaddr, &ina);
 		return (ISC_R_SUCCESS);
 	case dns_rdatatype_aaaa:
 		INSIST(rdata->length == 16);
-		memcpy(in6a.s6_addr, rdata->data, 16);
+		memmove(in6a.s6_addr, rdata->data, 16);
 		isc_netaddr_fromin6(netaddr, &in6a);
 		return (ISC_R_SUCCESS);
 	default:
@@ -5055,7 +5060,7 @@ answer_in_glue(ns_client_t *client, dns_rdatatype_t qtype) {
 		ISC_LIST_PREPEND(msg->sections[section], name, link);
 		ISC_LIST_UNLINK(name->list, rdataset, link);
 		ISC_LIST_PREPEND(name->list, rdataset, link);
-		rdataset->attributes |= DNS_RDATASETATTR_REQUIREDGLUE;
+		rdataset->attributes |= DNS_RDATASETATTR_REQUIRED;
 	}
 }
 
@@ -5178,8 +5183,7 @@ query_findclosestnsec3(dns_name_t *qname, dns_db_t *db,
 	dns_fixedname_t fixed;
 	dns_hash_t hash;
 	dns_name_t name;
-	int order;
-	unsigned int count;
+	unsigned int skip = 0, labels;
 	dns_rdata_nsec3_t nsec3;
 	dns_rdata_t rdata = DNS_RDATA_INIT;
 	isc_boolean_t optout;
@@ -5192,6 +5196,7 @@ query_findclosestnsec3(dns_name_t *qname, dns_db_t *db,
 
 	dns_name_init(&name, NULL);
 	dns_name_clone(qname, &name);
+	labels = dns_name_countlabels(&name);
 
 	/*
 	 * Map unknown algorithm to known value.
@@ -5223,13 +5228,14 @@ query_findclosestnsec3(dns_name_t *qname, dns_db_t *db,
 		dns_rdata_reset(&rdata);
 		optout = ISC_TF((nsec3.flags & DNS_NSEC3FLAG_OPTOUT) != 0);
 		if (found != NULL && optout &&
-		    dns_name_fullcompare(&name, dns_db_origin(db), &order,
-					 &count) == dns_namereln_subdomain) {
+		    dns_name_issubdomain(&name, dns_db_origin(db)))
+		{
 			dns_rdataset_disassociate(rdataset);
 			if (dns_rdataset_isassociated(sigrdataset))
 				dns_rdataset_disassociate(sigrdataset);
-			count = dns_name_countlabels(&name) - 1;
-			dns_name_getlabelsequence(&name, 1, count, &name);
+			skip++;
+			dns_name_getlabelsequence(qname, skip, labels - skip,
+						  &name);
 			ns_client_log(client, DNS_LOGCATEGORY_DNSSEC,
 				      NS_LOGMODULE_QUERY, ISC_LOG_DEBUG(3),
 				      "looking for closest provable encloser");
@@ -5247,7 +5253,11 @@ query_findclosestnsec3(dns_name_t *qname, dns_db_t *db,
 		ns_client_log(client, DNS_LOGCATEGORY_DNSSEC,
 			      NS_LOGMODULE_QUERY, ISC_LOG_WARNING,
 			      "expected covering NSEC3, got an exact match");
-	if (found != NULL)
+	if (found == qname) {
+		if (skip != 0U)
+			dns_name_getlabelsequence(qname, skip, labels - skip,
+						  found);
+	} else if (found != NULL)
 		dns_name_copy(&name, found, NULL);
 	return;
 }
@@ -5387,6 +5397,10 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 	isc_boolean_t resuming;
 	int line = -1;
 	isc_boolean_t dns64_exclude, dns64;
+	isc_boolean_t nxrewrite = ISC_FALSE;
+	isc_boolean_t associated;
+	dns_section_t section;
+	dns_ttl_t ttl;
 
 	CTRACE("query_find");
 
@@ -5730,9 +5744,11 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 			switch (rpz_st->m.policy) {
 			case DNS_RPZ_POLICY_NXDOMAIN:
 				result = DNS_R_NXDOMAIN;
+				nxrewrite = ISC_TRUE;
 				break;
 			case DNS_RPZ_POLICY_NODATA:
 				result = DNS_R_NXRRSET;
+				nxrewrite = ISC_TRUE;
 				break;
 			case DNS_RPZ_POLICY_RECORD:
 				result = rpz_st->m.result;
@@ -5791,7 +5807,8 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 			 * response policy zone cannot verify.
 			 */
 			client->attributes &= ~(NS_CLIENTATTR_WANTDNSSEC |
-						DNS_MESSAGEFLAG_AD);
+						NS_CLIENTATTR_WANTAD);
+			client->message->flags &= ~DNS_MESSAGEFLAG_AD;
 			query_putrdataset(client, &sigrdataset);
 			rpz_st->q.is_zone = is_zone;
 			is_zone = ISC_TRUE;
@@ -6275,15 +6292,22 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 			 */
 			query_releasename(client, &fname);
 		}
+
 		/*
-		 * Add SOA.
+		 * Add SOA to the additional section if generated by a RPZ
+		 * rewrite.
 		 */
+		associated = dns_rdataset_isassociated(rdataset);
+		section = nxrewrite ? DNS_SECTION_ADDITIONAL :
+				      DNS_SECTION_AUTHORITY;
+
 		result = query_addsoa(client, db, version, ISC_UINT32_MAX,
-				      dns_rdataset_isassociated(rdataset));
+				      associated, section);
 		if (result != ISC_R_SUCCESS) {
 			QUERY_ERROR(result);
 			goto cleanup;
 		}
+
 		/*
 		 * Add NSEC record if we found one.
 		 */
@@ -6318,20 +6342,23 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 		}
 
 		/*
-		 * Add SOA.  If the query was for a SOA record force the
+		 * Add SOA to the additional section if generated by a
+		 * RPZ rewrite.
+		 *
+		 * If the query was for a SOA record force the
 		 * ttl to zero so that it is possible for clients to find
 		 * the containing zone of an arbitrary name with a stub
 		 * resolver and not have it cached.
 		 */
-		if (qtype == dns_rdatatype_soa &&
-		    zone != NULL &&
-		    dns_zone_getzeronosoattl(zone))
-			result = query_addsoa(client, db, version, 0,
-					  dns_rdataset_isassociated(rdataset));
-		else
-			result = query_addsoa(client, db, version,
-					      ISC_UINT32_MAX,
-					  dns_rdataset_isassociated(rdataset));
+		associated = dns_rdataset_isassociated(rdataset);
+		section = nxrewrite ? DNS_SECTION_ADDITIONAL :
+				      DNS_SECTION_AUTHORITY;
+		ttl = ISC_UINT32_MAX;
+		if (!nxrewrite && qtype == dns_rdatatype_soa &&
+		    zone != NULL && dns_zone_getzeronosoattl(zone))
+			ttl = 0;
+		result = query_addsoa(client, db, version, ttl, associated,
+				      section);
 		if (result != ISC_R_SUCCESS) {
 			QUERY_ERROR(result);
 			goto cleanup;
@@ -6814,7 +6841,8 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 					goto addauth;
 				}
 
-				if (dns_db_issecure(db)) {
+				if (qtype == dns_rdatatype_rrsig &&
+				    dns_db_issecure(db)) {
 					char namebuf[DNS_NAME_FORMATSIZE];
 					dns_name_format(client->query.qname,
 							namebuf,
@@ -6994,7 +7022,8 @@ query_find(ns_client_t *client, dns_fetchevent_t *event, dns_rdatatype_t qtype)
 					 * Add a fake SOA record.
 					 */
 					(void)query_addsoa(client, db, version,
-							   600, ISC_FALSE);
+							   600, ISC_FALSE,
+							DNS_SECTION_AUTHORITY);
 					goto cleanup;
 				}
 #endif

@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: tsigconf.c,v 1.1.1.2 2013-08-22 22:51:52 laffer1 Exp $ */
+/* $Id: tsigconf.c,v 1.35 2011/01/11 23:47:12 tbox Exp $ */
 
 /*! \file */
 

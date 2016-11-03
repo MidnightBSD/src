@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: lwpacket.h,v 1.1.1.1 2013-01-30 01:45:01 laffer1 Exp $ */
+/* $Id: lwpacket.h,v 1.24 2007/06/19 23:47:23 tbox Exp $ */
 
 #ifndef LWRES_LWPACKET_H
 #define LWRES_LWPACKET_H 1

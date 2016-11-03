@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: callbacks.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id$ */
 
 #ifndef DNS_CALLBACKS_H
 #define DNS_CALLBACKS_H 1

@@ -1,5 +1,5 @@
 /*
- * Portions Copyright (C) 2004-2013  Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (C) 2004-2014  Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -29,7 +29,7 @@
  * IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dnssec-keygen.c,v 1.1.1.2 2013-08-22 22:51:51 laffer1 Exp $ */
+/* $Id: dnssec-keygen.c,v 1.115.14.4 2011/11/30 00:51:38 marka Exp $ */
 
 /*! \file */
 
@@ -394,61 +394,41 @@ main(int argc, char **argv) {
 			if (setpub || unsetpub)
 				fatal("-P specified more than once");
 
-			if (strcasecmp(isc_commandline_argument, "none")) {
-				setpub = ISC_TRUE;
-				publish = strtotime(isc_commandline_argument,
-						    now, now);
-			} else {
-				unsetpub = ISC_TRUE;
-			}
+			publish = strtotime(isc_commandline_argument,
+					    now, now, &setpub);
+			unsetpub = !setpub;
 			break;
 		case 'A':
 			if (setact || unsetact)
 				fatal("-A specified more than once");
 
-			if (strcasecmp(isc_commandline_argument, "none")) {
-				setact = ISC_TRUE;
-				activate = strtotime(isc_commandline_argument,
-						     now, now);
-			} else {
-				unsetact = ISC_TRUE;
-			}
+			activate = strtotime(isc_commandline_argument,
+					     now, now, &setact);
+			unsetact = !setact;
 			break;
 		case 'R':
 			if (setrev || unsetrev)
 				fatal("-R specified more than once");
 
-			if (strcasecmp(isc_commandline_argument, "none")) {
-				setrev = ISC_TRUE;
-				revoke = strtotime(isc_commandline_argument,
-						   now, now);
-			} else {
-				unsetrev = ISC_TRUE;
-			}
+			revoke = strtotime(isc_commandline_argument,
+					   now, now, &setrev);
+			unsetrev = !setrev;
 			break;
 		case 'I':
 			if (setinact || unsetinact)
 				fatal("-I specified more than once");
 
-			if (strcasecmp(isc_commandline_argument, "none")) {
-				setinact = ISC_TRUE;
-				inactive = strtotime(isc_commandline_argument,
-						     now, now);
-			} else {
-				unsetinact = ISC_TRUE;
-			}
+			inactive = strtotime(isc_commandline_argument,
+					     now, now, &setinact);
+			unsetinact = !setinact;
 			break;
 		case 'D':
 			if (setdel || unsetdel)
 				fatal("-D specified more than once");
 
-			if (strcasecmp(isc_commandline_argument, "none")) {
-				setdel = ISC_TRUE;
-				delete = strtotime(isc_commandline_argument,
-						   now, now);
-			} else {
-				unsetdel = ISC_TRUE;
-			}
+			delete = strtotime(isc_commandline_argument,
+					   now, now, &setdel);
+			unsetdel = !setdel;
 			break;
 		case 'S':
 			predecessor = isc_commandline_argument;
@@ -646,9 +626,9 @@ main(int argc, char **argv) {
 					    mctx, &prevkey);
 		if (ret != ISC_R_SUCCESS)
 			fatal("Invalid keyfile %s: %s",
-			      filename, isc_result_totext(ret));
+			      predecessor, isc_result_totext(ret));
 		if (!dst_key_isprivate(prevkey))
-			fatal("%s is not a private key", filename);
+			fatal("%s is not a private key", predecessor);
 
 		name = dst_key_name(prevkey);
 		alg = dst_key_alg(prevkey);
@@ -935,9 +915,9 @@ main(int argc, char **argv) {
 
 			if (setpub)
 				dst_key_settime(key, DST_TIME_PUBLISH, publish);
-			else if (setact)
+			else if (setact && !unsetpub)
 				dst_key_settime(key, DST_TIME_PUBLISH,
-						activate);
+						activate - prepub);
 			else if (!genonly && !unsetpub)
 				dst_key_settime(key, DST_TIME_PUBLISH, now);
 

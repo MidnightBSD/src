@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009, 2012, 2013  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2009, 2012-2014  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: getaddrinfo.c,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
+/* $Id: getaddrinfo.c,v 1.3 2009/09/02 23:48:02 tbox Exp $ */
 
 /*! \file */
 
@@ -178,6 +178,7 @@ static int add_ipv6(const char *hostname, int flags, struct addrinfo **aip,
 		    int socktype, int port);
 static void set_order(int, int (**)(const char *, int, struct addrinfo **,
 				    int, int));
+static void _freeaddrinfo(struct addrinfo *ai);
 
 #define FOUND_IPV4	0x1
 #define FOUND_IPV6	0x2
@@ -339,7 +340,7 @@ getaddrinfo(const char *hostname, const char *servname,
 		if (family == AF_INET6 || family == 0) {
 			ai = ai_alloc(AF_INET6, sizeof(struct sockaddr_in6));
 			if (ai == NULL) {
-				freeaddrinfo(ai_list);
+				_freeaddrinfo(ai_list);
 				return (EAI_MEMORY);
 			}
 			ai->ai_socktype = socktype;
@@ -409,7 +410,7 @@ getaddrinfo(const char *hostname, const char *servname,
 				 * Convert to a V4 mapped address.
 				 */
 				struct in6_addr *a6 = (struct in6_addr *)abuf;
-				memcpy(&a6->s6_addr[12], &a6->s6_addr[0], 4);
+				memmove(&a6->s6_addr[12], &a6->s6_addr[0], 4);
 				memset(&a6->s6_addr[10], 0xff, 2);
 				memset(&a6->s6_addr[0], 0, 10);
 				goto inet6_addr;
@@ -446,7 +447,7 @@ getaddrinfo(const char *hostname, const char *servname,
 			ai_list = ai;
 			ai->ai_socktype = socktype;
 			SIN(ai->ai_addr)->sin_port = port;
-			memcpy((char *)ai->ai_addr + addroff, abuf, addrsize);
+			memmove((char *)ai->ai_addr + addroff, abuf, addrsize);
 			if ((flags & AI_CANONNAME) != 0) {
 #ifdef IRS_HAVE_SIN6_SCOPE_ID
 				if (ai->ai_family == AF_INET6)
@@ -458,7 +459,7 @@ getaddrinfo(const char *hostname, const char *servname,
 						NI_NUMERICHOST) == 0) {
 					ai->ai_canonname = strdup(nbuf);
 					if (ai->ai_canonname == NULL) {
-						freeaddrinfo(ai);
+						_freeaddrinfo(ai);
 						return (EAI_MEMORY);
 					}
 				} else {
@@ -481,7 +482,7 @@ getaddrinfo(const char *hostname, const char *servname,
 					     socktype, port);
 			if (err != 0) {
 				if (ai_list != NULL) {
-					freeaddrinfo(ai_list);
+					_freeaddrinfo(ai_list);
 					ai_list = NULL;
 				}
 				break;
@@ -789,8 +790,8 @@ process_answer(isc_task_t *task, isc_event_t *event) {
 					RUNTIME_CHECK(result == ISC_R_SUCCESS);
 					SIN(ai->ai_addr)->sin_port =
 						resstate->head->ai_port;
-					memcpy(&SIN(ai->ai_addr)->sin_addr,
-					       &rdata_a.in_addr, 4);
+					memmove(&SIN(ai->ai_addr)->sin_addr,
+						&rdata_a.in_addr, 4);
 					dns_rdata_freestruct(&rdata_a);
 					break;
 				case AF_INET6:
@@ -800,8 +801,8 @@ process_answer(isc_task_t *task, isc_event_t *event) {
 					RUNTIME_CHECK(result == ISC_R_SUCCESS);
 					SIN6(ai->ai_addr)->sin6_port =
 						resstate->head->ai_port;
-					memcpy(&SIN6(ai->ai_addr)->sin6_addr,
-					       &rdata_aaaa.in6_addr, 16);
+					memmove(&SIN6(ai->ai_addr)->sin6_addr,
+						&rdata_aaaa.in6_addr, 16);
 					dns_rdata_freestruct(&rdata_aaaa);
 					break;
 				}
@@ -831,7 +832,7 @@ process_answer(isc_task_t *task, isc_event_t *event) {
 			error = EAI_NONAME;
 	} else {
 		if (trans->ai_sentinel.ai_next != NULL) {
-			freeaddrinfo(trans->ai_sentinel.ai_next);
+			_freeaddrinfo(trans->ai_sentinel.ai_next);
 			trans->ai_sentinel.ai_next = NULL;
 		}
 	}
@@ -1123,14 +1124,14 @@ add_ipv4(const char *hostname, int flags, struct addrinfo **aip,
 
 	ai = ai_clone(*aip, AF_INET); /* don't use ai_clone() */
 	if (ai == NULL) {
-		freeaddrinfo(*aip);
+		_freeaddrinfo(*aip);
 		return (EAI_MEMORY);
 	}
 
 	*aip = ai;
 	ai->ai_socktype = socktype;
 	SIN(ai->ai_addr)->sin_port = port;
-	memcpy(&SIN(ai->ai_addr)->sin_addr, v4_loop, 4);
+	memmove(&SIN(ai->ai_addr)->sin_addr, v4_loop, 4);
 
 	return (0);
 }
@@ -1153,7 +1154,7 @@ add_ipv6(const char *hostname, int flags, struct addrinfo **aip,
 	*aip = ai;
 	ai->ai_socktype = socktype;
 	SIN6(ai->ai_addr)->sin6_port = port;
-	memcpy(&SIN6(ai->ai_addr)->sin6_addr, v6_loop, 16);
+	memmove(&SIN6(ai->ai_addr)->sin6_addr, v6_loop, 16);
 
 	return (0);
 }
@@ -1161,6 +1162,11 @@ add_ipv6(const char *hostname, int flags, struct addrinfo **aip,
 /*% Free address info. */
 void
 freeaddrinfo(struct addrinfo *ai) {
+	_freeaddrinfo(ai);
+}
+
+static void
+_freeaddrinfo(struct addrinfo *ai) {
 	struct addrinfo *ai_next;
 
 	while (ai != NULL) {

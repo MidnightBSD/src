@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: sshfp_44.c,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
+/* $Id$ */
 
 /* RFC 4255 */
 

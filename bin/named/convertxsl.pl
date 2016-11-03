@@ -14,12 +14,12 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: convertxsl.pl,v 1.1.1.1 2013-01-30 01:44:56 laffer1 Exp $
+# $Id: convertxsl.pl,v 1.14 2008/07/17 23:43:26 jinmei Exp $
 
 use strict;
 use warnings;
 
-my $rev = '$Id: convertxsl.pl,v 1.1.1.1 2013-01-30 01:44:56 laffer1 Exp $';
+my $rev = '$Id: convertxsl.pl,v 1.14 2008/07/17 23:43:26 jinmei Exp $';
 $rev =~ s/\$//g;
 $rev =~ s/,v//g;
 $rev =~ s/Id: //;

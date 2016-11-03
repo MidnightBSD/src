@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: md5.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: md5.h,v 1.20 2010/01/07 23:48:54 tbox Exp $ */
 
 /*! \file isc/md5.h
  * \brief This is the header file for the MD5 message-digest algorithm.

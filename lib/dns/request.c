@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: request.c,v 1.1.1.2 2013-08-22 22:51:59 laffer1 Exp $ */
+/* $Id$ */
 
 /*! \file */
 

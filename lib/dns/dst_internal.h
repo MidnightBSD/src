@@ -1,5 +1,5 @@
 /*
- * Portions Copyright (C) 2004-2012  Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (C) 2004-2013  Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (C) 2000-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -29,7 +29,7 @@
  * IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dst_internal.h,v 1.1.1.2 2013-08-22 22:51:58 laffer1 Exp $ */
+/* $Id$ */
 
 #ifndef DST_DST_INTERNAL_H
 #define DST_DST_INTERNAL_H 1
@@ -125,6 +125,8 @@ struct dst_key {
 	isc_boolean_t	timeset[DST_MAX_TIMES + 1];  /*%< data set? */
 	isc_stdtime_t	nums[DST_MAX_NUMERIC + 1];   /*%< numeric metadata */
 	isc_boolean_t	numset[DST_MAX_NUMERIC + 1]; /*%< data set? */
+	isc_boolean_t 	inactive;      /*%< private key not present as it is
+					    inactive */
 
 	int		fmt_major;     /*%< private key format, major version */
 	int		fmt_minor;     /*%< private key format, minor version */

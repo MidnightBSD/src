@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2013  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -14,8 +14,6 @@
  * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
-
-/* $Id: main.c,v 1.1.1.2 2013-08-22 22:51:52 laffer1 Exp $ */
 
 /*! \file */
 
@@ -390,7 +388,7 @@ set_flags(const char *arg, struct flag_def *defs, unsigned int *ret) {
 		int arglen;
 		if (end == NULL)
 			end = arg + strlen(arg);
-		arglen = end - arg;
+		arglen = (int)(end - arg);
 		for (def = defs; def->name != NULL; def++) {
 			if (arglen == (int)strlen(def->name) &&
 			    memcmp(arg, def->name, arglen) == 0) {
@@ -410,15 +408,16 @@ static void
 parse_command_line(int argc, char *argv[]) {
 	int ch;
 	int port;
+	const char *p;
 	isc_boolean_t disable6 = ISC_FALSE;
 	isc_boolean_t disable4 = ISC_FALSE;
 
 	save_command_line(argc, argv);
 
+	/* PLEASE keep options synchronized when main is hooked! */
+#define CMDLINE_FLAGS "46c:C:d:E:fFgi:lm:n:N:p:P:sS:t:T:u:vVx:"
 	isc_commandline_errprint = ISC_FALSE;
-	while ((ch = isc_commandline_parse(argc, argv,
-					   "46c:C:d:E:fFgi:lm:n:N:p:P:"
-					   "sS:t:T:u:vVx:")) != -1) {
+	while ((ch = isc_commandline_parse(argc, argv, CMDLINE_FLAGS)) != -1) {
 		switch (ch) {
 		case '4':
 			if (disable4)
@@ -544,8 +543,25 @@ parse_command_line(int argc, char *argv[]) {
 			printf("%s %s", ns_g_product, ns_g_version);
 			if (*ns_g_description != 0)
 				printf(" %s", ns_g_description);
-			printf(" <id:%s> built with %s\n", ns_g_srcid,
-				ns_g_configargs);
+			printf(" <id:%s> built by %s with %s\n", ns_g_srcid,
+			       ns_g_builder, ns_g_configargs);
+#ifdef __clang__
+			printf("compiled by CLANG %s\n", __VERSION__);
+#else
+#if defined(__ICC) || defined(__INTEL_COMPILER)
+			printf("compiled by ICC %s\n", __VERSION__);
+#else
+#ifdef __GNUC__
+			printf("compiled by GCC %s\n", __VERSION__);
+#endif
+#endif
+#endif
+#ifdef _MSC_VER
+			printf("compiled by MSVC %d\n", _MSC_VER);
+#endif
+#ifdef __SUNPRO_C
+			printf("compiled by Solaris Studio %x\n", __SUNPRO_C);
+#endif
 #ifdef OPENSSL
 			printf("using OpenSSL version: %s\n",
 			       OPENSSL_VERSION_TEXT);
@@ -562,8 +578,14 @@ parse_command_line(int argc, char *argv[]) {
 			usage();
 			if (isc_commandline_option == '?')
 				exit(0);
-			ns_main_earlyfatal("unknown option '-%c'",
-					   isc_commandline_option);
+			p = strchr(CMDLINE_FLAGS, isc_commandline_option);
+			if (p == NULL || *++p != ':')
+				ns_main_earlyfatal("unknown option '-%c'",
+						   isc_commandline_option);
+			else
+				ns_main_earlyfatal("option '-%c' requires "
+						   "an argument",
+						   isc_commandline_option);
 			/* FALLTHROUGH */
 		default:
 			ns_main_earlyfatal("parsing options returned %d", ch);
@@ -669,7 +691,7 @@ destroy_managers(void) {
 }
 
 static void
-dump_symboltable() {
+dump_symboltable(void) {
 	int i;
 	isc_result_t result;
 	const char *fname;
@@ -1025,6 +1047,8 @@ ns_smf_get_instance(char **ins_name, int debug, isc_mem_t *mctx) {
 	return (ISC_R_SUCCESS);
 }
 #endif /* HAVE_LIBSCF */
+
+/* main entry point, possibly hooked */
 
 int
 main(int argc, char *argv[]) {

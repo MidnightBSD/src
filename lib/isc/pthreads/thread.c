@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: thread.c,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
+/* $Id: thread.c,v 1.17 2007/06/19 23:47:18 tbox Exp $ */
 
 /*! \file */
 

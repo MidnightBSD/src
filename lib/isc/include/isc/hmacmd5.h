@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: hmacmd5.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: hmacmd5.h,v 1.14 2009/02/06 23:47:42 tbox Exp $ */
 
 /*! \file isc/hmacmd5.h
  * \brief This is the header file for the HMAC-MD5 keyed hash algorithm

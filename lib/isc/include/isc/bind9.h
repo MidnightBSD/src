@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: bind9.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: bind9.h,v 1.2 2009/12/05 23:31:41 each Exp $ */
 
 #ifndef ISC_BIND9_H
 #define ISC_BIND9_H 1

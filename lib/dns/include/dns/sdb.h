@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: sdb.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id$ */
 
 #ifndef DNS_SDB_H
 #define DNS_SDB_H 1

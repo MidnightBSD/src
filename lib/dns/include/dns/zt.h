@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: zt.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id$ */
 
 #ifndef DNS_ZT_H
 #define DNS_ZT_H 1

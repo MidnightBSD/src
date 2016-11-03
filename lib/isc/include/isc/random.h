@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: random.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: random.h,v 1.20 2009/01/17 23:47:43 tbox Exp $ */
 
 #ifndef ISC_RANDOM_H
 #define ISC_RANDOM_H 1

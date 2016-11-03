@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: interfacemgr.c,v 1.1.1.2 2013-08-22 22:51:52 laffer1 Exp $ */
+/* $Id: interfacemgr.c,v 1.95.426.2 2011/03/12 04:59:14 tbox Exp $ */
 
 /*! \file */
 
@@ -525,12 +525,19 @@ setup_locals(ns_interfacemgr_t *mgr, isc_interface_t *interface) {
 		return (result);
 
 	if (result != ISC_R_SUCCESS) {
-		isc_log_write(IFMGR_COMMON_LOGARGS,
-			      ISC_LOG_WARNING,
+		isc_log_write(IFMGR_COMMON_LOGARGS, ISC_LOG_WARNING,
 			      "omitting IPv4 interface %s from "
-			      "localnets ACL: %s",
-			      interface->name,
+			      "localnets ACL: %s", interface->name,
 			      isc_result_totext(result));
+		return (ISC_R_SUCCESS);
+	}
+
+	if (prefixlen == 0U) {
+		isc_log_write(IFMGR_COMMON_LOGARGS, ISC_LOG_WARNING,
+			      "omitting %s interface %s from localnets ACL: "
+			      "zero prefix length detected",
+			      (netaddr->family == AF_INET) ? "IPv4" : "IPv6",
+			      interface->name);
 		return (ISC_R_SUCCESS);
 	}
 

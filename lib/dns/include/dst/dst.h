@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2013  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dst.h,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
+/* $Id$ */
 
 #ifndef DST_DST_H
 #define DST_DST_H 1
@@ -887,6 +887,23 @@ dst_key_restore(dns_name_t *name, unsigned int alg, unsigned int flags,
 		unsigned int protocol, dns_rdataclass_t rdclass,
 		isc_mem_t *mctx, const char *keystr, dst_key_t **keyp);
 
+isc_boolean_t
+dst_key_inactive(const dst_key_t *key);
+/*%<
+ * Determines if the private key is missing due the key being deemed inactive.
+ *
+ * Requires:
+ *	'key' to be valid.
+ */
+
+void
+dst_key_setinactive(dst_key_t *key, isc_boolean_t inactive);
+/*%<
+ * Set key inactive state.
+ *
+ * Requires:
+ *	'key' to be valid.
+ */
 
 ISC_LANG_ENDDECLS
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007-2009, 2011, 2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007-2009, 2011, 2012, 2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -14,8 +14,6 @@
  * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
-
-/* $Id: rbt.c,v 1.1.1.2 2013-08-22 22:51:59 laffer1 Exp $ */
 
 /*! \file */
 
@@ -134,7 +132,10 @@ struct dns_rbt {
  * of memory concerns, when chains were first implemented).
  */
 #define ADD_LEVEL(chain, node) \
-			(chain)->levels[(chain)->level_count++] = (node)
+	do { \
+		INSIST((chain)->level_count < DNS_RBT_LEVELBLOCK); \
+		(chain)->levels[(chain)->level_count++] = (node); \
+	} while (0)
 
 /*%
  * The following macros directly access normally private name variables.
@@ -1478,8 +1479,8 @@ create_node(isc_mem_t *mctx, dns_name_t *name, dns_rbtnode_t **nodep) {
 	OLDOFFSETLEN(node) = OFFSETLEN(node) = labels;
 	ATTRS(node) = name->attributes;
 
-	memcpy(NAME(node), region.base, region.length);
-	memcpy(OFFSETS(node), name->offsets, labels);
+	memmove(NAME(node), region.base, region.length);
+	memmove(OFFSETS(node), name->offsets, labels);
 
 #if DNS_RBT_USEMAGIC
 	node->magic = DNS_RBTNODE_MAGIC;
@@ -1840,7 +1841,7 @@ dns_rbt_deletefromlevel(dns_rbtnode_t *delete, dns_rbtnode_t **rootp) {
 		 * information, which will be needed when linking up
 		 * delete to the successor's old location.
 		 */
-		memcpy(tmp, successor, sizeof(dns_rbtnode_t));
+		memmove(tmp, successor, sizeof(dns_rbtnode_t));
 
 		if (IS_ROOT(delete)) {
 			*rootp = successor;

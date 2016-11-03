@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rcode.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: rcode.h,v 1.21 2008/09/25 04:02:39 tbox Exp $ */
 
 #ifndef DNS_RCODE_H
 #define DNS_RCODE_H 1

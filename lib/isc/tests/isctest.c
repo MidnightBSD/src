@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2011, 2012, 2014  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: isctest.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id$ */
 
 /*! \file */
 
@@ -59,7 +59,7 @@ static isc_logcategory_t categories[] = {
 };
 
 static void
-cleanup_managers() {
+cleanup_managers(void) {
 	if (maintask != NULL)
 		isc_task_destroy(&maintask);
 	if (socketmgr != NULL)
@@ -71,7 +71,7 @@ cleanup_managers() {
 }
 
 static isc_result_t
-create_managers() {
+create_managers(void) {
 	isc_result_t result;
 #ifdef ISC_PLATFORM_USETHREADS
 	ncpus = isc_os_ncpus();
@@ -138,7 +138,7 @@ isc_test_begin(FILE *logfile) {
 }
 
 void
-isc_test_end() {
+isc_test_end(void) {
 	if (maintask != NULL)
 		isc_task_detach(&maintask);
 	if (taskmgr != NULL)

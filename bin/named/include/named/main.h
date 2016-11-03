@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007, 2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2009, 2013  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,12 +15,16 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: main.h,v 1.1.1.1 2013-01-30 01:44:57 laffer1 Exp $ */
+/* $Id: main.h,v 1.17 2009/09/29 23:48:03 tbox Exp $ */
 
 #ifndef NAMED_MAIN_H
 #define NAMED_MAIN_H 1
 
 /*! \file */
+
+#ifdef ISC_MAIN_HOOK
+#define main(argc, argv) bindmain(argc, argv)
+#endif
 
 ISC_PLATFORM_NORETURN_PRE void
 ns_main_earlyfatal(const char *format, ...)

@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: print_p.h,v 1.1.1.1 2013-01-30 01:45:01 laffer1 Exp $ */
+/* $Id$ */
 
 #ifndef LWRES_PRINT_P_H
 #define LWRES_PRINT_P_H 1

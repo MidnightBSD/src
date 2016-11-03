@@ -18,7 +18,7 @@
 #ifndef GENERIC_NSEC_47_H
 #define GENERIC_NSEC_47_H 1
 
-/* $Id: nsec_47.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: nsec_47.h,v 1.10 2008/07/15 23:47:21 tbox Exp $ */
 
 /*!
  * \brief Per RFC 3845 */

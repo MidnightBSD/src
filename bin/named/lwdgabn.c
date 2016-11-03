@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: lwdgabn.c,v 1.1.1.1 2013-01-30 01:44:56 laffer1 Exp $ */
+/* $Id: lwdgabn.c,v 1.24 2009/09/02 23:48:01 tbox Exp $ */
 
 /*! \file */
 

@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rbtdb.h,v 1.1.1.1 2013-01-30 01:44:59 laffer1 Exp $ */
+/* $Id$ */
 
 #ifndef DNS_RBTDB_H
 #define DNS_RBTDB_H 1

@@ -1,5 +1,5 @@
 /*
- * Portions Copyright (C) 2004-2009, 2011, 2012  Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (C) 2004-2009, 2011-2013  Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (C) 1999-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -31,7 +31,7 @@
 
 /*
  * Principal Author: Brian Wellington
- * $Id: openssldh_link.c,v 1.1.1.1 2013-01-30 01:44:59 laffer1 Exp $
+ * $Id: openssldh_link.c,v 1.20 2011/01/11 23:47:13 tbox Exp $
  */
 
 #ifdef OPENSSL
@@ -608,11 +608,11 @@ BN_fromhex(BIGNUM *b, const char *str) {
 
 		s = strchr(hexdigits, tolower((unsigned char)str[i]));
 		RUNTIME_CHECK(s != NULL);
-		high = s - hexdigits;
+		high = (unsigned int)(s - hexdigits);
 
 		s = strchr(hexdigits, tolower((unsigned char)str[i + 1]));
 		RUNTIME_CHECK(s != NULL);
-		low = s - hexdigits;
+		low = (unsigned int)(s - hexdigits);
 
 		data[i/2] = (unsigned char)((high << 4) + low);
 	}

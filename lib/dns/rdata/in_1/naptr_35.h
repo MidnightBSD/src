@@ -18,7 +18,7 @@
 #ifndef IN_1_NAPTR_35_H
 #define IN_1_NAPTR_35_H 1
 
-/* $Id: naptr_35.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id$ */
 
 /*!
  *  \brief Per RFC2915 */

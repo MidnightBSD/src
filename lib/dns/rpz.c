@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2013  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2011-2014  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rpz.c,v 1.1.1.2 2013-08-22 22:51:59 laffer1 Exp $ */
+/* $Id$ */
 
 
 /*! \file */
@@ -496,16 +496,16 @@ ip2name(dns_rpz_cidr_t *cidr, const dns_rpz_cidr_key_t *tgt_ip,
 	}
 
 	if (canon_name != NULL) {
-		isc__buffer_init(&buffer, str, sizeof(str));
-		isc__buffer_add(&buffer, len);
+		isc_buffer_init(&buffer, str, sizeof(str));
+		isc_buffer_add(&buffer, len);
 		result = dns_name_fromtext(canon_name, &buffer,
 					   dns_rootname, 0, NULL);
 		if (result != ISC_R_SUCCESS)
 			return (result);
 	}
 	if (search_name != NULL) {
-		isc__buffer_init(&buffer, str, sizeof(str));
-		isc__buffer_add(&buffer, len);
+		isc_buffer_init(&buffer, str, sizeof(str));
+		isc_buffer_add(&buffer, len);
 		if (type == DNS_RPZ_TYPE_NSIP)
 			name = &cidr->nsip_name;
 		else
@@ -1115,7 +1115,7 @@ dns_rpz_cidr_find(dns_rpz_cidr_t *cidr, const isc_netaddr_t *netaddr,
 		 * one could cast netaddr->type.in6 to dns_rpz_cidr_key_t *,
 		 * but there are objections.
 		 */
-		memcpy(src_ip6.w, &netaddr->type.in6, sizeof(src_ip6.w));
+		memmove(src_ip6.w, &netaddr->type.in6, sizeof(src_ip6.w));
 		for (i = 0; i < 4; i++) {
 			tgt_ip.w[i] = ntohl(src_ip6.w[i]);
 		}

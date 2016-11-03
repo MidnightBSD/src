@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: lwaddr.h,v 1.1.1.1 2013-01-30 01:44:57 laffer1 Exp $ */
+/* $Id: lwaddr.h,v 1.8 2007/06/19 23:46:59 tbox Exp $ */
 
 /*! \file */
 

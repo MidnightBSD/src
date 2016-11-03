@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2013  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -16,7 +16,7 @@
  */
 
 /*
- * $Id: tsig.c,v 1.1.1.2 2013-08-22 22:51:59 laffer1 Exp $
+ * $Id$
  */
 /*! \file */
 #include <config.h>
@@ -1317,7 +1317,7 @@ dns_tsig_verify(isc_buffer_t *source, dns_message_t *msg,
 	    alg == DST_ALG_HMACSHA384 || alg == DST_ALG_HMACSHA512) {
 		isc_uint16_t digestbits = dst_key_getbits(key);
 		if (tsig.siglen > siglen) {
-			tsig_log(msg->tsigkey, 2, "signature length to big");
+			tsig_log(msg->tsigkey, 2, "signature length too big");
 			return (DNS_R_FORMERR);
 		}
 		if (tsig.siglen > 0 &&
@@ -1370,21 +1370,21 @@ dns_tsig_verify(isc_buffer_t *source, dns_message_t *msg,
 		 * Extract the header.
 		 */
 		isc_buffer_usedregion(source, &r);
-		memcpy(header, r.base, DNS_MESSAGE_HEADERLEN);
+		memmove(header, r.base, DNS_MESSAGE_HEADERLEN);
 		isc_region_consume(&r, DNS_MESSAGE_HEADERLEN);
 
 		/*
 		 * Decrement the additional field counter.
 		 */
-		memcpy(&addcount, &header[DNS_MESSAGE_HEADERLEN - 2], 2);
+		memmove(&addcount, &header[DNS_MESSAGE_HEADERLEN - 2], 2);
 		addcount = htons((isc_uint16_t)(ntohs(addcount) - 1));
-		memcpy(&header[DNS_MESSAGE_HEADERLEN - 2], &addcount, 2);
+		memmove(&header[DNS_MESSAGE_HEADERLEN - 2], &addcount, 2);
 
 		/*
 		 * Put in the original id.
 		 */
 		id = htons(tsig.originalid);
-		memcpy(&header[0], &id, 2);
+		memmove(&header[0], &id, 2);
 
 		/*
 		 * Digest the modified header.
@@ -1609,16 +1609,16 @@ tsig_verify_tcp(isc_buffer_t *source, dns_message_t *msg) {
 	 * Extract the header.
 	 */
 	isc_buffer_usedregion(source, &r);
-	memcpy(header, r.base, DNS_MESSAGE_HEADERLEN);
+	memmove(header, r.base, DNS_MESSAGE_HEADERLEN);
 	isc_region_consume(&r, DNS_MESSAGE_HEADERLEN);
 
 	/*
 	 * Decrement the additional field counter if necessary.
 	 */
 	if (has_tsig) {
-		memcpy(&addcount, &header[DNS_MESSAGE_HEADERLEN - 2], 2);
+		memmove(&addcount, &header[DNS_MESSAGE_HEADERLEN - 2], 2);
 		addcount = htons((isc_uint16_t)(ntohs(addcount) - 1));
-		memcpy(&header[DNS_MESSAGE_HEADERLEN - 2], &addcount, 2);
+		memmove(&header[DNS_MESSAGE_HEADERLEN - 2], &addcount, 2);
 	}
 
 	/*
@@ -1627,7 +1627,7 @@ tsig_verify_tcp(isc_buffer_t *source, dns_message_t *msg) {
 	/* XXX Can TCP transfers be forwarded?  How would that work? */
 	if (has_tsig) {
 		id = htons(tsig.originalid);
-		memcpy(&header[0], &id, 2);
+		memmove(&header[0], &id, 2);
 	}
 
 	/*

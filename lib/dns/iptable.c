@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: iptable.c,v 1.1.1.1 2013-01-30 01:44:59 laffer1 Exp $ */
+/* $Id: iptable.c,v 1.15 2009/02/18 23:47:48 tbox Exp $ */
 
 #include <config.h>
 

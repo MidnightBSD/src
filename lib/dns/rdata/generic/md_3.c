@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: md_3.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: md_3.c,v 1.49 2009/12/04 22:06:37 tbox Exp $ */
 
 /* Reviewed: Wed Mar 15 17:48:20 PST 2000 by bwelling */
 

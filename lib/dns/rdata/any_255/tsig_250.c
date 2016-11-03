@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: tsig_250.c,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
+/* $Id$ */
 
 /* Reviewed: Thu Mar 16 13:39:43 PST 2000 by gson */
 

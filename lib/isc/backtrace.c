@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2009, 2013, 2014  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: backtrace.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: backtrace.c,v 1.3 2009/09/02 23:48:02 tbox Exp $ */
 
 /*! \file */
 
@@ -51,6 +51,8 @@
 #define BACKTRACE_LIBC
 #elif defined(__GNUC__) && (defined(__x86_64__) || defined(__ia64__))
 #define BACKTRACE_GCC
+#elif defined(WIN32)
+#define BACKTRACE_WIN32
 #elif defined(__x86_64__) || defined(__i386__)
 #define BACKTRACE_X86STACK
 #else
@@ -127,10 +129,18 @@ isc_backtrace_gettrace(void **addrs, int maxaddrs, int *nframes) {
 
 	return (ISC_R_SUCCESS);
 }
+#elif defined(BACKTRACE_WIN32)
+isc_result_t
+isc_backtrace_gettrace(void **addrs, int maxaddrs, int *nframes) {
+	unsigned long ftc = (unsigned long)maxaddrs;
+
+	*nframes = (int)CaptureStackBackTrace(1, ftc, addrs, NULL);
+	return ISC_R_SUCCESS;
+}
 #elif defined(BACKTRACE_X86STACK)
 #ifdef __x86_64__
 static unsigned long
-getrbp() {
+getrbp(void) {
 	__asm("movq %rbp, %rax\n");
 }
 #endif
@@ -278,7 +288,8 @@ isc_backtrace_getsymbol(const void *addr, const char **symbolp,
 		result = ISC_R_NOTFOUND;
 	else {
 		*symbolp = found->symbol;
-		*offsetp = (const char *)addr - (char *)found->addr;
+		*offsetp = (unsigned long) ((const char *)addr -
+					    (char *)found->addr);
 	}
 
 	return (result);

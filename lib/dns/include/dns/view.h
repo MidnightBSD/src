@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2013  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: view.h,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
+/* $Id$ */
 
 #ifndef DNS_VIEW_H
 #define DNS_VIEW_H 1
@@ -138,6 +138,7 @@ struct dns_view {
 	dns_acl_t *			updateacl;
 	dns_acl_t *			upfwdacl;
 	dns_acl_t *			denyansweracl;
+	dns_acl_t *			nocasecompress;
 	dns_rbt_t *			answeracl_exclude;
 	dns_rbt_t *			denyanswernames;
 	dns_rbt_t *			answernames_exclude;
@@ -706,6 +707,7 @@ dns_viewlist_findzone(dns_viewlist_t *list, dns_name_t *name, isc_boolean_t allc
  * Returns:
  *\li	#ISC_R_SUCCESS          A matching zone was found.
  *\li	#ISC_R_NOTFOUND         No matching zone was found.
+ *\li	#ISC_R_MULTIPLE         Multiple zones with the same name were found.
  */
 
 isc_result_t

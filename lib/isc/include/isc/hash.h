@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007, 2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2009, 2013  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: hash.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: hash.h,v 1.12 2009/01/17 23:47:43 tbox Exp $ */
 
 #ifndef ISC_HASH_H
 #define ISC_HASH_H 1
@@ -82,7 +82,7 @@
 ISC_LANG_BEGINDECLS
 
 isc_result_t
-isc_hash_ctxcreate(isc_mem_t *mctx, isc_entropy_t *entropy, unsigned int limit,
+isc_hash_ctxcreate(isc_mem_t *mctx, isc_entropy_t *entropy, size_t limit,
 		   isc_hash_t **hctx);
 isc_result_t
 isc_hash_create(isc_mem_t *mctx, isc_entropy_t *entropy, size_t limit);

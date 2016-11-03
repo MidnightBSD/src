@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: keygen.c,v 1.1.1.2 2013-08-22 22:51:51 laffer1 Exp $ */
+/* $Id: keygen.c,v 1.4 2009/11/12 14:02:38 marka Exp $ */
 
 /*! \file */
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2011-2013  Internet Systems Consortium, Inc. ("ISC")
+# Copyright (C) 2011-2014  Internet Systems Consortium, Inc. ("ISC")
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -12,7 +12,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: Makefile.in,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $
+# $Id$
 
 srcdir =	@srcdir@
 VPATH =		@srcdir@
@@ -36,12 +36,14 @@ LIBS =		@LIBS@ @ATFLIBS@
 
 OBJS =		isctest.@O@
 
-SRCS =		isctest.c taskpool_test.c hash_test.c sockaddr_test.c \
-		symtab_test.c parse_test.c regex_test.c
+SRCS =		isctest.c taskpool_test.c hash_test.c lex_test.c \
+		sockaddr_test.c safe_test.c symtab_test.c parse_test.c \
+		print_test.c regex_test.c
 
 SUBDIRS =
-TARGETS =	taskpool_test@EXEEXT@ hash_test@EXEEXT@ sockaddr_test@EXEEXT@ \
-		symtab_test@EXEEXT@ parse_test@EXEEXT@ regex_test@EXEEXT@
+TARGETS =	taskpool_test@EXEEXT@ hash_test@EXEEXT@ lex_test@EXEEXT@ \
+		sockaddr_test@EXEEXT@ safe_test@EXEEXT@ symtab_test@EXEEXT@ \
+		parse_test@EXEEXT@ print_test@EXEEXT@ regex_test@EXEEXT@
 
 @BIND9_MAKE_RULES@
 
@@ -57,6 +59,10 @@ hash_test@EXEEXT@: hash_test.@O@ ${ISCDEPLIBS}
 	${LIBTOOL_MODE_LINK} ${PURIFY} ${CC} ${CFLAGS} ${LDFLAGS} -o $@ \
 			hash_test.@O@ ${ISCLIBS} ${LIBS}
 
+lex_test@EXEEXT@: lex_test.@O@ ${ISCDEPLIBS}
+	${LIBTOOL_MODE_LINK} ${PURIFY} ${CC} ${CFLAGS} ${LDFLAGS} -o $@ \
+			lex_test.@O@ ${ISCLIBS} ${LIBS}
+
 parse_test@EXEEXT@: parse_test.@O@ isctest.@O@ ${ISCDEPLIBS}
 	${LIBTOOL_MODE_LINK} ${PURIFY} ${CC} ${CFLAGS} ${LDFLAGS} -o $@ \
 			parse_test.@O@ isctest.@O@ ${ISCLIBS} ${LIBS}
@@ -65,9 +71,17 @@ sockaddr_test@EXEEXT@: sockaddr_test.@O@ isctest.@O@ ${ISCDEPLIBS}
 	${LIBTOOL_MODE_LINK} ${PURIFY} ${CC} ${CFLAGS} ${LDFLAGS} -o $@ \
 			sockaddr_test.@O@ isctest.@O@ ${ISCLIBS} ${LIBS}
 
+print_test@EXEEXT@: print_test.@O@ ${ISCDEPLIBS} ${top_srcdir}/lib/isc/print.c
+	${LIBTOOL_MODE_LINK} ${PURIFY} ${CC} ${CFLAGS} ${LDFLAGS} -o $@ \
+			print_test.@O@ ${ISCLIBS} ${LIBS}
+
 regex_test@EXEEXT@: regex_test.@O@ ${ISCDEPLIBS}
 	${LIBTOOL_MODE_LINK} ${PURIFY} ${CC} ${CFLAGS} ${LDFLAGS} -o $@ \
 			regex_test.@O@ ${ISCLIBS} ${LIBS}
+
+safe_test@EXEEXT@: safe_test.@O@ ${ISCDEPLIBS}
+	${LIBTOOL_MODE_LINK} ${PURIFY} ${CC} ${CFLAGS} ${LDFLAGS} -o $@ \
+			safe_test.@O@ ${ISCLIBS} ${LIBS}
 
 unit::
 	sh ${top_srcdir}/unit/unittest.sh

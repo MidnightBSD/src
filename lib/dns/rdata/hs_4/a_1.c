@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2007, 2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2007, 2009, 2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: a_1.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: a_1.c,v 1.33 2009/12/04 22:06:37 tbox Exp $ */
 
 /* reviewed: Thu Mar 16 15:58:36 PST 2000 by brister */
 
@@ -48,7 +48,7 @@ fromtext_hs_a(ARGS_FROMTEXT) {
 	isc_buffer_availableregion(target, &region);
 	if (region.length < 4)
 		return (ISC_R_NOSPACE);
-	memcpy(region.base, &addr, 4);
+	memmove(region.base, &addr, 4);
 	isc_buffer_add(target, 4);
 	return (ISC_R_SUCCESS);
 }
@@ -87,7 +87,7 @@ fromwire_hs_a(ARGS_FROMWIRE) {
 	if (tregion.length < 4)
 		return (ISC_R_NOSPACE);
 
-	memcpy(tregion.base, sregion.base, 4);
+	memmove(tregion.base, sregion.base, 4);
 	isc_buffer_forward(source, 4);
 	isc_buffer_add(target, 4);
 	return (ISC_R_SUCCESS);
@@ -106,7 +106,7 @@ towire_hs_a(ARGS_TOWIRE) {
 	isc_buffer_availableregion(target, &region);
 	if (region.length < rdata->length)
 		return (ISC_R_NOSPACE);
-	memcpy(region.base, rdata->data, rdata->length);
+	memmove(region.base, rdata->data, rdata->length);
 	isc_buffer_add(target, 4);
 	return (ISC_R_SUCCESS);
 }

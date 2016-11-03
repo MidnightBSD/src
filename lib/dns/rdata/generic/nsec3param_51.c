@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: nsec3param_51.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: nsec3param_51.c,v 1.7 2009/12/04 21:09:34 marka Exp $ */
 
 /*
  * Copyright (C) 2004  Nominet, Ltd.

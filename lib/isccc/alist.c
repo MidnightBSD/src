@@ -29,7 +29,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: alist.c,v 1.1.1.1 2013-01-30 01:45:01 laffer1 Exp $ */
+/* $Id: alist.c,v 1.8 2007/08/28 07:20:43 tbox Exp $ */
 
 /*! \file */
 

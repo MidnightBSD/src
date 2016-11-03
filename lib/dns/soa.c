@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: soa.c,v 1.1.1.1 2013-01-30 01:44:59 laffer1 Exp $ */
+/* $Id: soa.c,v 1.12 2009/09/10 02:18:40 each Exp $ */
 
 /*! \file */
 

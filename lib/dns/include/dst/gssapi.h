@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007, 2009-2011  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2009-2011, 2013  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: gssapi.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: gssapi.h,v 1.16 2011/01/08 23:47:01 tbox Exp $ */
 
 #ifndef DST_GSSAPI_H
 #define DST_GSSAPI_H 1
@@ -29,7 +29,7 @@
 #include <dns/types.h>
 
 #ifdef GSSAPI
-#ifdef _WINDOWS
+#ifdef WIN32
 /*
  * MSVC does not like macros in #include lines.
  */

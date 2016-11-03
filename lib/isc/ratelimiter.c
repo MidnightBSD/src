@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: ratelimiter.c,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
+/* $Id: ratelimiter.c,v 1.25 2007/06/19 23:47:17 tbox Exp $ */
 
 /*! \file */
 

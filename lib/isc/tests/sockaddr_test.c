@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: sockaddr_test.c,v 1.1.1.1 2013-08-22 22:52:01 laffer1 Exp $ */
+/* $Id$ */
 
 /*! \file */
 

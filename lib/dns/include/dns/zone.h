@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: zone.h,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
+/* $Id$ */
 
 #ifndef DNS_ZONE_H
 #define DNS_ZONE_H 1
@@ -1904,6 +1904,12 @@ isc_result_t
 dns_zone_rpz_enable(dns_zone_t *zone);
 /*%
  * Set the response policy associated with a zone.
+ */
+
+isc_result_t
+dns_zone_rpz_enable_db(dns_zone_t *zone, dns_db_t *db);
+/*%
+ * If a zone is a response policy zone, mark its new database.
  */
 
 isc_boolean_t

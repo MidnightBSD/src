@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: db.c,v 1.1.1.2 2013-08-22 22:51:58 laffer1 Exp $ */
+/* $Id$ */
 
 /*! \file */
 

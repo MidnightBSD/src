@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2013  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: view.c,v 1.1.1.2 2013-08-22 22:51:59 laffer1 Exp $ */
+/* $Id$ */
 
 /*! \file */
 
@@ -180,6 +180,7 @@ dns_view_create(isc_mem_t *mctx, dns_rdataclass_t rdclass,
 	view->updateacl = NULL;
 	view->upfwdacl = NULL;
 	view->denyansweracl = NULL;
+	view->nocasecompress = NULL;
 	view->answeracl_exclude = NULL;
 	view->denyanswernames = NULL;
 	view->answernames_exclude = NULL;
@@ -349,6 +350,8 @@ destroy(dns_view_t *view) {
 		dns_db_detach(&view->cachedb);
 	if (view->cache != NULL)
 		dns_cache_detach(&view->cache);
+	if (view->nocasecompress != NULL)
+		dns_acl_detach(&view->nocasecompress);
 	if (view->matchclients != NULL)
 		dns_acl_detach(&view->matchclients);
 	if (view->matchdestinations != NULL)
@@ -547,6 +550,8 @@ dialup(dns_zone_t *zone, void *dummy) {
 void
 dns_view_dialup(dns_view_t *view) {
 	REQUIRE(DNS_VIEW_VALID(view));
+	REQUIRE(view->zonetable != NULL);
+
 	(void)dns_zt_apply(view->zonetable, ISC_FALSE, dialup, NULL);
 }
 #endif
@@ -598,14 +603,14 @@ resolver_shutdown(isc_task_t *task, isc_event_t *event) {
 
 	UNUSED(task);
 
+	isc_event_free(&event);
+
 	LOCK(&view->lock);
 
 	view->attributes |= DNS_VIEWATTR_RESSHUTDOWN;
 	done = all_done(view);
 
 	UNLOCK(&view->lock);
-
-	isc_event_free(&event);
 
 	if (done)
 		destroy(view);
@@ -622,14 +627,14 @@ adb_shutdown(isc_task_t *task, isc_event_t *event) {
 
 	UNUSED(task);
 
+	isc_event_free(&event);
+
 	LOCK(&view->lock);
 
 	view->attributes |= DNS_VIEWATTR_ADBSHUTDOWN;
 	done = all_done(view);
 
 	UNLOCK(&view->lock);
-
-	isc_event_free(&event);
 
 	if (done)
 		destroy(view);
@@ -646,14 +651,14 @@ req_shutdown(isc_task_t *task, isc_event_t *event) {
 
 	UNUSED(task);
 
+	isc_event_free(&event);
+
 	LOCK(&view->lock);
 
 	view->attributes |= DNS_VIEWATTR_REQSHUTDOWN;
 	done = all_done(view);
 
 	UNLOCK(&view->lock);
-
-	isc_event_free(&event);
 
 	if (done)
 		destroy(view);
@@ -855,6 +860,7 @@ dns_view_addzone(dns_view_t *view, dns_zone_t *zone) {
 
 	REQUIRE(DNS_VIEW_VALID(view));
 	REQUIRE(!view->frozen);
+	REQUIRE(view->zonetable != NULL);
 
 	result = dns_zt_mount(view->zonetable, zone);
 
@@ -869,6 +875,7 @@ dns_view_findzone(dns_view_t *view, dns_name_t *name, dns_zone_t **zonep) {
 
 	REQUIRE(DNS_VIEW_VALID(view));
 
+	LOCK(&view->lock);
 	if (view->zonetable != NULL) {
 		result = dns_zt_find(view->zonetable, name, 0, NULL, zonep);
 		if (result == DNS_R_PARTIALMATCH) {
@@ -877,6 +884,7 @@ dns_view_findzone(dns_view_t *view, dns_name_t *name, dns_zone_t **zonep) {
 		}
 	} else
 		result = ISC_R_NOTFOUND;
+	UNLOCK(&view->lock);
 
 	return (result);
 }
@@ -939,7 +947,12 @@ dns_view_find2(dns_view_t *view, dns_name_t *name, dns_rdatatype_t type,
 	is_staticstub_zone = ISC_FALSE;
 #ifdef BIND9
 	zone = NULL;
-	result = dns_zt_find(view->zonetable, name, 0, NULL, &zone);
+	LOCK(&view->lock);
+	if (view->zonetable != NULL)
+		result = dns_zt_find(view->zonetable, name, 0, NULL, &zone);
+	else
+		result = ISC_R_NOTFOUND;
+	UNLOCK(&view->lock);
 	if (zone != NULL && dns_zone_gettype(zone) == dns_zone_staticstub &&
 	    !use_static_stub) {
 		result = ISC_R_NOTFOUND;
@@ -1185,6 +1198,9 @@ dns_view_findzonecut2(dns_view_t *view, dns_name_t *name, dns_name_t *fname,
 	dns_name_t *zfname;
 	dns_rdataset_t zrdataset, zsigrdataset;
 	dns_fixedname_t zfixedname;
+#ifdef BIND9
+	unsigned int ztoptions = 0;
+#endif
 
 #ifndef BIND9
 	UNUSED(zone);
@@ -1210,9 +1226,17 @@ dns_view_findzonecut2(dns_view_t *view, dns_name_t *name, dns_name_t *fname,
 	 */
 #ifdef BIND9
 	zone = NULL;
-	result = dns_zt_find(view->zonetable, name, 0, NULL, &zone);
+	LOCK(&view->lock);
+	if (view->zonetable != NULL) {
+		if ((options & DNS_DBFIND_NOEXACT) != 0)
+			ztoptions |= DNS_ZTFIND_NOEXACT;
+		result = dns_zt_find(view->zonetable, name, ztoptions,
+				     NULL, &zone);
+	} else
+		result = ISC_R_NOTFOUND;
 	if (result == ISC_R_SUCCESS || result == DNS_R_PARTIALMATCH)
 		result = dns_zone_getdb(zone, &db);
+	UNLOCK(&view->lock);
 #else
 	result = ISC_R_NOTFOUND;
 #endif
@@ -1402,7 +1426,13 @@ dns_viewlist_findzone(dns_viewlist_t *list, dns_name_t *name,
 		 * treat it as not found.
 		 */
 		zp = (zone1 == NULL) ? &zone1 : &zone2;
-		result = dns_zt_find(view->zonetable, name, 0, NULL, zp);
+		LOCK(&view->lock);
+		if (view->zonetable != NULL)
+			result = dns_zt_find(view->zonetable, name, 0,
+					     NULL, zp);
+		else
+			result = ISC_R_NOTFOUND;
+		UNLOCK(&view->lock);
 		INSIST(result == ISC_R_SUCCESS ||
 		       result == ISC_R_NOTFOUND ||
 		       result == DNS_R_PARTIALMATCH);
@@ -1417,7 +1447,7 @@ dns_viewlist_findzone(dns_viewlist_t *list, dns_name_t *name,
 		if (zone2 != NULL) {
 			dns_zone_detach(&zone1);
 			dns_zone_detach(&zone2);
-			return (ISC_R_NOTFOUND);
+			return (ISC_R_MULTIPLE);
 		}
 	}
 
@@ -1434,6 +1464,7 @@ isc_result_t
 dns_view_load(dns_view_t *view, isc_boolean_t stop) {
 
 	REQUIRE(DNS_VIEW_VALID(view));
+	REQUIRE(view->zonetable != NULL);
 
 	return (dns_zt_load(view->zonetable, stop));
 }
@@ -1442,6 +1473,7 @@ isc_result_t
 dns_view_loadnew(dns_view_t *view, isc_boolean_t stop) {
 
 	REQUIRE(DNS_VIEW_VALID(view));
+	REQUIRE(view->zonetable != NULL);
 
 	return (dns_zt_loadnew(view->zonetable, stop));
 }
@@ -1674,13 +1706,17 @@ dns_view_getrootdelonly(dns_view_t *view) {
 #ifdef BIND9
 isc_result_t
 dns_view_freezezones(dns_view_t *view, isc_boolean_t value) {
+
 	REQUIRE(DNS_VIEW_VALID(view));
+	REQUIRE(view->zonetable != NULL);
+
 	return (dns_zt_freezezones(view->zonetable, value));
 }
 #endif
 
 void
 dns_view_setresstats(dns_view_t *view, isc_stats_t *stats) {
+
 	REQUIRE(DNS_VIEW_VALID(view));
 	REQUIRE(!view->frozen);
 	REQUIRE(view->resstats == NULL);

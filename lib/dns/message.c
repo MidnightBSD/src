@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2013  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: message.c,v 1.1.1.2 2013-08-22 22:51:58 laffer1 Exp $ */
+/* $Id$ */
 
 /*! \file */
 
@@ -1375,6 +1375,16 @@ getsection(isc_buffer_t *source, dns_message_t *msg, dns_decompress_t *dctx,
 			covers = 0;
 
 		/*
+		 * Check the ownername of NSEC3 records
+		 */
+		if (rdtype == dns_rdatatype_nsec3 &&
+		    !dns_rdata_checkowner(name, msg->rdclass, rdtype,
+					  ISC_FALSE)) {
+			result = DNS_R_BADOWNERNAME;
+			goto cleanup;
+		}
+
+		/*
 		 * If we are doing a dynamic update or this is a meta-type,
 		 * don't bother searching for a name, just append this one
 		 * to the end of the message.
@@ -1673,8 +1683,8 @@ dns_message_parse(dns_message_t *msg, isc_buffer_t *source,
 		msg->saved.base = isc_mem_get(msg->mctx, msg->saved.length);
 		if (msg->saved.base == NULL)
 			return (ISC_R_NOMEMORY);
-		memcpy(msg->saved.base, isc_buffer_base(&origsource),
-		       msg->saved.length);
+		memmove(msg->saved.base, isc_buffer_base(&origsource),
+			msg->saved.length);
 		msg->free_saved = 1;
 	}
 
@@ -1746,7 +1756,7 @@ dns_message_renderchangebuffer(dns_message_t *msg, isc_buffer_t *buffer) {
 	 * Copy the contents from the old to the new buffer.
 	 */
 	isc_buffer_add(buffer, r.length);
-	memcpy(rn.base, r.base, r.length);
+	memmove(rn.base, r.base, r.length);
 
 	msg->buffer = buffer;
 
@@ -3194,7 +3204,8 @@ dns_message_pseudosectiontotext(dns_message_t *msg,
 				dns_pseudosection_t section,
 				const dns_master_style_t *style,
 				dns_messagetextflag_t flags,
-				isc_buffer_t *target) {
+				isc_buffer_t *target)
+{
 	dns_rdataset_t *ps = NULL;
 	dns_name_t *name = NULL;
 	isc_result_t result;
@@ -3268,8 +3279,11 @@ dns_message_pseudosectiontotext(dns_message_t *msg,
 					sprintf(buf, "%02x ", optdata[i]);
 					ADD_STRING(target, buf);
 				}
+
 				for (i = 0; i < optlen; i++) {
 					ADD_STRING(target, " (");
+					if (!isc_buffer_availablelength(target))
+						return (ISC_R_NOSPACE);
 					if (isprint(optdata[i]))
 						isc_buffer_putmem(target,
 								  &optdata[i],
@@ -3466,7 +3480,7 @@ dns_message_buildopt(dns_message_t *message, dns_rdataset_t **rdatasetp,
 	dns_rdatalist_t *rdatalist = NULL;
 	dns_rdata_t *rdata = NULL;
 	isc_result_t result;
-	size_t len = 0, i;
+	unsigned int len = 0, i;
 
 	REQUIRE(DNS_MESSAGE_VALID(message));
 	REQUIRE(rdatasetp != NULL && *rdatasetp == NULL);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: gai_strerror.c,v 1.1.1.1 2013-01-30 01:45:01 laffer1 Exp $ */
+/* $Id: gai_strerror.c,v 1.22 2007/06/19 23:47:22 tbox Exp $ */
 
 /*! \file gai_strerror.c
  * lwres_gai_strerror() returns an error message corresponding to an
@@ -63,7 +63,8 @@ static const char *gai_messages[] = {
 	"ai_socktype not supported",
 	"system error returned in errno",
 	"bad hints",
-	"bad protocol"
+	"bad protocol",
+	"overflow"
 };
 
 /*% Returns an error message corresponding to an error code returned by getaddrinfo() */

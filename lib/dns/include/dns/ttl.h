@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: ttl.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: ttl.h,v 1.19 2007/06/19 23:47:17 tbox Exp $ */
 
 #ifndef DNS_TTL_H
 #define DNS_TTL_H 1

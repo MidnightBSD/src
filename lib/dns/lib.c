@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: lib.c,v 1.1.1.1 2013-01-30 01:44:59 laffer1 Exp $ */
+/* $Id: lib.c,v 1.19 2009/09/03 00:12:23 each Exp $ */
 
 /*! \file */
 

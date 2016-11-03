@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: query.h,v 1.1.1.1 2013-01-30 01:44:57 laffer1 Exp $ */
+/* $Id: query.h,v 1.45 2011/01/13 04:59:24 tbox Exp $ */
 
 #ifndef NAMED_QUERY_H
 #define NAMED_QUERY_H 1

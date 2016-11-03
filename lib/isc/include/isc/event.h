@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: event.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: event.h,v 1.34 2007/06/19 23:47:18 tbox Exp $ */
 
 #ifndef ISC_EVENT_H
 #define ISC_EVENT_H 1
@@ -90,9 +90,12 @@ ISC_LANG_BEGINDECLS
 
 isc_event_t *
 isc_event_allocate(isc_mem_t *mctx, void *sender, isc_eventtype_t type,
-		   isc_taskaction_t action, const void *arg, size_t size);
+		   isc_taskaction_t action, void *arg, size_t size);
+isc_event_t *
+isc_event_constallocate(isc_mem_t *mctx, void *sender, isc_eventtype_t type,
+			isc_taskaction_t action, const void *arg, size_t size);
 /*%<
- * Allocate an event structure. 
+ * Allocate an event structure.
  *
  * Allocate and initialize in a structure with initial elements
  * defined by:
@@ -103,7 +106,7 @@ isc_event_allocate(isc_mem_t *mctx, void *sender, isc_eventtype_t type,
  *		...
  *	};
  * \endcode
- *	
+ *
  * Requires:
  *\li	'size' >= sizeof(struct isc_event)
  *\li	'action' to be non NULL

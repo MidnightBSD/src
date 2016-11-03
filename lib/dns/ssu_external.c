@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2011-2013  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: ssu_external.c,v 1.1.1.2 2013-08-22 22:51:59 laffer1 Exp $ */
+/* $Id$ */
 
 /*
  * This implements external update-policy rules.  This allows permission
@@ -131,7 +131,7 @@ dns_ssu_external_match(dns_name_t *identity,
 	isc_buffer_t *tkey_token = NULL;
 	int fd;
 	const char *sock_path;
-	size_t req_len;
+	unsigned int req_len;
 	isc_region_t token_region;
 	unsigned char *data;
 	isc_buffer_t buf;

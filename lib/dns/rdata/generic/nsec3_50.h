@@ -18,7 +18,7 @@
 #ifndef GENERIC_NSEC3_50_H
 #define GENERIC_NSEC3_50_H 1
 
-/* $Id: nsec3_50.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id$ */
 
 /*!
  * \brief Per RFC 5155 */

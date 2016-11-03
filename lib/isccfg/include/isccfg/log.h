@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: log.h,v 1.1.1.1 2013-01-30 01:45:01 laffer1 Exp $ */
+/* $Id: log.h,v 1.14 2009/01/18 23:48:14 tbox Exp $ */
 
 #ifndef ISCCFG_LOG_H
 #define ISCCFG_LOG_H 1

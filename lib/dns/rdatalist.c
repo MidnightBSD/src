@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatalist.c,v 1.1.1.1 2013-01-30 01:44:59 laffer1 Exp $ */
+/* $Id$ */
 
 /*! \file */
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2013  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,14 +15,14 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: stdio.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: stdio.h,v 1.13 2007/06/19 23:47:18 tbox Exp $ */
 
 #ifndef ISC_STDIO_H
 #define ISC_STDIO_H 1
 
 /*! \file isc/stdio.h */
 
-/*% 
+/*%
  * These functions are wrappers around the corresponding stdio functions.
  *
  * They return a detailed error code in the form of an an isc_result_t.  ANSI C
@@ -48,7 +48,11 @@ isc_stdio_close(FILE *f);
 
 /*% Seek */
 isc_result_t
-isc_stdio_seek(FILE *f, long offset, int whence);
+isc_stdio_seek(FILE *f, off_t offset, int whence);
+
+/*% Tell */
+isc_result_t
+isc_stdio_tell(FILE *f, off_t *offsetp);
 
 /*% Read */
 isc_result_t

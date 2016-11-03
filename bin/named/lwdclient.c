@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: lwdclient.c,v 1.1.1.1 2013-01-30 01:44:56 laffer1 Exp $ */
+/* $Id: lwdclient.c,v 1.22 2007/06/18 23:47:18 tbox Exp $ */
 
 /*! \file */
 

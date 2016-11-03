@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007, 2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2009, 2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001, 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rt_21.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: rt_21.c,v 1.48 2009/12/04 22:06:37 tbox Exp $ */
 
 /* reviewed: Thu Mar 16 15:02:31 PST 2000 by brister */
 
@@ -109,7 +109,7 @@ fromwire_rt(ARGS_FROMWIRE) {
 		return (ISC_R_NOSPACE);
 	if (sregion.length < 2)
 		return (ISC_R_UNEXPECTEDEND);
-	memcpy(tregion.base, sregion.base, 2);
+	memmove(tregion.base, sregion.base, 2);
 	isc_buffer_forward(source, 2);
 	isc_buffer_add(target, 2);
 	return (dns_name_fromwire(&name, source, dctx, options, target));
@@ -130,7 +130,7 @@ towire_rt(ARGS_TOWIRE) {
 	dns_rdata_toregion(rdata, &region);
 	if (tr.length < 2)
 		return (ISC_R_NOSPACE);
-	memcpy(tr.base, region.base, 2);
+	memmove(tr.base, region.base, 2);
 	isc_region_consume(&region, 2);
 	isc_buffer_add(target, 2);
 

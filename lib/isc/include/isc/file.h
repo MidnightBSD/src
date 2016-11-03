@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007, 2009, 2011, 2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2009, 2011-2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: file.h,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
+/* $Id$ */
 
 #ifndef ISC_FILE_H
 #define ISC_FILE_H 1
@@ -62,7 +62,7 @@ isc_file_getmodtime(const char *file, isc_time_t *time);
  *\li	#ISC_R_NOPERM
  *		The file's metainformation could not be retrieved because
  *		permission was denied to some part of the file's path.
- *\li	#ISC_R_EIO
+ *\li	#ISC_R_IOERROR
  *		Hardware error interacting with the filesystem.
  *\li	#ISC_R_UNEXPECTED
  *		Something totally unexpected happened.
@@ -213,7 +213,7 @@ isc_file_isplainfile(const char *name);
  *		permitted in addition to ISC_R_SUCCESS. This is done since
  *		the next call in logconf.c is to isc_stdio_open(), which
  *		will create the file if it can.
- *\li	#other ISC_R_* errors translated from errno
+ *\li	other ISC_R_* errors translated from errno
  *		These occur when stat returns -1 and an errno.
  */
 
@@ -229,7 +229,7 @@ isc_file_isdirectory(const char *name);
  *		File is not a directory.
  *\li	#ISC_R_FILENOTFOUND
  *		File does not exist.
- *\li	#other ISC_R_* errors translated from errno
+ *\li	other ISC_R_* errors translated from errno
  *		These occur when stat returns -1 and an errno.
  */
 
@@ -324,6 +324,16 @@ isc_file_splitpath(isc_mem_t *mctx, char *path,
  * - ISC_R_SUCCESS on success
  * - ISC_R_INVALIDFILE if 'path' is empty or ends with '/'
  * - ISC_R_NOMEMORY if unable to allocate memory
+ */
+
+isc_result_t
+isc_file_getsizefd(int fd, off_t *size);
+/*%<
+ * Return the size of the file (stored in the parameter pointed
+ * to by 'size') in bytes.
+ *
+ * Returns:
+ * - ISC_R_SUCCESS on success
  */
 
 ISC_LANG_ENDDECLS

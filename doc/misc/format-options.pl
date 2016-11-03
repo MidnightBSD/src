@@ -15,7 +15,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: format-options.pl,v 1.1.1.1 2013-01-30 01:44:58 laffer1 Exp $
+# $Id: format-options.pl,v 1.5 2007/09/24 04:21:59 marka Exp $
 
 print <<END;
 

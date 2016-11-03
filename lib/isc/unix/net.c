@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: net.c,v 1.1.1.2 2013-08-22 22:52:01 laffer1 Exp $ */
+/* $Id$ */
 
 #include <config.h>
 

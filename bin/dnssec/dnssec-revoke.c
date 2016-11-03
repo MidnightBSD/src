@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2009-2012, 2014  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dnssec-revoke.c,v 1.1.1.2 2013-08-22 22:51:51 laffer1 Exp $ */
+/* $Id: dnssec-revoke.c,v 1.22.124.2 2011/10/20 23:46:27 tbox Exp $ */
 
 /*! \file */
 
@@ -249,12 +249,10 @@ main(int argc, char **argv) {
 			dst_key_buildfilename(key, DST_TYPE_PRIVATE, dir, &buf);
 			if (strcmp(oldname, newname) == 0)
 				goto cleanup;
-			if (access(oldname, F_OK) == 0)
-				unlink(oldname);
+			(void)unlink(oldname);
 			isc_buffer_clear(&buf);
 			dst_key_buildfilename(key, DST_TYPE_PUBLIC, dir, &buf);
-			if (access(oldname, F_OK) == 0)
-				unlink(oldname);
+			(void)unlink(oldname);
 		}
 	} else {
 		dst_key_format(key, keystr, sizeof(keystr));

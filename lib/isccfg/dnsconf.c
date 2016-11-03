@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dnsconf.c,v 1.1.1.1 2013-01-30 01:45:01 laffer1 Exp $ */
+/* $Id: dnsconf.c,v 1.4 2009/09/02 23:48:03 tbox Exp $ */
 
 /*! \file */
 

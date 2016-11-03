@@ -2,7 +2,7 @@
                "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd"
 	       [<!ENTITY mdash "&#8212;">]>
 <!--
- - Copyright (C) 2004, 2005, 2007, 2012  Internet Systems Consortium, Inc. ("ISC")
+ - Copyright (C) 2004, 2005, 2007, 2012, 2014  Internet Systems Consortium, Inc. ("ISC")
  - Copyright (C) 2000, 2001  Internet Software Consortium.
  -
  - Permission to use, copy, modify, and/or distribute this software for any
@@ -18,11 +18,10 @@
  - PERFORMANCE OF THIS SOFTWARE.
 -->
 
-<!-- $Id: lwres_resutil.docbook,v 1.1.1.1 2013-01-30 01:45:01 laffer1 Exp $ -->
 <refentry>
 
   <refentryinfo>
-    <date>Jun 30, 2000</date>
+    <date>March 10, 2012</date>
   </refentryinfo>
 
   <refmeta>
@@ -37,6 +36,7 @@
       <year>2005</year>
       <year>2007</year>
       <year>2012</year>
+      <year>2014</year>
       <holder>Internet Systems Consortium, Inc. ("ISC")</holder>
     </copyright>
     <copyright>
@@ -154,7 +154,7 @@ typedef struct {
     <para>
       The lightweight resolver uses
       <function>lwres_getaddrsbyname()</function> to perform
-      foward lookups.
+      forward lookups.
       Hostname <parameter>name</parameter> is looked up using the
       resolver
       context <parameter>ctx</parameter> for memory allocation.

@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dnssec-dsfromkey.c,v 1.1.1.1 2013-01-30 01:44:56 laffer1 Exp $ */
+/* $Id: dnssec-dsfromkey.c,v 1.19.14.2 2011/09/05 23:45:53 tbox Exp $ */
 
 /*! \file */
 

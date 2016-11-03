@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2010, 2014  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: isc-hmac-fixup.c,v 1.1.1.1 2013-01-30 01:44:57 laffer1 Exp $ */
+/* $Id: isc-hmac-fixup.c,v 1.4 2010/03/10 02:17:52 marka Exp $ */
 
 #include <config.h>
 
@@ -52,7 +52,7 @@ main(int argc, char **argv)  {
 		fprintf(stderr, "error: %s\n", isc_result_totext(result));
 		return (1);
 	}
-	isc__buffer_usedregion(&buf, &r);
+	isc_buffer_usedregion(&buf, &r);
 
 	if (!strcasecmp(argv[1], "md5") ||
 	    !strcasecmp(argv[1], "hmac-md5")) {

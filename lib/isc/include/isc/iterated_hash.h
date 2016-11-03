@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2008, 2014  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: iterated_hash.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: iterated_hash.h,v 1.3 2008/09/25 04:02:39 tbox Exp $ */
 
 #ifndef ISC_ITERATED_HASH_H
 #define ISC_ITERATED_HASH_H 1
@@ -23,7 +23,7 @@
 #include <isc/sha1.h>
 
 /*
- * The maximal hash length that can be encoded it a name
+ * The maximal hash length that can be encoded in a name
  * using base32hex.  floor(255/8)*5
  */
 #define NSEC3_MAX_HASH_LENGTH 155

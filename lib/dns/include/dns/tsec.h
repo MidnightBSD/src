@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: tsec.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: tsec.h,v 1.6 2010/12/09 00:54:34 marka Exp $ */
 
 #ifndef DNS_TSEC_H
 #define DNS_TSEC_H 1

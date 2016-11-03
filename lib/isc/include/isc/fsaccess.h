@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: fsaccess.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: fsaccess.h,v 1.16 2009/01/17 23:47:43 tbox Exp $ */
 
 #ifndef ISC_FSACCESS_H
 #define ISC_FSACCESS_H 1

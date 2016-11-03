@@ -18,7 +18,7 @@
 #ifndef GENERIC_NSEC3PARAM_51_H
 #define GENERIC_NSEC3PARAM_51_H 1
 
-/* $Id: nsec3param_51.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: nsec3param_51.h,v 1.4 2008/09/25 04:02:39 tbox Exp $ */
 
 /*!
  * \brief Per RFC 5155 */

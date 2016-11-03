@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2011-2013  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: zonemgr_test.c,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
+/* $Id$ */
 
 /*! \file */
 
@@ -183,12 +183,23 @@ ATF_TC_BODY(zonemgr_unreachable, tc) {
 	in.s_addr = inet_addr("10.53.0.2");
 	isc_sockaddr_fromin(&addr2, &in, 5150);
 	ATF_CHECK(! dns_zonemgr_unreachable(zonemgr, &addr1, &addr2, &now));
+	/*
+	 * We require multiple unreachableadd calls to mark a server as
+	 * unreachable.
+	 */
+	dns_zonemgr_unreachableadd(zonemgr, &addr1, &addr2, &now);
+	ATF_CHECK(! dns_zonemgr_unreachable(zonemgr, &addr1, &addr2, &now));
 	dns_zonemgr_unreachableadd(zonemgr, &addr1, &addr2, &now);
 	ATF_CHECK(dns_zonemgr_unreachable(zonemgr, &addr1, &addr2, &now));
 
 	in.s_addr = inet_addr("10.53.0.3");
 	isc_sockaddr_fromin(&addr2, &in, 5150);
 	ATF_CHECK(! dns_zonemgr_unreachable(zonemgr, &addr1, &addr2, &now));
+	/*
+	 * We require multiple unreachableadd calls to mark a server as
+	 * unreachable.
+	 */
+	dns_zonemgr_unreachableadd(zonemgr, &addr1, &addr2, &now);
 	dns_zonemgr_unreachableadd(zonemgr, &addr1, &addr2, &now);
 	ATF_CHECK(dns_zonemgr_unreachable(zonemgr, &addr1, &addr2, &now));
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2013  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2001-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: config.c,v 1.1.1.2 2013-08-22 22:51:52 laffer1 Exp $ */
+/* $Id: config.c,v 1.113.16.2 2011/02/28 01:19:58 tbox Exp $ */
 
 /*! \file */
 
@@ -97,7 +97,7 @@ options {\n\
 	statistics-file \"named.stats\";\n\
 	statistics-interval 60;\n\
 	tcp-clients 100;\n\
-	tcp-listen-queue 3;\n\
+	tcp-listen-queue 10;\n\
 #	tkey-dhkey <none>\n\
 #	tkey-gssapi-credential <none>\n\
 #	tkey-domain <none>\n\
@@ -555,7 +555,7 @@ ns_config_getipandkeylist(const cfg_obj_t *config, const cfg_obj_t *list,
 				if (new == NULL)
 					goto cleanup;
 				if (listcount != 0) {
-					memcpy(new, lists, oldsize);
+					memmove(new, lists, oldsize);
 					isc_mem_put(mctx, lists, oldsize);
 				}
 				lists = new;
@@ -590,7 +590,7 @@ ns_config_getipandkeylist(const cfg_obj_t *config, const cfg_obj_t *list,
 				if (new == NULL)
 					goto cleanup;
 				if (stackcount != 0) {
-					memcpy(new, stack, oldsize);
+					memmove(new, stack, oldsize);
 					isc_mem_put(mctx, stack, oldsize);
 				}
 				stack = new;
@@ -617,7 +617,7 @@ ns_config_getipandkeylist(const cfg_obj_t *config, const cfg_obj_t *list,
 			if (new == NULL)
 				goto cleanup;
 			if (addrcount != 0) {
-				memcpy(new, addrs, oldsize);
+				memmove(new, addrs, oldsize);
 				isc_mem_put(mctx, addrs, oldsize);
 			}
 			addrs = new;
@@ -629,7 +629,7 @@ ns_config_getipandkeylist(const cfg_obj_t *config, const cfg_obj_t *list,
 			if (new == NULL)
 				goto cleanup;
 			if (keycount != 0) {
-				memcpy(new, keys, oldsize);
+				memmove(new, keys, oldsize);
 				isc_mem_put(mctx, keys, oldsize);
 			}
 			keys = new;
@@ -677,7 +677,7 @@ ns_config_getipandkeylist(const cfg_obj_t *config, const cfg_obj_t *list,
 			new = isc_mem_get(mctx, newsize);
 			if (new == NULL)
 				goto cleanup;
-			memcpy(new, addrs, newsize);
+			memmove(new, addrs, newsize);
 		} else
 			new = NULL;
 		isc_mem_put(mctx, addrs, oldsize);
@@ -690,7 +690,7 @@ ns_config_getipandkeylist(const cfg_obj_t *config, const cfg_obj_t *list,
 			new = isc_mem_get(mctx, newsize);
 			if (new == NULL)
 				goto cleanup;
-			memcpy(new, keys,  newsize);
+			memmove(new, keys,  newsize);
 		} else
 			new = NULL;
 		isc_mem_put(mctx, keys, oldsize);

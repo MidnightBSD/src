@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001, 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: print.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: print.h,v 1.26 2007/06/19 23:47:18 tbox Exp $ */
 
 #ifndef ISC_PRINT_H
 #define ISC_PRINT_H 1
@@ -38,10 +38,13 @@
  */
 #if !defined(ISC_PLATFORM_NEEDVSNPRINTF) && defined(ISC__PRINT_SOURCE)
 #define ISC_PLATFORM_NEEDVSNPRINTF
+#undef snprintf
+#undef vsnprintf
 #endif
 
 #if !defined(ISC_PLATFORM_NEEDSPRINTF) && defined(ISC__PRINT_SOURCE)
 #define ISC_PLATFORM_NEEDSPRINTF
+#undef sprintf
 #endif
 
 /***

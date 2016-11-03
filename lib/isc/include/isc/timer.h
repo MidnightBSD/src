@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2009, 2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2009, 2012, 2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: timer.h,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
+/* $Id: timer.h,v 1.43 2009/09/02 23:48:03 tbox Exp $ */
 
 #ifndef ISC_TIMER_H
 #define ISC_TIMER_H 1
@@ -112,7 +112,7 @@ typedef struct {
 				       const isc_interval_t *interval,
 				       isc_task_t *task,
 				       isc_taskaction_t action,
-				       const void *arg,
+				       void *arg,
 				       isc_timer_t **timerp);
 } isc_timermgrmethods_t;
 
@@ -173,7 +173,7 @@ isc_timer_create(isc_timermgr_t *manager,
 		 const isc_interval_t *interval,
 		 isc_task_t *task,
 		 isc_taskaction_t action,
-		 const void *arg,
+		 void *arg,
 		 isc_timer_t **timerp);
 /*%<
  * Create a new 'type' timer managed by 'manager'.  The timers parameters

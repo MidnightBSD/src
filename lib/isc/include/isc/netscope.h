@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: netscope.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: netscope.h,v 1.13 2009/06/25 23:48:02 tbox Exp $ */
 
 #ifndef ISC_NETSCOPE_H
 #define ISC_NETSCOPE_H 1

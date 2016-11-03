@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2007, 2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2005, 2007, 2009, 2014  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: a_1.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: a_1.c,v 1.8 2009/12/04 22:06:37 tbox Exp $ */
 
 /* by Bjorn.Victor@it.uu.se, 2005-05-07 */
 /* Based on generic/soa_6.c and generic/mx_15.c */
@@ -117,7 +117,7 @@ fromwire_ch_a(ARGS_FROMWIRE) {
 	if (tregion.length < 2)
 		return (ISC_R_NOSPACE);
 
-	memcpy(tregion.base, sregion.base, 2);
+	memmove(tregion.base, sregion.base, 2);
 	isc_buffer_forward(source, 2);
 	isc_buffer_add(target, 2);
 
@@ -149,7 +149,7 @@ towire_ch_a(ARGS_TOWIRE) {
 	if (tregion.length < 2)
 		return (ISC_R_NOSPACE);
 
-	memcpy(tregion.base, sregion.base, 2);
+	memmove(tregion.base, sregion.base, 2);
 	isc_buffer_add(target, 2);
 	return (ISC_R_SUCCESS);
 }

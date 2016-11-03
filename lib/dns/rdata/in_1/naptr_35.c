@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007-2009, 2012, 2013  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007-2009, 2012-2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001, 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: naptr_35.c,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
+/* $Id$ */
 
 /* Reviewed: Thu Mar 16 16:52:50 PST 2000 by bwelling */
 
@@ -226,19 +226,19 @@ totext_in_naptr(ARGS_TOTEXT) {
 	/*
 	 * Flags.
 	 */
-	RETERR(txt_totext(&region, target));
+	RETERR(txt_totext(&region, ISC_TRUE, target));
 	RETERR(str_totext(" ", target));
 
 	/*
 	 * Service.
 	 */
-	RETERR(txt_totext(&region, target));
+	RETERR(txt_totext(&region, ISC_TRUE, target));
 	RETERR(str_totext(" ", target));
 
 	/*
 	 * Regexp.
 	 */
-	RETERR(txt_totext(&region, target));
+	RETERR(txt_totext(&region, ISC_TRUE, target));
 	RETERR(str_totext(" ", target));
 
 	/*

@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: assertions.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: assertions.c,v 1.26 2009/09/29 15:06:07 fdupont Exp $ */
 
 /*! \file */
 

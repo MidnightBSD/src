@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007, 2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2009, 2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: aaaa_28.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: aaaa_28.c,v 1.47 2009/12/04 22:06:37 tbox Exp $ */
 
 /* Reviewed: Thu Mar 16 16:52:50 PST 2000 by bwelling */
 
@@ -51,7 +51,7 @@ fromtext_in_aaaa(ARGS_FROMTEXT) {
 	isc_buffer_availableregion(target, &region);
 	if (region.length < 16)
 		return (ISC_R_NOSPACE);
-	memcpy(region.base, addr, 16);
+	memmove(region.base, addr, 16);
 	isc_buffer_add(target, 16);
 	return (ISC_R_SUCCESS);
 }
@@ -90,7 +90,7 @@ fromwire_in_aaaa(ARGS_FROMWIRE) {
 	if (tregion.length < 16)
 		return (ISC_R_NOSPACE);
 
-	memcpy(tregion.base, sregion.base, 16);
+	memmove(tregion.base, sregion.base, 16);
 	isc_buffer_forward(source, 16);
 	isc_buffer_add(target, 16);
 	return (ISC_R_SUCCESS);
@@ -109,7 +109,7 @@ towire_in_aaaa(ARGS_TOWIRE) {
 	isc_buffer_availableregion(target, &region);
 	if (region.length < rdata->length)
 		return (ISC_R_NOSPACE);
-	memcpy(region.base, rdata->data, rdata->length);
+	memmove(region.base, rdata->data, rdata->length);
 	isc_buffer_add(target, 16);
 	return (ISC_R_SUCCESS);
 }
@@ -165,7 +165,7 @@ tostruct_in_aaaa(ARGS_TOSTRUCT) {
 
 	dns_rdata_toregion(rdata, &r);
 	INSIST(r.length == 16);
-	memcpy(aaaa->in6_addr.s6_addr, r.base, 16);
+	memmove(aaaa->in6_addr.s6_addr, r.base, 16);
 
 	return (ISC_R_SUCCESS);
 }

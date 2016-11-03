@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
- - Copyright (C) 2010  Internet Systems Consortium, Inc. ("ISC")
+ - Copyright (C) 2010, 2014  Internet Systems Consortium, Inc. ("ISC")
  -
  - Permission to use, copy, modify, and/or distribute this software for any
  - purpose with or without fee is hereby granted, provided that the above
@@ -270,7 +270,7 @@ $ <userinput>make</userinput>
   consists of a single domain name. Example:
   <literallayout>
   www.example.com
-  mx.examle.net
+  mx.example.net
   ns.xxx.example
 </literallayout>
   </listitem>
@@ -527,4 +527,4 @@ $ <userinput>sample-update -a sample-update -k Kxxx.+nnn+mmmm.key delete "foo.dy
   programs.</para>
   </sect2>
 </sect1>
-<!-- $Id: libdns.xml,v 1.1.1.1 2013-01-30 01:44:58 laffer1 Exp $ -->
+<!-- $Id: libdns.xml,v 1.3 2010/02/03 23:49:07 tbox Exp $ -->

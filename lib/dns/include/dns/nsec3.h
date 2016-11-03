@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2010, 2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2008-2010, 2012, 2013  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: nsec3.h,v 1.1.1.2 2013-08-22 22:51:59 laffer1 Exp $ */
+/* $Id$ */
 
 #ifndef DNS_NSEC3_H
 #define DNS_NSEC3_H 1
@@ -43,7 +43,7 @@
 /*
  * Test "unknown" algorithm.  Is mapped to dns_hash_sha1.
  */
-#define DNS_NSEC3_UNKNOWNALG 245U
+#define DNS_NSEC3_UNKNOWNALG ((dns_hash_t)245U)
 
 ISC_LANG_BEGINDECLS
 

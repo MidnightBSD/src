@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2013  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -114,7 +114,7 @@ typedef struct dns_rdata_textctx {
 } dns_rdata_textctx_t;
 
 static isc_result_t
-txt_totext(isc_region_t *source, isc_buffer_t *target);
+txt_totext(isc_region_t *source, isc_boolean_t quote, isc_buffer_t *target);
 
 static isc_result_t
 txt_fromtext(isc_textregion_t *source, isc_buffer_t *target);
@@ -127,9 +127,6 @@ multitxt_totext(isc_region_t *source, isc_buffer_t *target);
 
 static isc_result_t
 multitxt_fromtext(isc_textregion_t *source, isc_buffer_t *target);
-
-static isc_result_t
-multitxt_fromwire(isc_buffer_t *source, isc_buffer_t *target);
 
 static isc_boolean_t
 name_prefix(dns_name_t *name, dns_name_t *origin, dns_name_t *target);
@@ -279,7 +276,7 @@ locator_pton(const char *src, unsigned char *dst) {
 	}
 	if (tp != endp)
 		return (0);
-	memcpy(dst, tmp, NS_LOCATORSZ);
+	memmove(dst, tmp, NS_LOCATORSZ);
 	return (1);
 }
 
@@ -320,7 +317,7 @@ mem_maybedup(isc_mem_t *mctx, void *source, size_t length) {
 		return (source);
 	new = isc_mem_allocate(mctx, length);
 	if (new != NULL)
-		memcpy(new, source, length);
+		memmove(new, source, length);
 
 	return (new);
 }
@@ -500,7 +497,7 @@ dns_rdata_fromwire(dns_rdata_t *rdata, dns_rdataclass_t rdclass,
 	isc_buffer_t st;
 	isc_boolean_t use_default = ISC_FALSE;
 	isc_uint32_t activelength;
-	size_t length;
+	unsigned int length;
 
 	REQUIRE(dctx != NULL);
 	if (rdata != NULL) {
@@ -587,7 +584,7 @@ dns_rdata_towire(dns_rdata_t *rdata, dns_compress_t *cctx,
 		isc_buffer_availableregion(target, &tr);
 		if (tr.length < rdata->length)
 			return (ISC_R_NOSPACE);
-		memcpy(tr.base, rdata->data, rdata->length);
+		memmove(tr.base, rdata->data, rdata->length);
 		isc_buffer_add(target, rdata->length);
 		return (ISC_R_SUCCESS);
 	}
@@ -681,7 +678,7 @@ dns_rdata_fromtext(dns_rdata_t *rdata, dns_rdataclass_t rdclass,
 	unsigned long line;
 	void (*callback)(dns_rdatacallbacks_t *, const char *, ...);
 	isc_result_t tresult;
-	size_t length;
+	unsigned int length;
 	isc_boolean_t unknown;
 
 	REQUIRE(origin == NULL || dns_name_isabsolute(origin) == ISC_TRUE);
@@ -908,7 +905,7 @@ dns_rdata_fromstruct(dns_rdata_t *rdata, dns_rdataclass_t rdclass,
 	isc_buffer_t st;
 	isc_region_t region;
 	isc_boolean_t use_default = ISC_FALSE;
-	size_t length;
+	unsigned int length;
 
 	REQUIRE(source != NULL);
 	if (rdata != NULL) {
@@ -1123,7 +1120,7 @@ name_length(dns_name_t *name) {
 }
 
 static isc_result_t
-txt_totext(isc_region_t *source, isc_buffer_t *target) {
+txt_totext(isc_region_t *source, isc_boolean_t quote, isc_buffer_t *target) {
 	unsigned int tl;
 	unsigned int n;
 	unsigned char *sp;
@@ -1138,13 +1135,20 @@ txt_totext(isc_region_t *source, isc_buffer_t *target) {
 	n = *sp++;
 
 	REQUIRE(n + 1 <= source->length);
+	if (n == 0U)
+		REQUIRE(quote == ISC_TRUE);
 
-	if (tl < 1)
-		return (ISC_R_NOSPACE);
-	*tp++ = '"';
-	tl--;
+	if (quote) {
+		if (tl < 1)
+			return (ISC_R_NOSPACE);
+		*tp++ = '"';
+		tl--;
+	}
 	while (n--) {
-		if (*sp < 0x20 || *sp >= 0x7f) {
+		/*
+		 * \DDD space (0x20) if not quoting.
+		 */
+		if (*sp < (quote ? 0x20 : 0x21) || *sp >= 0x7f) {
 			if (tl < 4)
 				return (ISC_R_NOSPACE);
 			*tp++ = 0x5c;
@@ -1155,8 +1159,13 @@ txt_totext(isc_region_t *source, isc_buffer_t *target) {
 			tl -= 4;
 			continue;
 		}
-		/* double quote, semi-colon, backslash */
-		if (*sp == 0x22 || *sp == 0x3b || *sp == 0x5c) {
+		/*
+		 * Escape double quote, semi-colon, backslash.
+		 * If we are not enclosing the string in double
+		 * quotes also escape at sign.
+		 */
+		if (*sp == 0x22 || *sp == 0x3b || *sp == 0x5c ||
+		    (!quote && *sp == 0x40)) {
 			if (tl < 2)
 				return (ISC_R_NOSPACE);
 			*tp++ = '\\';
@@ -1167,11 +1176,13 @@ txt_totext(isc_region_t *source, isc_buffer_t *target) {
 		*tp++ = *sp++;
 		tl--;
 	}
-	if (tl < 1)
-		return (ISC_R_NOSPACE);
-	*tp++ = '"';
-	tl--;
-	isc_buffer_add(target, tp - (char *)region.base);
+	if (quote) {
+		if (tl < 1)
+			return (ISC_R_NOSPACE);
+		*tp++ = '"';
+		tl--;
+	}
+	isc_buffer_add(target, (unsigned int)(tp - (char *)region.base));
 	isc_region_consume(source, *source->base + 1);
 	return (ISC_R_SUCCESS);
 }
@@ -1237,7 +1248,7 @@ txt_fromtext(isc_textregion_t *source, isc_buffer_t *target) {
 	}
 	if (escape)
 		return (DNS_R_SYNTAX);
-	*tregion.base = t - tregion.base - 1;
+	*tregion.base = (unsigned char)(t - tregion.base - 1);
 	isc_buffer_add(target, *tregion.base + 1);
 	return (ISC_R_SUCCESS);
 }
@@ -1260,12 +1271,15 @@ txt_fromwire(isc_buffer_t *source, isc_buffer_t *target) {
 		return (ISC_R_NOSPACE);
 
 	if (tregion.base != sregion.base)
-		memcpy(tregion.base, sregion.base, n);
+		memmove(tregion.base, sregion.base, n);
 	isc_buffer_forward(source, n);
 	isc_buffer_add(target, n);
 	return (ISC_R_SUCCESS);
 }
 
+/*
+ * Conversion of TXT-like rdata fields without length limits.
+ */
 static isc_result_t
 multitxt_totext(isc_region_t *source, isc_buffer_t *target) {
 	unsigned int tl;
@@ -1284,9 +1298,8 @@ multitxt_totext(isc_region_t *source, isc_buffer_t *target) {
 	*tp++ = '"';
 	tl--;
 	do {
-		n0 = n = *sp++;
-
-		REQUIRE(n0 + 1 <= source->length);
+		n = source->length;
+		n0 = source->length - 1;
 
 		while (n--) {
 			if (*sp < 0x20 || *sp >= 0x7f) {
@@ -1318,7 +1331,7 @@ multitxt_totext(isc_region_t *source, isc_buffer_t *target) {
 		return (ISC_R_NOSPACE);
 	*tp++ = '"';
 	tl--;
-	isc_buffer_add(target, tp - (char *)region.base);
+	isc_buffer_add(target, (unsigned int)(tp - (char *)region.base));
 	return (ISC_R_SUCCESS);
 }
 
@@ -1338,17 +1351,11 @@ multitxt_fromtext(isc_textregion_t *source, isc_buffer_t *target) {
 
 	do {
 		isc_buffer_availableregion(target, &tregion);
-		t0 = tregion.base;
+		t0 = t = tregion.base;
 		nrem = tregion.length;
 		if (nrem < 1)
 			return (ISC_R_NOSPACE);
-		/* length byte */
-		t = t0;
-		nrem--;
-		t++;
-		/* 255 byte character-string slice */
-		if (nrem > 255)
-			nrem = 255;
+
 		while (n != 0) {
 			--n;
 			c = (*s++) & 0xff;
@@ -1382,38 +1389,9 @@ multitxt_fromtext(isc_textregion_t *source, isc_buffer_t *target) {
 		}
 		if (escape)
 			return (DNS_R_SYNTAX);
-		*t0 = t - t0 - 1;
-		isc_buffer_add(target, *t0 + 1);
+
+		isc_buffer_add(target, t - t0);
 	} while (n != 0);
-	return (ISC_R_SUCCESS);
-}
-
-static isc_result_t
-multitxt_fromwire(isc_buffer_t *source, isc_buffer_t *target) {
-	unsigned int n;
-	isc_region_t sregion;
-	isc_region_t tregion;
-
-	isc_buffer_activeregion(source, &sregion);
-	if (sregion.length == 0)
-		return(ISC_R_UNEXPECTEDEND);
-	n = 256U;
-	do {
-		if (n != 256U)
-			return (DNS_R_SYNTAX);
-		n = *sregion.base + 1;
-		if (n > sregion.length)
-			return (ISC_R_UNEXPECTEDEND);
-
-		isc_buffer_availableregion(target, &tregion);
-		if (n > tregion.length)
-			return (ISC_R_NOSPACE);
-
-		memcpy(tregion.base, sregion.base, n);
-		isc_buffer_forward(source, n);
-		isc_buffer_add(target, n);
-		isc_buffer_activeregion(source, &sregion);
-	} while (sregion.length != 0);
 	return (ISC_R_SUCCESS);
 }
 
@@ -1460,7 +1438,7 @@ str_totext(const char *source, isc_buffer_t *target) {
 	if (l > region.length)
 		return (ISC_R_NOSPACE);
 
-	memcpy(region.base, source, l);
+	memmove(region.base, source, l);
 	isc_buffer_add(target, l);
 	return (ISC_R_SUCCESS);
 }
@@ -1586,7 +1564,7 @@ mem_tobuffer(isc_buffer_t *target, void *base, unsigned int length) {
 	if (length > tr.length)
 		return (ISC_R_NOSPACE);
 	if (tr.base != base)
-		memcpy(tr.base, base, length);
+		memmove(tr.base, base, length);
 	isc_buffer_add(target, length);
 	return (ISC_R_SUCCESS);
 }
@@ -1604,7 +1582,7 @@ hexvalue(char value) {
 		c = tolower(c);
 	if ((s = strchr(hexdigits, c)) == NULL)
 		return (-1);
-	return (s - hexdigits);
+	return (int)(s - hexdigits);
 }
 
 static int
@@ -1619,7 +1597,7 @@ decvalue(char value) {
 		return (-1);
 	if ((s = strchr(decdigits, value)) == NULL)
 		return (-1);
-	return (s - decdigits);
+	return (int)(s - decdigits);
 }
 
 static const char atob_digits[86] =
@@ -1679,15 +1657,15 @@ byte_atob(int c, isc_buffer_t *target, struct state *state) {
 		}
 	} else if ((s = strchr(atob_digits, c)) != NULL) {
 		if (bcount == 0) {
-			word = s - atob_digits;
+			word = (isc_int32_t)(s - atob_digits);
 			++bcount;
 		} else if (bcount < 4) {
 			word = times85(word);
-			word += s - atob_digits;
+			word += (isc_int32_t)(s - atob_digits);
 			++bcount;
 		} else {
 			word = times85(word);
-			word += s - atob_digits;
+			word += (isc_int32_t)(s - atob_digits);
 			RETERR(putbyte((word >> 24) & 0xff, target, state));
 			RETERR(putbyte((word >> 16) & 0xff, target, state));
 			RETERR(putbyte((word >> 8) & 0xff, target, state));

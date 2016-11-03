@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2010-2012, 2014  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: opensslgost_link.c,v 1.1.1.2 2013-08-22 22:51:59 laffer1 Exp $ */
+/* $Id: opensslgost_link.c,v 1.5 2011/01/19 23:47:12 tbox Exp $ */
 
 #include <config.h>
 
@@ -253,7 +253,7 @@ opensslgost_todns(const dst_key_t *key, isc_buffer_t *data) {
 	len = i2d_PUBKEY(pkey, &p);
 	INSIST(len == sizeof(der));
 	INSIST(memcmp(gost_prefix, der, 37) == 0);
-	memcpy(r.base, der + 37, 64);
+	memmove(r.base, der + 37, 64);
 	isc_buffer_add(data, 64);
 
 	return (ISC_R_SUCCESS);
@@ -272,8 +272,8 @@ opensslgost_fromdns(dst_key_t *key, isc_buffer_t *data) {
 
 	if (r.length != 64)
 		return (DST_R_INVALIDPUBLICKEY);
-	memcpy(der, gost_prefix, 37);
-	memcpy(der + 37, r.base, 64);
+	memmove(der, gost_prefix, 37);
+	memmove(der + 37, r.base, 64);
 	isc_buffer_forward(data, 64);
 
 	p = der;

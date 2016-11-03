@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: result.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: result.h,v 1.9 2008/04/01 23:47:10 tbox Exp $ */
 
 #ifndef DST_RESULT_H
 #define DST_RESULT_H 1

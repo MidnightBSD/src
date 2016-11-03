@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2009, 2011, 2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2009, 2011, 2012, 2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: acl.c,v 1.1.1.1 2013-01-30 01:44:59 laffer1 Exp $ */
+/* $Id$ */
 
 /*! \file */
 
@@ -287,9 +287,12 @@ dns_acl_merge(dns_acl_t *dest, dns_acl_t *source, isc_boolean_t pos)
 		if (newmem == NULL)
 			return (ISC_R_NOMEMORY);
 
+		/* Zero. */
+		memset(newmem, 0, newalloc * sizeof(dns_aclelement_t));
+
 		/* Copy in the original elements */
-		memcpy(newmem, dest->elements,
-		       dest->length * sizeof(dns_aclelement_t));
+		memmove(newmem, dest->elements,
+			dest->length * sizeof(dns_aclelement_t));
 
 		/* Release the memory for the old elements array */
 		isc_mem_put(dest->mctx, dest->elements,

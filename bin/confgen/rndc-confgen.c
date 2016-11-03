@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007-2009, 2011, 2013  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007-2009, 2011, 2013, 2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2001, 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rndc-confgen.c,v 1.1.1.2 2013-08-22 22:51:51 laffer1 Exp $ */
+/* $Id: rndc-confgen.c,v 1.5.308.2 2011/03/12 04:59:13 tbox Exp $ */
 
 /*! \file */
 
@@ -120,7 +120,7 @@ main(int argc, char **argv) {
 
 	result = isc_file_progname(*argv, program, sizeof(program));
 	if (result != ISC_R_SUCCESS)
-		memcpy(program, "rndc-confgen", 13);
+		memmove(program, "rndc-confgen", 13);
 	progname = program;
 
 	keyname = DEFAULT_KEYNAME;

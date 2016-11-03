@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: timer.h,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: timer.h,v 1.9 2007/06/19 23:47:17 tbox Exp $ */
 
 #ifndef DNS_TIMER_H
 #define DNS_TIMER_H 1

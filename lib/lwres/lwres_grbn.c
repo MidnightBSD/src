@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2013  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: lwres_grbn.c,v 1.1.1.1 2013-01-30 01:45:01 laffer1 Exp $ */
+/* $Id: lwres_grbn.c,v 1.10 2007/06/19 23:47:22 tbox Exp $ */
 
 /*! \file lwres_grbn.c
 
@@ -61,9 +61,9 @@ lwres_grbnrequest_render(lwres_context_t *ctx, lwres_grbnrequest_t *req,
 	if (buf == NULL)
 		return (LWRES_R_NOMEMORY);
 
-	lwres_buffer_init(b, buf, buflen);
+	lwres_buffer_init(b, buf, (unsigned int)buflen);
 
-	pkt->length = buflen;
+	pkt->length = (lwres_uint32_t)buflen;
 	pkt->version = LWRES_LWPACKETVERSION_0;
 	pkt->pktflags &= ~LWRES_LWPACKETFLAG_RESPONSE;
 	pkt->opcode = LWRES_OPCODE_GETRDATABYNAME;
@@ -139,9 +139,9 @@ lwres_grbnresponse_render(lwres_context_t *ctx, lwres_grbnresponse_t *req,
 	buf = CTXMALLOC(buflen);
 	if (buf == NULL)
 		return (LWRES_R_NOMEMORY);
-	lwres_buffer_init(b, buf, buflen);
+	lwres_buffer_init(b, buf, (unsigned int)buflen);
 
-	pkt->length = buflen;
+	pkt->length = (lwres_uint32_t)buflen;
 	pkt->version = LWRES_LWPACKETVERSION_0;
 	pkt->pktflags |= LWRES_LWPACKETFLAG_RESPONSE;
 	pkt->opcode = LWRES_OPCODE_GETRDATABYNAME;

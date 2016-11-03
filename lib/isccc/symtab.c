@@ -29,7 +29,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: symtab.c,v 1.1.1.1 2013-01-30 01:45:01 laffer1 Exp $ */
+/* $Id: symtab.c,v 1.11 2007/09/13 04:45:18 each Exp $ */
 
 /*! \file */
 

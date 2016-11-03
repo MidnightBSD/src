@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2013  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2012-2014  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: opensslecdsa_link.c,v 1.1.1.2 2013-08-22 22:51:59 laffer1 Exp $ */
+/* $Id$ */
 
 #include <config.h>
 
@@ -371,7 +371,7 @@ opensslecdsa_todns(const dst_key_t *key, isc_buffer_t *data) {
 	cp = buf;
 	if (!i2o_ECPublicKey(eckey, &cp))
 		DST_RET (dst__openssl_toresult(ISC_R_FAILURE));
-	memcpy(r.base, buf + 1, len);
+	memmove(r.base, buf + 1, len);
 	isc_buffer_add(data, len);
 	ret = ISC_R_SUCCESS;
 
@@ -414,7 +414,7 @@ opensslecdsa_fromdns(dst_key_t *key, isc_buffer_t *data) {
 		return (dst__openssl_toresult(DST_R_OPENSSLFAILURE));
 
 	buf[0] = POINT_CONVERSION_UNCOMPRESSED;
-	memcpy(buf + 1, r.base, len);
+	memmove(buf + 1, r.base, len);
 	cp = buf;
 	if (o2i_ECPublicKey(&eckey,
 			    (const unsigned char **) &cp,

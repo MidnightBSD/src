@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007, 2009-2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2009-2012, 2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2001, 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: task.h,v 1.1.1.2 2013-08-22 22:52:00 laffer1 Exp $ */
+/* $Id$ */
 
 #ifndef ISC_TASK_H
 #define ISC_TASK_H 1
@@ -119,7 +119,7 @@ typedef struct isc_taskmethods {
 	unsigned int (*unsend)(isc_task_t *task, void *sender, isc_eventtype_t type,
 			       void *tag, isc_eventlist_t *events);
 	isc_result_t (*onshutdown)(isc_task_t *task, isc_taskaction_t action,
-				   const void *arg);
+				   void *arg);
 	void (*shutdown)(isc_task_t *task);
 	void (*setname)(isc_task_t *task, const char *name, void *tag);
 	unsigned int (*purgeevents)(isc_task_t *task, void *sender,
@@ -430,7 +430,7 @@ isc_task_unsend(isc_task_t *task, void *sender, isc_eventtype_t type,
 
 isc_result_t
 isc_task_onshutdown(isc_task_t *task, isc_taskaction_t action,
-		    const void *arg);
+		    void *arg);
 /*%<
  * Send a shutdown event with action 'action' and argument 'arg' when
  * 'task' is shutdown.

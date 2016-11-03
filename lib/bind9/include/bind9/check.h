@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: check.h,v 1.1.1.1 2013-01-30 01:44:59 laffer1 Exp $ */
+/* $Id: check.h,v 1.9 2007/06/19 23:47:16 tbox Exp $ */
 
 #ifndef BIND9_CHECK_H
 #define BIND9_CHECK_H 1

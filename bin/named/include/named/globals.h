@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: globals.h,v 1.1.1.2 2013-08-22 22:51:52 laffer1 Exp $ */
+/* $Id: globals.h,v 1.89.54.2 2011/06/17 23:47:10 tbox Exp $ */
 
 #ifndef NAMED_GLOBALS_H
 #define NAMED_GLOBALS_H 1
@@ -70,6 +70,7 @@ EXTERN const char *		ns_g_product		INIT(PRODUCT);
 EXTERN const char *		ns_g_description	INIT(DESCRIPTION);
 EXTERN const char *		ns_g_srcid		INIT(SRCID);
 EXTERN const char *		ns_g_configargs		INIT(CONFIGARGS);
+EXTERN const char *		ns_g_builder		INIT(BUILDER);
 EXTERN in_port_t		ns_g_port		INIT(0);
 EXTERN in_port_t		lwresd_g_listenport	INIT(0);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -16,7 +16,7 @@
  */
 
 /*
- * $Id: dnssec.c,v 1.1.1.2 2013-08-22 22:51:58 laffer1 Exp $
+ * $Id$
  */
 
 /*! \file */
@@ -295,7 +295,7 @@ dns_dnssec_sign(dns_name_t *name, dns_rdataset_t *set, dst_key_t *key,
 	 * Create an envelope for each rdata: <name|type|class|ttl>.
 	 */
 	isc_buffer_init(&envbuf, data, sizeof(data));
-	memcpy(data, r.base, r.length);
+	memmove(data, r.base, r.length);
 	isc_buffer_add(&envbuf, r.length);
 	isc_buffer_putuint16(&envbuf, set->type);
 	isc_buffer_putuint16(&envbuf, set->rdclass);
@@ -492,10 +492,10 @@ dns_dnssec_verify2(dns_name_t *name, dns_rdataset_t *set, dst_key_t *key,
 	if (labels - sig.labels > 0) {
 		isc_buffer_putuint8(&envbuf, 1);
 		isc_buffer_putuint8(&envbuf, '*');
-		memcpy(data + 2, r.base, r.length);
+		memmove(data + 2, r.base, r.length);
 	}
 	else
-		memcpy(data, r.base, r.length);
+		memmove(data, r.base, r.length);
 	isc_buffer_add(&envbuf, r.length);
 	isc_buffer_putuint16(&envbuf, set->type);
 	isc_buffer_putuint16(&envbuf, set->rdclass);
@@ -753,6 +753,7 @@ dns_dnssec_findzonekeys2(dns_db_t *db, dns_dbversion_t *ver,
 		 * If a key is marked inactive, skip it
 		 */
 		if (!key_active(keys[count], now)) {
+			dst_key_setinactive(pubkey, ISC_TRUE);
 			dst_key_free(&keys[count]);
 			keys[count] = pubkey;
 			pubkey = NULL;
@@ -1021,14 +1022,14 @@ dns_dnssec_verifymessage(isc_buffer_t *source, dns_message_t *msg,
 	/*
 	 * Extract the header.
 	 */
-	memcpy(header, source_r.base, DNS_MESSAGE_HEADERLEN);
+	memmove(header, source_r.base, DNS_MESSAGE_HEADERLEN);
 
 	/*
 	 * Decrement the additional field counter.
 	 */
-	memcpy(&addcount, &header[DNS_MESSAGE_HEADERLEN - 2], 2);
+	memmove(&addcount, &header[DNS_MESSAGE_HEADERLEN - 2], 2);
 	addcount = htons((isc_uint16_t)(ntohs(addcount) - 1));
-	memcpy(&header[DNS_MESSAGE_HEADERLEN - 2], &addcount, 2);
+	memmove(&header[DNS_MESSAGE_HEADERLEN - 2], &addcount, 2);
 
 	/*
 	 * Digest the modified header.
@@ -1228,7 +1229,10 @@ get_hints(dns_dnsseckey_t *key, isc_stdtime_t now) {
 	/* Metadata says activate (so we must also publish) */
 	if (actset && active <= now) {
 		key->hint_sign = ISC_TRUE;
-		key->hint_publish = ISC_TRUE;
+
+		/* Only publish if publish time has already passed. */
+		if (pubset && publish <= now)
+			key->hint_publish = ISC_TRUE;
 	}
 
 	/*
@@ -1490,7 +1494,7 @@ dns_dnssec_keylistfromrdataset(dns_name_t *origin,
 			       const char *directory, isc_mem_t *mctx,
 			       dns_rdataset_t *keyset, dns_rdataset_t *keysigs,
 			       dns_rdataset_t *soasigs, isc_boolean_t savekeys,
-			       isc_boolean_t public,
+			       isc_boolean_t publickey,
 			       dns_dnsseckeylist_t *keylist)
 {
 	dns_rdataset_t keys;
@@ -1518,7 +1522,7 @@ dns_dnssec_keylistfromrdataset(dns_name_t *origin,
 		if (!dns_name_equal(origin, dst_key_name(pubkey)))
 			goto skip;
 
-		if (public) {
+		if (publickey) {
 			RETERR(addkey(keylist, &pubkey, savekeys, mctx));
 			goto skip;
 		}

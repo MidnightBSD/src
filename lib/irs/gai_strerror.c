@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: gai_strerror.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: gai_strerror.c,v 1.5 2009/09/02 23:48:02 tbox Exp $ */
 
 /*! \file gai_strerror.c
  * gai_strerror() returns an error message corresponding to an

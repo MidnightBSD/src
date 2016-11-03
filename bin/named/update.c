@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: update.c,v 1.1.1.2 2013-08-22 22:51:52 laffer1 Exp $ */
+/* $Id: update.c,v 1.186.16.7 2011/11/03 02:55:34 each Exp $ */
 
 #include <config.h>
 
@@ -398,7 +398,6 @@ do_one_tuple(dns_difftuple_t **tuple, dns_db_t *db, dns_dbversion_t *ver,
 	 * Create a singleton diff.
 	 */
 	dns_diff_init(diff->mctx, &temp_diff);
-	temp_diff.resign = diff->resign;
 	ISC_LIST_APPEND(temp_diff.tuples, *tuple, link);
 
 	/*
@@ -2004,7 +2003,8 @@ del_keysigs(dns_db_t *db, dns_dbversion_t *ver, dns_name_t *name,
 		for (i = 0; i < nkeys; i++) {
 			if (rrsig.keyid == dst_key_id(keys[i])) {
 				found = ISC_TRUE;
-				if (!dst_key_isprivate(keys[i])) {
+				if (!dst_key_inactive(keys[i]) &&
+				    !dst_key_isprivate(keys[i])) {
 					/*
 					 * The re-signing code in zone.c
 					 * will mark this as offline.
@@ -2147,7 +2147,6 @@ update_signatures(ns_client_t *client, dns_zone_t *zone, dns_db_t *db,
 	dns_diff_init(client->mctx, &affected);
 
 	dns_diff_init(client->mctx, &sig_diff);
-	sig_diff.resign = dns_zone_getsigresigninginterval(zone);
 	dns_diff_init(client->mctx, &nsec_diff);
 	dns_diff_init(client->mctx, &nsec_mindiff);
 
@@ -4019,10 +4018,18 @@ update_action(isc_task_t *task, isc_event_t *event) {
 					dns_diff_clear(&ctx.del_diff);
 					dns_diff_clear(&ctx.add_diff);
 				} else {
-					CHECK(do_diff(&ctx.del_diff, db, ver,
-						      &diff));
-					CHECK(do_diff(&ctx.add_diff, db, ver,
-						      &diff));
+					result = do_diff(&ctx.del_diff, db, ver,
+							 &diff);
+					if (result == ISC_R_SUCCESS) {
+						result = do_diff(&ctx.add_diff,
+								 db, ver,
+								 &diff);
+					}
+					if (result != ISC_R_SUCCESS) {
+						dns_diff_clear(&ctx.del_diff);
+						dns_diff_clear(&ctx.add_diff);
+						goto failure;
+					}
 					CHECK(update_one_rr(db, ver, &diff,
 							    DNS_DIFFOP_ADD,
 							    name, ttl, &rdata));
@@ -4170,10 +4177,9 @@ update_action(isc_task_t *task, isc_event_t *event) {
 #define ALLOW_SECURE_TO_INSECURE(zone) \
 	((dns_zone_getoptions(zone) & DNS_ZONEOPT_SECURETOINSECURE) != 0)
 
+		CHECK(rrset_exists(db, oldver, zonename, dns_rdatatype_dnskey,
+				   0, &had_dnskey));
 		if (!ALLOW_SECURE_TO_INSECURE(zone)) {
-			CHECK(rrset_exists(db, oldver, zonename,
-					   dns_rdatatype_dnskey, 0,
-					   &had_dnskey));
 			if (had_dnskey && !has_dnskey) {
 				update_log(client, zone, LOGLEVEL_PROTOCOL,
 					   "update rejected: all DNSKEY "
@@ -4467,6 +4473,8 @@ forward_action(isc_task_t *task, isc_event_t *event) {
 
 static isc_result_t
 send_forward_event(ns_client_t *client, dns_zone_t *zone) {
+	char namebuf[DNS_NAME_FORMATSIZE];
+	char classbuf[DNS_RDATACLASS_FORMATSIZE];
 	isc_result_t result = ISC_R_SUCCESS;
 	update_event_t *event = NULL;
 	isc_task_t *zonetask = NULL;
@@ -4491,6 +4499,15 @@ send_forward_event(ns_client_t *client, dns_zone_t *zone) {
 	INSIST(client->nupdates == 0);
 	client->nupdates++;
 	event->ev_arg = evclient;
+
+	dns_name_format(dns_zone_getorigin(zone), namebuf,
+			sizeof(namebuf));
+	dns_rdataclass_format(dns_zone_getclass(zone), classbuf,
+			      sizeof(classbuf));
+
+	ns_client_log(client, NS_LOGCATEGORY_UPDATE, NS_LOGMODULE_UPDATE,
+		      LOGLEVEL_PROTOCOL, "forwarding update for zone '%s/%s'",
+		      namebuf, classbuf);
 
 	dns_zone_gettask(zone, &zonetask);
 	isc_task_send(zonetask, ISC_EVENT_PTR(&event));

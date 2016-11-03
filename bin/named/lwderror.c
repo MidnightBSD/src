@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: lwderror.c,v 1.1.1.1 2013-01-30 01:44:56 laffer1 Exp $ */
+/* $Id: lwderror.c,v 1.12 2007/06/19 23:46:59 tbox Exp $ */
 
 /*! \file */
 

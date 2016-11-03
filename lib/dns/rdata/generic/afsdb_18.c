@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007, 2009  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2009, 2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001, 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: afsdb_18.c,v 1.1.1.1 2013-01-30 01:45:00 laffer1 Exp $ */
+/* $Id: afsdb_18.c,v 1.49 2009/12/04 22:06:37 tbox Exp $ */
 
 /* Reviewed: Wed Mar 15 14:59:00 PST 2000 by explorer */
 
@@ -113,7 +113,7 @@ fromwire_afsdb(ARGS_FROMWIRE) {
 		return (ISC_R_NOSPACE);
 	if (sr.length < 2)
 		return (ISC_R_UNEXPECTEDEND);
-	memcpy(tr.base, sr.base, 2);
+	memmove(tr.base, sr.base, 2);
 	isc_buffer_forward(source, 2);
 	isc_buffer_add(target, 2);
 	return (dns_name_fromwire(&name, source, dctx, options, target));
@@ -134,7 +134,7 @@ towire_afsdb(ARGS_TOWIRE) {
 	dns_rdata_toregion(rdata, &sr);
 	if (tr.length < 2)
 		return (ISC_R_NOSPACE);
-	memcpy(tr.base, sr.base, 2);
+	memmove(tr.base, sr.base, 2);
 	isc_region_consume(&sr, 2);
 	isc_buffer_add(target, 2);
 

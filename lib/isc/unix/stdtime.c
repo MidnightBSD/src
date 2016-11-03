@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: stdtime.c,v 1.1.1.1 2013-01-30 01:45:01 laffer1 Exp $ */
+/* $Id: stdtime.c,v 1.19 2007/06/19 23:47:18 tbox Exp $ */
 
 /*! \file */
 
