@@ -359,11 +359,6 @@ doc/xsl/isc-docbook-latex.xsl.in -text
 doc/xsl/isc-docbook-text.xsl -text
 doc/xsl/isc-manpage.xsl.in -text
 doc/xsl/pre-latex.xsl -text
-docutil/HTML_COPYRIGHT -text
-docutil/MAN_COPYRIGHT -text
-docutil/patch-db2latex-duplicate-template-bug -text
-docutil/patch-db2latex-nested-param-bug -text
-docutil/patch-db2latex-xsltproc-title-bug -text
 /install-sh -text
 /isc-config.sh.1 -text
 /isc-config.sh.docbook -text
