@@ -1,7 +1,6 @@
 /* $MidnightBSD$ */
-
 /*
- * Copyright (C) 2004-2010  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2010, 2013-2015  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -16,8 +15,6 @@
  * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
-
-/* $Id: platform.h,v 1.7 2013-01-30 01:55:40 laffer1 Exp $ */
 
 #ifndef ISC_PLATFORM_H
 #define ISC_PLATFORM_H 1
@@ -134,6 +131,11 @@
 #undef ISC_PLATFORM_FIXIN6ISADDR
 
 /*! \brief
+ * Define if the system has struct sockaddr_storage.
+ */
+#define ISC_PLATFORM_HAVESOCKADDRSTORAGE 1
+
+/*! \brief
  * Define if the system supports kqueue multiplexing
  */
 #define ISC_PLATFORM_HAVEKQUEUE 1
@@ -169,6 +171,16 @@
 #undef ISC_PLATFORM_NEEDSPRINTF
 
 /*! \brief
+ * If this system need a modern printf() that format size %z (size_t).
+ */
+#undef ISC_PLATFORM_NEEDPRINTF
+
+/*! \brief
+ * If this system need a modern fprintf() that format size %z (size_t).
+ */
+#undef ISC_PLATFORM_NEEDFPRINTF
+
+/*! \brief
  * The printf format string modifier to use with isc_uint64_t values.
  */
 #define ISC_PLATFORM_QUADFORMAT "ll"
@@ -201,6 +213,11 @@
  */
 #undef ISC_PLATFORM_NEEDMEMMOVE
 
+/*
+ * Define if this system needs strcasestr.
+ */
+#undef ISC_PLATFORM_NEEDSTRCASESTR
+
 /***
  *** Miscellaneous.
  ***/
@@ -219,19 +236,19 @@
  * Defined to <gssapi.h> or <gssapi/gssapi.h> for how to include
  * the GSSAPI header.
  */
-
+#define ISC_PLATFORM_GSSAPIHEADER <gssapi/gssapi.h>
 
 /*
  * Defined to <gssapi_krb5.h> or <gssapi/gssapi_krb5.h> for how to
  * include the GSSAPI KRB5 header.
  */
-
+#define ISC_PLATFORM_GSSAPI_KRB5_HEADER <gssapi/gssapi_krb5.h>
 
 /*
  * Defined to <krb5.h> or <krb5/krb5.h> for how to include
  * the KRB5 header.
  */
-
+#define ISC_PLATFORM_KRB5HEADER <krb5.h>
 
 /*
  * Type used for resource limits.
@@ -331,7 +348,7 @@
 /*
  * Define if the standard __asm function must be used.
  */
-
+#undef ISC_PLATFORM_USESTDASM
 
 /*
  * Define if the platform has <strings.h>.
@@ -357,7 +374,7 @@
  * Define if MacOS style of PPC assembly must be used.
  * e.g. "r6", not "6", for register six.
  */
-
+#undef ISC_PLATFORM_USEMACASM
 
 #ifndef ISC_PLATFORM_USEDECLSPEC
 #define LIBISC_EXTERNAL_DATA
@@ -365,6 +382,7 @@
 #define LIBISCCC_EXTERNAL_DATA
 #define LIBISCCFG_EXTERNAL_DATA
 #define LIBBIND9_EXTERNAL_DATA
+#define LIBTESTS_EXTERNAL_DATA
 #else /*! \brief ISC_PLATFORM_USEDECLSPEC */
 #ifdef LIBISC_EXPORTS
 #define LIBISC_EXTERNAL_DATA __declspec(dllexport)
@@ -390,6 +408,11 @@
 #define LIBBIND9_EXTERNAL_DATA __declspec(dllexport)
 #else
 #define LIBBIND9_EXTERNAL_DATA __declspec(dllimport)
+#endif
+#ifdef LIBTESTS_EXPORTS
+#define LIBTESTS_EXTERNAL_DATA __declspec(dllexport)
+#else
+#define LIBTESTS_EXTERNAL_DATA __declspec(dllimport)
 #endif
 #endif /*! \brief ISC_PLATFORM_USEDECLSPEC */
 

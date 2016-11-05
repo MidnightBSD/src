@@ -1,9 +1,8 @@
-# $MidnightBSD: src/lib/bind/lwres/Makefile,v 1.8 2010/01/16 16:51:32 laffer1 Exp $
-# $FreeBSD: src/lib/bind/lwres/Makefile,v 1.7.2.1 2005/11/16 07:59:50 ru Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
-BIND_DIR=	${.CURDIR}/../../../contrib/bind98
+BIND_DIR=	${.CURDIR}/../../../contrib/bind9
 LIB_BIND_REL=	..
 LIB_BIND_DIR=	${.CURDIR}/${LIB_BIND_REL}
 SRCDIR=		${BIND_DIR}/lib/lwres
@@ -18,12 +17,11 @@ MK_BIND_LIBS=	yes
 LIB=		lwres
 
 .PATH:		${SRCDIR} ${SRCDIR}/man
-SRCS+=		context.c gai_strerror.c getaddrinfo.c gethost.c \
+SRCS+=		compat.c context.c gai_strerror.c getaddrinfo.c gethost.c \
 		getipnode.c getnameinfo.c getrrset.c herror.c \
 		lwbuffer.c lwconfig.c lwpacket.c lwresutil.c \
 		lwres_gabn.c lwres_gnba.c lwres_grbn.c lwres_noop.c \
-		lwinetaton.c lwinetpton.c lwinetntop.c print.c \
-		strtoul.c
+		lwinetaton.c lwinetpton.c lwinetntop.c print.c
 
 CFLAGS+=	-I${SRCDIR}/unix/include -I${SRCDIR}/include
 CFLAGS+=	-I${.CURDIR}
@@ -120,6 +118,7 @@ INCS=		${SRCDIR}/include/lwres/context.h \
 		${SRCDIR}/include/lwres/lwpacket.h \
 		${SRCDIR}/include/lwres/lwres.h \
 		${SRCDIR}/include/lwres/result.h \
+		${SRCDIR}/include/lwres/string.h \
 		${SRCDIR}/include/lwres/version.h \
 		${SRCDIR}/unix/include/lwres/net.h \
 		lwres/netdb.h \
