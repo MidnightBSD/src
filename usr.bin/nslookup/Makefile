@@ -1,6 +1,6 @@
-# $MidnightBSD: src/usr.bin/nslookup/Makefile,v 1.4 2012/11/22 19:12:52 laffer1 Exp $
+# $MidnightBSD$
 
-BIND_DIR=	${.CURDIR}/../../contrib/bind98
+BIND_DIR=	${.CURDIR}/../../contrib/bind9
 LIB_BIND_REL=	../../lib/bind
 LIB_BIND_DIR=	${.CURDIR}/${LIB_BIND_REL}
 SRCDIR=		${BIND_DIR}/bin/dig
@@ -12,13 +12,14 @@ PROG=		nslookup
 .PATH: ${SRCDIR}
 SRCS+=		dighost.c nslookup.c
 
-CFLAGS+=	-I${SRCDIR}/include
+CFLAGS+=	-I${SRCDIR}/include -ledit
 CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
 
-DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD} ${PTHREAD_DPADD}
-LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD} ${PTHREAD_LDADD}
+DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD} ${PTHREAD_DPADD} ${LIBEDIT}
+LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD} ${PTHREAD_LDADD} ${LIBEDIT}
 
-WARNS?=		1
+WARNS?=		0
+
 MANFILTER=	sed -e "s@^host \[server\]@\\\fBhost\\\fR \\\fI[server]\\\fR@"
 
 .include <bsd.prog.mk>
