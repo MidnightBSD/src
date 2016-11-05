@@ -1,4 +1,4 @@
-/* $Id: openbsd-compat.h,v 1.61 2014/02/04 00:18:23 djm Exp $ */
+/* $Id: openbsd-compat.h,v 1.62 2014/09/30 23:43:08 djm Exp $ */
 
 /*
  * Copyright (c) 1999-2003 Damien Miller.  All rights reserved.
@@ -36,14 +36,18 @@
 
 #include <sys/socket.h>
 
+#include <stddef.h>  /* for wchar_t */
+
 /* OpenBSD function replacements */
 #include "base64.h"
 #include "sigact.h"
-#include "glob.h"
 #include "readpassphrase.h"
 #include "vis.h"
 #include "getrrsetbyname.h"
+#include "sha1.h"
 #include "sha2.h"
+#include "rmd160.h"
+#include "md5.h"
 #include "blf.h"
 
 #ifndef HAVE_BASENAME
@@ -62,9 +66,21 @@ void closefrom(int);
 char *getcwd(char *pt, size_t size);
 #endif 
 
+#ifndef HAVE_REALLOCARRAY
+void *reallocarray(void *, size_t, size_t);
+#endif
+
 #if !defined(HAVE_REALPATH) || defined(BROKEN_REALPATH)
+/*
+ * glibc's FORTIFY_SOURCE can redefine this and prevent us picking up the
+ * compat version.
+ */
+# ifdef BROKEN_REALPATH
+#  define realpath(x, y) _ssh_compat_realpath(x, y)
+# endif
+
 char *realpath(const char *path, char *resolved);
-#endif 
+#endif
 
 #ifndef HAVE_RRESVPORT_AF
 int rresvport_af(int *alport, sa_family_t af);
@@ -214,11 +230,44 @@ long long strtonum(const char *, long long, long long, const char **);
 
 /* multibyte character support */
 #ifndef HAVE_MBLEN
-# define mblen(x, y)	1
+# define mblen(x, y)	(1)
+#endif
+
+#ifndef HAVE_WCWIDTH
+# define wcwidth(x)	(((x) >= 0x20 && (x) <= 0x7e) ? 1 : -1)
+/* force our no-op nl_langinfo and mbtowc */
+# undef HAVE_NL_LANGINFO
+# undef HAVE_MBTOWC
+# undef HAVE_LANGINFO_H
+#endif
+
+#ifndef HAVE_NL_LANGINFO
+# define nl_langinfo(x)	""
+#endif
+
+#ifndef HAVE_MBTOWC
+int mbtowc(wchar_t *, const char*, size_t);
 #endif
 
 #if !defined(HAVE_VASPRINTF) || !defined(HAVE_VSNPRINTF)
 # include <stdarg.h>
+#endif
+
+/*
+ * Some platforms unconditionally undefine va_copy() so we define VA_COPY()
+ * instead.  This is known to be the case on at least some configurations of
+ * AIX with the xlc compiler.
+ */
+#ifndef VA_COPY
+# ifdef HAVE_VA_COPY
+#  define VA_COPY(dest, src) va_copy(dest, src)
+# else
+#  ifdef HAVE___VA_COPY
+#   define VA_COPY(dest, src) __va_copy(dest, src)
+#  else
+#   define VA_COPY(dest, src) (dest) = (src)
+#  endif
+# endif
 #endif
 
 #ifndef HAVE_VASPRINTF
@@ -267,5 +316,21 @@ char *shadow_pw(struct passwd *pw);
 #include "port-solaris.h"
 #include "port-tun.h"
 #include "port-uw.h"
+
+/* _FORTIFY_SOURCE breaks FD_ISSET(n)/FD_SET(n) for n > FD_SETSIZE. Avoid. */
+#if defined(HAVE_FEATURES_H) && defined(_FORTIFY_SOURCE)
+# include <features.h>
+# if defined(__GNU_LIBRARY__) && defined(__GLIBC_PREREQ)
+#  if __GLIBC_PREREQ(2, 15) && (_FORTIFY_SOURCE > 0)
+#   include <sys/socket.h>  /* Ensure include guard is defined */
+#   undef FD_SET
+#   undef FD_ISSET
+#   define FD_SET(n, set)	kludge_FD_SET(n, set)
+#   define FD_ISSET(n, set)	kludge_FD_ISSET(n, set)
+void kludge_FD_SET(int, fd_set *);
+int kludge_FD_ISSET(int, fd_set *);
+#  endif /* __GLIBC_PREREQ(2, 15) && (_FORTIFY_SOURCE > 0) */
+# endif /* __GNU_LIBRARY__ && __GLIBC_PREREQ */
+#endif /* HAVE_FEATURES_H && _FORTIFY_SOURCE */
 
 #endif /* _OPENBSD_COMPAT_H */

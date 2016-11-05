@@ -1,18 +1,25 @@
-#	$OpenBSD: cert-userkey.sh,v 1.12 2013/12/06 13:52:46 markus Exp $
+#	$OpenBSD: cert-userkey.sh,v 1.16 2016/05/03 12:15:49 dtucker Exp $
 #	Placed in the Public Domain.
 
 tid="certified user keys"
 
 rm -f $OBJ/authorized_keys_$USER $OBJ/user_ca_key* $OBJ/cert_user_key*
 cp $OBJ/sshd_proxy $OBJ/sshd_proxy_bak
+cp $OBJ/ssh_proxy $OBJ/ssh_proxy_bak
 
 PLAIN_TYPES=`$SSH -Q key-plain | sed 's/^ssh-dss/ssh-dsa/;s/^ssh-//'`
 
-type_has_legacy() {
-	case $1 in
-		ed25519*|ecdsa*) return 1 ;;
+if echo "$PLAIN_TYPES" | grep '^rsa$' >/dev/null 2>&1 ; then
+	PLAIN_TYPES="$PLAIN_TYPES rsa-sha2-256 rsa-sha2-512"
+fi
+
+kname() {
+	case $ktype in
+	rsa-sha2-*) ;;
+	# subshell because some seds will add a newline
+	*) n=$(echo $1 | sed 's/^dsa/ssh-dss/;s/^rsa/ssh-rsa/;s/^ed/ssh-ed/') ;;
 	esac
-	return 0
+	echo "$n*,ssh-rsa*,ssh-ed25519*"
 }
 
 # Create a CA key
@@ -20,27 +27,25 @@ ${SSHKEYGEN} -q -N '' -t rsa  -f $OBJ/user_ca_key ||\
 	fail "ssh-keygen of user_ca_key failed"
 
 # Generate and sign user keys
-for ktype in $PLAIN_TYPES ; do 
+for ktype in $PLAIN_TYPES $EXTRA_TYPES ; do
 	verbose "$tid: sign user ${ktype} cert"
 	${SSHKEYGEN} -q -N '' -t ${ktype} \
 	    -f $OBJ/cert_user_key_${ktype} || \
-		fail "ssh-keygen of cert_user_key_${ktype} failed"
-	${SSHKEYGEN} -q -s $OBJ/user_ca_key -I \
-	    "regress user key for $USER" \
-	    -n ${USER},mekmitasdigoat $OBJ/cert_user_key_${ktype} ||
-		fail "couldn't sign cert_user_key_${ktype}"
-	type_has_legacy $ktype || continue
-	cp $OBJ/cert_user_key_${ktype} $OBJ/cert_user_key_${ktype}_v00
-	cp $OBJ/cert_user_key_${ktype}.pub $OBJ/cert_user_key_${ktype}_v00.pub
-	verbose "$tid: sign host ${ktype}_v00 cert"
-	${SSHKEYGEN} -q -t v00 -s $OBJ/user_ca_key -I \
-	    "regress user key for $USER" \
-	    -n ${USER},mekmitasdigoat $OBJ/cert_user_key_${ktype}_v00 ||
-		fatal "couldn't sign cert_user_key_${ktype}_v00"
+		fatal "ssh-keygen of cert_user_key_${ktype} failed"
+	# Generate RSA/SHA2 certs for rsa-sha2* keys.
+	case $ktype in
+	rsa-sha2-*)	tflag="-t $ktype" ;;
+	*)		tflag="" ;;
+	esac
+	${SSHKEYGEN} -q -s $OBJ/user_ca_key -z $$ \
+	    -I "regress user key for $USER" \
+	    -n ${USER},mekmitasdigoat $tflag $OBJ/cert_user_key_${ktype} || \
+		fatal "couldn't sign cert_user_key_${ktype}"
 done
 
 # Test explicitly-specified principals
-for ktype in $PLAIN_TYPES rsa_v00 dsa_v00 ; do 
+for ktype in $EXTRA_TYPES $PLAIN_TYPES ; do
+	t=$(kname $ktype)
 	for privsep in yes no ; do
 		_prefix="${ktype} privsep $privsep"
 
@@ -52,7 +57,12 @@ for ktype in $PLAIN_TYPES rsa_v00 dsa_v00 ; do
 			echo "AuthorizedPrincipalsFile " \
 			    "$OBJ/authorized_principals_%u"
 			echo "TrustedUserCAKeys $OBJ/user_ca_key.pub"
+			echo "PubkeyAcceptedKeyTypes ${t}"
 		) > $OBJ/sshd_proxy
+		(
+			cat $OBJ/ssh_proxy_bak
+			echo "PubkeyAcceptedKeyTypes ${t}"
+		) > $OBJ/ssh_proxy
 
 		# Missing authorized_principals
 		verbose "$tid: ${_prefix} missing authorized_principals"
@@ -71,7 +81,7 @@ for ktype in $PLAIN_TYPES rsa_v00 dsa_v00 ; do
 		if [ $? -eq 0 ]; then
 			fail "ssh cert connect succeeded unexpectedly"
 		fi
-	
+
 		# Wrong authorized_principals
 		verbose "$tid: ${_prefix} wrong authorized_principals"
 		echo gregorsamsa > $OBJ/authorized_principals_$USER
@@ -125,7 +135,12 @@ for ktype in $PLAIN_TYPES rsa_v00 dsa_v00 ; do
 		(
 			cat $OBJ/sshd_proxy_bak
 			echo "UsePrivilegeSeparation $privsep"
+			echo "PubkeyAcceptedKeyTypes ${t}"
 		) > $OBJ/sshd_proxy
+		(
+			cat $OBJ/ssh_proxy_bak
+			echo "PubkeyAcceptedKeyTypes ${t}"
+		) > $OBJ/ssh_proxy
 
 		# Wrong principals list
 		verbose "$tid: ${_prefix} wrong principals key option"
@@ -165,8 +180,9 @@ basic_tests() {
 		echo > $OBJ/authorized_keys_$USER
 		extra_sshd="TrustedUserCAKeys $OBJ/user_ca_key.pub"
 	fi
-	
-	for ktype in $PLAIN_TYPES rsa_v00 dsa_v00 ; do 
+
+	for ktype in $PLAIN_TYPES ; do
+		t=$(kname $ktype)
 		for privsep in yes no ; do
 			_prefix="${ktype} privsep $privsep $auth"
 			# Simple connect
@@ -174,9 +190,14 @@ basic_tests() {
 			(
 				cat $OBJ/sshd_proxy_bak
 				echo "UsePrivilegeSeparation $privsep"
+				echo "PubkeyAcceptedKeyTypes ${t}"
 				echo "$extra_sshd"
 			) > $OBJ/sshd_proxy
-	
+			(
+				cat $OBJ/ssh_proxy_bak
+				echo "PubkeyAcceptedKeyTypes ${t}"
+			) > $OBJ/ssh_proxy
+
 			${SSH} -2i $OBJ/cert_user_key_${ktype} \
 			    -F $OBJ/ssh_proxy somehost true
 			if [ $? -ne 0 ]; then
@@ -189,6 +210,7 @@ basic_tests() {
 				cat $OBJ/sshd_proxy_bak
 				echo "UsePrivilegeSeparation $privsep"
 				echo "RevokedKeys $OBJ/cert_user_key_${ktype}.pub"
+				echo "PubkeyAcceptedKeyTypes ${t}"
 				echo "$extra_sshd"
 			) > $OBJ/sshd_proxy
 			${SSH} -2i $OBJ/cert_user_key_${ktype} \
@@ -197,12 +219,13 @@ basic_tests() {
 				fail "ssh cert connect succeeded unexpecedly"
 			fi
 		done
-	
+
 		# Revoked CA
 		verbose "$tid: ${ktype} $auth revoked CA key"
 		(
 			cat $OBJ/sshd_proxy_bak
 			echo "RevokedKeys $OBJ/user_ca_key.pub"
+			echo "PubkeyAcceptedKeyTypes ${t}"
 			echo "$extra_sshd"
 		) > $OBJ/sshd_proxy
 		${SSH} -2i $OBJ/cert_user_key_${ktype} -F $OBJ/ssh_proxy \
@@ -211,10 +234,11 @@ basic_tests() {
 			fail "ssh cert connect succeeded unexpecedly"
 		fi
 	done
-	
+
 	verbose "$tid: $auth CA does not authenticate"
 	(
 		cat $OBJ/sshd_proxy_bak
+		echo "PubkeyAcceptedKeyTypes ${t}"
 		echo "$extra_sshd"
 	) > $OBJ/sshd_proxy
 	verbose "$tid: ensure CA key does not authenticate user"
@@ -240,12 +264,7 @@ test_one() {
 	fi
 
 	for auth in $auth_choice ; do
-		for ktype in rsa rsa_v00 ; do
-			case $ktype in
-			*_v00) keyv="-t v00" ;;
-			*) keyv="" ;;
-			esac
-
+		for ktype in rsa ed25519 ; do
 			cat $OBJ/sshd_proxy_bak > $OBJ/sshd_proxy
 			if test "x$auth" = "xauthorized_keys" ; then
 				# Add CA to authorized_keys
@@ -257,16 +276,17 @@ test_one() {
 				echo > $OBJ/authorized_keys_$USER
 				echo "TrustedUserCAKeys $OBJ/user_ca_key.pub" \
 				    >> $OBJ/sshd_proxy
+				echo "PubkeyAcceptedKeyTypes ${t}*" \
+				    >> $OBJ/sshd_proxy
 				if test "x$auth_opt" != "x" ; then
 					echo $auth_opt >> $OBJ/sshd_proxy
 				fi
 			fi
-			
+
 			verbose "$tid: $ident auth $auth expect $result $ktype"
 			${SSHKEYGEN} -q -s $OBJ/user_ca_key \
 			    -I "regress user key for $USER" \
-			    $sign_opts $keyv \
-			    $OBJ/cert_user_key_${ktype} ||
+			    $sign_opts $OBJ/cert_user_key_${ktype} ||
 				fail "couldn't sign cert_user_key_${ktype}"
 
 			${SSH} -2i $OBJ/cert_user_key_${ktype} \
@@ -318,16 +338,13 @@ test_one "principals key option no principals" failure "" \
 
 # Wrong certificate
 cat $OBJ/sshd_proxy_bak > $OBJ/sshd_proxy
-for ktype in $PLAIN_TYPES rsa_v00 dsa_v00 ; do 
-	case $ktype in
-	*_v00) args="-t v00" ;;
-	*) args="" ;;
-	esac
+for ktype in $PLAIN_TYPES ; do
+	t=$(kname $ktype)
 	# Self-sign
-	${SSHKEYGEN} $args -q -s $OBJ/cert_user_key_${ktype} -I \
+	${SSHKEYGEN} -q -s $OBJ/cert_user_key_${ktype} -I \
 	    "regress user key for $USER" \
 	    -n $USER $OBJ/cert_user_key_${ktype} ||
-		fail "couldn't sign cert_user_key_${ktype}"
+		fatal "couldn't sign cert_user_key_${ktype}"
 	verbose "$tid: user ${ktype} connect wrong cert"
 	${SSH} -2i $OBJ/cert_user_key_${ktype} -F $OBJ/ssh_proxy \
 	    somehost true >/dev/null 2>&1

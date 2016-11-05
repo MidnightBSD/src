@@ -1,4 +1,4 @@
-/* $OpenBSD: serverloop.c,v 1.170 2014/02/02 03:44:31 djm Exp $ */
+/* $OpenBSD: serverloop.c,v 1.184 2016/03/07 19:02:43 djm Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -37,8 +37,8 @@
 
 #include "includes.h"
 
+#include <sys/param.h>	/* MIN MAX */
 #include <sys/types.h>
-#include <sys/param.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
 #ifdef HAVE_SYS_TIME_H
@@ -61,6 +61,7 @@
 #include "packet.h"
 #include "buffer.h"
 #include "log.h"
+#include "misc.h"
 #include "servconf.h"
 #include "canohost.h"
 #include "sshpty.h"
@@ -77,13 +78,11 @@
 #include "dispatch.h"
 #include "auth-options.h"
 #include "serverloop.h"
-#include "misc.h"
-#include "roaming.h"
+#include "ssherr.h"
 
 extern ServerOptions options;
 
 /* XXX */
-extern Kex *xxx_kex;
 extern Authctxt *the_authctxt;
 extern int use_privsep;
 
@@ -277,7 +276,7 @@ client_alive_check(void)
  */
 static void
 wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
-    u_int *nallocp, u_int64_t max_time_milliseconds)
+    u_int *nallocp, u_int64_t max_time_ms)
 {
 	struct timeval tv, *tvp;
 	int ret;
@@ -289,9 +288,9 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 	channel_prepare_select(readsetp, writesetp, maxfdp, nallocp,
 	    &minwait_secs, 0);
 
+	/* XXX need proper deadline system for rekey/client alive */
 	if (minwait_secs != 0)
-		max_time_milliseconds = MIN(max_time_milliseconds,
-		    (u_int)minwait_secs * 1000);
+		max_time_ms = MIN(max_time_ms, (u_int)minwait_secs * 1000);
 
 	/*
 	 * if using client_alive, set the max timeout accordingly,
@@ -301,11 +300,13 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 	 * this could be randomized somewhat to make traffic
 	 * analysis more difficult, but we're not doing it yet.
 	 */
-	if (compat20 &&
-	    max_time_milliseconds == 0 && options.client_alive_interval) {
+	if (compat20 && options.client_alive_interval) {
+		uint64_t keepalive_ms =
+		    (uint64_t)options.client_alive_interval * 1000;
+
 		client_alive_scheduled = 1;
-		max_time_milliseconds =
-		    (u_int64_t)options.client_alive_interval * 1000;
+		if (max_time_ms == 0 || max_time_ms > keepalive_ms)
+			max_time_ms = keepalive_ms;
 	}
 
 	if (compat20) {
@@ -354,14 +355,14 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 	 * from it, then read as much as is available and exit.
 	 */
 	if (child_terminated && packet_not_very_much_data_to_write())
-		if (max_time_milliseconds == 0 || client_alive_scheduled)
-			max_time_milliseconds = 100;
+		if (max_time_ms == 0 || client_alive_scheduled)
+			max_time_ms = 100;
 
-	if (max_time_milliseconds == 0)
+	if (max_time_ms == 0)
 		tvp = NULL;
 	else {
-		tv.tv_sec = max_time_milliseconds / 1000;
-		tv.tv_usec = 1000 * (max_time_milliseconds % 1000);
+		tv.tv_sec = max_time_ms / 1000;
+		tv.tv_usec = 1000 * (max_time_ms % 1000);
 		tvp = &tv;
 	}
 
@@ -394,18 +395,16 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 static void
 process_input(fd_set *readset)
 {
+	struct ssh *ssh = active_state; /* XXX */
 	int len;
 	char buf[16384];
 
 	/* Read and buffer any input data from the client. */
 	if (FD_ISSET(connection_in, readset)) {
-		int cont = 0;
-		len = roaming_read(connection_in, buf, sizeof(buf), &cont);
+		len = read(connection_in, buf, sizeof(buf));
 		if (len == 0) {
-			if (cont)
-				return;
-			verbose("Connection closed by %.100s",
-			    get_remote_ipaddr());
+			verbose("Connection closed by %.100s port %d",
+			    ssh_remote_ipaddr(ssh), ssh_remote_port(ssh));
 			connection_closed = 1;
 			if (compat20)
 				return;
@@ -414,8 +413,9 @@ process_input(fd_set *readset)
 			if (errno != EINTR && errno != EAGAIN &&
 			    errno != EWOULDBLOCK) {
 				verbose("Read error from remote host "
-				    "%.100s: %.100s",
-				    get_remote_ipaddr(), strerror(errno));
+				    "%.100s port %d: %.100s",
+				    ssh_remote_ipaddr(ssh),
+				    ssh_remote_port(ssh), strerror(errno));
 				cleanup_exit(255);
 			}
 		} else {
@@ -545,7 +545,7 @@ drain_output(void)
 static void
 process_buffered_input_packets(void)
 {
-	dispatch_run(DISPATCH_NONBLOCK, NULL, compat20 ? xxx_kex : NULL);
+	dispatch_run(DISPATCH_NONBLOCK, NULL, active_state);
 }
 
 /*
@@ -824,7 +824,7 @@ void
 server_loop2(Authctxt *authctxt)
 {
 	fd_set *readset = NULL, *writeset = NULL;
-	int rekeying = 0, max_fd;
+	int max_fd;
 	u_int nalloc = 0;
 	u_int64_t rekey_timeout_ms = 0;
 
@@ -851,11 +851,11 @@ server_loop2(Authctxt *authctxt)
 	for (;;) {
 		process_buffered_input_packets();
 
-		rekeying = (xxx_kex != NULL && !xxx_kex->done);
-
-		if (!rekeying && packet_not_very_much_data_to_write())
+		if (!ssh_packet_is_rekeying(active_state) &&
+		    packet_not_very_much_data_to_write())
 			channel_output_poll();
-		if (options.rekey_interval > 0 && compat20 && !rekeying)
+		if (options.rekey_interval > 0 && compat20 &&
+		    !ssh_packet_is_rekeying(active_state))
 			rekey_timeout_ms = packet_get_rekey_timeout() * 1000;
 		else
 			rekey_timeout_ms = 0;
@@ -870,14 +870,8 @@ server_loop2(Authctxt *authctxt)
 		}
 
 		collect_children();
-		if (!rekeying) {
+		if (!ssh_packet_is_rekeying(active_state))
 			channel_after_select(readset, writeset);
-			if (packet_need_rekeying()) {
-				debug("need rekeying");
-				xxx_kex->done = 0;
-				kex_send_kexinit(xxx_kex);
-			}
-		}
 		process_input(readset);
 		if (connection_closed)
 			break;
@@ -895,7 +889,7 @@ server_loop2(Authctxt *authctxt)
 	session_destroy_all(NULL);
 }
 
-static void
+static int
 server_input_keep_alive(int type, u_int32_t seq, void *ctxt)
 {
 	debug("Got %d/%u for keepalive", type, seq);
@@ -905,9 +899,10 @@ server_input_keep_alive(int type, u_int32_t seq, void *ctxt)
 	 * the bogus CHANNEL_REQUEST we send for keepalives.
 	 */
 	packet_set_alive_timeouts(0);
+	return 0;
 }
 
-static void
+static int
 server_input_stdin_data(int type, u_int32_t seq, void *ctxt)
 {
 	char *data;
@@ -916,15 +911,16 @@ server_input_stdin_data(int type, u_int32_t seq, void *ctxt)
 	/* Stdin data from the client.  Append it to the buffer. */
 	/* Ignore any data if the client has closed stdin. */
 	if (fdin == -1)
-		return;
+		return 0;
 	data = packet_get_string(&data_len);
 	packet_check_eom();
 	buffer_append(&stdin_buffer, data, data_len);
 	explicit_bzero(data, data_len);
 	free(data);
+	return 0;
 }
 
-static void
+static int
 server_input_eof(int type, u_int32_t seq, void *ctxt)
 {
 	/*
@@ -935,9 +931,10 @@ server_input_eof(int type, u_int32_t seq, void *ctxt)
 	debug("EOF received for stdin.");
 	packet_check_eom();
 	stdin_eof = 1;
+	return 0;
 }
 
-static void
+static int
 server_input_window_size(int type, u_int32_t seq, void *ctxt)
 {
 	u_int row = packet_get_int();
@@ -949,6 +946,7 @@ server_input_window_size(int type, u_int32_t seq, void *ctxt)
 	packet_check_eom();
 	if (fdin != -1)
 		pty_change_window_size(fdin, row, col, xpixel, ypixel);
+	return 0;
 }
 
 static Channel *
@@ -970,12 +968,44 @@ server_request_direct_tcpip(void)
 	/* XXX fine grained permissions */
 	if ((options.allow_tcp_forwarding & FORWARD_LOCAL) != 0 &&
 	    !no_port_forwarding_flag) {
-		c = channel_connect_to(target, target_port,
+		c = channel_connect_to_port(target, target_port,
 		    "direct-tcpip", "direct-tcpip");
 	} else {
 		logit("refused local port forward: "
 		    "originator %s port %d, target %s port %d",
 		    originator, originator_port, target, target_port);
+	}
+
+	free(originator);
+	free(target);
+
+	return c;
+}
+
+static Channel *
+server_request_direct_streamlocal(void)
+{
+	Channel *c = NULL;
+	char *target, *originator;
+	u_short originator_port;
+
+	target = packet_get_string(NULL);
+	originator = packet_get_string(NULL);
+	originator_port = packet_get_int();
+	packet_check_eom();
+
+	debug("server_request_direct_streamlocal: originator %s port %d, target %s",
+	    originator, originator_port, target);
+
+	/* XXX fine grained permissions */
+	if ((options.allow_streamlocal_forwarding & FORWARD_LOCAL) != 0 &&
+	    !no_port_forwarding_flag) {
+		c = channel_connect_to_path(target,
+		    "direct-streamlocal@openssh.com", "direct-streamlocal");
+	} else {
+		logit("refused streamlocal port forward: "
+		    "originator %s port %d, target %s",
+		    originator, originator_port, target);
 	}
 
 	free(originator);
@@ -1061,7 +1091,7 @@ server_request_session(void)
 	return c;
 }
 
-static void
+static int
 server_input_channel_open(int type, u_int32_t seq, void *ctxt)
 {
 	Channel *c = NULL;
@@ -1081,6 +1111,8 @@ server_input_channel_open(int type, u_int32_t seq, void *ctxt)
 		c = server_request_session();
 	} else if (strcmp(ctype, "direct-tcpip") == 0) {
 		c = server_request_direct_tcpip();
+	} else if (strcmp(ctype, "direct-streamlocal@openssh.com") == 0) {
+		c = server_request_direct_streamlocal();
 	} else if (strcmp(ctype, "tun@openssh.com") == 0) {
 		c = server_request_tun();
 	}
@@ -1109,14 +1141,86 @@ server_input_channel_open(int type, u_int32_t seq, void *ctxt)
 		packet_send();
 	}
 	free(ctype);
+	return 0;
 }
 
-static void
+static int
+server_input_hostkeys_prove(struct sshbuf **respp)
+{
+	struct ssh *ssh = active_state; /* XXX */
+	struct sshbuf *resp = NULL;
+	struct sshbuf *sigbuf = NULL;
+	struct sshkey *key = NULL, *key_pub = NULL, *key_prv = NULL;
+	int r, ndx, success = 0;
+	const u_char *blob;
+	u_char *sig = 0;
+	size_t blen, slen;
+
+	if ((resp = sshbuf_new()) == NULL || (sigbuf = sshbuf_new()) == NULL)
+		fatal("%s: sshbuf_new", __func__);
+
+	while (ssh_packet_remaining(ssh) > 0) {
+		sshkey_free(key);
+		key = NULL;
+		if ((r = sshpkt_get_string_direct(ssh, &blob, &blen)) != 0 ||
+		    (r = sshkey_from_blob(blob, blen, &key)) != 0) {
+			error("%s: couldn't parse key: %s",
+			    __func__, ssh_err(r));
+			goto out;
+		}
+		/*
+		 * Better check that this is actually one of our hostkeys
+		 * before attempting to sign anything with it.
+		 */
+		if ((ndx = ssh->kex->host_key_index(key, 1, ssh)) == -1) {
+			error("%s: unknown host %s key",
+			    __func__, sshkey_type(key));
+			goto out;
+		}
+		/*
+		 * XXX refactor: make kex->sign just use an index rather
+		 * than passing in public and private keys
+		 */
+		if ((key_prv = get_hostkey_by_index(ndx)) == NULL &&
+		    (key_pub = get_hostkey_public_by_index(ndx, ssh)) == NULL) {
+			error("%s: can't retrieve hostkey %d", __func__, ndx);
+			goto out;
+		}
+		sshbuf_reset(sigbuf);
+		free(sig);
+		sig = NULL;
+		if ((r = sshbuf_put_cstring(sigbuf,
+		    "hostkeys-prove-00@openssh.com")) != 0 ||
+		    (r = sshbuf_put_string(sigbuf,
+		    ssh->kex->session_id, ssh->kex->session_id_len)) != 0 ||
+		    (r = sshkey_puts(key, sigbuf)) != 0 ||
+		    (r = ssh->kex->sign(key_prv, key_pub, &sig, &slen,
+		    sshbuf_ptr(sigbuf), sshbuf_len(sigbuf), NULL, 0)) != 0 ||
+		    (r = sshbuf_put_string(resp, sig, slen)) != 0) {
+			error("%s: couldn't prepare signature: %s",
+			    __func__, ssh_err(r));
+			goto out;
+		}
+	}
+	/* Success */
+	*respp = resp;
+	resp = NULL; /* don't free it */
+	success = 1;
+ out:
+	free(sig);
+	sshbuf_free(resp);
+	sshbuf_free(sigbuf);
+	sshkey_free(key);
+	return success;
+}
+
+static int
 server_input_global_request(int type, u_int32_t seq, void *ctxt)
 {
 	char *rtype;
 	int want_reply;
-	int success = 0, allocated_listen_port = 0;
+	int r, success = 0, allocated_listen_port = 0;
+	struct sshbuf *resp = NULL;
 
 	rtype = packet_get_string(NULL);
 	want_reply = packet_get_char();
@@ -1125,63 +1229,97 @@ server_input_global_request(int type, u_int32_t seq, void *ctxt)
 	/* -R style forwarding */
 	if (strcmp(rtype, "tcpip-forward") == 0) {
 		struct passwd *pw;
-		char *listen_address;
-		u_short listen_port;
+		struct Forward fwd;
 
 		pw = the_authctxt->pw;
 		if (pw == NULL || !the_authctxt->valid)
 			fatal("server_input_global_request: no/invalid user");
-		listen_address = packet_get_string(NULL);
-		listen_port = (u_short)packet_get_int();
+		memset(&fwd, 0, sizeof(fwd));
+		fwd.listen_host = packet_get_string(NULL);
+		fwd.listen_port = (u_short)packet_get_int();
 		debug("server_input_global_request: tcpip-forward listen %s port %d",
-		    listen_address, listen_port);
+		    fwd.listen_host, fwd.listen_port);
 
 		/* check permissions */
 		if ((options.allow_tcp_forwarding & FORWARD_REMOTE) == 0 ||
 		    no_port_forwarding_flag ||
-		    (!want_reply && listen_port == 0)
-#ifndef NO_IPPORT_RESERVED_CONCEPT
-		    || (listen_port != 0 && listen_port < IPPORT_RESERVED &&
-                    pw->pw_uid != 0)
-#endif
-		    ) {
+		    (!want_reply && fwd.listen_port == 0) ||
+		    (fwd.listen_port != 0 && fwd.listen_port < IPPORT_RESERVED &&
+		    pw->pw_uid != 0)) {
 			success = 0;
 			packet_send_debug("Server has disabled port forwarding.");
 		} else {
 			/* Start listening on the port */
-			success = channel_setup_remote_fwd_listener(
-			    listen_address, listen_port,
-			    &allocated_listen_port, options.gateway_ports);
+			success = channel_setup_remote_fwd_listener(&fwd,
+			    &allocated_listen_port, &options.fwd_opts);
 		}
-		free(listen_address);
+		free(fwd.listen_host);
+		if ((resp = sshbuf_new()) == NULL)
+			fatal("%s: sshbuf_new", __func__);
+		if (allocated_listen_port != 0 &&
+		    (r = sshbuf_put_u32(resp, allocated_listen_port)) != 0)
+			fatal("%s: sshbuf_put_u32: %s", __func__, ssh_err(r));
 	} else if (strcmp(rtype, "cancel-tcpip-forward") == 0) {
-		char *cancel_address;
-		u_short cancel_port;
+		struct Forward fwd;
 
-		cancel_address = packet_get_string(NULL);
-		cancel_port = (u_short)packet_get_int();
+		memset(&fwd, 0, sizeof(fwd));
+		fwd.listen_host = packet_get_string(NULL);
+		fwd.listen_port = (u_short)packet_get_int();
 		debug("%s: cancel-tcpip-forward addr %s port %d", __func__,
-		    cancel_address, cancel_port);
+		    fwd.listen_host, fwd.listen_port);
 
-		success = channel_cancel_rport_listener(cancel_address,
-		    cancel_port);
-		free(cancel_address);
+		success = channel_cancel_rport_listener(&fwd);
+		free(fwd.listen_host);
+	} else if (strcmp(rtype, "streamlocal-forward@openssh.com") == 0) {
+		struct Forward fwd;
+
+		memset(&fwd, 0, sizeof(fwd));
+		fwd.listen_path = packet_get_string(NULL);
+		debug("server_input_global_request: streamlocal-forward listen path %s",
+		    fwd.listen_path);
+
+		/* check permissions */
+		if ((options.allow_streamlocal_forwarding & FORWARD_REMOTE) == 0
+		    || no_port_forwarding_flag) {
+			success = 0;
+			packet_send_debug("Server has disabled port forwarding.");
+		} else {
+			/* Start listening on the socket */
+			success = channel_setup_remote_fwd_listener(
+			    &fwd, NULL, &options.fwd_opts);
+		}
+		free(fwd.listen_path);
+	} else if (strcmp(rtype, "cancel-streamlocal-forward@openssh.com") == 0) {
+		struct Forward fwd;
+
+		memset(&fwd, 0, sizeof(fwd));
+		fwd.listen_path = packet_get_string(NULL);
+		debug("%s: cancel-streamlocal-forward path %s", __func__,
+		    fwd.listen_path);
+
+		success = channel_cancel_rport_listener(&fwd);
+		free(fwd.listen_path);
 	} else if (strcmp(rtype, "no-more-sessions@openssh.com") == 0) {
 		no_more_sessions = 1;
 		success = 1;
+	} else if (strcmp(rtype, "hostkeys-prove-00@openssh.com") == 0) {
+		success = server_input_hostkeys_prove(&resp);
 	}
 	if (want_reply) {
 		packet_start(success ?
 		    SSH2_MSG_REQUEST_SUCCESS : SSH2_MSG_REQUEST_FAILURE);
-		if (success && allocated_listen_port > 0)
-			packet_put_int(allocated_listen_port);
+		if (success && resp != NULL)
+			ssh_packet_put_raw(active_state, sshbuf_ptr(resp),
+			    sshbuf_len(resp));
 		packet_send();
 		packet_write_wait();
 	}
 	free(rtype);
+	sshbuf_free(resp);
+	return 0;
 }
 
-static void
+static int
 server_input_channel_req(int type, u_int32_t seq, void *ctxt)
 {
 	Channel *c;
@@ -1204,13 +1342,14 @@ server_input_channel_req(int type, u_int32_t seq, void *ctxt)
 	} else if ((c->type == SSH_CHANNEL_LARVAL ||
 	    c->type == SSH_CHANNEL_OPEN) && strcmp(c->ctype, "session") == 0)
 		success = session_input_channel_req(c, rtype);
-	if (reply) {
+	if (reply && !(c->flags & CHAN_CLOSE_SENT)) {
 		packet_start(success ?
 		    SSH2_MSG_CHANNEL_SUCCESS : SSH2_MSG_CHANNEL_FAILURE);
 		packet_put_int(c->remote_id);
 		packet_send();
 	}
 	free(rtype);
+	return 0;
 }
 
 static void

@@ -99,18 +99,6 @@
 # undef HAVE_VSNPRINTF
 #endif
 
-#ifndef VA_COPY
-# ifdef HAVE_VA_COPY
-#  define VA_COPY(dest, src) va_copy(dest, src)
-# else
-#  ifdef HAVE___VA_COPY
-#   define VA_COPY(dest, src) __va_copy(dest, src)
-#  else
-#   define VA_COPY(dest, src) (dest) = (src)
-#  endif
-# endif
-#endif
-
 #if !defined(HAVE_SNPRINTF) || !defined(HAVE_VSNPRINTF)
 
 #include <ctype.h>
@@ -538,7 +526,7 @@ fmtstr(char *buffer, size_t *currlen, size_t maxlen,
 	}
 	while (*value && (cnt < max)) {
 		DOPR_OUTCH(buffer, *currlen, maxlen, *value);
-		*value++;
+		value++;
 		++cnt;
 	}
 	while ((padlen < 0) && (cnt < max)) {
@@ -553,7 +541,7 @@ fmtstr(char *buffer, size_t *currlen, size_t maxlen,
 
 static int
 fmtint(char *buffer, size_t *currlen, size_t maxlen,
-		    LLONG value, int base, int min, int max, int flags)
+    intmax_t value, int base, int min, int max, int flags)
 {
 	int signvalue = 0;
 	unsigned LLONG uvalue;
