@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2009, 2011, 2012, 2014  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2007-2009, 2011-2014  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -278,6 +278,9 @@ isc_radix_search(isc_radix_tree_t *radix, isc_radix_node_t **target,
 
 	while (cnt-- > 0) {
 		node = stack[cnt];
+
+		if (prefix->bitlen < node->bit)
+			continue;
 
 		if (_comp_with_mask(isc_prefix_tochar(node->prefix),
 				    isc_prefix_tochar(prefix),

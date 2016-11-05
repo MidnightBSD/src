@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007, 2009, 2010, 2014  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2009, 2010, 2013-2015  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -22,6 +22,7 @@
 #include <config.h>
 
 #include <isc/mem.h>
+#include <isc/print.h>
 #include <isc/rwlock.h>
 #include <isc/string.h>		/* Required for HP/UX (and others?) */
 #include <isc/util.h>
@@ -67,7 +68,8 @@ dns_keytable_create(isc_mem_t *mctx, dns_keytable_t **keytablep) {
 	if (result != ISC_R_SUCCESS)
 		goto cleanup_lock;
 
-	keytable->mctx = mctx;
+	keytable->mctx = NULL;
+	isc_mem_attach(mctx, &keytable->mctx);
 	keytable->active_nodes = 0;
 	keytable->references = 1;
 	keytable->magic = KEYTABLE_MAGIC;
@@ -82,7 +84,7 @@ dns_keytable_create(isc_mem_t *mctx, dns_keytable_t **keytablep) {
 	dns_rbt_destroy(&keytable->table);
 
    cleanup_keytable:
-	isc_mem_put(mctx, keytable, sizeof(*keytable));
+	isc_mem_putanddetach(&mctx, keytable, sizeof(*keytable));
 
 	return (result);
 }
@@ -137,7 +139,8 @@ dns_keytable_detach(dns_keytable_t **keytablep) {
 		isc_rwlock_destroy(&keytable->rwlock);
 		DESTROYLOCK(&keytable->lock);
 		keytable->magic = 0;
-		isc_mem_put(keytable->mctx, keytable, sizeof(*keytable));
+		isc_mem_putanddetach(&keytable->mctx,
+				     keytable, sizeof(*keytable));
 	}
 
 	*keytablep = NULL;
@@ -273,16 +276,17 @@ dns_keytable_deletekeynode(dns_keytable_t *keytable, dst_key_t *dstkey) {
 	}
 
 	knode = node->data;
-	if (knode->next == NULL &&
-	    (knode->key == NULL ||
-	     dst_key_compare(knode->key, dstkey) == ISC_TRUE)) {
+	if (knode->next == NULL && knode->key != NULL &&
+	    dst_key_compare(knode->key, dstkey) == ISC_TRUE)
+	{
 		result = dns_rbt_deletenode(keytable->table, node, ISC_FALSE);
 		goto finish;
 	}
 
 	kprev = (dns_keynode_t **) &node->data;
 	while (knode != NULL) {
-		if (dst_key_compare(knode->key, dstkey) == ISC_TRUE)
+		if (knode->key != NULL &&
+		    dst_key_compare(knode->key, dstkey) == ISC_TRUE)
 			break;
 		kprev = &knode->next;
 		knode = knode->next;

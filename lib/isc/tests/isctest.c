@@ -20,6 +20,8 @@
 
 #include <config.h>
 
+#include <time.h>
+
 #include <isc/app.h>
 #include <isc/buffer.h>
 #include <isc/entropy.h>
@@ -28,6 +30,8 @@
 #include <isc/os.h>
 #include <isc/socket.h>
 #include <isc/string.h>
+#include <isc/task.h>
+#include <isc/timer.h>
 #include <isc/util.h>
 
 #include "isctest.h"
@@ -93,7 +97,7 @@ create_managers(void) {
 }
 
 isc_result_t
-isc_test_begin(FILE *logfile) {
+isc_test_begin(FILE *logfile, isc_boolean_t start_managers) {
 	isc_result_t result;
 
 	isc_mem_debugging |= ISC_MEM_DEBUGRECORD;
@@ -128,7 +132,8 @@ isc_test_begin(FILE *logfile) {
 	ncpus = 1;
 #endif
 
-	CHECK(create_managers());
+	if (start_managers)
+		CHECK(create_managers());
 
 	return (ISC_R_SUCCESS);
 
@@ -158,3 +163,24 @@ isc_test_end(void) {
 		isc_mem_destroy(&mctx);
 }
 
+/*
+ * Sleep for 'usec' microseconds.
+ */
+void
+isc_test_nap(isc_uint32_t usec) {
+#ifdef HAVE_NANOSLEEP
+	struct timespec ts;
+
+	ts.tv_sec = usec / 1000000;
+	ts.tv_nsec = (usec % 1000000) * 1000;
+	nanosleep(&ts, NULL);
+#elif HAVE_USLEEP
+	usleep(usec);
+#else
+	/*
+	 * No fractional-second sleep function is available, so we
+	 * round up to the nearest second and sleep instead
+	 */
+	sleep((usec / 1000000) + 1);
+#endif
+}

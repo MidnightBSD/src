@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2014  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2007, 2008, 2013, 2014  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -36,8 +36,9 @@
 
 #define NETADDR_TO_PREFIX_T(na,pt,bits) \
 	do { \
+		const void *p = na; \
 		memset(&(pt), 0, sizeof(pt)); \
-		if((na) != NULL) { \
+		if (p != NULL) { \
 			(pt).family = (na)->family; \
 			(pt).bitlen = (bits); \
 			if ((pt).family == AF_INET6) { \

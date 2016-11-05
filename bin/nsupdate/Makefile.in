@@ -1,4 +1,4 @@
-# Copyright (C) 2004, 2006-2009, 2012, 2014  Internet Systems Consortium, Inc. ("ISC")
+# Copyright (C) 2004, 2006-2009, 2012-2015  Internet Systems Consortium, Inc. ("ISC")
 # Copyright (C) 2000-2002  Internet Software Consortium.
 #
 # Permission to use, copy, modify, and/or distribute this software for any
@@ -19,9 +19,11 @@ srcdir =	@srcdir@
 VPATH =		@srcdir@
 top_srcdir =	@top_srcdir@
 
-@BIND9_VERSION@
+VERSION=@BIND9_VERSION@
 
 @BIND9_MAKE_INCLUDES@
+
+READLINE_LIB = @READLINE_LIB@
 
 DST_GSSAPI_INC = @DST_GSSAPI_INC@
 
@@ -74,7 +76,7 @@ nsupdate.@O@: nsupdate.c
 		-c ${srcdir}/nsupdate.c
 
 nsupdate@EXEEXT@: nsupdate.@O@ ${UOBJS} ${DEPLIBS}
-	export BASEOBJS="nsupdate.@O@ ${UOBJS}"; \
+	export BASEOBJS="nsupdate.@O@ ${READLINE_LIB} ${UOBJS}"; \
 	${FINALBUILDCMD}
 
 doc man:: ${MANOBJS}

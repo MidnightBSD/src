@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007-2009, 2011-2014  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007-2009, 2011, 2013-2015  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id$ */
+/* $Id: diff.c,v 1.26 2011/03/25 23:53:02 each Exp $ */
 
 /*! \file */
 
@@ -26,6 +26,7 @@
 #include <isc/buffer.h>
 #include <isc/file.h>
 #include <isc/mem.h>
+#include <isc/print.h>
 #include <isc/string.h>
 #include <isc/util.h>
 
@@ -73,7 +74,8 @@ dns_difftuple_create(isc_mem_t *mctx,
 	t = isc_mem_allocate(mctx, size);
 	if (t == NULL)
 		return (ISC_R_NOMEMORY);
-	t->mctx = mctx;
+	t->mctx = NULL;
+	isc_mem_attach(mctx, &t->mctx);
 	t->op = op;
 
 	datap = (unsigned char *)(t + 1);
@@ -105,10 +107,15 @@ dns_difftuple_create(isc_mem_t *mctx,
 void
 dns_difftuple_free(dns_difftuple_t **tp) {
 	dns_difftuple_t *t = *tp;
+	isc_mem_t *mctx;
+
 	REQUIRE(DNS_DIFFTUPLE_VALID(t));
+
 	dns_name_invalidate(&t->name);
 	t->magic = 0;
-	isc_mem_free(t->mctx, t);
+	mctx = t->mctx;
+	isc_mem_free(mctx, t);
+	isc_mem_detach(&mctx);
 	*tp = NULL;
 }
 
@@ -284,12 +291,11 @@ diff_apply(dns_diff_t *diff, dns_db_t *db, dns_dbversion_t *ver,
 			 * of the diff itself is not affected.
 			 */
 
+			dns_rdatalist_init(&rdl);
 			rdl.type = type;
 			rdl.covers = covers;
 			rdl.rdclass = t->rdata.rdclass;
 			rdl.ttl = t->ttl;
-			ISC_LIST_INIT(rdl.rdata);
-			ISC_LINK_INIT(&rdl, link);
 
 			node = NULL;
 			if (type != dns_rdatatype_nsec3 &&
@@ -384,9 +390,6 @@ diff_apply(dns_diff_t *diff, dns_db_t *db, dns_dbversion_t *ver,
 				 * Issue a warning and continue.
 				 */
 				if (warn) {
-					char classbuf[DNS_RDATATYPE_FORMATSIZE];
-					char namebuf[DNS_NAME_FORMATSIZE];
-
 					dns_name_format(dns_db_origin(db),
 							namebuf,
 							sizeof(namebuf));
@@ -459,12 +462,11 @@ dns_diff_load(dns_diff_t *diff, dns_addrdatasetfunc_t addfunc,
 			type = t->rdata.type;
 			covers = rdata_covers(&t->rdata);
 
+			dns_rdatalist_init(&rdl);
 			rdl.type = type;
 			rdl.covers = covers;
 			rdl.rdclass = t->rdata.rdclass;
 			rdl.ttl = t->ttl;
-			ISC_LIST_INIT(rdl.rdata);
-			ISC_LINK_INIT(&rdl, link);
 
 			while (t != NULL && dns_name_equal(&t->name, name) &&
 			       t->op == op && t->rdata.type == type &&
@@ -553,11 +555,10 @@ diff_tuple_tordataset(dns_difftuple_t *t, dns_rdata_t *rdata,
 	REQUIRE(rdl != NULL);
 	REQUIRE(rds != NULL);
 
+	dns_rdatalist_init(rdl);
 	rdl->type = t->rdata.type;
 	rdl->rdclass = t->rdata.rdclass;
 	rdl->ttl = t->ttl;
-	ISC_LIST_INIT(rdl->rdata);
-	ISC_LINK_INIT(rdl, link);
 	dns_rdataset_init(rds);
 	ISC_LINK_INIT(rdata, link);
 	dns_rdata_clone(&t->rdata, rdata);

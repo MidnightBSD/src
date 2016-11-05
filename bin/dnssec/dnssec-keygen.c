@@ -1,5 +1,5 @@
 /*
- * Portions Copyright (C) 2004-2014  Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (C) 2004-2015  Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -29,8 +29,6 @@
  * IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dnssec-keygen.c,v 1.115.14.4 2011/11/30 00:51:38 marka Exp $ */
-
 /*! \file */
 
 #include <config.h>
@@ -43,6 +41,7 @@
 #include <isc/commandline.h>
 #include <isc/entropy.h>
 #include <isc/mem.h>
+#include <isc/print.h>
 #include <isc/region.h>
 #include <isc/string.h>
 #include <isc/util.h>
@@ -124,11 +123,12 @@ usage(void) {
 #else
 	fprintf(stderr, "    -E <engine name>\n");
 #endif
-	fprintf(stderr, "    -e: use large exponent (RSAMD5/RSASHA1 only)\n");
 	fprintf(stderr, "    -f <keyflag>: KSK | REVOKE\n");
 	fprintf(stderr, "    -g <generator>: use specified generator "
 			"(DH only)\n");
+	fprintf(stderr, "    -L <ttl>: default key TTL\n");
 	fprintf(stderr, "    -p <protocol>: (default: 3 [dnssec])\n");
+	fprintf(stderr, "    -r <randomdev>: a file containing random data\n");
 	fprintf(stderr, "    -s <strength>: strength value this key signs DNS "
 			"records with (default: 0)\n");
 	fprintf(stderr, "    -T <rrtype>: DNSKEY | KEY (default: DNSKEY; "
@@ -137,12 +137,11 @@ usage(void) {
 	fprintf(stderr, "    -t <type>: "
 			"AUTHCONF | NOAUTHCONF | NOAUTH | NOCONF "
 			"(default: AUTHCONF)\n");
-	fprintf(stderr, "    -r <randomdev>: a file containing random data\n");
-
 	fprintf(stderr, "    -h: print usage and exit\n");
 	fprintf(stderr, "    -m <memory debugging mode>:\n");
 	fprintf(stderr, "       usage | trace | record | size | mctx\n");
 	fprintf(stderr, "    -v <level>: set verbosity level (0 - 10)\n");
+	fprintf(stderr, "    -V: print version information\n");
 	fprintf(stderr, "Timing options:\n");
 	fprintf(stderr, "    -P date/[+-]offset/none: set key publication date "
 						"(default: now)\n");
@@ -212,7 +211,7 @@ main(int argc, char **argv) {
 	isc_boolean_t	conflict = ISC_FALSE, null_key = ISC_FALSE;
 	isc_boolean_t	oldstyle = ISC_FALSE;
 	isc_mem_t	*mctx = NULL;
-	int		ch, rsa_exp = 0, generator = 0, param = 0;
+	int		ch, generator = 0, param = 0;
 	int		protocol = -1, size = -1, signatory = 0;
 	isc_result_t	ret;
 	isc_textregion_t r;
@@ -231,14 +230,15 @@ main(int argc, char **argv) {
 	dns_rdataclass_t rdclass;
 	int		options = DST_TYPE_PRIVATE | DST_TYPE_PUBLIC;
 	int		dbits = 0;
+	dns_ttl_t	ttl = 0;
 	isc_boolean_t	use_default = ISC_FALSE, use_nsec3 = ISC_FALSE;
-	isc_stdtime_t	publish = 0, activate = 0, revoke = 0;
+	isc_stdtime_t	publish = 0, activate = 0, revokekey = 0;
 	isc_stdtime_t	inactive = 0, delete = 0;
 	isc_stdtime_t	now;
 	int		prepub = -1;
 	isc_boolean_t	setpub = ISC_FALSE, setact = ISC_FALSE;
 	isc_boolean_t	setrev = ISC_FALSE, setinact = ISC_FALSE;
-	isc_boolean_t	setdel = ISC_FALSE;
+	isc_boolean_t	setdel = ISC_FALSE, setttl = ISC_FALSE;
 	isc_boolean_t	unsetpub = ISC_FALSE, unsetact = ISC_FALSE;
 	isc_boolean_t	unsetrev = ISC_FALSE, unsetinact = ISC_FALSE;
 	isc_boolean_t	unsetdel = ISC_FALSE;
@@ -257,7 +257,8 @@ main(int argc, char **argv) {
 	/*
 	 * Process memory debugging argument first.
 	 */
-#define CMDLINE_FLAGS "3A:a:b:Cc:D:d:E:eFf:Gg:hI:i:K:km:n:P:p:qR:r:S:s:T:t:v:"
+#define CMDLINE_FLAGS "3A:a:b:Cc:D:d:E:eFf:Gg:hI:i:K:kL:m:n:P:p:qR:r:S:s:T:t:" \
+		      "v:V"
 	while ((ch = isc_commandline_parse(argc, argv, CMDLINE_FLAGS)) != -1) {
 		switch (ch) {
 		case 'm':
@@ -310,7 +311,9 @@ main(int argc, char **argv) {
 			engine = isc_commandline_argument;
 			break;
 		case 'e':
-			rsa_exp = 1;
+			fprintf(stderr,
+				"phased-out option -e "
+				"(was 'use (RSA) large exponent)\n");
 			break;
 		case 'f':
 			c = (unsigned char)(isc_commandline_argument[0]);
@@ -339,6 +342,10 @@ main(int argc, char **argv) {
 			fatal("The -k option has been deprecated.\n"
 			      "To generate a key-signing key, use -f KSK.\n"
 			      "To generate a key with TYPE=KEY, use -T KEY.\n");
+			break;
+		case 'L':
+			ttl = strtottl(isc_commandline_argument);
+			setttl = ISC_TRUE;
 			break;
 		case 'n':
 			nametype = isc_commandline_argument;
@@ -410,7 +417,7 @@ main(int argc, char **argv) {
 			if (setrev || unsetrev)
 				fatal("-R specified more than once");
 
-			revoke = strtotime(isc_commandline_argument,
+			revokekey = strtotime(isc_commandline_argument,
 					   now, now, &setrev);
 			unsetrev = !setrev;
 			break;
@@ -445,7 +452,12 @@ main(int argc, char **argv) {
 					program, isc_commandline_option);
 			/* FALLTHROUGH */
 		case 'h':
+			/* Does not return. */
 			usage();
+
+		case 'V':
+			/* Does not return. */
+			version(program);
 
 		default:
 			fprintf(stderr, "%s: unhandled option -%c\n",
@@ -465,7 +477,7 @@ main(int argc, char **argv) {
 		fatal("could not initialize dst: %s",
 		      isc_result_totext(ret));
 
-	setup_logging(verbose, mctx, &log);
+	setup_logging(mctx, &log);
 
 	if (predecessor == NULL) {
 		if (prepub == -1)
@@ -529,6 +541,9 @@ main(int argc, char **argv) {
 			if (alg == DST_ALG_DH)
 				options |= DST_TYPE_KEY;
 		}
+
+		if (!dst_algorithm_supported(alg))
+			fatal("unsupported algorithm: %d", alg);
 
 		if (use_nsec3 &&
 		    alg != DST_ALG_NSEC3DSA && alg != DST_ALG_NSEC3RSASHA1 &&
@@ -697,8 +712,13 @@ main(int argc, char **argv) {
 			fatal("invalid DSS key size: %d", size);
 		break;
 	case DST_ALG_ECCGOST:
+		size = 256;
+		break;
 	case DST_ALG_ECDSA256:
+		size = 256;
+		break;
 	case DST_ALG_ECDSA384:
+		size = 384;
 		break;
 	case DST_ALG_HMACMD5:
 		options |= DST_TYPE_KEY;
@@ -762,13 +782,6 @@ main(int argc, char **argv) {
 		break;
 	}
 
-	if (!(alg == DNS_KEYALG_RSAMD5 || alg == DNS_KEYALG_RSASHA1 ||
-	      alg == DNS_KEYALG_NSEC3RSASHA1 || alg == DNS_KEYALG_RSASHA256 ||
-	      alg == DNS_KEYALG_RSASHA512 || alg == DST_ALG_ECCGOST ||
-	      alg == DST_ALG_ECDSA256 || alg == DST_ALG_ECDSA384) &&
-	    rsa_exp != 0)
-		fatal("specified RSA exponent for a non-RSA key");
-
 	if (alg != DNS_KEYALG_DH && generator != 0)
 		fatal("specified DH generator for a non-DH key");
 
@@ -828,7 +841,6 @@ main(int argc, char **argv) {
 	case DNS_KEYALG_NSEC3RSASHA1:
 	case DNS_KEYALG_RSASHA256:
 	case DNS_KEYALG_RSASHA512:
-		param = rsa_exp;
 		show_progress = ISC_TRUE;
 		break;
 
@@ -934,7 +946,7 @@ main(int argc, char **argv) {
 						"was used. Revoking a ZSK is "
 						"legal, but undefined.\n",
 						program);
-				dst_key_settime(key, DST_TIME_REVOKE, revoke);
+				dst_key_settime(key, DST_TIME_REVOKE, revokekey);
 			}
 
 			if (setinact)
@@ -962,6 +974,10 @@ main(int argc, char **argv) {
 			 */
 			dst_key_setprivateformat(key, 1, 2);
 		}
+
+		/* Set the default key TTL */
+		if (setttl)
+			dst_key_setttl(key, ttl);
 
 		/*
 		 * Do not overwrite an existing key, or create a key

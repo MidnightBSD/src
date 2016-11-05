@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012, 2014  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2010-2015  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,14 +14,13 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: opensslgost_link.c,v 1.5 2011/01/19 23:47:12 tbox Exp $ */
-
 #include <config.h>
 
 #ifdef HAVE_OPENSSL_GOST
 
 #include <isc/entropy.h>
 #include <isc/mem.h>
+#include <isc/safe.h>
 #include <isc/string.h>
 #include <isc/util.h>
 
@@ -196,6 +195,7 @@ opensslgost_generate(dst_key_t *key, int unused, void (*callback)(int)) {
 		DST_RET(dst__openssl_toresult2("EVP_PKEY_keygen",
 					       DST_R_OPENSSLFAILURE));
 	key->keydata.pkey = pkey;
+	key->key_size = EVP_PKEY_bits(pkey);
 	EVP_PKEY_CTX_free(ctx);
 	return (ISC_R_SUCCESS);
 
@@ -252,7 +252,7 @@ opensslgost_todns(const dst_key_t *key, isc_buffer_t *data) {
 	p = der;
 	len = i2d_PUBKEY(pkey, &p);
 	INSIST(len == sizeof(der));
-	INSIST(memcmp(gost_prefix, der, 37) == 0);
+	INSIST(isc_safe_memequal(gost_prefix, der, 37));
 	memmove(r.base, der + 37, 64);
 	isc_buffer_add(data, 64);
 
@@ -281,6 +281,7 @@ opensslgost_fromdns(dst_key_t *key, isc_buffer_t *data) {
 		return (dst__openssl_toresult2("d2i_PUBKEY",
 					       DST_R_OPENSSLFAILURE));
 	key->keydata.pkey = pkey;
+	key->key_size = EVP_PKEY_bits(pkey);
 
 	return (ISC_R_SUCCESS);
 }
@@ -295,6 +296,11 @@ opensslgost_tofile(const dst_key_t *key, const char *directory) {
 
 	if (key->keydata.pkey == NULL)
 		return (DST_R_NULLKEY);
+
+	if (key->external) {
+		priv.nelements = 0;
+		return (dst__privstruct_writefile(key, &priv, directory));
+	}
 
 	pkey = key->keydata.pkey;
 
@@ -337,13 +343,21 @@ opensslgost_parse(dst_key_t *key, isc_lex_t *lexer, dst_key_t *pub) {
 	if (ret != ISC_R_SUCCESS)
 		return (ret);
 
-	INSIST(priv.elements[0].tag == TAG_GOST_PRIVASN1);
-	p = priv.elements[0].data;
-	if (d2i_PrivateKey(NID_id_GostR3410_2001, &pkey, &p,
-			   (long) priv.elements[0].length) == NULL)
-		DST_RET(dst__openssl_toresult2("d2i_PrivateKey",
-					       DST_R_INVALIDPRIVATEKEY));
-	key->keydata.pkey = pkey;
+	if (key->external) {
+		INSIST(priv.nelements == 0);
+		if (pub == NULL)
+			DST_RET(DST_R_INVALIDPRIVATEKEY);
+		key->keydata.pkey = pub->keydata.pkey;
+		pub->keydata.pkey = NULL;
+	} else {
+		INSIST(priv.elements[0].tag == TAG_GOST_PRIVASN1);
+		p = priv.elements[0].data;
+		if (d2i_PrivateKey(NID_id_GostR3410_2001, &pkey, &p,
+				   (long) priv.elements[0].length) == NULL)
+			DST_RET(dst__openssl_toresult2("d2i_PrivateKey",
+						     DST_R_INVALIDPRIVATEKEY));
+		key->keydata.pkey = pkey;
+	}
 	key->key_size = EVP_PKEY_bits(pkey);
 	dst__privstruct_free(&priv, mctx);
 	memset(&priv, 0, sizeof(priv));
@@ -373,6 +387,7 @@ static dst_func_t opensslgost_functions = {
 	opensslgost_adddata,
 	opensslgost_sign,
 	opensslgost_verify,
+	NULL, /*%< verify2 */
 	NULL, /*%< computesecret */
 	opensslgost_compare,
 	NULL, /*%< paramcompare */

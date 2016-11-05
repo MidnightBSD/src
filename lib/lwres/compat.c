@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007, 2012, 2014  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -123,6 +123,7 @@ lwres_strtoul(const char *nptr, char **endptr, int base) {
 		acc = ULONG_MAX;
 		errno = ERANGE;
 	} else if (neg)
+		/* XXX: acc was declared unsigned! */
 		acc = -acc;
 	if (endptr != 0)
 		DE_CONST(any ? s - 1 : nptr, *endptr);

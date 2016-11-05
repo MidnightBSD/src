@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2008, 2011, 2012, 2014  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2008, 2011, 2013-2015  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id$ */
+/* $Id: adb.h,v 1.88 2011/12/05 17:10:51 each Exp $ */
 
 #ifndef DNS_ADB_H
 #define DNS_ADB_H 1
@@ -206,6 +206,11 @@ struct dns_adbfind {
  *      Must set _WANTEVENT for this to be meaningful.
  */
 #define DNS_ADBFIND_LAMEPRUNED		0x00000200
+/*%
+ *      The server's fetch quota is exceeded; it will be treated as
+ *      lame for this query.
+ */
+#define DNS_ADBFIND_OVERQUOTA		0x00000400
 
 /*%
  * The answers to queries come back as a list of these.
@@ -334,6 +339,13 @@ dns_adb_createfind(dns_adb_t *adb, isc_task_t *task, isc_taskaction_t action,
 		   dns_rdatatype_t qtype, unsigned int options,
 		   isc_stdtime_t now, dns_name_t *target,
 		   in_port_t port, dns_adbfind_t **find);
+isc_result_t
+dns_adb_createfind2(dns_adb_t *adb, isc_task_t *task, isc_taskaction_t action,
+		    void *arg, dns_name_t *name, dns_name_t *qname,
+		    dns_rdatatype_t qtype, unsigned int options,
+		    isc_stdtime_t now, dns_name_t *target, in_port_t port,
+		    unsigned int depth, isc_counter_t *qc,
+		    dns_adbfind_t **find);
 /*%<
  * Main interface for clients. The adb will look up the name given in
  * "name" and will build up a list of found addresses, and perhaps start
@@ -576,6 +588,30 @@ dns_adb_changeflags(dns_adb_t *adb, dns_adbaddrinfo_t *addr,
  *\li	addr be valid.
  */
 
+void
+dns_adb_plainresponse(dns_adb_t *adb, dns_adbaddrinfo_t *addr);
+/*%
+ * Record a successful DNS response.
+ *
+ * Requires:
+ *
+ *\li  adb be valid.
+ *
+ *\li  addr be valid.
+ */
+
+void
+dns_adb_timeout(dns_adb_t *adb, dns_adbaddrinfo_t *addr);
+/*%
+ * Record a DNS UDP query failed.
+ *
+ * Requires:
+ *
+ *\li  adb be valid.
+ *
+ *\li  addr be valid.
+ */
+
 isc_result_t
 dns_adb_findaddrinfo(dns_adb_t *adb, isc_sockaddr_t *sa,
 		     dns_adbaddrinfo_t **addrp, isc_stdtime_t now);
@@ -618,7 +654,7 @@ dns_adb_flush(dns_adb_t *adb);
  */
 
 void
-dns_adb_setadbsize(dns_adb_t *adb, isc_uint32_t size);
+dns_adb_setadbsize(dns_adb_t *adb, size_t size);
 /*%<
  * Set a target memory size.  If memory usage exceeds the target
  * size entries will be removed before they would have expired on
@@ -638,6 +674,64 @@ dns_adb_flushname(dns_adb_t *adb, dns_name_t *name);
  * Requires:
  *\li	'adb' is valid.
  *\li	'name' is valid.
+ */
+
+void
+dns_adb_setquota(dns_adb_t *adb, isc_uint32_t quota, isc_uint32_t freq,
+		 double low, double high, double discount);
+/*%<
+ * Set the baseline ADB quota, and configure parameters for the
+ * quota adjustment algorithm.
+ *
+ * If the number of fetches currently waiting for responses from this
+ * address exceeds the current quota, then additional fetches are spilled.
+ *
+ * 'quota' is the highest permissible quota; it will adjust itself
+ * downward in response to detected congestion.
+ *
+ * After every 'freq' fetches have either completed or timed out, an
+ * exponentially weighted moving average of the ratio of timeouts
+ * to responses is calculated.  If the EWMA goes above a 'high'
+ * threshold, then the quota is adjusted down one step; if it drops
+ * below a 'low' threshold, then the quota is adjusted back up one
+ * step.
+ *
+ * The quota adjustment is based on the function (1 / 1 + (n/10)^(3/2)),
+ * for values of n from 0 to 99.  It starts at 100% of the baseline
+ * quota, and descends after 100 steps to 2%.
+ *
+ * 'discount' represents the discount rate of the moving average. Higher
+ * values cause older values to be discounted sooner, providing a faster
+ * response to changes in the timeout ratio.
+ *
+ * Requires:
+ *\li	'adb' is valid.
+ */
+
+isc_boolean_t
+dns_adbentry_overquota(dns_adbentry_t *entry);
+/*%<
+ * Returns true if the specified ADB has too many active fetches.
+ *
+ * Requires:
+ *\li	'entry' is valid.
+ */
+
+void
+dns_adb_beginudpfetch(dns_adb_t *adb, dns_adbaddrinfo_t *addr);
+void
+dns_adb_endudpfetch(dns_adb_t *adb, dns_adbaddrinfo_t *addr);
+/*%
+ * Begin/end a UDP fetch on a particular address.
+ *
+ * These functions increment or decrement the fetch counter for
+ * the ADB entry so that the fetch quota can be enforced.
+ *
+ * Requires:
+ *
+ *\li	adb be valid.
+ *
+ *\li	addr be valid.
  */
 
 ISC_LANG_ENDDECLS

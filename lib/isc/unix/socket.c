@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2014  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2016  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -338,7 +338,8 @@ struct isc__socket {
 				listener : 1, /* listener socket */
 				connected : 1,
 				connecting : 1, /* connect pending */
-				bound : 1; /* bound to local addr */
+				bound : 1, /* bound to local addr */
+				dupped : 1;
 
 #ifdef ISC_NET_RECVOVERFLOW
 	unsigned char		overflow; /* used for MSG_TRUNC fake */
@@ -393,6 +394,9 @@ struct isc__socketmgr {
 	/* Locked by fdlock. */
 	isc__socket_t	       **fds;
 	int			*fdstate;
+#if defined(USE_EPOLL)
+	uint32_t		*epoll_events;
+#endif
 #ifdef USE_DEVPOLL
 	pollinfo_t		*fdpollinfo;
 #endif
@@ -434,6 +438,10 @@ static isc__socketmgr_t *socketmgr = NULL;
 # define MAXSCATTERGATHER_RECV	(ISC_SOCKET_MAXSCATTERGATHER)
 #endif
 
+static isc_result_t socket_create(isc_socketmgr_t *manager0, int pf,
+				  isc_sockettype_t type,
+				  isc_socket_t **socketp,
+				  isc_socket_t *dup_socket);
 static void send_recvdone_event(isc__socket_t *, isc_socketevent_t **);
 static void send_senddone_event(isc__socket_t *, isc_socketevent_t **);
 static void free_socket(isc__socket_t **);
@@ -557,6 +565,10 @@ isc__socket_fdwatchcreate(isc_socketmgr_t *manager, int fd, int flags,
 			  isc_task_t *task, isc_socket_t **socketp);
 ISC_SOCKETFUNC_SCOPE isc_result_t
 isc__socket_fdwatchpoke(isc_socket_t *sock, int flags);
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_dup(isc_socket_t *sock, isc_socket_t **socketp);
+ISC_SOCKETFUNC_SCOPE int
+isc__socket_getfd(isc_socket_t *sock);
 
 static struct {
 	isc_socketmethods_t methods;
@@ -574,13 +586,17 @@ static struct {
 		isc__socket_detach,
 		isc__socket_bind,
 		isc__socket_sendto,
+		isc__socket_sendto2,
 		isc__socket_connect,
 		isc__socket_recv,
+		isc__socket_recv2,
 		isc__socket_cancel,
 		isc__socket_getsockname,
 		isc__socket_gettype,
 		isc__socket_ipv6only,
-		isc__socket_fdwatchpoke
+		isc__socket_fdwatchpoke,
+		isc__socket_dup,
+		isc__socket_getfd
 	}
 #ifndef BIND9
 	,
@@ -822,15 +838,27 @@ watch_fd(isc__socketmgr_t *manager, int fd, int msg) {
 	return (result);
 #elif defined(USE_EPOLL)
 	struct epoll_event event;
+	uint32_t oldevents;
+	int ret;
+	int op;
 
+	oldevents = manager->epoll_events[fd];
 	if (msg == SELECT_POKE_READ)
-		event.events = EPOLLIN;
+		manager->epoll_events[fd] |= EPOLLIN;
 	else
-		event.events = EPOLLOUT;
+		manager->epoll_events[fd] |= EPOLLOUT;
+
+	event.events = manager->epoll_events[fd];
 	memset(&event.data, 0, sizeof(event.data));
 	event.data.fd = fd;
-	if (epoll_ctl(manager->epoll_fd, EPOLL_CTL_ADD, fd, &event) == -1 &&
-	    errno != EEXIST) {
+
+	op = (oldevents == 0U) ? EPOLL_CTL_ADD : EPOLL_CTL_MOD;
+	ret = epoll_ctl(manager->epoll_fd, op, fd, &event);
+	if (ret == -1) {
+		if (errno == EEXIST)
+			UNEXPECTED_ERROR(__FILE__, __LINE__,
+					 "epoll_ctl(ADD/MOD) returned "
+					 "EEXIST for fd %d", fd);
 		result = isc__errno2result(errno);
 	}
 
@@ -890,15 +918,21 @@ unwatch_fd(isc__socketmgr_t *manager, int fd, int msg) {
 	return (result);
 #elif defined(USE_EPOLL)
 	struct epoll_event event;
+	int ret;
+	int op;
 
 	if (msg == SELECT_POKE_READ)
-		event.events = EPOLLIN;
+		manager->epoll_events[fd] &= ~(EPOLLIN);
 	else
-		event.events = EPOLLOUT;
+		manager->epoll_events[fd] &= ~(EPOLLOUT);
+
+	event.events = manager->epoll_events[fd];
 	memset(&event.data, 0, sizeof(event.data));
 	event.data.fd = fd;
-	if (epoll_ctl(manager->epoll_fd, EPOLL_CTL_DEL, fd, &event) == -1 &&
-	    errno != ENOENT) {
+
+	op = (event.events == 0U) ? EPOLL_CTL_DEL : EPOLL_CTL_MOD;
+	ret = epoll_ctl(manager->epoll_fd, op, fd, &event);
+	if (ret == -1 && errno != ENOENT) {
 		char strbuf[ISC_STRERRORSIZE];
 		isc__strerror(errno, strbuf, sizeof(strbuf));
 		UNEXPECTED_ERROR(__FILE__, __LINE__,
@@ -1540,15 +1574,19 @@ build_msghdr_recv(isc__socket_t *sock, isc_socketevent_t *dev,
 	msg->msg_iovlen = iovcount;
 
 #ifdef ISC_NET_BSD44MSGHDR
-	msg->msg_control = NULL;
-	msg->msg_controllen = 0;
-	msg->msg_flags = 0;
 #if defined(USE_CMSG)
 	if (sock->type == isc_sockettype_udp) {
 		msg->msg_control = sock->recvcmsgbuf;
 		msg->msg_controllen = sock->recvcmsgbuflen;
+	} else {
+		msg->msg_control = NULL;
+		msg->msg_controllen = 0;
 	}
+#else
+	msg->msg_control = NULL;
+	msg->msg_controllen = 0;
 #endif /* USE_CMSG */
+	msg->msg_flags = 0;
 #else /* ISC_NET_BSD44MSGHDR */
 	msg->msg_accrights = NULL;
 	msg->msg_accrightslen = 0;
@@ -1750,7 +1788,7 @@ doio_recv(isc__socket_t *sock, isc_socketevent_t *dev) {
 		}
 		/*
 		 * Simulate a firewall blocking UDP responses bigger than
-		 * 512 bytes.
+		 * 'maxudp' bytes.
 		 */
 		if (sock->manager->maxudp != 0 && cc > sock->manager->maxudp)
 			return (DOIO_SOFT);
@@ -1844,7 +1882,12 @@ doio_send(isc__socket_t *sock, isc_socketevent_t *dev) {
 	build_msghdr_send(sock, dev, &msghdr, iov, &write_count);
 
  resend:
-	cc = sendmsg(sock->fd, &msghdr, 0);
+	if (sock->type == isc_sockettype_udp &&
+	    sock->manager->maxudp != 0 &&
+	    write_count > (size_t)sock->manager->maxudp)
+		cc = write_count;
+	else
+		cc = sendmsg(sock->fd, &msghdr, 0);
 	send_errno = errno;
 
 	/*
@@ -1854,8 +1897,11 @@ doio_send(isc__socket_t *sock, isc_socketevent_t *dev) {
 		if (send_errno == EINTR && ++attempts < NRETRIES)
 			goto resend;
 
-		if (SOFT_ERROR(send_errno))
+		if (SOFT_ERROR(send_errno)) {
+			if (errno == EWOULDBLOCK || errno == EAGAIN)
+				dev->result = ISC_R_WOULDBLOCK;
 			return (DOIO_SOFT);
+		}
 
 #define SOFT_OR_HARD(_system, _isc) \
 	if (send_errno == _system) { \
@@ -2017,7 +2063,7 @@ destroy(isc__socket_t **sockp) {
 	INSIST(ISC_LIST_EMPTY(sock->recv_list));
 	INSIST(ISC_LIST_EMPTY(sock->send_list));
 	INSIST(sock->connect_ev == NULL);
-	REQUIRE(sock->fd == -1 || sock->fd < (int)manager->maxsocks);
+	INSIST(sock->fd >= -1 && sock->fd < (int)manager->maxsocks);
 
 	if (sock->fd >= 0) {
 		fd = sock->fd;
@@ -2060,6 +2106,7 @@ allocate_socket(isc__socketmgr_t *manager, isc_sockettype_t type,
 	sock->manager = manager;
 	sock->type = type;
 	sock->fd = -1;
+	sock->dupped = 0;
 	sock->statsindex = NULL;
 
 	ISC_LINK_INIT(sock, link);
@@ -2173,8 +2220,8 @@ static void
 free_socket(isc__socket_t **socketp) {
 	isc__socket_t *sock = *socketp;
 
-	INSIST(sock->references == 0);
 	INSIST(VALID_SOCKET(sock));
+	INSIST(sock->references == 0);
 	INSIST(!sock->connecting);
 	INSIST(!sock->pending_recv);
 	INSIST(!sock->pending_send);
@@ -2265,7 +2312,9 @@ use_min_mtu(isc__socket_t *sock) {
 }
 
 static isc_result_t
-opensocket(isc__socketmgr_t *manager, isc__socket_t *sock) {
+opensocket(isc__socketmgr_t *manager, isc__socket_t *sock,
+	   isc__socket_t *dup_socket)
+{
 	isc_result_t result;
 	char strbuf[ISC_STRERRORSIZE];
 	const char *err = "socket";
@@ -2279,22 +2328,29 @@ opensocket(isc__socketmgr_t *manager, isc__socket_t *sock) {
 #endif
 
  again:
-	switch (sock->type) {
-	case isc_sockettype_udp:
-		sock->fd = socket(sock->pf, SOCK_DGRAM, IPPROTO_UDP);
-		break;
-	case isc_sockettype_tcp:
-		sock->fd = socket(sock->pf, SOCK_STREAM, IPPROTO_TCP);
-		break;
-	case isc_sockettype_unix:
-		sock->fd = socket(sock->pf, SOCK_STREAM, 0);
-		break;
-	case isc_sockettype_fdwatch:
-		/*
-		 * We should not be called for isc_sockettype_fdwatch sockets.
-		 */
-		INSIST(0);
-		break;
+	if (dup_socket == NULL) {
+		switch (sock->type) {
+		case isc_sockettype_udp:
+			sock->fd = socket(sock->pf, SOCK_DGRAM, IPPROTO_UDP);
+			break;
+		case isc_sockettype_tcp:
+			sock->fd = socket(sock->pf, SOCK_STREAM, IPPROTO_TCP);
+			break;
+		case isc_sockettype_unix:
+			sock->fd = socket(sock->pf, SOCK_STREAM, 0);
+			break;
+		case isc_sockettype_fdwatch:
+			/*
+			 * We should not be called for isc_sockettype_fdwatch
+			 * sockets.
+			 */
+			INSIST(0);
+			break;
+		}
+	} else {
+		sock->fd = dup(dup_socket->fd);
+		sock->dupped = 1;
+		sock->bound = dup_socket->bound;
 	}
 	if (sock->fd == -1 && errno == EINTR && tries++ < 42)
 		goto again;
@@ -2370,6 +2426,9 @@ opensocket(isc__socketmgr_t *manager, isc__socket_t *sock) {
 			return (ISC_R_UNEXPECTED);
 		}
 	}
+
+	if (dup_socket != NULL)
+		goto setup_done;
 
 	result = make_nonblock(sock->fd);
 	if (result != ISC_R_SUCCESS) {
@@ -2535,20 +2594,21 @@ opensocket(isc__socketmgr_t *manager, isc__socket_t *sock) {
 	}
 #endif /* defined(USE_CMSG) || defined(SO_RCVBUF) */
 
+setup_done:
 	inc_stats(manager->stats, sock->statsindex[STATID_OPEN]);
 
 	return (ISC_R_SUCCESS);
 }
 
-/*%
- * Create a new 'type' socket managed by 'manager'.  Events
- * will be posted to 'task' and when dispatched 'action' will be
- * called with 'arg' as the arg value.  The new socket is returned
- * in 'socketp'.
+/*
+ * Create a 'type' socket or duplicate an existing socket, managed
+ * by 'manager'.  Events will be posted to 'task' and when dispatched
+ * 'action' will be called with 'arg' as the arg value.  The new
+ * socket is returned in 'socketp'.
  */
-ISC_SOCKETFUNC_SCOPE isc_result_t
-isc__socket_create(isc_socketmgr_t *manager0, int pf, isc_sockettype_t type,
-		   isc_socket_t **socketp)
+static isc_result_t
+socket_create(isc_socketmgr_t *manager0, int pf, isc_sockettype_t type,
+	      isc_socket_t **socketp, isc_socket_t *dup_socket)
 {
 	isc__socket_t *sock = NULL;
 	isc__socketmgr_t *manager = (isc__socketmgr_t *)manager0;
@@ -2580,7 +2640,8 @@ isc__socket_create(isc_socketmgr_t *manager0, int pf, isc_sockettype_t type,
 	}
 
 	sock->pf = pf;
-	result = opensocket(manager, sock);
+
+	result = opensocket(manager, sock, (isc__socket_t *)dup_socket);
 	if (result != ISC_R_SUCCESS) {
 		inc_stats(manager->stats, sock->statsindex[STATID_OPENFAIL]);
 		free_socket(&sock);
@@ -2600,6 +2661,9 @@ isc__socket_create(isc_socketmgr_t *manager0, int pf, isc_sockettype_t type,
 	LOCK(&manager->fdlock[lockid]);
 	manager->fds[sock->fd] = sock;
 	manager->fdstate[sock->fd] = MANAGED;
+#if defined(USE_EPOLL)
+	manager->epoll_events[sock->fd] = 0;
+#endif
 #ifdef USE_DEVPOLL
 	INSIST(sock->manager->fdpollinfo[sock->fd].want_read == 0 &&
 	       sock->manager->fdpollinfo[sock->fd].want_write == 0);
@@ -2615,9 +2679,38 @@ isc__socket_create(isc_socketmgr_t *manager0, int pf, isc_sockettype_t type,
 	UNLOCK(&manager->lock);
 
 	socket_log(sock, NULL, CREATION, isc_msgcat, ISC_MSGSET_SOCKET,
-		   ISC_MSG_CREATED, "created");
+		   ISC_MSG_CREATED, dup_socket != NULL ? "dupped" : "created");
 
 	return (ISC_R_SUCCESS);
+}
+
+/*%
+ * Create a new 'type' socket managed by 'manager'.  Events
+ * will be posted to 'task' and when dispatched 'action' will be
+ * called with 'arg' as the arg value.  The new socket is returned
+ * in 'socketp'.
+ */
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_create(isc_socketmgr_t *manager0, int pf, isc_sockettype_t type,
+		   isc_socket_t **socketp)
+{
+	return (socket_create(manager0, pf, type, socketp, NULL));
+}
+
+/*%
+ * Duplicate an existing socket.  The new socket is returned
+ * in 'socketp'.
+ */
+ISC_SOCKETFUNC_SCOPE isc_result_t
+isc__socket_dup(isc_socket_t *sock0, isc_socket_t **socketp) {
+	isc__socket_t *sock = (isc__socket_t *)sock0;
+
+	REQUIRE(VALID_SOCKET(sock));
+	REQUIRE(socketp != NULL && *socketp == NULL);
+
+	return (socket_create((isc_socketmgr_t *) sock->manager,
+			      sock->pf, sock->type, socketp,
+			      sock0));
 }
 
 #ifdef BIND9
@@ -2638,7 +2731,7 @@ isc__socket_open(isc_socket_t *sock0) {
 	 */
 	REQUIRE(sock->fd == -1);
 
-	result = opensocket(sock->manager, sock);
+	result = opensocket(sock->manager, sock, NULL);
 	if (result != ISC_R_SUCCESS)
 		sock->fd = -1;
 
@@ -2648,6 +2741,9 @@ isc__socket_open(isc_socket_t *sock0) {
 		LOCK(&sock->manager->fdlock[lockid]);
 		sock->manager->fds[sock->fd] = sock;
 		sock->manager->fdstate[sock->fd] = MANAGED;
+#if defined(USE_EPOLL)
+		sock->manager->epoll_events[sock->fd] = 0;
+#endif
 #ifdef USE_DEVPOLL
 		INSIST(sock->manager->fdpollinfo[sock->fd].want_read == 0 &&
 		       sock->manager->fdpollinfo[sock->fd].want_write == 0);
@@ -2685,6 +2781,9 @@ isc__socket_fdwatchcreate(isc_socketmgr_t *manager0, int fd, int flags,
 	REQUIRE(VALID_MANAGER(manager));
 	REQUIRE(socketp != NULL && *socketp == NULL);
 
+	if (fd < 0 || (unsigned int)fd >= manager->maxsocks)
+		return (ISC_R_RANGE);
+
 	result = allocate_socket(manager, isc_sockettype_fdwatch, &sock);
 	if (result != ISC_R_SUCCESS)
 		return (result);
@@ -2709,6 +2808,9 @@ isc__socket_fdwatchcreate(isc_socketmgr_t *manager0, int fd, int flags,
 	LOCK(&manager->fdlock[lockid]);
 	manager->fds[sock->fd] = sock;
 	manager->fdstate[sock->fd] = MANAGED;
+#if defined(USE_EPOLL)
+	manager->epoll_events[sock->fd] = 0;
+#endif
 	UNLOCK(&manager->fdlock[lockid]);
 
 	LOCK(&manager->lock);
@@ -2818,6 +2920,7 @@ isc__socket_close(isc_socket_t *sock0) {
 	int fd;
 	isc__socketmgr_t *manager;
 
+	fflush(stdout);
 	REQUIRE(VALID_SOCKET(sock));
 
 	LOCK(&sock->lock);
@@ -2838,6 +2941,7 @@ isc__socket_close(isc_socket_t *sock0) {
 	manager = sock->manager;
 	fd = sock->fd;
 	sock->fd = -1;
+	sock->dupped = 0;
 	memset(sock->name, 0, sizeof(sock->name));
 	sock->tag = NULL;
 	sock->listener = 0;
@@ -3246,6 +3350,9 @@ internal_accept(isc_task_t *me, isc_event_t *ev) {
 		LOCK(&manager->fdlock[lockid]);
 		manager->fds[fd] = NEWCONNSOCK(dev);
 		manager->fdstate[fd] = MANAGED;
+#if defined(USE_EPOLL)
+		manager->epoll_events[fd] = 0;
+#endif
 		UNLOCK(&manager->fdlock[lockid]);
 
 		LOCK(&manager->lock);
@@ -4196,6 +4303,15 @@ isc__socketmgr_create2(isc_mem_t *mctx, isc_socketmgr_t **managerp,
 		result = ISC_R_NOMEMORY;
 		goto free_manager;
 	}
+#if defined(USE_EPOLL)
+	manager->epoll_events = isc_mem_get(mctx, (manager->maxsocks *
+						   sizeof(uint32_t)));
+	if (manager->epoll_events == NULL) {
+		result = ISC_R_NOMEMORY;
+		goto free_manager;
+	}
+	memset(manager->epoll_events, 0, manager->maxsocks * sizeof(uint32_t));
+#endif
 	manager->stats = NULL;
 
 	manager->common.methods = &socketmgrmethods;
@@ -4265,7 +4381,9 @@ isc__socketmgr_create2(isc_mem_t *mctx, isc_socketmgr_t **managerp,
 	result = setup_watcher(mctx, manager);
 	if (result != ISC_R_SUCCESS)
 		goto cleanup;
+
 	memset(manager->fdstate, 0, manager->maxsocks * sizeof(int));
+
 #ifdef USE_WATCHER_THREAD
 	/*
 	 * Start up the select/poll thread.
@@ -4314,6 +4432,12 @@ free_manager:
 		isc_mem_put(mctx, manager->fdlock,
 			    FDLOCK_COUNT * sizeof(isc_mutex_t));
 	}
+#if defined(USE_EPOLL)
+	if (manager->epoll_events != NULL) {
+		isc_mem_put(mctx, manager->epoll_events,
+			    manager->maxsocks * sizeof(uint32_t));
+	}
+#endif
 	if (manager->fdstate != NULL) {
 		isc_mem_put(mctx, manager->fdstate,
 			    manager->maxsocks * sizeof(int));
@@ -4429,6 +4553,10 @@ isc__socketmgr_destroy(isc_socketmgr_t **managerp) {
 		if (manager->fdstate[i] == CLOSE_PENDING) /* no need to lock */
 			(void)close(i);
 
+#if defined(USE_EPOLL)
+	isc_mem_put(manager->mctx, manager->epoll_events,
+		    manager->maxsocks * sizeof(uint32_t));
+#endif
 	isc_mem_put(manager->mctx, manager->fds,
 		    manager->maxsocks * sizeof(isc__socket_t *));
 	isc_mem_put(manager->mctx, manager->fdstate,
@@ -5046,11 +5174,13 @@ isc__socket_bind(isc_socket_t *sock0, isc_sockaddr_t *sockaddr,
 	LOCK(&sock->lock);
 
 	INSIST(!sock->bound);
+	INSIST(!sock->dupped);
 
 	if (sock->pf != sockaddr->type.sa.sa_family) {
 		UNLOCK(&sock->lock);
 		return (ISC_R_FAMILYMISMATCH);
 	}
+
 	/*
 	 * Only set SO_REUSEADDR when we want a specific port.
 	 */
@@ -5735,6 +5865,7 @@ isc__socket_ipv6only(isc_socket_t *sock0, isc_boolean_t yes) {
 #endif
 
 	REQUIRE(VALID_SOCKET(sock));
+	INSIST(!sock->dupped);
 
 #ifdef IPV6_V6ONLY
 	if (sock->pf == AF_INET6) {
@@ -5890,33 +6021,33 @@ isc__socketmgr_dispatch(isc_socketmgr_t *manager0, isc_socketwait_t *swait) {
 #ifdef BIND9
 void
 isc__socket_setname(isc_socket_t *socket0, const char *name, void *tag) {
-	isc__socket_t *socket = (isc__socket_t *)socket0;
+	isc__socket_t *sock = (isc__socket_t *)socket0;
 
 	/*
-	 * Name 'socket'.
+	 * Name 'sock'.
 	 */
 
-	REQUIRE(VALID_SOCKET(socket));
+	REQUIRE(VALID_SOCKET(sock));
 
-	LOCK(&socket->lock);
-	memset(socket->name, 0, sizeof(socket->name));
-	strncpy(socket->name, name, sizeof(socket->name) - 1);
-	socket->tag = tag;
-	UNLOCK(&socket->lock);
+	LOCK(&sock->lock);
+	memset(sock->name, 0, sizeof(sock->name));
+	strncpy(sock->name, name, sizeof(sock->name) - 1);
+	sock->tag = tag;
+	UNLOCK(&sock->lock);
 }
 
 ISC_SOCKETFUNC_SCOPE const char *
 isc__socket_getname(isc_socket_t *socket0) {
-	isc__socket_t *socket = (isc__socket_t *)socket0;
+	isc__socket_t *sock = (isc__socket_t *)socket0;
 
-	return (socket->name);
+	return (sock->name);
 }
 
 void *
 isc__socket_gettag(isc_socket_t *socket0) {
-	isc__socket_t *socket = (isc__socket_t *)socket0;
+	isc__socket_t *sock = (isc__socket_t *)socket0;
 
-	return (socket->tag);
+	return (sock->tag);
 }
 #endif	/* BIND9 */
 
@@ -5926,6 +6057,13 @@ isc__socket_register(void) {
 	return (isc_socket_register(isc__socketmgr_create));
 }
 #endif
+
+ISC_SOCKETFUNC_SCOPE int
+isc__socket_getfd(isc_socket_t *socket0) {
+	isc__socket_t *sock = (isc__socket_t *)socket0;
+
+	return ((short) sock->fd);
+}
 
 #if defined(HAVE_LIBXML2) && defined(BIND9)
 

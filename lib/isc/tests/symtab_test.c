@@ -55,7 +55,7 @@ ATF_TC_BODY(symtab_grow, tc) {
 
 	UNUSED(tc);
 
-	result = isc_test_begin(NULL);
+	result = isc_test_begin(NULL, ISC_TRUE);
 	ATF_REQUIRE_EQ(result, ISC_R_SUCCESS);
 
 	result = isc_symtab_create(mctx, 3, undefine, NULL, ISC_FALSE, &st);

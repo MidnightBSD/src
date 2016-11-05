@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2014  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2015  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -1420,7 +1420,6 @@ compute_keytag(dns_rdata_t *rdata, dns_rdata_dnskey_t *key) {
  */
 static isc_boolean_t
 isselfsigned(dns_validator_t *val) {
-	dns_fixedname_t fixed;
 	dns_rdataset_t *rdataset, *sigrdataset;
 	dns_rdata_t rdata = DNS_RDATA_INIT;
 	dns_rdata_t sigrdata = DNS_RDATA_INIT;
@@ -1473,9 +1472,10 @@ isselfsigned(dns_validator_t *val) {
 			if (result != ISC_R_SUCCESS)
 				continue;
 
-			result = dns_dnssec_verify2(name, rdataset, dstkey,
-						    ISC_TRUE, mctx, &sigrdata,
-						    dns_fixedname_name(&fixed));
+			result = dns_dnssec_verify3(name, rdataset, dstkey,
+						    ISC_TRUE,
+						    val->view->maxbits,
+						    mctx, &sigrdata, NULL);
 			dst_key_free(&dstkey);
 			if (result != ISC_R_SUCCESS)
 				continue;
@@ -1511,8 +1511,9 @@ verify(dns_validator_t *val, dst_key_t *key, dns_rdata_t *rdata,
 	dns_fixedname_init(&fixed);
 	wild = dns_fixedname_name(&fixed);
  again:
-	result = dns_dnssec_verify2(val->event->name, val->event->rdataset,
-				    key, ignore, val->view->mctx, rdata, wild);
+	result = dns_dnssec_verify3(val->event->name, val->event->rdataset,
+				    key, ignore, val->view->maxbits,
+				    val->view->mctx, rdata, wild);
 	if ((result == DNS_R_SIGEXPIRED || result == DNS_R_SIGFUTURE) &&
 	    val->view->acceptexpired)
 	{
@@ -2059,9 +2060,6 @@ validatezonekey(dns_validator_t *val) {
 				      "the DNSKEY RRset and also matches a "
 				      "trusted key for '%s'",
 				      namebuf);
-			validator_log(val, ISC_LOG_NOTICE,
-				      "please check the 'trusted-keys' for "
-				      "'%s' in named.conf.", namebuf);
 			return (DNS_R_NOVALIDKEY);
 		}
 

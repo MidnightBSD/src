@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2012, 2014  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2012, 2014, 2015  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001, 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -14,8 +14,6 @@
  * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
-
-/* $Id$ */
 
 #ifndef DNS_RESOLVER_H
 #define DNS_RESOLVER_H 1
@@ -54,6 +52,7 @@
 
 #include <isc/lang.h>
 #include <isc/socket.h>
+#include <isc/stats.h>
 
 #include <dns/types.h>
 #include <dns/fixedname.h>
@@ -83,6 +82,14 @@ typedef struct dns_fetchevent {
 	dns_messageid_t			id;
 	isc_result_t			vresult;
 } dns_fetchevent_t;
+
+/*%
+ * The two quota types (fetches-per-zone and fetches-per-server)
+ */
+typedef enum {
+	dns_quotatype_zone = 0,
+	dns_quotatype_server
+} dns_quotatype_t;
 
 /*
  * Options that modify how a 'fetch' is done.
@@ -127,7 +134,8 @@ typedef struct dns_fetchevent {
 
 isc_result_t
 dns_resolver_create(dns_view_t *view,
-		    isc_taskmgr_t *taskmgr, unsigned int ntasks,
+		    isc_taskmgr_t *taskmgr,
+		    unsigned int ntasks, unsigned int ndisp,
 		    isc_socketmgr_t *socketmgr,
 		    isc_timermgr_t *timermgr,
 		    unsigned int options,
@@ -156,9 +164,11 @@ dns_resolver_create(dns_view_t *view,
  *
  *\li	'timermgr' is a valid timer manager.
  *
- *\li	'dispatchv4' is a valid dispatcher with an IPv4 UDP socket, or is NULL.
+ *\li	'dispatchv4' is a dispatch with an IPv4 UDP socket, or is NULL.
+ *	If not NULL, 'ndisp' clones of it will be created by the resolver.
  *
- *\li	'dispatchv6' is a valid dispatcher with an IPv6 UDP socket, or is NULL.
+ *\li	'dispatchv6' is a dispatch with an IPv6 UDP socket, or is NULL.
+ *	If not NULL, 'ndisp' clones of it will be created by the resolver.
  *
  *\li	resp != NULL && *resp == NULL.
  *
@@ -268,6 +278,18 @@ dns_resolver_createfetch2(dns_resolver_t *res, dns_name_t *name,
 			  dns_forwarders_t *forwarders,
 			  isc_sockaddr_t *client, isc_uint16_t id,
 			  unsigned int options, isc_task_t *task,
+			  isc_taskaction_t action, void *arg,
+			  dns_rdataset_t *rdataset,
+			  dns_rdataset_t *sigrdataset,
+			  dns_fetch_t **fetchp);
+isc_result_t
+dns_resolver_createfetch3(dns_resolver_t *res, dns_name_t *name,
+			  dns_rdatatype_t type,
+			  dns_name_t *domain, dns_rdataset_t *nameservers,
+			  dns_forwarders_t *forwarders,
+			  isc_sockaddr_t *client, isc_uint16_t id,
+			  unsigned int options, unsigned int depth,
+			  isc_counter_t *qc, isc_task_t *task,
 			  isc_taskaction_t action, void *arg,
 			  dns_rdataset_t *rdataset,
 			  dns_rdataset_t *sigrdataset,
@@ -517,6 +539,8 @@ dns_resolver_gettimeout(dns_resolver_t *resolver);
 void
 dns_resolver_setclientsperquery(dns_resolver_t *resolver,
 				isc_uint32_t min, isc_uint32_t max);
+void
+dns_resolver_setfetchesperzone(dns_resolver_t *resolver, isc_uint32_t clients);
 
 void
 dns_resolver_getclientsperquery(dns_resolver_t *resolver, isc_uint32_t *cur,
@@ -571,6 +595,54 @@ dns_resolver_printbadcache(dns_resolver_t *resolver, FILE *fp);
  *
  * Requires:
  * \li	resolver to be valid.
+ */
+
+void
+dns_resolver_setmaxdepth(dns_resolver_t *resolver, unsigned int maxdepth);
+unsigned int
+dns_resolver_getmaxdepth(dns_resolver_t *resolver);
+/*%
+ * Get and set how many NS indirections will be followed when looking for
+ * nameserver addresses.
+ *
+ * Requires:
+ * \li	resolver to be valid.
+ */
+
+void
+dns_resolver_setmaxqueries(dns_resolver_t *resolver, unsigned int queries);
+unsigned int
+dns_resolver_getmaxqueries(dns_resolver_t *resolver);
+/*%
+ * Get and set how many iterative queries will be allowed before
+ * terminating a recursive query.
+ *
+ * Requires:
+ * \li	resolver to be valid.
+ */
+
+void
+dns_resolver_dumpfetches(dns_resolver_t *resolver, FILE *fp);
+
+void
+dns_resolver_setquotaresponse(dns_resolver_t *resolver,
+			     dns_quotatype_t which, isc_result_t resp);
+isc_result_t
+dns_resolver_getquotaresponse(dns_resolver_t *resolver, dns_quotatype_t which);
+/*%
+ * Get and set the result code that will be used when quotas
+ * are exceeded. If 'which' is set to quotatype "zone", then the
+ * result specified in 'resp' will be used when the fetches-per-zone
+ * quota is exceeded by a fetch.  If 'which' is set to quotatype "server",
+ * then the reuslt specified in 'resp' will be used when the
+ * fetches-per-server quota has been exceeded for all the
+ * authoritative servers for a zone.  Valid choices are
+ * DNS_R_DROP or DNS_R_SERVFAIL.
+ *
+ * Requires:
+ * \li	'resolver' to be valid.
+ * \li	'which' to be dns_quotatype_zone or dns_quotatype_server
+ * \li	'resp' to be DNS_R_DROP or DNS_R_SERVFAIL.
  */
 
 ISC_LANG_ENDDECLS

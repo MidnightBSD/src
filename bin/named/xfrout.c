@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2011, 2013  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2013, 2015  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: xfrout.c,v 1.139.16.4 2011/12/01 01:00:50 marka Exp $ */
+/* $Id$ */
 
 #include <config.h>
 
@@ -135,6 +135,7 @@ log_rr(dns_name_t *name, dns_rdata_t *rdata, isc_uint32_t ttl) {
 	dns_rdataset_t rds;
 	dns_rdata_t rd = DNS_RDATA_INIT;
 
+	dns_rdatalist_init(&rdl);
 	rdl.type = rdata->type;
 	rdl.rdclass = rdata->rdclass;
 	rdl.ttl = ttl;
@@ -143,8 +144,6 @@ log_rr(dns_name_t *name, dns_rdata_t *rdata, isc_uint32_t ttl) {
 		rdl.covers = dns_rdata_covers(rdata);
 	else
 		rdl.covers = dns_rdatatype_none;
-	ISC_LIST_INIT(rdl.rdata);
-	ISC_LINK_INIT(&rdl, link);
 	dns_rdataset_init(&rds);
 	dns_rdata_init(&rd);
 	dns_rdata_clone(rdata, &rd);
@@ -247,12 +246,13 @@ ixfr_rrstream_create(isc_mem_t *mctx,
 	s = isc_mem_get(mctx, sizeof(*s));
 	if (s == NULL)
 		return (ISC_R_NOMEMORY);
-	s->common.mctx = mctx;
+	s->common.mctx = NULL;
+	isc_mem_attach(mctx, &s->common.mctx);
 	s->common.methods = &ixfr_rrstream_methods;
 	s->journal = NULL;
 
 	CHECK(dns_journal_open(mctx, journal_filename,
-			       ISC_FALSE, &s->journal));
+			       DNS_JOURNAL_READ, &s->journal));
 	CHECK(dns_journal_iter_init(s->journal, begin_serial, end_serial));
 
 	*sp = (rrstream_t *) s;
@@ -289,7 +289,7 @@ ixfr_rrstream_destroy(rrstream_t **rsp) {
 	ixfr_rrstream_t *s = (ixfr_rrstream_t *) *rsp;
 	if (s->journal != 0)
 		dns_journal_destroy(&s->journal);
-	isc_mem_put(s->common.mctx, s, sizeof(*s));
+	isc_mem_putanddetach(&s->common.mctx, s, sizeof(*s));
 }
 
 static rrstream_methods_t ixfr_rrstream_methods = {
@@ -335,7 +335,8 @@ axfr_rrstream_create(isc_mem_t *mctx, dns_db_t *db, dns_dbversion_t *ver,
 	s = isc_mem_get(mctx, sizeof(*s));
 	if (s == NULL)
 		return (ISC_R_NOMEMORY);
-	s->common.mctx = mctx;
+	s->common.mctx = NULL;
+	isc_mem_attach(mctx, &s->common.mctx);
 	s->common.methods = &axfr_rrstream_methods;
 	s->it_valid = ISC_FALSE;
 
@@ -413,7 +414,7 @@ axfr_rrstream_destroy(rrstream_t **rsp) {
 	axfr_rrstream_t *s = (axfr_rrstream_t *) *rsp;
 	if (s->it_valid)
 		dns_rriterator_destroy(&s->it);
-	isc_mem_put(s->common.mctx, s, sizeof(*s));
+	isc_mem_putanddetach(&s->common.mctx, s, sizeof(*s));
 }
 
 static rrstream_methods_t axfr_rrstream_methods = {
@@ -455,7 +456,8 @@ soa_rrstream_create(isc_mem_t *mctx, dns_db_t *db, dns_dbversion_t *ver,
 	s = isc_mem_get(mctx, sizeof(*s));
 	if (s == NULL)
 		return (ISC_R_NOMEMORY);
-	s->common.mctx = mctx;
+	s->common.mctx = NULL;
+	isc_mem_attach(mctx, &s->common.mctx);
 	s->common.methods = &soa_rrstream_methods;
 	s->soa_tuple = NULL;
 
@@ -497,7 +499,7 @@ soa_rrstream_destroy(rrstream_t **rsp) {
 	soa_rrstream_t *s = (soa_rrstream_t *) *rsp;
 	if (s->soa_tuple != NULL)
 		dns_difftuple_free(&s->soa_tuple);
-	isc_mem_put(s->common.mctx, s, sizeof(*s));
+	isc_mem_putanddetach(&s->common.mctx, s, sizeof(*s));
 }
 
 static rrstream_methods_t soa_rrstream_methods = {
@@ -561,7 +563,8 @@ compound_rrstream_create(isc_mem_t *mctx, rrstream_t **soa_stream,
 	s = isc_mem_get(mctx, sizeof(*s));
 	if (s == NULL)
 		return (ISC_R_NOMEMORY);
-	s->common.mctx = mctx;
+	s->common.mctx = NULL;
+	isc_mem_attach(mctx, &s->common.mctx);
 	s->common.methods = &compound_rrstream_methods;
 	s->components[0] = *soa_stream;
 	s->components[1] = *data_stream;
@@ -634,7 +637,7 @@ compound_rrstream_destroy(rrstream_t **rsp) {
 	s->components[0]->methods->destroy(&s->components[0]);
 	s->components[1]->methods->destroy(&s->components[1]);
 	s->components[2] = NULL; /* Copy of components[0]. */
-	isc_mem_put(s->common.mctx, s, sizeof(*s));
+	isc_mem_putanddetach(&s->common.mctx, s, sizeof(*s));
 }
 
 static rrstream_methods_t compound_rrstream_methods = {
@@ -1243,6 +1246,7 @@ sendstream(xfrout_ctx_t *xfr) {
 	dns_rdataset_t *msgrds = NULL;
 	dns_compress_t cctx;
 	isc_boolean_t cleanup_cctx = ISC_FALSE;
+	isc_boolean_t is_tcp;
 
 	int n_rrs;
 
@@ -1250,7 +1254,8 @@ sendstream(xfrout_ctx_t *xfr) {
 	isc_buffer_clear(&xfr->txlenbuf);
 	isc_buffer_clear(&xfr->txbuf);
 
-	if ((xfr->client->attributes & NS_CLIENTATTR_TCP) == 0) {
+	is_tcp = ISC_TF((xfr->client->attributes & NS_CLIENTATTR_TCP) != 0);
+	if (!is_tcp) {
 		/*
 		 * In the UDP case, we put the response data directly into
 		 * the client message.
@@ -1416,8 +1421,6 @@ sendstream(xfrout_ctx_t *xfr) {
 			msgrdl->covers = dns_rdata_covers(rdata);
 		else
 			msgrdl->covers = dns_rdatatype_none;
-		ISC_LINK_INIT(msgrdl, link);
-		ISC_LIST_INIT(msgrdl->rdata);
 		ISC_LIST_APPEND(msgrdl->rdata, msgrdata, link);
 
 		result = dns_message_gettemprdataset(msg, &msgrds);
@@ -1441,9 +1444,17 @@ sendstream(xfrout_ctx_t *xfr) {
 
 		if (! xfr->many_answers)
 			break;
+		/*
+		 * At this stage, at least 1 RR has been rendered into
+		 * the message. Check if we want to clamp this message
+		 * here (TCP only). 20480 was set as an upper limit to
+		 * improve message compression.
+		 */
+		if ((isc_buffer_usedlength(&xfr->buf) >= 20480) && is_tcp)
+			break;
 	}
 
-	if ((xfr->client->attributes & NS_CLIENTATTR_TCP) != 0) {
+	if (is_tcp) {
 		CHECK(dns_compress_init(&cctx, -1, xfr->mctx));
 		dns_compress_setsensitive(&cctx, ISC_TRUE);
 		cleanup_cctx = ISC_TRUE;

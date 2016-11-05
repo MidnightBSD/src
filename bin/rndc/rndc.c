@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2014  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2016  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -14,8 +14,6 @@
  * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
-
-/* $Id: rndc.c,v 1.131.20.3 2011/11/03 22:06:31 each Exp $ */
 
 /*! \file */
 
@@ -34,6 +32,7 @@
 #include <isc/log.h>
 #include <isc/net.h>
 #include <isc/mem.h>
+#include <isc/print.h>
 #include <isc/random.h>
 #include <isc/socket.h>
 #include <isc/stdtime.h>
@@ -80,7 +79,7 @@ static isccc_ccmsg_t ccmsg;
 static isccc_region_t secret;
 static isc_boolean_t failed = ISC_FALSE;
 static isc_boolean_t c_flag = ISC_FALSE;
-static isc_mem_t *mctx;
+static isc_mem_t *rndc_mctx;
 static int sends, recvs, connects;
 static char *command;
 static char *args;
@@ -105,12 +104,14 @@ command is one of the following:\n\
 		Add zone to given view. Requires new-zone-file option.\n\
   delzone zone [class [view]]\n\
 		Removes zone from given view. Requires new-zone-file option.\n\
-  dumpdb [-all|-cache|-zones] [view ...]\n\
+  dumpdb [-all|-cache|-zones|-adb|-bad|-fail] [view ...]\n\
 		Dump cache(s) to the dump file (named_dump.db).\n\
   flush 	Flushes all of the server's caches.\n\
   flush [view]	Flushes the server's cache for a view.\n\
   flushname name [view]\n\
 		Flush the given name from the server's cache(s)\n\
+  flushtree name [view]\n\
+		Flush all names under the given name from the server's cache(s)\n\
   freeze	Suspend updates to all dynamic zones.\n\
   freeze zone [class [view]]\n\
 		Suspend updates to a dynamic zone.\n\
@@ -122,7 +123,8 @@ command is one of the following:\n\
   notify zone [class [view]]\n\
 		Resend NOTIFY messages for the zone.\n\
   notrace	Set debugging level to 0.\n\
-  querylog	Toggle query logging.\n\
+  querylog newstate\n\
+		Enable / disable query logging.\n\
   reconfig	Reload configuration file and new zones only.\n\
   recursing	Dump the queries that are currently recursing (named.recursing)\n\
   refresh zone [class [view]]\n\
@@ -136,11 +138,30 @@ command is one of the following:\n\
 		Write security roots to the secroots file.\n\
   sign zone [class [view]]\n\
 		Update zone keys, and sign as needed.\n\
+  signing -clear all zone [class [view]]\n\
+		Remove the private records for all keys that have\n\
+		finished signing the given zone.\n\
+  signing -clear <keyid>/<algorithm> zone [class [view]]\n\
+		Remove the private record that indicating the given key\n\
+		has finished signing the given zone.\n\
+  signing -list zone [class [view]]\n\
+		List the private records showing the state of DNSSEC\n\
+		signing in the given zone.\n\
+  signing -nsec3param hash flags iterations salt zone [class [view]]\n\
+		Add NSEC3 chain to zone if already signed.\n\
+		Prime zone with NSEC3 chain if not yet signed.\n\
+  signing -nsec3param none zone [class [view]]\n\
+		Remove NSEC3 chains from zone.\n\
   stats		Write server statistics to the statistics file.\n\
   status	Display status of the server.\n\
   stop		Save pending updates to master files and stop the server.\n\
   stop -p	Save pending updates to master files and stop the server\n\
 		reporting process id.\n\
+  sync [-clean]	Dump changes to all dynamic zones to disk, and optionally\n\
+		remove their journal files.\n\
+  sync [-clean] zone [class [view]]\n\
+		Dump a single zone's changes to disk, and optionally\n\
+		remove its journal file.\n\
   thaw		Enable updates to all dynamic zones and reload them.\n\
   thaw zone [class [view]]\n\
 		Enable updates to a frozen dynamic zone and reload it.\n\
@@ -228,8 +249,8 @@ rndc_recvdone(isc_task_t *task, isc_event_t *event) {
 	DO("parse message", isccc_cc_fromwire(&source, &response, &secret));
 
 	data = isccc_alist_lookup(response, "_data");
-	if (data == NULL)
-		fatal("no data section in response");
+	if (!isccc_alist_alistp(data))
+		fatal("bad or missing data section in response");
 	result = isccc_cc_lookupstring(data, "err", &errormsg);
 	if (result == ISC_R_SUCCESS) {
 		failed = ISC_TRUE;
@@ -241,9 +262,10 @@ rndc_recvdone(isc_task_t *task, isc_event_t *event) {
 			progname, isc_result_totext(result));
 
 	result = isccc_cc_lookupstring(data, "text", &textmsg);
-	if (result == ISC_R_SUCCESS)
-		printf("%s\n", textmsg);
-	else if (result != ISC_R_NOTFOUND)
+	if (result == ISC_R_SUCCESS) {
+		if (strlen(textmsg) != 0U)
+			printf("%s\n", textmsg);
+	} else if (result != ISC_R_NOTFOUND)
 		fprintf(stderr, "%s: parsing response failed: %s\n",
 			progname, isc_result_totext(result));
 
@@ -291,8 +313,8 @@ rndc_recvnonce(isc_task_t *task, isc_event_t *event) {
 	DO("parse message", isccc_cc_fromwire(&source, &response, &secret));
 
 	_ctrl = isccc_alist_lookup(response, "_ctrl");
-	if (_ctrl == NULL)
-		fatal("_ctrl section missing");
+	if (!isccc_alist_alistp(_ctrl))
+		fatal("bad or missing ctrl section in response");
 	nonce = 0;
 	if (isccc_cc_lookupuint32(_ctrl, "_nonce", &nonce) != ISC_R_SUCCESS)
 		nonce = 0;
@@ -384,7 +406,7 @@ rndc_connected(isc_task_t *task, isc_event_t *event) {
 	r.length = len;
 	r.base = databuf;
 
-	isccc_ccmsg_init(mctx, sock, &ccmsg);
+	isccc_ccmsg_init(rndc_mctx, sock, &ccmsg);
 	isccc_ccmsg_setmaxsize(&ccmsg, 1024 * 1024);
 
 	DO("schedule recv", isccc_ccmsg_readmessage(&ccmsg, task,
@@ -791,12 +813,12 @@ main(int argc, char **argv) {
 
 	isc_random_get(&serial);
 
-	DO("create memory context", isc_mem_create(0, 0, &mctx));
-	DO("create socket manager", isc_socketmgr_create(mctx, &socketmgr));
-	DO("create task manager", isc_taskmgr_create(mctx, 1, 0, &taskmgr));
+	DO("create memory context", isc_mem_create(0, 0, &rndc_mctx));
+	DO("create socket manager", isc_socketmgr_create(rndc_mctx, &socketmgr));
+	DO("create task manager", isc_taskmgr_create(rndc_mctx, 1, 0, &taskmgr));
 	DO("create task", isc_task_create(taskmgr, 0, &task));
 
-	DO("create logging context", isc_log_create(mctx, &log, &logconfig));
+	DO("create logging context", isc_log_create(rndc_mctx, &log, &logconfig));
 	isc_log_setcontext(log);
 	DO("setting log tag", isc_log_settag(logconfig, progname));
 	logdest.file.stream = stderr;
@@ -810,7 +832,7 @@ main(int argc, char **argv) {
 	DO("enabling log channel", isc_log_usechannel(logconfig, "stderr",
 						      NULL, NULL));
 
-	parse_config(mctx, log, keyname, &pctx, &config);
+	parse_config(rndc_mctx, log, keyname, &pctx, &config);
 
 	isccc_result_register();
 
@@ -825,7 +847,7 @@ main(int argc, char **argv) {
 	for (i = 0; i < argc; i++)
 		argslen += strlen(argv[i]) + 1;
 
-	args = isc_mem_get(mctx, argslen);
+	args = isc_mem_get(rndc_mctx, argslen);
 	if (args == NULL)
 		DO("isc_mem_get", ISC_R_NOMEMORY);
 
@@ -849,7 +871,7 @@ main(int argc, char **argv) {
 	if (nserveraddrs == 0)
 		get_addresses(servername, (in_port_t) remoteport);
 
-	DO("post event", isc_app_onrun(mctx, task, rndc_start, NULL));
+	DO("post event", isc_app_onrun(rndc_mctx, task, rndc_start, NULL));
 
 	result = isc_app_run();
 	if (result != ISC_R_SUCCESS)
@@ -867,15 +889,15 @@ main(int argc, char **argv) {
 	cfg_obj_destroy(pctx, &config);
 	cfg_parser_destroy(&pctx);
 
-	isc_mem_put(mctx, args, argslen);
+	isc_mem_put(rndc_mctx, args, argslen);
 	isccc_ccmsg_invalidate(&ccmsg);
 
 	dns_name_destroy();
 
 	if (show_final_mem)
-		isc_mem_stats(mctx, stderr);
+		isc_mem_stats(rndc_mctx, stderr);
 
-	isc_mem_destroy(&mctx);
+	isc_mem_destroy(&rndc_mctx);
 
 	if (failed)
 		return (1);

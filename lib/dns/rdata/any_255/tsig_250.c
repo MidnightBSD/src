@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007, 2009, 2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2009, 2011, 2012, 2015  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -35,8 +35,8 @@ fromtext_any_tsig(ARGS_FROMTEXT) {
 	long i;
 	char *e;
 
-	REQUIRE(type == 250);
-	REQUIRE(rdclass == 255);
+	REQUIRE(type == dns_rdatatype_tsig);
+	REQUIRE(rdclass == dns_rdataclass_any);
 
 	UNUSED(type);
 	UNUSED(rdclass);
@@ -49,7 +49,8 @@ fromtext_any_tsig(ARGS_FROMTEXT) {
 				      ISC_FALSE));
 	dns_name_init(&name, NULL);
 	buffer_fromregion(&buffer, &token.value.as_region);
-	origin = (origin != NULL) ? origin : dns_rootname;
+	if (origin == NULL)
+		origin = dns_rootname;
 	RETTOK(dns_name_fromtext(&name, &buffer, origin, options, target));
 
 	/*
@@ -141,8 +142,8 @@ totext_any_tsig(ARGS_TOTEXT) {
 	isc_uint64_t sigtime;
 	unsigned short n;
 
-	REQUIRE(rdata->type == 250);
-	REQUIRE(rdata->rdclass == 255);
+	REQUIRE(rdata->type == dns_rdatatype_tsig);
+	REQUIRE(rdata->rdclass == dns_rdataclass_any);
 	REQUIRE(rdata->length != 0);
 
 	dns_rdata_toregion(rdata, &sr);
@@ -202,8 +203,11 @@ totext_any_tsig(ARGS_TOTEXT) {
 	if ((tctx->flags & DNS_STYLEFLAG_MULTILINE) != 0)
 		RETERR(str_totext(" (", target));
 	RETERR(str_totext(tctx->linebreak, target));
-	RETERR(isc_base64_totext(&sigr, tctx->width - 2,
-				 tctx->linebreak, target));
+	if (tctx->width == 0)   /* No splitting */
+		RETERR(isc_base64_totext(&sigr, 60, "", target));
+	else
+		RETERR(isc_base64_totext(&sigr, tctx->width - 2,
+					 tctx->linebreak, target));
 	if ((tctx->flags & DNS_STYLEFLAG_MULTILINE) != 0)
 		RETERR(str_totext(" ) ", target));
 	else
@@ -236,7 +240,10 @@ totext_any_tsig(ARGS_TOTEXT) {
 	/*
 	 * Other.
 	 */
-	return (isc_base64_totext(&sr, 60, " ", target));
+	if (tctx->width == 0)   /* No splitting */
+		return (isc_base64_totext(&sr, 60, "", target));
+	else
+		return (isc_base64_totext(&sr, 60, " ", target));
 }
 
 static inline isc_result_t
@@ -245,8 +252,8 @@ fromwire_any_tsig(ARGS_FROMWIRE) {
 	dns_name_t name;
 	unsigned long n;
 
-	REQUIRE(type == 250);
-	REQUIRE(rdclass == 255);
+	REQUIRE(type == dns_rdatatype_tsig);
+	REQUIRE(rdclass == dns_rdataclass_any);
 
 	UNUSED(type);
 	UNUSED(rdclass);
@@ -308,8 +315,8 @@ towire_any_tsig(ARGS_TOWIRE) {
 	dns_name_t name;
 	dns_offsets_t offsets;
 
-	REQUIRE(rdata->type == 250);
-	REQUIRE(rdata->rdclass == 255);
+	REQUIRE(rdata->type == dns_rdatatype_tsig);
+	REQUIRE(rdata->rdclass == dns_rdataclass_any);
 	REQUIRE(rdata->length != 0);
 
 	dns_compress_setmethods(cctx, DNS_COMPRESS_NONE);
@@ -331,8 +338,8 @@ compare_any_tsig(ARGS_COMPARE) {
 
 	REQUIRE(rdata1->type == rdata2->type);
 	REQUIRE(rdata1->rdclass == rdata2->rdclass);
-	REQUIRE(rdata1->type == 250);
-	REQUIRE(rdata1->rdclass == 255);
+	REQUIRE(rdata1->type == dns_rdatatype_tsig);
+	REQUIRE(rdata1->rdclass == dns_rdataclass_any);
 	REQUIRE(rdata1->length != 0);
 	REQUIRE(rdata2->length != 0);
 
@@ -355,8 +362,8 @@ fromstruct_any_tsig(ARGS_FROMSTRUCT) {
 	dns_rdata_any_tsig_t *tsig = source;
 	isc_region_t tr;
 
-	REQUIRE(type == 250);
-	REQUIRE(rdclass == 255);
+	REQUIRE(type == dns_rdatatype_tsig);
+	REQUIRE(rdclass == dns_rdataclass_any);
 	REQUIRE(source != NULL);
 	REQUIRE(tsig->common.rdclass == rdclass);
 	REQUIRE(tsig->common.rdtype == type);
@@ -427,8 +434,8 @@ tostruct_any_tsig(ARGS_TOSTRUCT) {
 	dns_name_t alg;
 	isc_region_t sr;
 
-	REQUIRE(rdata->type == 250);
-	REQUIRE(rdata->rdclass == 255);
+	REQUIRE(rdata->type == dns_rdatatype_tsig);
+	REQUIRE(rdata->rdclass == dns_rdataclass_any);
 	REQUIRE(rdata->length != 0);
 
 	tsig = (dns_rdata_any_tsig_t *) target;
@@ -523,8 +530,8 @@ freestruct_any_tsig(ARGS_FREESTRUCT) {
 	dns_rdata_any_tsig_t *tsig = (dns_rdata_any_tsig_t *) source;
 
 	REQUIRE(source != NULL);
-	REQUIRE(tsig->common.rdclass == 255);
-	REQUIRE(tsig->common.rdtype == 250);
+	REQUIRE(tsig->common.rdtype == dns_rdatatype_tsig);
+	REQUIRE(tsig->common.rdclass == dns_rdataclass_any);
 
 	if (tsig->mctx == NULL)
 		return;
@@ -539,8 +546,8 @@ freestruct_any_tsig(ARGS_FREESTRUCT) {
 
 static inline isc_result_t
 additionaldata_any_tsig(ARGS_ADDLDATA) {
-	REQUIRE(rdata->type == 250);
-	REQUIRE(rdata->rdclass == 255);
+	REQUIRE(rdata->type == dns_rdatatype_tsig);
+	REQUIRE(rdata->rdclass == dns_rdataclass_any);
 
 	UNUSED(rdata);
 	UNUSED(add);
@@ -552,8 +559,8 @@ additionaldata_any_tsig(ARGS_ADDLDATA) {
 static inline isc_result_t
 digest_any_tsig(ARGS_DIGEST) {
 
-	REQUIRE(rdata->type == 250);
-	REQUIRE(rdata->rdclass == 255);
+	REQUIRE(rdata->type == dns_rdatatype_tsig);
+	REQUIRE(rdata->rdclass == dns_rdataclass_any);
 
 	UNUSED(rdata);
 	UNUSED(digest);
@@ -565,8 +572,8 @@ digest_any_tsig(ARGS_DIGEST) {
 static inline isc_boolean_t
 checkowner_any_tsig(ARGS_CHECKOWNER) {
 
-	REQUIRE(type == 250);
-	REQUIRE(rdclass == 255);
+	REQUIRE(type == dns_rdatatype_tsig);
+	REQUIRE(rdclass == dns_rdataclass_any);
 
 	UNUSED(name);
 	UNUSED(type);
@@ -579,8 +586,8 @@ checkowner_any_tsig(ARGS_CHECKOWNER) {
 static inline isc_boolean_t
 checknames_any_tsig(ARGS_CHECKNAMES) {
 
-	REQUIRE(rdata->type == 250);
-	REQUIRE(rdata->rdclass == 250);
+	REQUIRE(rdata->type == dns_rdatatype_tsig);
+	REQUIRE(rdata->rdclass == dns_rdataclass_any);
 
 	UNUSED(rdata);
 	UNUSED(owner);

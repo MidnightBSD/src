@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2009, 2011-2014  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2009, 2011-2015  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -16,7 +16,7 @@
  */
 
 /*
- * $Id$
+ * $Id: gssapi_link.c,v 1.17 2011/03/28 05:32:16 marka Exp $
  */
 
 #include <config.h>
@@ -26,6 +26,7 @@
 #include <isc/base64.h>
 #include <isc/buffer.h>
 #include <isc/mem.h>
+#include <isc/print.h>
 #include <isc/string.h>
 #include <isc/util.h>
 
@@ -362,6 +363,7 @@ static dst_func_t gssapi_functions = {
 	gssapi_adddata,
 	gssapi_sign,
 	gssapi_verify,
+	NULL, /*%< verify2 */
 	NULL, /*%< computesecret */
 	gssapi_compare,
 	NULL, /*%< paramcompare */

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2013  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2013, 2015  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id$ */
+/* $Id: dst.h,v 1.34 2011/10/20 21:20:02 marka Exp $ */
 
 #ifndef DST_DST_H
 #define DST_DST_H 1
@@ -69,6 +69,7 @@ typedef struct dst_context 	dst_context_t;
 #define DST_ALG_HMACSHA256	163	/* XXXMPA */
 #define DST_ALG_HMACSHA384	164	/* XXXMPA */
 #define DST_ALG_HMACSHA512	165	/* XXXMPA */
+#define DST_ALG_INDIRECT	252
 #define DST_ALG_PRIVATE		254
 #define DST_ALG_EXPAND		255
 #define DST_MAX_ALGS		255
@@ -239,8 +240,15 @@ dst_context_sign(dst_context_t *dctx, isc_buffer_t *sig);
 
 isc_result_t
 dst_context_verify(dst_context_t *dctx, isc_region_t *sig);
+
+isc_result_t
+dst_context_verify2(dst_context_t *dctx, unsigned int maxbits,
+		    isc_region_t *sig);
 /*%<
  * Verifies the signature using the data and key stored in the context.
+ *
+ * 'maxbits' specifies the maximum number of bits permitted in the RSA
+ * exponent.
  *
  * Requires:
  * \li	"dctx" is a valid context.
@@ -498,6 +506,14 @@ dst_key_fromgssapi(dns_name_t *name, gss_ctx_id_t gssctx, isc_mem_t *mctx,
  *	the context id.
  */
 
+#ifdef DST_KEY_INTERNAL
+isc_result_t
+dst_key_buildinternal(dns_name_t *name, unsigned int alg,
+		      unsigned int bits, unsigned int flags,
+		      unsigned int protocol, dns_rdataclass_t rdclass,
+		      void *data, isc_mem_t *mctx, dst_key_t **keyp);
+#endif
+
 isc_result_t
 dst_key_fromlabel(dns_name_t *name, int alg, unsigned int flags,
 		  unsigned int protocol, dns_rdataclass_t rdclass,
@@ -518,6 +534,7 @@ dst_key_generate2(dns_name_t *name, unsigned int alg,
 		  dns_rdataclass_t rdclass,
 		  isc_mem_t *mctx, dst_key_t **keyp,
 		  void (*callback)(int));
+
 /*%<
  * Generate a DST key (or keypair) with the supplied parameters.  The
  * interpretation of the "param" field depends on the algorithm:
@@ -748,6 +765,26 @@ dst_key_setbits(dst_key_t *key, isc_uint16_t bits);
  *	"key" is a valid key.
  */
 
+void
+dst_key_setttl(dst_key_t *key, dns_ttl_t ttl);
+/*%<
+ * Set the default TTL to use when converting the key
+ * to a KEY or DNSKEY RR.
+ *
+ * Requires:
+ *	"key" is a valid key.
+ */
+
+dns_ttl_t
+dst_key_getttl(const dst_key_t *key);
+/*%<
+ * Get the default TTL to use when converting the key
+ * to a KEY or DNSKEY RR.
+ *
+ * Requires:
+ *	"key" is a valid key.
+ */
+
 isc_result_t
 dst_key_setflags(dst_key_t *key, isc_uint32_t flags);
 /*
@@ -904,6 +941,12 @@ dst_key_setinactive(dst_key_t *key, isc_boolean_t inactive);
  * Requires:
  *	'key' to be valid.
  */
+
+void
+dst_key_setexternal(dst_key_t *key, isc_boolean_t value);
+
+isc_boolean_t
+dst_key_isexternal(dst_key_t *key);
 
 ISC_LANG_ENDDECLS
 

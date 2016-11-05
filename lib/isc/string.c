@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007, 2011, 2012, 2014  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007, 2011, 2012, 2014, 2015  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001, 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -56,14 +56,14 @@
 #include <isc/string.h>
 #include <isc/util.h>
 
-static char digits[] = "0123456789abcdefghijklmnoprstuvwxyz";
+static const char digits[] = "0123456789abcdefghijklmnoprstuvwxyz";
 
 isc_uint64_t
 isc_string_touint64(char *source, char **end, int base) {
 	isc_uint64_t tmp;
 	isc_uint64_t overflow;
 	char *s = source;
-	char *o;
+	const char *o;
 	char c;
 
 	if ((base < 0) || (base == 1) || (base > 36)) {
@@ -295,4 +295,25 @@ isc_string_strlcat(char *dst, const char *src, size_t size)
 	*d = '\0';
 
 	return(dlen + (s - src));	/* count does not include NUL */
+}
+
+char *
+isc_string_strcasestr(const char *str, const char *search) {
+	char c, sc, *s;
+	size_t len;
+
+	if ((c = *search++) != 0) {
+		c = tolower((unsigned char) c);
+		len = strlen(search);
+		do {
+			do {
+				if ((sc = *str++) == 0)
+					return (NULL);
+			} while ((char) tolower((unsigned char) sc) != c);
+		} while (strncasecmp(str, search, len) != 0);
+		str--;
+	}
+	DE_CONST(str, s);
+	return (s);
+
 }

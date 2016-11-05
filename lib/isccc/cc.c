@@ -1,5 +1,5 @@
 /*
- * Portions Copyright (C) 2004-2007, 2012, 2013  Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (C) 2004-2007, 2012, 2013, 2015, 2016  Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (C) 2001-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -28,8 +28,6 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-
-/* $Id: cc.c,v 1.18 2007/08/28 07:20:43 tbox Exp $ */
 
 /*! \file */
 
@@ -85,8 +83,7 @@ static isc_result_t
 list_towire(isccc_sexpr_t *alist, isccc_region_t *target);
 
 static isc_result_t
-value_towire(isccc_sexpr_t *elt, isccc_region_t *target)
-{
+value_towire(isccc_sexpr_t *elt, isccc_region_t *target) {
 	unsigned int len;
 	unsigned char *lenp;
 	isccc_region_t *vr;
@@ -160,7 +157,7 @@ table_towire(isccc_sexpr_t *alist, isccc_region_t *target)
 	isccc_sexpr_t *kv, *elt, *k, *v;
 	char *ks;
 	isc_result_t result;
-	size_t len;
+	unsigned int len;
 
 	for (elt = isccc_alist_first(alist);
 	     elt != NULL;
@@ -169,7 +166,7 @@ table_towire(isccc_sexpr_t *alist, isccc_region_t *target)
 		k = ISCCC_SEXPR_CAR(kv);
 		ks = isccc_sexpr_tostring(k);
 		v = ISCCC_SEXPR_CDR(kv);
-		len = strlen(ks);
+		len = (unsigned int)strlen(ks);
 		INSIST(len <= 255U);
 		/*
 		 * Emit the key name.
@@ -287,10 +284,10 @@ verify(isccc_sexpr_t *alist, unsigned char *data, unsigned int length,
 	 * Extract digest.
 	 */
 	_auth = isccc_alist_lookup(alist, "_auth");
-	if (_auth == NULL)
+	if (!isccc_alist_alistp(_auth))
 		return (ISC_R_FAILURE);
 	hmd5 = isccc_alist_lookup(_auth, "hmd5");
-	if (hmd5 == NULL)
+	if (!isccc_sexpr_binaryp(hmd5))
 		return (ISC_R_FAILURE);
 	/*
 	 * Compute digest.
@@ -313,8 +310,8 @@ verify(isccc_sexpr_t *alist, unsigned char *data, unsigned int length,
 	/*
 	 * Verify.
 	 */
-	if (!isc_safe_memcmp((unsigned char *) isccc_sexpr_tostring(hmd5),
-			     digestb64, HMD5_LENGTH))
+	if (!isc_safe_memequal((unsigned char *) isccc_sexpr_tostring(hmd5),
+			       digestb64, HMD5_LENGTH))
 		return (ISCCC_R_BADAUTH);
 
 	return (ISC_R_SUCCESS);
@@ -328,8 +325,7 @@ static isc_result_t
 list_fromwire(isccc_region_t *source, isccc_sexpr_t **listp);
 
 static isc_result_t
-value_fromwire(isccc_region_t *source, isccc_sexpr_t **valuep)
-{
+value_fromwire(isccc_region_t *source, isccc_sexpr_t **valuep) {
 	unsigned int msgtype;
 	isc_uint32_t len;
 	isccc_sexpr_t *value;
@@ -423,8 +419,7 @@ table_fromwire(isccc_region_t *source, isccc_region_t *secret,
 }
 
 static isc_result_t
-list_fromwire(isccc_region_t *source, isccc_sexpr_t **listp)
-{
+list_fromwire(isccc_region_t *source, isccc_sexpr_t **listp) {
 	isccc_sexpr_t *list, *value;
 	isc_result_t result;
 
@@ -439,7 +434,7 @@ list_fromwire(isccc_region_t *source, isccc_sexpr_t **listp)
 		if (isccc_sexpr_addtolist(&list, value) == NULL) {
 			isccc_sexpr_free(&value);
 			isccc_sexpr_free(&list);
-			return (result);
+			return (ISC_R_NOMEMORY);
 		}
 	}
 
@@ -545,7 +540,7 @@ isccc_cc_createack(isccc_sexpr_t *message, isc_boolean_t ok,
 	REQUIRE(ackp != NULL && *ackp == NULL);
 
 	_ctrl = isccc_alist_lookup(message, "_ctrl");
-	if (_ctrl == NULL ||
+	if (!isccc_alist_alistp(_ctrl) ||
 	    isccc_cc_lookupuint32(_ctrl, "_ser", &serial) != ISC_R_SUCCESS ||
 	    isccc_cc_lookupuint32(_ctrl, "_tim", &t) != ISC_R_SUCCESS)
 		return (ISC_R_FAILURE);
@@ -585,12 +580,11 @@ isccc_cc_createack(isccc_sexpr_t *message, isc_boolean_t ok,
 }
 
 isc_boolean_t
-isccc_cc_isack(isccc_sexpr_t *message)
-{
+isccc_cc_isack(isccc_sexpr_t *message) {
 	isccc_sexpr_t *_ctrl;
 
 	_ctrl = isccc_alist_lookup(message, "_ctrl");
-	if (_ctrl == NULL)
+	if (!isccc_alist_alistp(_ctrl))
 		return (ISC_FALSE);
 	if (isccc_cc_lookupstring(_ctrl, "_ack", NULL) == ISC_R_SUCCESS)
 		return (ISC_TRUE);
@@ -598,12 +592,11 @@ isccc_cc_isack(isccc_sexpr_t *message)
 }
 
 isc_boolean_t
-isccc_cc_isreply(isccc_sexpr_t *message)
-{
+isccc_cc_isreply(isccc_sexpr_t *message) {
 	isccc_sexpr_t *_ctrl;
 
 	_ctrl = isccc_alist_lookup(message, "_ctrl");
-	if (_ctrl == NULL)
+	if (!isccc_alist_alistp(_ctrl))
 		return (ISC_FALSE);
 	if (isccc_cc_lookupstring(_ctrl, "_rpl", NULL) == ISC_R_SUCCESS)
 		return (ISC_TRUE);
@@ -623,7 +616,7 @@ isccc_cc_createresponse(isccc_sexpr_t *message, isccc_time_t now,
 
 	_ctrl = isccc_alist_lookup(message, "_ctrl");
 	_data = isccc_alist_lookup(message, "_data");
-	if (_ctrl == NULL || _data == NULL ||
+	if (!isccc_alist_alistp(_ctrl) || !isccc_alist_alistp(_data) ||
 	    isccc_cc_lookupuint32(_ctrl, "_ser", &serial) != ISC_R_SUCCESS ||
 	    isccc_cc_lookupstring(_data, "type", &type) != ISC_R_SUCCESS)
 		return (ISC_R_FAILURE);
@@ -672,8 +665,7 @@ isccc_cc_createresponse(isccc_sexpr_t *message, isccc_time_t now,
 }
 
 isccc_sexpr_t *
-isccc_cc_definestring(isccc_sexpr_t *alist, const char *key, const char *str)
-{
+isccc_cc_definestring(isccc_sexpr_t *alist, const char *key, const char *str) {
 	size_t len;
 	isccc_region_t r;
 
@@ -685,8 +677,7 @@ isccc_cc_definestring(isccc_sexpr_t *alist, const char *key, const char *str)
 }
 
 isccc_sexpr_t *
-isccc_cc_defineuint32(isccc_sexpr_t *alist, const char *key, isc_uint32_t i)
-{
+isccc_cc_defineuint32(isccc_sexpr_t *alist, const char *key, isc_uint32_t i) {
 	char b[100];
 	size_t len;
 	isccc_region_t r;
@@ -700,8 +691,7 @@ isccc_cc_defineuint32(isccc_sexpr_t *alist, const char *key, isc_uint32_t i)
 }
 
 isc_result_t
-isccc_cc_lookupstring(isccc_sexpr_t *alist, const char *key, char **strp)
-{
+isccc_cc_lookupstring(isccc_sexpr_t *alist, const char *key, char **strp) {
 	isccc_sexpr_t *kv, *v;
 
 	REQUIRE(strp == NULL || *strp == NULL);
@@ -754,9 +744,7 @@ symtab_undefine(char *key, unsigned int type, isccc_symvalue_t value,
 }
 
 static isc_boolean_t
-symtab_clean(char *key, unsigned int type, isccc_symvalue_t value,
-	     void *arg)
-{
+symtab_clean(char *key, unsigned int type, isccc_symvalue_t value, void *arg) {
 	isccc_time_t *now;
 
 	UNUSED(key);
@@ -772,21 +760,18 @@ symtab_clean(char *key, unsigned int type, isccc_symvalue_t value,
 }
 
 isc_result_t
-isccc_cc_createsymtab(isccc_symtab_t **symtabp)
-{
+isccc_cc_createsymtab(isccc_symtab_t **symtabp) {
 	return (isccc_symtab_create(11897, symtab_undefine, NULL, ISC_FALSE,
 				  symtabp));
 }
 
 void
-isccc_cc_cleansymtab(isccc_symtab_t *symtab, isccc_time_t now)
-{
+isccc_cc_cleansymtab(isccc_symtab_t *symtab, isccc_time_t now) {
 	isccc_symtab_foreach(symtab, symtab_clean, &now);
 }
 
 static isc_boolean_t
-has_whitespace(const char *str)
-{
+has_whitespace(const char *str) {
 	char c;
 
 	if (str == NULL)
@@ -812,7 +797,7 @@ isccc_cc_checkdup(isccc_symtab_t *symtab, isccc_sexpr_t *message,
 	isccc_sexpr_t *_ctrl;
 
 	_ctrl = isccc_alist_lookup(message, "_ctrl");
-	if (_ctrl == NULL ||
+	if (!isccc_alist_alistp(_ctrl) ||
 	    isccc_cc_lookupstring(_ctrl, "_ser", &_ser) != ISC_R_SUCCESS ||
 	    isccc_cc_lookupstring(_ctrl, "_tim", &_tim) != ISC_R_SUCCESS)
 		return (ISC_R_FAILURE);

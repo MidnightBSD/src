@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009, 2012-2014  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2009, 2012-2015  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -35,6 +35,7 @@
 #include <isc/buffer.h>
 #include <isc/lib.h>
 #include <isc/mem.h>
+#include <isc/print.h>
 #include <isc/sockaddr.h>
 #include <isc/util.h>
 
@@ -213,7 +214,9 @@ main(int argc, char *argv[]) {
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_protocol = IPPROTO_UDP;
+#ifdef AI_NUMERICHOST
 	hints.ai_flags = AI_NUMERICHOST;
+#endif
 	gai_error = getaddrinfo(argv[0], "53", &hints, &res);
 	if (gai_error != 0) {
 		fprintf(stderr, "getaddrinfo failed: %s\n",

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007, 2008, 2010-2013  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2008, 2010-2013, 2015  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -151,12 +151,10 @@ addoptout(dns_message_t *message, dns_db_t *cache, dns_dbnode_t *node,
 	/*
 	 * Initialize the list.
 	 */
+	dns_rdatalist_init(&ncrdatalist);
 	ncrdatalist.rdclass = dns_db_class(cache);
-	ncrdatalist.type = 0;
 	ncrdatalist.covers = covers;
 	ncrdatalist.ttl = maxttl;
-	ISC_LIST_INIT(ncrdatalist.rdata);
-	ISC_LINK_INIT(&ncrdatalist, link);
 
 	/*
 	 * Build an ncache rdatas into buffer.
@@ -614,13 +612,11 @@ dns_ncache_getsigrdataset(dns_rdataset_t *ncacherdataset, dns_name_t *name,
 		dns_name_fromregion(&tname, &remaining);
 		INSIST(remaining.length >= tname.length);
 		isc_buffer_forward(&source, tname.length);
-		remaining.length -= tname.length;
-		remaining.base += tname.length;
+		isc_region_consume(&remaining, tname.length);
 
 		INSIST(remaining.length >= 2);
 		type = isc_buffer_getuint16(&source);
-		remaining.length -= 2;
-		remaining.base += 2;
+		isc_region_consume(&remaining, 2);
 
 		if (type != dns_rdatatype_rrsig ||
 		    !dns_name_equal(&tname, name)) {
@@ -632,8 +628,7 @@ dns_ncache_getsigrdataset(dns_rdataset_t *ncacherdataset, dns_name_t *name,
 		INSIST(remaining.length >= 1);
 		trust = isc_buffer_getuint8(&source);
 		INSIST(trust <= dns_trust_ultimate);
-		remaining.length -= 1;
-		remaining.base += 1;
+		isc_region_consume(&remaining, 1);
 
 		raw = remaining.base;
 		count = raw[0] * 256 + raw[1];

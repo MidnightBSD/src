@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2013  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: globals.h,v 1.89.54.2 2011/06/17 23:47:10 tbox Exp $ */
+/* $Id: globals.h,v 1.92 2011/11/09 18:44:04 each Exp $ */
 
 #ifndef NAMED_GLOBALS_H
 #define NAMED_GLOBALS_H 1
@@ -51,6 +51,7 @@
 
 EXTERN isc_mem_t *		ns_g_mctx		INIT(NULL);
 EXTERN unsigned int		ns_g_cpus		INIT(0);
+EXTERN unsigned int		ns_g_udpdisp		INIT(0);
 EXTERN isc_taskmgr_t *		ns_g_taskmgr		INIT(NULL);
 EXTERN dns_dispatchmgr_t *	ns_g_dispatchmgr	INIT(NULL);
 EXTERN isc_entropy_t *		ns_g_entropy		INIT(NULL);
@@ -156,9 +157,15 @@ EXTERN int			ns_g_listen		INIT(3);
 EXTERN isc_time_t		ns_g_boottime;
 EXTERN isc_boolean_t		ns_g_memstatistics	INIT(ISC_FALSE);
 EXTERN isc_boolean_t		ns_g_clienttest		INIT(ISC_FALSE);
+EXTERN isc_boolean_t		ns_g_dropedns		INIT(ISC_FALSE);
+EXTERN isc_boolean_t		ns_g_noedns		INIT(ISC_FALSE);
 EXTERN isc_boolean_t		ns_g_nosoa		INIT(ISC_FALSE);
 EXTERN isc_boolean_t		ns_g_noaa		INIT(ISC_FALSE);
 EXTERN isc_boolean_t		ns_g_nonearest		INIT(ISC_FALSE);
+EXTERN isc_boolean_t		ns_g_notcp		INIT(ISC_FALSE);
+EXTERN isc_boolean_t		ns_g_disable6		INIT(ISC_FALSE);
+EXTERN isc_boolean_t		ns_g_disable4		INIT(ISC_FALSE);
+
 
 #undef EXTERN
 #undef INIT
