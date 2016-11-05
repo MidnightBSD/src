@@ -1,7 +1,7 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 
 /*
- * Copyright (C) 2004-2012 Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2016 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2003 Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -67,11 +67,12 @@
 #include "rdata/generic/loc_29.c"
 #include "rdata/generic/nxt_30.c"
 #include "rdata/in_1/srv_33.c"
-#include "rdata/in_1/naptr_35.c"
+#include "rdata/generic/naptr_35.c"
 #include "rdata/in_1/kx_36.c"
 #include "rdata/generic/cert_37.c"
 #include "rdata/in_1/a6_38.c"
 #include "rdata/generic/dname_39.c"
+#include "rdata/generic/sink_40.c"
 #include "rdata/generic/opt_41.c"
 #include "rdata/in_1/apl_42.c"
 #include "rdata/generic/ds_43.c"
@@ -84,11 +85,29 @@
 #include "rdata/generic/nsec3_50.c"
 #include "rdata/generic/nsec3param_51.c"
 #include "rdata/generic/tlsa_52.c"
+#include "rdata/generic/smimea_53.c"
 #include "rdata/generic/hip_55.c"
+#include "rdata/generic/ninfo_56.c"
+#include "rdata/generic/rkey_57.c"
+#include "rdata/generic/talink_58.c"
+#include "rdata/generic/cds_59.c"
+#include "rdata/generic/cdnskey_60.c"
+#include "rdata/generic/openpgpkey_61.c"
+#include "rdata/generic/csync_62.c"
 #include "rdata/generic/spf_99.c"
 #include "rdata/generic/unspec_103.c"
+#include "rdata/generic/nid_104.c"
+#include "rdata/generic/l32_105.c"
+#include "rdata/generic/l64_106.c"
+#include "rdata/generic/lp_107.c"
+#include "rdata/generic/eui48_108.c"
+#include "rdata/generic/eui64_109.c"
 #include "rdata/generic/tkey_249.c"
 #include "rdata/any_255/tsig_250.c"
+#include "rdata/generic/uri_256.c"
+#include "rdata/generic/caa_257.c"
+#include "rdata/generic/avc_258.c"
+#include "rdata/generic/ta_32768.c"
 #include "rdata/generic/dlv_32769.c"
 #include "rdata/generic/keydata_65533.c"
 
@@ -157,11 +176,7 @@
 		default: result = DNS_R_UNKNOWN; break; \
 		} \
 		break; \
-	case 35: switch (rdclass) { \
-		case 1: result = fromtext_in_naptr(rdclass, type, lexer, origin, options, target, callbacks); break; \
-		default: result = DNS_R_UNKNOWN; break; \
-		} \
-		break; \
+	case 35: result = fromtext_naptr(rdclass, type, lexer, origin, options, target, callbacks); break; \
 	case 36: switch (rdclass) { \
 		case 1: result = fromtext_in_kx(rdclass, type, lexer, origin, options, target, callbacks); break; \
 		default: result = DNS_R_UNKNOWN; break; \
@@ -174,6 +189,7 @@
 		} \
 		break; \
 	case 39: result = fromtext_dname(rdclass, type, lexer, origin, options, target, callbacks); break; \
+	case 40: result = fromtext_sink(rdclass, type, lexer, origin, options, target, callbacks); break; \
 	case 41: result = fromtext_opt(rdclass, type, lexer, origin, options, target, callbacks); break; \
 	case 42: switch (rdclass) { \
 		case 1: result = fromtext_in_apl(rdclass, type, lexer, origin, options, target, callbacks); break; \
@@ -194,15 +210,33 @@
 	case 50: result = fromtext_nsec3(rdclass, type, lexer, origin, options, target, callbacks); break; \
 	case 51: result = fromtext_nsec3param(rdclass, type, lexer, origin, options, target, callbacks); break; \
 	case 52: result = fromtext_tlsa(rdclass, type, lexer, origin, options, target, callbacks); break; \
+	case 53: result = fromtext_smimea(rdclass, type, lexer, origin, options, target, callbacks); break; \
 	case 55: result = fromtext_hip(rdclass, type, lexer, origin, options, target, callbacks); break; \
+	case 56: result = fromtext_ninfo(rdclass, type, lexer, origin, options, target, callbacks); break; \
+	case 57: result = fromtext_rkey(rdclass, type, lexer, origin, options, target, callbacks); break; \
+	case 58: result = fromtext_talink(rdclass, type, lexer, origin, options, target, callbacks); break; \
+	case 59: result = fromtext_cds(rdclass, type, lexer, origin, options, target, callbacks); break; \
+	case 60: result = fromtext_cdnskey(rdclass, type, lexer, origin, options, target, callbacks); break; \
+	case 61: result = fromtext_openpgpkey(rdclass, type, lexer, origin, options, target, callbacks); break; \
+	case 62: result = fromtext_csync(rdclass, type, lexer, origin, options, target, callbacks); break; \
 	case 99: result = fromtext_spf(rdclass, type, lexer, origin, options, target, callbacks); break; \
 	case 103: result = fromtext_unspec(rdclass, type, lexer, origin, options, target, callbacks); break; \
+	case 104: result = fromtext_nid(rdclass, type, lexer, origin, options, target, callbacks); break; \
+	case 105: result = fromtext_l32(rdclass, type, lexer, origin, options, target, callbacks); break; \
+	case 106: result = fromtext_l64(rdclass, type, lexer, origin, options, target, callbacks); break; \
+	case 107: result = fromtext_lp(rdclass, type, lexer, origin, options, target, callbacks); break; \
+	case 108: result = fromtext_eui48(rdclass, type, lexer, origin, options, target, callbacks); break; \
+	case 109: result = fromtext_eui64(rdclass, type, lexer, origin, options, target, callbacks); break; \
 	case 249: result = fromtext_tkey(rdclass, type, lexer, origin, options, target, callbacks); break; \
 	case 250: switch (rdclass) { \
 		case 255: result = fromtext_any_tsig(rdclass, type, lexer, origin, options, target, callbacks); break; \
 		default: result = DNS_R_UNKNOWN; break; \
 		} \
 		break; \
+	case 256: result = fromtext_uri(rdclass, type, lexer, origin, options, target, callbacks); break; \
+	case 257: result = fromtext_caa(rdclass, type, lexer, origin, options, target, callbacks); break; \
+	case 258: result = fromtext_avc(rdclass, type, lexer, origin, options, target, callbacks); break; \
+	case 32768: result = fromtext_ta(rdclass, type, lexer, origin, options, target, callbacks); break; \
 	case 32769: result = fromtext_dlv(rdclass, type, lexer, origin, options, target, callbacks); break; \
 	case 65533: result = fromtext_keydata(rdclass, type, lexer, origin, options, target, callbacks); break; \
 	default: result = DNS_R_UNKNOWN; break; \
@@ -271,11 +305,7 @@
 		default: use_default = ISC_TRUE; break; \
 		} \
 		break; \
-	case 35: switch (rdata->rdclass) { \
-		case 1: result = totext_in_naptr(rdata, tctx, target); break; \
-		default: use_default = ISC_TRUE; break; \
-		} \
-		break; \
+	case 35: result = totext_naptr(rdata, tctx, target); break; \
 	case 36: switch (rdata->rdclass) { \
 		case 1: result = totext_in_kx(rdata, tctx, target); break; \
 		default: use_default = ISC_TRUE; break; \
@@ -288,6 +318,7 @@
 		} \
 		break; \
 	case 39: result = totext_dname(rdata, tctx, target); break; \
+	case 40: result = totext_sink(rdata, tctx, target); break; \
 	case 41: result = totext_opt(rdata, tctx, target); break; \
 	case 42: switch (rdata->rdclass) { \
 		case 1: result = totext_in_apl(rdata, tctx, target); break; \
@@ -308,15 +339,33 @@
 	case 50: result = totext_nsec3(rdata, tctx, target); break; \
 	case 51: result = totext_nsec3param(rdata, tctx, target); break; \
 	case 52: result = totext_tlsa(rdata, tctx, target); break; \
+	case 53: result = totext_smimea(rdata, tctx, target); break; \
 	case 55: result = totext_hip(rdata, tctx, target); break; \
+	case 56: result = totext_ninfo(rdata, tctx, target); break; \
+	case 57: result = totext_rkey(rdata, tctx, target); break; \
+	case 58: result = totext_talink(rdata, tctx, target); break; \
+	case 59: result = totext_cds(rdata, tctx, target); break; \
+	case 60: result = totext_cdnskey(rdata, tctx, target); break; \
+	case 61: result = totext_openpgpkey(rdata, tctx, target); break; \
+	case 62: result = totext_csync(rdata, tctx, target); break; \
 	case 99: result = totext_spf(rdata, tctx, target); break; \
 	case 103: result = totext_unspec(rdata, tctx, target); break; \
+	case 104: result = totext_nid(rdata, tctx, target); break; \
+	case 105: result = totext_l32(rdata, tctx, target); break; \
+	case 106: result = totext_l64(rdata, tctx, target); break; \
+	case 107: result = totext_lp(rdata, tctx, target); break; \
+	case 108: result = totext_eui48(rdata, tctx, target); break; \
+	case 109: result = totext_eui64(rdata, tctx, target); break; \
 	case 249: result = totext_tkey(rdata, tctx, target); break; \
 	case 250: switch (rdata->rdclass) { \
 		case 255: result = totext_any_tsig(rdata, tctx, target); break; \
 		default: use_default = ISC_TRUE; break; \
 		} \
 		break; \
+	case 256: result = totext_uri(rdata, tctx, target); break; \
+	case 257: result = totext_caa(rdata, tctx, target); break; \
+	case 258: result = totext_avc(rdata, tctx, target); break; \
+	case 32768: result = totext_ta(rdata, tctx, target); break; \
 	case 32769: result = totext_dlv(rdata, tctx, target); break; \
 	case 65533: result = totext_keydata(rdata, tctx, target); break; \
 	default: use_default = ISC_TRUE; break; \
@@ -385,11 +434,7 @@
 		default: use_default = ISC_TRUE; break; \
 		} \
 		break; \
-	case 35: switch (rdclass) { \
-		case 1: result = fromwire_in_naptr(rdclass, type, source, dctx, options, target); break; \
-		default: use_default = ISC_TRUE; break; \
-		} \
-		break; \
+	case 35: result = fromwire_naptr(rdclass, type, source, dctx, options, target); break; \
 	case 36: switch (rdclass) { \
 		case 1: result = fromwire_in_kx(rdclass, type, source, dctx, options, target); break; \
 		default: use_default = ISC_TRUE; break; \
@@ -402,6 +447,7 @@
 		} \
 		break; \
 	case 39: result = fromwire_dname(rdclass, type, source, dctx, options, target); break; \
+	case 40: result = fromwire_sink(rdclass, type, source, dctx, options, target); break; \
 	case 41: result = fromwire_opt(rdclass, type, source, dctx, options, target); break; \
 	case 42: switch (rdclass) { \
 		case 1: result = fromwire_in_apl(rdclass, type, source, dctx, options, target); break; \
@@ -422,15 +468,33 @@
 	case 50: result = fromwire_nsec3(rdclass, type, source, dctx, options, target); break; \
 	case 51: result = fromwire_nsec3param(rdclass, type, source, dctx, options, target); break; \
 	case 52: result = fromwire_tlsa(rdclass, type, source, dctx, options, target); break; \
+	case 53: result = fromwire_smimea(rdclass, type, source, dctx, options, target); break; \
 	case 55: result = fromwire_hip(rdclass, type, source, dctx, options, target); break; \
+	case 56: result = fromwire_ninfo(rdclass, type, source, dctx, options, target); break; \
+	case 57: result = fromwire_rkey(rdclass, type, source, dctx, options, target); break; \
+	case 58: result = fromwire_talink(rdclass, type, source, dctx, options, target); break; \
+	case 59: result = fromwire_cds(rdclass, type, source, dctx, options, target); break; \
+	case 60: result = fromwire_cdnskey(rdclass, type, source, dctx, options, target); break; \
+	case 61: result = fromwire_openpgpkey(rdclass, type, source, dctx, options, target); break; \
+	case 62: result = fromwire_csync(rdclass, type, source, dctx, options, target); break; \
 	case 99: result = fromwire_spf(rdclass, type, source, dctx, options, target); break; \
 	case 103: result = fromwire_unspec(rdclass, type, source, dctx, options, target); break; \
+	case 104: result = fromwire_nid(rdclass, type, source, dctx, options, target); break; \
+	case 105: result = fromwire_l32(rdclass, type, source, dctx, options, target); break; \
+	case 106: result = fromwire_l64(rdclass, type, source, dctx, options, target); break; \
+	case 107: result = fromwire_lp(rdclass, type, source, dctx, options, target); break; \
+	case 108: result = fromwire_eui48(rdclass, type, source, dctx, options, target); break; \
+	case 109: result = fromwire_eui64(rdclass, type, source, dctx, options, target); break; \
 	case 249: result = fromwire_tkey(rdclass, type, source, dctx, options, target); break; \
 	case 250: switch (rdclass) { \
 		case 255: result = fromwire_any_tsig(rdclass, type, source, dctx, options, target); break; \
 		default: use_default = ISC_TRUE; break; \
 		} \
 		break; \
+	case 256: result = fromwire_uri(rdclass, type, source, dctx, options, target); break; \
+	case 257: result = fromwire_caa(rdclass, type, source, dctx, options, target); break; \
+	case 258: result = fromwire_avc(rdclass, type, source, dctx, options, target); break; \
+	case 32768: result = fromwire_ta(rdclass, type, source, dctx, options, target); break; \
 	case 32769: result = fromwire_dlv(rdclass, type, source, dctx, options, target); break; \
 	case 65533: result = fromwire_keydata(rdclass, type, source, dctx, options, target); break; \
 	default: use_default = ISC_TRUE; break; \
@@ -499,11 +563,7 @@
 		default: use_default = ISC_TRUE; break; \
 		} \
 		break; \
-	case 35: switch (rdata->rdclass) { \
-		case 1: result = towire_in_naptr(rdata, cctx, target); break; \
-		default: use_default = ISC_TRUE; break; \
-		} \
-		break; \
+	case 35: result = towire_naptr(rdata, cctx, target); break; \
 	case 36: switch (rdata->rdclass) { \
 		case 1: result = towire_in_kx(rdata, cctx, target); break; \
 		default: use_default = ISC_TRUE; break; \
@@ -516,6 +576,7 @@
 		} \
 		break; \
 	case 39: result = towire_dname(rdata, cctx, target); break; \
+	case 40: result = towire_sink(rdata, cctx, target); break; \
 	case 41: result = towire_opt(rdata, cctx, target); break; \
 	case 42: switch (rdata->rdclass) { \
 		case 1: result = towire_in_apl(rdata, cctx, target); break; \
@@ -536,15 +597,33 @@
 	case 50: result = towire_nsec3(rdata, cctx, target); break; \
 	case 51: result = towire_nsec3param(rdata, cctx, target); break; \
 	case 52: result = towire_tlsa(rdata, cctx, target); break; \
+	case 53: result = towire_smimea(rdata, cctx, target); break; \
 	case 55: result = towire_hip(rdata, cctx, target); break; \
+	case 56: result = towire_ninfo(rdata, cctx, target); break; \
+	case 57: result = towire_rkey(rdata, cctx, target); break; \
+	case 58: result = towire_talink(rdata, cctx, target); break; \
+	case 59: result = towire_cds(rdata, cctx, target); break; \
+	case 60: result = towire_cdnskey(rdata, cctx, target); break; \
+	case 61: result = towire_openpgpkey(rdata, cctx, target); break; \
+	case 62: result = towire_csync(rdata, cctx, target); break; \
 	case 99: result = towire_spf(rdata, cctx, target); break; \
 	case 103: result = towire_unspec(rdata, cctx, target); break; \
+	case 104: result = towire_nid(rdata, cctx, target); break; \
+	case 105: result = towire_l32(rdata, cctx, target); break; \
+	case 106: result = towire_l64(rdata, cctx, target); break; \
+	case 107: result = towire_lp(rdata, cctx, target); break; \
+	case 108: result = towire_eui48(rdata, cctx, target); break; \
+	case 109: result = towire_eui64(rdata, cctx, target); break; \
 	case 249: result = towire_tkey(rdata, cctx, target); break; \
 	case 250: switch (rdata->rdclass) { \
 		case 255: result = towire_any_tsig(rdata, cctx, target); break; \
 		default: use_default = ISC_TRUE; break; \
 		} \
 		break; \
+	case 256: result = towire_uri(rdata, cctx, target); break; \
+	case 257: result = towire_caa(rdata, cctx, target); break; \
+	case 258: result = towire_avc(rdata, cctx, target); break; \
+	case 32768: result = towire_ta(rdata, cctx, target); break; \
 	case 32769: result = towire_dlv(rdata, cctx, target); break; \
 	case 65533: result = towire_keydata(rdata, cctx, target); break; \
 	default: use_default = ISC_TRUE; break; \
@@ -613,11 +692,7 @@
 		default: use_default = ISC_TRUE; break; \
 		} \
 		break; \
-	case 35: switch (rdata1->rdclass) { \
-		case 1: result = compare_in_naptr(rdata1, rdata2); break; \
-		default: use_default = ISC_TRUE; break; \
-		} \
-		break; \
+	case 35: result = compare_naptr(rdata1, rdata2); break; \
 	case 36: switch (rdata1->rdclass) { \
 		case 1: result = compare_in_kx(rdata1, rdata2); break; \
 		default: use_default = ISC_TRUE; break; \
@@ -630,6 +705,7 @@
 		} \
 		break; \
 	case 39: result = compare_dname(rdata1, rdata2); break; \
+	case 40: result = compare_sink(rdata1, rdata2); break; \
 	case 41: result = compare_opt(rdata1, rdata2); break; \
 	case 42: switch (rdata1->rdclass) { \
 		case 1: result = compare_in_apl(rdata1, rdata2); break; \
@@ -650,15 +726,33 @@
 	case 50: result = compare_nsec3(rdata1, rdata2); break; \
 	case 51: result = compare_nsec3param(rdata1, rdata2); break; \
 	case 52: result = compare_tlsa(rdata1, rdata2); break; \
+	case 53: result = compare_smimea(rdata1, rdata2); break; \
 	case 55: result = compare_hip(rdata1, rdata2); break; \
+	case 56: result = compare_ninfo(rdata1, rdata2); break; \
+	case 57: result = compare_rkey(rdata1, rdata2); break; \
+	case 58: result = compare_talink(rdata1, rdata2); break; \
+	case 59: result = compare_cds(rdata1, rdata2); break; \
+	case 60: result = compare_cdnskey(rdata1, rdata2); break; \
+	case 61: result = compare_openpgpkey(rdata1, rdata2); break; \
+	case 62: result = compare_csync(rdata1, rdata2); break; \
 	case 99: result = compare_spf(rdata1, rdata2); break; \
 	case 103: result = compare_unspec(rdata1, rdata2); break; \
+	case 104: result = compare_nid(rdata1, rdata2); break; \
+	case 105: result = compare_l32(rdata1, rdata2); break; \
+	case 106: result = compare_l64(rdata1, rdata2); break; \
+	case 107: result = compare_lp(rdata1, rdata2); break; \
+	case 108: result = compare_eui48(rdata1, rdata2); break; \
+	case 109: result = compare_eui64(rdata1, rdata2); break; \
 	case 249: result = compare_tkey(rdata1, rdata2); break; \
 	case 250: switch (rdata1->rdclass) { \
 		case 255: result = compare_any_tsig(rdata1, rdata2); break; \
 		default: use_default = ISC_TRUE; break; \
 		} \
 		break; \
+	case 256: result = compare_uri(rdata1, rdata2); break; \
+	case 257: result = compare_caa(rdata1, rdata2); break; \
+	case 258: result = compare_avc(rdata1, rdata2); break; \
+	case 32768: result = compare_ta(rdata1, rdata2); break; \
 	case 32769: result = compare_dlv(rdata1, rdata2); break; \
 	case 65533: result = compare_keydata(rdata1, rdata2); break; \
 	default: use_default = ISC_TRUE; break; \
@@ -727,11 +821,7 @@
 		default: use_default = ISC_TRUE; break; \
 		} \
 		break; \
-	case 35: switch (rdata1->rdclass) { \
-		case 1: result = casecompare_in_naptr(rdata1, rdata2); break; \
-		default: use_default = ISC_TRUE; break; \
-		} \
-		break; \
+	case 35: result = casecompare_naptr(rdata1, rdata2); break; \
 	case 36: switch (rdata1->rdclass) { \
 		case 1: result = casecompare_in_kx(rdata1, rdata2); break; \
 		default: use_default = ISC_TRUE; break; \
@@ -744,6 +834,7 @@
 		} \
 		break; \
 	case 39: result = casecompare_dname(rdata1, rdata2); break; \
+	case 40: result = casecompare_sink(rdata1, rdata2); break; \
 	case 41: result = casecompare_opt(rdata1, rdata2); break; \
 	case 42: switch (rdata1->rdclass) { \
 		case 1: result = casecompare_in_apl(rdata1, rdata2); break; \
@@ -764,15 +855,33 @@
 	case 50: result = casecompare_nsec3(rdata1, rdata2); break; \
 	case 51: result = casecompare_nsec3param(rdata1, rdata2); break; \
 	case 52: result = casecompare_tlsa(rdata1, rdata2); break; \
+	case 53: result = casecompare_smimea(rdata1, rdata2); break; \
 	case 55: result = casecompare_hip(rdata1, rdata2); break; \
+	case 56: result = casecompare_ninfo(rdata1, rdata2); break; \
+	case 57: result = casecompare_rkey(rdata1, rdata2); break; \
+	case 58: result = casecompare_talink(rdata1, rdata2); break; \
+	case 59: result = casecompare_cds(rdata1, rdata2); break; \
+	case 60: result = casecompare_cdnskey(rdata1, rdata2); break; \
+	case 61: result = casecompare_openpgpkey(rdata1, rdata2); break; \
+	case 62: result = casecompare_csync(rdata1, rdata2); break; \
 	case 99: result = casecompare_spf(rdata1, rdata2); break; \
 	case 103: result = casecompare_unspec(rdata1, rdata2); break; \
+	case 104: result = casecompare_nid(rdata1, rdata2); break; \
+	case 105: result = casecompare_l32(rdata1, rdata2); break; \
+	case 106: result = casecompare_l64(rdata1, rdata2); break; \
+	case 107: result = casecompare_lp(rdata1, rdata2); break; \
+	case 108: result = casecompare_eui48(rdata1, rdata2); break; \
+	case 109: result = casecompare_eui64(rdata1, rdata2); break; \
 	case 249: result = casecompare_tkey(rdata1, rdata2); break; \
 	case 250: switch (rdata1->rdclass) { \
 		case 255: result = casecompare_any_tsig(rdata1, rdata2); break; \
 		default: use_default = ISC_TRUE; break; \
 		} \
 		break; \
+	case 256: result = casecompare_uri(rdata1, rdata2); break; \
+	case 257: result = casecompare_caa(rdata1, rdata2); break; \
+	case 258: result = casecompare_avc(rdata1, rdata2); break; \
+	case 32768: result = casecompare_ta(rdata1, rdata2); break; \
 	case 32769: result = casecompare_dlv(rdata1, rdata2); break; \
 	case 65533: result = casecompare_keydata(rdata1, rdata2); break; \
 	default: use_default = ISC_TRUE; break; \
@@ -841,11 +950,7 @@
 		default: use_default = ISC_TRUE; break; \
 		} \
 		break; \
-	case 35: switch (rdclass) { \
-		case 1: result = fromstruct_in_naptr(rdclass, type, source, target); break; \
-		default: use_default = ISC_TRUE; break; \
-		} \
-		break; \
+	case 35: result = fromstruct_naptr(rdclass, type, source, target); break; \
 	case 36: switch (rdclass) { \
 		case 1: result = fromstruct_in_kx(rdclass, type, source, target); break; \
 		default: use_default = ISC_TRUE; break; \
@@ -858,6 +963,7 @@
 		} \
 		break; \
 	case 39: result = fromstruct_dname(rdclass, type, source, target); break; \
+	case 40: result = fromstruct_sink(rdclass, type, source, target); break; \
 	case 41: result = fromstruct_opt(rdclass, type, source, target); break; \
 	case 42: switch (rdclass) { \
 		case 1: result = fromstruct_in_apl(rdclass, type, source, target); break; \
@@ -878,15 +984,33 @@
 	case 50: result = fromstruct_nsec3(rdclass, type, source, target); break; \
 	case 51: result = fromstruct_nsec3param(rdclass, type, source, target); break; \
 	case 52: result = fromstruct_tlsa(rdclass, type, source, target); break; \
+	case 53: result = fromstruct_smimea(rdclass, type, source, target); break; \
 	case 55: result = fromstruct_hip(rdclass, type, source, target); break; \
+	case 56: result = fromstruct_ninfo(rdclass, type, source, target); break; \
+	case 57: result = fromstruct_rkey(rdclass, type, source, target); break; \
+	case 58: result = fromstruct_talink(rdclass, type, source, target); break; \
+	case 59: result = fromstruct_cds(rdclass, type, source, target); break; \
+	case 60: result = fromstruct_cdnskey(rdclass, type, source, target); break; \
+	case 61: result = fromstruct_openpgpkey(rdclass, type, source, target); break; \
+	case 62: result = fromstruct_csync(rdclass, type, source, target); break; \
 	case 99: result = fromstruct_spf(rdclass, type, source, target); break; \
 	case 103: result = fromstruct_unspec(rdclass, type, source, target); break; \
+	case 104: result = fromstruct_nid(rdclass, type, source, target); break; \
+	case 105: result = fromstruct_l32(rdclass, type, source, target); break; \
+	case 106: result = fromstruct_l64(rdclass, type, source, target); break; \
+	case 107: result = fromstruct_lp(rdclass, type, source, target); break; \
+	case 108: result = fromstruct_eui48(rdclass, type, source, target); break; \
+	case 109: result = fromstruct_eui64(rdclass, type, source, target); break; \
 	case 249: result = fromstruct_tkey(rdclass, type, source, target); break; \
 	case 250: switch (rdclass) { \
 		case 255: result = fromstruct_any_tsig(rdclass, type, source, target); break; \
 		default: use_default = ISC_TRUE; break; \
 		} \
 		break; \
+	case 256: result = fromstruct_uri(rdclass, type, source, target); break; \
+	case 257: result = fromstruct_caa(rdclass, type, source, target); break; \
+	case 258: result = fromstruct_avc(rdclass, type, source, target); break; \
+	case 32768: result = fromstruct_ta(rdclass, type, source, target); break; \
 	case 32769: result = fromstruct_dlv(rdclass, type, source, target); break; \
 	case 65533: result = fromstruct_keydata(rdclass, type, source, target); break; \
 	default: use_default = ISC_TRUE; break; \
@@ -955,11 +1079,7 @@
 		default: use_default = ISC_TRUE; break; \
 		} \
 		break; \
-	case 35: switch (rdata->rdclass) { \
-		case 1: result = tostruct_in_naptr(rdata, target, mctx); break; \
-		default: use_default = ISC_TRUE; break; \
-		} \
-		break; \
+	case 35: result = tostruct_naptr(rdata, target, mctx); break; \
 	case 36: switch (rdata->rdclass) { \
 		case 1: result = tostruct_in_kx(rdata, target, mctx); break; \
 		default: use_default = ISC_TRUE; break; \
@@ -972,6 +1092,7 @@
 		} \
 		break; \
 	case 39: result = tostruct_dname(rdata, target, mctx); break; \
+	case 40: result = tostruct_sink(rdata, target, mctx); break; \
 	case 41: result = tostruct_opt(rdata, target, mctx); break; \
 	case 42: switch (rdata->rdclass) { \
 		case 1: result = tostruct_in_apl(rdata, target, mctx); break; \
@@ -992,15 +1113,33 @@
 	case 50: result = tostruct_nsec3(rdata, target, mctx); break; \
 	case 51: result = tostruct_nsec3param(rdata, target, mctx); break; \
 	case 52: result = tostruct_tlsa(rdata, target, mctx); break; \
+	case 53: result = tostruct_smimea(rdata, target, mctx); break; \
 	case 55: result = tostruct_hip(rdata, target, mctx); break; \
+	case 56: result = tostruct_ninfo(rdata, target, mctx); break; \
+	case 57: result = tostruct_rkey(rdata, target, mctx); break; \
+	case 58: result = tostruct_talink(rdata, target, mctx); break; \
+	case 59: result = tostruct_cds(rdata, target, mctx); break; \
+	case 60: result = tostruct_cdnskey(rdata, target, mctx); break; \
+	case 61: result = tostruct_openpgpkey(rdata, target, mctx); break; \
+	case 62: result = tostruct_csync(rdata, target, mctx); break; \
 	case 99: result = tostruct_spf(rdata, target, mctx); break; \
 	case 103: result = tostruct_unspec(rdata, target, mctx); break; \
+	case 104: result = tostruct_nid(rdata, target, mctx); break; \
+	case 105: result = tostruct_l32(rdata, target, mctx); break; \
+	case 106: result = tostruct_l64(rdata, target, mctx); break; \
+	case 107: result = tostruct_lp(rdata, target, mctx); break; \
+	case 108: result = tostruct_eui48(rdata, target, mctx); break; \
+	case 109: result = tostruct_eui64(rdata, target, mctx); break; \
 	case 249: result = tostruct_tkey(rdata, target, mctx); break; \
 	case 250: switch (rdata->rdclass) { \
 		case 255: result = tostruct_any_tsig(rdata, target, mctx); break; \
 		default: use_default = ISC_TRUE; break; \
 		} \
 		break; \
+	case 256: result = tostruct_uri(rdata, target, mctx); break; \
+	case 257: result = tostruct_caa(rdata, target, mctx); break; \
+	case 258: result = tostruct_avc(rdata, target, mctx); break; \
+	case 32768: result = tostruct_ta(rdata, target, mctx); break; \
 	case 32769: result = tostruct_dlv(rdata, target, mctx); break; \
 	case 65533: result = tostruct_keydata(rdata, target, mctx); break; \
 	default: use_default = ISC_TRUE; break; \
@@ -1069,11 +1208,7 @@
 		default: break; \
 		} \
 		break; \
-	case 35: switch (common->rdclass) { \
-		case 1: freestruct_in_naptr(source); break; \
-		default: break; \
-		} \
-		break; \
+	case 35: freestruct_naptr(source); break; \
 	case 36: switch (common->rdclass) { \
 		case 1: freestruct_in_kx(source); break; \
 		default: break; \
@@ -1086,6 +1221,7 @@
 		} \
 		break; \
 	case 39: freestruct_dname(source); break; \
+	case 40: freestruct_sink(source); break; \
 	case 41: freestruct_opt(source); break; \
 	case 42: switch (common->rdclass) { \
 		case 1: freestruct_in_apl(source); break; \
@@ -1106,15 +1242,33 @@
 	case 50: freestruct_nsec3(source); break; \
 	case 51: freestruct_nsec3param(source); break; \
 	case 52: freestruct_tlsa(source); break; \
+	case 53: freestruct_smimea(source); break; \
 	case 55: freestruct_hip(source); break; \
+	case 56: freestruct_ninfo(source); break; \
+	case 57: freestruct_rkey(source); break; \
+	case 58: freestruct_talink(source); break; \
+	case 59: freestruct_cds(source); break; \
+	case 60: freestruct_cdnskey(source); break; \
+	case 61: freestruct_openpgpkey(source); break; \
+	case 62: freestruct_csync(source); break; \
 	case 99: freestruct_spf(source); break; \
 	case 103: freestruct_unspec(source); break; \
+	case 104: freestruct_nid(source); break; \
+	case 105: freestruct_l32(source); break; \
+	case 106: freestruct_l64(source); break; \
+	case 107: freestruct_lp(source); break; \
+	case 108: freestruct_eui48(source); break; \
+	case 109: freestruct_eui64(source); break; \
 	case 249: freestruct_tkey(source); break; \
 	case 250: switch (common->rdclass) { \
 		case 255: freestruct_any_tsig(source); break; \
 		default: break; \
 		} \
 		break; \
+	case 256: freestruct_uri(source); break; \
+	case 257: freestruct_caa(source); break; \
+	case 258: freestruct_avc(source); break; \
+	case 32768: freestruct_ta(source); break; \
 	case 32769: freestruct_dlv(source); break; \
 	case 65533: freestruct_keydata(source); break; \
 	default: break; \
@@ -1183,11 +1337,7 @@
 		default: use_default = ISC_TRUE; break; \
 		} \
 		break; \
-	case 35: switch (rdata->rdclass) { \
-		case 1: result = additionaldata_in_naptr(rdata, add, arg); break; \
-		default: use_default = ISC_TRUE; break; \
-		} \
-		break; \
+	case 35: result = additionaldata_naptr(rdata, add, arg); break; \
 	case 36: switch (rdata->rdclass) { \
 		case 1: result = additionaldata_in_kx(rdata, add, arg); break; \
 		default: use_default = ISC_TRUE; break; \
@@ -1200,6 +1350,7 @@
 		} \
 		break; \
 	case 39: result = additionaldata_dname(rdata, add, arg); break; \
+	case 40: result = additionaldata_sink(rdata, add, arg); break; \
 	case 41: result = additionaldata_opt(rdata, add, arg); break; \
 	case 42: switch (rdata->rdclass) { \
 		case 1: result = additionaldata_in_apl(rdata, add, arg); break; \
@@ -1220,15 +1371,33 @@
 	case 50: result = additionaldata_nsec3(rdata, add, arg); break; \
 	case 51: result = additionaldata_nsec3param(rdata, add, arg); break; \
 	case 52: result = additionaldata_tlsa(rdata, add, arg); break; \
+	case 53: result = additionaldata_smimea(rdata, add, arg); break; \
 	case 55: result = additionaldata_hip(rdata, add, arg); break; \
+	case 56: result = additionaldata_ninfo(rdata, add, arg); break; \
+	case 57: result = additionaldata_rkey(rdata, add, arg); break; \
+	case 58: result = additionaldata_talink(rdata, add, arg); break; \
+	case 59: result = additionaldata_cds(rdata, add, arg); break; \
+	case 60: result = additionaldata_cdnskey(rdata, add, arg); break; \
+	case 61: result = additionaldata_openpgpkey(rdata, add, arg); break; \
+	case 62: result = additionaldata_csync(rdata, add, arg); break; \
 	case 99: result = additionaldata_spf(rdata, add, arg); break; \
 	case 103: result = additionaldata_unspec(rdata, add, arg); break; \
+	case 104: result = additionaldata_nid(rdata, add, arg); break; \
+	case 105: result = additionaldata_l32(rdata, add, arg); break; \
+	case 106: result = additionaldata_l64(rdata, add, arg); break; \
+	case 107: result = additionaldata_lp(rdata, add, arg); break; \
+	case 108: result = additionaldata_eui48(rdata, add, arg); break; \
+	case 109: result = additionaldata_eui64(rdata, add, arg); break; \
 	case 249: result = additionaldata_tkey(rdata, add, arg); break; \
 	case 250: switch (rdata->rdclass) { \
 		case 255: result = additionaldata_any_tsig(rdata, add, arg); break; \
 		default: use_default = ISC_TRUE; break; \
 		} \
 		break; \
+	case 256: result = additionaldata_uri(rdata, add, arg); break; \
+	case 257: result = additionaldata_caa(rdata, add, arg); break; \
+	case 258: result = additionaldata_avc(rdata, add, arg); break; \
+	case 32768: result = additionaldata_ta(rdata, add, arg); break; \
 	case 32769: result = additionaldata_dlv(rdata, add, arg); break; \
 	case 65533: result = additionaldata_keydata(rdata, add, arg); break; \
 	default: use_default = ISC_TRUE; break; \
@@ -1297,11 +1466,7 @@
 		default: use_default = ISC_TRUE; break; \
 		} \
 		break; \
-	case 35: switch (rdata->rdclass) { \
-		case 1: result = digest_in_naptr(rdata, digest, arg); break; \
-		default: use_default = ISC_TRUE; break; \
-		} \
-		break; \
+	case 35: result = digest_naptr(rdata, digest, arg); break; \
 	case 36: switch (rdata->rdclass) { \
 		case 1: result = digest_in_kx(rdata, digest, arg); break; \
 		default: use_default = ISC_TRUE; break; \
@@ -1314,6 +1479,7 @@
 		} \
 		break; \
 	case 39: result = digest_dname(rdata, digest, arg); break; \
+	case 40: result = digest_sink(rdata, digest, arg); break; \
 	case 41: result = digest_opt(rdata, digest, arg); break; \
 	case 42: switch (rdata->rdclass) { \
 		case 1: result = digest_in_apl(rdata, digest, arg); break; \
@@ -1334,15 +1500,33 @@
 	case 50: result = digest_nsec3(rdata, digest, arg); break; \
 	case 51: result = digest_nsec3param(rdata, digest, arg); break; \
 	case 52: result = digest_tlsa(rdata, digest, arg); break; \
+	case 53: result = digest_smimea(rdata, digest, arg); break; \
 	case 55: result = digest_hip(rdata, digest, arg); break; \
+	case 56: result = digest_ninfo(rdata, digest, arg); break; \
+	case 57: result = digest_rkey(rdata, digest, arg); break; \
+	case 58: result = digest_talink(rdata, digest, arg); break; \
+	case 59: result = digest_cds(rdata, digest, arg); break; \
+	case 60: result = digest_cdnskey(rdata, digest, arg); break; \
+	case 61: result = digest_openpgpkey(rdata, digest, arg); break; \
+	case 62: result = digest_csync(rdata, digest, arg); break; \
 	case 99: result = digest_spf(rdata, digest, arg); break; \
 	case 103: result = digest_unspec(rdata, digest, arg); break; \
+	case 104: result = digest_nid(rdata, digest, arg); break; \
+	case 105: result = digest_l32(rdata, digest, arg); break; \
+	case 106: result = digest_l64(rdata, digest, arg); break; \
+	case 107: result = digest_lp(rdata, digest, arg); break; \
+	case 108: result = digest_eui48(rdata, digest, arg); break; \
+	case 109: result = digest_eui64(rdata, digest, arg); break; \
 	case 249: result = digest_tkey(rdata, digest, arg); break; \
 	case 250: switch (rdata->rdclass) { \
 		case 255: result = digest_any_tsig(rdata, digest, arg); break; \
 		default: use_default = ISC_TRUE; break; \
 		} \
 		break; \
+	case 256: result = digest_uri(rdata, digest, arg); break; \
+	case 257: result = digest_caa(rdata, digest, arg); break; \
+	case 258: result = digest_avc(rdata, digest, arg); break; \
+	case 32768: result = digest_ta(rdata, digest, arg); break; \
 	case 32769: result = digest_dlv(rdata, digest, arg); break; \
 	case 65533: result = digest_keydata(rdata, digest, arg); break; \
 	default: use_default = ISC_TRUE; break; \
@@ -1411,11 +1595,7 @@
 		default: result = ISC_TRUE; break; \
 		} \
 		break; \
-	case 35: switch (rdclass) { \
-		case 1: result = checkowner_in_naptr(name, rdclass, type, wildcard); break; \
-		default: result = ISC_TRUE; break; \
-		} \
-		break; \
+	case 35: result = checkowner_naptr(name, rdclass, type, wildcard); break; \
 	case 36: switch (rdclass) { \
 		case 1: result = checkowner_in_kx(name, rdclass, type, wildcard); break; \
 		default: result = ISC_TRUE; break; \
@@ -1428,6 +1608,7 @@
 		} \
 		break; \
 	case 39: result = checkowner_dname(name, rdclass, type, wildcard); break; \
+	case 40: result = checkowner_sink(name, rdclass, type, wildcard); break; \
 	case 41: result = checkowner_opt(name, rdclass, type, wildcard); break; \
 	case 42: switch (rdclass) { \
 		case 1: result = checkowner_in_apl(name, rdclass, type, wildcard); break; \
@@ -1448,15 +1629,33 @@
 	case 50: result = checkowner_nsec3(name, rdclass, type, wildcard); break; \
 	case 51: result = checkowner_nsec3param(name, rdclass, type, wildcard); break; \
 	case 52: result = checkowner_tlsa(name, rdclass, type, wildcard); break; \
+	case 53: result = checkowner_smimea(name, rdclass, type, wildcard); break; \
 	case 55: result = checkowner_hip(name, rdclass, type, wildcard); break; \
+	case 56: result = checkowner_ninfo(name, rdclass, type, wildcard); break; \
+	case 57: result = checkowner_rkey(name, rdclass, type, wildcard); break; \
+	case 58: result = checkowner_talink(name, rdclass, type, wildcard); break; \
+	case 59: result = checkowner_cds(name, rdclass, type, wildcard); break; \
+	case 60: result = checkowner_cdnskey(name, rdclass, type, wildcard); break; \
+	case 61: result = checkowner_openpgpkey(name, rdclass, type, wildcard); break; \
+	case 62: result = checkowner_csync(name, rdclass, type, wildcard); break; \
 	case 99: result = checkowner_spf(name, rdclass, type, wildcard); break; \
 	case 103: result = checkowner_unspec(name, rdclass, type, wildcard); break; \
+	case 104: result = checkowner_nid(name, rdclass, type, wildcard); break; \
+	case 105: result = checkowner_l32(name, rdclass, type, wildcard); break; \
+	case 106: result = checkowner_l64(name, rdclass, type, wildcard); break; \
+	case 107: result = checkowner_lp(name, rdclass, type, wildcard); break; \
+	case 108: result = checkowner_eui48(name, rdclass, type, wildcard); break; \
+	case 109: result = checkowner_eui64(name, rdclass, type, wildcard); break; \
 	case 249: result = checkowner_tkey(name, rdclass, type, wildcard); break; \
 	case 250: switch (rdclass) { \
 		case 255: result = checkowner_any_tsig(name, rdclass, type, wildcard); break; \
 		default: result = ISC_TRUE; break; \
 		} \
 		break; \
+	case 256: result = checkowner_uri(name, rdclass, type, wildcard); break; \
+	case 257: result = checkowner_caa(name, rdclass, type, wildcard); break; \
+	case 258: result = checkowner_avc(name, rdclass, type, wildcard); break; \
+	case 32768: result = checkowner_ta(name, rdclass, type, wildcard); break; \
 	case 32769: result = checkowner_dlv(name, rdclass, type, wildcard); break; \
 	case 65533: result = checkowner_keydata(name, rdclass, type, wildcard); break; \
 	default: result = ISC_TRUE; break; \
@@ -1525,11 +1724,7 @@
 		default: result = ISC_TRUE; break; \
 		} \
 		break; \
-	case 35: switch (rdata->rdclass) { \
-		case 1: result = checknames_in_naptr(rdata, owner, bad); break; \
-		default: result = ISC_TRUE; break; \
-		} \
-		break; \
+	case 35: result = checknames_naptr(rdata, owner, bad); break; \
 	case 36: switch (rdata->rdclass) { \
 		case 1: result = checknames_in_kx(rdata, owner, bad); break; \
 		default: result = ISC_TRUE; break; \
@@ -1542,6 +1737,7 @@
 		} \
 		break; \
 	case 39: result = checknames_dname(rdata, owner, bad); break; \
+	case 40: result = checknames_sink(rdata, owner, bad); break; \
 	case 41: result = checknames_opt(rdata, owner, bad); break; \
 	case 42: switch (rdata->rdclass) { \
 		case 1: result = checknames_in_apl(rdata, owner, bad); break; \
@@ -1562,15 +1758,33 @@
 	case 50: result = checknames_nsec3(rdata, owner, bad); break; \
 	case 51: result = checknames_nsec3param(rdata, owner, bad); break; \
 	case 52: result = checknames_tlsa(rdata, owner, bad); break; \
+	case 53: result = checknames_smimea(rdata, owner, bad); break; \
 	case 55: result = checknames_hip(rdata, owner, bad); break; \
+	case 56: result = checknames_ninfo(rdata, owner, bad); break; \
+	case 57: result = checknames_rkey(rdata, owner, bad); break; \
+	case 58: result = checknames_talink(rdata, owner, bad); break; \
+	case 59: result = checknames_cds(rdata, owner, bad); break; \
+	case 60: result = checknames_cdnskey(rdata, owner, bad); break; \
+	case 61: result = checknames_openpgpkey(rdata, owner, bad); break; \
+	case 62: result = checknames_csync(rdata, owner, bad); break; \
 	case 99: result = checknames_spf(rdata, owner, bad); break; \
 	case 103: result = checknames_unspec(rdata, owner, bad); break; \
+	case 104: result = checknames_nid(rdata, owner, bad); break; \
+	case 105: result = checknames_l32(rdata, owner, bad); break; \
+	case 106: result = checknames_l64(rdata, owner, bad); break; \
+	case 107: result = checknames_lp(rdata, owner, bad); break; \
+	case 108: result = checknames_eui48(rdata, owner, bad); break; \
+	case 109: result = checknames_eui64(rdata, owner, bad); break; \
 	case 249: result = checknames_tkey(rdata, owner, bad); break; \
 	case 250: switch (rdata->rdclass) { \
 		case 255: result = checknames_any_tsig(rdata, owner, bad); break; \
 		default: result = ISC_TRUE; break; \
 		} \
 		break; \
+	case 256: result = checknames_uri(rdata, owner, bad); break; \
+	case 257: result = checknames_caa(rdata, owner, bad); break; \
+	case 258: result = checknames_avc(rdata, owner, bad); break; \
+	case 32768: result = checknames_ta(rdata, owner, bad); break; \
 	case 32769: result = checknames_dlv(rdata, owner, bad); break; \
 	case 65533: result = checknames_keydata(rdata, owner, bad); break; \
 	default: result = ISC_TRUE; break; \
@@ -1609,6 +1823,7 @@
 			break; \
 		case 182: \
 			RDATATYPE_COMPARE("soa", 6, _typename, _length, _typep); \
+			RDATATYPE_COMPARE("ta", 32768, _typename, _length, _typep); \
 			break; \
 		case 126: \
 			RDATATYPE_COMPARE("mb", 7, _typename, _length, _typep); \
@@ -1659,6 +1874,7 @@
 			break; \
 		case 140: \
 			RDATATYPE_COMPARE("nsap-ptr", 23, _typename, _length, _typep); \
+			RDATATYPE_COMPARE("l64", 106, _typename, _length, _typep); \
 			break; \
 		case 122: \
 			RDATATYPE_COMPARE("sig", 24, _typename, _length, _typep); \
@@ -1666,6 +1882,7 @@
 			break; \
 		case 254: \
 			RDATATYPE_COMPARE("key", 25, _typename, _length, _typep); \
+			RDATATYPE_COMPARE("talink", 58, _typename, _length, _typep); \
 			break; \
 		case 112: \
 			RDATATYPE_COMPARE("px", 26, _typename, _length, _typep); \
@@ -1694,6 +1911,7 @@
 			break; \
 		case 172: \
 			RDATATYPE_COMPARE("cert", 37, _typename, _length, _typep); \
+			RDATATYPE_COMPARE("avc", 258, _typename, _length, _typep); \
 			break; \
 		case 226: \
 			RDATATYPE_COMPARE("a6", 38, _typename, _length, _typep); \
@@ -1701,14 +1919,19 @@
 		case 109: \
 			RDATATYPE_COMPARE("dname", 39, _typename, _length, _typep); \
 			break; \
+		case 189: \
+			RDATATYPE_COMPARE("sink", 40, _typename, _length, _typep); \
+			break; \
 		case 168: \
 			RDATATYPE_COMPARE("opt", 41, _typename, _length, _typep); \
 			break; \
 		case 48: \
 			RDATATYPE_COMPARE("apl", 42, _typename, _length, _typep); \
+			RDATATYPE_COMPARE("eui48", 108, _typename, _length, _typep); \
 			break; \
 		case 210: \
 			RDATATYPE_COMPARE("ds", 43, _typename, _length, _typep); \
+			RDATATYPE_COMPARE("cds", 59, _typename, _length, _typep); \
 			break; \
 		case 128: \
 			RDATATYPE_COMPARE("sshfp", 44, _typename, _length, _typep); \
@@ -1724,6 +1947,7 @@
 			break; \
 		case 26: \
 			RDATATYPE_COMPARE("dnskey", 48, _typename, _length, _typep); \
+			RDATATYPE_COMPARE("cdnskey", 60, _typename, _length, _typep); \
 			break; \
 		case 4: \
 			RDATATYPE_COMPARE("dhcid", 49, _typename, _length, _typep); \
@@ -1735,8 +1959,24 @@
 		case 120: \
 			RDATATYPE_COMPARE("tlsa", 52, _typename, _length, _typep); \
 			break; \
+		case 217: \
+			RDATATYPE_COMPARE("smimea", 53, _typename, _length, _typep); \
+			break; \
 		case 208: \
 			RDATATYPE_COMPARE("hip", 55, _typename, _length, _typep); \
+			break; \
+		case 221: \
+			RDATATYPE_COMPARE("ninfo", 56, _typename, _length, _typep); \
+			break; \
+		case 198: \
+			RDATATYPE_COMPARE("rkey", 57, _typename, _length, _typep); \
+			break; \
+		case 49: \
+			RDATATYPE_COMPARE("openpgpkey", 61, _typename, _length, _typep); \
+			break; \
+		case 56: \
+			RDATATYPE_COMPARE("csync", 62, _typename, _length, _typep); \
+			RDATATYPE_COMPARE("uri", 256, _typename, _length, _typep); \
 			break; \
 		case 230: \
 			RDATATYPE_COMPARE("uinfo", 100, _typename, _length, _typep); \
@@ -1746,6 +1986,18 @@
 			break; \
 		case 145: \
 			RDATATYPE_COMPARE("unspec", 103, _typename, _length, _typep); \
+			break; \
+		case 36: \
+			RDATATYPE_COMPARE("nid", 104, _typename, _length, _typep); \
+			break; \
+		case 174: \
+			RDATATYPE_COMPARE("l32", 105, _typename, _length, _typep); \
+			break; \
+		case 32: \
+			RDATATYPE_COMPARE("lp", 107, _typename, _length, _typep); \
+			break; \
+		case 136: \
+			RDATATYPE_COMPARE("eui64", 109, _typename, _length, _typep); \
 			break; \
 		case 184: \
 			RDATATYPE_COMPARE("tkey", 249, _typename, _length, _typep); \
@@ -1768,6 +2020,9 @@
 			break; \
 		case 68: \
 			RDATATYPE_COMPARE("any", 255, _typename, _length, _typep); \
+			break; \
+		case 166: \
+			RDATATYPE_COMPARE("caa", 257, _typename, _length, _typep); \
 			break; \
 	}
 #define RDATATYPE_ATTRIBUTE_SW \
@@ -1812,6 +2067,7 @@
 	case 37: return (RRTYPE_CERT_ATTRIBUTES); \
 	case 38: return (RRTYPE_A6_ATTRIBUTES); \
 	case 39: return (RRTYPE_DNAME_ATTRIBUTES); \
+	case 40: return (RRTYPE_SINK_ATTRIBUTES); \
 	case 41: return (RRTYPE_OPT_ATTRIBUTES); \
 	case 42: return (RRTYPE_APL_ATTRIBUTES); \
 	case 43: return (RRTYPE_DS_ATTRIBUTES); \
@@ -1824,12 +2080,26 @@
 	case 50: return (RRTYPE_NSEC3_ATTRIBUTES); \
 	case 51: return (RRTYPE_NSEC3PARAM_ATTRIBUTES); \
 	case 52: return (RRTYPE_TLSA_ATTRIBUTES); \
+	case 53: return (RRTYPE_SMIMEA_ATTRIBUTES); \
 	case 55: return (RRTYPE_HIP_ATTRIBUTES); \
+	case 56: return (RRTYPE_NINFO_ATTRIBUTES); \
+	case 57: return (RRTYPE_RKEY_ATTRIBUTES); \
+	case 58: return (RRTYPE_TALINK_ATTRIBUTES); \
+	case 59: return (RRTYPE_CDS_ATTRIBUTES); \
+	case 60: return (RRTYPE_CDNSKEY_ATTRIBUTES); \
+	case 61: return (RRTYPE_OPENPGPKEY_ATTRIBUTES); \
+	case 62: return (RRTYPE_CSYNC_ATTRIBUTES); \
 	case 99: return (RRTYPE_SPF_ATTRIBUTES); \
 	case 100: return (DNS_RDATATYPEATTR_RESERVED); \
 	case 101: return (DNS_RDATATYPEATTR_RESERVED); \
 	case 102: return (DNS_RDATATYPEATTR_RESERVED); \
 	case 103: return (RRTYPE_UNSPEC_ATTRIBUTES); \
+	case 104: return (RRTYPE_NID_ATTRIBUTES); \
+	case 105: return (RRTYPE_L32_ATTRIBUTES); \
+	case 106: return (RRTYPE_L64_ATTRIBUTES); \
+	case 107: return (RRTYPE_LP_ATTRIBUTES); \
+	case 108: return (RRTYPE_EUI48_ATTRIBUTES); \
+	case 109: return (RRTYPE_EUI64_ATTRIBUTES); \
 	case 249: return (RRTYPE_TKEY_ATTRIBUTES); \
 	case 250: return (RRTYPE_TSIG_ATTRIBUTES); \
 	case 251: return (DNS_RDATATYPEATTR_META | DNS_RDATATYPEATTR_QUESTIONONLY); \
@@ -1837,6 +2107,10 @@
 	case 253: return (DNS_RDATATYPEATTR_META | DNS_RDATATYPEATTR_QUESTIONONLY); \
 	case 254: return (DNS_RDATATYPEATTR_META | DNS_RDATATYPEATTR_QUESTIONONLY); \
 	case 255: return (DNS_RDATATYPEATTR_META | DNS_RDATATYPEATTR_QUESTIONONLY); \
+	case 256: return (RRTYPE_URI_ATTRIBUTES); \
+	case 257: return (RRTYPE_CAA_ATTRIBUTES); \
+	case 258: return (RRTYPE_AVC_ATTRIBUTES); \
+	case 32768: return (RRTYPE_TA_ATTRIBUTES); \
 	case 32769: return (RRTYPE_DLV_ATTRIBUTES); \
 	case 65533: return (RRTYPE_KEYDATA_ATTRIBUTES); \
 	}
@@ -1882,6 +2156,7 @@
 	case 37: return (str_totext("CERT", target)); \
 	case 38: return (str_totext("A6", target)); \
 	case 39: return (str_totext("DNAME", target)); \
+	case 40: return (str_totext("SINK", target)); \
 	case 41: return (str_totext("OPT", target)); \
 	case 42: return (str_totext("APL", target)); \
 	case 43: return (str_totext("DS", target)); \
@@ -1894,12 +2169,26 @@
 	case 50: return (str_totext("NSEC3", target)); \
 	case 51: return (str_totext("NSEC3PARAM", target)); \
 	case 52: return (str_totext("TLSA", target)); \
+	case 53: return (str_totext("SMIMEA", target)); \
 	case 55: return (str_totext("HIP", target)); \
+	case 56: return (str_totext("NINFO", target)); \
+	case 57: return (str_totext("RKEY", target)); \
+	case 58: return (str_totext("TALINK", target)); \
+	case 59: return (str_totext("CDS", target)); \
+	case 60: return (str_totext("CDNSKEY", target)); \
+	case 61: return (str_totext("OPENPGPKEY", target)); \
+	case 62: return (str_totext("CSYNC", target)); \
 	case 99: return (str_totext("SPF", target)); \
 	case 100: return (str_totext("UINFO", target)); \
 	case 101: return (str_totext("UID", target)); \
 	case 102: return (str_totext("GID", target)); \
 	case 103: return (str_totext("UNSPEC", target)); \
+	case 104: return (str_totext("NID", target)); \
+	case 105: return (str_totext("L32", target)); \
+	case 106: return (str_totext("L64", target)); \
+	case 107: return (str_totext("LP", target)); \
+	case 108: return (str_totext("EUI48", target)); \
+	case 109: return (str_totext("EUI64", target)); \
 	case 249: return (str_totext("TKEY", target)); \
 	case 250: return (str_totext("TSIG", target)); \
 	case 251: return (str_totext("IXFR", target)); \
@@ -1907,7 +2196,10 @@
 	case 253: return (str_totext("MAILB", target)); \
 	case 254: return (str_totext("MAILA", target)); \
 	case 255: return (str_totext("ANY", target)); \
+	case 256: return (str_totext("URI", target)); \
+	case 257: return (str_totext("CAA", target)); \
+	case 258: return (str_totext("AVC", target)); \
+	case 32768: return (str_totext("TA", target)); \
 	case 32769: return (str_totext("DLV", target)); \
-	case 65533: return (str_totext("KEYDATA", target)); \
 	}
 #endif /* DNS_CODE_H */

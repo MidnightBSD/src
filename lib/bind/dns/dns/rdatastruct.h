@@ -1,7 +1,6 @@
 /* $MidnightBSD$ */
-
 /*
- * Copyright (C) 2004-2012 Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2016 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2003 Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -43,7 +42,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: rdatastructpre.h,v 1.16 2007/06/19 23:47:17 tbox Exp $ */
 
 #ifndef DNS_RDATASTRUCT_H
 #define DNS_RDATASTRUCT_H 1
@@ -89,7 +88,7 @@ typedef struct dns_rdatacommon {
 #ifndef IN_1_A_1_H
 #define IN_1_A_1_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: a_1.h,v 1.28 2007/06/19 23:47:17 tbox Exp $ */
 
 typedef struct dns_rdata_in_a {
 	dns_rdatacommon_t	common;
@@ -113,7 +112,7 @@ typedef struct dns_rdata_in_a {
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: a_1.h,v 1.5 2007/06/19 23:47:17 tbox Exp $ */
 
 /* by Bjorn.Victor@it.uu.se, 2005-05-07 */
 /* Based on generic/mx_15.h */
@@ -152,7 +151,7 @@ typedef struct dns_rdata_ch_a {
 #ifndef HS_4_A_1_H
 #define HS_4_A_1_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: a_1.h,v 1.12 2007/06/19 23:47:17 tbox Exp $ */
 
 typedef struct dns_rdata_hs_a {
 	dns_rdatacommon_t	common;
@@ -181,7 +180,7 @@ typedef struct dns_rdata_hs_a {
 #ifndef GENERIC_NS_2_H
 #define GENERIC_NS_2_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: ns_2.h,v 1.27 2007/06/19 23:47:17 tbox Exp $ */
 
 typedef struct dns_rdata_ns {
 	dns_rdatacommon_t	common;
@@ -212,7 +211,7 @@ typedef struct dns_rdata_ns {
 #ifndef GENERIC_MD_3_H
 #define GENERIC_MD_3_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: md_3.h,v 1.28 2007/06/19 23:47:17 tbox Exp $ */
 
 typedef struct dns_rdata_md {
 	dns_rdatacommon_t	common;
@@ -243,7 +242,7 @@ typedef struct dns_rdata_md {
 #ifndef GENERIC_MF_4_H
 #define GENERIC_MF_4_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: mf_4.h,v 1.26 2007/06/19 23:47:17 tbox Exp $ */
 
 typedef struct dns_rdata_mf {
 	dns_rdatacommon_t	common;
@@ -269,7 +268,7 @@ typedef struct dns_rdata_mf {
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: cname_5.h,v 1.26 2007/06/19 23:47:17 tbox Exp $ */
 
 #ifndef GENERIC_CNAME_5_H
 #define GENERIC_CNAME_5_H 1
@@ -302,7 +301,7 @@ typedef struct dns_rdata_cname {
 #ifndef GENERIC_SOA_6_H
 #define GENERIC_SOA_6_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: soa_6.h,v 1.32 2007/06/19 23:47:17 tbox Exp $ */
 
 typedef struct dns_rdata_soa {
 	dns_rdatacommon_t	common;
@@ -339,7 +338,7 @@ typedef struct dns_rdata_soa {
 #ifndef GENERIC_MB_7_H
 #define GENERIC_MB_7_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: mb_7.h,v 1.27 2007/06/19 23:47:17 tbox Exp $ */
 
 typedef struct dns_rdata_mb {
 	dns_rdatacommon_t	common;
@@ -369,7 +368,7 @@ typedef struct dns_rdata_mb {
 #ifndef GENERIC_MG_8_H
 #define GENERIC_MG_8_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: mg_8.h,v 1.26 2007/06/19 23:47:17 tbox Exp $ */
 
 typedef struct dns_rdata_mg {
 	dns_rdatacommon_t	common;
@@ -399,7 +398,7 @@ typedef struct dns_rdata_mg {
 #ifndef GENERIC_MR_9_H
 #define GENERIC_MR_9_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: mr_9.h,v 1.26 2007/06/19 23:47:17 tbox Exp $ */
 
 typedef struct dns_rdata_mr {
 	dns_rdatacommon_t	common;
@@ -429,7 +428,7 @@ typedef struct dns_rdata_mr {
 #ifndef GENERIC_NULL_10_H
 #define GENERIC_NULL_10_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: null_10.h,v 1.25 2007/06/19 23:47:17 tbox Exp $ */
 
 typedef struct dns_rdata_null {
 	dns_rdatacommon_t	common;
@@ -460,7 +459,7 @@ typedef struct dns_rdata_null {
 #ifndef IN_1_WKS_11_H
 #define IN_1_WKS_11_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: wks_11.h,v 1.22 2007/06/19 23:47:17 tbox Exp $ */
 
 typedef	struct dns_rdata_in_wks {
 	dns_rdatacommon_t	common;
@@ -493,7 +492,7 @@ typedef	struct dns_rdata_in_wks {
 #ifndef GENERIC_PTR_12_H
 #define GENERIC_PTR_12_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: ptr_12.h,v 1.27 2007/06/19 23:47:17 tbox Exp $ */
 
 typedef struct dns_rdata_ptr {
         dns_rdatacommon_t       common;
@@ -522,7 +521,7 @@ typedef struct dns_rdata_ptr {
 #ifndef GENERIC_HINFO_13_H
 #define GENERIC_HINFO_13_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: hinfo_13.h,v 1.25 2007/06/19 23:47:17 tbox Exp $ */
 
 typedef struct dns_rdata_hinfo {
 	dns_rdatacommon_t	common;
@@ -555,7 +554,7 @@ typedef struct dns_rdata_hinfo {
 #ifndef GENERIC_MINFO_14_H
 #define GENERIC_MINFO_14_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: minfo_14.h,v 1.27 2007/06/19 23:47:17 tbox Exp $ */
 
 typedef struct dns_rdata_minfo {
 	dns_rdatacommon_t	common;
@@ -586,7 +585,7 @@ typedef struct dns_rdata_minfo {
 #ifndef GENERIC_MX_15_H
 #define GENERIC_MX_15_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: mx_15.h,v 1.29 2007/06/19 23:47:17 tbox Exp $ */
 
 typedef struct dns_rdata_mx {
 	dns_rdatacommon_t	common;
@@ -617,7 +616,7 @@ typedef struct dns_rdata_mx {
 #ifndef GENERIC_TXT_16_H
 #define GENERIC_TXT_16_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: txt_16.h,v 1.28 2007/06/19 23:47:17 tbox Exp $ */
 
 typedef struct dns_rdata_txt_string {
                 isc_uint8_t    length;
@@ -668,7 +667,7 @@ dns_rdata_txt_current(dns_rdata_txt_t *, dns_rdata_txt_string_t *);
 #ifndef GENERIC_RP_17_H
 #define GENERIC_RP_17_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: rp_17.h,v 1.21 2007/06/19 23:47:17 tbox Exp $ */
 
 /*!
  *  \brief Per RFC1183 */
@@ -702,7 +701,7 @@ typedef struct dns_rdata_rp {
 #ifndef GENERIC_AFSDB_18_H
 #define GENERIC_AFSDB_18_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: afsdb_18.h,v 1.20 2007/06/19 23:47:17 tbox Exp $ */
 
 /*!
  *  \brief Per RFC1183 */
@@ -736,7 +735,7 @@ typedef struct dns_rdata_afsdb {
 #ifndef GENERIC_X25_19_H
 #define GENERIC_X25_19_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: x25_19.h,v 1.18 2007/06/19 23:47:17 tbox Exp $ */
 
 /*!
  *  \brief Per RFC1183 */
@@ -769,7 +768,7 @@ typedef struct dns_rdata_x25 {
 #ifndef GENERIC_ISDN_20_H
 #define GENERIC_ISDN_20_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: isdn_20.h,v 1.18 2007/06/19 23:47:17 tbox Exp $ */
 
 /*!
  * \brief Per RFC1183 */
@@ -804,7 +803,7 @@ typedef struct dns_rdata_isdn {
 #ifndef GENERIC_RT_21_H
 #define GENERIC_RT_21_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: rt_21.h,v 1.21 2007/06/19 23:47:17 tbox Exp $ */
 
 /*!
  *  \brief Per RFC1183 */
@@ -837,7 +836,7 @@ typedef struct dns_rdata_rt {
 #ifndef IN_1_NSAP_22_H
 #define IN_1_NSAP_22_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: nsap_22.h,v 1.18 2007/06/19 23:47:17 tbox Exp $ */
 
 /*! 
  *  \brief Per RFC1706 */
@@ -870,7 +869,7 @@ typedef struct dns_rdata_in_nsap {
 #ifndef IN_1_NSAP_PTR_23_H
 #define IN_1_NSAP_PTR_23_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: nsap-ptr_23.h,v 1.19 2007/06/19 23:47:17 tbox Exp $ */
 
 /*! 
  *  \brief Per RFC1348.  Obsoleted in RFC 1706 - use PTR instead. */
@@ -902,7 +901,7 @@ typedef struct dns_rdata_in_nsap_ptr {
 #ifndef GENERIC_SIG_24_H
 #define GENERIC_SIG_24_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: sig_24.h,v 1.26 2007/06/19 23:47:17 tbox Exp $ */
 
 /*!
  *  \brief Per RFC2535 */
@@ -925,7 +924,7 @@ typedef struct dns_rdata_sig_t {
 
 #endif /* GENERIC_SIG_24_H */
 /*
- * Copyright (C) 2004, 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2015  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -944,19 +943,19 @@ typedef struct dns_rdata_sig_t {
 #ifndef GENERIC_KEY_25_H
 #define GENERIC_KEY_25_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: key_25.h,v 1.19 2007/06/19 23:47:17 tbox Exp $ */
 
 /*!
  * \brief Per RFC2535 */
 
-typedef struct dns_rdata_key_t {
-        dns_rdatacommon_t	common;
-        isc_mem_t *		mctx;
-        isc_uint16_t		flags;
-        isc_uint8_t		protocol;
-        isc_uint8_t		algorithm;
-        isc_uint16_t		datalen;
-        unsigned char *		data;
+typedef struct dns_rdata_key {
+	dns_rdatacommon_t	common;
+	isc_mem_t *		mctx;
+	isc_uint16_t		flags;
+	isc_uint8_t		protocol;
+	isc_uint8_t		algorithm;
+	isc_uint16_t		datalen;
+	unsigned char *		data;
 } dns_rdata_key_t;
 
 
@@ -981,7 +980,7 @@ typedef struct dns_rdata_key_t {
 #ifndef IN_1_PX_26_H
 #define IN_1_PX_26_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: px_26.h,v 1.19 2007/06/19 23:47:17 tbox Exp $ */
 
 /*! 
  *  \brief Per RFC2163 */
@@ -1015,7 +1014,7 @@ typedef struct dns_rdata_in_px {
 #ifndef GENERIC_GPOS_27_H
 #define GENERIC_GPOS_27_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: gpos_27.h,v 1.17 2007/06/19 23:47:17 tbox Exp $ */
 
 /*!
  *  \brief per RFC1712 */
@@ -1052,7 +1051,7 @@ typedef struct dns_rdata_gpos {
 #ifndef IN_1_AAAA_28_H
 #define IN_1_AAAA_28_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: aaaa_28.h,v 1.21 2007/06/19 23:47:17 tbox Exp $ */
 
 /*! 
  *  \brief Per RFC1886 */
@@ -1083,7 +1082,7 @@ typedef struct dns_rdata_in_aaaa {
 #ifndef GENERIC_LOC_29_H
 #define GENERIC_LOC_29_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: loc_29.h,v 1.19 2007/06/19 23:47:17 tbox Exp $ */
 
 /*!
  * \brief Per RFC1876 */
@@ -1126,7 +1125,7 @@ typedef struct dns_rdata_loc {
 #ifndef GENERIC_NXT_30_H
 #define GENERIC_NXT_30_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: nxt_30.h,v 1.25 2007/06/19 23:47:17 tbox Exp $ */
 
 /*!
  *  \brief RFC2535 */
@@ -1160,7 +1159,7 @@ typedef struct dns_rdata_nxt {
 #ifndef IN_1_SRV_33_H
 #define IN_1_SRV_33_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: srv_33.h,v 1.19 2007/06/19 23:47:17 tbox Exp $ */
 
 /* Reviewed: Fri Mar 17 13:01:00 PST 2000 by bwelling */
 
@@ -1178,7 +1177,7 @@ typedef struct dns_rdata_in_srv {
 
 #endif /* IN_1_SRV_33_H */
 /*
- * Copyright (C) 2004, 2005, 2007, 2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2011, 2012  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -1194,15 +1193,15 @@ typedef struct dns_rdata_in_srv {
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef IN_1_NAPTR_35_H
-#define IN_1_NAPTR_35_H 1
+#ifndef GENERIC_NAPTR_35_H
+#define GENERIC_NAPTR_35_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id$ */
 
 /*!
  *  \brief Per RFC2915 */
 
-typedef struct dns_rdata_in_naptr {
+typedef struct dns_rdata_naptr {
 	dns_rdatacommon_t	common;
 	isc_mem_t		*mctx;
 	isc_uint16_t		order;
@@ -1214,9 +1213,9 @@ typedef struct dns_rdata_in_naptr {
 	char			*regexp;
 	isc_uint8_t		regexp_len;
 	dns_name_t		replacement;
-} dns_rdata_in_naptr_t;
+} dns_rdata_naptr_t;
 
-#endif /* IN_1_NAPTR_35_H */
+#endif /* GENERIC_NAPTR_35_H */
 /*
  * Copyright (C) 2004, 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
@@ -1237,7 +1236,7 @@ typedef struct dns_rdata_in_naptr {
 #ifndef IN_1_KX_36_H
 #define IN_1_KX_36_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: kx_36.h,v 1.20 2007/06/19 23:47:17 tbox Exp $ */
 
 /*! 
  *  \brief Per RFC2230 */
@@ -1267,7 +1266,7 @@ typedef struct dns_rdata_in_kx {
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: cert_37.h,v 1.20 2007/06/19 23:47:17 tbox Exp $ */
 
 #ifndef GENERIC_CERT_37_H
 #define GENERIC_CERT_37_H 1
@@ -1304,7 +1303,7 @@ typedef struct dns_rdata_cert {
 #ifndef IN_1_A6_38_H
 #define IN_1_A6_38_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: a6_38.h,v 1.24 2007/06/19 23:47:17 tbox Exp $ */
 
 /*! 
  *  \brief Per RFC2874 */
@@ -1338,7 +1337,7 @@ typedef struct dns_rdata_in_a6 {
 #ifndef GENERIC_DNAME_39_H
 #define GENERIC_DNAME_39_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: dname_39.h,v 1.21 2007/06/19 23:47:17 tbox Exp $ */
 
 /*! 
  *  \brief per RFC2672 */
@@ -1350,6 +1349,36 @@ typedef struct dns_rdata_dname {
 } dns_rdata_dname_t;
 
 #endif /* GENERIC_DNAME_39_H */
+/*
+ * Copyright (C) 2015  Internet Systems Consortium, Inc. ("ISC")
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#ifndef GENERIC_SINK_40_H
+#define GENERIC_SINK_40_H 1
+
+typedef struct dns_rdata_sink_t {
+	dns_rdatacommon_t	common;
+	isc_mem_t *		mctx;
+	isc_uint8_t		meaning;
+	isc_uint8_t		coding;
+	isc_uint8_t		subcoding;
+	isc_uint16_t		datalen;
+	unsigned char *		data;
+} dns_rdata_sink_t;
+
+#endif /* GENERIC_SINK_40_H */
 /*
  * Copyright (C) 2004, 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2001  Internet Software Consortium.
@@ -1370,7 +1399,7 @@ typedef struct dns_rdata_dname {
 #ifndef GENERIC_OPT_41_H
 #define GENERIC_OPT_41_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: opt_41.h,v 1.18 2007/06/19 23:47:17 tbox Exp $ */
 
 /*!
  *  \brief Per RFC2671 */
@@ -1426,7 +1455,7 @@ dns_rdata_opt_current(dns_rdata_opt_t *, dns_rdata_opt_opcode_t *);
 #ifndef IN_1_APL_42_H
 #define IN_1_APL_42_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: apl_42.h,v 1.6 2007/06/19 23:47:17 tbox Exp $ */
 
 typedef struct dns_rdata_apl_ent {
 	isc_boolean_t	negative;
@@ -1478,7 +1507,7 @@ dns_rdata_apl_current(dns_rdata_in_apl_t *, dns_rdata_apl_ent_t *);
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: ds_43.h,v 1.7 2007/06/19 23:47:17 tbox Exp $ */
 
 #ifndef GENERIC_DS_43_H
 #define GENERIC_DS_43_H 1
@@ -1513,7 +1542,7 @@ typedef struct dns_rdata_ds {
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: sshfp_44.h,v 1.8 2007/06/19 23:47:17 tbox Exp $ */
 
 /*!
  *  \brief Per RFC 4255 */
@@ -1547,7 +1576,7 @@ typedef struct dns_rdata_sshfp {
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: ipseckey_45.h,v 1.4 2007/06/19 23:47:17 tbox Exp $ */
 
 #ifndef GENERIC_IPSECKEY_45_H
 #define GENERIC_IPSECKEY_45_H 1
@@ -1586,7 +1615,7 @@ typedef struct dns_rdata_ipseckey {
 #ifndef GENERIC_DNSSIG_46_H
 #define GENERIC_DNSSIG_46_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: rrsig_46.h,v 1.7 2007/06/19 23:47:17 tbox Exp $ */
 
 /*!
  *  \brief Per RFC2535 */
@@ -1627,7 +1656,7 @@ typedef struct dns_rdata_rrsig {
 #ifndef GENERIC_NSEC_47_H
 #define GENERIC_NSEC_47_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: nsec_47.h,v 1.10 2008/07/15 23:47:21 tbox Exp $ */
 
 /*!
  * \brief Per RFC 3845 */
@@ -1642,7 +1671,7 @@ typedef struct dns_rdata_nsec {
 
 #endif /* GENERIC_NSEC_47_H */
 /*
- * Copyright (C) 2004, 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2015  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -1661,21 +1690,11 @@ typedef struct dns_rdata_nsec {
 #ifndef GENERIC_DNSKEY_48_H
 #define GENERIC_DNSKEY_48_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
-
 /*!
- *  \brief per RFC2535 */
+ *  \brief per RFC2535
+ */
 
-typedef struct dns_rdata_dnskey {
-        dns_rdatacommon_t	common;
-        isc_mem_t *		mctx;
-        isc_uint16_t		flags;
-        isc_uint8_t		protocol;
-        isc_uint8_t		algorithm;
-        isc_uint16_t		datalen;
-        unsigned char *		data;
-} dns_rdata_dnskey_t;
-
+typedef struct dns_rdata_key dns_rdata_dnskey_t;
 
 #endif /* GENERIC_DNSKEY_48_H */
 /*
@@ -1698,7 +1717,7 @@ typedef struct dns_rdata_dnskey {
 #ifndef IN_1_DHCID_49_H
 #define IN_1_DHCID_49_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: dhcid_49.h,v 1.5 2007/06/19 23:47:17 tbox Exp $ */
 
 typedef struct dns_rdata_in_dhcid {
 	dns_rdatacommon_t	common;
@@ -1709,7 +1728,7 @@ typedef struct dns_rdata_in_dhcid {
 
 #endif /* IN_1_DHCID_49_H */
 /*
- * Copyright (C) 2008, 2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2008, 2011, 2012  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1728,7 +1747,7 @@ typedef struct dns_rdata_in_dhcid {
 #ifndef GENERIC_NSEC3_50_H
 #define GENERIC_NSEC3_50_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id$ */
 
 /*!
  * \brief Per RFC 5155 */
@@ -1756,7 +1775,16 @@ typedef struct dns_rdata_nsec3 {
 #define DNS_NSEC3FLAG_OPTOUT 0x01U
 
 /*%
- * Non-standard, NSEC3PARAM only.
+ * The following flags are used in the private-type record (implemented in
+ * lib/dns/private.c) which is used to store NSEC3PARAM data during the
+ * time when it is not legal to have an actual NSEC3PARAM record in the
+ * zone.  They are defined here because the private-type record uses the
+ * same flags field for the OPTOUT flag above and for the private flags
+ * below.  XXX: This should be considered for refactoring.
+ */
+
+/*%
+ * Non-standard, private type only.
  *
  * Create a corresponding NSEC3 chain.
  * Once the NSEC3 chain is complete this flag will be removed to signal
@@ -1765,13 +1793,14 @@ typedef struct dns_rdata_nsec3 {
  * This flag is automatically set when a NSEC3PARAM record is added to
  * the zone via UPDATE.
  *
- * NSEC3PARAM records with this flag set are supposed to be ignored by
- * RFC 5155 compliant nameservers.
+ * NSEC3PARAM records containing this flag should never be published,
+ * but if they are, they should be ignored by RFC 5155 compliant
+ * nameservers.
  */
 #define DNS_NSEC3FLAG_CREATE 0x80U
 
 /*%
- * Non-standard, NSEC3PARAM only.
+ * Non-standard, private type only.
  *
  * The corresponding NSEC3 set is to be removed once the NSEC chain
  * has been generated.
@@ -1779,24 +1808,39 @@ typedef struct dns_rdata_nsec3 {
  * This flag is automatically set when the last active NSEC3PARAM record
  * is removed from the zone via UPDATE.
  *
- * NSEC3PARAM records with this flag set are supposed to be ignored by
- * RFC 5155 compliant nameservers.
+ * NSEC3PARAM records containing this flag should never be published,
+ * but if they are, they should be ignored by RFC 5155 compliant
+ * nameservers.
  */
 #define DNS_NSEC3FLAG_REMOVE 0x40U
 
 /*%
- * Non-standard, NSEC3PARAM only.
+ * Non-standard, private type only.
  *
- * Used to identify NSEC3PARAM records added in this UPDATE request.
+ * When set with the CREATE flag, a corresponding NSEC3 chain will be
+ * created when the zone becomes capable of supporting one (i.e., when it
+ * has a DNSKEY RRset containing at least one NSEC3-capable algorithm).
+ * Without this flag, NSEC3 chain creation would be attempted immediately,
+ * fail, and the private type record would be removed.  With it, the NSEC3
+ * parameters are stored until they can be used.  When the zone has the
+ * necessary prerequisites for NSEC3, then the INITIAL flag can be cleared,
+ * and the record will be cleaned up normally.
+ *
+ * NSEC3PARAM records containing this flag should never be published, but
+ * if they are, they should be ignored by RFC 5155 compliant nameservers.
  */
-#define DNS_NSEC3FLAG_UPDATE 0x20U
+#define DNS_NSEC3FLAG_INITIAL 0x20U
 
 /*%
- * Non-standard, NSEC3PARAM only.
+ * Non-standard, private type only.
  *
  * Prevent the creation of a NSEC chain before the last NSEC3 chain
  * is removed.  This will normally only be set when the zone is
  * transitioning from secure with NSEC3 chains to insecure.
+ *
+ * NSEC3PARAM records containing this flag should never be published,
+ * but if they are, they should be ignored by RFC 5155 compliant
+ * nameservers.
  */
 #define DNS_NSEC3FLAG_NONSEC 0x10U
 
@@ -1821,7 +1865,7 @@ typedef struct dns_rdata_nsec3 {
 #ifndef GENERIC_NSEC3PARAM_51_H
 #define GENERIC_NSEC3PARAM_51_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: nsec3param_51.h,v 1.4 2008/09/25 04:02:39 tbox Exp $ */
 
 /*!
  * \brief Per RFC 5155 */
@@ -1840,7 +1884,7 @@ typedef struct dns_rdata_nsec3param {
 
 #endif /* GENERIC_NSEC3PARAM_51_H */
 /*
- * Copyright (C) 2012  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2012, 2014  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1855,13 +1899,13 @@ typedef struct dns_rdata_nsec3param {
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id$ */
 
 #ifndef GENERIC_TLSA_52_H
 #define GENERIC_TLSA_52_H 1
 
 /*!
- *  \brief per draft-ietf-dane-protocol-19.txt
+ *  \brief per rfc6698.txt
  */
 typedef struct dns_rdata_tlsa {
 	dns_rdatacommon_t	common;
@@ -1874,6 +1918,28 @@ typedef struct dns_rdata_tlsa {
 } dns_rdata_tlsa_t;
 
 #endif /* GENERIC_TLSA_52_H */
+/*
+ * Copyright (C) 2015  Internet Systems Consortium, Inc. ("ISC")
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#ifndef GENERIC_SMIMEA_53_H
+#define GENERIC_SMIMEA_53_H 1
+
+typedef struct dns_rdata_tlsa dns_rdata_smimea_t;
+
+#endif /* GENERIC_SMIMEA_53_H */
 /*
  * Copyright (C) 2009  Internet Systems Consortium, Inc. ("ISC")
  *
@@ -1890,7 +1956,7 @@ typedef struct dns_rdata_tlsa {
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: hip_55.h,v 1.2 2009/02/26 06:09:19 marka Exp $ */
 
 #ifndef GENERIC_HIP_5_H
 #define GENERIC_HIP_5_H 1
@@ -1922,7 +1988,203 @@ dns_rdata_hip_current(dns_rdata_hip_t *, dns_name_t *);
 
 #endif /* GENERIC_HIP_5_H */
 /*
- * Copyright (C) 2004, 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2015  Internet Systems Consortium, Inc. ("ISC")
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/* */
+#ifndef GENERIC_NINFO_56_H
+#define GENERIC_NINFO_56_H 1
+
+typedef struct dns_rdata_txt_string dns_rdata_ninfo_string_t;
+
+typedef struct dns_rdata_txt dns_rdata_ninfo_t;
+
+/*
+ * ISC_LANG_BEGINDECLS and ISC_LANG_ENDDECLS are already done
+ * via rdatastructpre.h and rdatastructsuf.h.
+ */
+
+isc_result_t
+dns_rdata_ninfo_first(dns_rdata_ninfo_t *);
+
+isc_result_t
+dns_rdata_ninfo_next(dns_rdata_ninfo_t *);
+
+isc_result_t
+dns_rdata_ninfo_current(dns_rdata_ninfo_t *, dns_rdata_ninfo_string_t *);
+
+#endif /* GENERIC_NINFO_16_H */
+/*
+ * Copyright (C) 2015  Internet Systems Consortium, Inc. ("ISC")
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#ifndef GENERIC_RKEY_57_H
+#define GENERIC_RKEY_57_H 1
+
+typedef struct dns_rdata_key dns_rdata_rkey_t;
+
+#endif /* GENERIC_RKEY_57_H */
+/*
+ * Copyright (C) 2015  Internet Systems Consortium, Inc. ("ISC")
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/* http://www.iana.org/assignments/dns-parameters/TALINK/talink-completed-template */
+
+#ifndef GENERIC_TALINK_58_H
+#define GENERIC_TALINK_58_H 1
+
+typedef struct dns_rdata_talink {
+	dns_rdatacommon_t	common;
+	isc_mem_t		*mctx;
+	dns_name_t		prev;
+	dns_name_t		next;
+} dns_rdata_talink_t;
+
+#endif /* GENERIC_TALINK_58_H */
+/*
+ * Copyright (C) 2014, 2015  Internet Systems Consortium, Inc. ("ISC")
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#ifndef GENERIC_CDS_59_H
+#define GENERIC_CDS_59_H 1
+
+/* CDS records have the same RDATA fields as DS records. */
+typedef struct dns_rdata_ds dns_rdata_cds_t;
+
+#endif /* GENERIC_CDS_59_H */
+/*
+ * Copyright (C) 2014, 2015  Internet Systems Consortium, Inc. ("ISC")
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#ifndef GENERIC_CDNSKEY_60_H
+#define GENERIC_CDNSKEY_60_H 1
+
+/* CDNSKEY records have the same RDATA fields as DNSKEY records. */
+typedef struct dns_rdata_key dns_rdata_cdnskey_t;
+
+#endif /* GENERIC_CDNSKEY_60_H */
+/*
+ * Copyright (C) 2014  Internet Systems Consortium, Inc. ("ISC")
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#ifndef GENERIC_OPENPGPKEY_61_H
+#define GENERIC_OPENPGPKEY_61_H 1
+
+typedef struct dns_rdata_openpgpkey {
+	dns_rdatacommon_t	common;
+	isc_mem_t *		mctx;
+	isc_uint16_t		length;
+	unsigned char *		keyring;
+} dns_rdata_openpgpkey_t;
+
+#endif /* GENERIC_OPENPGPKEY_61_H */
+/*
+ * Copyright (C) 2015  Internet Systems Consortium, Inc. ("ISC")
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#ifndef GENERIC_CSYNC_62_H
+#define GENERIC_CSYNC_62_H 1
+
+/*!
+ * \brief Per RFC 7477
+ */
+
+typedef struct dns_rdata_csync {
+	dns_rdatacommon_t	common;
+	isc_mem_t		*mctx;
+	isc_uint32_t		serial;
+	isc_uint16_t		flags;
+	unsigned char		*typebits;
+	isc_uint16_t		len;
+} dns_rdata_csync_t;
+
+#endif /* GENERIC_CSYNC_62_H */
+/*
+ * Copyright (C) 2004, 2005, 2007, 2014  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -1941,36 +2203,26 @@ dns_rdata_hip_current(dns_rdata_hip_t *, dns_name_t *);
 #ifndef GENERIC_SPF_99_H
 #define GENERIC_SPF_99_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: spf_99.h,v 1.4 2007/06/19 23:47:17 tbox Exp $ */
 
 typedef struct dns_rdata_spf_string {
-                isc_uint8_t    length;
-                unsigned char   *data;
+		isc_uint8_t    length;
+		unsigned char   *data;
 } dns_rdata_spf_string_t;
 
 typedef struct dns_rdata_spf {
-        dns_rdatacommon_t       common;
-        isc_mem_t               *mctx;
-        unsigned char           *txt;
-        isc_uint16_t            txt_len;
-        /* private */
-        isc_uint16_t            offset;
+	dns_rdatacommon_t       common;
+	isc_mem_t               *mctx;
+	unsigned char           *txt;
+	isc_uint16_t            txt_len;
+	/* private */
+	isc_uint16_t            offset;
 } dns_rdata_spf_t;
 
 /*
  * ISC_LANG_BEGINDECLS and ISC_LANG_ENDDECLS are already done
  * via rdatastructpre.h and rdatastructsuf.h.
  */
-
-isc_result_t
-dns_rdata_spf_first(dns_rdata_spf_t *);
-
-isc_result_t
-dns_rdata_spf_next(dns_rdata_spf_t *);
-
-isc_result_t
-dns_rdata_spf_current(dns_rdata_spf_t *, dns_rdata_spf_string_t *);
-
 #endif /* GENERIC_SPF_99_H */
 /*
  * Copyright (C) 2004, 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
@@ -1993,7 +2245,7 @@ dns_rdata_spf_current(dns_rdata_spf_t *, dns_rdata_spf_string_t *);
 #ifndef GENERIC_UNSPEC_103_H
 #define GENERIC_UNSPEC_103_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: unspec_103.h,v 1.17 2007/06/19 23:47:17 tbox Exp $ */
 
 typedef struct dns_rdata_unspec_t {
 	dns_rdatacommon_t	common;
@@ -2003,6 +2255,167 @@ typedef struct dns_rdata_unspec_t {
 } dns_rdata_unspec_t;
 
 #endif /* GENERIC_UNSPEC_103_H */
+/*
+ * Copyright (C) 2013  Internet Systems Consortium, Inc. ("ISC")
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/* */
+#ifndef GENERIC_NID_104_H
+#define GENERIC_NID_104_H 1
+
+typedef struct dns_rdata_nid {
+	dns_rdatacommon_t	common;
+	isc_uint16_t		pref;
+	unsigned char		nid[8];
+} dns_rdata_nid_t;
+
+#endif /* GENERIC_NID_104_H */
+/*
+ * Copyright (C) 2013  Internet Systems Consortium, Inc. ("ISC")
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/* */
+#ifndef GENERIC_L32_105_H
+#define GENERIC_L32_105_H 1
+
+typedef struct dns_rdata_l32 {
+	dns_rdatacommon_t	common;
+	isc_uint16_t		pref;
+	struct in_addr		l32;
+} dns_rdata_l32_t;
+
+#endif /* GENERIC_L32_105_H */
+/*
+ * Copyright (C) 2013  Internet Systems Consortium, Inc. ("ISC")
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/* */
+#ifndef GENERIC_L64_106_H
+#define GENERIC_L64_106_H 1
+
+typedef struct dns_rdata_l64 {
+	dns_rdatacommon_t	common;
+	isc_uint16_t		pref;
+	unsigned char		l64[8];
+} dns_rdata_l64_t;
+
+#endif /* GENERIC_L64_106_H */
+/*
+ * Copyright (C) 2013  Internet Systems Consortium, Inc. ("ISC")
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/* */
+#ifndef GENERIC_LP_107_H
+#define GENERIC_LP_107_H 1
+
+typedef struct dns_rdata_lp {
+	dns_rdatacommon_t	common;
+	isc_mem_t		*mctx;
+	isc_uint16_t		pref;
+	dns_name_t		lp;
+} dns_rdata_lp_t;
+
+#endif /* GENERIC_LP_107_H */
+/*
+ * Copyright (C) 2013  Internet Systems Consortium, Inc. ("ISC")
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/* */
+#ifndef GENERIC_EUI48_108_H
+#define GENERIC_EUI48_108_H 1
+
+typedef struct dns_rdata_eui48 {
+	dns_rdatacommon_t	common;
+	unsigned char		eui48[6];
+} dns_rdata_eui48_t;
+
+#endif /* GENERIC_EUI48_10k_H */
+/*
+ * Copyright (C) 2013  Internet Systems Consortium, Inc. ("ISC")
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/* */
+#ifndef GENERIC_EUI64_109_H
+#define GENERIC_EUI64_109_H 1
+
+typedef struct dns_rdata_eui64 {
+	dns_rdatacommon_t	common;
+	unsigned char		eui64[8];
+} dns_rdata_eui64_t;
+
+#endif /* GENERIC_EUI64_10k_H */
 /*
  * Copyright (C) 2004, 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001, 2003  Internet Software Consortium.
@@ -2023,7 +2436,7 @@ typedef struct dns_rdata_unspec_t {
 #ifndef GENERIC_TKEY_249_H
 #define GENERIC_TKEY_249_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: tkey_249.h,v 1.24 2007/06/19 23:47:17 tbox Exp $ */
 
 /*!
  *  \brief Per draft-ietf-dnsind-tkey-00.txt */
@@ -2061,7 +2474,7 @@ typedef struct dns_rdata_tkey {
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: tsig_250.h,v 1.25 2007/06/19 23:47:17 tbox Exp $ */
 
 #ifndef ANY_255_TSIG_250_H
 #define ANY_255_TSIG_250_H 1
@@ -2083,7 +2496,7 @@ typedef struct dns_rdata_any_tsig {
 
 #endif /* ANY_255_TSIG_250_H */
 /*
- * Copyright (C) 2004, 2006, 2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2011, 2012  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -2098,21 +2511,136 @@ typedef struct dns_rdata_any_tsig {
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+#ifndef GENERIC_URI_256_H
+#define GENERIC_URI_256_H 1
+
+/* $Id$ */
+
+typedef struct dns_rdata_uri {
+	dns_rdatacommon_t	common;
+	isc_mem_t *		mctx;
+	isc_uint16_t		priority;
+	isc_uint16_t		weight;
+	unsigned char *		target;
+	isc_uint16_t		tgt_len;
+} dns_rdata_uri_t;
+
+#endif /* GENERIC_URI_256_H */
+/*
+ * Copyright (C) 2014  Internet Systems Consortium, Inc. ("ISC")
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#ifndef GENERIC_CAA_257_H
+#define GENERIC_CAA_257_H 1
+
+/* $Id$ */
+
+typedef struct dns_rdata_caa {
+	dns_rdatacommon_t	common;
+	isc_mem_t *		mctx;
+	isc_uint8_t		flags;
+	unsigned char *		tag;
+	isc_uint8_t		tag_len;
+	unsigned char		*value;
+	isc_uint8_t		value_len;
+} dns_rdata_caa_t;
+
+#endif /* GENERIC_CAA_257_H */
+/*
+ * Copyright (C) 2016  Internet Systems Consortium, Inc. ("ISC")
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#ifndef GENERIC_AVC_258_H
+#define GENERIC_AVC_258_H 1
+
+typedef dns_rdata_txt_string_t dns_rdata_avc_string_t;
+
+typedef struct dns_rdata_avc {
+	dns_rdatacommon_t       common;
+	isc_mem_t               *mctx;
+	unsigned char           *data;
+	isc_uint16_t            length;
+	/* private */
+	isc_uint16_t            offset;
+} dns_rdata_avc_t;
+
+/*
+ * ISC_LANG_BEGINDECLS and ISC_LANG_ENDDECLS are already done
+ * via rdatastructpre.h and rdatastructsuf.h.
+ */
+#endif /* GENERIC_AVC_258_H */
+/*
+ * Copyright (C) 2015  Internet Systems Consortium, Inc. ("ISC")
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#ifndef GENERIC_TA_32768_H
+#define GENERIC_TA_32768_H 1
+
+/*
+ * TA records are identical to DS records.
+ */
+typedef struct dns_rdata_ds dns_rdata_ta_t;
+
+#endif /* GENERIC_TA_32768_H */
+/*
+ * Copyright (C) 2004, 2006, 2007, 2015  Internet Systems Consortium, Inc. ("ISC")
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/* $Id: dlv_32769.h,v 1.5 2007/06/19 23:47:17 tbox Exp $ */
 
 /* draft-ietf-dnsext-delegation-signer-05.txt */
 #ifndef GENERIC_DLV_32769_H
 #define GENERIC_DLV_32769_H 1
 
-typedef struct dns_rdata_dlv {
-	dns_rdatacommon_t	common;
-	isc_mem_t		*mctx;
-	isc_uint16_t		key_tag;
-	isc_uint8_t		algorithm;
-	isc_uint8_t		digest_type;
-	isc_uint16_t		length;
-	unsigned char		*digest;
-} dns_rdata_dlv_t;
+typedef struct dns_rdata_ds dns_rdata_dlv_t;
 
 #endif /* GENERIC_DLV_32769_H */
 /*
@@ -2134,7 +2662,7 @@ typedef struct dns_rdata_dlv {
 #ifndef GENERIC_KEYDATA_65533_H
 #define GENERIC_KEYDATA_65533_H 1
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: keydata_65533.h,v 1.2 2009/06/30 02:52:32 each Exp $ */
 
 typedef struct dns_rdata_keydata {
 	dns_rdatacommon_t	common;
@@ -2167,7 +2695,7 @@ typedef struct dns_rdata_keydata {
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatastruct.h,v 1.11 2013-01-30 01:55:40 laffer1 Exp $ */
+/* $Id: rdatastructsuf.h,v 1.10 2007/06/19 23:47:17 tbox Exp $ */
 
 ISC_LANG_ENDDECLS
 

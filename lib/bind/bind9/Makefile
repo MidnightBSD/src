@@ -1,9 +1,8 @@
-# $MidnightBSD: src/lib/bind/bind9/Makefile,v 1.6 2010/01/16 16:51:31 laffer1 Exp $
-# $FreeBSD: src/lib/bind/bind9/Makefile,v 1.4.4.1 2005/11/16 07:59:49 ru Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
-BIND_DIR=	${.CURDIR}/../../../contrib/bind98
+BIND_DIR=	${.CURDIR}/../../../contrib/bind9
 LIB_BIND_REL=	..
 LIB_BIND_DIR=	${.CURDIR}/${LIB_BIND_REL}
 SRCDIR=		${BIND_DIR}/lib/bind9

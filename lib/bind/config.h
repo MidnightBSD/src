@@ -1,9 +1,8 @@
-/* $MidnightBSD: src/lib/bind/config.h,v 1.10 2013/01/30 01:55:39 laffer1 Exp $ */
-
+/* $MidnightBSD$
 /* config.h.  Generated from config.h.in by configure.  */
 /* config.h.in.  Generated from configure.in by autoheader.  */
 /*
- * Copyright (C) 2004, 2005, 2007, 2008  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2008, 2012, 2014, 2016  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -19,7 +18,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: config.h,v 1.11 2013-04-02 22:43:24 laffer1 Exp $ */
+/* $Id: acconfig.h,v 1.53 2008/12/01 23:47:44 tbox Exp $ */
 
 /*! \file */
 
@@ -75,6 +74,9 @@
 
 /** define if arc4random() exists */
 #define HAVE_ARC4RANDOM 1
+
+/** define if arc4random_addrandom() exists */
+#define HAVE_ARC4RANDOM_ADDRANDOM 1
 
 /**
  * define if pthread_setconcurrency() should be called to tell the
@@ -141,17 +143,26 @@ int sigwait(const unsigned int *set, int *sig);
 /* Define if OpenSSL includes DSA support */
 #define HAVE_OPENSSL_DSA 1
 
+/* Define if OpenSSL includes ECDSA support */
+#define HAVE_OPENSSL_ECDSA 1
+
 /* Define to the length type used by the socket API (socklen_t, size_t, int). */
 #define ISC_SOCKADDR_LEN_T socklen_t
 
 /* Define if threads need PTHREAD_SCOPE_SYSTEM */
 /* #undef NEED_PTHREAD_SCOPE_SYSTEM */
 
+/* Define to 1 if you have the uname library function. */
+#define HAVE_UNAME 1
+
 /* Define if building universal (internal helper macro) */
 /* #undef AC_APPLE_UNIVERSAL_BUILD */
 
 /* Define to enable the "filter-aaaa-on-v4" option. */
 /* #undef ALLOW_FILTER_AAAA_ON_V4 */
+
+/* define if ATF unit tests are to be built. */
+/* #undef ATF_TEST */
 
 /* Define if recvmsg() does not meet all of the BSD socket API specifications.
    */
@@ -163,11 +174,15 @@ int sigwait(const unsigned int *set, int *sig);
 /* Define to enable "rrset-order fixed" syntax. */
 /* #undef DNS_RDATASET_FIXED */
 
+/* Define to enable the "fetches-per-server" and "fetches-per-zone" options.
+   */
+/* #undef ENABLE_FETCHLIMIT */
+
 /* Define to enable rpz-nsdname rules. */
-/* #undef ENABLE_RPZ_NSDNAME */
+#define ENABLE_RPZ_NSDNAME 1
 
 /* Define to enable rpz-nsip rules. */
-/* #undef ENABLE_RPZ_NSIP */
+#define ENABLE_RPZ_NSIP 1
 
 /* Solaris hack to get select_large_fdset. */
 /* #undef FD_SETSIZE */
@@ -180,6 +195,9 @@ int sigwait(const unsigned int *set, int *sig);
    instead. Don't use 'offsetof (struct s, d[0])', as this doesn't work with
    MSVC and with C++ compilers. */
 #define FLEXIBLE_ARRAY_MEMBER /**/
+
+/* Define to 1 if the compiler supports __builtin_expect. */
+#define HAVE_BUILTIN_EXPECT 1
 
 /* Define to 1 if you have the `chroot' function. */
 #define HAVE_CHROOT 1
@@ -202,11 +220,23 @@ int sigwait(const unsigned int *set, int *sig);
 /* Define to 1 if you have the `EVP_sha256' function. */
 #define HAVE_EVP_SHA256 1
 
+/* Define to 1 if you have the `EVP_sha384' function. */
+#define HAVE_EVP_SHA384 1
+
 /* Define to 1 if you have the `EVP_sha512' function. */
 #define HAVE_EVP_SHA512 1
 
 /* Define to 1 if you have the <fcntl.h> header file. */
 #define HAVE_FCNTL_H 1
+
+/* Define to 1 if you have the `fseeko' function. */
+#define HAVE_FSEEKO 1
+
+/* Define to 1 if you have the `ftello' function. */
+#define HAVE_FTELLO 1
+
+/* Define to use gperftools CPU profiler. */
+/* #undef HAVE_GPERFTOOLS_PROFILER */
 
 /* Define to 1 if you have the <gssapi/gssapi.h> header file. */
 /* #undef HAVE_GSSAPI_GSSAPI_H */
@@ -219,6 +249,9 @@ int sigwait(const unsigned int *set, int *sig);
 
 /* Define to 1 if you have the <gssapi_krb5.h> header file. */
 /* #undef HAVE_GSSAPI_KRB5_H */
+
+/* Define to 1 if you have the if_nametoindex function. */
+#define HAVE_IF_NAMETOINDEX 1
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
@@ -250,6 +283,9 @@ int sigwait(const unsigned int *set, int *sig);
 /* Define to 1 if you have the `pthread' library (-lpthread). */
 /* #undef HAVE_LIBPTHREAD */
 
+/* Define to 1 if you have the `rt' library (-lrt). */
+/* #undef HAVE_LIBRT */
+
 /* Define to 1 if you have the `scf' library (-lscf). */
 /* #undef HAVE_LIBSCF */
 
@@ -265,6 +301,9 @@ int sigwait(const unsigned int *set, int *sig);
 /* Define to 1 if you have the <linux/capability.h> header file. */
 /* #undef HAVE_LINUX_CAPABILITY_H */
 
+/* Define to 1 if you have the <linux/types.h> header file. */
+/* #undef HAVE_LINUX_TYPES_H */
+
 /* Define to 1 if you have the <locale.h> header file. */
 #define HAVE_LOCALE_H 1
 
@@ -277,11 +316,29 @@ int sigwait(const unsigned int *set, int *sig);
 /* Define to 1 if you have the <net/if6.h> header file. */
 /* #undef HAVE_NET_IF6_H */
 
+/* Define if your OpenSSL version supports ECDSA. */
+#define HAVE_OPENSSL_ECDSA 1
+
 /* Define if your OpenSSL version supports GOST. */
 /* #undef HAVE_OPENSSL_GOST */
 
+/* Define to 1 if you have the `pthread_yield' function. */
+#define HAVE_PTHREAD_YIELD 1
+
+/* Define to 1 if you have the `pthread_yield_np' function. */
+/* #undef HAVE_PTHREAD_YIELD_NP */
+
+/* Define to 1 if you have the `readline' function. */
+#define HAVE_READLINE 1
+
 /* Define to 1 if you have the <regex.h> header file. */
-/* #undef HAVE_REGEX_H */
+#define HAVE_REGEX_H 1
+
+/* Define to 1 if you have the <sched.h> header file. */
+#define HAVE_SCHED_H 1
+
+/* Define to 1 if you have the `sched_yield' function. */
+#define HAVE_SCHED_YIELD 1
 
 /* Define to 1 if you have the `setegid' function. */
 #define HAVE_SETEGID 1
@@ -352,6 +409,12 @@ int sigwait(const unsigned int *set, int *sig);
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
 
+/* Define to 1 if you have the `usleep' function. */
+#define HAVE_USLEEP 1
+
+/* HMAC_*() return ints */
+/* #undef HMAC_RETURN_INT */
+
 /* return type of gai_strerror */
 #define IRS_GAISTRERROR_RETURN_T const char *
 
@@ -360,6 +423,9 @@ int sigwait(const unsigned int *set, int *sig);
 
 /* Define to the flags type used by getnameinfo(3). */
 #define IRS_GETNAMEINFO_FLAGS_T int
+
+/* Define to the sockaddr length type used by getnameinfo(3). */
+#define IRS_GETNAMEINFO_SOCKLEN_T socklen_t
 
 /* Define to allow building of objects for dlopen(). */
 #define ISC_DLZ_DLOPEN 1
@@ -375,23 +441,26 @@ int sigwait(const unsigned int *set, int *sig);
    */
 /* #undef NEED_SECURE_DIRECTORY */
 
+/* Use the new XML schema for statistics */
+/* #undef NEWSTATS */
+
 /* Define to the address where bug reports for this package should be sent. */
-#define PACKAGE_BUGREPORT ""
+#define PACKAGE_BUGREPORT "bind9-bugs@isc.org"
 
 /* Define to the full name of this package. */
-#define PACKAGE_NAME ""
+#define PACKAGE_NAME "BIND"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING ""
+#define PACKAGE_STRING "BIND 9.9"
 
 /* Define to the one symbol short name of this package. */
-#define PACKAGE_TARNAME ""
+#define PACKAGE_TARNAME "bind"
 
 /* Define to the home page for this package. */
-#define PACKAGE_URL ""
+#define PACKAGE_URL "https://www.isc.org/downloads/BIND/"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION ""
+#define PACKAGE_VERSION "9.9"
 
 /* Sets which flag to pass to open/fcntl to make non-blocking
    (O_NDELAY/O_NONBLOCK). */
@@ -409,6 +478,12 @@ int sigwait(const unsigned int *set, int *sig);
 /* Defined if you need to use ioctl(FIONBIO) instead a fcntl call to make
    non-blocking. */
 /* #undef USE_FIONBIO_IOCTL */
+
+/* Enable DNS Response Rate Limiting */
+/* #undef USE_RRL */
+
+/* Define to enable very verbose query trace logging. */
+/* #undef WANT_QUERYTRACE */
 
 /* define if idnkit support is to be included. */
 /* #undef WITH_IDN */
@@ -429,7 +504,7 @@ int sigwait(const unsigned int *set, int *sig);
 /* #undef const */
 
 /* Define to empty if your compiler does not support "static inline". */
-#define inline /**/
+/* #undef inline */
 
 /* Define to `unsigned int' if <sys/types.h> does not define. */
 /* #undef size_t */

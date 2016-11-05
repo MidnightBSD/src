@@ -1,7 +1,6 @@
 /* $MidnightBSD$ */
-
 /*
- * Copyright (C) 2004-2012 Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2016 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2003 Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
