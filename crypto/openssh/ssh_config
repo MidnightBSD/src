@@ -17,8 +17,7 @@
 # list of available options, their meanings and defaults, please see the
 # ssh_config(5) man page.
 
-Host *
-UseRoaming no
+# Host *
 #   ForwardAgent no
 #   ForwardX11 no
 #   RhostsRSAAuthentication no

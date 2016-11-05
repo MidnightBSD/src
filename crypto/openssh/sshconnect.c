@@ -1243,7 +1243,6 @@ verify_host_key(char *host, struct sockaddr *hostaddr, Key *host_key)
 	int r = -1, flags = 0;
 	char valid[64], *fp = NULL, *cafp = NULL;
 	struct sshkey *plain = NULL;
-	Key *plain = NULL;
 
 	if ((fp = sshkey_fingerprint(host_key,
 	    options.fingerprint_hash, SSH_FP_DEFAULT)) == NULL) {
@@ -1333,7 +1332,6 @@ verify_host_key(char *host, struct sockaddr *hostaddr, Key *host_key)
 				}
 			}
 		}
-		key_free(plain);
 	}
 	r = check_host_key(host, hostaddr, options.port, host_key, RDRW,
 	    options.user_hostfiles, options.num_user_hostfiles,

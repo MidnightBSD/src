@@ -3,7 +3,7 @@
 
 tid="login with different key types"
 
-TIME=`which time` 2>/dev/null
+TIME=`which time 2>/dev/null`
 if test ! -x "$TIME"; then
 	TIME=""
 fi
@@ -58,7 +58,7 @@ for ut in $ktypes; do
 			echo HostKeyAlgorithms $t
 		) > $OBJ/ssh_proxy
 		(
-			echon 'localhost-with-alias,127.0.0.1,::1 '
+			printf 'localhost-with-alias,127.0.0.1,::1 '
 			cat $OBJ/key.$ht.pub
 		) > $OBJ/known_hosts
 		cat $OBJ/key.$ut.pub > $OBJ/authorized_keys_$USER
