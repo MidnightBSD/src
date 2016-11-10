@@ -1,4 +1,4 @@
-/* $Id: platform.c,v 1.21 2014/01/21 01:59:29 tim Exp $ */
+/* $Id: platform.c,v 1.22 2014/07/18 04:11:26 djm Exp $ */
 
 /*
  * Copyright (c) 2006 Darren Tucker.  All rights reserved.
@@ -18,13 +18,12 @@
 
 #include "includes.h"
 
-#include <sys/types.h>
-
 #include <stdarg.h>
 #include <unistd.h>
 
 #include "log.h"
 #include "buffer.h"
+#include "misc.h"
 #include "servconf.h"
 #include "key.h"
 #include "hostfile.h"
@@ -106,8 +105,12 @@ platform_setusercontext(struct passwd *pw)
 #endif
 
 #ifdef USE_SOLARIS_PROJECTS
-	/* if solaris projects were detected, set the default now */
-	if (getuid() == 0 || geteuid() == 0)
+	/*
+	 * If solaris projects were detected, set the default now, unless
+	 * we are using PAM in which case it is the responsibility of the
+	 * PAM stack.
+	 */
+	if (!options.use_pam && (getuid() == 0 || geteuid() == 0))
 		solaris_set_default_project(pw);
 #endif
 

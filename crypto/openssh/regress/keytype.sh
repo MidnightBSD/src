@@ -1,9 +1,9 @@
-#	$OpenBSD: keytype.sh,v 1.3 2013/12/06 13:52:46 markus Exp $
+#	$OpenBSD: keytype.sh,v 1.4 2015/07/10 06:23:25 markus Exp $
 #	Placed in the Public Domain.
 
 tid="login with different key types"
 
-TIME=`which time` 2>/dev/null
+TIME=`which time 2>/dev/null`
 if test ! -x "$TIME"; then
 	TIME=""
 fi
@@ -36,17 +36,29 @@ for ut in $ktypes; do
 	htypes=$ut
 	#htypes=$ktypes
 	for ht in $htypes; do 
+		case $ht in
+		dsa-1024)	t=ssh-dss;;
+		ecdsa-256)	t=ecdsa-sha2-nistp256;;
+		ecdsa-384)	t=ecdsa-sha2-nistp384;;
+		ecdsa-521)	t=ecdsa-sha2-nistp521;;
+		ed25519-512)	t=ssh-ed25519;;
+		rsa-*)		t=ssh-rsa;;
+		esac
 		trace "ssh connect, userkey $ut, hostkey $ht"
 		(
 			grep -v HostKey $OBJ/sshd_proxy_bak
 			echo HostKey $OBJ/key.$ht 
+			echo PubkeyAcceptedKeyTypes $t
+			echo HostKeyAlgorithms $t
 		) > $OBJ/sshd_proxy
 		(
 			grep -v IdentityFile $OBJ/ssh_proxy_bak
 			echo IdentityFile $OBJ/key.$ut 
+			echo PubkeyAcceptedKeyTypes $t
+			echo HostKeyAlgorithms $t
 		) > $OBJ/ssh_proxy
 		(
-			echon 'localhost-with-alias,127.0.0.1,::1 '
+			printf 'localhost-with-alias,127.0.0.1,::1 '
 			cat $OBJ/key.$ht.pub
 		) > $OBJ/known_hosts
 		cat $OBJ/key.$ut.pub > $OBJ/authorized_keys_$USER

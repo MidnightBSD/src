@@ -1,4 +1,4 @@
-/* $OpenBSD: auth-rh-rsa.c,v 1.43 2010/03/04 10:36:03 djm Exp $ */
+/* $OpenBSD: auth-rh-rsa.c,v 1.45 2016/03/07 19:02:43 djm Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -15,6 +15,8 @@
 
 #include "includes.h"
 
+#ifdef WITH_SSH1
+
 #include <sys/types.h>
 
 #include <pwd.h>
@@ -24,6 +26,7 @@
 #include "uidswap.h"
 #include "log.h"
 #include "buffer.h"
+#include "misc.h"
 #include "servconf.h"
 #include "key.h"
 #include "hostfile.h"
@@ -39,8 +42,8 @@
 extern ServerOptions options;
 
 int
-auth_rhosts_rsa_key_allowed(struct passwd *pw, char *cuser, char *chost,
-    Key *client_host_key)
+auth_rhosts_rsa_key_allowed(struct passwd *pw, const char *cuser,
+    const char *chost, Key *client_host_key)
 {
 	HostStatus host_status;
 
@@ -65,7 +68,8 @@ auth_rhosts_rsa_key_allowed(struct passwd *pw, char *cuser, char *chost,
 int
 auth_rhosts_rsa(Authctxt *authctxt, char *cuser, Key *client_host_key)
 {
-	char *chost;
+	struct ssh *ssh = active_state; /* XXX */
+	const char *chost;
 	struct passwd *pw = authctxt->pw;
 
 	debug("Trying rhosts with RSA host authentication for client user %.100s",
@@ -75,7 +79,7 @@ auth_rhosts_rsa(Authctxt *authctxt, char *cuser, Key *client_host_key)
 	    client_host_key->rsa == NULL)
 		return 0;
 
-	chost = (char *)get_canonical_hostname(options.use_dns);
+	chost = auth_get_canonical_hostname(ssh, options.use_dns);
 	debug("Rhosts RSA authentication: canonical host %.900s", chost);
 
 	if (!PRIVSEP(auth_rhosts_rsa_key_allowed(pw, cuser, chost, client_host_key))) {
@@ -101,3 +105,5 @@ auth_rhosts_rsa(Authctxt *authctxt, char *cuser, Key *client_host_key)
 	packet_send_debug("Rhosts with RSA host authentication accepted.");
 	return 1;
 }
+
+#endif /* WITH_SSH1 */
