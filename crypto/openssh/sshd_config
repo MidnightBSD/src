@@ -41,6 +41,7 @@
 
 #LoginGraceTime 2m
 #PermitRootLogin prohibit-password
+PermitRootLogin no
 #StrictModes yes
 #MaxAuthTries 6
 #MaxSessions 10
@@ -106,7 +107,7 @@ AuthorizedKeysFile	.ssh/authorized_keys
 #PrintLastLog yes
 #TCPKeepAlive yes
 #UseLogin no
-#UsePrivilegeSeparation sandbox
+UsePrivilegeSeparation sandbox
 #PermitUserEnvironment no
 #Compression delayed
 #ClientAliveInterval 0
