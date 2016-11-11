@@ -131,7 +131,7 @@
 #define DISABLE_WTMPX 1
 
 /* Enable for PKCS#11 support */
-#define ENABLE_PKCS11 
+#define ENABLE_PKCS11  /**/
 
 /* File names may not contain backslash characters */
 /* #undef FILESYSTEM_NO_BACKSLASH */
@@ -224,22 +224,22 @@
 #define HAVE_BINDRESVPORT_SA 1
 
 /* Define to 1 if you have the `blf_enc' function. */
-/* #undef HAVE_BLF_ENC */
+/* #define HAVE_BLF_ENC 1 */
 
 /* Define to 1 if you have the <blf.h> header file. */
 /* #undef HAVE_BLF_H */
 
 /* Define to 1 if you have the `Blowfish_expand0state' function. */
-/* #undef HAVE_BLOWFISH_EXPAND0STATE */
+/* #define HAVE_BLOWFISH_EXPAND0STATE 1 */
 
 /* Define to 1 if you have the `Blowfish_expandstate' function. */
-/* #undef HAVE_BLOWFISH_EXPANDSTATE */
+/* #define HAVE_BLOWFISH_EXPANDSTATE 1 */
 
 /* Define to 1 if you have the `Blowfish_initstate' function. */
-/* #undef HAVE_BLOWFISH_INITSTATE */
+/* #define HAVE_BLOWFISH_INITSTATE 1 */
 
 /* Define to 1 if you have the `Blowfish_stream2word' function. */
-/* #undef HAVE_BLOWFISH_STREAM2WORD */
+/* #define HAVE_BLOWFISH_STREAM2WORD 1 */
 
 /* Define to 1 if you have the `BN_is_prime_ex' function. */
 #define HAVE_BN_IS_PRIME_EX 1
@@ -266,7 +266,7 @@
 #define HAVE_CLOCK_T 1
 
 /* Define to 1 if you have the `closefrom' function. */
-#define HAVE_CLOSEFROM 1
+/* #define HAVE_CLOSEFROM 1 */
 
 /* Define if gai_strerror() returns const char * */
 #define HAVE_CONST_GAI_STRERROR_PROTO 1
@@ -777,7 +777,7 @@
 /* #undef HAVE_MD5_CRYPT */
 
 /* Define if you want to allow MD5 passwords */
-/* #undef HAVE_MD5_PASSWORDS */
+#define HAVE_MD5_PASSWORDS 1
 
 /* Define to 1 if you have the `memmove' function. */
 #define HAVE_MEMMOVE 1
@@ -910,7 +910,7 @@
 #define HAVE_RECVMSG 1
 
 /* sys/resource.h has RLIMIT_NPROC */
-#define HAVE_RLIMIT_NPROC 
+#define HAVE_RLIMIT_NPROC /**/
 
 /* Define to 1 if you have the <rpc/types.h> header file. */
 #define HAVE_RPC_TYPES_H 1
@@ -1434,6 +1434,8 @@
 /* Define if pututxline updates lastlog too */
 /* #undef LASTLOG_WRITE_PUTUTXLINE */
 
+#define LIBWRAP 1
+
 /* Define to whatever link() returns for "not supported" if it doesn't return
    EOPNOTSUPP. */
 /* #undef LINK_OPNOTSUPP_ERRNO */
@@ -1719,14 +1721,14 @@
 /* #undef WITH_SELINUX */
 
 /* include SSH protocol version 1 support */
-#define WITH_SSH1 1
+/* #define WITH_SSH1 1 */
 
 /* Define to 1 if your processor stores words with the most significant byte
    first (like Motorola and SPARC, unlike Intel and VAX). */
 /* #undef WORDS_BIGENDIAN */
 
 /* Define if xauth is found in your path */
-/* #undef XAUTH_PATH */
+#define XAUTH_PATH "/usr/local/bin/xauth"
 
 /* Number of bits in a file offset, on hosts where this is settable. */
 /* #undef _FILE_OFFSET_BITS */

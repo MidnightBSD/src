@@ -41,8 +41,8 @@ LDADD+=	 -lgssapi_krb5 -lgssapi -lkrb5 -lhx509 -lasn1 \
 	-lcom_err -lroken -lwind -lheimbase -lheimipcc
 .endif
 
-DPADD+= ${LIBCRYPT} ${LIBCRYPTO} ${LIBZ}
-LDADD+= -lcrypt -lcrypto -lz
+DPADD+= ${LIBCRYPT} ${LIBCRYPTO} ${LIBWRAP} ${LIBZ}
+LDADD+= -lcrypt -lcrypto -lwrap -lz
 
 # Fix the order of NEEDED entries for libthr and libc. The libthr
 # needs to interpose libc symbols, leaving the libthr loading as
