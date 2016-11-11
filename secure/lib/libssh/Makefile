@@ -21,15 +21,17 @@ SRCS=	authfd.c authfile.c bufaux.c bufbn.c bufec.c buffer.c \
 	kex.c kexdh.c kexgex.c kexecdh.c kexc25519.c \
 	kexdhc.c kexgexc.c kexecdhc.c kexc25519c.c \
 	kexdhs.c kexgexs.c kexecdhs.c kexc25519s.c \
-	platform-pledge.c platform-tracing.c
+	platform-pledge.c platform-tracing.c \
+	ssh_api.c ssherr.c sshbuf.c sshkey.c sshbuf-getput-basic.c sshbuf-misc.c \
+	sshbuf-getput-crypto.c krl.c bitmap.c
 
 # gss-genr.c should be in $SRCS but causes linking problems, so it is
 # compiled directly into sshd instead.
 
 # Portability layer
 SRCS+=	bcrypt_pbkdf.c blowfish.c bsd-misc.c explicit_bzero.c fmt_scaled.c \
-	glob.c openssl-compat.c port-tun.c strtonum.c timingsafe_bcmp.c \
-	vis.c xcrypt.c xmmap.c
+	glob.c openssl-compat.c port-tun.c realpath.c strtonum.c timingsafe_bcmp.c \
+	vis.c xcrypt.c xmmap.c 
 
 # DNS
 SRCS+=	getrrsetbyname.c
