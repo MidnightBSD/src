@@ -1,6 +1,8 @@
 Updating Information for MidnightBSD users.
 
 20161213:
+	MidnightBSD 0.8.5
+
 	Fix two security issues, telnetd and link_ntoa(3) in libc.
 
 20161105:
