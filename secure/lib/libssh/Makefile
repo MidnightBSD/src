@@ -23,7 +23,7 @@ SRCS=	authfd.c authfile.c bufaux.c bufbn.c bufec.c buffer.c \
 	kexdhs.c kexgexs.c kexecdhs.c kexc25519s.c \
 	platform-pledge.c platform-tracing.c \
 	ssh_api.c ssherr.c sshbuf.c sshkey.c sshbuf-getput-basic.c sshbuf-misc.c \
-	sshbuf-getput-crypto.c krl.c bitmap.c
+	sshbuf-getput-crypto.c krl.c bitmap.c md5crypt.c
 
 # gss-genr.c should be in $SRCS but causes linking problems, so it is
 # compiled directly into sshd instead.
