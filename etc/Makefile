@@ -14,6 +14,7 @@ BIN1=	crontab \
 	dhclient.conf \
 	dhcp6c.conf \
 	disktab \
+	doas.conf \
 	fbtab \
 	ftpusers \
 	gettytab \

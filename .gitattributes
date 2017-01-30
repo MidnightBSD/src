@@ -49063,6 +49063,7 @@ etc/devfs.conf -text
 etc/dhclient.conf -text
 etc/dhcp6c.conf -text
 etc/disktab -text
+etc/doas.conf svneol=native#text/plain
 etc/etc.amd64/ttys -text
 etc/etc.i386/ttys -text
 etc/fbtab -text
@@ -69485,6 +69486,17 @@ usr.bin/dc/stack.c -text
 usr.bin/dig/Makefile -text
 usr.bin/dirname/Makefile -text
 usr.bin/dirname/dirname.c -text
+usr.bin/doas/LICENSE -text
+usr.bin/doas/Makefile svneol=native#text/plain
+usr.bin/doas/doas.1 svneol=native#text/plain
+usr.bin/doas/doas.c svneol=native#text/plain
+usr.bin/doas/doas.conf.5 svneol=native#text/plain
+usr.bin/doas/doas.h svneol=native#text/plain
+usr.bin/doas/env.c svneol=native#text/plain
+usr.bin/doas/execvpe.c svneol=native#text/plain
+usr.bin/doas/parse.y -text
+usr.bin/doas/reallocarray.c svneol=native#text/plain
+usr.bin/doas/tree.h svneol=native#text/plain
 usr.bin/du/Makefile -text
 usr.bin/du/du.1 -text
 usr.bin/du/du.c -text

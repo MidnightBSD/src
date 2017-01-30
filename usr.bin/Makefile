@@ -42,6 +42,7 @@ SUBDIR=	alias \
 	ctlstat \
 	cut \
 	dirname \
+	doas \
 	du \
 	ee \
 	elf2aout \
