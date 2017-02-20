@@ -3544,12 +3544,14 @@ contrib/amd/vers.m4 -text
 contrib/amd/wire-test/wire-test.8 -text
 contrib/amd/wire-test/wire-test.c -text
 contrib/apr-util/CHANGES -text
+contrib/apr-util/CMakeLists.txt -text
 contrib/apr-util/LICENSE -text
 contrib/apr-util/Makefile.in -text
 contrib/apr-util/Makefile.win -text
 contrib/apr-util/NOTICE -text
 contrib/apr-util/NWGNUmakefile -text
 contrib/apr-util/README -text
+contrib/apr-util/README.cmake -text
 contrib/apr-util/apr-util.pc.in -text
 contrib/apr-util/apr-util.spec -text
 contrib/apr-util/aprutil.dep -text
@@ -3686,6 +3688,7 @@ contrib/apr-util/include/apr_hooks.h -text
 contrib/apr-util/include/apr_ldap.h.in -text
 contrib/apr-util/include/apr_ldap.hnw -text
 contrib/apr-util/include/apr_ldap.hw -text
+contrib/apr-util/include/apr_ldap.hwc -text
 contrib/apr-util/include/apr_ldap_init.h -text
 contrib/apr-util/include/apr_ldap_option.h -text
 contrib/apr-util/include/apr_ldap_rebind.h -text
@@ -3709,6 +3712,7 @@ contrib/apr-util/include/apr_xml.h -text
 contrib/apr-util/include/apu.h.in -text
 contrib/apr-util/include/apu.hnw -text
 contrib/apr-util/include/apu.hw -text
+contrib/apr-util/include/apu.hwc -text
 contrib/apr-util/include/apu_errno.h -text
 contrib/apr-util/include/apu_version.h -text
 contrib/apr-util/include/apu_want.h.in -text
@@ -3772,7 +3776,6 @@ contrib/apr-util/test/testpass.c -text
 contrib/apr-util/test/testqueue.c -text
 contrib/apr-util/test/testreslist.c -text
 contrib/apr-util/test/testrmm.c -text
-contrib/apr-util/test/testssl.c -text
 contrib/apr-util/test/teststrmatch.c -text
 contrib/apr-util/test/testuri.c -text
 contrib/apr-util/test/testutil.c -text
