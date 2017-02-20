@@ -3571,53 +3571,6 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_svn_fs_set_warning_func(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  svn_fs_t *arg1 = (svn_fs_t *) 0 ;
-  svn_fs_warning_callback_t arg2 = (svn_fs_warning_callback_t) 0 ;
-  void *arg3 = (void *) 0 ;
-  PyObject * obj0 = 0 ;
-  PyObject * obj1 = 0 ;
-  PyObject * obj2 = 0 ;
-  
-  if (!PyArg_ParseTuple(args,(char *)"OOO:svn_fs_set_warning_func",&obj0,&obj1,&obj2)) SWIG_fail;
-  {
-    arg1 = (svn_fs_t *)svn_swig_MustGetPtr(obj0, SWIGTYPE_p_svn_fs_t, svn_argnum_obj0);
-    if (PyErr_Occurred()) {
-      SWIG_fail;
-    }
-  }
-  {
-    svn_fs_warning_callback_t * tmp =
-    svn_swig_MustGetPtr(obj1, SWIGTYPE_p_p_f_p_void_p_struct_svn_error_t__void, svn_argnum_obj1);
-    if (tmp == NULL || PyErr_Occurred()) {
-      SWIG_fail;
-    }
-    arg2 = *tmp;
-  }
-  {
-    if (obj2 == Py_None) {
-      arg3 = NULL;
-    } else if (SWIG_ConvertPtr(obj2, (void **) &arg3, 0, 0) == -1) {
-      arg3 = (void *) obj2;
-      PyErr_Clear();
-    }
-  }
-  {
-    svn_swig_py_release_py_lock();
-    
-    svn_fs_set_warning_func(arg1,arg2,arg3);
-    
-    svn_swig_py_acquire_py_lock();
-    
-  }
-  resultobj = SWIG_Py_Void();
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
 SWIGINTERN PyObject *_wrap_svn_fs_create(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   svn_fs_t **arg1 = (svn_fs_t **) 0 ;
@@ -11937,7 +11890,6 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SWIG_PyInstanceMethod_New", (PyCFunction)SWIG_PyInstanceMethod_New, METH_O, NULL},
 	 { (char *)"svn_fs_version", _wrap_svn_fs_version, METH_VARARGS, (char *)"svn_fs_version() -> svn_version_t const *"},
 	 { (char *)"svn_fs_initialize", _wrap_svn_fs_initialize, METH_VARARGS, (char *)"svn_fs_initialize(apr_pool_t pool) -> svn_error_t"},
-	 { (char *)"svn_fs_set_warning_func", _wrap_svn_fs_set_warning_func, METH_VARARGS, (char *)"svn_fs_set_warning_func(svn_fs_t * fs, svn_fs_warning_callback_t warning, void * warning_baton)"},
 	 { (char *)"svn_fs_create", _wrap_svn_fs_create, METH_VARARGS, (char *)"svn_fs_create(char const * path, apr_hash_t fs_config, apr_pool_t pool) -> svn_error_t"},
 	 { (char *)"svn_fs_open", _wrap_svn_fs_open, METH_VARARGS, (char *)"svn_fs_open(char const * path, apr_hash_t fs_config, apr_pool_t pool) -> svn_error_t"},
 	 { (char *)"svn_fs_upgrade", _wrap_svn_fs_upgrade, METH_VARARGS, (char *)"svn_fs_upgrade(char const * path, apr_pool_t pool) -> svn_error_t"},

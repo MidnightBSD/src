@@ -5287,7 +5287,7 @@ def update_with_file_lock_and_keywords_property_set(sbox):
   wc_dir = sbox.wc_dir
 
   mu_path = sbox.ospath('A/mu')
-  svntest.main.file_append(mu_path, '$Id: update_tests.py,v 1.1.1.1 2013-08-24 19:37:07 laffer1 Exp $')
+  svntest.main.file_append(mu_path, '$Id$')
   svntest.main.run_svn(None, 'ps', 'svn:keywords', 'Id', mu_path)
   svntest.main.run_svn(None, 'lock', mu_path)
   mu_ts_before_update = os.path.getmtime(mu_path)

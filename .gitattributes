@@ -38443,6 +38443,8 @@ contrib/subversion/subversion/bindings/ctypes-python/README -text
 contrib/subversion/subversion/bindings/ctypes-python/TODO -text
 contrib/subversion/subversion/bindings/ctypes-python/csvn/__init__.py -text
 contrib/subversion/subversion/bindings/ctypes-python/csvn/auth.py -text
+contrib/subversion/subversion/bindings/ctypes-python/csvn/core/__init__.py -text
+contrib/subversion/subversion/bindings/ctypes-python/csvn/core/functions.py.in -text
 contrib/subversion/subversion/bindings/ctypes-python/csvn/ext/__init__.py -text
 contrib/subversion/subversion/bindings/ctypes-python/csvn/ext/callback_receiver.py -text
 contrib/subversion/subversion/bindings/ctypes-python/csvn/ext/listmixin.py -text
@@ -38908,6 +38910,7 @@ contrib/subversion/subversion/include/private/svn_adler32.h -text
 contrib/subversion/subversion/include/private/svn_atomic.h -text
 contrib/subversion/subversion/include/private/svn_auth_private.h -text
 contrib/subversion/subversion/include/private/svn_cache.h -text
+contrib/subversion/subversion/include/private/svn_cert.h -text
 contrib/subversion/subversion/include/private/svn_client_private.h -text
 contrib/subversion/subversion/include/private/svn_cmdline_private.h -text
 contrib/subversion/subversion/include/private/svn_dav_protocol.h -text
@@ -39399,6 +39402,7 @@ contrib/subversion/subversion/po/ko.po -text
 contrib/subversion/subversion/po/nb.po -text
 contrib/subversion/subversion/po/pl.po -text
 contrib/subversion/subversion/po/pt_BR.po -text
+contrib/subversion/subversion/po/subversion.pot -text
 contrib/subversion/subversion/po/sv.po -text
 contrib/subversion/subversion/po/zh_CN.po -text
 contrib/subversion/subversion/po/zh_TW.po -text
@@ -39702,6 +39706,7 @@ contrib/subversion/subversion/tests/cmdline/upgrade_tests_data/tree-replace1.tar
 contrib/subversion/subversion/tests/cmdline/upgrade_tests_data/tree-replace2.tar.bz2 -text svneol=unset#unset
 contrib/subversion/subversion/tests/cmdline/upgrade_tests_data/upgrade_1_0.tar.bz2 -text svneol=unset#unset
 contrib/subversion/subversion/tests/cmdline/upgrade_tests_data/upgrade_1_5.tar.bz2 -text svneol=unset#unset
+contrib/subversion/subversion/tests/cmdline/upgrade_tests_data/upgrade_1_7_dir_external.tar.bz2 -text svneol=unset#application/x-bzip2
 contrib/subversion/subversion/tests/cmdline/upgrade_tests_data/upgrade_absent.tar.bz2 -text svneol=unset#unset
 contrib/subversion/subversion/tests/cmdline/upgrade_tests_data/upgrade_absent_repos.tar.bz2 -text svneol=unset#unset
 contrib/subversion/subversion/tests/cmdline/upgrade_tests_data/upgrade_file_externals.tar.bz2 -text svneol=unset#unset
@@ -39767,6 +39772,7 @@ contrib/subversion/subversion/tests/libsvn_subr/subst_translate-test.c -text
 contrib/subversion/subversion/tests/libsvn_subr/time-test.c -text
 contrib/subversion/subversion/tests/libsvn_subr/translate-test.c -text
 contrib/subversion/subversion/tests/libsvn_subr/utf-test.c -text
+contrib/subversion/subversion/tests/libsvn_subr/zlib.deflated -text
 contrib/subversion/subversion/tests/libsvn_wc/conflict-data-test.c -text
 contrib/subversion/subversion/tests/libsvn_wc/create_wc_for_upgrade.sh -text
 contrib/subversion/subversion/tests/libsvn_wc/db-test.c -text
@@ -40013,9 +40019,11 @@ contrib/subversion/tools/server-side/svnpubsub/README.txt -text
 contrib/subversion/tools/server-side/svnpubsub/commit-hook.py -text
 contrib/subversion/tools/server-side/svnpubsub/daemonize.py -text
 contrib/subversion/tools/server-side/svnpubsub/irkerbridge.py -text
+contrib/subversion/tools/server-side/svnpubsub/rc.d/svnpubsub -text
 contrib/subversion/tools/server-side/svnpubsub/rc.d/svnpubsub.debian -text
 contrib/subversion/tools/server-side/svnpubsub/rc.d/svnpubsub.freebsd -text
 contrib/subversion/tools/server-side/svnpubsub/rc.d/svnpubsub.solaris -text
+contrib/subversion/tools/server-side/svnpubsub/rc.d/svnwcsub -text
 contrib/subversion/tools/server-side/svnpubsub/rc.d/svnwcsub.debian -text
 contrib/subversion/tools/server-side/svnpubsub/rc.d/svnwcsub.freebsd -text
 contrib/subversion/tools/server-side/svnpubsub/rc.d/svnwcsub.solaris -text

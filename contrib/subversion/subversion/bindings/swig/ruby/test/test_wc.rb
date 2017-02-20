@@ -584,13 +584,13 @@ EOE
   end
 
   def assert_translated_keyword(method_name)
-    src_file = "$Revision: 1.1.1.1 $"
+    src_file = "$Revision$"
     revision_file = "revision_file"
     src_path = File.join(@wc_path, src_file)
     revision_path = File.join(@wc_path, revision_file)
 
-    source = "$Revision: 1.1.1.1 $\n"
-    revision_source = source.gsub(/\$Revision\$/, "$Revision: 1.1.1.1 $")
+    source = "$Revision$\n"
+    revision_source = source.gsub(/\$Revision\$/, "$Revision: 1 $")
 
     File.open(revision_path, "w") {}
 

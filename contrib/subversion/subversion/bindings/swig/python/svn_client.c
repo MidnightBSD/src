@@ -33164,7 +33164,8 @@ static swig_cast_info *swig_cast_initial[] = {
 static swig_const_info swig_const_table[] = {
 { SWIG_PY_POINTER, (char*)"svn_swig_py_cancel_func", 0, 0, (void *)(svn_swig_py_cancel_func), &SWIGTYPE_p_f_p_void__p_svn_error_t },
 { SWIG_PY_POINTER, (char*)"svn_swig_py_get_commit_log_func", 0, 0, (void *)(svn_swig_py_get_commit_log_func), &SWIGTYPE_p_f_p_p_q_const__char_p_p_q_const__char_p_q_const__apr_array_header_t_p_void_p_apr_pool_t__p_svn_error_t },
-{ SWIG_PY_POINTER, (char*)"svn_swig_py_notify_func", 0, 0, (void *)(svn_swig_py_notify_func), &SWIGTYPE_p_f_p_void_p_q_const__struct_svn_wc_notify_t_p_apr_pool_t__void },
+{ SWIG_PY_POINTER, (char*)"svn_swig_py_notify_func", 0, 0, (void *)(svn_swig_py_notify_func), &SWIGTYPE_p_f_p_void_p_q_const__char_enum_svn_wc_notify_action_t_enum_svn_node_kind_t_p_q_const__char_enum_svn_wc_notify_state_t_enum_svn_wc_notify_state_t_long__void },
+{ SWIG_PY_POINTER, (char*)"svn_swig_py_notify_func2", 0, 0, (void *)(svn_swig_py_notify_func2), &SWIGTYPE_p_f_p_void_p_q_const__struct_svn_wc_notify_t_p_apr_pool_t__void },
 {0, 0, 0, 0.0, 0, 0}};
 
 #ifdef __cplusplus
@@ -33876,10 +33877,19 @@ SWIG_init(void) {
     
   }
   {
-    svn_wc_notify_func2_t * tmp = malloc(sizeof(svn_wc_notify_func2_t));
-    *tmp = (svn_wc_notify_func2_t) svn_swig_py_notify_func;
+    svn_wc_notify_func_t * tmp = malloc(sizeof(svn_wc_notify_func_t));
+    *tmp = (svn_wc_notify_func_t) svn_swig_py_notify_func;
     
-    SWIG_Python_SetConstant(d, "svn_swig_py_notify_func",svn_swig_NewPointerObj(tmp, SWIGTYPE_p_p_f_p_void_p_q_const__struct_svn_wc_notify_t_p_apr_pool_t__void, NULL, NULL))
+    SWIG_Python_SetConstant(d, "svn_swig_py_notify_func",svn_swig_NewPointerObj(tmp, SWIGTYPE_p_p_f_p_void_p_q_const__char_enum_svn_wc_notify_action_t_enum_svn_node_kind_t_p_q_const__char_enum_svn_wc_notify_state_t_enum_svn_wc_notify_state_t_long__void, NULL, NULL))
+    
+    ;
+    
+  }
+  {
+    svn_wc_notify_func2_t * tmp = malloc(sizeof(svn_wc_notify_func2_t));
+    *tmp = (svn_wc_notify_func2_t) svn_swig_py_notify_func2;
+    
+    SWIG_Python_SetConstant(d, "svn_swig_py_notify_func2",svn_swig_NewPointerObj(tmp, SWIGTYPE_p_p_f_p_void_p_q_const__struct_svn_wc_notify_t_p_apr_pool_t__void, NULL, NULL))
     
     ;
     

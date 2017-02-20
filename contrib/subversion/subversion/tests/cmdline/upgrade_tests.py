@@ -430,7 +430,10 @@ def basic_upgrade_1_0(sbox):
 
   url = sbox.repo_url
 
-  xml_entries_relocate(sbox.wc_dir, 'file:///1.0.0/repos', url)
+  # This is non-canonical by the rules of svn_uri_canonicalize, it gets
+  # written into the entries file and upgrade has to canonicalize.
+  non_canonical_url = url[:-1] + '%%%02x' % ord(url[-1])
+  xml_entries_relocate(sbox.wc_dir, 'file:///1.0.0/repos', non_canonical_url)
 
   # Attempt to use the working copy, this should give an error
   expected_stderr = wc_is_too_old_regex
@@ -1425,6 +1428,17 @@ def changelist_upgrade_1_6(sbox):
   if paths != expected_paths:
     raise svntest.Failure("changelist not matched")
 
+
+def upgrade_1_7_dir_external(sbox):
+  "upgrade from 1.7 with dir external"
+
+  sbox.build(create_wc = False)
+  replace_sbox_with_tarfile(sbox, 'upgrade_1_7_dir_external.tar.bz2')
+
+  # This fails for 'make check EXCLUSIVE_WC_LOCKS=1' giving an error:
+  # svn: warning: W200033: sqlite[S5]: database is locked
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -1480,6 +1494,7 @@ test_list = [ None,
               iprops_upgrade,
               iprops_upgrade1_6,
               changelist_upgrade_1_6,
+              upgrade_1_7_dir_external,
              ]
 
 

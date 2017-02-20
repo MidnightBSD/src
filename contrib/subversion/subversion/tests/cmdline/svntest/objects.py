@@ -238,7 +238,7 @@ class SvnWC:
     if content is None:
       # Default content
       content = "This is the file '" + filename + "'.\n" + \
-                "Last changed in '$Revision: 1.1.1.1 $'.\n"
+                "Last changed in '$Revision$'.\n"
     main.file_write(lpath, content)
     actions.run_and_verify_svn(None, None, [], 'add', lpath)
 

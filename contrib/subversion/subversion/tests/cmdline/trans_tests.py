@@ -144,19 +144,19 @@ def setup_working_copy(wc_dir, value_len):
   id_with_space_path = os.path.join(wc_dir, 'id with space')
   id_exp_with_dollar_path = os.path.join(wc_dir, 'id_exp with_$_sign')
 
-  svntest.main.file_append(author_rev_unexp_path, "$Author: laffer1 $\n$Rev$")
-  svntest.main.file_append(author_rev_exp_path, "$Author: laffer1 $\n$Rev: 0 $")
+  svntest.main.file_append(author_rev_unexp_path, "$Author$\n$Rev$")
+  svntest.main.file_append(author_rev_exp_path, "$Author: blah $\n$Rev: 0 $")
   svntest.main.file_append(url_unexp_path, "$URL$")
   svntest.main.file_append(url_exp_path, "$URL: blah $")
-  svntest.main.file_append(id_unexp_path, "$Id: trans_tests.py,v 1.1.1.1 2013-08-24 19:37:06 laffer1 Exp $")
-  svntest.main.file_append(id_exp_path, "$Id: trans_tests.py,v 1.1.1.1 2013-08-24 19:37:06 laffer1 Exp $")
-  svntest.main.file_append(header_unexp_path, "$Header: /home/cvs/src/contrib/subversion/subversion/tests/cmdline/trans_tests.py,v 1.1.1.1 2013-08-24 19:37:06 laffer1 Exp $")
-  svntest.main.file_append(header_exp_path, "$Header: /home/cvs/src/contrib/subversion/subversion/tests/cmdline/trans_tests.py,v 1.1.1.1 2013-08-24 19:37:06 laffer1 Exp $")
+  svntest.main.file_append(id_unexp_path, "$Id$")
+  svntest.main.file_append(id_exp_path, "$Id: blah $")
+  svntest.main.file_append(header_unexp_path, "$Header$")
+  svntest.main.file_append(header_exp_path, "$Header: blah $")
   svntest.main.file_append(bogus_keywords_path, "$Arthur$\n$Rev0$")
   svntest.main.file_append(embd_author_rev_unexp_path,
-                           "one\nfish\n$Author: laffer1 $ two fish\n red $Rev$\n fish")
+                           "one\nfish\n$Author$ two fish\n red $Rev$\n fish")
   svntest.main.file_append(embd_author_rev_exp_path,
-                           "blue $Author: laffer1 $ fish$Rev: 0 $\nI fish")
+                           "blue $Author: blah $ fish$Rev: 0 $\nI fish")
   svntest.main.file_append(embd_bogus_keywords_path,
                            "you fish $Arthur$then\n we$Rev0$ \n\nchew fish")
 
@@ -181,9 +181,9 @@ def setup_working_copy(wc_dir, value_len):
   for i in keyword_test_targets:
     svntest.main.file_append(fixed_length_keywords_path, i)
 
-  svntest.main.file_append(id_with_space_path, "$Id: trans_tests.py,v 1.1.1.1 2013-08-24 19:37:06 laffer1 Exp $")
+  svntest.main.file_append(id_with_space_path, "$Id$")
   svntest.main.file_append(id_exp_with_dollar_path,
-                   "$Id: trans_tests.py,v 1.1.1.1 2013-08-24 19:37:06 laffer1 Exp $_sign 1 2006-06-10 11:10:00Z jrandom $")
+                   "$Id: id_exp with_$_sign 1 2006-06-10 11:10:00Z jrandom $")
 
 
 ### Helper functions for setting/removing properties
@@ -411,7 +411,7 @@ def keywords_from_birth(sbox):
   fp = open(id_exp_with_dollar_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$Id: trans_tests.py,v 1.1.1.1 2013-08-24 19:37:06 laffer1 Exp $_sign [^$]* jrandom \$",
+          and (re.match("\$Id: .*id_exp with_\$_sign [^$]* jrandom \$",
                         lines[0]))):
     logger.warn("Id expansion failed for %s", id_exp_with_dollar_path)
 
@@ -644,7 +644,7 @@ def cat_keyword_expansion(sbox):
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
 
   # Set up A/mu to do $Rev$ keyword expansion
-  svntest.main.file_append(mu_path , "$Rev$\n$Author: laffer1 $")
+  svntest.main.file_append(mu_path , "$Rev$\n$Author$")
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'svn:keywords', 'Rev Author',
                                      mu_path)
@@ -688,7 +688,7 @@ def cat_keyword_expansion(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      [ "This is the file 'mu'.\n",
                                        "$Rev: 2 $\n",
-                                       "$Author: laffer1 $"], [],
+                                       "$Author: " + key_author + " $"], [],
                                      'cat', '-r', 'HEAD', mu_path)
 
 
@@ -803,10 +803,10 @@ def props_only_file_update(sbox):
 
   iota_path = os.path.join(wc_dir, 'iota')
   content = ["This is the file 'iota'.\n",
-             "$Author: laffer1 $\n",
+             "$Author$\n",
              ]
   content_expanded = ["This is the file 'iota'.\n",
-                      "$Author: laffer1 $\n",
+                      "$Author: jrandom $\n",
                       ]
 
   # Create r2 with iota's contents and svn:keywords modified
@@ -855,7 +855,7 @@ def props_only_file_update(sbox):
                                         wc_dir, '-r', '2')
 
   if open(iota_path).read() != ''.join(content_expanded):
-    raise svntest.Failure("$Author: laffer1 $ is not expanded in 'iota'")
+    raise svntest.Failure("$Author$ is not expanded in 'iota'")
 
   # Update to r3. this should retranslate iota, dropping the keyword expansion
   expected_disk = svntest.main.greek_state.copy()
@@ -871,7 +871,7 @@ def props_only_file_update(sbox):
                                         wc_dir)
 
   if open(iota_path).read() != ''.join(content):
-    raise svntest.Failure("$Author: laffer1 $ is not contracted in 'iota'")
+    raise svntest.Failure("$Author$ is not contracted in 'iota'")
 
   # We used to leave some temporary files around. Make sure that we don't.
   temps = os.listdir(os.path.join(wc_dir, svntest.main.get_admin_name(), 'tmp'))
