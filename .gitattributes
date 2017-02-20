@@ -62351,9 +62351,6 @@ sys/dev/led/led.c -text
 sys/dev/led/led.h -text
 sys/dev/lge/if_lge.c -text
 sys/dev/lge/if_lgereg.h -text
-sys/dev/lindev/full.c -text
-sys/dev/lindev/lindev.c -text
-sys/dev/lindev/lindev.h -text
 sys/dev/lm/lm78.c -text
 sys/dev/lm/lm78_isa.c -text
 sys/dev/lm/lm78var.h -text

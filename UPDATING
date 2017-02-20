@@ -3,6 +3,9 @@ Updating Information for MidnightBSD users.
 20170219:
 	Add /dev/full device.
 
+	The lindev device has been removed since /dev/full has been made a
+	standard device.
+
 20170129:
 	add doas utility from OpenBSD.
 
