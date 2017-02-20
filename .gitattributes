@@ -288,12 +288,14 @@
 1.5.2/xml/expat/win32/MANIFEST.txt -text
 1.5.2/xml/expat/win32/expat.iss -text
 dist/CHANGES -text
+dist/CMakeLists.txt -text
 dist/LICENSE -text
 dist/Makefile.in -text
 dist/Makefile.win -text
 dist/NOTICE -text
 dist/NWGNUmakefile -text
 dist/README -text
+dist/README.cmake -text
 dist/apr-util.pc.in -text
 dist/apr-util.spec -text
 dist/aprutil.dep -text
@@ -430,6 +432,7 @@ dist/include/apr_hooks.h -text
 dist/include/apr_ldap.h.in -text
 dist/include/apr_ldap.hnw -text
 dist/include/apr_ldap.hw -text
+dist/include/apr_ldap.hwc -text
 dist/include/apr_ldap_init.h -text
 dist/include/apr_ldap_option.h -text
 dist/include/apr_ldap_rebind.h -text
@@ -453,6 +456,7 @@ dist/include/apr_xml.h -text
 dist/include/apu.h.in -text
 dist/include/apu.hnw -text
 dist/include/apu.hw -text
+dist/include/apu.hwc -text
 dist/include/apu_errno.h -text
 dist/include/apu_version.h -text
 dist/include/apu_want.h.in -text
@@ -516,7 +520,6 @@ dist/test/testpass.c -text
 dist/test/testqueue.c -text
 dist/test/testreslist.c -text
 dist/test/testrmm.c -text
-dist/test/testssl.c -text
 dist/test/teststrmatch.c -text
 dist/test/testuri.c -text
 dist/test/testutil.c -text
