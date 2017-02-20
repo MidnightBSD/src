@@ -1,16 +1,21 @@
-/* Copyright 2008 Justin Erenkrantz and Greg Stein
+/* ====================================================================
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
+ * ====================================================================
  */
 
 #include <apr.h>
@@ -54,20 +59,7 @@ static void test_ssl_init(CuTest *tc)
     CuAssertIntEquals(tc, APR_SUCCESS, status);
 }
 
-
-static const char * get_ca_file(apr_pool_t *pool, const char * file)
-{
-    char *srcdir = "";
-
-    if (apr_env_get(&srcdir, "srcdir", pool) == APR_SUCCESS) {
-        return apr_pstrcat(pool, srcdir, "/", file, NULL);
-    }
-    else {
-        return file;
-    }
-}
-
-
+#define get_ca_file(pool, file)  get_srcdir_file(pool, file) 
 /* Test that loading a custom CA certificate file works. */
 static void test_ssl_load_cert_file(CuTest *tc)
 {
@@ -261,7 +253,8 @@ static void test_ssl_cert_export(CuTest *tc)
 
     /* A .pem file contains a Base64 encoded DER certificate, which is exactly
        what serf_ssl_cert_export is supposed to be returning. */
-    status = apr_file_open(&fp, "test/serftestca.pem",
+    status = apr_file_open(&fp,
+                           get_srcdir_file(test_pool, "test/serftestca.pem"),
                            APR_FOPEN_READ | APR_FOPEN_BINARY,
                            APR_FPROT_OS_DEFAULT, test_pool);
     CuAssertIntEquals(tc, APR_SUCCESS, status);
