@@ -3897,6 +3897,7 @@ contrib/apr/build/make_nw_export.awk -text
 contrib/apr/build/make_var_export.awk -text
 contrib/apr/build/mkdir.sh -text
 contrib/apr/build/nw_export.inc -text
+contrib/apr/build/nw_make_header.awk -text
 contrib/apr/build/nw_ver.awk -text
 contrib/apr/build/pkg/README -text
 contrib/apr/build/pkg/buildpkg.sh -text
@@ -3925,6 +3926,7 @@ contrib/apr/dso/os390/dso.c -text
 contrib/apr/dso/unix/dso.c -text
 contrib/apr/dso/win32/dso.c -text
 contrib/apr/emacs-mode -text
+contrib/apr/encoding/apr_escape.c -text
 contrib/apr/file_io/netware/filepath.c -text
 contrib/apr/file_io/netware/filestat.c -text
 contrib/apr/file_io/netware/filesys.c -text
@@ -3981,11 +3983,13 @@ contrib/apr/helpers/apr_rename.pl -text
 contrib/apr/include/apr.h.in -text
 contrib/apr/include/apr.hnw -text
 contrib/apr/include/apr.hw -text
+contrib/apr/include/apr.hwc -text
 contrib/apr/include/apr_allocator.h -text
 contrib/apr/include/apr_atomic.h -text
 contrib/apr/include/apr_dso.h -text
 contrib/apr/include/apr_env.h -text
 contrib/apr/include/apr_errno.h -text
+contrib/apr/include/apr_escape.h -text
 contrib/apr/include/apr_file_info.h -text
 contrib/apr/include/apr_file_io.h -text
 contrib/apr/include/apr_fnmatch.h -text
@@ -4005,6 +4009,7 @@ contrib/apr/include/apr_random.h -text
 contrib/apr/include/apr_ring.h -text
 contrib/apr/include/apr_shm.h -text
 contrib/apr/include/apr_signal.h -text
+contrib/apr/include/apr_skiplist.h -text
 contrib/apr/include/apr_strings.h -text
 contrib/apr/include/apr_support.h -text
 contrib/apr/include/apr_tables.h -text
@@ -4161,6 +4166,7 @@ contrib/apr/poll/unix/pollcb.c -text
 contrib/apr/poll/unix/pollset.c -text
 contrib/apr/poll/unix/port.c -text
 contrib/apr/poll/unix/select.c -text
+contrib/apr/poll/unix/z_asio.c -text
 contrib/apr/random/unix/apr_random.c -text
 contrib/apr/random/unix/sha2.c -text
 contrib/apr/random/unix/sha2.h -text
@@ -4177,6 +4183,7 @@ contrib/apr/strings/apr_strnatcmp.c -text
 contrib/apr/strings/apr_strtok.c -text
 contrib/apr/support/unix/waitio.c -text
 contrib/apr/tables/apr_hash.c -text
+contrib/apr/tables/apr_skiplist.c -text
 contrib/apr/tables/apr_tables.c -text
 contrib/apr/test/Makefile.in -text
 contrib/apr/test/Makefile.win -text
@@ -4221,6 +4228,7 @@ contrib/apr/test/testdll.dsp -text
 contrib/apr/test/testdso.c -text
 contrib/apr/test/testdup.c -text
 contrib/apr/test/testenv.c -text
+contrib/apr/test/testescape.c -text
 contrib/apr/test/testfile.c -text
 contrib/apr/test/testfilecopy.c -text
 contrib/apr/test/testfileinfo.c -text
@@ -4251,6 +4259,7 @@ contrib/apr/test/testshm.c -text
 contrib/apr/test/testshm.h -text
 contrib/apr/test/testshmconsumer.c -text
 contrib/apr/test/testshmproducer.c -text
+contrib/apr/test/testskiplist.c -text
 contrib/apr/test/testsleep.c -text
 contrib/apr/test/testsock.c -text
 contrib/apr/test/testsock.h -text
