@@ -1,16 +1,21 @@
-/* Copyright 2013 Justin Erenkrantz and Greg Stein
+/* ====================================================================
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
+ * ====================================================================
  */
 
 #include "serf.h"
@@ -22,6 +27,10 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+#if defined(OPENSSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER >= 0x10100000L
+#define USE_OPENSSL_1_1_API
+#endif
+
 static int init_done = 0;
 
 typedef struct ssl_context_t {
@@ -30,6 +39,7 @@ typedef struct ssl_context_t {
     SSL_CTX* ctx;
     SSL* ssl;
     BIO *bio;
+    BIO_METHOD *biom;
 
 } ssl_context_t;
 
@@ -40,12 +50,36 @@ static int pem_passwd_cb(char *buf, int size, int rwflag, void *userdata)
     return strlen(buf);
 }
 
+static void bio_set_data(BIO *bio, void *data)
+{
+#ifdef USE_OPENSSL_1_1_API
+    BIO_set_data(bio, data);
+#else
+    bio->ptr = data;
+#endif
+}
+
+static void *bio_get_data(BIO *bio)
+{
+#ifdef USE_OPENSSL_1_1_API
+    return BIO_get_data(bio);
+#else
+    return bio->ptr;
+#endif
+}
+
 static int bio_apr_socket_create(BIO *bio)
 {
+#ifdef USE_OPENSSL_1_1_API
+    BIO_set_shutdown(bio, 1);
+    BIO_set_init(bio, 1);
+    BIO_set_data(bio, NULL);
+#else
     bio->shutdown = 1;
     bio->init = 1;
     bio->num = -1;
     bio->ptr = NULL;
+#endif
 
     return 1;
 }
@@ -83,7 +117,7 @@ static long bio_apr_socket_ctrl(BIO *bio, int cmd, long num, void *ptr)
 static int bio_apr_socket_read(BIO *bio, char *in, int inlen)
 {
     apr_size_t len = inlen;
-    serv_ctx_t *serv_ctx = bio->ptr;
+    serv_ctx_t *serv_ctx = bio_get_data(bio);
     apr_status_t status;
 
     BIO_clear_retry_flags(bio);
@@ -109,7 +143,7 @@ static int bio_apr_socket_read(BIO *bio, char *in, int inlen)
 static int bio_apr_socket_write(BIO *bio, const char *in, int inlen)
 {
     apr_size_t len = inlen;
-    serv_ctx_t *serv_ctx = bio->ptr;
+    serv_ctx_t *serv_ctx = bio_get_data(bio);
 
     apr_status_t status = apr_socket_send(serv_ctx->client_sock, in, &len);
 
@@ -124,6 +158,7 @@ static int bio_apr_socket_write(BIO *bio, const char *in, int inlen)
 }
 
 
+#ifndef USE_OPENSSL_1_1_API
 static BIO_METHOD bio_apr_socket_method = {
     BIO_TYPE_SOCKET,
     "APR sockets",
@@ -138,6 +173,27 @@ static BIO_METHOD bio_apr_socket_method = {
     NULL /* sslc does not have the callback_ctrl field */
 #endif
 };
+#endif
+
+static BIO_METHOD *bio_meth_apr_socket_new(void)
+{
+    BIO_METHOD *biom = NULL;
+
+#ifdef USE_OPENSSL_1_1_API
+    biom = BIO_meth_new(BIO_TYPE_SOCKET, "APR sockets");
+    if (biom) {
+        BIO_meth_set_write(biom, bio_apr_socket_write);
+        BIO_meth_set_read(biom, bio_apr_socket_read);
+        BIO_meth_set_ctrl(biom, bio_apr_socket_ctrl);
+        BIO_meth_set_create(biom, bio_apr_socket_create);
+        BIO_meth_set_destroy(biom, bio_apr_socket_destroy);
+    }
+#else
+    biom = &bio_apr_socket_method;
+#endif
+
+    return biom;
+}
 
 static int validate_client_certificate(int preverify_ok, X509_STORE_CTX *ctx)
 {
@@ -172,7 +228,11 @@ init_ssl_context(serv_ctx_t *serv_ctx,
     /* Init OpenSSL globally */
     if (!init_done)
     {
+#ifdef USE_OPENSSL_1_1_API
+        OPENSSL_malloc_init();
+#else
         CRYPTO_malloc_init();
+#endif
         ERR_load_crypto_strings();
         SSL_load_error_strings();
         SSL_library_init();
@@ -200,7 +260,7 @@ init_ssl_context(serv_ctx_t *serv_ctx,
         certfile = certfiles[0];
         rv = SSL_CTX_use_certificate_file(ssl_ctx->ctx, certfile, SSL_FILETYPE_PEM);
         if (rv != 1) {
-            fprintf(stderr, "Cannot load certficate from file '%s'\n", keyfile);
+            fprintf(stderr, "Cannot load certficate from file '%s'\n", certfile);
             exit(1);
         }
 
@@ -229,8 +289,9 @@ init_ssl_context(serv_ctx_t *serv_ctx,
 
         SSL_CTX_set_mode(ssl_ctx->ctx, SSL_MODE_ENABLE_PARTIAL_WRITE);
 
-        ssl_ctx->bio = BIO_new(&bio_apr_socket_method);
-        ssl_ctx->bio->ptr = serv_ctx;
+        ssl_ctx->biom = bio_meth_apr_socket_new();
+        ssl_ctx->bio = BIO_new(ssl_ctx->biom);
+        bio_set_data(ssl_ctx->bio, serv_ctx);
         init_ssl(serv_ctx);
     }
 
@@ -383,8 +444,12 @@ static apr_status_t cleanup_https_server(void *baton)
     ssl_context_t *ssl_ctx = servctx->ssl_ctx;
 
     if (ssl_ctx) {
-        if (ssl_ctx->ssl)
+        if (ssl_ctx->ssl) {
           SSL_clear(ssl_ctx->ssl);
+#ifdef USE_OPENSSL_1_1_API
+          BIO_meth_free(ssl_ctx->biom);
+#endif
+        }
         SSL_CTX_free(ssl_ctx->ctx);
     }
 
