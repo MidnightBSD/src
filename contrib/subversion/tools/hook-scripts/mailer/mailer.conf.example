@@ -1,7 +1,7 @@
 #
 # mailer.conf: example configuration file for mailer.py
 #
-# $Id: mailer.conf.example,v 1.1.1.1 2013-08-24 19:37:10 laffer1 Exp $
+# $Id: mailer.conf.example 1439592 2013-01-28 19:20:53Z danielsh $
 
 [general]
 

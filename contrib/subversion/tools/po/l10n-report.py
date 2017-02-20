@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: l10n-report.py,v 1.1.1.1 2013-08-24 19:37:10 laffer1 Exp $
+# $Id: l10n-report.py 1132657 2011-06-06 14:23:36Z julianfoad $
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -46,7 +46,7 @@ SUBJECT_TEMPLATE = "[l10n] Translation status report for %s r%s"
 MAIL_THREAD_ID = '<translation_status_report_for_%s@subversion.apache.org>'
 
 def _rev():
-  dollar = "$Revision: 1.1.1.1 $"
+  dollar = "$Revision: 1132657 $"
   return int(re.findall('[0-9]+', dollar)[0]);
 
 def usage_and_exit(errmsg=None):

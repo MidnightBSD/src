@@ -3263,6 +3263,7 @@ SWIG_SVN_INFO_SIZE_UNKNOWN = _client.SWIG_SVN_INFO_SIZE_UNKNOWN
 svn_swig_py_cancel_func = _client.svn_swig_py_cancel_func
 svn_swig_py_get_commit_log_func = _client.svn_swig_py_get_commit_log_func
 svn_swig_py_notify_func = _client.svn_swig_py_notify_func
+svn_swig_py_notify_func2 = _client.svn_swig_py_notify_func2
 # This file is compatible with both classic and new-style classes.
 
 

@@ -108,10 +108,6 @@ def svn_fs_initialize(*args):
   """svn_fs_initialize(apr_pool_t pool) -> svn_error_t"""
   return _fs.svn_fs_initialize(*args)
 
-def svn_fs_set_warning_func(*args):
-  """svn_fs_set_warning_func(svn_fs_t * fs, svn_fs_warning_callback_t warning, void * warning_baton)"""
-  return _fs.svn_fs_set_warning_func(*args)
-
 def svn_fs_create(*args):
   """svn_fs_create(char const * path, apr_hash_t fs_config, apr_pool_t pool) -> svn_error_t"""
   return _fs.svn_fs_create(*args)

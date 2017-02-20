@@ -213,7 +213,7 @@ def cat_keywords(sbox):
                                      ["This is the file 'iota'.\n"],
                                      [], 'cat', iota_path)
 
-  svntest.main.file_append(iota_path, "$Revision: 1.1.1.1 $\n")
+  svntest.main.file_append(iota_path, "$Revision$\n")
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'svn:keywords', 'Revision',
                                      iota_path)
@@ -222,7 +222,7 @@ def cat_keywords(sbox):
                                      'ci', '-m', 'r2', wc_dir)
 
   svntest.actions.run_and_verify_svn(None,
-                                     ["This is the file 'iota'.\n", "$Revision: 1.1.1.1 $\n"],
+                                     ["This is the file 'iota'.\n", "$Revision: 2 $\n"],
                                      [], 'cat', iota_path)
 
 def cat_url_special_characters(sbox):

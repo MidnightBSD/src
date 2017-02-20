@@ -20,7 +20,7 @@
 #
 #
 
-# $Id: gen_junit_report.py,v 1.1.1.1 2013-08-24 19:37:10 laffer1 Exp $
+# $Id: gen_junit_report.py 1141953 2011-07-01 14:42:56Z rhuijben $
 """
 gen_junit_report.py -- The script is to generate the junit report for
 Subversion tests.  The script uses the log file, tests.log created by
