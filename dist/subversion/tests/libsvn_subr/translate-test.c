@@ -58,11 +58,11 @@ const char *lines[] =
     "Line 6: fairly boring subst test data... blah blah.",
     "Line 7: fairly boring subst test data... blah blah.",
     "Line 8: Valid $LastChangedBy$, started unexpanded.",
-    "Line 9: Valid $Author: laffer1 $, started unexpanded.",
+    "Line 9: Valid $Author$, started unexpanded.",
     "Line 10: fairly boring subst test data... blah blah.",
     "Line 11: fairly boring subst test data... blah blah.",
     "Line 12: Valid $LastChangedDate$, started unexpanded.",
-    "Line 13: Valid $Date: 2013-08-24 19:37:07 $, started unexpanded.",
+    "Line 13: Valid $Date$, started unexpanded.",
     "Line 14: fairly boring subst test data... blah blah.",
     "Line 15: fairly boring subst test data... blah blah.",
     "Line 16: Valid $HeadURL$, started unexpanded.",
@@ -70,14 +70,14 @@ const char *lines[] =
     "Line 18: fairly boring subst test data... blah blah.",
     "Line 19: Invalid expanded keyword spanning two lines: $Author: ",
     /* The idea here is that, were it not broken across two lines,
-       "$Author: laffer1 $" would be a valid if odd, keyword. */
+       "$Author: Line 20: jrandom$" would be a valid if odd, keyword. */
     "Line 20: jrandom$ remainder of invalid keyword spanning two lines.",
     "Line 21: fairly boring subst test data... blah blah.",
     "Line 22: an unknown keyword $LastChangedSocks$.",
     "Line 23: fairly boring subst test data... blah blah.",
     /* In line 24, the third dollar sign terminates the first, and the
        fourth should therefore remain a literal dollar sign. */
-    "Line 24: keyword in a keyword: $Author: laffer1 $Date$ $",
+    "Line 24: keyword in a keyword: $Author: $Date$ $",
     "Line 25: fairly boring subst test data... blah blah.",
     "Line 26: Emptily expanded keyword $Rev: $.",
     "Line 27: fairly boring subst test data... blah blah.",
@@ -87,11 +87,11 @@ const char *lines[] =
     "Line 31: fairly boring subst test data... blah blah.",
     "Line 32: fairly boring subst test data... blah blah.",
     "Line 33: Valid $LastChangedDate: 2002-01-01 $, started expanded.",
-    "Line 34: Valid $Date: 2013-08-24 19:37:07 $, started expanded.",
+    "Line 34: Valid $Date: 2002-01-01 $, started expanded.",
     "Line 35: fairly boring subst test data... blah blah.",
     "Line 36: fairly boring subst test data... blah blah.",
     "Line 37: Valid $LastChangedBy: jrandom $, started expanded.",
-    "Line 38: Valid $Author: laffer1 $, started expanded.",
+    "Line 38: Valid $Author: jrandom $, started expanded.",
     "Line 39: fairly boring subst test data... blah blah.",
     "Line 40: fairly boring subst test data... blah blah.",
     "Line 41: Valid $HeadURL: http://tomato/mauve $, started expanded.",
@@ -99,13 +99,13 @@ const char *lines[] =
     "Line 43: fairly boring subst test data... blah blah.",
     "Line 44: fairly boring subst test data... blah blah.",
     "Line 45: Invalid $LastChangedRevisionWithSuffix$, started unexpanded.",
-    "Line 46: Empty $Author: laffer1 $, started expanded.",
+    "Line 46: Empty $Author:$, started expanded.",
     "Line 47: fairly boring subst test data... blah blah.",
-    "Line 48: Two keywords back to back: $Author: laffer1 $$Rev$.",
-    "Line 49: One keyword, one not, back to back: $Author: laffer1 $Rev$.",
+    "Line 48: Two keywords back to back: $Author$$Rev$.",
+    "Line 49: One keyword, one not, back to back: $Author$Rev$.",
     "Line 50: a series of dollar signs $$$$$$$$$$$$$$$$$$$$$$$$$$$$.",
-    "Line 51: same, but with embedded keyword $$$$$$$$Date: 2013-08-24 19:37:07 $$$$$$$$$$.",
-    "Line 52: same, with expanded, empty keyword $$$$$$Date: 2013-08-24 19:37:07 $$$$$$.",
+    "Line 51: same, but with embedded keyword $$$$$$$$Date$$$$$$$$$$.",
+    "Line 52: same, with expanded, empty keyword $$$$$$Date: $$$$$$.",
     "Line 53: $This is a lengthy line designed to test a bug that was "
     "reported about keyword expansion.  The problem was that a line "
     "had more than SVN_KEYWORD_MAX_LEN (255 at the time) characters "
@@ -128,12 +128,12 @@ const char *lines[] =
     "",
     "",
     "",
-    "$Author: laffer1 $Rev$.", /* Line 70-73 test places where '$' abuts a newline. */
-    ".$veR$Author: laffer1 $",
+    "$Author$Rev$.", /* Line 70-73 test places where '$' abuts a newline. */
+    ".$veR$Author$",
     "$",
     "$$",
     /* Line 74-75 test for keywords containing '$', issue #1780 */
-    "Line 74: Valid $Author: laffer1 $dom $, started expanded.",
+    "Line 74: Valid $Author: jran$dom $, started expanded.",
     "Line 75: Valid $URL: http://tomato/mau$ve $, started expanded.",
     /* Line 76-78 tests for a string with an unknown keyword of 252-254 bytes
        long */
@@ -155,30 +155,30 @@ const char *lines[] =
     "aaaaaaaaaaaaa$aaaaaaaaaaaaaaaaaaaaaa$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa $, started expanded.",
-    "Line 80: Valid $Author: laffer1 $aaaaaaaaaaaaaaa"
+    "Line 80: Valid $Author: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$aaaaaaaaaaaaaaa"
     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$aaaaaaaaaaaaaaaaaa"
     "aaaaaaa$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$aaaaaaa $, started "
     "expanded.",
     /* keyword from first dollar sign to last = 254 chars */
-    "Line 81: Valid $Author: laffer1 $aaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "Line 81: Valid $Author: aaaaaaaaaaaaaaaaaaaa$aaaaaaaaaaaaaaaaaaaaaaaaaaa"
     "aaaaaaaaaaaaa$aaaaaaaaaaaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaa"
     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$$aaaaaa$$$ $, started "
     "expanded.",
     /* keyword from first dollar sign to last = 255 chars */
-    "Line 82: Valid $Author: laffer1 $$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "Line 82: Valid $Author: aaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     "aaaaaaaaaaaaaaaaaaaaaaaaaa$$$$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaaaa"
     "aaaaaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$$$ $, started "
     "expanded.",
     /* keyword from first dollar sign to last = 256 chars */
-    "Line 83: Invalid $Author: laffer1 $$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "Line 83: Invalid $Author: aaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     "aaaaaaaaaaaaaaaaaaaaaaaaaa$$$$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaaaa"
     "aaaaaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$$$ $, started "
     "expanded.",
-    "Line 84: Invalid $Author: laffer1 $$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "Line 84: Invalid $Author: aaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     "aaaaaaaaaaaaaaaaaaaaaaaaaa$$$$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaaaa"
     "aaaaaaaaaaaaaa$$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$$$ $, started "
@@ -465,7 +465,7 @@ substitute_and_verify(const char *test_name,
                         (char *)NULL);
           expect[13 - 1] =
             apr_pstrcat(pool, "Line 13: ",
-                        "Valid $Date: 2013-08-24 19:37:07 $, started unexpanded.",
+                        "Valid $Date: ", date, " $, started unexpanded.",
                         (char *)NULL);
           expect[33 - 1] =
             apr_pstrcat(pool, "Line 33: ",
@@ -475,17 +475,17 @@ substitute_and_verify(const char *test_name,
                         (char *)NULL);
           expect[34 - 1] =
             apr_pstrcat(pool, "Line 34: ",
-                        "Valid $Date: 2013-08-24 19:37:07 $, started expanded.",
+                        "Valid $Date: ", date, " $, started expanded.",
                         (char *)NULL);
           expect[51 - 1] =
             apr_pstrcat(pool, "Line 51: ",
                         "same, but with embedded keyword ",
-                        "$$$$$$$$Date: 2013-08-24 19:37:07 $$$$$$$$$$.",
+                        "$$$$$$$$Date: ", date, " $$$$$$$$$$.",
                         (char *)NULL);
           expect[52 - 1] =
             apr_pstrcat(pool, "Line 52: ",
                         "same, with expanded, empty keyword ",
-                        "$$$$$$Date: 2013-08-24 19:37:07 $$$$$$.",
+                        "$$$$$$Date: ", date, " $$$$$$.",
                         (char *)NULL);
         }
       else  /* unexpand */
@@ -494,11 +494,11 @@ substitute_and_verify(const char *test_name,
           expect[33 - 1] =
             "Line 33: Valid $LastChangedDate$, started expanded.";
           expect[34 - 1] =
-            "Line 34: Valid $Date: 2013-08-24 19:37:07 $, started expanded.";
+            "Line 34: Valid $Date$, started expanded.";
           expect[51 - 1] =
-            "Line 51: same, but with embedded keyword $$$$$$$$Date: 2013-08-24 19:37:07 $$$$$$$$$$.";
+            "Line 51: same, but with embedded keyword $$$$$$$$Date$$$$$$$$$$.";
           expect[52 - 1] =
-            "Line 52: same, with expanded, empty keyword $$$$$$Date: 2013-08-24 19:37:07 $$$$$$.";
+            "Line 52: same, with expanded, empty keyword $$$$$$Date$$$$$$.";
         }
     }
 
@@ -514,7 +514,7 @@ substitute_and_verify(const char *test_name,
                         (char *)NULL);
           expect[9 - 1] =
             apr_pstrcat(pool, "Line 9: ",
-                        "Valid $Author: laffer1 $, started unexpanded.",
+                        "Valid $Author: ", author, " $, started unexpanded.",
                         (char *)NULL);
           expect[37 - 1] =
             apr_pstrcat(pool, "Line 37: ",
@@ -522,34 +522,34 @@ substitute_and_verify(const char *test_name,
                         " $, started expanded.", (char *)NULL);
           expect[38 - 1] =
             apr_pstrcat(pool, "Line 38: ",
-                        "Valid $Author: laffer1 $, started expanded.",
+                        "Valid $Author: ", author, " $, started expanded.",
                         (char *)NULL);
           expect[46 - 1] =
             apr_pstrcat(pool, "Line 46: ",
-                        "Empty $Author: laffer1 $, started expanded.",
+                        "Empty $Author: ", author, " $, started expanded.",
                         (char *)NULL);
           expect[71 - 1] =
-            apr_pstrcat(pool, ".$veR$Author: laffer1 $", (char *)NULL);
+            apr_pstrcat(pool, ".$veR$Author: ", author, " $", (char *)NULL);
 
           expect[74 - 1] =
             apr_pstrcat(pool, "Line 74: ",
-                        "Valid $Author: laffer1 $, started expanded.",
+                        "Valid $Author: ", author, " $, started expanded.",
                         (char *)NULL);
           expect[79 - 1] =
             apr_pstrcat(pool, "Line 79: ",
-                        "Valid $Author: laffer1 $, started expanded.",
+                        "Valid $Author: ", author, " $, started expanded.",
                         (char *)NULL);
           expect[80 - 1] =
             apr_pstrcat(pool, "Line 80: ",
-                        "Valid $Author: laffer1 $, started expanded.",
+                        "Valid $Author: ", author, " $, started expanded.",
                         (char *)NULL);
           expect[81 - 1] =
             apr_pstrcat(pool, "Line 81: ",
-                        "Valid $Author: laffer1 $, started expanded.",
+                        "Valid $Author: ", author, " $, started expanded.",
                         (char *)NULL);
           expect[82 - 1] =
             apr_pstrcat(pool, "Line 82: ",
-                        "Valid $Author: laffer1 $, started expanded.",
+                        "Valid $Author: ", author, " $, started expanded.",
                         (char *)NULL);
         }
       else  /* unexpand */
@@ -558,19 +558,19 @@ substitute_and_verify(const char *test_name,
           expect[37 - 1] =
             "Line 37: Valid $LastChangedBy$, started expanded.";
           expect[38 - 1] =
-            "Line 38: Valid $Author: laffer1 $, started expanded.";
+            "Line 38: Valid $Author$, started expanded.";
           expect[46 - 1] =
-            "Line 46: Empty $Author: laffer1 $, started expanded.";
+            "Line 46: Empty $Author$, started expanded.";
           expect[74 - 1] =
-            "Line 74: Valid $Author: laffer1 $, started expanded.";
+            "Line 74: Valid $Author$, started expanded.";
           expect[79 - 1] =
-            "Line 79: Valid $Author: laffer1 $, started expanded.";
+            "Line 79: Valid $Author$, started expanded.";
           expect[80 - 1] =
-            "Line 80: Valid $Author: laffer1 $, started expanded.";
+            "Line 80: Valid $Author$, started expanded.";
           expect[81 - 1] =
-            "Line 81: Valid $Author: laffer1 $, started expanded.";
+            "Line 81: Valid $Author$, started expanded.";
           expect[82 - 1] =
-            "Line 82: Valid $Author: laffer1 $, started expanded.";
+            "Line 82: Valid $Author$, started expanded.";
         }
     }
 
@@ -620,16 +620,16 @@ substitute_and_verify(const char *test_name,
           expect[48 - 1] =
             apr_pstrcat(pool, "Line 48: ",
                         "Two keywords back to back: "
-                        "$Author: laffer1 $"
+                        "$Author: ", author, " $"
                         "$Rev: ", rev, " $.",
                         (char *)NULL);
           expect[49 - 1] =
             apr_pstrcat(pool, "Line 49: ",
                         "One keyword, one not, back to back: "
-                        "$Author: laffer1 $Rev$.",
+                        "$Author: ", author, " $Rev$.",
                         (char *)NULL);
           expect[70 - 1] =
-            apr_pstrcat(pool, "$Author: laffer1 $Rev$.", (char *)NULL);
+            apr_pstrcat(pool, "$Author: ", author, " $Rev$.", (char *)NULL);
         }
       /* Else Lines 48, 49, and 70 remain unchanged. */
     }
@@ -640,15 +640,15 @@ substitute_and_verify(const char *test_name,
           expect[48 - 1] =
             apr_pstrcat(pool, "Line 48: ",
                         "Two keywords back to back: "
-                        "$Author: laffer1 $$Rev: ", rev, " $.",
+                        "$Author$$Rev: ", rev, " $.",
                         (char *)NULL);
           expect[49 - 1] =
             apr_pstrcat(pool, "Line 49: ",
                         "One keyword, one not, back to back: "
-                        "$Author: laffer1 $Rev: ", rev, " $.",
+                        "$Author$Rev: ", rev, " $.",
                         (char *)NULL);
           expect[70 - 1] =
-            apr_pstrcat(pool, "$Author: laffer1 $Rev: ", rev, " $.", (char *)NULL);
+            apr_pstrcat(pool, "$Author$Rev: ", rev, " $.", (char *)NULL);
         }
       /* Else Lines 48, 49, and 70 remain unchanged. */
     }
@@ -659,15 +659,15 @@ substitute_and_verify(const char *test_name,
           expect[48 - 1] =
             apr_pstrcat(pool, "Line 48: ",
                         "Two keywords back to back: "
-                        "$Author: laffer1 $$Rev$.",
+                        "$Author: ", author, " $$Rev$.",
                         (char *)NULL);
           expect[49 - 1] =
             apr_pstrcat(pool, "Line 49: ",
                         "One keyword, one not, back to back: "
-                        "$Author: laffer1 $Rev$.",
+                        "$Author: ", author, " $Rev$.",
                         (char *)NULL);
           expect[70 - 1] =
-            apr_pstrcat(pool, "$Author: laffer1 $Rev$.", (char *)NULL);
+            apr_pstrcat(pool, "$Author: ", author, " $Rev$.", (char *)NULL);
         }
       /* Else Lines 48, 49, and 70 remain unchanged. */
     }
@@ -683,14 +683,14 @@ substitute_and_verify(const char *test_name,
             apr_pstrcat(pool, "Line 24: ",
                         "keyword in a keyword: $Author: ",
                         author,
-                        " $Date: 2013-08-24 19:37:07 $ $",
+                        " $Date$ $",
                         (char *)NULL);
         }
       else  /* unexpand */
         {
           expect[24 - 1] =
             apr_pstrcat(pool, "Line 24: ",
-                        "keyword in a keyword: $Author: laffer1 $Date$ $",
+                        "keyword in a keyword: $Author$Date$ $",
                         (char *)NULL);
         }
     }
@@ -700,7 +700,7 @@ substitute_and_verify(const char *test_name,
         {
           expect[24 - 1] =
             apr_pstrcat(pool, "Line 24: ",
-                        "keyword in a keyword: $Author: laffer1 $Date: ",
+                        "keyword in a keyword: $Author: $Date: ",
                         date,
                         " $ $",
                         (char *)NULL);
@@ -715,14 +715,14 @@ substitute_and_verify(const char *test_name,
             apr_pstrcat(pool, "Line 24: ",
                         "keyword in a keyword: $Author: ",
                         author,
-                        " $Date: 2013-08-24 19:37:07 $ $",
+                        " $Date$ $",
                         (char *)NULL);
         }
       else  /* unexpand */
         {
           expect[24 - 1] =
             apr_pstrcat(pool, "Line 24: ",
-                        "keyword in a keyword: $Author: laffer1 $Date$ $",
+                        "keyword in a keyword: $Author$Date$ $",
                         (char *)NULL);
         }
     }

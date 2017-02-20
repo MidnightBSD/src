@@ -25,7 +25,7 @@
 ######################################################################
 
 # General modules
-import stat, os, re, shutil, logging
+import stat, os, re, shutil, logging, sys
 
 logger = logging.getLogger()
 
@@ -5787,6 +5787,96 @@ def copy_over_excluded(sbox):
                                        sbox.ospath('A/C'),
                                        sbox.ospath('A/D'))
 
+def copy_relocate(sbox):
+  "copy from a relocated location"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  tmp_dir = sbox.add_wc_path('relocated')
+
+  shutil.copytree(sbox.repo_dir, tmp_dir)
+
+  url = 'file://'
+
+  if sys.platform == 'win32':
+    url += '/'
+
+  url += os.path.abspath(tmp_dir).replace(os.path.sep, '/')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'relocate', url, wc_dir)
+
+  copiedpath = sbox.ospath('AA')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', url + '/A', copiedpath)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'info', copiedpath)
+
+def ext_wc_copy_deleted(sbox):
+  "copy deleted tree from separate wc"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  wc2_dir = sbox.add_wc_path('2')
+
+  sbox.simple_rm('A/B')
+  sbox.simple_commit()
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '--set-depth', 'exclude',
+                                     sbox.ospath('A/D'))
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'co', sbox.repo_url, wc2_dir, '-r', 1)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', sbox.path('A'), os.path.join(wc2_dir,'AA'))
+
+  expected_output = expected_output = svntest.wc.State(wc2_dir, {
+    'AA'    : Item(verb='Adding'),
+    'AA/B'  : Item(verb='Deleting'),
+  })
+
+  svntest.actions.run_and_verify_commit(wc2_dir,
+                                        expected_output, None, None,
+                                        wc2_dir)
+
+def copy_subtree_deleted(sbox):
+  "copy to-be-deleted subtree"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc2_dir = sbox.add_wc_path('2')
+  svntest.actions.duplicate_dir(wc_dir, wc2_dir)
+
+  sbox.simple_rm('A/B')
+
+  # Commit copy within a working copy
+  sbox.simple_copy('A', 'AA')
+  expected_output = expected_output = svntest.wc.State(wc_dir, {
+    'AA'    : Item(verb='Adding'),
+    'AA/B'  : Item(verb='Deleting'),
+  })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, None, None,
+                                        sbox.ospath('AA'))
+
+  # Commit copy between working copies
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', sbox.path('A'),
+                                     os.path.join(wc2_dir,'AA2'))
+  expected_output = expected_output = svntest.wc.State(wc2_dir, {
+    'AA2'    : Item(verb='Adding'),
+    'AA2/B'  : Item(verb='Deleting'),
+  })
+  svntest.actions.run_and_verify_commit(wc2_dir,
+                                        expected_output, None, None,
+                                        wc2_dir)
+
+
 ########################################################################
 # Run the tests
 
@@ -5904,6 +5994,9 @@ test_list = [ None,
               copy_to_unversioned_parent,
               copy_text_conflict,
               copy_over_excluded,
+              copy_relocate,
+              ext_wc_copy_deleted,
+              copy_subtree_deleted,
              ]
 
 if __name__ == '__main__':

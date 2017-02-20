@@ -1818,6 +1818,8 @@ dist/subversion/bindings/ctypes-python/README -text
 dist/subversion/bindings/ctypes-python/TODO -text
 dist/subversion/bindings/ctypes-python/csvn/__init__.py -text
 dist/subversion/bindings/ctypes-python/csvn/auth.py -text
+dist/subversion/bindings/ctypes-python/csvn/core/__init__.py -text
+dist/subversion/bindings/ctypes-python/csvn/core/functions.py.in -text
 dist/subversion/bindings/ctypes-python/csvn/ext/__init__.py -text
 dist/subversion/bindings/ctypes-python/csvn/ext/callback_receiver.py -text
 dist/subversion/bindings/ctypes-python/csvn/ext/listmixin.py -text
@@ -2283,6 +2285,7 @@ dist/subversion/include/private/svn_adler32.h -text
 dist/subversion/include/private/svn_atomic.h -text
 dist/subversion/include/private/svn_auth_private.h -text
 dist/subversion/include/private/svn_cache.h -text
+dist/subversion/include/private/svn_cert.h -text
 dist/subversion/include/private/svn_client_private.h -text
 dist/subversion/include/private/svn_cmdline_private.h -text
 dist/subversion/include/private/svn_dav_protocol.h -text
@@ -2774,6 +2777,7 @@ dist/subversion/po/ko.po -text
 dist/subversion/po/nb.po -text
 dist/subversion/po/pl.po -text
 dist/subversion/po/pt_BR.po -text
+dist/subversion/po/subversion.pot -text
 dist/subversion/po/sv.po -text
 dist/subversion/po/zh_CN.po -text
 dist/subversion/po/zh_TW.po -text
@@ -3077,6 +3081,7 @@ dist/subversion/tests/cmdline/upgrade_tests_data/tree-replace1.tar.bz2 -text svn
 dist/subversion/tests/cmdline/upgrade_tests_data/tree-replace2.tar.bz2 -text svneol=unset#unset
 dist/subversion/tests/cmdline/upgrade_tests_data/upgrade_1_0.tar.bz2 -text svneol=unset#unset
 dist/subversion/tests/cmdline/upgrade_tests_data/upgrade_1_5.tar.bz2 -text svneol=unset#unset
+dist/subversion/tests/cmdline/upgrade_tests_data/upgrade_1_7_dir_external.tar.bz2 -text svneol=unset#application/x-bzip2
 dist/subversion/tests/cmdline/upgrade_tests_data/upgrade_absent.tar.bz2 -text svneol=unset#unset
 dist/subversion/tests/cmdline/upgrade_tests_data/upgrade_absent_repos.tar.bz2 -text svneol=unset#unset
 dist/subversion/tests/cmdline/upgrade_tests_data/upgrade_file_externals.tar.bz2 -text svneol=unset#unset
@@ -3142,6 +3147,7 @@ dist/subversion/tests/libsvn_subr/subst_translate-test.c -text
 dist/subversion/tests/libsvn_subr/time-test.c -text
 dist/subversion/tests/libsvn_subr/translate-test.c -text
 dist/subversion/tests/libsvn_subr/utf-test.c -text
+dist/subversion/tests/libsvn_subr/zlib.deflated -text
 dist/subversion/tests/libsvn_wc/conflict-data-test.c -text
 dist/subversion/tests/libsvn_wc/create_wc_for_upgrade.sh -text
 dist/subversion/tests/libsvn_wc/db-test.c -text
@@ -3388,9 +3394,11 @@ dist/tools/server-side/svnpubsub/README.txt -text
 dist/tools/server-side/svnpubsub/commit-hook.py -text
 dist/tools/server-side/svnpubsub/daemonize.py -text
 dist/tools/server-side/svnpubsub/irkerbridge.py -text
+dist/tools/server-side/svnpubsub/rc.d/svnpubsub -text
 dist/tools/server-side/svnpubsub/rc.d/svnpubsub.debian -text
 dist/tools/server-side/svnpubsub/rc.d/svnpubsub.freebsd -text
 dist/tools/server-side/svnpubsub/rc.d/svnpubsub.solaris -text
+dist/tools/server-side/svnpubsub/rc.d/svnwcsub -text
 dist/tools/server-side/svnpubsub/rc.d/svnwcsub.debian -text
 dist/tools/server-side/svnpubsub/rc.d/svnwcsub.freebsd -text
 dist/tools/server-side/svnpubsub/rc.d/svnwcsub.solaris -text

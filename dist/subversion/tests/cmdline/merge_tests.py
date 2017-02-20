@@ -2047,7 +2047,7 @@ def merge_binary_with_common_ancestry(sbox):
   # Commit the second branch
   expected_output = wc.State(wc_dir, {
     'L'       : Item(verb='Adding'),
-    'L/theta' : Item(verb='Adding  (bin)'),
+    'L/theta' : Item(verb='Replacing'),
     })
 
   expected_status.add({
@@ -2246,7 +2246,7 @@ def merge_keyword_expansions(sbox):
                                      "ci", "-m", "r3", wcpath)
 
   # Add a file to t.
-  svntest.main.file_append(t_fpath, "$Revision: 1.1.1.1 $")
+  svntest.main.file_append(t_fpath, "$Revision$")
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'add', t_fpath)
   # Ask for keyword expansion in the file.
@@ -2280,7 +2280,7 @@ def merge_keyword_expansions(sbox):
   expected_elision_output = wc.State(bpath, {
     })
   expected_disk = wc.State('', {
-    'f'      : Item("$Revision: 1.1.1.1 $"),
+    'f'      : Item("$Revision: 4 $"),
     })
   expected_status = wc.State(bpath, {
     ''       : Item(status=' M', wc_rev=4),
@@ -12526,7 +12526,7 @@ def svn_mkfile(path):
   path = local_path(path)
   dirname, filename = os.path.split(path)
   svntest.main.file_write(path, "This is the file '" + filename + "'.\n" +
-                                "Last changed in '$Revision: 1.1.1.1 $'.\n")
+                                "Last changed in '$Revision$'.\n")
   svntest.actions.run_and_verify_svn(None, None, [], 'add', path)
   svntest.actions.run_and_verify_svn(None, None, [], 'propset',
                                      'svn:keywords', 'Revision', path)
@@ -17990,7 +17990,7 @@ def merge_binary_file_with_keywords(sbox):
 
   # make some 'binary' files with keyword expansion enabled
   for f in files:
-    svntest.main.file_append(sbox.ospath(f), "With $Revision: 1.1.1.1 $ keyword.\n")
+    svntest.main.file_append(sbox.ospath(f), "With $Revision: $ keyword.\n")
     svntest.main.run_svn(binary_mime_type_on_text_file_warning,
                          'propset', 'svn:mime-type',
                          'application/octet-stream', sbox.ospath(f))
@@ -18047,7 +18047,7 @@ def merge_conflict_when_keywords_removed(sbox):
   sbox.wc_dir = ''
 
   # make a file with keyword expansion enabled
-  svntest.main.file_write('A/keyfile', "$Date: 2013-08-24 19:37:06 $ $Revision: 1.1.1.1 $\n")
+  svntest.main.file_write('A/keyfile', "$Date$ $Revision$\n")
   sbox.simple_add('A/keyfile')
   sbox.simple_propset('svn:keywords', 'Date Revision', 'A/keyfile')
   sbox.simple_commit()
@@ -18073,7 +18073,7 @@ def merge_conflict_when_keywords_removed(sbox):
 
   # modify the original version: disable those KW & enable 'Id'
   sbox.simple_propset('svn:keywords', 'Id', 'A/keyfile')
-  svntest.main.file_append('A/keyfile', "$Id: merge_tests.py,v 1.1.1.1 2013-08-24 19:37:06 laffer1 Exp $\n")
+  svntest.main.file_append('A/keyfile', "$Id$\n")
   sbox.simple_commit()
 
   # sync merge again
@@ -19143,6 +19143,159 @@ def merge_to_empty_target_merge_to_infinite_target(sbox):
   # Commit the merge.
   #sbox.simple_commit()
 
+def merge_dir_delete_force(sbox):
+  "merge a directory delete with --force"
+
+  sbox.build()
+
+  sbox.simple_rm('A/D/G')
+  sbox.simple_commit() # r2
+
+  sbox.simple_update(revision=1)
+
+  # Just merging r2 on r1 succeeds
+  svntest.actions.run_and_verify_svn(sbox.wc_dir, None, [],
+                                     'merge', '-c2', '^/', sbox.wc_dir,
+                                     '--ignore-ancestry')
+
+  # Bring working copy to r1 again
+  svntest.actions.run_and_verify_svn(sbox.wc_dir, None, [],
+                                     'revert', '-R', sbox.wc_dir)
+
+  # But when using --force this same merge caused a segfault in 1.8.0-1.8.8
+  svntest.actions.run_and_verify_svn(sbox.wc_dir, None, [],
+                                     'merge', '-c2', '^/', sbox.wc_dir,
+                                     '--ignore-ancestry', '--force')
+
+def conflict_naming(sbox):
+  "verify conflict file naming"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  sbox.simple_append('file.txt', 'This is the initial content\n')
+  sbox.simple_add('file.txt')
+  sbox.simple_commit()
+
+  sbox.simple_append('file.txt', 'This is the new content\n', truncate=True)
+  sbox.simple_commit()
+
+  sbox.simple_append('file.txt', 'This is conflicting content\n', truncate=True)
+
+  # Update - no preserve ext
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_output = svntest.wc.State(wc_dir, {
+    'file.txt' : Item(status='C ')
+  })
+  expected_status.add({
+    'file.txt' : Item(status='C ', wc_rev='2')
+  })
+
+  expected_disk.add({
+    'file.txt.r3'       : Item(contents="This is the new content\n"),
+    'file.txt.r2'       : Item(contents="This is the initial content\n"),
+    'file.txt'          : Item(contents="<<<<<<< .mine\n" \
+                               "This is conflicting content\n" \
+                               "=======\n" \
+                               "This is the initial content\n" \
+                               ">>>>>>> .r2\n"),
+    'file.txt.mine'     : Item(contents="This is conflicting content\n"),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, None,
+                                        wc_dir, '-r', '2')
+
+  sbox.simple_revert('file.txt')
+  sbox.simple_update('', revision=3)
+  sbox.simple_append('file.txt', 'This is conflicting content\n', truncate=True)
+
+  # Update - preserve ext
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_output = svntest.wc.State(wc_dir, {
+    'file.txt' : Item(status='C ')
+  })
+  expected_status.add({
+    'file.txt' : Item(status='C ', wc_rev='2')
+  })
+
+  expected_disk.add({
+    'file.txt.r3.txt'   : Item(contents="This is the new content\n"),
+    'file.txt.r2.txt'   : Item(contents="This is the initial content\n"),
+    'file.txt'          : Item(contents="<<<<<<< .mine.txt\n" \
+                               "This is conflicting content\n" \
+                               "=======\n" \
+                               "This is the initial content\n" \
+                               ">>>>>>> .r2.txt\n"),
+    'file.txt.mine.txt' : Item(contents="This is conflicting content\n"),
+  })
+  svntest.actions.run_and_verify_update(
+                      wc_dir,
+                      expected_output, expected_disk, expected_status,
+                      None, None, None, None, None, None,
+                      wc_dir, '-r', '2',
+                      '--config-option',
+                      'config:miscellany:preserved-conflict-file-exts=' +
+                      'c txt h')
+
+  sbox.simple_revert('file.txt')
+  sbox.simple_update('', revision=3)
+  sbox.simple_append('file.txt', 'This is conflicting content\n', truncate=True)
+
+  # Merge - no preserve ext
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status.add({
+    'file.txt' : Item(status='C ', wc_rev='3')
+  })
+  expected_disk.add({
+    'file.txt.merge-left.r3' : Item(contents="This is the new content\n"),
+    'file.txt.merge-right.r2': Item(contents="This is the initial content\n"),
+    'file.txt'               : Item(contents="<<<<<<< .working\n" \
+                                    "This is conflicting content\n" \
+                                    "=======\n" \
+                                    "This is the initial content\n" \
+                                    ">>>>>>> .merge-right.r2\n"),
+    'file.txt.working'       : Item(contents="This is conflicting content\n"),
+  })
+
+  svntest.actions.run_and_verify_svn(wc_dir, None, [],
+                                     'merge', '-c-3', '^/', sbox.ospath(''))
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.actions.verify_disk(wc_dir, expected_disk)
+
+  sbox.simple_revert('file.txt')
+  sbox.simple_append('file.txt', 'This is conflicting content\n', truncate=True)
+
+  # Merge - preserve ext
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status.add({
+    'file.txt' : Item(status='C ', wc_rev='3')
+  })
+  expected_disk.add({
+    'file.txt.merge-left.r3.txt' : Item(contents="This is the new content\n"),
+    'file.txt.merge-right.r2.txt': Item(contents="This is the initial content\n"),
+    'file.txt'                   : Item(contents="<<<<<<< .working.txt\n" \
+                                        "This is conflicting content\n" \
+                                        "=======\n" \
+                                        "This is the initial content\n" \
+                                        ">>>>>>> .merge-right.r2.txt\n"),
+    'file.txt.working.txt'       : Item(contents="This is conflicting content\n"),
+  })
+
+  svntest.actions.run_and_verify_svn(
+                           wc_dir, None, [],
+                           'merge', '-c-3', '^/', sbox.ospath(''),
+                           '--config-option',
+                           'config:miscellany:preserved-conflict-file-exts=' +
+                           'c txt h')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.actions.verify_disk(wc_dir, expected_disk)
+
 ########################################################################
 # Run the tests
 
@@ -19288,6 +19441,8 @@ test_list = [ None,
               single_editor_drive_merge_notifications,
               conflicted_split_merge_with_resolve,
               merge_to_empty_target_merge_to_infinite_target,
+              merge_dir_delete_force,
+              conflict_naming,
              ]
 
 if __name__ == '__main__':
