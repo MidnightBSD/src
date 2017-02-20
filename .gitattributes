@@ -535,6 +535,7 @@ dist/build/make_nw_export.awk -text
 dist/build/make_var_export.awk -text
 dist/build/mkdir.sh -text
 dist/build/nw_export.inc -text
+dist/build/nw_make_header.awk -text
 dist/build/nw_ver.awk -text
 dist/build/pkg/README -text
 dist/build/pkg/buildpkg.sh -text
@@ -563,6 +564,7 @@ dist/dso/os390/dso.c -text
 dist/dso/unix/dso.c -text
 dist/dso/win32/dso.c -text
 dist/emacs-mode -text
+dist/encoding/apr_escape.c -text
 dist/file_io/netware/filepath.c -text
 dist/file_io/netware/filestat.c -text
 dist/file_io/netware/filesys.c -text
@@ -619,11 +621,13 @@ dist/helpers/apr_rename.pl -text
 dist/include/apr.h.in -text
 dist/include/apr.hnw -text
 dist/include/apr.hw -text
+dist/include/apr.hwc -text
 dist/include/apr_allocator.h -text
 dist/include/apr_atomic.h -text
 dist/include/apr_dso.h -text
 dist/include/apr_env.h -text
 dist/include/apr_errno.h -text
+dist/include/apr_escape.h -text
 dist/include/apr_file_info.h -text
 dist/include/apr_file_io.h -text
 dist/include/apr_fnmatch.h -text
@@ -643,6 +647,7 @@ dist/include/apr_random.h -text
 dist/include/apr_ring.h -text
 dist/include/apr_shm.h -text
 dist/include/apr_signal.h -text
+dist/include/apr_skiplist.h -text
 dist/include/apr_strings.h -text
 dist/include/apr_support.h -text
 dist/include/apr_tables.h -text
@@ -799,6 +804,7 @@ dist/poll/unix/pollcb.c -text
 dist/poll/unix/pollset.c -text
 dist/poll/unix/port.c -text
 dist/poll/unix/select.c -text
+dist/poll/unix/z_asio.c -text
 dist/random/unix/apr_random.c -text
 dist/random/unix/sha2.c -text
 dist/random/unix/sha2.h -text
@@ -815,6 +821,7 @@ dist/strings/apr_strnatcmp.c -text
 dist/strings/apr_strtok.c -text
 dist/support/unix/waitio.c -text
 dist/tables/apr_hash.c -text
+dist/tables/apr_skiplist.c -text
 dist/tables/apr_tables.c -text
 dist/test/Makefile.in -text
 dist/test/Makefile.win -text
@@ -859,6 +866,7 @@ dist/test/testdll.dsp -text
 dist/test/testdso.c -text
 dist/test/testdup.c -text
 dist/test/testenv.c -text
+dist/test/testescape.c -text
 dist/test/testfile.c -text
 dist/test/testfilecopy.c -text
 dist/test/testfileinfo.c -text
@@ -889,6 +897,7 @@ dist/test/testshm.c -text
 dist/test/testshm.h -text
 dist/test/testshmconsumer.c -text
 dist/test/testshmproducer.c -text
+dist/test/testskiplist.c -text
 dist/test/testsleep.c -text
 dist/test/testsock.c -text
 dist/test/testsock.h -text
