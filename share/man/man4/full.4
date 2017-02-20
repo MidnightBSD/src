@@ -1,5 +1,5 @@
-.\" Copyright (c) 1996
-.\"	Mike Pritchard <mpp@FreeBSD.org>.  All rights reserved.
+.\" Copyright (c) 2014
+.\"	Eitan Adler <eadler@FreeBSD.org>.  All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -9,13 +9,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by Mike Pritchard and
-.\"	contributors.
-.\" 4. Neither the name of the author nor the names of its contributors
-.\"    may be used to endorse or promote products derived from this software
-.\"    without specific prior written permission.
 .\"
 .\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
 .\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -29,30 +22,26 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD$
 .\"
-.Dd April 7, 1996
-.Dt ZERO 4
+.Dd March 29, 2014
+.Dt FULL 4
 .Os
 .Sh NAME
-.Nm zero
-.Nd the zero device
+.Nm full
+.Nd the full device
 .Sh DESCRIPTION
 The
 .Nm
-device accepts and reads data as any ordinary (and willing)
-file,
-but throws away any data written to it, and returns an endless
-supply of null bytes when read.
+device supplies an endless stream of zeros when read.
+However, it will always be full when writing to it.
 .Sh FILES
-.Bl -tag -width /dev/zero
-.It Pa /dev/zero
+.Bl -tag -width /dev/full
+.It Pa /dev/full
 .El
 .Sh SEE ALSO
-.Xr full 4
 .Xr null 4
-.Sh HISTORY
-A
-.Nm
-device appeared in
-.Bx 4.4 .
+.Xr zero 4
+.Sh Author
+This device and man page was written by
+.An Eitan Adler Aq eadler@FreeBSD.org .

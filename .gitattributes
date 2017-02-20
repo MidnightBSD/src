@@ -57242,6 +57242,7 @@ share/man/man4/filemon.4 -text
 share/man/man4/firewire.4 -text
 share/man/man4/fla.4 -text
 share/man/man4/fpa.4 -text
+share/man/man4/full.4 svneol=native#text/plain
 share/man/man4/fwe.4 -text
 share/man/man4/fwip.4 -text
 share/man/man4/fwohci.4 -text
