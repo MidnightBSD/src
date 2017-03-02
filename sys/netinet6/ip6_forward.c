@@ -136,7 +136,7 @@ ip6_forward(struct mbuf *m, int srcrt)
 	if ((m->m_flags & (M_BCAST|M_MCAST)) != 0 ||
 	    IN6_IS_ADDR_MULTICAST(&ip6->ip6_dst) ||
 	    IN6_IS_ADDR_UNSPECIFIED(&ip6->ip6_src)) {
-		V_ip6stat.ip6s_cantforward++;
+		IP6STAT_INC(ip6s_cantforward);
 		/* XXX in6_ifstat_inc(rt->rt_ifp, ifs6_in_discard) */
 		if (V_ip6_log_time + V_ip6_log_interval < time_second) {
 			V_ip6_log_time = time_second;
@@ -184,7 +184,7 @@ ip6_forward(struct mbuf *m, int srcrt)
 	    IP_FORWARDING, &error);
 	if (sp == NULL) {
 		V_ipsec6stat.out_inval++;
-		V_ip6stat.ip6s_cantforward++;
+		IP6STAT_INC(ip6s_cantforward);
 		if (mcopy) {
 #if 0
 			/* XXX: what icmp ? */
@@ -205,7 +205,7 @@ ip6_forward(struct mbuf *m, int srcrt)
 		 * This packet is just discarded.
 		 */
 		V_ipsec6stat.out_polvio++;
-		V_ip6stat.ip6s_cantforward++;
+		IP6STAT_INC(ip6s_cantforward);
 		KEY_FREESP(&sp);
 		if (mcopy) {
 #if 0
@@ -227,7 +227,7 @@ ip6_forward(struct mbuf *m, int srcrt)
 		if (sp->req == NULL) {
 			/* XXX should be panic ? */
 			printf("ip6_forward: No IPsec request specified.\n");
-			V_ip6stat.ip6s_cantforward++;
+			IP6STAT_INC(ip6s_cantforward);
 			KEY_FREESP(&sp);
 			if (mcopy) {
 #if 0
@@ -311,7 +311,7 @@ ip6_forward(struct mbuf *m, int srcrt)
 			/* don't show these error codes to the user */
 			break;
 		}
-		V_ip6stat.ip6s_cantforward++;
+		IP6STAT_INC(ip6s_cantforward);
 		if (mcopy) {
 #if 0
 			/* XXX: what icmp ? */
@@ -363,7 +363,7 @@ again2:
 	if (rin6.ro_rt != NULL)
 		RT_UNLOCK(rin6.ro_rt);
 	else {
-		V_ip6stat.ip6s_noroute++;
+		IP6STAT_INC(ip6s_noroute);
 		in6_ifstat_inc(m->m_pkthdr.rcvif, ifs6_in_noroute);
 		if (mcopy) {
 			icmp6_error(mcopy, ICMP6_DST_UNREACH,
@@ -388,13 +388,13 @@ skip_routing:
 	src_in6 = ip6->ip6_src;
 	if (in6_setscope(&src_in6, rt->rt_ifp, &outzone)) {
 		/* XXX: this should not happen */
-		V_ip6stat.ip6s_cantforward++;
-		V_ip6stat.ip6s_badscope++;
+		IP6STAT_INC(ip6s_cantforward);
+		IP6STAT_INC(ip6s_badscope);
 		goto bad;
 	}
 	if (in6_setscope(&src_in6, m->m_pkthdr.rcvif, &inzone)) {
-		V_ip6stat.ip6s_cantforward++;
-		V_ip6stat.ip6s_badscope++;
+		IP6STAT_INC(ip6s_cantforward);
+		IP6STAT_INC(ip6s_badscope);
 		goto bad;
 	}
 	if (inzone != outzone
@@ -402,8 +402,8 @@ skip_routing:
 	    && !ipsecrt
 #endif
 	    ) {
-		V_ip6stat.ip6s_cantforward++;
-		V_ip6stat.ip6s_badscope++;
+		IP6STAT_INC(ip6s_cantforward);
+		IP6STAT_INC(ip6s_badscope);
 		in6_ifstat_inc(rt->rt_ifp, ifs6_in_discard);
 
 		if (V_ip6_log_time + V_ip6_log_interval < time_second) {
@@ -433,8 +433,8 @@ skip_routing:
 	if (in6_setscope(&dst_in6, m->m_pkthdr.rcvif, &inzone) != 0 ||
 	    in6_setscope(&dst_in6, rt->rt_ifp, &outzone) != 0 ||
 	    inzone != outzone) {
-		V_ip6stat.ip6s_cantforward++;
-		V_ip6stat.ip6s_badscope++;
+		IP6STAT_INC(ip6s_cantforward);
+		IP6STAT_INC(ip6s_badscope);
 		goto bad;
 	}
 
@@ -624,12 +624,12 @@ pass:
 	error = nd6_output(rt->rt_ifp, origifp, m, dst, rt);
 	if (error) {
 		in6_ifstat_inc(rt->rt_ifp, ifs6_out_discard);
-		V_ip6stat.ip6s_cantforward++;
+		IP6STAT_INC(ip6s_cantforward);
 	} else {
-		V_ip6stat.ip6s_forward++;
+		IP6STAT_INC(ip6s_forward);
 		in6_ifstat_inc(rt->rt_ifp, ifs6_out_forward);
 		if (type)
-			V_ip6stat.ip6s_redirectsent++;
+			IP6STAT_INC(ip6s_redirectsent);
 		else {
 			if (mcopy)
 				goto freecopy;

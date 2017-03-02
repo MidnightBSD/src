@@ -499,16 +499,16 @@ skip_ipsec2:;
 	if (IN6_IS_ADDR_UNSPECIFIED(&ip6->ip6_src) &&
 	    (flags & IPV6_UNSPECSRC) == 0) {
 		error = EOPNOTSUPP;
-		V_ip6stat.ip6s_badscope++;
+		IP6STAT_INC(ip6s_badscope);
 		goto bad;
 	}
 	if (IN6_IS_ADDR_MULTICAST(&ip6->ip6_src)) {
 		error = EOPNOTSUPP;
-		V_ip6stat.ip6s_badscope++;
+		IP6STAT_INC(ip6s_badscope);
 		goto bad;
 	}
 
-	V_ip6stat.ip6s_localout++;
+	IP6STAT_INC(ip6s_localout);
 
 	/*
 	 * Route packet.
@@ -714,7 +714,7 @@ again:
 	goto routefound;
 
   badscope:
-	V_ip6stat.ip6s_badscope++;
+	IP6STAT_INC(ip6s_badscope);
 	in6_ifstat_inc(origifp, ifs6_out_discard);
 	if (error == 0)
 		error = EHOSTUNREACH; /* XXX */
@@ -743,7 +743,7 @@ again:
 		 * Confirm that the outgoing interface supports multicast.
 		 */
 		if (!(ifp->if_flags & IFF_MULTICAST)) {
-			V_ip6stat.ip6s_noroute++;
+			IP6STAT_INC(ip6s_noroute);
 			in6_ifstat_inc(ifp, ifs6_out_discard);
 			error = ENETUNREACH;
 			goto bad;
@@ -1076,7 +1076,7 @@ passout:
 		if (qslots <= 0 || ((u_int)qslots * (mtu - hlen)
 		    < tlen  /* - hlen */)) {
 			error = ENOBUFS;
-			V_ip6stat.ip6s_odropped++;
+			IP6STAT_INC(ip6s_odropped);
 			goto bad;
 		}
 
@@ -1126,7 +1126,7 @@ passout:
 			MGETHDR(m, M_DONTWAIT, MT_HEADER);
 			if (!m) {
 				error = ENOBUFS;
-				V_ip6stat.ip6s_odropped++;
+				IP6STAT_INC(ip6s_odropped);
 				goto sendorfree;
 			}
 			m->m_pkthdr.rcvif = NULL;
@@ -1139,7 +1139,7 @@ passout:
 			m->m_len = sizeof(*mhip6);
 			error = ip6_insertfraghdr(m0, m, hlen, &ip6f);
 			if (error) {
-				V_ip6stat.ip6s_odropped++;
+				IP6STAT_INC(ip6s_odropped);
 				goto sendorfree;
 			}
 			ip6f->ip6f_offlg = htons((u_short)((off - hlen) & ~7));
@@ -1151,7 +1151,7 @@ passout:
 			    sizeof(*ip6f) - sizeof(struct ip6_hdr)));
 			if ((m_frgpart = m_copy(m0, off, len)) == 0) {
 				error = ENOBUFS;
-				V_ip6stat.ip6s_odropped++;
+				IP6STAT_INC(ip6s_odropped);
 				goto sendorfree;
 			}
 			m_cat(m, m_frgpart);
@@ -1160,7 +1160,7 @@ passout:
 			ip6f->ip6f_reserved = 0;
 			ip6f->ip6f_ident = id;
 			ip6f->ip6f_nxt = nextproto;
-			V_ip6stat.ip6s_ofragments++;
+			IP6STAT_INC(ip6s_ofragments);
 			in6_ifstat_inc(ifp, ifs6_out_fragcreat);
 		}
 
@@ -1189,7 +1189,7 @@ sendorfree:
 	}
 
 	if (error == 0)
-		V_ip6stat.ip6s_fragmented++;
+		IP6STAT_INC(ip6s_fragmented);
 
 done:
 	if (ro == &ip6route)

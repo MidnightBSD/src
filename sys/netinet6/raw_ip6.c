@@ -297,7 +297,7 @@ rip6_input(struct mbuf **mp, int *offp, int proto)
 	if ((last != NULL) && ipsec6_in_reject(m, last)) {
 		m_freem(m);
 		V_ipsec6stat.in_polvio++;
-		V_ip6stat.ip6s_delivered--;
+		IP6STAT_DEC(ip6s_delivered);
 		/* Do not inject data into pcb. */
 		INP_RUNLOCK(last);
 	} else
@@ -329,7 +329,7 @@ rip6_input(struct mbuf **mp, int *offp, int proto)
 			    ICMP6_PARAMPROB_NEXTHEADER,
 			    prvnxtp - mtod(m, char *));
 		}
-		V_ip6stat.ip6s_delivered--;
+		IP6STAT_DEC(ip6s_delivered);
 	}
 	return (IPPROTO_DONE);
 }
