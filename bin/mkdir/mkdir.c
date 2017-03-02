@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)mkdir.c	8.2 (Berkeley) 1/25/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/mkdir/mkdir.c,v 1.3 2006/11/30 03:58:23 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -136,7 +136,7 @@ main(int argc, char *argv[])
  * Returns 1 if a directory has been created,
  * 2 if it already existed, and 0 on failure.
  */
-int
+static int
 build(char *path, mode_t omode)
 {
 	struct stat sb;
@@ -209,7 +209,7 @@ build(char *path, mode_t omode)
 	return (retval);
 }
 
-void
+static void
 usage(void)
 {
 
