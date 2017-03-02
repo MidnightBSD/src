@@ -7,7 +7,7 @@ divert(-1)
 # forth in the LICENSE file which can be found at the top level of
 # the sendmail distribution.
 #
-#
+#  
 
 #
 #  This is the MidnightBSD configuration for a set-group-ID sm-msp sendmail
