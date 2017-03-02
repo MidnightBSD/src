@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20170302:
+	add a callback to the ada(4) driver so that it knows when
+	GEOM has released references to it.
+
 20170219:
 	Add /dev/full device.
 
