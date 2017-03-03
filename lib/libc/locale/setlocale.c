@@ -57,7 +57,7 @@ __MBSDID("$MidnightBSD$");
 /*
  * Category names for getenv()
  */
-static char *categories[_LC_LAST] = {
+static const char categories[_LC_LAST][12] = {
     "LC_ALL",
     "LC_COLLATE",
     "LC_CTYPE",
