@@ -145,8 +145,8 @@ Updating Information for MidnightBSD users.
 	pools. The first two read-only compatible "feature flags" for ZFS
 	pools are "com.delphix:async_destroy" and "com.delphix:empty_bpobj".
 	For more information read the new zpool-features(7) manual page.
-        Please refer to the "ZFS notes" section of this file for information
-        on upgrading boot ZFS pools.
+	Please refer to the "ZFS notes" section of this file for information
+	on upgrading boot ZFS pools.
 
 20160906:
 	Add support for the MosChip MCS9904 four serial ports
