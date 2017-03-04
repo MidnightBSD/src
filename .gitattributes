@@ -71620,6 +71620,7 @@ usr.sbin/mergemaster/Makefile -text
 usr.sbin/mergemaster/mergemaster.8 -text
 usr.sbin/mergemaster/mergemaster.sh -text
 usr.sbin/mfiutil/Makefile -text
+usr.sbin/mfiutil/mfi_bbu.c svneol=native#text/plain
 usr.sbin/mfiutil/mfi_cmd.c -text
 usr.sbin/mfiutil/mfi_config.c -text
 usr.sbin/mfiutil/mfi_drive.c -text
