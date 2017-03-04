@@ -1,8 +1,9 @@
-# $MidnightBSD: src/sys/modules/dtrace/dtrace/Makefile,v 1.1 2012/03/28 21:16:38 laffer1 Exp $
+# $MidnightBSD$
 
 ARCHDIR=	${MACHINE_CPUARCH}
 
 .PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/uts/common/dtrace
+.PATH: ${.CURDIR}/../../../cddl/compat/opensolaris/kern
 .PATH: ${.CURDIR}/../../../cddl/kern
 .PATH: ${.CURDIR}/../../../cddl/dev/dtrace
 .PATH: ${.CURDIR}/../../../cddl/dev/dtrace/${ARCHDIR}
@@ -25,6 +26,9 @@ SRCS+=		assym.s
 
 # These are needed for assym.s
 SRCS+=		opt_compat.h opt_kstack_pages.h opt_nfs.h opt_hwpmc_hooks.h
+
+#This is needed for dtrace.c
+SRCS += 	opensolaris_taskq.c
 
 .if ${MACHINE_CPUARCH} == "i386"
 SRCS+=		opt_apic.h
