@@ -58910,8 +58910,6 @@ sys/amd64/amd64/trap.c -text
 sys/amd64/amd64/uio_machdep.c -text
 sys/amd64/amd64/uma_machdep.c -text
 sys/amd64/amd64/vm_machdep.c -text
-sys/amd64/compile/.cvsignore -text
-sys/amd64/conf/.cvsignore -text
 sys/amd64/conf/DEFAULTS -text
 sys/amd64/conf/GENERIC -text
 sys/amd64/conf/GENERIC.hints -text
@@ -64131,8 +64129,6 @@ sys/i386/bios/mca_machdep.c -text
 sys/i386/bios/mca_machdep.h -text
 sys/i386/bios/smapi.c -text
 sys/i386/bios/smapi_bios.S -text
-sys/i386/compile/.cvsignore -text
-sys/i386/conf/.cvsignore -text
 sys/i386/conf/ALTQ -text
 sys/i386/conf/DEFAULTS -text
 sys/i386/conf/GENERIC -text
@@ -67875,7 +67871,6 @@ tools/regression/geom_stripe/Makefile -text
 tools/regression/geom_stripe/runtests.sh -text
 tools/regression/geom_stripe/test-1.sh -text
 tools/regression/geom_stripe/test-2.sh -text
-tools/regression/geom_uzip/.cvsignore -text
 tools/regression/geom_uzip/Makefile -text
 tools/regression/geom_uzip/etalon/etalon.txt -text
 tools/regression/geom_uzip/runtests.sh -text
