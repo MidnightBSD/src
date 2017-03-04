@@ -8,7 +8,8 @@ INCSDIR=${INCLUDEDIR}/gcc/${GCCVER}
 .PATH: ${GCCDIR}/config/${GCC_CPU}
 
 .if ${TARGET_ARCH} == "i386" || ${TARGET_ARCH} == "amd64"
-INCS=	emmintrin.h mmintrin.h pmmintrin.h tmmintrin.h xmmintrin.h mm_malloc.h
+INCS=	emmintrin.h mmintrin.h mm3dnow.h pmmintrin.h tmmintrin.h xmmintrin.h \
+	mm_malloc.h
 .endif
 
 mm_malloc.h: pmm_malloc.h
