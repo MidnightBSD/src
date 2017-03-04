@@ -51,11 +51,11 @@
  * 		or r is 5-9 in stable after 1.0 is released.
  */
 #undef __MidnightBSD_version
-#define __MidnightBSD_version 9004	/* Master, propagated to newvers */
+#define __MidnightBSD_version 9005	/* Master, propagated to newvers */
 
 /* Version of FreeBSD we're compatible with */
 #undef __FreeBSD_version
-#define __FreeBSD_version 901502
+#define __FreeBSD_version 901504
 
 /*
  * It is tempting to use this macro in userland code when we want to enable
