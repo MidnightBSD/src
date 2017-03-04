@@ -65114,7 +65114,6 @@ sys/modules/libalias/modules/smedia/Makefile -text
 sys/modules/libiconv/Makefile -text
 sys/modules/libmbpool/Makefile -text
 sys/modules/libmchain/Makefile -text
-sys/modules/lindev/Makefile -text
 sys/modules/linprocfs/Makefile -text
 sys/modules/linsysfs/Makefile -text
 sys/modules/linux/Makefile -text

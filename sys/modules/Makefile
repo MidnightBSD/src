@@ -178,7 +178,6 @@ SUBDIR=	\
 	libiconv \
 	libmbpool \
 	libmchain \
-	${_lindev} \
 	${_linprocfs} \
 	${_linsysfs} \
 	${_linux} \
@@ -483,7 +482,6 @@ _ie=		ie
 _if_ndis=	if_ndis
 _igb=		igb
 _io=		io
-_lindev=	lindev
 _linprocfs=	linprocfs
 _linsysfs=	linsysfs
 _linux=		linux
@@ -670,7 +668,6 @@ _iwnfw=		iwnfw
 .endif
 _ixgb=		ixgb
 _ixgbe=		ixgbe
-_lindev=	lindev
 _linprocfs=	linprocfs
 _linsysfs=	linsysfs
 _linux=		linux
