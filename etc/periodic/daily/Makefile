@@ -6,6 +6,7 @@ FILES=	100.clean-disks \
 	110.clean-tmps \
 	120.clean-preserve \
 	200.backup-passwd \
+	210.backup-aliases \
 	330.news \
 	400.status-disks \
 	405.status-ata-raid \
@@ -38,7 +39,6 @@ FILES+=	140.clean-rwho \
 
 .if ${MK_SENDMAIL} != "no"
 FILES+=	150.clean-hoststat \
-	210.backup-aliases \
 	440.status-mailq \
 	460.status-mail-rejects \
 	500.queuerun
