@@ -426,4 +426,7 @@
 #define	FREEBSD32_SYS_freebsd32_posix_fallocate	530
 #define	FREEBSD32_SYS_freebsd32_posix_fadvise	531
 #define	FREEBSD32_SYS_freebsd32_wait6	532
+#define	FREEBSD32_SYS_freebsd32_posix_fallocate	530
+#define	FREEBSD32_SYS_freebsd32_posix_fadvise	531
+#define	FREEBSD32_SYS_freebsd32_wait6	532
 #define	FREEBSD32_SYS_MAXSYSCALL	533

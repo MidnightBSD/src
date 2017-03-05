@@ -1754,7 +1754,7 @@ struct posix_fadvise_args {
 };
 struct wait6_args {
 	char idtype_l_[PADL_(int)]; int idtype; char idtype_r_[PADR_(int)];
-	char id_l_[PADL_(int)]; int id; char id_r_[PADR_(int)];
+	char id_l_[PADL_(id_t)]; id_t id; char id_r_[PADR_(id_t)];
 	char status_l_[PADL_(int *)]; int * status; char status_r_[PADR_(int *)];
 	char options_l_[PADL_(int)]; int options; char options_r_[PADR_(int)];
 	char wrusage_l_[PADL_(struct __wrusage *)]; struct __wrusage * wrusage; char wrusage_r_[PADR_(struct __wrusage *)];

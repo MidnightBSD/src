@@ -553,7 +553,13 @@ const char *freebsd32_syscallnames[] = {
 	"rctl_get_limits",			/* 527 = rctl_get_limits */
 	"rctl_add_rule",			/* 528 = rctl_add_rule */
 	"rctl_remove_rule",			/* 529 = rctl_remove_rule */
+#ifdef PAD64_REQUIRED
 	"freebsd32_posix_fallocate",			/* 530 = freebsd32_posix_fallocate */
 	"freebsd32_posix_fadvise",			/* 531 = freebsd32_posix_fadvise */
 	"freebsd32_wait6",			/* 532 = freebsd32_wait6 */
+#else
+	"freebsd32_posix_fallocate",			/* 530 = freebsd32_posix_fallocate */
+	"freebsd32_posix_fadvise",			/* 531 = freebsd32_posix_fadvise */
+	"freebsd32_wait6",			/* 532 = freebsd32_wait6 */
+#endif
 };
