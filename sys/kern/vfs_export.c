@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD: src/sys/kern/vfs_export.c,v 1.4 2012/10/09 04:08:17 laffer1 Exp $");
+__FBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/dirent.h>
@@ -49,6 +49,7 @@ __FBSDID("$MidnightBSD: src/sys/kern/vfs_export.c,v 1.4 2012/10/09 04:08:17 laff
 #include <sys/mutex.h>
 #include <sys/rwlock.h>
 #include <sys/refcount.h>
+#include <sys/signalvar.h>
 #include <sys/socket.h>
 #include <sys/systm.h>
 #include <sys/vnode.h>
