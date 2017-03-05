@@ -902,28 +902,3 @@ usb_proc_explore_unlock(struct usb_device *udev)
 {
 	USB_BUS_UNLOCK(udev->bus);
 }
-
-/* convenience wrappers */
-void
-usb_proc_explore_mwait(struct usb_device *udev, void *pm1, void *pm2)
-{
-	usb_proc_mwait(&udev->bus->explore_proc, pm1, pm2);
-}
-
-void	*
-usb_proc_explore_msignal(struct usb_device *udev, void *pm1, void *pm2)
-{
-	return (usb_proc_msignal(&udev->bus->explore_proc, pm1, pm2));
-}
-
-void
-usb_proc_explore_lock(struct usb_device *udev)
-{
-	USB_BUS_LOCK(udev->bus);
-}
-
-void
-usb_proc_explore_unlock(struct usb_device *udev)
-{
-	USB_BUS_UNLOCK(udev->bus);
-}
