@@ -71099,7 +71099,7 @@ usr.sbin/bsnmpd/modules/snmp_hast/BEGEMOT-HAST-MIB.txt svneol=native#text/plain
 usr.sbin/bsnmpd/modules/snmp_hast/Makefile svneol=native#text/plain
 usr.sbin/bsnmpd/modules/snmp_hast/hast_snmp.c svneol=native#text/plain
 usr.sbin/bsnmpd/modules/snmp_hast/hast_tree.def -text
-usr.sbin/bsnmpd/modules/snmp_hast/snmp_hast.8 svneol=native#text/plain
+usr.sbin/bsnmpd/modules/snmp_hast/snmp_hast.3 svneol=native#text/plain
 usr.sbin/bsnmpd/modules/snmp_hostres/BEGEMOT-HOSTRES-MIB.txt -text
 usr.sbin/bsnmpd/modules/snmp_hostres/Makefile -text
 usr.sbin/bsnmpd/modules/snmp_hostres/hostres_begemot.c -text
