@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/advansys/adwvar.h,v 1.2 2008/12/02 02:24:30 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Generic driver definitions and exported functions for the Advanced
  * Systems Inc. Second Generation SCSI controllers
@@ -50,7 +50,6 @@ int			adw_attach(struct adw_softc *adw);
 void			adw_done(struct adw_softc *adw, union ccb* ccb,
 				 u_int done_stat, u_int host_stat,
 				 u_int scsi_stat, u_int q_no);
-timeout_t		adw_timeout;
+void			adw_timeout(void *arg);
 
-extern u_long adw_unit;
 #endif /* _ADWVAR_H_ */

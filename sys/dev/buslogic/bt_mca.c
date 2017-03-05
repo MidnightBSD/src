@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/buslogic/bt_mca.c,v 1.2 2008/12/02 02:24:37 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Matthew N. Dodd <winter@jurai.net>
  * All rights reserved.
@@ -197,7 +197,7 @@ bt_mca_probe (device_t dev)
 	} else {	       
 		mca_add_drq(dev, drq);
 		mca_add_irq(dev, irq);
-		result = 0;    
+		result = BUS_PROBE_DEFAULT;    
 	}	       
 	bt_mca_release_resources(dev);
 
@@ -230,8 +230,8 @@ bt_mca_attach (device_t dev)
 				/* nsegments	*/ ~0,
 				/* maxsegsz	*/ BUS_SPACE_MAXSIZE_32BIT,
 				/* flags	*/ 0,
-				/* lockfunc	*/ busdma_lock_mutex,
-				/* lockarg	*/ &Giant,
+				/* lockfunc	*/ NULL,
+				/* lockarg	*/ NULL,
 				&bt->parent_dmat) != 0) {
 		bt_mca_release_resources(dev);
 		return (ENOMEM);
@@ -255,8 +255,8 @@ bt_mca_attach (device_t dev)
 				/* nsegments	*/ 1,
 				/* maxsegsz	*/ BUS_SPACE_MAXSIZE_32BIT,
 				/* flags	*/ 0,
-				/* lockfunc	*/ busdma_lock_mutex,
-				/* lockarg	*/ &Giant,
+				/* lockfunc	*/ NULL,
+				/* lockarg	*/ NULL,
 				&bt->sense_dmat) != 0) {
 		bt_mca_release_resources(dev);
 		return (ENOMEM);

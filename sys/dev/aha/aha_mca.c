@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/aha/aha_mca.c,v 1.2 2008/12/02 02:24:30 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Matthew N. Dodd <winter@jurai.net>
  * All rights reserved.
@@ -119,8 +119,6 @@ aha_mca_attach (device_t dev)
 {
 	struct aha_softc *	sc = device_get_softc(dev);
 	int			error = ENOMEM;
-	int			unit = device_get_unit(dev);
-	void *			ih;
 
 	sc->portrid = 0;
 	sc->port = bus_alloc_resource_any(dev, SYS_RES_IOPORT, &sc->portrid,
@@ -146,8 +144,7 @@ aha_mca_attach (device_t dev)
 		goto bad;
 	}
 
-	aha_alloc(sc, unit, rman_get_bustag(sc->port),
-	    rman_get_bushandle(sc->port));
+	aha_alloc(sc);
 	error = aha_probe(sc);
 	if (error) {
 		device_printf(dev, "aha_probe() failed!\n");
@@ -174,8 +171,8 @@ aha_mca_attach (device_t dev)
 				/* nsegments	*/ ~0,
 				/* maxsegsz	*/ BUS_SPACE_MAXSIZE_24BIT,
 				/* flags	*/ 0,
-				/* lockfunc	*/ busdma_lock_mutex,
-				/* lockarg	*/ &Giant,
+				/* lockfunc	*/ NULL,
+				/* lockarg	*/ NULL,
 				&sc->parent_dmat);
 	if (error) {
 		device_printf(dev, "bus_dma_tag_create() failed!\n");
@@ -194,10 +191,11 @@ aha_mca_attach (device_t dev)
 		goto bad;
 	}
 
-	error = bus_setup_intr(dev, sc->irq, INTR_TYPE_CAM | INTR_ENTROPY,
-	    NULL, aha_intr, sc, &ih);
+	error = bus_setup_intr(dev, sc->irq, INTR_TYPE_CAM | INTR_ENTROPY |
+	    INTR_MPSAFE, NULL, aha_intr, sc, &aha->ih);
 	if (error) {
 		device_printf(dev, "Unable to register interrupt handler\n");
+		aha_detach(sc);
 		goto bad;
 	}
 

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/buslogic/bt_isa.c,v 1.2 2008/12/02 02:24:37 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Product specific probe and attach routines for:
  *      Buslogic BT-54X and BT-445 cards
@@ -76,7 +76,7 @@ bt_isa_alloc_resources(device_t dev, u_long portstart, u_long portend)
 			return (ENOMEM);
 		}
 	} else
-		irq = 0;
+		irq = NULL;
 
 	if (isa_get_drq(dev) != -1) {
 		rid = 0;
@@ -91,7 +91,7 @@ bt_isa_alloc_resources(device_t dev, u_long portstart, u_long portend)
 			return (ENOMEM);
 		}
 	} else
-		drq = 0;
+		drq = NULL;
 
 	bt_init_softc(dev, port, irq, drq);
 
@@ -177,7 +177,7 @@ bt_isa_probe(device_t dev)
 		bus_set_resource(dev, SYS_RES_DRQ, 0, info.drq, 1);
 		bus_set_resource(dev, SYS_RES_IRQ, 0, info.irq, 1);
 
-		return (0);
+		return (BUS_PROBE_DEFAULT);
 	}
 
 	return (ENXIO);
@@ -234,7 +234,7 @@ bt_isa_attach(device_t dev)
 	}
 			
 	/* XXX Should be a child of the ISA or VL bus dma tag */
-	if (bus_dma_tag_create(	/* parent	*/ NULL,
+	if (bus_dma_tag_create(	/* parent	*/ bus_get_dma_tag(dev),
 				/* alignemnt	*/ 1,
 				/* boundary	*/ 0,
 				/* lowaddr	*/ lowaddr,
@@ -245,8 +245,8 @@ bt_isa_attach(device_t dev)
 				/* nsegments	*/ ~0,
 				/* maxsegsz	*/ BUS_SPACE_MAXSIZE_32BIT,
 				/* flags	*/ 0,
-				/* lockfunc	*/ busdma_lock_mutex,
-				/* lockarg	*/ &Giant,
+				/* lockfunc	*/ NULL,
+				/* lockarg	*/ NULL,
 				&bt->parent_dmat) != 0) {
 		bt_isa_release_resources(dev);
                 return (ENOMEM);
@@ -273,8 +273,8 @@ bt_isa_attach(device_t dev)
 				/* nsegments	*/ 1,
 				/* maxsegsz	*/ BUS_SPACE_MAXSIZE_32BIT,
 				/* flags	*/ 0,
-				/* lockfunc	*/ busdma_lock_mutex,
-				/* lockarg	*/ &Giant,
+				/* lockfunc	*/ NULL,
+				/* lockarg	*/ NULL,
 				&bt->sense_dmat) != 0) {
 			bt_isa_release_resources(dev);
 			return (ENOMEM);

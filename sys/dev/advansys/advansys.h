@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/advansys/advansys.h,v 1.2 2008/12/02 02:24:29 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Generic driver definitions and exported functions for the Advanced
  * Systems Inc. SCSI controllers
@@ -39,9 +39,7 @@
 
 #include <dev/advansys/advlib.h>
 
-struct adv_softc *	adv_alloc(device_t dev, bus_space_tag_t tag,
-				  bus_space_handle_t bsh);
-char *			adv_name(struct adv_softc *adv);
+struct adv_softc *	adv_alloc(device_t dev, struct resource *res, long offset);
 void			adv_map(void *arg, bus_dma_segment_t *segs,
 				int nseg, int error);
 void 			adv_free(struct adv_softc *adv);
@@ -51,6 +49,6 @@ int			adv_attach(struct adv_softc *adv);
 void			adv_done(struct adv_softc *adv, union ccb* ccb,
 				 u_int done_stat, u_int host_stat,
 				 u_int scsi_stat, u_int q_no);
-timeout_t		adv_timeout;
+void			adv_timeout(void *arg);
 
 #endif /* _ADVANSYS_H_ */

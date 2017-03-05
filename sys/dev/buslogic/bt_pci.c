@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/buslogic/bt_pci.c,v 1.2 2008/12/02 02:24:37 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Product specific probe and attach routines for:
  *      Buslogic BT946, BT948, BT956, BT958 SCSI controllers
@@ -149,7 +149,7 @@ bt_pci_probe(device_t dev)
 			}
 			bt_pci_release_resources(dev);
 			device_set_desc(dev, "Buslogic Multi-Master SCSI Host Adapter");
-			return (0);
+			return (BUS_PROBE_DEFAULT);
 		}
 		default:
 			break;
@@ -162,7 +162,6 @@ static int
 bt_pci_attach(device_t dev)
 {
 	struct bt_softc   *bt = device_get_softc(dev);
-	int		   opri;
 	int		   error;
 
 	/* Initialize softc */
@@ -184,31 +183,19 @@ bt_pci_attach(device_t dev)
 				/* nsegments	*/ ~0,
 				/* maxsegsz	*/ BUS_SPACE_MAXSIZE_32BIT,
 				/* flags	*/ 0,
-				/* lockfunc	*/ busdma_lock_mutex,
-				/* lockarg	*/ &Giant,
+				/* lockfunc	*/ NULL,
+				/* lockarg	*/ NULL,
 				&bt->parent_dmat) != 0) {
 		bt_pci_release_resources(dev);
 		return (ENOMEM);
 	}
 
-	/*
-	 * Protect ourself from spurrious interrupts during
-	 * intialization and attach.  We should really rely
-	 * on interrupts during attach, but we don't have
-	 * access to our interrupts during ISA probes, so until
-	 * that changes, we mask our interrupts during attach
-	 * too.
-	 */
-	opri = splcam();
-
 	if (bt_probe(dev) || bt_fetch_adapter_info(dev) || bt_init(dev)) {
 		bt_pci_release_resources(dev);
-		splx(opri);
 		return (ENXIO);
 	}
 
 	error = bt_attach(dev);
-	splx(opri);
 
 	if (error) {
 		bt_pci_release_resources(dev);
