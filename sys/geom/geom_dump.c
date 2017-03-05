@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/geom/geom_dump.c,v 1.4 2011/12/10 22:55:34 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -105,7 +105,7 @@ g_confdot(void *p, int flag )
 	sbuf_printf(sb, "digraph geom {\n");
 	LIST_FOREACH(mp, &g_classes, class)
 		g_confdot_class(sb, mp);
-	sbuf_printf(sb, "};\n");
+	sbuf_printf(sb, "}\n");
 	sbuf_finish(sb);
 }
 
