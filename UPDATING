@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20170305:
+	Add hast module to bsnmpd
+
 20170302:
 	add a callback to the ada(4) driver so that it knows when
 	GEOM has released references to it.
