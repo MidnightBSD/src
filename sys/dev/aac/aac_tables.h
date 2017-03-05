@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/aac/aac_tables.h,v 1.4 2012/04/12 01:20:08 laffer1 Exp $ */
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -28,13 +28,14 @@
  *	$FreeBSD$
  */
 
+#if 0
 /*
  * Status codes for block read/write commands, etc.
  *
  * XXX many of these would not normally be returned, as they are
  * relevant only to FSA operations.
  */
-static struct aac_code_lookup aac_command_status_table[] = {
+static const struct aac_code_lookup aac_command_status_table[] = {
 	{"OK",					ST_OK},
 	{"operation not permitted",		ST_PERM},
 	{"not found",				ST_NOENT},
@@ -76,8 +77,9 @@ static struct aac_code_lookup aac_command_status_table[] = {
 };
 
 #define AAC_COMMAND_STATUS(x)	aac_describe_code(aac_command_status_table, x)
+#endif
 
-static struct aac_code_lookup aac_cpu_variant[] = {
+static const struct aac_code_lookup aac_cpu_variant[] = {
 	{"i960JX",		CPUI960_JX},
 	{"i960CX",		CPUI960_CX},
 	{"i960HX",		CPUI960_HX},
@@ -94,7 +96,7 @@ static struct aac_code_lookup aac_cpu_variant[] = {
 	{"Unknown processor",	0}
 };
 
-static struct aac_code_lookup aac_battery_platform[] = {
+static const struct aac_code_lookup aac_battery_platform[] = {
 	{"required battery present",		PLATFORM_BAT_REQ_PRESENT},
 	{"REQUIRED BATTERY NOT PRESENT",	PLATFORM_BAT_REQ_NOTPRESENT},
 	{"optional battery present",		PLATFORM_BAT_OPT_PRESENT},
@@ -104,7 +106,7 @@ static struct aac_code_lookup aac_battery_platform[] = {
 	{"unknown battery platform",		0}
 };
 
-static struct aac_code_lookup aac_container_types[] = {
+static const struct aac_code_lookup aac_container_types[] = {
 	{"Volume",		CT_VOLUME},
 	{"RAID 1 (Mirror)",	CT_MIRROR},
 	{"RAID 0 (Stripe)",	CT_STRIPE},
@@ -127,4 +129,3 @@ static struct aac_code_lookup aac_container_types[] = {
 	{NULL, 0},
 	{"unknown",		0}
 };
-
