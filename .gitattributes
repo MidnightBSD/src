@@ -53662,6 +53662,8 @@ lib/libprocstat/Versions.def -text
 lib/libprocstat/cd9660.c -text
 lib/libprocstat/common_kvm.c -text
 lib/libprocstat/common_kvm.h -text
+lib/libprocstat/core.c svneol=native#text/plain
+lib/libprocstat/core.h svneol=native#text/plain
 lib/libprocstat/libprocstat.3 -text
 lib/libprocstat/libprocstat.c -text
 lib/libprocstat/libprocstat.h -text
@@ -71093,6 +71095,11 @@ usr.sbin/bsnmpd/modules/snmp_bridge/bridge_snmp.h -text
 usr.sbin/bsnmpd/modules/snmp_bridge/bridge_sys.c -text
 usr.sbin/bsnmpd/modules/snmp_bridge/bridge_tree.def -text
 usr.sbin/bsnmpd/modules/snmp_bridge/snmp_bridge.3 -text
+usr.sbin/bsnmpd/modules/snmp_hast/BEGEMOT-HAST-MIB.txt svneol=native#text/plain
+usr.sbin/bsnmpd/modules/snmp_hast/Makefile svneol=native#text/plain
+usr.sbin/bsnmpd/modules/snmp_hast/hast_snmp.c svneol=native#text/plain
+usr.sbin/bsnmpd/modules/snmp_hast/hast_tree.def -text
+usr.sbin/bsnmpd/modules/snmp_hast/snmp_hast.8 svneol=native#text/plain
 usr.sbin/bsnmpd/modules/snmp_hostres/BEGEMOT-HOSTRES-MIB.txt -text
 usr.sbin/bsnmpd/modules/snmp_hostres/Makefile -text
 usr.sbin/bsnmpd/modules/snmp_hostres/hostres_begemot.c -text
