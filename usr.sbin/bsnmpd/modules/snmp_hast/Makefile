@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: release/9.2.0/usr.sbin/bsnmpd/modules/snmp_hast/Makefile 251010 2013-05-26 18:54:05Z trociny $
 
 .include <bsd.own.mk>
