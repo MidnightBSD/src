@@ -161,7 +161,6 @@ SUBDIR=	alias \
 	stat \
 	stdbuf \
 	su \
-	sudo \
 	systat \
 	tabs \
 	tail \

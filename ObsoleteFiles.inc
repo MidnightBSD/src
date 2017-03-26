@@ -15,6 +15,9 @@
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
 
+# 20170326:
+OLD_FILES+=etc/sudoers
+OLD_FILES+=usr/bin/sudo
 # 20160929: removed long unused directories for .1aout section manpages
 OLD_FILES+=usr/share/man/en.ISO8859-1/man1aout
 OLD_FILES+=usr/share/man/en.UTF-8/man1aout
