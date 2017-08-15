@@ -1,4 +1,4 @@
-$FreeBSD: release/9.2.0/sys/dev/e1000/README 252899 2013-07-06 22:34:42Z jfv $
+$FreeBSD: stable/9/sys/dev/e1000/README 252899 2013-07-06 22:34:42Z jfv $
 FreeBSD* Driver for Intel Network Connection
 =============================================
 

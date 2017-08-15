@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2011, Intel Corporation 
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: release/9.2.0/sys/dev/e1000/e1000_82541.c 238262 2012-07-08 20:35:56Z jfv $*/
+/*$FreeBSD: stable/9/sys/dev/e1000/e1000_82541.c 238262 2012-07-08 20:35:56Z jfv $*/
 
 /*
  * 82541EI Gigabit Ethernet Controller

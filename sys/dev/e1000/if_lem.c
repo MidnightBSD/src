@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2012, Intel Corporation 
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: release/9.2.0/sys/dev/e1000/if_lem.c 254364 2013-08-15 12:19:16Z scottl $*/
+/*$FreeBSD: stable/9/sys/dev/e1000/if_lem.c 273912 2014-10-31 18:18:04Z hselasky $*/
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -2679,7 +2678,7 @@ lem_setup_transmit_structures(struct adapter *adapter)
 			void *addr;
 
 			addr = PNMB(slot + si, &paddr);
-			adapter->tx_desc_base[si].buffer_addr = htole64(paddr);
+			adapter->tx_desc_base[i].buffer_addr = htole64(paddr);
 			/* reload the map for netmap mode */
 			netmap_load_map(adapter->txtag, tx_buffer->map, addr);
 		}
@@ -2986,7 +2985,7 @@ lem_txeof(struct adapter *adapter)
 	EM_TX_LOCK_ASSERT(adapter);
 
 #ifdef DEV_NETMAP
-	if (netmap_tx_irq(ifp, 0 | (NETMAP_LOCKED_ENTER|NETMAP_LOCKED_EXIT)))
+	if (netmap_tx_irq(ifp, 0))
 		return;
 #endif /* DEV_NETMAP */
         if (adapter->num_tx_desc_avail == adapter->num_tx_desc)
@@ -3369,7 +3368,7 @@ lem_initialize_receive_unit(struct adapter *adapter)
 #ifdef DEV_NETMAP
 	/* preserve buffers already made available to clients */
 	if (ifp->if_capenable & IFCAP_NETMAP)
-		rctl -= NA(adapter->ifp)->rx_rings[0].nr_hwavail;
+		rctl -= nm_kr_rxspace(&NA(adapter->ifp)->rx_rings[0]);
 #endif /* DEV_NETMAP */
 	E1000_WRITE_REG(&adapter->hw, E1000_RDT(0), rctl);
 
@@ -3455,8 +3454,10 @@ lem_rxeof(struct adapter *adapter, int count, int *done)
 	    BUS_DMASYNC_POSTREAD);
 
 #ifdef DEV_NETMAP
-	if (netmap_rx_irq(ifp, 0 | NETMAP_LOCKED_ENTER, &rx_sent))
+	if (netmap_rx_irq(ifp, 0, &rx_sent)) {
+		EM_RX_UNLOCK(adapter);
 		return (FALSE);
+	}
 #endif /* DEV_NETMAP */
 
 	if (!((current_desc->status) & E1000_RXD_STAT_DD)) {
@@ -4647,7 +4648,7 @@ lem_set_flow_cntrl(struct adapter *adapter, const char *name,
 	*limit = value;
 	SYSCTL_ADD_INT(device_get_sysctl_ctx(adapter->dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(adapter->dev)),
-	    OID_AUTO, name, CTLTYPE_INT|CTLFLAG_RW, limit, value, description);
+	    OID_AUTO, name, CTLFLAG_RW, limit, value, description);
 }
 
 static void
@@ -4657,5 +4658,5 @@ lem_add_rx_process_limit(struct adapter *adapter, const char *name,
 	*limit = value;
 	SYSCTL_ADD_INT(device_get_sysctl_ctx(adapter->dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(adapter->dev)),
-	    OID_AUTO, name, CTLTYPE_INT|CTLFLAG_RW, limit, value, description);
+	    OID_AUTO, name, CTLFLAG_RW, limit, value, description);
 }
