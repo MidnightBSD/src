@@ -1,7 +1,6 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
-  Copyright (c) 2001-2011, Intel Corporation 
+  Copyright (c) 2001-2014, Intel Corporation 
   All rights reserved.
   
   Redistribution and use in source and binary forms, with or without 
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: release/9.2.0/sys/dev/e1000/e1000_vf.c 235527 2012-05-16 22:22:52Z jfv $*/
+/*$FreeBSD: stable/9/sys/dev/e1000/e1000_vf.c 269647 2014-08-06 22:15:01Z jfv $*/
 
 
 #include "e1000_api.h"
@@ -50,7 +49,7 @@ static s32 e1000_get_link_up_info_vf(struct e1000_hw *hw, u16 *speed,
 static s32 e1000_init_hw_vf(struct e1000_hw *hw);
 static s32 e1000_reset_hw_vf(struct e1000_hw *hw);
 static void e1000_update_mc_addr_list_vf(struct e1000_hw *hw, u8 *, u32);
-static void e1000_rar_set_vf(struct e1000_hw *, u8 *, u32);
+static int  e1000_rar_set_vf(struct e1000_hw *, u8 *, u32);
 static s32 e1000_read_mac_addr_vf(struct e1000_hw *);
 
 /**
@@ -160,7 +159,7 @@ void e1000_init_function_pointers_vf(struct e1000_hw *hw)
  *  In addition, the MAC registers to access PHY/NVM don't exist so we don't
  *  even want any SW to attempt to use them.
  **/
-static s32 e1000_acquire_vf(struct e1000_hw *hw)
+static s32 e1000_acquire_vf(struct e1000_hw E1000_UNUSEDARG *hw)
 {
 	return -E1000_ERR_PHY;
 }
@@ -173,7 +172,7 @@ static s32 e1000_acquire_vf(struct e1000_hw *hw)
  *  In addition, the MAC registers to access PHY/NVM don't exist so we don't
  *  even want any SW to attempt to use them.
  **/
-static void e1000_release_vf(struct e1000_hw *hw)
+static void e1000_release_vf(struct e1000_hw E1000_UNUSEDARG *hw)
 {
 	return;
 }
@@ -184,7 +183,7 @@ static void e1000_release_vf(struct e1000_hw *hw)
  *
  *  Virtual functions cannot change link.
  **/
-static s32 e1000_setup_link_vf(struct e1000_hw *hw)
+static s32 e1000_setup_link_vf(struct e1000_hw E1000_UNUSEDARG *hw)
 {
 	DEBUGFUNC("e1000_setup_link_vf");
 
@@ -321,7 +320,8 @@ static s32 e1000_init_hw_vf(struct e1000_hw *hw)
  *  @addr: pointer to the receive address
  *  @index receive address array register
  **/
-static void e1000_rar_set_vf(struct e1000_hw *hw, u8 * addr, u32 index)
+static int e1000_rar_set_vf(struct e1000_hw *hw, u8 *addr,
+			     u32 E1000_UNUSEDARG index)
 {
 	struct e1000_mbx_info *mbx = &hw->mbx;
 	u32 msgbuf[3];
@@ -342,6 +342,8 @@ static void e1000_rar_set_vf(struct e1000_hw *hw, u8 * addr, u32 index)
 	if (!ret_val &&
 	    (msgbuf[0] == (E1000_VF_SET_MAC_ADDR | E1000_VT_MSGTYPE_NACK)))
 		e1000_read_mac_addr_vf(hw);
+
+	return E1000_SUCCESS;
 }
 
 /**

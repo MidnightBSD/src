@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
 
   Copyright (c) 2001-2013, Intel Corporation 
@@ -31,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: release/9.2.0/sys/dev/e1000/e1000_nvm.h 248292 2013-03-14 22:55:59Z jfv $*/
+/*$FreeBSD: stable/9/sys/dev/e1000/e1000_nvm.h 248292 2013-03-14 22:55:59Z jfv $*/
 
 #ifndef _E1000_NVM_H_
 #define _E1000_NVM_H_
