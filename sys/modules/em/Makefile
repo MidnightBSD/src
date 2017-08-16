@@ -1,11 +1,12 @@
 # $MidnightBSD$
-# $FreeBSD: src/sys/modules/em/Makefile,v 1.9.2.2.6.1 2010/02/10 00:26:20 kensmith Exp $
+# $FreeBSD: stable/10/sys/modules/em/Makefile 284522 2015-06-17 18:50:57Z sbruno $
 
 .include <bsd.own.mk>
 
 .PATH:  ${.CURDIR}/../../dev/e1000
 KMOD    = if_em
-SRCS    = device_if.h bus_if.h pci_if.h opt_inet.h opt_inet6.h
+SRCS    = device_if.h bus_if.h pci_if.h opt_ddb.h opt_em.h opt_inet.h \
+	  opt_inet6.h 
 SRCS    += $(CORE_SRC) $(LEGACY_SRC)
 SRCS	+= $(COMMON_SHARED) $(LEGACY_SHARED) $(PCIE_SHARED)
 CORE_SRC = if_em.c e1000_osdep.c

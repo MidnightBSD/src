@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: src/sys/modules/igb/Makefile,v 1.3.2.2.6.1 2010/02/10 00:26:20 kensmith Exp $
+#$FreeBSD: stable/10/sys/modules/igb/Makefile 253303 2013-07-12 22:36:26Z jfv $
 
 .include <bsd.own.mk>
 
@@ -17,6 +17,12 @@ CFLAGS += -I${.CURDIR}/../../dev/e1000 -DSMP
 # DEVICE_POLLING gives you non-interrupt handling
 # not advisable since MSIX gives better results
 #CFLAGS  += -DDEVICE_POLLING
+
+# IGB_LEGACY_TX will override the stack if_transmit path and
+# instead use the older if_start non-multiqueue capable interface.
+# This might be desireable for testing, or to enable the use of
+# ALTQ. 
+#CFLAGS  += -DIGB_LEGACY_TX
 
 .if !defined(KERNBUILDDIR)
 .if ${MK_INET_SUPPORT} != "no"
