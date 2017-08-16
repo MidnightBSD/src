@@ -1,6 +1,6 @@
 /******************************************************************************
 
-  Copyright (c) 2001-2013, Intel Corporation 
+  Copyright (c) 2001-2015, Intel Corporation 
   All rights reserved.
   
   Redistribution and use in source and binary forms, with or without 
@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/9/sys/dev/e1000/e1000_80003es2lan.h 269647 2014-08-06 22:15:01Z jfv $*/
+/*$FreeBSD: stable/10/sys/dev/e1000/e1000_80003es2lan.h 294958 2016-01-27 22:31:08Z marius $*/
 
 #ifndef _E1000_80003ES2LAN_H_
 #define _E1000_80003ES2LAN_H_
