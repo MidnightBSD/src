@@ -1,6 +1,6 @@
 /******************************************************************************
 
-  Copyright (c) 2001-2014, Intel Corporation 
+  Copyright (c) 2001-2015, Intel Corporation 
   All rights reserved.
   
   Redistribution and use in source and binary forms, with or without 
@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/9/sys/dev/e1000/e1000_82571.h 269647 2014-08-06 22:15:01Z jfv $*/
+/*$FreeBSD: stable/10/sys/dev/e1000/e1000_82571.h 296055 2016-02-25 19:15:06Z erj $*/
 
 #ifndef _E1000_82571_H_
 #define _E1000_82571_H_

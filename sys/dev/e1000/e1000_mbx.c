@@ -1,6 +1,6 @@
 /******************************************************************************
 
-  Copyright (c) 2001-2014, Intel Corporation 
+  Copyright (c) 2001-2015, Intel Corporation 
   All rights reserved.
   
   Redistribution and use in source and binary forms, with or without 
@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/9/sys/dev/e1000/e1000_mbx.c 269647 2014-08-06 22:15:01Z jfv $*/
+/*$FreeBSD: stable/10/sys/dev/e1000/e1000_mbx.c 296055 2016-02-25 19:15:06Z erj $*/
 
 #include "e1000_mbx.h"
 
@@ -426,15 +426,21 @@ static s32 e1000_check_for_rst_vf(struct e1000_hw *hw,
 static s32 e1000_obtain_mbx_lock_vf(struct e1000_hw *hw)
 {
 	s32 ret_val = -E1000_ERR_MBX;
+	int count = 10;
 
 	DEBUGFUNC("e1000_obtain_mbx_lock_vf");
 
-	/* Take ownership of the buffer */
-	E1000_WRITE_REG(hw, E1000_V2PMAILBOX(0), E1000_V2PMAILBOX_VFU);
+	do {
+		/* Take ownership of the buffer */
+		E1000_WRITE_REG(hw, E1000_V2PMAILBOX(0), E1000_V2PMAILBOX_VFU);
 
-	/* reserve mailbox for vf use */
-	if (e1000_read_v2p_mailbox(hw) & E1000_V2PMAILBOX_VFU)
-		ret_val = E1000_SUCCESS;
+		/* reserve mailbox for vf use */
+		if (e1000_read_v2p_mailbox(hw) & E1000_V2PMAILBOX_VFU) {
+			ret_val = E1000_SUCCESS;
+			break;
+		}
+		usec_delay(1000);
+	} while (count-- > 0);
 
 	return ret_val;
 }
@@ -639,18 +645,26 @@ static s32 e1000_obtain_mbx_lock_pf(struct e1000_hw *hw, u16 vf_number)
 {
 	s32 ret_val = -E1000_ERR_MBX;
 	u32 p2v_mailbox;
+	int count = 10;
 
 	DEBUGFUNC("e1000_obtain_mbx_lock_pf");
 
-	/* Take ownership of the buffer */
-	E1000_WRITE_REG(hw, E1000_P2VMAILBOX(vf_number), E1000_P2VMAILBOX_PFU);
+	do {
+		/* Take ownership of the buffer */
+		E1000_WRITE_REG(hw, E1000_P2VMAILBOX(vf_number),
+				E1000_P2VMAILBOX_PFU);
 
-	/* reserve mailbox for vf use */
-	p2v_mailbox = E1000_READ_REG(hw, E1000_P2VMAILBOX(vf_number));
-	if (p2v_mailbox & E1000_P2VMAILBOX_PFU)
-		ret_val = E1000_SUCCESS;
+		/* reserve mailbox for pf use */
+		p2v_mailbox = E1000_READ_REG(hw, E1000_P2VMAILBOX(vf_number));
+		if (p2v_mailbox & E1000_P2VMAILBOX_PFU) {
+			ret_val = E1000_SUCCESS;
+			break;
+		}
+		usec_delay(1000);
+	} while (count-- > 0);
 
 	return ret_val;
+
 }
 
 /**
