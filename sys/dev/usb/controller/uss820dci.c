@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/9/sys/dev/usb/controller/uss820dci.c 262457 2014-02-24 20:29:39Z dim $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky <hselasky@FreeBSD.org>
  * All rights reserved.
@@ -2004,6 +2004,13 @@ tr_handle_get_descriptor:
 		len = sizeof(uss820dci_devd);
 		ptr = (const void *)&uss820dci_devd;
 		goto tr_valid;
+	case UDESC_DEVICE_QUALIFIER:
+		if (value & 0xff) {
+			goto tr_stalled;
+		}
+		len = sizeof(uss820dci_odevd);
+		ptr = (const void *)&uss820dci_odevd;
+		goto tr_valid;
 	case UDESC_CONFIG:
 		if (value & 0xff) {
 			goto tr_stalled;
@@ -2331,10 +2338,6 @@ uss820dci_ep_init(struct usb_device *udev, struct usb_endpoint_descriptor *edesc
 
 	if (udev->device_index != sc->sc_rt_addr) {
 
-		if (udev->flags.usb_mode != USB_MODE_DEVICE) {
-			/* not supported */
-			return;
-		}
 		if (udev->speed != USB_SPEED_FULL) {
 			/* not supported */
 			return;

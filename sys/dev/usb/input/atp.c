@@ -57,7 +57,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/input/atp.c 263064 2014-03-12 07:18:39Z hselasky $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>

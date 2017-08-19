@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/9/sys/dev/usb/net/usb_ethernet.c 262594 2014-02-28 01:35:24Z rodrigc $ */
 /*-
  * Copyright (c) 2009 Andrew Thompson (thompsa@FreeBSD.org)
  *
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/net/usb_ethernet.c 262594 2014-02-28 01:35:24Z rodrigc $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -207,6 +207,7 @@ ue_attach_post_task(struct usb_proc_msg *_task)
 	sysctl_ctx_init(&ue->ue_sysctl_ctx);
 
 	error = 0;
+	CURVNET_SET_QUIET(vnet0);
 	ifp = if_alloc(IFT_ETHER);
 	if (ifp == NULL) {
 		device_printf(ue->ue_dev, "could not allocate ifnet\n");
@@ -254,6 +255,8 @@ ue_attach_post_task(struct usb_proc_msg *_task)
 	if (ifp->if_capabilities & IFCAP_VLAN_MTU)
 		ifp->if_hdrlen = sizeof(struct ether_vlan_header);
 
+	CURVNET_RESTORE();
+
 	snprintf(num, sizeof(num), "%u", ue->ue_unit);
 	ue->ue_sysctl_oid = SYSCTL_ADD_NODE(&ue->ue_sysctl_ctx,
 	    &SYSCTL_NODE_CHILDREN(_net, ue),
@@ -267,6 +270,7 @@ ue_attach_post_task(struct usb_proc_msg *_task)
 	return;
 
 fail:
+	CURVNET_RESTORE();
 	free_unr(ueunit, ue->ue_unit);
 	if (ue->ue_ifp != NULL) {
 		if_free(ue->ue_ifp);

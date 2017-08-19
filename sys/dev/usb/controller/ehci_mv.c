@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/ehci_mv.c 308403 2016-11-07 09:23:07Z hselasky $");
 
 #include "opt_bus.h"
 
@@ -123,6 +123,7 @@ mv_ehci_attach(device_t self)
 	sc->sc_bus.parent = self;
 	sc->sc_bus.devices = sc->sc_devices;
 	sc->sc_bus.devices_max = EHCI_MAX_DEVICES;
+	sc->sc_bus.dma_bits = 32;
 
 	/* get all DMA memory */
 	if (usb_bus_mem_alloc_all(&sc->sc_bus,
@@ -238,14 +239,8 @@ static int
 mv_ehci_detach(device_t self)
 {
 	ehci_softc_t *sc = device_get_softc(self);
-	device_t bdev;
 	int err;
 
-	if (sc->sc_bus.bdev) {
-		bdev = sc->sc_bus.bdev;
-		device_detach(bdev);
-		device_delete_child(self, bdev);
-	}
 	/* during module unload there are lots of children leftover */
 	device_delete_children(self);
 

@@ -42,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/serial/uipaq.c 240659 2012-09-18 16:28:49Z hselasky $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>

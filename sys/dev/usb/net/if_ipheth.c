@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/net/if_ipheth.c 251701 2013-06-13 20:40:39Z eadler $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>

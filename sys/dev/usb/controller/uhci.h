@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/9/sys/dev/usb/controller/uhci.h 293147 2016-01-04 07:29:19Z hselasky $ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -97,7 +97,7 @@ struct uhci_td {
 #define	UHCI_TD_GET_ENDPT(s)	(((s) >> 15) & 0xf)
 #define	UHCI_TD_SET_DT(t)	((t) << 19)
 #define	UHCI_TD_GET_DT(s)	(((s) >> 19) & 1)
-#define	UHCI_TD_SET_MAXLEN(l)	(((l)-1) << 21)
+#define	UHCI_TD_SET_MAXLEN(l)	(((l)-1U) << 21)
 #define	UHCI_TD_GET_MAXLEN(s)	((((s) >> 21) + 1) & 0x7ff)
 #define	UHCI_TD_MAXLEN_MASK	0xffe00000
 	volatile uint32_t td_buffer;

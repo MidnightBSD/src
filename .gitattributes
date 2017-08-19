@@ -61878,6 +61878,7 @@ sys/dev/usb/input/uhid.c -text
 sys/dev/usb/input/ukbd.c -text
 sys/dev/usb/input/ums.c -text
 sys/dev/usb/input/usb_rdesc.h -text
+sys/dev/usb/input/wsp.c svneol=native#text/plain
 sys/dev/usb/misc/udbp.c -text
 sys/dev/usb/misc/udbp.h -text
 sys/dev/usb/misc/ufm.c -text
@@ -61885,6 +61886,8 @@ sys/dev/usb/net/if_aue.c -text
 sys/dev/usb/net/if_auereg.h -text
 sys/dev/usb/net/if_axe.c -text
 sys/dev/usb/net/if_axereg.h -text
+sys/dev/usb/net/if_axge.c svneol=native#text/plain
+sys/dev/usb/net/if_axgereg.h svneol=native#text/plain
 sys/dev/usb/net/if_cdce.c -text
 sys/dev/usb/net/if_cdcereg.h -text
 sys/dev/usb/net/if_cue.c -text
@@ -61900,6 +61903,8 @@ sys/dev/usb/net/if_rue.c -text
 sys/dev/usb/net/if_ruereg.h -text
 sys/dev/usb/net/if_udav.c -text
 sys/dev/usb/net/if_udavreg.h -text
+sys/dev/usb/net/if_urndis.c svneol=native#text/plain
+sys/dev/usb/net/if_urndisreg.h svneol=native#text/plain
 sys/dev/usb/net/if_usie.c -text
 sys/dev/usb/net/if_usievar.h -text
 sys/dev/usb/net/ruephy.c -text
@@ -61946,6 +61951,7 @@ sys/dev/usb/template/usb_template_mouse.c -text
 sys/dev/usb/template/usb_template_msc.c -text
 sys/dev/usb/template/usb_template_mtp.c -text
 sys/dev/usb/ufm_ioctl.h -text
+sys/dev/usb/uftdiio.h svneol=native#text/plain
 sys/dev/usb/usb.h -text
 sys/dev/usb/usb_bus.h -text
 sys/dev/usb/usb_busdma.c -text

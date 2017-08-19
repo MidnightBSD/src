@@ -1,7 +1,7 @@
 /*	$NetBSD: uplcom.c,v 1.21 2001/11/13 06:24:56 lukem Exp $	*/
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/serial/uplcom.c 305557 2016-09-07 19:21:52Z dim $");
 
 /*-
  * Copyright (c) 2001-2003, 2005 Shunsuke Akiyama <akiyama@jp.FreeBSD.org>.
@@ -44,13 +44,6 @@ __MBSDID("$MidnightBSD$");
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -173,7 +166,7 @@ struct uplcom_softc {
 /* prototypes */
 
 static usb_error_t uplcom_reset(struct uplcom_softc *, struct usb_device *);
-static usb_error_t uplcom_pl2303_do(struct usb_device *, int8_t, uint8_t,
+static usb_error_t uplcom_pl2303_do(struct usb_device *, uint8_t, uint8_t,
 			uint16_t, uint16_t, uint16_t);
 static int	uplcom_pl2303_init(struct usb_device *, uint8_t);
 static void	uplcom_free(struct ucom_softc *);
@@ -520,7 +513,7 @@ uplcom_reset(struct uplcom_softc *sc, struct usb_device *udev)
 }
 
 static usb_error_t
-uplcom_pl2303_do(struct usb_device *udev, int8_t req_type, uint8_t request,
+uplcom_pl2303_do(struct usb_device *udev, uint8_t req_type, uint8_t request,
     uint16_t value, uint16_t index, uint16_t length)
 {
 	struct usb_device_request req;

@@ -1,6 +1,6 @@
 /*	$OpenBSD: if_zyd.c,v 1.52 2007/02/11 00:08:04 jsg Exp $	*/
 /*	$NetBSD: if_zyd.c,v 1.7 2007/06/21 04:04:29 kiyohara Exp $	*/
-/*	$MidnightBSD$	*/
+/*	$FreeBSD: stable/9/sys/dev/usb/wlan/if_zyd.c 269267 2014-07-29 22:00:54Z hselasky $	*/
 
 /*-
  * Copyright (c) 2006 by Damien Bergamini <damien.bergamini@free.fr>
@@ -20,7 +20,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/wlan/if_zyd.c 269267 2014-07-29 22:00:54Z hselasky $");
 
 /*
  * ZyDAS ZD1211/ZD1211B USB WLAN driver.
@@ -438,12 +438,29 @@ zyd_detach(device_t dev)
 	struct zyd_softc *sc = device_get_softc(dev);
 	struct ifnet *ifp = sc->sc_ifp;
 	struct ieee80211com *ic;
+	unsigned int x;
 
-	/* stop all USB transfers */
-	usbd_transfer_unsetup(sc->sc_xfer, ZYD_N_TRANSFER);
+	/*
+	 * Prevent further allocations from RX/TX data
+	 * lists and ioctls:
+	 */
+	ZYD_LOCK(sc);
+	sc->sc_flags |= ZYD_FLAG_DETACHED;
+	STAILQ_INIT(&sc->tx_q);
+	STAILQ_INIT(&sc->tx_free);
+	ZYD_UNLOCK(sc);
+
+	/* drain USB transfers */
+	for (x = 0; x != ZYD_N_TRANSFER; x++)
+		usbd_transfer_drain(sc->sc_xfer[x]);
 
 	/* free TX list, if any */
+	ZYD_LOCK(sc);
 	zyd_unsetup_tx_list(sc);
+	ZYD_UNLOCK(sc);
+
+	/* free USB transfers and some data buffers */
+	usbd_transfer_unsetup(sc->sc_xfer, ZYD_N_TRANSFER);
 
 	if (ifp) {
 		ic = ifp->if_l2com;
@@ -471,9 +488,14 @@ zyd_vap_create(struct ieee80211com *ic, const char name[IFNAMSIZ], int unit,
 	if (zvp == NULL)
 		return (NULL);
 	vap = &zvp->vap;
+
 	/* enable s/w bmiss handling for sta mode */
-	ieee80211_vap_setup(ic, vap, name, unit, opmode,
-	    flags | IEEE80211_CLONE_NOBEACONS, bssid, mac);
+	if (ieee80211_vap_setup(ic, vap, name, unit, opmode,
+	    flags | IEEE80211_CLONE_NOBEACONS, bssid, mac) != 0) {
+		/* out of memory */
+		free(zvp, M_80211_VAP);
+		return (NULL);
+	}
 
 	/* override state transition machine */
 	zvp->newstate = vap->iv_newstate;
@@ -2457,7 +2479,7 @@ zyd_tx_start(struct zyd_softc *sc, struct mbuf *m0, struct ieee80211_node *ni)
 	const struct ieee80211_txparam *tp;
 	struct ieee80211_key *k;
 	int rate, totlen;
-	static uint8_t ratediv[] = ZYD_TX_RATEDIV;
+	static const uint8_t ratediv[] = ZYD_TX_RATEDIV;
 	uint8_t phy;
 	uint16_t pktlen;
 	uint32_t bits;
@@ -2637,7 +2659,14 @@ zyd_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	struct zyd_softc *sc = ifp->if_softc;
 	struct ieee80211com *ic = ifp->if_l2com;
 	struct ifreq *ifr = (struct ifreq *) data;
-	int error = 0, startall = 0;
+	int error;
+	int startall = 0;
+
+	ZYD_LOCK(sc);
+	error = (sc->sc_flags & ZYD_FLAG_DETACHED) ? ENXIO : 0;
+	ZYD_UNLOCK(sc);
+	if (error)
+		return (error);
 
 	switch (cmd) {
 	case SIOCSIFFLAGS:
@@ -2928,8 +2957,7 @@ static device_method_t zyd_methods[] = {
         DEVMETHOD(device_probe, zyd_match),
         DEVMETHOD(device_attach, zyd_attach),
         DEVMETHOD(device_detach, zyd_detach),
-
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t zyd_driver = {

@@ -79,7 +79,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/net/if_mos.c 248085 2013-03-09 02:36:32Z marius $");
 
 /*
  * Moschip MCS7730/MCS7830/MCS7832 USB to Ethernet controller

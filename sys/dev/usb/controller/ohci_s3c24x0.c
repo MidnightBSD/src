@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/ohci_s3c24x0.c 308403 2016-11-07 09:23:07Z hselasky $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -84,6 +84,7 @@ ohci_s3c24x0_attach(device_t dev)
 	sc->sc_bus.parent = dev;
 	sc->sc_bus.devices = sc->sc_devices;
 	sc->sc_bus.devices_max = OHCI_MAX_DEVICES;
+	sc->sc_bus.dma_bits = 32;
 
 	/* get all DMA memory */
 	if (usb_bus_mem_alloc_all(&sc->sc_bus, USB_GET_DMA_TAG(dev),
@@ -147,14 +148,8 @@ static int
 ohci_s3c24x0_detach(device_t dev)
 {
 	struct ohci_softc *sc = device_get_softc(dev);
-	device_t bdev;
 	int err;
 
-	if (sc->sc_bus.bdev) {
-		bdev = sc->sc_bus.bdev;
-		device_detach(bdev);
-		device_delete_child(dev, bdev);
-	}
 	/* during module unload there are lots of children leftover */
 	device_delete_children(dev);
 

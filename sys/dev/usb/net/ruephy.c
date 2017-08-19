@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/net/ruephy.c 235000 2012-05-04 15:05:30Z hselasky $");
 
 /*
  * driver for RealTek RTL8150 internal PHY

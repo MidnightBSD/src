@@ -5,7 +5,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/input/uhid.c 291206 2015-11-23 13:48:28Z hselasky $");
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -518,7 +518,9 @@ uhid_open(struct usb_fifo *fifo, int fflags)
 	 */
 	if (fflags & FREAD) {
 		/* reset flags */
+		mtx_lock(&sc->sc_mtx);
 		sc->sc_flags &= ~UHID_FLAG_IMMED;
+		mtx_unlock(&sc->sc_mtx);
 
 		if (usb_fifo_alloc_buffer(fifo,
 		    sc->sc_isize + 1, UHID_FRAME_NUM)) {
@@ -734,7 +736,7 @@ uhid_attach(device_t dev)
 		if (uaa->info.idProduct == USB_PRODUCT_WACOM_GRAPHIRE) {
 
 			sc->sc_repdesc_size = sizeof(uhid_graphire_report_descr);
-			sc->sc_repdesc_ptr = (void *)&uhid_graphire_report_descr;
+			sc->sc_repdesc_ptr = __DECONST(void *, &uhid_graphire_report_descr);
 			sc->sc_flags |= UHID_FLAG_STATIC_DESC;
 
 		} else if (uaa->info.idProduct == USB_PRODUCT_WACOM_GRAPHIRE3_4X5) {
@@ -755,16 +757,27 @@ uhid_attach(device_t dev)
 				    usbd_errstr(error));
 			}
 			sc->sc_repdesc_size = sizeof(uhid_graphire3_4x5_report_descr);
-			sc->sc_repdesc_ptr = (void *)&uhid_graphire3_4x5_report_descr;
+			sc->sc_repdesc_ptr = __DECONST(void *, &uhid_graphire3_4x5_report_descr);
 			sc->sc_flags |= UHID_FLAG_STATIC_DESC;
 		}
 	} else if ((uaa->info.bInterfaceClass == UICLASS_VENDOR) &&
-		    (uaa->info.bInterfaceSubClass == UISUBCLASS_XBOX360_CONTROLLER) &&
+	    (uaa->info.bInterfaceSubClass == UISUBCLASS_XBOX360_CONTROLLER) &&
 	    (uaa->info.bInterfaceProtocol == UIPROTO_XBOX360_GAMEPAD)) {
-
+		static const uint8_t reportbuf[3] = {1, 3, 0};
+		/*
+		 * Turn off the four LEDs on the gamepad which
+		 * are blinking by default:
+		 */
+		error = usbd_req_set_report(uaa->device, NULL,
+		    __DECONST(void *, reportbuf), sizeof(reportbuf),
+		    uaa->info.bIfaceIndex, UHID_OUTPUT_REPORT, 0);
+		if (error) {
+			DPRINTF("set output report failed, error=%s (ignored)\n",
+			    usbd_errstr(error));
+		}
 		/* the Xbox 360 gamepad has no report descriptor */
 		sc->sc_repdesc_size = sizeof(uhid_xb360gp_report_descr);
-		sc->sc_repdesc_ptr = (void *)&uhid_xb360gp_report_descr;
+		sc->sc_repdesc_ptr = __DECONST(void *, &uhid_xb360gp_report_descr);
 		sc->sc_flags |= UHID_FLAG_STATIC_DESC;
 	}
 	if (sc->sc_repdesc_ptr == NULL) {

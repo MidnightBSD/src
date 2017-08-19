@@ -46,7 +46,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/net/if_cdce.c 290608 2015-11-09 11:27:31Z hselasky $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -1381,6 +1381,7 @@ cdce_ncm_bulk_read_callback(struct usb_xfer *xfer, usb_error_t error)
 
 			/* check if we have a buffer */
 			if (m) {
+				m->m_len = m->m_pkthdr.len = temp + ETHER_ALIGN;
 				m_adj(m, ETHER_ALIGN);
 
 				usbd_copy_out(pc, offset, m->m_data, temp);

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/ohci_pci.c 308403 2016-11-07 09:23:07Z hselasky $");
 
 /*
  * USB Open Host Controller driver.
@@ -154,6 +154,8 @@ ohci_pci_match(device_t self)
 	case 0x00d710de:
 		return ("nVidia nForce3 USB Controller");
 
+	case 0x005a10de:
+		return ("nVidia nForce CK804 USB Controller");
 	case 0x036c10de:
 		return ("nVidia nForce MCP55 USB Controller");
 	case 0x03f110de:
@@ -209,6 +211,7 @@ ohci_pci_attach(device_t self)
 	sc->sc_bus.parent = self;
 	sc->sc_bus.devices = sc->sc_devices;
 	sc->sc_bus.devices_max = OHCI_MAX_DEVICES;
+	sc->sc_bus.dma_bits = 32;
 
 	/* get all DMA memory */
 	if (usb_bus_mem_alloc_all(&sc->sc_bus, USB_GET_DMA_TAG(self),
@@ -329,13 +332,7 @@ static int
 ohci_pci_detach(device_t self)
 {
 	ohci_softc_t *sc = device_get_softc(self);
-	device_t bdev;
 
-	if (sc->sc_bus.bdev) {
-		bdev = sc->sc_bus.bdev;
-		device_detach(bdev);
-		device_delete_child(self, bdev);
-	}
 	/* during module unload there are lots of children leftover */
 	device_delete_children(self);
 

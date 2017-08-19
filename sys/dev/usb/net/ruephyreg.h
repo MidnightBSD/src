@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/9/sys/dev/usb/net/ruephyreg.h 227229 2011-11-06 17:23:49Z marius $
  */
 
 #ifndef _RUEPHYREG_H_

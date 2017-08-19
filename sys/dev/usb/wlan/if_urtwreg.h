@@ -1,4 +1,4 @@
-/*	$MidnightBSD$	*/
+/*	$FreeBSD: stable/9/sys/dev/usb/wlan/if_urtwreg.h 198194 2009-10-18 00:11:49Z weongyo $	*/
 
 /*-
  * Copyright (c) 2008 Weongyo Jeong <weongyo@FreeBSD.org>

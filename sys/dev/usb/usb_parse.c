@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/9/sys/dev/usb/usb_parse.c 217265 2011-01-11 13:59:06Z jhb $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *

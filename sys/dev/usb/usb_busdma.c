@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/9/sys/dev/usb/usb_busdma.c 291251 2015-11-24 12:19:20Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -130,6 +130,35 @@ usbd_get_page(struct usb_page_cache *pc, usb_frlength_t offset,
 }
 
 /*------------------------------------------------------------------------*
+ *  usb_pc_buffer_is_aligned - verify alignment
+ * 
+ * This function is used to check if a page cache buffer is properly
+ * aligned to reduce the use of bounce buffers in PIO mode.
+ *------------------------------------------------------------------------*/
+uint8_t
+usb_pc_buffer_is_aligned(struct usb_page_cache *pc, usb_frlength_t offset,
+    usb_frlength_t len, usb_frlength_t mask)
+{
+	struct usb_page_search buf_res;
+
+	while (len != 0) {
+
+		usbd_get_page(pc, offset, &buf_res);
+
+		if (buf_res.length > len)
+			buf_res.length = len;
+		if (USB_P2U(buf_res.buffer) & mask)
+			return (0);
+		if (buf_res.length & mask)
+			return (0);
+
+		offset += buf_res.length;
+		len -= buf_res.length;
+	}
+	return (1);
+}
+
+/*------------------------------------------------------------------------*
  *  usbd_copy_in - copy directly to DMA-able memory
  *------------------------------------------------------------------------*/
 void
@@ -211,9 +240,7 @@ usbd_m_copy_in(struct usb_page_cache *cache, usb_frlength_t dst_offset,
     struct mbuf *m, usb_size_t src_offset, usb_frlength_t src_len)
 {
 	struct usb_m_copy_in_arg arg = {cache, dst_offset};
-	int error;
-
-	error = m_apply(m, src_offset, src_len, &usbd_m_copy_in_cb, &arg);
+	(void) m_apply(m, src_offset, src_len, &usbd_m_copy_in_cb, &arg);
 }
 #endif
 
@@ -358,8 +385,7 @@ usb_dma_tag_create(struct usb_dma_tag *udt,
 	if (bus_dma_tag_create
 	    ( /* parent    */ udt->tag_parent->tag,
 	     /* alignment */ align,
-	     /* boundary  */ (align == 1) ?
-	    USB_PAGE_SIZE : 0,
+	     /* boundary  */ 0,
 	     /* lowaddr   */ (2ULL << (udt->tag_parent->dma_bits - 1)) - 1,
 	     /* highaddr  */ BUS_SPACE_MAXADDR,
 	     /* filter    */ NULL,
@@ -418,6 +444,7 @@ usb_pc_common_mem_cb(void *arg, bus_dma_segment_t *segs,
 	struct usb_page_cache *pc;
 	struct usb_page *pg;
 	usb_size_t rem;
+	bus_size_t off;
 	uint8_t owned;
 
 	pc = arg;
@@ -433,27 +460,40 @@ usb_pc_common_mem_cb(void *arg, bus_dma_segment_t *segs,
 	if (error) {
 		goto done;
 	}
+
+	off = 0;
 	pg = pc->page_start;
 	pg->physaddr = segs->ds_addr & ~(USB_PAGE_SIZE - 1);
 	rem = segs->ds_addr & (USB_PAGE_SIZE - 1);
 	pc->page_offset_buf = rem;
 	pc->page_offset_end += rem;
-	nseg--;
 #ifdef USB_DEBUG
-	if (rem != (USB_P2U(pc->buffer) & (USB_PAGE_SIZE - 1))) {
+	if (nseg > 1 &&
+	    ((segs->ds_addr + segs->ds_len) & (USB_PAGE_SIZE - 1)) !=
+	    ((segs + 1)->ds_addr & (USB_PAGE_SIZE - 1))) {
 		/*
-		 * This check verifies that the physical address is correct:
+		 * This check verifies there is no page offset hole
+		 * between the first and second segment. See the
+		 * BUS_DMA_KEEP_PG_OFFSET flag.
 		 */
 		DPRINTFN(0, "Page offset was not preserved\n");
 		error = 1;
 		goto done;
 	}
 #endif
-	while (nseg > 0) {
-		nseg--;
-		segs++;
+	while (pc->ismultiseg) {
+		off += USB_PAGE_SIZE;
+		if (off >= (segs->ds_len + rem)) {
+			/* page crossing */
+			nseg--;
+			segs++;
+			off = 0;
+			rem = 0;
+			if (nseg == 0)
+				break;
+		}
 		pg++;
-		pg->physaddr = segs->ds_addr & ~(USB_PAGE_SIZE - 1);
+		pg->physaddr = (segs->ds_addr + off) & ~(USB_PAGE_SIZE - 1);
 	}
 
 done:

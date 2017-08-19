@@ -1,5 +1,5 @@
 /*	$OpenBSD: if_upgt.c,v 1.35 2008/04/16 18:32:15 damien Exp $ */
-/*	$MidnightBSD$ */
+/*	$FreeBSD: stable/9/sys/dev/usb/wlan/if_upgt.c 292184 2015-12-14 09:42:39Z hselasky $ */
 
 /*
  * Copyright (c) 2007 Marcus Glocker <mglocker@openbsd.org>
@@ -182,7 +182,7 @@ static const STRUCT_USB_HOST_ID upgt_devs[] = {
 	UPGT_DEV(FSC,		E5400),
 	UPGT_DEV(GLOBESPAN,	PRISM_GT_1),
 	UPGT_DEV(GLOBESPAN,	PRISM_GT_2),
-	UPGT_DEV(NETGEAR,	WG111V2_2),
+	UPGT_DEV(NETGEAR,	WG111V1_2),
 	UPGT_DEV(INTERSIL,	PRISM_GT),
 	UPGT_DEV(SMC,		2862WG),
 	UPGT_DEV(USR,		USR5422),
@@ -201,9 +201,8 @@ static const struct usb_config upgt_config[UPGT_N_XFERS] = {
 		.type = UE_BULK,
 		.endpoint = UE_ADDR_ANY,
 		.direction = UE_DIR_OUT,
-		.bufsize = MCLBYTES,
+		.bufsize = MCLBYTES * UPGT_TX_MAXCOUNT,
 		.flags = {
-			.ext_buffer = 1,
 			.force_short_xfer = 1,
 			.pipe_bof = 1
 		},
@@ -214,9 +213,8 @@ static const struct usb_config upgt_config[UPGT_N_XFERS] = {
 		.type = UE_BULK,
 		.endpoint = UE_ADDR_ANY,
 		.direction = UE_DIR_IN,
-		.bufsize = MCLBYTES,
+		.bufsize = MCLBYTES * UPGT_RX_MAXCOUNT,
 		.flags = {
-			.ext_buffer = 1,
 			.pipe_bof = 1,
 			.short_xfer_ok = 1
 		},
@@ -261,21 +259,26 @@ upgt_attach(device_t dev)
 	callout_init(&sc->sc_led_ch, 0);
 	callout_init(&sc->sc_watchdog_ch, 0);
 
-	/* Allocate TX and RX xfers.  */
-	error = upgt_alloc_tx(sc);
-	if (error)
-		goto fail1;
-	error = upgt_alloc_rx(sc);
-	if (error)
-		goto fail2;
-
 	error = usbd_transfer_setup(uaa->device, &iface_index, sc->sc_xfer,
 	    upgt_config, UPGT_N_XFERS, sc, &sc->sc_mtx);
 	if (error) {
 		device_printf(dev, "could not allocate USB transfers, "
 		    "err=%s\n", usbd_errstr(error));
-		goto fail3;
+		goto fail1;
 	}
+
+	sc->sc_rx_dma_buf = usbd_xfer_get_frame_buffer(
+	    sc->sc_xfer[UPGT_BULK_RX], 0);
+	sc->sc_tx_dma_buf = usbd_xfer_get_frame_buffer(
+	    sc->sc_xfer[UPGT_BULK_TX], 0);
+
+	/* Setup TX and RX buffers */
+	error = upgt_alloc_tx(sc);
+	if (error)
+		goto fail2;
+	error = upgt_alloc_rx(sc);
+	if (error)
+		goto fail3;
 
 	ifp = sc->sc_ifp = if_alloc(IFT_IEEE80211);
 	if (ifp == NULL) {
@@ -379,9 +382,9 @@ upgt_attach(device_t dev)
 	return (0);
 
 fail5:	if_free(ifp);
-fail4:	usbd_transfer_unsetup(sc->sc_xfer, UPGT_N_XFERS);
-fail3:	upgt_free_rx(sc);
-fail2:	upgt_free_tx(sc);
+fail4:	upgt_free_rx(sc);
+fail3:	upgt_free_tx(sc);
+fail2:	usbd_transfer_unsetup(sc->sc_xfer, UPGT_N_XFERS);
 fail1:	mtx_destroy(&sc->sc_mtx);
 
 	return (error);
@@ -425,7 +428,7 @@ upgt_get_stats(struct upgt_softc *sc)
 
 	data_cmd = upgt_getbuf(sc);
 	if (data_cmd == NULL) {
-		device_printf(sc->sc_dev, "%s: out of buffer.\n", __func__);
+		device_printf(sc->sc_dev, "%s: out of buffers.\n", __func__);
 		return;
 	}
 
@@ -463,7 +466,14 @@ upgt_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	struct upgt_softc *sc = ifp->if_softc;
 	struct ieee80211com *ic = ifp->if_l2com;
 	struct ifreq *ifr = (struct ifreq *) data;
-	int error = 0, startall = 0;
+	int error;
+	int startall = 0;
+
+	UPGT_LOCK(sc);
+	error = (sc->sc_flags & UPGT_FLAG_DETACHED) ? ENXIO : 0;
+	UPGT_UNLOCK(sc);
+	if (error)
+		return (error);
 
 	switch (cmd) {
 	case SIOCSIFFLAGS:
@@ -1030,8 +1040,13 @@ upgt_vap_create(struct ieee80211com *ic, const char name[IFNAMSIZ], int unit,
 		return NULL;
 	vap = &uvp->vap;
 	/* enable s/w bmiss handling for sta mode */
-	ieee80211_vap_setup(ic, vap, name, unit, opmode,
-	    flags | IEEE80211_CLONE_NOBEACONS, bssid, mac);
+
+	if (ieee80211_vap_setup(ic, vap, name, unit, opmode,
+	    flags | IEEE80211_CLONE_NOBEACONS, bssid, mac) != 0) {
+		/* out of memory */
+		free(uvp, M_80211_VAP);
+		return (NULL);
+	}
 
 	/* override state transition machine */
 	uvp->newstate = vap->iv_newstate;
@@ -1583,7 +1598,6 @@ upgt_tx_done(struct upgt_softc *sc, uint8_t *data)
 			data_tx->ni = NULL;
 			data_tx->addr = 0;
 			data_tx->m = NULL;
-			data_tx->use = 0;
 
 			DPRINTF(sc, UPGT_DEBUG_TX_PROC,
 			    "TX done: memaddr=0x%08x, status=0x%04x, rssi=%d, ",
@@ -1978,13 +1992,7 @@ upgt_alloc_tx(struct upgt_softc *sc)
 
 	for (i = 0; i < UPGT_TX_MAXCOUNT; i++) {
 		struct upgt_data *data = &sc->sc_tx_data[i];
-
-		data->buf = malloc(MCLBYTES, M_USBDEV, M_NOWAIT | M_ZERO);
-		if (data->buf == NULL) {
-			device_printf(sc->sc_dev,
-			    "could not allocate TX buffer\n");
-			return (ENOMEM);
-		}
+		data->buf = ((uint8_t *)sc->sc_tx_dma_buf) + (i * MCLBYTES);
 		STAILQ_INSERT_TAIL(&sc->sc_tx_inactive, data, next);
 		UPGT_STAT_INC(sc, st_tx_inactive);
 	}
@@ -2002,16 +2010,9 @@ upgt_alloc_rx(struct upgt_softc *sc)
 
 	for (i = 0; i < UPGT_RX_MAXCOUNT; i++) {
 		struct upgt_data *data = &sc->sc_rx_data[i];
-
-		data->buf = malloc(MCLBYTES, M_USBDEV, M_NOWAIT | M_ZERO);
-		if (data->buf == NULL) {
-			device_printf(sc->sc_dev,
-			    "could not allocate RX buffer\n");
-			return (ENOMEM);
-		}
+		data->buf = ((uint8_t *)sc->sc_rx_dma_buf) + (i * MCLBYTES);
 		STAILQ_INSERT_TAIL(&sc->sc_rx_inactive, data, next);
 	}
-
 	return (0);
 }
 
@@ -2021,20 +2022,42 @@ upgt_detach(device_t dev)
 	struct upgt_softc *sc = device_get_softc(dev);
 	struct ifnet *ifp = sc->sc_ifp;
 	struct ieee80211com *ic = ifp->if_l2com;
+	unsigned int x;
 
-	if (!device_is_attached(dev))
-		return 0;
+	/*
+	 * Prevent further allocations from RX/TX/CMD
+	 * data lists and ioctls
+	 */
+	UPGT_LOCK(sc);
+	sc->sc_flags |= UPGT_FLAG_DETACHED;
+
+	STAILQ_INIT(&sc->sc_tx_active);
+	STAILQ_INIT(&sc->sc_tx_inactive);
+	STAILQ_INIT(&sc->sc_tx_pending);
+
+	STAILQ_INIT(&sc->sc_rx_active);
+	STAILQ_INIT(&sc->sc_rx_inactive);
+	UPGT_UNLOCK(sc);
 
 	upgt_stop(sc);
 
 	callout_drain(&sc->sc_led_ch);
 	callout_drain(&sc->sc_watchdog_ch);
 
-	usbd_transfer_unsetup(sc->sc_xfer, UPGT_N_XFERS);
-	ieee80211_ifdetach(ic);
+	/* drain USB transfers */
+	for (x = 0; x != UPGT_N_XFERS; x++)
+		usbd_transfer_drain(sc->sc_xfer[x]);
+
+	/* free data buffers */
+	UPGT_LOCK(sc);
 	upgt_free_rx(sc);
 	upgt_free_tx(sc);
+	UPGT_UNLOCK(sc);
 
+	/* free USB transfers and some data buffers */
+	usbd_transfer_unsetup(sc->sc_xfer, UPGT_N_XFERS);
+
+	ieee80211_ifdetach(ic);
 	if_free(ifp);
 	mtx_destroy(&sc->sc_mtx);
 
@@ -2049,7 +2072,7 @@ upgt_free_rx(struct upgt_softc *sc)
 	for (i = 0; i < UPGT_RX_MAXCOUNT; i++) {
 		struct upgt_data *data = &sc->sc_rx_data[i];
 
-		free(data->buf, M_USBDEV);
+		data->buf = NULL;
 		data->ni = NULL;
 	}
 }
@@ -2062,7 +2085,10 @@ upgt_free_tx(struct upgt_softc *sc)
 	for (i = 0; i < UPGT_TX_MAXCOUNT; i++) {
 		struct upgt_data *data = &sc->sc_tx_data[i];
 
-		free(data->buf, M_USBDEV);
+		if (data->ni != NULL)
+			ieee80211_free_node(data->ni);
+
+		data->buf = NULL;
 		data->ni = NULL;
 	}
 }
@@ -2304,8 +2330,7 @@ setup:
 			return;
 		STAILQ_REMOVE_HEAD(&sc->sc_rx_inactive, next);
 		STAILQ_INSERT_TAIL(&sc->sc_rx_active, data, next);
-		usbd_xfer_set_frame_data(xfer, 0, data->buf,
-		    usbd_xfer_max_len(xfer));
+		usbd_xfer_set_frame_data(xfer, 0, data->buf, MCLBYTES);
 		usbd_transfer_submit(xfer);
 
 		/*
@@ -2408,8 +2433,7 @@ static device_method_t upgt_methods[] = {
         DEVMETHOD(device_probe, upgt_match),
         DEVMETHOD(device_attach, upgt_attach),
         DEVMETHOD(device_detach, upgt_detach),
-	
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t upgt_driver = {

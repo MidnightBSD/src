@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/net/if_axe.c 263166 2014-03-14 10:18:53Z hselasky $");
 
 /*
  * ASIX Electronics AX88172/AX88178/AX88778 USB 2.0 ethernet driver.
@@ -159,6 +159,7 @@ static const STRUCT_USB_HOST_ID axe_devs[] = {
 	AXE_DEV(COREGA, FETHER_USB2_TX, 0),
 	AXE_DEV(DLINK, DUBE100, 0),
 	AXE_DEV(DLINK, DUBE100B1, AXE_FLAG_772),
+	AXE_DEV(DLINK, DUBE100C1, AXE_FLAG_772B),
 	AXE_DEV(GOODWAY, GWUSB2E, 0),
 	AXE_DEV(IODATA, ETGUS2, AXE_FLAG_178),
 	AXE_DEV(JVC, MP_PRX1, 0),
