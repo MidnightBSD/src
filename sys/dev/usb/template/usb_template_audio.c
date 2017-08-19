@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/template/usb_template_audio.c 223472 2011-06-23 10:35:45Z hselasky $");
 
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.

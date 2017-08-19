@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/template/usb_template_mouse.c 229103 2011-12-31 14:37:51Z hselasky $");
 
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.

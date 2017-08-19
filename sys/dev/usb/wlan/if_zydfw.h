@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*	$MidnightBSD$	*/
+/*	$FreeBSD: stable/9/sys/dev/usb/wlan/if_zydfw.h 196219 2009-08-14 20:03:53Z jhb $	*/
 
 uint8_t zd1211_firmware[] = {
 	0x08, 0x91, 0xFF, 0xED, 0x09, 0x93, 0x1E, 0xEE,

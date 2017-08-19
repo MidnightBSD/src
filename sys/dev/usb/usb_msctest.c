@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/9/sys/dev/usb/usb_msctest.c 283174 2015-05-21 06:53:55Z hselasky $ */
 /*-
  * Copyright (c) 2008,2011 Hans Petter Selasky. All rights reserved.
  *
@@ -83,7 +83,7 @@ enum {
 	DIR_NONE,
 };
 
-#define	SCSI_MAX_LEN	0x100
+#define	SCSI_MAX_LEN	MAX(0x100, BULK_SIZE)
 #define	SCSI_INQ_LEN	0x24
 #define	SCSI_SENSE_LEN	0xFF
 
@@ -98,6 +98,9 @@ static uint8_t scsi_cmotech_eject[] =   { 0xff, 0x52, 0x44, 0x45, 0x56, 0x43,
 static uint8_t scsi_huawei_eject[] =	{ 0x11, 0x06, 0x00, 0x00, 0x00, 0x00,
 					  0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 					  0x00, 0x00, 0x00, 0x00 };
+static uint8_t scsi_huawei_eject2[] =	{ 0x11, 0x06, 0x20, 0x00, 0x00, 0x01,
+					  0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+					  0x00, 0x00, 0x00, 0x00 };
 static uint8_t scsi_tct_eject[] =	{ 0x06, 0xf5, 0x04, 0x02, 0x52, 0x70 };
 static uint8_t scsi_sync_cache[] =	{ 0x35, 0x00, 0x00, 0x00, 0x00, 0x00,
 					  0x00, 0x00, 0x00, 0x00 };
@@ -105,6 +108,8 @@ static uint8_t scsi_request_sense[] =	{ 0x03, 0x00, 0x00, 0x00, 0x12, 0x00,
 					  0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 static uint8_t scsi_read_capacity[] =	{ 0x25, 0x00, 0x00, 0x00, 0x00, 0x00,
 					  0x00, 0x00, 0x00, 0x00 };
+static uint8_t scsi_prevent_removal[] =	{ 0x1e, 0, 0, 0, 1, 0 };
+static uint8_t scsi_allow_removal[] =	{ 0x1e, 0, 0, 0, 0, 0 };
 
 #define	BULK_SIZE		64	/* dummy */
 #define	ERR_CSW_FAILED		-1
@@ -139,8 +144,8 @@ struct bbb_csw {
 struct bbb_transfer {
 	struct mtx mtx;
 	struct cv cv;
-	struct bbb_cbw cbw;
-	struct bbb_csw csw;
+	struct bbb_cbw *cbw;
+	struct bbb_csw *csw;
 
 	struct usb_xfer *xfer[ST_MAX];
 
@@ -150,6 +155,7 @@ struct bbb_transfer {
 	usb_size_t data_rem;		/* bytes */
 	usb_timeout_t data_timeout;	/* ms */
 	usb_frlength_t actlen;		/* bytes */
+	usb_frlength_t buffer_size;    	/* bytes */
 
 	uint8_t	cmd_len;		/* bytes */
 	uint8_t	dir;
@@ -158,7 +164,7 @@ struct bbb_transfer {
 	uint8_t	status_try;
 	int	error;
 
-	uint8_t	buffer[SCSI_MAX_LEN] __aligned(4);
+	uint8_t	*buffer;
 };
 
 static usb_callback_t bbb_command_callback;
@@ -167,6 +173,7 @@ static usb_callback_t bbb_data_rd_cs_callback;
 static usb_callback_t bbb_data_write_callback;
 static usb_callback_t bbb_data_wr_cs_callback;
 static usb_callback_t bbb_status_callback;
+static usb_callback_t bbb_raw_write_callback;
 
 static void	bbb_done(struct bbb_transfer *, int);
 static void	bbb_transfer_start(struct bbb_transfer *, uint8_t);
@@ -174,7 +181,7 @@ static void	bbb_data_clear_stall_callback(struct usb_xfer *, uint8_t,
 		    uint8_t);
 static int	bbb_command_start(struct bbb_transfer *, uint8_t, uint8_t,
 		    void *, size_t, void *, size_t, usb_timeout_t);
-static struct bbb_transfer *bbb_attach(struct usb_device *, uint8_t);
+static struct bbb_transfer *bbb_attach(struct usb_device *, uint8_t, uint8_t);
 static void	bbb_detach(struct bbb_transfer *);
 
 static const struct usb_config bbb_config[ST_MAX] = {
@@ -184,7 +191,6 @@ static const struct usb_config bbb_config[ST_MAX] = {
 		.endpoint = UE_ADDR_ANY,
 		.direction = UE_DIR_OUT,
 		.bufsize = sizeof(struct bbb_cbw),
-		.flags = {.ext_buffer = 1,},
 		.callback = &bbb_command_callback,
 		.timeout = 4 * USB_MS_HZ,	/* 4 seconds */
 	},
@@ -193,8 +199,8 @@ static const struct usb_config bbb_config[ST_MAX] = {
 		.type = UE_BULK,
 		.endpoint = UE_ADDR_ANY,
 		.direction = UE_DIR_IN,
-		.bufsize = BULK_SIZE,
-		.flags = {.ext_buffer = 1,.proxy_buffer = 1,.short_xfer_ok = 1,},
+		.bufsize = SCSI_MAX_LEN,
+		.flags = {.proxy_buffer = 1,.short_xfer_ok = 1,},
 		.callback = &bbb_data_read_callback,
 		.timeout = 4 * USB_MS_HZ,	/* 4 seconds */
 	},
@@ -212,7 +218,7 @@ static const struct usb_config bbb_config[ST_MAX] = {
 		.type = UE_BULK,
 		.endpoint = UE_ADDR_ANY,
 		.direction = UE_DIR_OUT,
-		.bufsize = BULK_SIZE,
+		.bufsize = SCSI_MAX_LEN,
 		.flags = {.ext_buffer = 1,.proxy_buffer = 1,},
 		.callback = &bbb_data_write_callback,
 		.timeout = 4 * USB_MS_HZ,	/* 4 seconds */
@@ -232,16 +238,28 @@ static const struct usb_config bbb_config[ST_MAX] = {
 		.endpoint = UE_ADDR_ANY,
 		.direction = UE_DIR_IN,
 		.bufsize = sizeof(struct bbb_csw),
-		.flags = {.ext_buffer = 1,.short_xfer_ok = 1,},
+		.flags = {.short_xfer_ok = 1,},
 		.callback = &bbb_status_callback,
 		.timeout = 1 * USB_MS_HZ,	/* 1 second  */
+	},
+};
+
+static const struct usb_config bbb_raw_config[1] = {
+
+	[0] = {
+		.type = UE_BULK_INTR,
+		.endpoint = UE_ADDR_ANY,
+		.direction = UE_DIR_OUT,
+		.bufsize = SCSI_MAX_LEN,
+		.flags = {.ext_buffer = 1,.proxy_buffer = 1,},
+		.callback = &bbb_raw_write_callback,
+		.timeout = 1 * USB_MS_HZ,	/* 1 second */
 	},
 };
 
 static void
 bbb_done(struct bbb_transfer *sc, int error)
 {
-
 	sc->error = error;
 	sc->state = ST_COMMAND;
 	sc->status_try = 1;
@@ -290,18 +308,19 @@ bbb_command_callback(struct usb_xfer *xfer, usb_error_t error)
 
 	case USB_ST_SETUP:
 		sc->status_try = 0;
-		tag = UGETDW(sc->cbw.dCBWTag) + 1;
-		USETDW(sc->cbw.dCBWSignature, CBWSIGNATURE);
-		USETDW(sc->cbw.dCBWTag, tag);
-		USETDW(sc->cbw.dCBWDataTransferLength, (uint32_t)sc->data_len);
-		sc->cbw.bCBWFlags = ((sc->dir == DIR_IN) ? CBWFLAGS_IN : CBWFLAGS_OUT);
-		sc->cbw.bCBWLUN = sc->lun;
-		sc->cbw.bCDBLength = sc->cmd_len;
-		if (sc->cbw.bCDBLength > sizeof(sc->cbw.CBWCDB)) {
-			sc->cbw.bCDBLength = sizeof(sc->cbw.CBWCDB);
+		tag = UGETDW(sc->cbw->dCBWTag) + 1;
+		USETDW(sc->cbw->dCBWSignature, CBWSIGNATURE);
+		USETDW(sc->cbw->dCBWTag, tag);
+		USETDW(sc->cbw->dCBWDataTransferLength, (uint32_t)sc->data_len);
+		sc->cbw->bCBWFlags = ((sc->dir == DIR_IN) ? CBWFLAGS_IN : CBWFLAGS_OUT);
+		sc->cbw->bCBWLUN = sc->lun;
+		sc->cbw->bCDBLength = sc->cmd_len;
+		if (sc->cbw->bCDBLength > sizeof(sc->cbw->CBWCDB)) {
+			sc->cbw->bCDBLength = sizeof(sc->cbw->CBWCDB);
 			DPRINTFN(0, "Truncating long command\n");
 		}
-		usbd_xfer_set_frame_data(xfer, 0, &sc->cbw, sizeof(sc->cbw));
+		usbd_xfer_set_frame_len(xfer, 0,
+		    sizeof(struct bbb_cbw));
 		usbd_transfer_submit(xfer);
 		break;
 
@@ -388,7 +407,7 @@ bbb_data_write_callback(struct usb_xfer *xfer, usb_error_t error)
 
 		if (sc->data_rem == 0) {
 			bbb_transfer_start(sc, ST_STATUS);
-			return;
+			break;
 		}
 		if (max_bulk > sc->data_rem) {
 			max_bulk = sc->data_rem;
@@ -396,7 +415,7 @@ bbb_data_write_callback(struct usb_xfer *xfer, usb_error_t error)
 		usbd_xfer_set_timeout(xfer, sc->data_timeout);
 		usbd_xfer_set_frame_data(xfer, 0, sc->data_ptr, max_bulk);
 		usbd_transfer_submit(xfer);
-		return;
+		break;
 
 	default:			/* Error */
 		if (error == USB_ERR_CANCELLED) {
@@ -404,8 +423,7 @@ bbb_data_write_callback(struct usb_xfer *xfer, usb_error_t error)
 		} else {
 			bbb_transfer_start(sc, ST_DATA_WR_CS);
 		}
-		return;
-
+		break;
 	}
 }
 
@@ -430,9 +448,9 @@ bbb_status_callback(struct usb_xfer *xfer, usb_error_t error)
 
 		/* very simple status check */
 
-		if (actlen < (int)sizeof(sc->csw)) {
+		if (actlen < (int)sizeof(struct bbb_csw)) {
 			bbb_done(sc, USB_ERR_SHORT_XFER);
-		} else if (sc->csw.bCSWStatus == CSWSTATUS_GOOD) {
+		} else if (sc->csw->bCSWStatus == CSWSTATUS_GOOD) {
 			bbb_done(sc, 0);	/* success */
 		} else {
 			bbb_done(sc, ERR_CSW_FAILED);	/* error */
@@ -440,7 +458,8 @@ bbb_status_callback(struct usb_xfer *xfer, usb_error_t error)
 		break;
 
 	case USB_ST_SETUP:
-		usbd_xfer_set_frame_data(xfer, 0, &sc->csw, sizeof(sc->csw));
+		usbd_xfer_set_frame_len(xfer, 0,
+		    sizeof(struct bbb_csw));
 		usbd_transfer_submit(xfer);
 		break;
 
@@ -454,6 +473,47 @@ bbb_status_callback(struct usb_xfer *xfer, usb_error_t error)
 			sc->status_try = 1;
 			bbb_transfer_start(sc, ST_DATA_RD_CS);
 		}
+		break;
+	}
+}
+
+static void
+bbb_raw_write_callback(struct usb_xfer *xfer, usb_error_t error)
+{
+	struct bbb_transfer *sc = usbd_xfer_softc(xfer);
+	usb_frlength_t max_bulk = usbd_xfer_max_len(xfer);
+	int actlen, sumlen;
+
+	usbd_xfer_status(xfer, &actlen, &sumlen, NULL, NULL);
+
+	switch (USB_GET_STATE(xfer)) {
+	case USB_ST_TRANSFERRED:
+		sc->data_rem -= actlen;
+		sc->data_ptr += actlen;
+		sc->actlen += actlen;
+
+		if (actlen < sumlen) {
+			/* short transfer */
+			sc->data_rem = 0;
+		}
+	case USB_ST_SETUP:
+		DPRINTF("max_bulk=%d, data_rem=%d\n",
+		    max_bulk, sc->data_rem);
+
+		if (sc->data_rem == 0) {
+			bbb_done(sc, 0);
+			break;
+		}
+		if (max_bulk > sc->data_rem) {
+			max_bulk = sc->data_rem;
+		}
+		usbd_xfer_set_timeout(xfer, sc->data_timeout);
+		usbd_xfer_set_frame_data(xfer, 0, sc->data_ptr, max_bulk);
+		usbd_transfer_submit(xfer);
+		break;
+
+	default:			/* Error */
+		bbb_done(sc, error);
 		break;
 	}
 }
@@ -477,10 +537,11 @@ bbb_command_start(struct bbb_transfer *sc, uint8_t dir, uint8_t lun,
 	sc->data_rem = data_len;
 	sc->data_timeout = (data_timeout + USB_MS_HZ);
 	sc->actlen = 0;
+	sc->error = 0;
 	sc->cmd_len = cmd_len;
-	memset(&sc->cbw.CBWCDB, 0, sizeof(sc->cbw.CBWCDB));
-	memcpy(&sc->cbw.CBWCDB, cmd_ptr, cmd_len);
-	DPRINTFN(1, "SCSI cmd = %*D\n", (int)cmd_len, (char *)sc->cbw.CBWCDB, ":");
+	memset(&sc->cbw->CBWCDB, 0, sizeof(sc->cbw->CBWCDB));
+	memcpy(&sc->cbw->CBWCDB, cmd_ptr, cmd_len);
+	DPRINTFN(1, "SCSI cmd = %*D\n", (int)cmd_len, (char *)sc->cbw->CBWCDB, ":");
 
 	mtx_lock(&sc->mtx);
 	usbd_transfer_start(sc->xfer[sc->state]);
@@ -492,13 +553,45 @@ bbb_command_start(struct bbb_transfer *sc, uint8_t dir, uint8_t lun,
 	return (sc->error);
 }
 
+/*------------------------------------------------------------------------*
+ *	bbb_raw_write - write a raw BULK message synchronously
+ *
+ * Return values
+ * 0: Success
+ * Else: Failure
+ *------------------------------------------------------------------------*/
+static int
+bbb_raw_write(struct bbb_transfer *sc, const void *data_ptr, size_t data_len,
+    usb_timeout_t data_timeout)
+{
+	sc->data_ptr = __DECONST(void *, data_ptr);
+	sc->data_len = data_len;
+	sc->data_rem = data_len;
+	sc->data_timeout = (data_timeout + USB_MS_HZ);
+	sc->actlen = 0;
+	sc->error = 0;
+
+	DPRINTFN(1, "BULK DATA = %*D\n", (int)data_len,
+	    (const char *)data_ptr, ":");
+
+	mtx_lock(&sc->mtx);
+	usbd_transfer_start(sc->xfer[0]);
+	while (usbd_transfer_pending(sc->xfer[0]))
+		cv_wait(&sc->cv, &sc->mtx);
+	mtx_unlock(&sc->mtx);
+	return (sc->error);
+}
+
 static struct bbb_transfer *
-bbb_attach(struct usb_device *udev, uint8_t iface_index)
+bbb_attach(struct usb_device *udev, uint8_t iface_index,
+    uint8_t bInterfaceClass)
 {
 	struct usb_interface *iface;
 	struct usb_interface_descriptor *id;
+	const struct usb_config *pconfig;
 	struct bbb_transfer *sc;
 	usb_error_t err;
+	int nconfig;
 	uint8_t do_unlock;
 
 	/* Prevent re-enumeration */
@@ -518,22 +611,39 @@ bbb_attach(struct usb_device *udev, uint8_t iface_index)
 		return (NULL);
 
 	id = iface->idesc;
-	if (id == NULL || id->bInterfaceClass != UICLASS_MASS)
+	if (id == NULL || id->bInterfaceClass != bInterfaceClass)
 		return (NULL);
 
-	switch (id->bInterfaceSubClass) {
-	case UISUBCLASS_SCSI:
-	case UISUBCLASS_UFI:
-	case UISUBCLASS_SFF8020I:
-	case UISUBCLASS_SFF8070I:
+	switch (id->bInterfaceClass) {
+	case UICLASS_MASS:
+		switch (id->bInterfaceSubClass) {
+		case UISUBCLASS_SCSI:
+		case UISUBCLASS_UFI:
+		case UISUBCLASS_SFF8020I:
+		case UISUBCLASS_SFF8070I:
+			break;
+		default:
+			return (NULL);
+		}
+		switch (id->bInterfaceProtocol) {
+		case UIPROTO_MASS_BBB_OLD:
+		case UIPROTO_MASS_BBB:
+			break;
+		default:
+			return (NULL);
+		}
+		pconfig = bbb_config;
+		nconfig = ST_MAX;
 		break;
-	default:
-		return (NULL);
-	}
-
-	switch (id->bInterfaceProtocol) {
-	case UIPROTO_MASS_BBB_OLD:
-	case UIPROTO_MASS_BBB:
+	case UICLASS_HID:
+		switch (id->bInterfaceSubClass) {
+		case 0:
+			break;
+		default:
+			return (NULL);
+		}
+		pconfig = bbb_raw_config;
+		nconfig = 1;
 		break;
 	default:
 		return (NULL);
@@ -543,11 +653,26 @@ bbb_attach(struct usb_device *udev, uint8_t iface_index)
 	mtx_init(&sc->mtx, "USB autoinstall", NULL, MTX_DEF);
 	cv_init(&sc->cv, "WBBB");
 
-	err = usbd_transfer_setup(udev, &iface_index, sc->xfer, bbb_config,
-	    ST_MAX, sc, &sc->mtx);
+	err = usbd_transfer_setup(udev, &iface_index, sc->xfer, pconfig,
+	    nconfig, sc, &sc->mtx);
 	if (err) {
 		bbb_detach(sc);
 		return (NULL);
+	}
+	switch (id->bInterfaceClass) {
+	case UICLASS_MASS:
+		/* store pointer to DMA buffers */
+		sc->buffer = usbd_xfer_get_frame_buffer(
+		    sc->xfer[ST_DATA_RD], 0);
+		sc->buffer_size =
+		    usbd_xfer_max_len(sc->xfer[ST_DATA_RD]);
+		sc->cbw = usbd_xfer_get_frame_buffer(
+		    sc->xfer[ST_COMMAND], 0);
+		sc->csw = usbd_xfer_get_frame_buffer(
+		    sc->xfer[ST_STATUS], 0);
+		break;
+	default:
+		break;
 	}
 	return (sc);
 }
@@ -577,7 +702,7 @@ usb_iface_is_cdrom(struct usb_device *udev, uint8_t iface_index)
 	uint8_t sid_type;
 	int err;
 
-	sc = bbb_attach(udev, iface_index);
+	sc = bbb_attach(udev, iface_index, UICLASS_MASS);
 	if (sc == NULL)
 		return (0);
 
@@ -633,7 +758,7 @@ usb_msc_auto_quirk(struct usb_device *udev, uint8_t iface_index)
 	uint8_t sid_type;
 	int err;
 
-	sc = bbb_attach(udev, iface_index);
+	sc = bbb_attach(udev, iface_index, UICLASS_MASS);
 	if (sc == NULL)
 		return (0);
 
@@ -677,10 +802,28 @@ usb_msc_auto_quirk(struct usb_device *udev, uint8_t iface_index)
 	    USB_MS_HZ);
 
 	if (err != 0) {
-
 		if (err != ERR_CSW_FAILED)
 			goto error;
+		DPRINTF("Test unit ready failed\n");
 	}
+
+	err = bbb_command_start(sc, DIR_OUT, 0, NULL, 0,
+	    &scsi_prevent_removal, sizeof(scsi_prevent_removal),
+	    USB_MS_HZ);
+
+	if (err == 0) {
+		err = bbb_command_start(sc, DIR_OUT, 0, NULL, 0,
+		    &scsi_allow_removal, sizeof(scsi_allow_removal),
+		    USB_MS_HZ);
+	}
+
+	if (err != 0) {
+		if (err != ERR_CSW_FAILED)
+			goto error;
+		DPRINTF("Device doesn't handle prevent and allow removal\n");
+		usbd_add_dynamic_quirk(udev, UQ_MSC_NO_PREVENT_ALLOW);
+	}
+
 	timeout = 1;
 
 retry_sync_cache:
@@ -696,7 +839,6 @@ retry_sync_cache:
 		DPRINTF("Device doesn't handle synchronize cache\n");
 
 		usbd_add_dynamic_quirk(udev, UQ_MSC_NO_SYNC_CACHE);
-
 	} else {
 
 		/*
@@ -770,6 +912,7 @@ error:
 	DPRINTF("Device did not respond, enabling all quirks\n");
 
 	usbd_add_dynamic_quirk(udev, UQ_MSC_NO_SYNC_CACHE);
+	usbd_add_dynamic_quirk(udev, UQ_MSC_NO_PREVENT_ALLOW);
 	usbd_add_dynamic_quirk(udev, UQ_MSC_NO_TEST_UNIT_READY);
 
 	/* Need to re-enumerate the device */
@@ -784,11 +927,10 @@ usb_msc_eject(struct usb_device *udev, uint8_t iface_index, int method)
 	struct bbb_transfer *sc;
 	usb_error_t err;
 
-	sc = bbb_attach(udev, iface_index);
+	sc = bbb_attach(udev, iface_index, UICLASS_MASS);
 	if (sc == NULL)
 		return (USB_ERR_INVAL);
 
-	err = 0;
 	switch (method) {
 	case MSC_EJECT_STOPUNIT:
 		err = bbb_command_start(sc, DIR_IN, 0, NULL, 0,
@@ -819,21 +961,44 @@ usb_msc_eject(struct usb_device *udev, uint8_t iface_index, int method)
 		    &scsi_huawei_eject, sizeof(scsi_huawei_eject),
 		    USB_MS_HZ);
 		break;
+	case MSC_EJECT_HUAWEI2:
+		err = bbb_command_start(sc, DIR_IN, 0, NULL, 0,
+		    &scsi_huawei_eject2, sizeof(scsi_huawei_eject2),
+		    USB_MS_HZ);
+		break;
 	case MSC_EJECT_TCT:
 		/*
 		 * TCTMobile needs DIR_IN flag. To get it, we
 		 * supply a dummy data with the command.
 		 */
-		err = bbb_command_start(sc, DIR_IN, 0, &sc->buffer,
-		    sizeof(sc->buffer), &scsi_tct_eject,
+		err = bbb_command_start(sc, DIR_IN, 0, sc->buffer,
+		    sc->buffer_size, &scsi_tct_eject,
 		    sizeof(scsi_tct_eject), USB_MS_HZ);
 		break;
 	default:
-		printf("usb_msc_eject: unknown eject method (%d)\n", method);
-		break;
+		DPRINTF("Unknown eject method (%d)\n", method);
+		bbb_detach(sc);
+		return (USB_ERR_INVAL);
 	}
+
 	DPRINTF("Eject CD command status: %s\n", usbd_errstr(err));
 
 	bbb_detach(sc);
 	return (0);
 }
+
+usb_error_t
+usb_dymo_eject(struct usb_device *udev, uint8_t iface_index)
+{
+	static const uint8_t data[3] = { 0x1b, 0x5a, 0x01 };
+	struct bbb_transfer *sc;
+	usb_error_t err;
+
+	sc = bbb_attach(udev, iface_index, UICLASS_HID);
+	if (sc == NULL)
+		return (USB_ERR_INVAL);
+	err = bbb_raw_write(sc, data, sizeof(data), USB_MS_HZ);
+	bbb_detach(sc);
+	return (err);
+}
+

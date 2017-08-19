@@ -1,5 +1,5 @@
 /*	$NetBSD: ucomvar.h,v 1.9 2001/01/23 21:56:17 augustss Exp $	*/
-/*	$MidnightBSD$	*/
+/*	$FreeBSD: stable/9/sys/dev/usb/serial/usb_serial.h 268208 2014-07-03 08:07:37Z hselasky $	*/
 
 /*-
  * Copyright (c) 2001-2002, Shunsuke Akiyama <akiyama@jp.FreeBSD.org>.
@@ -43,13 +43,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -146,7 +139,7 @@ struct ucom_super_softc {
 
 struct ucom_softc {
 	/*
-	 * NOTE: To avoid loosing level change information we use two
+	 * NOTE: To avoid losing level change information we use two
 	 * tasks instead of one for all commands.
 	 *
 	 * Level changes are transitions like:
@@ -202,7 +195,7 @@ struct ucom_softc {
 #define	UCOM_MTX_LOCK(sc) mtx_lock((sc)->sc_mtx)
 #define	UCOM_MTX_UNLOCK(sc) mtx_unlock((sc)->sc_mtx)
 #define	UCOM_UNLOAD_DRAIN(x) \
-SYSUNINIT(var, SI_SUB_KLD - 3, SI_ORDER_ANY, ucom_drain_all, 0)
+SYSUNINIT(var, SI_SUB_KLD - 2, SI_ORDER_ANY, ucom_drain_all, 0)
 
 #define	ucom_cfg_do_request(udev,com,req,ptr,flags,timo) \
     usbd_do_request_proc(udev,&(com)->sc_super->sc_tq,req,ptr,flags,NULL,timo)

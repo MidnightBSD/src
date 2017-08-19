@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/usb_pf.c 287273 2015-08-29 06:17:39Z hselasky $");
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/bus.h>
@@ -103,13 +103,16 @@ usbpf_detach(struct usb_bus *ubus)
 {
 	struct ifnet *ifp = ubus->ifp;
 
+	USB_BUS_LOCK(ubus);
+	ubus->ifp = NULL;
+	USB_BUS_UNLOCK(ubus);
+
 	if (ifp != NULL) {
 		bpfdetach(ifp);
 		if_down(ifp);
 		if_detach(ifp);
 		if_free(ifp);
 	}
-	ubus->ifp = NULL;
 }
 
 static uint32_t
@@ -261,7 +264,7 @@ usbpf_xfertap(struct usb_xfer *xfer, int type)
 	/* sanity checks */
 	if (usb_no_pf != 0)
 		return;
-	if (bus->ifp == NULL)
+	if (bus->ifp == NULL || bus->ifp->if_bpf == NULL)
 		return;
 	if (!bpf_peers_present(bus->ifp->if_bpf))
 		return;

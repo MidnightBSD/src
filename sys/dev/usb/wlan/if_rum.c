@@ -1,4 +1,4 @@
-/*	$MidnightBSD$	*/
+/*	$FreeBSD: stable/9/sys/dev/usb/wlan/if_rum.c 269267 2014-07-29 22:00:54Z hselasky $	*/
 
 /*-
  * Copyright (c) 2005-2007 Damien Bergamini <damien.bergamini@free.fr>
@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/wlan/if_rum.c 269267 2014-07-29 22:00:54Z hselasky $");
 
 /*-
  * Ralink Technology RT2501USB/RT2601USB chipset driver
@@ -543,6 +543,11 @@ rum_detach(device_t self)
 	struct ifnet *ifp = sc->sc_ifp;
 	struct ieee80211com *ic;
 
+	/* Prevent further ioctls */
+	RUM_LOCK(sc);
+	sc->sc_detached = 1;
+	RUM_UNLOCK(sc);
+
 	/* stop all USB transfers */
 	usbd_transfer_unsetup(sc->sc_xfer, RUM_N_TRANSFER);
 
@@ -557,7 +562,6 @@ rum_detach(device_t self)
 		if_free(ifp);
 	}
 	mtx_destroy(&sc->sc_mtx);
-
 	return (0);
 }
 
@@ -600,8 +604,13 @@ rum_vap_create(struct ieee80211com *ic, const char name[IFNAMSIZ], int unit,
 		return NULL;
 	vap = &rvp->vap;
 	/* enable s/w bmiss handling for sta mode */
-	ieee80211_vap_setup(ic, vap, name, unit, opmode,
-	    flags | IEEE80211_CLONE_NOBEACONS, bssid, mac);
+
+	if (ieee80211_vap_setup(ic, vap, name, unit, opmode,
+	    flags | IEEE80211_CLONE_NOBEACONS, bssid, mac) != 0) {
+		/* out of memory */
+		free(rvp, M_80211_VAP);
+		return (NULL);
+	}
 
 	/* override state transition machine */
 	rvp->newstate = vap->iv_newstate;
@@ -1025,6 +1034,8 @@ rum_setup_tx_desc(struct rum_softc *sc, struct rum_tx_desc *desc,
 		desc->plcp_length_hi = plcp_length >> 6;
 		desc->plcp_length_lo = plcp_length & 0x3f;
 	} else {
+		if (rate == 0)
+			rate = 2;	/* avoid division by zero */
 		plcp_length = (16 * len + rate - 1) / rate;
 		if (rate == 22) {
 			remainder = (16 * len) % 22;
@@ -1127,7 +1138,7 @@ rum_tx_mgt(struct rum_softc *sc, struct mbuf *m0, struct ieee80211_node *ni)
 
 		dur = ieee80211_ack_duration(ic->ic_rt, tp->mgmtrate, 
 		    ic->ic_flags & IEEE80211_F_SHPREAMBLE);
-		*(uint16_t *)wh->i_dur = htole16(dur);
+		USETW(wh->i_dur, dur);
 
 		/* tell hardware to add timestamp for probe responses */
 		if ((wh->i_fc[0] &
@@ -1271,7 +1282,7 @@ rum_tx_data(struct rum_softc *sc, struct mbuf *m0, struct ieee80211_node *ni)
 
 		dur = ieee80211_ack_duration(ic->ic_rt, rate, 
 		    ic->ic_flags & IEEE80211_F_SHPREAMBLE);
-		*(uint16_t *)wh->i_dur = htole16(dur);
+		USETW(wh->i_dur, dur);
 	}
 
 	rum_setup_tx_desc(sc, &data->desc, flags, 0, m0->m_pkthdr.len, rate);
@@ -1322,7 +1333,14 @@ rum_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	struct rum_softc *sc = ifp->if_softc;
 	struct ieee80211com *ic = ifp->if_l2com;
 	struct ifreq *ifr = (struct ifreq *) data;
-	int error = 0, startall = 0;
+	int error;
+	int startall = 0;
+
+	RUM_LOCK(sc);
+	error = sc->sc_detached ? ENXIO : 0;
+	RUM_UNLOCK(sc);
+	if (error)
+		return (error);
 
 	switch (cmd) {
 	case SIOCSIFFLAGS:
@@ -2366,8 +2384,7 @@ static device_method_t rum_methods[] = {
 	DEVMETHOD(device_probe,		rum_match),
 	DEVMETHOD(device_attach,	rum_attach),
 	DEVMETHOD(device_detach,	rum_detach),
-
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t rum_driver = {

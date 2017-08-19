@@ -64,6 +64,7 @@ struct cdev {
 #define SI_DUMPDEV	0x0080	/* is kernel dumpdev */
 #define SI_CANDELETE	0x0100	/* can do BIO_DELETE */
 #define SI_CLONELIST	0x0200	/* on a clone list */
+#define	SI_UNMAPPED	0x0400	/* can handle unmapped I/O */
 	struct timespec	si_atime;
 	struct timespec	si_ctime;
 	struct timespec	si_mtime;
@@ -171,6 +172,7 @@ typedef int dumper_t(
 #define D_PSEUDO	0x00200000	/* make_dev() can return NULL */
 #define D_NEEDGIANT	0x00400000	/* driver want Giant */
 #define	D_NEEDMINOR	0x00800000	/* driver uses clone_create() */
+#define	D_UNMAPPED_IO   0x01000000	/* d_strategy can accept unmapped IO */
 
 /*
  * Version numbers.
@@ -245,6 +247,7 @@ void clone_cleanup(struct clonedevs **);
 int clone_create(struct clonedevs **, struct cdevsw *, int *unit, struct cdev **dev, int extra);
 
 int	count_dev(struct cdev *_dev);
+void	delist_dev(struct cdev *_dev);
 void	destroy_dev(struct cdev *_dev);
 int	destroy_dev_sched(struct cdev *dev);
 int	destroy_dev_sched_cb(struct cdev *dev, void (*cb)(void *), void *arg);

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/9/sys/dev/usb/usb_core.h 278508 2015-02-10 13:18:48Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -97,6 +97,7 @@ struct usb_xfer_flags_int {
 					 * sent */
 	uint8_t	control_act:1;		/* set if control transfer is active */
 	uint8_t	control_stall:1;	/* set if control transfer should be stalled */
+	uint8_t control_did_data:1;	/* set if control DATA has been transferred */
 
 	uint8_t	short_frames_ok:1;	/* filtered version */
 	uint8_t	short_xfer_ok:1;	/* filtered version */
@@ -113,6 +114,8 @@ struct usb_xfer_flags_int {
 	uint8_t	can_cancel_immed:1;	/* set if USB transfer can be
 					 * cancelled immediately */
 	uint8_t	doing_callback:1;	/* set if executing the callback */
+	uint8_t maxp_was_clamped:1;	/* set if the max packet size 
+					 * was outside its allowed range */
 };
 
 /*

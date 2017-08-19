@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/9/sys/dev/usb/usb_request.c 305735 2016-09-12 10:20:44Z hselasky $ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc. All rights reserved.
  * Copyright (c) 1998 Lennart Augustsson. All rights reserved.
@@ -48,7 +48,6 @@
 #include <dev/usb/usb.h>
 #include <dev/usb/usbdi.h>
 #include <dev/usb/usbdi_util.h>
-#include <dev/usb/usb_ioctl.h>
 #include <dev/usb/usbhid.h>
 
 #define	USB_DEBUG_VAR usb_debug
@@ -71,6 +70,11 @@ static int usb_no_cs_fail;
 
 SYSCTL_INT(_hw_usb, OID_AUTO, no_cs_fail, CTLFLAG_RW,
     &usb_no_cs_fail, 0, "USB clear stall failures are ignored, if set");
+
+static int usb_full_ddesc;
+
+SYSCTL_INT(_hw_usb, OID_AUTO, full_ddesc, CTLFLAG_RW,
+    &usb_full_ddesc, 0, "USB always read complete device descriptor, if set");
 
 #ifdef USB_DEBUG
 #ifdef USB_REQ_DEBUG
@@ -449,16 +453,9 @@ usbd_do_request_flags(struct usb_device *udev, struct mtx *mtx,
 	}
 
 	/*
-	 * Grab the USB device enumeration SX-lock serialization is
-	 * achieved when multiple threads are involved:
+	 * Serialize access to this function:
 	 */
-	do_unlock = usbd_enum_lock(udev);
-
-	/*
-	 * We need to allow suspend and resume at this point, else the
-	 * control transfer will timeout if the device is suspended!
-	 */
-	usbd_sr_unlock(udev);
+	do_unlock = usbd_ctrl_lock(udev);
 
 	hr_func = usbd_get_hr_func(udev);
 
@@ -702,14 +699,23 @@ usbd_do_request_flags(struct usb_device *udev, struct mtx *mtx,
 	USB_XFER_UNLOCK(xfer);
 
 done:
-	usbd_sr_lock(udev);
-
 	if (do_unlock)
-		usbd_enum_unlock(udev);
+		usbd_ctrl_unlock(udev);
 
 	if ((mtx != NULL) && (mtx != &Giant))
 		mtx_lock(mtx);
 
+	switch (err) {
+	case USB_ERR_NORMAL_COMPLETION:
+	case USB_ERR_SHORT_XFER:
+	case USB_ERR_STALLED:
+	case USB_ERR_CANCELLED:
+		break;
+	default:
+		DPRINTF("I/O error - waiting a bit for TT cleanup\n");
+		usb_pause_mtx(mtx, hz / 16);
+		break;
+	}
 	return ((usb_error_t)err);
 }
 
@@ -789,8 +795,6 @@ usbd_req_reset_port(struct usb_device *udev, struct mtx *mtx, uint8_t port)
 	/* check for errors */
 	if (err)
 		goto done;
-#ifdef USB_DEBUG
-#endif
 	n = 0;
 	while (1) {
 		/* wait for the device to recover from reset */
@@ -997,7 +1001,7 @@ usbd_req_get_desc(struct usb_device *udev,
 		USETW(req.wLength, min_len);
 
 		err = usbd_do_request_flags(udev, mtx, &req,
-		    desc, 0, NULL, 1000);
+		    desc, 0, NULL, 500 /* ms */);
 
 		if (err) {
 			if (!retries) {
@@ -1882,32 +1886,41 @@ usbd_setup_device_desc(struct usb_device *udev, struct mtx *mtx)
 	 */
 	switch (udev->speed) {
 	case USB_SPEED_FULL:
-	case USB_SPEED_LOW:
+		if (usb_full_ddesc != 0) {
+			/* get full device descriptor */
+			err = usbd_req_get_device_desc(udev, mtx, &udev->ddesc);
+			if (err == 0)
+				break;
+		}
+
+		/* get partial device descriptor, some devices crash on this */
 		err = usbd_req_get_desc(udev, mtx, NULL, &udev->ddesc,
 		    USB_MAX_IPACKET, USB_MAX_IPACKET, 0, UDESC_DEVICE, 0, 0);
-		if (err != 0) {
-			DPRINTFN(0, "getting device descriptor "
-			    "at addr %d failed, %s\n", udev->address,
-			    usbd_errstr(err));
-			return (err);
-		}
+		if (err != 0)
+			break;
+
+		/* get the full device descriptor */
+		err = usbd_req_get_device_desc(udev, mtx, &udev->ddesc);
 		break;
+
 	default:
 		DPRINTF("Minimum MaxPacketSize is large enough "
-		    "to hold the complete device descriptor\n");
+		    "to hold the complete device descriptor or "
+		    "only once MaxPacketSize choice\n");
+
+		/* get the full device descriptor */
+		err = usbd_req_get_device_desc(udev, mtx, &udev->ddesc);
+
+		/* try one more time, if error */
+		if (err != 0)
+			err = usbd_req_get_device_desc(udev, mtx, &udev->ddesc);
 		break;
 	}
 
-	/* get the full device descriptor */
-	err = usbd_req_get_device_desc(udev, mtx, &udev->ddesc);
-
-	/* try one more time, if error */
-	if (err)
-		err = usbd_req_get_device_desc(udev, mtx, &udev->ddesc);
-
-	if (err) {
-		DPRINTF("addr=%d, getting full desc failed\n",
-		    udev->address);
+	if (err != 0) {
+		DPRINTFN(0, "getting device descriptor "
+		    "at addr %d failed, %s\n", udev->address,
+		    usbd_errstr(err));
 		return (err);
 	}
 
@@ -1952,6 +1965,7 @@ usbd_req_re_enumerate(struct usb_device *udev, struct mtx *mtx)
 		return (USB_ERR_INVAL);
 	}
 retry:
+#if USB_HAVE_TT_SUPPORT
 	/*
 	 * Try to reset the High Speed parent HUB of a LOW- or FULL-
 	 * speed device, if any.
@@ -1959,15 +1973,24 @@ retry:
 	if (udev->parent_hs_hub != NULL &&
 	    udev->speed != USB_SPEED_HIGH) {
 		DPRINTF("Trying to reset parent High Speed TT.\n");
-		err = usbd_req_reset_tt(udev->parent_hs_hub, NULL,
-		    udev->hs_port_no);
+		if (udev->parent_hs_hub == parent_hub &&
+		    (uhub_count_active_host_ports(parent_hub, USB_SPEED_LOW) +
+		     uhub_count_active_host_ports(parent_hub, USB_SPEED_FULL)) == 1) {
+			/* we can reset the whole TT */
+			err = usbd_req_reset_tt(parent_hub, NULL,
+			    udev->hs_port_no);
+		} else {
+			/* only reset a particular device and endpoint */
+			err = usbd_req_clear_tt_buffer(udev->parent_hs_hub, NULL,
+			    udev->hs_port_no, old_addr, UE_CONTROL, 0);
+		}
 		if (err) {
 			DPRINTF("Resetting parent High "
 			    "Speed TT failed (%s).\n",
 			    usbd_errstr(err));
 		}
 	}
-
+#endif
 	/* Try to warm reset first */
 	if (parent_hub->speed == USB_SPEED_SUPER)
 		usbd_req_warm_reset_port(parent_hub, mtx, udev->port_no);

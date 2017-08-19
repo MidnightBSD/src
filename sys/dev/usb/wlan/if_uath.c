@@ -49,7 +49,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/wlan/if_uath.c 259457 2013-12-16 09:07:09Z hselasky $");
 
 /*-
  * Driver for Atheros AR5523 USB parts.
@@ -217,9 +217,8 @@ static const struct usb_config uath_usbconfig[UATH_N_XFERS] = {
 		.type = UE_BULK,
 		.endpoint = 0x1,
 		.direction = UE_DIR_OUT,
-		.bufsize = UATH_MAX_CMDSZ,
+		.bufsize = UATH_MAX_CMDSZ * UATH_CMD_LIST_COUNT,
 		.flags = {
-			.ext_buffer = 1,
 			.force_short_xfer = 1,
 			.pipe_bof = 1,
 		},
@@ -242,9 +241,8 @@ static const struct usb_config uath_usbconfig[UATH_N_XFERS] = {
 		.type = UE_BULK,
 		.endpoint = 0x2,
 		.direction = UE_DIR_OUT,
-		.bufsize = UATH_MAX_TXBUFSZ,
+		.bufsize = UATH_MAX_TXBUFSZ * UATH_TX_DATA_LIST_COUNT,
 		.flags = {
-			.ext_buffer = 1,
 			.force_short_xfer = 1,
 			.pipe_bof = 1
 		},
@@ -258,10 +256,8 @@ static struct ieee80211vap *uath_vap_create(struct ieee80211com *,
 		    const uint8_t [IEEE80211_ADDR_LEN],
 		    const uint8_t [IEEE80211_ADDR_LEN]);
 static void	uath_vap_delete(struct ieee80211vap *);
-static int	uath_alloc_cmd_list(struct uath_softc *, struct uath_cmd [],
-		    int, int);
-static void	uath_free_cmd_list(struct uath_softc *, struct uath_cmd [],
-		    int);
+static int	uath_alloc_cmd_list(struct uath_softc *, struct uath_cmd []);
+static void	uath_free_cmd_list(struct uath_softc *, struct uath_cmd []);
 static int	uath_host_available(struct uath_softc *);
 static int	uath_get_capability(struct uath_softc *, uint32_t, uint32_t *);
 static int	uath_get_devcap(struct uath_softc *);
@@ -362,22 +358,26 @@ uath_attach(device_t dev)
 	callout_init(&sc->stat_ch, 0);
 	callout_init_mtx(&sc->watchdog_ch, &sc->sc_mtx, 0);
 
-	/*
-	 * Allocate xfers for firmware commands.
-	 */
-	error = uath_alloc_cmd_list(sc, sc->sc_cmd, UATH_CMD_LIST_COUNT,
-	    UATH_MAX_CMDSZ);
-	if (error != 0) {
-		device_printf(sc->sc_dev,
-		    "could not allocate Tx command list\n");
-		goto fail;
-	}
-
 	error = usbd_transfer_setup(uaa->device, &iface_index, sc->sc_xfer,
 	    uath_usbconfig, UATH_N_XFERS, sc, &sc->sc_mtx);
 	if (error) {
 		device_printf(dev, "could not allocate USB transfers, "
 		    "err=%s\n", usbd_errstr(error));
+		goto fail;
+	}
+
+	sc->sc_cmd_dma_buf = 
+	    usbd_xfer_get_frame_buffer(sc->sc_xfer[UATH_INTR_TX], 0);
+	sc->sc_tx_dma_buf = 
+	    usbd_xfer_get_frame_buffer(sc->sc_xfer[UATH_BULK_TX], 0);
+
+	/*
+	 * Setup buffers for firmware commands.
+	 */
+	error = uath_alloc_cmd_list(sc, sc->sc_cmd);
+	if (error != 0) {
+		device_printf(sc->sc_dev,
+		    "could not allocate Tx command list\n");
 		goto fail1;
 	}
 
@@ -492,8 +492,8 @@ uath_attach(device_t dev)
 
 fail4:	if_free(ifp);
 fail3:	UATH_UNLOCK(sc);
-fail2:	usbd_transfer_unsetup(sc->sc_xfer, UATH_N_XFERS);
-fail1:	uath_free_cmd_list(sc, sc->sc_cmd, UATH_CMD_LIST_COUNT);
+fail2:	uath_free_cmd_list(sc, sc->sc_cmd);
+fail1:	usbd_transfer_unsetup(sc->sc_xfer, UATH_N_XFERS);
 fail:
 	return (error);
 }
@@ -504,74 +504,83 @@ uath_detach(device_t dev)
 	struct uath_softc *sc = device_get_softc(dev);
 	struct ifnet *ifp = sc->sc_ifp;
 	struct ieee80211com *ic = ifp->if_l2com;
+	unsigned int x;
 
-	if (!device_is_attached(dev))
-		return (0);
-
+	/*
+	 * Prevent further allocations from RX/TX/CMD
+	 * data lists and ioctls
+	 */
 	UATH_LOCK(sc);
 	sc->sc_flags |= UATH_FLAG_INVALID;
+
+	STAILQ_INIT(&sc->sc_rx_active);
+	STAILQ_INIT(&sc->sc_rx_inactive);
+
+	STAILQ_INIT(&sc->sc_tx_active);
+	STAILQ_INIT(&sc->sc_tx_inactive);
+	STAILQ_INIT(&sc->sc_tx_pending);
+
+	STAILQ_INIT(&sc->sc_cmd_active);
+	STAILQ_INIT(&sc->sc_cmd_pending);
+	STAILQ_INIT(&sc->sc_cmd_waiting);
+	STAILQ_INIT(&sc->sc_cmd_inactive);
 	UATH_UNLOCK(sc);
 
-	ieee80211_ifdetach(ic);
 	uath_stop(ifp);
 
 	callout_drain(&sc->stat_ch);
 	callout_drain(&sc->watchdog_ch);
 
-	usbd_transfer_unsetup(sc->sc_xfer, UATH_N_XFERS);
+	/* drain USB transfers */
+	for (x = 0; x != UATH_N_XFERS; x++)
+		usbd_transfer_drain(sc->sc_xfer[x]);
 
-	/* free buffers */
+	/* free data buffers */
 	UATH_LOCK(sc);
 	uath_free_rx_data_list(sc);
 	uath_free_tx_data_list(sc);
-	uath_free_cmd_list(sc, sc->sc_cmd, UATH_CMD_LIST_COUNT);
+	uath_free_cmd_list(sc, sc->sc_cmd);
 	UATH_UNLOCK(sc);
 
+	/* free USB transfers and some data buffers */
+	usbd_transfer_unsetup(sc->sc_xfer, UATH_N_XFERS);
+
+	ieee80211_ifdetach(ic);
 	if_free(ifp);
 	mtx_destroy(&sc->sc_mtx);
 	return (0);
 }
 
 static void
-uath_free_cmd_list(struct uath_softc *sc, struct uath_cmd cmds[], int ncmd)
+uath_free_cmd_list(struct uath_softc *sc, struct uath_cmd cmds[])
 {
 	int i;
 
-	for (i = 0; i < ncmd; i++)
-		if (cmds[i].buf != NULL)
-			free(cmds[i].buf, M_USBDEV);
+	for (i = 0; i != UATH_CMD_LIST_COUNT; i++)
+		cmds[i].buf = NULL;
 }
 
 static int
-uath_alloc_cmd_list(struct uath_softc *sc, struct uath_cmd cmds[],
-	int ncmd, int maxsz)
+uath_alloc_cmd_list(struct uath_softc *sc, struct uath_cmd cmds[])
 {
-	int i, error;
+	int i;
 
 	STAILQ_INIT(&sc->sc_cmd_active);
 	STAILQ_INIT(&sc->sc_cmd_pending);
 	STAILQ_INIT(&sc->sc_cmd_waiting);
 	STAILQ_INIT(&sc->sc_cmd_inactive);
 
-	for (i = 0; i < ncmd; i++) {
+	for (i = 0; i != UATH_CMD_LIST_COUNT; i++) {
 		struct uath_cmd *cmd = &cmds[i];
 
 		cmd->sc = sc;	/* backpointer for callbacks */
 		cmd->msgid = i;
-		cmd->buf = malloc(maxsz, M_USBDEV, M_NOWAIT);
-		if (cmd->buf == NULL) {
-			device_printf(sc->sc_dev,
-			    "could not allocate xfer buffer\n");
-			error = ENOMEM;
-			goto fail;
-		}
+		cmd->buf = ((uint8_t *)sc->sc_cmd_dma_buf) +
+		    (i * UATH_MAX_CMDSZ);
 		STAILQ_INSERT_TAIL(&sc->sc_cmd_inactive, cmd, next);
 		UATH_STAT_INC(sc, st_cmd_inactive);
 	}
 	return (0);
-
-fail:	uath_free_cmd_list(sc, cmds, ncmd);
-	return (error);
 }
 
 static int
@@ -942,21 +951,18 @@ uath_free_data_list(struct uath_softc *sc, struct uath_data data[], int ndata,
 				dp->buf = NULL;
 			}
 		} else {
-			if (dp->buf != NULL) {
-				free(dp->buf, M_USBDEV);
-				dp->buf = NULL;
-			}
+			dp->buf = NULL;
 		}
-#ifdef UATH_DEBUG
-		if (dp->ni != NULL)
-			device_printf(sc->sc_dev, "Node isn't NULL\n");
-#endif
+		if (dp->ni != NULL) {
+			ieee80211_free_node(dp->ni);
+			dp->ni = NULL;
+		}
 	}
 }
 
 static int
 uath_alloc_data_list(struct uath_softc *sc, struct uath_data data[],
-	int ndata, int maxsz, int fillmbuf)
+    int ndata, int maxsz, void *dma_buf)
 {
 	int i, error;
 
@@ -964,7 +970,7 @@ uath_alloc_data_list(struct uath_softc *sc, struct uath_data data[],
 		struct uath_data *dp = &data[i];
 
 		dp->sc = sc;
-		if (fillmbuf) {
+		if (dma_buf == NULL) {
 			/* XXX check maxsz */
 			dp->m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 			if (dp->m == NULL) {
@@ -976,20 +982,14 @@ uath_alloc_data_list(struct uath_softc *sc, struct uath_data data[],
 			dp->buf = mtod(dp->m, uint8_t *);
 		} else {
 			dp->m = NULL;
-			dp->buf = malloc(maxsz, M_USBDEV, M_NOWAIT);
-			if (dp->buf == NULL) {
-				device_printf(sc->sc_dev,
-				    "could not allocate buffer\n");
-				error = ENOMEM;
-				goto fail;
-			}
+			dp->buf = ((uint8_t *)dma_buf) + (i * maxsz);
 		}
 		dp->ni = NULL;
 	}
 
 	return (0);
 
-fail:	uath_free_data_list(sc, data, ndata, fillmbuf);
+fail:	uath_free_data_list(sc, data, ndata, 1 /* free mbufs */);
 	return (error);
 }
 
@@ -1001,7 +1001,7 @@ uath_alloc_rx_data_list(struct uath_softc *sc)
 	/* XXX is it enough to store the RX packet with MCLBYTES bytes?  */
 	error = uath_alloc_data_list(sc,
 	    sc->sc_rx, UATH_RX_DATA_LIST_COUNT, MCLBYTES,
-	    1 /* setup mbufs */);
+	    NULL /* setup mbufs */);
 	if (error != 0)
 		return (error);
 
@@ -1024,7 +1024,7 @@ uath_alloc_tx_data_list(struct uath_softc *sc)
 
 	error = uath_alloc_data_list(sc,
 	    sc->sc_tx, UATH_TX_DATA_LIST_COUNT, UATH_MAX_TXBUFSZ,
-	    0 /* no mbufs */);
+	    sc->sc_tx_dma_buf);
 	if (error != 0)
 		return (error);
 
@@ -1044,10 +1044,6 @@ uath_alloc_tx_data_list(struct uath_softc *sc)
 static void
 uath_free_rx_data_list(struct uath_softc *sc)
 {
-
-	STAILQ_INIT(&sc->sc_rx_active);
-	STAILQ_INIT(&sc->sc_rx_inactive);
-
 	uath_free_data_list(sc, sc->sc_rx, UATH_RX_DATA_LIST_COUNT,
 	    1 /* free mbufs */);
 }
@@ -1055,11 +1051,6 @@ uath_free_rx_data_list(struct uath_softc *sc)
 static void
 uath_free_tx_data_list(struct uath_softc *sc)
 {
-
-	STAILQ_INIT(&sc->sc_tx_active);
-	STAILQ_INIT(&sc->sc_tx_inactive);
-	STAILQ_INIT(&sc->sc_tx_pending);
-
 	uath_free_data_list(sc, sc->sc_tx, UATH_TX_DATA_LIST_COUNT,
 	    0 /* no mbufs */);
 }
@@ -1081,8 +1072,13 @@ uath_vap_create(struct ieee80211com *ic, const char name[IFNAMSIZ], int unit,
 		return (NULL);
 	vap = &uvp->vap;
 	/* enable s/w bmiss handling for sta mode */
-	ieee80211_vap_setup(ic, vap, name, unit, opmode,
-	    flags | IEEE80211_CLONE_NOBEACONS, bssid, mac);
+
+	if (ieee80211_vap_setup(ic, vap, name, unit, opmode,
+	    flags | IEEE80211_CLONE_NOBEACONS, bssid, mac) != 0) {
+		/* out of memory */
+		free(uvp, M_80211_VAP);
+		return (NULL);
+	}
 
 	/* override state transition machine */
 	uvp->newstate = vap->iv_newstate;
@@ -1562,7 +1558,15 @@ uath_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 {
 	struct ieee80211com *ic = ifp->if_l2com;
 	struct ifreq *ifr = (struct ifreq *) data;
-	int error = 0, startall = 0;
+	struct uath_softc *sc = ifp->if_softc;
+	int error;
+	int startall = 0;
+
+	UATH_LOCK(sc);
+	error = (sc->sc_flags & UATH_FLAG_INVALID) ? ENXIO : 0;
+	UATH_UNLOCK(sc);
+	if (error)
+		return (error);
 
 	switch (cmd) {
 	case SIOCSIFFLAGS:
@@ -2741,8 +2745,7 @@ setup:
 		UATH_STAT_DEC(sc, st_rx_inactive);
 		STAILQ_INSERT_TAIL(&sc->sc_rx_active, data, next);
 		UATH_STAT_INC(sc, st_rx_active);
-		usbd_xfer_set_frame_data(xfer, 0, data->buf,
-		    usbd_xfer_max_len(xfer));
+		usbd_xfer_set_frame_data(xfer, 0, data->buf, MCLBYTES);
 		usbd_transfer_submit(xfer);
 
 		/*
@@ -2890,7 +2893,7 @@ static device_method_t uath_methods[] = {
 	DEVMETHOD(device_probe, uath_match),
 	DEVMETHOD(device_attach, uath_attach),
 	DEVMETHOD(device_detach, uath_detach),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 static driver_t uath_driver = {
 	.name = "uath",

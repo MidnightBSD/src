@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/9/sys/dev/usb/usb_msctest.h 283174 2015-05-21 06:53:55Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -33,6 +33,7 @@ enum {
 	MSC_EJECT_ZTESTOR,
 	MSC_EJECT_CMOTECH,
 	MSC_EJECT_HUAWEI,
+	MSC_EJECT_HUAWEI2,
 	MSC_EJECT_TCT,
 };
 
@@ -41,6 +42,8 @@ int usb_iface_is_cdrom(struct usb_device *udev,
 usb_error_t usb_msc_eject(struct usb_device *udev,
 	    uint8_t iface_index, int method);
 usb_error_t usb_msc_auto_quirk(struct usb_device *udev,
+	    uint8_t iface_index);
+usb_error_t usb_dymo_eject(struct usb_device *udev,
 	    uint8_t iface_index);
 
 #endif					/* _USB_MSCTEST_H_ */

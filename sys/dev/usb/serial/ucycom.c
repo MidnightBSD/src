@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/serial/ucycom.c 240659 2012-09-18 16:28:49Z hselasky $");
 
 /*-
  * Copyright (c) 2004 Dag-Erling Coïdan Smørgrav

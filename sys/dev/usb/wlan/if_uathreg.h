@@ -1,5 +1,5 @@
 /*	$OpenBSD: if_uathreg.h,v 1.2 2006/09/18 16:34:23 damien Exp $	*/
-/*	$MidnightBSD$	*/
+/*	$FreeBSD: stable/9/sys/dev/usb/wlan/if_uathreg.h 190688 2009-04-04 11:23:00Z weongyo $	*/
 
 /*-
  * Copyright (c) 2006

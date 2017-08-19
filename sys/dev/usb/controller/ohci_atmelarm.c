@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/controller/ohci_atmelarm.c 278279 2015-02-05 20:15:42Z hselasky $");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -91,6 +91,7 @@ ohci_atmelarm_attach(device_t dev)
 	sc->sc_ohci.sc_bus.parent = dev;
 	sc->sc_ohci.sc_bus.devices = sc->sc_ohci.sc_devices;
 	sc->sc_ohci.sc_bus.devices_max = OHCI_MAX_DEVICES;
+	sc->sc_ohci.sc_bus.dma_bits = 32;
 
 	/* get all DMA memory */
 	if (usb_bus_mem_alloc_all(&sc->sc_ohci.sc_bus,

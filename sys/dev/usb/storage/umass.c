@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/storage/umass.c 255663 2013-09-18 06:38:40Z hselasky $");
 
 /*-
  * Copyright (c) 1999 MAEKAWA Masahide <bishop@rr.iij4u.or.jp>,
@@ -27,7 +27,7 @@ __MBSDID("$MidnightBSD$");
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$MidnightBSD$
+ *	$FreeBSD: stable/9/sys/dev/usb/storage/umass.c 255663 2013-09-18 06:38:40Z hselasky $
  *	$NetBSD: umass.c,v 1.28 2000/04/02 23:46:53 augustss Exp $
  */
 
@@ -1320,10 +1320,12 @@ umass_t_bbb_command_callback(struct usb_xfer *xfer, usb_error_t error)
 			}
 			sc->cbw.bCDBLength = sc->sc_transfer.cmd_len;
 
+			/* copy SCSI command data */
 			memcpy(sc->cbw.CBWCDB, sc->sc_transfer.cmd_data,
 			    sc->sc_transfer.cmd_len);
 
-			memset(sc->sc_transfer.cmd_data +
+			/* clear remaining command area */
+			memset(sc->cbw.CBWCDB +
 			    sc->sc_transfer.cmd_len, 0,
 			    sizeof(sc->cbw.CBWCDB) -
 			    sc->sc_transfer.cmd_len);

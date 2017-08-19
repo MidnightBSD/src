@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/9/sys/dev/usb/usb.h 282510 2015-05-05 20:00:20Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  * Copyright (c) 1998 The NetBSD Foundation, Inc. All rights reserved.
@@ -493,8 +493,11 @@ typedef struct usb_interface_assoc_descriptor usb_interface_assoc_descriptor_t;
 #define	UICLASS_WIRELESS	0xe0
 #define	UISUBCLASS_RF			0x01
 #define	UIPROTO_BLUETOOTH		0x01
+#define	UIPROTO_RNDIS			0x03
 
 #define	UICLASS_IAD		0xEF	/* Interface Association Descriptor */
+#define	UISUBCLASS_SYNC			0x01
+#define	UIPROTO_ACTIVESYNC		0x01
 
 #define	UICLASS_APPL_SPEC	0xfe
 #define	UISUBCLASS_FIRMWARE_DOWNLOAD	1
@@ -533,6 +536,11 @@ struct usb_endpoint_descriptor {
 #define	UE_ISO_ADAPT	0x08
 #define	UE_ISO_SYNC	0x0c
 #define	UE_GET_ISO_TYPE(a)	((a) & UE_ISO_TYPE)
+#define	UE_ISO_USAGE	0x30
+#define	UE_ISO_USAGE_DATA	0x00
+#define	UE_ISO_USAGE_FEEDBACK	0x10
+#define	UE_ISO_USAGE_IMPLICT_FB	0x20
+#define	UE_GET_ISO_USAGE(a)	((a) & UE_ISO_USAGE)
 	uWord	wMaxPacketSize;
 #define	UE_ZERO_MPS 0xFFFF		/* for internal use only */
 	uByte	bInterval;

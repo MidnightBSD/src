@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/9/sys/dev/usb/misc/ufm.c 235000 2012-05-04 15:05:30Z hselasky $");
 
 
 #include <sys/stdint.h>

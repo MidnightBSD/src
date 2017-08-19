@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/9/sys/dev/usb/usb_process.c 273889 2014-10-31 08:06:21Z hselasky $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -24,8 +24,6 @@
  * SUCH DAMAGE.
  */
 
-#define	USB_DEBUG_VAR usb_proc_debug
-
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -49,6 +47,8 @@
 #include <dev/usb/usbdi.h>
 #include <dev/usb/usbdi_util.h>
 #include <dev/usb/usb_process.h>
+
+#define	USB_DEBUG_VAR usb_proc_debug
 #include <dev/usb/usb_debug.h>
 #include <dev/usb/usb_util.h>
 
@@ -492,4 +492,16 @@ usb_proc_rewakeup(struct usb_process *up)
 		/* re-wakeup */
 		cv_signal(&up->up_cv);
 	}
+}
+
+/*------------------------------------------------------------------------*
+ *	usb_proc_is_called_from
+ *
+ * This function will return non-zero if called from inside the USB
+ * process passed as first argument. Else this function returns zero.
+ *------------------------------------------------------------------------*/
+int
+usb_proc_is_called_from(struct usb_process *up)
+{
+	return (up->up_curtd == curthread);
 }

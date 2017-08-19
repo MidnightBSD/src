@@ -1,5 +1,5 @@
 /*	$OpenBSD: if_uathvar.h,v 1.3 2006/09/20 19:47:17 damien Exp $	*/
-/*	$MidnightBSD$	*/
+/*	$FreeBSD: stable/9/sys/dev/usb/wlan/if_uathvar.h 259460 2013-12-16 09:34:01Z hselasky $	*/
 
 /*-
  * Copyright (c) 2006
@@ -52,7 +52,7 @@ struct uath_rx_radiotap_header {
 	int8_t		wr_antsignal;
 	int8_t		wr_antnoise;
 	u_int8_t	wr_antenna;
-} __packed;
+} __packed __aligned(8);
 
 #define UATH_RX_RADIOTAP_PRESENT (		\
 	(1 << IEEE80211_RADIOTAP_TSFT)		| \
@@ -69,7 +69,7 @@ struct uath_tx_radiotap_header {
 	uint8_t		wt_flags;
 	uint16_t	wt_chan_freq;
 	uint16_t	wt_chan_flags;
-} __packed;
+} __packed __aligned(8);
 
 #define	UATH_TX_RADIOTAP_PRESENT					\
 	((1 << IEEE80211_RADIOTAP_FLAGS) |				\
@@ -186,6 +186,8 @@ struct uath_softc {
 	struct ifnet			*sc_ifp;
 	device_t			sc_dev;
 	struct usb_device		*sc_udev;
+	void				*sc_cmd_dma_buf;
+	void				*sc_tx_dma_buf;
 	struct mtx			sc_mtx;
 	uint32_t			sc_debug;
 

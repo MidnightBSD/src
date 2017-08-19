@@ -1,4 +1,4 @@
-$MidnightBSD$ 
+$FreeBSD: stable/9/sys/dev/usb/usbdevs 315250 2017-03-14 15:25:49Z hselasky $
 /* $NetBSD: usbdevs,v 1.392 2004/12/29 08:38:44 imp Exp $ */
 
 /*-
@@ -1438,6 +1438,9 @@ product CLIPSAL 5000CT2		0x0304	5000CT2 C-Bus Touch Screen
 product CLIPSAL C5000CT2	0x0305	C5000CT2 C-Bus Touch Screen
 product CLIPSAL L51xx		0x0401	L51xx C-Bus Dimmer
 
+/* C-Media products */
+product CMEDIA CM6206		0x0102	CM106 compatible sound device
+
 /* CMOTECH products */
 product CMOTECH CNU510		0x5141	CDMA Technologies USB modem
 product CMOTECH CNU550		0x5543	CDMA 2000 1xRTT/1xEVDO USB modem
@@ -2726,6 +2729,7 @@ product LOGITECH BB13		0xc401	USB-PS/2 Trackball
 product LOGITECH RK53		0xc501	Cordless mouse
 product LOGITECH RB6		0xc503	Cordless keyboard
 product LOGITECH MX700		0xc506	Cordless optical mouse
+product LOGITECH UNIFYING	0xc52b  Logitech Unifying Receiver
 product LOGITECH QUICKCAMPRO2	0xd001	QuickCam Pro
 
 /* Logitec Corp. products */
@@ -3049,7 +3053,7 @@ product MELCO WLRUCG		0x0116	WLR-UC-G
 product MELCO WLRUCGAOSS	0x0119	WLR-UC-G-AOSS
 product MELCO WLIUCAG300N	0x012e	WLI-UC-AG300N
 product MELCO WLIUCG		0x0137	WLI-UC-G
-product MELCO RT2870_1		0x0148	RT2870
+product MELCO WLIUCG300HP	0x0148	WLI-UC-G300HP
 product MELCO RT2870_2		0x0150	RT2870
 product MELCO WLIUCGN		0x015d	WLI-UC-GN
 product MELCO WLIUCG301N	0x016f	WLI-UC-G301N
@@ -3262,7 +3266,7 @@ product NETGEAR EA101X		0x1002	Ethernet
 product NETGEAR FA101		0x1020	Ethernet 10/100, USB1.1
 product NETGEAR FA120		0x1040	USB 2.0 Ethernet
 product NETGEAR M4100		0x1100	M4100/M5300/M7100 series switch
-product NETGEAR WG111V2_2	0x4240	PrismGT USB 2.0 WLAN
+product NETGEAR WG111V1_2	0x4240	PrismGT USB 2.0 WLAN
 product NETGEAR WG111V3		0x4260	WG111v3
 product NETGEAR WG111U		0x4300	WG111U
 product NETGEAR WG111U_NF	0x4301	WG111U (no firmware)
@@ -4075,7 +4079,9 @@ product SIERRA C22		0x6891	C22
 product SIERRA E6892		0x6892	E6892
 product SIERRA E6893		0x6893	E6893
 product SIERRA MC8700		0x68A3	MC8700
-product SIERRA AIRCARD875	0x6820	Aircard 875 HSDPA
+product SIERRA MC7354		0x68C0	MC7354
+product SIERRA MC7355		0x9041	MC7355
+product SIERRA MC7430		0x9071	Sierra Wireless MC7430 Qualcomm Snapdragon X7 LTE-A
 product SIERRA AC313U		0x68aa	Sierra Wireless AirCard 313U
 product SIERRA TRUINSTALL	0x0fff	Aircard Tru Installer
 
