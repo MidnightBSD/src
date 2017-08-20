@@ -3,6 +3,9 @@ Updating Information for MidnightBSD users.
 20170819:
 	Heimdal KDC-REP service name validation vulerability patched.
 
+        Introduce a partial fix for AMD Ryzen issues. On Ryzen, move
+        the lower shared page by one.
+
 20170326:
 	sudo removed from base. Use doas(1) or install sudo from mports
 
