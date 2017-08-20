@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20170819:
+	Introduce a partial fix for AMD Ryzen issues. On Ryzen, move
+	the lower shared page by one. 
+
 20170818:
 	MidnightBSD 0.8.6
 
