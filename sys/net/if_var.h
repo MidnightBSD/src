@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	From: @(#)if.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/9/sys/net/if_var.h 248287 2013-03-14 21:39:39Z jfv $
+ * $FreeBSD: release/9.2.0/sys/net/if_var.h 252781 2013-07-05 13:48:32Z andre $
  */
 
 #ifndef	_NET_IF_VAR_H_
@@ -206,7 +206,11 @@ struct ifnet {
 	 * be used with care where binary compatibility is required.
 	 */
 	char	if_cspare[3];
-	int	if_ispare[4];
+	u_int	if_hw_tsomax;		/* tso burst length limit, the minmum
+					 * is (IP_MAXPACKET / 8).
+					 * XXXAO: Have to find a better place
+					 * for it eventually. */
+	int	if_ispare[3];
 	void	*if_pspare[8];		/* 1 netmap, 7 TDB */
 };
 
@@ -755,6 +759,8 @@ drbr_inuse(struct ifnet *ifp, struct buf_ring *br)
  */
 #define	IF_MINMTU	72
 #define	IF_MAXMTU	65535
+
+#define	TOEDEV(ifp)	((ifp)->if_llsoftc)
 
 #endif /* _KERNEL */
 
