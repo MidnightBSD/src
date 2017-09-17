@@ -107,7 +107,6 @@ SUBDIR=	${SUBDIR_ORDERED} \
 	${_libsmutil} \
 	libstand \
 	libstdbuf \
-	libSystem \
 	${_libtelnet} \
 	${_libthr} \
 	libthread_db \
