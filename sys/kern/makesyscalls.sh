@@ -156,7 +156,6 @@ s/\$//g
 		printf "#include <sys/ucontext.h>\n" > sysarg
 		printf "#include <sys/wait.h>\n" > sysarg
 		printf "#include <bsm/audit_kevents.h>\n" > sysarg
-		printf "#include <sys/mach/mach_types.h>\n\n" > sysarg
 		printf "struct proc;\n\n" > sysarg
 		printf "struct thread;\n\n" > sysarg
 		printf "#define\tPAD_(t)\t(sizeof(register_t) <= sizeof(t) ? \\\n" > sysarg
