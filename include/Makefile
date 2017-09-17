@@ -6,11 +6,11 @@
 .include <bsd.own.mk>
 
 CLEANFILES= osreldate.h version vers.c
-SUBDIR= arpa mach mach_debug protocols rpcsvc rpc xlocale
+SUBDIR= arpa gssapi protocols rpcsvc rpc xlocale
 INCS=	a.out.h ar.h assert.h bitstring.h complex.h cpio.h _ctype.h ctype.h \
 	db.h \
 	dirent.h dlfcn.h elf.h elf-hints.h err.h fmtmsg.h fnmatch.h fstab.h \
-	fts.h ftw.h getopt.h glob.h grp.h \
+	fts.h ftw.h getopt.h glob.h grp.h gssapi.h \
 	ieeefp.h ifaddrs.h \
 	inttypes.h iso646.h kenv.h langinfo.h libgen.h limits.h link.h \
 	locale.h malloc.h malloc_np.h memory.h monetary.h mpool.h mqueue.h \
@@ -27,28 +27,7 @@ INCS=	a.out.h ar.h assert.h bitstring.h complex.h cpio.h _ctype.h ctype.h \
 	wchar.h wctype.h wordexp.h xlocale.h
 
 .PATH: ${.CURDIR}/../contrib/libc-vis
-INCS+= vis.h
-
-# APSL headers
-INCS+=	Availability.h \
-	AvailabilityInternal.h \
-	AvailabilityMacros.h \
-	CrashReporterClient.h \
-	MacTypes.h \
-	NSSystemDirectories.h \
-	TargetConditionals.h \
-	_simple.h \
-	_types.h \
-	aliasdb.h \
-	ils.h \
-	libinfo.h \
-	si_data.h \
-	si_module.h \
-	util.h \
-	utmp.h
-
-SUBDIR+= apple
-
+INCS+=	vis.h
 
 MHDRS=	float.h floatingpoint.h stdarg.h
 
@@ -65,8 +44,8 @@ LDIRS=	bsm cam geom net net80211 netatalk netgraph netinet netinet6 \
 LSUBDIRS=	cam/ata cam/scsi \
 	dev/acpica dev/agp dev/an dev/bktr dev/ciss dev/filemon dev/firewire \
 	dev/hwpmc \
-	dev/ic dev/iicbus ${_dev_ieee488} dev/io dev/lmc dev/mfi dev/ofw \
-	dev/pbio dev/pci dev/ppbus dev/smbus \
+	dev/ic dev/iicbus ${_dev_ieee488} dev/io dev/lmc dev/mfi dev/nvme \
+	dev/ofw dev/pbio dev/pci dev/ppbus dev/smbus \
 	dev/speaker dev/usb dev/utopia dev/vkbd dev/wi \
 	fs/devfs fs/fdescfs fs/fifofs fs/msdosfs fs/nfs fs/ntfs fs/nullfs \
 	${_fs_nwfs} fs/portalfs fs/procfs fs/smbfs fs/udf fs/unionfs \
@@ -77,26 +56,19 @@ LSUBDIRS=	cam/ata cam/scsi \
 	security/audit \
 	security/mac_biba security/mac_bsdextended security/mac_lomac \
 	security/mac_mls security/mac_partition \
-	ufs/ffs ufs/ufs \
-	sys/mach sys/mach_debug
+	ufs/ffs ufs/ufs
 
-LSUBSUBDIRS=	dev/mpt/mpilib sys/mach/ipc sys/mach/device
+LSUBSUBDIRS=	dev/mpt/mpilib
 
 .if ${MK_GPIB} != "no"
 _dev_ieee488=	dev/ieee488
-.endif
-
-.if ${MK_GSSAPI} != "no"
-SUBDIR+=	gssapi
-INCS+=		gssapi.h
 .endif
 
 .if ${MK_HESIOD} != "no"
 INCS+=	hesiod.h
 .endif
 
-# Handle the #define aliases for libiconv
-.if ${MK_ICONV} == "yes"
+.if ${MK_ICONV} != "no"
 INCS+=	iconv.h
 .endif
 
@@ -171,7 +143,7 @@ compat:
 .endif
 
 copies:
-.for i in ${LDIRS} ${LSUBDIRS} ${LSUBSUBDIRS} altq crypto machine machine/pc machine/mach \
+.for i in ${LDIRS} ${LSUBDIRS} ${LSUBSUBDIRS} altq crypto machine machine/pc \
 	${_MARCHS}
 .if exists(${DESTDIR}${INCLUDEDIR}/$i)
 	cd ${DESTDIR}${INCLUDEDIR}/$i; \
@@ -187,8 +159,6 @@ copies:
 .endfor
 	cd ${.CURDIR}/../sys/dev/acpica; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 acpiio.h \
-	    ${DESTDIR}${INCLUDEDIR}/dev/acpica; \
-	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 acpi_hpet.h \
 	    ${DESTDIR}${INCLUDEDIR}/dev/acpica
 	cd ${.CURDIR}/../sys/dev/agp; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 agpreg.h \
@@ -246,39 +216,9 @@ copies:
 	cd ${.CURDIR}/../sys/rpc; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 types.h \
 	    ${DESTDIR}${INCLUDEDIR}/rpc
-.if exists(${.CURDIR}/../sys/sys/mach)
-	${INSTALL} -d -o ${BINOWN} -g ${BINGRP} -m 755 \
-		${DESTDIR}${INCLUDEDIR}/sys/mach
-	cd ${.CURDIR}/../sys/sys/mach ; \
-	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 *.h *.defs \
-		${DESTDIR}${INCLUDEDIR}/sys/mach
-.endif
-.if exists(${.CURDIR}/../sys/sys/mach/ipc)
-	${INSTALL} -d -o ${BINOWN} -g ${BINGRP} -m 755 \
-		${DESTDIR}${INCLUDEDIR}/sys/mach/ipc
-	cd ${.CURDIR}/../sys/sys/mach/ipc ; \
-	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 *.h \
-		${DESTDIR}${INCLUDEDIR}/sys/mach/ipc
-.endif
-.if exists(${.CURDIR}/../sys/sys/mach_debug)
-	${INSTALL} -d -o ${BINOWN} -g ${BINGRP} -m 755 \
-		${DESTDIR}${INCLUDEDIR}/sys/mach_debug
-	cd ${.CURDIR}/../sys/sys/mach_debug ; \
-		${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 *.h *.defs \
-		${DESTDIR}${INCLUDEDIR}/sys/mach_debug
-.endif
-.if exists(${.CURDIR}/../sys/sys/mach/device)
-	${INSTALL} -d -o ${BINOWN} -g ${BINGRP} -m 755 \
-		${DESTDIR}${INCLUDEDIR}/sys/mach/device
-	cd ${.CURDIR}/../sys/sys/mach/device ; \
-		${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 *.h *.defs \
-		${DESTDIR}${INCLUDEDIR}/sys/mach/device
-.endif
 
 symlinks:
 	@${ECHO} "Setting up symlinks to kernel source tree..."
-	mkdir -p ${DESTDIR}${INCLUDEDIR}/apple/System
-	ln -fs ../sys ${DESTDIR}${INCLUDEDIR}/apple/System/sys
 .for i in ${LDIRS}
 	cd ${.CURDIR}/../sys/$i; \
 	for h in *.h; do \
@@ -292,7 +232,7 @@ symlinks:
 	done
 .endfor
 	cd ${.CURDIR}/../sys/dev/acpica; \
-	for h in acpiio.h acpi_hpet.h; do \
+	for h in acpiio.h; do \
 		ln -fs ../../../../sys/dev/acpica/$$h \
 		    ${DESTDIR}${INCLUDEDIR}/dev/acpica; \
 	done
@@ -355,18 +295,6 @@ symlinks:
 		ln -fs ../../../../sys/${MACHINE}/include/pc/$$h \
 		    ${DESTDIR}${INCLUDEDIR}/machine/pc; \
 	done
-.endif
-.if exists(${.CURDIR}/../sys/${MACHINE}/include/mach)
-	cd ${.CURDIR}/../sys/${MACHINE}/include/mach; \
-	for h in *.h; do \
-		ln -fs ../../../../sys/${MACHINE}/include/mach/$$h \
-		    ${DESTDIR}${INCLUDEDIR}/machine/mach; \
-	done
-	for d in *.defs; do \
-		ln -fs ../../../../sys/${MACHINE}/include/mach/$$d \
-		    ${DESTDIR}${INCLUDEDIR}/machine/mach; \
-	done
-
 .endif
 .for _MARCH in ${_MARCHS}
 .if exists(${.CURDIR}/../sys/${_MARCH}/include)
