@@ -1338,8 +1338,7 @@ vn_ioctl(fp, com, data, active_cred, td)
 			VOP_UNLOCK(vp, 0);
 			if (!error)
 				*(int *)data = vattr.va_size - fp->f_offset;
-		}
-		if (com == FIONBIO || com == FIOASYNC)	/* XXX */
+		} else if (com == FIONBIO || com == FIOASYNC)	/* XXX */
 			error = 0;
 		else
 			error = VOP_IOCTL(vp, com, data, fp->f_flag,
