@@ -66457,15 +66457,6 @@ sys/sys/lockmgr.h -text
 sys/sys/lockstat.h -text
 sys/sys/loginclass.h -text
 sys/sys/mac.h -text
-sys/sys/mach_debug/hash_info.h svneol=native#text/plain
-sys/sys/mach_debug/ipc_info.h svneol=native#text/plain
-sys/sys/mach_debug/lockgroup_info.h svneol=native#text/plain
-sys/sys/mach_debug/mach_debug.h svneol=native#text/plain
-sys/sys/mach_debug/mach_debug_types.defs -text
-sys/sys/mach_debug/mach_debug_types.h svneol=native#text/plain
-sys/sys/mach_debug/page_info.h svneol=native#text/plain
-sys/sys/mach_debug/vm_info.h svneol=native#text/plain
-sys/sys/mach_debug/zone_info.h svneol=native#text/plain
 sys/sys/malloc.h -text
 sys/sys/mbpool.h -text
 sys/sys/mbuf.h -text
