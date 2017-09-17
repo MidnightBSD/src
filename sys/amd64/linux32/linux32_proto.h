@@ -16,7 +16,6 @@
 #include <sys/ucontext.h>
 #include <sys/wait.h>
 #include <bsm/audit_kevents.h>
-#include <sys/mach/mach_types.h>
 
 struct proc;
 
