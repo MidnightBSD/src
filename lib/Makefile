@@ -85,7 +85,6 @@ SUBDIR=	${SUBDIR_ORDERED} \
 	libjansson \
 	libkiconv \
 	liblzma \
-	libmach \
 	libmagic \
 	libmemstat \
 	${_libmilter} \
