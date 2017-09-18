@@ -139,6 +139,8 @@
             mpilib
             ..
         ..
+        nvme
+        ..
         ofw
         ..
         pbio
