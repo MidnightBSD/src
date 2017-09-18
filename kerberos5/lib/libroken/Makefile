@@ -70,7 +70,6 @@ SRCS=	base64.c \
 	strpool.c \
 	timeval.c \
 	tm2time.c \
-	unvis.c \
 	verify.c \
 	vis.c \
 	warnerr.c \
