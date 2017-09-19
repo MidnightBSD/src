@@ -57187,7 +57187,9 @@ share/man/man4/nge.4 -text
 share/man/man4/nmdm.4 -text
 share/man/man4/nsp.4 -text
 share/man/man4/null.4 -text
+share/man/man4/nvd.4 svneol=native#text/plain
 share/man/man4/nve.4 -text
+share/man/man4/nvme.4 svneol=native#text/plain
 share/man/man4/nvram.4 -text
 share/man/man4/nvram2env.4 -text
 share/man/man4/nxge.4 -text

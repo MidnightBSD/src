@@ -326,7 +326,9 @@ MAN=	aac.4 \
 	nmdm.4 \
 	nsp.4 \
 	null.4 \
+	nvd.4 \
 	${_nve.4} \
+	nvme.4 \
 	${_nvram.4} \
 	${_nvram2env.4} \
 	${_nxge.4} \
