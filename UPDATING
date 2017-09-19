@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20170918:
+	Introduce nvme(4) and nvd(4) from FreeBSD.
+
+	Fix build of boot code and rescue.
+
 20170819:
 	Heimdal KDC-REP service name validation vulerability patched.
 
