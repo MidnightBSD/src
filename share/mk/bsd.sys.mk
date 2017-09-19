@@ -114,7 +114,12 @@ CWARNFLAGS+=	-Wno-unknown-pragmas
 .if ${COMPILER_TYPE} == "clang" && !defined(EARLY_BUILD)
 CLANG_NO_IAS=	 -no-integrated-as
 CLANG_OPT_SMALL= -mstack-alignment=8 -mllvm -inline-threshold=3\
-		 -mllvm -enable-load-pre=false -mllvm -simplifycfg-dup-ret
+		 -mllvm -simplifycfg-dup-ret
+.if ${COMPILER_VERSION} >= 30500
+CLANG_OPT_SMALL+= -mllvm -enable-gvn=false
+.else
+CLANG_OPT_SMALL+= -mllvm -enable-load-pre=false
+.endif
 CFLAGS+=	 -Qunused-arguments
 .endif # CLANG
 
