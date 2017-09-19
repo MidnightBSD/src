@@ -70,7 +70,7 @@ CWARNFLAGS+=	-Wno-empty-body -Wno-string-plus-int
 .endif # WARNS <= 6
 .if ${WARNS} <= 3
 CWARNFLAGS+=	-Wno-tautological-compare -Wno-unused-value\
-		-Wno-parentheses-equality -Wno-unused-function -Wno-conversion
+		-Wno-parentheses-equality -Wno-unused-function -Wno-enum-conversion
 .endif # WARNS <= 3
 .if ${WARNS} <= 2
 CWARNFLAGS+=	-Wno-switch -Wno-switch-enum -Wno-knr-promoted-parameter
@@ -123,12 +123,11 @@ CLANG_OPT_SMALL+= -mllvm -enable-load-pre=false
 CFLAGS+=	 -Qunused-arguments
 .endif # CLANG
 
-.if ${MK_SSP} != "no" && ${MACHINE_CPUARCH} != "ia64" && \
-    ${MACHINE_CPUARCH} != "arm" && ${MACHINE_CPUARCH} != "mips"
+.if ${MK_SSP} != "no" && ${MACHINE_CPUARCH} != "arm" 
 # Don't use -Wstack-protector as it breaks world with -Werror.
 SSP_CFLAGS?=	-fstack-protector
 CFLAGS+=	${SSP_CFLAGS}
-.endif # SSP && !IA64 && !ARM && !MIPS
+.endif # SSP && !ARM
 
 # Allow user-specified additional warning flags
 CFLAGS+=	${CWARNFLAGS}
