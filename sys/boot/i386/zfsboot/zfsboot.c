@@ -15,7 +15,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: release/9.2.0/sys/boot/i386/zfsboot/zfsboot.c 242562 2012-11-04 13:37:33Z avg $ */
-__MBSDID("$MidnightBSD$"):
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/errno.h>
