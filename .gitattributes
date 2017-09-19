@@ -64885,7 +64885,9 @@ sys/modules/nsp/Makefile -text
 sys/modules/ntfs/Makefile -text
 sys/modules/ntfs_iconv/Makefile -text
 sys/modules/nullfs/Makefile -text
+sys/modules/nvd/Makefile svneol=native#text/plain
 sys/modules/nve/Makefile -text
+sys/modules/nvme/Makefile svneol=native#text/plain
 sys/modules/nvram/Makefile -text
 sys/modules/nwfs/Makefile -text
 sys/modules/nxge/Makefile -text
