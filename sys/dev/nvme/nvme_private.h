@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (C) 2012-2013 Intel Corporation
+ * Copyright (C) 2012-2014 Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/sys/dev/nvme/nvme_private.h 253297 2013-07-12 22:08:24Z jimharris $
+ * $FreeBSD: stable/9/sys/dev/nvme/nvme_private.h 265566 2014-05-07 16:48:43Z jimharris $
  */
 
 #ifndef __NVME_PRIVATE_H__
@@ -239,6 +239,7 @@ struct nvme_namespace {
 	uint16_t			flags;
 	struct cdev			*cdev;
 	void				*cons_cookie[NVME_MAX_CONSUMERS];
+	uint32_t			stripesize;
 	struct mtx			lock;
 };
 
@@ -289,6 +290,8 @@ struct nvme_controller {
 	struct task		fail_req_task;
 	struct taskqueue	*taskqueue;
 
+	struct resource		*msi_res[MAXCPU + 1];
+
 	/* For shared legacy interrupt. */
 	int			rid;
 	struct resource		*res;
@@ -322,12 +325,17 @@ struct nvme_controller {
 
 	struct cdev			*cdev;
 
+	/** bit mask of warning types currently enabled for async events */
+	union nvme_critical_warning_state	async_event_config;
+
 	uint32_t			num_aers;
 	struct nvme_async_event_request	aer[NVME_MAX_ASYNC_EVENTS];
 
 	void				*cons_cookie[NVME_MAX_CONSUMERS];
 
-	uint32_t		is_resetting;
+	uint32_t			is_resetting;
+	uint32_t			is_initialized;
+	uint32_t			notification_sent;
 
 	boolean_t			is_failed;
 	STAILQ_HEAD(, nvme_request)	fail_req;
@@ -434,6 +442,7 @@ void	nvme_completion_poll_cb(void *arg, const struct nvme_completion *cpl);
 
 int	nvme_ctrlr_construct(struct nvme_controller *ctrlr, device_t dev);
 void	nvme_ctrlr_destruct(struct nvme_controller *ctrlr, device_t dev);
+void	nvme_ctrlr_shutdown(struct nvme_controller *ctrlr);
 int	nvme_ctrlr_hw_reset(struct nvme_controller *ctrlr);
 void	nvme_ctrlr_reset(struct nvme_controller *ctrlr);
 /* ctrlr defined as void * to allow use with config_intrhook. */
@@ -552,5 +561,6 @@ void	nvme_notify_async_consumers(struct nvme_controller *ctrlr,
 				    uint32_t log_page_id, void *log_page_buffer,
 				    uint32_t log_page_size);
 void	nvme_notify_fail_consumers(struct nvme_controller *ctrlr);
+void	nvme_notify_new_controller(struct nvme_controller *ctrlr);
 
 #endif /* __NVME_PRIVATE_H__ */

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/nvme/nvme_util.c 253631 2013-07-24 22:48:29Z jimharris $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <dev/nvme/nvme.h>

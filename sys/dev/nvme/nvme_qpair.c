@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (C) 2012-2013 Intel Corporation
+ * Copyright (C) 2012-2014 Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/sys/dev/nvme/nvme_qpair.c 253296 2013-07-12 22:07:33Z jimharris $");
+__FBSDID("$FreeBSD: stable/9/sys/dev/nvme/nvme_qpair.c 265566 2014-05-07 16:48:43Z jimharris $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -488,9 +488,7 @@ nvme_qpair_construct(struct nvme_qpair *qpair, uint32_t id,
 		 *  the queue's vector to get the corresponding rid to use.
 		 */
 		qpair->rid = vector + 1;
-
-		qpair->res = bus_alloc_resource_any(ctrlr->dev, SYS_RES_IRQ,
-		    &qpair->rid, RF_ACTIVE);
+		qpair->res = ctrlr->msi_res[vector];
 
 		bus_setup_intr(ctrlr->dev, qpair->res,
 		    INTR_TYPE_MISC | INTR_MPSAFE, NULL,
@@ -499,8 +497,9 @@ nvme_qpair_construct(struct nvme_qpair *qpair, uint32_t id,
 
 	mtx_init(&qpair->lock, "nvme qpair lock", NULL, MTX_DEF);
 
+	/* Note: NVMe PRP format is restricted to 4-byte alignment. */
 	bus_dma_tag_create(bus_get_dma_tag(ctrlr->dev),
-	    sizeof(uint64_t), PAGE_SIZE, BUS_SPACE_MAXADDR,
+	    4, PAGE_SIZE, BUS_SPACE_MAXADDR,
 	    BUS_SPACE_MAXADDR, NULL, NULL, NVME_MAX_XFER_SIZE,
 	    (NVME_MAX_XFER_SIZE/PAGE_SIZE)+1, PAGE_SIZE, 0,
 	    NULL, NULL, &qpair->dma_tag);
