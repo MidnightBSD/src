@@ -106,8 +106,6 @@ SSH=	${.CURDIR}/../crypto/openssh/ssh_config \
 SSL=	${.CURDIR}/../crypto/openssl/apps/openssl.cnf
 .endif
 
-SUDO=	${.CURDIR}/../contrib/sudo/sudoers
-
 .if ${MK_NS_CACHING} != "no"
 BIN1+= nscd.conf
 .endif
@@ -249,8 +247,6 @@ distribution:
 	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
 	    ${SSL} ${DESTDIR}/etc/ssl
 .endif
-	cd ${.CURDIR}; ${INSTALL} -o root -g wheel -m 440 \
-	    ${SUDO} ${DESTDIR}/etc
 	cd ${.CURDIR}; ${INSTALL} -o root -g wheel -m 644 \
 	    ${.CURDIR}/../contrib/mDNSResponder/mDNSPosix/nss_mdns.conf ${DESTDIR}/etc
 .if ${MK_KERBEROS} != "no"
