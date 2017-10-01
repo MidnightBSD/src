@@ -25,8 +25,11 @@
 #include <apr_pools.h>
 
 #include "../svn_test.h"
+#include "../../libsvn_fs/fs-loader.h"
 #include "../../libsvn_fs_fs/fs.h"
+#include "../../libsvn_fs_fs/fs_fs.h"
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_props.h"
 #include "svn_fs.h"
@@ -37,6 +40,16 @@
 
 
 /*** Helper Functions ***/
+
+static void
+ignore_fs_warnings(void *baton, svn_error_t *err)
+{
+#ifdef SVN_DEBUG
+  SVN_DBG(("Ignoring FS warning %s\n",
+           svn_error_symbolic_name(err ? err->apr_err : 0)));
+#endif
+  return;
+}
 
 /* Write the format number and maximum number of files per directory
    to a new format file in PATH, overwriting a previously existing
@@ -857,6 +870,354 @@ get_set_multiple_huge_revprops_packed_fs(const svn_test_opts_t *opts,
 #undef SHARD_SIZE
 
 /* ------------------------------------------------------------------------ */
+
+#define REPO_NAME "revprop_caching_on_off"
+static svn_error_t *
+revprop_caching_on_off(const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  svn_fs_t *fs1;
+  svn_fs_t *fs2;
+  apr_hash_t *fs_config;
+  svn_string_t *value;
+  const svn_string_t *another_value_for_avoiding_warnings_from_a_broken_api;
+  const svn_string_t *new_value = svn_string_create("new", pool);
+
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
+
+  /* Open two filesystem objects, enable revision property caching
+   * in one of them. */
+  SVN_ERR(svn_test__create_fs(&fs1, REPO_NAME, opts, pool));
+
+  fs_config = apr_hash_make(pool);
+  apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+               APR_HASH_KEY_STRING, "1");
+
+  SVN_ERR(svn_fs_open(&fs2, svn_fs_path(fs1, pool), fs_config, pool));
+
+  /* With inefficient named atomics, the filesystem will output a warning
+     and disable the revprop caching, but we still would like to test
+     these cases.  Ignore the warning(s). */
+  svn_fs_set_warning_func(fs2, ignore_fs_warnings, NULL);
+
+  SVN_ERR(svn_fs_revision_prop(&value, fs2, 0, "svn:date", pool));
+  another_value_for_avoiding_warnings_from_a_broken_api = value;
+  SVN_ERR(svn_fs_change_rev_prop2(
+              fs1, 0, "svn:date",
+              &another_value_for_avoiding_warnings_from_a_broken_api,
+              new_value, pool));
+
+  /* Expect the change to be visible through both objects.*/
+  SVN_ERR(svn_fs_revision_prop(&value, fs1, 0, "svn:date", pool));
+  SVN_TEST_STRING_ASSERT(value->data, "new");
+
+  SVN_ERR(svn_fs_revision_prop(&value, fs2, 0, "svn:date", pool));
+  SVN_TEST_STRING_ASSERT(value->data, "new");
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+
+/* ------------------------------------------------------------------------ */
+
+#define REPO_NAME "test-repo-delta_chain_with_plain"
+
+static svn_error_t *
+delta_chain_with_plain(const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  fs_fs_data_t *ffd;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *root;
+  svn_revnum_t rev;
+  svn_stringbuf_t *prop_value, *contents, *contents2, *hash_rep;
+  int i;
+  apr_hash_t *fs_config, *props;
+
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
+
+  /* Reproducing issue #4577 without the r1676667 fix is much harder in 1.9+
+   * than it was in 1.8.  The reason is that 1.9+ won't deltify small reps
+   * nor against small reps.  So, we must construct relatively large PLAIN
+   * and DELTA reps.
+   *
+   * The idea is to construct a PLAIN prop rep, make a file share that as
+   * its text rep, grow the file considerably (to make the PLAIN rep later
+   * read beyond EOF) and then replace it entirely with another longish
+   * contents.
+   */
+
+  /* Create a repo that and explicitly enable rep sharing. */
+  SVN_ERR(svn_test__create_fs(&fs, REPO_NAME, opts, pool));
+
+  ffd = fs->fsap_data;
+  if (ffd->format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
+
+  ffd->rep_sharing_allowed = TRUE;
+
+  /* Make sure all props are stored as PLAIN reps. */
+  ffd->deltify_properties = FALSE;
+
+  /* Construct various content strings.
+   * Note that props need to be shorter than the file contents. */
+  prop_value = svn_stringbuf_create("prop", pool);
+  for (i = 0; i < 10; ++i)
+    svn_stringbuf_appendstr(prop_value, prop_value);
+
+  contents = svn_stringbuf_create("Some text.", pool);
+  for (i = 0; i < 10; ++i)
+    svn_stringbuf_appendstr(contents, contents);
+
+  contents2 = svn_stringbuf_create("Totally new!", pool);
+  for (i = 0; i < 10; ++i)
+    svn_stringbuf_appendstr(contents2, contents2);
+
+  /* Revision 1: create a property rep. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_change_node_prop(root, "/", "p",
+                                  svn_string_create(prop_value->data, pool),
+                                  pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* Revision 2: create a file that shares the text rep with the PLAIN
+   * property rep from r1. */
+  props = apr_hash_make(pool);
+  apr_hash_set(props, "p", APR_HASH_KEY_STRING,
+               svn_string_create(prop_value->data, pool));
+
+  hash_rep = svn_stringbuf_create_empty(pool);
+  svn_hash_write2(props, svn_stream_from_stringbuf(hash_rep, pool), "END",
+                  pool);
+
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_make_file(root, "foo", pool));
+  SVN_ERR(svn_test__set_file_contents(root, "foo", hash_rep->data, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* Revision 3: modify the file contents to a long-ish full text
+   * (~10kByte, longer than the r1 revision file). */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_test__set_file_contents(root, "foo", contents->data, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* Revision 4: replace file contents to something disjoint from r3. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_test__set_file_contents(root, "foo", contents2->data, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* Getting foo@4 must work.  To make sure we actually read from disk,
+   * use a new FS instance with disjoint caches. */
+  fs_config = apr_hash_make(pool);
+  apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS, APR_HASH_KEY_STRING,
+                          svn_uuid_generate(pool));
+  SVN_ERR(svn_fs_open(&fs, REPO_NAME, fs_config, pool));
+
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+  SVN_ERR(svn_test__get_file_contents(root, "foo", &contents, pool));
+  SVN_TEST_STRING_ASSERT(contents->data, contents2->data);
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+
+/* ------------------------------------------------------------------------ */
+#define REPO_NAME "test-repo-plain_0_length"
+
+static char *
+stringbuf_find(svn_stringbuf_t *rev_contents,
+               const char *substring)
+{
+  apr_size_t i;
+  apr_size_t len = strlen(substring);
+
+  for (i = 0; i < rev_contents->len - len + 1; ++i)
+      if (!memcmp(rev_contents->data + i, substring, len))
+        return rev_contents->data + i;
+
+  return NULL;
+}
+
+
+static svn_stringbuf_t *
+get_line(svn_stringbuf_t *rev_contents,
+         const char *prefix,
+         apr_pool_t *pool)
+{
+  char *end, *start = stringbuf_find(rev_contents, prefix);
+  if (start == NULL)
+    return svn_stringbuf_create_empty(pool);
+
+  end = strchr(start, '\n');
+  if (end == NULL)
+    return svn_stringbuf_create_empty(pool);
+
+  return svn_stringbuf_ncreate(start, end - start, pool);
+}
+
+static svn_error_t *
+plain_0_length(const svn_test_opts_t *opts,
+               apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  fs_fs_data_t *ffd;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *root;
+  svn_revnum_t rev;
+  const char *rev_path;
+  svn_stringbuf_t *rev_contents, *props_line;
+  char *text;
+  apr_hash_t *fs_config;
+  svn_filesize_t file_length;
+  apr_file_t *file;
+
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
+
+  /* Create a repo that does not deltify properties and does not share reps
+     on its own - makes it easier to do that later by hand. */
+  SVN_ERR(svn_test__create_fs(&fs, REPO_NAME, opts, pool));
+  ffd = fs->fsap_data;
+  ffd->deltify_properties = FALSE;
+  ffd->rep_sharing_allowed = FALSE;
+
+  /* Create one file node with matching contents and property reps. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_make_file(root, "foo", pool));
+  SVN_ERR(svn_test__set_file_contents(root, "foo", "END\n", pool));
+  SVN_ERR(svn_fs_change_node_prop(root, "foo", "x", NULL, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* Redirect text rep to props rep. */
+  SVN_ERR(svn_fs_fs__path_rev_absolute(&rev_path, fs, rev, pool));
+  SVN_ERR(svn_stringbuf_from_file2(&rev_contents, rev_path, pool));
+
+  props_line = get_line(rev_contents, "props: ", pool);
+  text = stringbuf_find(rev_contents, "text: ");
+
+  if (text)
+    {
+      /* Explicitly set the last number before the MD5 to 0 */
+      strstr(props_line->data, " 2d29")[-1] = '0';
+
+      /* Add a padding space - in case we shorten the number in TEXT */
+      svn_stringbuf_appendbyte(props_line, ' ');
+
+      /* Make text point to the PLAIN data rep with no expanded size info. */
+      memcpy(text + 6, props_line->data + 7, props_line->len - 7);
+    }
+
+  SVN_ERR(svn_io_set_file_read_write(rev_path, FALSE, pool));
+  SVN_ERR(svn_io_file_open(&file, rev_path, APR_WRITE | APR_TRUNCATE,
+                           APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_io_file_write_full(file, rev_contents->data,
+                                 rev_contents->len, NULL, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  /* Create an independent FS instances with separate caches etc. */
+  fs_config = apr_hash_make(pool);
+  apr_hash_set(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS, APR_HASH_KEY_STRING,
+               svn_uuid_generate(pool));
+  SVN_ERR(svn_fs_open(&fs, REPO_NAME, fs_config, pool));
+
+  /* Now, check that we get the correct file length. */
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+  SVN_ERR(svn_fs_file_length(&file_length, root, "foo", pool));
+
+  SVN_TEST_ASSERT(file_length == 4);
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+
+/* ------------------------------------------------------------------------ */
+
+#define REPO_NAME "test-repo-large_delta_against_plain"
+
+static svn_error_t *
+large_delta_against_plain(const svn_test_opts_t *opts,
+                          apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  fs_fs_data_t *ffd;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *root;
+  svn_revnum_t rev;
+  svn_stringbuf_t *prop_value;
+  svn_string_t *prop_read;
+  int i;
+  apr_hash_t *fs_config;
+
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
+
+  /* Create a repo that and explicitly enable rep sharing. */
+  SVN_ERR(svn_test__create_fs(&fs, REPO_NAME, opts, pool));
+  ffd = fs->fsap_data;
+
+  /* Make sure all props are stored as PLAIN reps. */
+  ffd->deltify_properties = FALSE;
+
+  /* Construct a property larger than 2 txdelta windows. */
+  prop_value = svn_stringbuf_create("prop", pool);
+  while (prop_value->len <= 2 * 102400)
+    svn_stringbuf_appendstr(prop_value, prop_value);
+
+  /* Revision 1: create a property rep. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_change_node_prop(root, "/", "p",
+                                  svn_string_create(prop_value->data, pool),
+                                  pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* Now, store them as DELTA reps. */
+  ffd->deltify_properties = TRUE;
+
+  /* Construct a property larger than 2 txdelta windows, distinct from the
+   * previous one but with a matching "tail". */
+  prop_value = svn_stringbuf_create("blob", pool);
+  while (prop_value->len <= 2 * 102400)
+    svn_stringbuf_appendstr(prop_value, prop_value);
+  for (i = 0; i < 100; ++i)
+    svn_stringbuf_appendcstr(prop_value, "prop");
+
+  /* Revision 2: modify the property. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 1, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_change_node_prop(root, "/", "p",
+                                  svn_string_create(prop_value->data, pool),
+                                  pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* Reconstructing the property deltified must work.  To make sure we
+   * actually read from disk, use a new FS instance with disjoint caches. */
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
+                           svn_uuid_generate(pool));
+  SVN_ERR(svn_fs_open(&fs, REPO_NAME, fs_config, pool));
+
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+  SVN_ERR(svn_fs_node_prop(&prop_read, root, "/", "p", pool));
+  SVN_TEST_STRING_ASSERT(prop_read->data, prop_value->data);
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+
+/* ------------------------------------------------------------------------ */
 
 /* The test table.  */
 
@@ -883,5 +1244,13 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test file hint at shard boundary"),
     SVN_TEST_OPTS_PASS(get_set_multiple_huge_revprops_packed_fs,
                        "set multiple huge revprops in packed FSFS"),
+    SVN_TEST_OPTS_PASS(revprop_caching_on_off,
+                       "change revprops with enabled and disabled caching"),
+    SVN_TEST_OPTS_PASS(delta_chain_with_plain,
+                       "delta chains starting with PLAIN, issue #4577"),
+    SVN_TEST_OPTS_PASS(plain_0_length,
+                       "file with 0 expanded-length, issue #4554"),
+    SVN_TEST_OPTS_PASS(large_delta_against_plain,
+                       "large deltas against PLAIN, issue #4658"),
     SVN_TEST_NULL
   };

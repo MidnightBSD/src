@@ -609,8 +609,10 @@ def authz_log_and_tracing_test(sbox):
 
   ## cat
 
+  expected_err2 = ".*svn: E195012: Unable to find repository location.*"
+
   # now see if we can look at the older version of rho
-  svntest.actions.run_and_verify_svn(None, None, expected_err,
+  svntest.actions.run_and_verify_svn(None, None, expected_err2,
                                      'cat', '-r', '2', D_url+'/rho')
 
   if sbox.repo_url.startswith('http'):
@@ -627,10 +629,11 @@ def authz_log_and_tracing_test(sbox):
   svntest.actions.run_and_verify_svn(None, None, expected_err,
                                      'diff', '-r', 'HEAD', G_url+'/rho')
 
-  svntest.actions.run_and_verify_svn(None, None, expected_err,
+  # diff treats the unreadable path as indicating an add so no error
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'diff', '-r', '2', D_url+'/rho')
 
-  svntest.actions.run_and_verify_svn(None, None, expected_err,
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'diff', '-r', '2:4', D_url+'/rho')
 
 # test whether read access is correctly granted and denied
@@ -1589,6 +1592,55 @@ def authz_file_external_to_authz(sbox):
   svntest.actions.run_and_verify_update(wc_dir,
                                         None, None, expected_status)
 
+@Skip(svntest.main.is_ra_type_file)
+def remove_access_after_commit(sbox):
+  "remove a subdir with authz file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.write_restrictive_svnserve_conf(sbox.repo_dir)
+  svntest.main.write_authz_file(sbox, { "/"      : "*=rw"})
+
+  # Modification in subtree
+  sbox.simple_append('A/B/E/alpha', 'appended\n')
+  sbox.simple_append('A/D/G/rho', 'appended\n')
+  sbox.simple_commit()
+
+  svntest.main.write_authz_file(sbox, { "/"      : "*=rw",
+                                        "/A/B"   : "*=",
+                                        "/A/D"   : "*="})
+
+  # Local modification
+  sbox.simple_append('A/D/G/pi', 'appended\n')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B'  : Item(status='D '),
+    'A/D'  : Item(status='  ', treeconflict='C'),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/D/G/rho',
+                      contents="This is the file 'rho'.\nappended\n")
+  expected_disk.tweak('A/D/G/pi',
+                      contents="This is the file 'pi'.\nappended\n")
+  expected_disk.remove('A/B', 'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
+                       'A/B/F', 'A/B/lambda')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+
+  expected_status.tweak('A/D', status='R ',treeconflict='C', )
+  expected_status.tweak('A/D', 'A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
+                        'A/D/H', 'A/D/H/omega', 'A/D/H/chi', 'A/D/H/psi',
+                        'A/D/gamma', copied='+', wc_rev='-')
+  expected_status.tweak('A/D/G/pi', status='M ')
+  expected_status.remove('A/B', 'A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/F',
+                         'A/B/lambda')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        [], True)
+
 
 ########################################################################
 # Run the tests
@@ -1624,6 +1676,7 @@ test_list = [ None,
               authz_del_from_subdir,
               log_diff_dontdothat,
               authz_file_external_to_authz,
+              remove_access_after_commit,
              ]
 serial_only = True
 

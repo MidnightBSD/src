@@ -101,6 +101,21 @@
  * on their hash key.
  */
 
+/* APR's read-write lock implementation on Windows is horribly inefficient.
+ * Even with very low contention a runtime overhead of 35% percent has been
+ * measured for 'svn-bench null-export' over ra_serf.
+ *
+ * Use a simple mutex on Windows.  Because there is one mutex per segment,
+ * large machines should (and usually can) be configured with large caches
+ * such that read contention is kept low.  This is basically the situation
+ * we head before 1.8.
+ */
+#ifdef WIN32
+#  define USE_SIMPLE_MUTEX 1
+#else
+#  define USE_SIMPLE_MUTEX 0
+#endif
+
 /* A 16-way associative cache seems to be a good compromise between
  * performance (worst-case lookups) and efficiency-loss due to collisions.
  *
@@ -109,6 +124,10 @@
 #define GROUP_SIZE 16
 
 /* For more efficient copy operations, let's align all data items properly.
+ * Since we can't portably align pointers, this is rather the item size
+ * granularity which ensures *relative* alignment within the cache - still
+ * giving us decent copy speeds on most machines.
+ *
  * Must be a power of 2.
  */
 #define ITEM_ALIGNMENT 16
@@ -465,11 +484,15 @@ struct svn_membuffer_t
    * the cache's creator doesn't feel the cache needs to be
    * thread-safe.
    */
+#  if USE_SIMPLE_MUTEX
+  svn_mutex__t *lock;
+#  else
   apr_thread_rwlock_t *lock;
+#  endif
 
   /* If set, write access will wait until they get exclusive access.
    * Otherwise, they will become no-ops if the segment is currently
-   * read-locked.
+   * read-locked.  Only used when LOCK is an r/w lock.
    */
   svn_boolean_t allow_blocking_writes;
 #endif
@@ -479,22 +502,22 @@ struct svn_membuffer_t
  */
 #define ALIGN_VALUE(value) (((value) + ITEM_ALIGNMENT-1) & -ITEM_ALIGNMENT)
 
-/* Align POINTER value to the next ITEM_ALIGNMENT boundary.
- */
-#define ALIGN_POINTER(pointer) ((void*)ALIGN_VALUE((apr_size_t)(char*)(pointer)))
-
 /* If locking is supported for CACHE, acquire a read lock for it.
  */
 static svn_error_t *
 read_lock_cache(svn_membuffer_t *cache)
 {
 #if APR_HAS_THREADS
+#  if USE_SIMPLE_MUTEX
+  return svn_mutex__lock(cache->lock);
+#  else
   if (cache->lock)
   {
     apr_status_t status = apr_thread_rwlock_rdlock(cache->lock);
     if (status)
       return svn_error_wrap_apr(status, _("Can't lock cache mutex"));
   }
+#  endif
 #endif
   return SVN_NO_ERROR;
 }
@@ -505,6 +528,12 @@ static svn_error_t *
 write_lock_cache(svn_membuffer_t *cache, svn_boolean_t *success)
 {
 #if APR_HAS_THREADS
+#  if USE_SIMPLE_MUTEX
+
+  return svn_mutex__lock(cache->lock);
+
+#  else
+
   if (cache->lock)
     {
       apr_status_t status;
@@ -526,6 +555,8 @@ write_lock_cache(svn_membuffer_t *cache, svn_boolean_t *success)
         return svn_error_wrap_apr(status,
                                   _("Can't write-lock cache mutex"));
     }
+
+#  endif
 #endif
   return SVN_NO_ERROR;
 }
@@ -537,10 +568,18 @@ static svn_error_t *
 force_write_lock_cache(svn_membuffer_t *cache)
 {
 #if APR_HAS_THREADS
+#  if USE_SIMPLE_MUTEX
+
+  return svn_mutex__lock(cache->lock);
+
+#  else
+
   apr_status_t status = apr_thread_rwlock_wrlock(cache->lock);
   if (status)
     return svn_error_wrap_apr(status,
                               _("Can't write-lock cache mutex"));
+
+#  endif
 #endif
   return SVN_NO_ERROR;
 }
@@ -552,6 +591,12 @@ static svn_error_t *
 unlock_cache(svn_membuffer_t *cache, svn_error_t *err)
 {
 #if APR_HAS_THREADS
+#  if USE_SIMPLE_MUTEX
+
+  return svn_mutex__unlock(cache->lock, err);
+
+#  else
+
   if (cache->lock)
   {
     apr_status_t status = apr_thread_rwlock_unlock(cache->lock);
@@ -561,6 +606,8 @@ unlock_cache(svn_membuffer_t *cache, svn_error_t *err)
     if (status)
       return svn_error_wrap_apr(status, _("Can't unlock cache mutex"));
   }
+
+#  endif
 #endif
   return err;
 }
@@ -1106,28 +1153,6 @@ ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
    * right answer. */
 }
 
-/* Mimic apr_pcalloc in APR_POOL_DEBUG mode, i.e. handle failed allocations
- * (e.g. OOM) properly: Allocate at least SIZE bytes from POOL and zero
- * the content of the allocated memory if ZERO has been set. Return NULL
- * upon failed allocations.
- *
- * Also, satisfy our buffer alignment needs for performance reasons.
- */
-static void* secure_aligned_alloc(apr_pool_t *pool,
-                                  apr_size_t size,
-                                  svn_boolean_t zero)
-{
-  void* memory = apr_palloc(pool, size + ITEM_ALIGNMENT);
-  if (memory != NULL)
-    {
-      memory = ALIGN_POINTER(memory);
-      if (zero)
-        memset(memory, 0, size);
-    }
-
-  return memory;
-}
-
 svn_error_t *
 svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
                                   apr_size_t total_size,
@@ -1263,8 +1288,10 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
       c[seg].last = NO_INDEX;
       c[seg].next = NO_INDEX;
 
-      c[seg].data_size = data_size;
-      c[seg].data = secure_aligned_alloc(pool, (apr_size_t)data_size, FALSE);
+      c[seg].data_size = ALIGN_VALUE(data_size);
+
+      /* This cast is safe because DATA_SIZE <= MAX_SEGMENT_SIZE. */
+      c[seg].data = apr_palloc(pool, (apr_size_t)ALIGN_VALUE(data_size));
       c[seg].current_data = 0;
       c[seg].data_used = 0;
       c[seg].max_entry_size = max_entry_size;
@@ -1290,6 +1317,12 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
        * the cache's creator doesn't feel the cache needs to be
        * thread-safe.
        */
+#  if USE_SIMPLE_MUTEX
+
+      SVN_ERR(svn_mutex__init(&c[seg].lock, thread_safe, pool));
+
+#  else
+
       c[seg].lock = NULL;
       if (thread_safe)
         {
@@ -1298,6 +1331,8 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
           if (status)
             return svn_error_wrap_apr(status, _("Can't create cache mutex"));
         }
+
+#  endif
 
       /* Select the behavior of write operations.
        */
@@ -1524,7 +1559,7 @@ membuffer_cache_get_internal(svn_membuffer_t *cache,
     }
 
   size = ALIGN_VALUE(entry->size);
-  *buffer = ALIGN_POINTER(apr_palloc(result_pool, size + ITEM_ALIGNMENT-1));
+  *buffer = apr_palloc(result_pool, size);
   memcpy(*buffer, (const char*)cache->data + entry->offset, size);
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER

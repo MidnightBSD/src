@@ -4484,7 +4484,7 @@ dist/subversion/po/de.po -text
 dist/subversion/po/es.po -text
 dist/subversion/po/fr.po -text
 dist/subversion/po/it.po -text
-dist/subversion/po/ja.po -text
+dist/subversion/po/ja.po -text svneol=unset#application/octet-stream
 dist/subversion/po/ko.po -text
 dist/subversion/po/nb.po -text
 dist/subversion/po/pl.po -text
@@ -4647,6 +4647,7 @@ dist/subversion/tests/cmdline/merge_reintegrate_tests.py -text
 dist/subversion/tests/cmdline/merge_tests.py -text
 dist/subversion/tests/cmdline/merge_tree_conflict_tests.py -text
 dist/subversion/tests/cmdline/mergeinfo_tests.py -text
+dist/subversion/tests/cmdline/mod_authz_svn_tests.py -text
 dist/subversion/tests/cmdline/move_tests.py -text
 dist/subversion/tests/cmdline/patch_tests.py -text
 dist/subversion/tests/cmdline/prop_tests.py -text
@@ -4730,6 +4731,7 @@ dist/subversion/tests/cmdline/svnsync_tests_data/descend-into-replace.expected.d
 dist/subversion/tests/cmdline/svnsync_tests_data/dir-prop-change.dump -text
 dist/subversion/tests/cmdline/svnsync_tests_data/file-dir-file.dump -text
 dist/subversion/tests/cmdline/svnsync_tests_data/largemods.dump -text
+dist/subversion/tests/cmdline/svnsync_tests_data/mergeinfo-contains-r0.dump -text
 dist/subversion/tests/cmdline/svnsync_tests_data/modified-in-place.dump -text
 dist/subversion/tests/cmdline/svnsync_tests_data/no-author.dump -text
 dist/subversion/tests/cmdline/svnsync_tests_data/repo-with-copy-of-root-dir.dump -text
@@ -4809,6 +4811,7 @@ dist/subversion/tests/cmdline/upgrade_tests_data/wc-3x-1.4.0.tar.bz2 -text svneo
 dist/subversion/tests/cmdline/upgrade_tests_data/wc-3x-1.4.6.tar.bz2 -text svneol=unset#unset
 dist/subversion/tests/cmdline/upgrade_tests_data/wc-3x-1.6.12.tar.bz2 -text svneol=unset#unset
 dist/subversion/tests/cmdline/upgrade_tests_data/wc-delete.tar.bz2 -text svneol=unset#unset
+dist/subversion/tests/cmdline/upgrade_tests_data/wc-without-stat1.tar.bz2 -text svneol=unset#application/x-bzip2
 dist/subversion/tests/cmdline/wc_tests.py -text
 dist/subversion/tests/greek-tree.txt -text
 dist/subversion/tests/libsvn_client/client-test.c -text
