@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20171001:
+	Change 0.10 version to 1.0. There are several compatibility issues
+	with using 0.10 as the trailing zero is dropped in several utilities
+	making it look like 0.1. 
+
 20170918:
 	Introduce nvme(4) and nvd(4) from FreeBSD.
 
