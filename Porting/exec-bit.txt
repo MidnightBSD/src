@@ -10,6 +10,8 @@ cflags.SH
 configpm
 configure.gnu
 config_h.SH
+cpan/autodie/t/chmod.t
+cpan/CPAN-Meta-YAML/t/tml
 cpan/Test-Harness/t/source_tests/source.sh
 cpan/Test-Harness/t/source_tests/source_args.sh
 installperl
@@ -25,11 +27,9 @@ regen/regcharclass.pl
 regen/uconfig_h.pl
 runtests.SH
 t/TEST
-vms/ext/filespec.t
-x2p/Makefile.SH
-x2p/cflags.SH
 Porting/Maintainers.pl
 Porting/add-package.pl
+Porting/bench.pl
 Porting/bisect.pl
 Porting/bisect-example.sh
 Porting/bisect-runner.pl
@@ -38,6 +38,7 @@ Porting/checkAUTHORS.pl
 Porting/checkURL.pl
 Porting/checkVERSION.pl
 Porting/checkansi.pl
+Porting/checkcfguse.pl
 Porting/checkcfgvar.pl
 Porting/checkpodencoding.pl
 Porting/cmpVERSION.pl
@@ -46,6 +47,7 @@ Porting/corecpan.pl
 Porting/corelist-perldelta.pl
 Porting/corelist.pl
 Porting/expand-macro.pl
+Porting/harness-timer-report.pl
 Porting/findrfuncs
 Porting/makerel
 Porting/make_dot_patch.pl

@@ -10,12 +10,36 @@ Documentation for this is in bisect-runner.pl
 # The default, auto_abbrev will treat -e as an abbreviation of --end
 # Which isn't what we want.
 use Getopt::Long qw(:config pass_through no_auto_abbrev);
+use File::Spec;
+use File::Path qw(mkpath);
 
-my ($start, $end, $validate, $usage, $bad);
+my ($start, $end, $validate, $usage, $bad, $jobs, $make, $gold,
+    $module, $with_module);
+
+my $need_cpan_config;
+my $cpan_config_dir;
+
 $bad = !GetOptions('start=s' => \$start, 'end=s' => \$end,
-                   validate => \$validate, 'usage|help|?' => \$usage);
+                   'jobs|j=i' => \$jobs, 'make=s' => \$make, 'gold=s' => \$gold,
+                   validate => \$validate, 'usage|help|?' => \$usage,
+                   'module=s' => \$module, 'with-module=s' => \$with_module,
+                   'cpan-config-dir=s' => \$cpan_config_dir);
 unshift @ARGV, '--help' if $bad || $usage;
 unshift @ARGV, '--validate' if $validate;
+
+if ($module || $with_module) {
+  unshift @ARGV, '--module', $module if defined $module;
+  unshift @ARGV, '--with-module', $with_module if defined $with_module;
+
+  if ($cpan_config_dir) {
+    my $c = File::Spec->catfile($cpan_config_dir, 'CPAN', 'MyConfig.pm');
+    die "--cpan-config-dir: $c does not exist\n" unless -e $c;
+
+    unshift @ARGV, '--cpan-config-dir', $cpan_config_dir;
+  } else {
+    $need_cpan_config = 1;
+  }
+}
 
 my $runner = $0;
 $runner =~ s/bisect\.pl/bisect-runner.pl/;
@@ -26,18 +50,56 @@ system $^X, $runner, '--check-args', '--check-shebang', @ARGV and exit 255;
 exit 255 if $bad;
 exit 0 if $usage;
 
-{
-    my ($dev0, $ino0) = stat $0;
-    die "Can't stat $0: $!" unless defined $ino0;
-    my ($dev1, $ino1) = stat 'Porting/bisect.pl';
-    die "Can't run a bisect using the directory containing $runner"
-      if defined $dev1 && $dev0 == $dev1 && $ino0 == $ino1;
-}
-
 my $start_time = time;
 
+if (!defined $jobs &&
+    !($^O eq 'hpux' && system((defined $make ? $make : 'make')
+                              . ' --version >/dev/null 2>&1'))) {
+    # Try to default to (ab)use all the CPUs:
+    my $cpus;
+    if (open my $fh, '<', '/proc/cpuinfo') {
+        while (<$fh>) {
+            ++$cpus if /^processor\s+:\s+\d+$/;
+        }
+    } elsif (-x '/sbin/sysctl' || -x '/usr/sbin/sysctl') {
+        my $sysctl =  '/sbin/sysctl';
+        $sysctl =  "/usr$sysctl" unless -x $sysctl;
+        $cpus =  $1 if `$sysctl hw.ncpu` =~ /^hw\.ncpu: (\d+)$/;
+    } elsif (-x '/usr/bin/getconf') {
+        $cpus = $1 if `/usr/bin/getconf _NPROCESSORS_ONLN` =~ /^(\d+)$/;
+    }
+    $jobs = defined $cpus ? $cpus + 1 : 2;
+}
+
+unshift @ARGV, '--jobs', $jobs if defined $jobs;
+unshift @ARGV, '--make', $make if defined $make;
+
+if ($need_cpan_config) {
+  # Make sure we have a CPAN::MyConfig so if we start at an old
+  # revision CPAN doesn't ask for user input to configure itself
+
+  my $cdir = File::Spec->catdir($ENV{HOME},".cpan","CPAN");
+  my $cfile = File::Spec->catfile($cdir, "MyConfig.pm");
+
+  unless (-e $cfile) {
+    printf <<EOF;
+I could not find a CPAN::MyConfig. We need to create one now so that
+you can bisect with --module or --with-module. I'll boot up the CPAN
+shell for you. Feel free to use defaults or change things as needed.
+We recommend using 'manual' over 'local::lib' if it asks.
+
+Type 'quit' when finished.
+
+EOF
+    system("$^X -MCPAN -e shell");
+  }
+}
+
 # We try these in this order for the start revision if none is specified.
-my @stable = qw(perl-5.005 perl-5.6.0 perl-5.8.0 v5.10.0 v5.12.0 v5.14.0);
+my @stable = map {chomp $_; $_} grep {/v5\.[0-9]+[02468]\.0$/} `git tag -l`;
+die "git tag -l didn't seem to return any tags for stable releases"
+    unless @stable;
+unshift @stable, qw(perl-5.005 perl-5.6.0 perl-5.8.0);
 
 {
     my ($dev_C, $ino_C) = stat 'Configure';
@@ -50,7 +112,21 @@ my @stable = qw(perl-5.005 perl-5.6.0 perl-5.8.0 v5.10.0 v5.12.0 v5.14.0);
     }
 }
 
-$end = 'blead' unless defined $end;
+unshift @ARGV, '--gold', defined $gold ? $gold : $stable[-1];
+
+if (!defined $end) {
+    # If we have a branch blead, use that as the end
+    $end = `git rev-parse --verify --quiet blead`;
+    die unless defined $end;
+    if (!length $end) {
+        # Else use whichever is newer - HEAD, or the most recent stable tag.
+        if (`git rev-list -n1 HEAD ^$stable[-1]` eq "") {
+            $end = pop @stable;
+        } else {
+            $end = 'HEAD';
+        }
+    }
+}
 
 # Canonicalising branches to revisions before moving the checkout permits one
 # to use revisions such as 'HEAD' for --start or --end
@@ -61,10 +137,51 @@ foreach ($start, $end) {
     chomp;
 }
 
-my $modified = () = `git ls-files --modified --deleted --others`;
+{
+    my $modified = my @modified = `git ls-files --modified --deleted --others`;
 
-die "This checkout is not clean - $modified modified or untracked file(s)"
-    if $modified;
+    my ($dev0, $ino0) = stat $0;
+    die "Can't stat $0: $!" unless defined $ino0;
+    my ($dev1, $ino1) = stat 'Porting/bisect.pl';
+
+    my $inplace = defined $dev1 && $dev0 == $dev1 && $ino0 == $ino1;
+
+    if ($modified) {
+        my $final = $inplace
+            ? "Can't run a bisect using a dirty directory containing $runner"
+            : "You can use 'git clean -Xdf' to cleanup the ignored files";
+
+        die "This checkout is not clean, found file(s):\n",
+            join("\t","",@modified),
+                "$modified modified, untracked, or other file(s)\n",
+                "These files may not show in git status as they may be ignored.\n",
+                "$final.\n";
+    }
+
+    if ($inplace) {
+        # We assume that it's safe to copy the runner to the temporary
+        # directory and run it from there, because a shared /tmp should be +t
+        # and hence others are not be able to delete or rename our file.
+        require File::Temp;
+        my ($to, $toname) = File::Temp::tempfile();
+        die "Can't create tempfile"
+            unless $to;
+        open my $from, '<', $runner
+            or die "Can't open '$runner': $!";
+        local $/;
+        print {$to} <$from>
+            or die "Can't copy from '$runner' to '$toname': $!";
+        close $from
+            or die "Can't close '$runner': $!";
+        close $to
+            or die "Can't close '$toname': $!";
+        chmod 0500, $toname
+            or die "Can't chmod 0500, '$toname': $!";
+        $runner = $toname;
+        system $^X, $runner, '--check-args', @ARGV
+            and die "Can't run inplace for some reason. :-(";
+    }
+}
 
 sub validate {
     my $commit = shift;
@@ -114,6 +231,8 @@ if ($git_version ge v1.6.6) {
 system "git checkout $end" and die;
 my $ret = system $^X, $runner, @ARGV;
 die "Runner returned $ret for end revision" unless $ret;
+die "Runner returned $ret for end revision, which is a skip"
+    if $ret == 125 * 256;
 
 if (defined $start) {
     system "git checkout $start" and die;
@@ -152,7 +271,7 @@ system 'git', 'bisect', 'run', $^X, $runner, @ARGV and die;
 END {
     my $end_time = time;
 
-    printf "That took %d seconds\n", $end_time - $start_time
+    printf "That took %d seconds.\n", $end_time - $start_time
         if defined $start_time;
 }
 
@@ -162,9 +281,4 @@ Documentation for this is in bisect-runner.pl
 
 =cut
 
-# Local variables:
-# cperl-indent-level: 4
-# indent-tabs-mode: nil
-# End:
-#
 # ex: set ts=8 sts=4 sw=4 et:

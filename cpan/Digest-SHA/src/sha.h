@@ -1,12 +1,12 @@
 /*
  * sha.h: header file for SHA-1/224/256/384/512 routines
  *
- * Ref: NIST FIPS PUB 180-2 Secure Hash Standard
+ * Ref: NIST FIPS PUB 180-4 Secure Hash Standard
  *
- * Copyright (C) 2003-2013 Mark Shelor, All Rights Reserved
+ * Copyright (C) 2003-2016 Mark Shelor, All Rights Reserved
  *
- * Version: 5.84
- * Sat Mar  9 17:36:08 MST 2013
+ * Version: 5.96
+ * Wed Jul 27 20:04:34 MST 2016
  *
  */
 
@@ -79,10 +79,10 @@
 
 #if defined(BYTEORDER) && (BYTEORDER & 0xffff) == 0x4321
 	#if defined(SHA32_ALIGNED)
-		#define SHA32_SCHED(W, b)	memcpy(W, b, 64)
+		#define SHA32_SCHED(W, b)	Copy(b, W, 64, char)
 	#endif
 	#if defined(SHA64) && defined(SHA64_ALIGNED)
-		#define SHA64_SCHED(W, b)	memcpy(W, b, 128)
+		#define SHA64_SCHED(W, b)	Copy(b, W, 128, char)
 	#endif
 #endif
 
@@ -100,30 +100,6 @@
 			(SHA64) b[2] << 40 | (SHA64) b[3] << 32 |	\
 			(SHA64) b[4] << 24 | (SHA64) b[5] << 16 |	\
 			(SHA64) b[6] <<  8 | (SHA64) b[7]; }
-#endif
-
-#define SHA_new		New
-#define SHA_newz	Newz
-#define SHA_free	Safefree
-
-#ifdef SHA_PerlIO
-	#define SHA_FILE		PerlIO
-	#define SHA_stdin()		PerlIO_stdin()
-	#define SHA_stdout()		PerlIO_stdout()
-	#define SHA_open		PerlIO_open
-	#define SHA_close		PerlIO_close
-	#define SHA_fprintf		PerlIO_printf
-	#define SHA_feof		PerlIO_eof
-	#define SHA_getc		PerlIO_getc
-#else
-	#define SHA_FILE		FILE
-	#define SHA_stdin()		stdin
-	#define SHA_stdout()		stdout
-	#define SHA_open		fopen
-	#define SHA_close		fclose
-	#define SHA_fprintf		fprintf
-	#define SHA_feof		feof
-	#define SHA_getc		fgetc
 #endif
 
 #define SHA1		1
@@ -155,30 +131,29 @@
 #define SHA_MAX_HEX_LEN		(SHA_MAX_DIGEST_BITS / 4)
 #define SHA_MAX_BASE64_LEN	(1 + (SHA_MAX_DIGEST_BITS / 6))
 
-#if defined(SHA64)
-	#define SHA_H_SIZE	sizeof(SHA64) * 8
-#else
-	#define SHA_H_SIZE	sizeof(SHA32) * 8
+#if !defined(SHA64)
+	#define SHA64	SHA32
 #endif
 
 typedef struct SHA {
 	int alg;
 	void (*sha)(struct SHA *, unsigned char *);
-	unsigned char H[SHA_H_SIZE];
+	SHA32 H32[8];
+	SHA64 H64[8];
 	unsigned char block[SHA_MAX_BLOCK_BITS/8];
 	unsigned int blockcnt;
 	unsigned int blocksize;
 	SHA32 lenhh, lenhl, lenlh, lenll;
 	unsigned char digest[SHA_MAX_DIGEST_BITS/8];
-	int digestlen;
+	unsigned int digestlen;
 	char hex[SHA_MAX_HEX_LEN+1];
 	char base64[SHA_MAX_BASE64_LEN+1];
 } SHA;
 
 typedef struct {
-	SHA *ksha;
-	SHA *isha;
-	SHA *osha;
+	SHA isha;
+	SHA osha;
+	unsigned int digestlen;
 	unsigned char key[SHA_MAX_BLOCK_BITS/8];
 } HMAC;
 

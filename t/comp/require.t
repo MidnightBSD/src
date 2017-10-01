@@ -3,7 +3,7 @@
 BEGIN {
     chdir 't' if -d 't';
     @INC = '.';
-    push @INC, '../lib';
+    push @INC, '../lib', '../ext/re';
 }
 
 sub do_require {
@@ -16,13 +16,25 @@ sub do_require {
 # don't make this lexical
 $i = 1;
 
-my @fjles_to_delete = qw (bleah.pm bleah.do bleah.flg urkkk.pm urkkk.pmc
+my @files_to_delete = qw (bleah.pm bleah.do bleah.flg urkkk.pm urkkk.pmc
 krunch.pm krunch.pmc whap.pm whap.pmc);
+
+# there may be another copy of this test script running, or the files may
+# just not have been deleted at the end of the last run; if the former, we
+# wait a while so that creating and unlinking these files won't interfere
+# with the other process; if the latter, then the delay is harmless.  As
+# to why there might be multiple execution of this test file, I don't
+# know; but this is an experiment to see if random smoke failures go away.
+
+if (grep -e, @files_to_delete) {
+    print "# Sleeping for 20 secs waiting for other process to finish\n";
+    sleep 20;
+}
 
 
 my $Is_EBCDIC = (ord('A') == 193) ? 1 : 0;
 my $Is_UTF8   = (${^OPEN} || "") =~ /:utf8/;
-my $total_tests = 54;
+my $total_tests = 58;
 if ($Is_EBCDIC || $Is_UTF8) { $total_tests -= 3; }
 print "1..$total_tests\n";
 
@@ -57,6 +69,10 @@ print "ok ",$i++," - require 5.005 try 4\n";
 eval { require v5.5.630; };
 print "# $@\nnot " if $@;
 print "ok ",$i++," - require 5.5.630\n";
+
+eval { require(v5.5.630); };
+print "# $@\nnot " if $@;
+print "ok ",$i++," - require(v5.5.630) with parens [perl #124153]\n";
 
 sub v5 { die }
 eval { require v5; };
@@ -187,7 +203,11 @@ $foo = eval q{require bleah}; delete $INC{"bleah.pm"}; ++$::i;
        eval q{return require bleah}; delete $INC{"bleah.pm"}; ++$::i;
 $foo = eval  {require bleah}; delete $INC{"bleah.pm"}; ++$::i;
 @foo = eval  {require bleah}; delete $INC{"bleah.pm"}; ++$::i;
-       eval  {require bleah};
+       eval  {require bleah}; delete $INC{"bleah.pm"}; ++$::i;
+
+eval 'require ::bleah;';
+print "# $@\nnot " unless $@ =~ /^Bareword in require must not start with a double-colon:/;
+print "ok ", $i," - require ::bleah is banned\n";
 
 # Test for fix of RT #24404 : "require $scalar" may load a directory
 my $r = "threads";
@@ -197,6 +217,15 @@ if($@ =~ /Can't locate threads in \@INC/) {
     print "ok $i - RT #24404\n";
 } else {
     print "not ok - RT #24404$i\n";
+}
+
+# require CORE::foo
+eval ' require CORE::lc "THREADS" ';
+$i++;
+if($@ =~ /Can't locate threads in \@INC/) {
+    print "ok $i - [perl #24482] require CORE::foo\n";
+} else {
+    print "not ok - [perl #24482] require CORE::foo\n";
 }
 
 
@@ -222,13 +251,18 @@ EOT
     require Config;
     die "Failed to load Config for some reason"
 	unless $Config::Config{version};
-    my $ccflags = $Config::Config{ccflags};
-    die "Failed to get ccflags for some reason" unless defined $ccflags;
 
     my $simple = ++$i;
     my $pmc_older = ++$i;
     my $pmc_dies = ++$i;
-    if ($ccflags =~ /(?:^|\s)-DPERL_DISABLE_PMC\b/) {
+    my $no_pmc;
+    foreach(Config::non_bincompat_options()) {
+	if($_ eq "PERL_DISABLE_PMC"){
+	    $no_pmc = 1;
+	    last;
+	}
+    }
+    if ($no_pmc) {
 	print "# .pmc files are ignored, so test that\n";
 	write_file_not_thing('krunch.pmc', '.pmc', $pmc_older);
 	write_file('urkkk.pm', qq(print "ok $simple - urkkk.pm branch A\n"));
@@ -262,6 +296,21 @@ EOT
     } else {
 	print "not ok $pmc_dies - pmc_dies\n";
     }
+}
+
+
+{
+    # if we 'require "op"', since we're in the t/ directory and '.' is the
+    # first thing in @INC, it will try to load t/op/; it should fail and
+    # move onto the next path; however, the previous value of $! was
+    # leaking into implementation if it was EACCES and we're accessing a
+    # directory.
+
+    $! = eval 'use Errno qw(EACCES); EACCES' || 0;
+    eval q{require 'op'};
+    $i++;
+    print "not " if $@ =~ /Permission denied/;
+    print "ok $i - require op\n";
 }
 
 # Test "require func()" with abs path when there is no .pmc file.
@@ -305,9 +354,9 @@ if (defined &DynaLoader::boot_DynaLoader) {
 # Add generic tests before this point.   #
 ##########################################
 
-# UTF-encoded things - skipped on EBCDIC machines and on UTF-8 input
+# UTF-encoded things - skipped on UTF-8 input
 
-if ($Is_EBCDIC || $Is_UTF8) { exit; }
+if ($Is_UTF8) { exit; }
 
 my %templates = (
 		 'UTF-8'    => 'C0U',
@@ -330,7 +379,7 @@ foreach (sort keys %templates) {
 }
 
 END {
-    foreach my $file (@fjles_to_delete) {
+    foreach my $file (@files_to_delete) {
 	1 while unlink $file;
     }
 }

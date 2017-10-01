@@ -2,11 +2,11 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
     require './test.pl';
+    set_up_inc('../lib');
 }
 
-plan tests => 22;
+plan tests => 29;
 
 @x = (1, 2, 3);
 is( join(':',@x), '1:2:3', 'join an array with character');
@@ -63,6 +63,26 @@ is( $f, 'baeak', 'join back to self, self is join character');
   is( $s, "\x{1234}\x{ff}\x{fe}", 'high byte as separator, multi-byte and high byte list');
 }
 
+{ my $s = join('x', ());
+  is( $s, '', 'join should return empty string for empty list');
+}
+
+{ my $s = join('', ());
+  is( $s, '', 'join should return empty string for empty list and empty separator as well');
+}
+
+{ my $w;
+  local $SIG{__WARN__} = sub { $w = shift };
+  use warnings "uninitialized";
+  my $s = join(undef, ());
+  is( $s, '', 'join should return empty string for empty list, when separator is undef');
+  # this warning isn't normative, the implementation may choose to
+  # not evaluate the separator as a string if the list has fewer than
+  # two elements
+  like $w, qr/^Use of uninitialized value in join/, "should warn if separator is undef";
+}
+
+
 { # [perl #24846] $jb2 should be in bytes, not in utf8.
   my $b = "abc\304";
   my $u = "abc\x{0100}";
@@ -97,3 +117,14 @@ is( $f, 'baeak', 'join back to self, self is join character');
   is( $ju2, $u );
 }
 
+package o { use overload q|""| => sub { ${$_[0]}++ } }
+{
+  my $o = bless \(my $dummy = "a"), o::;
+  $_ = join $o, 1..10;
+  is $_, "1a2a3a4a5a6a7a8a9a10", 'join, $overloaded, LIST';
+  is $$o, "b", 'overloading was called once on overloaded separator';
+}
+
+for(1,2) { push @_, \join "x", 1 }
+isnt $_[1], $_[0],
+    'join(const, const) still returns a new scalar each time';

@@ -3,7 +3,7 @@ use strict;
 use vars qw($Needs_Write $Verbose @Changed $TAP);
 use File::Compare;
 use Symbol;
-use Text::Wrap;
+use Text::Wrap();
 
 # Common functions needed by the regen scripts
 
@@ -34,23 +34,28 @@ sub safer_unlink {
 
 # Open a new file.
 sub open_new {
-    my ($final_name, $mode, $header) = @_;
+    my ($final_name, $mode, $header, $force) = @_;
     my $name = $final_name . '-new';
-    my $lang = $final_name =~ /\.(?:c|h|tab|act)$/ ? 'C' : 'Perl';
+    my $lang = $final_name =~ /\.pod$/ ? 'Pod' :
+	$final_name =~ /\.(?:c|h|inc|tab|act)$/ ? 'C' : 'Perl';
+    if ($force && -e $final_name) {
+        chmod 0777, $name if $Needs_Write;
+        CORE::unlink $final_name
+                or die "Couldn't unlink $final_name: $!\n";
+    }
     my $fh = gensym;
     if (!defined $mode or $mode eq '>') {
 	if (-f $name) {
 	    unlink $name or die "$name exists but can't unlink: $!";
 	}
-	open $fh, ">$name" or die "Can't create $name: $!";
+	open $fh, '>', $name or die "Can't create $name: $!";
     } elsif ($mode eq '>>') {
-	open $fh, ">>$name" or die "Can't append to $name: $!";
+	open $fh, '>>', $name or die "Can't append to $name: $!";
     } else {
-	die "Unhandled open mode '$mode#";
+        die "Unhandled open mode '$mode'";
     }
-    *{$fh}->{name} = $name;
-    *{$fh}->{final_name} = $final_name;
-    *{$fh}->{lang} = $lang;
+    @{*$fh}{qw(name final_name lang force)}
+        = ($name, $final_name, $lang, $force);
     binmode $fh;
     print {$fh} read_only_top(lang => $lang, %$header) if $header;
     $fh;
@@ -58,35 +63,70 @@ sub open_new {
 
 sub close_and_rename {
     my $fh = shift;
-    my $name = *{$fh}->{name};
+    my ($name, $final_name, $force) = @{*{$fh}}{qw(name final_name force)};
     close $fh or die "Error closing $name: $!";
-    my $final_name = *{$fh}->{final_name};
 
     if ($TAP) {
-	my $not = compare($name, $final_name) ? 'not ' : '';
-	print STDOUT $not . "ok - $0 $final_name\n";
-	safer_unlink($name);
-	return;
-    }
-    if (compare($name, $final_name) == 0) {
-	warn "no changes between '$name' & '$final_name'\n" if $Verbose > 0;
-	safer_unlink($name);
-	return;
-    }
-    warn "changed '$name' to '$final_name'\n" if $Verbose > 0;
-    push @Changed, $final_name unless $Verbose < 0;
+        # Don't use compare because if there are errors it doesn't give any
+        # way to generate diagnostics about what went wrong.
+        # These files are small enough to read into memory.
+        local $/;
+        # This is the file we just closed, so it should open cleanly:
+        open $fh, '<', $name
+            or die "Can't open '$name': $!";
+        my $want = <$fh>;
+        die "Can't read '$name': $!"
+            unless defined $want;
+        close $fh
+            or die "Can't close '$name': $!";
 
-    # Some dosish systems can't rename over an existing file:
+        my $fail;
+        if (!open $fh, '<', $final_name) {
+            $fail = "Can't open '$final_name': $!";
+        } else {
+            my $have = <$fh>;
+            if (!defined $have) {
+                $fail = "Can't read '$final_name': $!";
+                close $fh;
+            } elsif (!close $fh) {
+                $fail = "Can't close '$final_name': $!";
+            } elsif ($want ne $have) {
+                $fail = "'$name' and '$final_name' differ";
+            }
+        }
+        if ($fail) {
+            print STDOUT "not ok - $0 $final_name\n";
+            print STDERR "$fail\n";
+        } else {
+            print STDOUT "ok - $0 $final_name\n";
+        }
+	safer_unlink($name);
+	return;
+    }
+    unless ($force) {
+        if (compare($name, $final_name) == 0) {
+            warn "no changes between '$name' & '$final_name'\n" if $Verbose > 0;
+            safer_unlink($name);
+            return;
+        }
+        warn "changed '$name' to '$final_name'\n" if $Verbose > 0;
+        push @Changed, $final_name unless $Verbose < 0;
+    }
+
+    # Some DOSish systems can't rename over an existing file:
     safer_unlink $final_name;
     chmod 0600, $name if $Needs_Write;
     rename $name, $final_name or die "renaming $name to $final_name: $!";
 }
 
+my %lang_opener = (Perl => '# ', Pod => '', C => '/* ');
+
 sub read_only_top {
     my %args = @_;
-    die "Missing language argument" unless defined $args{lang};
-    die "Unknown language argument '$args{lang}'"
-	unless $args{lang} eq 'Perl' or $args{lang} eq 'C';
+    my $lang = $args{lang};
+    die "Missing language argument" unless defined $lang;
+    die "Unknown language argument '$lang'"
+        unless exists $lang_opener{$lang};
     my $style = $args{style} ? " $args{style} " : '   ';
 
     my $raw = "-*- buffer-read-only: t -*-\n";
@@ -96,8 +136,7 @@ sub read_only_top {
     }
     if ($args{copyright}) {
 	local $" = ', ';
-	local $Text::Wrap::columns = 75;
-	$raw .= wrap('   ', '   ', <<"EOM") . "\n";
+         $raw .= wrap(75, '   ', '   ', <<"EOM") . "\n";
 
 Copyright (C) @{$args{copyright}} by\0Larry\0Wall\0and\0others
 
@@ -124,9 +163,9 @@ EOM
     $raw .= "Any changes made here will be lost!\n";
     $raw .= $args{final} if $args{final};
 
-    local $Text::Wrap::columns = 78;
-    my $cooked = $args{lang} eq 'Perl'
-	? wrap('# ', '# ', $raw) . "\n" : wrap('/* ', $style, $raw) . " */\n\n";
+    my $cooked = $lang eq 'C'
+        ? wrap(78, '/* ', $style, $raw) . " */\n\n"
+        : wrap(78, $lang_opener{$lang}, $lang_opener{$lang}, $raw) . "\n";
     $cooked =~ tr/\0/ /; # Don't break Larry's name etc
     $cooked =~ s/ +$//mg; # Remove all trailing spaces
     $cooked =~ s! \*/\n!$args{quote}!s if $args{quote};
@@ -135,16 +174,21 @@ EOM
 
 sub read_only_bottom_close_and_rename {
     my ($fh, $sources) = @_;
-    my $name = *{$fh}->{name};
-    my $lang = *{$fh}->{lang};
+    my ($name, $lang, $final_name) = @{*{$fh}}{qw(name lang final_name)};
     die "No final name specified at open time for $name"
-	unless *{$fh}->{final_name};
+        unless $final_name;
 
     my $comment;
     if ($sources) {
 	$comment = "Generated from:\n";
 	foreach my $file (sort @$sources) {
-	    my $digest = digest($file);
+            my $digest = (-e $file)
+                         ? digest($file)
+                           # Use a random number that won't match the real
+                           # digest, so will always show as out-of-date, so
+                           # Porting tests likely will fail drawing attention
+                           # to the problem.
+                         : int(rand(1_000_000));
 	    $comment .= "$digest $file\n";
 	}
     }
@@ -152,7 +196,7 @@ sub read_only_bottom_close_and_rename {
 
     if (defined $lang && $lang eq 'Perl') {
 	$comment =~ s/^/# /mg;
-    } else {
+    } elsif (!defined $lang or $lang ne 'Pod') {
 	$comment =~ s/^/ * /mg;
 	$comment =~ s! \* !/* !;
 	$comment .= " */";
@@ -175,10 +219,35 @@ sub digest {
     require Digest::SHA;
 
     local ($/, *FH);
-    open FH, "$file" or die "Can't open $file: $!";
+    open FH, '<', $file or die "Can't open $file: $!";
     my $raw = <FH>;
     close FH or die "Can't close $file: $!";
     return Digest::SHA::sha256_hex($raw);
 };
+
+sub wrap {
+    local $Text::Wrap::columns = shift;
+    Text::Wrap::wrap(@_);
+}
+
+# return the perl version as defined in patchlevel.h.
+# (we may be being run by another perl, so $] won't be right)
+# return e.g. (5, 14, 3, "5.014003")
+
+sub perl_version {
+    my $plh = 'patchlevel.h';
+    open my $fh, "<", $plh or die "can't open '$plh': $!\n";
+    my ($v1,$v2,$v3);
+    while (<$fh>) {
+        $v1 = $1 if /PERL_REVISION\s+(\d+)/;
+        $v2 = $1 if /PERL_VERSION\s+(\d+)/;
+        $v3 = $1 if /PERL_SUBVERSION\s+(\d+)/;
+    }
+    die "can't locate PERL_REVISION in '$plh'"   unless defined $v1;
+    die "can't locate PERL_VERSION in '$plh'"    unless defined $v2;
+    die "can't locate PERL_SUBVERSION in '$plh'" unless defined $v3;
+    return ($v1,$v2,$v3, sprintf("%d.%03d%03d", $v1, $v2, $v3));
+}
+
 
 1;

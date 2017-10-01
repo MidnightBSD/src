@@ -7,6 +7,7 @@ use Test::More 'no_plan';
 
 use Cwd             qw[cwd];
 use File::Basename  qw[basename];
+use File::Path      qw[rmtree];
 use Data::Dumper;
 
 use_ok('File::Fetch');
@@ -14,6 +15,8 @@ use_ok('File::Fetch');
 ### optionally set debugging ###
 $File::Fetch::DEBUG = $File::Fetch::DEBUG   = 1 if $ARGV[0];
 $IPC::Cmd::DEBUG    = $IPC::Cmd::DEBUG      = 1 if $ARGV[0];
+
+$File::Fetch::FORCEIPV4=1;
 
 unless( $ENV{PERL_CORE} ) {
     warn qq[
@@ -46,7 +49,7 @@ if( $File::Fetch::DEBUG ) {
 }
 
 ### Heuristics
-my %heuristics = map { $_ => 1 } qw(http ftp rsync file);
+my %heuristics = map { $_ => 1 } qw(http ftp rsync file git);
 ### _parse_uri tests
 ### these go on all platforms
 my @map = (
@@ -61,6 +64,12 @@ my @map = (
         host	=> 'cpan.pair.com',
         path	=> '/CPAN/',
         file	=> 'MIRRORING.FROM',
+    },
+    {	uri	    => 'git://github.com/Perl-Toolchain-Gang/file-fetch.git',
+        scheme	=> 'git',
+        host	=> 'github.com',
+        path	=> '/Perl-Toolchain-Gang/',
+        file	=> 'file-fetch.git',
     },
     {   uri     => 'http://localhost/tmp/index.txt',
         scheme  => 'http',
@@ -167,13 +176,13 @@ for my $entry (@map) {
 ### Heuristics
 {
   require IO::Socket::INET;
-  my $sock = IO::Socket::INET->new( PeerAddr => 'ftp.funet.fi', PeerPort => 21, Timeout => 20 )
+  my $sock = IO::Socket::INET->new( PeerAddr => 'mirror.bytemark.co.uk', PeerPort => 21, Timeout => 20 )
      or $heuristics{ftp} = 0;
 }
 
 ### ftp:// tests ###
-{   my $uri = 'ftp://ftp.funet.fi/pub/CPAN/index.html';
-    for (qw[lwp netftp wget curl lftp fetch ncftp]) {
+{   my $uri = 'ftp://mirror.bytemark.co.uk/CPAN/index.html';
+    for (qw[wget curl lftp fetch ncftp]) {
 
         ### STUPID STUPID warnings ###
         next if $_ eq 'ncftp' and $File::Fetch::FTP_PASSIVE
@@ -194,6 +203,7 @@ for my $entry (@map) {
 {   for my $uri ( 'http://www.cpan.org/index.html',
                   'http://www.cpan.org/index.html?q=1',
                   'http://www.cpan.org/index.html?q=1&y=2',
+                  #'http://user:passwd@httpbin.org/basic-auth/user/passwd',
     ) {
         for (qw[lwp httptiny wget curl lftp fetch lynx httplite iosock]) {
             _fetch_uri( http => $uri, $_ );
@@ -213,6 +223,24 @@ for my $entry (@map) {
 
     for (qw[rsync]) {
         _fetch_uri( rsync => $uri, $_ );
+    }
+}
+
+### Heuristics
+{
+  require IO::Socket::INET;
+  my $sock = IO::Socket::INET->new( PeerAddr => 'github.com', PeerPort => 9418, Timeout => 20 )
+     or $heuristics{git} = 0;
+}
+
+### git:// tests ###
+{   my $uri = 'git://github.com/Perl-Toolchain-Gang/file-fetch.git';
+
+    for (qw[git]) {
+        local $ENV{GIT_CONFIG_NOSYSTEM} = 1;
+        local $ENV{XDG_CONFIG_HOME};
+        local $ENV{HOME};
+        _fetch_uri( git => $uri, $_ );
     }
 }
 
@@ -240,7 +268,7 @@ sub _fetch_uri {
         for my $to ( 'tmp', do { \my $o } ) { SKIP: {
 
 
-            my $how     = ref $to ? 'slurp' : 'file';
+            my $how     = ref $to && $type ne 'git' ? 'slurp' : 'file';
             my $skip    = ref $to ? 4       : 3;
 
             ok( 1,              "   Fetching '$uri' in $how mode" );
@@ -258,7 +286,7 @@ sub _fetch_uri {
             ok( $file,          "   File ($file) fetched with $method ($uri)" );
 
             ### check we got some contents if we were meant to slurp
-            if( ref $to ) {
+            if( ref $to && $type ne 'git' ) {
                 ok( $$to,       "   Contents slurped" );
             }
 
@@ -267,7 +295,7 @@ sub _fetch_uri {
             is( $file && basename($file), $ff->output_file,
                                 "   File has expected name" );
 
-            unlink $file;
+            rmtree $file;
         }}
     }
 }

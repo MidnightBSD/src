@@ -21,17 +21,15 @@ plan tests => 15;
 my $verbose = @ARGV; # set if ANY ARGS
 
 my $a;
-my $Is_VMS = $^O eq 'VMS';
 
 my $path = join " ", map { qq["-I$_"] } @INC;
-$path = '"-I../lib" "-Iperl_root:[lib]"' if $Is_VMS;   # gets too long otherwise
 my $is_thread = $Config{use5005threads} && $Config{use5005threads} eq 'define';
 
 if ($is_thread) {
     ok "# use5005threads: test skipped\n";
 } else {
     $a = `$^X $path "-MO=Showlex" -e "my \@one" 2>&1`;
-    like ($a, qr/sv_undef.*PVNV.*\@one.*sv_undef.*AV/s,
+    like ($a, qr/undef.*: \([^)]*\) \@one.*Nullsv.*AV/s,
 	  "canonical usage works");
 }
 
@@ -43,8 +41,8 @@ my ($out, $newlex);	# output, option-flag
 sub padrep {
     my ($varname,$newlex) = @_;
     return ($newlex)
-	? 'PVNV \(0x[0-9a-fA-F]+\) "\\'.$varname.'" = '
-	: "PVNV \\\(0x[0-9a-fA-F]+\\\) \\$varname\n";
+	? '\(0x[0-9a-fA-F]+\) "\\'.$varname.'" = '
+	: "\\\(0x[0-9a-fA-F]+\\\) \\$varname\n";
 }
 
 for $newlex ('', '-newlex') {

@@ -6,7 +6,7 @@ use strict;
 
 our($VERSION, @ISA, @EXPORT_OK);
 
-$VERSION = "1.25";
+$VERSION = "1.39";
 
 use Carp;
 use Exporter ();
@@ -308,17 +308,19 @@ invert_opset function.
 
     rv2sv sassign
 
-    rv2av aassign aelem aelemfast aelemfast_lex aslice av2arylen
+    rv2av aassign aelem aelemfast aelemfast_lex aslice kvaslice
+    av2arylen
 
-    rv2hv helem hslice each values keys exists delete aeach akeys
-    avalues reach rvalues rkeys
+    rv2hv helem hslice kvhslice each values keys exists delete
+    aeach akeys avalues multideref argelem argdefelem argcheck
 
     preinc i_preinc predec i_predec postinc i_postinc
     postdec i_postdec int hex oct abs pow multiply i_multiply
     divide i_divide modulo i_modulo add i_add subtract i_subtract
 
-    left_shift right_shift bit_and bit_xor bit_or negate i_negate
-    not complement
+    left_shift right_shift bit_and bit_xor bit_or nbit_and
+    nbit_xor nbit_or sbit_and sbit_xor sbit_or negate i_negate not
+    complement ncomplement scomplement
 
     lt i_lt gt i_gt le i_le ge i_ge eq i_eq ne i_ne ncmp i_ncmp
     slt sgt sle sge seq sne scmp
@@ -336,9 +338,10 @@ invert_opset function.
 
     warn die lineseq nextstate scope enter leave
 
-    rv2cv anoncode prototype coreargs
+    rv2cv anoncode prototype coreargs avhvswitch anonconst
 
     entersub leavesub leavesublv return method method_named
+    method_super method_redir method_redir_super
      -- XXX loops via recursion?
 
     leaveeval -- needed for Safe to operate, is safe
@@ -401,12 +404,12 @@ These are a hotchpotch of opcodes still waiting to be considered
 
     once
 
-    rv2gv refgen srefgen ref
+    rv2gv refgen srefgen ref refassign lvref lvrefslice lvavref
 
     bless -- could be used to change ownership of objects
 	     (reblessing)
 
-    pushre regcmaybe regcreset regcomp subst substcont
+     regcmaybe regcreset regcomp subst substcont
 
     sprintf prtf -- can core dump
 

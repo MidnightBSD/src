@@ -1,8 +1,11 @@
 
 BEGIN {
-    unless ("A" eq pack('U', 0x41)) {
-	print "1..0 # Unicode::Collate " .
-	    "cannot stringify a Unicode code point\n";
+    unless ('A' eq pack('U', 0x41)) {
+	print "1..0 # Unicode::Collate cannot pack a Unicode code point\n";
+	exit 0;
+    }
+    unless (0x41 == unpack('U', 'A')) {
+	print "1..0 # Unicode::Collate cannot get a Unicode code point\n";
 	exit 0;
     }
     if ($ENV{PERL_CORE}) {
@@ -13,7 +16,7 @@ BEGIN {
 
 use strict;
 use warnings;
-BEGIN { $| = 1; print "1..23\n"; }
+BEGIN { $| = 1; print "1..25\n"; }
 my $count = 0;
 sub ok ($;$) {
     my $p = my $r = shift;
@@ -53,11 +56,11 @@ ok($objSa->eq("\x{933}", "\x{934}"));
 
 for my $h (0, 1) {
     no warnings 'utf8';
-    my $t = $h ? pack('U', 0xFFFF) : "";
-    $objSa->change(highestFFFF => 1) if $h;
+    my $t = $h ? pack('U', 0xFFFF) : 'z';
 
     ok($objSa->lt("\x{950}$t", "\x{902}"));
     ok($objSa->lt("\x{902}$t", "\x{903}"));
+    ok($objSa->lt("\x{903}$t", "\x{A8FD}"));
     ok($objSa->lt("\x{903}$t", "\x{972}"));
 
     ok($objSa->lt("\x{938}$t", "\x{939}"));
@@ -67,4 +70,4 @@ for my $h (0, 1) {
     ok($objSa->lt("\x{91C}\x{94D}\x{91E}$t", "\x{93D}"));
 }
 
-# 23
+# 25

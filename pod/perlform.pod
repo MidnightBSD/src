@@ -169,7 +169,7 @@ characters B<without> an embedded "."), the character used for the decimal
 point is determined by the current LC_NUMERIC locale if C<use locale> is in
 effect.  This means that, if, for example, the run-time environment happens
 to specify a German locale, "," will be used instead of the default ".".  See
-L<perllocale> and L<"WARNINGS"> for more information.
+L<perllocale> and L</"WARNINGS"> for more information.
 
 
 =head2 Using Fill Mode
@@ -301,7 +301,7 @@ stage in the expression to single-step the debugger through):
 
 If you use the English module, you can even read the variable names:
 
-    use English '-no_match_vars';
+    use English;
     $ofh = select(OUTF);
     $FORMAT_NAME     = "My_Other_Format";
     $FORMAT_TOP_NAME = "My_Top_Format";

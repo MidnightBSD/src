@@ -1,46 +1,28 @@
 #!perl
 
 BEGIN {
-    chdir 't';
-    @INC = '../lib';
+    chdir 't' if -d 't';
     require './test.pl';
+    set_up_inc('../lib');
     *bar::is = *is;
     *bar::like = *like;
 }
-no warnings 'deprecated';
-plan 136;
-
-# -------------------- Errors with feature disabled -------------------- #
-
-eval "#line 8 foo\nmy sub foo";
-is $@, qq 'Experimental "my" subs not enabled at foo line 8.\n',
-  'my sub unexperimental error';
-eval "#line 8 foo\nCORE::state sub foo";
-is $@, qq 'Experimental "state" subs not enabled at foo line 8.\n',
-  'state sub unexperimental error';
-eval "#line 8 foo\nour sub foo";
-is $@, qq 'Experimental "our" subs not enabled at foo line 8.\n',
-  'our sub unexperimental error';
+plan 149;
 
 # -------------------- our -------------------- #
 
-no warnings "experimental::lexical_subs";
-use feature 'lexical_subs';
 {
   our sub foo { 42 }
   is foo, 42, 'calling our sub from same package';
   is &foo, 42, 'calling our sub from same package (amper)';
-  is do foo(), 42, 'calling our sub from same package (do)';
   package bar;
   sub bar::foo { 43 }
   is foo, 42, 'calling our sub from another package';
   is &foo, 42, 'calling our sub from another package (amper)';
-  is do foo(), 42, 'calling our sub from another package (do)';
 }
 package bar;
 is foo, 43, 'our sub falling out of scope';
 is &foo, 43, 'our sub falling out of scope (called via amper)';
-is do foo(), 43, 'our sub falling out of scope (called via amper)';
 package main;
 {
   sub bar::a { 43 }
@@ -49,7 +31,6 @@ package main;
       package bar;
       is a, 43, 'our sub invisible inside itself';
       is &a, 43, 'our sub invisible inside itself (called via amper)';
-      is do a(), 43, 'our sub invisible inside itself (called via do)';
     }
     42
   }
@@ -61,7 +42,6 @@ package main;
       package bar;
       is b, 42, 'our sub visible inside itself after decl';
       is &b, 42, 'our sub visible inside itself after decl (amper)';
-      is do b(), 42, 'our sub visible inside itself after decl (do)';
     }
     42
   }
@@ -74,7 +54,6 @@ sub bar::c { 43 }
   package bar;
   is c, 42, 'our sub foo; makes lex alias for existing sub';
   is &c, 42, 'our sub foo; makes lex alias for existing sub (amper)';
-  is do c(), 42, 'our sub foo; makes lex alias for existing sub (do)';
 }
 {
   our sub d;
@@ -95,6 +74,37 @@ sub bar::c { 43 }
   my $y = if if if;
   is $y, 42, 'our subs from other packages override all keywords';
 }
+# Interaction with ‘use constant’
+{
+  our sub const; # symtab now has an undefined CV
+  BEGIN { delete $::{const} } # delete symtab entry; pad entry still exists
+  use constant const => 3; # symtab now has a scalar ref
+  # inlining this used to fail an assertion (parentheses necessary):
+  is(const, 3, 'our sub pointing to "use constant" constant');
+}
+# our sub and method confusion
+sub F::h { 4242 }
+{
+  my $called;
+  our sub h { ++$called; 4343 };
+  is((h F),4242, 'our sub symbol translation does not affect meth names');
+  undef $called;
+  print "#";
+  print h F; # follows a different path through yylex to intuit_method
+  print "\n";
+  is $called, undef, 'our sub symbol translation & meth names after print'
+}
+our sub j;
+is j
+  =>, 'j', 'name_of_our_sub <newline> =>  is parsed properly';
+sub _cmp { $a cmp $b }
+sub bar::_cmp { $b cmp $a }
+{
+  package bar;
+  our sub _cmp;
+  package main;
+  is join(" ", sort _cmp split //, 'oursub'), 'u u s r o b', 'sort our_sub'
+}
 
 # -------------------- state -------------------- #
 
@@ -102,25 +112,21 @@ use feature 'state'; # state
 {
   state sub foo { 44 }
   isnt \&::foo, \&foo, 'state sub is not stored in the package';
-  is eval foo, 44, 'calling state sub from same package';
-  is eval &foo, 44, 'calling state sub from same package (amper)';
-  is eval do foo(), 44, 'calling state sub from same package (do)';
+  is foo, 44, 'calling state sub from same package';
+  is &foo, 44, 'calling state sub from same package (amper)';
   package bar;
-  is eval foo, 44, 'calling state sub from another package';
-  is eval &foo, 44, 'calling state sub from another package (amper)';
-  is eval do foo(), 44, 'calling state sub from another package (do)';
+  is foo, 44, 'calling state sub from another package';
+  is &foo, 44, 'calling state sub from another package (amper)';
 }
 package bar;
 is foo, 43, 'state sub falling out of scope';
 is &foo, 43, 'state sub falling out of scope (called via amper)';
-is do foo(), 43, 'state sub falling out of scope (called via amper)';
 {
   sub sa { 43 }
   state sub sa {
     if (shift) {
       is sa, 43, 'state sub invisible inside itself';
       is &sa, 43, 'state sub invisible inside itself (called via amper)';
-      is do sa(), 43, 'state sub invisible inside itself (called via do)';
     }
     44
   }
@@ -137,9 +143,6 @@ is do foo(), 43, 'state sub falling out of scope (called via amper)';
       eval{&sb};
       like $@, qr/^Undefined subroutine &sb called at /,
         'state sub foo {} after forward declaration (amper)';
-      eval{do sb()};
-      like $@, qr/^Undefined subroutine &sb called at /,
-        'state sub foo {} after forward declaration (do)';
     }
     44
   }
@@ -151,7 +154,6 @@ is do foo(), 43, 'state sub falling out of scope (called via amper)';
       package bar;
       is sb2, 44, 'state sub visible inside itself after decl';
       is &sb2, 44, 'state sub visible inside itself after decl (amper)';
-      is do sb2(), 44, 'state sub visible inside itself after decl (do)';
     }
     44
   }
@@ -187,9 +189,6 @@ sub sc { 43 }
   eval{&sc};
   like $@, qr/^Undefined subroutine &sc called at /,
      'state sub foo; makes no lex alias for existing sub (amper)';
-  eval{do sc()};
-  like $@, qr/^Undefined subroutine &sc called at /,
-     'state sub foo; makes no lex alias for existing sub (do)';
 }
 package main;
 {
@@ -278,12 +277,54 @@ sub make_anon_with_state_sub{
     'state subs in anon subs are cloned';
   is &$s(0), &$s(0), 'but only when the anon sub is cloned';
 }
+# Check that nested state subs close over variables properly
+{
+  is sub {
+    state sub a;
+    state sub b {
+      state sub c {
+        state $x = 42;
+        sub a { $x }
+      }
+      c();
+    }
+    b();
+    a();
+  }->(), 42, 'state sub with body defined in doubly-nested state subs';
+  is sub {
+    state sub a;
+    state sub b;
+    state sub c {
+      sub b {
+        state $x = 42;
+        sub a { $x }
+      }
+    }
+    b();
+    a();
+  }->(), 42, 'nested state subs declared in same scope';
+  state $w;
+  local $SIG{__WARN__} = sub { $w .= shift };
+  use warnings 'closure';
+  my $sub = sub {
+    state sub a;
+    sub {
+      my $x;
+      sub a { $x }
+    }
+  };
+  like $w, qr/Variable \"\$x\" is not available at /,
+      "unavailability warning when state closure is defined in anon sub";
+}
 {
   state sub BEGIN { exit };
   pass 'state subs are never special blocks';
   state sub END { shift }
   is eval{END('jkqeudth')}, jkqeudth,
     'state sub END {shift} implies @_, not @ARGV';
+  state sub CORE { scalar reverse shift }
+  is CORE::uc("hello"), "HELLO",
+    'lexical CORE does not interfere with CORE::...';
 }
 {
   state sub redef {}
@@ -322,12 +363,111 @@ sub make_anon_with_state_sub{
   r(1);
 }
 like runperl(
-      switches => [ '-Mfeature=:all' ],
+      switches => [ '-Mfeature=lexical_subs,state' ],
       prog     => 'state sub a { foo ref } a()',
       stderr   => 1
      ),
      qr/syntax error/,
     'referencing a state sub after a syntax error does not crash';
+{
+  state $stuff;
+  package A {
+    state sub foo{ $stuff .= our $AUTOLOAD }
+    *A::AUTOLOAD = \&foo;
+  }
+  A::bar();
+  is $stuff, 'A::bar', 'state sub assigned to *AUTOLOAD can autoload';
+}
+{
+  state sub quire{qr "quires"}
+  package o { use overload qr => \&quire }
+  ok "quires" =~ bless([], o::), 'state sub used as overload method';
+}
+{
+  state sub foo;
+  *cvgv = \&foo;
+  local *cvgv2 = *cvgv;
+  eval 'sub cvgv2 {42}'; # uses the stub already present
+  is foo, 42, 'defining state sub body via package sub declaration';
+}
+{
+  local $ENV{PERL5DB} = 'sub DB::DB{}';
+  is(
+    runperl(
+     switches => [ '-d' ],
+     progs => [ split "\n",
+      'use feature qw - lexical_subs state -;
+       no warnings q-experimental::lexical_subs-;
+       sub DB::sub{
+         print qq|4\n| unless $DB::sub =~ DESTROY;
+         goto $DB::sub
+       }
+       state sub foo {print qq|2\n|}
+       foo();
+      '
+     ],
+     stderr => 1
+    ),
+    "4\n2\n",
+    'state subs and DB::sub under -d'
+  );
+  is(
+    runperl(
+     switches => [ '-d' ],
+     progs => [ split "\n",
+      'use feature qw - lexical_subs state -;
+       no warnings q-experimental::lexical_subs-;
+       sub DB::goto{ print qq|4\n|; $_ = $DB::sub }
+       state sub foo {print qq|2\n|}
+       $^P|=0x80;
+       sub { goto &foo }->();
+       print $_ == \&foo ? qq|ok\n| : qq|$_\n|;
+      '
+     ],
+     stderr => 1
+    ),
+    "4\n2\nok\n",
+    'state subs and DB::goto under -d'
+  );
+}
+# This used to fail an assertion, but only as a standalone script
+is runperl(switches => ['-lXMfeature=:all'],
+           prog     => 'state sub x {}; undef &x; print defined &x',
+           stderr   => 1), "\n", 'undefining state sub';
+{
+  state sub x { is +(caller 0)[3], 'x', 'state sub name in caller' }
+  x
+}
+{
+  state sub _cmp { $b cmp $a }
+  is join(" ", sort _cmp split //, 'lexsub'), 'x u s l e b',
+    'sort state_sub LIST'
+}
+{
+  state sub handel { "" }
+  print handel, "ok ", curr_test(),
+       " - no 'No comma allowed' after state sub\n";
+  curr_test(curr_test()+1);
+}
+{
+  use utf8;
+  state sub φου;
+  eval { φου };
+  like $@, qr/^Undefined subroutine &φου called at /,
+    'state sub with utf8 name';
+}
+# This used to crash, but only as a standalone script
+is runperl(switches => ['-lXMfeature=:all'],
+           prog     => '$::x = global=>;
+                        sub x;
+                        sub x {
+                          state $x = 42;
+                          state sub x { print eval q|$x| }
+                          x()
+                        }
+                        x()',
+           stderr   => 1), "42\n",
+  'closure behaviour of state sub in predeclared package sub';
 
 # -------------------- my -------------------- #
 
@@ -336,23 +476,19 @@ like runperl(
   isnt \&::foo, \&foo, 'my sub is not stored in the package';
   is foo, 44, 'calling my sub from same package';
   is &foo, 44, 'calling my sub from same package (amper)';
-  is do foo(), 44, 'calling my sub from same package (do)';
   package bar;
   is foo, 44, 'calling my sub from another package';
   is &foo, 44, 'calling my sub from another package (amper)';
-  is do foo(), 44, 'calling my sub from another package (do)';
 }
 package bar;
 is foo, 43, 'my sub falling out of scope';
 is &foo, 43, 'my sub falling out of scope (called via amper)';
-is do foo(), 43, 'my sub falling out of scope (called via amper)';
 {
   sub ma { 43 }
   my sub ma {
     if (shift) {
       is ma, 43, 'my sub invisible inside itself';
       is &ma, 43, 'my sub invisible inside itself (called via amper)';
-      is do ma(), 43, 'my sub invisible inside itself (called via do)';
     }
     44
   }
@@ -369,9 +505,6 @@ is do foo(), 43, 'my sub falling out of scope (called via amper)';
       eval{&mb};
       like $@, qr/^Undefined subroutine &mb called at /,
         'my sub foo {} after forward declaration (amper)';
-      eval{do mb()};
-      like $@, qr/^Undefined subroutine &mb called at /,
-        'my sub foo {} after forward declaration (do)';
     }
     44
   }
@@ -383,7 +516,6 @@ is do foo(), 43, 'my sub falling out of scope (called via amper)';
       package bar;
       is mb2, 44, 'my sub visible inside itself after decl';
       is &mb2, 44, 'my sub visible inside itself after decl (amper)';
-      is do mb2(), 44, 'my sub visible inside itself after decl (do)';
     }
     44
   }
@@ -419,15 +551,17 @@ sub mc { 43 }
   eval{&mc};
   like $@, qr/^Undefined subroutine &mc called at /,
      'my sub foo; makes no lex alias for existing sub (amper)';
-  eval{do mc()};
-  like $@, qr/^Undefined subroutine &mc called at /,
-     'my sub foo; makes no lex alias for existing sub (do)';
 }
 package main;
 {
   my sub me ($);
   is prototype eval{\&me}, '$', 'my sub with proto';
   is prototype "me", undef, 'prototype "..." ignores my subs';
+
+  my $coderef = eval "my sub foo (\$\x{30cd}) {1}; \\&foo";
+  my $proto = prototype $coderef;
+  ok(utf8::is_utf8($proto), "my sub with UTF8 proto maintains the UTF8ness");
+  is($proto, "\$\x{30cd}", "check the prototypes actually match");
 }
 {
   my sub if() { 44 }
@@ -612,6 +746,10 @@ not_lexical11();
   my sub x;
   eval 'sub x {3}';
   is x, 3, 'my sub defined inside eval';
+
+  my sub z;
+  BEGIN { eval 'sub z {4}' }
+  is z, 4, 'my sub defined in BEGIN { eval "..." }';
 }
 
 {
@@ -621,12 +759,103 @@ not_lexical11();
   is $w, undef, 'no double free from constant my subs';
 }
 like runperl(
-      switches => [ '-Mfeature=:all' ],
+      switches => [ '-Mfeature=lexical_subs,state' ],
       prog     => 'my sub a { foo ref } a()',
       stderr   => 1
      ),
      qr/syntax error/,
     'referencing a my sub after a syntax error does not crash';
+{
+  state $stuff;
+  package A {
+    my sub foo{ $stuff .= our $AUTOLOAD }
+    *A::AUTOLOAD = \&foo;
+  }
+  A::bar();
+  is $stuff, 'A::bar', 'my sub assigned to *AUTOLOAD can autoload';
+}
+{
+  my sub quire{qr "quires"}
+  package mo { use overload qr => \&quire }
+  ok "quires" =~ bless([], mo::), 'my sub used as overload method';
+}
+{
+  my sub foo;
+  *mcvgv = \&foo;
+  local *mcvgv2 = *mcvgv;
+  eval 'sub mcvgv2 {42}'; # uses the stub already present
+  is foo, 42, 'defining my sub body via package sub declaration';
+}
+{
+  my sub foo;
+  *mcvgv3 = \&foo;
+  local *mcvgv4 = *mcvgv3;
+  eval 'sub mcvgv4 {42}'; # uses the stub already present
+  undef *mcvgv3; undef *mcvgv4; # leaves the pad with the only reference
+}
+# We would have crashed by now if it weren’t fixed.
+pass "pad taking ownership once more of packagified my-sub";
+
+{
+  local $ENV{PERL5DB} = 'sub DB::DB{}';
+  is(
+    runperl(
+     switches => [ '-d' ],
+     progs => [ split "\n",
+      'use feature qw - lexical_subs state -;
+       no warnings q-experimental::lexical_subs-;
+       sub DB::sub{
+         print qq|4\n| unless $DB::sub =~ DESTROY;
+         goto $DB::sub
+       }
+       my sub foo {print qq|2\n|}
+       foo();
+      '
+     ],
+     stderr => 1
+    ),
+    "4\n2\n",
+    'my subs and DB::sub under -d'
+  );
+}
+# This used to fail an assertion, but only as a standalone script
+is runperl(switches => ['-lXMfeature=:all'],
+           prog     => 'my sub x {}; undef &x; print defined &x',
+           stderr   => 1), "\n", 'undefining my sub';
+{
+  my sub x { is +(caller 0)[3], 'x', 'my sub name in caller' }
+  x
+}
+{
+  my sub _cmp { $b cmp $a }
+  is join(" ", sort _cmp split //, 'lexsub'), 'x u s l e b',
+    'sort my_sub LIST'
+}
+{
+  my sub handel { "" }
+  print handel,"ok ",curr_test()," - no 'No comma allowed' after my sub\n";
+  curr_test(curr_test()+1);
+}
+{
+  my $x = 43;
+  my sub y :prototype() {$x};
+  is y, 43, 'my sub that looks like constant closure';
+}
+{
+  use utf8;
+  my sub φου;
+  eval { φου };
+  like $@, qr/^Undefined subroutine &φου called at /,
+    'my sub with utf8 name';
+}
+{
+  my $w;
+  local $SIG{__WARN__} = sub { $w = shift };
+  use warnings 'closure';
+  eval 'sub stayshared { my sub x; sub notstayshared { x } } 1' or die;
+  like $w, qr/^Subroutine "&x" will not stay shared at /,
+          'Subroutine will not stay shared';
+}
 
 # -------------------- Interactions (and misc tests) -------------------- #
 
@@ -697,7 +926,7 @@ eval 'sub not_lexical7 { my @x }';
 }
 
 like runperl(
-      switches => [ '-Mfeature=:all', '-Mwarnings=FATAL,all', '-M-warnings=experimental::lexical_subs' ],
+      switches => [ '-Mfeature=lexical_subs,state', '-Mwarnings=FATAL,all', '-M-warnings=experimental::lexical_subs' ],
       prog     => 'my sub foo; sub foo { foo } foo',
       stderr   => 1
      ),
@@ -705,9 +934,26 @@ like runperl(
     'deep recursion warnings for lexical subs do not crash';
 
 like runperl(
-      switches => [ '-Mfeature=:all', '-Mwarnings=FATAL,all', '-M-warnings=experimental::lexical_subs' ],
+      switches => [ '-Mfeature=lexical_subs,state', '-Mwarnings=FATAL,all', '-M-warnings=experimental::lexical_subs' ],
       prog     => 'my sub foo() { 42 } undef &foo',
       stderr   => 1
      ),
      qr/Constant subroutine foo undefined at /,
     'constant undefinition warnings for lexical subs do not crash';
+
+{
+  my sub foo;
+  *AutoloadTestSuper::blah = \&foo;
+  sub AutoloadTestSuper::AUTOLOAD {
+    is $AutoloadTestSuper::AUTOLOAD, "AutoloadTestSuper::blah",
+      "Autoloading via inherited lex stub";
+  }
+  @AutoloadTest::ISA = AutoloadTestSuper::;
+  AutoloadTest->blah;
+}
+
+# This used to crash because op.c:find_lexical_cv was looking at the wrong
+# CV’s OUTSIDE pointer.  [perl #124099]
+{
+  my sub h; sub{my $x; sub{h}}
+}

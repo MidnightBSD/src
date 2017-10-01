@@ -1,6 +1,5 @@
+use strict;
+use warnings;
 package perlfaq;
-{
-  $perlfaq::VERSION = '5.0150042';
-}
-
-0; # not is it supposed to be loaded
+$perlfaq::VERSION = '5.021011';
+1;

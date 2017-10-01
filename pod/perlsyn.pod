@@ -68,7 +68,7 @@ subroutine without defining it by saying C<sub name>, thus:
 X<subroutine, declaration>
 
     sub myname;
-    $me = myname $0 		or die "can't get myname";
+    $me = myname $0             or die "can't get myname";
 
 A bare declaration like that declares the function to be a list operator,
 not a unary operator, so you have to be careful to use parentheses (or
@@ -84,7 +84,7 @@ operator:
 
 That now parses as you'd expect, but you still ought to get in the habit of
 using parentheses in that situation.  For more on prototypes, see
-L<perlsub>
+L<perlsub>.
 
 Subroutines declarations can also be loaded up with the C<require> statement
 or both loaded and imported into your namespace with a C<use> statement.
@@ -174,30 +174,42 @@ evaluated.
 This is so that you can write loops like:
 
     do {
-	$line = <STDIN>;
-	...
+        $line = <STDIN>;
+        ...
     } until !defined($line) || $line eq ".\n"
 
 See L<perlfunc/do>.  Note also that the loop control statements described
 later will I<NOT> work in this construct, because modifiers don't take
 loop labels.  Sorry.  You can always put another block inside of it
-(for C<next>) or around it (for C<last>) to do that sort of thing.
-For C<next>, just double the braces:
+(for C<next>/C<redo>) or around it (for C<last>) to do that sort of thing.
 X<next> X<last> X<redo>
 
+For C<next> or C<redo>, just double the braces:
+
     do {{
-	next if $x == $y;
-	# do something here
+        next if $x == $y;
+        # do something here
     }} until $x++ > $z;
 
-For C<last>, you have to be more elaborate:
+For C<last>, you have to be more elaborate and put braces around it:
 X<last>
 
-    LOOP: { 
-	    do {
-		last if $x = $y**2;
-		# do something here
-	    } while $x++ <= $z;
+    {
+        do {
+            last if $x == $y**2;
+            # do something here
+        } while $x++ <= $z;
+    }
+
+If you need both C<next> and C<last>, you have to do both and also use a
+loop label:
+
+    LOOP: {
+        do {{
+            next if $x == $y;
+            last LOOP if $x == $y**2;
+            # do something here
+        }} until $x++ > $z;
     }
 
 B<NOTE:> The behaviour of a C<my>, C<state>, or
@@ -219,8 +231,8 @@ a C<next> from inside a C<foreach> and C<break> from inside a C<given>.
 
 Under the current implementation, the C<foreach> loop can be
 anywhere within the C<when> modifier's dynamic scope, but must be
-within the C<given> block's lexical scope.  This restricted may
-be relaxed in a future release.  See L<"Switch Statements"> below.
+within the C<given> block's lexical scope.  This restriction may
+be relaxed in a future release.  See L</"Switch Statements"> below.
 
 =head2 Compound Statements
 X<statement, compound> X<block> X<bracket, curly> X<curly bracket> X<brace>
@@ -267,7 +279,7 @@ The following compound statements may be used to control flow:
 
     PHASE BLOCK
 
-The experimental C<given> statement is I<not automatically enabled>; see 
+The experimental C<given> statement is I<not automatically enabled>; see
 L</"Switch Statements"> below for how to do so, and the attendant caveats.
 
 Unlike in C and Pascal, in Perl these are all defined in terms of BLOCKs,
@@ -280,7 +292,7 @@ all do the same thing:
     die "Can't open $FOO: $!" unless open(FOO);
     open(FOO)  || die "Can't open $FOO: $!";
     open(FOO) ? () : die "Can't open $FOO: $!";
-			# a bit exotic, that last one
+        # a bit exotic, that last one
 
 The C<if> statement is straightforward.  Because BLOCKs are always
 bounded by curly brackets, there is never any ambiguity about which
@@ -327,16 +339,16 @@ X<loop control> X<loop, control> X<next> X<last> X<redo> X<continue>
 The C<next> command starts the next iteration of the loop:
 
     LINE: while (<STDIN>) {
-	next LINE if /^#/;	# discard comments
-	...
+        next LINE if /^#/;      # discard comments
+        ...
     }
 
 The C<last> command immediately exits the loop in question.  The
 C<continue> block, if any, is not executed:
 
     LINE: while (<STDIN>) {
-	last LINE if /^$/;	# exit when done with header
-	...
+        last LINE if /^$/;      # exit when done with header
+        ...
     }
 
 The C<redo> command restarts the loop block without evaluating the
@@ -349,23 +361,23 @@ If your input lines might end in backslashes to indicate continuation, you
 want to skip ahead and get the next record.
 
     while (<>) {
-	chomp;
-	if (s/\\$//) {
-	    $_ .= <>;
-	    redo unless eof();
-	}
-	# now process $_
+        chomp;
+        if (s/\\$//) {
+            $_ .= <>;
+            redo unless eof();
+        }
+        # now process $_
     }
 
 which is Perl shorthand for the more explicitly written version:
 
     LINE: while (defined($line = <ARGV>)) {
-	chomp($line);
-	if ($line =~ s/\\$//) {
-	    $line .= <ARGV>;
-	    redo LINE unless eof(); # not eof(ARGV)!
-	}
-	# now process $line
+        chomp($line);
+        if ($line =~ s/\\$//) {
+            $line .= <ARGV>;
+            redo LINE unless eof(); # not eof(ARGV)!
+        }
+        # now process $line
     }
 
 Note that if there were a C<continue> block on the above code, it would
@@ -375,13 +387,13 @@ or C<m?pat?> one-time matches:
 
     # inspired by :1,$g/fred/s//WILMA/
     while (<>) {
-	m?(fred)?    && s//WILMA $1 WILMA/;
-	m?(barney)?  && s//BETTY $1 BETTY/;
-	m?(homer)?   && s//MARGE $1 MARGE/;
+        m?(fred)?    && s//WILMA $1 WILMA/;
+        m?(barney)?  && s//BETTY $1 BETTY/;
+        m?(homer)?   && s//MARGE $1 MARGE/;
     } continue {
-	print "$ARGV $.: $_";
-	close ARGV  if eof;		# reset $.
-	reset	    if eof;		# reset ?pat?
+        print "$ARGV $.: $_";
+        close ARGV  if eof;             # reset $.
+        reset       if eof;             # reset ?pat?
     }
 
 If the word C<while> is replaced by the word C<until>, the sense of the
@@ -392,14 +404,14 @@ Loop control statements don't work in an C<if> or C<unless>, since
 they aren't loops.  You can double the braces to make them such, though.
 
     if (/pattern/) {{
-	last if /fred/;
-	next if /barney/; # same effect as "last",
-			  # but doesn't document as well
-	# do something here
+        last if /fred/;
+        next if /barney/; # same effect as "last",
+                          # but doesn't document as well
+        # do something here
     }}
 
 This is caused by the fact that a block by itself acts as a loop that
-executes once, see L<"Basic BLOCKs">.
+executes once, see L</"Basic BLOCKs">.
 
 The form C<while/if BLOCK BLOCK>, available in Perl 4, is no longer
 available.   Replace any occurrence of C<if BLOCK> by C<if (do BLOCK)>.
@@ -411,16 +423,16 @@ Perl's C-style C<for> loop works like the corresponding C<while> loop;
 that means that this:
 
     for ($i = 1; $i < 10; $i++) {
-	...
+        ...
     }
 
 is the same as this:
 
     $i = 1;
     while ($i < 10) {
-	...
+        ...
     } continue {
-	$i++;
+        $i++;
     }
 
 There is one minor difference: if variables are declared with C<my>
@@ -428,6 +440,21 @@ in the initialization section of the C<for>, the lexical scope of
 those variables is exactly the C<for> loop (the body of the loop
 and the control sections).
 X<my>
+
+As a special case, if the test in the C<for> loop (or the corresponding
+C<while> loop) is empty, it is treated as true.  That is, both
+
+    for (;;) {
+        ...
+    }
+
+and
+
+    while () {
+        ...
+    }
+
+are treated as infinite loops.
 
 Besides the normal array index looping, C<for> can lend itself
 to many other interesting applications.  Here's one that avoids the
@@ -439,7 +466,7 @@ X<eof> X<end-of-file> X<end of file>
     $on_a_tty = -t STDIN && -t STDOUT;
     sub prompt { print "yes? " if $on_a_tty }
     for ( prompt(); <STDIN>; prompt() ) {
-	# do something
+        # do something
     }
 
 Using C<readline> (or the operator form, C<< <EXPR> >>) as the
@@ -454,7 +481,7 @@ X<readline> X<< <> >>
 =head2 Foreach Loops
 X<for> X<foreach>
 
-The C<foreach> loop iterates over a normal list value and sets the
+The C<foreach> loop iterates over a normal list value and sets the scalar
 variable VAR to be each element of the list in turn.  If the variable
 is preceded with the keyword C<my>, then it is lexically scoped, and
 is therefore visible only within the loop.  Otherwise, the variable is
@@ -484,35 +511,50 @@ X<splice>
 C<foreach> probably won't do what you expect if VAR is a tied or other
 special variable.   Don't do that either.
 
+As of Perl 5.22, there is an experimental variant of this loop that accepts
+a variable preceded by a backslash for VAR, in which case the items in the
+LIST must be references.  The backslashed variable will become an alias
+to each referenced item in the LIST, which must be of the correct type.
+The variable needn't be a scalar in this case, and the backslash may be
+followed by C<my>.  To use this form, you must enable the C<refaliasing>
+feature via C<use feature>.  (See L<feature>.  See also L<perlref/Assigning
+to References>.)
+
 Examples:
 
     for (@ary) { s/foo/bar/ }
 
     for my $elem (@elements) {
-	$elem *= 2;
+        $elem *= 2;
     }
 
     for $count (reverse(1..10), "BOOM") {
-	print $count, "\n";
-	sleep(1);
+        print $count, "\n";
+        sleep(1);
     }
 
     for (1..15) { print "Merry Christmas\n"; }
 
     foreach $item (split(/:[\\\n:]*/, $ENV{TERMCAP})) {
-	print "Item: $item\n";
+        print "Item: $item\n";
+    }
+
+    use feature "refaliasing";
+    no warnings "experimental::refaliasing";
+    foreach \my %hash (@array_of_hash_references) {
+        # do something which each %hash
     }
 
 Here's how a C programmer might code up a particular algorithm in Perl:
 
     for (my $i = 0; $i < @ary1; $i++) {
-	for (my $j = 0; $j < @ary2; $j++) {
-	    if ($ary1[$i] > $ary2[$j]) {
-		last; # can't go to outer :-(
-	    }
-	    $ary1[$i] += $ary2[$j];
-	}
-	# this is where that last takes me
+        for (my $j = 0; $j < @ary2; $j++) {
+            if ($ary1[$i] > $ary2[$j]) {
+                last; # can't go to outer :-(
+            }
+            $ary1[$i] += $ary2[$j];
+        }
+        # this is where that last takes me
     }
 
 Whereas here's how a Perl programmer more comfortable with the idiom might
@@ -520,10 +562,10 @@ do it:
 
     OUTER: for my $wid (@ary1) {
     INNER:   for my $jet (@ary2) {
-		next OUTER if $wid > $jet;
-		$wid += $jet;
-	     }
-	  }
+                next OUTER if $wid > $jet;
+                $wid += $jet;
+             }
+          }
 
 See how much easier this is?  It's cleaner, safer, and faster.  It's
 cleaner because it's less noisy.  It's safer because if code gets added
@@ -532,6 +574,12 @@ accidentally executed.  The C<next> explicitly iterates the other loop
 rather than merely terminating the inner one.  And it's faster because
 Perl executes a C<foreach> statement more rapidly than it would the
 equivalent C<for> loop.
+
+Perceptive Perl hackers may have noticed that a C<for> loop has a return
+value, and that this value can be captured by wrapping the loop in a C<do>
+block.  The reward for this discovery is this cautionary advice:  The
+return value of a C<for> loop is unspecified and may change without notice.
+Do not rely on it.
 
 =head2 Basic BLOCKs
 X<block>
@@ -546,10 +594,10 @@ block is optional.
 The BLOCK construct can be used to emulate case structures.
 
     SWITCH: {
-	if (/^abc/) { $abc = 1; last SWITCH; }
-	if (/^def/) { $def = 1; last SWITCH; }
-	if (/^xyz/) { $xyz = 1; last SWITCH; }
-	$nothing = 1;
+        if (/^abc/) { $abc = 1; last SWITCH; }
+        if (/^def/) { $def = 1; last SWITCH; }
+        if (/^xyz/) { $xyz = 1; last SWITCH; }
+        $nothing = 1;
     }
 
 You'll also find that C<foreach> loop used to create a topicalizer
@@ -557,10 +605,10 @@ and a switch:
 
     SWITCH:
     for ($var) {
-	if (/^abc/) { $abc = 1; last SWITCH; }
-	if (/^def/) { $def = 1; last SWITCH; }
-	if (/^xyz/) { $xyz = 1; last SWITCH; }
-	$nothing = 1;
+        if (/^abc/) { $abc = 1; last SWITCH; }
+        if (/^def/) { $def = 1; last SWITCH; }
+        if (/^xyz/) { $xyz = 1; last SWITCH; }
+        $nothing = 1;
     }
 
 Such constructs are quite frequently used, both because older versions of
@@ -590,15 +638,15 @@ Starting from Perl 5.16, one can prefix the switch
 keywords with C<CORE::> to access the feature without a C<use feature>
 statement.  The keywords C<given> and
 C<when> are analogous to C<switch> and
-C<case> in other languages, so the code in the previous section could be
-rewritten as
+C<case> in other languages -- though C<continue> is not -- so the code
+in the previous section could be rewritten as
 
     use v5.10.1;
     for ($var) {
-	when (/^abc/) { $abc = 1 }
-	when (/^def/) { $def = 1 }
-	when (/^xyz/) { $xyz = 1 }
-	default       { $nothing = 1 }
+        when (/^abc/) { $abc = 1 }
+        when (/^def/) { $def = 1 }
+        when (/^xyz/) { $xyz = 1 }
+        default       { $nothing = 1 }
     }
 
 The C<foreach> is the non-experimental way to set a topicalizer.
@@ -607,30 +655,30 @@ written like this:
 
     use v5.10.1;
     given ($var) {
-	when (/^abc/) { $abc = 1 }
-	when (/^def/) { $def = 1 }
-	when (/^xyz/) { $xyz = 1 }
-	default       { $nothing = 1 }
+        when (/^abc/) { $abc = 1 }
+        when (/^def/) { $def = 1 }
+        when (/^xyz/) { $xyz = 1 }
+        default       { $nothing = 1 }
     }
 
 As of 5.14, that can also be written this way:
 
     use v5.14;
     for ($var) {
-	$abc = 1 when /^abc/;
-	$def = 1 when /^def/;
-	$xyz = 1 when /^xyz/;
-	default { $nothing = 1 }
+        $abc = 1 when /^abc/;
+        $def = 1 when /^def/;
+        $xyz = 1 when /^xyz/;
+        default { $nothing = 1 }
     }
 
 Or if you don't care to play it safe, like this:
 
     use v5.14;
     given ($var) {
-	$abc = 1 when /^abc/;
-	$def = 1 when /^def/;
-	$xyz = 1 when /^xyz/;
-	default { $nothing = 1 }
+        $abc = 1 when /^abc/;
+        $def = 1 when /^def/;
+        $xyz = 1 when /^xyz/;
+        default { $nothing = 1 }
     }
 
 The arguments to C<given> and C<when> are in scalar context,
@@ -649,13 +697,8 @@ and 5.16, under those implementations the version of C<$_> governed by
 C<given> is merely a lexically scoped copy of the original, not a
 dynamically scoped alias to the original, as it would be if it were a
 C<foreach> or under both the original and the current Perl 6 language
-specification.  This bug was fixed in Perl
-5.18.  If you really want a lexical C<$_>,
-specify that explicitly, but note that C<my $_>
-is now deprecated and will warn unless warnings
-have been disabled:
-
-    given(my $_ = EXPR) { ... }
+specification.  This bug was fixed in Perl 5.18 (and lexicalized C<$_> itself
+was removed in Perl 5.24).
 
 If your code still needs to run on older versions,
 stick to C<foreach> for your topicalizer and
@@ -725,7 +768,7 @@ throws an exception with the text C<Unimplemented>:
     sub unimplemented { ... }
     eval { unimplemented() };
     if ($@ =~ /^Unimplemented at /) {
-	say "I found an ellipsis!";
+        say "I found an ellipsis!";
     }
 
 You can only use the elliptical statement to stand in for a
@@ -737,14 +780,14 @@ complete statement.  These examples of how the ellipsis works:
     ...;
     eval { ... };
     sub somemeth {
-	my $self = shift;
-	...;
+        my $self = shift;
+        ...;
     }
     $x = do {
-	my $n;
-	...;
-	say "Hurrah!";
-	$n;
+        my $n;
+        ...;
+        say "Hurrah!";
+        $n;
     };
 
 The elliptical statement cannot stand in for an expression that
@@ -767,20 +810,17 @@ syntax error if Perl doesn't guess that the C<{ ... }> is a block.  In that
 case, it doesn't think the C<...> is an ellipsis because it's expecting an
 expression instead of a statement:
 
-    @transformed = map { ... } @input;  # syntax error
+    @transformed = map { ... } @input;    # syntax error
 
-You can use a C<;> inside your block to denote that the C<{ ...  }> is a
-block and not a hash reference constructor.  Now the ellipsis works:
+Inside your block, you can use a C<;> before the ellipsis to denote that the
+C<{ ... }> is a block and not a hash reference constructor.  Now the ellipsis
+works:
 
-    @transformed = map {; ... } @input; # ; disambiguates
-
-    @transformed = map { ...; } @input; # ; disambiguates
+    @transformed = map {; ... } @input;   # ';' disambiguates
 
 Note: Some folks colloquially refer to this bit of punctuation as a
 "yada-yada" or "triple-dot", but its true name
-is actually an ellipsis.  Perl does not yet
-accept the Unicode version, U+2026 HORIZONTAL ELLIPSIS, as an alias for
-C<...>, but someday it may.
+is actually an ellipsis.
 
 =head2 PODs: Embedded Documentation
 X<POD> X<documentation>
@@ -807,8 +847,8 @@ and your documentation text freely, as in
     =cut back to the compiler, nuff of this pod stuff!
 
     sub snazzle($) {
-	my $thingie = shift;
-	.........
+        my $thingie = shift;
+        .........
     }
 
 Note that pod translators should look at only paragraphs beginning
@@ -895,32 +935,32 @@ Here is a longer example of C<given>:
 
     use feature ":5.10";
     given ($foo) {
-	when (undef) {
-	    say '$foo is undefined';
-	}
-	when ("foo") {
-	    say '$foo is the string "foo"';
-	}
-	when ([1,3,5,7,9]) {
-	    say '$foo is an odd digit';
-	    continue; # Fall through
-	}
-	when ($_ < 100) {
-	    say '$foo is numerically less than 100';
-	}
-	when (\&complicated_check) {
-	    say 'a complicated check for $foo is true';
-	}
-	default {
-	    die q(I don't know what to do with $foo);
-	}
+        when (undef) {
+            say '$foo is undefined';
+        }
+        when ("foo") {
+            say '$foo is the string "foo"';
+        }
+        when ([1,3,5,7,9]) {
+            say '$foo is an odd digit';
+            continue; # Fall through
+        }
+        when ($_ < 100) {
+            say '$foo is numerically less than 100';
+        }
+        when (\&complicated_check) {
+            say 'a complicated check for $foo is true';
+        }
+        default {
+            die q(I don't know what to do with $foo);
+        }
     }
 
 Before Perl 5.18, C<given(EXPR)> assigned the value of I<EXPR> to
 merely a lexically scoped I<B<copy>> (!) of C<$_>, not a dynamically
 scoped alias the way C<foreach> does.  That made it similar to
 
-	do { my $_ = EXPR; ... }
+        do { my $_ = EXPR; ... }
 
 except that the block was automatically broken out of by a successful
 C<when> or an explicit C<break>.  Because it was only a copy, and because
@@ -938,49 +978,48 @@ listed below, it is used directly as a boolean.
 
 =over 4
 
-=item 1.
+=item Z<>1.
 
 A user-defined subroutine call or a method invocation.
 
-=item 2.
+=item Z<>2.
 
 A regular expression match in the form of C</REGEX/>, C<$foo =~ /REGEX/>,
 or C<$foo =~ EXPR>.  Also, a negated regular expression match in
 the form C<!/REGEX/>, C<$foo !~ /REGEX/>, or C<$foo !~ EXPR>.
 
-=item 3.
+=item Z<>3.
 
 A smart match that uses an explicit C<~~> operator, such as C<EXPR ~~ EXPR>.
 
-=item 4.
+B<NOTE:> You will often have to use C<$c ~~ $_> because the default case
+uses C<$_ ~~ $c> , which is frequentlythe opposite of what you want.
+
+=item Z<>4.
 
 A boolean comparison operator such as C<$_ E<lt> 10> or C<$x eq "abc">.  The
 relational operators that this applies to are the six numeric comparisons
 (C<< < >>, C<< > >>, C<< <= >>, C<< >= >>, C<< == >>, and C<< != >>), and
 the six string comparisons (C<lt>, C<gt>, C<le>, C<ge>, C<eq>, and C<ne>).
 
-B<NOTE:> You will often have to use C<$c ~~ $_> because
-the default case uses C<$_ ~~ $c> , which is frequently
-the opposite of what you want.
-
-=item 5.
+=item Z<>5.
 
 At least the three builtin functions C<defined(...)>, C<exists(...)>, and
 C<eof(...)>.  We might someday add more of these later if we think of them.
 
-=item 6.
+=item Z<>6.
 
 A negated expression, whether C<!(EXPR)> or C<not(EXPR)>, or a logical
 exclusive-or, C<(EXPR1) xor (EXPR2)>.  The bitwise versions (C<~> and C<^>)
 are not included.
 
-=item 7.
+=item Z<>7.
 
 A filetest operator, with exactly 4 exceptions: C<-s>, C<-M>, C<-A>, and
 C<-C>, as these return numerical values, not boolean ones.  The C<-z>
 filetest operator is not included in the exception list.
 
-=item 8.
+=item Z<>8.
 
 The C<..> and C<...> flip-flop operators.  Note that the C<...> flip-flop
 operator is completely different from the C<...> elliptical statement
@@ -997,7 +1036,7 @@ above test to the operands:
 
 =over 4
 
-=item 9.
+=item Z<>9.
 
 If EXPR is C<EXPR1 && EXPR2> or C<EXPR1 and EXPR2>, the test is applied
 I<recursively> to both EXPR1 and EXPR2.
@@ -1005,7 +1044,7 @@ Only if I<both> operands also pass the
 test, I<recursively>, will the expression be treated as boolean.  Otherwise,
 smartmatching is used.
 
-=item 10.
+=item Z<>10.
 
 If EXPR is C<EXPR1 || EXPR2>, C<EXPR1 // EXPR2>, or C<EXPR1 or EXPR2>, the
 test is applied I<recursively> to EXPR1 only (which might itself be a
@@ -1079,12 +1118,12 @@ a C<break>.
 =head3 Fall-through
 
 You can use the C<continue> keyword to fall through from one
-case to the next:
+case to the next immediate C<when> or C<default>:
 
     given($foo) {
-	when (/x/) { say '$foo contains an x'; continue }
-	when (/y/) { say '$foo contains a y'            }
-	default    { say '$foo does not contain a y'    }
+        when (/x/) { say '$foo contains an x'; continue }
+        when (/y/) { say '$foo contains a y'            }
+        default    { say '$foo does not contain a y'    }
     }
 
 =head3 Return value
@@ -1117,12 +1156,12 @@ Note that, unlike C<if> and C<unless>, failed C<when> statements always
 evaluate to an empty list.
 
     my $price = do {
-	given ($item) {
-	    when (["pear", "apple"]) { 1 }
-	    break when "vote";      # My vote cannot be bought
-	    1e10  when /Mona Lisa/;
-	    "unknown";
-	}
+        given ($item) {
+            when (["pear", "apple"]) { 1 }
+            break when "vote";      # My vote cannot be bought
+            1e10  when /Mona Lisa/;
+            "unknown";
+        }
     };
 
 Currently, C<given> blocks can't always
@@ -1138,7 +1177,7 @@ string occurs in an array:
     use v5.10.1;
     my $count = 0;
     for (@array) {
-	when ("foo") { ++$count }
+        when ("foo") { ++$count }
     }
     print "\@array contains $count copies of 'foo'\n";
 
@@ -1147,7 +1186,7 @@ Or in a more recent version:
     use v5.14;
     my $count = 0;
     for (@array) {
-	++$count when "foo";
+        ++$count when "foo";
     }
     print "\@array contains $count copies of 'foo'\n";
 
@@ -1170,7 +1209,7 @@ made optional in Perl 5 without a great deal of potential confusion,
 because Perl 5 would parse the expression
 
     given $foo {
-	...
+        ...
     }
 
 as though the argument to C<given> were an element of the hash
@@ -1193,7 +1232,7 @@ this works in Perl 5:
     say "that's all, folks!";
 
 But it doesn't work at all in Perl 6.  Instead, you should
-use the (parallelizable) C<any> operator instead:
+use the (parallelizable) C<any> operator:
 
    if any(@primary) eq "red" {
        say "primary smartmatches red";

@@ -1,10 +1,11 @@
 #!./perl
 
 BEGIN {
-    require "test.pl";
+    chdir 't' if -d 't';
+    require "./test.pl";
 }
 
-plan(104);
+plan(124);
 
 # A lot of tests to check that reversed for works.
 
@@ -547,18 +548,119 @@ for my $i (reverse (map {$_} @array, 1)) {
 }
 is ($r, '1CBA', 'Reverse for array and value via map with var');
 
-TODO: {
-    if (do {17; foreach (1, 2) { 1; } } != 17) {
-        #print "not ";
-	todo_skip("RT #1085: what should be output of perl -we 'print do { foreach (1, 2) { 1; } }'");
-     }
-}
+is do {17; foreach (1, 2) { 1; } }, '', "RT #1085: what should be output of perl -we 'print do { foreach (1, 2) { 1; } }'";
 
 TODO: {
     local $TODO = "RT #2166: foreach spuriously autovivifies";
     my %h;
     foreach (@h{a, b}) {}
-    if(keys(%h)) {
-        todo_skip("RT #2166: foreach spuriously autovivifies");
+    is keys(%h), 0, 'RT #2166: foreach spuriously autovivifies';
+}
+
+sub {
+    foreach (@_) {
+        is eval { \$_ }, \undef, 'foreach (@array_containing_undef)'
     }
+}->(undef);
+
+SKIP: {
+    skip "No XS::APItest under miniperl", 1, if is_miniperl;
+    skip "no XS::APItest", 1 if !eval { require XS::APItest };
+    my @a;
+    sub {
+        XS::APItest::alias_av(\@a, 0, undef);
+        eval { \$_[0] }
+    }->($a[0]);
+    is $@, "", 'vivify_defelem does not croak on &PL_sv_undef elements';
+}
+
+for $x ($y) {
+    $x = 3;
+    ($x, my $z) = (1, $y);
+    is $z, 3, 'list assignment after aliasing via foreach';
+}
+
+for my $x (my $y) {
+    $x = 3;
+    ($x, my $z) = (1, $y);
+    is $z, 3, 'list assignment after aliasing lexical var via foreach';
+}
+
+@_ = ();
+@_ = (1,2,3,scalar do{for(@_){}} + 1, 4, 5, 6);
+is "@_", "1 2 3 1 4 5 6",
+   '[perl #124004] scalar for(@empty_array) stack bug';
+
+# DAPM: while messing with the scope code, I broke some cpan/ code,
+# but surprisingly didn't break any dedicated tests. So test it:
+
+sub fscope {
+    for my $y (1,2) {
+	my $a = $y;
+	return $a;
+    }
+}
+
+is(fscope(), 1, 'return via loop in sub');
+
+# make sure a NULL GvSV is restored at the end of the loop
+
+{
+    local $foo = "boo";
+    {
+        local *foo;
+        for $foo (1,2) {}
+        ok(!defined $foo, "NULL GvSV");
+    }
+}
+
+# make sure storing an int in a NULL GvSV is ok
+
+{
+    local $foo = "boo";
+    {
+        local *foo;
+        for $foo (1..2) {}
+        ok(!defined $foo, "NULL GvSV int iterator");
+    }
+}
+
+# RT #123994 - handle a null GVSV within a loop
+
+{
+    local *foo;
+    local $foo = "outside";
+
+    my $i = 0;
+    for $foo (0..1) {
+        is($foo, $i, "RT #123994 int range $i");
+        *foo = "";
+        $i++;
+    }
+    is($foo, "outside", "RT #123994 int range outside");
+
+    $i = 0;
+    for $foo ('0'..'1') {
+        is($foo, $i, "RT #123994 str range $i");
+        *foo = "";
+        $i++;
+    }
+    is($foo, "outside", "RT #123994 str range outside");
+
+    $i = 0;
+    for $foo (0, 1) {
+        is($foo, $i, "RT #123994 list $i");
+        *foo = "";
+        $i++;
+    }
+    is($foo, "outside", "RT #123994 list outside");
+
+    my @a = (0,1);
+    $i = 0;
+    for $foo (@a) {
+        is($foo, $i, "RT #123994 array $i");
+        *foo = "";
+        $i++;
+    }
+    is($foo, "outside", "RT #123994 array outside");
 }

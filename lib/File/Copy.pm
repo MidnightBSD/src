@@ -22,7 +22,7 @@ sub syscopy;
 sub cp;
 sub mv;
 
-$VERSION = '2.26';
+$VERSION = '2.32';
 
 require Exporter;
 @ISA = qw(Exporter);
@@ -40,44 +40,6 @@ sub carp {
     require Carp;
     goto &Carp::carp;
 }
-
-# Look up the feature settings on VMS using VMS::Feature when available.
-
-my $use_vms_feature = 0;
-BEGIN {
-    if ($^O eq 'VMS') {
-        if (eval { local $SIG{__DIE__}; require VMS::Feature; }) {
-            $use_vms_feature = 1;
-        }
-    }
-}
-
-# Need to look up the UNIX report mode.  This may become a dynamic mode
-# in the future.
-sub _vms_unix_rpt {
-    my $unix_rpt;
-    if ($use_vms_feature) {
-        $unix_rpt = VMS::Feature::current("filename_unix_report");
-    } else {
-        my $env_unix_rpt = $ENV{'DECC$FILENAME_UNIX_REPORT'} || '';
-        $unix_rpt = $env_unix_rpt =~ /^[ET1]/i;
-    }
-    return $unix_rpt;
-}
-
-# Need to look up the EFS character set mode.  This may become a dynamic
-# mode in the future.
-sub _vms_efs {
-    my $efs;
-    if ($use_vms_feature) {
-        $efs = VMS::Feature::current("efs_charset");
-    } else {
-        my $env_efs = $ENV{'DECC$EFS_CHARSET'} || '';
-        $efs = $env_efs =~ /^[ET1]/i;
-    }
-    return $efs;
-}
-
 
 sub _catname {
     my($from, $to) = @_;
@@ -158,50 +120,21 @@ sub copy {
 	&& !($from_a_handle && $^O eq 'NetWare')
        )
     {
-	my $copy_to = $to;
+        if ($^O eq 'VMS' && -e $from
+            && ! -d $to && ! -d $from) {
 
-        if ($^O eq 'VMS' && -e $from) {
+            # VMS natively inherits path components from the source of a
+            # copy, but we want the Unixy behavior of inheriting from
+            # the current working directory.  Also, default in a trailing
+            # dot for null file types.
 
-            if (! -d $to && ! -d $from) {
+            $to = VMS::Filespec::rmsexpand(VMS::Filespec::vmsify($to), '.');
 
-                my $vms_efs = _vms_efs();
-                my $unix_rpt = _vms_unix_rpt();
-                my $unix_mode = 0;
-                my $from_unix = 0;
-                $from_unix = 1 if ($from =~ /^\.\.?$/);
-                my $from_vms = 0;
-                $from_vms = 1 if ($from =~ m#[\[<\]]#);
-
-                # Need to know if we are in Unix mode.
-                if ($from_vms == $from_unix) {
-                    $unix_mode = $unix_rpt;
-                } else {
-                    $unix_mode = $from_unix;
-                }
-
-                # VMS has sticky defaults on extensions, which means that
-                # if there is a null extension on the destination file, it
-                # will inherit the extension of the source file
-                # So add a '.' for a null extension.
-
-                # In unix_rpt mode, the trailing dot should not be added.
-
-                if ($vms_efs) {
-                    $copy_to = $to;
-                } else {
-                    $copy_to = VMS::Filespec::vmsify($to);
-                }
-                my ($vol, $dirs, $file) = File::Spec->splitpath($copy_to);
-                $file = $file . '.'
-                    unless (($file =~ /(?<!\^)\./) || $unix_rpt);
-                $copy_to = File::Spec->catpath($vol, $dirs, $file);
-
-                # Get rid of the old versions to be like UNIX
-                1 while unlink $copy_to;
-            }
+            # Get rid of the old versions to be like UNIX
+            1 while unlink $to;
         }
 
-        return syscopy($from, $copy_to) || 0;
+        return syscopy($from, $to) || 0;
     }
 
     my $closefrom = 0;
@@ -331,49 +264,21 @@ sub _move {
       unlink $to;
     }
 
-    my $rename_to = $to;
-    if (-$^O eq 'VMS' && -e $from) {
+    if ($^O eq 'VMS' && -e $from
+        && ! -d $to && ! -d $from) {
 
-        if (! -d $to && ! -d $from) {
+            # VMS natively inherits path components from the source of a
+            # copy, but we want the Unixy behavior of inheriting from
+            # the current working directory.  Also, default in a trailing
+            # dot for null file types.
 
-            my $vms_efs = _vms_efs();
-            my $unix_rpt = _vms_unix_rpt();
-            my $unix_mode = 0;
-            my $from_unix = 0;
-            $from_unix = 1 if ($from =~ /^\.\.?$/);
-            my $from_vms = 0;
-            $from_vms = 1 if ($from =~ m#[\[<\]]#);
-
-            # Need to know if we are in Unix mode.
-            if ($from_vms == $from_unix) {
-                $unix_mode = $unix_rpt;
-            } else {
-                $unix_mode = $from_unix;
-            }
-
-            # VMS has sticky defaults on extensions, which means that
-            # if there is a null extension on the destination file, it
-            # will inherit the extension of the source file
-            # So add a '.' for a null extension.
-
-            # In unix_rpt mode, the trailing dot should not be added.
-
-            if ($vms_efs) {
-                $rename_to = $to;
-            } else {
-                $rename_to = VMS::Filespec::vmsify($to);
-            }
-            my ($vol, $dirs, $file) = File::Spec->splitpath($rename_to);
-            $file = $file . '.'
-                unless (($file =~ /(?<!\^)\./) || $unix_rpt);
-            $rename_to = File::Spec->catpath($vol, $dirs, $file);
+            $to = VMS::Filespec::rmsexpand(VMS::Filespec::vmsify($to), '.');
 
             # Get rid of the old versions to be like UNIX
-            1 while unlink $rename_to;
-        }
+            1 while unlink $to;
     }
 
-    return 1 if rename $from, $rename_to;
+    return 1 if rename $from, $to;
 
     # Did rename return an error even though it succeeded, because $to
     # is on a remote NFS file system, and NFS lost the server's ack?
@@ -435,9 +340,9 @@ File::Copy - Copy files or filehandles
 
 	use File::Copy;
 
-	copy("file1","file2") or die "Copy failed: $!";
+	copy("sourcefile","destinationfile") or die "Copy failed: $!";
 	copy("Copy.pm",\*STDOUT);
-	move("/dev1/fileA","/dev2/fileB");
+	move("/dev1/sourcefile","/dev2/destinationfile");
 
 	use File::Copy "cp";
 
@@ -461,8 +366,11 @@ argument may be a string, a FileHandle reference or a FileHandle
 glob. Obviously, if the first argument is a filehandle of some
 sort, it will be read from, and if it is a file I<name> it will
 be opened for reading. Likewise, the second argument will be
-written to (and created if need be).  Trying to copy a file on top
-of itself is an error.
+written to. If the second argument does not exist but the parent
+directory does exist, then it will be created. Trying to copy
+a file into a non-existent directory is an error.
+Trying to copy a file on top of itself is also an error.
+C<copy> will not overwrite read-only files.
 
 If the destination (second argument) already exists and is a directory,
 and the source (first argument) is not a filehandle, then the source
@@ -571,6 +479,11 @@ from the input filespec, then all timestamps other than the
 revision date are propagated.  If this parameter is not supplied,
 it defaults to 0.
 
+C<rmscopy> is VMS specific and cannot be exported; it must be
+referenced by its full name, e.g.:
+
+  File::Copy::rmscopy($from, $to) or die $!;
+
 Like C<copy>, C<rmscopy> returns 1 on success.  If an error occurs,
 it sets C<$!>, deletes the output file, and returns 0.
 
@@ -580,6 +493,14 @@ it sets C<$!>, deletes the output file, and returns 0.
 
 All functions return 1 on success, 0 on failure.
 $! will be set if an error was encountered.
+
+=head1 NOTES
+
+Before calling copy() or move() on a filehandle, the caller should
+close or flush() the file to avoid writes being lost. Note that this
+is the case even for move(), because it may actually copy the file,
+depending on the OS-specific inplementation, and the underlying
+filesystem(s).
 
 =head1 AUTHOR
 

@@ -22,7 +22,7 @@ use vars qw(@ISA @EXPORT_OK $VERSION);
 		show_results process_options files_to_modules
 		finish_tap_output
 		reload_manifest);
-$VERSION = 0.09;
+$VERSION = 0.12;
 
 require Exporter;
 
@@ -41,7 +41,7 @@ sub reload_manifest {
         $manifest_path = "../MANIFEST";
     }
 
-    if (open(my $manfh,  $manifest_path )) {
+    if (open(my $manfh,  '<', $manifest_path )) {
 	while (<$manfh>) {
 	    if (/^(\S+)/) {
 		$MANIFEST{$1}++;
@@ -64,7 +64,7 @@ sub get_module_pat {
     split ' ', $Modules{$m}{FILES};
 }
 
-# exand dir/ or foo* into a full list of files
+# expand dir/ or foo* into a full list of files
 #
 sub expand_glob {
     sort { lc $a cmp lc $b }
@@ -236,7 +236,7 @@ sub files_to_modules {
 	if (@ToDo) {
 	    # Try prefix matching.
 
-	    # Need to try longst prefixes first, else lib/CPAN may match
+	    # Need to try longest prefixes first, else lib/CPAN may match
 	    # lib/CPANPLUS/... and similar
 
 	    my @OrderedModuleByPat
@@ -356,7 +356,7 @@ sub duplicated_maintainers {
 
 sub warn_maintainer {
     my $name = shift;
-    ok($files{$name}, "$name has a maintainer");
+    ok($files{$name}, "$name has a maintainer (see Porting/Maintainer.pl)");
 }
 
 sub missing_maintainers {

@@ -1,8 +1,11 @@
 
 BEGIN {
-    unless ("A" eq pack('U', 0x41)) {
-	print "1..0 # Unicode::Collate " .
-	    "cannot stringify a Unicode code point\n";
+    unless ('A' eq pack('U', 0x41)) {
+	print "1..0 # Unicode::Collate cannot pack a Unicode code point\n";
+	exit 0;
+    }
+    unless (0x41 == unpack('U', 'A')) {
+	print "1..0 # Unicode::Collate cannot get a Unicode code point\n";
 	exit 0;
     }
     if ($ENV{PERL_CORE}) {
@@ -36,8 +39,8 @@ my $AE = pack 'U', 0xC6;
 my $objFr = Unicode::Collate::Locale->
     new(locale => 'FR', normalization => undef);
 
-ok($objFr->getlocale, 'fr');
-ok($objFr->locale_version, 0.87);
+ok($objFr->getlocale, 'default'); # no tailoring since 1.18
+ok($objFr->locale_version, undef);
 
 $objFr->change(level => 1);
 

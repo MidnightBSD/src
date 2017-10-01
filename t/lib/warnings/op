@@ -1,10 +1,11 @@
   op.c		AOK
 
-     Use of my $_ is experimental
-	my $_ ;
-
      Found = in conditional, should be ==
 	1 if $a = 1 ;
+
+     Scalar value %.*s better written as $%.*s" 
+	@a[3] = 2;
+	@a{3} = 2;
 
      Useless use of time in void context
      Useless use of a variable in void context
@@ -57,23 +58,15 @@
        format FRED =
        .
  
-     Array @%s missing the @ in argument %d of %s() 
-	push fred ;
- 
-     Hash %%%s missing the %% in argument %d of %s() 
-	keys joe ;
- 
      Statement unlikely to be reached
      	(Maybe you meant system() when you said exec()?
  	exec "true" ; my $a
 
-     defined(@array) is deprecated
-     	(Maybe you should just omit the defined()?)
+     Can't use defined(@array) (Maybe you should just omit the defined()?)
 	my @a ; defined @a ;
 	defined (@a = (1,2,3)) ;
 
-     defined(%hash) is deprecated
-     	(Maybe you should just omit the defined()?)
+     Can't use defined(%hash) (Maybe you should just omit the defined()?)
 	my %h ; defined %h ;
 
      "my %s" used in sort comparison
@@ -94,6 +87,8 @@
 
     Use of /g modifier is meaningless in split
 
+    The bitwise feature is experimental			[Perl_ck_bitop]
+
     Possible precedence problem on bitwise %c operator	[Perl_ck_bitop]
 
     Mandatory Warnings 
@@ -106,17 +101,6 @@
     oops: oopsHV		[oopsHV]	TODO
     
 __END__
-# op.c
-use warnings 'experimental::lexical_topic' ;
-my $_;
-CORE::state $_;
-no warnings 'experimental::lexical_topic' ;
-my $_;
-CORE::state $_;
-EXPECT
-Use of my $_ is experimental at - line 3.
-Use of state $_ is experimental at - line 4.
-########
 # op.c
 use warnings 'syntax' ;
 1 if $a = 1 ;
@@ -139,33 +123,240 @@ no warnings 'syntax' ;
 EXPECT
 ########
 # op.c
-my (@foo, %foo);
+# NAME unless with assignment as condition
+use warnings 'syntax';
+1 unless $a = 1;
+unless ($a = 1) {
+    1;
+}
+EXPECT
+Found = in conditional, should be == at - line 3.
+Found = in conditional, should be == at - line 4.
+########
+# op.c
+# NAME while with assignment as condition
+use warnings 'syntax';
+1 while $a = 0;
+while ($a = 0) {
+    1;
+}
+EXPECT
+Found = in conditional, should be == at - line 3.
+Found = in conditional, should be == at - line 4.
+########
+# op.c
+# NAME until with assignment as condition
+use warnings 'syntax';
+1 until $a = 1;
+until ($a = 1) {
+    1;
+}
+EXPECT
+Found = in conditional, should be == at - line 3.
+Found = in conditional, should be == at - line 4.
+########
+# op.c
+use warnings 'syntax' ;
+@a[3];
+@a{3};
+@a["]"];
+@a{"]"};
+@a["}"];
+@a{"}"};
+@a{$_};
+@a{--$_};
+@a[$_];
+@a[--$_];
+delete @a[$x];
+delete @a{$x};
+no warnings 'syntax' ;
+@a[3];
+@a{3};
+delete @a[$x];
+delete @a{$x};
+EXPECT
+Scalar value @a[3] better written as $a[3] at - line 3.
+Scalar value @a{3} better written as $a{3} at - line 4.
+Scalar value @a["]"] better written as $a["]"] at - line 5.
+Scalar value @a{"]"} better written as $a{"]"} at - line 6.
+Scalar value @a["}"] better written as $a["}"] at - line 7.
+Scalar value @a{"}"} better written as $a{"}"} at - line 8.
+Scalar value @a{...} better written as $a{...} at - line 9.
+Scalar value @a{...} better written as $a{...} at - line 10.
+Scalar value @a[...] better written as $a[...] at - line 11.
+Scalar value @a[...] better written as $a[...] at - line 12.
+Scalar value @a[...] better written as $a[...] at - line 13.
+Scalar value @a{...} better written as $a{...} at - line 14.
+########
+# op.c
+use utf8;
+use open qw( :utf8 :std );
+use warnings 'syntax' ;
+@à[3];
+@à{3};
+no warnings 'syntax' ;
+@à[3];
+@à{3};
+EXPECT
+Scalar value @à[3] better written as $à[3] at - line 5.
+Scalar value @à{3} better written as $à{3} at - line 6.
+########
+# op.c
+use utf8;
+use open qw( :utf8 :std );
+use warnings 'syntax' ;
+@ぁ[3];
+@ぁ{3};
+no warnings 'syntax' ;
+@ぁ[3];
+@ぁ{3};
+EXPECT
+Scalar value @ぁ[3] better written as $ぁ[3] at - line 5.
+Scalar value @ぁ{3} better written as $ぁ{3} at - line 6.
+########
+# op.c
+# "Scalar value better written as" false positives
+# [perl #28380] and [perl #114024]
+use warnings 'syntax';
+
+# hashes
+@h{qw"a b c"} = 1..3;
+@h{qw'a b c'} = 1..3;
+@h{qw$a b c$} = 1..3;
+@h{qw-a b c-} = 1..3;
+@h{qw#a b c#} = 1..3;
+@h{ qw#a b c#} = 1..3;
+@h{	qw#a b c#} = 1..3; # tab before qw
+@h{qw "a"};
+@h{ qw "a"};
+@h{	qw "a"};
+sub foo() { qw/abc def ghi/ }
+@X{+foo} = ( 1 .. 3 );
+$_ = "abc"; @X{split ""} = ( 1 .. 3 );
+my @s = @f{"}", "a"};
+my @s = @f{"]", "a"};
+@a{$],0};
+@_{0} = /(.*)/;
+@h{m "$re"};
+@h{qx ""} if 0;
+@h{glob ""};
+@h{readline ""};
+@h{m ""};
+use constant phoo => 1..3;
+@h{+phoo}; # rv2av
+@h{sort foo};
+@h{reverse foo};
+@h{caller 0};
+@h{lstat ""};
+@h{stat ""};
+@h{readdir ""};
+@h{system ""} if 0;
+@h{+times} if 0;
+@h{localtime 0};
+@h{gmtime 0};
+@h{eval ""};
+
+# arrays
+@h[qw"a b c"] = 1..3;
+@h[qw'a b c'] = 1..3;
+@h[qw$a b c$] = 1..3;
+@h[qw-a b c-] = 1..3;
+@h[qw#a b c#] = 1..3;
+@h[ qw#a b c#] = 1..3;
+@h[	qw#a b c#] = 1..3; # tab before qw
+@h[qw "a"];
+@h[ qw "a"];
+@h[	qw "a"];
+sub foo() { qw/abc def ghi/ }
+@X[+foo] = ( 1 .. 3 );
+$_ = "abc"; @X[split ""] = ( 1 .. 3 );
+my @s = @f["}", "a"];
+my @s = @f["]", "a"];
+@a[$],0];
+@_[0] = /(.*)/;
+@h[m "$re"];
+@h[qx ""] if 0;
+@h[glob ""];
+@h[readline ""];
+@h[m ""];
+use constant phoo => 1..3;
+@h[+phoo]; # rv2av
+@h[sort foo];
+@h[reverse foo];
+@h[caller 0];
+@h[lstat ""];
+@h[stat ""];
+@h[readdir ""];
+@h[system ""] if 0;
+@h[+times] if 0;
+@h[localtime 0];
+@h[gmtime 0];
+@h[eval ""];
+EXPECT
+########
+# op.c
+# "Scalar value better written as" should not trigger for syntax errors
+use warnings 'syntax';
+@a[]
+EXPECT
+syntax error at - line 4, near "[]"
+Execution of - aborted due to compilation errors.
+########
+# op.c
+my %foo;
 %main::foo->{"bar"};
+EXPECT
+OPTION fatal
+Can't use a hash as a reference at - line 3.
+########
+# op.c
+my %foo;
 %foo->{"bar"};
+EXPECT
+OPTION fatal
+Can't use a hash as a reference at - line 3.
+########
+# op.c
+my @foo;
 @main::foo->[23];
+EXPECT
+OPTION fatal
+Can't use an array as a reference at - line 3.
+########
+# op.c
+my @foo;
 @foo->[23];
+EXPECT
+OPTION fatal
+Can't use an array as a reference at - line 3.
+########
+# op.c
+my %foo;
 $main::foo = {}; %$main::foo->{"bar"};
+EXPECT
+OPTION fatal
+Can't use a hash as a reference at - line 3.
+########
+# op.c
+my %foo;
 $foo = {}; %$foo->{"bar"};
+EXPECT
+OPTION fatal
+Can't use a hash as a reference at - line 3.
+########
+# op.c
+my @foo;
 $main::foo = []; @$main::foo->[34];
-$foo = []; @$foo->[34];
-no warnings 'deprecated';
-%main::foo->{"bar"};
-%foo->{"bar"};
-@main::foo->[23];
-@foo->[23];
-$main::foo = {}; %$main::foo->{"bar"};
-$foo = {}; %$foo->{"bar"};
-$main::foo = []; @$main::foo->[34];
+EXPECT
+OPTION fatal
+Can't use an array as a reference at - line 3.
+########
+# op.c
+my @foo;
 $foo = []; @$foo->[34];
 EXPECT
-Using a hash as a reference is deprecated at - line 3.
-Using a hash as a reference is deprecated at - line 4.
-Using an array as a reference is deprecated at - line 5.
-Using an array as a reference is deprecated at - line 6.
-Using a hash as a reference is deprecated at - line 7.
-Using a hash as a reference is deprecated at - line 8.
-Using an array as a reference is deprecated at - line 9.
-Using an array as a reference is deprecated at - line 10.
+OPTION fatal
+Can't use an array as a reference at - line 3.
 ########
 # op.c
 use warnings 'void' ; no warnings 'experimental::smartmatch'; close STDIN ;
@@ -181,7 +372,7 @@ wantarray ; 		# OP_WANTARRAY
 			# OP_PADANY
 			# OP_AV2ARYLEN
 ref ;			# OP_REF
-\@a ;			# OP_REFGEN
+\(@a) ;			# OP_REFGEN
 \$a ;			# OP_SREFGEN
 defined $a ;		# OP_DEFINED
 hex $a ;		# OP_HEX
@@ -201,7 +392,7 @@ $a{0} ;			# OP_HELEM
 @a{0} ;			# OP_HSLICE
 unpack "a", "a" ;	# OP_UNPACK
 pack $a,"" ;		# OP_PACK
-join "" ;		# OP_JOIN
+join "", @_ ;		# OP_JOIN
 (@a)[0,1] ;		# OP_LSLICE
 			# OP_ANONLIST
 			# OP_ANONHASH
@@ -225,8 +416,13 @@ eval { getpwuid 1 };	# OP_GPWUID
 prototype "foo";	# OP_PROTOTYPE
 $a ~~ $b;		# OP_SMARTMATCH
 $a <=> $b;		# OP_NCMP
+"dsatrewq";
+"diatrewq";
+"igatrewq";
 use 5.015;
-__SUB__			# OP_RUNCV
+__SUB__	;		# OP_RUNCV
+[];			# OP_ANONLIST
+grep /42/, (1,2);	# OP_GREP. Not warned about (yet). Grep git logs for void_unusual to see why...
 EXPECT
 Useless use of a constant ("111") in void context at - line 2.
 Useless use of repeat (x) in void context at - line 3.
@@ -269,7 +465,11 @@ Useless use of getpwuid in void context at - line 53.
 Useless use of subroutine prototype in void context at - line 54.
 Useless use of smart match in void context at - line 55.
 Useless use of numeric comparison (<=>) in void context at - line 56.
-Useless use of __SUB__ in void context at - line 58.
+Useless use of a constant ("dsatrewq") in void context at - line 57.
+Useless use of a constant ("diatrewq") in void context at - line 58.
+Useless use of a constant ("igatrewq") in void context at - line 59.
+Useless use of __SUB__ in void context at - line 61.
+Useless use of anonymous array ([]) in void context at - line 62.
 ########
 # op.c
 use warnings 'void' ; close STDIN ;
@@ -552,6 +752,7 @@ U;
 qq/"	\n/;
 5 || print "bad\n";	# test OPpCONST_SHORTCIRCUIT
 print "boo\n" if U;	# test OPpCONST_SHORTCIRCUIT
+if($foo){}elsif(""){}	# test OPpCONST_SHORTCIRCUIT
 no warnings 'void' ;
 "abc"; # OP_CONST
 7 ; # OP_CONST
@@ -566,10 +767,23 @@ Useless use of a constant (undef) in void context at - line 8.
 Useless use of a constant ("\"\t\n") in void context at - line 9.
 ########
 # op.c
+BEGIN {
+    if (ord('A') == 193) {
+        print "SKIPPED\n# Result varies depending on EBCDIC code page";
+        exit 0;
+    }
+}
 use utf8;
 use open qw( :utf8 :std );
 use warnings 'void' ;
 "àḆc"; # OP_CONST
+EXPECT
+Useless use of a constant ("\340\x{1e06}c") in void context at - line 11.
+########
+# op.c
+use utf8;
+use open qw( :utf8 :std );
+use warnings 'void' ;
 "Ẋ" . "ƴ"; # optimized to OP_CONST
 ＦＯＯ;     # Bareword optimized to OP_CONST
 use constant ů => undef;
@@ -580,14 +794,13 @@ no warnings 'void' ;
 "àḆc"; # OP_CONST
 "Ẋ" . "ƴ"; # optimized to OP_CONST
 EXPECT
-Useless use of a constant ("\340\x{1e06}c") in void context at - line 5.
-Useless use of a constant ("\x{1e8a}\x{1b4}") in void context at - line 6.
-Useless use of a constant ("\x{ff26}\x{ff2f}\x{ff2f}") in void context at - line 7.
-Useless use of a constant (undef) in void context at - line 9.
+Useless use of a constant ("\x{1e8a}\x{1b4}") in void context at - line 5.
+Useless use of a constant ("\x{ff26}\x{ff2f}\x{ff2f}") in void context at - line 6.
+Useless use of a constant (undef) in void context at - line 8.
 ########
 # op.c
 #
-use warnings 'misc' ;
+use warnings 'misc' ; use utf8;
 my $a ; my @a = () ; my %a = () ; my $b = \@a ; my $c = \%a ;my $d = 'test';
 @a =~ /abc/ ;
 @a2 =~ s/a/b/ ;
@@ -603,6 +816,9 @@ my $a ; my @a = () ; my %a = () ; my $b = \@a ; my $c = \%a ;my $d = 'test';
 %$c =~ tr/a/b/ ;
 $d =~ tr/a/b/d ;
 $d2 =~ tr/a/bc/;
+$d3 =~ tr//b/c;
+$d =~ tr/α/β/d ;
+$d2 =~ tr/α/βγ/;
 {
 no warnings 'misc' ;
 my $a ; my @a = () ; my %a = () ; my $b = \@a ; my $c = \%a ; my $d = 'test';
@@ -620,6 +836,7 @@ my $a ; my @a = () ; my %a = () ; my $b = \@a ; my $c = \%a ; my $d = 'test';
 %$c =~ tr/a/b/ ;
 $d =~ tr/a/b/d ;
 $d =~ tr/a/bc/ ;
+$d =~ tr//b/c;
 }
 EXPECT
 Applying pattern match (m//) to @a will act on scalar(@a) at - line 5.
@@ -636,14 +853,17 @@ Applying substitution (s///) to %hash will act on scalar(%hash) at - line 15.
 Applying transliteration (tr///) to %hash will act on scalar(%hash) at - line 16.
 Useless use of /d modifier in transliteration operator at - line 17.
 Replacement list is longer than search list at - line 18.
+Useless use of /d modifier in transliteration operator at - line 20.
+Replacement list is longer than search list at - line 21.
 Can't modify array dereference in substitution (s///) at - line 6, near "s/a/b/ ;"
-BEGIN not safe after errors--compilation aborted at - line 20.
+BEGIN not safe after errors--compilation aborted at - line 23.
 ########
 # op.c
 use warnings 'parenthesis' ;
 my $a, $b = (1,2);
 my @foo,%bar,	$quux; # there's a TAB here
 my $x, $y or print;
+my $p, *q;
 no warnings 'parenthesis' ;
 my $c, $d = (1,2);
 EXPECT
@@ -653,6 +873,7 @@ Parentheses missing around "my" list at - line 4.
 # op.c
 use warnings 'parenthesis' ;
 our $a, $b = (1,2);
+our $p, *q;
 no warnings 'parenthesis' ;
 our $c, $d = (1,2);
 EXPECT
@@ -662,11 +883,13 @@ Parentheses missing around "our" list at - line 3.
 use warnings 'parenthesis' ;
 local $a, $b = (1,2);
 local *f, *g;
+local $p, *q;
 no warnings 'parenthesis' ;
 local $c, $d = (1,2);
 EXPECT
 Parentheses missing around "local" list at - line 3.
 Parentheses missing around "local" list at - line 4.
+Parentheses missing around "local" list at - line 5.
 ########
 # op.c
 use warnings 'bareword' ;
@@ -802,15 +1025,11 @@ sub phred { 2 };
 state sub jorge { 1 }
 sub jorge () { 2 } # should *not* produce redef warnings by default
 EXPECT
-The lexical_subs feature is experimental at - line 3.
 Prototype mismatch: sub fred () vs none at - line 4.
 Constant subroutine fred redefined at - line 4.
-The lexical_subs feature is experimental at - line 5.
 Prototype mismatch: sub george: none vs () at - line 6.
-The lexical_subs feature is experimental at - line 7.
 Prototype mismatch: sub phred () vs none at - line 8.
 Constant subroutine phred redefined at - line 8.
-The lexical_subs feature is experimental at - line 9.
 Prototype mismatch: sub jorge: none vs () at - line 10.
 ########
 # op.c
@@ -838,21 +1057,7 @@ EXPECT
 Format FRED redefined at - line 5.
 ########
 # op.c
-push FRED;
-no warnings 'deprecated' ;
-push FRED;
-EXPECT
-Array @FRED missing the @ in argument 1 of push() at - line 2.
-########
-# op.c
-@a = keys FRED ;
-no warnings 'deprecated' ;
-@a = keys FRED ;
-EXPECT
-Hash %FRED missing the % in argument 1 of keys() at - line 2.
-########
-# op.c
-use warnings 'syntax' ;
+use warnings 'exec' ;
 exec "$^X -e 1" ; 
 my $a
 EXPECT
@@ -860,7 +1065,7 @@ Statement unlikely to be reached at - line 4.
 	(Maybe you meant system() when you said exec()?)
 ########
 # op.c, no warning if exec isn't a statement.
-use warnings 'syntax' ;
+use warnings 'exec' ;
 $a || exec "$^X -e 1" ;
 my $a
 EXPECT
@@ -868,35 +1073,33 @@ EXPECT
 # op.c
 defined(@a);
 EXPECT
-defined(@array) is deprecated at - line 2.
-	(Maybe you should just omit the defined()?)
+OPTION fatal
+Can't use 'defined(@array)' (Maybe you should just omit the defined()?) at - line 2.
 ########
 # op.c
 my @a; defined(@a);
 EXPECT
-defined(@array) is deprecated at - line 2.
-	(Maybe you should just omit the defined()?)
+OPTION fatal
+Can't use 'defined(@array)' (Maybe you should just omit the defined()?) at - line 2.
 ########
 # op.c
 defined(@a = (1,2,3));
 EXPECT
-defined(@array) is deprecated at - line 2.
-	(Maybe you should just omit the defined()?)
 ########
 # op.c
 defined(%h);
 EXPECT
-defined(%hash) is deprecated at - line 2.
-	(Maybe you should just omit the defined()?)
+OPTION fatal
+Can't use 'defined(%hash)' (Maybe you should just omit the defined()?) at - line 2.
 ########
 # op.c
 my %h; defined(%h);
 EXPECT
-defined(%hash) is deprecated at - line 2.
-	(Maybe you should just omit the defined()?)
+OPTION fatal
+Can't use 'defined(%hash)' (Maybe you should just omit the defined()?) at - line 2.
 ########
 # op.c
-no warnings 'syntax' ;
+no warnings 'exec' ;
 exec "$^X -e 1" ; 
 my $a
 EXPECT
@@ -925,48 +1128,60 @@ Prototype mismatch: sub main::frèd () vs ($) at - line 5.
 use utf8;
 use open qw( :utf8 :std );
 use warnings;
-eval "sub fòò (\$\0) {}";
+eval "sub fòò (@\$\0) {}";
 EXPECT
-Illegal character in prototype for main::fòò : $\0 at (eval 1) line 1.
+Prototype after '@' for main::fòò : @$\0 at (eval 1) line 1.
+Illegal character in prototype for main::fòò : @$\0 at (eval 1) line 1.
 ########
 # op.c
 use utf8;
 use open qw( :utf8 :std );
 use warnings;
-eval "sub foo (\0) {}";
+eval "sub foo (@\0) {}";
 EXPECT
-Illegal character in prototype for main::foo : \0 at (eval 1) line 1.
+Prototype after '@' for main::foo : @\0 at (eval 1) line 1.
+Illegal character in prototype for main::foo : @\0 at (eval 1) line 1.
+########
+# op.c
+BEGIN {
+    if (ord('A') == 193) {
+        print "SKIPPED\n# Different results on EBCDIC";
+        exit 0;
+    }
+}
+use utf8;
+use open qw( :utf8 :std );
+use warnings;
+BEGIN { $::{"foo"} = "\@\$\0L\351on" }
+BEGIN { eval "sub foo (@\$\0L\x{c3}\x{a9}on) {}"; }
+EXPECT
+Prototype after '@' for main::foo : @$\x{0}L... at (eval 1) line 1.
+Illegal character in prototype for main::foo : @$\x{0}L... at (eval 1) line 1.
 ########
 # op.c
 use utf8;
 use open qw( :utf8 :std );
 use warnings;
-BEGIN { $::{"foo"} = "\$\0L\351on" }
-BEGIN { eval "sub foo (\$\0L\x{c3}\x{a9}on) {}"; }
+BEGIN { eval "sub foo (@\0) {}"; }
 EXPECT
-Illegal character in prototype for main::foo : $\x{0}L... at (eval 1) line 1.
+Prototype after '@' for main::foo : @\0 at (eval 1) line 1.
+Illegal character in prototype for main::foo : @\0 at (eval 1) line 1.
+########
+# op.c
+use warnings;
+eval "sub foo (@\xAB) {}";
+EXPECT
+Prototype after '@' for main::foo : @\x{ab} at (eval 1) line 1.
+Illegal character in prototype for main::foo : @\x{ab} at (eval 1) line 1.
 ########
 # op.c
 use utf8;
 use open qw( :utf8 :std );
 use warnings;
-BEGIN { eval "sub foo (\0) {}"; }
+BEGIN { eval "sub foo (@\x{30cb}) {}"; }
 EXPECT
-Illegal character in prototype for main::foo : \0 at (eval 1) line 1.
-########
-# op.c
-use warnings;
-eval "sub foo (\xAB) {}";
-EXPECT
-Illegal character in prototype for main::foo : \x{ab} at (eval 1) line 1.
-########
-# op.c
-use utf8;
-use open qw( :utf8 :std );
-use warnings;
-BEGIN { eval "sub foo (\x{30cb}) {}"; }
-EXPECT
-Illegal character in prototype for main::foo : \x{30cb} at (eval 1) line 1.
+Prototype after '@' for main::foo : @\x{30cb} at (eval 1) line 1.
+Illegal character in prototype for main::foo : @\x{30cb} at (eval 1) line 1.
 ########
 # op.c
 use utf8;
@@ -1244,6 +1459,7 @@ END { print "in end\n"; }
 print "in mainline\n";
 1;
 --FILE--
+BEGIN { unshift @INC, '.' }
 require abc;
 do "abc.pm";
 EXPECT
@@ -1275,6 +1491,81 @@ split /blah/g, "blah";
 EXPECT
 Use of /g modifier is meaningless in split at - line 4.
 ########
+use feature "bitwise";
+$_ = $_ | $_;
+$_ = $_ & $_;
+$_ = $_ ^ $_;
+$_ = ~$_;
+$_ = $_ |. $_;
+$_ = $_ &. $_;
+$_ = $_ ^. $_;
+$_ = ~.$_;
+$_ |= $_;
+$_ &= $_;
+$_ ^= $_;
+$_ |.= $_;
+$_ &.= $_;
+$_ ^.= $_;
+use warnings "experimental::bitwise";
+$_ = $_ | $_;
+$_ = $_ & $_;
+$_ = $_ ^ $_;
+$_ = ~$_;
+$_ = $_ |. $_;
+$_ = $_ &. $_;
+$_ = $_ ^. $_;
+$_ = ~.$_;
+$_ |= $_;
+$_ &= $_;
+$_ ^= $_;
+$_ |.= $_;
+$_ &.= $_;
+$_ ^.= $_;
+no warnings "experimental::bitwise";
+$_ = $_ | $_;
+$_ = $_ & $_;
+$_ = $_ ^ $_;
+$_ = ~$_;
+$_ = $_ |. $_;
+$_ = $_ &. $_;
+$_ = $_ ^. $_;
+$_ = ~.$_;
+$_ |= $_;
+$_ &= $_;
+$_ ^= $_;
+$_ |.= $_;
+$_ &.= $_;
+$_ ^.= $_;
+EXPECT
+The bitwise feature is experimental at - line 2.
+The bitwise feature is experimental at - line 3.
+The bitwise feature is experimental at - line 4.
+The bitwise feature is experimental at - line 5.
+The bitwise feature is experimental at - line 6.
+The bitwise feature is experimental at - line 7.
+The bitwise feature is experimental at - line 8.
+The bitwise feature is experimental at - line 9.
+The bitwise feature is experimental at - line 10.
+The bitwise feature is experimental at - line 11.
+The bitwise feature is experimental at - line 12.
+The bitwise feature is experimental at - line 13.
+The bitwise feature is experimental at - line 14.
+The bitwise feature is experimental at - line 15.
+The bitwise feature is experimental at - line 17.
+The bitwise feature is experimental at - line 18.
+The bitwise feature is experimental at - line 19.
+The bitwise feature is experimental at - line 20.
+The bitwise feature is experimental at - line 21.
+The bitwise feature is experimental at - line 22.
+The bitwise feature is experimental at - line 23.
+The bitwise feature is experimental at - line 24.
+The bitwise feature is experimental at - line 25.
+The bitwise feature is experimental at - line 26.
+The bitwise feature is experimental at - line 27.
+The bitwise feature is experimental at - line 28.
+The bitwise feature is experimental at - line 29.
+The bitwise feature is experimental at - line 30.
+########
 # op.c
 use warnings 'precedence';
 $a = $b & $c == $d;
@@ -1285,6 +1576,25 @@ $a = $b >= $c ^ $d;
 $a = $b <= $c | $d;
 $a = $b <=> $c & $d;
 $a &= $b == $c; $a |= $b == $c; $a ^= $b == $c; # shouldn't warn
+{
+ use experimental 'bitwise';
+ $a = $b & $c == $d;
+ $a = $b ^ $c != $d;
+ $a = $b | $c > $d;
+ $a = $b < $c & $d;
+ $a = $b >= $c ^ $d;
+ $a = $b <= $c | $d;
+ $a = $b <=> $c & $d;
+ $a &= $b == $c; $a |= $b == $c; $a ^= $b == $c; # shouldn't warn
+ $a = $b &. $c == $d;
+ $a = $b ^. $c != $d;
+ $a = $b |. $c > $d;
+ $a = $b < $c &. $d;
+ $a = $b >= $c ^. $d;
+ $a = $b <= $c |. $d;
+ $a = $b <=> $c &. $d;
+ $a &.= $b == $c; $a |.= $b == $c; $a ^.= $b == $c; # shouldn't warn
+}
 no warnings 'precedence';
 $a = $b & $c == $d;
 $a = $b ^ $c != $d;
@@ -1293,6 +1603,25 @@ $a = $b < $c & $d;
 $a = $b >= $c ^ $d;
 $a = $b <= $c | $d;
 $a = $b <=> $c & $d;
+{
+ use experimental 'bitwise';
+ $a = $b & $c == $d;
+ $a = $b ^ $c != $d;
+ $a = $b | $c > $d;
+ $a = $b < $c & $d;
+ $a = $b >= $c ^ $d;
+ $a = $b <= $c | $d;
+ $a = $b <=> $c & $d;
+ $a &= $b == $c; $a |= $b == $c; $a ^= $b == $c; # shouldn't warn
+ $a = $b &. $c == $d;
+ $a = $b ^. $c != $d;
+ $a = $b |. $c > $d;
+ $a = $b < $c &. $d;
+ $a = $b >= $c ^. $d;
+ $a = $b <= $c |. $d;
+ $a = $b <=> $c &. $d;
+ $a &.= $b == $c; $a |.= $b == $c; $a ^.= $b == $c; # shouldn't warn
+}
 EXPECT
 Possible precedence problem on bitwise & operator at - line 3.
 Possible precedence problem on bitwise ^ operator at - line 4.
@@ -1301,6 +1630,20 @@ Possible precedence problem on bitwise & operator at - line 6.
 Possible precedence problem on bitwise ^ operator at - line 7.
 Possible precedence problem on bitwise | operator at - line 8.
 Possible precedence problem on bitwise & operator at - line 9.
+Possible precedence problem on bitwise & operator at - line 13.
+Possible precedence problem on bitwise ^ operator at - line 14.
+Possible precedence problem on bitwise | operator at - line 15.
+Possible precedence problem on bitwise & operator at - line 16.
+Possible precedence problem on bitwise ^ operator at - line 17.
+Possible precedence problem on bitwise | operator at - line 18.
+Possible precedence problem on bitwise & operator at - line 19.
+Possible precedence problem on bitwise &. operator at - line 21.
+Possible precedence problem on bitwise ^. operator at - line 22.
+Possible precedence problem on bitwise |. operator at - line 23.
+Possible precedence problem on bitwise &. operator at - line 24.
+Possible precedence problem on bitwise ^. operator at - line 25.
+Possible precedence problem on bitwise |. operator at - line 26.
+Possible precedence problem on bitwise &. operator at - line 27.
 ########
 # op.c
 use integer;
@@ -1429,13 +1772,13 @@ if (my $w2) { $a=1 }
 if ($a && (my $w3 = 1)) {$a = 2}
 
 EXPECT
-Deprecated use of my() in false conditional at - line 2.
-Deprecated use of my() in false conditional at - line 3.
-Deprecated use of my() in false conditional at - line 4.
-Deprecated use of my() in false conditional at - line 5.
-Deprecated use of my() in false conditional at - line 6.
-Deprecated use of my() in false conditional at - line 7.
-Deprecated use of my() in false conditional at - line 8.
+Deprecated use of my() in false conditional. This will be a fatal error in Perl 5.30 at - line 2.
+Deprecated use of my() in false conditional. This will be a fatal error in Perl 5.30 at - line 3.
+Deprecated use of my() in false conditional. This will be a fatal error in Perl 5.30 at - line 4.
+Deprecated use of my() in false conditional. This will be a fatal error in Perl 5.30 at - line 5.
+Deprecated use of my() in false conditional. This will be a fatal error in Perl 5.30 at - line 6.
+Deprecated use of my() in false conditional. This will be a fatal error in Perl 5.30 at - line 7.
+Deprecated use of my() in false conditional. This will be a fatal error in Perl 5.30 at - line 8.
 ########
 # op.c
 $[ = 1;
@@ -1561,3 +1904,222 @@ OPTION regex
 ?(?s).*
 Subroutine DynaLoader::dl_error redefined at \(eval 2\) line 2\.
 ########
+# op.c
+use warnings;
+sub do_warn_1  { return $a or $b; }
+sub do_warn_2  { return $a and $b; }
+sub do_warn_3  { return $a xor $b; }
+sub do_warn_4  { die $a or $b; }
+sub do_warn_5  { die $a and $b; }
+sub do_warn_6  { die $a xor $b; }
+sub do_warn_7  { exit $a or $b; }
+sub do_warn_8  { exit $a and $b; }
+sub do_warn_9  { exit $a xor $b; }
+
+# Since exit is an unary operator, it is even stronger than
+# || and &&.
+sub do_warn_10 { exit $a || $b; }
+sub do_warn_11 { exit $a && $b; }
+
+sub do_warn_12 { goto $a or $b; }
+sub do_warn_13 { goto $a and $b; }
+sub do_warn_14 { goto $a xor $b; }
+sub do_warn_15 { next $a or $b while(1);  }
+sub do_warn_16 { next $a and $b while(1); }
+sub do_warn_17 { next $a xor $b while(1); }
+sub do_warn_18 { last $a or $b while(1);  }
+sub do_warn_19 { last $a and $b while(1); }
+sub do_warn_20 { last $a xor $b while(1); }
+sub do_warn_21 { redo $a or $b while(1); }
+sub do_warn_22 { redo $a and $b while(1); }
+sub do_warn_23 { redo $a xor $b while(1); }
+# These get re-written to "(return/die $a) and $b"
+sub do_warn_24 { $b if return $a; }
+sub do_warn_25 { $b if die $a; }
+EXPECT
+Possible precedence issue with control flow operator at - line 3.
+Possible precedence issue with control flow operator at - line 4.
+Possible precedence issue with control flow operator at - line 5.
+Possible precedence issue with control flow operator at - line 6.
+Possible precedence issue with control flow operator at - line 7.
+Possible precedence issue with control flow operator at - line 8.
+Possible precedence issue with control flow operator at - line 9.
+Possible precedence issue with control flow operator at - line 10.
+Possible precedence issue with control flow operator at - line 11.
+Possible precedence issue with control flow operator at - line 15.
+Possible precedence issue with control flow operator at - line 16.
+Possible precedence issue with control flow operator at - line 18.
+Possible precedence issue with control flow operator at - line 19.
+Possible precedence issue with control flow operator at - line 20.
+Possible precedence issue with control flow operator at - line 21.
+Possible precedence issue with control flow operator at - line 22.
+Possible precedence issue with control flow operator at - line 23.
+Possible precedence issue with control flow operator at - line 24.
+Possible precedence issue with control flow operator at - line 25.
+Possible precedence issue with control flow operator at - line 26.
+Possible precedence issue with control flow operator at - line 27.
+Possible precedence issue with control flow operator at - line 28.
+Possible precedence issue with control flow operator at - line 29.
+Possible precedence issue with control flow operator at - line 31.
+Possible precedence issue with control flow operator at - line 32.
+########
+# op.c
+#  (same as above, except these should not warn)
+use constant FEATURE => 1;
+use constant MISSING_FEATURE => 0;
+
+sub dont_warn_1  { MISSING_FEATURE and return or dont_warn_3(); }
+sub dont_warn_2  { FEATURE || return and dont_warn_3(); }
+sub dont_warn_3  { not FEATURE and return or dont_warn_3(); }
+sub dont_warn_4  { !MISSING_FEATURE || return and dont_warn_3(); }
+sub dont_warn_5  { MISSING_FEATURE and die or dont_warn_3(); }
+sub dont_warn_6  { FEATURE || die and dont_warn_3(); }
+sub dont_warn_7  { not FEATURE and die or dont_warn_3(); }
+sub dont_warn_8  { !MISSING_FEATURE || die and dont_warn_3(); }
+sub dont_warn_9  { MISSING_FEATURE and goto $a or dont_warn_3(); }
+sub dont_warn_10 { FEATURE || goto $a and dont_warn_3(); }
+sub dont_warn_11 { not FEATURE and goto $a or dont_warn_3(); }
+sub dont_warn_12 { !MISSING_FEATURE || goto $a and dont_warn_3(); }
+
+sub dont_warn_13 { MISSING_FEATURE and exit $a or dont_warn_3(); }
+sub dont_warn_14 { FEATURE || exit $a and dont_warn_3(); }
+sub dont_warn_15 { not FEATURE and exit $a or dont_warn_3(); }
+sub dont_warn_16 { !MISSING_FEATURE || exit $a and dont_warn_3(); }
+
+sub dont_warn_17 { MISSING_FEATURE and next or dont_warn_3() while(1); }
+sub dont_warn_18 { FEATURE || next and dont_warn_3() while(1); }
+sub dont_warn_19 { not FEATURE and next or dont_warn_3() while(1); }
+sub dont_warn_20 { !MISSING_FEATURE || next and dont_warn_3() while(1); }
+sub dont_warn_21 { MISSING_FEATURE and redo or dont_warn_3() while(1); }
+sub dont_warn_22 { FEATURE || redo and dont_warn_3() while(1); }
+sub dont_warn_23 { not FEATURE and redo or dont_warn_3() while(1); }
+sub dont_warn_24 { !MISSING_FEATURE || redo and dont_warn_3() while(1); }
+sub dont_warn_25 { MISSING_FEATURE and last or dont_warn_3() while(1); }
+sub dont_warn_26 { FEATURE || last and dont_warn_3() while(1); }
+sub dont_warn_27 { not FEATURE and last or dont_warn_3() while(1); }
+sub dont_warn_28 { !MISSING_FEATURE || last and dont_warn_3() while(1); }
+
+# These are weird, but at least not ambiguous.
+sub dont_warn_29 { return ($a or $b); }
+sub dont_warn_30 { return ($a and $b); }
+sub dont_warn_31 { return ($a xor $b); }
+sub dont_warn_32 { die ($a or $b); }
+sub dont_warn_33 { die ($a and $b); }
+sub dont_warn_34 { die ($a xor $b); }
+sub dont_warn_35 { goto ($a or $b); }
+sub dont_warn_36 { goto ($a and $b); }
+sub dont_warn_37 { goto ($a xor $b); }
+sub dont_warn_38 { next ($a or $b) while(1);  }
+sub dont_warn_39 { next ($a and $b) while(1); }
+sub dont_warn_40 { next ($a xor $b) while(1); }
+sub dont_warn_41 { last ($a or $b) while(1);  }
+sub dont_warn_42 { last ($a and $b) while(1); }
+sub dont_warn_43 { last ($a xor $b) while(1); }
+sub dont_warn_44 { redo ($a or $b) while(1);  }
+sub dont_warn_45 { redo ($a and $b) while(1); }
+sub dont_warn_46 { redo ($a xor $b) while(1); }
+EXPECT
+########
+use feature "signatures";
+sub aaa { 2 }
+sub bbb ($a) { 4 }
+$aaa = sub { 2 };
+$bbb = sub ($a) { 4 };
+EXPECT
+The signatures feature is experimental at - line 3.
+The signatures feature is experimental at - line 5.
+########
+no warnings "experimental::signatures";
+use feature "signatures";
+sub aaa { 2 }
+sub bbb ($a) { 4 }
+$aaa = sub { 2 };
+$bbb = sub ($a) { 4 };
+EXPECT
+########
+use warnings 'numeric';
+my $c = -4.5;
+my $a = "y" x $c;
+my $b = "y" x -3;
+no warnings 'numeric';
+my $d = "y" x $c;
+my $e = "y" x -3;
+no warnings 'numeric';
+EXPECT
+Negative repeat count does nothing at - line 3.
+Negative repeat count does nothing at - line 4.
+########
+use Config;
+my $non_ieee_fp = ($Config{doublekind} == 9 ||
+                   $Config{doublekind} == 10 ||
+                   $Config{doublekind} == 11);
+if ($non_ieee_fp) {
+    print <<EOM ;
+SKIPPED
+# No inf/nan support
+EOM
+    exit ;
+}
+my $a = "inf" + 0;
+my $b = -$a;
+my $c = "nan" + 0;
+use warnings 'numeric';
+my $x = "x" x $a;
+my $y = "y" x $b;
+my $z = "z" x $c;
+no warnings 'numeric';
+my $x = "x" x $a;
+my $y = "y" x $b;
+my $z = "z" x $c;
+no warnings 'numeric';
+EXPECT
+Non-finite repeat count does nothing at - line 16.
+Non-finite repeat count does nothing at - line 17.
+Non-finite repeat count does nothing at - line 18.
+########
+# NAME warn on stat @array
+@foo = ("op/stat.t");
+stat @foo;
+my @bar = @foo;
+stat @bar;
+my $ref = \@foo;
+stat @$ref;
+use warnings 'syntax';
+stat @foo;
+stat @bar;
+stat @$ref;
+EXPECT
+Array passed to stat will be coerced to a scalar (did you want stat $foo[0]?) at - line 8.
+Array passed to stat will be coerced to a scalar (did you want stat $bar[0]?) at - line 9.
+Array passed to stat will be coerced to a scalar at - line 10.
+
+########
+# NAME barewords and conditionals near constant folding
+use warnings;
+my $x1 = !a || !b; # no "in conditional" warnings
+my $x2 = !A || !B; # warning-free, because upper-case won't clash
+EXPECT
+Unquoted string "a" may clash with future reserved word at - line 2.
+Unquoted string "b" may clash with future reserved word at - line 2.
+########
+# RT #6870: Odd parsing of do...for...
+# This was really more a tokenizer bug, but it manifests as spurious warnings
+use warnings;
+no warnings 'reserved';
+$a=do xa for ax;
+do "xa" for ax;
+do xa for ax;
+do xa for "ax";
+do xa for sin(1);
+do xa for (sin(1));
+do xa for "sin";
+do xa for qq(sin);
+do xa for my $a;
+do xa for my @a;
+EXPECT
+########
+# TODO [perl #125493
+use warnings;
+$_="3.14159";
+tr/0-9/\x{6F0}-\x{6F9}/;
+EXPECT

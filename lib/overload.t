@@ -47,8 +47,8 @@ sub numify { 0 + "${$_[0]}" }	# Not needed, additional overhead
 package main;
 
 $| = 1;
-BEGIN { require './test.pl' }
-plan tests => 5191;
+BEGIN { require './test.pl'; require './charset_tools.pl' }
+plan tests => 5215;
 
 use Scalar::Util qw(tainted);
 
@@ -305,7 +305,7 @@ is($na, '_!_xx_!_');
 $na = 0;
 
 $na = eval { ~$aI };
-like($@, '');
+is($@, '');
 
 bless \$x, OscalarI;
 
@@ -1021,7 +1021,7 @@ unless ($aaa) {
   main::ok($x+0 =~ qr/Recurse=ARRAY/);
 }
 
-# BugID 20010422.003
+# BugID 20010422.003 (#6872)
 package Foo;
 
 use overload
@@ -1290,6 +1290,19 @@ foreach my $op (qw(<=> == != < <= > >=)) {
     # Check that constant overloading propagates into evals
     BEGIN { overload::constant integer => sub { 23 } }
     is(eval "17", $twenty_three);
+}
+
+{
+    # Check readonliness of constants, whether shared hash key
+    # scalars or no (brought up in bug #109744)
+    BEGIN { overload::constant integer => sub { "main" }; }
+    eval { ${\5} = 'whatever' };
+    like $@, qr/^Modification of a read-only value attempted at /,
+	'constant overloading makes read-only constants';
+    BEGIN { overload::constant integer => sub { __PACKAGE__ }; }
+    eval { ${\5} = 'whatever' };
+    like $@, qr/^Modification of a read-only value attempted at /,
+	'... even with shared hash key scalars';
 }
 
 {
@@ -2052,11 +2065,11 @@ fresh_perl_is
     }
 
     package NCmp;
-    use base 'CmpBase';
+    use parent '-norequire', 'CmpBase';
     use overload '<=>' => 'cmp';
 
     package SCmp;
-    use base 'CmpBase';
+    use parent '-norequire', 'CmpBase';
     use overload 'cmp' => 'cmp';
 
     package main;
@@ -2120,7 +2133,7 @@ fresh_perl_is
                 ? $nomethod . "=>'nomethod'," : '';
             eval qq{
                     package NuMB$fall$nomethod;
-                    use base qw/NuMB/;
+                    use parent '-norequire', qw/NuMB/;
                     use overload $nomethod_decl
                     fallback => $fall;
                 };
@@ -2248,9 +2261,9 @@ fresh_perl_is
 
     $o->[0] = 1;
     $c = 0;
-    ::ok("\xc4\x80" =~ "^\x{100}\$",
+    ::ok(main::byte_utf8a_to_utf8n("\xc4\x80") =~ "^\x{100}\$",
 				"regex stringify utf8=1 ol=0 bytes=1");
-    ::ok("\xc4\x80" =~ $o,	"regex stringify utf8=1 ol=1 bytes=1");
+    ::ok(main::byte_utf8a_to_utf8n("\xc4\x80") =~ $o,	"regex stringify utf8=1 ol=1 bytes=1");
     ::is($c, 1,			"regex stringify utf8=1 ol=1 bytes=1 count");
 
 
@@ -2687,6 +2700,120 @@ EOF
 	{ stderr => 1 },
 	'overloaded REGEXP'
     );
+}
+
+{
+    # RT #121362
+    # splitting the stash HV while rebuilding the overload cache gave
+    # valgrind errors. This test code triggers such a split. It doesn't
+    # actually test anything; its just there for valgrind to spot
+    # problems.
+
+    package A_121362;
+
+    sub stringify { }
+    use overload '""' => 'stringify';
+
+    package B_121362;
+    our @ISA = qw(A_121362);
+
+    package main;
+
+    my $x = bless { }, 'B_121362';
+
+    for ('a'..'z') {
+        delete $B_121362::{stringify}; # delete cache entry
+        no strict 'refs';
+        *{"B_121362::$_"}  = sub { };  # increase size of %B_121362
+        my $y = $x->{value};       # trigger cache add to %B_121362
+    }
+    pass("RT 121362");
+}
+
+package refsgalore {
+    use overload
+	'${}' => sub { \42  },
+	'@{}' => sub { [43] },
+	'%{}' => sub { { 44 => 45 } },
+	'&{}' => sub { sub { 46 } };
+}
+{
+    use feature 'postderef';
+    tell myio; # vivifies *myio{IO} at compile time
+    use constant ioref => bless *myio{IO}, refsgalore::;
+    is ioref->$*, 42, '(overloaded constant that is not a scalar ref)->$*';
+    is ioref->[0], 43, '(ovrld constant that is not an array ref)->[0]';
+    is ioref->{44}, 45, "(ovrld const that is not a hash ref)->{key}";
+    is ioref->(), 46, '(overloaded constant that is not a sub ref)->()';
+}
+
+package xstack { use overload 'x' => sub { shift . " x " . shift },
+                              '""'=> sub { "xstack" } }
+is join(",", 1..3, scalar((bless([], 'xstack')) x 3, 1), 4..6),
+  "1,2,3,1,4,5,6",
+  '(...)x... in void cx with x overloaded [perl #121827]';
+
+package bitops {
+    our @o;
+    use overload do {
+	my %o;
+	for my $o (qw(& | ^ ~ &. |. ^. ~. &= |= ^= &.= |.= ^.=)) {
+	    $o{$o} = sub {
+		::ok !defined $_[3], "undef (or nonexistent) arg 3 for $o";
+		push @o, $o, scalar @_, $_[4]//'u';
+		$_[0]
+	    }
+	}
+	%o, '=' => sub { bless [] };
+    }
+}
+{
+    use experimental 'bitwise';
+    my $o = bless [], bitops::;
+    $_ = $o & 0;
+    $_ = $o | 0;
+    $_ = $o ^ 0;
+    $_ = ~$o;
+    $_ = $o &. 0;
+    $_ = $o |. 0;
+    $_ = $o ^. 0;
+    $_ = ~.$o;
+    $o &= 0;
+    $o |= 0;
+    $o ^= 0;
+    $o &.= 0;
+    $o |.= 0;
+    $o ^.= 0;
+    # elems are in triplets: op, length of @_, numeric? (1/u for y/n)
+    is "@bitops::o", '& 5 1 | 5 1 ^ 5 1 ~ 5 1 &. 3 u |. 3 u ^. 3 u ~. 3 u ' 		   . '&= 5 1 |= 5 1 ^= 5 1 &.= 3 u |.= 3 u ^.= 3 u',
+       'experimental "bitwise" ops'
+}
+package bitops2 {
+    our @o;
+    use overload
+	 nomethod => sub { push @o, $_[3], scalar @_, $_[4]//'u'; $_[0] },
+	'=' => sub { bless [] };
+}
+{
+    use experimental 'bitwise';
+    my $o = bless [], bitops2::;
+    $_ = $o & 0;
+    $_ = $o | 0;
+    $_ = $o ^ 0;
+    $_ = ~$o;
+    $_ = $o &. 0;
+    $_ = $o |. 0;
+    $_ = $o ^. 0;
+    $_ = ~.$o;
+    $o &= 0;
+    $o |= 0;
+    $o ^= 0;
+    $o &.= 0;
+    $o |.= 0;
+    $o ^.= 0;
+    # elems are in triplets: op, length of @_, numeric? (1/u for y/n)
+    is "@bitops2::o", '& 5 1 | 5 1 ^ 5 1 ~ 5 1 &. 4 u |. 4 u ^. 4 u ~. 4 u ' 		    . '&= 5 1 |= 5 1 ^= 5 1 &.= 4 u |.= 4 u ^.= 4 u',
+       'experimental "bitwise" ops with nomethod'
 }
 
 { # undefining the overload stash -- KEEP THIS TEST LAST

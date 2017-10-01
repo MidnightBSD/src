@@ -1,18 +1,20 @@
 #!./perl
 
 BEGIN {
-    require "test.pl";
+    chdir 't' if -d 't';
+    require "./test.pl";
 }
 
 plan(3);
 
-fresh_perl_is('$_ = qq{OK\n}; print;', "OK\n",
+fresh_perl_is('$_ = qq{OK\n}; print;', "OK\n", {},
               'print without arguments outputs $_');
-fresh_perl_is('$_ = qq{OK\n}; print STDOUT;', "OK\n",
+fresh_perl_is('$_ = qq{OK\n}; print STDOUT;', "OK\n", {},
               'print with only a filehandle outputs $_');
 SKIP: {
     skip_if_miniperl('no dynamic loading of PerlIO::scalar in miniperl');
-fresh_perl_is(<<'EOF', "\xC1\xAF\xC1\xAF\xC1\xB0\xC1\xB3", "", "print doesn't launder utf8 overlongs");
+    skip("overlong UTF-8 test is ASCII-centric") if $::IS_EBCDIC;    # Varies depending on code page
+fresh_perl_is(<<'EOF', "\xC1\xAF\xC1\xAF\xC1\xB0\xC1\xB3", {}, "print doesn't launder utf8 overlongs");
 use strict;
 use warnings;
 

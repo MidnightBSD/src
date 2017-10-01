@@ -4,15 +4,24 @@ use strict;
 use warnings;
 use vars qw[$VERSION %utilities];
 use Module::CoreList;
-use Module::CoreList::TieHashDelta;
 
-$VERSION = '3.03';
+$VERSION = '5.20170530';
 
 sub utilities {
     my $perl = shift;
     $perl = shift if eval { $perl->isa(__PACKAGE__) };
     return unless $perl or exists $utilities{$perl};
     return sort keys %{ $utilities{$perl} };
+}
+
+sub _released_order {   # Sort helper, to make '?' sort after everything else
+    (substr($Module::CoreList::released{$a}, 0, 1) eq "?")
+    ? ((substr($Module::CoreList::released{$b}, 0, 1) eq "?")
+        ? 0
+        : 1)
+    : ((substr($Module::CoreList::released{$b}, 0, 1) eq "?")
+        ? -1
+        : $Module::CoreList::released{$a} cmp $Module::CoreList::released{$b} )
 }
 
 sub first_release_raw {
@@ -32,7 +41,7 @@ sub first_release_raw {
 sub first_release_by_date {
     my @perls = &first_release_raw;
     return unless @perls;
-    return (sort { $Module::CoreList::released{$a} cmp $Module::CoreList::released{$b} } @perls)[0];
+    return (sort _released_order @perls)[0];
 }
 
 sub first_release {
@@ -47,7 +56,7 @@ sub removed_from {
 }
 
 sub removed_from_by_date {
-  my @perls = sort { $Module::CoreList::released{$a} cmp $Module::CoreList::released{$b} } &removed_raw;
+  my @perls = sort _released_order &removed_raw;
   return shift @perls;
 }
 
@@ -822,6 +831,20 @@ my %delta = (
         removed => {
         }
     },
+    5.018003 => {
+        delta_from => 5.018000,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.018004 => {
+        delta_from => 5.018000,
+        changed => {
+        },
+        removed => {
+        }
+    },
     5.019000 => {
         delta_from => 5.018000,
         changed => {
@@ -882,15 +905,367 @@ my %delta = (
         removed => {
         }
     },
+    5.019008 => {
+        delta_from => 5.019007,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.019009 => {
+        delta_from => 5.019008,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.019010 => {
+        delta_from => 5.019009,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.019011 => {
+        delta_from => 5.019010,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.020000 => {
+        delta_from => 5.019011,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.021000 => {
+        delta_from => 5.020000,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.021001 => {
+        delta_from => 5.021000,
+        changed => {
+        },
+        removed => {
+            'a2p'                   => 1,
+            'config_data'           => 1,
+            'find2perl'             => 1,
+            'psed'                  => 1,
+            's2p'                   => 1,
+        }
+    },
+    5.021002 => {
+        delta_from => 5.021001,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.021003 => {
+        delta_from => 5.021002,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.020001 => {
+        delta_from => 5.02,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.021004 => {
+        delta_from => 5.021003,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.021005 => {
+        delta_from => 5.021004,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.021006 => {
+        delta_from => 5.021005,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.021007 => {
+        delta_from => 5.021006,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.021008 => {
+        delta_from => 5.021007,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.020002 => {
+        delta_from => 5.020001,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.021009 => {
+        delta_from => 5.021008,
+        changed => {
+            'encguess'              => '1',
+        },
+        removed => {
+        }
+    },
+    5.021010 => {
+        delta_from => 5.021009,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.021011 => {
+        delta_from => 5.02101,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.022000 => {
+        delta_from => 5.021011,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.023000 => {
+        delta_from => 5.022000,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.023001 => {
+        delta_from => 5.023,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.023002 => {
+        delta_from => 5.023001,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.020003 => {
+        delta_from => 5.020002,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.023003 => {
+        delta_from => 5.023002,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.023004 => {
+        delta_from => 5.023003,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.023005 => {
+        delta_from => 5.023004,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.022001 => {
+        delta_from => 5.022,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.023006 => {
+        delta_from => 5.023005,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.023007 => {
+        delta_from => 5.023006,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.023008 => {
+        delta_from => 5.023007,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.023009 => {
+        delta_from => 5.023008,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.022002 => {
+        delta_from => 5.022001,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.024000 => {
+        delta_from => 5.023009,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025000 => {
+        delta_from => 5.024000,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025001 => {
+        delta_from => 5.025000,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025002 => {
+        delta_from => 5.025001,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025003 => {
+        delta_from => 5.025002,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025004 => {
+        delta_from => 5.025003,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025005 => {
+        delta_from => 5.025004,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025006 => {
+        delta_from => 5.025005,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025007 => {
+        delta_from => 5.025006,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025008 => {
+        delta_from => 5.025007,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.022003 => {
+        delta_from => 5.022002,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.024001 => {
+        delta_from => 5.024000,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025009 => {
+        delta_from => 5.025008,
+        changed => {
+        },
+        removed => {
+            'c2ph'                  => 1,
+            'pstruct'               => 1,
+        }
+    },
+    5.025010 => {
+        delta_from => 5.025009,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025011 => {
+        delta_from => 5.025010,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025012 => {
+        delta_from => 5.025011,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.026000 => {
+        delta_from => 5.025012,
+        changed => {
+        },
+        removed => {
+        }
+    },
 );
 
-for my $version (sort { $a <=> $b } keys %delta) {
-    my $data = $delta{$version};
-
-    tie %{$utilities{$version}}, 'Module::CoreList::TieHashDelta',
-        $data->{changed}, $data->{removed},
-        $data->{delta_from} ? $utilities{$data->{delta_from}} : undef;
-}
+%utilities = Module::CoreList::_undelta(\%delta);
 
 # Create aliases with trailing zeros for $] use
 
@@ -928,8 +1303,11 @@ Module::CoreList::Utils - what utilities shipped with versions of perl
 
  print $Module::CoreList::Utils::utilities{5.009003}{ptar}; # prints 1
 
- print Module::CoreList::Utils->first_release('corelist');           # prints 5.008009
- print Module::CoreList::Utils->first_release_by_date('corelist');   # prints 5.009002
+ print Module::CoreList::Utils->first_release('corelist');
+ # prints 5.008009
+
+ print Module::CoreList::Utils->first_release_by_date('corelist');
+ # prints 5.009002
 
 =head1 DESCRIPTION
 

@@ -1,7 +1,22 @@
-?
-    Version 2.40
+Wed Jul  2 16:25:25 IST 2014   Abhijit Menon-Sen <ams@toroid.org>
+    Version 2.51
 
-	Security warnings section added
+	* [perl #121928] Fix memory leak for dclone inside freeze hook
+	  (Alex Solovey)
+	* Do not call DESTROY for empty objects
+	  (Vladimir Timofeev)
+	* Other bugfixes
+
+Sat Jul 13 18:34:27 IST 2013   Abhijit Menon-Sen <ams@toroid.org>
+    Version 2.45
+
+       * [perl #118829] Memory leaks in STORABLE_attach
+         (Vladimir Timofeev)
+       * [perl #118139] Don't SEGV during global destruction
+         (Nicholas Clark, report/test from Reini Urban)
+       * Added security warnings section (Steffen Mueller)
+       * Update INSTALLDIRS to favour installation in 'site'
+         (James E Keenan)
 
 Tue 11 Sep 06:51:11 IST 2012   Abhijit Menon-Sen <ams@toroid.org>
     Version 2.39
@@ -194,7 +209,7 @@ Fri Jun  7 23:55:41 BST 2002   Nicholas Clark
 	The bug was introduced as development perl change 16442 (on
 	2002/05/07), so has been present since 2.00.
 	Patches to introduce more regression tests to reduce the chance of
-	a reoccurence of this sort of goof are always welcome.
+	a reoccurrence of this sort of goof are always welcome.
 	
 Thu May 30 20:31:08 BST 2002   Nicholas Clark <nick@ccl4.org>
 

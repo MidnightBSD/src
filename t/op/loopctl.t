@@ -32,11 +32,11 @@
 #  -- .robin. <robin@kitsite.com>  2001-03-13
 BEGIN {
     chdir 't' if -d 't';
-    @INC = qw(. ../lib);
+    require "./test.pl";
+    set_up_inc(qw(. ../lib));
 }
 
-require "test.pl";
-plan( tests => 64 );
+plan( tests => 67 );
 
 my $ok;
 
@@ -975,7 +975,7 @@ cmp_ok($ok,'==',1,'dynamically scoped');
     for my $x (reverse @a37725) {
 	$x = $i++;
     }
-    cmp_ok("@a37725",'eq',"5 4 3 2",'bug 27725: reverse with empty slots bug');
+    cmp_ok("@a37725",'eq',"5 4 3 2",'bug 37725: reverse with empty slots bug');
 }
 
 # [perl #21469] bad things happened with for $x (...) { *x = *y }
@@ -1104,3 +1104,17 @@ redo_113684:
         fail("redo with non-constant label");
     }
 }
+
+# [perl #3112]
+# The original report, which produced a Bizarre copy
+@a  = ();
+eval {
+    for (1) {
+        push @a, last;
+    }
+};
+is @a, 0, 'push @a, last;  does not push';
+is $@, "", 'no error, either';
+# And my japh, which relied on the misbehaviour
+is do{{&{sub{"Just another Perl hacker,\n"}},last}}, undef,
+  'last returns nothing';

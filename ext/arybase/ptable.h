@@ -127,15 +127,15 @@ STATIC void ptable_split(pPTBLMS_ ptable * const t) {
  t->ary = ary;
 
  for (i = 0; i < oldsize; i++, ary++) {
-  ptable_ent **curentp, **entp, *ent;
+  ptable_ent **currentp, **entp, *ent;
   if (!*ary)
    continue;
-  curentp = ary + oldsize;
+  currentp = ary + oldsize;
   for (entp = ary, ent = *ary; ent; ent = *entp) {
    if ((newsize & PTABLE_HASH(ent->key)) != i) {
     *entp     = ent->next;
-    ent->next = *curentp;
-    *curentp  = ent;
+    ent->next = *currentp;
+    *currentp  = ent;
     continue;
    } else
     entp = &ent->next;
@@ -164,6 +164,8 @@ STATIC void PTABLE_PREFIX(_store)(pPTBL_ ptable * const t, const void * const ke
  }
 }
 
+/* this function appears to be unused */
+#if 0
 #ifndef ptable_walk
 STATIC void ptable_walk(pTHX_ ptable * const t, void (*cb)(pTHX_ ptable_ent *ent, void *userdata), void *userdata) {
 #define ptable_walk(T, CB, UD) ptable_walk(aTHX_ (T), (CB), (UD))
@@ -178,7 +180,10 @@ STATIC void ptable_walk(pTHX_ ptable * const t, void (*cb)(pTHX_ ptable_ent *ent
  }
 }
 #endif /* !ptable_walk */
+#endif
 
+/* this function appears to be unused */
+#if 0
 STATIC void PTABLE_PREFIX(_clear)(pPTBL_ ptable * const t) {
  if (t && t->items) {
   ptable_ent ** const array = t->ary;
@@ -199,7 +204,10 @@ STATIC void PTABLE_PREFIX(_clear)(pPTBL_ ptable * const t) {
   t->items = 0;
  }
 }
+#endif
 
+/* this function appears to be unused */
+#if 0
 STATIC void PTABLE_PREFIX(_free)(pPTBL_ ptable * const t) {
  if (!t)
   return;
@@ -207,6 +215,7 @@ STATIC void PTABLE_PREFIX(_free)(pPTBL_ ptable * const t) {
  PerlMemShared_free(t->ary);
  PerlMemShared_free(t);
 }
+#endif
 
 #undef pPTBL
 #undef pPTBL_

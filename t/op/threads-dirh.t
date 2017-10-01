@@ -33,6 +33,8 @@ fresh_perl_is <<'# this is no comment', 'ok', {}, 'crash when duping dirh';
 
 my $dir;
 SKIP: {
+ skip "telldir or seekdir not defined on this platform", 5
+    if !$Config::Config{d_telldir} || !$Config::Config{d_seekdir};
  my $skip = sub {
    chdir($dir);
    chdir updir;
@@ -48,7 +50,7 @@ SKIP: {
 
  $dir = catdir getcwd(), "thrext$$" . int rand() * 100000;
 
- rmtree($dir);
+ rmtree($dir) if -d $dir;
  mkdir($dir);
 
  # Create a dir structure like this:

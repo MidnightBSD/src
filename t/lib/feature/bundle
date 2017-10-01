@@ -9,20 +9,20 @@ Helloworld
 ########
 # Standard feature bundle, no 5.11
 use feature ":5.10";
-say ord uc chr 233;
+say utf8::native_to_unicode(ord uc chr utf8::unicode_to_native(233));
 EXPECT
 233
 ########
 # Standard feature bundle, 5.11
 use feature ":5.11";
-say ord uc chr 233;
+say utf8::native_to_unicode(ord uc chr utf8::unicode_to_native(233));
 EXPECT
 201
 ########
 # Standard feature bundle, 5.11
 use feature ":5.11";
 use utf8;
-say ord "\ué"; # this is utf8
+say utf8::native_to_unicode(ord "\ué"); # this is utf8
 EXPECT
 201
 ########
@@ -117,3 +117,11 @@ EXPECT
 Use of assignment to $[ is deprecated at - line 2.
 Assigning non-zero to $[ is no longer possible at - line 5.
 b
+########
+# NAME $^H accidentally enabling all features
+eval 'BEGIN { $^H |= 0x1c020000 } $_ = evalbytes 12345';
+print $_||$@;
+EXPECT
+Number found where operator expected at (eval 1) line 1, near "evalbytes 12345"
+	(Do you need to predeclare evalbytes?)
+syntax error at (eval 1) line 1, near "evalbytes 12345"

@@ -32,36 +32,33 @@
 #    perl.imp    NetWare
 #    makedef.lis VMS
 
-BEGIN { unshift @INC, "lib" }
-use Config;
-use strict;
-
-my %ARGS = (CCTYPE => 'MSVC', TARG_DIR => '');
-
+my $fold;
+my %ARGS;
 my %define;
 
-my $fold;
+BEGIN {
+    BEGIN { unshift @INC, "lib" }
+    use Config;
+    use strict;
 
-sub process_cc_flags {
-    foreach (map {split /\s+/, $_} @_) {
-	$define{$1} = $2 // 1 if /^-D(\w+)(?:=(.+))?/;
+    %ARGS = (CCTYPE => 'MSVC', TARG_DIR => '');
+
+    sub process_cc_flags {
+	foreach (map {split /\s+/, $_} @_) {
+	    $define{$1} = $2 // 1 if /^-D(\w+)(?:=(.+))?/;
+	}
     }
-}
 
-while (@ARGV) {
-    my $flag = shift;
-    if ($flag =~ /^(?:CC_FLAGS=)?(-D\w.*)/) {
-	process_cc_flags($1);
-    } elsif ($flag =~ /^(CCTYPE|FILETYPE|PLATFORM|TARG_DIR)=(.+)$/) {
-	$ARGS{$1} = $2;
-    } elsif ($flag eq '--sort-fold') {
-	++$fold;
+    while (@ARGV) {
+	my $flag = shift;
+	if ($flag =~ /^(?:CC_FLAGS=)?(-D\w.*)/) {
+	    process_cc_flags($1);
+	} elsif ($flag =~ /^(CCTYPE|FILETYPE|PLATFORM|TARG_DIR)=(.+)$/) {
+	    $ARGS{$1} = $2;
+	} elsif ($flag eq '--sort-fold') {
+	    ++$fold;
+	}
     }
-}
-
-require "$ARGS{TARG_DIR}regen/embed_lib.pl";
-
-{
     my @PLATFORM = qw(aix win32 wince os2 netware vms test);
     my %PLATFORM;
     @PLATFORM{@PLATFORM} = ();
@@ -71,6 +68,9 @@ require "$ARGS{TARG_DIR}regen/embed_lib.pl";
     die "PLATFORM must be one of: @PLATFORM\n"
 	unless exists $PLATFORM{$ARGS{PLATFORM}};
 }
+use constant PLATFORM => $ARGS{PLATFORM};
+
+require "./$ARGS{TARG_DIR}regen/embed_lib.pl";
 
 # Is the following guard strictly necessary? Added during refactoring
 # to keep the same behaviour when merging other code into here.
@@ -104,7 +104,7 @@ my %exportperlmalloc =
 
 my $exportperlmalloc = $ARGS{PLATFORM} eq 'os2';
 
-my $config_h = $ARGS{PLATFORM} eq 'wince' ? 'xconfig.h' : 'config.h';
+my $config_h = 'config.h';
 open(CFG, '<', $config_h) || die "Cannot open $config_h: $!\n";
 while (<CFG>) {
     $define{$1} = 1 if /^\s*\#\s*define\s+(MYMALLOC|MULTIPLICITY
@@ -206,13 +206,13 @@ if ($ARGS{PLATFORM} ne 'os2') {
         ++$skip{Perl_my_symlink} unless $Config{d_symlink};
     } else {
 	++$skip{PL_statusvalue_vms};
+	++$skip{PL_perllib_sep};
 	if ($ARGS{PLATFORM} ne 'aix') {
 	    ++$skip{$_} foreach qw(
 				PL_DBcv
 				PL_generation
 				PL_lastgotoprobe
 				PL_modcount
-				PL_timesbuf
 				main
 				 );
 	}
@@ -235,6 +235,12 @@ if ($ARGS{PLATFORM} ne 'vms') {
     }
 }
 
+if ($ARGS{PLATFORM} ne 'win32') {
+    ++$skip{$_} foreach qw(
+		    Perl_my_setlocale
+			 );
+}
+
 unless ($define{UNLINK_ALL_VERSIONS}) {
     ++$skip{Perl_unlnk};
 }
@@ -247,6 +253,8 @@ unless ($define{'DEBUGGING'}) {
 		    Perl_debstackptrs
 		    Perl_pad_sv
 		    Perl_pad_setsv
+                    Perl__setlocale_debug_string
+		    Perl_set_padlist
 		    Perl_hv_assert
 		    PL_watchaddr
 		    PL_watchok
@@ -278,8 +286,7 @@ else {
 			 );
 }
 
-unless ($define{'PERL_OLD_COPY_ON_WRITE'}
-     || $define{'PERL_NEW_COPY_ON_WRITE'}) {
+if (!$define{'PERL_COPY_ON_WRITE'} || $define{'PERL_NO_COW'}) {
     ++$skip{Perl_sv_setsv_cow};
 }
 
@@ -358,12 +365,14 @@ unless ($define{'USE_ITHREADS'}) {
 		    PL_regex_padav
 		    PL_dollarzero_mutex
 		    PL_hints_mutex
+		    PL_locale_mutex
 		    PL_my_ctx_mutex
 		    PL_perlio_mutex
 		    PL_stashpad
 		    PL_stashpadix
 		    PL_stashpadmax
 		    Perl_alloccopstash
+		    Perl_allocfilegv
 		    Perl_clone_params_del
 		    Perl_clone_params_new
 		    Perl_parser_dup
@@ -390,6 +399,14 @@ unless ($define{'USE_ITHREADS'}) {
 			 );
 }
 
+unless (   $define{'USE_ITHREADS'}
+        && $define{'HAS_NEWLOCALE'})
+{
+    ++$skip{$_} foreach qw(
+        PL_C_locale_obj
+    );
+}
+
 unless ($define{'PERL_IMPLICIT_CONTEXT'}) {
     ++$skip{$_} foreach qw(
 		    PL_my_cxt_index
@@ -412,6 +429,21 @@ unless ($define{'PERL_IMPLICIT_CONTEXT'}) {
 		    Perl_my_cxt_init
 		    Perl_my_cxt_index
 			 );
+}
+
+unless ($define{'PERL_OP_PARENT'}) {
+    ++$skip{$_} foreach qw(
+		    Perl_op_parent
+                );
+}
+
+unless ($define{'USE_DTRACE'}) {
+    ++$skip{$_} foreach qw(
+                    Perl_dtrace_probe_call
+                    Perl_dtrace_probe_load
+                    Perl_dtrace_probe_op
+                    Perl_dtrace_probe_phase
+                );
 }
 
 unless ($define{'PERL_NEED_APPCTX'}) {
@@ -444,13 +476,6 @@ unless ($define{'PERL_USES_PL_PIDSTATUS'}) {
 
 unless ($define{'PERL_TRACK_MEMPOOL'}) {
     ++$skip{PL_memory_debug_header};
-}
-
-unless ($define{PERL_MAD}) {
-    ++$skip{$_} foreach qw(
-		    PL_madskills
-		    PL_xmlfp
-			 );
 }
 
 unless ($define{'MULTIPLICITY'}) {
@@ -515,6 +540,11 @@ unless ($define{USE_LOCALE_NUMERIC}) {
 			 );
 }
 
+unless ($define{'USE_C_BACKTRACE'}) {
+    ++$skip{Perl_get_c_backtrace_dump};
+    ++$skip{Perl_dump_c_backtrace};
+}
+
 unless ($define{HAVE_INTERP_INTERN}) {
     ++$skip{$_} foreach qw(
 		    Perl_sys_intern_clear
@@ -539,6 +569,9 @@ if ($define{'PERL_GLOBAL_STRUCT'}) {
 } else {
     ++$skip{$_} foreach qw(Perl_init_global_struct Perl_free_global_struct);
 }
+
+++$skip{PL_op_exec_cnt}
+    unless $define{PERL_TRACE_OPS};
 
 # functions from *.sym files
 
@@ -611,6 +644,8 @@ my @layer_syms = qw(
 		    Perl_PerlIO_get_cnt
 		    Perl_PerlIO_get_ptr
 		    Perl_PerlIO_read
+		    Perl_PerlIO_restore_errno
+		    Perl_PerlIO_save_errno
 		    Perl_PerlIO_seek
 		    Perl_PerlIO_set_cnt
 		    Perl_PerlIO_set_ptrcnt
@@ -626,113 +661,17 @@ if ($ARGS{PLATFORM} eq 'netware') {
     push(@layer_syms,'PL_def_layerlist','PL_known_layers','PL_perlio');
 }
 
-if ($define{'USE_PERLIO'}) {
-    # Export the symols that make up the PerlIO abstraction, regardless
-    # of its implementation - read from a file
-    push @syms, 'perlio.sym';
+# Export the symbols that make up the PerlIO abstraction, regardless
+# of its implementation - read from a file
+push @syms, 'perlio.sym';
 
-    # This part is then dependent on how the abstraction is implemented
-    if ($define{'USE_SFIO'}) {
-	# Old legacy non-stdio "PerlIO"
-	++$skip{$_} foreach @layer_syms;
-	++$skip{perlsio_binmode};
-	# SFIO defines most of the PerlIO routines as macros
-	# So undo most of what $perlio_sym has just done - d'oh !
-	# Perhaps it would be better to list the ones which do exist
-	# And emit them
-	++$skip{$_} foreach qw(
-			 PerlIO_canset_cnt
-			 PerlIO_clearerr
-			 PerlIO_close
-			 PerlIO_eof
-			 PerlIO_error
-			 PerlIO_exportFILE
-			 PerlIO_fast_gets
-			 PerlIO_fdopen
-			 PerlIO_fileno
-			 PerlIO_findFILE
-			 PerlIO_flush
-			 PerlIO_get_base
-			 PerlIO_get_bufsiz
-			 PerlIO_get_cnt
-			 PerlIO_get_ptr
-			 PerlIO_getc
-			 PerlIO_getname
-			 PerlIO_has_base
-			 PerlIO_has_cntptr
-			 PerlIO_importFILE
-			 PerlIO_open
-			 PerlIO_printf
-			 PerlIO_putc
-			 PerlIO_puts
-			 PerlIO_read
-			 PerlIO_releaseFILE
-			 PerlIO_reopen
-			 PerlIO_rewind
-			 PerlIO_seek
-			 PerlIO_set_cnt
-			 PerlIO_set_ptrcnt
-			 PerlIO_setlinebuf
-			 PerlIO_sprintf
-			 PerlIO_stderr
-			 PerlIO_stdin
-			 PerlIO_stdout
-			 PerlIO_stdoutf
-			 PerlIO_tell
-			 PerlIO_ungetc
-			 PerlIO_vprintf
-			 PerlIO_write
-			 PerlIO_perlio
-			 Perl_PerlIO_clearerr
-			 Perl_PerlIO_close
-			 Perl_PerlIO_eof
-			 Perl_PerlIO_error
-			 Perl_PerlIO_fileno
-			 Perl_PerlIO_fill
-			 Perl_PerlIO_flush
-			 Perl_PerlIO_get_base
-			 Perl_PerlIO_get_bufsiz
-			 Perl_PerlIO_get_cnt
-			 Perl_PerlIO_get_ptr
-			 Perl_PerlIO_read
-			 Perl_PerlIO_seek
-			 Perl_PerlIO_set_cnt
-			 Perl_PerlIO_set_ptrcnt
-			 Perl_PerlIO_setlinebuf
-			 Perl_PerlIO_stderr
-			 Perl_PerlIO_stdin
-			 Perl_PerlIO_stdout
-			 Perl_PerlIO_tell
-			 Perl_PerlIO_unread
-			 Perl_PerlIO_write
-                         PL_def_layerlist
-                         PL_known_layers
-                         PL_perlio
-			     );
-    }
-    else {
-	# PerlIO with layers - export implementation
-	try_symbols(@layer_syms, 'perlsio_binmode');
-    }
-} else {
-	# -Uuseperlio
-	# Skip the PerlIO layer symbols - although
-	# nothing should have exported them anyway.
-	++$skip{$_} foreach @layer_syms;
-	++$skip{$_} foreach qw(
-			perlsio_binmode
-			PL_def_layerlist
-			PL_known_layers
-			PL_perlio
-			PL_perlio_debug_fd
-			PL_perlio_fd_refcnt
-			PL_perlio_fd_refcnt_size
-			PL_perlio_mutex
-			     );
+# PerlIO with layers - export implementation
+try_symbols(@layer_syms, 'perlsio_binmode');
 
-	# Also do NOT add abstraction symbols from $perlio_sym
-	# abstraction is done as #define to stdio
-	# Remaining remnants that _may_ be functions are handled below.
+
+unless ($define{'USE_QUADMATH'}) {
+  ++$skip{Perl_quadmath_format_needed};
+  ++$skip{Perl_quadmath_format_single};
 }
 
 ###############################################################################
@@ -747,7 +686,9 @@ if ($define{'USE_PERLIO'}) {
     foreach (@$embed) {
 	my ($flags, $retval, $func, @args) = @$_;
 	next unless $func;
-	if ($flags =~ /[AX]/ && $flags !~ /[xmi]/ || $flags =~ /b/) {
+	if (   ($flags =~ /[AX]/ && $flags !~ /[xmi]/)
+            || ($flags =~ /b/ && ! $define{'NO_MATHOMS'}))
+        {
 	    # public API, so export
 
 	    # If a function is defined twice, for example before and after
@@ -756,7 +697,7 @@ if ($define{'USE_PERLIO'}) {
 	    # mean "don't export"
 	    next if $seen{$func}++;
 	    # Should we also skip adding the Perl_ prefix if $flags =~ /o/ ?
-	    $func = "Perl_$func" if ($flags =~ /[pbX]/ && $func !~ /^Perl_/); 
+	    $func = "Perl_$func" if ($flags =~ /[pX]/ && $func !~ /^Perl_/);
 	    ++$export{$func} unless exists $skip{$func};
 	}
     }
@@ -765,12 +706,9 @@ if ($define{'USE_PERLIO'}) {
 foreach (@syms) {
     my $syms = $ARGS{TARG_DIR} . $_;
     open my $global, '<', $syms or die "failed to open $syms: $!\n";
-    # Functions already have a Perl_ prefix
-    # Variables need a PL_ prefix
-    my $prefix = $syms =~ /var\.sym$/i ? 'PL_' : '';
     while (<$global>) {
 	next unless /^([A-Za-z].*)/;
-	my $symbol = "$prefix$1";
+	my $symbol = "$1";
 	++$export{$symbol} unless exists $skip{$symbol};
     }
 }
@@ -801,9 +739,7 @@ try_symbols(qw(
 		    PerlIO_getpos
 		    PerlIO_init
 		    PerlIO_setpos
-		    PerlIO_sprintf
 		    PerlIO_tmpfile
-		    PerlIO_vsprintf
 	     ));
 
 if ($ARGS{PLATFORM} eq 'win32') {
@@ -1004,11 +940,11 @@ elsif ($ARGS{PLATFORM} eq 'vms') {
 		      Perl_my_gconvert
 		      Perl_my_getenv
 		      Perl_my_getenv_len
-		      Perl_my_getlogin
 		      Perl_my_getpwnam
 		      Perl_my_getpwuid
 		      Perl_my_gmtime
 		      Perl_my_kill
+		      Perl_my_killpg
 		      Perl_my_localtime
 		      Perl_my_mkdir
 		      Perl_my_sigaction
@@ -1291,7 +1227,7 @@ if ($ARGS{PLATFORM} =~ /^win(?:32|ce)$/) {
 
 if ($ARGS{PLATFORM} eq 'os2') {
     my (%mapped, @missing);
-    open MAP, 'miniperl.map' or die 'Cannot read miniperl.map';
+    open MAP, '<', 'miniperl.map' or die 'Cannot read miniperl.map';
     /^\s*[\da-f:]+\s+(\w+)/i and $mapped{$1}++ foreach <MAP>;
     close MAP or die 'Cannot close miniperl.map';
 
@@ -1357,10 +1293,16 @@ elsif ($ARGS{PLATFORM} eq 'netware') {
 
 my @symbols = $fold ? sort {lc $a cmp lc $b} keys %export : sort keys %export;
 foreach my $symbol (@symbols) {
-    if ($ARGS{PLATFORM} =~ /^win(?:32|ce)$/) {
-	print "\t$symbol\n";
+    if (PLATFORM eq 'win32' || PLATFORM eq 'wince') {
+	# Remembering the origin file of each symbol is an alternative to PL_ matching
+	if (substr($symbol, 0, 3) eq 'PL_') {
+	    print "\t$symbol DATA\n";
+	}
+	else {
+	    print "\t$symbol\n";
+	}
     }
-    elsif ($ARGS{PLATFORM} eq 'os2') {
+    elsif (PLATFORM eq 'os2') {
 	printf qq(    %-31s \@%s\n),
 	  qq("$symbol"), $ordinal{$symbol} || ++$sym_ord;
 	printf qq(    %-31s \@%s\n),
@@ -1368,7 +1310,7 @@ foreach my $symbol (@symbols) {
 	  $ordinal{$exportperlmalloc{$symbol}} || ++$sym_ord
 	  if $exportperlmalloc and exists $exportperlmalloc{$symbol};
     }
-    elsif ($ARGS{PLATFORM} eq 'netware') {
+    elsif (PLATFORM eq 'netware') {
 	print "\t$symbol,\n";
     } else {
 	print "$symbol\n";

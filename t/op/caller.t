@@ -3,9 +3,9 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
     require './test.pl';
-    plan( tests => 91 );
+    set_up_inc('../lib');
+    plan( tests => 100 ); # some tests are run in a BEGIN block
 }
 
 my @c;
@@ -27,11 +27,11 @@ sub { @c = caller(0) } -> ();
 is( $c[3], "main::__ANON__", "anonymous subroutine name" );
 ok( $c[4], "hasargs true with anon sub" );
 
-# Bug 20020517.003, used to dump core
+# Bug 20020517.003 (#9367), used to dump core
 sub foo { @c = caller(0) }
 my $fooref = delete $::{foo};
 $fooref -> ();
-is( $c[3], "main::__ANON__", "deleted subroutine name" );
+is( $c[3], "main::foo", "deleted subroutine name" );
 ok( $c[4], "hasargs true with deleted sub" );
 
 BEGIN {
@@ -66,7 +66,7 @@ ok( $c[4], "hasargs true with anon sub" );
 sub foo2 { f() }
 my $fooref2 = delete $::{foo2};
 $fooref2 -> ();
-is( $c[3], "main::__ANON__", "deleted subroutine name" );
+is( $c[3], "main::foo2", "deleted subroutine name" );
 ok( $c[4], "hasargs true with deleted sub" );
 
 # See if caller() returns the correct warning mask
@@ -109,10 +109,8 @@ sub testwarn {
 	vec($registered, $warnings::LAST_BIT/2, 2) = 1;
     }
 
-    # The repetition number must be set to the value of $BYTES in
-    # lib/warnings.pm
-    BEGIN { check_bits( ${^WARNING_BITS}, "\0" x 14, 'all bits off via "no warnings"' ) }
-    testwarn("\0" x 14, 'no bits');
+    BEGIN { check_bits( ${^WARNING_BITS}, "\0" x $warnings::BYTES, 'all bits off via "no warnings"' ) }
+    testwarn("\0" x $warnings::BYTES, 'no bits');
 
     use warnings;
     BEGIN { check_bits( ${^WARNING_BITS}, $default,
@@ -269,6 +267,19 @@ END
 is eval "(caller 0)[6]", "(caller 0)[6]",
   'eval text returned by caller does not include \n;';
 
+if (1) {
+    is (sub { (caller)[2] }->(), __LINE__,
+      '[perl #115768] caller gets line numbers from nulled cops');
+}
+# Test it at the end of the program, too.
+fresh_perl_is(<<'115768', 2, {},
+  if (1) {
+    foo();
+  }
+  sub foo { print +(caller)[2] }
+115768
+    '[perl #115768] caller gets line numbers from nulled cops (2)');
+
 # PL_linestr should not be modifiable
 eval '"${;BEGIN{  ${\(caller 2)[6]} = *foo  }}"';
 pass "no assertion failure after modifying eval text via caller";
@@ -297,6 +308,61 @@ is eval "s//<<END/e;\nfoo\nEND\n(caller 0)[6]",
  is $w, 1, 'value from (caller 0)[9] (bitmask) works in ${^WARNING_BITS}';
 }
 
+# [perl #126991]
+sub getlineno { (caller)[2] }
+my $line = eval "\n#line 3000000000\ngetlineno();";
+is $line, "3000000000", "check large line numbers are preserved";
+
+# This was fixed with commit d4d03940c58a0177, which fixed bug #78742
+fresh_perl_is <<'END', "__ANON__::doof\n", {},
+package foo;
+BEGIN {undef %foo::}
+sub doof { caller(0) }
+print +(doof())[3];
+END
+    "caller should not SEGV when the current package is undefined";
+
+# caller should not SEGV when the eval entry has been cleared #120998
+fresh_perl_is <<'END', 'main', {},
+$SIG{__DIE__} = \&dbdie;
+eval '/x';
+sub dbdie {
+    @x = caller(1);
+    print $x[0];
+}
+END
+    "caller should not SEGV for eval '' stack frames";
+
+TODO: {
+    local $::TODO = 'RT #7165: line number should be consistent for multiline subroutine calls';
+    fresh_perl_is(<<'EOP', "6\n9\n", {}, 'RT #7165: line number should be consistent for multiline subroutine calls');
+      sub tagCall {
+        my ($package, $file, $line) = caller;
+        print "$line\n";
+      }
+      
+      tagCall
+      "abc";
+      
+      tagCall
+      sub {};
+EOP
+}
+
 $::testing_caller = 1;
 
 do './op/caller.pl' or die $@;
+
+{
+    package RT129239;
+    BEGIN {
+        my ($pkg, $file, $line) = caller;
+        ::is $file, 'virtually/op/caller.t', "BEGIN block sees correct caller filename";
+        ::is $line, 12345,                   "BEGIN block sees correct caller line";
+        TODO: {
+            local $::TODO = "BEGIN blocks have wrong caller package [perl #129239]";
+            ::is $pkg, 'RT129239',               "BEGIN block sees correct caller package";
+        }
+#line 12345 "virtually/op/caller.t"
+    }
+}

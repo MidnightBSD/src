@@ -2,8 +2,8 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
     require './test.pl';
+    set_up_inc('../lib');
 }
 
 use strict;
@@ -12,8 +12,7 @@ use warnings;
 our @tests = (
     # /p      Pattern   PRE     MATCH   POST
     [ '/p',   "345",    "012-", "345",  "-6789"],
-    # these not supported under 5.18.x
-    #[ '/$r/p',"345",    "012-", "345",  "-6789"],
+    [ '/$r/p',"345",    "012-", "345",  "-6789"],
     [ '(?p)', "345",    "012-", "345",  "-6789"],
     [ '(?p:)',"345",    "012-", "345",  "-6789"],
     [ '',     "(345)",  undef,  undef,  undef ],

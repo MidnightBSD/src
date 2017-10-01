@@ -37,7 +37,7 @@ pop @{$EXPORT_TAGS{bsd_glob}}; # no "glob"
 
 @EXPORT_OK   = (@{$EXPORT_TAGS{'glob'}}, 'csh_glob');
 
-$VERSION = '1.20_01';
+$VERSION = '1.28';
 
 sub import {
     require Exporter;
@@ -75,6 +75,12 @@ if ($^O =~ /^(?:MSWin32|VMS|os2|dos|riscos)$/) {
 # File::Glob::glob() is deprecated because its prototype is different from
 # CORE::glob() (use bsd_glob() instead)
 sub glob {
+    use 5.024;
+    use warnings ();
+    warnings::warnif (deprecated =>
+         "File::Glob::glob() will disappear in perl 5.30. " .
+         "Use File::Glob::bsd_glob() instead.") unless state $warned ++;
+
     splice @_, 1; # no flags
     goto &bsd_glob;
 }
@@ -176,10 +182,15 @@ means this will loop forever:
 =head3 C<bsd_glob>
 
 This function, which is included in the two export tags listed above,
-takes one or two arguments.  The first is the glob pattern.  The second is
-a set of flags ORed together.  The available flags are listed below under
-L</POSIX FLAGS>.  If the second argument is omitted, C<GLOB_CSH> (or
-C<GLOB_CSH|GLOB_NOCASE> on VMS and DOSish systems) is used by default.
+takes one or two arguments.  The first is the glob pattern.  The
+second, if given, is a set of flags ORed together.  The available
+flags and the default set of flags are listed below under L</POSIX FLAGS>.
+
+Remember that to use the named constants for flags you must import
+them, for example with C<:bsd_glob> described above.  If not imported,
+and C<use strict> is not in effect, then the constants will be
+treated as bareword strings, which won't do what you what.
+
 
 =head3 C<:nocase> and C<:case>
 
@@ -196,7 +207,9 @@ uses this internally.
 
 =head2 POSIX FLAGS
 
-The POSIX defined flags for bsd_glob() are:
+If no flags argument is give then C<GLOB_CSH> is set, and on VMS and
+Windows systems, C<GLOB_NOCASE> too.  Otherwise the flags to use are
+determined solely by the flags argument.  The POSIX defined flags are:
 
 =over 4
 
@@ -363,35 +376,47 @@ E<lt>gsar@activestate.comE<gt>, and Thomas Wegner
 E<lt>wegner_thomas@yahoo.comE<gt>.  The C glob code has the
 following copyright:
 
-    Copyright (c) 1989, 1993 The Regents of the University of California.
-    All rights reserved.
+Copyright (c) 1989, 1993 The Regents of the University of California.
+All rights reserved.
 
-    This code is derived from software contributed to Berkeley by
-    Guido van Rossum.
+This code is derived from software contributed to Berkeley by
+Guido van Rossum.
 
-    Redistribution and use in source and binary forms, with or without
-    modification, are permitted provided that the following conditions
-    are met:
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
 
-    1. Redistributions of source code must retain the above copyright
-       notice, this list of conditions and the following disclaimer.
-    2. Redistributions in binary form must reproduce the above copyright
-       notice, this list of conditions and the following disclaimer in the
-       documentation and/or other materials provided with the distribution.
-    3. Neither the name of the University nor the names of its contributors
-       may be used to endorse or promote products derived from this software
-       without specific prior written permission.
+=over 4
 
-    THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS "AS IS" AND
-    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-    ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
-    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
-    OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-    HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
-    SUCH DAMAGE.
+=item 1.
+
+Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+
+=item 2.
+
+Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+=item 3.
+
+Neither the name of the University nor the names of its contributors
+may be used to endorse or promote products derived from this software
+without specific prior written permission.
+
+=back
+
+THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGE.
 
 =cut

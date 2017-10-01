@@ -1,3 +1,11 @@
+BEGIN {
+  require Config; import Config;
+  if ($Config{usequadmath}) {
+     print "1..0 # Skip: usequadmath\n";
+     exit(0);
+  }
+}
+
 use Test::More tests => 11;
 
 BEGIN { use_ok('XS::APItest') };
@@ -26,7 +34,7 @@ print_flush();
 
 # Now redirect STDOUT and read from the file
 ok open(STDOUT, ">&", $oldout), "restore STDOUT";
-ok open(my $foo, "<foo.out"), "open foo.out";
+ok open(my $foo, '<', 'foo.out'), "open foo.out";
 #print "# Test output by reading from file\n";
 # now test the output
 my @output = map { chomp; $_ } <$foo>;

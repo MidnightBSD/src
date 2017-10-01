@@ -4,11 +4,13 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
     require './test.pl';
+    set_up_inc('../lib');
     require Config;
     skip_all('no fork')
 	unless ($Config::Config{d_fork} or $Config::Config{d_pseudofork});
+    skip_all('no fork')
+        if $^O eq 'MSWin32' && is_miniperl;
 }
 
 $|=1;
@@ -291,6 +293,9 @@ parent got 10752
 $| = 1;
 $\ = "\n";
 my $echo = 'echo';
+if ($^O =~ /android/) {
+    $echo = q{sh -c 'echo $@' -- };
+}
 if ($pid = fork) {
     waitpid($pid,0);
     print "parent got $?"
@@ -494,7 +499,7 @@ if (my $pid = fork) {
 }
 else {
     $SIG{TERM} = sub { print "2\n" };
-    sleep 3;
+    sleep 10;
     print "3\n";
 }
 EXPECT
@@ -502,3 +507,27 @@ EXPECT
 2
 3
 4
+########
+# this used to SEGV. RT # 121721
+$|=1;
+&main;
+sub main {
+    if (my $pid = fork) {
+	waitpid($pid, 0);
+    }
+    else {
+        print "foo\n";
+    }
+}
+EXPECT
+foo
+########
+# ${^GLOBAL_PHASE} at the end of a pseudo-fork
+if (my $pid = fork) {
+    waitpid $pid, 0;
+} else {
+    eval 'END { print "${^GLOBAL_PHASE}\n" }';
+    exit;
+}
+EXPECT
+END

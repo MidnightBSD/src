@@ -1,8 +1,11 @@
 
 BEGIN {
-    unless ("A" eq pack('U', 0x41)) {
-	print "1..0 # Unicode::Collate " .
-	    "cannot stringify a Unicode code point\n";
+    unless ('A' eq pack('U', 0x41)) {
+	print "1..0 # Unicode::Collate cannot pack a Unicode code point\n";
+	exit 0;
+    }
+    unless (0x41 == unpack('U', 'A')) {
+	print "1..0 # Unicode::Collate cannot get a Unicode code point\n";
 	exit 0;
     }
     if ($ENV{PERL_CORE}) {
@@ -39,8 +42,7 @@ $objTe->change(level => 1);
 
 for my $h (0, 1) {
     no warnings 'utf8';
-    my $t = $h ? pack('U', 0xFFFF) : "";
-    $objTe->change(highestFFFF => 1) if $h;
+    my $t = $h ? pack('U', 0xFFFF) : 'z';
 
     ok($objTe->lt("\x{C13}$t", "\x{C14}"));
     ok($objTe->lt("\x{C14}$t", "\x{C01}"));
@@ -48,3 +50,5 @@ for my $h (0, 1) {
     ok($objTe->lt("\x{C02}$t", "\x{C03}"));
     ok($objTe->lt("\x{C03}$t", "\x{C15}"));
 }
+
+# 12

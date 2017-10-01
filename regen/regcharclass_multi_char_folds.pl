@@ -15,12 +15,19 @@ use Unicode::UCD "prop_invmap";
 # this code is designed to help regcomp.c, and EXACTFish regnodes.  For
 # non-UTF-8 patterns, the strings are not folded, so we need to check for the
 # upper and lower case versions.  For UTF-8 patterns, the strings are folded,
-# so we only need to worry about the fold version.  There are no non-ASCII
-# Latin1 multi-char folds currently, and none likely to be ever added.  Thus
-# the output is the same as if it were just asking for ASCII characters, not
-# full Latin1.  Hence, it is suitable for generating things that match
-# EXACTFA.  It does check for and croak if there ever were to be an upper
-# Latin1 range multi-character fold.
+# except in EXACTFL nodes) so we only need to worry about the fold version.
+# All folded-to characters in non-UTF-8 (Latin1) are members of fold-pairs,
+# at least within Latin1, 'k', and 'K', for example.  So there aren't
+# complications with dealing with unfolded input.  That's not true of UTF-8
+# patterns, where things can get tricky.  Thus for EXACTFL nodes where things
+# aren't all folded, code has to be written specially to handle this, instead
+# of the macros here being extended to try to handle it.
+#
+# There are no non-ASCII Latin1 multi-char folds currently, and none likely to
+# be ever added.  Thus the output is the same as if it were just asking for
+# ASCII characters, not full Latin1.  Hence, it is suitable for generating
+# things that match EXACTFA.  It does check for and croak if there ever were
+# to be an upper Latin1 range multi-character fold.
 #
 # This is designed for input to regen/regcharlass.pl.
 
@@ -56,6 +63,8 @@ sub multi_char_folds ($) {
                             # multi-char folds; false if just the ones that
                             # are all ascii
 
+    return () if pack("C*", split /\./, Unicode::UCD::UnicodeVersion()) lt v3.0.1;
+
     my ($cp_ref, $folds_ref, $format) = prop_invmap("Case_Folding");
     die "Could not find inversion map for Case_Folding" unless defined $format;
     die "Incorrect format '$format' for Case_Folding inversion map"
@@ -71,7 +80,7 @@ sub multi_char_folds ($) {
         # for ascii chars in EXACTFA (and EXACTFL) nodes.  But I (khw) doubt
         # that there will ever be such a fold created by Unicode, so the code
         # isn't there to occupy space and time; instead there is this check.
-        die sprintf("regcomp.c can't cope with a latin1 multi-char fold (found in the fold of U+%X", $cp_ref->[$i]) if grep { $_ < 256 && chr($_) !~ /[[:ascii:]]/ } @{$folds_ref->[$i]};
+        die sprintf("regcomp.c can't cope with a latin1 multi-char fold (found in the fold of 0x%X", $cp_ref->[$i]) if grep { $_ < 256 && chr($_) !~ /[[:ascii:]]/ } @{$folds_ref->[$i]};
 
         # Create a line that looks like "\x{foo}\x{bar}\x{baz}" of the code
         # points that make up the fold.
@@ -103,6 +112,29 @@ sub multi_char_folds ($) {
 
         }
     }
+
+    # \x17F is the small LONG S, which folds to 's'.  Both Capital and small
+    # LATIN SHARP S fold to 'ss'.  Therefore, they should also match two 17F's
+    # in a row under regex /i matching.  But under /iaa regex matching, all
+    # three folds to 's' are prohibited, but the sharp S's should still match
+    # two 17F's.  This prohibition causes our regular regex algorithm that
+    # would ordinarily allow this match to fail.  This is the only instance in
+    # all Unicode of this kind of issue.  By adding a special case here, we
+    # can use the regular algorithm (with some other changes elsewhere as
+    # well).
+    #
+    # It would be possible to re-write the above code to automatically detect
+    # and handle this case, and any others that might eventually get added to
+    # the Unicode standard, but I (khw) don't think it's worth it.  I believe
+    # that it's extremely unlikely that more folds to ASCII characters are
+    # going to be added, and if I'm wrong, fold_grind.t has the intelligence
+    # to detect them, and test that they work, at which point another special
+    # case could be added here if necessary.
+    #
+    # No combinations of this with 's' need be added, as any of these
+    # containing 's' are prohibted under /iaa.
+    push @folds, '"\x{17F}\x{17F}"' if $all_folds;
+
 
     return @folds;
 }

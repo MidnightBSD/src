@@ -9,18 +9,18 @@ use strict ;
 use warnings;
 use bytes;
 
-use IO::Uncompress::RawInflate 2.060 ;
+use IO::Uncompress::RawInflate 2.074 ;
 
-use Compress::Raw::Zlib 2.060 () ;
-use IO::Compress::Base::Common 2.060 qw(:Status );
-use IO::Compress::Gzip::Constants 2.060 ;
-use IO::Compress::Zlib::Extra 2.060 ;
+use Compress::Raw::Zlib 2.074 () ;
+use IO::Compress::Base::Common 2.074 qw(:Status );
+use IO::Compress::Gzip::Constants 2.074 ;
+use IO::Compress::Zlib::Extra 2.074 ;
 
 require Exporter ;
 
 our ($VERSION, @ISA, @EXPORT_OK, %EXPORT_TAGS, $GunzipError);
 
-@ISA = qw( Exporter IO::Uncompress::RawInflate );
+@ISA = qw(IO::Uncompress::RawInflate Exporter);
 @EXPORT_OK = qw( $GunzipError gunzip );
 %EXPORT_TAGS = %IO::Uncompress::RawInflate::DEFLATE_CONSTANTS ;
 push @{ $EXPORT_TAGS{all} }, @EXPORT_OK ;
@@ -28,7 +28,7 @@ Exporter::export_ok_tags('all');
 
 $GunzipError = '';
 
-$VERSION = '2.060';
+$VERSION = '2.074';
 
 sub new
 {
@@ -345,7 +345,7 @@ section.
 
 The functional interface needs Perl5.005 or better.
 
-=head2 gunzip $input => $output [, OPTS]
+=head2 gunzip $input_filename_or_reference => $output_filename_or_reference [, OPTS]
 
 C<gunzip> expects at least two parameters,
 C<$input_filename_or_reference> and C<$output_filename_or_reference>.
@@ -811,7 +811,7 @@ Usage is
 
     $status = $z->read($buffer)
 
-Reads a block of compressed data (the size the the compressed block is
+Reads a block of compressed data (the size of the compressed block is
 determined by the C<Buffer> option in the constructor), uncompresses it and
 writes any uncompressed data into C<$buffer>. If the C<Append> parameter is
 set in the constructor, the uncompressed data will be appended to the
@@ -849,7 +849,7 @@ Usage is
 
 Reads a single line. 
 
-This method fully supports the use of of the variable C<$/> (or
+This method fully supports the use of the variable C<$/> (or
 C<$INPUT_RECORD_SEPARATOR> or C<$RS> when C<English> is in use) to
 determine what constitutes an end of line. Paragraph mode, record mode and
 file slurp mode are all supported. 
@@ -933,7 +933,7 @@ It is a fatal error to attempt to seek backward.
 Note that the implementation of C<seek> in this module does not provide
 true random access to a compressed file/buffer. It  works by uncompressing
 data from the current offset in the file/buffer until it reaches the
-ucompressed offset specified in the parameters to C<seek>. For very small
+uncompressed offset specified in the parameters to C<seek>. For very small
 files this may be acceptable behaviour. For large files it may cause an
 unacceptable delay.
 
@@ -982,7 +982,7 @@ Returns the current uncompressed line number. If C<EXPR> is present it has
 the effect of setting the line number. Note that setting the line number
 does not change the current position within the file/buffer being read.
 
-The contents of C<$/> are used to to determine what constitutes a line
+The contents of C<$/> are used to determine what constitutes a line
 terminator.
 
 =head2 fileno
@@ -1096,21 +1096,21 @@ L<Archive::Tar|Archive::Tar>,
 L<IO::Zlib|IO::Zlib>
 
 For RFC 1950, 1951 and 1952 see 
-F<http://www.faqs.org/rfcs/rfc1950.html>,
-F<http://www.faqs.org/rfcs/rfc1951.html> and
-F<http://www.faqs.org/rfcs/rfc1952.html>
+L<http://www.faqs.org/rfcs/rfc1950.html>,
+L<http://www.faqs.org/rfcs/rfc1951.html> and
+L<http://www.faqs.org/rfcs/rfc1952.html>
 
 The I<zlib> compression library was written by Jean-loup Gailly
-F<gzip@prep.ai.mit.edu> and Mark Adler F<madler@alumni.caltech.edu>.
+C<gzip@prep.ai.mit.edu> and Mark Adler C<madler@alumni.caltech.edu>.
 
 The primary site for the I<zlib> compression library is
-F<http://www.zlib.org>.
+L<http://www.zlib.org>.
 
-The primary site for gzip is F<http://www.gzip.org>.
+The primary site for gzip is L<http://www.gzip.org>.
 
 =head1 AUTHOR
 
-This module was written by Paul Marquess, F<pmqs@cpan.org>. 
+This module was written by Paul Marquess, C<pmqs@cpan.org>. 
 
 =head1 MODIFICATION HISTORY
 
@@ -1118,7 +1118,7 @@ See the Changes file.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2005-2013 Paul Marquess. All rights reserved.
+Copyright (c) 2005-2017 Paul Marquess. All rights reserved.
 
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.

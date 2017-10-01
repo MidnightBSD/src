@@ -6,9 +6,11 @@ BEGIN {
 	print "1..0\n";
 	exit 0;
     }
+    unshift @INC, "../../t";
+    require 'loc_tools.pl';
 }
 
-use Test::More tests => 109;
+use Test::More tests => 93;
 
 use POSIX qw(fcntl_h signal_h limits_h _exit getcwd open read strftime write
 	     errno localeconv dup dup2 lseek access);
@@ -153,7 +155,7 @@ if ( $unix_mode ) {
     $pat = qr#[\\/]POSIX$#i;
 }
 else {
-    $pat = qr/\.POSIX]/i;
+    $pat = qr/\.POSIX\]/i;
 }
 like( getcwd(), qr/$pat/, 'getcwd' );
 
@@ -162,14 +164,33 @@ like( getcwd(), qr/$pat/, 'getcwd' );
 SKIP: { 
     skip("strtod() not present", 2) unless $Config{d_strtod};
 
-    $lc = &POSIX::setlocale(&POSIX::LC_NUMERIC, 'C') if $Config{d_setlocale};
+    if (locales_enabled('LC_NUMERIC')) {
+        $lc = &POSIX::setlocale(&POSIX::LC_NUMERIC);
+        &POSIX::setlocale(&POSIX::LC_NUMERIC, 'C');
+    }
 
     # we're just checking that strtod works, not how accurate it is
     ($n, $x) = &POSIX::strtod('3.14159_OR_SO');
     cmp_ok(abs("3.14159" - $n), '<', 1e-6, 'strtod works');
     is($x, 6, 'strtod works');
 
-    &POSIX::setlocale(&POSIX::LC_NUMERIC, $lc) if $Config{d_setlocale};
+    &POSIX::setlocale(&POSIX::LC_NUMERIC, $lc) if locales_enabled('LC_NUMERIC');
+}
+
+SKIP: {
+    skip("strtold() not present", 2) unless $Config{d_strtold};
+
+    if (locales_enabled('LC_NUMERIC')) {
+        $lc = &POSIX::setlocale(&POSIX::LC_NUMERIC);
+        &POSIX::setlocale(&POSIX::LC_NUMERIC, 'C');
+    }
+
+    # we're just checking that strtold works, not how accurate it is
+    ($n, $x) = &POSIX::strtod('2.718_ISH');
+    cmp_ok(abs("2.718" - $n), '<', 1e-6, 'strtold works');
+    is($x, 4, 'strtold works');
+
+    &POSIX::setlocale(&POSIX::LC_NUMERIC, $lc) if locales_enabled('LC_NUMERIC');
 }
 
 SKIP: {
@@ -206,13 +227,20 @@ sub try_strftime {
     is($got, $expect, "validating mini_mktime() and strftime(): $expect");
 }
 
-$lc = &POSIX::setlocale(&POSIX::LC_TIME, 'C') if $Config{d_setlocale};
+if (locales_enabled('LC_TIME')) {
+    $lc = &POSIX::setlocale(&POSIX::LC_TIME);
+    &POSIX::setlocale(&POSIX::LC_TIME, 'C');
+}
+
 try_strftime("Wed Feb 28 00:00:00 1996 059", 0,0,0, 28,1,96);
 SKIP: {
     skip("VC++ 8 and Vista's CRTs regard 60 seconds as an invalid parameter", 1)
-	if ($Is_W32 and (($Config{cc} eq 'cl' and
-	                 $Config{ccversion} =~ /^(\d+)/ and $1 >= 14) or
-	                 (Win32::GetOSVersion())[1] >= 6));
+	if ($Is_W32
+	    and (($Config{cc} eq 'cl' and
+		    $Config{ccversion} =~ /^(\d+)/ and $1 >= 14)
+		or ($Config{cc} eq 'icl' and
+		    `cl --version 2>&1` =~ /^.*Version\s+([\d.]+)/ and $1 >= 14)
+		or (Win32::GetOSVersion())[1] >= 6));
 
     try_strftime("Thu Feb 29 00:00:60 1996 060", 60,0,-24, 30,1,96);
 }
@@ -238,7 +266,7 @@ try_strftime("Fri Mar 31 00:00:00 2000 091", 0,0,0, 31,2,100);
   try_strftime("Thu Dec 30 00:00:00 1999 364", 0,0,0, -1,0,100,0,10);
 }
 
-&POSIX::setlocale(&POSIX::LC_TIME, $lc) if $Config{d_setlocale};
+&POSIX::setlocale(&POSIX::LC_TIME, $lc) if locales_enabled('LC_TIME');
 
 {
     for my $test (0, 1) {
@@ -271,51 +299,21 @@ like ($@, qr/^Usage: POSIX::kill\(pid, sig\)/, "check its usage message");
 # Check unimplemented.
 $result = eval {POSIX::offsetof};
 is ($result, undef, "offsetof should fail");
-like ($@, qr/^Unimplemented: POSIX::offsetof\(\) is C-specific/,
+like ($@, qr/^Unimplemented: POSIX::offsetof\(\): C-specific/,
       "check its unimplemented message");
 
 # Check reimplemented.
 $result = eval {POSIX::fgets};
 is ($result, undef, "fgets should fail");
-like ($@, qr/^Use method IO::Handle::gets\(\) instead/,
+like ($@, qr/^Unimplemented: POSIX::fgets\(\): Use method IO::Handle::gets\(\) instead/,
       "check its redef message");
-
-# Simplistic tests for the isXXX() functions (bug #16799)
-ok( POSIX::isalnum('1'),  'isalnum' );
-ok(!POSIX::isalnum('*'),  'isalnum' );
-ok( POSIX::isalpha('f'),  'isalpha' );
-ok(!POSIX::isalpha('7'),  'isalpha' );
-ok( POSIX::iscntrl("\cA"),'iscntrl' );
-ok(!POSIX::iscntrl("A"),  'iscntrl' );
-ok( POSIX::isdigit('1'),  'isdigit' );
-ok(!POSIX::isdigit('z'),  'isdigit' );
-ok( POSIX::isgraph('@'),  'isgraph' );
-ok(!POSIX::isgraph(' '),  'isgraph' );
-ok( POSIX::islower('l'),  'islower' );
-ok(!POSIX::islower('L'),  'islower' );
-ok( POSIX::isupper('U'),  'isupper' );
-ok(!POSIX::isupper('u'),  'isupper' );
-ok( POSIX::isprint('$'),  'isprint' );
-ok(!POSIX::isprint("\n"), 'isprint' );
-ok( POSIX::ispunct('%'),  'ispunct' );
-ok(!POSIX::ispunct('u'),  'ispunct' );
-ok( POSIX::isspace("\t"), 'isspace' );
-ok(!POSIX::isspace('_'),  'isspace' );
-ok( POSIX::isxdigit('f'), 'isxdigit' );
-ok(!POSIX::isxdigit('g'), 'isxdigit' );
-# metaphysical question : what should be returned for an empty string ?
-# anyway this shouldn't segfault (bug #24554)
-ok( POSIX::isalnum(''),   'isalnum empty string' );
-ok( POSIX::isalnum(undef),'isalnum undef' );
-# those functions should stringify their arguments
-ok(!POSIX::isalpha([]),   'isalpha []' );
-ok( POSIX::isprint([]),   'isprint []' );
 
 eval { use strict; POSIX->import("S_ISBLK"); my $x = S_ISBLK };
 unlike( $@, qr/Can't use string .* as a symbol ref/, "Can import autoloaded constants" );
 
 SKIP: {
-    skip("localeconv() not present", 20) unless $Config{d_locconv};
+    skip("locales not available", 26) unless locales_enabled(qw(NUMERIC MONETARY));
+    skip("localeconv() not available", 26) unless $Config{d_locconv};
     my $conv = localeconv;
     is(ref $conv, 'HASH', 'localconv returns a hash reference');
 
@@ -330,8 +328,24 @@ SKIP: {
 	}
     }
 
-    foreach (qw(int_frac_digits frac_digits p_cs_precedes p_sep_by_space
-		n_cs_precedes n_sep_by_space p_sign_posn n_sign_posn)) {
+    my @lconv = qw(
+        int_frac_digits frac_digits
+        p_cs_precedes   p_sep_by_space
+        n_cs_precedes   n_sep_by_space
+        p_sign_posn     n_sign_posn
+    );
+
+    SKIP: {
+        skip('No HAS_LC_MONETARY_2008', 6) unless $Config{d_lc_monetary_2008};
+
+        push @lconv, qw(
+            int_p_cs_precedes int_p_sep_by_space
+            int_n_cs_precedes int_n_sep_by_space
+            int_p_sign_posn   int_n_sign_posn
+        );
+    }
+
+    foreach (@lconv) {
     SKIP: {
 	    skip("localeconv has no result for $_", 1)
 		unless exists $conv->{$_};
@@ -386,6 +400,12 @@ SKIP: {
     skip("$^O is insufficiently POSIX", 1)
 	if $Is_W32 || $Is_VMS;
     cmp_ok($!, '==', POSIX::ENOTDIR);
+}
+
+{   # tmpnam() has been removed as unsafe
+    my $x = eval { POSIX::tmpnam() };
+    is($x, undef, 'tmpnam has been removed');
+    like($@, qr/use File::Temp/, 'tmpnam advises File::Temp');
 }
 
 # Check that output is not flushed by _exit. This test should be last

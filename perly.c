@@ -19,15 +19,13 @@
  *	restriction.  This special exception was added by the Free
  *	Software Foundation in version 1.24 of Bison.
  *
- * Note that this file is also #included in madly.c, to allow compilation
- * of a second parser, Perl_madparse, that is identical to Perl_yyparse,
- * but which includes extra code for dumping the parse tree.
- * This is controlled by the PERL_IN_MADLY_C define.
  */
 
 #include "EXTERN.h"
 #define PERL_IN_PERLY_C
 #include "perl.h"
+#include "feature.h"
+#include "keywords.h"
 
 typedef unsigned char yytype_uint8;
 typedef signed char yytype_int8;
@@ -49,6 +47,10 @@ typedef signed char yysigned_char;
 
 #ifndef YY_NULL
 # define YY_NULL 0
+#endif
+
+#ifndef YY_NULLPTR
+# define YY_NULLPTR NULL
 #endif
 
 /* contains all the parser state tables; auto-generated from perly.y */
@@ -92,12 +94,13 @@ do {								\
 static void
 yysymprint(pTHX_ PerlIO * const yyoutput, int yytype, const YYSTYPE * const yyvaluep)
 {
+    PERL_UNUSED_CONTEXT;
     if (yytype < YYNTOKENS) {
 	YYFPRINTF (yyoutput, "token %s (", yytname[yytype]);
 #   ifdef YYPRINT
 	YYPRINT (yyoutput, yytoknum[yytype], *yyvaluep);
 #   else
-	YYFPRINTF (yyoutput, "0x%"UVxf, (UV)yyvaluep->ival);
+	YYFPRINTF (yyoutput, "0x%" UVxf, (UV)yyvaluep->ival);
 #   endif
     }
     else
@@ -142,14 +145,11 @@ yy_stack_print (pTHX_ const yy_parser *parser)
 		    : "(Nullop)"
 	    );
 	    break;
-#ifndef PERL_IN_MADLY_C
-	case toketype_i_tkval:
-#endif
 	case toketype_ival:
-	    PerlIO_printf(Perl_debug_log, " %8"IVdf, (IV)ps->val.ival);
+	    PerlIO_printf(Perl_debug_log, " %8" IVdf, (IV)ps->val.ival);
 	    break;
 	default:
-	    PerlIO_printf(Perl_debug_log, " %8"UVxf, (UV)ps->val.ival);
+	    PerlIO_printf(Perl_debug_log, " %8" UVxf, (UV)ps->val.ival);
 	}
     }
     PerlIO_printf(Perl_debug_log, "\n\n");
@@ -174,8 +174,14 @@ yy_reduce_print (pTHX_ int yyrule)
     YYFPRINTF (Perl_debug_log, "Reducing stack by rule %d (line %u), ",
 			  yyrule - 1, yylineno);
     /* Print the symbols being reduced, and their result.  */
+#if PERL_BISON_VERSION >= 30000 /* 3.0+ */
+    for (yyi = 0; yyi < yyr2[yyrule]; yyi++)
+	YYFPRINTF (Perl_debug_log, "%s ",
+            yytname [yystos[(PL_parser->ps)[yyi + 1 - yyr2[yyrule]].state]]);
+#else
     for (yyi = yyprhs[yyrule]; 0 <= yyrhs[yyi]; yyi++)
 	YYFPRINTF (Perl_debug_log, "%s ", yytname [yyrhs[yyi]]);
+#endif
     YYFPRINTF (Perl_debug_log, "-> %s\n", yytname [yyr1[yyrule]]);
 }
 
@@ -218,9 +224,10 @@ S_clear_yystack(pTHX_  const yy_parser *parser)
 	if (yy_type_tab[yystos[ps->state]] == toketype_opval
 	    && ps->val.opval)
 	{
-	    if (ps->compcv != PL_compcv) {
+	    if (ps->compcv && (ps->compcv != PL_compcv)) {
 		PL_compcv = ps->compcv;
 		PAD_SET_CUR_NOSAVE(CvPADLIST(PL_compcv), 1);
+		PL_comppad_name = PadlistNAMES(CvPADLIST(PL_compcv));
 	    }
 	    YYDPRINTF ((Perl_debug_log, "(freeing op)\n"));
 	    op_free(ps->val.opval);
@@ -238,11 +245,7 @@ S_clear_yystack(pTHX_  const yy_parser *parser)
 `----------*/
 
 int
-#ifdef PERL_IN_MADLY_C
-Perl_madparse (pTHX_ int gramtype)
-#else
 Perl_yyparse (pTHX_ int gramtype)
-#endif
 {
     dVAR;
     int yystate;
@@ -262,13 +265,6 @@ Perl_yyparse (pTHX_ int gramtype)
 	  action routines: ie $$.  */
     YYSTYPE yyval;
 
-#ifndef PERL_IN_MADLY_C
-#  ifdef PERL_MAD
-    if (PL_madskills)
-	return madparse(gramtype);
-#  endif
-#endif
-
     YYDPRINTF ((Perl_debug_log, "Starting parse\n"));
 
     parser = PL_parser;
@@ -277,320 +273,300 @@ Perl_yyparse (pTHX_ int gramtype)
     SAVEPPTR(parser->yylval.pval);
     SAVEINT(parser->yychar);
     SAVEINT(parser->yyerrstatus);
-    SAVEINT(parser->stack_size);
     SAVEINT(parser->yylen);
     SAVEVPTR(parser->stack);
+    SAVEVPTR(parser->stack_max1);
     SAVEVPTR(parser->ps);
 
     /* initialise state for this parse */
     parser->yychar = gramtype;
+    yytoken = YYTRANSLATE(NATIVE_TO_UNI(parser->yychar));
+
     parser->yyerrstatus = 0;
-    parser->stack_size = YYINITDEPTH;
     parser->yylen = 0;
     Newx(parser->stack, YYINITDEPTH, yy_stack_frame);
+    parser->stack_max1 = parser->stack + YYINITDEPTH - 1;
     ps = parser->ps = parser->stack;
     ps->state = 0;
     SAVEDESTRUCTOR_X(S_clear_yystack, parser);
 
-/*------------------------------------------------------------.
-| yynewstate -- Push a new state, which is found in yystate.  |
-`------------------------------------------------------------*/
-  yynewstate:
+    while (1) {
+        /* main loop: shift some tokens, then reduce when possible */
 
-    yystate = ps->state;
+        while (1) {
+            /* shift a token, or quit when it's possible to reduce */
 
-    YYDPRINTF ((Perl_debug_log, "Entering state %d\n", yystate));
+            yystate = ps->state;
 
-    parser->yylen = 0;
+            YYDPRINTF ((Perl_debug_log, "Entering state %d\n", yystate));
 
-    {
-	size_t size = ps - parser->stack + 1;
+            parser->yylen = 0;
 
-	/* grow the stack? We always leave 1 spare slot,
-	 * in case of a '' -> 'foo' reduction */
+            /* Grow the stack? We always leave 1 spare slot, in case of a
+             * '' -> 'foo' reduction.
+             * Note that stack_max1 points to the (top-1)th allocated stack
+             * element to make this check faster */
 
-	if (size >= (size_t)parser->stack_size - 1) {
-	    /* this will croak on insufficient memory */
-	    parser->stack_size *= 2;
-	    Renew(parser->stack, parser->stack_size, yy_stack_frame);
-	    ps = parser->ps = parser->stack + size -1;
+            if (ps >= parser->stack_max1) {
+                Size_t pos = ps - parser->stack;
+                Size_t newsize = 2 * (parser->stack_max1 + 2 - parser->stack);
+                /* this will croak on insufficient memory */
+                Renew(parser->stack, newsize, yy_stack_frame);
+                ps = parser->ps = parser->stack + pos;
+                parser->stack_max1 = parser->stack + newsize - 1;
 
-	    YYDPRINTF((Perl_debug_log,
-			    "parser stack size increased to %lu frames\n",
-			    (unsigned long int)parser->stack_size));
-	}
-    }
+                YYDPRINTF((Perl_debug_log,
+                                "parser stack size increased to %lu frames\n",
+                                (unsigned long int)newsize));
+            }
 
-/* Do appropriate processing given the current state.  */
-/* Read a lookahead token if we need one and don't already have one.  */
+            /* Do appropriate processing given the current state. Read a
+             * lookahead token if we need one and don't already have one.
+             * */
 
-    /* First try to decide what to do without reference to lookahead token.  */
+            /* First try to decide what to do without reference to
+             * lookahead token. */
 
-    yyn = yypact[yystate];
-    if (yyn == YYPACT_NINF)
-	goto yydefault;
+            yyn = yypact[yystate];
+            if (yyn == YYPACT_NINF)
+                goto yydefault;
 
-    /* Not known => get a lookahead token if don't already have one.  */
+            /* Not known => get a lookahead token if don't already have
+             * one.  YYCHAR is either YYEMPTY or YYEOF or a valid
+             * lookahead symbol. */
 
-    /* YYCHAR is either YYEMPTY or YYEOF or a valid lookahead symbol.  */
-    if (parser->yychar == YYEMPTY) {
-	YYDPRINTF ((Perl_debug_log, "Reading a token: "));
-#ifdef PERL_IN_MADLY_C
-	parser->yychar = PL_madskills ? madlex() : yylex();
-#else
-	parser->yychar = yylex();
-#endif
+            if (parser->yychar == YYEMPTY) {
+                YYDPRINTF ((Perl_debug_log, "Reading a token:\n"));
+                parser->yychar = yylex();
+                assert(parser->yychar >= 0);
+                if (parser->yychar == YYEOF) {
+                    YYDPRINTF ((Perl_debug_log, "Now at end of input.\n"));
+                }
+                /* perly.tab is shipped based on an ASCII system, so need
+                 * to index it with characters translated to ASCII.
+                 * Although it's not designed for this purpose, we can use
+                 * NATIVE_TO_UNI here.  It returns its argument on ASCII
+                 * platforms, and on EBCDIC translates native to ascii in
+                 * the 0-255 range, leaving every other possible input
+                 * unchanged.  This jibes with yylex() returning some bare
+                 * characters in that range, but all tokens it returns are
+                 * either 0, or above 255.  There could be a problem if NULs
+                 * weren't 0, or were ever returned as raw chars by yylex() */
+                yytoken = YYTRANSLATE(NATIVE_TO_UNI(parser->yychar));
+            }
 
-#  ifdef EBCDIC
-	if (parser->yychar >= 0 && parser->yychar < 255) {
-	    parser->yychar = NATIVE_TO_ASCII(parser->yychar);
-	}
-#  endif
-    }
+            /* make sure no-ones changed yychar since the last call to yylex */
+            assert(yytoken == YYTRANSLATE(NATIVE_TO_UNI(parser->yychar)));
+            YYDSYMPRINTF("lookahead token is", yytoken, &parser->yylval);
 
-    if (parser->yychar <= YYEOF) {
-	parser->yychar = yytoken = YYEOF;
-	YYDPRINTF ((Perl_debug_log, "Now at end of input.\n"));
-    }
-    else {
-	yytoken = YYTRANSLATE (parser->yychar);
-	YYDSYMPRINTF ("Next token is", yytoken, &parser->yylval);
-    }
 
-    /* If the proper action on seeing token YYTOKEN is to reduce or to
-	  detect an error, take that action.  */
-    yyn += yytoken;
-    if (yyn < 0 || YYLAST < yyn || yycheck[yyn] != yytoken)
-	goto yydefault;
-    yyn = yytable[yyn];
-    if (yyn <= 0) {
-	if (yyn == 0 || yyn == YYTABLE_NINF)
-	    goto yyerrlab;
-	yyn = -yyn;
-	goto yyreduce;
-    }
+            /* If the proper action on seeing token YYTOKEN is to reduce or to
+             * detect an error, take that action.
+             * Casting yyn to unsigned allows a >=0 test to be included as
+             * part of the  <=YYLAST test for speed */
+            yyn += yytoken;
+            if ((unsigned int)yyn > YYLAST || yycheck[yyn] != yytoken) {
+              yydefault:
+                /* do the default action for the current state. */
+                yyn = yydefact[yystate];
+                if (yyn == 0)
+                    goto yyerrlab;
+                break; /* time to reduce */
+            }
 
-    if (yyn == YYFINAL)
-	YYACCEPT;
+            yyn = yytable[yyn];
+            if (yyn <= 0) {
+                if (yyn == 0 || yyn == YYTABLE_NINF)
+                    goto yyerrlab;
+                yyn = -yyn;
+                break; /* time to reduce */
+            }
 
-    /* Shift the lookahead token.  */
-    YYDPRINTF ((Perl_debug_log, "Shifting token %s, ", yytname[yytoken]));
+            if (yyn == YYFINAL)
+                YYACCEPT;
 
-    /* Discard the token being shifted unless it is eof.  */
-    if (parser->yychar != YYEOF)
-	parser->yychar = YYEMPTY;
+            /* Shift the lookahead token.  */
+            YYDPRINTF ((Perl_debug_log, "Shifting token %s, ", yytname[yytoken]));
 
-    YYPUSHSTACK;
-    ps->state   = yyn;
-    ps->val     = parser->yylval;
-    ps->compcv  = (CV*)SvREFCNT_inc(PL_compcv);
-    ps->savestack_ix = PL_savestack_ix;
+            /* Discard the token being shifted unless it is eof.  */
+            if (parser->yychar != YYEOF)
+                parser->yychar = YYEMPTY;
+
+            YYPUSHSTACK;
+            ps->state   = yyn;
+            ps->val     = parser->yylval;
+            ps->compcv  = (CV*)SvREFCNT_inc(PL_compcv);
+            ps->savestack_ix = PL_savestack_ix;
 #ifdef DEBUGGING
-    ps->name    = (const char *)(yytname[yytoken]);
+            ps->name    = (const char *)(yytname[yytoken]);
 #endif
 
-    /* Count tokens shifted since error; after three, turn off error
-	  status.  */
-    if (parser->yyerrstatus)
-	parser->yyerrstatus--;
+            /* Count tokens shifted since error; after three, turn off error
+                  status.  */
+            if (parser->yyerrstatus)
+                parser->yyerrstatus--;
 
-    goto yynewstate;
+        }
 
+        /* Do a reduction */
 
-  /*-----------------------------------------------------------.
-  | yydefault -- do the default action for the current state.  |
-  `-----------------------------------------------------------*/
-  yydefault:
-    yyn = yydefact[yystate];
-    if (yyn == 0)
-	goto yyerrlab;
-    goto yyreduce;
+        /* yyn is the number of a rule to reduce with.  */
+        parser->yylen = yyr2[yyn];
 
+        /* If YYLEN is nonzero, implement the default value of the action:
+          "$$ = $1".
 
-  /*-----------------------------.
-  | yyreduce -- Do a reduction.  |
-  `-----------------------------*/
-  yyreduce:
-    /* yyn is the number of a rule to reduce with.  */
-    parser->yylen = yyr2[yyn];
+          Otherwise, the following line sets YYVAL to garbage.
+          This behavior is undocumented and Bison
+          users should not rely upon it.  Assigning to YYVAL
+          unconditionally makes the parser a bit smaller, and it avoids a
+          GCC warning that YYVAL may be used uninitialized.  */
+        yyval = ps[1-parser->yylen].val;
 
-    /* If YYLEN is nonzero, implement the default value of the action:
-      "$$ = $1".
+        YY_STACK_PRINT(parser);
+        YY_REDUCE_PRINT (yyn);
 
-      Otherwise, the following line sets YYVAL to garbage.
-      This behavior is undocumented and Bison
-      users should not rely upon it.  Assigning to YYVAL
-      unconditionally makes the parser a bit smaller, and it avoids a
-      GCC warning that YYVAL may be used uninitialized.  */
-    yyval = ps[1-parser->yylen].val;
+        switch (yyn) {
 
-    YY_STACK_PRINT(parser);
-    YY_REDUCE_PRINT (yyn);
-
-    switch (yyn) {
-
-
-#define dep() deprecate("\"do\" to call subroutines")
-
-#ifdef PERL_IN_MADLY_C
-#  define IVAL(i) (i)->tk_lval.ival
-#  define PVAL(p) (p)->tk_lval.pval
-#  define TOKEN_GETMAD(a,b,c) token_getmad((a),(b),(c))
-#  define TOKEN_FREE(a) token_free(a)
-#  define OP_GETMAD(a,b,c) op_getmad((a),(b),(c))
-#  define IF_MAD(a,b) (a)
-#  define DO_MAD(a) a
-#  define MAD
-#else
-#  define IVAL(i) (i)
-#  define PVAL(p) (p)
-#  define TOKEN_GETMAD(a,b,c)
-#  define TOKEN_FREE(a)
-#  define OP_GETMAD(a,b,c)
-#  define IF_MAD(a,b) (b)
-#  define DO_MAD(a)
-#  undef MAD
-#endif
-
-/* contains all the rule actions; auto-generated from perly.y */
+    /* contains all the rule actions; auto-generated from perly.y */
 #include "perly.act"
 
-    }
+        }
 
-    {
-	int i;
-	for (i=0; i< parser->yylen; i++) {
-	    SvREFCNT_dec(ps[-i].compcv);
-	}
-    }
+        {
+            int i;
+            for (i=0; i< parser->yylen; i++) {
+                SvREFCNT_dec(ps[-i].compcv);
+            }
+        }
 
-    parser->ps = ps -= (parser->yylen-1);
+        parser->ps = ps -= (parser->yylen-1);
 
-    /* Now shift the result of the reduction.  Determine what state
-	  that goes to, based on the state we popped back to and the rule
-	  number reduced by.  */
+        /* Now shift the result of the reduction.  Determine what state
+              that goes to, based on the state we popped back to and the rule
+              number reduced by.  */
 
-    ps->val     = yyval;
-    ps->compcv  = (CV*)SvREFCNT_inc(PL_compcv);
-    ps->savestack_ix = PL_savestack_ix;
+        ps->val     = yyval;
+        ps->compcv  = (CV*)SvREFCNT_inc(PL_compcv);
+        ps->savestack_ix = PL_savestack_ix;
 #ifdef DEBUGGING
-    ps->name    = (const char *)(yytname [yyr1[yyn]]);
+        ps->name    = (const char *)(yytname [yyr1[yyn]]);
 #endif
 
-    yyn = yyr1[yyn];
+        yyn = yyr1[yyn];
 
-    yystate = yypgoto[yyn - YYNTOKENS] + ps[-1].state;
-    if (0 <= yystate && yystate <= YYLAST && yycheck[yystate] == ps[-1].state)
-	yystate = yytable[yystate];
-    else
-	yystate = yydefgoto[yyn - YYNTOKENS];
-    ps->state = yystate;
+        yystate = yypgoto[yyn - YYNTOKENS] + ps[-1].state;
+        if (0 <= yystate && yystate <= YYLAST && yycheck[yystate] == ps[-1].state)
+            yystate = yytable[yystate];
+        else
+            yystate = yydefgoto[yyn - YYNTOKENS];
+        ps->state = yystate;
 
-    goto yynewstate;
-
-
-  /*------------------------------------.
-  | yyerrlab -- here on detecting error |
-  `------------------------------------*/
-  yyerrlab:
-    /* If not already recovering from an error, report this error.  */
-    if (!parser->yyerrstatus) {
-	yyerror ("syntax error");
-    }
+        continue;
 
 
-    if (parser->yyerrstatus == 3) {
-	/* If just tried and failed to reuse lookahead token after an
-	      error, discard it.  */
-
-	/* Return failure if at end of input.  */
-	if (parser->yychar == YYEOF) {
-	    /* Pop the error token.  */
-	    SvREFCNT_dec(ps->compcv);
-	    YYPOPSTACK;
-	    /* Pop the rest of the stack.  */
-	    while (ps > parser->stack) {
-		YYDSYMPRINTF ("Error: popping", yystos[ps->state], &ps->val);
-		LEAVE_SCOPE(ps->savestack_ix);
-		if (yy_type_tab[yystos[ps->state]] == toketype_opval
-			&& ps->val.opval)
-		{
-		    YYDPRINTF ((Perl_debug_log, "(freeing op)\n"));
-		    if (ps->compcv != PL_compcv) {
-			PL_compcv = ps->compcv;
-			PAD_SET_CUR_NOSAVE(CvPADLIST(PL_compcv), 1);
-		    }
-		    op_free(ps->val.opval);
-		}
-		SvREFCNT_dec(ps->compcv);
-		YYPOPSTACK;
-	    }
-	    YYABORT;
-	}
-
-	YYDSYMPRINTF ("Error: discarding", yytoken, &parser->yylval);
-	parser->yychar = YYEMPTY;
-
-    }
-
-    /* Else will try to reuse lookahead token after shifting the error
-	  token.  */
-    goto yyerrlab1;
+      /*------------------------------------.
+      | yyerrlab -- here on detecting error |
+      `------------------------------------*/
+      yyerrlab:
+        /* If not already recovering from an error, report this error.  */
+        if (!parser->yyerrstatus) {
+            yyerror ("syntax error");
+        }
 
 
-  /*----------------------------------------------------.
-  | yyerrlab1 -- error raised explicitly by an action.  |
-  `----------------------------------------------------*/
-  yyerrlab1:
-    parser->yyerrstatus = 3;	/* Each real token shifted decrements this.  */
+        if (parser->yyerrstatus == 3) {
+            /* If just tried and failed to reuse lookahead token after an
+                  error, discard it.  */
 
-    for (;;) {
-	yyn = yypact[yystate];
-	if (yyn != YYPACT_NINF) {
-	    yyn += YYTERROR;
-	    if (0 <= yyn && yyn <= YYLAST && yycheck[yyn] == YYTERROR) {
-		yyn = yytable[yyn];
-		if (0 < yyn)
-		    break;
-	    }
-	}
+            /* Return failure if at end of input.  */
+            if (parser->yychar == YYEOF) {
+                /* Pop the error token.  */
+                SvREFCNT_dec(ps->compcv);
+                YYPOPSTACK;
+                /* Pop the rest of the stack.  */
+                while (ps > parser->stack) {
+                    YYDSYMPRINTF ("Error: popping", yystos[ps->state], &ps->val);
+                    LEAVE_SCOPE(ps->savestack_ix);
+                    if (yy_type_tab[yystos[ps->state]] == toketype_opval
+                            && ps->val.opval)
+                    {
+                        YYDPRINTF ((Perl_debug_log, "(freeing op)\n"));
+                        if (ps->compcv != PL_compcv) {
+                            PL_compcv = ps->compcv;
+                            PAD_SET_CUR_NOSAVE(CvPADLIST(PL_compcv), 1);
+                        }
+                        op_free(ps->val.opval);
+                    }
+                    SvREFCNT_dec(ps->compcv);
+                    YYPOPSTACK;
+                }
+                YYABORT;
+            }
 
-	/* Pop the current state because it cannot handle the error token.  */
-	if (ps == parser->stack)
-	    YYABORT;
+            YYDSYMPRINTF ("Error: discarding", yytoken, &parser->yylval);
+            parser->yychar = YYEMPTY;
 
-	YYDSYMPRINTF ("Error: popping", yystos[ps->state], &ps->val);
-	LEAVE_SCOPE(ps->savestack_ix);
-	if (yy_type_tab[yystos[ps->state]] == toketype_opval && ps->val.opval) {
-	    YYDPRINTF ((Perl_debug_log, "(freeing op)\n"));
-	    if (ps->compcv != PL_compcv) {
-		PL_compcv = ps->compcv;
-		PAD_SET_CUR_NOSAVE(CvPADLIST(PL_compcv), 1);
-	    }
-	    op_free(ps->val.opval);
-	}
-	SvREFCNT_dec(ps->compcv);
-	YYPOPSTACK;
-	yystate = ps->state;
+        }
 
-	YY_STACK_PRINT(parser);
-    }
+        /* Else will try to reuse lookahead token after shifting the error
+              token.  */
+        goto yyerrlab1;
 
-    if (yyn == YYFINAL)
-	YYACCEPT;
 
-    YYDPRINTF ((Perl_debug_log, "Shifting error token, "));
+      /*----------------------------------------------------.
+      | yyerrlab1 -- error raised explicitly by an action.  |
+      `----------------------------------------------------*/
+      yyerrlab1:
+        parser->yyerrstatus = 3;	/* Each real token shifted decrements this.  */
 
-    YYPUSHSTACK;
-    ps->state   = yyn;
-    ps->val     = parser->yylval;
-    ps->compcv  = (CV*)SvREFCNT_inc(PL_compcv);
-    ps->savestack_ix = PL_savestack_ix;
+        for (;;) {
+            yyn = yypact[yystate];
+            if (yyn != YYPACT_NINF) {
+                yyn += YYTERROR;
+                if (0 <= yyn && yyn <= YYLAST && yycheck[yyn] == YYTERROR) {
+                    yyn = yytable[yyn];
+                    if (0 < yyn)
+                        break;
+                }
+            }
+
+            /* Pop the current state because it cannot handle the error token.  */
+            if (ps == parser->stack)
+                YYABORT;
+
+            YYDSYMPRINTF ("Error: popping", yystos[ps->state], &ps->val);
+            LEAVE_SCOPE(ps->savestack_ix);
+            if (yy_type_tab[yystos[ps->state]] == toketype_opval && ps->val.opval) {
+                YYDPRINTF ((Perl_debug_log, "(freeing op)\n"));
+                if (ps->compcv != PL_compcv) {
+                    PL_compcv = ps->compcv;
+                    PAD_SET_CUR_NOSAVE(CvPADLIST(PL_compcv), 1);
+                }
+                op_free(ps->val.opval);
+            }
+            SvREFCNT_dec(ps->compcv);
+            YYPOPSTACK;
+            yystate = ps->state;
+
+            YY_STACK_PRINT(parser);
+        }
+
+        if (yyn == YYFINAL)
+            YYACCEPT;
+
+        YYDPRINTF ((Perl_debug_log, "Shifting error token, "));
+
+        YYPUSHSTACK;
+        ps->state   = yyn;
+        ps->val     = parser->yylval;
+        ps->compcv  = (CV*)SvREFCNT_inc(PL_compcv);
+        ps->savestack_ix = PL_savestack_ix;
 #ifdef DEBUGGING
-    ps->name    ="<err>";
+        ps->name    ="<err>";
 #endif
 
-    goto yynewstate;
+    } /* main loop */
 
 
   /*-------------------------------------.
@@ -617,11 +593,5 @@ Perl_yyparse (pTHX_ int gramtype)
 }
 
 /*
- * Local variables:
- * c-indentation-style: bsd
- * c-basic-offset: 4
- * indent-tabs-mode: nil
- * End:
- *
  * ex: set ts=8 sts=4 sw=4 et:
  */

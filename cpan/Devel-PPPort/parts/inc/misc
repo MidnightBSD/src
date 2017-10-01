@@ -1,12 +1,6 @@
 ################################################################################
 ##
-##  $Revision: 56 $
-##  $Author: mhx $
-##  $Date: 2011/09/10 20:38:10 +0200 $
-##
-################################################################################
-##
-##  Version 3.x, Copyright (C) 2004-2010, Marcus Holland-Moritz.
+##  Version 3.x, Copyright (C) 2004-2013, Marcus Holland-Moritz.
 ##  Version 2.x, Copyright (C) 2001, Paul Marquess.
 ##  Version 1.x, Copyright (C) 1999, Kenneth Albanowski.
 ##
@@ -22,6 +16,7 @@ PERL_UNUSED_DECL
 PERL_UNUSED_ARG
 PERL_UNUSED_VAR
 PERL_UNUSED_CONTEXT
+PERL_UNUSED_RESULT
 PERL_GCC_BRACE_GROUPS_FORBIDDEN
 PERL_USE_GCC_BRACE_GROUPS
 PERLIO_FUNCS_DECL
@@ -41,9 +36,53 @@ EXTERN_C
 STMT_START
 STMT_END
 UTF8_MAXBYTES
+WIDEST_UTYPE
 XSRETURN
+HeUTF8
+C_ARRAY_LENGTH
+C_ARRAY_END
+SvRX
+SvRXOK
+PERL_MAGIC_qr
+cBOOL
+OpHAS_SIBLING
+OpSIBLING
+OpMORESIB_set
+OpLASTSIB_set
+OpMAYBESIB_set
 
 =implementation
+
+__UNDEFINED__ PERL_MAGIC_qr             'r'
+
+__UNDEFINED__ cBOOL(cbool) ((cbool) ? (bool)1 : (bool)0)
+__UNDEFINED__ OpHAS_SIBLING(o)      (cBOOL((o)->op_sibling))
+__UNDEFINED__ OpSIBLING(o)          (0 + (o)->op_sibling)
+__UNDEFINED__ OpMORESIB_set(o, sib) ((o)->op_sibling = (sib))
+__UNDEFINED__ OpLASTSIB_set(o, parent) ((o)->op_sibling = NULL)
+__UNDEFINED__ OpMAYBESIB_set(o, sib, parent) ((o)->op_sibling = (sib))
+
+#ifndef SvRX
+#if { NEED SvRX }
+
+void *
+SvRX(pTHX_ SV *rv)
+{
+	if (SvROK(rv)) {
+		SV *sv = SvRV(rv);
+		if (SvMAGICAL(sv)) {
+			MAGIC *mg = mg_find(sv, PERL_MAGIC_qr);
+			if (mg && mg->mg_obj) {
+				return mg->mg_obj;
+			}
+		}
+	}
+	return 0;
+}
+#endif
+#endif
+
+__UNDEFINED__ SvRXOK(sv) (!!SvRX(sv))
 
 #ifndef PERL_UNUSED_DECL
 #  ifdef HASATTRIBUTE
@@ -75,6 +114,14 @@ XSRETURN
 #    define PERL_UNUSED_CONTEXT PERL_UNUSED_ARG(my_perl)
 #  else
 #    define PERL_UNUSED_CONTEXT
+#  endif
+#endif
+
+#ifndef PERL_UNUSED_RESULT
+#  if defined(__GNUC__) && defined(HASATTRIBUTE_WARN_UNUSED_RESULT)
+#    define PERL_UNUSED_RESULT(v) STMT_START { __typeof__(v) z = (v); (void)sizeof(z); } STMT_END
+#  else
+#    define PERL_UNUSED_RESULT(v) ((void)(v))
 #  endif
 #endif
 
@@ -146,22 +193,22 @@ __UNDEFINED__  PTR2NV(p)       NUM2PTR(NV,p)
 #undef STMT_START
 #undef STMT_END
 #ifdef PERL_USE_GCC_BRACE_GROUPS
-#  define STMT_START	(void)(	/* gcc supports ``({ STATEMENTS; })'' */
-#  define STMT_END	)
+#  define STMT_START    (void)( /* gcc supports ``({ STATEMENTS; })'' */
+#  define STMT_END      )
 #else
 #  if defined(VOIDFLAGS) && (VOIDFLAGS) && (defined(sun) || defined(__sun__)) && !defined(__GNUC__)
-#    define STMT_START	if (1)
-#    define STMT_END	else (void)0
+#    define STMT_START  if (1)
+#    define STMT_END    else (void)0
 #  else
-#    define STMT_START	do
-#    define STMT_END	while (0)
+#    define STMT_START  do
+#    define STMT_END    while (0)
 #  endif
 #endif
 
 __UNDEFINED__  boolSV(b)    ((b) ? &PL_sv_yes : &PL_sv_no)
 
 /* DEFSV appears first in 5.004_56 */
-__UNDEFINED__  DEFSV	    GvSV(PL_defgv)
+__UNDEFINED__  DEFSV        GvSV(PL_defgv)
 __UNDEFINED__  SAVE_DEFSV   SAVESPTR(GvSV(PL_defgv))
 __UNDEFINED__  DEFSV_set(sv) (DEFSV = (sv))
 
@@ -223,13 +270,13 @@ __UNDEFINED__  UTF8_MAXBYTES   UTF8_MAXLEN
 __UNDEFINED__  CPERLscope(x)   x
 
 __UNDEFINED__  PERL_HASH(hash,str,len) \
-     STMT_START	{ \
-	const char *s_PeRlHaSh = str; \
-	I32 i_PeRlHaSh = len; \
-	U32 hash_PeRlHaSh = 0; \
-	while (i_PeRlHaSh--) \
-	    hash_PeRlHaSh = hash_PeRlHaSh * 33 + *s_PeRlHaSh++; \
-	(hash) = hash_PeRlHaSh; \
+     STMT_START { \
+        const char *s_PeRlHaSh = str; \
+        I32 i_PeRlHaSh = len; \
+        U32 hash_PeRlHaSh = 0; \
+        while (i_PeRlHaSh--) \
+            hash_PeRlHaSh = hash_PeRlHaSh * 33 + *s_PeRlHaSh++; \
+        (hash) = hash_PeRlHaSh; \
     } STMT_END
 
 #ifndef PERLIO_FUNCS_DECL
@@ -255,16 +302,16 @@ typedef OP* (CPERLscope(*Perl_check_t)) (pTHX_ OP*);
 
 #endif
 
-__UNDEFINED__ isPSXSPC(c)	(isSPACE(c) || (c) == '\v')
-__UNDEFINED__ isBLANK(c)	((c) == ' ' || (c) == '\t')
+__UNDEFINED__ isPSXSPC(c)       (isSPACE(c) || (c) == '\v')
+__UNDEFINED__ isBLANK(c)        ((c) == ' ' || (c) == '\t')
 #ifdef EBCDIC
-__UNDEFINED__ isALNUMC(c)	isalnum(c)
-__UNDEFINED__ isASCII(c)	isascii(c)
-__UNDEFINED__ isCNTRL(c)	iscntrl(c)
-__UNDEFINED__ isGRAPH(c)	isgraph(c)
-__UNDEFINED__ isPRINT(c)	isprint(c)
-__UNDEFINED__ isPUNCT(c)	ispunct(c)
-__UNDEFINED__ isXDIGIT(c)	isxdigit(c)
+__UNDEFINED__ isALNUMC(c)       isalnum(c)
+__UNDEFINED__ isASCII(c)        isascii(c)
+__UNDEFINED__ isCNTRL(c)        iscntrl(c)
+__UNDEFINED__ isGRAPH(c)        isgraph(c)
+__UNDEFINED__ isPRINT(c)        isprint(c)
+__UNDEFINED__ isPUNCT(c)        ispunct(c)
+__UNDEFINED__ isXDIGIT(c)       isxdigit(c)
 #else
 # if { VERSION < 5.10.0 }
 /* Hint: isPRINT
@@ -274,14 +321,37 @@ __UNDEFINED__ isXDIGIT(c)	isxdigit(c)
  */
 #  undef isPRINT
 # endif
-__UNDEFINED__ isALNUMC(c)	(isALPHA(c) || isDIGIT(c))
-__UNDEFINED__ isASCII(c)	((U8) (c) <= 127)
-__UNDEFINED__ isCNTRL(c)	((U8) (c) < ' ' || (c) == 127)
-__UNDEFINED__ isGRAPH(c)	(isALNUM(c) || isPUNCT(c))
-__UNDEFINED__ isPRINT(c)	(((c) >= 32 && (c) < 127))
-__UNDEFINED__ isPUNCT(c)	(((c) >= 33 && (c) <= 47) || ((c) >= 58 && (c) <= 64)  || ((c) >= 91 && (c) <= 96) || ((c) >= 123 && (c) <= 126))
-__UNDEFINED__ isXDIGIT(c)	(isDIGIT(c) || ((c) >= 'a' && (c) <= 'f') || ((c) >= 'A' && (c) <= 'F'))
+
+#ifdef HAS_QUAD
+# ifdef U64TYPE
+#  define WIDEST_UTYPE U64TYPE
+# else
+#  define WIDEST_UTYPE Quad_t
+# endif
+#else
+# define WIDEST_UTYPE U32
 #endif
+
+__UNDEFINED__ isALNUMC(c)       (isALPHA(c) || isDIGIT(c))
+__UNDEFINED__ isASCII(c)        ((WIDEST_UTYPE) (c) <= 127)
+__UNDEFINED__ isCNTRL(c)        ((WIDEST_UTYPE) (c) < ' ' || (c) == 127)
+__UNDEFINED__ isGRAPH(c)        (isALNUM(c) || isPUNCT(c))
+__UNDEFINED__ isPRINT(c)        (((c) >= 32 && (c) < 127))
+__UNDEFINED__ isPUNCT(c)        (((c) >= 33 && (c) <= 47) || ((c) >= 58 && (c) <= 64)  || ((c) >= 91 && (c) <= 96) || ((c) >= 123 && (c) <= 126))
+__UNDEFINED__ isXDIGIT(c)       (isDIGIT(c) || ((c) >= 'a' && (c) <= 'f') || ((c) >= 'A' && (c) <= 'F'))
+#endif
+
+/* Until we figure out how to support this in older perls... */
+#if { VERSION >= 5.8.0 }
+
+__UNDEFINED__ HeUTF8(he)        ((HeKLEN(he) == HEf_SVKEY) ?            \
+                                 SvUTF8(HeKEY_sv(he)) :                 \
+                                 (U32)HeKUTF8(he))
+
+#endif
+
+__UNDEFINED__ C_ARRAY_LENGTH(a)		(sizeof(a)/sizeof((a)[0]))
+__UNDEFINED__ C_ARRAY_END(a)		((a) + C_ARRAY_LENGTH(a))
 
 =xsmisc
 
@@ -294,6 +364,8 @@ XS(XS_Devel__PPPort_dXSTARG)
   dXSARGS;
   dXSTARG;
   IV iv;
+
+  PERL_UNUSED_VAR(cv);
   SP -= items;
   iv = SvIV(ST(0)) + 1;
   PUSHi(iv);
@@ -307,11 +379,17 @@ XS(XS_Devel__PPPort_dAXMARK)
   dAXMARK;
   dITEMS;
   IV iv;
+
+  PERL_UNUSED_VAR(cv);
   SP -= items;
   iv = SvIV(ST(0)) - 1;
   mPUSHi(iv);
   XSRETURN(1);
 }
+
+=xsinit
+
+#define NEED_SvRX
 
 =xsboot
 
@@ -324,166 +402,282 @@ newXS("Devel::PPPort::dAXMARK", XS_Devel__PPPort_dAXMARK, file);
 =xsubs
 
 int
-ptrtests()
+OpSIBLING_tests()
 	PREINIT:
-		int var, *p = &var;
-
+		OP *x;
+		OP *kid;
+		OP *lastkid;
+		int count = 0;
+		int failures = 0;
+		int i;
 	CODE:
-		RETVAL = 0;
-		RETVAL += PTR2nat(p) != 0       ?  1 : 0;
-		RETVAL += PTR2ul(p) != 0UL      ?  2 : 0;
-		RETVAL += PTR2UV(p) != (UV) 0   ?  4 : 0;
-		RETVAL += PTR2IV(p) != (IV) 0   ?  8 : 0;
-		RETVAL += PTR2NV(p) != (NV) 0   ? 16 : 0;
-		RETVAL += p > NUM2PTR(int *, 0) ? 32 : 0;
+		x = newOP(OP_PUSHMARK, 0);
 
+		/* No siblings yet! */
+		if (OpHAS_SIBLING(x) || OpSIBLING(x)) {
+			failures++; warn("Op should not have had a sib");
+		}
+
+
+		/* Add 2 siblings */
+		kid = x;
+
+		for (i = 0; i < 2; i++) {
+			OP *newsib = newOP(OP_PUSHMARK, 0);
+			OpMORESIB_set(kid, newsib);
+
+			kid = OpSIBLING(kid);
+			lastkid = kid;
+		}
+
+		/* Should now have a sibling */
+		if (! OpHAS_SIBLING(x) || ! OpSIBLING(x) ) {
+			failures++; warn("Op should have had a sib after moresib_set");
+		}
+
+		/* Count the siblings */
+		for (kid = OpSIBLING(x); kid; kid = OpSIBLING(kid)) {
+			count++;
+		}
+
+		if (count != 2) {
+			failures++; warn("Kid had %d sibs, expected 2", count);
+		}
+
+		if (OpHAS_SIBLING(lastkid) || OpSIBLING(lastkid)) {
+			failures++; warn("Last kid should not have a sib");
+		}
+
+		/* Really sets the parent, and says 'no more siblings' */
+		OpLASTSIB_set(x, lastkid);
+
+		if (OpHAS_SIBLING(x) || OpSIBLING(x)) {
+			failures++; warn("OpLASTSIB_set failed?");
+		}
+
+		/* Restore the kid */
+		OpMORESIB_set(x, lastkid);
+
+		/* Try to remove it again */
+		OpLASTSIB_set(x, NULL);
+
+		if (OpHAS_SIBLING(x) || OpSIBLING(x)) {
+			failures++; warn("OpLASTSIB_set with NULL failed?");
+		}
+
+		/* Try to restore with maybesib_set */
+		OpMAYBESIB_set(x, lastkid, NULL);
+
+		if (! OpHAS_SIBLING(x) || ! OpSIBLING(x) ) {
+			failures++; warn("Op should have had a sib after maybesibset");
+		}
+
+		RETVAL = failures;
 	OUTPUT:
 		RETVAL
+
+int
+SvRXOK(sv)
+	SV *sv
+	CODE:
+		RETVAL = SvRXOK(sv);
+	OUTPUT:
+		RETVAL
+
+int
+ptrtests()
+        PREINIT:
+                int var, *p = &var;
+
+        CODE:
+                RETVAL = 0;
+                RETVAL += PTR2nat(p) != 0       ?  1 : 0;
+                RETVAL += PTR2ul(p) != 0UL      ?  2 : 0;
+                RETVAL += PTR2UV(p) != (UV) 0   ?  4 : 0;
+                RETVAL += PTR2IV(p) != (IV) 0   ?  8 : 0;
+                RETVAL += PTR2NV(p) != (NV) 0   ? 16 : 0;
+                RETVAL += p > NUM2PTR(int *, 0) ? 32 : 0;
+
+        OUTPUT:
+                RETVAL
 
 int
 gv_stashpvn(name, create)
-	char *name
-	I32 create
-	CODE:
-		RETVAL = gv_stashpvn(name, strlen(name), create) != NULL;
-	OUTPUT:
-		RETVAL
+        char *name
+        I32 create
+        CODE:
+                RETVAL = gv_stashpvn(name, strlen(name), create) != NULL;
+        OUTPUT:
+                RETVAL
 
 int
 get_sv(name, create)
-	char *name
-	I32 create
-	CODE:
-		RETVAL = get_sv(name, create) != NULL;
-	OUTPUT:
-		RETVAL
+        char *name
+        I32 create
+        CODE:
+                RETVAL = get_sv(name, create) != NULL;
+        OUTPUT:
+                RETVAL
 
 int
 get_av(name, create)
-	char *name
-	I32 create
-	CODE:
-		RETVAL = get_av(name, create) != NULL;
-	OUTPUT:
-		RETVAL
+        char *name
+        I32 create
+        CODE:
+                RETVAL = get_av(name, create) != NULL;
+        OUTPUT:
+                RETVAL
 
 int
 get_hv(name, create)
-	char *name
-	I32 create
-	CODE:
-		RETVAL = get_hv(name, create) != NULL;
-	OUTPUT:
-		RETVAL
+        char *name
+        I32 create
+        CODE:
+                RETVAL = get_hv(name, create) != NULL;
+        OUTPUT:
+                RETVAL
 
 int
 get_cv(name, create)
-	char *name
-	I32 create
-	CODE:
-		RETVAL = get_cv(name, create) != NULL;
-	OUTPUT:
-		RETVAL
+        char *name
+        I32 create
+        CODE:
+                RETVAL = get_cv(name, create) != NULL;
+        OUTPUT:
+                RETVAL
 
 void
 xsreturn(two)
-	int two
-	PPCODE:
-		mXPUSHp("test1", 5);
-		if (two)
-		  mXPUSHp("test2", 5);
-		if (two)
-		  XSRETURN(2);
-		else
-		  XSRETURN(1);
+        int two
+        PPCODE:
+                mXPUSHp("test1", 5);
+                if (two)
+                  mXPUSHp("test2", 5);
+                if (two)
+                  XSRETURN(2);
+                else
+                  XSRETURN(1);
 
 SV*
 boolSV(value)
-	int value
-	CODE:
-		RETVAL = newSVsv(boolSV(value));
-	OUTPUT:
-		RETVAL
+        int value
+        CODE:
+                RETVAL = newSVsv(boolSV(value));
+        OUTPUT:
+                RETVAL
 
 SV*
 DEFSV()
-	CODE:
-		RETVAL = newSVsv(DEFSV);
-	OUTPUT:
-		RETVAL
+        CODE:
+                RETVAL = newSVsv(DEFSV);
+        OUTPUT:
+                RETVAL
 
 void
 DEFSV_modify()
-	PPCODE:
-		XPUSHs(sv_mortalcopy(DEFSV));
-		ENTER;
-		SAVE_DEFSV;
-		DEFSV_set(newSVpvs("DEFSV"));
-		XPUSHs(sv_mortalcopy(DEFSV));
-		/* Yes, this leaks the above scalar; 5.005 with threads for some reason */
-		/* frees it upon LEAVE, thus mortalizing it causes "attempt to free..." */
-		/* sv_2mortal(DEFSV); */
-		LEAVE;
-		XPUSHs(sv_mortalcopy(DEFSV));
-		XSRETURN(3);
+        PPCODE:
+                XPUSHs(sv_mortalcopy(DEFSV));
+                ENTER;
+                SAVE_DEFSV;
+                DEFSV_set(newSVpvs("DEFSV"));
+                XPUSHs(sv_mortalcopy(DEFSV));
+                /* Yes, this leaks the above scalar; 5.005 with threads for some reason */
+                /* frees it upon LEAVE, thus mortalizing it causes "attempt to free..." */
+                /* sv_2mortal(DEFSV); */
+                LEAVE;
+                XPUSHs(sv_mortalcopy(DEFSV));
+                XSRETURN(3);
 
 int
 ERRSV()
-	CODE:
-		RETVAL = SvTRUE(ERRSV);
-	OUTPUT:
-		RETVAL
+        CODE:
+                RETVAL = SvTRUE(ERRSV);
+        OUTPUT:
+                RETVAL
 
 SV*
 UNDERBAR()
-	CODE:
-		{
-		  dUNDERBAR;
-		  RETVAL = newSVsv(UNDERBAR);
-		}
-	OUTPUT:
-		RETVAL
+        CODE:
+                {
+                  dUNDERBAR;
+                  RETVAL = newSVsv(UNDERBAR);
+                }
+        OUTPUT:
+                RETVAL
 
 void
 prepush()
-	CODE:
-		{
-		  dXSTARG;
-		  XSprePUSH;
-		  PUSHi(42);
-		  XSRETURN(1);
-		}
+        CODE:
+                {
+                  dXSTARG;
+                  XSprePUSH;
+                  PUSHi(42);
+                  XSRETURN(1);
+                }
 
 int
 PERL_ABS(a)
-	int a
+        int a
 
 void
 SVf(x)
-	SV *x
-	PPCODE:
+        SV *x
+        PPCODE:
 #if { VERSION >= 5.004 }
-		x = sv_2mortal(newSVpvf("[%"SVf"]", SVfARG(x)));
+                x = sv_2mortal(newSVpvf("[%"SVf"]", SVfARG(x)));
 #endif
-		XPUSHs(x);
-		XSRETURN(1);
+                XPUSHs(x);
+                XSRETURN(1);
 
 void
 Perl_ppaddr_t(string)
-	char *string
-	PREINIT:
-		Perl_ppaddr_t lower;
-	PPCODE:
-		lower = PL_ppaddr[OP_LC];
-		mXPUSHs(newSVpv(string, 0));
-		PUTBACK;
-		ENTER;
-		(void)*(lower)(aTHXR);
-		SPAGAIN;
-		LEAVE;
-		XSRETURN(1);
+        char *string
+        PREINIT:
+                Perl_ppaddr_t lower;
+        PPCODE:
+                lower = PL_ppaddr[OP_LC];
+                mXPUSHs(newSVpv(string, 0));
+                PUTBACK;
+                ENTER;
+                (void)*(lower)(aTHXR);
+                SPAGAIN;
+                LEAVE;
+                XSRETURN(1);
 
-=tests plan => 39
+#if { VERSION >= 5.8.0 }
+
+void
+check_HeUTF8(utf8_key)
+        SV *utf8_key;
+        PREINIT:
+                HV *hash;
+                HE *ent;
+                STRLEN klen;
+                char *key;
+        PPCODE:
+                hash = newHV();
+
+                key = SvPV(utf8_key, klen);
+                if (SvUTF8(utf8_key)) klen *= -1;
+                hv_store(hash, key, klen, newSVpvs("string"), 0);
+                hv_iterinit(hash);
+                ent = hv_iternext(hash);
+                assert(ent);
+                mXPUSHp((HeUTF8(ent) == 0 ? "norm" : "utf8"), 4);
+                hv_undef(hash);
+
+
+#endif
+
+void
+check_c_array()
+        PREINIT:
+                int x[] = { 10, 11, 12, 13 };
+        PPCODE:
+                mXPUSHi(C_ARRAY_LENGTH(x));  /* 4 */
+                mXPUSHi(*(C_ARRAY_END(x)-1)); /* 13 */
+
+=tests plan => 48
 
 use vars qw($my_sv @my_av %my_hv);
 
@@ -494,8 +688,9 @@ $_ = "Fred";
 ok(&Devel::PPPort::DEFSV(), "Fred");
 ok(&Devel::PPPort::UNDERBAR(), "Fred");
 
-if ($] >= 5.009002) {
+if ($] >= 5.009002 && $] < 5.023 && $] < 5.023004) {
   eval q{
+    no warnings "deprecated";
     no if $^V > v5.17.9, warnings => "experimental::lexical_topic";
     my $_ = "Tony";
     ok(&Devel::PPPort::DEFSV(), "Fred");
@@ -563,3 +758,30 @@ ok(&Devel::PPPort::Perl_ppaddr_t("FOO"), "foo");
 
 ok(&Devel::PPPort::ptrtests(), 63);
 
+ok(&Devel::PPPort::OpSIBLING_tests(), 0);
+
+if ($] >= 5.009000) {
+  eval q{
+    ok(&Devel::PPPort::check_HeUTF8("hello"), "norm");
+    ok(&Devel::PPPort::check_HeUTF8("\N{U+263a}"), "utf8");
+  };
+} else {
+  ok(1, 1);
+  ok(1, 1);
+}
+
+@r = &Devel::PPPort::check_c_array();
+ok($r[0], 4);
+ok($r[1], "13");
+
+ok(!Devel::PPPort::SvRXOK(""));
+ok(!Devel::PPPort::SvRXOK(bless [], "Regexp"));
+
+if ($] < 5.005) {
+        skip 'no qr// objects in this perl', 0;
+        skip 'no qr// objects in this perl', 0;
+} else {
+        my $qr = eval 'qr/./';
+        ok(Devel::PPPort::SvRXOK($qr));
+        ok(Devel::PPPort::SvRXOK(bless $qr, "Surprise"));
+}

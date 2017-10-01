@@ -10,7 +10,7 @@ BEGIN {
     require 'test.pl';		# we use runperl from 'test.pl', so can't use Test::More
 }
 
-plan tests => 161;
+plan tests => 167;
 
 require_ok("B::Concise");
 
@@ -381,9 +381,7 @@ like($out, qr/Config::AUTOLOAD exists in stash, but has no START/,
     "coderef properly undefined");
 
 # test -stash and -src rendering
-# todo: stderr=1 puts '-e syntax OK' into $out,
-# conceivably fouling one of the lines that are tested
-$out = runperl ( switches => ["-MO=Concise,-stash=B::Concise,-src"],
+$out = runperl ( switches => ["-MO=-qq,Concise,-stash=B::Concise,-src"],
 		 prog => '-e 1', stderr => 1 );
 
 like($out, qr/FUNC: \*B::Concise::concise_cv_obj/,
@@ -399,7 +397,7 @@ $out = runperl ( switches => ["-MStorable", "-MO=Concise,-stash=Storable,-src"],
 		 prog => '-e 1', stderr => 1 );
 
 like($out, qr/FUNC: \*Storable::BIN_MAJOR/,
-     "stash rendering includes constant sub: PAD_FAKELEX_MULTI");
+     "stash rendering has constant sub: Storable::BIN_MAJOR");
 
 like($out, qr/BIN_MAJOR is a constant sub, optimized to a IV/,
      "stash rendering identifies it as constant");
@@ -413,8 +411,12 @@ like($out, qr/FUNC: \*ExtUtils::Mksymlists::_write_vms/,
 $out = runperl ( switches => ["-MO=Concise,-stash=Data::Dumper,-src,-exec"],
 		 prog => '-e 1', stderr => 1 );
 
-like($out, qr/FUNC: \*Data::Dumper::format_refaddr/,
-     "stash rendering loads package as needed");
+SKIP: {
+    skip "Data::Dumper is statically linked", 1
+	if $Config{static_ext} =~ m|\bData/Dumper\b|;
+    like($out, qr/FUNC: \*Data::Dumper::format_refaddr/,
+	"stash rendering loads package as needed");
+}
 
 my $prog = q{package FOO; sub bar { print q{bar} } package main; FOO::bar(); };
 
@@ -453,13 +455,73 @@ $out =
  runperl(
   switches => ["-MO=Concise,-nobanner,foo"], prog=>'sub foo{}', stderr => 1
  );
-unlike $out, 'main::foo', '-nobanner';
+unlike $out, qr/main::foo/, '-nobanner';
 
 # glob
 $out =
  runperl(
-  switches => ["-MO=Concise"], prog=>'<.>', stderr => 1
+  switches => ["-MO=Concise"], prog=>'glob(q{.})', stderr => 1
  );
-like $out, '\*<none>::', '<.>';
+like $out, qr/\*<none>::/, 'glob(q{.})';
+
+# Test op_other in -debug
+$out = runperl(
+    switches => ["-MO=Concise,-debug,xx"],
+    prog => q{sub xx { if ($a) { return $b } }},
+    stderr => 1,
+);
+
+$out =~s/\r\n/\n/g;
+
+# Look for OP_AND
+$end = <<'EOF';
+LOGOP \(0x\w+\)
+	op_next		0x\w+
+	op_other	(0x\w+)
+	op_sibling	0
+	op_ppaddr	PL_ppaddr\[OP_AND\]
+EOF
+
+$end =~ s/\r\n/\n/g;
+
+like $out, qr/$end/, 'OP_AND has op_other';
+
+# like(..) above doesn't fill in $1
+$out =~ $end;
+my $next = $1;
+
+# Check it points to a PUSHMARK
+$end = <<'EOF';
+OP \(<NEXT>\)
+	op_next		0x\w+
+	op_sibling	0x\w+
+	op_ppaddr	PL_ppaddr\[OP_PUSHMARK\]
+EOF
+
+$end =~ s/<NEXT>/$next/;
+
+like $out, qr/$end/, 'OP_AND->op_other points correctly';
+
+# test nextstate hints display
+
+{
+
+    $out = runperl(
+        switches => ["-MO=Concise"],
+        prog => q{my $x; use strict; use warnings; $x++; use feature q(:5.11); $x++},
+        stderr => 1,
+    );
+
+    my @hints = $out =~ /nextstate\([^)]+\) (.*) ->/g;
+
+    # handle test script run with PERL_UNICODE=""
+    s/>,<,// for @hints;
+    s/%,// for @hints;
+
+    is(scalar(@hints), 3, "3 hints");
+    is($hints[0], 'v:{',                           "hints[0]");
+    is($hints[1], 'v:*,&,{,x*,x&,x$,$',            "hints[1]");
+    is($hints[2], 'v:us,*,&,{,x*,x&,x$,$,fea=7', "hints[2]");
+}
 
 __END__

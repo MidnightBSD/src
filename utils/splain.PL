@@ -21,11 +21,11 @@ $file = basename($0, '.PL');
 $file .= '.com' if $^O eq 'VMS';
 
 # Open input file before creating output file.
-$IN = File::Spec->catfile(File::Spec->updir, 'lib', 'diagnostics.pm');
-open IN or die "Can't open $IN: $!\n";
+$in = File::Spec->catfile(File::Spec->updir, 'lib', 'diagnostics.pm');
+open IN, '<', $in or die "Can't open $in: $!\n";
 
 # Create output file.
-open OUT,">$file" or die "Can't create $file: $!";
+open OUT, '>', $file or die "Can't create $file: $!";
 
 print "Extracting $file (with variable substitutions)\n";
 
@@ -37,6 +37,12 @@ $Config{startperl}
     eval 'exec $Config{perlpath} -S \$0 \${1+"\$@"}'
 	if \$running_under_some_shell;
 !GROK!THIS!
+
+print OUT <<'!NO!SUBS!';
+
+BEGIN { pop @INC if $INC[-1] eq '.' }
+
+!NO!SUBS!
 
 while (<IN>) {
     print OUT unless /^package diagnostics/;

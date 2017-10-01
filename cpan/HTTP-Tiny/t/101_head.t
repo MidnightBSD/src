@@ -5,12 +5,13 @@ use warnings;
 
 use File::Basename;
 use Test::More 0.88;
-use t::Util    qw[tmpfile rewind slurp monkey_patch dir_list parse_case
+use lib 't';
+use Util    qw[tmpfile rewind slurp monkey_patch dir_list parse_case
                   set_socket_source sort_headers $CRLF $LF];
 use HTTP::Tiny;
 BEGIN { monkey_patch() }
 
-for my $file ( dir_list("t/cases", qr/^head/ ) ) {
+for my $file ( dir_list("corpus", qr/^head/ ) ) {
   my $data = do { local (@ARGV,$/) = $file; <> };
   my ($params, $expect_req, $give_res) = split /--+\n/, $data;
   # cleanup source data
@@ -45,7 +46,7 @@ for my $file ( dir_list("t/cases", qr/^head/ ) ) {
   my $res_fh = tmpfile($give_res);
   my $req_fh = tmpfile();
 
-  my $http = HTTP::Tiny->new;
+  my $http = HTTP::Tiny->new( keep_alive => 0 );
   set_socket_source($req_fh, $res_fh);
 
   (my $url_basename = $url) =~ s{.*/}{};

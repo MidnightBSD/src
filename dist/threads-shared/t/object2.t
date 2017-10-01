@@ -17,7 +17,7 @@ use ExtUtils::testlib;
 
 BEGIN {
     $| = 1;
-    print("1..122\n");   ### Number of tests that will be run ###
+    print("1..133\n");   ### Number of tests that will be run ###
 };
 
 use threads;
@@ -405,5 +405,68 @@ ok($destroyed[$ID], 'Scalar object removed from undef shared hash');
     async { $shared_scalar = SclrObj->new(); }->join();
 }
 ok($destroyed[$ID], 'Scalar object removed from shared scalar');
+
+#
+# RT #122950 abandoning array elements (e.g. by setting $#ary)
+# should trigger destructors
+
+{
+    package rt122950;
+
+    my $count = 0;
+    sub DESTROY { $count++ }
+
+    my $n = 4;
+
+    for my $type (0..1) {
+        my @a : shared;
+        $count = 0;
+        push @a, bless &threads::shared::share({}) for 1..$n;
+        for (1..$n) {
+            { # new scope to ensure tmps are freed, destructors called
+                if ($type) {
+                    pop @a;
+                }
+                else {
+                    $#a = $n - $_ - 1;
+                }
+            }
+            ::ok($count == $_,
+                "remove array object $_ by " . ($type ? "pop" : '$#a=N'));
+        }
+    }
+
+    my @a : shared;
+    $count = 0;
+    push @a, bless &threads::shared::share({}) for 1..$n;
+    {
+        undef @a; # this is implemented internally as $#a = -01
+    }
+    ::ok($count == $n, "remove array object by undef");
+}
+
+# RT #131124
+# Emptying a shared array creates new temp SVs. If there are no spare
+# SVs, a new arena is allocated. shared.xs was mallocing a new arena
+# with the wrong perl context set, meaning that when the arena was later
+# freed, it would "panic: realloc from wrong pool"
+#
+
+{
+    threads->new(sub {
+        my @a :shared;
+        push @a, bless &threads::shared::share({}) for 1..1000;
+        undef @a; # this creates lots of temp SVs
+    })->join;
+    ok(1, "#131124 undef array doesnt panic");
+
+    threads->new(sub {
+        my @a :shared;
+        push @a, bless &threads::shared::share({}) for 1..1000;
+        @a = (); # this creates lots of temp SVs
+    })->join;
+    ok(1, "#131124 clear array doesnt panic");
+}
+
 
 # EOF

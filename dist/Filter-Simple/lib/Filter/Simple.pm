@@ -4,7 +4,7 @@ use Text::Balanced ':ALL';
 
 use vars qw{ $VERSION @EXPORT };
 
-$VERSION = '0.89';
+$VERSION = '0.93';
 
 use Filter::Util::Call;
 use Carp;
@@ -119,8 +119,8 @@ sub gen_std_filter_for {
         }
         if ($type =~ /^code/) {
             my $count = 0;
-            local $placeholder = qr/\Q$;\E(\C{4})\Q$;\E/;
-            my $extractor =      qr/\Q$;\E(\C{4})\Q$;\E/;
+            local $placeholder = qr/\Q$;\E(.{4})\Q$;\E/s;
+            my $extractor =      qr/\Q$;\E(.{4})\Q$;\E/s;
             $_ = join "",
                   map { ref $_ ? $;.pack('N',$count++).$; : $_ }
                       @components;
@@ -198,6 +198,7 @@ sub gen_filter_import {
                     if ($terminator{terminator} &&
                         m/$terminator{terminator}/) {
                         $lastline = $_;
+                        $count++;
                         last;
                     }
                     $data .= $_;
@@ -242,7 +243,6 @@ __END__
 =head1 NAME
 
 Filter::Simple - Simplified source filtering
-
 
 =head1 SYNOPSIS
 
@@ -801,6 +801,6 @@ Damian Conway E<lt>damian@conway.orgE<gt>.
 
 =head1 COPYRIGHT AND LICENSE
 
-    Copyright (c) 2000-2008, Damian Conway. All Rights Reserved.
+    Copyright (c) 2000-2014, Damian Conway. All Rights Reserved.
     This module is free software. It may be used, redistributed
     and/or modified under the same terms as Perl itself.

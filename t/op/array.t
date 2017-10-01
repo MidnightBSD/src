@@ -2,11 +2,11 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = ('.', '../lib');
-    require 'test.pl';
+    require './test.pl';
+    set_up_inc('.', '../lib');
 }
 
-plan (127);
+plan (173);
 
 #
 # @foo, @bar, and @ary are also used from tie-stdarray after tie-ing them
@@ -19,9 +19,6 @@ $tmp = $ary[$#ary]; --$#ary;
 is($tmp, 5);
 is($#ary, 3);
 is(join('',@ary), '1234');
-
-{
-    no warnings 'deprecated';
 
 @foo = ();
 $r = join(',', $#foo, @foo);
@@ -54,8 +51,6 @@ is($r, "0,0");
 $bar[2] = '2';
 $r = join(',', $#bar, @bar);
 is($r, "2,0,,2");
-
-}
 
 $foo = 'now is the time';
 ok(scalar (($F1,$F2,$Etc) = ($foo =~ /^(\S+)\s+(\S+)\s*(.*)/)));
@@ -105,32 +100,27 @@ is($foo, 'e');
 $foo = ('a','b','c','d','e','f')[1];
 is($foo, 'b');
 
-@foo = ( 'foo', 'bar', 'burbl');
-{
-    no warnings 'deprecated';
-    push(foo, 'blah');
-}
-is($#foo, 3);
+@foo = ( 'foo', 'bar', 'burbl', 'blah');
 
 # various AASSIGN_COMMON checks (see newASSIGNOP() in op.c)
 
-#curr_test(38);
+#curr_test(37);
 
 @foo = @foo;
-is("@foo", "foo bar burbl blah");				# 38
+is("@foo", "foo bar burbl blah");				# 37
 
 (undef,@foo) = @foo;
-is("@foo", "bar burbl blah");					# 39
+is("@foo", "bar burbl blah");					# 38
 
 @foo = ('XXX',@foo, 'YYY');
-is("@foo", "XXX bar burbl blah YYY");				# 40
+is("@foo", "XXX bar burbl blah YYY");				# 39
 
 @foo = @foo = qw(foo b\a\r bu\\rbl blah);
-is("@foo", 'foo b\a\r bu\\rbl blah');				# 41
+is("@foo", 'foo b\a\r bu\\rbl blah');				# 40
 
-@bar = @foo = qw(foo bar);					# 42
+@bar = @foo = qw(foo bar);					# 41
 is("@foo", "foo bar");
-is("@bar", "foo bar");						# 43
+is("@bar", "foo bar");						# 42
 
 # try the same with local
 # XXX tie-stdarray fails the tests involving local, so we use
@@ -140,55 +130,55 @@ is("@bar", "foo bar");						# 43
 {
 
     local @bee = @bee;
-    is("@bee", "foo bar burbl blah");				# 44
+    is("@bee", "foo bar burbl blah");				# 43
     {
 	local (undef,@bee) = @bee;
-	is("@bee", "bar burbl blah");				# 45
+	is("@bee", "bar burbl blah");				# 44
 	{
 	    local @bee = ('XXX',@bee,'YYY');
-	    is("@bee", "XXX bar burbl blah YYY");		# 46
+	    is("@bee", "XXX bar burbl blah YYY");		# 45
 	    {
 		local @bee = local(@bee) = qw(foo bar burbl blah);
-		is("@bee", "foo bar burbl blah");		# 47
+		is("@bee", "foo bar burbl blah");		# 46
 		{
 		    local (@bim) = local(@bee) = qw(foo bar);
-		    is("@bee", "foo bar");			# 48
-		    is("@bim", "foo bar");			# 49
+		    is("@bee", "foo bar");			# 47
+		    is("@bim", "foo bar");			# 48
 		}
-		is("@bee", "foo bar burbl blah");		# 50
+		is("@bee", "foo bar burbl blah");		# 49
 	    }
-	    is("@bee", "XXX bar burbl blah YYY");		# 51
+	    is("@bee", "XXX bar burbl blah YYY");		# 50
 	}
-	is("@bee", "bar burbl blah");				# 52
+	is("@bee", "bar burbl blah");				# 51
     }
-    is("@bee", "foo bar burbl blah");				# 53
+    is("@bee", "foo bar burbl blah");				# 52
 }
 
 # try the same with my
 {
     my @bee = @bee;
-    is("@bee", "foo bar burbl blah");				# 54
+    is("@bee", "foo bar burbl blah");				# 53
     {
 	my (undef,@bee) = @bee;
-	is("@bee", "bar burbl blah");				# 55
+	is("@bee", "bar burbl blah");				# 54
 	{
 	    my @bee = ('XXX',@bee,'YYY');
-	    is("@bee", "XXX bar burbl blah YYY");		# 56
+	    is("@bee", "XXX bar burbl blah YYY");		# 55
 	    {
 		my @bee = my @bee = qw(foo bar burbl blah);
-		is("@bee", "foo bar burbl blah");		# 57
+		is("@bee", "foo bar burbl blah");		# 56
 		{
 		    my (@bim) = my(@bee) = qw(foo bar);
-		    is("@bee", "foo bar");			# 58
-		    is("@bim", "foo bar");			# 59
+		    is("@bee", "foo bar");			# 57
+		    is("@bim", "foo bar");			# 58
 		}
-		is("@bee", "foo bar burbl blah");		# 60
+		is("@bee", "foo bar burbl blah");		# 59
 	    }
-	    is("@bee", "XXX bar burbl blah YYY");		# 61
+	    is("@bee", "XXX bar burbl blah YYY");		# 60
 	}
-	is("@bee", "bar burbl blah");				# 62
+	is("@bee", "bar burbl blah");				# 61
     }
-    is("@bee", "foo bar burbl blah");				# 63
+    is("@bee", "foo bar burbl blah");				# 62
 }
 
 # try the same with our (except that previous values aren't restored)
@@ -471,5 +461,118 @@ package peen {
 	'arylen_p magic does not stop isa magic from being copied';
 }
 
+# Test that &PL_sv_undef is not special in arrays
+sub {
+    ok exists $_[0],
+      'exists returns true for &PL_sv_undef elem [perl #7508]';
+    is \$_[0], \undef, 'undef preserves identity in array [perl #109726]';
+}->(undef);
+# and that padav also knows how to handle the resulting NULLs
+@_ = sub { my @a; $a[1]=1; @a }->();
+is join (" ", map $_//"undef", @_), "undef 1",
+  'returning my @a with nonexistent elements'; 
+
+# [perl #118691]
+@plink=@plunk=();
+$plink[3] = 1;
+sub {
+    $_[0] = 2;
+    is $plink[0], 2, '@_ alias to nonexistent elem within array';
+    $_[1] = 3;
+    is $plink[1], 3, '@_ alias to nonexistent neg index within array';
+    is $_[2], undef, 'reading alias to negative index past beginning';
+    eval { $_[2] = 42 };
+    like $@, qr/Modification of non-creatable array value attempted, (?x:
+               )subscript -5/,
+         'error when setting alias to negative index past beginning';
+    is $_[3], undef, 'reading alias to -1 elem of empty array';
+    eval { $_[3] = 42 };
+    like $@, qr/Modification of non-creatable array value attempted, (?x:
+               )subscript -1/,
+         'error when setting alias to -1 elem of empty array';
+}->($plink[0], $plink[-2], $plink[-5], $plunk[-1]);
+
+$_ = \$#{[]};
+$$_ = \1;
+"$$_";
+pass "no assertion failure after assigning ref to arylen when ary is gone";
+
+
+{
+    # Test aelemfast for both +ve and -ve indices, both lex and package vars.
+    # Make especially careful that we don't have any edge cases around
+    # fitting an I8 into a U8.
+    my @a = (0..299);
+    is($a[-256], 300-256, 'lex -256');
+    is($a[-255], 300-255, 'lex -255');
+    is($a[-254], 300-254, 'lex -254');
+    is($a[-129], 300-129, 'lex -129');
+    is($a[-128], 300-128, 'lex -128');
+    is($a[-127], 300-127, 'lex -127');
+    is($a[-126], 300-126, 'lex -126');
+    is($a[  -1], 300-  1, 'lex   -1');
+    is($a[   0],       0, 'lex    0');
+    is($a[   1],       1, 'lex    1');
+    is($a[ 126],     126, 'lex  126');
+    is($a[ 127],     127, 'lex  127');
+    is($a[ 128],     128, 'lex  128');
+    is($a[ 129],     129, 'lex  129');
+    is($a[ 254],     254, 'lex  254');
+    is($a[ 255],     255, 'lex  255');
+    is($a[ 256],     256, 'lex  256');
+    @aelem =(0..299);
+    is($aelem[-256], 300-256, 'pkg -256');
+    is($aelem[-255], 300-255, 'pkg -255');
+    is($aelem[-254], 300-254, 'pkg -254');
+    is($aelem[-129], 300-129, 'pkg -129');
+    is($aelem[-128], 300-128, 'pkg -128');
+    is($aelem[-127], 300-127, 'pkg -127');
+    is($aelem[-126], 300-126, 'pkg -126');
+    is($aelem[  -1], 300-  1, 'pkg   -1');
+    is($aelem[   0],       0, 'pkg    0');
+    is($aelem[   1],       1, 'pkg    1');
+    is($aelem[ 126],     126, 'pkg  126');
+    is($aelem[ 127],     127, 'pkg  127');
+    is($aelem[ 128],     128, 'pkg  128');
+    is($aelem[ 129],     129, 'pkg  129');
+    is($aelem[ 254],     254, 'pkg  254');
+    is($aelem[ 255],     255, 'pkg  255');
+    is($aelem[ 256],     256, 'pkg  256');
+}
+
+# Test aelemfast in list assignment
+@ary = ('a','b');
+($ary[0],$ary[1]) = ($ary[1],$ary[0]);
+is "@ary", 'b a',
+   'aelemfast with the same array on both sides of list assignment';
+
+for(scalar $#foo) { $_ = 3 }
+is $#foo, 3, 'assigning to arylen aliased in foreach(scalar $#arylen)';
+
+{
+    my @a = qw(a b c);
+    @a = @a;
+    is "@a", 'a b c', 'assigning to itself';
+}
+
+sub { undef *_; shift }->(); # This would crash; no ok() necessary.
+sub { undef *_; pop   }->();
+
+# [perl #129164], [perl #129166], [perl #129167]
+# splice() with null array entries
+# These used to crash.
+$#a = -1; $#a++;
+() = 0-splice @a; # subtract
+$#a = -1; $#a++;
+() =  -splice @a; # negate
+$#a = -1; $#a++;
+() = 0+splice @a; # add
+# And with array expansion, too
+$#a = -1; $#a++;
+() = 0-splice @a, 0, 1, 1, 1;
+$#a = -1; $#a++;
+() =  -splice @a, 0, 1, 1, 1;
+$#a = -1; $#a++;
+() = 0+splice @a, 0, 1, 1, 1;
 
 "We're included by lib/Tie/Array/std.t so we need to return something true";

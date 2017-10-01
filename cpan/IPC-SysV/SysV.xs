@@ -1,12 +1,6 @@
 /*******************************************************************************
 *
-*  $Revision: 33 $
-*  $Author: mhx $
-*  $Date: 2010/03/07 16:01:40 +0100 $
-*
-********************************************************************************
-*
-*  Version 2.x, Copyright (C) 2007-2010, Marcus Holland-Moritz <mhx@cpan.org>.
+*  Version 2.x, Copyright (C) 2007-2013, Marcus Holland-Moritz <mhx@cpan.org>.
 *  Version 1.x, Copyright (C) 1999, Graham Barr <gbarr@pobox.com>.
 *
 *  This program is free software; you can redistribute it and/or
@@ -398,10 +392,15 @@ shmat(id, addr, flag)
     int flag
   CODE:
 #ifdef HAS_SHM
-    void *caddr = SvOK(addr) ? sv2addr(addr) : NULL;
-    void *shm = (void *) shmat(id, caddr, flag);
-    ST(0) = shm == (void *) -1 ? &PL_sv_undef
-                               : sv_2mortal(newSVpvn((char *) &shm, sizeof(void *)));
+    if (id >= 0) {
+      void *caddr = SvOK(addr) ? sv2addr(addr) : NULL;
+      void *shm = (void *) shmat(id, caddr, flag);
+      ST(0) = shm == (void *) -1 ? &PL_sv_undef
+                                 : sv_2mortal(newSVpvn((char *) &shm, sizeof(void *)));
+    } else {
+      SETERRNO(EINVAL,LIB_INVARG);
+      ST(0) = &PL_sv_undef;
+    }
     XSRETURN(1);
 #else
     Perl_die(aTHX_ PL_no_func, "shmat"); return;

@@ -1,8 +1,11 @@
 
 BEGIN {
-    unless ("A" eq pack('U', 0x41)) {
-	print "1..0 # Unicode::Collate " .
-	    "cannot stringify a Unicode code point\n";
+    unless ('A' eq pack('U', 0x41)) {
+	print "1..0 # Unicode::Collate cannot pack a Unicode code point\n";
+	exit 0;
+    }
+    unless (0x41 == unpack('U', 'A')) {
+	print "1..0 # Unicode::Collate cannot get a Unicode code point\n";
 	exit 0;
     }
     if ($ENV{PERL_CORE}) {
@@ -13,7 +16,7 @@ BEGIN {
 
 use strict;
 use warnings;
-BEGIN { $| = 1; print "1..51\n"; }
+BEGIN { $| = 1; print "1..53\n"; }
 my $count = 0;
 sub ok ($;$) {
     my $p = my $r = shift;
@@ -44,13 +47,15 @@ ok($objHa->gt("e", "\x{257}"));
 ok($objHa->lt("k", "\x{199}"));
 ok($objHa->gt("l", "\x{199}"));
 ok($objHa->lt("s", "sh"));
+ok($objHa->lt("sz","sh"));
 ok($objHa->gt("t", "sh"));
 ok($objHa->lt("t", "ts"));
+ok($objHa->lt("tz","ts"));
 ok($objHa->gt("u", "ts"));
 ok($objHa->lt("y", "\x{1B4}"));
 ok($objHa->gt("z", "\x{1B4}"));
 
-# 14
+# 16
 
 $objHa->change(level => 2);
 
@@ -71,7 +76,7 @@ ok($objHa->eq("\x{1B3}", "\x{2BC}Y"));
 ok($objHa->eq("\x{2BC}Y","'Y"));
 ok($objHa->eq("'Y",      "\x{1B4}"));
 
-# 29
+# 31
 
 $objHa->change(level => 3);
 
@@ -92,7 +97,7 @@ ok($objHa->lt("\x{1B3}", "\x{2BC}Y"));
 ok($objHa->lt("\x{2BC}Y","'Y"));
 ok($objHa->gt("'Y",      "\x{1B4}"));
 
-# 44
+# 46
 
 $objHa->change(upper_before_lower => 1);
 
@@ -104,4 +109,4 @@ ok($objHa->lt("\x{1B3}", "\x{2BC}Y"));
 ok($objHa->lt("\x{2BC}Y","'Y"));
 ok($objHa->lt("'Y",      "\x{1B4}"));
 
-# 51
+# 53

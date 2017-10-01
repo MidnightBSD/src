@@ -3,13 +3,15 @@
 my $hires;
 BEGIN {
     chdir 't' if -d 't';
-    @INC = ('.', '../lib');
+    require './test.pl';
+    set_up_inc('.', '../lib');
     $hires = eval 'use Time::HiResx "time"; 1';
 }
 
-require 'test.pl';
+skip_all("Win32 miniperl has no socket select")
+  if $^O eq "MSWin32" && is_miniperl();
 
-plan (11);
+plan (15);
 
 my $blank = "";
 eval {select undef, $blank, $blank, 0};
@@ -25,6 +27,16 @@ eval {select $blank, "", $blank, 0};
 is ($@, "", 'select $blank ""     $blank 0');
 eval {select $blank, $blank, "", 0};
 is ($@, "", 'select $blank $blank ""     0');
+
+# Test with read-only copy-on-write empty string
+my($rocow) = keys%{{""=>undef}};
+Internals::SvREADONLY($rocow,1);
+eval {select $rocow, $blank, $blank, 0};
+is ($@, "", 'select $rocow     $blank $blank 0');
+eval {select $blank, $rocow, $blank, 0};
+is ($@, "", 'select $blank $rocow     $blank 0');
+eval {select $blank, $blank, $rocow, 0};
+is ($@, "", 'select $blank $blank $rocow     0');
 
 eval {select "a", $blank, $blank, 0};
 like ($@, qr/^Modification of a read-only value attempted/,
@@ -64,3 +76,20 @@ $t1 = time;
 $diff = $t1-$t0;
 ok($diff >= $sleep-$under, "select(\$e,u,u,\$sleep): at least $sleep seconds have passed");
 note("diff=$diff under=$under");
+
+# [perl #120102] CORE::select ignoring timeout var's magic
+
+{
+    package RT120102;
+
+    my $count = 0;
+
+    sub TIESCALAR { bless [] }
+    sub FETCH { $count++; 0.1 }
+
+    my $sleep;
+
+    tie $sleep, 'RT120102';
+    select (undef, undef, undef, $sleep);
+    ::is($count, 1, 'RT120102');
+}

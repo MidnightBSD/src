@@ -1,6 +1,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#define PERL_NO_GET_CONTEXT
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
@@ -66,7 +67,7 @@ my_init_tm(struct tm *ptm)        /* see mktime, strftime and asctime    */
 #else
 /* use core version from util.c in 5.8.0 and later */
 # define my_init_tm init_tm
-#endif 
+#endif
 
 #ifdef WIN32
 
@@ -133,6 +134,10 @@ my_init_tm(struct tm *ptm)        /* see mktime, strftime and asctime    */
 
 #undef getenv
 #undef putenv
+#  ifdef UNDER_CE
+#    define getenv xcegetenv
+#    define putenv xceputenv
+#  endif
 #undef malloc
 #undef free
 
@@ -148,8 +153,22 @@ fix_win32_tzenv(void)
     if (crt_tz_env == NULL)
         crt_tz_env = "";
     if (strcmp(perl_tz_env, crt_tz_env) != 0) {
-        newenv = (char*)malloc((strlen(perl_tz_env) + 4) * sizeof(char));
+        STRLEN perl_tz_env_len = strlen(perl_tz_env);
+        newenv = (char*)malloc((perl_tz_env_len + 4) * sizeof(char));
         if (newenv != NULL) {
+/* putenv with old MS CRTs will cause a double free internally if you delete
+   an env var with the CRT env that doesn't exist in Win32 env (perl %ENV only
+   modifies the Win32 env, not CRT env), so always create the env var in Win32
+   env before deleting it with CRT env api, so the error branch never executes
+   in __crtsetenv after SetEnvironmentVariableA executes inside __crtsetenv.
+
+   VC 9/2008 and up dont have this bug, older VC (msvcrt80.dll and older) and
+   mingw (msvcrt.dll) have it see [perl #125529]
+*/
+#if !(_MSC_VER >= 1500)
+            if(!perl_tz_env_len)
+                SetEnvironmentVariableA("TZ", "");
+#endif
             sprintf(newenv, "TZ=%s", perl_tz_env);
             putenv(newenv);
             if (oldenv != NULL)
@@ -307,6 +326,7 @@ my_mini_mktime(struct tm *ptm)
 #       define strncasecmp(x,y,n) strnicmp(x,y,n)
 #   endif
 
+/* strptime.c    0.1 (Powerdog) 94/03/27 */
 /* strptime copied from freebsd with the following copyright: */
 /*
  * Copyright (c) 1994 Powerdog Industries.  All rights reserved.
@@ -314,18 +334,14 @@ my_mini_mktime(struct tm *ptm)
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
+ *
  * 1. Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer
  *    in the documentation and/or other materials provided with the
  *    distribution.
- * 3. All advertising materials mentioning features or use of this
- *    software must display the following acknowledgement:
- *      This product includes software developed by Powerdog Industries.
- * 4. The name of Powerdog Industries may not be used to endorse or
- *    promote products derived from this software without specific prior
- *    written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY POWERDOG INDUSTRIES ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -338,15 +354,11 @@ my_mini_mktime(struct tm *ptm)
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * The views and conclusions contained in the software and documentation
+ * are those of the authors and should not be interpreted as representing
+ * official policies, either expressed or implied, of Powerdog Industries.
  */
- 
-#ifndef lint
-#ifndef NOID
-static char copyright[] =
-"@(#) Copyright (c) 1994 Powerdog Industries.  All rights reserved.";
-static char sccsid[] = "@(#)strptime.c	0.1 (Powerdog) 94/03/27";
-#endif /* !defined NOID */
-#endif /* not lint */
 
 #include <time.h>
 #include <ctype.h>
@@ -361,7 +373,7 @@ struct lc_time_T {
     const char *    month[12];
     const char *    wday[7];
     const char *    weekday[7];
-    const char *    X_fmt;     
+    const char *    X_fmt;
     const char *    x_fmt;
     const char *    c_fmt;
     const char *    am;
@@ -584,6 +596,7 @@ label:
 				return 0;
 
 			tm->tm_yday = i - 1;
+			tm->tm_mday = 0;
 			break;
 
 		case 'M':
@@ -679,7 +692,7 @@ label:
 
 		case 'A':
 		case 'a':
-			for (i = 0; i < asizeof(Locale->weekday); i++) {
+			for (i = 0; i < (int)asizeof(Locale->weekday); i++) {
 				if (c == 'A') {
 					len = strlen(Locale->weekday[i]);
 					if (strncasecmp(buf,
@@ -694,7 +707,7 @@ label:
 						break;
 				}
 			}
-			if (i == asizeof(Locale->weekday))
+			if (i == (int)asizeof(Locale->weekday))
 				return 0;
 
 			tm->tm_wday = i;
@@ -773,7 +786,7 @@ label:
 		case 'B':
 		case 'b':
 		case 'h':
-			for (i = 0; i < asizeof(Locale->month); i++) {
+			for (i = 0; i < (int)asizeof(Locale->month); i++) {
 				if (Oalternative) {
 					if (c == 'B') {
 						len = strlen(Locale->alt_month[i]);
@@ -798,7 +811,7 @@ label:
 					}
 				}
 			}
-			if (i == asizeof(Locale->month))
+			if (i == (int)asizeof(Locale->month))
 				return 0;
 
 			tm->tm_mon = i;
@@ -890,7 +903,7 @@ label:
 			const char *cp;
 			char *zonestr;
 
-			for (cp = buf; *cp && isupper((unsigned char)*cp); ++cp) 
+			for (cp = buf; *cp && isupper((unsigned char)*cp); ++cp)
                             {/*empty*/}
 			if (cp - buf) {
 				zonestr = (char *)malloc(cp - buf + 1);
@@ -943,14 +956,61 @@ label:
 	return (char *)buf;
 }
 
-
-char *
-our_strptime(pTHX_ const char *buf, const char *fmt, struct tm *tm)
+/* Saves alot of machine code.
+   Takes a (auto) SP, which may or may not have been PUSHed before, puts
+   tm struct members on Perl stack, then returns new, advanced, SP to caller.
+   Assign the return of push_common_tm to your SP, so you can continue to PUSH
+   or do a PUTBACK and return eventually.
+   !!!! push_common_tm does not touch PL_stack_sp !!!!
+   !!!! do not use PUTBACK then SPAGAIN semantics around push_common_tm !!!!
+   !!!! You must mortalize whatever push_common_tm put on stack yourself to
+        avoid leaking !!!!
+*/
+SV **
+push_common_tm(pTHX_ SV ** SP, struct tm *mytm)
 {
-	char *ret;
-	int got_GMT = 0;
+	PUSHs(newSViv(mytm->tm_sec));
+	PUSHs(newSViv(mytm->tm_min));
+	PUSHs(newSViv(mytm->tm_hour));
+	PUSHs(newSViv(mytm->tm_mday));
+	PUSHs(newSViv(mytm->tm_mon));
+	PUSHs(newSViv(mytm->tm_year));
+	PUSHs(newSViv(mytm->tm_wday));
+	PUSHs(newSViv(mytm->tm_yday));
+	PUSHs(newSViv(mytm->tm_isdst));
+	return SP;
+}
 
-	return _strptime(aTHX_ buf, fmt, tm, &got_GMT);
+/* specialized common end of 2 XSUBs
+  SV ** SP -- pass your (auto) SP, which has not been PUSHed before, but was
+              reset to 0 (PPCODE only or SP -= items or XSprePUSH)
+  tm *mytm -- a tm *, will be proprocessed with my_mini_mktime
+  return   -- none, after calling return_11part_tm, you must call "return;"
+              no exceptions
+*/
+void
+return_11part_tm(pTHX_ SV ** SP, struct tm *mytm)
+{
+       my_mini_mktime(mytm);
+
+  /* warn("tm: %d-%d-%d %d:%d:%d\n", mytm.tm_year, mytm.tm_mon, mytm.tm_mday, mytm.tm_hour, mytm.tm_min, mytm.tm_sec); */
+       EXTEND(SP, 11);
+       SP = push_common_tm(aTHX_ SP, mytm);
+       /* epoch */
+       PUSHs(newSViv(0));
+       /* islocal */
+       PUSHs(newSViv(0));
+       PUTBACK;
+       {
+            SV ** endsp = SP; /* the SV * under SP needs to be mortaled */
+            SP -= (11 - 1); /* subtract 0 based count of SVs to mortal */
+/* mortal target of SP, then increment before function call
+   so SP is already calculated before next comparison to not stall CPU */
+            do {
+                sv_2mortal(*SP++);
+            } while(SP <= endsp);
+       }
+       return;
 }
 
 MODULE = Time::Piece     PACKAGE = Time::Piece
@@ -958,37 +1018,24 @@ MODULE = Time::Piece     PACKAGE = Time::Piece
 PROTOTYPES: ENABLE
 
 void
-_strftime(fmt, sec, min, hour, mday, mon, year, wday = -1, yday = -1, isdst = -1)
-    char *        fmt
-    int        sec
-    int        min
-    int        hour
-    int        mday
-    int        mon
-    int        year
-    int        wday
-    int        yday
-    int        isdst
+_strftime(fmt, epoch, islocal = 1)
+    char *      fmt
+    time_t      epoch
+    int         islocal
     CODE:
     {
         char tmpbuf[128];
         struct tm mytm;
-        int len;
-        memset(&mytm, 0, sizeof(mytm));
-        my_init_tm(&mytm);    /* XXX workaround - see my_init_tm() above */
-        mytm.tm_sec = sec;
-        mytm.tm_min = min;
-        mytm.tm_hour = hour;
-        mytm.tm_mday = mday;
-        mytm.tm_mon = mon;
-        mytm.tm_year = year;
-        mytm.tm_wday = wday;
-        mytm.tm_yday = yday;
-        mytm.tm_isdst = isdst;
-        my_mini_mktime(&mytm);
+        size_t len;
+
+        if(islocal == 1)
+            mytm = *localtime(&epoch);
+        else
+            mytm = *gmtime(&epoch);
+
         len = strftime(tmpbuf, sizeof tmpbuf, fmt, &mytm);
         /*
-        ** The following is needed to handle to the situation where 
+        ** The following is needed to handle to the situation where
         ** tmpbuf overflows.  Basically we want to allocate a buffer
         ** and try repeatedly.  The reason why it is so complicated
         ** is that getting a return value of 0 from strftime can indicate
@@ -1036,8 +1083,9 @@ _strftime(fmt, sec, min, hour, mday, mon, year, wday = -1, yday = -1, isdst = -1
 void
 _tzset()
   PPCODE:
+    PUTBACK; /* makes rest of this function tailcall friendly */
     my_tzset(aTHX);
-
+    return; /* skip XSUBPP's PUTBACK */
 
 void
 _strptime ( string, format )
@@ -1047,36 +1095,23 @@ _strptime ( string, format )
        struct tm mytm;
        time_t t;
        char * remainder;
+       int got_GMT;
   PPCODE:
        t = 0;
        mytm = *gmtime(&t);
-       remainder = (char *)our_strptime(aTHX_ string, format, &mytm);
+       mytm.tm_isdst = -1; /* -1 means we don't know */
+       got_GMT = 0;
+
+       remainder = (char *)_strptime(aTHX_ string, format, &mytm, &got_GMT);
        if (remainder == NULL) {
            croak("Error parsing time");
        }
        if (*remainder != '\0') {
            warn("garbage at end of string in strptime: %s", remainder);
        }
-	  
-       my_mini_mktime(&mytm);
 
-  /* warn("tm: %d-%d-%d %d:%d:%d\n", mytm.tm_year, mytm.tm_mon, mytm.tm_mday, mytm.tm_hour, mytm.tm_min, mytm.tm_sec); */
-	  
-       EXTEND(SP, 11);
-       PUSHs(sv_2mortal(newSViv(mytm.tm_sec)));
-       PUSHs(sv_2mortal(newSViv(mytm.tm_min)));
-       PUSHs(sv_2mortal(newSViv(mytm.tm_hour)));
-       PUSHs(sv_2mortal(newSViv(mytm.tm_mday)));
-       PUSHs(sv_2mortal(newSViv(mytm.tm_mon)));
-       PUSHs(sv_2mortal(newSViv(mytm.tm_year)));
-       PUSHs(sv_2mortal(newSViv(mytm.tm_wday)));
-       PUSHs(sv_2mortal(newSViv(mytm.tm_yday)));
-       /* isdst */
-       PUSHs(sv_2mortal(newSViv(0)));
-       /* epoch */
-       PUSHs(sv_2mortal(newSViv(0)));
-       /* islocal */
-       PUSHs(sv_2mortal(newSViv(0)));
+       return_11part_tm(aTHX_ SP, &mytm);
+       return;
 
 void
 _mini_mktime(int sec, int min, int hour, int mday, int mon, int year)
@@ -1093,61 +1128,32 @@ _mini_mktime(int sec, int min, int hour, int mday, int mon, int year)
        mytm.tm_mday = mday;
        mytm.tm_mon = mon;
        mytm.tm_year = year;
-       
-       my_mini_mktime(&mytm);
 
-       EXTEND(SP, 11);
-       PUSHs(sv_2mortal(newSViv(mytm.tm_sec)));
-       PUSHs(sv_2mortal(newSViv(mytm.tm_min)));
-       PUSHs(sv_2mortal(newSViv(mytm.tm_hour)));
-       PUSHs(sv_2mortal(newSViv(mytm.tm_mday)));
-       PUSHs(sv_2mortal(newSViv(mytm.tm_mon)));
-       PUSHs(sv_2mortal(newSViv(mytm.tm_year)));
-       PUSHs(sv_2mortal(newSViv(mytm.tm_wday)));
-       PUSHs(sv_2mortal(newSViv(mytm.tm_yday)));
-       /* isdst */
-       PUSHs(sv_2mortal(newSViv(0)));
-       /* epoch */
-       PUSHs(sv_2mortal(newSViv(0)));
-       /* islocal */
-       PUSHs(sv_2mortal(newSViv(0)));
+       return_11part_tm(aTHX_ SP, &mytm);
+       return;
 
 void
 _crt_localtime(time_t sec)
+    ALIAS:
+        _crt_gmtime = 1
     PREINIT:
         struct tm mytm;
     PPCODE:
-        mytm = *localtime(&sec);
+        if(ix) mytm = *gmtime(&sec);
+        else mytm = *localtime(&sec);
         /* Need to get: $s,$n,$h,$d,$m,$y */
-        
+
         EXTEND(SP, 9);
-        PUSHs(sv_2mortal(newSViv(mytm.tm_sec)));
-        PUSHs(sv_2mortal(newSViv(mytm.tm_min)));
-        PUSHs(sv_2mortal(newSViv(mytm.tm_hour)));
-        PUSHs(sv_2mortal(newSViv(mytm.tm_mday)));
-        PUSHs(sv_2mortal(newSViv(mytm.tm_mon)));
-        PUSHs(sv_2mortal(newSViv(mytm.tm_year)));
-        PUSHs(sv_2mortal(newSViv(mytm.tm_year)));
-        PUSHs(sv_2mortal(newSViv(mytm.tm_wday)));
-        PUSHs(sv_2mortal(newSViv(mytm.tm_yday)));
-        PUSHs(sv_2mortal(newSViv(mytm.tm_isdst)));
-        
-void
-_crt_gmtime(time_t sec)
-    PREINIT:
-        struct tm mytm;
-    PPCODE:
-        mytm = *gmtime(&sec);
-        /* Need to get: $s,$n,$h,$d,$m,$y */
-        
-        EXTEND(SP, 9);
-        PUSHs(sv_2mortal(newSViv(mytm.tm_sec)));
-        PUSHs(sv_2mortal(newSViv(mytm.tm_min)));
-        PUSHs(sv_2mortal(newSViv(mytm.tm_hour)));
-        PUSHs(sv_2mortal(newSViv(mytm.tm_mday)));
-        PUSHs(sv_2mortal(newSViv(mytm.tm_mon)));
-        PUSHs(sv_2mortal(newSViv(mytm.tm_year)));
-        PUSHs(sv_2mortal(newSViv(mytm.tm_wday)));
-        PUSHs(sv_2mortal(newSViv(mytm.tm_yday)));
-        PUSHs(sv_2mortal(newSViv(mytm.tm_isdst)));
-        
+        SP = push_common_tm(aTHX_ SP, &mytm);
+        PUSHs(newSViv(mytm.tm_isdst));
+        PUTBACK;
+        {
+            SV ** endsp = SP; /* the SV * under SP needs to be mortaled */
+            SP -= (9 - 1); /* subtract 0 based count of SVs to mortal */
+/* mortal target of SP, then increment before function call
+   so SP is already calculated before next comparison to not stall CPU */
+            do {
+                sv_2mortal(*SP++);
+            } while(SP <= endsp);
+        }
+        return;

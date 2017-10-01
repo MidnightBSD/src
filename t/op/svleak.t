@@ -5,7 +5,7 @@
 # see if the count increases.
 
 BEGIN {
-    chdir 't';
+    chdir 't' if -d 't';
     @INC = '../lib';
     require './test.pl';
 
@@ -15,7 +15,7 @@ BEGIN {
 
 use Config;
 
-plan tests => 124;
+plan tests => 141;
 
 # run some code N times. If the number of SVs at the end of loop N is
 # greater than (N-1)*delta at the end of loop 1, we've got a leak
@@ -37,6 +37,7 @@ sub leak {
 # if the name is absent.
 sub eleak {
     my ($n,$delta,$code,@rest) = @_;
+    no warnings 'deprecated'; # Silence the literal control character warning
     leak $n, $delta, sub { eval $code },
          @rest ? @rest : $code
 }
@@ -69,6 +70,27 @@ leak(5, 0, sub {},                 "basic check 1 of leak test infrastructure");
 leak(5, 0, sub {push @a,1;pop @a}, "basic check 2 of leak test infrastructure");
 leak(5, 1, sub {push @a,1;},       "basic check 3 of leak test infrastructure");
 
+# delete
+{
+    my $key = "foo";
+    $key++ while exists $ENV{$key};
+    leak(2, 0, sub { delete local $ENV{$key} },
+	'delete local on nonexistent env var');
+}
+
+# defined
+leak(2, 0, sub { defined *{"!"} }, 'defined *{"!"}');
+leak(2, 0, sub { defined *{"["} }, 'defined *{"["}');
+leak(2, 0, sub { defined *{"-"} }, 'defined *{"-"}');
+sub def_bang { defined *{"!"}; delete $::{"!"} }
+def_bang;
+leak(2, 0, \&def_bang,'defined *{"!"} vivifying GV');
+leak(2, 0, sub { defined *{"["}; delete $::{"["} },
+    'defined *{"["} vivifying GV');
+sub def_neg { defined *{"-"}; delete $::{"-"} }
+def_neg;
+leak(2, 0, \&def_neg, 'defined *{"-"} vivifying GV');
+
 # Fatal warnings
 my $f = "use warnings FATAL =>";
 my $all = "$f 'all';";
@@ -78,7 +100,7 @@ eleak(2, 0, "$all /\$\\ /", '/$\ / with fatal warnings');
 eleak(2, 0, "$all s//\\1/", 's//\1/ with fatal warnings');
 eleak(2, 0, "$all qq|\\i|", 'qq|\i| with fatal warnings');
 eleak(2, 0, "$f 'digit'; qq|\\o{9}|", 'qq|\o{9}| with fatal warnings');
-eleak(2, 0, "$f 'misc'; sub foo{} sub foo:lvalue",
+eleak(3, 1, "$f 'misc'; sub foo{} sub foo:lvalue",
      'ignored :lvalue with fatal warnings');
 eleak(2, 0, "no warnings; use feature ':all'; $f 'misc';
              my sub foo{} sub foo:lvalue",
@@ -151,36 +173,43 @@ leak_expr(5, 0, q{"YYYYYa" =~ /.+?(a(.+?)|b)/ }, "trie leak");
     my $s;
     my @a;
     my @count = (0) x 4; # pre-allocate
+    # Using 0..3 with constant endpoints will cause an erroneous test fail-
+    # ure, as the SV in the op tree needs to be copied (to protect it),
+    # but copying happens *during iteration*, causing the number of SVs to
+    # go up.  Using a variable (0..$_3) will cause evaluation of the range
+    # operator at run time, not compile time, so the values will already be
+    # on the stack before grep starts.
+    my $_3 = 3;
 
-    grep qr/1/ && ($count[$_] = sv_count()) && 99,  0..3;
+    grep qr/1/ && ($count[$_] = sv_count()) && 99,  0..$_3;
     is(@count[3] - @count[0], 0, "void   grep expr:  no new tmps per iter");
-    grep { qr/1/ && ($count[$_] = sv_count()) && 99 }  0..3;
+    grep { qr/1/ && ($count[$_] = sv_count()) && 99 }  0..$_3;
     is(@count[3] - @count[0], 0, "void   grep block: no new tmps per iter");
 
-    $s = grep qr/1/ && ($count[$_] = sv_count()) && 99,  0..3;
+    $s = grep qr/1/ && ($count[$_] = sv_count()) && 99,  0..$_3;
     is(@count[3] - @count[0], 0, "scalar grep expr:  no new tmps per iter");
-    $s = grep { qr/1/ && ($count[$_] = sv_count()) && 99 }  0..3;
+    $s = grep { qr/1/ && ($count[$_] = sv_count()) && 99 }  0..$_3;
     is(@count[3] - @count[0], 0, "scalar grep block: no new tmps per iter");
 
-    @a = grep qr/1/ && ($count[$_] = sv_count()) && 99,  0..3;
+    @a = grep qr/1/ && ($count[$_] = sv_count()) && 99,  0..$_3;
     is(@count[3] - @count[0], 0, "list   grep expr:  no new tmps per iter");
-    @a = grep { qr/1/ && ($count[$_] = sv_count()) && 99 }  0..3;
+    @a = grep { qr/1/ && ($count[$_] = sv_count()) && 99 }  0..$_3;
     is(@count[3] - @count[0], 0, "list   grep block: no new tmps per iter");
 
 
-    map qr/1/ && ($count[$_] = sv_count()) && 99,  0..3;
+    map qr/1/ && ($count[$_] = sv_count()) && 99,  0..$_3;
     is(@count[3] - @count[0], 0, "void   map expr:  no new tmps per iter");
-    map { qr/1/ && ($count[$_] = sv_count()) && 99 }  0..3;
+    map { qr/1/ && ($count[$_] = sv_count()) && 99 }  0..$_3;
     is(@count[3] - @count[0], 0, "void   map block: no new tmps per iter");
 
-    $s = map qr/1/ && ($count[$_] = sv_count()) && 99,  0..3;
+    $s = map qr/1/ && ($count[$_] = sv_count()) && 99,  0..$_3;
     is(@count[3] - @count[0], 0, "scalar map expr:  no new tmps per iter");
-    $s = map { qr/1/ && ($count[$_] = sv_count()) && 99 }  0..3;
+    $s = map { qr/1/ && ($count[$_] = sv_count()) && 99 }  0..$_3;
     is(@count[3] - @count[0], 0, "scalar map block: no new tmps per iter");
 
-    @a = map qr/1/ && ($count[$_] = sv_count()) && 99,  0..3;
+    @a = map qr/1/ && ($count[$_] = sv_count()) && 99,  0..$_3;
     is(@count[3] - @count[0], 3, "list   map expr:  one new tmp per iter");
-    @a = map { qr/1/ && ($count[$_] = sv_count()) && 99 }  0..3;
+    @a = map { qr/1/ && ($count[$_] = sv_count()) && 99 }  0..$_3;
     is(@count[3] - @count[0], 3, "list   map block: one new tmp per iter");
 
 }
@@ -240,6 +269,7 @@ eleak(2,0,'/[pp]/');
 eleak(2,0,'/[[:ascii:]]/');
 eleak(2,0,'/[[.zog.]]/');
 eleak(2,0,'/[.zog.]/');
+eleak(2,0,'/|\W/', '/|\W/ [perl #123198]');
 eleak(2,0,'no warnings; /(?[])/');
 eleak(2,0,'no warnings; /(?[[a]+[b]])/');
 eleak(2,0,'no warnings; /(?[[a]-[b]])/');
@@ -279,6 +309,14 @@ leak(2, 0, sub { sub { local $_[0]; shift }->(1) },
     'local $_[0] on surreal @_, followed by shift');
 leak(2, 0, sub { sub { local $_[0]; \@_ }->(1) },
     'local $_[0] on surreal @_, followed by reification');
+
+sub recredef {}
+sub Recursive::Redefinition::DESTROY {
+    *recredef = sub { CORE::state $x } # state makes it cloneable
+}
+leak(2, 0, sub {
+    bless \&recredef, "Recursive::Redefinition"; eval "sub recredef{}"
+}, 'recursive sub redefinition');
 
 # Syntax errors
 eleak(2, 0, '"${<<END}"
@@ -450,3 +488,108 @@ leak(2, 0, sub {
 
 
 leak(2,0,sub{eval{require untohunothu}}, 'requiring nonexistent module');
+
+# [perl #120939]
+use constant const_av_xsub_leaked => 1 .. 3;
+leak(5, 0, sub { scalar &const_av_xsub_leaked }, "const_av_sub in scalar context");
+
+# check that OP_MULTIDEREF doesn't leak when compiled and then freed
+
+eleak(2, 0, <<'EOF', 'OP_MULTIDEREF');
+no strict;
+no warnings;
+my ($x, @a, %h, $r, $k, $i);
+$x = $a[0]{foo}{$k}{$i};
+$x = $h[0]{foo}{$k}{$i};
+$x = $r->[0]{foo}{$k}{$i};
+$x = $mdr::a[0]{foo}{$mdr::k}{$mdr::i};
+$x = $mdr::h[0]{foo}{$mdr::k}{$mdr::i};
+$x = $mdr::r->[0]{foo}{$mdr::k}{$mdr::i};
+EOF
+
+# un-localizing a tied (or generally magic) item could leak if the things
+# called by mg_set() died
+
+{
+    package MG_SET;
+
+    sub TIESCALAR {  bless [] }
+    sub FETCH { 1; }
+    my $do_die = 0;
+    sub STORE { die if $do_die; }
+
+    sub f {
+        local $s;
+        tie $s, 'MG_SET';
+        local $s;
+        $do_die = 1;
+    }
+    sub g {
+        eval { my $x = f(); };
+    }
+
+    ::leak(5,0, \&g, "MG_SET");
+}
+
+# check that @_ isn't leaked when dieing while goto'ing a new sub
+
+{
+    package my_goto;
+    sub TIEARRAY { bless [] }
+    sub FETCH { 1 }
+    sub STORE { die if $_[0][0]; $_[0][0] = 1 }
+
+    sub f { eval { g() } }
+    sub g {
+        my @a;
+        tie @a, "my_goto";
+        local $a[0];
+        goto &h;
+    }
+    sub h {}
+
+    ::leak(5, 0, \&f, q{goto shouldn't leak @_});
+}
+
+# [perl #128313] POSIX warnings shouldn't leak
+{
+    no warnings 'experimental';
+    use re 'strict';
+    my $a = 'aaa';
+    my $b = 'aa';
+    sub f { $a =~ /[^.]+$b/; }
+    ::leak(2, 0, \&f, q{use re 'strict' shouldn't leak warning strings});
+}
+
+# check that B::RHE->HASH does not leak
+{
+    package BHINT;
+    sub foo {}
+    require B;
+    my $op = B::svref_2object(\&foo)->ROOT->first;
+    sub lk { { my $d = $op->hints_hash->HASH } }
+    ::leak(3, 0, \&lk, q!B::RHE->HASH shoudln't leak!);
+}
+
+
+# dying while compiling a regex with codeblocks imported from an embedded
+# qr// could leak
+
+{
+    my sub codeblocks {
+        my $r = qr/(?{ 1; })/;
+        my $c = '(?{ 2; })';
+        eval { /$r$c/ }
+    }
+    ::leak(2, 0, \&codeblocks, q{leaking embedded qr codeblocks});
+}
+
+{
+    # Perl_reg_named_buff_fetch() leaks an AV when called with an RE
+    # with no named captures
+    sub named {
+        "x" =~ /x/;
+        re::regname("foo", 1);
+    }
+    ::leak(2, 0, \&named, "Perl_reg_named_buff_fetch() on no-name RE");
+}

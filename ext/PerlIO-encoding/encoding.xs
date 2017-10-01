@@ -6,7 +6,7 @@
 
 #define OUR_DEFAULT_FB	"Encode::PERLQQ"
 
-#if defined(USE_PERLIO) && !defined(USE_SFIO)
+#if defined(USE_PERLIO)
 
 /* Define an encoding "layer" in the perliol.h sense.
 
@@ -49,18 +49,27 @@ typedef struct {
 
 #define NEEDS_LINES	1
 
-SV *
+static const MGVTBL PerlIOEncode_tag = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
+static SV *
 PerlIOEncode_getarg(pTHX_ PerlIO * f, CLONE_PARAMS * param, int flags)
 {
     PerlIOEncode *e = PerlIOSelf(f, PerlIOEncode);
-    SV *sv = &PL_sv_undef;
-    PERL_UNUSED_ARG(param);
+    SV *sv;
     PERL_UNUSED_ARG(flags);
+    /* During cloning, return an undef token object so that _pushed() knows
+     * that it should not call methods and wait for _dup() to actually dup the
+     * encoding object. */
+    if (param) {
+	sv = newSV(0);
+	sv_magicext(sv, NULL, PERL_MAGIC_ext, &PerlIOEncode_tag, 0, 0);
+	return sv;
+    }
+    sv = &PL_sv_undef;
     if (e->enc) {
 	dSP;
 	/* Not 100% sure stack swap is right thing to do during dup ... */
 	PUSHSTACKi(PERLSI_MAGIC);
-	SPAGAIN;
 	ENTER;
 	SAVETMPS;
 	PUSHMARK(sp);
@@ -78,7 +87,7 @@ PerlIOEncode_getarg(pTHX_ PerlIO * f, CLONE_PARAMS * param, int flags)
     return sv;
 }
 
-IV
+static IV
 PerlIOEncode_pushed(pTHX_ PerlIO * f, const char *mode, SV * arg, PerlIO_funcs *tab)
 {
     PerlIOEncode *e = PerlIOSelf(f, PerlIOEncode);
@@ -86,9 +95,15 @@ PerlIOEncode_pushed(pTHX_ PerlIO * f, const char *mode, SV * arg, PerlIO_funcs *
     IV  code = PerlIOBuf_pushed(aTHX_ f, mode, Nullsv,tab);
     SV *result = Nullsv;
 
-    PUSHSTACKi(PERLSI_MAGIC);
-    SPAGAIN;
+    if (SvTYPE(arg) >= SVt_PVMG
+		&& mg_findext(arg, PERL_MAGIC_ext, &PerlIOEncode_tag)) {
+	e->enc = NULL;
+	e->chk = NULL;
+	e->inEncodeCall = 0;
+	return code;
+    }
 
+    PUSHSTACKi(PERLSI_MAGIC);
     ENTER;
     SAVETMPS;
 
@@ -157,7 +172,7 @@ PerlIOEncode_pushed(pTHX_ PerlIO * f, const char *mode, SV * arg, PerlIO_funcs *
     return code;
 }
 
-IV
+static IV
 PerlIOEncode_popped(pTHX_ PerlIO * f)
 {
     PerlIOEncode *e = PerlIOSelf(f, PerlIOEncode);
@@ -180,7 +195,7 @@ PerlIOEncode_popped(pTHX_ PerlIO * f)
     return 0;
 }
 
-STDCHAR *
+static STDCHAR *
 PerlIOEncode_get_base(pTHX_ PerlIO * f)
 {
     PerlIOEncode *e = PerlIOSelf(f, PerlIOEncode);
@@ -188,7 +203,7 @@ PerlIOEncode_get_base(pTHX_ PerlIO * f)
 	e->base.bufsiz = 1024;
     if (!e->bufsv) {
 	e->bufsv = newSV(e->base.bufsiz);
-	sv_setpvn(e->bufsv, "", 0);
+	SvPVCLEAR(e->bufsv);
     }
     e->base.buf = (STDCHAR *) SvPVX(e->bufsv);
     if (!e->base.ptr)
@@ -217,7 +232,7 @@ PerlIOEncode_get_base(pTHX_ PerlIO * f)
     return e->base.buf;
 }
 
-IV
+static IV
 PerlIOEncode_fill(pTHX_ PerlIO * f)
 {
     PerlIOEncode *e = PerlIOSelf(f, PerlIOEncode);
@@ -239,7 +254,6 @@ PerlIOEncode_fill(pTHX_ PerlIO * f)
 	}
     }
     PUSHSTACKi(PERLSI_MAGIC);
-    SPAGAIN;
     ENTER;
     SAVETMPS;
   retry:
@@ -389,7 +403,10 @@ PerlIOEncode_fill(pTHX_ PerlIO * f)
 	if (avail == 0)
 	    PerlIOBase(f)->flags |= PERLIO_F_EOF;
 	else
+	{
 	    PerlIOBase(f)->flags |= PERLIO_F_ERROR;
+	    Perl_PerlIO_save_errno(aTHX_ f);
+	}
     }
     FREETMPS;
     LEAVE;
@@ -397,7 +414,7 @@ PerlIOEncode_fill(pTHX_ PerlIO * f)
     return code;
 }
 
-IV
+static IV
 PerlIOEncode_flush(pTHX_ PerlIO * f)
 {
     PerlIOEncode *e = PerlIOSelf(f, PerlIOEncode);
@@ -413,7 +430,6 @@ PerlIOEncode_flush(pTHX_ PerlIO * f)
 	    if (e->inEncodeCall) return 0;
 	    /* Write case - encode the buffer and write() to layer below */
 	    PUSHSTACKi(PERLSI_MAGIC);
-	    SPAGAIN;
 	    ENTER;
 	    SAVETMPS;
 	    PUSHMARK(sp);
@@ -446,8 +462,8 @@ PerlIOEncode_flush(pTHX_ PerlIO * f)
 	    if (!SvPOKp(e->bufsv) || SvTHINKFIRST(e->bufsv))
 		(void)SvPV_force_nolen(e->bufsv);
 	    if ((STDCHAR *)SvPVX(e->bufsv) != e->base.buf) {
-		e->base.ptr = SvEND(e->bufsv);
-		e->base.end = SvPVX(e->bufsv) + (e->base.end-e->base.buf);
+		e->base.ptr = (STDCHAR *)SvEND(e->bufsv);
+		e->base.end = (STDCHAR *)SvPVX(e->bufsv) + (e->base.end-e->base.buf);
 		e->base.buf = (STDCHAR *)SvPVX(e->bufsv);
 	    }
 	    (void)PerlIOEncode_get_base(aTHX_ f);
@@ -476,7 +492,6 @@ PerlIOEncode_flush(pTHX_ PerlIO * f)
 		   re-encode and unread() to layer below
 		 */
 		PUSHSTACKi(PERLSI_MAGIC);
-		SPAGAIN;
 		ENTER;
 		SAVETMPS;
 		str = sv_newmortal();
@@ -516,7 +531,7 @@ PerlIOEncode_flush(pTHX_ PerlIO * f)
     return code;
 }
 
-IV
+static IV
 PerlIOEncode_close(pTHX_ PerlIO * f)
 {
     PerlIOEncode *e = PerlIOSelf(f, PerlIOEncode);
@@ -545,7 +560,7 @@ PerlIOEncode_close(pTHX_ PerlIO * f)
     return code;
 }
 
-Off_t
+static Off_t
 PerlIOEncode_tell(pTHX_ PerlIO * f)
 {
     PerlIOBuf *b = PerlIOSelf(f, PerlIOBuf);
@@ -559,7 +574,7 @@ PerlIOEncode_tell(pTHX_ PerlIO * f)
     return PerlIO_tell(PerlIONext(f));
 }
 
-PerlIO *
+static PerlIO *
 PerlIOEncode_dup(pTHX_ PerlIO * f, PerlIO * o,
 		 CLONE_PARAMS * params, int flags)
 {
@@ -569,11 +584,14 @@ PerlIOEncode_dup(pTHX_ PerlIO * f, PerlIO * o,
 	if (oe->enc) {
 	    fe->enc = PerlIO_sv_dup(aTHX_ oe->enc, params);
 	}
+	if (oe->chk) {
+	    fe->chk = PerlIO_sv_dup(aTHX_ oe->chk, params);
+	}
     }
     return f;
 }
 
-SSize_t
+static SSize_t
 PerlIOEncode_write(pTHX_ PerlIO *f, const void *vbuf, Size_t count)
 {
     PerlIOEncode *e = PerlIOSelf(f, PerlIOEncode);
@@ -605,7 +623,7 @@ PerlIOEncode_write(pTHX_ PerlIO *f, const void *vbuf, Size_t count)
     }
 }
 
-PerlIO_funcs PerlIO_encode = {
+static PERLIO_FUNCS_DECL(PerlIO_encode) = {
     sizeof(PerlIO_funcs),
     "encoding",
     sizeof(PerlIOEncode),
@@ -650,19 +668,14 @@ BOOT:
      * is invoked without prior "use Encode". -- dankogai
      */
     PUSHSTACKi(PERLSI_MAGIC);
-    SPAGAIN;
     if (!get_cvs(OUR_DEFAULT_FB, 0)) {
 #if 0
 	/* This would just be an irritant now loading works */
 	Perl_warner(aTHX_ packWARN(WARN_IO), ":encoding without 'use Encode'");
 #endif
-	ENTER;
-	/* Encode needs a lot of stack - it is likely to move ... */
-	PUTBACK;
 	/* The SV is magically freed by load_module */
-	load_module(PERL_LOADMOD_NOIMPORT, newSVpvn("Encode", 6), Nullsv, Nullsv);
-	SPAGAIN;
-	LEAVE;
+	load_module(PERL_LOADMOD_NOIMPORT, newSVpvs("Encode"), Nullsv, Nullsv);
+	assert(sp == PL_stack_sp);
     }
     PUSHMARK(sp);
     PUTBACK;
@@ -674,7 +687,7 @@ BOOT:
     sv_setsv(chk, POPs);
     PUTBACK;
 #ifdef PERLIO_LAYERS
-    PerlIO_define_layer(aTHX_ &PerlIO_encode);
+    PerlIO_define_layer(aTHX_ PERLIO_FUNCS_CAST(&PerlIO_encode));
 #endif
     POPSTACK;
 }

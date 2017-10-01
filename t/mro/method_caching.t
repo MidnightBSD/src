@@ -1,18 +1,18 @@
 #!./perl
 
+BEGIN {
+    unless (-d 'blib') {
+        chdir 't' if -d 't';
+    }
+    require './test.pl';
+    set_up_inc('../lib');
+}
+
 use strict;
 no strict 'refs'; # we do a lot of this
 use warnings;
 no warnings 'redefine'; # we do a lot of this
 no warnings 'prototype'; # we do a lot of this
-
-BEGIN {
-    unless (-d 'blib') {
-        chdir 't' if -d 't';
-        @INC = '../lib';
-    }
-    require './test.pl';
-}
 
 {
     package MCTest::Base;

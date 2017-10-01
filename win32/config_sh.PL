@@ -22,7 +22,7 @@ sub loadopts {
 	shift @ARGV;
 	my $optfile = shift @ARGV;
 	local (*OPTF);
-	open OPTF, $optfile or die "Can't open $optfile: $!\n";
+	open OPTF, '<', $optfile or die "Can't open $optfile: $!\n";
 	my @opts;
 	chomp(my $line = <OPTF>);
 	my @vars = split(/\t+~\t+/, $line);
@@ -59,7 +59,7 @@ $opt{known_extensions} = join(' ',FindExt::known_extensions()) || ' ';
 my $pl_h = '../patchlevel.h';
 
 if (-e $pl_h) {
-    open PL, "<$pl_h" or die "Can't open $pl_h: $!";
+    open PL, "<", $pl_h or die "Can't open $pl_h: $!";
     while (<PL>) {
 	if (/^#\s*define\s+(PERL_\w+)\s+([\d.]+)/) {
 	    $opt{$1} = $2;
@@ -93,8 +93,8 @@ else {
 
 if (exists $opt{cc}) {
     # cl version detection borrowed from Test::Smoke's configsmoke.pl
-    if ($opt{cc} eq 'cl') {
-        my $output = `cl --version 2>&1`;
+    if ($opt{cc} =~ /\b(?:cl|icl)/) { #MSVC can come as clarm.exe, icl=Intel C
+        my $output = `$opt{cc} --version 2>&1`;
         $opt{ccversion} = $output =~ /^.*Version\s+([\d.]+)/ ? $1 : '?';
     }
     elsif ($opt{cc} =~ /\bgcc\b/) {
@@ -114,14 +114,12 @@ $opt{usemymalloc} = 'y' if $opt{d_mymalloc} eq 'define';
 $opt{libpth} = mungepath($opt{libpth}) if exists $opt{libpth};
 $opt{incpath} = mungepath($opt{incpath}) if exists $opt{incpath};
 
-my($int64, $int64f);
-if ($opt{cc} eq 'cl') {
+my $int64;
+if ($opt{cc} =~ /\b(?:cl|icl)/) {
     $int64  = '__int64';
-    $int64f = 'I64';
 }
 elsif ($opt{cc} =~ /\bgcc\b/) {
     $int64  = 'long long';
-    $int64f = 'll';
 }
 
 # set large files options
@@ -153,24 +151,32 @@ else {
     $opt{ssizetype} = 'int';
     $opt{st_ino_size} = 4;
 }
+
+# set 64-bit-int options
 if ($opt{use64bitint} eq 'define') {
-    $opt{d_nv_preserves_uv} = 'undef';
-    $opt{ivdformat} = qq{"${int64f}d"};
+    if ($opt{uselongdouble} eq 'define') {
+        $opt{d_nv_preserves_uv} = 'define';
+        $opt{nv_preserves_uv_bits} = 64;
+    }
+    else {
+        $opt{d_nv_preserves_uv} = 'undef';
+        $opt{nv_preserves_uv_bits} = 53;
+    }
+    $opt{ivdformat} = qq{"I64d"};
     $opt{ivsize} = 8;
     $opt{ivtype} = $int64;
-    $opt{nv_preserves_uv_bits} = 53;
-    $opt{sPRIXU64} = qq{"${int64f}X"};
-    $opt{sPRId64} = qq{"${int64f}d"};
-    $opt{sPRIi64} = qq{"${int64f}i"};
-    $opt{sPRIo64} = qq{"${int64f}o"};
-    $opt{sPRIu64} = qq{"${int64f}u"};
-    $opt{sPRIx64} = qq{"${int64f}x"};
-    $opt{uvXUformat} = qq{"${int64f}X"};
-    $opt{uvoformat} = qq{"${int64f}o"};
+    $opt{sPRIXU64} = qq{"I64X"};
+    $opt{sPRId64} = qq{"I64d"};
+    $opt{sPRIi64} = qq{"I64i"};
+    $opt{sPRIo64} = qq{"I64o"};
+    $opt{sPRIu64} = qq{"I64u"};
+    $opt{sPRIx64} = qq{"I64x"};
+    $opt{uvXUformat} = qq{"I64X"};
+    $opt{uvoformat} = qq{"I64o"};
     $opt{uvsize} = 8;
     $opt{uvtype} = qq{unsigned $int64};
-    $opt{uvuformat} = qq{"${int64f}u"};
-    $opt{uvxformat} = qq{"${int64f}x"};
+    $opt{uvuformat} = qq{"I64u"};
+    $opt{uvxformat} = qq{"I64x"};
 }
 else {
     $opt{d_nv_preserves_uv} = 'define';
@@ -192,21 +198,122 @@ else {
     $opt{uvxformat} = '"lx"';
 }
 
+unless ($opt{cc} =~ /\bcl/) {
+    if ($opt{WIN64} eq 'define') {
+        $opt{longdblsize} = 16;
+        $opt{longdblinfbytes} = '0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0xff, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00';
+        $opt{longdblnanbytes} = '0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00';
+    }
+    else {
+        $opt{longdblsize} = 12;
+        $opt{longdblinfbytes} = '0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0xff, 0x7f, 0x00, 0x00';
+        $opt{longdblnanbytes} = '0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0xff, 0xff, 0x00, 0x00';
+    }
+}
+
+# set long double options
+if ($opt{uselongdouble} eq 'define') {
+    $opt{d_Gconvert} = 'sprintf((b),"%.*""Lg",(n),(x))';
+    $opt{d_PRIEUldbl} = 'define';
+    $opt{d_PRIFUldbl} = 'define';
+    $opt{d_PRIGUldbl} = 'define';
+    $opt{d_frexpl} = 'define';
+    $opt{d_isnanl} = 'define';
+    $opt{d_modfl} = 'define';
+    $opt{d_modflproto} = 'define';
+    $opt{d_sqrtl} = 'define';
+    $opt{d_strtold} = 'define';
+    $opt{d_PRIeldbl} = 'define';
+    $opt{d_PRIfldbl} = 'define';
+    $opt{d_PRIgldbl} = 'define';
+    $opt{d_SCNfldbl} = 'define';
+    $opt{nvsize} = $opt{longdblsize};
+    $opt{nvtype} = 'long double';
+    $opt{nv_overflows_integers_at} = '256.0*256.0*256.0*256.0*256.0*256.0*256.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0';
+    $opt{nvEUformat} = '"LE"';
+    $opt{nvFUformat} = '"LF"';
+    $opt{nvGUformat} = '"LG"';
+    $opt{nveformat} = '"Le"';
+    $opt{nvfformat} = '"Lf"';
+    $opt{nvgformat} = '"Lg"';
+    $opt{longdblkind} = 3;
+    $opt{longdblmantbits} = 64;
+}
+else {
+    $opt{d_Gconvert} = 'sprintf((b),"%.*g",(n),(x))';
+    $opt{d_PRIEUldbl} = 'undef';
+    $opt{d_PRIFUldbl} = 'undef';
+    $opt{d_PRIGUldbl} = 'undef';
+    $opt{d_frexpl} = 'undef';
+    $opt{d_isnanl} = 'undef';
+    $opt{d_modfl} = 'undef';
+    $opt{d_modflproto} = 'undef';
+    $opt{d_sqrtl} = 'undef';
+    $opt{d_strtold} = 'undef';
+    $opt{d_PRIeldbl} = 'undef';
+    $opt{d_PRIfldbl} = 'undef';
+    $opt{d_PRIgldbl} = 'undef';
+    $opt{d_SCNfldbl} = 'undef';
+    $opt{nvsize} = 8;
+    $opt{nvtype} = 'double';
+    $opt{nv_overflows_integers_at} = '256.0*256.0*256.0*256.0*256.0*256.0*2.0*2.0*2.0*2.0*2.0';
+    $opt{nvEUformat} = '"E"';
+    $opt{nvFUformat} = '"F"';
+    $opt{nvGUformat} = '"G"';
+    $opt{nveformat} = '"e"';
+    $opt{nvfformat} = '"f"';
+    $opt{nvgformat} = '"g"';
+}
+
 # change the s{GM|LOCAL}TIME_{min|max} for VS2005 (aka VC 8) and
 # VS2008 (aka VC 9) or higher (presuming that later versions will have
 # at least the range of that).
-if ($opt{cc} eq 'cl' and $opt{ccversion} =~ /^(\d+)/) {
+if ($opt{cc} =~ /\bcl/ and $opt{ccversion} =~ /^(\d+)/) {
     my $ccversion = $1;
     if ($ccversion >= 14) {
 	$opt{sGMTIME_max} = 32535291599;
 	$opt{sLOCALTIME_max} = 32535244799;
     }
+    if($ccversion < 13) { #VC6
+	$opt{ar} ='lib';
+    }
+    if ($ccversion >= 19) { # VC14
+	$opt{stdio_base} = 'PERLIO_FILE_base(fp)';
+	$opt{stdio_bufsiz} = '(PERLIO_FILE_cnt(fp) + PERLIO_FILE_ptr(fp) - PERLIO_FILE_base(fp))';
+	$opt{stdio_cnt} = 'PERLIO_FILE_cnt(fp)';
+	$opt{stdio_ptr} = 'PERLIO_FILE_ptr(fp)';
+	$opt{i_stdbool} = 'define';
+    }
+}
+#find out which MSVC this ICC is using
+elsif ($opt{cc} =~ /\bicl/) {
+    my $output = `cl --version 2>&1`;
+    my $num_ver = $output =~ /^.*Version\s+([\d.]+)/ ? $1 : '?';
+    if($num_ver =~ /^(\d+)/ && $1 >= 14) {
+	$opt{sGMTIME_max} = 32535291599;
+	$opt{sLOCALTIME_max} = 32535244799;
+    }
+    if ($num_ver =~ /^(\d+)/ && $1 >= 19) { # VC14
+	$opt{stdio_base} = 'PERLIO_FILE_base(fp)';
+	$opt{stdio_bufsiz} = '(PERLIO_FILE_cnt(fp) + PERLIO_FILE_ptr(fp) - PERLIO_FILE_base(fp))';
+	$opt{stdio_cnt} = 'PERLIO_FILE_cnt(fp)';
+	$opt{stdio_ptr} = 'PERLIO_FILE_ptr(fp)';
+	$opt{i_stdbool} = 'define';
+    }
+    $opt{ar} ='xilib';
 }
 
 if ($opt{useithreads} eq 'define' && $opt{ccflags} =~ /-DPERL_IMPLICIT_SYS\b/) {
     $opt{d_pseudofork} = 'define';
 }
 
+if ($opt{usecplusplus} eq 'define') {
+    $opt{d_cplusplus} = 'define';
+    $opt{extern_C} = 'extern "C"';
+}
+
+#if the fields above are defined, they override the defaults in the premade
+#config file
 while (<>) {
     s/~([\w_]+)~/exists $opt{$1} ? $opt{$1} : ''/eg;
     if (/^([\w_]+)=(.*)$/) {

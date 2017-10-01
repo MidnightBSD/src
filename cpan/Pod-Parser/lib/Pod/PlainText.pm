@@ -29,7 +29,7 @@ use vars qw(@ISA %ESCAPES $VERSION);
 # by Pod::Usage.
 @ISA = qw(Pod::Select);
 
-$VERSION = '2.06';
+$VERSION = '2.07';
 
 BEGIN {
    if ($] < 5.006) {
@@ -620,6 +620,10 @@ Pod::PlainText - Convert POD data to formatted ASCII text
     $parser->parse_from_file ('file.pod', 'file.txt');
 
 =head1 DESCRIPTION
+
+B<NOTE: This module is considered legacy; modern Perl releases (5.18 and
+higher) are going to remove Pod-Parser from core and use L<Pod-Simple>
+for all things POD.>
 
 Pod::PlainText is a module that can convert documentation in the POD format (the
 preferred language for documenting Perl) into formatted ASCII.  It uses no

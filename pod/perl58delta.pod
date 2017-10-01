@@ -318,7 +318,7 @@ tainted data and in some future release they will produce fatal errors.
 
 The existing behaviour when localising tied arrays and hashes is wrong,
 and will be changed in a future release, so do not rely on the existing
-behaviour. See L<"Localising Tied Arrays and Hashes Is Broken">.
+behaviour. See L</"Localising Tied Arrays and Hashes Is Broken">.
 
 =back
 
@@ -1407,7 +1407,7 @@ use/require work.
 
 =item *
 
-In SDBM_File on dosish platforms, some keys went missing because of
+In SDBM_File on DOSish platforms, some keys went missing because of
 lack of support for files with "holes".  A workaround for the problem
 has been added.
 

@@ -16,7 +16,6 @@ local $Data::Dumper::Sortkeys = 1;
 
 use Data::Dumper;
 use Config;
-my $Is_ebcdic = defined($Config{'ebcdic'}) && $Config{'ebcdic'} eq 'define';
 
 $Data::Dumper::Pad = "#";
 my $TMAX;
@@ -24,50 +23,82 @@ my $XS;
 my $TNUM = 0;
 my $WANT = '';
 
+sub convert_to_native($) {
+    my $input = shift;
+
+    # unicode_to_native() not available before this release; hence won't work
+    # on EBCDIC platforms for earlier.
+    return $input if $] lt 5.007_003;
+
+    my @output;
+
+    # The input should always be one of the following constructs
+    while ($input =~ m/ ( \\ [0-7]+ )
+                      | ( \\ x \{ [[:xdigit:]]+ } )
+                      | ( \\ . )
+                      | ( . ) /gx)
+    {
+        #print STDERR __LINE__, ": ", $&, "\n";
+        my $index;
+        my $replacement;
+        if (defined $4) {       # Literal
+            $index = ord $4;
+            $replacement = $4;
+        }
+        elsif (defined $3) {    # backslash escape
+            $index = ord eval "\"$3\"";
+            $replacement = $3;
+        }
+        elsif (defined $2) {    # Hex
+            $index = utf8::unicode_to_native(ord eval "\"$2\"");
+
+            # But low hex numbers are always in octal.  These are all
+            # controls.
+            my $format = ($index < ord(" "))
+                         ? "\\%o"
+                         : "\\x{%x}";
+            $replacement = sprintf($format, $index);
+        }
+        elsif (defined $1) {    # Octal
+            $index = utf8::unicode_to_native(ord eval "\"$1\"");
+            $replacement = sprintf("\\%o", $index);
+        }
+        else {
+            die "Unexpected match in convert_to_native()";
+        }
+
+        if (defined $output[$index]) {
+            print STDERR "ordinal $index already has '$output[$index]'; skipping '$replacement'\n";
+            next;
+        }
+
+        $output[$index] = $replacement;
+    }
+
+    return join "", grep { defined } @output;
+}
+
 sub TEST {
   my $string = shift;
   my $name = shift;
   my $t = eval $string;
   ++$TNUM;
   $t =~ s/([A-Z]+)\(0x[0-9a-f]+\)/$1(0xdeadbeef)/g
-      if ($WANT =~ /deadbeef/);
-  if ($Is_ebcdic) {
-      # these data need massaging with non ascii character sets
-      # because of hashing order differences
-      $WANT = join("\n",sort(split(/\n/,$WANT)));
-      $WANT =~ s/\,$//mg;
-      $t    = join("\n",sort(split(/\n/,$t)));
-      $t    =~ s/\,$//mg;
-  }
+    if ($WANT =~ /deadbeef/);
   $name = $name ? " - $name" : '';
   print( ($t eq $WANT and not $@) ? "ok $TNUM$name\n"
-	: "not ok $TNUM$name\n--Expected--\n$WANT\n--Got--\n$@$t\n");
+    : "not ok $TNUM$name\n--Expected--\n$WANT\n--Got--\n$@$t\n");
 
   ++$TNUM;
-  if ($Is_ebcdic) { # EBCDIC.
-      if ($TNUM == 311 || $TNUM == 314) {
-	  eval $string;
-      } else {
-	  eval $t;
-      }
-  } else {
-      eval "$t";
-  }
-  print $@ ? "not ok $TNUM\n# \$@ says: $@\n" : "ok $TNUM\n";
+  eval "$t";
+  print $@ ? "not ok $TNUM\n# \$@ says: $@\n" : "ok $TNUM -   no eval error\n";
 
   $t = eval $string;
   ++$TNUM;
   $t =~ s/([A-Z]+)\(0x[0-9a-f]+\)/$1(0xdeadbeef)/g
-      if ($WANT =~ /deadbeef/);
-  if ($Is_ebcdic) {
-      # here too there are hashing order differences
-      $WANT = join("\n",sort(split(/\n/,$WANT)));
-      $WANT =~ s/\,$//mg;
-      $t    = join("\n",sort(split(/\n/,$t)));
-      $t    =~ s/\,$//mg;
-  }
-  print( ($t eq $WANT and not $@) ? "ok $TNUM\n"
-	: "not ok $TNUM\n--Expected--\n$WANT\n--Got--\n$@$t\n");
+    if ($WANT =~ /deadbeef/);
+  print( ($t eq $WANT and not $@) ? "ok $TNUM -   works a 2nd time after intervening eval\n"
+    : "not ok $TNUM\n--Expected--\n$WANT\n--Got--\n$@$t\n");
 }
 
 sub SKIP_TEST {
@@ -77,17 +108,20 @@ sub SKIP_TEST {
   ++$TNUM; print "ok $TNUM # skip $reason\n";
 }
 
+$TMAX = 450;
+
 # Force Data::Dumper::Dump to use perl. We test Dumpxs explicitly by calling
 # it direct. Out here it lets us knobble the next if to test that the perl
 # only tests do work (and count correctly)
 $Data::Dumper::Useperl = 1;
 if (defined &Data::Dumper::Dumpxs) {
   print "### XS extension loaded, will run XS tests\n";
-  $TMAX = 402; $XS = 1;
+  $XS = 1;
 }
 else {
   print "### XS extensions not loaded, will NOT run XS tests\n";
-  $TMAX = 201; $XS = 0;
+  $TMAX /= 2;
+  $XS = 0;
 }
 
 print "1..$TMAX\n";
@@ -104,7 +138,7 @@ $b->{a} = $a;
 $b->{b} = $a->[1];
 $b->{c} = $a->[2];
 
-############# 1
+#############
 ##
 $WANT = <<'EOT';
 #$a = [
@@ -122,16 +156,23 @@ $WANT = <<'EOT';
 #$6 = $a->[1]{'c'};
 EOT
 
-TEST q(Data::Dumper->Dump([$a,$b,$c], [qw(a b), 6]));
-TEST q(Data::Dumper->Dumpxs([$a,$b,$c], [qw(a b), 6])) if $XS;
+TEST (q(Data::Dumper->Dump([$a,$b,$c], [qw(a b), 6])),
+    'basic test with names: Dump()');
+TEST (q(Data::Dumper->Dumpxs([$a,$b,$c], [qw(a b), 6])),
+    'basic test with names: Dumpxs()')
+    if $XS;
 
 SCOPE: {
-  local $Data::Dumper::Sparseseen = 1;
-  TEST q(Data::Dumper->Dump([$a,$b,$c], [qw(a b), 6]));
-  TEST q(Data::Dumper->Dumpxs([$a,$b,$c], [qw(a b), 6])) if $XS;
+    local $Data::Dumper::Sparseseen = 1;
+    TEST (q(Data::Dumper->Dump([$a,$b,$c], [qw(a b), 6])),
+        'Sparseseen with names: Dump()');
+    TEST (q(Data::Dumper->Dumpxs([$a,$b,$c], [qw(a b), 6])),
+        'Sparseseen with names: Dumpxs()')
+        if $XS;
 }
 
-############# 7
+
+#############
 ##
 $WANT = <<'EOT';
 #@a = (
@@ -152,16 +193,22 @@ $WANT = <<'EOT';
 EOT
 
 $Data::Dumper::Purity = 1;         # fill in the holes for eval
-TEST q(Data::Dumper->Dump([$a, $b], [qw(*a b)])); # print as @a
-TEST q(Data::Dumper->Dumpxs([$a, $b], [qw(*a b)])) if $XS;
+TEST (q(Data::Dumper->Dump([$a, $b], [qw(*a b)])),
+    'Purity: basic test with dereferenced array: Dump()'); # print as @a
+TEST (q(Data::Dumper->Dumpxs([$a, $b], [qw(*a b)])),
+    'Purity: basic test with dereferenced array: Dumpxs()')
+    if $XS;
 
 SCOPE: {
   local $Data::Dumper::Sparseseen = 1;
-  TEST q(Data::Dumper->Dump([$a, $b], [qw(*a b)])); # print as @a
-  TEST q(Data::Dumper->Dumpxs([$a, $b], [qw(*a b)])) if $XS;
+  TEST (q(Data::Dumper->Dump([$a, $b], [qw(*a b)])),
+    'Purity: Sparseseen with dereferenced array: Dump()'); # print as @a
+  TEST (q(Data::Dumper->Dumpxs([$a, $b], [qw(*a b)])),
+    'Purity: Sparseseen with dereferenced array: Dumpxs()')
+    if $XS;
 }
 
-############# 13
+#############
 ##
 $WANT = <<'EOT';
 #%b = (
@@ -181,10 +228,13 @@ $WANT = <<'EOT';
 #$a = $b{'a'};
 EOT
 
-TEST q(Data::Dumper->Dump([$b, $a], [qw(*b a)])); # print as %b
-TEST q(Data::Dumper->Dumpxs([$b, $a], [qw(*b a)])) if $XS;
+TEST (q(Data::Dumper->Dump([$b, $a], [qw(*b a)])),
+    'basic test with dereferenced hash: Dump()'); # print as %b
+TEST (q(Data::Dumper->Dumpxs([$b, $a], [qw(*b a)])),
+    'basic test with dereferenced hash: Dumpxs()')
+    if $XS;
 
-############# 19
+#############
 ##
 $WANT = <<'EOT';
 #$a = [
@@ -204,21 +254,23 @@ $WANT = <<'EOT';
 EOT
 
 $Data::Dumper::Indent = 1;
-TEST q(
+TEST (q(
        $d = Data::Dumper->new([$a,$b], [qw(a b)]);
        $d->Seen({'*c' => $c});
        $d->Dump;
-      );
+      ),
+      'Indent: Seen: Dump()');
 if ($XS) {
-  TEST q(
+  TEST (q(
 	 $d = Data::Dumper->new([$a,$b], [qw(a b)]);
 	 $d->Seen({'*c' => $c});
 	 $d->Dumpxs;
-	);
+     ),
+      'Indent: Seen: Dumpxs()');
 }
 
 
-############# 25
+#############
 ##
 $WANT = <<'EOT';
 #$a = [
@@ -241,11 +293,14 @@ EOT
 
 $d->Indent(3);
 $d->Purity(0)->Quotekeys(0);
-TEST q( $d->Reset; $d->Dump );
+TEST (q( $d->Reset; $d->Dump ),
+    'Indent(3): Purity(0)->Quotekeys(0): Dump()');
 
-TEST q( $d->Reset; $d->Dumpxs ) if $XS;
+TEST (q( $d->Reset; $d->Dumpxs ),
+    'Indent(3): Purity(0)->Quotekeys(0): Dumpxs()')
+    if $XS;
 
-############# 31
+#############
 ##
 $WANT = <<'EOT';
 #$VAR1 = [
@@ -264,10 +319,10 @@ $WANT = <<'EOT';
 #$VAR1->[2] = $VAR1->[1]{'c'};
 EOT
 
-TEST q(Dumper($a));
-TEST q(Data::Dumper::DumperX($a)) if $XS;
+TEST (q(Dumper($a)), 'Dumper');
+TEST (q(Data::Dumper::DumperX($a)), 'DumperX') if $XS;
 
-############# 37
+#############
 ##
 $WANT = <<'EOT';
 #[
@@ -287,12 +342,15 @@ EOT
   local $Data::Dumper::Purity = 0;
   local $Data::Dumper::Quotekeys = 0;
   local $Data::Dumper::Terse = 1;
-  TEST q(Dumper($a));
-  TEST q(Data::Dumper::DumperX($a)) if $XS;
+  TEST (q(Dumper($a)),
+    'Purity 0: Quotekeys 0: Terse 1: Dumper');
+  TEST (q(Data::Dumper::DumperX($a)),
+    'Purity 0: Quotekeys 0: Terse 1: DumperX')
+    if $XS;
 }
 
 
-############# 43
+#############
 ##
 $WANT = <<'EOT';
 #$VAR1 = {
@@ -306,20 +364,9 @@ $foo = { "abc\000\'\efg" => "mno\000",
        };
 {
   local $Data::Dumper::Useqq = 1;
-  TEST q(Dumper($foo));
+  TEST (q(Dumper($foo)), 'Useqq: Dumper');
+  TEST (q(Data::Dumper::DumperX($foo)), 'Useqq: DumperX') if $XS;
 }
-
-  $WANT = <<"EOT";
-#\$VAR1 = {
-#  'abc\0\\'\efg' => 'mno\0',
-#  'reftest' => \\\\1
-#};
-EOT
-
-  {
-    local $Data::Dumper::Useqq = 1;
-    TEST q(Data::Dumper::DumperX($foo)) if $XS;   # cheat
-  }
 
 
 
@@ -335,7 +382,7 @@ EOT
   $foo{d} = \%foo;
   $foo[2] = \%foo;
 
-############# 49
+#############
 ##
   $WANT = <<'EOT';
 #$foo = \*::foo;
@@ -364,10 +411,13 @@ EOT
 
   $Data::Dumper::Purity = 1;
   $Data::Dumper::Indent = 3;
-  TEST q(Data::Dumper->Dump([\\*foo, \\@foo, \\%foo], ['*foo', '*bar', '*baz']));
-  TEST q(Data::Dumper->Dumpxs([\\*foo, \\@foo, \\%foo], ['*foo', '*bar', '*baz'])) if $XS;
+  TEST (q(Data::Dumper->Dump([\\*foo, \\@foo, \\%foo], ['*foo', '*bar', '*baz'])),
+    'Purity 1: Indent 3: Dump()');
+  TEST (q(Data::Dumper->Dumpxs([\\*foo, \\@foo, \\%foo], ['*foo', '*bar', '*baz'])),
+    'Purity 1: Indent 3: Dumpxs()')
+    if $XS;
 
-############# 55
+#############
 ##
   $WANT = <<'EOT';
 #$foo = \*::foo;
@@ -392,10 +442,13 @@ EOT
 EOT
 
   $Data::Dumper::Indent = 1;
-  TEST q(Data::Dumper->Dump([\\*foo, \\@foo, \\%foo], ['foo', 'bar', 'baz']));
-  TEST q(Data::Dumper->Dumpxs([\\*foo, \\@foo, \\%foo], ['foo', 'bar', 'baz'])) if $XS;
+  TEST (q(Data::Dumper->Dump([\\*foo, \\@foo, \\%foo], ['foo', 'bar', 'baz'])),
+    'Purity 1: Indent 1: Dump()');
+  TEST (q(Data::Dumper->Dumpxs([\\*foo, \\@foo, \\%foo], ['foo', 'bar', 'baz'])),
+    'Purity 1: Indent 1: Dumpxs()')
+    if $XS;
 
-############# 61
+#############
 ##
   $WANT = <<'EOT';
 #@bar = (
@@ -419,10 +472,13 @@ EOT
 #$foo = $bar[1];
 EOT
 
-  TEST q(Data::Dumper->Dump([\\@foo, \\%foo, \\*foo], ['*bar', '*baz', '*foo']));
-  TEST q(Data::Dumper->Dumpxs([\\@foo, \\%foo, \\*foo], ['*bar', '*baz', '*foo'])) if $XS;
+  TEST (q(Data::Dumper->Dump([\\@foo, \\%foo, \\*foo], ['*bar', '*baz', '*foo'])),
+    'array|hash|glob dereferenced: Dump()');
+  TEST (q(Data::Dumper->Dumpxs([\\@foo, \\%foo, \\*foo], ['*bar', '*baz', '*foo'])),
+    'array|hash|glob dereferenced: Dumpxs()')
+    if $XS;
 
-############# 67
+#############
 ##
   $WANT = <<'EOT';
 #$bar = [
@@ -446,10 +502,13 @@ EOT
 #$foo = $bar->[1];
 EOT
 
-  TEST q(Data::Dumper->Dump([\\@foo, \\%foo, \\*foo], ['bar', 'baz', 'foo']));
-  TEST q(Data::Dumper->Dumpxs([\\@foo, \\%foo, \\*foo], ['bar', 'baz', 'foo'])) if $XS;
+  TEST (q(Data::Dumper->Dump([\\@foo, \\%foo, \\*foo], ['bar', 'baz', 'foo'])),
+    'array|hash|glob: not dereferenced: Dump()');
+  TEST (q(Data::Dumper->Dumpxs([\\@foo, \\%foo, \\*foo], ['bar', 'baz', 'foo'])),
+    'array|hash|glob: not dereferenced: Dumpxs()')
+    if $XS;
 
-############# 73
+#############
 ##
   $WANT = <<'EOT';
 #$foo = \*::foo;
@@ -468,10 +527,13 @@ EOT
 
   $Data::Dumper::Purity = 0;
   $Data::Dumper::Quotekeys = 0;
-  TEST q(Data::Dumper->Dump([\\*foo, \\@foo, \\%foo], ['*foo', '*bar', '*baz']));
-  TEST q(Data::Dumper->Dumpxs([\\*foo, \\@foo, \\%foo], ['*foo', '*bar', '*baz'])) if $XS;
+  TEST (q(Data::Dumper->Dump([\\*foo, \\@foo, \\%foo], ['*foo', '*bar', '*baz'])),
+    'Purity 0: Quotekeys 0: dereferenced: Dump()');
+  TEST (q(Data::Dumper->Dumpxs([\\*foo, \\@foo, \\%foo], ['*foo', '*bar', '*baz'])),
+    'Purity 0: Quotekeys 0: dereferenced: Dumpxs')
+    if $XS;
 
-############# 79
+#############
 ##
   $WANT = <<'EOT';
 #$foo = \*::foo;
@@ -488,8 +550,11 @@ EOT
 #$baz = $bar->[2];
 EOT
 
-  TEST q(Data::Dumper->Dump([\\*foo, \\@foo, \\%foo], ['foo', 'bar', 'baz']));
-  TEST q(Data::Dumper->Dumpxs([\\*foo, \\@foo, \\%foo], ['foo', 'bar', 'baz'])) if $XS;
+  TEST (q(Data::Dumper->Dump([\\*foo, \\@foo, \\%foo], ['foo', 'bar', 'baz'])),
+    'Purity 0: Quotekeys 0: not dereferenced: Dump()');
+  TEST (q(Data::Dumper->Dumpxs([\\*foo, \\@foo, \\%foo], ['foo', 'bar', 'baz'])),
+    'Purity 0: Quotekeys 0: not dereferenced: Dumpxs()')
+    if $XS;
 
 }
 
@@ -506,7 +571,7 @@ EOT
   $mutts = \%kennel;
   $mutts = $mutts;         # avoid warning
 
-############# 85
+#############
 ##
   $WANT = <<'EOT';
 #%kennels = (
@@ -521,20 +586,22 @@ EOT
 #%mutts = %kennels;
 EOT
 
-  TEST q(
+  TEST (q(
 	 $d = Data::Dumper->new([\\%kennel, \\@dogs, $mutts],
 				[qw(*kennels *dogs *mutts)] );
 	 $d->Dump;
-	);
+	),
+    'constructor: hash|array|scalar: Dump()');
   if ($XS) {
-    TEST q(
+    TEST (q(
 	   $d = Data::Dumper->new([\\%kennel, \\@dogs, $mutts],
 				  [qw(*kennels *dogs *mutts)] );
 	   $d->Dumpxs;
-	  );
+	  ),
+      'constructor: hash|array|scalar: Dumpxs()');
   }
 
-############# 91
+#############
 ##
   $WANT = <<'EOT';
 #%kennels = %kennels;
@@ -542,10 +609,10 @@ EOT
 #%mutts = %kennels;
 EOT
 
-  TEST q($d->Dump);
-  TEST q($d->Dumpxs) if $XS;
+  TEST q($d->Dump), 'object call: Dump';
+  TEST q($d->Dumpxs), 'object call: Dumpxs' if $XS;
 
-############# 97
+#############
 ##
   $WANT = <<'EOT';
 #%kennels = (
@@ -560,13 +627,12 @@ EOT
 #%mutts = %kennels;
 EOT
 
-
-  TEST q($d->Reset; $d->Dump);
+  TEST q($d->Reset; $d->Dump), 'Reset and Dump separate calls';
   if ($XS) {
-    TEST q($d->Reset; $d->Dumpxs);
+    TEST (q($d->Reset; $d->Dumpxs), 'Reset and Dumpxs separate calls');
   }
 
-############# 103
+#############
 ##
   $WANT = <<'EOT';
 #@dogs = (
@@ -581,27 +647,29 @@ EOT
 #%mutts = %{$dogs[2]};
 EOT
 
-  TEST q(
+  TEST (q(
 	 $d = Data::Dumper->new([\\@dogs, \\%kennel, $mutts],
 				[qw(*dogs *kennels *mutts)] );
 	 $d->Dump;
-	);
+	),
+    'constructor: array|hash|scalar: Dump()');
   if ($XS) {
-    TEST q(
+    TEST (q(
 	   $d = Data::Dumper->new([\\@dogs, \\%kennel, $mutts],
 				  [qw(*dogs *kennels *mutts)] );
 	   $d->Dumpxs;
-	  );
+	  ),
+	'constructor: array|hash|scalar: Dumpxs()');
   }
 
-############# 109
+#############
 ##
-  TEST q($d->Reset->Dump);
+  TEST q($d->Reset->Dump), 'Reset Dump chained';
   if ($XS) {
-    TEST q($d->Reset->Dumpxs);
+    TEST q($d->Reset->Dumpxs), 'Reset Dumpxs chained';
   }
 
-############# 115
+#############
 ##
   $WANT = <<'EOT';
 #@dogs = (
@@ -618,12 +686,18 @@ EOT
 #);
 EOT
 
-  TEST q(
+  TEST (q(
 	 $d = Data::Dumper->new( [\@dogs, \%kennel], [qw(*dogs *kennels)] );
 	 $d->Deepcopy(1)->Dump;
-	);
+	),
+    'Deepcopy(1): Dump');
   if ($XS) {
-    TEST q($d->Reset->Dumpxs);
+#    TEST 'q($d->Reset->Dumpxs);
+    TEST (q(
+	    $d = Data::Dumper->new( [\@dogs, \%kennel], [qw(*dogs *kennels)] );
+	    $d->Deepcopy(1)->Dumpxs;
+    ),
+    'Deepcopy(1): Dumpxs');
   }
 
 }
@@ -633,7 +707,7 @@ EOT
 sub z { print "foo\n" }
 $c = [ \&z ];
 
-############# 121
+#############
 ##
   $WANT = <<'EOT';
 #$a = $b;
@@ -642,11 +716,13 @@ $c = [ \&z ];
 #];
 EOT
 
-TEST q(Data::Dumper->new([\&z,$c],['a','c'])->Seen({'b' => \&z})->Dump;);
-TEST q(Data::Dumper->new([\&z,$c],['a','c'])->Seen({'b' => \&z})->Dumpxs;)
+TEST (q(Data::Dumper->new([\&z,$c],['a','c'])->Seen({'b' => \&z})->Dump;),
+    'Seen: scalar: Dump');
+TEST (q(Data::Dumper->new([\&z,$c],['a','c'])->Seen({'b' => \&z})->Dumpxs;),
+    'Seen: scalar: Dumpxs')
 	if $XS;
 
-############# 127
+#############
 ##
   $WANT = <<'EOT';
 #$a = \&b;
@@ -655,11 +731,13 @@ TEST q(Data::Dumper->new([\&z,$c],['a','c'])->Seen({'b' => \&z})->Dumpxs;)
 #];
 EOT
 
-TEST q(Data::Dumper->new([\&z,$c],['a','c'])->Seen({'*b' => \&z})->Dump;);
-TEST q(Data::Dumper->new([\&z,$c],['a','c'])->Seen({'*b' => \&z})->Dumpxs;)
+TEST (q(Data::Dumper->new([\&z,$c],['a','c'])->Seen({'*b' => \&z})->Dump;),
+    'Seen: glob: Dump');
+TEST (q(Data::Dumper->new([\&z,$c],['a','c'])->Seen({'*b' => \&z})->Dumpxs;),
+    'Seen: glob: Dumpxs')
 	if $XS;
 
-############# 133
+#############
 ##
   $WANT = <<'EOT';
 #*a = \&b;
@@ -668,8 +746,11 @@ TEST q(Data::Dumper->new([\&z,$c],['a','c'])->Seen({'*b' => \&z})->Dumpxs;)
 #);
 EOT
 
-TEST q(Data::Dumper->new([\&z,$c],['*a','*c'])->Seen({'*b' => \&z})->Dump;);
-TEST q(Data::Dumper->new([\&z,$c],['*a','*c'])->Seen({'*b' => \&z})->Dumpxs;)
+TEST (q(Data::Dumper->new([\&z,$c],['*a','*c'])->Seen({'*b' => \&z})->Dump;),
+    'Seen: glob: dereference: Dump');
+TEST (q(Data::Dumper->new([\&z,$c],['*a','*c'])->Seen({'*b' =>
+\&z})->Dumpxs;),
+    'Seen: glob: derference: Dumpxs')
 	if $XS;
 
 }
@@ -678,7 +759,7 @@ TEST q(Data::Dumper->new([\&z,$c],['*a','*c'])->Seen({'*b' => \&z})->Dumpxs;)
   $a = [];
   $a->[1] = \$a->[0];
 
-############# 139
+#############
 ##
   $WANT = <<'EOT';
 #@a = (
@@ -688,8 +769,10 @@ TEST q(Data::Dumper->new([\&z,$c],['*a','*c'])->Seen({'*b' => \&z})->Dumpxs;)
 #$a[1] = \$a[0];
 EOT
 
-TEST q(Data::Dumper->new([$a],['*a'])->Purity(1)->Dump;);
-TEST q(Data::Dumper->new([$a],['*a'])->Purity(1)->Dumpxs;)
+TEST (q(Data::Dumper->new([$a],['*a'])->Purity(1)->Dump;),
+    'Purity(1): dereference: Dump');
+TEST (q(Data::Dumper->new([$a],['*a'])->Purity(1)->Dumpxs;),
+    'Purity(1): dereference: Dumpxs')
 	if $XS;
 }
 
@@ -697,15 +780,17 @@ TEST q(Data::Dumper->new([$a],['*a'])->Purity(1)->Dumpxs;)
   $a = \\\\\'foo';
   $b = $$$a;
 
-############# 145
+#############
 ##
   $WANT = <<'EOT';
 #$a = \\\\\'foo';
 #$b = ${${$a}};
 EOT
 
-TEST q(Data::Dumper->new([$a,$b],['a','b'])->Purity(1)->Dump;);
-TEST q(Data::Dumper->new([$a,$b],['a','b'])->Purity(1)->Dumpxs;)
+TEST (q(Data::Dumper->new([$a,$b],['a','b'])->Purity(1)->Dump;),
+    'Purity(1): not dereferenced: Dump');
+TEST (q(Data::Dumper->new([$a,$b],['a','b'])->Purity(1)->Dumpxs;),
+    'Purity(1): not dereferenced: Dumpxs')
 	if $XS;
 }
 
@@ -713,7 +798,7 @@ TEST q(Data::Dumper->new([$a,$b],['a','b'])->Purity(1)->Dumpxs;)
   $a = [{ a => \$b }, { b => undef }];
   $b = [{ c => \$b }, { d => \$a }];
 
-############# 151
+#############
 ##
   $WANT = <<'EOT';
 #$a = [
@@ -736,8 +821,10 @@ TEST q(Data::Dumper->new([$a,$b],['a','b'])->Purity(1)->Dumpxs;)
 #$b = ${$a->[0]{a}};
 EOT
 
-TEST q(Data::Dumper->new([$a,$b],['a','b'])->Purity(1)->Dump;);
-TEST q(Data::Dumper->new([$a,$b],['a','b'])->Purity(1)->Dumpxs;)
+TEST (q(Data::Dumper->new([$a,$b],['a','b'])->Purity(1)->Dump;),
+    'Purity(1): Dump again');
+TEST (q(Data::Dumper->new([$a,$b],['a','b'])->Purity(1)->Dumpxs;),
+    'Purity(1); Dumpxs again')
 	if $XS;
 }
 
@@ -746,7 +833,7 @@ TEST q(Data::Dumper->new([$a,$b],['a','b'])->Purity(1)->Dumpxs;)
   $b = $a->[0][0];
   $c = $${$b->[0][0]};
 
-############# 157
+#############
 ##
   $WANT = <<'EOT';
 #$a = [
@@ -762,8 +849,10 @@ TEST q(Data::Dumper->new([$a,$b],['a','b'])->Purity(1)->Dumpxs;)
 #$c = ${${$a->[0][0][0][0]}};
 EOT
 
-TEST q(Data::Dumper->new([$a,$b,$c],['a','b','c'])->Purity(1)->Dump;);
-TEST q(Data::Dumper->new([$a,$b,$c],['a','b','c'])->Purity(1)->Dumpxs;)
+TEST (q(Data::Dumper->new([$a,$b,$c],['a','b','c'])->Purity(1)->Dump;),
+    'Purity(1): Dump: 3 elements');
+TEST (q(Data::Dumper->new([$a,$b,$c],['a','b','c'])->Purity(1)->Dumpxs;),
+    'Purity(1): Dumpxs: 3 elements')
 	if $XS;
 }
 
@@ -775,7 +864,7 @@ TEST q(Data::Dumper->new([$a,$b,$c],['a','b','c'])->Purity(1)->Dumpxs;)
     $b = { 'c' => $c };
     $a = { 'b' => $b };
 
-############# 163
+#############
 ##
   $WANT = <<'EOT';
 #$a = {
@@ -791,11 +880,13 @@ TEST q(Data::Dumper->new([$a,$b,$c],['a','b','c'])->Purity(1)->Dumpxs;)
 #$c = $a->{b}{c};
 EOT
 
-TEST q(Data::Dumper->new([$a,$b,$c],['a','b','c'])->Maxdepth(4)->Dump;);
-TEST q(Data::Dumper->new([$a,$b,$c],['a','b','c'])->Maxdepth(4)->Dumpxs;)
+TEST (q(Data::Dumper->new([$a,$b,$c],['a','b','c'])->Maxdepth(4)->Dump;),
+    'Maxdepth(4): Dump()');
+TEST (q(Data::Dumper->new([$a,$b,$c],['a','b','c'])->Maxdepth(4)->Dumpxs;),
+    'Maxdepth(4): Dumpxs()')
 	if $XS;
 
-############# 169
+#############
 ##
   $WANT = <<'EOT';
 #$a = {
@@ -807,8 +898,10 @@ TEST q(Data::Dumper->new([$a,$b,$c],['a','b','c'])->Maxdepth(4)->Dumpxs;)
 #];
 EOT
 
-TEST q(Data::Dumper->new([$a,$b,$c],['a','b','c'])->Maxdepth(1)->Dump;);
-TEST q(Data::Dumper->new([$a,$b,$c],['a','b','c'])->Maxdepth(1)->Dumpxs;)
+TEST (q(Data::Dumper->new([$a,$b,$c],['a','b','c'])->Maxdepth(1)->Dump;),
+    'Maxdepth(1): Dump()');
+TEST (q(Data::Dumper->new([$a,$b,$c],['a','b','c'])->Maxdepth(1)->Dumpxs;),
+    'Maxdepth(1): Dumpxs()')
 	if $XS;
 }
 
@@ -816,7 +909,7 @@ TEST q(Data::Dumper->new([$a,$b,$c],['a','b','c'])->Maxdepth(1)->Dumpxs;)
     $a = \$a;
     $b = [$a];
 
-############# 175
+#############
 ##
   $WANT = <<'EOT';
 #$b = [
@@ -824,11 +917,13 @@ TEST q(Data::Dumper->new([$a,$b,$c],['a','b','c'])->Maxdepth(1)->Dumpxs;)
 #];
 EOT
 
-TEST q(Data::Dumper->new([$b],['b'])->Purity(0)->Dump;);
-TEST q(Data::Dumper->new([$b],['b'])->Purity(0)->Dumpxs;)
+TEST (q(Data::Dumper->new([$b],['b'])->Purity(0)->Dump;),
+    'Purity(0): Dump()');
+TEST (q(Data::Dumper->new([$b],['b'])->Purity(0)->Dumpxs;),
+    'Purity(0): Dumpxs()')
 	if $XS;
 
-############# 181
+#############
 ##
   $WANT = <<'EOT';
 #$b = [
@@ -838,14 +933,16 @@ TEST q(Data::Dumper->new([$b],['b'])->Purity(0)->Dumpxs;)
 EOT
 
 
-TEST q(Data::Dumper->new([$b],['b'])->Purity(1)->Dump;);
-TEST q(Data::Dumper->new([$b],['b'])->Purity(1)->Dumpxs;)
+TEST (q(Data::Dumper->new([$b],['b'])->Purity(1)->Dump;),
+    'Purity(1): Dump()');
+TEST (q(Data::Dumper->new([$b],['b'])->Purity(1)->Dumpxs;),
+    'Purity(1): Dumpxs')
 	if $XS;
 }
 
 {
   $a = "\x{09c10}";
-############# 187
+#############
 ## XS code was adding an extra \0
   $WANT = <<'EOT';
 #$a = "\x{9c10}";
@@ -864,7 +961,7 @@ EOT
   $i = 0;
   $a = { map { ("$_$_$_", ++$i) } 'I'..'Q' };
 
-############# 193
+#############
 ##
   $WANT = <<'EOT';
 #$VAR1 = {
@@ -880,8 +977,10 @@ EOT
 #};
 EOT
 
-TEST q(Data::Dumper->new([$a])->Dump;);
-TEST q(Data::Dumper->new([$a])->Dumpxs;)
+TEST (q(Data::Dumper->new([$a])->Dump;),
+    'basic test without names: Dump()');
+TEST (q(Data::Dumper->new([$a])->Dumpxs;),
+    'basic test without names: Dumpxs()')
 	if $XS;
 }
 
@@ -894,7 +993,7 @@ TEST q(Data::Dumper->new([$a])->Dumpxs;)
     return [ sort { $b <=> $a } keys %$hash ];
   }
 
-############# 199
+#############
 ##
   $WANT = <<'EOT';
 #$VAR1 = {
@@ -910,11 +1009,8 @@ TEST q(Data::Dumper->new([$a])->Dumpxs;)
 #};
 EOT
 
-# perl code does keys and values as numbers if possible
-TEST q(Data::Dumper->new([$c])->Dump;);
-# XS code always does them as strings
-$WANT =~ s/ (\d+)/ '$1'/gs;
-TEST q(Data::Dumper->new([$c])->Dumpxs;)
+TEST q(Data::Dumper->new([$c])->Dump;), "sortkeys sub";
+TEST q(Data::Dumper->new([$c])->Dumpxs;), "sortkeys sub (XS)"
 	if $XS;
 }
 
@@ -931,7 +1027,7 @@ TEST q(Data::Dumper->new([$c])->Dumpxs;)
     ];
   }
 
-############# 205
+#############
 ##
   $WANT = <<'EOT';
 #$VAR1 = [
@@ -960,9 +1056,10 @@ TEST q(Data::Dumper->new([$c])->Dumpxs;)
 #];
 EOT
 
-TEST q(Data::Dumper->new([[$c, $d]])->Dump;);
-$WANT =~ s/ (\d+)/ '$1'/gs;
-TEST q(Data::Dumper->new([[$c, $d]])->Dumpxs;)
+TEST q(Data::Dumper->new([[$c, $d]])->Dump;), "more sortkeys sub";
+# the XS code does number values as strings
+$WANT =~ s/ (\d+)(,?)$/ '$1'$2/gm;
+TEST q(Data::Dumper->new([[$c, $d]])->Dumpxs;), "more sortkeys sub (XS)"
 	if $XS;
 }
 
@@ -970,7 +1067,7 @@ TEST q(Data::Dumper->new([[$c, $d]])->Dumpxs;)
   local $Data::Dumper::Deparse = 1;
   local $Data::Dumper::Indent = 2;
 
-############# 211
+#############
 ##
   $WANT = <<'EOT';
 #$VAR1 = {
@@ -983,11 +1080,12 @@ EOT
   if(" $Config{'extensions'} " !~ m[ B ]) {
     SKIP_TEST "Perl configured without B module";
   } else {
-    TEST q(Data::Dumper->new([{ foo => sub { print "foo"; } }])->Dump);
+    TEST (q(Data::Dumper->new([{ foo => sub { print "foo"; } }])->Dump),
+        'Deparse 1: Indent 2; Dump()');
   }
 }
 
-############# 214
+#############
 ##
 
 # This is messy.
@@ -1229,7 +1327,7 @@ if ($XS) {
 
 {
   $a = "1\n";
-############# 310
+#############
 ## Perl code was using /...$/ and hence missing the \n.
   $WANT = <<'EOT';
 my $VAR1 = '42
@@ -1258,7 +1356,7 @@ EOT
         -2147483648,
         -2147483649,
         );
-############# 316
+#############
 ## Perl code flips over at 10 digits.
   $WANT = <<'EOT';
 #$VAR1 = 999999999;
@@ -1315,42 +1413,27 @@ EOT
   }
 }
 
-#XXX}
 {
-    if ($Is_ebcdic) {
 	$b = "Bad. XS didn't escape dollar sign";
-############# 322
-	$WANT = <<"EOT"; # Careful. This is '' string written inside '' here doc
-#\$VAR1 = '\$b\"\@\\\\\xB1';
-EOT
-        $a = "\$b\"\@\\\xB1\x{100}";
-	chop $a;
-	TEST q(Data::Dumper->Dump([$a])), "utf8 flag with \" and \$";
-	if ($XS) {
-	    $WANT = <<'EOT'; # While this is "" string written inside "" here doc
-#$VAR1 = "\$b\"\@\\\x{b1}";
-EOT
-            TEST q(Data::Dumper->Dumpxs([$a])), "XS utf8 flag with \" and \$";
-	}
-    } else {
-	$b = "Bad. XS didn't escape dollar sign";
-############# 322
-	$WANT = <<"EOT"; # Careful. This is '' string written inside '' here doc
-#\$VAR1 = '\$b\"\@\\\\\xA3';
+#############
+    # B6 is chosen because it is UTF-8 variant on ASCII and all 3 EBCDIC
+    # platforms that Perl currently purports to work on.  It also is the only
+    # such code point that has the same meaning on all 4, the paragraph sign.
+    $WANT = <<"EOT"; # Careful. This is '' string written inside "" here doc
+#\$VAR1 = '\$b\"\@\\\\\xB6';
 EOT
 
-        $a = "\$b\"\@\\\xA3\x{100}";
-	chop $a;
-	TEST q(Data::Dumper->Dump([$a])), "utf8 flag with \" and \$";
-	if ($XS) {
-	    $WANT = <<'EOT'; # While this is "" string written inside "" here doc
-#$VAR1 = "\$b\"\@\\\x{a3}";
+    $a = "\$b\"\@\\\xB6\x{100}";
+    chop $a;
+    TEST q(Data::Dumper->Dump([$a])), "utf8 flag with \" and \$";
+    if ($XS) {
+        $WANT = <<'EOT'; # While this is "" string written inside "" here doc
+#$VAR1 = "\$b\"\@\\\x{b6}";
 EOT
-            TEST q(Data::Dumper->Dumpxs([$a])), "XS utf8 flag with \" and \$";
-	}
-  }
+        TEST q(Data::Dumper->Dumpxs([$a])), "XS utf8 flag with \" and \$";
+    }
   # XS used to produce "$b\"' which is 4 chars, not 3. [ie wrongly qq(\$b\\\")]
-############# 328
+#############
   $WANT = <<'EOT';
 #$VAR1 = '$b"';
 EOT
@@ -1365,7 +1448,7 @@ EOT
 
   # XS used to produce 'D'oh!' which is well, D'oh!
   # Andreas found this one, which in turn discovered the previous two.
-############# 334
+#############
   $WANT = <<'EOT';
 #$VAR1 = 'D\'oh!';
 EOT
@@ -1398,8 +1481,11 @@ EOT
   %ping = (chr (0xDECAF) x 4  =>\$ping);
   for $Data::Dumper::Sortkeys (0, 1) {
     if($] >= 5.007) {
-      TEST q(Data::Dumper->Dump([\\*ping, \\%ping], ['*ping', '*pong']));
-      TEST q(Data::Dumper->Dumpxs([\\*ping, \\%ping], ['*ping', '*pong'])) if $XS;
+      TEST (q(Data::Dumper->Dump([\\*ping, \\%ping], ['*ping', '*pong'])),
+        "utf8: Purity 1: Sortkeys: Dump()");
+      TEST (q(Data::Dumper->Dumpxs([\\*ping, \\%ping], ['*ping', '*pong'])),
+        "utf8: Purity 1: Sortkeys: Dumpxs()")
+        if $XS;
     } else {
       SKIP_TEST "Incomplete support for UTF-8 in old perls";
       SKIP_TEST "Incomplete support for UTF-8 in old perls";
@@ -1425,7 +1511,7 @@ EOT
   TEST q(Data::Dumper->Dumpxs([\\%foo])),
     "XS quotekeys == 0 for utf8 flagged ASCII" if $XS;
 }
-############# 358
+#############
 {
   $WANT = <<'EOT';
 #$VAR1 = [
@@ -1436,11 +1522,11 @@ EOT
 EOT
     @foo = ();
     $foo[2] = 1;
-    TEST q(Data::Dumper->Dump([\@foo])), 'Richard Clamp, Message-Id: <20030104005247.GA27685@mirth.demon.co.uk>';
-    TEST q(Data::Dumper->Dumpxs([\@foo])) if $XS;
+    TEST q(Data::Dumper->Dump([\@foo])), 'Richard Clamp, Message-Id: <20030104005247.GA27685@mirth.demon.co.uk>: Dump()';
+    TEST q(Data::Dumper->Dumpxs([\@foo])), 'Richard Clamp, Message-Id: <20030104005247.GA27685@mirth.demon.co.uk>: Dumpxs()'if $XS;
 }
 
-############# 364
+#############
 # Make sure $obj->Dumpxs returns the right thing in list context. This was
 # broken by the initial attempt to fix [perl #74170].
 $WANT = <<'EOT';
@@ -1450,25 +1536,29 @@ TEST q(join " ", new Data::Dumper [[]],[] =>->Dumpxs),
     '$obj->Dumpxs in list context'
  if $XS;
 
-############# 366
+#############
 {
-  $WANT = <<'EOT';
-#$VAR1 = [
-#  "\0\1\2\3\4\5\6\a\b\t\n\13\f\r\16\17\20\21\22\23\24\25\26\27\30\31\32\e\34\35\36\37 !\"#\$%&'()*+,-./0123456789:;<=>?\@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\177\200\201\202\203\204\205\206\207\210\211\212\213\214\215\216\217\220\221\222\223\224\225\226\227\230\231\232\233\234\235\236\237\240\241\242\243\244\245\246\247\250\251\252\253\254\255\256\257\260\261\262\263\264\265\266\267\270\271\272\273\274\275\276\277\300\301\302\303\304\305\306\307\310\311\312\313\314\315\316\317\320\321\322\323\324\325\326\327\330\331\332\333\334\335\336\337\340\341\342\343\344\345\346\347\350\351\352\353\354\355\356\357\360\361\362\363\364\365\366\367\370\371\372\373\374\375\376\377"
+  $WANT = '\0\1\2\3\4\5\6\a\b\t\n\13\f\r\16\17\20\21\22\23\24\25\26\27\30\31\32\e\34\35\36\37 !\"#\$%&\'()*+,-./0123456789:;<=>?\@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\177\200\201\202\203\204\205\206\207\210\211\212\213\214\215\216\217\220\221\222\223\224\225\226\227\230\231\232\233\234\235\236\237\240\241\242\243\244\245\246\247\250\251\252\253\254\255\256\257\260\261\262\263\264\265\266\267\270\271\272\273\274\275\276\277\300\301\302\303\304\305\306\307\310\311\312\313\314\315\316\317\320\321\322\323\324\325\326\327\330\331\332\333\334\335\336\337\340\341\342\343\344\345\346\347\350\351\352\353\354\355\356\357\360\361\362\363\364\365\366\367\370\371\372\373\374\375\376\377';
+  $WANT = convert_to_native($WANT);
+  $WANT = <<EOT;
+#\$VAR1 = [
+#  "$WANT"
 #];
 EOT
 
   $foo = [ join "", map chr, 0..255 ];
   local $Data::Dumper::Useqq = 1;
-  TEST q(Dumper($foo)), 'All latin1 characters';
-  for (1..3) { print "not ok " . (++$TNUM) . " # TODO NYI\n" if $XS } # TEST q(Data::Dumper::DumperX($foo)) if $XS;
+  TEST (q(Dumper($foo)), 'All latin1 characters: Dumper');
+  TEST (q(Data::Dumper::DumperX($foo)), 'All latin1 characters: DumperX') if $XS;
 }
 
-############# 372
+#############
 {
-  $WANT = <<'EOT';
-#$VAR1 = [
-#  "\0\1\2\3\4\5\6\a\b\t\n\13\f\r\16\17\20\21\22\23\24\25\26\27\30\31\32\e\34\35\36\37 !\"#\$%&'()*+,-./0123456789:;<=>?\@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\177\x{80}\x{81}\x{82}\x{83}\x{84}\x{85}\x{86}\x{87}\x{88}\x{89}\x{8a}\x{8b}\x{8c}\x{8d}\x{8e}\x{8f}\x{90}\x{91}\x{92}\x{93}\x{94}\x{95}\x{96}\x{97}\x{98}\x{99}\x{9a}\x{9b}\x{9c}\x{9d}\x{9e}\x{9f}\x{a0}\x{a1}\x{a2}\x{a3}\x{a4}\x{a5}\x{a6}\x{a7}\x{a8}\x{a9}\x{aa}\x{ab}\x{ac}\x{ad}\x{ae}\x{af}\x{b0}\x{b1}\x{b2}\x{b3}\x{b4}\x{b5}\x{b6}\x{b7}\x{b8}\x{b9}\x{ba}\x{bb}\x{bc}\x{bd}\x{be}\x{bf}\x{c0}\x{c1}\x{c2}\x{c3}\x{c4}\x{c5}\x{c6}\x{c7}\x{c8}\x{c9}\x{ca}\x{cb}\x{cc}\x{cd}\x{ce}\x{cf}\x{d0}\x{d1}\x{d2}\x{d3}\x{d4}\x{d5}\x{d6}\x{d7}\x{d8}\x{d9}\x{da}\x{db}\x{dc}\x{dd}\x{de}\x{df}\x{e0}\x{e1}\x{e2}\x{e3}\x{e4}\x{e5}\x{e6}\x{e7}\x{e8}\x{e9}\x{ea}\x{eb}\x{ec}\x{ed}\x{ee}\x{ef}\x{f0}\x{f1}\x{f2}\x{f3}\x{f4}\x{f5}\x{f6}\x{f7}\x{f8}\x{f9}\x{fa}\x{fb}\x{fc}\x{fd}\x{fe}\x{ff}\x{20ac}"
+  $WANT = '\0\1\2\3\4\5\6\a\b\t\n\13\f\r\16\17\20\21\22\23\24\25\26\27\30\31\32\e\34\35\36\37 !\"#\$%&\'()*+,-./0123456789:;<=>?\@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\177\x{80}\x{81}\x{82}\x{83}\x{84}\x{85}\x{86}\x{87}\x{88}\x{89}\x{8a}\x{8b}\x{8c}\x{8d}\x{8e}\x{8f}\x{90}\x{91}\x{92}\x{93}\x{94}\x{95}\x{96}\x{97}\x{98}\x{99}\x{9a}\x{9b}\x{9c}\x{9d}\x{9e}\x{9f}\x{a0}\x{a1}\x{a2}\x{a3}\x{a4}\x{a5}\x{a6}\x{a7}\x{a8}\x{a9}\x{aa}\x{ab}\x{ac}\x{ad}\x{ae}\x{af}\x{b0}\x{b1}\x{b2}\x{b3}\x{b4}\x{b5}\x{b6}\x{b7}\x{b8}\x{b9}\x{ba}\x{bb}\x{bc}\x{bd}\x{be}\x{bf}\x{c0}\x{c1}\x{c2}\x{c3}\x{c4}\x{c5}\x{c6}\x{c7}\x{c8}\x{c9}\x{ca}\x{cb}\x{cc}\x{cd}\x{ce}\x{cf}\x{d0}\x{d1}\x{d2}\x{d3}\x{d4}\x{d5}\x{d6}\x{d7}\x{d8}\x{d9}\x{da}\x{db}\x{dc}\x{dd}\x{de}\x{df}\x{e0}\x{e1}\x{e2}\x{e3}\x{e4}\x{e5}\x{e6}\x{e7}\x{e8}\x{e9}\x{ea}\x{eb}\x{ec}\x{ed}\x{ee}\x{ef}\x{f0}\x{f1}\x{f2}\x{f3}\x{f4}\x{f5}\x{f6}\x{f7}\x{f8}\x{f9}\x{fa}\x{fb}\x{fc}\x{fd}\x{fe}\x{ff}\x{20ac}';
+  $WANT = convert_to_native($WANT);
+  $WANT = <<EOT;
+#\$VAR1 = [
+#  "$WANT"
 #];
 EOT
 
@@ -1479,12 +1569,14 @@ EOT
   }
   else {
     TEST q(Dumper($foo)),
-	 'All latin1 characters with utf8 flag including a wide character';
+	 'All latin1 characters with utf8 flag including a wide character: Dumper';
   }
-  for (1..3) { print "not ok " . (++$TNUM) . " # TODO NYI\n" if $XS } # TEST q(Data::Dumper::DumperX($foo)) if $XS;
+  TEST (q(Data::Dumper::DumperX($foo)),
+    'All latin1 characters with utf8 flag including a wide character: DumperX')
+    if $XS;
 }
 
-############# 378
+#############
 {
   # If XS cannot load, the pure-Perl version cannot deparse vstrings with
   # underscores properly.  In 5.8.0, vstrings are just strings.
@@ -1494,11 +1586,12 @@ EOT
 #$c = \'ABC';
 #$d = \'ABC';
 NOVSTRINGS
-  my $vstrings_corr = <<'VSTRINGS_CORRECT';
-#$a = \v65.66.67;
-#$b = \v65.66.067;
-#$c = \v65.66.6_7;
-#$d = \'ABC';
+my $ABC_native = chr(65) . chr(66) . chr(67);
+  my $vstrings_corr = <<VSTRINGS_CORRECT;
+#\$a = \\v65.66.67;
+#\$b = \\v65.66.067;
+#\$c = \\v65.66.6_7;
+#\$d = \\'$ABC_native';
 VSTRINGS_CORRECT
   $WANT = $] <= 5.0080001
           ? $no_vstrings
@@ -1522,7 +1615,7 @@ VSTRINGS_CORRECT
   }
 }
 
-############# 384
+#############
 {
   # [perl #107372] blessed overloaded globs
   $WANT = <<'EOW';
@@ -1536,4 +1629,114 @@ EOW
     'blessed overloaded globs';
   TEST q(Data::Dumper->Dumpxs([\*finkle])), 'blessed overloaded globs (xs)'
     if $XS;
+}
+#############
+{
+  # [perl #74798] uncovered behaviour
+  $WANT = <<'EOW';
+#$VAR1 = "\0000";
+EOW
+  local $Data::Dumper::Useqq = 1;
+  TEST q(Data::Dumper->Dump(["\x000"])),
+    "\\ octal followed by digit";
+  TEST q(Data::Dumper->Dumpxs(["\x000"])), '\\ octal followed by digit (xs)'
+    if $XS;
+
+  $WANT = <<'EOW';
+#$VAR1 = "\x{100}\0000";
+EOW
+  local $Data::Dumper::Useqq = 1;
+  TEST q(Data::Dumper->Dump(["\x{100}\x000"])),
+    "\\ octal followed by digit unicode";
+  TEST q(Data::Dumper->Dumpxs(["\x{100}\x000"])), '\\ octal followed by digit unicode (xs)'
+    if $XS;
+
+
+  $WANT = <<'EOW';
+#$VAR1 = "\0\x{660}";
+EOW
+  TEST q(Data::Dumper->Dump(["\\x00\\x{0660}"])),
+    "\\ octal followed by unicode digit";
+  TEST q(Data::Dumper->Dumpxs(["\\x00\\x{0660}"])), '\\ octal followed by unicode digit (xs)'
+    if $XS;
+
+  # [perl #118933 - handling of digits
+$WANT = <<'EOW';
+#$VAR1 = 0;
+#$VAR2 = 1;
+#$VAR3 = 90;
+#$VAR4 = -10;
+#$VAR5 = "010";
+#$VAR6 = 112345678;
+#$VAR7 = "1234567890";
+EOW
+  TEST q(Data::Dumper->Dump([0, 1, 90, -10, "010", "112345678", "1234567890" ])),
+    "numbers and number-like scalars";
+
+  TEST q(Data::Dumper->Dumpxs([0, 1, 90, -10, "010", "112345678", "1234567890" ])),
+    "numbers and number-like scalars"
+    if $XS;
+}
+#############
+{
+  # [perl #82948]
+  # re::regexp_pattern was moved to universal.c in v5.10.0-252-g192c1e2
+  # and apparently backported to maint-5.10
+  $WANT = $] > 5.010 ? <<'NEW' : <<'OLD';
+#$VAR1 = qr/abc/;
+#$VAR2 = qr/abc/i;
+NEW
+#$VAR1 = qr/(?-xism:abc)/;
+#$VAR2 = qr/(?i-xsm:abc)/;
+OLD
+  TEST q(Data::Dumper->Dump([ qr/abc/, qr/abc/i ])), "qr//";
+  TEST q(Data::Dumper->Dumpxs([ qr/abc/, qr/abc/i ])), "qr// xs"
+    if $XS;
+}
+#############
+
+{
+  sub foo {}
+  $WANT = <<'EOW';
+#*a = sub { "DUMMY" };
+#$b = \&a;
+EOW
+
+  TEST q(Data::Dumper->new([ \&foo, \\&foo ], [ "*a", "b" ])->Dump), "name of code in *foo";
+  TEST q(Data::Dumper->new([ \&foo, \\&foo ], [ "*a", "b" ])->Dumpxs), "name of code in *foo xs"
+    if $XS;
+}
+#############
+
+{
+    if($] lt 5.007_003) {
+        SKIP_TEST "Test is only problematic for EBCDIC, which only works for >= 5.8";
+        SKIP_TEST "Test is only problematic for EBCDIC, which only works for >= 5.8";
+    }
+    else {
+        # There is special code to handle the single control that in EBCDIC is
+        # not in the block with all the other controls, when it is UTF-8 and
+        # there are no variants in it (All controls in EBCDIC are invariant.)
+        # This tests that.  There is no harm in testing this works on ASCII,
+        # and is better to not have split code paths.
+        my $outlier = chr utf8::unicode_to_native(0x9F);
+        my $outlier_hex = sprintf "%x", ord $outlier;
+        $WANT = <<EOT;
+#\$VAR1 = \"\\x{$outlier_hex}\";
+EOT
+        $foo = "$outlier\x{100}";
+        chop $foo;
+        local $Data::Dumper::Useqq = 1;
+        TEST (q(Dumper($foo)), 'EBCDIC outlier control');
+        TEST (q(Data::Dumper::DumperX($foo)), 'EBCDIC outlier control: DumperX') if $XS;
+    }
+}
+############# [perl #124091]
+{
+        $WANT = <<'EOT';
+#$VAR1 = "\n";
+EOT
+        local $Data::Dumper::Useqq = 1;
+        TEST (qq(Dumper("\n")), '\n alone');
+        TEST (qq(Data::Dumper::DumperX("\n")), '\n alone') if $XS;
 }

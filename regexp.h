@@ -36,13 +36,14 @@ struct regexp_engine;
 struct regexp;
 
 struct reg_substr_datum {
-    I32 min_offset;
-    I32 max_offset;
+    SSize_t min_offset; /* min pos (in chars) that substr must appear */
+    SSize_t max_offset  /* max pos (in chars) that substr must appear */;
     SV *substr;		/* non-utf8 variant */
     SV *utf8_substr;	/* utf8 variant */
-    I32 end_shift;
+    SSize_t end_shift;  /* how many fixed chars must end the string */
 };
 struct reg_substr_data {
+    U8      check_ix;   /* index into data[] of check substr */
     struct reg_substr_datum data[3];	/* Actual array */
 };
 
@@ -55,15 +56,15 @@ struct reg_substr_data {
 /* offsets within a string of a particular /(.)/ capture */
 
 typedef struct regexp_paren_pair {
-    I32 start;
-    I32 end;
+    SSize_t start;
+    SSize_t end;
     /* 'start_tmp' records a new opening position before the matching end
      * has been found, so that the old start and end values are still
      * valid, e.g.
      *	  "abc" =~ /(.(?{print "[$1]"}))+/
      *outputs [][a][b]
      * This field is not part of the API.  */
-    I32 start_tmp;
+    SSize_t start_tmp;
 } regexp_paren_pair;
 
 #if defined(PERL_IN_REGCOMP_C) || defined(PERL_IN_UTF8_C)
@@ -84,6 +85,14 @@ struct reg_code_block {
     REGEXP *src_regex;
 };
 
+/* array of reg_code_block's plus header info */
+
+struct reg_code_blocks {
+    int refcnt; /* we may be pointed to from a regex and from the savestack */
+    int  count;    /* how many code blocks */
+    struct reg_code_block *cb; /* array of reg_code_block's */
+};
+
 
 /*
   The regexp/REGEXP struct, see L<perlreapi> for further documentation
@@ -101,12 +110,13 @@ struct reg_code_block {
 	const struct regexp_engine* engine; 				\
 	REGEXP *mother_re; /* what re is this a lightweight copy of? */	\
 	HV *paren_names;   /* Optional hash of paren names */		\
+        /*--------------------------------------------------------*/    \
 	/* Information about the match that the perl core uses to */	\
 	/* manage things */						\
 	U32 extflags;	/* Flags used both externally and internally */	\
-	I32 minlen;	/* mininum possible number of chars in string to match */\
-	I32 minlenret;	/* mininum possible number of chars in $& */		\
-	U32 gofs;	/* chars left of pos that we search from */	\
+	SSize_t minlen;	/* mininum possible number of chars in string to match */\
+	SSize_t minlenret; /* mininum possible number of chars in $& */		\
+	STRLEN gofs;	/* chars left of pos that we search from */	\
 	/* substring data about strings that must appear in the */	\
 	/* final match, used for optimisations */			\
 	struct reg_substr_data *substrs;				\
@@ -115,24 +125,30 @@ struct reg_code_block {
 	U32 intflags;	/* Engine Specific Internal flags */		\
 	void *pprivate;	/* Data private to the regex engine which */	\
 			/* created this object. */			\
+        /*--------------------------------------------------------*/    \
 	/* Data about the last/current match. These are modified */	\
 	/* during matching */						\
 	U32 lastparen;			/* last open paren matched */	\
 	U32 lastcloseparen;		/* last close paren matched */	\
 	/* Array of offsets for (@-) and (@+) */			\
 	regexp_paren_pair *offs;					\
+        char **recurse_locinput; /* used to detect infinite recursion, XXX: move to internal */ \
+        /*--------------------------------------------------------*/    \
 	/* saved or original string so \digit works forever. */		\
 	char *subbeg;							\
 	SV_SAVED_COPY	/* If non-NULL, SV which is COW from original */\
-	I32 sublen;	/* Length of string pointed by subbeg */	\
-	I32 suboffset;	/* byte offset of subbeg from logical start of str */ \
-	I32 subcoffset;	/* suboffset equiv, but in chars (for @-/@+) */ \
+	SSize_t sublen;	/* Length of string pointed by subbeg */	\
+	SSize_t suboffset; /* byte offset of subbeg from logical start of str */ \
+	SSize_t subcoffset; /* suboffset equiv, but in chars (for @-/@+) */ \
 	/* Information about the match that isn't often used */		\
+        SSize_t maxlen;        /* mininum possible number of chars in string to match */\
+        /*--------------------------------------------------------*/    \
 	/* offset from wrapped to the start of precomp */		\
 	PERL_BITFIELD32 pre_prefix:4;					\
         /* original flags used to compile the pattern, may differ */    \
         /* from extflags in various ways */                             \
         PERL_BITFIELD32 compflags:9;                                    \
+        /*--------------------------------------------------------*/    \
 	CV *qr_anoncv	/* the anon sub wrapped round qr/(?{..})/ */
 
 typedef struct regexp {
@@ -146,7 +162,7 @@ typedef struct regexp {
 typedef struct re_scream_pos_data_s
 {
     char **scream_olds;		/* match pos */
-    I32 *scream_pos;		/* Internal iterator of scream. */
+    SSize_t *scream_pos;	/* Internal iterator of scream. */
 } re_scream_pos_data;
 
 /* regexp_engine structure. This is the dispatch table for regexes.
@@ -155,13 +171,18 @@ typedef struct re_scream_pos_data_s
 typedef struct regexp_engine {
     REGEXP* (*comp) (pTHX_ SV * const pattern, U32 flags);
     I32     (*exec) (pTHX_ REGEXP * const rx, char* stringarg, char* strend,
-                     char* strbeg, I32 minend, SV* screamer,
+                     char* strbeg, SSize_t minend, SV* sv,
                      void* data, U32 flags);
-    char*   (*intuit) (pTHX_ REGEXP * const rx, SV *sv, char *strpos,
-                       char *strend, const U32 flags,
+    char*   (*intuit) (pTHX_
+                        REGEXP * const rx,
+                        SV *sv,
+                        const char * const strbeg,
+                        char *strpos,
+                        char *strend,
+                        const U32 flags,
                        re_scream_pos_data *data);
     SV*     (*checkstr) (pTHX_ REGEXP * const rx);
-    void    (*free) (pTHX_ REGEXP * const rx);
+    void    (*rxfree) (pTHX_ REGEXP * const rx);
     void    (*numbered_buff_FETCH) (pTHX_ REGEXP * const rx, const I32 paren,
                                     SV * const sv);
     void    (*numbered_buff_STORE) (pTHX_ REGEXP * const rx, const I32 paren,
@@ -178,7 +199,7 @@ typedef struct regexp_engine {
 #endif
     REGEXP* (*op_comp) (pTHX_ SV ** const patternp, int pat_count,
 		    OP *expr, const struct regexp_engine* eng,
-		    REGEXP *VOL old_re,
+		    REGEXP *old_re,
 		    bool *is_bare_re, U32 orig_rx_flags, U32 pm_flags);
 } regexp_engine;
 
@@ -225,7 +246,7 @@ typedef struct regexp_engine {
 
 =for apidoc Am|REGEXP *|SvRX|SV *sv
 
-Convenience macro to get the REGEXP from a SV. This is approximately
+Convenience macro to get the REGEXP from a SV.  This is approximately
 equivalent to the following snippet:
 
     if (SvMAGICAL(sv))
@@ -235,7 +256,7 @@ equivalent to the following snippet:
     if (SvTYPE(sv) == SVt_REGEXP)
         return (REGEXP*) sv;
 
-NULL will be returned if a REGEXP* is not found.
+C<NULL> will be returned if a REGEXP* is not found.
 
 =for apidoc Am|bool|SvRXOK|SV* sv
 
@@ -249,7 +270,7 @@ and check for NULL.
 */
 
 #define SvRX(sv)   (Perl_get_re_arg(aTHX_ sv))
-#define SvRXOK(sv) (Perl_get_re_arg(aTHX_ sv) ? TRUE : FALSE)
+#define SvRXOK(sv) cBOOL(Perl_get_re_arg(aTHX_ sv))
 
 
 /* Flags stored in regexp->extflags
@@ -265,17 +286,26 @@ and check for NULL.
 
 #include "op_reg_common.h"
 
-#define RXf_PMf_STD_PMMOD	(RXf_PMf_MULTILINE|RXf_PMf_SINGLELINE|RXf_PMf_FOLD|RXf_PMf_EXTENDED)
+#define RXf_PMf_STD_PMMOD	(RXf_PMf_MULTILINE|RXf_PMf_SINGLELINE|RXf_PMf_FOLD|RXf_PMf_EXTENDED|RXf_PMf_EXTENDED_MORE|RXf_PMf_NOCAPTURE)
 
-#define CASE_STD_PMMOD_FLAGS_PARSE_SET(pmfl)                        \
-    case IGNORE_PAT_MOD:    *(pmfl) |= RXf_PMf_FOLD;       break;   \
-    case MULTILINE_PAT_MOD: *(pmfl) |= RXf_PMf_MULTILINE;  break;   \
-    case SINGLE_PAT_MOD:    *(pmfl) |= RXf_PMf_SINGLELINE; break;   \
-    case XTENDED_PAT_MOD:   *(pmfl) |= RXf_PMf_EXTENDED;   break
+#define CASE_STD_PMMOD_FLAGS_PARSE_SET(pmfl, x_count)                       \
+    case IGNORE_PAT_MOD:    *(pmfl) |= RXf_PMf_FOLD;       break;           \
+    case MULTILINE_PAT_MOD: *(pmfl) |= RXf_PMf_MULTILINE;  break;           \
+    case SINGLE_PAT_MOD:    *(pmfl) |= RXf_PMf_SINGLELINE; break;           \
+    case XTENDED_PAT_MOD:   if (x_count == 0) {                             \
+                                *(pmfl) |= RXf_PMf_EXTENDED;                \
+                                *(pmfl) &= ~RXf_PMf_EXTENDED_MORE;          \
+                            }                                               \
+                            else {                                          \
+                                *(pmfl) |= RXf_PMf_EXTENDED                 \
+                                          |RXf_PMf_EXTENDED_MORE;           \
+                            }                                               \
+                            (x_count)++; break;                             \
+    case NOCAPTURE_PAT_MOD: *(pmfl) |= RXf_PMf_NOCAPTURE; break;
 
 /* Note, includes charset ones, assumes 0 is the default for them */
 #define STD_PMMOD_FLAGS_CLEAR(pmfl)                        \
-    *(pmfl) &= ~(RXf_PMf_FOLD|RXf_PMf_MULTILINE|RXf_PMf_SINGLELINE|RXf_PMf_EXTENDED|RXf_PMf_CHARSET)
+    *(pmfl) &= ~(RXf_PMf_FOLD|RXf_PMf_MULTILINE|RXf_PMf_SINGLELINE|RXf_PMf_EXTENDED|RXf_PMf_EXTENDED_MORE|RXf_PMf_CHARSET|RXf_PMf_NOCAPTURE)
 
 /* chars and strings used as regex pattern modifiers
  * Singular is a 'c'har, plural is a "string"
@@ -287,6 +317,7 @@ and check for NULL.
 #define DEFAULT_PAT_MOD      '^'    /* Short for all the default modifiers */
 #define EXEC_PAT_MOD         'e'
 #define KEEPCOPY_PAT_MOD     'p'
+#define NOCAPTURE_PAT_MOD    'n'
 #define ONCE_PAT_MOD         'o'
 #define GLOBAL_PAT_MOD       'g'
 #define CONTINUE_PAT_MOD     'c'
@@ -302,6 +333,7 @@ and check for NULL.
 
 #define ONCE_PAT_MODS        "o"
 #define KEEPCOPY_PAT_MODS    "p"
+#define NOCAPTURE_PAT_MODS   "n"
 #define EXEC_PAT_MODS        "e"
 #define LOOP_PAT_MODS        "gc"
 #define NONDESTRUCT_PAT_MODS "r"
@@ -314,7 +346,7 @@ and check for NULL.
 /* This string is expected by regcomp.c to be ordered so that the first
  * character is the flag in bit RXf_PMf_STD_PMMOD_SHIFT of extflags; the next
  * character is bit +1, etc. */
-#define STD_PAT_MODS        "msix"
+#define STD_PAT_MODS        "msixxn"
 
 #define CHARSET_PAT_MODS    ASCII_RESTRICT_PAT_MODS DEPENDS_PAT_MODS LOCALE_PAT_MODS UNICODE_PAT_MODS
 
@@ -323,7 +355,7 @@ and check for NULL.
  * extflags; the next character is in bit +1, etc. */
 #define INT_PAT_MODS    STD_PAT_MODS    KEEPCOPY_PAT_MODS
 
-#define EXT_PAT_MODS    ONCE_PAT_MODS   KEEPCOPY_PAT_MODS
+#define EXT_PAT_MODS    ONCE_PAT_MODS   KEEPCOPY_PAT_MODS  NOCAPTURE_PAT_MODS
 #define QR_PAT_MODS     STD_PAT_MODS    EXT_PAT_MODS	   CHARSET_PAT_MODS
 #define M_PAT_MODS      QR_PAT_MODS     LOOP_PAT_MODS
 #define S_PAT_MODS      M_PAT_MODS      EXEC_PAT_MODS      NONDESTRUCT_PAT_MODS
@@ -334,97 +366,88 @@ and check for NULL.
  *
  */
 
-/* Leave some space, so future bit allocations can go either in the shared or
- * unshared area without affecting binary compatibility */
-#define RXf_BASE_SHIFT (_RXf_PMf_SHIFT_NEXT)
-
 /*
-  Set in Perl_pmruntime if op_flags & OPf_SPECIAL, i.e. split. Will
-  be used by regex engines to check whether they should set
-  RXf_SKIPWHITE
+  Set in Perl_pmruntime for a split. Will be used by regex engines to
+  check whether they should set RXf_SKIPWHITE
 */
-#define RXf_SPLIT                (1<<(RXf_BASE_SHIFT-1))
-#if RXf_SPLIT != RXf_PMf_SPLIT
-#   error "RXf_SPLIT does not match RXf_PMf_SPLIT"
-#endif
+#define RXf_SPLIT   RXf_PMf_SPLIT
 
-/* Manually decorate this function with gcc-style attributes just to
- * avoid having to restructure the header files and their called order,
- * as proto.h would have to be included before this file, and isn't */
+/* Currently the regex flags occupy a single 32-bit word.  Not all bits are
+ * currently used.  The lower bits are shared with their corresponding PMf flag
+ * bits, up to but not including _RXf_PMf_SHIFT_NEXT.  The unused bits
+ * immediately follow; finally the used RXf-only (unshared) bits, so that the
+ * highest bit in the word is used.  This gathers all the unused bits as a pool
+ * in the middle, like so: 11111111111111110000001111111111
+ * where the '1's represent used bits, and the '0's unused.  This design allows
+ * us to allocate off one end of the pool if we need to add a shared bit, and
+ * off the other end if we need a non-shared bit, without disturbing the other
+ * bits.  This maximizes the likelihood of being able to change things without
+ * breaking binary compatibility.
+ *
+ * To add shared bits, do so in op_reg_common.h.  This should change
+ * _RXf_PMf_SHIFT_NEXT so that things won't compile.  Then come to regexp.h and
+ * op.h and adjust the constant adders in the definitions of RXf_BASE_SHIFT and
+ * Pmf_BASE_SHIFT down by the number of shared bits you added.  That's it.
+ * Things should be binary compatible.  But if either of these gets to having
+ * to subtract rather than add, leave at 0 and instead adjust all the entries
+ * that are in terms of it.  But if the first one of those is already
+ * RXf_BASE_SHIFT+0, there are no bits left, and a redesign is in order.
+ *
+ * To remove unshared bits, just delete its entry.  If you're where breaking
+ * binary compatibility is ok to do, you might want to adjust things to move
+ * the newly opened space so that it gets absorbed into the common pool.
+ *
+ * To add unshared bits, first use up any gaps in the middle.  Otherwise,
+ * allocate off the low end until you get to RXf_BASE_SHIFT+0.  If that isn't
+ * enough, move RXf_BASE_SHIFT down (if possible) and add the new bit at the
+ * other end instead; this preserves binary compatibility.
+ *
+ * For the regexp bits, PL_reg_extflags_name[] in regnodes.h has a comment
+ * giving which bits are used/unused */
 
-PERL_STATIC_INLINE const char *
-get_regex_charset_name(const U32 flags, STRLEN* const lenp)
-    __attribute__warn_unused_result__;
-
-#define MAX_CHARSET_NAME_LENGTH 2
-
-PERL_STATIC_INLINE const char *
-get_regex_charset_name(const U32 flags, STRLEN* const lenp)
-{
-    /* Returns a string that corresponds to the name of the regex character set
-     * given by 'flags', and *lenp is set the length of that string, which
-     * cannot exceed MAX_CHARSET_NAME_LENGTH characters */
-
-    *lenp = 1;
-    switch (get_regex_charset(flags)) {
-        case REGEX_DEPENDS_CHARSET: return DEPENDS_PAT_MODS;
-        case REGEX_LOCALE_CHARSET:  return LOCALE_PAT_MODS;
-        case REGEX_UNICODE_CHARSET: return UNICODE_PAT_MODS;
-	case REGEX_ASCII_RESTRICTED_CHARSET: return ASCII_RESTRICT_PAT_MODS;
-	case REGEX_ASCII_MORE_RESTRICTED_CHARSET:
-	    *lenp = 2;
-	    return ASCII_MORE_RESTRICT_PAT_MODS;
-        default:
-	    return "?";	    /* Unknown */
-    }
-}
-
-/* Anchor and GPOS related stuff */
-#define RXf_ANCH_BOL    	(1<<(RXf_BASE_SHIFT+0))
-#define RXf_ANCH_MBOL   	(1<<(RXf_BASE_SHIFT+1))
-#define RXf_ANCH_SBOL   	(1<<(RXf_BASE_SHIFT+2))
-#define RXf_ANCH_GPOS   	(1<<(RXf_BASE_SHIFT+3))
-#define RXf_GPOS_SEEN   	(1<<(RXf_BASE_SHIFT+4))
-#define RXf_GPOS_FLOAT  	(1<<(RXf_BASE_SHIFT+5))
-/* two bits here */
-#define RXf_ANCH        	(RXf_ANCH_BOL|RXf_ANCH_MBOL|RXf_ANCH_GPOS|RXf_ANCH_SBOL)
-#define RXf_GPOS_CHECK          (RXf_GPOS_SEEN|RXf_ANCH_GPOS)
-#define RXf_ANCH_SINGLE         (RXf_ANCH_SBOL|RXf_ANCH_GPOS)
+#define RXf_BASE_SHIFT (_RXf_PMf_SHIFT_NEXT + 2)
 
 /* What we have seen */
-#define RXf_NO_INPLACE_SUBST    (1<<(RXf_BASE_SHIFT+6))
-#define RXf_EVAL_SEEN   	(1<<(RXf_BASE_SHIFT+7))
-#define RXf_CANY_SEEN   	(1<<(RXf_BASE_SHIFT+8))
+#define RXf_NO_INPLACE_SUBST    (1U<<(RXf_BASE_SHIFT+2))
+#define RXf_EVAL_SEEN   	(1U<<(RXf_BASE_SHIFT+3))
 
 /* Special */
-#define RXf_NOSCAN      	(1<<(RXf_BASE_SHIFT+9))
-#define RXf_CHECK_ALL   	(1<<(RXf_BASE_SHIFT+10))
+#define RXf_UNBOUNDED_QUANTIFIER_SEEN   (1U<<(RXf_BASE_SHIFT+4))
+#define RXf_CHECK_ALL   	(1U<<(RXf_BASE_SHIFT+5))
 
 /* UTF8 related */
-#define RXf_MATCH_UTF8  	(1<<(RXf_BASE_SHIFT+11))
+#define RXf_MATCH_UTF8  	(1U<<(RXf_BASE_SHIFT+6)) /* $1 etc are utf8 */
 
 /* Intuit related */
-#define RXf_USE_INTUIT_NOML	(1<<(RXf_BASE_SHIFT+12))
-#define RXf_USE_INTUIT_ML	(1<<(RXf_BASE_SHIFT+13))
-#define RXf_INTUIT_TAIL 	(1<<(RXf_BASE_SHIFT+14))
+#define RXf_USE_INTUIT_NOML	(1U<<(RXf_BASE_SHIFT+7))
+#define RXf_USE_INTUIT_ML	(1U<<(RXf_BASE_SHIFT+8))
+#define RXf_INTUIT_TAIL 	(1U<<(RXf_BASE_SHIFT+9))
 #define RXf_USE_INTUIT		(RXf_USE_INTUIT_NOML|RXf_USE_INTUIT_ML)
 
-/* Copy and tainted info */
-#define RXf_COPY_DONE   	(1<<(RXf_BASE_SHIFT+16))
+/* Do we have some sort of anchor? */
+#define RXf_IS_ANCHORED         (1U<<(RXf_BASE_SHIFT+10))
 
-/* during execution: pattern temporarily tainted by executing locale ops;
- * post-execution: $1 et al are tainted */
-#define RXf_TAINTED_SEEN	(1<<(RXf_BASE_SHIFT+17))
+/* Copy and tainted info */
+#define RXf_COPY_DONE   	(1U<<(RXf_BASE_SHIFT+11))
+
+/* post-execution: $1 et al are tainted */
+#define RXf_TAINTED_SEEN	(1U<<(RXf_BASE_SHIFT+12))
 /* this pattern was tainted during compilation */
-#define RXf_TAINTED		(1<<(RXf_BASE_SHIFT+18))
+#define RXf_TAINTED		(1U<<(RXf_BASE_SHIFT+13))
 
 /* Flags indicating special patterns */
-#define RXf_START_ONLY		(1<<(RXf_BASE_SHIFT+19)) /* Pattern is /^/ */
-#define RXf_SKIPWHITE                (1<<(RXf_BASE_SHIFT+20)) /* Pattern is for a split " " */
-#define RXf_WHITE		(1<<(RXf_BASE_SHIFT+21)) /* Pattern is /\s+/ */
-#define RXf_NULL		(1U<<(RXf_BASE_SHIFT+22)) /* Pattern is // */
-#if RXf_BASE_SHIFT+22 > 31
-#   error Too many RXf_PMf bits used.  See regnodes.h for any spare in middle
+#define RXf_START_ONLY		(1U<<(RXf_BASE_SHIFT+14)) /* Pattern is /^/ */
+#define RXf_SKIPWHITE           (1U<<(RXf_BASE_SHIFT+15)) /* Pattern is for a */
+                                                          /* split " " */
+#define RXf_WHITE		(1U<<(RXf_BASE_SHIFT+16)) /* Pattern is /\s+/ */
+#define RXf_NULL		(1U<<(RXf_BASE_SHIFT+17)) /* Pattern is // */
+
+/* See comments at the beginning of these defines about adding bits.  The
+ * highest bit position should be used, so that if RXf_BASE_SHIFT gets
+ * increased, the #error below will be triggered so that you will be reminded
+ * to adjust things at the other end to keep the bit positions unchanged */
+#if RXf_BASE_SHIFT+17 > 31
+#   error Too many RXf_PMf bits used.  See comments at beginning of these for what to do
 #endif
 
 /*
@@ -433,7 +456,7 @@ get_regex_charset_name(const U32 flags, STRLEN* const lenp)
  *
  */
 
-#if NO_TAINT_SUPPORT
+#ifdef NO_TAINT_SUPPORT
 #   define RX_ISTAINTED(prog)    0
 #   define RX_TAINT_on(prog)     NOOP
 #   define RXp_MATCH_TAINTED(prog) 0
@@ -496,6 +519,10 @@ get_regex_charset_name(const U32 flags, STRLEN* const lenp)
 #define RX_LASTPAREN(prog)	(ReANY(prog)->lastparen)
 #define RX_LASTCLOSEPAREN(prog)	(ReANY(prog)->lastcloseparen)
 #define RX_SAVED_COPY(prog)	(ReANY(prog)->saved_copy)
+/* last match was zero-length */
+#define RX_ZERO_LEN(prog) \
+        (RX_OFFS(prog)[0].start + (SSize_t)RX_GOFS(prog) \
+          == RX_OFFS(prog)[0].end)
 
 #endif /* PLUGGABLE_RE_EXTENSION */
 
@@ -523,22 +550,30 @@ get_regex_charset_name(const U32 flags, STRLEN* const lenp)
 #define RX_MATCH_UTF8_on(prog)		(RX_EXTFLAGS(prog) |= RXf_MATCH_UTF8)
 #define RX_MATCH_UTF8_off(prog)		(RX_EXTFLAGS(prog) &= ~RXf_MATCH_UTF8)
 #define RX_MATCH_UTF8_set(prog, t)	((t) \
-			? (RX_MATCH_UTF8_on(prog), (PL_reg_match_utf8 = 1)) \
-			: (RX_MATCH_UTF8_off(prog), (PL_reg_match_utf8 = 0)))
+			? RX_MATCH_UTF8_on(prog) \
+			: RX_MATCH_UTF8_off(prog))
 
 /* Whether the pattern stored at RX_WRAPPED is in UTF-8  */
 #define RX_UTF8(prog)			SvUTF8(prog)
 
-#define REXEC_COPY_STR	0x01		/* Need to copy the string. */
-#define REXEC_CHECKED	0x02		/* check_substr already checked. */
-#define REXEC_SCREAM	0x04		/* use scream table. */
-#define REXEC_IGNOREPOS	0x08		/* \G matches at start. */
-#define REXEC_NOT_FIRST	0x10		/* This is another iteration of //g. */
-                                    /* under REXEC_COPY_STR, it's ok for the
-                                     * engine (modulo PL_sawamperand etc)
-                                     * to skip copying ... */
-#define REXEC_COPY_SKIP_PRE  0x20   /* ...the $` part of the string, or */
-#define REXEC_COPY_SKIP_POST 0x40   /* ...the $' part of the string */
+
+/* bits in flags arg of Perl_regexec_flags() */
+
+#define REXEC_COPY_STR  0x01    /* Need to copy the string for captures. */
+#define REXEC_CHECKED   0x02    /* re_intuit_start() already called. */
+#define REXEC_SCREAM    0x04    /* currently unused. */
+#define REXEC_IGNOREPOS 0x08    /* use stringarg, not pos(), for \G match */
+#define REXEC_NOT_FIRST 0x10    /* This is another iteration of //g:
+                                   no need to copy string again */
+
+                                     /* under REXEC_COPY_STR, it's ok for the
+                                        engine (modulo PL_sawamperand etc)
+                                        to skip copying: ... */
+#define REXEC_COPY_SKIP_PRE  0x20    /* ...the $` part of the string, or */
+#define REXEC_COPY_SKIP_POST 0x40    /* ...the $' part of the string */
+#define REXEC_FAIL_ON_UNDERFLOW 0x80 /* fail the match if $& would start before
+                                        the start pos (so s/.\G// would fail
+                                        on second iteration */
 
 #if defined(__GNUC__) && !defined(PERL_GCC_BRACE_GROUPS_FORBIDDEN)
 #  define ReREFCNT_inc(re)						\
@@ -571,17 +606,64 @@ get_regex_charset_name(const U32 flags, STRLEN* const lenp)
 
 #define FBMrf_MULTILINE	1
 
-/* some basic information about the current match that is created by
- * Perl_regexec_flags and then passed to regtry(), regmatch() etc */
+struct regmatch_state;
+struct regmatch_slab;
+
+/* like regmatch_info_aux, but contains extra fields only needed if the
+ * pattern contains (?{}). If used, is snuck into the second slot in the
+ * regmatch_state stack at the start of execution */
 
 typedef struct {
-    REGEXP *prog;
-    char *bol;
-    char *till;
-    SV *sv;
-    char *ganch;
-    char *cutpoint;
-    bool is_utf8_pat;
+    regexp *rex;
+    PMOP    *curpm;     /* saved PL_curpm */
+#ifdef PERL_ANY_COW
+    SV      *saved_copy; /* saved saved_copy field from rex */
+#endif
+    char    *subbeg;    /* saved subbeg     field from rex */
+    STRLEN  sublen;     /* saved sublen     field from rex */
+    STRLEN  suboffset;  /* saved suboffset  field from rex */
+    STRLEN  subcoffset; /* saved subcoffset field from rex */
+    MAGIC   *pos_magic; /* pos() magic attached to $_ */
+    SSize_t pos;        /* the original value of pos() in pos_magic */
+    U8      pos_flags;  /* flags to be restored; currently only MGf_BYTES*/
+} regmatch_info_aux_eval;
+
+
+/* fields that logically  live in regmatch_info, but which need cleaning
+ * up on croak(), and so are instead are snuck into the first slot in
+ * the regmatch_state stack at the start of execution */
+
+typedef struct {
+    regmatch_info_aux_eval *info_aux_eval;
+    struct regmatch_state *old_regmatch_state; /* saved PL_regmatch_state */
+    struct regmatch_slab  *old_regmatch_slab;  /* saved PL_regmatch_slab */
+    char *poscache;	/* S-L cache of fail positions of WHILEMs */
+} regmatch_info_aux;
+
+
+/* some basic information about the current match that is created by
+ * Perl_regexec_flags and then passed to regtry(), regmatch() etc.
+ * It is allocated as a local var on the stack, so nothing should be
+ * stored in it that needs preserving or clearing up on croak().
+ * For that, see the aux_info and aux_info_eval members of the
+ * regmatch_state union. */
+
+typedef struct {
+    REGEXP *prog;        /* the regex being executed */
+    const char * strbeg; /* real start of string */
+    char *strend;        /* one byte beyond last char of match string */
+    char *till;          /* matches shorter than this fail (see minlen arg) */
+    SV *sv;              /* the SV string currently being matched */
+    char *ganch;         /* position of \G anchor */
+    char *cutpoint;      /* (*COMMIT) position (if any) */
+    regmatch_info_aux      *info_aux; /* extra fields that need cleanup */
+    regmatch_info_aux_eval *info_aux_eval; /* extra saved state for (?{}) */
+    I32  poscache_maxiter; /* how many whilems todo before S-L cache kicks in */
+    I32  poscache_iter;    /* current countdown from _maxiter to zero */
+    STRLEN poscache_size;  /* size of regmatch_info_aux.poscache */
+    bool intuit;    /* re_intuit_start() is the top-level caller */
+    bool is_utf8_pat;    /* regex is utf8 */
+    bool is_utf8_target; /* string being matched is utf8 */
     bool warned; /* we have issued a recursion warning; no need for more */
 } regmatch_info;
  
@@ -589,7 +671,7 @@ typedef struct {
 /* structures for holding and saving the state maintained by regmatch() */
 
 #ifndef MAX_RECURSE_EVAL_NOCHANGE_DEPTH
-#define MAX_RECURSE_EVAL_NOCHANGE_DEPTH 1000
+#define MAX_RECURSE_EVAL_NOCHANGE_DEPTH 10
 #endif
 
 typedef I32 CHECKPOINT;
@@ -599,6 +681,29 @@ typedef struct regmatch_state {
     char *locinput;		/* where to backtrack in string on failure */
 
     union {
+
+        /* the 'info_aux' and 'info_aux_eval' union members are cuckoos in
+         * the nest. They aren't saved backtrack state; rather they
+         * represent one or two extra chunks of data that need allocating
+         * at the start of a match. These fields would logically live in
+         * the regmatch_info struct, except that is allocated on the
+         * C stack, and these fields are all things that require cleanup
+         * after a croak(), when the stack is lost.
+         * As a convenience, we just use the first 1 or 2 regmatch_state
+         * slots to store this info, as we will be allocating a slab of
+         * these anyway. Otherwise we'd have to malloc and then free them,
+         * or allocate them on the save stack (where they will get
+         * realloced if the save stack grows).
+         * info_aux contains the extra fields that are always needed;
+         * info_aux_eval contains extra fields that only needed if
+         * the pattern contains code blocks
+         * We split them into two separate structs to avoid increasing
+         * the size of the union.
+         */
+
+        regmatch_info_aux info_aux;
+
+        regmatch_info_aux_eval info_aux_eval;
 
 	/* this is a fake union member that matches the first element
 	 * of each member that needs to store positive backtrack
@@ -651,14 +756,14 @@ typedef struct regmatch_state {
 	struct {
 	    /* this first element must match u.yes */
 	    struct regmatch_state *prev_yes_state;
-	    struct regmatch_state *prev_eval;
 	    struct regmatch_state *prev_curlyx;
+            struct regmatch_state *prev_eval;
 	    REGEXP	*prev_rex;
-	    bool	saved_utf8_pat; /* saved copy of is_utf8_pat */
 	    CHECKPOINT	cp;	/* remember current savestack indexes */
 	    CHECKPOINT	lastcp;
-	    U32        close_paren; /* which close bracket is our end */
+            U32         close_paren; /* which close bracket is our end (+1) */
 	    regnode	*B;	/* the node following us  */
+            char        *prev_recurse_locinput;
 	} eval;
 
 	struct {
@@ -743,6 +848,8 @@ typedef struct regmatch_state {
     } u;
 } regmatch_state;
 
+
+
 /* how many regmatch_state structs to allocate as a single slab.
  * We do it in 4K blocks for efficiency. The "3" is 2 for the next/prev
  * pointers, plus 1 for any mythical malloc overhead. */
@@ -755,57 +862,8 @@ typedef struct regmatch_slab {
     struct regmatch_slab *prev, *next;
 } regmatch_slab;
 
-#define PL_bostr		PL_reg_state.re_state_bostr
-#define PL_regeol		PL_reg_state.re_state_regeol
-#define PL_reg_match_utf8	PL_reg_state.re_state_reg_match_utf8
-#define PL_reg_magic		PL_reg_state.re_state_reg_magic
-#define PL_reg_oldpos		PL_reg_state.re_state_reg_oldpos
-#define PL_reg_oldcurpm		PL_reg_state.re_state_reg_oldcurpm
-#define PL_reg_curpm		PL_reg_state.re_state_reg_curpm
-#define PL_reg_oldsaved		PL_reg_state.re_state_reg_oldsaved
-#define PL_reg_oldsavedlen	PL_reg_state.re_state_reg_oldsavedlen
-#define PL_reg_oldsavedoffset	PL_reg_state.re_state_reg_oldsavedoffset
-#define PL_reg_oldsavedcoffset	PL_reg_state.re_state_reg_oldsavedcoffset
-#define PL_reg_maxiter		PL_reg_state.re_state_reg_maxiter
-#define PL_reg_leftiter		PL_reg_state.re_state_reg_leftiter
-#define PL_reg_poscache		PL_reg_state.re_state_reg_poscache
-#define PL_reg_poscache_size	PL_reg_state.re_state_reg_poscache_size
-#define PL_reg_starttry		PL_reg_state.re_state_reg_starttry
-#define PL_nrs			PL_reg_state.re_state_nrs
 
-struct re_save_state {
-    bool re_state_eval_setup_done;	/* from regexec.c */
-    bool re_state_reg_match_utf8;	/* from regexec.c */
-    /* Space for U8 */
-    I32 re_state_reg_oldpos;		/* from regexec.c */
-    I32 re_state_reg_maxiter;		/* max wait until caching pos */
-    I32 re_state_reg_leftiter;		/* wait until caching pos */
-    char *re_state_bostr;
-    char *re_state_regeol;		/* End of input, for $ check. */
-    MAGIC *re_state_reg_magic;		/* from regexec.c */
-    PMOP *re_state_reg_oldcurpm;	/* from regexec.c */
-    PMOP *re_state_reg_curpm;		/* from regexec.c */
-    char *re_state_reg_oldsaved;	/* old saved substr during match */
-    STRLEN re_state_reg_oldsavedlen;	/* old length of saved substr during match */
-    STRLEN re_state_reg_oldsavedoffset;	/* old offset of saved substr during match */
-    STRLEN re_state_reg_oldsavedcoffset;/* old coffset of saved substr during match */
-    STRLEN re_state_reg_poscache_size;	/* size of pos cache of WHILEM */
-    char *re_state_reg_poscache;	/* cache of pos of WHILEM */
-    char *re_state_reg_starttry;	/* from regexec.c */
-#ifdef PERL_ANY_COW
-    SV *re_state_nrs;			/* was placeholder: unused since 5.8.0 (5.7.2 patch #12027 for bug ID 20010815.012). Used to save rx->saved_copy */
-#endif
-};
-
-#define SAVESTACK_ALLOC_FOR_RE_SAVE_STATE \
-	(1 + ((sizeof(struct re_save_state) - 1) / sizeof(*PL_savestack)))
 
 /*
- * Local variables:
- * c-indentation-style: bsd
- * c-basic-offset: 4
- * indent-tabs-mode: nil
- * End:
- *
  * ex: set ts=8 sts=4 sw=4 et:
  */

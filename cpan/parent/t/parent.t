@@ -9,7 +9,7 @@ BEGIN {
 }
 
 use strict;
-use Test::More tests => 10;
+use Test::More tests => 9;
 
 use_ok('parent');
 
@@ -56,19 +56,15 @@ is( $Eval1::VERSION, '1.01' );
 
 is( $Eval2::VERSION, '1.02' );
 
+my $expected= q{/^Can't locate reallyReAlLyNotexists.pm in \@INC \(\@INC contains:/};
+$expected= q{/^Can't locate reallyReAlLyNotexists.pm in \@INC \(you may need to install the reallyReAlLyNotexists module\) \(\@INC contains:/}
+    if 5.017005 <= $];
 
 eval q{use parent 'reallyReAlLyNotexists'};
-like( $@, q{/^Can't locate reallyReAlLyNotexists.pm in \@INC \(you may need to install the reallyReAlLyNotexists module\) \(\@INC contains:/}, 'baseclass that does not exist');
+like( $@, $expected, 'baseclass that does not exist');
 
 eval q{use parent 'reallyReAlLyNotexists'};
-like( $@, q{/^Can't locate reallyReAlLyNotexists.pm in \@INC \(you may need to install the reallyReAlLyNotexists module\) \(\@INC contains:/}, '  still failing on 2nd load');
-{
-    my $warning;
-    local $SIG{__WARN__} = sub { $warning = shift };
-    eval q{package HomoGenous; use parent 'HomoGenous';};
-    like($warning, q{/^Class 'HomoGenous' tried to inherit from itself/},
-                                          '  self-inheriting');
-}
+like( $@, $expected, '  still failing on 2nd load');
 
 {
     BEGIN { $Has::Version_0::VERSION = 0 }

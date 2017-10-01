@@ -2,11 +2,11 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
     require './test.pl';
+    set_up_inc('../lib');
 }
 
-plan tests => 39;
+plan tests => 42;
 
 $^R = undef;
 like( 'a',  qr/^a(?{1})(?:b(?{2}))?/, 'a =~ ab?' );
@@ -91,3 +91,14 @@ cmp_ok( scalar(@var), '==', 0, '..still nothing pushed (package)' );
     $x = "(?{})";
     is eval { "a" =~ /a++(?{})+$x/x } || $@, '1', '/a++(?{})+$code_block/'
 }
+
+# [perl #78194] $_ in code block aliasing op return values
+"$_" =~ /(?{ is \$_, \$_,
+               '[perl #78194] \$_ == \$_ when $_ aliases "$x"' })/;
+
+@a = 1..3;
+like eval { qr/@a(?{})/ }, qr/1 2 3\(\?\{\}\)/, 'qr/@a(?{})/';
+
+# Not a code block, but looks a bit like one.  (Failed an assertion from
+# 5.17.1 to 5.21.6.)
+ok "(?{" =~ qr/\Q(?{/, 'qr/\Q(?{/';

@@ -2,8 +2,8 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
     require './test.pl';	# for which_perl() etc
+    set_up_inc('../lib');
 }
 
 use Config;
@@ -19,8 +19,13 @@ if(eval {require File::Spec; 1}) {
     diag("\ncontinuing, assuming '.' for current directory. Some tests will be skipped.");
 }
 
+if ($^O eq 'MSWin32') {
+    # under minitest, buildcustomize sets this to 1, which means
+    # nlinks isn't populated properly, allow nlinks tests to pass
+    ${^WIN32_SLOPPY_STAT} = 0;
+}
 
-plan tests => 113;
+plan tests => 118;
 
 my $Perl = which_perl();
 
@@ -36,14 +41,15 @@ $Is_NetWare = $^O eq 'NetWare';
 $Is_OS2     = $^O eq 'os2';
 $Is_Solaris = $^O eq 'solaris';
 $Is_VMS     = $^O eq 'VMS';
-$Is_DGUX    = $^O eq 'dgux';
 $Is_MPRAS   = $^O =~ /svr4/ && -f '/etc/.relid';
+$Is_Android = $^O =~ /android/;
+$Is_Dfly    = $^O eq 'dragonfly';
 
 $Is_Dosish  = $Is_Dos || $Is_OS2 || $Is_MSWin32 || $Is_NetWare;
 
-$Is_UFS     = $Is_Darwin && (() = `df -t ufs . 2>/dev/null`) == 2;
+$ufs_no_ctime = ($Is_Dfly || $Is_Darwin) && (() = `df -t ufs . 2>/dev/null`) == 2;
 
-if ($Is_Cygwin) {
+if ($Is_Cygwin && !is_miniperl) {
   require Win32;
   Win32->import;
 }
@@ -93,8 +99,17 @@ close(FOO);
 
 sleep 2;
 
+my $has_link = 1;
+my $inaccurate_atime = 0;
+if (defined &Win32::IsWinNT && Win32::IsWinNT()) {
+    if (Win32::FsType() ne 'NTFS') {
+        $has_link            = 0;
+	$inaccurate_atime    = 1;
+    }
+}
 
 SKIP: {
+    skip "No link on this filesystem", 6 unless $has_link;
     unlink $tmpfile_link;
     my $lnk_result = eval { link $tmpfile, $tmpfile_link };
     skip "link() unimplemented", 6 if $@ =~ /unimplemented/;
@@ -127,8 +142,7 @@ SKIP: {
         # no ctime concept $ctime is ALWAYS == $mtime
         # expect netware to be the same ...
         skip "No ctime concept on this OS", 2
-                                     if $Is_MSWin32 || 
-                                        ($Is_Darwin && $Is_UFS);
+                                     if $Is_MSWin32 || $ufs_no_ctime;
 
         if( !ok($mtime, 'hard link mtime') ||
             !isnt($mtime, $ctime, 'hard link ctime != mtime') ) {
@@ -137,8 +151,8 @@ SKIP: {
 # has this problem.  Building on the ClearCase VOBS filesystem may also
 # cause this failure.
 #
-# Darwin's UFS doesn't have a ctime concept, and thus is expected to fail
-# this test.
+# Some UFS implementations don't have a ctime concept, and thus are
+# expected to fail this test.
 DIAG
         }
     }
@@ -177,8 +191,10 @@ SKIP: {
         # Going to try to switch away from root.  Might not work.
         my $olduid = $>;
         eval { $> = 1; };
+	skip "Can't test if an admin user in miniperl", 2,
+	  if $Is_Cygwin && is_miniperl();
         skip "Can't test -r or -w meaningfully if you're superuser", 2
-          if ($Is_Cygwin ? Win32::IsAdminUser : $> == 0);
+          if ($> == 0);
 
         SKIP: {
             skip "Can't test -r meaningfully?", 1 if $Is_Dos;
@@ -251,7 +267,7 @@ SKIP: {
       if $Is_VMS;
 
     delete $ENV{CLICOLOR_FORCE};
-    my $LS  = $Config{d_readlink} ? "ls -lL" : "ls -l";
+    my $LS  = $Config{d_readlink} && !$Is_Android ? "ls -lL" : "ls -l";
     my $CMD = "$LS /dev 2>/dev/null";
     my $DEV = qx($CMD);
 
@@ -294,13 +310,10 @@ SKIP: {
 	is($c1, $c2, "ls and $_[1] agreeing on /dev ($c1 $c2)");
     };
 
-SKIP: {
-    skip("DG/UX ls -L broken", 3) if $Is_DGUX;
-
+{
     $try->('b', '-b');
     $try->('c', '-c');
     $try->('s', '-S');
-
 }
 
 ok(! -b $Curdir,    '!-b cwd');
@@ -377,12 +390,7 @@ SKIP: {
 my $statfile = './op/stat.t';
 ok(  -T $statfile,    '-T');
 ok(! -B $statfile,    '!-B');
-
-SKIP: {
-     skip("DG/UX", 1) if $Is_DGUX;
 ok(-B $Perl,      '-B');
-}
-
 ok(! -T $Perl,    '!-T');
 
 open(FOO,$statfile);
@@ -435,7 +443,7 @@ ok(-f(),    '     -f() "');
 
 unlink $tmpfile or print "# unlink failed: $!\n";
 
-# bug id 20011101.069
+# bug id 20011101.069 (#7861)
 my @r = \stat($Curdir);
 is(scalar @r, 13,   'stat returns full 13 elements');
 
@@ -469,16 +477,19 @@ like $@, qr/^The stat preceding lstat\(\) wasn't an lstat at /,
 'stat $ioref resets stat type';
 
 {
-    my @statbuf = stat STDOUT;
+    open(FOO, ">$tmpfile") || DIE("Can't open temp test file: $!");
+    my @statbuf = stat FOO;
     stat "test.pl";
-    my @lstatbuf = lstat *STDOUT{IO};
+    my @lstatbuf = lstat *FOO{IO};
     is "@lstatbuf", "@statbuf", 'lstat $ioref reverts to regular fstat';
+    close(FOO);
+    unlink $tmpfile or print "# unlink failed: $!\n";
 }
   
 SKIP: {
     skip "No lstat", 2 unless $Config{d_lstat};
 
-    # bug id 20020124.004
+    # bug id 20020124.004 (#8334)
     # If we have d_lstat, we should have symlink()
     my $linkname = 'stat-' . rand =~ y/.//dr;
     my $target = $Perl;
@@ -509,7 +520,11 @@ SKIP: {
     my @b = (-M _, -A _, -C _);
     print "# -MAC=(@b)\n";
     ok( (-M _) < 0, 'negative -M works');
-    ok( (-A _) < 0, 'negative -A works');
+  SKIP:
+    {
+        skip "Access timestamps inaccurate", 1 if $inaccurate_atime;
+        ok( (-A _) < 0, 'negative -A works');
+    }
     ok( (-C _) < 0, 'negative -C works');
     ok(unlink($f), 'unlink tmp file');
 }
@@ -525,9 +540,13 @@ SKIP: {
     my $s2 = -s _;
     is($s1, $s2, q(-T _ doesn't break the statbuffer));
     SKIP: {
+	my $root_uid = $Is_Cygwin ? 18 : 0;
 	skip "No lstat", 1 unless $Config{d_lstat};
-	skip "uid=0", 1 unless $<&&$>;
-	skip "Readable by group/other means readable by me", 1 if $^O eq 'VMS';
+	skip "uid=0", 1 if $< == $root_uid or $> == $root_uid;
+	skip "Can't check if admin user in miniperl", 1
+	  if $^O =~ /^(cygwin|MSWin32|msys)$/ && is_miniperl();
+	skip "Readable by group/other means readable by me on $^O", 1 if $^O eq 'VMS'
+          or ($^O =~ /^(cygwin|MSWin32|msys)$/ and Win32::IsAdminUser());
 	lstat($tmpfile);
 	-T _;
 	ok(eval { lstat _ },
@@ -601,6 +620,37 @@ SKIP: {
     stat 'prepeinamehyparcheiarcheiometoonomaavto';
     stat _;
     is $w, undef, 'no unopened warning from stat _';
+}
+
+{
+    # [perl #123816]
+    # Inappropriate stacking of l?stat with filetests should either work or
+    # give a syntax error, they shouldn't crash.
+    eval { stat -t };
+    ok(1, 'can "stat -t" without crashing');
+	eval { lstat -t };
+    ok(1, 'can "lstat -t" without crashing');
+}
+
+# [perl #126064] stat stat stack busting
+is join("-", 1,2,3,(stat stat stat),4,5,6), "1-2-3-4-5-6",
+  'stat inside stat gets scalar context';
+
+# [perl #126162] stat an array should not work
+# skip if -e '2'.
+SKIP:
+{
+    skip "There is a file named '2', which invalidates this test", 2 if -e '2';
+
+    my $Errno_loaded = eval { require Errno };
+    my @statarg = ($statfile, $statfile);
+    ok !stat(@statarg),
+    'stat on an array of valid paths should warn and should not return any data';
+    my $error = 0+$!;
+    skip "Errno not available", 1
+      unless $Errno_loaded;
+    is $error, &Errno::ENOENT,
+      'stat on an array of valid paths should return ENOENT';
 }
 
 END {

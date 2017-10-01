@@ -13,6 +13,7 @@ BEGIN {
         plan skip_all => 'This is not Win32';
     }
 }
+plan 'no_plan'; # BinGOs says there are 63 but I can only see 62
 
 use Config;
 use File::Spec;
@@ -46,18 +47,18 @@ SKIP: {
     skip( '$ENV{COMSPEC} not set', 2 )
         unless $ENV{COMSPEC} =~ m!((?:[a-z]:)?[^|<>]+)!i;
     my $comspec = $1;
-    is( $MM->maybe_command( $comspec ), 
+    is( $MM->maybe_command( $comspec ),
         $comspec, 'COMSPEC is a maybe_command()' );
     ( my $comspec2 = $comspec ) =~ s|\..{3}$||;
-    like( $MM->maybe_command( $comspec2 ), 
-          qr/\Q$comspec/i, 
+    like( $MM->maybe_command( $comspec2 ),
+          qr/\Q$comspec/i,
           'maybe_command() without extension' );
 }
 
 my $had_pathext = exists $ENV{PATHEXT};
 {
     local $ENV{PATHEXT} = '.exe';
-    ok( ! $MM->maybe_command( 'not_a_command.com' ), 
+    ok( ! $MM->maybe_command( 'not_a_command.com' ),
         'not a maybe_command()' );
 }
 # Bug in Perl.  local $ENV{FOO} won't delete the key afterward.
@@ -65,14 +66,14 @@ delete $ENV{PATHEXT} unless $had_pathext;
 
 # file_name_is_absolute() [Does not support UNC-paths]
 {
-    ok( $MM->file_name_is_absolute( 'C:/' ), 
+    ok( $MM->file_name_is_absolute( 'C:/' ),
         'file_name_is_absolute()' );
     ok( ! $MM->file_name_is_absolute( 'some/path/' ),
         'not file_name_is_absolute()' );
 
 }
 
-# find_perl() 
+# find_perl()
 # Should be able to find running perl... $^X is OK on Win32
 {
     my $my_perl = $1 if $^X  =~ /(.*)/; # are we in -T or -t?
@@ -85,10 +86,10 @@ delete $ENV{PATHEXT} unless $had_pathext;
 {
     my @path_eg = qw( c: trick dir/now_OK );
 
-    is( $MM->catdir( @path_eg ), 
+    is( $MM->catdir( @path_eg ),
          'C:\\trick\\dir\\now_OK', 'catdir()' );
-    is( $MM->catdir( @path_eg ), 
-        File::Spec->catdir( @path_eg ), 
+    is( $MM->catdir( @path_eg ),
+        File::Spec->catdir( @path_eg ),
         'catdir() eq File::Spec->catdir()' );
 
 # catfile() (calls MM_Win32->catdir)
@@ -97,8 +98,8 @@ delete $ENV{PATHEXT} unless $had_pathext;
     is( $MM->catfile( @path_eg ),
         'C:\\trick\\dir\\now_OK\\file.ext', 'catfile()' );
 
-    is( $MM->catfile( @path_eg ), 
-        File::Spec->catfile( @path_eg ), 
+    is( $MM->catfile( @path_eg ),
+        File::Spec->catfile( @path_eg ),
         'catfile() eq File::Spec->catfile()' );
 }
 
@@ -126,7 +127,7 @@ note "init_others creates expected keys"; {
 # init_* methods and check the keys in $mm_w32 directly
 {
     my $mm_w32 = bless {
-        NAME         => 'TestMM_Win32', 
+        NAME         => 'TestMM_Win32',
         VERSION      => '1.00',
         PM           => { 'MM_Win32.pm' => 1 },
         MAKE         => $Config{make},
@@ -146,7 +147,6 @@ note "init_others creates expected keys"; {
     $mm_w32->init_xs;
 
     my $s_PM = join( " \\\n\t", sort keys %{$mm_w32->{PM}} );
-    my $k_PM = join( " \\\n\t", %{$mm_w32->{PM}} );
 
     my $constants = $mm_w32->constants;
 
@@ -156,7 +156,6 @@ note "init_others creates expected keys"; {
          qr|^MAKEMAKER  \s* = \s* \Q$INC{'ExtUtils/MakeMaker.pm'}\E \s* $|xms,
          qr|^MM_VERSION \s* = \s* \Q$ExtUtils::MakeMaker::VERSION\E \s* $|xms,
          qr|^TO_INST_PM \s* = \s* \Q$s_PM\E \s* $|xms,
-         qr|^PM_TO_BLIB \s* = \s* \Q$k_PM\E \s* $|xms,
         )
     {
         like( $constants, $regex, 'constants() check' );
@@ -175,7 +174,7 @@ note "init_others creates expected keys"; {
 
 # init_linker
 {
-    my $libperl = File::Spec->catfile('$(PERL_INC)', 
+    my $libperl = File::Spec->catfile('$(PERL_INC)',
                                       $Config{libperl} || 'libperl.a');
     my $export  = '$(BASEEXT).def';
     my $after   = '';
@@ -207,19 +206,19 @@ EOSCRIPT
     skip( "Can't write to temp file: $!", 4 )
         unless close SCRIPT;
     # now start tests:
-    is( $MM->perl_script( $script_name ), 
+    is( $MM->perl_script( $script_name ),
         "${script_name}$script_ext", "perl_script ($script_ext)" );
 
     skip( "Can't rename temp file: $!", 3 )
         unless rename $script_name, "${script_name}.pl";
     $script_ext = '.pl';
-    is( $MM->perl_script( $script_name ), 
+    is( $MM->perl_script( $script_name ),
         "${script_name}$script_ext", "perl_script ($script_ext)" );
 
     skip( "Can't rename temp file: $!", 2 )
         unless rename "${script_name}$script_ext", "${script_name}.bat";
     $script_ext = '.bat';
-    is( $MM->perl_script( $script_name ), 
+    is( $MM->perl_script( $script_name ),
         "${script_name}$script_ext", "perl_script ($script_ext)" );
 
     skip( "Can't rename temp file: $!", 1 )
@@ -227,7 +226,7 @@ EOSCRIPT
     $script_ext = '.noscript';
 
     isnt( $MM->perl_script( $script_name ),
-          "${script_name}$script_ext", 
+          "${script_name}$script_ext",
           "not a perl_script anymore ($script_ext)" );
     is( $MM->perl_script( $script_name ), undef,
         "perl_script ($script_ext) returns empty" );
@@ -281,7 +280,7 @@ unlink "${script_name}$script_ext" if -f "${script_name}$script_ext";
 
         my @cc_env = ExtUtils::MM_Win32::_identify_compiler_environment( $config );
 
-        my %cc_env = ( BORLAND => $cc_env[0], GCC => $cc_env[1], DLLTOOL => $cc_env[2] );
+        my %cc_env = ( BORLAND => $cc_env[0], GCC => $cc_env[1], MSVC => $cc_env[2] );
 
         return \%cc_env;
     }
@@ -300,16 +299,6 @@ unlink "${script_name}$script_ext" if -f "${script_name}$script_ext";
     }
 
     my @tests = (
-        {
-            config => {},
-            key => 'DLLTOOL', expect => 'dlltool',
-            desc => 'empty dlltool defaults to "dlltool"',
-        },
-        {
-            config => { dlltool => 'test' },
-            key => 'DLLTOOL', expect => 'test',
-            desc => 'dlltool value is taken over verbatim from %Config, if set',
-        },
         {
             config => {},
             key => 'GCC', expect => 0,
@@ -347,8 +336,8 @@ unlink "${script_name}$script_ext" if -f "${script_name}$script_ext";
         },
         {
             config => { cc => 'C:/Borland/bin/bcc.exe' },
-            key => 'BORLAND', expect => 0,
-            desc => 'fully qualified borland cc is not recognized',
+            key => 'BORLAND', expect => 1,
+            desc => 'fully qualified borland cc is recognized',
         },
         {
             config => { cc => 'bcc-1.exe' },
@@ -364,10 +353,6 @@ unlink "${script_name}$script_ext" if -f "${script_name}$script_ext";
 
     _check_cc_id_value($_) for @tests;
 }
-
-
-done_testing;
-
 
 package FakeOut;
 

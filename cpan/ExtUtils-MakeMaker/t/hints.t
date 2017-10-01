@@ -4,8 +4,11 @@ use strict;
 use warnings;
 
 use lib 't/lib';
-chdir 't';
 
+use File::Temp qw[tempdir];
+my $tmpdir = tempdir( DIR => 't', CLEANUP => 1 );
+use Cwd; my $cwd = getcwd; END { chdir $cwd } # so File::Temp can cleanup
+chdir $tmpdir;
 use File::Spec;
 
 use Test::More tests => 3;
@@ -39,7 +42,7 @@ CLOO
 
     $mm->check_hints;
     is( $mm->{CCFLAGS}, 'basset hounds got long ears' );
-    is( $stderr, "Processing hints file $Hint_File\n" );
+    is( $stderr, "" );
 }
 
 
@@ -59,7 +62,6 @@ CLOO
 
     $mm->check_hints;
     is( $stderr, <<OUT, 'hint files produce errors' );
-Processing hints file $Hint_File
 Argh!
 OUT
 }

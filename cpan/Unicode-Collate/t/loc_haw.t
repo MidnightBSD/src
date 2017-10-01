@@ -1,8 +1,11 @@
 
 BEGIN {
-    unless ("A" eq pack('U', 0x41)) {
-	print "1..0 # Unicode::Collate " .
-	    "cannot stringify a Unicode code point\n";
+    unless ('A' eq pack('U', 0x41)) {
+	print "1..0 # Unicode::Collate cannot pack a Unicode code point\n";
+	exit 0;
+    }
+    unless (0x41 == unpack('U', 'A')) {
+	print "1..0 # Unicode::Collate cannot get a Unicode code point\n";
 	exit 0;
     }
     if ($ENV{PERL_CORE}) {
@@ -13,7 +16,7 @@ BEGIN {
 
 use strict;
 use warnings;
-BEGIN { $| = 1; print "1..49\n"; }
+BEGIN { $| = 1; print "1..57\n"; }
 my $count = 0;
 sub ok ($;$) {
     my $p = my $r = shift;
@@ -49,9 +52,21 @@ ok($objHaw->lt('m', 'n'));
 ok($objHaw->lt('n', 'p'));
 ok($objHaw->lt('p', 'w'));
 ok($objHaw->lt('w', "\x{2BB}"));
-ok($objHaw->gt('b', "\x{2BB}"));
+ok($objHaw->lt('b', "\x{2BB}"));
 
 # 15
+
+ok($objHaw->lt('u', 'b'));
+ok($objHaw->lt('b', 'h'));
+ok($objHaw->gt('x', "\x{2BB}"));
+
+ok($objHaw->lt('aw', 'e'));
+ok($objHaw->lt('ew', 'i'));
+ok($objHaw->lt('iw', 'o'));
+ok($objHaw->lt('ow', 'u'));
+ok($objHaw->lt('uw', 'h'));
+
+# 23
 
 $objHaw->change(level => 2);
 
@@ -68,7 +83,7 @@ ok($objHaw->eq('n', 'N'));
 ok($objHaw->eq('p', 'P'));
 ok($objHaw->eq('w', 'W'));
 
-# 27
+# 35
 
 $objHaw->change(level => 3);
 
@@ -85,7 +100,7 @@ ok($objHaw->lt('n', 'N'));
 ok($objHaw->lt('p', 'P'));
 ok($objHaw->lt('w', 'W'));
 
-# 39
+# 47
 
 ok($objHaw->eq("a\x{304}", "\x{101}"));
 ok($objHaw->eq("A\x{304}", "\x{100}"));
@@ -98,4 +113,4 @@ ok($objHaw->eq("O\x{304}", "\x{14C}"));
 ok($objHaw->eq("u\x{304}", "\x{16B}"));
 ok($objHaw->eq("U\x{304}", "\x{16A}"));
 
-# 49
+# 57

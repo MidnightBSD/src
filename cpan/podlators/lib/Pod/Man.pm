@@ -11,9 +11,10 @@
 # me any patches at the address above in addition to sending them to the
 # standard Perl mailing lists.
 #
-# Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
-#     2010, 2012, 2013 Russ Allbery <rra@stanford.edu>
+# Written by Russ Allbery <rra@cpan.org>
 # Substantial contributions by Sean Burke <sburke@cpan.org>
+# Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
+#     2010, 2012, 2013, 2014, 2015, 2016 Russ Allbery <rra@cpan.org>
 #
 # This program is free software; you may redistribute it and/or modify it
 # under the same terms as Perl itself.
@@ -24,19 +25,25 @@
 
 package Pod::Man;
 
-require 5.005;
-
+use 5.006;
 use strict;
+use warnings;
+
 use subs qw(makespace);
 use vars qw(@ISA %ESCAPES $PREAMBLE $VERSION);
 
-use Carp qw(croak);
-use Encode qw(encode);
+use Carp qw(carp croak);
 use Pod::Simple ();
+
+# Conditionally import Encode and set $HAS_ENCODE if it is available.
+our $HAS_ENCODE;
+BEGIN {
+    $HAS_ENCODE = eval { require Encode };
+}
 
 @ISA = qw(Pod::Simple);
 
-$VERSION = '2.27';
+$VERSION = '4.09';
 
 # Set the debugging level.  If someone has inserted a debug function into this
 # class already, use that.  Otherwise, use any Pod::Simple debug function
@@ -56,6 +63,27 @@ BEGIN { *ASCII = \&Pod::Simple::ASCII }
 # Pretty-print a data structure.  Only used for debugging.
 BEGIN { *pretty = \&Pod::Simple::pretty }
 
+# Formatting instructions for various types of blocks.  cleanup makes hyphens
+# hard, adds spaces between consecutive underscores, and escapes backslashes.
+# convert translates characters into escapes.  guesswork means to apply the
+# transformations done by the guesswork sub.  literal says to protect literal
+# quotes from being turned into UTF-8 quotes.  By default, all transformations
+# are on except literal, but some elements override.
+#
+# DEFAULT specifies the default settings.  All other elements should list only
+# those settings that they are overriding.  Data indicates =for roff blocks,
+# which should be passed along completely verbatim.
+#
+# Formatting inherits negatively, in the sense that if the parent has turned
+# off guesswork, all child elements should leave it off.
+my %FORMATTING = (
+    DEFAULT  => { cleanup => 1, convert => 1, guesswork => 1, literal => 0 },
+    Data     => { cleanup => 0, convert => 0, guesswork => 0, literal => 0 },
+    Verbatim => {                             guesswork => 0, literal => 1 },
+    C        => {                             guesswork => 0, literal => 1 },
+    X        => { cleanup => 0,               guesswork => 0               },
+);
+
 ##############################################################################
 # Object initialization
 ##############################################################################
@@ -73,8 +101,8 @@ sub new {
     $self->nbsp_for_S (1);
 
     # Tell Pod::Simple to keep whitespace whenever possible.
-    if ($self->can ('preserve_whitespace')) {
-        $self->preserve_whitespace (1);
+    if (my $preserve_whitespace = $self->can ('preserve_whitespace')) {
+        $self->$preserve_whitespace (1);
     } else {
         $self->fullstop_space_harden (1);
     }
@@ -117,6 +145,22 @@ sub new {
         croak (qq(Invalid errors setting: "$$self{errors}"));
     }
     delete $$self{errors};
+
+    # Degrade back to non-utf8 if Encode is not available.
+    #
+    # Suppress the warning message when PERL_CORE is set, indicating this is
+    # running as part of the core Perl build.  Perl builds podlators (and all
+    # pure Perl modules) before Encode and other XS modules, so Encode won't
+    # yet be available.  Rely on the Perl core build to generate man pages
+    # later, after all the modules are available, so that UTF-8 handling will
+    # be correct.
+    if ($$self{utf8} and !$HAS_ENCODE) {
+        if (!$ENV{PERL_CORE}) {
+            carp ('utf8 mode requested but Encode module not available,'
+                    . ' falling back to non-utf8');
+        }
+        delete $$self{utf8};
+    }
 
     # Initialize various other internal constants based on our arguments.
     $self->init_fonts;
@@ -172,23 +216,32 @@ sub init_fonts {
 }
 
 # Initialize the quotes that we'll be using for C<> text.  This requires some
-# special handling, both to parse the user parameter if given and to make sure
-# that the quotes will be safe against *roff.  Sets the internal hash keys
-# LQUOTE and RQUOTE.
+# special handling, both to parse the user parameters if given and to make
+# sure that the quotes will be safe against *roff.  Sets the internal hash
+# keys LQUOTE and RQUOTE.
 sub init_quotes {
     my ($self) = (@_);
 
+    # Handle the quotes option first, which sets both quotes at once.
     $$self{quotes} ||= '"';
     if ($$self{quotes} eq 'none') {
         $$self{LQUOTE} = $$self{RQUOTE} = '';
     } elsif (length ($$self{quotes}) == 1) {
         $$self{LQUOTE} = $$self{RQUOTE} = $$self{quotes};
-    } elsif ($$self{quotes} =~ /^(.)(.)$/
-             || $$self{quotes} =~ /^(..)(..)$/) {
-        $$self{LQUOTE} = $1;
-        $$self{RQUOTE} = $2;
+    } elsif (length ($$self{quotes}) % 2 == 0) {
+        my $length = length ($$self{quotes}) / 2;
+        $$self{LQUOTE} = substr ($$self{quotes}, 0, $length);
+        $$self{RQUOTE} = substr ($$self{quotes}, $length);
     } else {
         croak(qq(Invalid quote specification "$$self{quotes}"))
+    }
+
+    # Now handle the lquote and rquote options.
+    if (defined $$self{lquote}) {
+        $$self{LQUOTE} = $$self{lquote} eq 'none' ? q{} : $$self{lquote};
+    }
+    if (defined $$self{rquote}) {
+        $$self{RQUOTE} = $$self{rquote} eq 'none' ? q{} : $$self{rquote};
     }
 
     # Double the first quote; note that this should not be s///g as two double
@@ -257,8 +310,7 @@ sub _handle_text {
 # Given an element name, get the corresponding method name.
 sub method_for_element {
     my ($self, $element) = @_;
-    $element =~ tr/-/_/;
-    $element =~ tr/A-Z/a-z/;
+    $element =~ tr/A-Z-/a-z_/;
     $element =~ tr/_a-z0-9//cd;
     return $element;
 }
@@ -284,13 +336,14 @@ sub _handle_element_start {
         # and also depends on our parent tags.  Thankfully, inside tags that
         # turn off guesswork and reformatting, nothing else can turn it back
         # on, so this can be strictly inherited.
-        my $formatting = $$self{PENDING}[-1][1];
-        $formatting = $self->formatting ($formatting, $element);
+        my $formatting = {
+            %{ $$self{PENDING}[-1][1] || $FORMATTING{DEFAULT} },
+            %{ $FORMATTING{$element} || {} },
+        };
         push (@{ $$self{PENDING} }, [ $attrs, $formatting, '' ]);
         DEBUG > 4 and print "Pending: [", pretty ($$self{PENDING}), "]\n";
-    } elsif ($self->can ("start_$method")) {
-        my $method = 'start_' . $method;
-        $self->$method ($attrs, '');
+    } elsif (my $start_method = $self->can ("start_$method")) {
+        $self->$start_method ($attrs, '');
     } else {
         DEBUG > 2 and print "No $method start method, skipping\n";
     }
@@ -306,13 +359,12 @@ sub _handle_element_end {
 
     # If we have a command handler, pull off the pending text and pass it to
     # the handler along with the saved attribute hash.
-    if ($self->can ("cmd_$method")) {
+    if (my $cmd_method = $self->can ("cmd_$method")) {
         DEBUG > 2 and print "</$element> stops saving a tag\n";
         my $tag = pop @{ $$self{PENDING} };
         DEBUG > 4 and print "Popped: [", pretty ($tag), "]\n";
         DEBUG > 4 and print "Pending: [", pretty ($$self{PENDING}), "]\n";
-        my $method = 'cmd_' . $method;
-        my $text = $self->$method ($$tag[0], $$tag[2]);
+        my $text = $self->$cmd_method ($$tag[0], $$tag[2]);
         if (defined $text) {
             if (@{ $$self{PENDING} } > 1) {
                 $$self{PENDING}[-1][2] .= $text;
@@ -320,9 +372,8 @@ sub _handle_element_end {
                 $self->output ($text);
             }
         }
-    } elsif ($self->can ("end_$method")) {
-        my $method = 'end_' . $method;
-        $self->$method ();
+    } elsif (my $end_method = $self->can ("end_$method")) {
+        $self->$end_method ();
     } else {
         DEBUG > 2 and print "No $method end method, skipping\n";
     }
@@ -331,34 +382,6 @@ sub _handle_element_end {
 ##############################################################################
 # General formatting
 ##############################################################################
-
-# Return formatting instructions for a new block.  Takes the current
-# formatting and the new element.  Formatting inherits negatively, in the
-# sense that if the parent has turned off guesswork, all child elements should
-# leave it off.  We therefore return a copy of the same formatting
-# instructions but possibly with more things turned off depending on the
-# element.
-sub formatting {
-    my ($self, $current, $element) = @_;
-    my %options;
-    if ($current) {
-        %options = %$current;
-    } else {
-        %options = (guesswork => 1, cleanup => 1, convert => 1);
-    }
-    if ($element eq 'Data') {
-        $options{guesswork} = 0;
-        $options{cleanup} = 0;
-        $options{convert} = 0;
-    } elsif ($element eq 'X') {
-        $options{guesswork} = 0;
-        $options{cleanup} = 0;
-    } elsif ($element eq 'Verbatim' || $element eq 'C') {
-        $options{guesswork} = 0;
-        $options{literal} = 1;
-    }
-    return \%options;
-}
 
 # Format a text block.  Takes a hash of formatting options and the text to
 # format.  Currently, the only formatting options are guesswork, cleanup, and
@@ -456,7 +479,7 @@ sub guesswork {
     local $_ = shift;
     DEBUG > 5 and print "   Guesswork called on [$_]\n";
 
-    # By the time we reach this point, all hypens will be escaped by adding a
+    # By the time we reach this point, all hyphens will be escaped by adding a
     # backslash.  We want to undo that escaping if they're part of regular
     # words and there's only a single dash, since that's a real hyphen that
     # *roff gets to consider a possible break point.  Make sure that a dash
@@ -500,9 +523,9 @@ sub guesswork {
     # entire warranty disclaimers in man page output into small caps.
     if ($$self{MAGIC_SMALLCAPS}) {
         s{
-            ( ^ | [\s\(\"\'\`\[\{<>] | \\[ ]  )                     # (1)
-            ( [A-Z] [A-Z] (?: [/A-Z+:\d_\$&] | \\- | [.,\"\s] )* )  # (2)
-            (?= [\s>\}\]\(\)\'\".?!,;] | \\*\(-- | \\[ ] | $ )      # (3)
+            ( ^ | [\s\(\"\'\`\[\{<>] | \\[ ]  )                           # (1)
+            ( [A-Z] [A-Z] (?: \s? [/A-Z+:\d_\$&] | \\- | \s? [.,\"] )* )  # (2)
+            (?= [\s>\}\]\(\)\'\".?!,;] | \\*\(-- | \\[ ] | $ )            # (3)
         } {
             $1 . '\s-1' . $2 . '\s0'
         }egx;
@@ -512,7 +535,7 @@ sub guesswork {
     # strings inserted around things that we've made small-caps if later
     # transforms should work on those strings.
 
-    # Italize functions in the form func(), including functions that are in
+    # Italicize functions in the form func(), including functions that are in
     # all capitals, but don't italize if there's anything between the parens.
     # The function must start with an alphabetic character or underscore and
     # then consist of word characters or colons.
@@ -535,6 +558,7 @@ sub guesswork {
     if ($$self{MAGIC_MANREF}) {
         s{
             ( \b | \\s-1 )
+            (?<! \\ )                                   # rule out \s0(1)
             ( [A-Za-z_] (?:[.:\w] | \\- | \\s-?[01])+ )
             ( \( \d [a-z]* \) )
         } {
@@ -671,10 +695,11 @@ sub switchquotes {
         # to Roman rather than the actual previous font when used in headings.
         # troff output may still be broken, but at least we can fix nroff by
         # just switching the font changes to the non-fixed versions.
-        $nroff =~ s/\Q$$self{FONTS}{100}\E(.*?)\\f[PR]/$1/g;
-        $nroff =~ s/\Q$$self{FONTS}{101}\E(.*?)\\f([PR])/\\fI$1\\f$2/g;
-        $nroff =~ s/\Q$$self{FONTS}{110}\E(.*?)\\f([PR])/\\fB$1\\f$2/g;
-        $nroff =~ s/\Q$$self{FONTS}{111}\E(.*?)\\f([PR])/\\f\(BI$1\\f$2/g;
+        my $font_end = "(?:\\f[PR]|\Q$$self{FONTS}{100}\E)";
+        $nroff =~ s/\Q$$self{FONTS}{100}\E(.*?)\\f([PR])/$1/g;
+        $nroff =~ s/\Q$$self{FONTS}{101}\E(.*?)$font_end/\\fI$1\\fP/g;
+        $nroff =~ s/\Q$$self{FONTS}{110}\E(.*?)$font_end/\\fB$1\\fP/g;
+        $nroff =~ s/\Q$$self{FONTS}{111}\E(.*?)$font_end/\\f\(BI$1\\fP/g;
 
         # Now finally output the command.  Bother with .ie only if the nroff
         # and troff output aren't the same.
@@ -750,7 +775,7 @@ sub outindex {
 sub output {
     my ($self, @text) = @_;
     if ($$self{ENCODE}) {
-        print { $$self{output_fh} } encode ('UTF-8', join ('', @text));
+        print { $$self{output_fh} } Encode::encode ('UTF-8', join ('', @text));
     } else {
         print { $$self{output_fh} } @text;
     }
@@ -767,7 +792,6 @@ sub start_document {
     if ($$attrs{contentless} && !$$self{ALWAYS_EMIT_SOMETHING}) {
         DEBUG and print "Document is contentless\n";
         $$self{CONTENTLESS} = 1;
-        return;
     } else {
         delete $$self{CONTENTLESS};
     }
@@ -788,17 +812,20 @@ sub start_document {
         }
     }
 
-    # Determine information for the preamble and then output it.
-    my ($name, $section);
-    if (defined $$self{name}) {
-        $name = $$self{name};
-        $section = $$self{section} || 1;
-    } else {
-        ($name, $section) = $self->devise_title;
+    # Determine information for the preamble and then output it unless the
+    # document was content-free.
+    if (!$$self{CONTENTLESS}) {
+        my ($name, $section);
+        if (defined $$self{name}) {
+            $name = $$self{name};
+            $section = $$self{section} || 1;
+        } else {
+            ($name, $section) = $self->devise_title;
+        }
+        my $date = defined($$self{date}) ? $$self{date} : $self->devise_date;
+        $self->preamble ($name, $section, $date)
+            unless $self->bare_output or DEBUG > 9;
     }
-    my $date = $$self{date} || $self->devise_date;
-    $self->preamble ($name, $section, $date)
-        unless $self->bare_output or DEBUG > 9;
 
     # Initialize a few per-document variables.
     $$self{INDENT}    = 0;      # Current indentation level.
@@ -835,45 +862,65 @@ sub devise_title {
     $section = 3 if (!$$self{section} && $name =~ /\.pm\z/i);
     $name =~ s/\.p(od|[lm])\z//i;
 
+    # If Pod::Parser gave us an IO::File reference as the source file name,
+    # convert that to the empty string as well.  Then, if we don't have a
+    # valid name, convert it to STDIN.
+    #
+    # In podlators 4.00 through 4.07, this also produced a warning, but that
+    # was surprising to a lot of programs that had expected to be able to pipe
+    # POD through pod2man without specifying the name.  In the name of
+    # backward compatibility, just quietly set STDIN as the page title.
+    if ($name =~ /^IO::File(?:=\w+)\(0x[\da-f]+\)$/i) {
+        $name = '';
+    }
+    if ($name eq '') {
+        $name = 'STDIN';
+    }
+
     # If the section isn't 3, then the name defaults to just the basename of
-    # the file.  Otherwise, assume we're dealing with a module.  We want to
-    # figure out the full module name from the path to the file, but we don't
-    # want to include too much of the path into the module name.  Lose
-    # anything up to the first off:
-    #
-    #     */lib/*perl*/         standard or site_perl module
-    #     */*perl*/lib/         from -Dprefix=/opt/perl
-    #     */*perl*/             random module hierarchy
-    #
-    # which works.  Also strip off a leading site, site_perl, or vendor_perl
-    # component, any OS-specific component, and any version number component,
-    # and strip off an initial component of "lib" or "blib/lib" since that's
-    # what ExtUtils::MakeMaker creates.  splitdir requires at least File::Spec
-    # 0.8.
+    # the file.
     if ($section !~ /^3/) {
         require File::Basename;
         $name = uc File::Basename::basename ($name);
     } else {
         require File::Spec;
         my ($volume, $dirs, $file) = File::Spec->splitpath ($name);
+
+        # Otherwise, assume we're dealing with a module.  We want to figure
+        # out the full module name from the path to the file, but we don't
+        # want to include too much of the path into the module name.  Lose
+        # anything up to the first of:
+        #
+        #     */lib/*perl*/         standard or site_perl module
+        #     */*perl*/lib/         from -Dprefix=/opt/perl
+        #     */*perl*/             random module hierarchy
+        #
+        # Also strip off a leading site, site_perl, or vendor_perl component,
+        # any OS-specific component, and any version number component, and
+        # strip off an initial component of "lib" or "blib/lib" since that's
+        # what ExtUtils::MakeMaker creates.
+        #
+        # splitdir requires at least File::Spec 0.8.
         my @dirs = File::Spec->splitdir ($dirs);
-        my $cut = 0;
-        my $i;
-        for ($i = 0; $i < @dirs; $i++) {
-            if ($dirs[$i] =~ /perl/) {
-                $cut = $i + 1;
-                $cut++ if ($dirs[$i + 1] && $dirs[$i + 1] eq 'lib');
-                last;
+        if (@dirs) {
+            my $cut = 0;
+            my $i;
+            for ($i = 0; $i < @dirs; $i++) {
+                if ($dirs[$i] =~ /perl/) {
+                    $cut = $i + 1;
+                    $cut++ if ($dirs[$i + 1] && $dirs[$i + 1] eq 'lib');
+                    last;
+                }
             }
+            if ($cut > 0) {
+                splice (@dirs, 0, $cut);
+                shift @dirs if ($dirs[0] =~ /^(site|vendor)(_perl)?$/);
+                shift @dirs if ($dirs[0] =~ /^[\d.]+$/);
+                shift @dirs if ($dirs[0] =~ /^(.*-$^O|$^O-.*|$^O)$/);
+            }
+            shift @dirs if $dirs[0] eq 'lib';
+            splice (@dirs, 0, 2) if ($dirs[0] eq 'blib' && $dirs[1] eq 'lib');
         }
-        if ($cut > 0) {
-            splice (@dirs, 0, $cut);
-            shift @dirs if ($dirs[0] =~ /^(site|vendor)(_perl)?$/);
-            shift @dirs if ($dirs[0] =~ /^[\d.]+$/);
-            shift @dirs if ($dirs[0] =~ /^(.*-$^O|$^O-.*|$^O)$/);
-        }
-        shift @dirs if $dirs[0] eq 'lib';
-        splice (@dirs, 0, 2) if ($dirs[0] eq 'blib' && $dirs[1] eq 'lib');
 
         # Remove empty directories when building the module name; they
         # occur too easily on Unix by doubling slashes.
@@ -883,25 +930,55 @@ sub devise_title {
 }
 
 # Determine the modification date and return that, properly formatted in ISO
-# format.  If we can't get the modification date of the input, instead use the
-# current time.  Pod::Simple returns a completely unuseful stringified file
-# handle as the source_filename for input from a file handle, so we have to
-# deal with that as well.
+# format.
+#
+# If POD_MAN_DATE is set, that overrides anything else.  This can be used for
+# reproducible generation of the same file even if the input file timestamps
+# are unpredictable or the POD coms from standard input.
+#
+# Otherwise, if SOURCE_DATE_EPOCH is set and can be parsed as seconds since
+# the UNIX epoch, base the timestamp on that.  See
+# <https://reproducible-builds.org/specs/source-date-epoch/>
+#
+# Otherwise, use the modification date of the input if we can stat it.  Be
+# aware that Pod::Simple returns the stringification of the file handle as
+# source_filename for input from a file handle, so we'll stat some random ref
+# string in that case.  If that fails, instead use the current time.
+#
+# $self - Pod::Man object, used to get the source file
+#
+# Returns: YYYY-MM-DD date suitable for the left-hand footer
 sub devise_date {
     my ($self) = @_;
-    my $input = $self->source_filename;
-    my $time;
-    if ($input) {
-        $time = (stat $input)[9] || time;
-    } else {
-        $time = time;
+
+    # If POD_MAN_DATE is set, always use it.
+    if (defined($ENV{POD_MAN_DATE})) {
+        return $ENV{POD_MAN_DATE};
     }
 
-    # Can't use POSIX::strftime(), which uses Fcntl, because MakeMaker
-    # uses this and it has to work in the core which can't load dynamic
-    # libraries.
-    my ($year, $month, $day) = (localtime $time)[5,4,3];
-    return sprintf ("%04d-%02d-%02d", $year + 1900, $month + 1, $day);
+    # If SOURCE_DATE_EPOCH is set and can be parsed, use that.
+    my $time;
+    if (defined($ENV{SOURCE_DATE_EPOCH}) && $ENV{SOURCE_DATE_EPOCH} !~ /\D/) {
+        $time = $ENV{SOURCE_DATE_EPOCH};
+    }
+
+    # Otherwise, get the input filename and try to stat it.  If that fails,
+    # use the current time.
+    if (!defined $time) {
+        my $input = $self->source_filename;
+        if ($input) {
+            $time = (stat($input))[9] || time();
+        } else {
+            $time = time();
+        }
+    }
+
+    # Can't use POSIX::strftime(), which uses Fcntl, because MakeMaker uses
+    # this and it has to work in the core which can't load dynamic libraries.
+    # Use gmtime instead of localtime so that the generated man page does not
+    # depend on the local time zone setting and is more reproducible
+    my ($year, $month, $day) = (gmtime($time))[5,4,3];
+    return sprintf("%04d-%02d-%02d", $year + 1900, $month + 1, $day);
 }
 
 # Print out the preamble and the title.  The meaning of the arguments to .TH
@@ -988,9 +1065,12 @@ sub cmd_para {
         if defined ($line) && DEBUG && !$$self{IN_NAME};
 
     # Force exactly one newline at the end and strip unwanted trailing
-    # whitespace at the end, but leave "\ " backslashed space from an S< >
-    # at the end of a line.
-    $text =~ s/((?:\\ )*)\s*$/$1\n/;
+    # whitespace at the end, but leave "\ " backslashed space from an S< > at
+    # the end of a line.  Reverse the text first, to avoid having to scan the
+    # entire paragraph.
+    $text = reverse $text;
+    $text =~ s/\A\s*?(?= \\|\S|\z)/\n/;
+    $text = reverse $text;
 
     # Output the paragraph.
     $self->output ($self->protect ($self->textmapfonts ($text)));
@@ -1009,8 +1089,11 @@ sub cmd_verbatim {
     return unless $text =~ /\S/;
 
     # Force exactly one newline at the end and strip unwanted trailing
-    # whitespace at the end.
-    $text =~ s/\s*$/\n/;
+    # whitespace at the end.  Reverse the text first, to avoid having to scan
+    # the entire paragraph.
+    $text = reverse $text;
+    $text =~ s/\A\s*/\n/;
+    $text = reverse $text;
 
     # Get a count of the number of lines before the first blank line, which
     # we'll pass to .Vb as its parameter.  This tells *roff to keep that many
@@ -1354,6 +1437,26 @@ sub parse_file {
     return $self->SUPER::parse_file ($in);
 }
 
+# Do the same for parse_lines, just to be polite.  Pod::Simple's man page
+# implies that the caller is responsible for setting this, but I don't see any
+# reason not to set a default.
+sub parse_lines {
+    my ($self, @lines) = @_;
+    unless (defined $$self{output_fh}) {
+        $self->output_fh (\*STDOUT);
+    }
+    return $self->SUPER::parse_lines (@lines);
+}
+
+# Likewise for parse_string_document.
+sub parse_string_document {
+    my ($self, $doc) = @_;
+    unless (defined $$self{output_fh}) {
+        $self->output_fh (\*STDOUT);
+    }
+    return $self->SUPER::parse_string_document ($doc);
+}
+
 ##############################################################################
 # Translation tables
 ##############################################################################
@@ -1442,7 +1545,7 @@ sub preamble_template {
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .\"
-.\" If the F register is turned on, we'll generate index entries on stderr for
+.\" If the F register is >0, we'll generate index entries on stderr for
 .\" titles (.TH), headers (.SH), subsections (.SS), items (.Ip), and index
 .\" entries marked with X<> in POD.  Of course, you'll have to process the
 .\" output yourself in some meaningful fashion.
@@ -1450,20 +1553,16 @@ sub preamble_template {
 .\" Avoid warning from groff about undefined register 'F'.
 .de IX
 ..
-.nr rF 0
-.if \n(.g .if rF .nr rF 1
-.if (\n(rF:(\n(.g==0)) \{
-.    if \nF \{
-.        de IX
-.        tm Index:\\$1\t\\n%\t"\\$2"
+.if !\nF .nr F 0
+.if \nF>0 \{\
+.    de IX
+.    tm Index:\\$1\t\\n%\t"\\$2"
 ..
-.        if !\nF==2 \{
-.            nr % 0
-.            nr F 2
-.        \}
+.    if !\nF==2 \{\
+.        nr % 0
+.        nr F 2
 .    \}
 .\}
-.rr rF
 ----END OF PREAMBLE----
 #'# for cperl-mode
 
@@ -1547,7 +1646,7 @@ __END__
 =for stopwords
 en em ALLCAPS teeny fixedbold fixeditalic fixedbolditalic stderr utf8
 UTF-8 Allbery Sean Burke Ossanna Solaris formatters troff uppercased
-Christiansen nourls
+Christiansen nourls parsers Kernighan lquote rquote
 
 =head1 NAME
 
@@ -1610,8 +1709,19 @@ argument.
 
 =item center
 
-Sets the centered page header to use instead of "User Contributed Perl
-Documentation".
+Sets the centered page header for the C<.TH> macro.  The default, if this
+option is not specified, is "User Contributed Perl Documentation".
+
+=item date
+
+Sets the left-hand footer for the C<.TH> macro.  If this option is not set,
+the contents of the environment variable POD_MAN_DATE, if set, will be used.
+Failing that, the value of SOURCE_DATE_EPOCH, the modification date of the
+input file, or the current time if stat() can't find that file (which will be
+the case if the input is from C<STDIN>) will be used.  If obtained from the
+file modification date or the current time, the date will be formatted as
+C<YYYY-MM-DD> and will be based on UTC (so that the output will be
+reproducible regardless of local time zone).
 
 =item errors
 
@@ -1621,14 +1731,7 @@ not to throw an exception.  C<pod> says to include a POD ERRORS section
 in the resulting documentation summarizing the errors.  C<none> ignores
 POD errors entirely, as much as possible.
 
-The default is C<output>.
-
-=item date
-
-Sets the left-hand footer.  By default, the modification date of the input
-file will be used, or the current date if stat() can't find that file (the
-case if the input is from C<STDIN>), and the date will be formatted as
-C<YYYY-MM-DD>.
+The default is C<pod>.
 
 =item fixed
 
@@ -1654,14 +1757,32 @@ Pod::Man doesn't assume you have this, and defaults to C<CB>.  Some
 systems (such as Solaris) have this font available as C<CX>.  Only matters
 for B<troff> output.
 
+=item lquote
+
+=item rquote
+
+Sets the quote marks used to surround CE<lt>> text.  C<lquote> sets the
+left quote mark and C<rquote> sets the right quote mark.  Either may also
+be set to the special value C<none>, in which case no quote mark is added
+on that side of CE<lt>> text (but the font is still changed for troff
+output).
+
+Also see the C<quotes> option, which can be used to set both quotes at once.
+If both C<quotes> and one of the other options is set, C<lquote> or C<rquote>
+overrides C<quotes>.
+
 =item name
 
-Set the name of the manual page.  Without this option, the manual name is
-set to the uppercased base name of the file being converted unless the
-manual section is 3, in which case the path is parsed to see if it is a Perl
-module path.  If it is, a path like C<.../lib/Pod/Man.pm> is converted into
-a name like C<Pod::Man>.  This option, if given, overrides any automatic
-determination of the name.
+Set the name of the manual page for the C<.TH> macro.  Without this
+option, the manual name is set to the uppercased base name of the file
+being converted unless the manual section is 3, in which case the path is
+parsed to see if it is a Perl module path.  If it is, a path like
+C<.../lib/Pod/Man.pm> is converted into a name like C<Pod::Man>.  This
+option, if given, overrides any automatic determination of the name.
+
+If generating a manual page from standard input, the name will be set to
+C<STDIN> if this option is not provided.  Providing this option is strongly
+recommended to set a meaningful manual page name.
 
 =item nourls
 
@@ -1682,22 +1803,30 @@ important.
 =item quotes
 
 Sets the quote marks used to surround CE<lt>> text.  If the value is a
-single character, it is used as both the left and right quote; if it is two
-characters, the first character is used as the left quote and the second as
-the right quoted; and if it is four characters, the first two are used as
-the left quote and the second two as the right quote.
+single character, it is used as both the left and right quote.  Otherwise,
+it is split in half, and the first half of the string is used as the left
+quote and the second is used as the right quote.
 
 This may also be set to the special value C<none>, in which case no quote
 marks are added around CE<lt>> text (but the font is still changed for troff
 output).
 
+Also see the C<lquote> and C<rquote> options, which can be used to set the
+left and right quotes independently.  If both C<quotes> and one of the other
+options is set, C<lquote> or C<rquote> overrides C<quotes>.
+
 =item release
 
-Set the centered footer.  By default, this is the version of Perl you run
-Pod::Man under.  Note that some system an macro sets assume that the
-centered footer will be a modification date and will prepend something like
-"Last modified: "; if this is the case, you may want to set C<release> to
-the last modified date and C<date> to the version number.
+Set the centered footer for the C<.TH> macro.  By default, this is set to
+the version of Perl you run Pod::Man under.  Setting this to the empty
+string will cause some *roff implementations to use the system default
+value.
+
+Note that some system C<an> macro sets assume that the centered footer
+will be a modification date and will prepend something like "Last
+modified: ".  If this is the case for your target system, you may want to
+set C<release> to the last modified date and C<date> to the version
+number.
 
 =item section
 
@@ -1737,25 +1866,31 @@ by many implementations and may even result in segfaults and other bad
 behavior.
 
 Be aware that, when using this option, the input encoding of your POD
-source must be properly declared unless it is US-ASCII or Latin-1.  POD
-input without an C<=encoding> command will be assumed to be in Latin-1,
-and if it's actually in UTF-8, the output will be double-encoded.  See
-L<perlpod(1)> for more information on the C<=encoding> command.
+source should be properly declared unless it's US-ASCII.  Pod::Simple will
+attempt to guess the encoding and may be successful if it's Latin-1 or
+UTF-8, but it will produce warnings.  Use the C<=encoding> command to
+declare the encoding.  See L<perlpod(1)> for more information.
 
 =back
 
 The standard Pod::Simple method parse_file() takes one argument naming the
 POD file to read from.  By default, the output is sent to C<STDOUT>, but
-this can be changed with the output_fd() method.
+this can be changed with the output_fh() method.
 
 The standard Pod::Simple method parse_from_file() takes up to two
 arguments, the first being the input file to read POD from and the second
 being the file to write the formatted output to.
 
 You can also call parse_lines() to parse an array of lines or
-parse_string_document() to parse a document already in memory.  To put the
-output into a string instead of a file handle, call the output_string()
-method.  See L<Pod::Simple> for the specific details.
+parse_string_document() to parse a document already in memory.  As with
+parse_file(), parse_lines() and parse_string_document() default to sending
+their output to C<STDOUT> unless changed with the output_fh() method.
+
+To put the output from any parse method into a string instead of a file
+handle, call the output_string() method instead of output_fh().
+
+See L<Pod::Simple> for more specific details on the methods available to
+all derived parsers.
 
 =head1 DIAGNOSTICS
 
@@ -1775,13 +1910,50 @@ canonical versions of B<nroff> and B<troff> don't either).
 =item Invalid quote specification "%s"
 
 (F) The quote specification given (the C<quotes> option to the
-constructor) was invalid.  A quote specification must be one, two, or four
-characters long.
+constructor) was invalid.  A quote specification must be either one
+character long or an even number (greater than one) characters long.
 
 =item POD document had syntax errors
 
 (F) The POD document being formatted had syntax errors and the C<errors>
 option was set to C<die>.
+
+=back
+
+=head1 ENVIRONMENT
+
+=over 4
+
+=item PERL_CORE
+
+If set and Encode is not available, silently fall back to non-UTF-8 mode
+without complaining to standard error.  This environment variable is set
+during Perl core builds, which build Encode after podlators.  Encode is
+expected to not (yet) be available in that case.
+
+=item POD_MAN_DATE
+
+If set, this will be used as the value of the left-hand footer unless the
+C<date> option is explicitly set, overriding the timestamp of the input
+file or the current time.  This is primarily useful to ensure reproducible
+builds of the same output file given the same source and Pod::Man version,
+even when file timestamps may not be consistent.
+
+=item SOURCE_DATE_EPOCH
+
+If set, and POD_MAN_DATE and the C<date> options are not set, this will be
+used as the modification time of the source file, overriding the timestamp of
+the input file or the current time.  It should be set to the desired time in
+seconds since UNIX epoch.  This is primarily useful to ensure reproducible
+builds of the same output file given the same source and Pod::Man version,
+even when file timestamps may not be consistent.  See
+L<https://reproducible-builds.org/specs/source-date-epoch/> for the full
+specification.
+
+(Arguably, according to the specification, this variable should be used only
+if the timestamp of the input file is not available and Pod::Man uses the
+current time.  However, for reproducible builds in Debian, results were more
+reliable if this variable overrode the timestamp of the input file.)
 
 =back
 
@@ -1835,7 +2007,7 @@ only matters for troff output.
 
 =head1 AUTHOR
 
-Russ Allbery <rra@stanford.edu>, based I<very> heavily on the original
+Russ Allbery <rra@cpan.org>, based I<very> heavily on the original
 B<pod2man> by Tom Christiansen <tchrist@mox.perl.com>.  The modifications to
 work with Pod::Simple instead of Pod::Parser were originally contributed by
 Sean Burke (but I've since hacked them beyond recognition and all bugs are
@@ -1844,7 +2016,7 @@ mine).
 =head1 COPYRIGHT AND LICENSE
 
 Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-2009, 2010, 2012, 2013 Russ Allbery <rra@stanford.edu>.
+2009, 2010, 2012, 2013, 2014, 2015, 2016 Russ Allbery <rra@cpan.org>
 
 This program is free software; you may redistribute it and/or modify it
 under the same terms as Perl itself.

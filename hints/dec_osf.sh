@@ -167,22 +167,7 @@ EOF
 	*"-c99: Unknown flag"*)
 		_ccflags_strict_ansi="-std1"
 		;;
-	*)	# However, use the -c99 only if compiling for
-		# -DPERL_MEM_LOG, where the C99 feature __func__
-		# is useful to have.  Otherwise use the good old
-		# -std1 so that we stay C89 strict, which the goal
-		# of the Perl C code base (no //, no code between
-		# declarations, etc).  Moreover, the Tru64 cc is
-		# not fully C99, and most probably never will be.
-		#
-		# The -DPERL_MEM_LOG can be either in ccflags
-		# (if using an old config.sh) or in the command line
-		# (which has been stowed away in UU/cmdline.opt).
-		#
-		case "$ccflags `cat UU/cmdline.opt`" in
-		*-DPERL_MEM_LOG*)	_ccflags_strict_ansi="-c99"  ;;
-		*)			_ccflags_strict_ansi="-std1" ;;
-		esac
+	*)	_ccflags_strict_ansi="-c99"
 		;;
 	esac
 	_lddlflags_strict_ansi="-std1"
@@ -528,7 +513,6 @@ gcc)   ;;
        # -readonly_strings moves string constants into read-only section
        #  which hopefully means that modifying them leads into segmentation
        #  faults.
-       #
        for i in -trapuv -readonly_strings
        do
                case "$ccflags" in
@@ -538,6 +522,41 @@ gcc)   ;;
        done
        ;;
 esac
+
+# In Tru64 several slightly incompatible socket APIs are supported,
+# which one applies is chosen with a set of defines:
+# -D_SOCKADDR_LEN enables 4.4BSD and IPv6 interfaces
+# -D_POSIX_PII_SOCKET enables socklen_t instead of size_t
+for i in -D_SOCKADDR_LEN -D_POSIX_PII_SOCKET
+do
+    case "$ccflags" in
+    *$i*) ;;
+    *) ccflags="$ccflags $i" ;;
+    esac
+done
+# For OSF/1 3.2, however, defining _SOCKADDR_LEN would be
+# a bad idea since it breaks send() and recv().
+case "$ccflags" in
+*DEC_OSF1_3_X*SOCKADDR_LEN*)
+ ccflags=`echo " $ccflags " | sed -e 's/ -D_SOCKADDR_LEN / /'`
+ ;;
+esac
+
+# These are in libm, but seem broken (there are no protos in headers,
+# or man pages, either)
+d_fdim='undef'
+d_fma='undef'
+d_fmax='undef'
+d_fmin='undef'
+d_llrint='undef'
+d_llround='undef'
+d_lrint='undef'
+d_lround='undef'
+d_nan='undef'
+d_nearbyint='undef'
+d_round='undef'
+d_scalbn='undef'
+d_tgamma='undef'
 
 #
 # Unset temporary variables no more needed.

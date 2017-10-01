@@ -1,9 +1,9 @@
 #!./perl
 
 BEGIN {
-    chdir 't';
-    @INC = '../lib';
+    chdir 't' if -d 't';
     require './test.pl';
+    set_up_inc(qw '../lib ../cpan/version/lib');
 }
 
 # XXX remove this later -- dagolden, 2010-01-13
@@ -166,9 +166,6 @@ v01.02.03	fail	pass	pass	no leading zeros
 1.02_03		fail	pass	pass	underscore
 v1.2_3		fail	pass	pass	underscore
 v1.02_03	fail	pass	pass	underscore
-v1.2_3_4	fail	fail	fail	underscore
-v1.2_3.4	fail	fail	fail	underscore
-1.2_3.4		fail	fail	fail	underscore
 0_		fail	fail	na	underscore
 1_		fail	fail	na	underscore
 1_.		fail	fail	na	underscore

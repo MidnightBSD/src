@@ -3,7 +3,7 @@ package Socket;
 use strict;
 { use 5.006001; }
 
-our $VERSION = '2.009';
+our $VERSION = '2.020_03'; # patched in perl5.git
 
 =head1 NAME
 
@@ -107,6 +107,10 @@ C<SOL_SOCKET> level.
 
 Socket option name constants for IPv4 socket options at the C<IPPROTO_IP>
 level.
+
+=head2 IPTOS_LOWDELAY, IPTOS_THROUGHPUT, IPTOS_RELIABILITY, ...
+
+Socket option value constants for C<IP_TOS> socket option.
 
 =head2 MSG_BCAST, MSG_OOB, MSG_TRUNC, ...
 
@@ -578,8 +582,8 @@ service on the named host.
  print <$sock>;
 
 Because a list of potential candidates is returned, the C<while> loop tries
-each in turn until it it finds one that succeeds both the socket() and
-connect() calls.
+each in turn until it finds one that succeeds both the socket() and connect()
+calls.
 
 This function performs the work of the legacy functions gethostbyname(),
 getservbyname(), inet_aton() and pack_sockaddr_in().
@@ -756,8 +760,11 @@ our @EXPORT_OK = qw(
 	IP_DROP_SOURCE_MEMBERSHIP IP_MULTICAST_IF IP_MULTICAST_LOOP
 	IP_MULTICAST_TTL
 
-	IPPROTO_IP IPPROTO_IPV6 IPPROTO_RAW IPPROTO_ICMP IPPROTO_TCP
-	IPPROTO_UDP
+	IPPROTO_IP IPPROTO_IPV6 IPPROTO_RAW IPPROTO_ICMP IPPROTO_IGMP
+	IPPROTO_TCP IPPROTO_UDP IPPROTO_GRE IPPROTO_ESP IPPROTO_AH
+	IPPROTO_SCTP
+
+	IPTOS_LOWDELAY IPTOS_THROUGHPUT IPTOS_RELIABILITY IPTOS_MINCOST
 
 	TCP_CONGESTION TCP_CONNECTIONTIMEOUT TCP_CORK TCP_DEFER_ACCEPT TCP_INFO
 	TCP_INIT_CWND TCP_KEEPALIVE TCP_KEEPCNT TCP_KEEPIDLE TCP_KEEPINTVL
@@ -929,7 +936,7 @@ if( defined &getaddrinfo ) {
 # family
 
 # Borrowed from Regexp::Common::net
-my $REGEXP_IPv4_DECIMAL = qr/25[0-5]|2[0-4][0-9]|1?[0-9][0-9]{1,2}/;
+my $REGEXP_IPv4_DECIMAL = qr/25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2}/;
 my $REGEXP_IPv4_DOTTEDQUAD = qr/$REGEXP_IPv4_DECIMAL\.$REGEXP_IPv4_DECIMAL\.$REGEXP_IPv4_DECIMAL\.$REGEXP_IPv4_DECIMAL/;
 
 sub fake_makeerr
@@ -992,7 +999,7 @@ sub fake_getaddrinfo
     my @ports; # Actually ARRAYrefs of [ socktype, protocol, port ]
     my $protname = "";
     if( $protocol ) {
-	$protname = getprotobynumber( $protocol );
+	$protname = eval { getprotobynumber( $protocol ) };
     }
 
     if( $service ne "" and $service !~ m/^\d+$/ ) {
@@ -1023,7 +1030,7 @@ sub fake_getaddrinfo
 	    $port = 0;
 	}
 
-	push @ports, [ $this_socktype, scalar getprotobyname( $this_protname ) || 0, $port ];
+	push @ports, [ $this_socktype, eval { scalar getprotobyname( $this_protname ) } || 0, $port ];
     }
 
     my @ret;

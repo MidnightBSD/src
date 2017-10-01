@@ -33,7 +33,7 @@ ok $b->have_compiler, "have_compiler";
 $source_file = File::Spec->catfile('t', 'basict.c');
 {
   local *FH;
-  open FH, "> $source_file" or die "Can't create $source_file: $!";
+  open FH, '>', $source_file or die "Can't create $source_file: $!";
   print FH "int boot_basict(void) { return 1; }\n";
   close FH;
 }
@@ -44,12 +44,13 @@ ok 1;
 
 is $object_file, $b->compile(source => $source_file);
 
-$lib_file = $b->lib_file($object_file);
+$lib_file = $b->lib_file($object_file, module_name => 'basict');
 ok 1;
 
 my ($lib, @temps) = $b->link(objects => $object_file,
                              module_name => 'basict');
 $lib =~ tr/"'//d;
+$_ = File::Spec->rel2abs($_) for $lib_file, $lib;
 is $lib_file, $lib;
 
 for ($source_file, $object_file, $lib_file) {

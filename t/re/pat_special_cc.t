@@ -4,24 +4,22 @@
 # test the same and that /\s/ and /\S/ are opposites, and that
 # /[\s]/ and /[\S]/ are also opposites, for \s/\S and \d/\D and 
 # \w/\W.
+
+BEGIN {
+    chdir 't' if -d 't';
+    require './test.pl';
+    set_up_inc( '../lib', '.' );
+}
+
 use strict;
 use warnings;
 use 5.010;
 
+plan tests => 9;  # Update this when adding/deleting tests.
 
 sub run_tests;
 
 $| = 1;
-
-
-BEGIN {
-    chdir 't' if -d 't';
-    @INC = ('../lib','.');
-    require './test.pl';
-}
-
-
-plan tests => 9;  # Update this when adding/deleting tests.
 
 run_tests() unless caller;
 

@@ -2,17 +2,17 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
     require './test.pl';
+    set_up_inc('../lib');
 }
 
-plan tests => 66;
+plan tests => 72;
 
 # These tests make sure, among other things, that we don't end up
 # burning tons of CPU for dates far in the future.
 # watchdog() makes sure that the test script eventually exits if
 # the tests are triggering the failing behavior
-watchdog(15);
+watchdog(25);
 
 ($beguser,$begsys) = times;
 
@@ -21,9 +21,9 @@ $beg = time;
 while (($now = time) == $beg) { sleep 1 }
 
 ok($now > $beg && $now - $beg < 10,             'very basic time test');
-
+my $x = "aaaa";
 for ($i = 0; $i < 1_000_000; $i++) {
-    for my $j (1..100) {}; # burn some user cycles
+    for my $j (1..1000) { ++$x; }; # burn some user cycles
     ($nowuser, $nowsys) = times;
     $i = 2_000_000 if $nowuser > $beguser && ( $nowsys >= $begsys ||
                                             (!$nowsys && !$begsys));
@@ -210,7 +210,7 @@ SKIP: { #rt #73040
 	|| $small_time == $smallest
         || $big_time - 200 != $biggest
 	|| $big_time == $biggest) {
-	skip "Can't represent test values", 4;
+	skip "Can't represent test values", 8;
     }
     my $small_time_f = sprintf("%.0f", $small_time);
     my $big_time_f = sprintf("%.0f", $big_time);
@@ -221,17 +221,30 @@ SKIP: { #rt #73040
     $warning = '';
     my $date = gmtime($big_time);
     like $warning, qr/^gmtime\($big_time_f\) too large/;
+    like $warning, qr/^gmtime\($big_time_f\) failed/m;
 
     $warning = '';
     $date = localtime($big_time);
     like $warning, qr/^localtime\($big_time_f\) too large/;
+    like $warning, qr/^localtime\($big_time_f\) failed/m;
 
     $warning = '';
     $date = gmtime($small_time);
     like $warning, qr/^gmtime\($small_time_f\) too small/;
+    like $warning, qr/^gmtime\($small_time_f\) failed/m;
 
     $warning = '';
     $date = localtime($small_time);
     like $warning, qr/^localtime\($small_time_f\) too small/;
-  
+    like $warning, qr/^localtime\($small_time_f\) failed/m;
+}
+
+my $is_vax = (pack("d", 1) =~ /^[\x80\x10]\x40/);
+my $has_nan = !$is_vax;
+
+SKIP: {
+    skip("No NaN", 2) unless $has_nan;
+    local $^W;
+    is scalar gmtime("NaN"), undef, '[perl #123495] gmtime(NaN)';
+    is scalar localtime("NaN"), undef, 'localtime(NaN)';
 }

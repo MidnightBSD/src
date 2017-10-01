@@ -1,17 +1,18 @@
 #
-# t/test.pl - most of Test::More functionality without the fuss, plus
-# has mappings native_to_latin1 and latin1_to_native so that fewer tests
-# on non ASCII-ish platforms need to be skipped
+# t/test.pl - most of Test::More functionality without the fuss
 
 
 # NOTE:
 #
-# Increment ($x++) has a certain amount of cleverness for things like
+# Do not rely on features found only in more modern Perls here, as some CPAN
+# distributions copy this file and must operate on older Perls. Similarly, keep
+# things, simple as this may be run under fairly broken circumstances. For
+# example, increment ($x++) has a certain amount of cleverness for things like
 #
 #   $x = 'zz';
 #   $x++; # $x eq 'aaa';
 #
-# stands more chance of breaking than just a simple
+# This stands more chance of breaking than just a simple
 #
 #   $x = $x + 1
 #
@@ -53,6 +54,7 @@ sub plan {
 	}
     } else {
 	my %plan = @_;
+	$plan{skip_all} and skip_all($plan{skip_all});
 	$n = $plan{tests};
     }
     _print "1..$n\n" unless $noplan;
@@ -102,6 +104,12 @@ sub note {
 
 sub is_miniperl {
     return !defined &DynaLoader::boot_DynaLoader;
+}
+
+sub set_up_inc {
+    # Don’t clobber @INC under miniperl
+    @INC = () unless is_miniperl;
+    unshift @INC, @_;
 }
 
 sub _comment {
@@ -157,6 +165,13 @@ sub skip_all_without_config {
     }
 }
 
+sub skip_all_without_unicode_tables { # (but only under miniperl)
+    if (is_miniperl()) {
+        skip_all_if_miniperl("Unicode tables not built yet")
+            unless eval 'require "unicore/Heavy.pl"';
+    }
+}
+
 sub find_git_or_skip {
     my ($source_dir, $reason);
     if (-d '.git') {
@@ -175,6 +190,13 @@ sub find_git_or_skip {
 		$ENV{GIT_DIR} = "$where/.git";
 	    }
 	    $source_dir = $where;
+	}
+    } elsif (exists $ENV{GIT_DIR}) {
+	my $commit = '8d063cd8450e59ea1c611a2f4f5a21059a2804f1';
+	my $out = `git rev-parse --verify --quiet '$commit^{commit}'`;
+	chomp $out;
+	if($out eq $commit) {
+	    $source_dir = '.'
 	}
     }
     if ($source_dir) {
@@ -262,6 +284,12 @@ sub _qq {
     return defined $x ? '"' . display ($x) . '"' : 'undef';
 };
 
+# Support pre-5.10 Perls, for the benefit of CPAN dists that copy this file.
+# Note that chr(90) exists in both ASCII ("Z") and EBCDIC ("!").
+my $chars_template = defined(eval { pack "W*", 90 }) ? "W*" : "U*";
+eval 'sub re::is_regexp { ref($_[0]) eq "Regexp" }'
+    if !defined &re::is_regexp;
+
 # keys are the codes \n etc map to, values are 2 char strings such as \n
 my %backslash_escape;
 foreach my $x (split //, 'nrtfa\\\'"') {
@@ -274,18 +302,26 @@ sub display {
     foreach my $x (@_) {
         if (defined $x and not ref $x) {
             my $y = '';
-            foreach my $c (unpack("U*", $x)) {
+            foreach my $c (unpack($chars_template, $x)) {
                 if ($c > 255) {
                     $y = $y . sprintf "\\x{%x}", $c;
                 } elsif ($backslash_escape{$c}) {
                     $y = $y . $backslash_escape{$c};
                 } else {
                     my $z = chr $c; # Maybe we can get away with a literal...
-                    if ($z =~ /[[:^print:]]/) {
 
-                        # Use octal for characters traditionally expressed as
-                        # such: the low controls
-                        if ($c <= 037) {
+                    if ($z !~ /[^[:^print:][:^ascii:]]/) {
+                        # The pattern above is equivalent (by de Morgan's
+                        # laws) to:
+                        #     $z !~ /(?[ [:print:] & [:ascii:] ])/
+                        # or, $z is not an ascii printable character
+
+                        # Use octal for characters with small ordinals that
+                        # are traditionally expressed as octal: the controls
+                        # below space, which on EBCDIC are almost all the
+                        # controls, but on ASCII don't include DEL nor the C1
+                        # controls.
+                        if ($c < ord " ") {
                             $z = sprintf "\\%03o", $c;
                         } else {
                             $z = sprintf "\\x{%x}", $c;
@@ -411,13 +447,26 @@ sub unlike ($$@) { like_yn (1,@_) }; # 1 for un-
 
 sub like_yn ($$$@) {
     my ($flip, undef, $expected, $name, @mess) = @_;
+
+    # We just accept like(..., qr/.../), not like(..., '...'), and
+    # definitely not like(..., '/.../') like
+    # Test::Builder::maybe_regex() does.
+    unless (re::is_regexp($expected)) {
+	die "PANIC: The value '$expected' isn't a regexp. The like() function needs a qr// pattern, not a string";
+    }
+
     my $pass;
     $pass = $_[1] =~ /$expected/ if !$flip;
     $pass = $_[1] !~ /$expected/ if $flip;
+    my $display_got = $_[1];
+    $display_got = display($display_got);
+    my $display_expected = $expected;
+    $display_expected = display($display_expected);
     unless ($pass) {
-	unshift(@mess, "#      got '$_[1]'\n",
+	unshift(@mess, "#      got '$display_got'\n",
 		$flip
-		? "# expected !~ /$expected/\n" : "# expected /$expected/\n");
+		? "# expected !~ /$display_expected/\n"
+                : "# expected /$display_expected/\n");
     }
     local $Level = $Level + 1;
     _ok($pass, _where(), $name, @mess);
@@ -446,7 +495,21 @@ sub next_test {
 # be compatible with Test::More::skip().
 sub skip {
     my $why = shift;
-    my $n    = @_ ? shift : 1;
+    my $n   = @_ ? shift : 1;
+    my $bad_swap;
+    my $both_zero;
+    {
+      local $^W = 0;
+      $bad_swap = $why > 0 && $n == 0;
+      $both_zero = $why == 0 && $n == 0;
+    }
+    if ($bad_swap || $both_zero || @_) {
+      my $arg = "'$why', '$n'";
+      if (@_) {
+        $arg .= join(", ", '', map { qq['$_'] } @_);
+      }
+      die qq[$0: expected skip(why, count), got skip($arg)\n];
+    }
     for (1..$n) {
         _print "ok $test # skip $why\n";
         $test = $test + 1;
@@ -460,10 +523,11 @@ sub skip_if_miniperl {
 }
 
 sub skip_without_dynamic_extension {
-    my ($extension) = @_;
-    skip("no dynamic loading on miniperl, no $extension") if is_miniperl();
-    return if &_have_dynamic_extension;
-    skip("$extension was not built");
+    my $extension = shift;
+    skip("no dynamic loading on miniperl, no extension $extension", @_)
+	if is_miniperl();
+    return if &_have_dynamic_extension($extension);
+    skip("extension $extension was not built", @_);
 }
 
 sub todo_skip {
@@ -546,7 +610,7 @@ USE_OK
     }
 }
 
-# runperl - Runs a separate perl interpreter.
+# runperl - Runs a separate perl interpreter and returns its output.
 # Arguments :
 #   switches => [ command-line switches ]
 #   nolib    => 1 # don't use -I../lib (included by default)
@@ -554,8 +618,9 @@ USE_OK
 #   prog     => one-liner (avoid quotes)
 #   progs    => [ multi-liner (avoid quotes) ]
 #   progfile => perl script
-#   stdin    => string to feed the stdin
-#   stderr   => redirect stderr to stdout
+#   stdin    => string to feed the stdin (or undef to redirect from /dev/null)
+#   stderr   => If 'devnull' suppresses stderr, if other TRUE value redirect
+#               stderr to stdout
 #   args     => [ command-line arguments to the perl program ]
 #   verbose  => print the command line
 
@@ -587,7 +652,7 @@ sub _create_runperl { # Create the string to qx in runperl().
 	$runperl = "$ENV{PERL_RUNPERL_DEBUG} $runperl";
     }
     unless ($args{nolib}) {
-	$runperl = $runperl . ' "-I../lib"'; # doublequotes because of VMS
+	$runperl = $runperl . ' "-I../lib" "-I." '; # doublequotes because of VMS
     }
     if ($args{switches}) {
 	local $Level = 2;
@@ -598,14 +663,22 @@ sub _create_runperl { # Create the string to qx in runperl().
     if (defined $args{prog}) {
 	die "test.pl:runperl(): both 'prog' and 'progs' cannot be used " . _where()
 	    if defined $args{progs};
-        $args{progs} = [$args{prog}]
+        $args{progs} = [split /\n/, $args{prog}, -1]
     }
     if (defined $args{progs}) {
 	die "test.pl:runperl(): 'progs' must be an ARRAYREF " . _where()
 	    unless ref $args{progs} eq "ARRAY";
         foreach my $prog (@{$args{progs}}) {
-	    if ($prog =~ tr/'"// && !$args{non_portable}) {
-		warn "quotes in prog >>$prog<< are not portable";
+	    if (!$args{non_portable}) {
+		if ($prog =~ tr/'"//) {
+		    warn "quotes in prog >>$prog<< are not portable";
+		}
+		if ($prog =~ /^([<>|]|2>)/) {
+		    warn "Initial $1 in prog >>$prog<< is not portable";
+		}
+		if ($prog =~ /&\z/) {
+		    warn "Trailing & in prog >>$prog<< is not portable";
+		}
 	    }
             if ($is_mswin || $is_netware || $is_vms) {
                 $runperl = $runperl . qq ( -e "$prog" );
@@ -637,11 +710,38 @@ sub _create_runperl { # Create the string to qx in runperl().
 	    $runperl = qq{$Perl -e 'print qq(} .
 		$args{stdin} . q{)' | } . $runperl;
 	}
+    } elsif (exists $args{stdin}) {
+        # Using the pipe construction above can cause fun on systems which use
+        # ksh as /bin/sh, as ksh does pipes differently (with one less process)
+        # With sh, for the command line 'perl -e 'print qq()' | perl -e ...'
+        # the sh process forks two children, which use exec to start the two
+        # perl processes. The parent shell process persists for the duration of
+        # the pipeline, and the second perl process starts with no children.
+        # With ksh (and zsh), the shell saves a process by forking a child for
+        # just the first perl process, and execing itself to start the second.
+        # This means that the second perl process starts with one child which
+        # it didn't create. This causes "fun" when if the tests assume that
+        # wait (or waitpid) will only return information about processes
+        # started within the test.
+        # They also cause fun on VMS, where the pipe implementation returns
+        # the exit code of the process at the front of the pipeline, not the
+        # end. This messes up any test using OPTION FATAL.
+        # Hence it's useful to have a way to make STDIN be at eof without
+        # needing a pipeline, so that the fork tests have a sane environment
+        # without these surprises.
+
+        # /dev/null appears to be surprisingly portable.
+        $runperl = $runperl . ($is_mswin ? ' <nul' : ' </dev/null');
     }
     if (defined $args{args}) {
 	$runperl = _quote_args($runperl, $args{args});
     }
-    $runperl = $runperl . ' 2>&1' if $args{stderr};
+    if (exists $args{stderr} && $args{stderr} eq 'devnull') {
+        $runperl = $runperl . ($is_mswin ? ' 2>nul' : ' 2>/dev/null');
+    }
+    elsif ($args{stderr}) {
+        $runperl = $runperl . ' 2>&1';
+    }
     if ($args{verbose}) {
 	my $runperldisplay = $runperl;
 	$runperldisplay =~ s/\n/\n\#/g;
@@ -650,6 +750,7 @@ sub _create_runperl { # Create the string to qx in runperl().
     return $runperl;
 }
 
+# sub run_perl {} is alias to below
 sub runperl {
     die "test.pl:runperl() does not take a hashref"
 	if ref $_[0] and ref $_[0] eq 'HASH';
@@ -694,7 +795,7 @@ sub runperl {
     } else {
 	$result = `$runperl`;
     }
-    $result =~ s/\n\n/\n/ if $is_vms; # XXX pipes sometimes double these
+    $result =~ s/\n\n/\n/g if $is_vms; # XXX pipes sometimes double these
     return $result;
 }
 
@@ -827,14 +928,44 @@ sub tempfile {
 	    return $try;
 	}
     }
-    die "Can't find temporary file name starting 'tmp$$'";
+    die "Can't find temporary file name starting \"tmp$$\"";
 }
 
-# This is the temporary file for _fresh_perl
+# register_tempfile - Adds a list of files to be removed at the end of the current test file
+# Arguments :
+#   a list of files to be removed later
+
+# returns a count of how many file names were actually added
+
+# Reuses %tmpfiles so that tempfile() will also skip any files added here
+# even if the file doesn't exist yet.
+
+sub register_tempfile {
+    my $count = 0;
+    for( @_ ){
+	if( $tmpfiles{$_} ){
+	    _print_stderr "# Temporary file '$_' already added\n";
+	}else{
+	    $tmpfiles{$_} = 1;
+	    $count = $count + 1;
+	}
+    }
+    return $count;
+}
+
+# This is the temporary file for fresh_perl
 my $tmpfile = tempfile();
 
-sub _fresh_perl {
-    my($prog, $action, $expect, $runperl_args, $name) = @_;
+sub fresh_perl {
+    my($prog, $runperl_args) = @_;
+
+    # Run 'runperl' with the complete perl program contained in '$prog', and
+    # arguments in the hash referred to by '$runperl_args'.  The results are
+    # returned, with $? set to the exit code.  Unless overridden, stderr is
+    # redirected to stdout.
+
+    die sprintf "Third argument to fresh_perl_.* must be hashref of args to fresh_perl (or {})"
+        unless !(defined $runperl_args) || ref($runperl_args) eq 'HASH';
 
     # Given the choice of the mis-parsable {}
     # (we want an anon hash, but a borked lexer might think that it's a block)
@@ -847,22 +978,14 @@ sub _fresh_perl {
     $runperl_args->{progfile} ||= $tmpfile;
     $runperl_args->{stderr}     = 1 unless exists $runperl_args->{stderr};
 
-    open TEST, ">$tmpfile" or die "Cannot open $tmpfile: $!";
-
-    # VMS adjustments
-    if( $is_vms ) {
-        $prog =~ s#/dev/null#NL:#;
-
-        # VMS file locking
-        $prog =~ s{if \(-e _ and -f _ and -r _\)}
-                  {if (-e _ and -f _)}
-    }
-
+    open TEST, '>', $tmpfile or die "Cannot open $tmpfile: $!";
+    binmode TEST, ':utf8' if $runperl_args->{wide_chars};
     print TEST $prog;
     close TEST or die "Cannot close $tmpfile: $!";
 
     my $results = runperl(%$runperl_args);
-    my $status = $?;
+    my $status = $?;    # Not necessary to save this, but it makes it clear to
+                        # future maintainers.
 
     # Clean up the results into something a bit more predictable.
     $results  =~ s/\n+$//;
@@ -880,6 +1003,17 @@ sub _fresh_perl {
         # pipes double these sometimes
         $results =~ s/\n\n/\n/g;
     }
+
+    $? = $status;
+    return $results;
+}
+
+
+sub _fresh_perl {
+    my($prog, $action, $expect, $runperl_args, $name) = @_;
+
+    my $results = fresh_perl($prog, $runperl_args);
+    my $status = $?;
 
     # Use the first line of the program as a name if none was given
     unless( $name ) {
@@ -939,13 +1073,15 @@ sub fresh_perl_like {
 
 # Many tests use the same format in __DATA__ or external files to specify a
 # sequence of (fresh) tests to run, extra files they may temporarily need, and
-# what the expected output is. So have excatly one copy of the code to run that
+# what the expected output is.  Putting it here allows common code to serve
+# these multiple tests.
 #
 # Each program is source code to run followed by an "EXPECT" line, followed
 # by the expected output.
 #
-# The code to run may begin with a command line switch such as -w or -0777
-# (alphanumerics only), and may contain (note the '# ' on each):
+# The first line of the code to run may be a command line switch such as -wE
+# or -0777 (alphanumerics only; only one cluster, beginning with a minus is
+# allowed).  Later lines may contain (note the '# ' on each):
 #   # TODO reason for todo
 #   # SKIP reason for skip
 #   # SKIP ?code to test if this should be skipped
@@ -969,6 +1105,68 @@ sub fresh_perl_like {
 # If the global variable $FATAL is true then OPTION fatal is the
 # default.
 
+sub _setup_one_file {
+    my $fh = shift;
+    # Store the filename as a program that started at line 0.
+    # Real files count lines starting at line 1.
+    my @these = (0, shift);
+    my ($lineno, $current);
+    while (<$fh>) {
+        if ($_ eq "########\n") {
+            if (defined $current) {
+                push @these, $lineno, $current;
+            }
+            undef $current;
+        } else {
+            if (!defined $current) {
+                $lineno = $.;
+            }
+            $current .= $_;
+        }
+    }
+    if (defined $current) {
+        push @these, $lineno, $current;
+    }
+    ((scalar @these) / 2 - 1, @these);
+}
+
+sub setup_multiple_progs {
+    my ($tests, @prgs);
+    foreach my $file (@_) {
+        next if $file =~ /(?:~|\.orig|,v)$/;
+        next if $file =~ /perlio$/ && !PerlIO::Layer->find('perlio');
+        next if -d $file;
+
+        open my $fh, '<', $file or die "Cannot open $file: $!\n" ;
+        my $found;
+        while (<$fh>) {
+            if (/^__END__/) {
+                ++$found;
+                last;
+            }
+        }
+        # This is an internal error, and should never happen. All bar one of
+        # the files had an __END__ marker to signal the end of their preamble,
+        # although for some it wasn't technically necessary as they have no
+        # tests. It might be possible to process files without an __END__ by
+        # seeking back to the start and treating the whole file as tests, but
+        # it's simpler and more reliable just to make the rule that all files
+        # must have __END__ in. This should never fail - a file without an
+        # __END__ should not have been checked in, because the regression tests
+        # would not have passed.
+        die "Could not find '__END__' in $file"
+            unless $found;
+
+        my ($t, @p) = _setup_one_file($fh, $file);
+        $tests += $t;
+        push @prgs, @p;
+
+        close $fh
+            or die "Cannot close $file: $!\n";
+    }
+    return ($tests, @prgs);
+}
+
 sub run_multiple_progs {
     my $up = shift;
     my @prgs;
@@ -977,18 +1175,31 @@ sub run_multiple_progs {
 	# pass in a list of "programs" to run
 	@prgs = @_;
     } else {
-	# The tests below t run in t and pass in a file handle.
-	my $fh = shift;
-	local $/;
-	@prgs = split "\n########\n", <$fh>;
+        # The tests below t run in t and pass in a file handle. In theory we
+        # can pass (caller)[1] as the second argument to report errors with
+        # the filename of our caller, as the handle is always DATA. However,
+        # line numbers in DATA count from the __END__ token, so will be wrong.
+        # Which is more confusing than not providing line numbers. So, for now,
+        # don't provide line numbers. No obvious clean solution - one hack
+        # would be to seek DATA back to the start and read to the __END__ token,
+        # but that feels almost like we should just open $0 instead.
+
+        # Not going to rely on undef in list assignment.
+        my $dummy;
+        ($dummy, @prgs) = _setup_one_file(shift);
     }
 
     my $tmpfile = tempfile();
 
+    my ($file, $line);
   PROGRAM:
-    for (@prgs){
-	unless (/\n/) {
-	    print "# From $_\n";
+    while (defined ($line = shift @prgs)) {
+        $_ = shift @prgs;
+        unless ($line) {
+            $file = $_;
+            if (defined $file) {
+                print "# From $file\n";
+            }
 	    next;
 	}
 	my $switch = "";
@@ -1052,6 +1263,7 @@ sub run_multiple_progs {
 	open my $fh, '>', $tmpfile or die "Cannot open >$tmpfile: $!";
 	print $fh q{
         BEGIN {
+            push @INC, '.';
             open STDERR, '>&', STDOUT
               or die "Can't dup STDOUT->STDERR: $!;";
         }
@@ -1059,7 +1271,8 @@ sub run_multiple_progs {
 	print $fh "\n#line 1\n";  # So the line numbers don't get messed up.
 	print $fh $prog,"\n";
 	close $fh or die "Cannot close $tmpfile: $!";
-	my $results = runperl( stderr => 1, progfile => $tmpfile, $up
+	my $results = runperl( stderr => 1, progfile => $tmpfile,
+			       stdin => undef, $up
 			       ? (switches => ["-I$up/lib", $switch], nolib => 1)
 			       : (switches => [$switch])
 			        );
@@ -1148,7 +1361,14 @@ sub run_multiple_progs {
 	    }
 	}
 
-	ok($ok, $name);
+        if (defined $file) {
+            _ok($ok, "at $file line $line", $name);
+        } else {
+            # We don't have file and line number data for the test, so report
+            # errors as coming from our caller.
+            local $Level = $Level + 1;
+            ok($ok, $name);
+        }
 
 	foreach (@temps) {
 	    unlink $_ if $_;
@@ -1265,7 +1485,7 @@ sub class_ok {
     # Written so as to count as one test
     local $Level = $Level + 1;
     if( ref $class ) {
-        ok( 0, "$class is a refrence, not a class name" );
+        ok( 0, "$class is a reference, not a class name" );
     }
     else {
         isa_ok($class, $isa, $class_name);
@@ -1403,10 +1623,27 @@ sub watchdog ($;$)
                     _diag("Watchdog warning: $_[0]");
                 };
                 my $sig = $is_vms ? 'TERM' : 'KILL';
-                my $cmd = _create_runperl( prog =>  "sleep($timeout);" .
-                                                    "warn qq/# $timeout_msg" . '\n/;' .
-                                                    "kill($sig, $pid_to_kill);");
-                $watchdog = system(1, $cmd);
+                my $prog = "sleep($timeout);" .
+                           "warn qq/# $timeout_msg" . '\n/;' .
+                           "kill(q/$sig/, $pid_to_kill);";
+
+                # On Windows use the indirect object plus LIST form to guarantee
+                # that perl is launched directly rather than via the shell (see
+                # perlfunc.pod), and ensure that the LIST has multiple elements
+                # since the indirect object plus COMMANDSTRING form seems to
+                # hang (see perl #121283). Don't do this on VMS, which doesn't
+                # support the LIST form at all.
+                if ($is_mswin) {
+                    my $runperl = which_perl();
+                    if ($runperl =~ m/\s/) {
+                        $runperl = qq{"$runperl"};
+                    }
+                    $watchdog = system({ $runperl } 1, $runperl, '-e', $prog);
+                }
+                else {
+                    my $cmd = _create_runperl(prog => $prog);
+                    $watchdog = system(1, $cmd);
+                }
             };
             if ($@ || ($watchdog <= 0)) {
                 _diag('Failed to start watchdog');
@@ -1417,8 +1654,8 @@ sub watchdog ($;$)
 
             # Add END block to parent to terminate and
             #   clean up watchdog process
-            eval "END { local \$! = 0; local \$? = 0;
-                        wait() if kill('KILL', $watchdog); };";
+            eval("END { local \$! = 0; local \$? = 0;
+                        wait() if kill('KILL', $watchdog); };");
             return;
         }
 
@@ -1503,147 +1740,6 @@ WATCHDOG_VIA_ALARM:
             kill($sig, $pid_to_kill);
         };
     }
-}
-
-my $cp_0037 =   # EBCDIC code page 0037
-    '\x00\x01\x02\x03\x37\x2D\x2E\x2F\x16\x05\x25\x0B\x0C\x0D\x0E\x0F' .
-    '\x10\x11\x12\x13\x3C\x3D\x32\x26\x18\x19\x3F\x27\x1C\x1D\x1E\x1F' .
-    '\x40\x5A\x7F\x7B\x5B\x6C\x50\x7D\x4D\x5D\x5C\x4E\x6B\x60\x4B\x61' .
-    '\xF0\xF1\xF2\xF3\xF4\xF5\xF6\xF7\xF8\xF9\x7A\x5E\x4C\x7E\x6E\x6F' .
-    '\x7C\xC1\xC2\xC3\xC4\xC5\xC6\xC7\xC8\xC9\xD1\xD2\xD3\xD4\xD5\xD6' .
-    '\xD7\xD8\xD9\xE2\xE3\xE4\xE5\xE6\xE7\xE8\xE9\xBA\xE0\xBB\xB0\x6D' .
-    '\x79\x81\x82\x83\x84\x85\x86\x87\x88\x89\x91\x92\x93\x94\x95\x96' .
-    '\x97\x98\x99\xA2\xA3\xA4\xA5\xA6\xA7\xA8\xA9\xC0\x4F\xD0\xA1\x07' .
-    '\x20\x21\x22\x23\x24\x15\x06\x17\x28\x29\x2A\x2B\x2C\x09\x0A\x1B' .
-    '\x30\x31\x1A\x33\x34\x35\x36\x08\x38\x39\x3A\x3B\x04\x14\x3E\xFF' .
-    '\x41\xAA\x4A\xB1\x9F\xB2\x6A\xB5\xBD\xB4\x9A\x8A\x5F\xCA\xAF\xBC' .
-    '\x90\x8F\xEA\xFA\xBE\xA0\xB6\xB3\x9D\xDA\x9B\x8B\xB7\xB8\xB9\xAB' .
-    '\x64\x65\x62\x66\x63\x67\x9E\x68\x74\x71\x72\x73\x78\x75\x76\x77' .
-    '\xAC\x69\xED\xEE\xEB\xEF\xEC\xBF\x80\xFD\xFE\xFB\xFC\xAD\xAE\x59' .
-    '\x44\x45\x42\x46\x43\x47\x9C\x48\x54\x51\x52\x53\x58\x55\x56\x57' .
-    '\x8C\x49\xCD\xCE\xCB\xCF\xCC\xE1\x70\xDD\xDE\xDB\xDC\x8D\x8E\xDF';
-
-my $cp_1047 =   # EBCDIC code page 1047
-    '\x00\x01\x02\x03\x37\x2D\x2E\x2F\x16\x05\x15\x0B\x0C\x0D\x0E\x0F' .
-    '\x10\x11\x12\x13\x3C\x3D\x32\x26\x18\x19\x3F\x27\x1C\x1D\x1E\x1F' .
-    '\x40\x5A\x7F\x7B\x5B\x6C\x50\x7D\x4D\x5D\x5C\x4E\x6B\x60\x4B\x61' .
-    '\xF0\xF1\xF2\xF3\xF4\xF5\xF6\xF7\xF8\xF9\x7A\x5E\x4C\x7E\x6E\x6F' .
-    '\x7C\xC1\xC2\xC3\xC4\xC5\xC6\xC7\xC8\xC9\xD1\xD2\xD3\xD4\xD5\xD6' .
-    '\xD7\xD8\xD9\xE2\xE3\xE4\xE5\xE6\xE7\xE8\xE9\xAD\xE0\xBD\x5F\x6D' .
-    '\x79\x81\x82\x83\x84\x85\x86\x87\x88\x89\x91\x92\x93\x94\x95\x96' .
-    '\x97\x98\x99\xA2\xA3\xA4\xA5\xA6\xA7\xA8\xA9\xC0\x4F\xD0\xA1\x07' .
-    '\x20\x21\x22\x23\x24\x25\x06\x17\x28\x29\x2A\x2B\x2C\x09\x0A\x1B' .
-    '\x30\x31\x1A\x33\x34\x35\x36\x08\x38\x39\x3A\x3B\x04\x14\x3E\xFF' .
-    '\x41\xAA\x4A\xB1\x9F\xB2\x6A\xB5\xBB\xB4\x9A\x8A\xB0\xCA\xAF\xBC' .
-    '\x90\x8F\xEA\xFA\xBE\xA0\xB6\xB3\x9D\xDA\x9B\x8B\xB7\xB8\xB9\xAB' .
-    '\x64\x65\x62\x66\x63\x67\x9E\x68\x74\x71\x72\x73\x78\x75\x76\x77' .
-    '\xAC\x69\xED\xEE\xEB\xEF\xEC\xBF\x80\xFD\xFE\xFB\xFC\xBA\xAE\x59' .
-    '\x44\x45\x42\x46\x43\x47\x9C\x48\x54\x51\x52\x53\x58\x55\x56\x57' .
-    '\x8C\x49\xCD\xCE\xCB\xCF\xCC\xE1\x70\xDD\xDE\xDB\xDC\x8D\x8E\xDF';
-
-my $cp_bc = # EBCDIC code page POSiX-BC
-    '\x00\x01\x02\x03\x37\x2D\x2E\x2F\x16\x05\x15\x0B\x0C\x0D\x0E\x0F' .
-    '\x10\x11\x12\x13\x3C\x3D\x32\x26\x18\x19\x3F\x27\x1C\x1D\x1E\x1F' .
-    '\x40\x5A\x7F\x7B\x5B\x6C\x50\x7D\x4D\x5D\x5C\x4E\x6B\x60\x4B\x61' .
-    '\xF0\xF1\xF2\xF3\xF4\xF5\xF6\xF7\xF8\xF9\x7A\x5E\x4C\x7E\x6E\x6F' .
-    '\x7C\xC1\xC2\xC3\xC4\xC5\xC6\xC7\xC8\xC9\xD1\xD2\xD3\xD4\xD5\xD6' .
-    '\xD7\xD8\xD9\xE2\xE3\xE4\xE5\xE6\xE7\xE8\xE9\xBB\xBC\xBD\x6A\x6D' .
-    '\x4A\x81\x82\x83\x84\x85\x86\x87\x88\x89\x91\x92\x93\x94\x95\x96' .
-    '\x97\x98\x99\xA2\xA3\xA4\xA5\xA6\xA7\xA8\xA9\xFB\x4F\xFD\xFF\x07' .
-    '\x20\x21\x22\x23\x24\x25\x06\x17\x28\x29\x2A\x2B\x2C\x09\x0A\x1B' .
-    '\x30\x31\x1A\x33\x34\x35\x36\x08\x38\x39\x3A\x3B\x04\x14\x3E\x5F' .
-    '\x41\xAA\xB0\xB1\x9F\xB2\xD0\xB5\x79\xB4\x9A\x8A\xBA\xCA\xAF\xA1' .
-    '\x90\x8F\xEA\xFA\xBE\xA0\xB6\xB3\x9D\xDA\x9B\x8B\xB7\xB8\xB9\xAB' .
-    '\x64\x65\x62\x66\x63\x67\x9E\x68\x74\x71\x72\x73\x78\x75\x76\x77' .
-    '\xAC\x69\xED\xEE\xEB\xEF\xEC\xBF\x80\xE0\xFE\xDD\xFC\xAD\xAE\x59' .
-    '\x44\x45\x42\x46\x43\x47\x9C\x48\x54\x51\x52\x53\x58\x55\x56\x57' .
-    '\x8C\x49\xCD\xCE\xCB\xCF\xCC\xE1\x70\xC0\xDE\xDB\xDC\x8D\x8E\xDF';
-
-my $straight =  # Avoid ranges
-    '\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F' .
-    '\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1A\x1B\x1C\x1D\x1E\x1F' .
-    '\x20\x21\x22\x23\x24\x25\x26\x27\x28\x29\x2A\x2B\x2C\x2D\x2E\x2F' .
-    '\x30\x31\x32\x33\x34\x35\x36\x37\x38\x39\x3A\x3B\x3C\x3D\x3E\x3F' .
-    '\x40\x41\x42\x43\x44\x45\x46\x47\x48\x49\x4A\x4B\x4C\x4D\x4E\x4F' .
-    '\x50\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5A\x5B\x5C\x5D\x5E\x5F' .
-    '\x60\x61\x62\x63\x64\x65\x66\x67\x68\x69\x6A\x6B\x6C\x6D\x6E\x6F' .
-    '\x70\x71\x72\x73\x74\x75\x76\x77\x78\x79\x7A\x7B\x7C\x7D\x7E\x7F' .
-    '\x80\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8A\x8B\x8C\x8D\x8E\x8F' .
-    '\x90\x91\x92\x93\x94\x95\x96\x97\x98\x99\x9A\x9B\x9C\x9D\x9E\x9F' .
-    '\xA0\xA1\xA2\xA3\xA4\xA5\xA6\xA7\xA8\xA9\xAA\xAB\xAC\xAD\xAE\xAF' .
-    '\xB0\xB1\xB2\xB3\xB4\xB5\xB6\xB7\xB8\xB9\xBA\xBB\xBC\xBD\xBE\xBF' .
-    '\xC0\xC1\xC2\xC3\xC4\xC5\xC6\xC7\xC8\xC9\xCA\xCB\xCC\xCD\xCE\xCF' .
-    '\xD0\xD1\xD2\xD3\xD4\xD5\xD6\xD7\xD8\xD9\xDA\xDB\xDC\xDD\xDE\xDF' .
-    '\xE0\xE1\xE2\xE3\xE4\xE5\xE6\xE7\xE8\xE9\xEA\xEB\xEC\xED\xEE\xEF' .
-    '\xF0\xF1\xF2\xF3\xF4\xF5\xF6\xF7\xF8\xF9\xFA\xFB\xFC\xFD\xFE\xFF';
-
-# The following 2 functions allow tests to work on both EBCDIC and
-# ASCII-ish platforms.  They convert string scalars between the native
-# character set and the set of 256 characters which is usually called
-# Latin1.
-#
-# These routines don't work on UTF-EBCDIC and UTF-8.
-
-sub native_to_latin1($) {
-    my $string = shift;
-
-    return $string if ord('^') == 94;   # ASCII, Latin1
-    my $cp;
-    if (ord('^') == 95) {    # EBCDIC 1047
-        $cp = \$cp_1047;
-    }
-    elsif (ord('^') == 106) {   # EBCDIC POSIX-BC
-        $cp = \$cp_bc;
-    }
-    elsif (ord('^') == 176)  {   # EBCDIC 037 */
-        $cp = \$cp_0037;
-    }
-    else {
-        die "Unknown native character set";
-    }
-
-    eval '$string =~ tr/' . $$cp . '/' . $straight . '/';
-    return $string;
-}
-
-sub latin1_to_native($) {
-    my $string = shift;
-
-    return $string if ord('^') == 94;   # ASCII, Latin1
-    my $cp;
-    if (ord('^') == 95) {    # EBCDIC 1047
-        $cp = \$cp_1047;
-    }
-    elsif (ord('^') == 106) {   # EBCDIC POSIX-BC
-        $cp = \$cp_bc;
-    }
-    elsif (ord('^') == 176)  {   # EBCDIC 037 */
-        $cp = \$cp_0037;
-    }
-    else {
-        die "Unknown native character set";
-    }
-
-    eval '$string =~ tr/' . $straight . '/' . $$cp . '/';
-    return $string;
-}
-
-sub ord_latin1_to_native {
-    # given an input code point, return the platform's native
-    # equivalent value.  Anything above latin1 is itself.
-
-    my $ord = shift;
-    return $ord if $ord > 255;
-    return ord latin1_to_native(chr $ord);
-}
-
-sub ord_native_to_latin1 {
-    # given an input platform code point, return the latin1 equivalent value.
-    # Anything above latin1 is itself.
-
-    my $ord = shift;
-    return $ord if $ord > 255;
-    return ord native_to_latin1(chr $ord);
 }
 
 1;

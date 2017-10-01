@@ -39,7 +39,7 @@ my %tables = (
 my %not_here = 
     map {$_ => 1} 
 (
- '8859-1.ucm', # default
+ '8859-1.ucm', 'cp1252.ucm', # default
  qw(cp037.ucm cp1026.ucm cp1047.ucm cp500.ucm cp875.ucm), # EBCDIC
  qw(cp932.ucm cp936.ucm cp949.ucm cp950.ucm),  # CJK
  );
@@ -88,7 +88,7 @@ sub post_initialize
         if $^O eq 'MacOS' && $self->{SOURCE} !~ /\b$name\.c\b/;
     $self->{'H'} = [$self->catfile($self->updir,'Encode', 'encode.h')];
     my %xs;
-    foreach my $table (keys %tables) {
+    foreach my $table (sort keys %tables) {
     push (@{$self->{'C'}},"$table.c");
     # Do NOT add $table.h etc. to H_FILES unless we own up as to how they
     # get built.
@@ -102,13 +102,13 @@ sub post_initialize
     $self->{'clean'}{'FILES'} .= join(' ',@files);
     open(XS,">$name.xs") || die "Cannot open $name.xs:$!";
     print XS <<'END';
+#define PERL_NO_GET_CONTEXT
 #include <EXTERN.h>
 #include <perl.h>
 #include <XSUB.h>
-#define U8 U8
 #include "encode.h"
 END
-    foreach my $table (keys %tables) {
+    foreach my $table (sort keys %tables) {
     print XS qq[#include "${table}.h"\n];
     }
     print XS <<"END";
@@ -118,8 +118,14 @@ Encode_XSEncoding(pTHX_ encode_t *enc)
 {
  dSP;
  HV *stash = gv_stashpv("Encode::XS", TRUE);
- SV *sv    = sv_bless(newRV_noinc(newSViv(PTR2IV(enc))),stash);
+ SV *iv    = newSViv(PTR2IV(enc));
+ SV *sv    = sv_bless(newRV_noinc(iv),stash);
  int i = 0;
+ /* with the SvLEN() == 0 hack, PVX won't be freed. We cast away name's
+ constness, in the hope that perl won't mess with it. */
+ assert(SvTYPE(iv) >= SVt_PV); assert(SvLEN(iv) == 0);
+ SvFLAGS(iv) |= SVp_POK;
+ SvPVX(iv) = (char*) enc->name[0];
  PUSHMARK(sp);
  XPUSHs(sv);
  while (enc->name[i])
@@ -137,7 +143,7 @@ PROTOTYPES: DISABLE
 BOOT:
 {
 END
-    foreach my $table (keys %tables) {
+    foreach my $table (sort keys %tables) {
     print XS qq[#include "${table}.exh"\n];
     }
     print XS "}\n";
@@ -151,7 +157,7 @@ sub postamble
     my $dir  = $self->catdir($self->updir,'ucm');
     my $str  = "# $name\$(OBJ_EXT) depends on .h and .exh files not .c files - but all written by enc2xs\n";
     $str    .= "$name.c : $name.xs ";
-    foreach my $table (keys %tables)
+    foreach my $table (sort keys %tables)
     {
     $str .= " $table.c";
     }
@@ -159,7 +165,7 @@ sub postamble
     $str .= "$name\$(OBJ_EXT) : $name.c\n\n";
 
     my $enc2xs = $self->catfile($self->updir,'bin', 'enc2xs');
-    foreach my $table (keys %tables)
+    foreach my $table (sort keys %tables)
     {
     my $numlines = 1;
     my $lengthsofar = length($str);

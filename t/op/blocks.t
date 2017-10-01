@@ -1,12 +1,12 @@
 #!./perl
 
 BEGIN {
-    chdir 't';
-    @INC = '../lib';
+    chdir 't' if -d 't';
     require './test.pl';
+    set_up_inc('../lib');
 }
 
-plan tests => 6;
+plan tests => 11;
 
 my @expect = qw(
 b1
@@ -142,3 +142,20 @@ void
 void
 void
 expEct
+
+fresh_perl_is('END { print "ok\n" } INIT { bless {} and exit }', "ok\n",
+	       {}, 'null PL_curcop in newGP');
+
+fresh_perl_is('BEGIN{exit 0}; print "still here"', '', {}, 'RT #2754: BEGIN{exit 0} should exit');
+TODO: {
+    local $TODO = 'RT #2754: CHECK{exit 0} is broken';
+    fresh_perl_is('CHECK{exit 0}; print "still here"', '', {}, 'RT #2754: CHECK{exit 0} should exit');
+}
+
+TODO: {
+    local $TODO = 'RT #2917: INIT{} in eval is wrongly considered too late';
+    fresh_perl_is('eval "INIT { print qq(in init); };";', 'in init', {}, 'RT #2917: No constraint on how late INIT blocks can run');
+}
+
+fresh_perl_is('eval "BEGIN {goto end}"; end:', '', {}, 'RT #113934: goto out of BEGIN causes assertion failure');
+

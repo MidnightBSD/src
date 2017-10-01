@@ -14,7 +14,7 @@ use threads::shared;
 use Thread::Semaphore;
 
 if ($] == 5.008) {
-    require 't/test.pl';   # Test::More work-alike for Perl 5.8.0
+    require './t/test.pl';   # Test::More work-alike for Perl 5.8.0
 } else {
     require Test::More;
 }
@@ -30,27 +30,27 @@ ok($st, 'New Semaphore');
 
 my $token :shared = 0;
 
-threads->create(sub {
+my @threads;
+
+push @threads, threads->create(sub {
     $st->down();
     is($token++, 1, 'Thread 1 got semaphore');
-    $st->up();
     $sm->up();
 
     $st->down(4);
     is($token, 5, 'Thread 1 done');
     $sm->up();
-})->detach();
+});
 
-threads->create(sub {
+push @threads, threads->create(sub {
     $st->down(2);
     is($token++, 3, 'Thread 2 got semaphore');
-    $st->up();
     $sm->up();
 
     $st->down(4);
     is($token, 5, 'Thread 2 done');
     $sm->up();
-})->detach();
+});
 
 $sm->down();
 is($token++, 0, 'Main has semaphore');
@@ -66,8 +66,10 @@ $st->up(9);
 
 $sm->down(2);
 $st->down();
+
+$_->join for @threads;
+
 ok(1, 'Main done');
-threads::yield();
 
 exit(0);
 

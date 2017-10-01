@@ -12,16 +12,17 @@ BEGIN {
     skip_all_without_config('d_fork');
 }
 
-plan tests => 104;
+plan tests => 106;
 
 my $STDOUT = tempfile();
 my $STDERR = tempfile();
-my $PERL = $ENV{PERL} || './perl';
+my $PERL = './perl';
 my $FAILURE_CODE = 119;
 
 delete $ENV{PERLLIB};
 delete $ENV{PERL5LIB};
 delete $ENV{PERL5OPT};
+delete $ENV{PERL_USE_UNSAFE_INC};
 
 
 # Run perl with specified environment and arguments, return (STDOUT, STDERR)
@@ -33,6 +34,7 @@ sub runperl_and_capture {
   delete $ENV{PERLLIB};
   delete $ENV{PERL5LIB};
   delete $ENV{PERL5OPT};
+  delete $ENV{PERL_USE_UNSAFE_INC};
   my $pid = fork;
   return (0, "Couldn't fork: $!") unless defined $pid;   # failure
   if ($pid) {                   # parent
@@ -99,12 +101,12 @@ try({PERL5OPT => '-Mstrict'}, ['-I../lib', '-e', 'print $::x'],
 
 try({PERL5OPT => '-Mstrict'}, ['-I../lib', '-e', 'print $x'],
     "", 
-    qq{Global symbol "\$x" requires explicit package name at -e line 1.\nExecution of -e aborted due to compilation errors.\n});
+    qq{Global symbol "\$x" requires explicit package name (did you forget to declare "my \$x"?) at -e line 1.\nExecution of -e aborted due to compilation errors.\n});
 
 # Fails in 5.6.0
 try({PERL5OPT => '-Mstrict -w'}, ['-I../lib', '-e', 'print $x'],
     "", 
-    qq{Global symbol "\$x" requires explicit package name at -e line 1.\nExecution of -e aborted due to compilation errors.\n});
+    qq{Global symbol "\$x" requires explicit package name (did you forget to declare "my \$x"?) at -e line 1.\nExecution of -e aborted due to compilation errors.\n});
 
 # Fails in 5.6.0
 try({PERL5OPT => '-w -Mstrict'}, ['-I../lib', '-e', 'print $::x'],
@@ -204,74 +206,87 @@ try({PERL5LIB => "foo",
     '',
     '');
 
-try({PERL_HASH_SEED_DEBUG => 1},
-    ['-e','1'],
-    '',
-    qr/HASH_FUNCTION =/);
+SKIP:
+{
+    skip "NO_PERL_HASH_SEED_DEBUG set", 4
+      if $Config{ccflags} =~ /-DNO_PERL_HASH_SEED_DEBUG\b/;
 
-try({PERL_HASH_SEED_DEBUG => 1},
-    ['-e','1'],
-    '',
-    qr/HASH_SEED =/);
+    try({PERL_HASH_SEED_DEBUG => 1},
+        ['-e','1'],
+        '',
+        qr/HASH_FUNCTION =/);
 
-# special case, seed "0" implies disabled hash key traversal randomization
-try({PERL_HASH_SEED_DEBUG => 1, PERL_HASH_SEED => "0"},
-    ['-e','1'],
-    '',
-    qr/PERTURB_KEYS = 0/);
+    try({PERL_HASH_SEED_DEBUG => 1},
+        ['-e','1'],
+        '',
+        qr/HASH_SEED =/);
+}
 
-# check that setting it to a different value with the same logical value
-# triggers the normal "deterministic mode".
-try({PERL_HASH_SEED_DEBUG => 1, PERL_HASH_SEED => "0x0"},
-    ['-e','1'],
-    '',
-    qr/PERTURB_KEYS = 2/);
+SKIP:
+{
+    skip "NO_PERL_HASH_ENV or NO_PERL_HASH_SEED_DEBUG set", 16
+      if $Config{ccflags} =~ /-DNO_PERL_HASH_ENV\b/ ||
+         $Config{ccflags} =~ /-DNO_PERL_HASH_SEED_DEBUG\b/;
 
-try({PERL_HASH_SEED_DEBUG => 1, PERL_PERTURB_KEYS => "0"},
-    ['-e','1'],
-    '',
-    qr/PERTURB_KEYS = 0/);
+    # special case, seed "0" implies disabled hash key traversal randomization
+    try({PERL_HASH_SEED_DEBUG => 1, PERL_HASH_SEED => "0"},
+        ['-e','1'],
+        '',
+        qr/PERTURB_KEYS = 0/);
 
-try({PERL_HASH_SEED_DEBUG => 1, PERL_PERTURB_KEYS => "1"},
-    ['-e','1'],
-    '',
-    qr/PERTURB_KEYS = 1/);
+    # check that setting it to a different value with the same logical value
+    # triggers the normal "deterministic mode".
+    try({PERL_HASH_SEED_DEBUG => 1, PERL_HASH_SEED => "0x0"},
+        ['-e','1'],
+        '',
+        qr/PERTURB_KEYS = 2/);
 
-try({PERL_HASH_SEED_DEBUG => 1, PERL_PERTURB_KEYS => "2"},
-    ['-e','1'],
-    '',
-    qr/PERTURB_KEYS = 2/);
+    try({PERL_HASH_SEED_DEBUG => 1, PERL_PERTURB_KEYS => "0"},
+        ['-e','1'],
+        '',
+        qr/PERTURB_KEYS = 0/);
 
-try({PERL_HASH_SEED_DEBUG => 1, PERL_HASH_SEED => "12345678"},
-    ['-e','1'],
-    '',
-    qr/HASH_SEED = 0x12345678/);
+    try({PERL_HASH_SEED_DEBUG => 1, PERL_PERTURB_KEYS => "1"},
+        ['-e','1'],
+        '',
+        qr/PERTURB_KEYS = 1/);
 
-try({PERL_HASH_SEED_DEBUG => 1, PERL_HASH_SEED => "12"},
-    ['-e','1'],
-    '',
-    qr/HASH_SEED = 0x12000000/);
+    try({PERL_HASH_SEED_DEBUG => 1, PERL_PERTURB_KEYS => "2"},
+        ['-e','1'],
+        '',
+        qr/PERTURB_KEYS = 2/);
 
-try({PERL_HASH_SEED_DEBUG => 1, PERL_HASH_SEED => "123456789"},
-    ['-e','1'],
-    '',
-    qr/HASH_SEED = 0x12345678/);
+    try({PERL_HASH_SEED_DEBUG => 1, PERL_HASH_SEED => "12345678"},
+        ['-e','1'],
+        '',
+        qr/HASH_SEED = 0x12345678/);
 
-# Test that PERL_PERTURB_KEYS works as expected.  We check that we get the same
-# results if we use PERL_PERTURB_KEYS = 0 or 2 and we reuse the seed from previous run.
-my @print_keys = ( '-e', '@_{"A".."Z"}=(); print keys %_');
-for my $mode ( 0,1, 2 ) { # disabled and deterministic respectively
-    my %base_opts = ( PERL_PERTURB_KEYS => $mode, PERL_HASH_SEED_DEBUG => 1 ),
-    my ($out, $err) = runperl_and_capture( { %base_opts }, [ @print_keys ]);
-    if ($err=~/HASH_SEED = (0x[a-f0-9]+)/) {
-        my $seed = $1;
-        my($out2, $err2) = runperl_and_capture( { %base_opts, PERL_HASH_SEED => $seed }, [ @print_keys ]);
-        if ( $mode == 1 ) {
-            isnt ($out,$out2,"PERL_PERTURB_KEYS = $mode results in different key order with the same key");
-        } else {
-            is ($out,$out2,"PERL_PERTURB_KEYS = $mode allows one to recreate a random hash");
+    try({PERL_HASH_SEED_DEBUG => 1, PERL_HASH_SEED => "12"},
+        ['-e','1'],
+        '',
+        qr/HASH_SEED = 0x12000000/);
+
+    try({PERL_HASH_SEED_DEBUG => 1, PERL_HASH_SEED => "123456789"},
+        ['-e','1'],
+        '',
+        qr/HASH_SEED = 0x12345678/);
+
+    # Test that PERL_PERTURB_KEYS works as expected.  We check that we get the same
+    # results if we use PERL_PERTURB_KEYS = 0 or 2 and we reuse the seed from previous run.
+    my @print_keys = ( '-e', '@_{"A".."Z"}=(); print keys %_');
+    for my $mode ( 0,1, 2 ) { # disabled and deterministic respectively
+        my %base_opts = ( PERL_PERTURB_KEYS => $mode, PERL_HASH_SEED_DEBUG => 1 ),
+          my ($out, $err) = runperl_and_capture( { %base_opts }, [ @print_keys ]);
+        if ($err=~/HASH_SEED = (0x[a-f0-9]+)/) {
+            my $seed = $1;
+            my($out2, $err2) = runperl_and_capture( { %base_opts, PERL_HASH_SEED => $seed }, [ @print_keys ]);
+            if ( $mode == 1 ) {
+                isnt ($out,$out2,"PERL_PERTURB_KEYS = $mode results in different key order with the same key");
+            } else {
+                is ($out,$out2,"PERL_PERTURB_KEYS = $mode allows one to recreate a random hash");
+            }
+            is ($err,$err2,"Got the same debug output when we set PERL_HASH_SEED and PERL_PERTURB_KEYS");
         }
-        is ($err,$err2,"Got the same debug output when we set PERL_HASH_SEED and PERL_PERTURB_KEYS");
     }
 }
 
@@ -285,7 +300,24 @@ is ($err, '', 'No errors when determining @INC');
 
 my @default_inc = split /\n/, $out;
 
-is ($default_inc[-1], '.', '. is last in @INC');
+SKIP: {
+  skip_if_miniperl("under miniperl", 3);
+if ($Config{default_inc_excludes_dot}) {
+    ok !(grep { $_ eq '.' } @default_inc), '. is not in @INC';
+    ($out, $err) = runperl_and_capture({ PERL_USE_UNSAFE_INC => 1 }, [@dump_inc]);
+
+    is ($err, '', 'No errors when determining unsafe @INC');
+
+    my @unsafe_inc = split /\n/, $out;
+
+    ok (eq_array([@unsafe_inc], [@default_inc, '.']), '. last in unsafe @INC')
+        or diag 'Unsafe @INC is: ', @unsafe_inc;
+}
+else {
+    is ($default_inc[-1], '.', '. is last in @INC');
+    skip('Not testing unsafe @INC when it includes . by default', 2);
+}
+}
 
 my $sep = $Config{path_sep};
 foreach (['nothing', ''],
