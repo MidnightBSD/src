@@ -2107,7 +2107,7 @@ SWIG_ruby_failed(void)
 } 
 
 
-/*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/ruby/rubyprimtypes.swg,19,%ruby_aux_method@*/
+/*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/ruby/rubyprimtypes.swg,19,%ruby_aux_method@*/
 SWIGINTERN VALUE SWIG_AUX_NUM2LONG(VALUE *args)
 {
   VALUE obj = args[0];
@@ -2318,7 +2318,7 @@ typedef struct {
 #include "svn_auth.h"
 
 
-/*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/ruby/rubyprimtypes.swg,19,%ruby_aux_method@*/
+/*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/ruby/rubyprimtypes.swg,19,%ruby_aux_method@*/
 SWIGINTERN VALUE SWIG_AUX_NUM2ULONG(VALUE *args)
 {
   VALUE obj = args[0];
@@ -42290,15 +42290,15 @@ SWIGEXPORT void Init_core(void) {
   rb_define_module_function(mCore, "svn_pool_create_allocator", _wrap_svn_pool_create_allocator, -1);
   rb_define_const(mCore, "SVN_VER_MAJOR", SWIG_From_int((int)(1)));
   rb_define_const(mCore, "SVN_VER_MINOR", SWIG_From_int((int)(8)));
-  rb_define_const(mCore, "SVN_VER_PATCH", SWIG_From_int((int)(10)));
-  rb_define_const(mCore, "SVN_VER_MICRO", SWIG_From_int((int)(10)));
+  rb_define_const(mCore, "SVN_VER_PATCH", SWIG_From_int((int)(17)));
+  rb_define_const(mCore, "SVN_VER_MICRO", SWIG_From_int((int)(17)));
   rb_define_const(mCore, "SVN_VER_LIBRARY", SWIG_From_int((int)(1)));
-  rb_define_const(mCore, "SVN_VER_TAG", SWIG_FromCharPtr(" (r1615264)"));
+  rb_define_const(mCore, "SVN_VER_TAG", SWIG_FromCharPtr(" (r1770682)"));
   rb_define_const(mCore, "SVN_VER_NUMTAG", SWIG_FromCharPtr(""));
-  rb_define_const(mCore, "SVN_VER_REVISION", SWIG_From_int((int)(1615264)));
-  rb_define_const(mCore, "SVN_VER_NUM", SWIG_FromCharPtr("1.8.10"));
-  rb_define_const(mCore, "SVN_VER_NUMBER", SWIG_FromCharPtr("1.8.10"));
-  rb_define_const(mCore, "SVN_VERSION", SWIG_FromCharPtr("1.8.10 (r1615264)"));
+  rb_define_const(mCore, "SVN_VER_REVISION", SWIG_From_int((int)(1770682)));
+  rb_define_const(mCore, "SVN_VER_NUM", SWIG_FromCharPtr("1.8.17"));
+  rb_define_const(mCore, "SVN_VER_NUMBER", SWIG_FromCharPtr("1.8.17"));
+  rb_define_const(mCore, "SVN_VERSION", SWIG_FromCharPtr("1.8.17 (r1770682)"));
   
   SwigClassSvn_version_t.klass = rb_define_class_under(mCore, "Svn_version_t", rb_cObject);
   SWIG_TypeClientData(SWIGTYPE_p_svn_version_t, (void *) &SwigClassSvn_version_t);

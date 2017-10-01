@@ -14654,10 +14654,9 @@ XS(_wrap_svn_wc_entry_t_text_time_get) {
     arg1 = (struct svn_wc_entry_t *)(argp1);
     result =  ((arg1)->text_time);
     {
-      char temp[256];
+      char temp[30];
       sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) result);
-      ST(argvi) = sv_newmortal();
-      sv_setpv((SV*)ST(argvi++), temp);
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = sv_2mortal(newSVpv(temp, 0)); argvi++  ;
     }
     
     XSRETURN(argvi);
@@ -14724,10 +14723,9 @@ XS(_wrap_svn_wc_entry_t_prop_time_get) {
     arg1 = (struct svn_wc_entry_t *)(argp1);
     result =  ((arg1)->prop_time);
     {
-      char temp[256];
+      char temp[30];
       sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) result);
-      ST(argvi) = sv_newmortal();
-      sv_setpv((SV*)ST(argvi++), temp);
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = sv_2mortal(newSVpv(temp, 0)); argvi++  ;
     }
     
     XSRETURN(argvi);
@@ -14932,10 +14930,9 @@ XS(_wrap_svn_wc_entry_t_cmt_date_get) {
     arg1 = (struct svn_wc_entry_t *)(argp1);
     result =  ((arg1)->cmt_date);
     {
-      char temp[256];
+      char temp[30];
       sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) result);
-      ST(argvi) = sv_newmortal();
-      sv_setpv((SV*)ST(argvi++), temp);
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = sv_2mortal(newSVpv(temp, 0)); argvi++  ;
     }
     
     XSRETURN(argvi);
@@ -15292,10 +15289,9 @@ XS(_wrap_svn_wc_entry_t_lock_creation_date_get) {
     arg1 = (struct svn_wc_entry_t *)(argp1);
     result =  ((arg1)->lock_creation_date);
     {
-      char temp[256];
+      char temp[30];
       sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) result);
-      ST(argvi) = sv_newmortal();
-      sv_setpv((SV*)ST(argvi++), temp);
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = sv_2mortal(newSVpv(temp, 0)); argvi++  ;
     }
     
     XSRETURN(argvi);
@@ -15711,10 +15707,9 @@ XS(_wrap_svn_wc_entry_t_working_size_get) {
     arg1 = (struct svn_wc_entry_t *)(argp1);
     result =  ((arg1)->working_size);
     {
-      char temp[256];
+      char temp[30];
       sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) result);
-      ST(argvi) = sv_newmortal();
-      sv_setpv((SV*)ST(argvi++), temp);
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = sv_2mortal(newSVpv(temp, 0)); argvi++  ;
     }
     
     XSRETURN(argvi);
@@ -16846,10 +16841,9 @@ XS(_wrap_svn_wc_info_t_recorded_size_get) {
     arg1 = (struct svn_wc_info_t *)(argp1);
     result =  ((arg1)->recorded_size);
     {
-      char temp[256];
+      char temp[30];
       sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) result);
-      ST(argvi) = sv_newmortal();
-      sv_setpv((SV*)ST(argvi++), temp);
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = sv_2mortal(newSVpv(temp, 0)); argvi++  ;
     }
     
     XSRETURN(argvi);
@@ -16916,10 +16910,9 @@ XS(_wrap_svn_wc_info_t_recorded_time_get) {
     arg1 = (struct svn_wc_info_t *)(argp1);
     result =  ((arg1)->recorded_time);
     {
-      char temp[256];
+      char temp[30];
       sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) result);
-      ST(argvi) = sv_newmortal();
-      sv_setpv((SV*)ST(argvi++), temp);
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = sv_2mortal(newSVpv(temp, 0)); argvi++  ;
     }
     
     XSRETURN(argvi);
@@ -19107,10 +19100,9 @@ XS(_wrap_svn_wc_status3_t_filesize_get) {
     arg1 = (struct svn_wc_status3_t *)(argp1);
     result =  ((arg1)->filesize);
     {
-      char temp[256];
+      char temp[30];
       sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) result);
-      ST(argvi) = sv_newmortal();
-      sv_setpv((SV*)ST(argvi++), temp);
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = sv_2mortal(newSVpv(temp, 0)); argvi++  ;
     }
     
     XSRETURN(argvi);
@@ -19697,10 +19689,9 @@ XS(_wrap_svn_wc_status3_t_changed_date_get) {
     arg1 = (struct svn_wc_status3_t *)(argp1);
     result =  ((arg1)->changed_date);
     {
-      char temp[256];
+      char temp[30];
       sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) result);
-      ST(argvi) = sv_newmortal();
-      sv_setpv((SV*)ST(argvi++), temp);
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = sv_2mortal(newSVpv(temp, 0)); argvi++  ;
     }
     
     XSRETURN(argvi);
@@ -20717,10 +20708,9 @@ XS(_wrap_svn_wc_status3_t_ood_changed_date_get) {
     arg1 = (struct svn_wc_status3_t *)(argp1);
     result =  ((arg1)->ood_changed_date);
     {
-      char temp[256];
+      char temp[30];
       sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) result);
-      ST(argvi) = sv_newmortal();
-      sv_setpv((SV*)ST(argvi++), temp);
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = sv_2mortal(newSVpv(temp, 0)); argvi++  ;
     }
     
     XSRETURN(argvi);
@@ -21849,10 +21839,9 @@ XS(_wrap_svn_wc_status2_t_ood_last_cmt_date_get) {
     arg1 = (struct svn_wc_status2_t *)(argp1);
     result =  ((arg1)->ood_last_cmt_date);
     {
-      char temp[256];
+      char temp[30];
       sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) result);
-      ST(argvi) = sv_newmortal();
-      sv_setpv((SV*)ST(argvi++), temp);
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = sv_2mortal(newSVpv(temp, 0)); argvi++  ;
     }
     
     XSRETURN(argvi);
@@ -26074,9 +26063,11 @@ XS(_wrap_svn_wc_add_repos_file4) {
     arg2 = (char *)(buf2);
     {
       svn_swig_pl_make_stream (&arg3, ST(2));
+      SPAGAIN;
     }
     {
       svn_swig_pl_make_stream (&arg4, ST(3));
+      SPAGAIN;
     }
     {
       if (_global_pool == NULL)
@@ -26212,9 +26203,11 @@ XS(_wrap_svn_wc_add_repos_file3) {
     arg2 = (svn_wc_adm_access_t *)(argp2);
     {
       svn_swig_pl_make_stream (&arg3, ST(2));
+      SPAGAIN;
     }
     {
       svn_swig_pl_make_stream (&arg4, ST(3));
+      SPAGAIN;
     }
     {
       if (_global_pool == NULL)
@@ -36259,7 +36252,11 @@ XS(_wrap_svn_wc_get_pristine_contents2) {
       }
     }
     {
-      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = svn_swig_pl_from_stream(*arg1); argvi++  ;
+      SV *tmp;
+      PUTBACK;
+      tmp = svn_swig_pl_from_stream(*arg1);
+      SPAGAIN;
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = tmp; argvi++  ;
     }
     
     
@@ -36337,7 +36334,11 @@ XS(_wrap_svn_wc_get_pristine_contents) {
       }
     }
     {
-      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = svn_swig_pl_from_stream(*arg1); argvi++  ;
+      SV *tmp;
+      PUTBACK;
+      tmp = svn_swig_pl_from_stream(*arg1);
+      SPAGAIN;
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = tmp; argvi++  ;
     }
     
     if (alloc2 == SWIG_NEWOBJ) free((char*)buf2);
@@ -38304,7 +38305,11 @@ XS(_wrap_svn_wc_translated_stream) {
       }
     }
     {
-      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = svn_swig_pl_from_stream(*arg1); argvi++  ;
+      SV *tmp;
+      PUTBACK;
+      tmp = svn_swig_pl_from_stream(*arg1);
+      SPAGAIN;
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = tmp; argvi++  ;
     }
     
     if (alloc2 == SWIG_NEWOBJ) free((char*)buf2);
@@ -38529,7 +38534,7 @@ XS(_wrap_svn_wc_transmit_text_deltas2) {
       }
     }
     {
-      /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,59,%append_output@*/ if (argvi >= items) EXTEND(sp,1); /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,56,%set_output@*/ ST(argvi) = sv_2mortal(newSVpv(svn_md5_digest_to_cstring(arg2,
+      /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,59,%append_output@*/ if (argvi >= items) EXTEND(sp,1); /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,56,%set_output@*/ ST(argvi) = sv_2mortal(newSVpv(svn_md5_digest_to_cstring(arg2,
             _global_pool),
           0)); argvi++ /*@SWIG@*/
       
@@ -45862,6 +45867,7 @@ XS(_wrap_svn_wc_invoke_get_file) {
     arg4 = (svn_revnum_t)(val4);
     {
       svn_swig_pl_make_stream (&arg5, ST(4));
+      SPAGAIN;
     }
     if (items > 5) {
       
@@ -46053,6 +46059,7 @@ XS(_wrap_svn_wc_invoke_canonicalize_svn_prop_get_file) {
     }
     {
       svn_swig_pl_make_stream (&arg3, ST(1));
+      SPAGAIN;
     }
     res4 = SWIG_ConvertPtr(ST(2),SWIG_as_voidptrptr(&arg4), 0, 0);
     if (!SWIG_IsOK(res4)) {
@@ -48395,747 +48402,747 @@ XS(SWIG_init) {
     SvREADONLY_on(sv);
   }
   
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "SVN_WC_TRANSLATE_FROM_NF", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(0x00000000)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "SVN_WC_TRANSLATE_TO_NF", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(0x00000001)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "SVN_WC_TRANSLATE_FORCE_EOL_REPAIR", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(0x00000002)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(0x00000004)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "SVN_WC_TRANSLATE_FORCE_COPY", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(0x00000008)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "SVN_WC_TRANSLATE_USE_GLOBAL_TMP", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(0x00000010)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "SVN_WC_ADM_DIR_NAME", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_FromCharPtr(".svn"));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_add", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_add)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_copy", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_copy)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_delete", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_delete)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_restore", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_restore)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_revert", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_revert)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_failed_revert", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_failed_revert)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_resolved", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_resolved)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_skip", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_skip)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_update_delete", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_update_delete)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_update_add", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_update_add)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_update_update", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_update_update)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_update_completed", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_update_completed)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_update_external", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_update_external)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_status_completed", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_status_completed)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_status_external", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_status_external)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_commit_modified", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_commit_modified)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_commit_added", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_commit_added)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_commit_deleted", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_commit_deleted)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_commit_replaced", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_commit_replaced)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_commit_postfix_txdelta", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_commit_postfix_txdelta)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_blame_revision", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_blame_revision)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_locked", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_locked)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_unlocked", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_unlocked)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_failed_lock", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_failed_lock)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_failed_unlock", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_failed_unlock)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_exists", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_exists)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_changelist_set", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_changelist_set)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_changelist_clear", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_changelist_clear)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_changelist_moved", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_changelist_moved)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_merge_begin", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_merge_begin)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_foreign_merge_begin", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_foreign_merge_begin)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_update_replace", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_update_replace)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_property_added", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_property_added)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_property_modified", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_property_modified)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_property_deleted", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_property_deleted)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_property_deleted_nonexistent", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_property_deleted_nonexistent)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_revprop_set", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_revprop_set)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_revprop_deleted", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_revprop_deleted)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_merge_completed", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_merge_completed)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_tree_conflict", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_tree_conflict)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_failed_external", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_failed_external)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_update_started", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_update_started)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_update_skip_obstruction", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_update_skip_obstruction)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_update_skip_working_only", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_update_skip_working_only)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_update_skip_access_denied", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_update_skip_access_denied)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_update_external_removed", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_update_external_removed)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_update_shadowed_add", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_update_shadowed_add)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_update_shadowed_update", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_update_shadowed_update)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_update_shadowed_delete", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_update_shadowed_delete)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_merge_record_info", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_merge_record_info)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_upgraded_path", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_upgraded_path)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_merge_record_info_begin", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_merge_record_info_begin)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_merge_elide_info", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_merge_elide_info)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_patch", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_patch)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_patch_applied_hunk", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_patch_applied_hunk)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_patch_rejected_hunk", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_patch_rejected_hunk)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_patch_hunk_already_applied", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_patch_hunk_already_applied)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_commit_copied", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_commit_copied)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_commit_copied_replaced", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_commit_copied_replaced)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_url_redirect", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_url_redirect)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_path_nonexistent", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_path_nonexistent)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_exclude", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_exclude)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_failed_conflict", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_failed_conflict)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_failed_missing", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_failed_missing)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_failed_out_of_date", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_failed_out_of_date)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_failed_no_parent", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_failed_no_parent)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_failed_locked", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_failed_locked)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_failed_forbidden_by_server", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_failed_forbidden_by_server)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_skip_conflicted", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_skip_conflicted)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_update_broken_lock", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_update_broken_lock)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_failed_obstruction", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_failed_obstruction)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_conflict_resolver_starting", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_conflict_resolver_starting)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_conflict_resolver_done", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_conflict_resolver_done)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_left_local_modifications", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_left_local_modifications)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_foreign_copy_begin", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_foreign_copy_begin)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_move_broken", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_move_broken)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_state_inapplicable", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_state_inapplicable)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_state_unknown", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_state_unknown)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_state_unchanged", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_state_unchanged)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_state_missing", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_state_missing)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_state_obstructed", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_state_obstructed)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_state_changed", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_state_changed)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_state_merged", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_state_merged)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_state_conflicted", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_state_conflicted)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_state_source_missing", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_state_source_missing)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_lock_state_inapplicable", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_lock_state_inapplicable)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_lock_state_unknown", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_lock_state_unknown)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_lock_state_unchanged", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_lock_state_unchanged)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_lock_state_locked", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_lock_state_locked)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_notify_lock_state_unlocked", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_notify_lock_state_unlocked)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_action_edit", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_action_edit)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_action_add", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_action_add)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_action_delete", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_action_delete)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_action_replace", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_action_replace)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_reason_edited", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_reason_edited)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_reason_obstructed", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_reason_obstructed)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_reason_deleted", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_reason_deleted)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_reason_missing", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_reason_missing)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_reason_unversioned", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_reason_unversioned)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_reason_added", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_reason_added)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_reason_replaced", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_reason_replaced)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_reason_moved_away", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_reason_moved_away)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_reason_moved_here", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_reason_moved_here)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_kind_text", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_kind_text)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_kind_property", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_kind_property)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_kind_tree", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_kind_tree)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_operation_none", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_operation_none)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_operation_update", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_operation_update)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_operation_switch", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_operation_switch)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_operation_merge", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_operation_merge)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_choose_postpone", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_choose_postpone)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_choose_base", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_choose_base)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_choose_theirs_full", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_choose_theirs_full)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_choose_mine_full", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_choose_mine_full)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_choose_theirs_conflict", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_choose_theirs_conflict)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_choose_mine_conflict", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_choose_mine_conflict)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_choose_merged", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_choose_merged)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_conflict_choose_unspecified", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_conflict_choose_unspecified)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_schedule_normal", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_schedule_normal)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_schedule_add", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_schedule_add)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_schedule_delete", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_schedule_delete)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_schedule_replace", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_schedule_replace)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)((-1))));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "SVN_WC_ENTRY_THIS_DIR", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_FromCharPtr(""));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_status_none", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_status_none)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_status_unversioned", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_status_unversioned)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_status_normal", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_status_normal)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_status_added", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_status_added)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_status_missing", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_status_missing)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_status_deleted", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_status_deleted)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_status_replaced", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_status_replaced)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_status_modified", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_status_modified)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_status_merged", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_status_merged)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_status_conflicted", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_status_conflicted)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_status_ignored", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_status_ignored)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_status_obstructed", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_status_obstructed)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_status_external", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_status_external)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_status_incomplete", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_status_incomplete)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_merge_unchanged", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_merge_unchanged)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_merge_merged", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_merge_merged)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_merge_conflict", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_merge_conflict)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_wc_merge_no_merge", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_wc_merge_no_merge)));
     SvREADONLY_on(sv);

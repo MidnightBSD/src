@@ -11549,10 +11549,9 @@ XS(_wrap_svn_client_status_t_filesize_get) {
     arg1 = (struct svn_client_status_t *)(argp1);
     result =  ((arg1)->filesize);
     {
-      char temp[256];
+      char temp[30];
       sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) result);
-      ST(argvi) = sv_newmortal();
-      sv_setpv((SV*)ST(argvi++), temp);
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = sv_2mortal(newSVpv(temp, 0)); argvi++  ;
     }
     
     XSRETURN(argvi);
@@ -12423,10 +12422,9 @@ XS(_wrap_svn_client_status_t_changed_date_get) {
     arg1 = (struct svn_client_status_t *)(argp1);
     result =  ((arg1)->changed_date);
     {
-      char temp[256];
+      char temp[30];
       sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) result);
-      ST(argvi) = sv_newmortal();
-      sv_setpv((SV*)ST(argvi++), temp);
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = sv_2mortal(newSVpv(temp, 0)); argvi++  ;
     }
     
     XSRETURN(argvi);
@@ -13289,10 +13287,9 @@ XS(_wrap_svn_client_status_t_ood_changed_date_get) {
     arg1 = (struct svn_client_status_t *)(argp1);
     result =  ((arg1)->ood_changed_date);
     {
-      char temp[256];
+      char temp[30];
       sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) result);
-      ST(argvi) = sv_newmortal();
-      sv_setpv((SV*)ST(argvi++), temp);
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = sv_2mortal(newSVpv(temp, 0)); argvi++  ;
     }
     
     XSRETURN(argvi);
@@ -15822,9 +15819,11 @@ XS(_wrap_svn_client_diff6) {
     arg16 = (char *)(buf16);
     {
       svn_swig_pl_make_stream (&arg17, ST(16));
+      SPAGAIN;
     }
     {
       svn_swig_pl_make_stream (&arg18, ST(17));
+      SPAGAIN;
     }
     {
       arg19 = SvOK(ST(18)) ? (apr_array_header_t *) svn_swig_pl_strings_to_array(
@@ -16894,9 +16893,11 @@ XS(_wrap_svn_client_diff_peg6) {
     arg16 = (char *)(buf16);
     {
       svn_swig_pl_make_stream (&arg17, ST(16));
+      SPAGAIN;
     }
     {
       svn_swig_pl_make_stream (&arg18, ST(17));
+      SPAGAIN;
     }
     {
       arg19 = SvOK(ST(18)) ? (apr_array_header_t *) svn_swig_pl_strings_to_array(
@@ -25367,7 +25368,7 @@ XS(_wrap_svn_client_proplist2) {
       }
     }
     {
-      /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,59,%append_output@*/ if (argvi >= items) EXTEND(sp,1); /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,56,%set_output@*/ ST(argvi) = svn_swig_pl_convert_array(*arg1,
+      /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,59,%append_output@*/ if (argvi >= items) EXTEND(sp,1); /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,56,%set_output@*/ ST(argvi) = svn_swig_pl_convert_array(*arg1,
         SWIGTYPE_p_svn_client_proplist_item_t); argvi++ /*@SWIG@*/
       /*@SWIG@*/
       ;
@@ -25471,7 +25472,7 @@ XS(_wrap_svn_client_proplist) {
       }
     }
     {
-      /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,59,%append_output@*/ if (argvi >= items) EXTEND(sp,1); /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,56,%set_output@*/ ST(argvi) = svn_swig_pl_convert_array(*arg1,
+      /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,59,%append_output@*/ if (argvi >= items) EXTEND(sp,1); /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,56,%set_output@*/ ST(argvi) = svn_swig_pl_convert_array(*arg1,
         SWIGTYPE_p_svn_client_proplist_item_t); argvi++ /*@SWIG@*/
       /*@SWIG@*/
       ;
@@ -27088,6 +27089,7 @@ XS(_wrap_svn_client_cat2) {
     }
     {
       svn_swig_pl_make_stream (&arg1, ST(0));
+      SPAGAIN;
     }
     res2 = SWIG_AsCharPtrAndSize(ST(1), &buf2, NULL, &alloc2);
     if (!SWIG_IsOK(res2)) {
@@ -27185,6 +27187,7 @@ XS(_wrap_svn_client_cat) {
     }
     {
       svn_swig_pl_make_stream (&arg1, ST(0));
+      SPAGAIN;
     }
     res2 = SWIG_AsCharPtrAndSize(ST(1), &buf2, NULL, &alloc2);
     if (!SWIG_IsOK(res2)) {
@@ -28155,10 +28158,9 @@ XS(_wrap_svn_info_t_last_changed_date_get) {
     arg1 = (struct svn_info_t *)(argp1);
     result =  ((arg1)->last_changed_date);
     {
-      char temp[256];
+      char temp[30];
       sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) result);
-      ST(argvi) = sv_newmortal();
-      sv_setpv((SV*)ST(argvi++), temp);
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = sv_2mortal(newSVpv(temp, 0)); argvi++  ;
     }
     
     XSRETURN(argvi);
@@ -28629,10 +28631,9 @@ XS(_wrap_svn_info_t_text_time_get) {
     arg1 = (struct svn_info_t *)(argp1);
     result =  ((arg1)->text_time);
     {
-      char temp[256];
+      char temp[30];
       sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) result);
-      ST(argvi) = sv_newmortal();
-      sv_setpv((SV*)ST(argvi++), temp);
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = sv_2mortal(newSVpv(temp, 0)); argvi++  ;
     }
     
     XSRETURN(argvi);
@@ -28699,10 +28700,9 @@ XS(_wrap_svn_info_t_prop_time_get) {
     arg1 = (struct svn_info_t *)(argp1);
     result =  ((arg1)->prop_time);
     {
-      char temp[256];
+      char temp[30];
       sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) result);
-      ST(argvi) = sv_newmortal();
-      sv_setpv((SV*)ST(argvi++), temp);
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = sv_2mortal(newSVpv(temp, 0)); argvi++  ;
     }
     
     XSRETURN(argvi);
@@ -29402,10 +29402,9 @@ XS(_wrap_svn_info_t_size64_get) {
     arg1 = (struct svn_info_t *)(argp1);
     result =  ((arg1)->size64);
     {
-      char temp[256];
+      char temp[30];
       sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) result);
-      ST(argvi) = sv_newmortal();
-      sv_setpv((SV*)ST(argvi++), temp);
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = sv_2mortal(newSVpv(temp, 0)); argvi++  ;
     }
     
     XSRETURN(argvi);
@@ -29472,10 +29471,9 @@ XS(_wrap_svn_info_t_working_size64_get) {
     arg1 = (struct svn_info_t *)(argp1);
     result =  ((arg1)->working_size64);
     {
-      char temp[256];
+      char temp[30];
       sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) result);
-      ST(argvi) = sv_newmortal();
-      sv_setpv((SV*)ST(argvi++), temp);
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = sv_2mortal(newSVpv(temp, 0)); argvi++  ;
     }
     
     XSRETURN(argvi);
@@ -30054,10 +30052,9 @@ XS(_wrap_svn_client_info2_t_size_get) {
     arg1 = (struct svn_client_info2_t *)(argp1);
     result =  ((arg1)->size);
     {
-      char temp[256];
+      char temp[30];
       sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) result);
-      ST(argvi) = sv_newmortal();
-      sv_setpv((SV*)ST(argvi++), temp);
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = sv_2mortal(newSVpv(temp, 0)); argvi++  ;
     }
     
     XSRETURN(argvi);
@@ -30189,10 +30186,9 @@ XS(_wrap_svn_client_info2_t_last_changed_date_get) {
     arg1 = (struct svn_client_info2_t *)(argp1);
     result =  ((arg1)->last_changed_date);
     {
-      char temp[256];
+      char temp[30];
       sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) result);
-      ST(argvi) = sv_newmortal();
-      sv_setpv((SV*)ST(argvi++), temp);
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = sv_2mortal(newSVpv(temp, 0)); argvi++  ;
     }
     
     XSRETURN(argvi);
@@ -35192,72 +35188,72 @@ XS(SWIG_init) {
     SvREADONLY_on(sv);
   }
   
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "SVN_CLIENT_COMMIT_ITEM_ADD", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(0x01)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "SVN_CLIENT_COMMIT_ITEM_DELETE", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(0x02)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "SVN_CLIENT_COMMIT_ITEM_TEXT_MODS", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(0x04)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "SVN_CLIENT_COMMIT_ITEM_PROP_MODS", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(0x08)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "SVN_CLIENT_COMMIT_ITEM_IS_COPY", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(0x10)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(0x20)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "SVN_CLIENT_COMMIT_ITEM_MOVED_HERE", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(0x40)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_client_diff_summarize_kind_normal", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_client_diff_summarize_kind_normal)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_client_diff_summarize_kind_added", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_client_diff_summarize_kind_added)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_client_diff_summarize_kind_modified", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_client_diff_summarize_kind_modified)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "svn_client_diff_summarize_kind_deleted", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(svn_client_diff_summarize_kind_deleted)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "SVN_CLIENT_AUTH_USERNAME", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_FromCharPtr("username"));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "SVN_CLIENT_AUTH_PASSWORD", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_FromCharPtr("password"));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
-  /*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+  /*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "SWIG_SVN_INFO_SIZE_UNKNOWN", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_unsigned_SS_long  SWIG_PERL_CALL_ARGS_1((unsigned long)(-1)));
     SvREADONLY_on(sv);

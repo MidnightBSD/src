@@ -1258,13 +1258,14 @@ record_skip(merge_cmd_baton_t *merge_b,
             svn_node_kind_t kind,
             svn_wc_notify_action_t action,
             svn_wc_notify_state_t state,
+            struct merge_dir_baton_t *pdb,
             apr_pool_t *scratch_pool)
 {
   if (merge_b->record_only)
     return SVN_NO_ERROR; /* ### Why? - Legacy compatibility */
 
-  if (merge_b->merge_source.ancestral
-      || merge_b->reintegrate_merge)
+  if ((merge_b->merge_source.ancestral || merge_b->reintegrate_merge)
+      && !(pdb && pdb->shadowed))
     {
       store_path(merge_b->skipped_abspaths, local_abspath);
     }
@@ -1979,7 +1980,8 @@ merge_file_changed(const char *relpath,
           /* We haven't notified for this node yet: report a skip */
           SVN_ERR(record_skip(merge_b, local_abspath, svn_node_file,
                               svn_wc_notify_update_shadowed_update,
-                              fb->skip_reason, scratch_pool));
+                              fb->skip_reason, fb->parent_baton,
+                              scratch_pool));
         }
 
       return SVN_NO_ERROR;
@@ -2148,7 +2150,8 @@ merge_file_added(const char *relpath,
           /* We haven't notified for this node yet: report a skip */
           SVN_ERR(record_skip(merge_b, local_abspath, svn_node_file,
                               svn_wc_notify_update_shadowed_add,
-                              fb->skip_reason, scratch_pool));
+                              fb->skip_reason, fb->parent_baton,
+                              scratch_pool));
         }
 
       return SVN_NO_ERROR;
@@ -2359,7 +2362,8 @@ merge_file_deleted(const char *relpath,
           /* We haven't notified for this node yet: report a skip */
           SVN_ERR(record_skip(merge_b, local_abspath, svn_node_file,
                               svn_wc_notify_update_shadowed_delete,
-                              fb->skip_reason, scratch_pool));
+                              fb->skip_reason, fb->parent_baton,
+                              scratch_pool));
         }
 
       return SVN_NO_ERROR;
@@ -2723,6 +2727,12 @@ merge_dir_opened(void **new_dir_baton,
               /* Set a tree conflict */
               db->shadowed = TRUE;
               db->tree_conflict_reason = svn_wc_conflict_reason_obstructed;
+
+              if ((merge_b->merge_source.ancestral || merge_b->reintegrate_merge)
+                  && !(pdb && pdb->shadowed))
+                {
+                  store_path(merge_b->skipped_abspaths, local_abspath);
+                }
             }
         }
 
@@ -2847,7 +2857,8 @@ merge_dir_changed(const char *relpath,
           /* We haven't notified for this node yet: report a skip */
           SVN_ERR(record_skip(merge_b, local_abspath, svn_node_dir,
                               svn_wc_notify_update_shadowed_update,
-                              db->skip_reason, scratch_pool));
+                              db->skip_reason, db->parent_baton,
+                              scratch_pool));
         }
 
       return SVN_NO_ERROR;
@@ -2931,7 +2942,8 @@ merge_dir_added(const char *relpath,
           /* We haven't notified for this node yet: report a skip */
           SVN_ERR(record_skip(merge_b, local_abspath, svn_node_dir,
                               svn_wc_notify_update_shadowed_add,
-                              db->skip_reason, scratch_pool));
+                              db->skip_reason, db->parent_baton,
+                              scratch_pool));
         }
 
       return SVN_NO_ERROR;
@@ -3098,7 +3110,8 @@ merge_dir_deleted(const char *relpath,
           /* We haven't notified for this node yet: report a skip */
           SVN_ERR(record_skip(merge_b, local_abspath, svn_node_dir,
                               svn_wc_notify_update_shadowed_delete,
-                              db->skip_reason, scratch_pool));
+                              db->skip_reason, db->parent_baton,
+                              scratch_pool));
         }
 
       return SVN_NO_ERROR;
@@ -3278,13 +3291,14 @@ merge_node_absent(const char *relpath,
                   apr_pool_t *scratch_pool)
 {
   merge_cmd_baton_t *merge_b = processor->baton;
+  struct merge_dir_baton_t *db = dir_baton;
 
   const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
                                               relpath, scratch_pool);
 
   SVN_ERR(record_skip(merge_b, local_abspath, svn_node_unknown,
                       svn_wc_notify_skip, svn_wc_notify_state_missing,
-                      scratch_pool));
+                      db, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -11569,9 +11583,6 @@ open_reintegrate_source_and_target(svn_ra_session_t **source_ra_session_p,
   SVN_ERR(open_target_wc(&target, target_abspath,
                          FALSE, FALSE, FALSE,
                          ctx, scratch_pool, scratch_pool));
-  SVN_ERR(svn_client_open_ra_session2(target_ra_session_p,
-                                      target->loc.url, target->abspath,
-                                      ctx, result_pool, scratch_pool));
   if (! target->loc.url)
     return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
                              _("Can't reintegrate into '%s' because it is "
@@ -11579,6 +11590,10 @@ open_reintegrate_source_and_target(svn_ra_session_t **source_ra_session_p,
                                "the merge source"),
                              svn_dirent_local_style(target->abspath,
                                                     scratch_pool));
+
+  SVN_ERR(svn_client_open_ra_session2(target_ra_session_p,
+                                      target->loc.url, target->abspath,
+                                      ctx, result_pool, scratch_pool));
 
   SVN_ERR(svn_client__ra_session_from_path2(
             source_ra_session_p, &source_loc,
@@ -12489,12 +12504,19 @@ client_find_automatic_merge(automatic_merge_t **merge_p,
                          allow_switched_subtrees,
                          ctx, result_pool, scratch_pool));
 
+  if (!s_t->target->loc.url)
+    return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
+                             _("Can't perform automatic merge into '%s' "
+                               "because it is locally added and therefore "
+                               "not related to the merge source"),
+                             svn_dirent_local_style(target_abspath,
+                                                    scratch_pool));
+
   /* Open RA sessions to the source and target trees. */
   SVN_ERR(svn_client_open_ra_session2(&s_t->target_ra_session,
                                       s_t->target->loc.url,
                                       s_t->target->abspath,
                                       ctx, result_pool, scratch_pool));
-  /* ### check for null URL (i.e. added path) here, like in reintegrate? */
   SVN_ERR(svn_client__ra_session_from_path2(
             &s_t->source_ra_session, &s_t->source,
             source_path_or_url, NULL, source_revision, source_revision,
