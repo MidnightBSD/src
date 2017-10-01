@@ -41,6 +41,7 @@
 #include "svn_fs.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
+#include "svn_checksum.h"
 #include "svn_hash.h"
 #include "svn_props.h"
 #include "svn_sorts.h"
@@ -3988,16 +3989,22 @@ write_non_packed_revprop(const char **final_path,
                          apr_hash_t *proplist,
                          apr_pool_t *pool)
 {
+  apr_file_t *file;
   svn_stream_t *stream;
   *final_path = path_revprops(fs, rev, pool);
 
   /* ### do we have a directory sitting around already? we really shouldn't
      ### have to get the dirname here. */
-  SVN_ERR(svn_stream_open_unique(&stream, tmp_path,
-                                 svn_dirent_dirname(*final_path, pool),
-                                 svn_io_file_del_none, pool, pool));
+  SVN_ERR(svn_io_open_unique_file3(&file, tmp_path,
+                                   svn_dirent_dirname(*final_path, pool),
+                                   svn_io_file_del_none, pool, pool));
+  stream = svn_stream_from_aprfile2(file, TRUE, pool);
   SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, pool));
   SVN_ERR(svn_stream_close(stream));
+
+  /* Flush temporary file to disk and close it. */
+  SVN_ERR(svn_io_file_flush_to_disk(file, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
 
   return SVN_NO_ERROR;
 }
@@ -4085,7 +4092,7 @@ serialize_revprops_header(svn_stream_t *stream,
   return SVN_NO_ERROR;
 }
 
-/* Writes the a pack file to FILE_STREAM.  It copies the serialized data
+/* Writes the a pack file to FILE.  It copies the serialized data
  * from REVPROPS for the indexes [START,END) except for index CHANGED_INDEX.
  *
  * The data for the latter is taken from NEW_SERIALIZED.  Note, that
@@ -4103,7 +4110,7 @@ repack_revprops(svn_fs_t *fs,
                 int changed_index,
                 svn_stringbuf_t *new_serialized,
                 apr_off_t new_total_size,
-                svn_stream_t *file_stream,
+                apr_file_t *file,
                 apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -4151,9 +4158,11 @@ repack_revprops(svn_fs_t *fs,
                           ? SVN_DELTA_COMPRESSION_LEVEL_DEFAULT
                           : SVN_DELTA_COMPRESSION_LEVEL_NONE));
 
-  /* finally, write the content to the target stream and close it */
-  SVN_ERR(svn_stream_write(file_stream, compressed->data, &compressed->len));
-  SVN_ERR(svn_stream_close(file_stream));
+  /* finally, write the content to the target file, flush and close it */
+  SVN_ERR(svn_io_file_write_full(file, compressed->data, compressed->len,
+                                 NULL, pool));
+  SVN_ERR(svn_io_file_flush_to_disk(file, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
 
   return SVN_NO_ERROR;
 }
@@ -4161,23 +4170,22 @@ repack_revprops(svn_fs_t *fs,
 /* Allocate a new pack file name for revisions
  *     [REVPROPS->START_REVISION + START, REVPROPS->START_REVISION + END - 1]
  * of REVPROPS->MANIFEST.  Add the name of old file to FILES_TO_DELETE,
- * auto-create that array if necessary.  Return an open file stream to
- * the new file in *STREAM allocated in POOL.
+ * auto-create that array if necessary.  Return an open file *FILE that is
+ * allocated in POOL.
  */
 static svn_error_t *
-repack_stream_open(svn_stream_t **stream,
-                   svn_fs_t *fs,
-                   packed_revprops_t *revprops,
-                   int start,
-                   int end,
-                   apr_array_header_t **files_to_delete,
-                   apr_pool_t *pool)
+repack_file_open(apr_file_t **file,
+                 svn_fs_t *fs,
+                 packed_revprops_t *revprops,
+                 int start,
+                 int end,
+                 apr_array_header_t **files_to_delete,
+                 apr_pool_t *pool)
 {
   apr_int64_t tag;
   const char *tag_string;
   svn_string_t *new_filename;
   int i;
-  apr_file_t *file;
   int manifest_offset
     = (int)(revprops->start_revision - revprops->manifest_start);
 
@@ -4209,12 +4217,11 @@ repack_stream_open(svn_stream_t **stream,
     APR_ARRAY_IDX(revprops->manifest, i + manifest_offset, const char*)
       = new_filename->data;
 
-  /* create a file stream for the new file */
-  SVN_ERR(svn_io_file_open(&file, svn_dirent_join(revprops->folder,
-                                                  new_filename->data,
-                                                  pool),
+  /* open the file */
+  SVN_ERR(svn_io_file_open(file, svn_dirent_join(revprops->folder,
+                                                 new_filename->data,
+                                                 pool),
                            APR_WRITE | APR_CREATE, APR_OS_DEFAULT, pool));
-  *stream = svn_stream_from_aprfile2(file, FALSE, pool);
 
   return SVN_NO_ERROR;
 }
@@ -4238,6 +4245,7 @@ write_packed_revprop(const char **final_path,
   packed_revprops_t *revprops;
   apr_int64_t generation = 0;
   svn_stream_t *stream;
+  apr_file_t *file;
   svn_stringbuf_t *serialized;
   apr_off_t new_total_size;
   int changed_index;
@@ -4273,11 +4281,11 @@ write_packed_revprop(const char **final_path,
 
       *final_path = svn_dirent_join(revprops->folder, revprops->filename,
                                     pool);
-      SVN_ERR(svn_stream_open_unique(&stream, tmp_path, revprops->folder,
-                                     svn_io_file_del_none, pool, pool));
+      SVN_ERR(svn_io_open_unique_file3(&file, tmp_path, revprops->folder,
+                                       svn_io_file_del_none, pool, pool));
       SVN_ERR(repack_revprops(fs, revprops, 0, revprops->sizes->nelts,
                               changed_index, serialized, new_total_size,
-                              stream, pool));
+                              file, pool));
     }
   else
     {
@@ -4323,50 +4331,53 @@ write_packed_revprop(const char **final_path,
       /* write the new, split files */
       if (left_count)
         {
-          SVN_ERR(repack_stream_open(&stream, fs, revprops, 0,
-                                     left_count, files_to_delete, pool));
+          SVN_ERR(repack_file_open(&file, fs, revprops, 0,
+                                   left_count, files_to_delete, pool));
           SVN_ERR(repack_revprops(fs, revprops, 0, left_count,
                                   changed_index, serialized, new_total_size,
-                                  stream, pool));
+                                  file, pool));
         }
 
       if (left_count + right_count < revprops->sizes->nelts)
         {
-          SVN_ERR(repack_stream_open(&stream, fs, revprops, changed_index,
-                                     changed_index + 1, files_to_delete,
-                                     pool));
+          SVN_ERR(repack_file_open(&file, fs, revprops, changed_index,
+                                   changed_index + 1, files_to_delete,
+                                   pool));
           SVN_ERR(repack_revprops(fs, revprops, changed_index,
                                   changed_index + 1,
                                   changed_index, serialized, new_total_size,
-                                  stream, pool));
+                                  file, pool));
         }
 
       if (right_count)
         {
-          SVN_ERR(repack_stream_open(&stream, fs, revprops,
-                                     revprops->sizes->nelts - right_count,
-                                     revprops->sizes->nelts,
-                                     files_to_delete, pool));
+          SVN_ERR(repack_file_open(&file, fs, revprops,
+                                   revprops->sizes->nelts - right_count,
+                                   revprops->sizes->nelts,
+                                   files_to_delete, pool));
           SVN_ERR(repack_revprops(fs, revprops,
                                   revprops->sizes->nelts - right_count,
                                   revprops->sizes->nelts, changed_index,
-                                  serialized, new_total_size, stream,
+                                  serialized, new_total_size, file,
                                   pool));
         }
 
       /* write the new manifest */
       *final_path = svn_dirent_join(revprops->folder, PATH_MANIFEST, pool);
-      SVN_ERR(svn_stream_open_unique(&stream, tmp_path, revprops->folder,
-                                     svn_io_file_del_none, pool, pool));
+      SVN_ERR(svn_io_open_unique_file3(&file, tmp_path, revprops->folder,
+                                       svn_io_file_del_none, pool, pool));
 
       for (i = 0; i < revprops->manifest->nelts; ++i)
         {
           const char *filename = APR_ARRAY_IDX(revprops->manifest, i,
                                                const char*);
-          SVN_ERR(svn_stream_printf(stream, pool, "%s\n", filename));
+          SVN_ERR(svn_io_file_write_full(file, filename, strlen(filename),
+                                         NULL, pool));
+          SVN_ERR(svn_io_file_putc('\n', file, pool));
         }
 
-      SVN_ERR(svn_stream_close(stream));
+      SVN_ERR(svn_io_file_flush_to_disk(file, pool));
+      SVN_ERR(svn_io_file_close(file, pool));
     }
 
   return SVN_NO_ERROR;
@@ -4900,6 +4911,49 @@ build_rep_list(apr_array_header_t **list,
     }
 }
 
+/* Determine the optimal size of a string buf that shall receive a
+ * (full-) text of NEEDED bytes.
+ *
+ * The critical point is that those buffers may be very large and
+ * can cause memory fragmentation.  We apply simple heuristics to
+ * make fragmentation less likely.
+ */
+static apr_size_t
+optimimal_allocation_size(apr_size_t needed)
+{
+  /* For all allocations, assume some overhead that is shared between
+   * OS memory managemnt, APR memory management and svn_stringbuf_t. */
+  const apr_size_t overhead = 0x400;
+  apr_size_t optimal;
+
+  /* If an allocation size if safe for other ephemeral buffers, it should
+   * be safe for ours. */
+  if (needed <= SVN__STREAM_CHUNK_SIZE)
+    return needed;
+
+  /* Paranoia edge case:
+   * Skip our heuristics if they created arithmetical overflow.
+   * Beware to make this test work for NEEDED = APR_SIZE_MAX as well! */
+  if (needed >= APR_SIZE_MAX / 2 - overhead)
+    return needed;
+
+  /* As per definition SVN__STREAM_CHUNK_SIZE is a power of two.
+   * Since we know NEEDED to be larger than that, use it as the
+   * starting point.
+   *
+   * Heuristics: Allocate a power-of-two number of bytes that fit
+   *             NEEDED plus some OVERHEAD.  The APR allocator
+   *             will round it up to the next full page size.
+   */
+  optimal = SVN__STREAM_CHUNK_SIZE;
+  while (optimal - overhead < needed)
+    optimal *= 2;
+
+  /* This is above or equal to NEEDED. */
+  return optimal - overhead;
+}
+
+
 
 /* Create a rep_read_baton structure for node revision NODEREV in
    filesystem FS and store it in *RB_P.  If FULLTEXT_CACHE_KEY is not
@@ -4935,7 +4989,7 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
 
   if (SVN_IS_VALID_REVNUM(fulltext_cache_key.revision))
     b->current_fulltext = svn_stringbuf_create_ensure
-                            ((apr_size_t)b->len,
+                            (optimimal_allocation_size((apr_size_t)b->len),
                              b->filehandle_pool);
   else
     b->current_fulltext = NULL;
@@ -5018,6 +5072,17 @@ read_plain_window(svn_stringbuf_t **nwin, struct rep_state *rs,
   return SVN_NO_ERROR;
 }
 
+/* Skip SIZE bytes from the PLAIN representation RS. */
+static svn_error_t *
+skip_plain_window(struct rep_state *rs,
+                  apr_size_t size)
+{
+  /* Update RS. */
+  rs->off += (apr_off_t)size;
+
+  return SVN_NO_ERROR;
+}
+
 /* Get the undeltified window that is a result of combining all deltas
    from the current desired representation identified in *RB with its
    base representation.  Store the window in *RESULT. */
@@ -5062,11 +5127,21 @@ get_combined_window(svn_stringbuf_t **result,
       /* Maybe, we've got a PLAIN start representation.  If we do, read
          as much data from it as the needed for the txdelta window's source
          view.
-         Note that BUF / SOURCE may only be NULL in the first iteration. */
+         Note that BUF / SOURCE may only be NULL in the first iteration.
+         Also note that we may have short-cut reading the delta chain --
+         in which case SRC_OPS is 0 and it might not be a PLAIN rep. */
       source = buf;
       if (source == NULL && rb->src_state != NULL)
-        SVN_ERR(read_plain_window(&source, rb->src_state, window->sview_len,
-                                  pool));
+        {
+          /* Even if we don't need the source rep now, we still must keep
+           * its read offset in sync with what we might need for the next
+           * window. */
+          if (window->src_ops)
+            SVN_ERR(read_plain_window(&source, rb->src_state,
+                                      window->sview_len, pool));
+          else
+            SVN_ERR(skip_plain_window(rb->src_state, window->sview_len));
+        }
 
       /* Combine this window with the current one. */
       new_pool = svn_pool_create(rb->pool);
@@ -5804,10 +5879,40 @@ svn_fs_fs__file_length(svn_filesize_t *length,
                        node_revision_t *noderev,
                        apr_pool_t *pool)
 {
-  if (noderev->data_rep)
-    *length = noderev->data_rep->expanded_size;
+  representation_t *data_rep = noderev->data_rep;
+  if (!data_rep)
+    {
+      /* Treat "no representation" as "empty file". */
+      *length = 0;
+    }
+  else if (data_rep->expanded_size)
+    {
+      /* Standard case: a non-empty file. */
+      *length = data_rep->expanded_size;
+    }
   else
-    *length = 0;
+    {
+      /* Work around a FSFS format quirk (see issue #4554).
+         A plain representation may specify its EXPANDED LENGTH as "0"
+         in which case, the SIZE value is what we want.
+
+         Because EXPANDED_LENGTH will also be 0 for empty files, while
+         SIZE is non-null, we need to check wether the content is
+         actually empty.  We simply compare with the MD5 checksum of
+         empty content (sha-1 is not always available).
+       */
+      if (svn_checksum_is_empty_checksum(data_rep->md5_checksum))
+        {
+          /* Contents is empty. */
+          *length = 0;
+        }
+      else
+        {
+          /* Contents is not empty, i.e. EXPANDED_LENGTH cannot be the
+             actual file length. */
+          *length = data_rep->size;
+        }
+    }
 
   return SVN_NO_ERROR;
 }
@@ -6966,8 +7071,13 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
       rep = apr_pcalloc(pool, sizeof(*rep));
       rep->revision = SVN_INVALID_REVNUM;
       rep->txn_id = txn_id;
-      SVN_ERR(get_new_txn_node_id(&unique_suffix, fs, txn_id, pool));
-      rep->uniquifier = apr_psprintf(pool, "%s/%s", txn_id, unique_suffix);
+
+      if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+        {
+          SVN_ERR(get_new_txn_node_id(&unique_suffix, fs, txn_id, pool));
+          rep->uniquifier = apr_psprintf(pool, "%s/%s", txn_id, unique_suffix);
+        }
+
       parent_noderev->data_rep = rep;
       SVN_ERR(svn_fs_fs__put_node_revision(fs, parent_noderev->id,
                                            parent_noderev, FALSE, pool));
@@ -7529,10 +7639,21 @@ get_shared_rep(representation_t **old_rep,
         }
     }
 
-  /* Add information that is missing in the cached data. */
-  if (*old_rep)
+  if (!*old_rep)
+    return SVN_NO_ERROR;
+
+  /* We don't want 0-length PLAIN representations to replace non-0-length
+     ones (see issue #4554).  Also, this doubles as a simple guard against
+     general rep-cache induced corruption. */
+  if (   ((*old_rep)->expanded_size != rep->expanded_size)
+      || ((*old_rep)->size != rep->size))
     {
-      /* Use the old rep for this content. */
+      *old_rep = NULL;
+    }
+  else
+    {
+      /* Add information that is missing in the cached data.
+         Use the old rep for this content. */
       (*old_rep)->md5_checksum = rep->md5_checksum;
       (*old_rep)->uniquifier = rep->uniquifier;
     }
@@ -7551,6 +7672,7 @@ rep_write_contents_close(void *baton)
   representation_t *rep;
   representation_t *old_rep;
   apr_off_t offset;
+  fs_fs_data_t *ffd = b->fs->fsap_data;
 
   rep = apr_pcalloc(b->parent_pool, sizeof(*rep));
   rep->offset = b->rep_offset;
@@ -7567,9 +7689,13 @@ rep_write_contents_close(void *baton)
   /* Fill in the rest of the representation field. */
   rep->expanded_size = b->rep_size;
   rep->txn_id = svn_fs_fs__id_txn_id(b->noderev->id);
-  SVN_ERR(get_new_txn_node_id(&unique_suffix, b->fs, rep->txn_id, b->pool));
-  rep->uniquifier = apr_psprintf(b->parent_pool, "%s/%s", rep->txn_id,
-                                 unique_suffix);
+
+  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+    {
+      SVN_ERR(get_new_txn_node_id(&unique_suffix, b->fs, rep->txn_id, b->pool));
+      rep->uniquifier = apr_psprintf(b->parent_pool, "%s/%s", rep->txn_id,
+                                     unique_suffix);
+    }
   rep->revision = SVN_INVALID_REVNUM;
 
   /* Finalize the checksum. */
@@ -7842,7 +7968,7 @@ write_hash_rep(representation_t *rep,
 
       /* update the representation */
       rep->size = whb->size;
-      rep->expanded_size = 0;
+      rep->expanded_size = whb->size;
     }
 
   return SVN_NO_ERROR;
@@ -9070,7 +9196,9 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
      stored in the representation. */
   baton.file = rev_file;
   baton.pool = pool;
-  baton.remaining = data_rep->expanded_size;
+  baton.remaining = data_rep->expanded_size
+                  ? data_rep->expanded_size
+                  : data_rep->size;
   stream = svn_stream_create(&baton, pool);
   svn_stream_set_read(stream, read_handler_recover);
 
@@ -10912,6 +11040,9 @@ hotcopy_update_current(svn_revnum_t *dst_youngest,
     {
       apr_off_t root_offset;
       apr_file_t *rev_file;
+      char max_node_id[MAX_KEY_SIZE] = "0";
+      char max_copy_id[MAX_KEY_SIZE] = "0";
+      apr_size_t len;
 
       if (dst_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
         SVN_ERR(update_min_unpacked_rev(dst_fs, scratch_pool));
@@ -10921,9 +11052,15 @@ hotcopy_update_current(svn_revnum_t *dst_youngest,
       SVN_ERR(get_root_changes_offset(&root_offset, NULL, rev_file,
                                       dst_fs, new_youngest, scratch_pool));
       SVN_ERR(recover_find_max_ids(dst_fs, new_youngest, rev_file,
-                                   root_offset, next_node_id, next_copy_id,
+                                   root_offset, max_node_id, max_copy_id,
                                    scratch_pool));
       SVN_ERR(svn_io_file_close(rev_file, scratch_pool));
+
+      /* We store the _next_ ids. */
+      len = strlen(max_node_id);
+      svn_fs_fs__next_key(max_node_id, &len, next_node_id);
+      len = strlen(max_copy_id);
+      svn_fs_fs__next_key(max_copy_id, &len, next_copy_id);
     }
 
   /* Update 'current'. */

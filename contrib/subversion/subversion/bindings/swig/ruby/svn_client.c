@@ -2052,7 +2052,7 @@ SWIG_ruby_failed(void)
 } 
 
 
-/*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/ruby/rubyprimtypes.swg,19,%ruby_aux_method@*/
+/*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/ruby/rubyprimtypes.swg,19,%ruby_aux_method@*/
 SWIGINTERN VALUE SWIG_AUX_NUM2LONG(VALUE *args)
 {
   VALUE obj = args[0];
@@ -2157,7 +2157,7 @@ SWIG_From_int  (int value)
 }
 
 
-/*@SWIG:/home/breser/wandisco/rm/1.8.10/prefix/share/swig/2.0.9/ruby/rubyprimtypes.swg,19,%ruby_aux_method@*/
+/*@SWIG:/home/evgeny/release/svnrm/1.8.17/prefix/share/swig/2.0.9/ruby/rubyprimtypes.swg,19,%ruby_aux_method@*/
 SWIGINTERN VALUE SWIG_AUX_NUM2ULONG(VALUE *args)
 {
   VALUE obj = args[0];
@@ -2249,13 +2249,13 @@ SWIGINTERN struct svn_client_copy_source_t *new_svn_client_copy_source_t(char co
     self = apr_palloc(pool, sizeof(*self));
     self->path = path ? apr_pstrdup(pool, path) : NULL;
 
-    revision = apr_palloc(pool, sizeof(revision));
+    revision = apr_palloc(pool, sizeof(*revision));
     revision->kind = rev->kind;
     revision->value.number = rev->value.number;
     revision->value.date = rev->value.date;
     self->revision = revision;
 
-    peg_revision = apr_palloc(pool, sizeof(peg_revision));
+    peg_revision = apr_palloc(pool, sizeof(*peg_revision));
     peg_revision->kind = peg_rev->kind;
     peg_revision->value.number = peg_rev->value.number;
     peg_revision->value.date = peg_rev->value.date;
