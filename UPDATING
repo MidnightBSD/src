@@ -1,6 +1,8 @@
 Updating Information for MidnightBSD users.
 
 20171001:
+	Perl 5.26.0
+
 	Change 0.10 version to 1.0. There are several compatibility issues
 	with using 0.10 as the trailing zero is dropped in several utilities
 	making it look like 0.1. 
