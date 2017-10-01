@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/amdtemp/amdtemp.c 300520 2016-05-23 16:37:04Z loos $");
+__FBSDID("$FreeBSD: stable/11/sys/dev/amdtemp/amdtemp.c 300421 2016-05-22 13:58:32Z loos $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -505,7 +505,7 @@ amdtemp_sysctl(SYSCTL_HANDLER_ARGS)
 	return (error);
 }
 
-#define	AMDTEMP_ZERO_C_TO_K	2732
+#define	AMDTEMP_ZERO_C_TO_K	2731
 
 static int32_t
 amdtemp_gettemp0f(device_t dev, amdsensor_t sensor)
