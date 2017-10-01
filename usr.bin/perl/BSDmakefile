@@ -50,7 +50,6 @@ perl: ${PERL_MAKEFILE}
 ${PERL_MAKEFILE}:
 	-chmod 755 ${SRCDIR}/${CONFIGURE_SCRIPT}
 	cd ${.OBJDIR} && LD_LIBRARY_PATH=${DESTDIR}/lib ${SRCDIR}/${CONFIGURE_SCRIPT} ${CONFIGURE_ARGS}
-	cd x2p && ${MAKE} -f Makefile  makedepend
 
 # if OBJDIR is ., then don't delete ourselves.            
 clean:
