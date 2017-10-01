@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/dev/amdtemp/amdtemp.c,v 1.2 2011/02/19 18:36:55 laffer1 Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -74,6 +74,8 @@ struct amdtemp_softc {
 #define DEVICEID_AMD_MISC0F	0x1103
 #define DEVICEID_AMD_MISC10	0x1203
 #define DEVICEID_AMD_MISC11	0x1303
+#define DEVICEID_AMD_MISC14     0x1703
+#define DEVICEID_AMD_MISC15     0x1603
 
 static struct amdtemp_product {
 	uint16_t	amdtemp_vendorid;
@@ -82,6 +84,8 @@ static struct amdtemp_product {
 	{ VENDORID_AMD,	DEVICEID_AMD_MISC0F },
 	{ VENDORID_AMD,	DEVICEID_AMD_MISC10 },
 	{ VENDORID_AMD,	DEVICEID_AMD_MISC11 },
+	{ VENDORID_AMD, DEVICEID_AMD_MISC14 },
+	{ VENDORID_AMD, DEVICEID_AMD_MISC15 },
 	{ 0, 0 }
 };
 
