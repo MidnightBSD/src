@@ -48,7 +48,7 @@
 .ds doc-str-Lb-librtld_db  Run-time Linker Debugging Library (librtld_db, \-lrtld_db)
 .
 .\" Default .Os value
-.ds doc-default-operating-system MidnightBSD\~0.10
+.ds doc-default-operating-system MidnightBSD\~0.9
 .
 .\" MidnightBSD releases not found in doc-common
 .ds doc-operating-system-MidnightBSD-0.1   0.1
