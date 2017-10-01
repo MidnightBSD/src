@@ -1,4 +1,3 @@
-locincpth=''
 usevfork='true'
 case "$usemymalloc" in
     "") usemymalloc='n'
@@ -6,10 +5,19 @@ case "$usemymalloc" in
 esac
 libswanted=`echo $libswanted | sed 's/ malloc / /'`
 
-libpth="/usr/lib /usr/local/lib"
-glibpth="/usr/lib /usr/local/lib"
-ldflags="-Wl,-E "
-lddlflags="-shared "
+objformat=`/usr/bin/objformat`
+if [ x$objformat = xaout ]; then
+    if [ -e /usr/lib/aout ]; then
+        libpth="/usr/lib/aout /usr/local/lib /usr/lib"
+        glibpth="/usr/lib/aout /usr/local/lib /usr/lib"
+    fi
+    lddlflags='-Bshareable'
+else
+    libpth="/usr/lib /usr/local/lib"
+    glibpth="/usr/lib /usr/local/lib"
+    ldflags="-Wl,-E "
+    lddlflags="-shared "
+fi
 cccdlflags='-DPIC -fPIC'
 
 ccflags="${ccflags} -DHAS_FPSETMASK -DHAS_FLOATINGPOINT_H"
