@@ -14,6 +14,10 @@
 	$a = ${"#"} ;
  	$a = ${"*"} ;
 
+     ${^ENCODING} is no longer supported.
+
+     Name "main::a" used only once: possible typo
+
   Mandatory Warnings ALL TODO
   ------------------
 
@@ -39,8 +43,10 @@ sub Other::AUTOLOAD { 1 } sub Other::fred {}
 @ISA = qw(Other) ;
 use warnings 'deprecated' ;
 fred() ;
+my $x = \&barney;
+(bless[])->barney;
 EXPECT
-Use of inherited AUTOLOAD for non-method main::fred() is deprecated at - line 5.
+Use of inherited AUTOLOAD for non-method main::fred() is deprecated. This will be fatal in Perl 5.28 at - line 5.
 ########
 # gv.c
 use utf8;
@@ -50,7 +56,7 @@ sub Oᕞʀ::AUTOLOAD { 1 } sub Oᕞʀ::fᕃƌ {}
 use warnings 'deprecated' ;
 fᕃƌ() ;
 EXPECT
-Use of inherited AUTOLOAD for non-method main::fᕃƌ() is deprecated at - line 7.
+Use of inherited AUTOLOAD for non-method main::fᕃƌ() is deprecated. This will be fatal in Perl 5.28 at - line 7.
 ########
 # gv.c
 $a = ${"#"};
@@ -59,8 +65,8 @@ no warnings 'deprecated' ;
 $a = ${"#"};
 $a = ${"*"};
 EXPECT
-$# is no longer supported at - line 2.
-$* is no longer supported at - line 3.
+$# is no longer supported. Its use will be fatal in Perl 5.30 at - line 2.
+$* is no longer supported. Its use will be fatal in Perl 5.30 at - line 3.
 ########
 # gv.c
 $a = ${#};
@@ -69,8 +75,8 @@ no warnings 'deprecated' ;
 $a = ${#};
 $a = ${*};
 EXPECT
-$# is no longer supported at - line 2.
-$* is no longer supported at - line 3.
+$# is no longer supported. Its use will be fatal in Perl 5.30 at - line 2.
+$* is no longer supported. Its use will be fatal in Perl 5.30 at - line 3.
 ########
 # gv.c
 $a = $#;
@@ -87,12 +93,12 @@ $* = $a;
 $a = \$#;
 $a = \$*;
 EXPECT
-$# is no longer supported at - line 2.
-$* is no longer supported at - line 3.
-$# is no longer supported at - line 4.
-$* is no longer supported at - line 5.
-$# is no longer supported at - line 6.
-$* is no longer supported at - line 7.
+$# is no longer supported. Its use will be fatal in Perl 5.30 at - line 2.
+$* is no longer supported. Its use will be fatal in Perl 5.30 at - line 3.
+$# is no longer supported. Its use will be fatal in Perl 5.30 at - line 4.
+$* is no longer supported. Its use will be fatal in Perl 5.30 at - line 5.
+$# is no longer supported. Its use will be fatal in Perl 5.30 at - line 6.
+$* is no longer supported. Its use will be fatal in Perl 5.30 at - line 7.
 ########
 # gv.c
 @a = @#;
@@ -100,8 +106,8 @@ $* is no longer supported at - line 7.
 $a = $#;
 $a = $*;
 EXPECT
-$# is no longer supported at - line 4.
-$* is no longer supported at - line 5.
+$# is no longer supported. Its use will be fatal in Perl 5.30 at - line 4.
+$* is no longer supported. Its use will be fatal in Perl 5.30 at - line 5.
 ########
 # gv.c
 $a = $#;
@@ -109,8 +115,16 @@ $a = $*;
 @a = @#;
 @a = @*;
 EXPECT
-$# is no longer supported at - line 2.
-$* is no longer supported at - line 3.
+$# is no longer supported. Its use will be fatal in Perl 5.30 at - line 2.
+$* is no longer supported. Its use will be fatal in Perl 5.30 at - line 3.
+########
+# gv.c
+$a = ${^ENCODING};
+$a = ${^E_NCODING};
+${^ENCODING} = 1;
+${^E_NCODING} = 1; # We pretend this variable never existed.
+EXPECT
+${^ENCODING} is no longer supported. Its use will be fatal in Perl 5.28 at - line 4.
 ########
 # gv.c
 use warnings 'syntax' ;
@@ -121,3 +135,177 @@ package Ｙ;
 EXPECT
 Can't locate package Fred for @Ｙ::ISA at - line 6.
 Undefined subroutine &Ｙ::joe called at - line 6.
+########
+# gv.c
+use warnings;
+$x = 1;
+if ($x) {
+    print $y;
+}
+$a++; # These two should
+$b++; # be exempt.
+$Foo::a++;
+$Foo::b++;
+EXPECT
+Name "main::y" used only once: possible typo at - line 5.
+Use of uninitialized value $y in print at - line 5.
+########
+# gv.c
+use warnings;
+$x = 1;
+if ($x) {
+    $x++;
+    print $y;
+}
+EXPECT
+Name "main::y" used only once: possible typo at - line 6.
+Use of uninitialized value $y in print at - line 6.
+########
+# gv.c
+use warnings;
+$x = 0;
+if ($x) {
+    print "1\n";
+} elsif (!$x) {
+    print $y;
+} else {
+    print "0\n";
+}
+EXPECT
+Name "main::y" used only once: possible typo at - line 7.
+Use of uninitialized value $y in print at - line 7.
+########
+# gv.c
+use warnings;
+$x = 0;
+if ($x) {
+    print "1\n";
+} elsif (!$x) {
+    $x++;
+    print $y;
+} else {
+    print "0\n";
+}
+EXPECT
+Name "main::y" used only once: possible typo at - line 8.
+Use of uninitialized value $y in print at - line 8.
+########
+# gv.c
+use utf8;
+use open qw( :utf8 :std );
+use warnings;
+$ㄒ = 1;
+if ($ㄒ) {
+    print $ʎ;
+}
+EXPECT
+Name "main::ʎ" used only once: possible typo at - line 7.
+Use of uninitialized value $ʎ in print at - line 7.
+########
+# gv.c
+use utf8;
+use open qw( :utf8 :std );
+use warnings;
+$ㄒ = 1;
+if ($ㄒ) {
+    $ㄒ++;
+    print $ʎ;
+}
+EXPECT
+Name "main::ʎ" used only once: possible typo at - line 8.
+Use of uninitialized value $ʎ in print at - line 8.
+########
+# gv.c
+use utf8;
+use open qw( :utf8 :std );
+use warnings;
+$ㄒ = 0;
+if ($ㄒ) {
+    print "1\n";
+} elsif (!$ㄒ) {
+    print $ʎ;
+} else {
+    print "0\n";
+}
+EXPECT
+Name "main::ʎ" used only once: possible typo at - line 9.
+Use of uninitialized value $ʎ in print at - line 9.
+########
+# gv.c
+use utf8;
+use open qw( :utf8 :std );
+use warnings;
+$ㄒ = 0;
+if ($ㄒ) {
+    print "1\n";
+} elsif (!$ㄒ) {
+    $ㄒ++;
+    print $ʎ;
+} else {
+    print "0\n";
+}
+EXPECT
+Name "main::ʎ" used only once: possible typo at - line 10.
+Use of uninitialized value $ʎ in print at - line 10.
+########
+# gv.c
+use utf8;
+use open qw( :utf8 :std );
+use warnings;
+package 팣칵ぇ;
+$ㄒ = 1;
+if ($ㄒ) {
+    print $ʎ;
+}
+EXPECT
+Name "팣칵ぇ::ʎ" used only once: possible typo at - line 8.
+Use of uninitialized value $팣칵ぇ::ʎ in print at - line 8.
+########
+# gv.c
+use utf8;
+use open qw( :utf8 :std );
+use warnings;
+package 팣칵ぇ;
+$ㄒ = 1;
+if ($ㄒ) {
+    $ㄒ++;
+    print $ʎ;
+}
+EXPECT
+Name "팣칵ぇ::ʎ" used only once: possible typo at - line 9.
+Use of uninitialized value $팣칵ぇ::ʎ in print at - line 9.
+########
+# gv.c
+use utf8;
+use open qw( :utf8 :std );
+use warnings;
+package 팣칵ぇ;
+$ㄒ = 0;
+if ($ㄒ) {
+    print "1\n";
+} elsif (!$ㄒ) {
+    print $ʎ;
+} else {
+    print "0\n";
+}
+EXPECT
+Name "팣칵ぇ::ʎ" used only once: possible typo at - line 10.
+Use of uninitialized value $팣칵ぇ::ʎ in print at - line 10.
+########
+# gv.c
+use utf8;
+use open qw( :utf8 :std );
+use warnings;
+package 팣칵ぇ;
+$ㄒ = 0;
+if ($ㄒ) {
+    print "1\n";
+} elsif (!$ㄒ) {
+    $ㄒ++;
+    print $ʎ;
+} else {
+    print "0\n";
+}
+EXPECT
+Name "팣칵ぇ::ʎ" used only once: possible typo at - line 11.
+Use of uninitialized value $팣칵ぇ::ʎ in print at - line 11.

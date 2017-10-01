@@ -2,16 +2,15 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
     require Config; import Config;
     require './test.pl';
-
-    if (!$Config{'d_fork'}) {
-        skip_all("fork required to pipe");
-    }
-    else {
-        plan(tests => 24);
-    }
+    set_up_inc('../lib');
+}
+if (!$Config{'d_fork'}) {
+    skip_all("fork required to pipe");
+}
+else {
+    plan(tests => 24);
 }
 
 my $Perl = which_perl();
@@ -147,11 +146,10 @@ SKIP: {
       if $^O eq 'VMS';
 
     SKIP: {
-        # Sfio doesn't report failure when closing a broken pipe
+        # POSIX-BC doesn't report failure when closing a broken pipe
         # that has pending output.  Go figure.
-        # Nor does POSIX-BC.
         skip "Won't report failure on broken pipe", 1
-          if $Config{d_sfio} || $^O eq 'posix-bc';
+          if $^O eq 'posix-bc';
 
         local $SIG{PIPE} = 'IGNORE';
         open NIL, qq{|$Perl -e "exit 0"} or die "open failed: $!";

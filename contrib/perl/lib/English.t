@@ -6,7 +6,7 @@ BEGIN {
     @INC = '../lib';
 }
 
-use Test::More tests => 57;
+use Test::More tests => 58;
 
 use English qw( -no_match_vars ) ;
 use Config;
@@ -36,7 +36,7 @@ $ORS = "\n";
 	if ($^O ne 'dos') {
 	    pipe(IN, OUT);
 	} else {
-	    open(OUT, ">en.tmp");
+	    open(OUT, ">", "en.tmp");
 	}
 	select(OUT);
 	$| = 1;
@@ -48,7 +48,7 @@ $ORS = "\n";
 	my $close = close OUT;
 	ok( !($close) == $CHILD_ERROR, '$CHILD_ERROR should be false' );
 
-	open(IN, "<en.tmp") if ($^O eq 'dos');
+	open(IN, "<", "en.tmp") if ($^O eq 'dos');
 	my $foo = <IN>;
 	like( $foo, qr/ok 7/, '$OFS' );
 
@@ -87,6 +87,7 @@ is( $PROGRAM_NAME, $0, '$PROGRAM_NAME' );
 is( $BASETIME, $^T, '$BASETIME' );
 
 is( $PERL_VERSION, $^V, '$PERL_VERSION' );
+is( $OLD_PERL_VERSION, $], '$OLD_PERL_VERSION' );
 is( $DEBUGGING, $^D, '$DEBUGGING' );
 
 is( $WARNING, 0, '$WARNING' );
@@ -128,7 +129,7 @@ is( $keys[1], 'd|e|f', '$SUBSCRIPT_SEPARATOR' );
 eval { is( $EXCEPTIONS_BEING_CAUGHT, 1, '$EXCEPTIONS_BEING_CAUGHT' ) };
 ok( !$EXCEPTIONS_BEING_CAUGHT, '$EXCEPTIONS_BEING_CAUGHT should be false' );
 
-eval { local *F; my $f = 'asdasdasd'; ++$f while -e $f; open(F, $f); };
+eval { local *F; my $f = 'asdasdasd'; ++$f while -e $f; open(F, '<', $f); };
 is( $OS_ERROR, $ERRNO, '$OS_ERROR' );
 ok( $OS_ERROR{ENOENT}, '%OS_ERROR (ENOENT should be set)' );
 

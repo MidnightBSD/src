@@ -15,16 +15,17 @@ installhtml - converts a collection of POD pages to HTML format.
 
 =head1 SYNOPSIS
 
-    installhtml  [--help] [--podpath=<name>:...:<name>] [--podroot=<name>]
-         [--htmldir=<name>] [--htmlroot=<name>]  [--norecurse] [--recurse]
-         [--splithead=<name>,...,<name>]   [--splititem=<name>,...,<name>]
-         [--ignore=<name>,...,<name>]  [--verbose]
+  installhtml  [--help] [--podpath=<name>:...:<name>] [--podroot=<name>]
+       [--htmldir=<name>] [--htmlroot=<name>]  [--norecurse] [--recurse]
+       [--splithead=<name>,...,<name>]   [--splititem=<name>,...,<name>]
+       [--ignore=<name>,...,<name>]  [--verbose]
 
 =head1 DESCRIPTION
 
 I<installhtml> converts a collection of POD pages to a corresponding
-collection of HTML pages.  This is primarily used to convert the pod
-pages found in the perl distribution.
+collection of HTML pages.  This is used to convert the pod pages found in the
+perl distribution.  (It is not intended as a general-purpose
+converter/installer of POD pages in HTML format.  See L<Pod::Html>.)
 
 =head1 OPTIONS
 
@@ -67,10 +68,11 @@ relative to podroot.
 
 =item B<--splititem> POD files to split on =item directive
 
-Comma-separated list of all pod files to split by the =item directive.
-The .pod suffix is optional.  I<installhtml> does not do the actual
-split, rather it invokes I<splitpod> to do the dirty work.  As with
---splithead, these files should have names specified relative to podroot.
+Comma-separated list of all pod files to split by the =item directive.  The
+.pod suffix is optional.  I<installhtml> does not do the actual split, rather
+it invokes I<splitpod>, a separate program in the Perl 5 core distribution,
+to do the dirty work.  As with --splithead, these files should have names
+specified relative to podroot.
 
 =item B<--splitpod> Directory containing the splitpod program
 
@@ -233,7 +235,7 @@ foreach my $dir (@splithead) {
 
     # read in everything until what would have been the first =head
     # directive, patching the index as we go.
-    open(H, "<$file.html") ||
+    open(H, '<', "$file.html") ||
 	die "$0: error opening $file.html for input: $!\n";
     $/ = "";
     my @data = ();
@@ -250,7 +252,7 @@ foreach my $dir (@splithead) {
     close(H);
 
     # now rewrite the file
-    open(H, ">$file.html") ||
+    open(H, '>', "$file.html") ||
 	die "$0: error opening $file.html for output: $!\n";
     print H "@data", "\n";
     close(H);
@@ -298,7 +300,7 @@ sub create_index {
     my @files = sort(grep(/\.html?$/, readdir(DIR)));
     closedir(DIR);
 
-    open(HTML, ">$html") ||
+    open(HTML, '>', $html) ||
 	die "$0: error opening $html for output: $!\n";
 
     # for each .html file in the directory, extract the index
@@ -307,7 +309,7 @@ sub create_index {
     foreach my $file (@files) {
 
 	my $filedata = do {
-	    open(my $in, "<$dir/$file") ||
+	    open(my $in, '<', "$dir/$file") ||
 		die "$0: error opening $dir/$file for input: $!\n";
 	    local $/ = undef;
 	    <$in>;
@@ -406,7 +408,7 @@ sub splitpod {
 
     # read the file in paragraphs
     $/ = "";
-    open(SPLITIN, "<$pod") ||
+    open(SPLITIN, '<', $pod) ||
 	die "$0: error opening $pod for input: $!\n";
     @filedata = <SPLITIN>;
     close(SPLITIN) ||
@@ -462,7 +464,7 @@ sub splitpod {
 
 	# create the new .pod file
 	print "\tcreating $poddir/$file\n" if $verbose;
-	open(SPLITOUT, ">$poddir/$file") ||
+	open(SPLITOUT, '>', "$poddir/$file") ||
 	    die "$0: error opening $poddir/$file for output: $!\n";
 	$poddata[$i] =~ s,L<([^<>]*)>,
 			defined $heads{anchorify($1)} ? "L<$dir/$1>" : "L<$1>"
@@ -500,12 +502,12 @@ sub installdir {
 	no_upwards($_) or next;
 	my $is_dir = -d "$podroot/$dir/$_";
 	next if $is_dir and not $recurse;
-	my $target = (
-	    $is_dir    ? \@dirlist :
-	    s/\.pod$// ? \@podlist :
-	    s/\.pm$//  ? \@pmlist  :
-	    undef
-	);
+	my $target
+	    = $is_dir    ? \@dirlist
+	    : s/\.pod$// ? \@podlist
+	    : s/\.pm$//  ? \@pmlist
+	    : undef
+	    ;
 	push @$target, "$dir/$_" if $target;
     }
 

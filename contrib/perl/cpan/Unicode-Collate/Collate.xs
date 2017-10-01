@@ -10,38 +10,11 @@
 /* This file is prepared by mkheader */
 #include "ucatbl.h"
 
-/* Perl 5.6.1 ? */
-#ifndef utf8n_to_uvuni
-#define utf8n_to_uvuni  utf8_to_uv
-#endif /* utf8n_to_uvuni */
-
-/* UTF8_ALLOW_BOM is used before Perl 5.8.0 */
-#ifndef UTF8_ALLOW_BOM
-#define UTF8_ALLOW_BOM  (0)
-#endif /* UTF8_ALLOW_BOM */
-
-#ifndef UTF8_ALLOW_SURROGATE
-#define UTF8_ALLOW_SURROGATE  (0)
-#endif /* UTF8_ALLOW_SURROGATE */
-
-#ifndef UTF8_ALLOW_FE_FF
-#define UTF8_ALLOW_FE_FF  (0)
-#endif /* UTF8_ALLOW_FE_FF */
-
-#ifndef UTF8_ALLOW_FFFF
-#define UTF8_ALLOW_FFFF  (0)
-#endif /* UTF8_ALLOW_FFFF */
-
-#define AllowAnyUTF (UTF8_ALLOW_SURROGATE|UTF8_ALLOW_BOM|UTF8_ALLOW_FE_FF|UTF8_ALLOW_FFFF)
-
-/* if utf8n_to_uvuni() sets retlen to 0 (?) */
-#define ErrRetlenIsZero "panic (Unicode::Collate): zero-length character"
-
 /* At present, char > 0x10ffff are unaffected without complaint, right? */
 #define VALID_UTF_MAX    (0x10ffff)
 #define OVER_UTF_MAX(uv) (VALID_UTF_MAX < (uv))
 
-static const UV max_div_16 = UV_MAX / 16;
+#define MAX_DIV_16 (UV_MAX / 16)
 
 /* Supported Levels */
 #define MinLevel	(1)
@@ -83,6 +56,7 @@ static const UV max_div_16 = UV_MAX / 16;
 #define CJK_UidF51    (0x9FC3)
 #define CJK_UidF52    (0x9FCB)
 #define CJK_UidF61    (0x9FCC)
+#define CJK_UidF80    (0x9FD5)
 #define CJK_ExtAIni   (0x3400) /* Unicode 3.0 */
 #define CJK_ExtAFin   (0x4DB5) /* Unicode 3.0 */
 #define CJK_ExtBIni  (0x20000) /* Unicode 3.1 */
@@ -91,10 +65,12 @@ static const UV max_div_16 = UV_MAX / 16;
 #define CJK_ExtCFin  (0x2B734) /* Unicode 5.2 */
 #define CJK_ExtDIni  (0x2B740) /* Unicode 6.0 */
 #define CJK_ExtDFin  (0x2B81D) /* Unicode 6.0 */
+#define CJK_ExtEIni  (0x2B820) /* Unicode 8.0 */
+#define CJK_ExtEFin  (0x2CEA1) /* Unicode 8.0 */
 
 #define CJK_CompIni  (0xFA0E)
 #define CJK_CompFin  (0xFA29)
-static STDCHAR UnifiedCompat[] = {
+static const STDCHAR UnifiedCompat[] = {
       1,1,0,1,0,1,1,0,0,0,0,0,0,0,0,0,0,1,0,1,0,1,1,0,0,1,1,1
 }; /* E F 0 1 2 3 4 5 6 7 8 9 A B C D E F 0 1 2 3 4 5 6 7 8 9 */
 
@@ -109,7 +85,7 @@ _fetch_rest ()
   PREINIT:
     char ** rest;
   PPCODE:
-    for (rest = UCA_rest; *rest; ++rest) {
+    for (rest = (char **)UCA_rest; *rest; ++rest) {
 	XPUSHs(sv_2mortal(newSVpv((char *) *rest, 0)));
     }
 
@@ -132,12 +108,13 @@ _fetch_simple (uv)
 	int i;
 	int num = (int)*result;
 	++result;
+	EXTEND(SP, num);
 	for (i = 0; i < num; ++i) {
-	    XPUSHs(sv_2mortal(newSVpvn((char *) result, VCE_Length)));
+	    PUSHs(sv_2mortal(newSVpvn((char *) result, VCE_Length)));
 	    result += VCE_Length;
 	}
     } else {
-	XPUSHs(sv_2mortal(newSViv(0)));
+	PUSHs(sv_2mortal(newSViv(0)));
     }
 
 SV*
@@ -181,7 +158,7 @@ _getHexArray (src)
     s = SvPV(src,byte);
     for (e = s + byte; s < e;) {
 	hexdigit = strchr((char *) PL_hexdigit, *s++);
-        if (! hexdigit)
+	if (! hexdigit)
 	    continue;
 	value = (hexdigit - PL_hexdigit) & 0xF;
 	while (*s) {
@@ -190,7 +167,7 @@ _getHexArray (src)
 		break;
 	    if (overflowed)
 		continue;
-	    if (value > max_div_16) {
+	    if (value > MAX_DIV_16) {
 		overflowed = TRUE;
 		continue;
 	    }
@@ -210,22 +187,8 @@ _isIllegal (sv)
 	XSRETURN_YES;
     uv = SvUVX(sv);
     RETVAL = boolSV(
-	   0x10FFFF < uv		   /* out of range */
-    );
-OUTPUT:
-    RETVAL
-
-
-SV*
-_isNonchar (sv)
-    SV* sv
-  PREINIT:
-    UV uv;
-  CODE:
-    /* should be called only if ! _isIllegal(sv). */
-    uv = SvUVX(sv);
-    RETVAL = boolSV(
-	   ((uv & 0xFFFE) == 0xFFFE)       /* ??FFF[EF] (cf. utf8.c) */
+	   0x10FFFF < uv                   /* out of range */
+	|| ((uv & 0xFFFE) == 0xFFFE)       /* ??FFF[EF] */
 	|| (0xD800 <= uv && uv <= 0xDFFF)  /* unpaired surrogates */
 	|| (0xFDD0 <= uv && uv <= 0xFDEF)  /* other non-characters */
     );
@@ -246,10 +209,11 @@ _decompHangul (code)
     vindex = (sindex % Hangul_NCount) / Hangul_TCount;
     tindex =  sindex % Hangul_TCount;
 
-    XPUSHs(sv_2mortal(newSVuv(lindex + Hangul_LBase)));
-    XPUSHs(sv_2mortal(newSVuv(vindex + Hangul_VBase)));
+    EXTEND(SP, tindex ? 3 : 2);
+    PUSHs(sv_2mortal(newSVuv(lindex + Hangul_LBase)));
+    PUSHs(sv_2mortal(newSVuv(vindex + Hangul_VBase)));
     if (tindex)
-	XPUSHs(sv_2mortal(newSVuv(tindex + Hangul_TBase)));
+	PUSHs(sv_2mortal(newSVuv(tindex + Hangul_TBase)));
 
 
 SV*
@@ -305,17 +269,19 @@ _derivCE_9 (code)
     _derivCE_20 = 3
     _derivCE_22 = 4
     _derivCE_24 = 5
+    _derivCE_32 = 6
   PREINIT:
     UV base, aaaa, bbbb;
-    U8 a[VCE_Length + 1] = "\x00\xFF\xFF\x00\x20\x00\x02\xFF\xFF";
-    U8 b[VCE_Length + 1] = "\x00\xFF\xFF\x00\x00\x00\x00\xFF\xFF";
+    U8 a[VCE_Length + 1] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+    U8 b[VCE_Length + 1] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00";
     bool basic_unified = 0;
   PPCODE:
     if (CJK_UidIni <= code) {
 	if (codeRange(CJK_CompIni, CJK_CompFin))
 	    basic_unified = (bool)UnifiedCompat[code - CJK_CompIni];
 	else
-	    basic_unified = (ix >= 5 ? (code <= CJK_UidF61) :
+	    basic_unified = (ix >= 6 ? (code <= CJK_UidF80) :
+			     ix == 5 ? (code <= CJK_UidF61) :
 			     ix >= 3 ? (code <= CJK_UidF52) :
 			     ix == 2 ? (code <= CJK_UidF51) :
 			     ix == 1 ? (code <= CJK_UidF41) :
@@ -329,7 +295,9 @@ _derivCE_9 (code)
 		||
 	    (ix >= 3 && codeRange(CJK_ExtCIni, CJK_ExtCFin))
 		||
-	    (ix >= 4 && codeRange(CJK_ExtDIni, CJK_ExtDFin)))
+	    (ix >= 4 && codeRange(CJK_ExtDIni, CJK_ExtDFin))
+		||
+	    (ix >= 6 && codeRange(CJK_ExtEIni, CJK_ExtEFin)))
 	    ? 0xFB80   /* CJK ext. */
 	    : 0xFBC0;  /* others */
     aaaa =  base + (code >> 15);
@@ -338,10 +306,13 @@ _derivCE_9 (code)
     a[2] = (U8)(aaaa & 0xFF);
     b[1] = (U8)(bbbb >> 8);
     b[2] = (U8)(bbbb & 0xFF);
+    a[4] = (U8)(0x20); /* second octet of level 2 */
+    a[6] = (U8)(0x02); /* second octet of level 3 */
     a[7] = b[7] = (U8)(code >> 8);
     a[8] = b[8] = (U8)(code & 0xFF);
-    XPUSHs(sv_2mortal(newSVpvn((char *) a, VCE_Length)));
-    XPUSHs(sv_2mortal(newSVpvn((char *) b, VCE_Length)));
+    EXTEND(SP, 2);
+    PUSHs(sv_2mortal(newSVpvn((char *) a, VCE_Length)));
+    PUSHs(sv_2mortal(newSVpvn((char *) b, VCE_Length)));
 
 
 void
@@ -349,8 +320,8 @@ _derivCE_8 (code)
     UV code
   PREINIT:
     UV aaaa, bbbb;
-    U8 a[VCE_Length + 1] = "\x00\xFF\xFF\x00\x02\x00\x01\xFF\xFF";
-    U8 b[VCE_Length + 1] = "\x00\xFF\xFF\x00\x00\x00\x00\xFF\xFF";
+    U8 a[VCE_Length + 1] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+    U8 b[VCE_Length + 1] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00";
   PPCODE:
     aaaa =  0xFF80 + (code >> 15);
     bbbb = (code & 0x7FFF) | 0x8000;
@@ -358,21 +329,26 @@ _derivCE_8 (code)
     a[2] = (U8)(aaaa & 0xFF);
     b[1] = (U8)(bbbb >> 8);
     b[2] = (U8)(bbbb & 0xFF);
+    a[4] = (U8)(0x02); /* second octet of level 2 */
+    a[6] = (U8)(0x01); /* second octet of level 3 */
     a[7] = b[7] = (U8)(code >> 8);
     a[8] = b[8] = (U8)(code & 0xFF);
-    XPUSHs(sv_2mortal(newSVpvn((char *) a, VCE_Length)));
-    XPUSHs(sv_2mortal(newSVpvn((char *) b, VCE_Length)));
+    EXTEND(SP, 2);
+    PUSHs(sv_2mortal(newSVpvn((char *) a, VCE_Length)));
+    PUSHs(sv_2mortal(newSVpvn((char *) b, VCE_Length)));
 
 
 void
 _uideoCE_8 (code)
     UV code
   PREINIT:
-    U8 uice[VCE_Length + 1] = "\x00\xFF\xFF\x00\x20\x00\x02\xFF\xFF";
+    U8 uice[VCE_Length + 1] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00";
   PPCODE:
     uice[1] = uice[7] = (U8)(code >> 8);
     uice[2] = uice[8] = (U8)(code & 0xFF);
-    XPUSHs(sv_2mortal(newSVpvn((char *) uice, VCE_Length)));
+    uice[4] = (U8)(0x20); /* second octet of level 2 */
+    uice[6] = (U8)(0x02); /* second octet of level 3 */
+    PUSHs(sv_2mortal(newSVpvn((char *) uice, VCE_Length)));
 
 
 SV*
@@ -386,7 +362,8 @@ _isUIdeo (code, uca_vers)
 	if (codeRange(CJK_CompIni, CJK_CompFin))
 	    basic_unified = (bool)UnifiedCompat[code - CJK_CompIni];
 	else
-	    basic_unified = (uca_vers >= 24 ? (code <= CJK_UidF61) :
+	    basic_unified = (uca_vers >= 32 ? (code <= CJK_UidF80) :
+			     uca_vers >= 24 ? (code <= CJK_UidF61) :
 			     uca_vers >= 20 ? (code <= CJK_UidF52) :
 			     uca_vers >= 18 ? (code <= CJK_UidF51) :
 			     uca_vers >= 14 ? (code <= CJK_UidF41) :
@@ -402,6 +379,8 @@ _isUIdeo (code, uca_vers)
 	(uca_vers >= 20 && codeRange(CJK_ExtCIni, CJK_ExtCFin))
 		||
 	(uca_vers >= 22 && codeRange(CJK_ExtDIni, CJK_ExtDFin))
+		||
+	(uca_vers >= 32 && codeRange(CJK_ExtEIni, CJK_ExtEFin))
     );
 OUTPUT:
     RETVAL
@@ -600,36 +579,28 @@ varCE (self, vce)
     /* variable: checked only the first char and the length,
        trusting checkCollator() and %VariableOK in Perl ... */
 
-    if (vlen < VCE_Length /* ignore short VCE (unexpected) */
-	||
-	*a == 'n') /* non-ignorable */
-	1;
-    else if (*v) {
-	if (*a == 's') { /* shifted or shift-trimmed */
-	    d[7] = d[1]; /* wt level 1 to 4 */
-	    d[8] = d[2];
-	} /* else blanked */
-
-	d[1] = d[2] = d[3] = d[4] = d[5] = d[6] = '\0';
-    }
-    else if (*a == 'b') /* blanked */
-	1;
-    else if (*a == 's') { /* shifted or shift-trimmed */
-	totwt = d[1] + d[2] + d[3] + d[4] + d[5] + d[6];
-	if (alen == 7 && totwt != 0) { /* shifted */
-	    if (d[1] == 0 && d[2] == 1) { /* XXX: CollationAuxiliary-6.2.0 */
+    if (vlen >= VCE_Length && *a != 'n') {
+	if (*v) {
+	    if (*a == 's') { /* shifted or shift-trimmed */
 		d[7] = d[1]; /* wt level 1 to 4 */
 		d[8] = d[2];
-	    } else {
-		d[7] = (U8)(Shift4Wt >> 8);
-		d[8] = (U8)(Shift4Wt & 0xFF);
+	    } /* else blanked */
+	    d[1] = d[2] = d[3] = d[4] = d[5] = d[6] = '\0';
+	} else if (*a == 's') { /* shifted or shift-trimmed */
+	    totwt = d[1] + d[2] + d[3] + d[4] + d[5] + d[6];
+	    if (alen == 7 && totwt != 0) { /* shifted */
+		if (d[1] == 0 && d[2] == 1) { /* XXX: CollationAuxiliary-6.2.0 */
+		    d[7] = d[1]; /* wt level 1 to 4 */
+		    d[8] = d[2];
+		} else {
+		    d[7] = (U8)(Shift4Wt >> 8);
+		    d[8] = (U8)(Shift4Wt & 0xFF);
+		}
+	    } else { /* shift-trimmed or completely ignorable */
+		d[7] = d[8] = '\0';
 	    }
-	} else { /* shift-trimmed or completely ignorable */
-	    d[7] = d[8] = '\0';
-	}
-    }
-    else
-	croak("unknown variable value '%s'", a);
+	} /* else blanked */
+    } /* else non-ignorable */
     RETVAL = dst;
 OUTPUT:
     RETVAL
@@ -647,7 +618,7 @@ visualizeSortKey (self, key)
     STRLEN klen, dlen;
     UV uv;
     IV uca_vers, sep = 0;
-    static const char *upperhex = "0123456789ABCDEF";
+    const char *upperhex = "0123456789ABCDEF";
   CODE:
     if (SvROK(self) && SvTYPE(SvRV(self)) == SVt_PVHV)
 	selfHV = (HV*)SvRV(self);
@@ -698,31 +669,3 @@ visualizeSortKey (self, key)
     RETVAL = dst;
 OUTPUT:
     RETVAL
-
-
-
-void
-unpack_U (src)
-    SV* src
-  PREINIT:
-    STRLEN srclen, retlen;
-    U8 *s, *p, *e;
-    UV uv;
-  PPCODE:
-    s = (U8*)SvPV(src,srclen);
-    if (!SvUTF8(src)) {
-	SV* tmpsv = sv_mortalcopy(src);
-	if (!SvPOK(tmpsv))
-	    (void)sv_pvn_force(tmpsv,&srclen);
-	sv_utf8_upgrade(tmpsv);
-	s = (U8*)SvPV(tmpsv,srclen);
-    }
-    e = s + srclen;
-
-    for (p = s; p < e; p += retlen) {
-	uv = utf8n_to_uvuni(p, e - p, &retlen, AllowAnyUTF);
-	if (!retlen)
-	    croak(ErrRetlenIsZero);
-	XPUSHs(sv_2mortal(newSVuv(uv)));
-    }
-

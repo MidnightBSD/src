@@ -1,13 +1,40 @@
 #!./perl -w
 
-# Test the well-formed-ness of the MANIFEST file.
+# What does this test?
+# This tests the well-formed-ness of the MANIFEST file.
+#
+# Why do we test this?
+# TK
+#
+# It's broken - how do I fix it?
+# If MANIFEST is not sorted properly, you will get this error output:
+#      got ''MANIFEST' is NOT sorted properly
+#      # '
+#      # expected /(?^:is sorted properly)/
+#
+# To correct this, run either:
+#
+#   ./perl -Ilib Porting/manisort -o MANIFEST MANIFEST
+#
+# which will output "'MANIFEST' is NOT sorted properly" but which will
+# correct the problem; or:
+#
+#   make manisort
+#
+# which will output "WARNING: re-sorting MANIFEST" but which will also
+# correct the problem.
 
+use Config;
 BEGIN {
     @INC = '..' if -f '../TestInit.pm';
 }
 use TestInit qw(T); # T is chdir to the top level
 
-require 't/test.pl';
+require './t/test.pl';
+
+skip_all("Cross-compiling, the entire source might not be available")
+    if $Config{usecrosscompile};
+
 
 plan('no_plan');
 
@@ -45,24 +72,30 @@ close $m or die $!;
 
 # Test that MANIFEST is properly sorted
 SKIP: {
+    skip("Sorting order is different under EBCDIC", 1) if $::IS_EBCDIC || $::IS_EBCDIC;
     skip("'Porting/manisort' not found", 1) if (! -f 'Porting/manisort');
 
     my $result = runperl('progfile' => 'Porting/manisort',
                          'args'     => [ '-c', $manifest ],
-                         'stderr'   => 1);
+                         'stderr'   => 1,
+                         'nolib'    => 1 );
 
     like($result, qr/is sorted properly/, 'MANIFEST sorted properly');
 }
 
 SKIP: {
     find_git_or_skip(6);
-    chomp(my @repo= grep { !/\.gitignore$/ } `git ls-files`);
+    my %seen; # De-dup ls-files output (can appear more than once)
+    chomp(my @repo= grep { !/\.gitignore$/ && !$seen{$_}++ } `git ls-files`);
     skip("git ls-files didnt work",3)
         if !@repo;
     is( 0+@repo, 0+@files, "git ls-files gives the same number of files as MANIFEST lists");
-    my %repo= map { $_ => 1 } @repo;
-    my %mani= map { $_ => 1 } @files;
-    is( 0+keys %mani, 0+@files, "no duplicate files in MANIFEST");
+    my %repo;
+    ++$repo{$_} for @repo;
+    my %mani;
+    ++$mani{$_} for @files;
+    is( 0+keys %mani, 0+@files, "no duplicate files in MANIFEST")
+      or diag(join("\n  ", "Duplicates:",grep $mani{$_} > 1, keys %mani));
     delete $mani{$_} for @repo;
     delete $repo{$_} for @files;
     my @not_in_mani= keys %repo;

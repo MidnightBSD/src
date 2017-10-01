@@ -13,7 +13,9 @@ typedef struct {
     HV *	x_op_named_bits;	/* cache shared for whole process */
     SV *	x_opset_all;		/* mask with all bits set	*/
     IV		x_opset_len;		/* length of opmasks in bytes	*/
-    int		x_opcode_debug;
+#ifdef OPCODE_DEBUG
+    int		x_opcode_debug;		/* unused warn() emitting debugging code */
+#endif
 } my_cxt_t;
 
 START_MY_CXT
@@ -21,7 +23,12 @@ START_MY_CXT
 #define op_named_bits		(MY_CXT.x_op_named_bits)
 #define opset_all		(MY_CXT.x_opset_all)
 #define opset_len		(MY_CXT.x_opset_len)
-#define opcode_debug		(MY_CXT.x_opcode_debug)
+#ifdef OPCODE_DEBUG
+#  define opcode_debug		(MY_CXT.x_opcode_debug)
+#else
+ /* no API to turn this on at runtime, so constant fold the code away */
+#  define opcode_debug		0
+#endif
 
 static SV  *new_opset (pTHX_ SV *old_opset);
 static int  verify_opset (pTHX_ SV *opset, int fatal);
@@ -44,7 +51,7 @@ op_names_init(pTHX)
     int i;
     STRLEN len;
     char **op_names;
-    char *bitmap;
+    U8 *bitmap;
     dMY_CXT;
 
     op_named_bits = newHV();
@@ -58,10 +65,11 @@ op_names_init(pTHX)
     put_op_bitspec(aTHX_ STR_WITH_LEN(":none"), sv_2mortal(new_opset(aTHX_ Nullsv)));
 
     opset_all = new_opset(aTHX_ Nullsv);
-    bitmap = SvPV(opset_all, len);
+    bitmap = (U8*)SvPV(opset_all, len);
     memset(bitmap, 0xFF, len-1); /* deal with last byte specially, see below */
     /* Take care to set the right number of bits in the last byte */
-    bitmap[len-1] = (PL_maxo & 0x07) ? ~(0xFF << (PL_maxo & 0x07)) : 0xFF;
+    bitmap[len-1] = (PL_maxo & 0x07) ? ((~(0xFF << (PL_maxo & 0x07))) & 0xFF)
+                                     : 0xFF;
     put_op_bitspec(aTHX_ STR_WITH_LEN(":all"), opset_all); /* don't mortalise */
 }
 
@@ -220,7 +228,9 @@ static void
 opmask_addlocal(pTHX_ SV *opset, char *op_mask_buf) /* Localise PL_op_mask then opmask_add() */
 {
     char *orig_op_mask = PL_op_mask;
+#ifdef OPCODE_DEBUG
     dMY_CXT;
+#endif
 
     SAVEVPTR(PL_op_mask);
     /* XXX casting to an ordinary function ptr from a member function ptr
@@ -257,11 +267,13 @@ _safe_pkg_prep(Package)
     SV *Package
 PPCODE:
     HV *hv; 
+    char *hvname;
     ENTER;
    
     hv = gv_stashsv(Package, GV_ADDWARN); /* should exist already	*/
 
-    if (strNE(HvNAME_get(hv),"main")) {
+    hvname = HvNAME_get(hv);
+    if (!hvname || strNE(hvname, "main")) {
         /* make it think it's in main:: */
 	hv_name_set(hv, "main", 4, 0);
         (void) hv_store(hv,"_",1,(SV *)PL_defgv,0);  /* connect _ to global */
@@ -308,15 +320,20 @@ PPCODE:
     dummy_hv = save_hash(PL_incgv);
     GvHV(PL_incgv) = (HV*)SvREFCNT_inc(GvHV(gv_HVadd(gv_fetchpvs("INC",GV_ADD,SVt_PVHV))));
 
-    /* Invalidate ISA and method caches */
+    /* Invalidate class and method caches */
     ++PL_sub_generation;
     hv_clear(PL_stashcache);
 
     PUSHMARK(SP);
-    perl_call_sv(codesv, GIMME|G_EVAL|G_KEEPERR); /* use callers context */
+    /* use caller’s context */
+    perl_call_sv(codesv, GIMME_V|G_EVAL|G_KEEPERR);
     sv_free( (SV *) dummy_hv);  /* get rid of what save_hash gave us*/
     SPAGAIN; /* for the PUTBACK added by xsubpp */
     LEAVE;
+
+    /* Invalidate again */
+    ++PL_sub_generation;
+    hv_clear(PL_stashcache);
 
 
 int
@@ -417,7 +434,7 @@ CODE:
 
     if (!SvROK(safe) || !SvOBJECT(SvRV(safe)) || SvTYPE(SvRV(safe))!=SVt_PVHV)
 	croak("Not a Safe object");
-    mask = *hv_fetch((HV*)SvRV(safe), "Mask",4, 1);
+    mask = *hv_fetchs((HV*)SvRV(safe), "Mask", 1);
     if (ONLY_THESE)	/* *_only = new mask, else edit current	*/
 	sv_setsv(mask, sv_2mortal(new_opset(aTHX_ PERMITING ? opset_all : Nullsv)));
     else
@@ -518,7 +535,7 @@ CODE:
 void
 opcodes()
 PPCODE:
-    if (GIMME == G_ARRAY) {
+    if (GIMME_V == G_ARRAY) {
 	croak("opcodes in list context not yet implemented"); /* XXX */
     }
     else {

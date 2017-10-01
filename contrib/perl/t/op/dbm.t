@@ -1,9 +1,9 @@
 #!./perl
 
 BEGIN {
-    chdir 't';
-    @INC = '../lib';
+    chdir 't' if -d 't';
     require './test.pl';
+    set_up_inc('../lib');
 
     eval { require AnyDBM_File }; # not all places have dbm* functions
     skip_all("No dbm functions") if $@;
@@ -11,7 +11,7 @@ BEGIN {
 
 plan tests => 5;
 
-# This is [20020104.007] "coredump on dbmclose"
+# This is [20020104.007 (#8179)] "coredump on dbmclose"
 
 my $filename = tempfile();
 
@@ -62,6 +62,11 @@ fresh_perl_like('delete $::{"AnyDBM_File::"}; ' . $prog,
 { # undef 3rd arg
     local $^W = 1;
     local $SIG{__WARN__} = sub { ++$w };
-    dbmopen(%truffe, 'pleaseletthisfilenotexist', undef);
+    # Files may get created as a side effect of dbmopen, so ensure cleanup.
+    my $leaf = 'pleaseletthisfilenotexist';
+    dbmopen(%truffe, $leaf, undef);
     is $w, 1, '1 warning from dbmopen with undef third arg';
+    unlink $leaf
+        if -e $leaf;
+    1 while unlink glob "$leaf.*";
 }

@@ -1,31 +1,37 @@
-#!./perl -w
+#!perl
+
+use 5.008001;
+
+use strict;
+use warnings;
 
 BEGIN {
-    unless (-d 'blib') {
-	chdir 't' if -d 't';
-	@INC = '../lib';
+    if (!eval { require Socket }) {
+        print "1..0 # Skip: no Socket module\n"; exit 0;
     }
-    if (!eval "require Socket") {
-	print "1..0 # no Socket\n"; exit 0;
-    }
-    if (ord('A') == 193 && !eval "require Convert::EBCDIC") {
-        print "1..0 # EBCDIC but no Convert::EBCDIC\n"; exit 0;
+    if (ord('A') == 193 && !eval { require Convert::EBCDIC }) {
+        print "1..0 # Skip: EBCDIC but no Convert::EBCDIC\n"; exit 0;
     }
 }
 
 use Net::Config;
 use Net::FTP;
 
-unless(defined($NetConfig{ftp_testhost}) && $NetConfig{test_hosts}) {
-    print "1..0\n";
+unless(defined($NetConfig{ftp_testhost})) {
+    print "1..0 # Skip: no ftp_testhost defined in config\n";
+    exit 0;
+}
+
+unless($NetConfig{test_hosts}) {
+    print "1..0 # Skip: test_hosts not enabled in config\n";
     exit 0;
 }
 
 my $t = 1;
 print "1..7\n";
 
-$ftp = Net::FTP->new($NetConfig{ftp_testhost})
-	or (print("not ok 1\n"), exit);
+my $ftp = Net::FTP->new($NetConfig{ftp_testhost})
+        or (print("not ok 1\n"), exit);
 
 printf "ok %d\n",$t++;
 
@@ -44,12 +50,14 @@ $ftp->cwd('/pub') or do {
   print "not ";
 };
 
+my $data;
 if ($data = $ftp->stor('libnet.tst')) {
   my $text = "abc\ndef\nqwe\n";
   printf "ok %d\n",$t++;
   $data->write($text,length $text);
   $data->close;
   $data = $ftp->retr('libnet.tst');
+  my $buf;
   $data->read($buf,length $text);
   $data->close;
   print "not " unless $text eq $buf;

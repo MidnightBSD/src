@@ -9,15 +9,15 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
     require './test.pl';
-    skip_all_if_miniperl("no dynamic loading on miniperl, no re");
+    set_up_inc('../lib');
+    require './loc_tools.pl';
 }
 
 use strict;
 use Config;
 
-plan tests => 797;
+plan tests => 828;
 
 $| = 1;
 
@@ -152,7 +152,7 @@ my $TEST = 'TEST';
 	while (my $v = $vars[0]) {
 	    local $ENV{$v} = $TAINT;
 	    last if eval { `$echo 1` };
-	    last unless $@ =~ /^Insecure \$ENV\{$v}/;
+	    last unless $@ =~ /^Insecure \$ENV\{$v\}/;
 	    shift @vars;
 	}
 	is("@vars", "");
@@ -163,7 +163,7 @@ my $TEST = 'TEST';
 	is(eval { `$echo 1` }, "1\n");
 	$ENV{TERM} = 'e=mc2' . $TAINT;
 	is(eval { `$echo 1` }, undef);
-	like($@, qr/^Insecure \$ENV\{TERM}/);
+	like($@, qr/^Insecure \$ENV\{TERM\}/);
     }
 
     my $tmp;
@@ -182,7 +182,25 @@ my $TEST = 'TEST';
 
 	local $ENV{PATH} = $tmp;
 	is(eval { `$echo 1` }, undef);
-	like($@, qr/^Insecure directory in \$ENV\{PATH}/);
+	# Message can be different depending on whether echo
+	# is a builtin or not
+	like($@, qr/^Insecure (?:directory in )?\$ENV\{PATH\}/);
+    }
+
+    # Relative paths in $ENV{PATH} are always implicitly tainted.
+    SKIP: {
+        skip "Do these work on VMS?", 4 if $Is_VMS;
+        skip "Not applicable to DOSish systems", 4 if! $tmp;
+
+        local $ENV{PATH} = '.';
+        is(eval { `$echo 1` }, undef);
+        like($@, qr/^Insecure (?:directory in )?\$ENV\{PATH\}/);
+
+        # Backslash should not fool perl into thinking that this is one
+        # path.
+        local $ENV{PATH} = '/\:.';
+        is(eval { `$echo 1` }, undef);
+        like($@, qr/^Insecure (?:directory in )?\$ENV\{PATH\}/);
     }
 
     SKIP: {
@@ -190,14 +208,14 @@ my $TEST = 'TEST';
 
 	$ENV{'DCL$PATH'} = $TAINT;
 	is(eval { `$echo 1` }, undef);
-	like($@, qr/^Insecure \$ENV\{DCL\$PATH}/);
+	like($@, qr/^Insecure \$ENV\{DCL\$PATH\}/);
 	SKIP: {
             skip q[can't find world-writeable directory to test DCL$PATH], 2
               unless $tmp;
 
 	    $ENV{'DCL$PATH'} = $tmp;
 	    is(eval { `$echo 1` }, undef);
-	    like($@, qr/^Insecure directory in \$ENV\{DCL\$PATH}/);
+	    like($@, qr/^Insecure directory in \$ENV\{DCL\$PATH\}/);
 	}
 	$ENV{'DCL$PATH'} = '';
     }
@@ -297,17 +315,13 @@ my $TEST = 'TEST';
     is($one, 'a',      "$desc: \$1 value");
 
   SKIP: {
-        skip 'No locale testing without d_setlocale', 10 if(!$Config{d_setlocale});
+        skip 'Locales not available', 10 unless locales_enabled('LC_CTYPE');
 
         $desc = "match with pattern tainted via locale";
 
         $s = 'abcd';
         {
-            BEGIN {
-                if($Config{d_setlocale}) {
-                    require locale; import locale;
-                }
-            }
+            use locale;
             $res = $s =~ /(\w+)/; $one = $1;
         }
         isnt_tainted($s,   "$desc: s not tainted");
@@ -320,11 +334,7 @@ my $TEST = 'TEST';
 
         $s = 'abcd';
         {
-            BEGIN {
-                if($Config{d_setlocale}) {
-                    require locale; import locale;
-                }
-            }
+            use locale;
             $res = $s =~ /(\w)/g; $one = $1;
         }
         isnt_tainted($s,   "$desc: s not tainted");
@@ -358,17 +368,13 @@ my $TEST = 'TEST';
     is($one, 'd',      "$desc: \$1 value");
 
   SKIP: {
-        skip 'No locale testing without d_setlocale', 12 if(!$Config{d_setlocale});
+        skip 'Locales not available', 12 unless locales_enabled('LC_CTYPE');
 
         $desc = "match with pattern tainted via locale, list cxt";
 
         $s = 'abcd';
         {
-            BEGIN {
-                if($Config{d_setlocale}) {
-                    require locale; import locale;
-                }
-            }
+            use locale;
             ($res) = $s =~ /(\w+)/; $one = $1;
         }
         isnt_tainted($s,   "$desc: s not tainted");
@@ -381,11 +387,7 @@ my $TEST = 'TEST';
 
         $s = 'abcd';
         {
-            BEGIN {
-                if($Config{d_setlocale}) {
-                    require locale; import locale;
-                }
-            }
+            use locale;
             ($res, $res2) = $s =~ /(\w)/g; $one = $1;
         }
         isnt_tainted($s,   "$desc: s not tainted");
@@ -518,17 +520,13 @@ my $TEST = 'TEST';
     is($one, 'abcd',   "$desc: \$1 value");
 
   SKIP: {
-        skip 'No locale testing without d_setlocale', 18 if(!$Config{d_setlocale});
+        skip 'Locales not available', 18 unless locales_enabled('LC_CTYPE');
 
         $desc = "substitution with pattern tainted via locale";
 
         $s = 'abcd';
         {
-            BEGIN {
-                if($Config{d_setlocale}) {
-                    require locale; import locale;
-                }
-            }
+            use locale;
             $res = $s =~ s/(\w+)/xyz/; $one = $1;
         }
         is_tainted($s,     "$desc: s tainted");
@@ -542,11 +540,7 @@ my $TEST = 'TEST';
 
         $s = 'abcd';
         {
-            BEGIN {
-                if($Config{d_setlocale}) {
-                    require locale; import locale;
-                }
-            }
+            use locale;
             $res = $s =~ s/(\w)/x/g; $one = $1;
         }
         is_tainted($s,     "$desc: s tainted");
@@ -560,11 +554,7 @@ my $TEST = 'TEST';
 
         $s = 'abcd';
         {
-            BEGIN {
-                if($Config{d_setlocale}) {
-                    require locale; import locale;
-                }
-            }
+            use locale;
             $res = $s =~ s/(\w+)/xyz/r; $one = $1;
         }
         isnt_tainted($s,   "$desc: s not tainted");
@@ -714,17 +704,13 @@ my $TEST = 'TEST';
 	is($one, 'a',      "$desc: \$1 value");
 
   SKIP: {
-        skip 'No locale testing without d_setlocale', 10 if(!$Config{d_setlocale});
+        skip 'Locales not available', 10 unless locales_enabled('LC_CTYPE');
 
         $desc = "use re 'taint': match with pattern tainted via locale";
 
         $s = 'abcd';
         {
-            BEGIN {
-                if($Config{d_setlocale}) {
-                    require locale; import locale;
-                }
-            }
+            use locale;
             $res = $s =~ /(\w+)/; $one = $1;
         }
         isnt_tainted($s,   "$desc: s not tainted");
@@ -737,11 +723,7 @@ my $TEST = 'TEST';
 
         $s = 'abcd';
         {
-            BEGIN {
-                if($Config{d_setlocale}) {
-                    require locale; import locale;
-                }
-            }
+            use locale;
             $res = $s =~ /(\w)/g; $one = $1;
         }
         isnt_tainted($s,   "$desc: s not tainted");
@@ -775,17 +757,13 @@ my $TEST = 'TEST';
 	is($one, 'd',      "$desc: \$1 value");
 
   SKIP: {
-        skip 'No locale testing without d_setlocale', 12 if(!$Config{d_setlocale});
+        skip 'Locales not available', 12 unless locales_enabled('LC_CTYPE');
 
         $desc = "use re 'taint': match with pattern tainted via locale, list cxt";
 
         $s = 'abcd';
         {
-            BEGIN {
-                if($Config{d_setlocale}) {
-                    require locale; import locale;
-                }
-            }
+            use locale;
             ($res) = $s =~ /(\w+)/; $one = $1;
         }
         isnt_tainted($s,   "$desc: s not tainted");
@@ -798,11 +776,7 @@ my $TEST = 'TEST';
 
         $s = 'abcd';
         {
-            BEGIN {
-                if($Config{d_setlocale}) {
-                    require locale; import locale;
-                }
-            }
+            use locale;
             ($res, $res2) = $s =~ /(\w)/g; $one = $1;
         }
         isnt_tainted($s,   "$desc: s not tainted");
@@ -936,17 +910,13 @@ my $TEST = 'TEST';
 	is($one, 'abcd',   "$desc: \$1 value");
 
   SKIP: {
-        skip 'No locale testing without d_setlocale', 18 if(!$Config{d_setlocale});
+        skip 'Locales not available', 18 unless locales_enabled('LC_CTYPE');
 
         $desc = "use re 'taint': substitution with pattern tainted via locale";
 
         $s = 'abcd';
         {
-            BEGIN {
-                if($Config{d_setlocale}) {
-                    require locale; import locale;
-                }
-            }
+            use locale;
             $res = $s =~ s/(\w+)/xyz/; $one = $1;
         }
         is_tainted($s,     "$desc: s tainted");
@@ -960,11 +930,7 @@ my $TEST = 'TEST';
 
         $s = 'abcd';
         {
-            BEGIN {
-                if($Config{d_setlocale}) {
-                    require locale; import locale;
-                }
-            }
+            use locale;
             $res = $s =~ s/(\w)/x/g; $one = $1;
         }
         is_tainted($s,     "$desc: s tainted");
@@ -978,11 +944,7 @@ my $TEST = 'TEST';
 
         $s = 'abcd';
         {
-            BEGIN {
-                if($Config{d_setlocale}) {
-                    require locale; import locale;
-                }
-            }
+            use locale;
             $res = $s =~ s/(\w+)/xyz/r; $one = $1;
         }
         isnt_tainted($s,   "$desc: s not tainted");
@@ -1057,6 +1019,18 @@ my $TEST = 'TEST';
 	is($s,   'abcd',   "$desc: s value");
 	is($res, 'xyz',    "$desc: res value");
 	is($one, 'abcd',   "$desc: \$1 value");
+
+        # [perl #121854] match taintedness became sticky
+        # when one match has a taintess result, subseqent matches
+        # using the same pattern shouldn't necessarily be tainted
+
+        {
+            my $f = sub { $_[0] =~ /(.*)/ or die; $1 };
+            $res = $f->($TAINT);
+            is_tainted($res,   "121854: res tainted");
+            $res = $f->("abc");
+            isnt_tainted($res,   "121854: res not tainted");
+        }
     }
 
     $foo = $1 if 'bar' =~ /(.+)$TAINT/;
@@ -1185,6 +1159,7 @@ violates_taint(sub { link $TAINT, '' }, 'link');
 {
     my $foo = "imaginary library" . $TAINT;
     violates_taint(sub { require $foo }, 'require');
+    violates_taint(sub { do $foo }, 'do');
 
     my $filename = tempfile();	# NB: $filename isn't tainted!
     $foo = $filename . $TAINT;
@@ -1433,7 +1408,12 @@ SKIP: {
         my $sent = "foobar";
         my $rcvd;
         my $size = 2000;
-        my $id = shmget(IPC_PRIVATE, $size, S_IRWXU);
+        my $id;
+        eval {
+            local $SIG{SYS} = sub { die "SIGSYS caught\n" };
+            $id = shmget(IPC_PRIVATE, $size, S_IRWXU);
+            1;
+        } or do { chomp(my $msg = $@); skip "shmget: $msg", 1; };
 
         if (defined $id) {
             if (shmwrite($id, $sent, 0, 60)) {
@@ -1453,7 +1433,7 @@ SKIP: {
         skip "SysV shared memory operation failed", 1 unless 
           $rcvd eq $sent;
 
-        is_tainted($rcvd);
+        is_tainted($rcvd, "shmread");
     }
 
 
@@ -1462,7 +1442,12 @@ SKIP: {
         skip "msg*() not available", 1 unless $Config{d_msg};
 
 	no strict 'subs';
-	my $id = msgget(IPC_PRIVATE, IPC_CREAT | S_IRWXU);
+        my $id;
+        eval {
+            local $SIG{SYS} = sub { die "SIGSYS caught\n" };
+            $id = msgget(IPC_PRIVATE, IPC_CREAT | S_IRWXU);
+            1;
+        } or do { chomp(my $msg = $@); skip "msgget: $msg", 1; };
 
 	my $sent      = "message";
 	my $type_sent = 1234;
@@ -1488,13 +1473,13 @@ SKIP: {
             skip "SysV message queue operation failed", 1
               unless $rcvd eq $sent && $type_sent == $type_rcvd;
 
-	    is_tainted($rcvd);
+	    is_tainted($rcvd, "msgrcv");
 	}
     }
 }
 
 {
-    # bug id 20001004.006
+    # bug id 20001004.006 (#4380)
 
     open my $fh, '<', $TEST or warn "$0: cannot read $TEST: $!" ;
     local $/;
@@ -1507,7 +1492,7 @@ SKIP: {
 }
 
 {
-    # bug id 20001004.007
+    # bug id 20001004.007 (#4381)
 
     open my $fh, '<', $TEST or warn "$0: cannot read $TEST: $!" ;
     my $a = <$fh>;
@@ -1534,7 +1519,7 @@ SKIP: {
 }
 
 {
-    # bug id 20010519.003
+    # bug id 20010519.003 (#7015)
 
     BEGIN {
 	use vars qw($has_fcntl);
@@ -1545,7 +1530,7 @@ SKIP: {
     }
 
     SKIP: {
-        skip "no Fcntl", 18 unless $has_fcntl;
+        skip "no Fcntl", 36 unless $has_fcntl;
 
 	my $foo = tempfile();
 	my $evil = $foo . $TAINT;
@@ -1579,7 +1564,7 @@ SKIP: {
 }
 
 {
-    # bug 20010526.004
+    # bug 20010526.004 (#7041)
 
     use warnings;
 
@@ -1600,7 +1585,7 @@ SKIP: {
 
 
 {
-    # Bug ID 20010730.010
+    # Bug ID 20010730.010 (#7387)
 
     my $i = 0;
 
@@ -1650,7 +1635,7 @@ like($@, qr/^Modification of a read-only value attempted/,
      'Assigning to ${^TAINT} fails');
 
 {
-    # bug 20011111.105
+    # bug 20011111.105 (#7897)
     
     my $re1 = qr/x$TAINT/;
     is_tainted($re1);
@@ -1665,7 +1650,7 @@ like($@, qr/^Modification of a read-only value attempted/,
 SKIP: {
     skip "system {} has different semantics on Win32", 1 if $Is_MSWin32;
 
-    # bug 20010221.005
+    # bug 20010221.005 (#5882)
     local $ENV{PATH} .= $TAINT;
     eval { system { "echo" } "/arg0", "arg1" };
     like($@, qr/^Insecure \$ENV/);
@@ -1675,7 +1660,7 @@ TODO: {
     todo_skip 'tainted %ENV warning occludes tainted arguments warning', 22
       if $Is_VMS;
 
-    # bug 20020208.005 plus some single arg exec/system extras
+    # bug 20020208.005 (#8465) plus some single arg exec/system extras
     violates_taint(sub { exec $TAINT, $TAINT }, 'exec');
     violates_taint(sub { exec $TAINT $TAINT }, 'exec');
     violates_taint(sub { exec $TAINT $TAINT, $TAINT }, 'exec');
@@ -1704,7 +1689,7 @@ TODO: {
 }
 
 {
-    # [ID 20020704.001] taint propagation failure
+    # [ID 20020704.001 (#10026)] taint propagation failure
     use re 'taint';
     $TAINT =~ /(.*)/;
     is_tainted(my $foo = $1);
@@ -1997,18 +1982,40 @@ foreach my $ord (78, 163, 256) {
 }
 
 {
-    # 59998
-    sub cr { my $x = crypt($_[0], $_[1]); $x }
-    sub co { my $x = ~$_[0]; $x }
-    my ($a, $b);
-    $a = cr('hello', 'foo' . $TAINT);
-    $b = cr('hello', 'foo');
-    is_tainted($a,  "tainted crypt");
-    isnt_tainted($b, "untainted crypt");
-    $a = co('foo' . $TAINT);
-    $b = co('foo');
-    is_tainted($a,  "tainted complement");
-    isnt_tainted($b, "untainted complement");
+  SKIP: {
+      skip 'No crypt function, skipping crypt tests', 4 if(!$Config{d_crypt});
+      # 59998
+      sub cr {
+          # On platforms implementing FIPS mode, using a weak algorithm
+          # (including the default triple-DES algorithm) causes crypt(3) to
+          # return a null pointer, which Perl converts into undef. We assume
+          # for now that all such platforms support glibc-style selection of
+          # a different hashing algorithm.
+          # glibc supports MD5, but OpenBSD only supports Blowfish.
+          my $alg = '';       # Use default algorithm
+          if ( !defined(crypt("ab", $alg."cd")) ) {
+              $alg = '$5$';   # Try SHA-256
+          }
+          if ( !defined(crypt("ab", $alg."cd")) ) {
+              $alg = '$2b$12$FPWWO2RJ3CK4FINTw0Hi';  # Try Blowfish
+          }
+          if ( !defined(crypt("ab", $alg."cd")) ) {
+              $alg = ''; # Nothing worked.  Back to default
+          }
+          my $x = crypt($_[0], $alg . $_[1]);
+          $x
+      }
+      sub co { my $x = ~$_[0]; $x }
+      my ($a, $b);
+      $a = cr('hello', 'foo' . $TAINT);
+      $b = cr('hello', 'foo');
+      is_tainted($a,  "tainted crypt");
+      isnt_tainted($b, "untainted crypt");
+      $a = co('foo' . $TAINT);
+      $b = co('foo');
+      is_tainted($a,  "tainted complement");
+      isnt_tainted($b, "untainted complement");
+    }
 }
 
 {
@@ -2100,11 +2107,11 @@ foreach my $ord (78, 163, 256) {
 }
 
 # Bug RT #45167 the return value of sprintf sometimes wasn't tainted
-# when the args were tainted. This only occured on the first use of
+# when the args were tainted. This only occurred on the first use of
 # sprintf; after that, its TARG has taint magic attached, so setmagic
 # at the end works.  That's why there are multiple sprintf's below, rather
 # than just one wrapped in an inner loop. Also, any plaintext between
-# fprmat entires would correctly cause tainting to get set. so test with
+# format entries would correctly cause tainting to get set. so test with
 # "%s%s" rather than eg "%s %s".
 
 {
@@ -2239,7 +2246,7 @@ end
     ok("A" =~ /\p{$prop}/, "user-defined property: non-tainted case");
     $prop = "IsA$TAINT";
     eval { "A" =~ /\p{$prop}/};
-    like($@, qr/Insecure user-defined property \\p\{main::IsA}/,
+    like($@, qr/Insecure user-defined property \\p\{main::IsA\}/,
 	    "user-defined property: tainted case");
 }
 
@@ -2315,14 +2322,10 @@ pass("no death when TARG of ref is tainted");
 }
 
 SKIP: {
-    skip 'No locale testing without d_setlocale', 4 if(!$Config{d_setlocale});
+    skip 'Locales not available', 4 unless locales_enabled('LC_CTYPE');
 
     use feature 'fc';
-    BEGIN {
-        if($Config{d_setlocale}) {
-            require locale; import locale;
-        }
-    }
+    use locale;
     my ($latin1, $utf8) = ("\xDF") x 2;
     utf8::downgrade($latin1);
     utf8::upgrade($utf8);
@@ -2350,6 +2353,101 @@ SKIP: {
     eval { "a" =~ /$code/ };
     like($@, qr/Eval-group in insecure regular expression/, "tainted (?{})");
 }
+
+# reset() and tainted undef (?!)
+$::x = "foo";
+$_ = "$TAINT".reset "x";
+is eval { eval $::x.1 }, 1, 'reset does not taint undef';
+
+# [perl #122669]
+{
+    # See the comment above the first formline test.
+    local $ENV{PATH} = $ENV{PATH};
+    $ENV{PATH} = $old_env_path if $Is_MSWin32;
+    is runperl(
+       switches => [ '-T' ],
+       prog => 'use constant K=>$^X; 0 if K; BEGIN{} use strict; '
+              .'print 122669, qq-\n-',
+       stderr => 1,
+     ), "122669\n",
+        'tainted constant as logop condition should not prevent "use"';
+}
+
+# optimised SETi etc need to handle tainting
+
+{
+    my ($i1, $i2, $i3) = (1, 1, 1);
+    my ($n1, $n2, $n3) = (1.1, 1.1, 1.1);
+    my $tn = $TAINT0 + 1.1;
+
+    $i1 = $TAINT0 + 2;
+    is_tainted $i1, "+ SETi";
+    $i2 = $TAINT0 - 2;
+    is_tainted $i2, "- SETi";
+    $i3 = $TAINT0 * 2;
+    is_tainted $i3, "* SETi";
+
+    $n1 = $tn + 2.2;
+    is_tainted $n1, "+ SETn";
+    $n2 = $tn - 2.2;
+    is_tainted $n2, "- SETn";
+    $n3 = $tn * 2.2;
+    is_tainted $n3, "* SETn";
+}
+
+# check that localizing something with get magic (e.g. taint) doesn't
+# upgrade pIOK to IOK
+
+{
+    local our $x = 1.1 + $TAINT0;  # $x should be NOK
+    my $ix = int($x);          #          now NOK, pIOK
+    {
+        local $x = 0;
+    }
+    my $x1 = $x * 1;
+    isnt($x, 1); # it should be 1.1, not 1
+}
+
+# RT #129996
+# every item in a list assignment is independent, even if the lvalue
+# has taint magic already
+{
+    my ($a, $b, $c, $d);
+    $d = "";
+    $b = $TAINT;
+    ($a, $b, $c) = ($TAINT, 0, 0);
+    is_tainted   $a, "list assign tainted a";
+    isnt_tainted $b, "list assign tainted b";
+    isnt_tainted $c, "list assign tainted c";
+
+    $b = $TAINT;
+    $b = ""; # untaint;
+    ($a, $b, $c) = ($TAINT, 0, 0);
+    is_tainted   $a, "list assign detainted a";
+    isnt_tainted $b, "list assign detainted b";
+    isnt_tainted $c, "list assign detainted c";
+
+    $b = $TAINT;
+    $b = ""; # untaint;
+    ($a, $b, $c) = ($TAINT);
+    is_tainted   $a, "list assign empty rhs a";
+    isnt_tainted $b, "list assign empty rhs b";
+    isnt_tainted $c, "list assign empty rhs c";
+
+    $b = $TAINT;
+    $b = ""; # untaint;
+    ($a = ($TAINT. "x")), (($b, $c) = (0));
+    is_tainted   $a, "list assign already tainted expression a";
+    isnt_tainted $b, "list assign already tainted expression b";
+    isnt_tainted $c, "list assign already tainted expression c";
+
+    $b = $TAINT;
+    $b = ""; # untaint;
+    (($a) = ($TAINT. "x")), ($b = $b . "x");
+    is_tainted   $a, "list assign post tainted expression a";
+    isnt_tainted $b, "list assign post tainted expression b";
+}
+
 
 # This may bomb out with the alarm signal so keep it last
 SKIP: {

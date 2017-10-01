@@ -6,13 +6,13 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
     require './test.pl';
+    set_up_inc('../lib');
 }
 
 use warnings;
 
-plan( tests => 245 );
+plan(tests => 280);
 
 # type coercion on assignment
 $foo = 'foo';
@@ -182,7 +182,10 @@ is (*{*x{GLOB}}, "*main::STDOUT");
 	$warn .= $_[0];
     };
     my $val = *x{FILEHANDLE};
-    print {*x{IO}} ($warn =~ /is deprecated/
+
+    # deprecation warning removed in v5.23 -- rjbs, 2015-12-31
+    # https://rt.perl.org/Ticket/Display.html?id=127060
+    print {*x{IO}} (! defined $warn
 		    ? "ok $test\n" : "not ok $test\n");
     curr_test(++$test);
 }
@@ -198,18 +201,6 @@ is *x{PACKAGE}, 'main', 'and *foo{PACKAGE} the original package';
     # test if defined() doesn't create any new symbols
 
     my $a = "SYM000";
-    ok(!defined *{$a});
-
-    {
-	no warnings 'deprecated';
-	ok(!defined @{$a});
-    }
-    ok(!defined *{$a});
-
-    {
-	no warnings 'deprecated';
-	ok(!defined %{$a});
-    }
     ok(!defined *{$a});
 
     ok(!defined ${$a});
@@ -249,7 +240,7 @@ is *x{PACKAGE}, 'main', 'and *foo{PACKAGE} the original package';
     ok(defined *{$a});
 }
 
-# [ID 20010526.001] localized glob loses value when assigned to
+# [ID 20010526.001 (#7038)] localized glob loses value when assigned to
 
 $j=1; %j=(a=>1); @j=(1); local *j=*j; *j = sub{};
 
@@ -494,6 +485,17 @@ is (ref \$::{oonk}, 'GLOB', "This export does affect original");
 is (eval 'biff', "Value", "Constant has correct value");
 is (ref \$::{biff}, 'GLOB', "Symbol table has full typeglob");
 
+$::{yarrow} = [4,5,6];
+is join("-", eval "yarrow()"), '4-5-6', 'array ref as stash elem';
+is ref $::{yarrow}, "ARRAY", 'stash elem is still array ref after use';
+is join("-", eval "&yarrow"), '4-5-6', 'calling const list with &';
+is join("-", eval "&yarrow(1..10)"), '4-5-6', 'const list ignores & args';
+is prototype "yarrow", "", 'const list has "" prototype';
+is eval "yarrow", 3, 'const list in scalar cx returns length';
+
+$::{borage} = \&ok;
+eval 'borage("sub ref in stash")' or fail "sub ref in stash";
+
 {
     use vars qw($glook $smek $foof);
     # Check reference assignment isn't affected by the SV type (bug #38439)
@@ -516,7 +518,7 @@ is (ref \$::{biff}, 'GLOB', "Symbol table has full typeglob");
 format =
 .
 
-foreach my $value ([1,2,3], {1=>2}, *STDOUT{IO}, \&ok, *STDOUT{FORMAT}) {
+foreach my $value ({1=>2}, *STDOUT{IO}, *STDOUT{FORMAT}) {
     # *STDOUT{IO} returns a reference to a PVIO. As it's blessed, ref returns
     # IO::Handle, which isn't what we want.
     my $type = $value;
@@ -628,6 +630,34 @@ foreach my $type (qw(integer number string)) {
     is($str,  '*__ANON__::__ANONIO__',
 	"RT #65582/#96326 anon glob stringification");
 }
+
+# Another stringification bug: Test that recursion does not cause lexical
+# handles to lose their names.
+sub r {
+    my @output;
+    @output = r($_[0]-1) if $_[0];
+    open my $fh, "TEST";
+    push @output, $$fh;
+    close $fh;
+    @output;
+}
+is join(' ', r(4)),
+  '*main::$fh *main::$fh *main::$fh *main::$fh *main::$fh',
+  'recursion does not cause lex handles to lose their names';
+
+# And sub cloning, too; not just recursion
+my $close_over_me;
+is join(' ', sub {
+    () = $close_over_me;
+    my @output;
+    @output = CORE::__SUB__->($_[0]-1) if $_[0];
+    open my $fh, "TEST";
+    push @output, $$fh;
+    close $fh;
+    @output;
+   }->(4)),
+  '*main::$fh *main::$fh *main::$fh *main::$fh *main::$fh',
+  'sub cloning does not cause lex handles to lose their names';
 
 # [perl #71254] - Assigning a glob to a variable that has a current
 # match position. (We are testing that Perl_magic_setmglob respects globs'
@@ -911,6 +941,78 @@ ok eval {
   'no error when gp_free calls a destructor that assigns to the gv';
 }
 
+# This is a similar test, for destructors seeing a GV without a reference
+# count on its gp.
+sub undefine_me_if_you_dare {}
+bless \&undefine_me_if_you_dare, "Undefiner";
+sub Undefiner::DESTROY {
+    undef *undefine_me_if_you_dare;
+}
+{
+    my $w;
+    local $SIG{__WARN__} = sub { $w .= shift };
+    undef *undefine_me_if_you_dare;
+    is $w, undef,
+      'undeffing a gv in DESTROY triggered by undeffing the same gv'
+}
+
+# [perl #121242]
+# More gp_free madness.  gp_free could call a destructor that frees the gv
+# whose gp is being freed.
+sub Fred::AUTOLOAD { $Fred::AUTOLOAD }
+undef *{"Fred::AUTOLOAD"};
+pass 'no crash from gp_free triggering gv_try_downgrade';
+sub _121242::DESTROY { delete $_121242::{$_[0][0]} };
+${"_121242::foo"} = bless ["foo"], _121242::;
+undef *{"_121242::foo"};
+pass 'no crash from pp_undef/gp_free freeing the gv';
+${"_121242::bar"} = bless ["bar"], _121242::;
+*{"_121242::bar"} = "bar";
+pass 'no crash from sv_setsv/gp_free freeing the gv';
+${"_121242::baz"} = bless ["baz"], _121242::;
+*{"_121242::baz"} = *foo;
+pass 'no crash from glob_assign_glob/gp_free freeing the gv';
+{
+    my $foo;
+    undef *_121242::DESTROY;
+    *_121242::DESTROY = sub { undef $foo };
+    my $set_up_foo = sub {
+        # Make $$foo into a fake glob whose array slot holds a blessed
+        # array that undefines $foo, freeing the fake glob.
+        $foo = undef;
+        $$foo = do {local *bar};
+        *$$foo = bless [], _121242::;
+    };
+    &$set_up_foo;
+    $$foo = 3;
+    pass 'no crash from sv_setsv/sv_unglob/gp_free freeing the gv';
+    &$set_up_foo;
+    utf8::encode $$foo;
+    pass 'no crash from sv_utf8_encode/sv_unglob/gp_free freeing the gv';
+    &$set_up_foo;
+    open BAR, "TEST";
+    $$foo .= <BAR>;
+    pass 'no crash from do_readline/sv_unglob/gp_free freeing the gv';
+    close BAR;
+    &$set_up_foo;
+    $$foo .= 3;
+    pass 'no crash from pp_concat/sv_unglob/gp_free freeing the gv';
+    &$set_up_foo;
+    no warnings;
+    $$foo++;
+    pass 'no crash from sv_inc/sv_unglob/gp_free freeing the gv';
+    &$set_up_foo;
+    $$foo--;
+    pass 'no crash from sv_dec/sv_unglob/gp_free freeing the gv';
+    &$set_up_foo;
+    undef $$foo;
+    pass 'no crash from pp_undef/sv_unglob/gp_free freeing the gv';
+    $foo = undef;
+    $$foo = 3;
+    $$foo =~ s/3/$$foo = do {local *bar}; *$$foo = bless [],_121242::; 4/e;
+    pass 'no crash from pp_substcont/sv_unglob/gp_free freeing the gv';
+}
+
 # *{undef}
 eval { *{my $undef} = 3 };
 like $@, qr/^Can't use an undefined value as a symbol reference at /,
@@ -941,6 +1043,66 @@ package lrcg {
     'constants w/nulls in their names point 2 the right GVs when promoted';
 }
 
+{
+  no warnings 'io';
+  stat *{"try_downgrade"};
+  -T _;
+  $bang = $!;
+  eval "*try_downgrade if 0";
+  -T _;
+  is "$!",$bang,
+     'try_downgrade does not touch PL_statgv (last stat handle)';
+  readline *{"try_downgrade2"};
+  my $lastfh = "${^LAST_FH}";
+  eval "*try_downgrade2 if 0";
+  is ${^LAST_FH}, $lastfh, 'try_downgrade does not touch PL_last_in_gv';
+}
+
+is runperl(prog => '$s = STDERR; close $s; undef *$s;'
+                  .'eval q-*STDERR if 0-; *$s = *STDOUT{IO}; warn'),
+  "Warning: something's wrong at -e line 1.\n",
+  "try_downgrade does not touch PL_stderrgv";
+
+is runperl(prog =>
+             'use constant foo=>1; BEGIN { $x = \&foo } undef &$x; $x->()',
+           stderr=>1),
+  "Undefined subroutine &main::foo called at -e line 1.\n",
+  "gv_try_downgrade does not anonymise CVs referenced elsewhere";
+
+SKIP: {
+    skip_if_miniperl("no dynamic loading on miniperl, so can't load IO::File", 4);
+
+package glob_constant_test {
+  sub foo { 42 }
+  use constant bar => *foo;
+  BEGIN { undef *foo }
+  ::is eval { bar->() }, eval { &{+bar} },
+    'glob_constant->() is not mangled at compile time';
+  ::is "$@", "", 'no error from eval { &{+glob_constant} }';
+  use constant quux => do {
+    local *F;
+    my $f = *F;
+    *$f = *STDOUT{IO};
+  };
+  ::is eval { quux->autoflush; 420 }, 420,
+    'glob_constant->method() works';
+  ::is "$@", "", 'no error from eval { glob_constant->method() }';
+}
+
+}
+
+{
+  my $free2;
+  local $SIG{__WARN__} = sub { ++$free2 if shift =~ /Attempt to free/ };
+  my $handleref;
+  my $proxy = \$handleref;
+  open $$proxy, "TEST";
+  delete $::{*$handleref{NAME}};  # delete *main::_GEN_xxx
+  undef $handleref;
+  is $free2, undef,
+    'no double free because of bad rv2gv/newGVgen refcounting';
+}
+
 # Look away, please.
 # This violates perl's internal structures by fiddling with stashes in a
 # way that should never happen, but perl should not start trying to free
@@ -950,6 +1112,80 @@ package lrcg {
 # the harness to consider this test script to have failed.)
 $::{aoeuaoeuaoeaoeu} = __PACKAGE__; # cow
 () = *{"aoeuaoeuaoeaoeu"};
+
+$x = *_119051;
+$y = \&$x;
+undef $x;
+eval { &$y };
+pass "No crash due to CvGV(vivified stub) pointing to flattened glob copy";
+# Not really supported, but this should not crash either:
+$x = *_119051again;
+delete $::{_119051again};
+$::{_119051again} = $x;    # now we have a fake glob under the right name
+$y = \&$x;                 # so when this tries to look up the right GV for
+undef $::{_119051again};   # CvGV, it still gets a fake one
+eval { $y->() };
+pass "No crash due to CvGV pointing to glob copy in the stash";
+
+# Aliasing should disable no-common-vars optimisation.
+{
+    *x = *y;
+    $x = 3;
+    ($x, my $z) = (1, $y);
+    is $z, 3, 'list assignment after aliasing [perl #89646]';
+}
+
+# RT #125840: make sure *x = $x doesn't do bad things by freeing $x before
+# it's assigned.
+
+{
+    $a_125840 = 1;
+    $b_125840 = 2;
+    $a_125840 = *b_125840;
+    *a_125840 = $a_125840;
+    is($a_125840, 2, 'RT #125840: *a = $a');
+
+    $c_125840 = 1;
+    $d_125840 = 2;
+    *d_125840 = $d_125840 = *c_125840;
+    is($d_125840, 1, 'RT #125840: *d=$d=*c');
+    $c_125840 = $d_125840;
+    is($c_125840, 1, 'RT #125840: $c=$d');
+}
+
+# [perl #128597] Crash when gp_free calls ckWARN_d
+# I am not sure this test even belongs in this file, as the crash was the
+# result of various features interacting.  But a call to ckWARN_d from
+# gv.c:gp_free triggered the crash, so this seems as good a place as any.
+# ‘die’ (or any abnormal scope exit) can cause the current cop to be freed,
+# if the subroutine containing the ‘die’ gets freed as a result.  That
+# causes PL_curcop to be set to NULL.  If a writable handle gets freed
+# while PL_curcop is NULL, then gp_free will call ckWARN_d while that con-
+# dition still holds, so ckWARN_d needs to know about PL_curcop possibly
+# being NULL.
+SKIP: {
+    skip_if_miniperl("No PerlIO::scalar on miniperl", 1);
+    runperl(prog => 'open my $fh, q|>|, \$buf;'
+                   .'my $sub = eval q|sub {exit 0}|; $sub->()');
+    is ($? & 127, 0,"[perl #128597] No crash when gp_free calls ckWARN_d");
+}
+
+# test gv_try_downgrade()
+# If a GV can be stored in a stash in a compact, non-GV form, then
+# whenever ops are freed which reference the GV, an attempt is made to
+# downgrade the GV to something simpler. Made sure this happens.
+
+package GV_DOWNGRADE {
+    use constant FOO => 1;
+
+    ::like "$GV_DOWNGRADE::{FOO}", qr/SCALAR/, "gv_downgrade: pre";
+    eval q{
+        my $x = \&FOO; # upgrades compact to full GV
+        ::like "$GV_DOWNGRADE::{FOO}", qr/^\*/, "gv_downgrade: full";
+    };
+    # after the eval's ops are freed, the GV should get downgraded again
+    ::like "$GV_DOWNGRADE::{FOO}", qr/SCALAR/, "gv_downgrade: post";
+}
 
 __END__
 Perl

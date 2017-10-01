@@ -1,9 +1,9 @@
 #!./perl
 
 BEGIN {
-    chdir 't';
-    @INC = '../lib';
+    chdir 't' if -d 't';
     require './test.pl';
+    set_up_inc('../lib');
 }
 
 plan tests => 7;
@@ -13,8 +13,9 @@ use open qw( :utf8 :std );
 
 # [perl #19566]: sv_gets writes directly to its argument via
 # TARG. Test that we respect SvREADONLY.
-eval { for (\2) { $_ = <Fʜ> } };
-like($@, 'Modification of a read-only value attempted', '[perl #19566]');
+use constant roref=>\2;
+eval { for (roref) { $_ = <Fʜ> } };
+like($@, qr/Modification of a read-only value attempted/, '[perl #19566]');
 
 # [perl #21628]
 {
@@ -26,10 +27,13 @@ like($@, 'Modification of a read-only value attempted', '[perl #19566]');
 }
 
 use strict;
-
-open ᕝ, '.' and sysread ᕝ, $_, 1;
-my $err = $! + 0;
-close ᕝ;
+my $err;
+{
+  no warnings qw(deprecated);
+  open ᕝ, '.' and sysread ᕝ, $_, 1;
+  $err = $! + 0;
+  close ᕝ;
+}
 
 SKIP: {
   skip "you can read directories as plain files", 2 unless( $err );

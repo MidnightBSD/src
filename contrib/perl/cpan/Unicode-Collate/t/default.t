@@ -1,8 +1,11 @@
 
 BEGIN {
-    unless ("A" eq pack('U', 0x41)) {
-	print "1..0 # Unicode::Collate " .
-	    "cannot stringify a Unicode code point\n";
+    unless ('A' eq pack('U', 0x41)) {
+	print "1..0 # Unicode::Collate cannot pack a Unicode code point\n";
+	exit 0;
+    }
+    unless (0x41 == unpack('U', 'A')) {
+	print "1..0 # Unicode::Collate cannot get a Unicode code point\n";
 	exit 0;
     }
     if ($ENV{PERL_CORE}) {
@@ -162,10 +165,10 @@ my $Tailored = Unicode::Collate->new(
 );
 
 # Ka vs Kje
-ok($Collator->gt("\x{45C}", "\x{43A}"));
-ok($Collator->gt("\x{40C}", "\x{41A}"));
-ok($Tailored->gt("\x{45C}", "\x{43A}"));
-ok($Tailored->gt("\x{40C}", "\x{41A}"));
+ok($Collator->eq("\x{45C}", "\x{43A}"));
+ok($Collator->eq("\x{40C}", "\x{41A}"));
+ok($Tailored->eq("\x{45C}", "\x{43A}"));
+ok($Tailored->eq("\x{40C}", "\x{41A}"));
 
 # 60
 

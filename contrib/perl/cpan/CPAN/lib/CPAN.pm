@@ -2,7 +2,7 @@
 # vim: ts=4 sts=4 sw=4:
 use strict;
 package CPAN;
-$CPAN::VERSION = '2.00';
+$CPAN::VERSION = '2.18';
 $CPAN::VERSION =~ s/_//;
 
 # we need to run chdir all over and we would get at wrong libraries
@@ -14,6 +14,7 @@ BEGIN {
             $inc = File::Spec->rel2abs($inc) unless ref $inc;
         }
     }
+    $SIG{WINCH} = 'IGNORE' if exists $SIG{WINCH};
 }
 use CPAN::Author;
 use CPAN::HandleConfig;
@@ -318,7 +319,6 @@ Enter 'h' for help.
 
 },
                                  $CPAN::VERSION,
-                                 $rl_avail
                                 )
     }
     my($continuation) = "";
@@ -461,7 +461,7 @@ Enter 'h' for help.
         }
         for my $class (qw(Module Distribution)) {
             # again unsafe meta access?
-            for my $dm (keys %{$CPAN::META->{readwrite}{"CPAN::$class"}}) {
+            for my $dm (sort keys %{$CPAN::META->{readwrite}{"CPAN::$class"}}) {
                 next unless $CPAN::META->{readwrite}{"CPAN::$class"}{$dm}{incommandcolor};
                 CPAN->debug("BUG: $class '$dm' was in command state, resetting");
                 delete $CPAN::META->{readwrite}{"CPAN::$class"}{$dm}{incommandcolor};
@@ -709,13 +709,14 @@ sub checklock {
         my $otherpid  = <$fh>;
         my $otherhost = <$fh>;
         $fh->close;
-        if (defined $otherpid && $otherpid) {
+        if (defined $otherpid && length $otherpid) {
             chomp $otherpid;
         }
-        if (defined $otherhost && $otherhost) {
+        if (defined $otherhost && length $otherhost) {
             chomp $otherhost;
         }
         my $thishost  = hostname();
+        my $ask_if_degraded_wanted = 0;
         if (defined $otherhost && defined $thishost &&
             $otherhost ne '' && $thishost ne '' &&
             $otherhost ne $thishost) {
@@ -733,31 +734,7 @@ There seems to be running another CPAN process (pid $otherpid).  Contacting...
 });
             if (kill 0, $otherpid or $!{EPERM}) {
                 $CPAN::Frontend->mywarn(qq{Other job is running.\n});
-                my($ans) =
-                    CPAN::Shell::colorable_makemaker_prompt
-                        (qq{Shall I try to run in downgraded }.
-                        qq{mode? (Y/n)},"y");
-                if ($ans =~ /^y/i) {
-                    $CPAN::Frontend->mywarn("Running in downgraded mode (experimental).
-Please report if something unexpected happens\n");
-                    $RUN_DEGRADED = 1;
-                    for ($CPAN::Config) {
-                        # XXX
-                        # $_->{build_dir_reuse} = 0; # 2006-11-17 akoenig Why was that?
-                        $_->{commandnumber_in_prompt} = 0; # visibility
-                        $_->{histfile}       = "";  # who should win otherwise?
-                        $_->{cache_metadata} = 0;   # better would be a lock?
-                        $_->{use_sqlite}     = 0;   # better would be a write lock!
-                        $_->{auto_commit}    = 0;   # we are violent, do not persist
-                        $_->{test_report}    = 0;   # Oliver Paukstadt had sent wrong reports in degraded mode
-                    }
-                } else {
-                    $CPAN::Frontend->mydie("
-You may want to kill the other job and delete the lockfile. On UNIX try:
-    kill $otherpid
-    rm $lockfile
-");
-                }
+                $ask_if_degraded_wanted = 1;
             } elsif (-w $lockfile) {
                 my($ans) =
                     CPAN::Shell::colorable_makemaker_prompt
@@ -774,9 +751,45 @@ You may want to kill the other job and delete the lockfile. On UNIX try:
                     qq{  and then rerun us.\n}
                 );
             }
+        } elsif ($^O eq "MSWin32") {
+            $CPAN::Frontend->mywarn(
+                                    qq{
+There seems to be running another CPAN process according to '$lockfile'.
+});
+            $ask_if_degraded_wanted = 1;
         } else {
             $CPAN::Frontend->mydie(sprintf("CPAN.pm panic: Found invalid lockfile ".
                                            "'$lockfile', please remove. Cannot proceed.\n"));
+        }
+        if ($ask_if_degraded_wanted) {
+            my($ans) =
+                CPAN::Shell::colorable_makemaker_prompt
+                    (qq{Shall I try to run in downgraded }.
+                     qq{mode? (Y/n)},"y");
+            if ($ans =~ /^y/i) {
+                $CPAN::Frontend->mywarn("Running in downgraded mode (experimental).
+Please report if something unexpected happens\n");
+                $RUN_DEGRADED = 1;
+                for ($CPAN::Config) {
+                    # XXX
+                    # $_->{build_dir_reuse} = 0; # 2006-11-17 akoenig Why was that?
+                    $_->{commandnumber_in_prompt} = 0; # visibility
+                    $_->{histfile}       = "";  # who should win otherwise?
+                    $_->{cache_metadata} = 0;   # better would be a lock?
+                    $_->{use_sqlite}     = 0;   # better would be a write lock!
+                    $_->{auto_commit}    = 0;   # we are violent, do not persist
+                    $_->{test_report}    = 0;   # Oliver Paukstadt had sent wrong reports in degraded mode
+                }
+            } else {
+                my $msg = "You may want to kill the other job and delete the lockfile.";
+                if (defined $otherpid) {
+                    $msg .= " Something like:
+    kill $otherpid
+    rm $lockfile
+";
+                }
+                $CPAN::Frontend->mydie("\n$msg");
+            }
         }
     }
     my $dotcpan = $CPAN::Config->{cpan_home};
@@ -886,7 +899,7 @@ this variable in either a CPAN/MyConfig.pm or a CPAN/Config.pm in your
 #       be politely squashed.  Any bug that causes every eval {} to have to be
 #       modified should be not so politely squashed.
 #
-#       Those are my current opinions.  It is also my optinion that polite
+#       Those are my current opinions.  It is also my opinion that polite
 #       arguments degenerate to personal arguments far too frequently, and that
 #       when they do, it's because both people wanted it to, or at least didn't
 #       sufficiently want it not to.
@@ -918,6 +931,9 @@ sub getcwd {Cwd::getcwd();}
 
 #-> sub CPAN::fastcwd ;
 sub fastcwd {Cwd::fastcwd();}
+
+#-> sub CPAN::getdcwd ;
+sub getdcwd {Cwd::getdcwd();}
 
 #-> sub CPAN::backtickcwd ;
 sub backtickcwd {my $cwd = `cwd`; chomp $cwd; $cwd}
@@ -1020,6 +1036,18 @@ sub has_usable {
                             },
                            ],
 
+               'CPAN::Meta::Requirements' => [
+                            sub {
+                                require CPAN::Meta::Requirements;
+                                unless (CPAN::Version->vge(CPAN::Meta::Requirements->VERSION, 2.120920)) {
+                                    for ("Will not use CPAN::Meta::Requirements, need version 2.120920\n") {
+                                        $CPAN::Frontend->mywarn($_);
+                                        die $_;
+                                    }
+                                }
+                            },
+                           ],
+
                LWP => [ # we frequently had "Can't locate object
                         # method "new" via package "LWP::UserAgent" at
                         # (eval 69) line 2006
@@ -1036,6 +1064,16 @@ sub has_usable {
                        },
                       ],
                'Net::FTP' => [
+                            sub {
+                                my $var = $CPAN::Config->{ftp_proxy} || $ENV{ftp_proxy};
+                                if ($var and $var =~ /^http:/i) {
+                                    # rt #110833
+                                    for ("Net::FTP cannot handle http proxy") {
+                                        $CPAN::Frontend->mywarn($_);
+                                        die $_;
+                                    }
+                                }
+                            },
                             sub {require Net::FTP},
                             sub {require Net::Config},
                            ],
@@ -1090,6 +1128,8 @@ sub has_usable {
                                ]
               };
     if ($usable->{$mod}) {
+        local @INC = @INC;
+        pop @INC if $INC[-1] eq '.';
         for my $c (0..$#{$usable->{$mod}}) {
             my $code = $usable->{$mod}[$c];
             my $ret = eval { &$code() };
@@ -1103,6 +1143,20 @@ sub has_usable {
     return $HAS_USABLE->{$mod} = 1;
 }
 
+sub frontend {
+    shift;
+    $CPAN::Frontend = shift if @_;
+    $CPAN::Frontend;
+}
+
+sub use_inst {
+    my ($self, $module) = @_;
+
+    unless ($self->has_inst($module)) {
+        $self->frontend->mydie("$module not installed, cannot continue");
+    }
+}
+
 #-> sub CPAN::has_inst
 sub has_inst {
     my($self,$mod,$message) = @_;
@@ -1111,13 +1165,15 @@ sub has_inst {
     my %dont = map { $_ => 1 } keys %{$CPAN::META->{dontload_hash}||{}},
         keys %{$CPAN::Config->{dontload_hash}||{}},
             @{$CPAN::Config->{dontload_list}||[]};
-    if (defined $message && $message eq "no"  # afair only used by Nox
+    if (defined $message && $message eq "no"  # as far as I remember only used by Nox
         ||
         $dont{$mod}
        ) {
       $CPAN::META->{dontload_hash}{$mod}||=1; # unsafe meta access, ok
       return 0;
     }
+    local @INC = @INC;
+    pop @INC if $INC[-1] eq '.';
     my $file = $mod;
     my $obj;
     $file =~ s|::|/|g;
@@ -1125,7 +1181,7 @@ sub has_inst {
     if ($INC{$file}) {
         # checking %INC is wrong, because $INC{LWP} may be true
         # although $INC{"URI/URL.pm"} may have failed. But as
-        # I really want to say "bla loaded OK", I have to somehow
+        # I really want to say "blah loaded OK", I have to somehow
         # cache results.
         ### warn "$file in %INC"; #debug
         return 1;
@@ -1324,8 +1380,8 @@ sub _list_sorted_descending_is_tested {
                     keys %{$self->{is_tested}};
     if ($foul) {
         $CPAN::Frontend->mywarn("Lost build_dir detected ($foul), giving up all cached test results of currently running session.\n");
-        for my $dbd (keys %{$self->{is_tested}}) { # distro-build-dir
-        SEARCH: for my $d ($CPAN::META->all_objects("CPAN::Distribution")) {
+        for my $dbd (sort keys %{$self->{is_tested}}) { # distro-build-dir
+        SEARCH: for my $d (sort { $a->id cmp $b->id } $CPAN::META->all_objects("CPAN::Distribution")) {
                 if ($d->{build_dir} && $d->{build_dir} eq $dbd) {
                     $CPAN::Frontend->mywarn(sprintf "Flushing cache for %s\n", $d->pretty_id);
                     $d->fforce("");
@@ -1616,7 +1672,7 @@ in html or plain text format.
 =item C<ls> globbing_expression
 
 The first form lists all distribution files in and below an author's
-CPAN directory as stored in the CHECKUMS files distributed on
+CPAN directory as stored in the CHECKSUMS files distributed on
 CPAN. The listing recurses into subdirectories.
 
 The second form limits or expands the output with shell
@@ -1746,7 +1802,7 @@ not yet been installed. See also C<is_tested>.
 
 =item is_tested
 
-List all buid directories of distributions that have been tested
+List all build directories of distributions that have been tested
 successfully but have not yet been installed. See also
 C<install_tested>.
 
@@ -1865,7 +1921,7 @@ separated):
 
 Modules know their associated Distribution objects. They always refer
 to the most recent official release. Developers may mark their releases
-as unstable development versions (by inserting an underbar into the
+as unstable development versions (by inserting an underscore into the
 module version number which will also be reflected in the distribution
 name when you run 'make dist'), so the really hottest and newest
 distribution is not always the default.  If a module Foo circulates
@@ -1922,6 +1978,43 @@ The usual shell redirection symbols C< | > and C<< > >> are recognized
 by the cpan shell B<only when surrounded by whitespace>. So piping to
 pager or redirecting output into a file works somewhat as in a normal
 shell, with the stipulation that you must type extra spaces.
+
+=head2 Plugin support ***EXPERIMENTAL***
+
+Plugins are objects that implement any of currently eight methods:
+
+  pre_get
+  post_get
+  pre_make
+  post_make
+  pre_test
+  post_test
+  pre_install
+  post_install
+
+The C<plugin_list> configuration parameter holds a list of strings of
+the form
+
+  Modulename=arg0,arg1,arg2,arg3,...
+
+eg:
+
+  CPAN::Plugin::Flurb=dir,/opt/pkgs/flurb/raw,verbose,1
+
+At run time, each listed plugin is instantiated as a singleton object
+by running the equivalent of this pseudo code:
+
+  my $plugin = <string representation from config>;
+  <generate Modulename and arguments from $plugin>;
+  my $p = $instance{$plugin} ||= Modulename->new($arg0,$arg1,...);
+
+The generated singletons are kept around from instantiation until the
+end of the shell session. <plugin_list> can be reconfigured at any
+time at run time. While the cpan shell is running, it checks all
+activated plugins at each of the 8 reference points listed above and
+runs the respective method if it is implemented for that object. The
+method is called with the active CPAN::Distribution object passed in
+as an argument.
 
 =head1 CONFIGURATION
 
@@ -2028,6 +2121,9 @@ currently defined:
   bzip2              path to external prg
   cache_metadata     use serializer to cache metadata
   check_sigs         if signatures should be verified
+  cleanup_after_install
+                     remove build directory immediately after a
+                     successful install
   colorize_debug     Term::ANSIColor attributes for debugging output
   colorize_output    boolean if Term::ANSIColor should colorize output
   colorize_print     Term::ANSIColor attributes for normal output
@@ -2091,6 +2187,8 @@ currently defined:
   patch              path to external prg
   patches_dir        local directory containing patch files
   perl5lib_verbosity verbosity level for PERL5LIB additions
+  plugin_list        list of active hooks (see Plugin support above
+                     and the CPAN::Plugin module)
   prefer_external_tar
                      per default all untar operations are done with
                      Archive::Tar; by setting this variable to true
@@ -2110,12 +2208,14 @@ currently defined:
   proxy_user         username for accessing an authenticating proxy
   proxy_pass         password for accessing an authenticating proxy
   randomize_urllist  add some randomness to the sequence of the urllist
+  recommends_policy  whether recommended prerequisites should be included
   scan_cache         controls scanning of cache ('atstart', 'atexit' or 'never')
   shell              your favorite shell
   show_unparsable_versions
                      boolean if r command tells which modules are versionless
   show_upload_date   boolean if commands should try to determine upload date
   show_zero_versions boolean if r command tells for which modules $version==0
+  suggests_policy    whether suggested prerequisites should be included
   tar                location of external program tar
   tar_verbosity      verbosity level for the tar command
   term_is_latin      deprecated: if true Unicode is translated to ISO-8859-1
@@ -2127,6 +2227,7 @@ currently defined:
                      CPAN::Reporter history)
   unzip              location of external program unzip
   urllist            arrayref to nearby CPAN sites (or equivalent locations)
+  use_prompt_default set PERL_MM_USE_DEFAULT for configure/make/test/install
   use_sqlite         use CPAN::SQLite for metadata storage (fast and lean)
   username           your username if you CPAN server wants one
   version_timeout    stops version parsing after this many seconds.
@@ -2199,6 +2300,10 @@ Calls Cwd::getcwd
 
 Calls Cwd::fastcwd
 
+=item getdcwd
+
+Calls Cwd::getdcwd
+
 =item backtickcwd
 
 Calls the external command cwd.
@@ -2269,8 +2374,7 @@ C<ask/no>, CPAN.pm asks the user and sets the default accordingly.
 
 =head2 Configuration for individual distributions (I<Distroprefs>)
 
-(B<Note:> This feature has been introduced in CPAN.pm 1.8854 and is
-still considered beta quality)
+(B<Note:> This feature has been introduced in CPAN.pm 1.8854)
 
 Distributions on CPAN usually behave according to what we call the
 CPAN mantra. Or since the advent of Module::Build we should talk about
@@ -3370,6 +3474,11 @@ loaded:
 
 See the source for details.
 
+=item use_inst($module)
+
+Similary to L<has_inst()> tries to load optional library but also dies if
+library is not available
+
 =item has_usable($module)
 
 Returns true if the module is installed and in a usable state. Only
@@ -3381,6 +3490,12 @@ source for details.
 The constructor for all the singletons used to represent modules,
 distributions, authors, and bundles. If the object already exists, this
 method returns the object; otherwise, it calls the constructor.
+
+=item frontend()
+
+=item frontend($new_frontend)
+
+Getter/setter for frontend object. Method just allows to subclass CPAN.pm.
 
 =back
 
@@ -3755,7 +3870,7 @@ which to try in which order.
 
 Henk P. Penning maintains a site that collects data about CPAN sites:
 
-  http://www.cs.uu.nl/people/henkp/mirmon/cpan.html
+  http://mirrors.cpan.org/
 
 Also, feel free to play with experimental features. Run
 
@@ -3791,8 +3906,9 @@ Speaking of the build directory. Do I have to clean it up myself?
 You have the choice to set the config variable C<scan_cache> to
 C<never>. Then you must clean it up yourself. The other possible
 values, C<atstart> and C<atexit> clean up the build directory when you
-start or exit the CPAN shell, respectively. If you never start up the
-CPAN shell, you probably also have to clean up the build directory
+start (or more precisely, after the first extraction into the build
+directory) or exit the CPAN shell, respectively. If you never start up
+the CPAN shell, you probably also have to clean up the build directory
 yourself.
 
 =back

@@ -1,22 +1,21 @@
 #
-# $Id: Encode.pm,v 2.49 2013/03/05 03:13:47 dankogai Exp dankogai $
+# $Id: Encode.pm,v 2.88 2016/11/29 23:30:30 dankogai Exp dankogai $
 #
 package Encode;
 use strict;
 use warnings;
-our $VERSION = sprintf "%d.%02d", q$Revision: 2.49 $ =~ /(\d+)/g;
+our $VERSION = sprintf "%d.%02d", q$Revision: 2.88 $ =~ /(\d+)/g;
 use constant DEBUG => !!$ENV{PERL_ENCODE_DEBUG};
 use XSLoader ();
 XSLoader::load( __PACKAGE__, $VERSION );
 
-require Exporter;
-use base qw/Exporter/;
+use Exporter 5.57 'import';
 
 # Public, encouraged API is exported by default
 
 our @EXPORT = qw(
   decode  decode_utf8  encode  encode_utf8 str2bytes bytes2str
-  encodings  find_encoding clone_encoding
+  encodings  find_encoding find_mime_encoding clone_encoding
 );
 our @FB_FLAGS = qw(
   DIE_ON_ERR WARN_ON_ERR RETURN_ON_ERR LEAVE_SRC
@@ -53,10 +52,12 @@ our %ExtModule;
 require Encode::Config;
 #  See
 #  https://bugzilla.redhat.com/show_bug.cgi?id=435505#c2
-#  to find why sig handers inside eval{} are disabled.
+#  to find why sig handlers inside eval{} are disabled.
 eval {
     local $SIG{__DIE__};
     local $SIG{__WARN__};
+    local @INC = @INC;
+    pop @INC if $INC[-1] eq '.';
     require Encode::ConfigLocal;
 };
 
@@ -101,6 +102,8 @@ sub define_encoding {
 sub getEncoding {
     my ( $class, $name, $skip_external ) = @_;
 
+    defined($name) or return;
+
     $name =~ s/\s+//g; # https://rt.cpan.org/Ticket/Display.html?id=65796
 
     ref($name) && $name->can('renew') and return $name;
@@ -127,6 +130,14 @@ sub getEncoding {
 sub find_encoding($;$) {
     my ( $name, $skip_external ) = @_;
     return __PACKAGE__->getEncoding( $name, $skip_external );
+}
+
+sub find_mime_encoding($;$) {
+    my ( $mime_name, $skip_external ) = @_;
+    eval { require Encode::MIME::Name; };
+    $@ and return;
+    my $name = Encode::MIME::Name::get_encode_name( $mime_name );
+    return find_encoding( $name, $skip_external );
 }
 
 sub resolve_alias($) {
@@ -157,7 +168,20 @@ sub encode($$;$) {
         require Carp;
         Carp::croak("Unknown encoding '$name'");
     }
-    my $octets = $enc->encode( $string, $check );
+    # For Unicode, warnings need to be caught and re-issued at this level
+    # so that callers can disable utf8 warnings lexically.
+    my $octets;
+    if ( ref($enc) eq 'Encode::Unicode' ) {
+        my $warn = '';
+        {
+            local $SIG{__WARN__} = sub { $warn = shift };
+            $octets = $enc->encode( $string, $check );
+        }
+        warnings::warnif('utf8', $warn) if length $warn;
+    }
+    else {
+        $octets = $enc->encode( $string, $check );
+    }
     $_[1] = $string if $check and !ref $check and !( $check & LEAVE_SRC() );
     return $octets;
 }
@@ -173,7 +197,20 @@ sub decode($$;$) {
         require Carp;
         Carp::croak("Unknown encoding '$name'");
     }
-    my $string = $enc->decode( $octets, $check );
+    # For Unicode, warnings need to be caught and re-issued at this level
+    # so that callers can disable utf8 warnings lexically.
+    my $string;
+    if ( ref($enc) eq 'Encode::Unicode' ) {
+        my $warn = '';
+        {
+            local $SIG{__WARN__} = sub { $warn = shift };
+            $string = $enc->decode( $octets, $check );
+        }
+        warnings::warnif('utf8', $warn) if length $warn;
+    }
+    else {
+        $string = $enc->decode( $octets, $check );
+    }
     $_[1] = $octets if $check and !ref $check and !( $check & LEAVE_SRC() );
     return $string;
 }
@@ -193,14 +230,41 @@ sub from_to($$$;$) {
         require Carp;
         Carp::croak("Unknown encoding '$to'");
     }
-    my $uni = $f->decode($string);
-    $_[0] = $string = $t->encode( $uni, $check );
+
+    # For Unicode, warnings need to be caught and re-issued at this level
+    # so that callers can disable utf8 warnings lexically.
+    my $uni;
+    if ( ref($f) eq 'Encode::Unicode' ) {
+        my $warn = '';
+        {
+            local $SIG{__WARN__} = sub { $warn = shift };
+            $uni = $f->decode($string);
+        }
+        warnings::warnif('utf8', $warn) if length $warn;
+    }
+    else {
+        $uni = $f->decode($string);
+    }
+
+    if ( ref($t) eq 'Encode::Unicode' ) {
+        my $warn = '';
+        {
+            local $SIG{__WARN__} = sub { $warn = shift };
+            $_[0] = $string = $t->encode( $uni, $check );
+        }
+        warnings::warnif('utf8', $warn) if length $warn;
+    }
+    else {
+        $_[0] = $string = $t->encode( $uni, $check );
+    }
+
     return undef if ( $check && length($uni) );
     return defined( $_[0] ) ? length($string) : undef;
 }
 
 sub encode_utf8($) {
     my ($str) = @_;
+    return undef unless defined $str;
     utf8::encode($str);
     return $str;
 }
@@ -209,9 +273,8 @@ my $utf8enc;
 
 sub decode_utf8($;$) {
     my ( $octets, $check ) = @_;
-    return $octets if is_utf8($octets);
     return undef unless defined $octets;
-    $octets .= '' if ref $octets;
+    $octets .= '';
     $check   ||= 0;
     $utf8enc ||= find_encoding('utf8');
     my $string = $utf8enc->decode( $octets, $check );
@@ -287,7 +350,11 @@ sub predefine_encodings {
         $Encode::Encoding{Unicode} =
           bless { Name => "Internal" } => "Encode::Internal";
     }
-
+    {
+        # https://rt.cpan.org/Public/Bug/Display.html?id=103253
+        package Encode::XS;
+        push @Encode::XS::ISA, 'Encode::Encoding';
+    }
     {
 
         # was in Encode::utf8
@@ -440,6 +507,10 @@ I<ENCODING> and returns a sequence of octets.  I<ENCODING> can be either a
 canonical name or an alias.  For encoding names and aliases, see
 L</"Defining Aliases">.  For CHECK, see L</"Handling Malformed Data">.
 
+B<CAVEAT>: the input scalar I<STRING> might be modified in-place depending
+on what is set in CHECK. See L</LEAVE_SRC> if you want your inputs to be
+left unchanged.
+
 For example, to convert a string from Perl's internal format into
 ISO-8859-1, also known as Latin1:
 
@@ -459,10 +530,14 @@ If the $string is C<undef>, then C<undef> is returned.
 
 This function returns the string that results from decoding the scalar
 value I<OCTETS>, assumed to be a sequence of octets in I<ENCODING>, into
-Perl's internal form.  The returns the resulting string.  As with encode(),
+Perl's internal form.  As with encode(),
 I<ENCODING> can be either a canonical name or an alias. For encoding names
 and aliases, see L</"Defining Aliases">; for I<CHECK>, see L</"Handling
 Malformed Data">.
+
+B<CAVEAT>: the input scalar I<OCTETS> might be modified in-place depending
+on what is set in CHECK. See L</LEAVE_SRC> if you want your inputs to be
+left unchanged.
 
 For example, to convert ISO-8859-1 data into a string in Perl's
 internal format:
@@ -471,8 +546,7 @@ internal format:
 
 B<CAVEAT>: When you run C<$string = decode("utf8", $octets)>, then $string
 I<might not be equal to> $octets.  Though both contain the same data, the
-UTF8 flag for $string is on unless $octets consists entirely of ASCII data
-on ASCII machines or EBCDIC on EBCDIC machines.  See L</"The UTF8 flag">
+UTF8 flag for $string is on.  See L</"The UTF8 flag">
 below.
 
 If the $string is C<undef>, then C<undef> is returned.
@@ -513,6 +587,20 @@ name of the encoding object.
 
 See L<Encode::Encoding> for details.
 
+=head3 find_mime_encoding
+
+  [$obj =] find_mime_encoding(MIME_ENCODING)
+
+Returns the I<encoding object> corresponding to I<MIME_ENCODING>.  Acts
+same as C<find_encoding()> but C<mime_name()> of returned object must
+match to I<MIME_ENCODING>.  So as opposite of C<find_encoding()>
+canonical names and aliases are not used when searching for object.
+
+    find_mime_encoding("utf8"); # returns undef because "utf8" is not valid I<MIME_ENCODING>
+    find_mime_encoding("utf-8"); # returns encode object "utf-8-strict"
+    find_mime_encoding("UTF-8"); # same as "utf-8" because I<MIME_ENCODING> is case insensitive
+    find_mime_encoding("utf-8-strict"); returns undef because "utf-8-strict" is not valid I<MIME_ENCODING>
+
 =head3 from_to
 
   [$length =] from_to($octets, FROM_ENC, TO_ENC [, CHECK])
@@ -550,7 +638,7 @@ Also note that:
 
   from_to($octets, $from, $to, $check);
 
-is equivalent t:o
+is equivalent to:
 
   $octets = encode($to, decode($from, $octets), $check);
 
@@ -579,6 +667,10 @@ from UTF-8 into a sequence of logical characters.
 Because not all sequences of octets are valid UTF-8,
 it is quite possible for this function to fail.
 For CHECK, see L</"Handling Malformed Data">.
+
+B<CAVEAT>: the input I<$octets> might be modified in-place depending on
+what is set in CHECK. See L</LEAVE_SRC> if you want your inputs to be
+left unchanged.
 
 =head2 Listing available encodings
 
@@ -677,7 +769,7 @@ In the first version above, you let the appropriate encoding layer
 handle the conversion.  In the second, you explicitly translate
 from one encoding to the other.
 
-Unfortunately, it may be that encodings are C<PerlIO>-savvy.  You can check
+Unfortunately, it may be that encodings are not C<PerlIO>-savvy.  You can check
 to see whether your encoding is supported by C<PerlIO> by invoking the
 C<perlio_ok> method on it:
 
@@ -804,12 +896,23 @@ If you're not interested in this, then bitwise-OR it with the bitmask.
 =head2 coderef for CHECK
 
 As of C<Encode> 2.12, C<CHECK> can also be a code reference which takes the
-ordinal value of the unmapped character as an argument and returns a string
-that represents the fallback character.  For instance:
+ordinal value of the unmapped character as an argument and returns
+octets that represent the fallback character.  For instance:
 
   $ascii = encode("ascii", $utf8, sub{ sprintf "<U+%04X>", shift });
 
 Acts like C<FB_PERLQQ> but U+I<XXXX> is used instead of C<\x{I<XXXX>}>.
+
+Even the fallback for C<decode> must return octets, which are
+then decoded with the character encoding that C<decode> accepts. So for
+example if you wish to decode octets as UTF-8, and use ISO-8859-15 as
+a fallback for bytes that are not valid UTF-8, you could write
+
+    $str = decode 'UTF-8', $octets, sub {
+        my $tmp = chr shift;
+        from_to $tmp, 'ISO-8859-15', 'UTF-8';
+        return $tmp;
+    };
 
 =head1 Defining Encodings
 
@@ -1021,7 +1124,7 @@ who submitted code to the project.
 
 =head1 COPYRIGHT
 
-Copyright 2002-2012 Dan Kogai I<< <dankogai@cpan.org> >>.
+Copyright 2002-2014 Dan Kogai I<< <dankogai@cpan.org> >>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

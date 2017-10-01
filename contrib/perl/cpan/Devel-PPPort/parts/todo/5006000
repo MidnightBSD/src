@@ -1,5 +1,8 @@
 5.006000
+DO_UTF8                        # U
 PERL_SYS_INIT3                 # U
+PL_check                       # E
+POPul                          # E
 SvIOK_UV                       # U
 SvIOK_notUV                    # U
 SvIOK_only_UV                  # U
@@ -16,9 +19,11 @@ SvUOK                          # U
 SvUTF8                         # U
 SvUTF8_off                     # U
 SvUTF8_on                      # U
+UTF8SKIP                       # U
 av_delete                      # U
 av_exists                      # U
 call_atexit                    # E
+caller_cx                      # U
 cast_i32                       # U (cast_i32)
 cast_iv                        # U (cast_iv)
 cast_ulong                     # U
@@ -135,7 +140,6 @@ sv_utf8_decode                 # U
 sv_utf8_downgrade              # U
 sv_utf8_encode                 # U
 swash_init                     # U
-tmps_grow                      # U
 to_uni_lower_lc                # U
 to_uni_title_lc                # U
 to_uni_upper_lc                # U

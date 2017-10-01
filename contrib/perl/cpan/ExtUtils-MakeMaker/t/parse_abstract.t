@@ -13,16 +13,17 @@ sub test_abstract {
 
     local $Test::Builder::Level = $Test::Builder::Level + 1;
 
-    my ($fh,$file) = tempfile( DIR => 't', UNLINK => 1 );
-    print $fh $code;
-    close $fh;
-
-    # Hack up a minimal MakeMaker object.
-    my $mm = bless { DISTNAME => $package }, "MM";
-    my $have = $mm->parse_abstract($file);
-
-    my $ok = is( $have, $want, $name );
-
+    my $ok = 0;
+    for my $crlf (0, 1) {
+        my ($fh,$file) = tempfile( DIR => 't', UNLINK => 1 );
+        binmode $fh, $crlf ? ':crlf' : ':raw';
+        print $fh $code;
+        close $fh;
+        # Hack up a minimal MakeMaker object.
+        my $mm = bless { DISTNAME => $package }, "MM";
+        my $have = $mm->parse_abstract($file);
+        $ok += is( $have, $want, "$name :crlf=$crlf" ) ? 1 : 0;
+    }
     return $ok;
 }
 
@@ -69,4 +70,13 @@ test_abstract(<<END, "Foo", "the abstract", "more spaces");
 =pod
 
 Foo   -  the abstract
+END
+
+test_abstract(<<END, "Catalyst::Plugin::Authentication", "Infrastructure plugin for the Catalyst authentication framework.", "contains a line break");
+=pod
+
+=head1 NAME
+
+Catalyst::Plugin::Authentication - Infrastructure plugin for the Catalyst
+authentication framework.
 END

@@ -33,7 +33,7 @@ my %modules = (
     'Time::HiRes'=> q| ::can_ok( 'Time::HiRes' => 'usleep'  ) |,  # 5.7.3
 );
 
-plan tests => keys(%modules) * 3 + 8;
+plan tests => keys(%modules) * 3 + 10;
 
 # Try to load the module
 use_ok( 'XSLoader' );
@@ -95,4 +95,58 @@ SKIP: {
     eval 'package List::Util; XSLoader::load(__PACKAGE__, "version")';
     like $@, "/^Invalid version format/",
         'correct error msg for invalid versions';
+}
+
+SKIP: {
+  skip "Devel::Peek not available", 1
+    unless $extensions =~ /\bDevel::Peek\b/;
+
+  # XSLoader::load() assumes it's being called from a module, so
+  # pretend it is, first find where Devel/Peek.pm is
+  my $peek_file = "Devel/Peek.pm";
+  my $module_path;
+  for my $dir (@INC) {
+    if (-f "$dir/$peek_file") {
+      $module_path = "$dir/Not/Devel/Peek.pm";
+      last;
+    }
+  }
+
+  skip "Cannot find $peek_file", 1
+    unless $module_path;
+
+  # [perl #122455]
+  # die instead of falling back to DynaLoader
+  local *XSLoader::bootstrap_inherit = sub { die "Fallback to DynaLoader\n" };
+  ::ok( eval <<EOS, "test correct path searched for modules")
+package Not::Devel::Peek;
+#line 1 "$module_path"
+XSLoader::load("Devel::Peek");
+EOS
+    or ::diag $@;
+}
+
+SKIP: {
+  skip "File::Path not available", 1
+    unless eval { require File::Path };
+  my $name = "phooo$$";
+  File::Path::mkpath("$name/auto/Foo/Bar");
+  open my $fh,
+    ">$name/auto/Foo/Bar/Bar.$Config::Config{'dlext'}";
+  close $fh;
+  my $fell_back;
+  local *XSLoader::bootstrap_inherit = sub {
+    $fell_back++;
+    # Break out of the calling subs
+    goto the_test;
+  };
+  eval <<END;
+#line 1 $name
+package Foo::Bar;
+XSLoader::load("Foo::Bar");
+END
+ the_test:
+  ok $fell_back,
+    'XSLoader will not load relative paths based on (caller)[1]';
+  File::Path::rmtree($name);
 }

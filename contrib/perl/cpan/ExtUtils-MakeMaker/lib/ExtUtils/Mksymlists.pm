@@ -10,7 +10,8 @@ use Config;
 
 our @ISA = qw(Exporter);
 our @EXPORT = qw(&Mksymlists);
-our $VERSION = '6.66';
+our $VERSION = '7.24';
+$VERSION = eval $VERSION;
 
 sub Mksymlists {
     my(%spec) = @_;
@@ -86,7 +87,7 @@ sub _write_os2 {
     my $distname = $data->{DISTNAME} || $data->{NAME};
     $distname = "Distribution $distname";
     my $patchlevel = " pl$Config{perl_patchlevel}" || '';
-    my $comment = sprintf "Perl (v%s%s%s) module %s", 
+    my $comment = sprintf "Perl (v%s%s%s) module %s",
       $Config::Config{version}, $threaded, $patchlevel, $data->{NAME};
     chomp $comment;
     if ($data->{INSTALLDIRS} and $data->{INSTALLDIRS} eq 'perl') {
@@ -135,25 +136,30 @@ sub _write_win32 {
     open( my $def, ">", "$data->{FILE}.def" )
         or croak("Can't create $data->{FILE}.def: $!\n");
     # put library name in quotes (it could be a keyword, like 'Alias')
-    if ($Config::Config{'cc'} !~ /^gcc/i) {
+    if ($Config::Config{'cc'} !~ /\bgcc/i) {
         print $def "LIBRARY \"$data->{DLBASE}\"\n";
     }
     print $def "EXPORTS\n  ";
     my @syms;
     # Export public symbols both with and without underscores to
-    # ensure compatibility between DLLs from different compilers
+    # ensure compatibility between DLLs from Borland C and Visual C
     # NOTE: DynaLoader itself only uses the names without underscores,
     # so this is only to cover the case when the extension DLL may be
     # linked to directly from C. GSAR 97-07-10
-    if ($Config::Config{'cc'} =~ /^bcc/i) {
-        for (@{$data->{DL_VARS}}, @{$data->{FUNCLIST}}) {
-            push @syms, "_$_", "$_ = _$_";
+
+    #bcc dropped in 5.16, so dont create useless extra symbols for export table
+    unless($] >= 5.016) {
+        if ($Config::Config{'cc'} =~ /^bcc/i) {
+            push @syms, "_$_", "$_ = _$_"
+                for (@{$data->{DL_VARS}}, @{$data->{FUNCLIST}});
         }
-    }
-    else {
-        for (@{$data->{DL_VARS}}, @{$data->{FUNCLIST}}) {
-            push @syms, "$_", "_$_ = $_";
+        else {
+            push @syms, "$_", "_$_ = $_"
+                for (@{$data->{DL_VARS}}, @{$data->{FUNCLIST}});
         }
+    } else {
+        push @syms, "$_"
+            for (@{$data->{DL_VARS}}, @{$data->{FUNCLIST}});
     }
     print $def join("\n  ",@syms, "\n") if @syms;
     _print_imports($def, $data);
@@ -197,7 +203,7 @@ sub _write_vms {
         if ($isvax) { print $opt "UNIVERSAL=$safe\n" }
         else        { print $opt "SYMBOL_VECTOR=($safe=DATA)\n"; }
     }
-    
+
     close $opt;
 }
 

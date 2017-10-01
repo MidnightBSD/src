@@ -17,13 +17,12 @@ $| = 1;
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = ('../lib','.');
-    require './test.pl';
-    skip_all_if_miniperl("no dynamic loading on miniperl, no re");
+    require './test.pl'; require './charset_tools.pl';
+    set_up_inc('../lib');
 }
 
 
-plan tests => 519;  # Update this when adding/deleting tests.
+plan tests => 533;  # Update this when adding/deleting tests.
 
 run_tests() unless caller;
 
@@ -92,7 +91,8 @@ sub run_tests {
         ok 'goodfood' =~ $a,     "Reblessed qr // matches";
         is($a, '(?^:foo)', "Reblessed qr // stringifies");
         my $x = "\x{3fe}";
-        my $z = my $y = "\317\276";  # Byte representation of $x
+        my $z = my $y = byte_utf8a_to_utf8n("\317\276");  # Byte representation
+                                                          # of $x
         $a = qr /$x/;
         ok $x =~ $a, "UTF-8 interpolation in qr //";
         ok "a$a" =~ $x, "Stringified qr // preserves UTF-8";
@@ -341,8 +341,15 @@ sub run_tests {
             is("@ctl_n", "1 2 undef", 'Bug 56194');
             is("@plus", "1 2 undef", 'Bug 56194');
             is($str,
-               "\$1 = undef, \$2 = undef, \$3 = undef, \$4 = undef, \$5 = undef, \$^R = undef",
-               'Bug 56194');
+               "\$1 = undef, \$2 = undef, \$3 = undef, \$4 = undef, \$5 = undef, \$^R = 3",
+               'Bug 56194 ($^R tweaked by 121070)');
+       }
+       {
+            undef $^R;
+            "abcd"=~/(?<Char>.)(?&Char)(?{ 42 })/;
+            is("$^R", 42, 'Bug 121070 - use of (?&Char) should not clobber $^R');
+            "abcd"=~/(?<Char>.)(?&Char)(?{ 42 })(?{ 43 })/;
+            is("$^R", 43, 'related to 121070 - use of (?&Char) should not clobber $^R');
        }
     }
 
@@ -621,29 +628,22 @@ sub run_tests {
 	}
 
 	# and make sure things are freed at the right time
-
-        SKIP: {
-            if ($Config{mad}) {
-                skip "MAD doesn't free eval CVs", 3;
-	    }
-
+	{
+	    sub Foo99::DESTROY { $Foo99::d++ }
+	    $Foo99::d = 0;
+	    my $r1;
 	    {
-		sub Foo99::DESTROY { $Foo99::d++ }
-		$Foo99::d = 0;
-		my $r1;
-		{
-		    my $x = bless [1], 'Foo99';
-		    $r1 = eval 'qr/(??{$x->[0]})/';
-		}
-		my $r2 = eval 'qr/a$r1/';
-		my $x = 2;
-		ok(eval '"a1" =~ qr/^$r2$/', "match while in scope");
-		# make sure PL_reg_curpm isn't holding on to anything
-		"a" =~ /a(?{1})/;
-		is($Foo99::d, 0, "before scope exit");
+	        my $x = bless [1], 'Foo99';
+	        $r1 = eval 'qr/(??{$x->[0]})/';
 	    }
-	    ::is($Foo99::d, 1, "after scope exit");
+	    my $r2 = eval 'qr/a$r1/';
+	    my $x = 2;
+	    ok(eval '"a1" =~ qr/^$r2$/', "match while in scope");
+	    # make sure PL_reg_curpm isn't holding on to anything
+	    "a" =~ /a(?{1})/;
+	    is($Foo99::d, 0, "before scope exit");
 	}
+	::is($Foo99::d, 1, "after scope exit");
 
 	# forward declared subs should Do The Right Thing with any anon CVs
 	# within them (i.e. pad_fixup_inner_anons() should work)
@@ -662,7 +662,8 @@ sub run_tests {
     # does all the right escapes
 
     {
-	my $enc = eval 'use Encode; find_encoding("ascii")';
+	my $enc;
+        $enc = eval 'use Encode; find_encoding("ascii")' unless $::IS_EBCDIC;
 
 	my $x = 0;
 	my $y = 'bad';
@@ -689,7 +690,9 @@ sub run_tests {
 	    my $s = shift;
 	    $s =~ s{(.)}{
 			my $c = ord($1);
-			($c< 32 || $c > 127) ? sprintf("<0x%x>", $c) : $1;
+			(utf8::native_to_unicode($c)< 32
+                         || utf8::native_to_unicode($c) > 127)
+                        ? sprintf("<0x%x>", $c) : $1;
 		}ge;
 	    $s;
 	}
@@ -721,12 +724,14 @@ sub run_tests {
 		ok($ss =~ /^$cc/, fmt("plain      $u->[2]", $ss, $cc));
 
 		no strict;
-		my $chr41 = "\x41";
-		$ss = "$u->[0]\t${q}$chr41${b}x42$s";
 		$nine = $nine = "bad";
+                $ss = "$u->[0]\t${q}\x41${b}x42$s" if $::IS_ASCII;
+                $ss = "$u->[0]\t${q}\xC1${b}xC2$s" if $::IS_EBCDIC;
 		for my $use_qr ('', 'qr') {
 		    $c =  qq[(??{my \$z='{';]
-			. qq[$use_qr"$b${b}t$b$q$b${b}x41$b$b$b${b}x42"]
+			. (($::IS_ASCII)
+                           ? qq[$use_qr"$b${b}t$b$q$b${b}x41$b$b$b${b}x42"]
+                           : qq[$use_qr"$b${b}t$b$q$b${b}xC1$b$b$b${b}xC2"])
 			. qq[. \$nine})];
 		    # (??{ qr/str/ }) goes through one less interpolation
 		    # stage than  (??{ qq/str/ })
@@ -741,11 +746,15 @@ sub run_tests {
 			ok($ss =~ /^$cc/, fmt("code         $u->[2]", $ss, $cc));
 		    }
 
+                    SKIP:
 		    {
+                        skip("Encode not working on EBCDIC", 1) unless defined $enc;
 			# Poor man's "use encoding 'ascii'".
 			# This causes a different code path in S_const_str()
 			# to be used
+			no warnings 'deprecated';
 			local ${^ENCODING} = $enc;
+			use warnings 'deprecated';
 			use re 'eval';
 			ok($ss =~ /^$cc/, fmt("encode       $u->[2]", $ss, $cc));
 		    }
@@ -754,10 +763,10 @@ sub run_tests {
 	}
 
 	my $code1u = "(??{qw(\x{100})})";
-	eval {/^$code1u$/}; norun("reparse embeded unicode norun");
+	eval {/^$code1u$/}; norun("reparse embedded unicode norun");
 	{
 	    use re 'eval';
-	    ok("\x{100}" =~ /^$code1u$/, "reparse embeded unicode");
+	    ok("\x{100}" =~ /^$code1u$/, "reparse embedded unicode");
 	}
     }
 
@@ -931,6 +940,11 @@ sub run_tests {
 	like($@,
 	    qr/BEGIN failed--compilation aborted at \(eval \d+\) line \d+/,
 	    'syntax error');
+        
+        use utf8;
+        $code = '(?{Ｆｏｏ::$bar})';
+        eval { "a" =~ /^a$code/ };
+        like($@, qr/Bad name after Ｆｏｏ:: at \(eval \d+\) line \d+/, 'UTF8 sytax error');
     }
 
     # make sure that 'use re eval' is propagated into compiling the
@@ -1174,6 +1188,107 @@ sub run_tests {
 	ok("a=" =~ qr/\Q@tied\E/, 'qr empty tied pattern with \Q');
 	ok("a=" =~ //, 'completely empty pattern');
 	ok("a=" =~ qr//, 'qr completely empty pattern');
+    }
+
+    {
+	{ package o; use overload '""'=>sub { "abc" } }
+	my $x = bless [],"o";
+	my $y = \$x;
+	(my $y_addr = "$y") =~ y/()//d; # REF(0x7fcb9c02) -> REF0x7fcb9c02
+	# $y_addr =~ $y should be true, as should $y_addr =~ /(??{$y})/
+	"abc$y_addr" =~ /(??{$x})(??{$y})/;
+	is "$&", "abc$y_addr",
+	   '(??{$x}) does not leak cached qr to (??{\$x}) (match)';
+	is scalar "abcabc" =~ /(??{$x})(??{$y})/, "",
+	   '(??{$x}) does not leak cached qr to (??{\$x}) (no match)';
+    }
+
+    {
+	sub ReEvalTieTest::TIESCALAR {bless[], "ReEvalTieTest"}
+	sub ReEvalTieTest::STORE{}
+	sub ReEvalTieTest::FETCH { "$1" }
+	tie my $t, "ReEvalTieTest";
+	$t = bless [], "o";
+	"aab" =~ /(a)((??{"b" =~ m|(.)|; $t}))/;
+	is "[$1 $2]", "[a b]",
+	   '(??{$tied_former_overload}) sees the right $1 in FETCH';
+    }
+
+    {
+	my @matchsticks;
+	my $ref = bless \my $o, "o";
+	my $foo = sub { push @matchsticks, scalar "abc" =~ /(??{$ref})/ };
+	&$foo;
+	bless \$o;
+	() = "$ref"; # flush AMAGIC flag on main
+	&$foo;
+	is "@matchsticks", "1 ", 'qr magic is not cached on refs';
+    }
+
+    {
+	my ($foo, $bar) = ("foo"x1000, "bar"x1000);
+	"$foo$bar" =~ /(??{".*"})/;
+	is "$&", "foo"x1000 . "bar"x1000,
+	    'padtmp swiping does not affect "$a$b" =~ /(??{})/'
+    }
+
+    {
+        # [perl #129140]
+        # this used to cause a double-free of the code_block struct
+        # when re-running the compilation after spotting utf8.
+        # This test doesn't catch it, but might panic, or fail under
+        # valgrind etc
+
+        my $s = '';
+        /$s(?{})\x{100}/ for '', '';
+        pass "RT #129140";
+    }
+
+    # RT #130650 code blocks could get double-freed during a pattern
+    # compilation croak
+
+    {
+        # this used to panic or give ASAN errors
+        eval 'qr/(?{})\6/';
+        like $@, qr/Reference to nonexistent group/, "RT #130650";
+    }
+
+    # RT #129881
+    # on exit from a pattern with multiple code blocks from different
+    # CVs, PL_comppad wasn't being restored correctly
+
+    sub {
+        # give first few pad slots known values
+        my ($x1, $x2, $x3, $x4, $x5) = 101..105;
+        # these vars are in a separate pad
+        my $r = qr/((?{my ($y1, $y2) = 201..202; 1;})A){2}X/;
+        # the first alt fails, causing a switch to this anon
+        # sub's pad
+        "AAA" =~ /$r|(?{my ($z1, $z2) = 301..302; 1;})A/;
+        is $x1, 101, "RT #129881: x1";
+        is $x2, 102, "RT #129881: x2";
+        is $x3, 103, "RT #129881: x3";
+    }->();
+
+
+    # RT #126697
+    # savestack wasn't always being unwound on EVAL failure
+    {
+        local our $i = 0;
+        my $max = 0;
+
+        'ABC' =~ m{
+            \A
+            (?:
+                (?: AB | A | BC )
+                (?{
+                    local $i = $i + 1;
+                    $max = $i if $max < $i;
+                })
+            )*
+            \z
+        }x;
+        is $max, 2, "RT #126697";
     }
 
 

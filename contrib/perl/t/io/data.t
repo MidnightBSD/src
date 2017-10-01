@@ -4,8 +4,8 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
-    require './test.pl';
+    require "./test.pl";
+    set_up_inc('../lib');
 }
 
 $|=1;
@@ -79,3 +79,12 @@ lotsa junk
 nothing
 EXPECT
 ok
+########
+# Which package is __DATA__ in?
+package foo;
+BEGIN{*foo::=*bar::}
+print <DATA>;
+__DATA__
+123
+EXPECT
+123

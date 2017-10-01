@@ -3,7 +3,6 @@ POD2HTML_ARGS = --htmlroot=$(HTMLROOT) --podroot=.. --podpath=pod:lib:ext:vms
 POD2HTML = ../ext/Pod-Html/pod2html
 POD2MAN = ../cpan/podlators/pod2man
 POD2TEXT = ../cpan/podlators/pod2text
-POD2LATEX = ../cpan/Pod-LaTeX/pod2latex
 PODCHECKER = ../cpan/Pod-Parser/podchecker
 
 all: html
@@ -36,6 +35,18 @@ POD = perl.pod	\
 	perl5180delta.pod	\
 	perl5181delta.pod	\
 	perl5182delta.pod	\
+	perl5184delta.pod	\
+	perl5200delta.pod	\
+	perl5201delta.pod	\
+	perl5202delta.pod	\
+	perl5203delta.pod	\
+	perl5220delta.pod	\
+	perl5221delta.pod	\
+	perl5222delta.pod	\
+	perl5223delta.pod	\
+	perl5240delta.pod	\
+	perl5241delta.pod	\
+	perl5260delta.pod	\
 	perl561delta.pod	\
 	perl56delta.pod	\
 	perl581delta.pod	\
@@ -64,6 +75,7 @@ POD = perl.pod	\
 	perldebtut.pod	\
 	perldebug.pod	\
 	perldelta.pod	\
+	perldeprecation.pod	\
 	perldiag.pod	\
 	perldsc.pod	\
 	perldtrace.pod	\
@@ -133,6 +145,7 @@ POD = perl.pod	\
 	perltoot.pod	\
 	perltrap.pod	\
 	perlunicode.pod	\
+	perlunicook.pod	\
 	perlunifaq.pod	\
 	perluniintro.pod	\
 	perluniprops.pod	\
@@ -164,6 +177,18 @@ MAN = perl.man	\
 	perl5180delta.man	\
 	perl5181delta.man	\
 	perl5182delta.man	\
+	perl5184delta.man	\
+	perl5200delta.man	\
+	perl5201delta.man	\
+	perl5202delta.man	\
+	perl5203delta.man	\
+	perl5220delta.man	\
+	perl5221delta.man	\
+	perl5222delta.man	\
+	perl5223delta.man	\
+	perl5240delta.man	\
+	perl5241delta.man	\
+	perl5260delta.man	\
 	perl561delta.man	\
 	perl56delta.man	\
 	perl581delta.man	\
@@ -192,6 +217,7 @@ MAN = perl.man	\
 	perldebtut.man	\
 	perldebug.man	\
 	perldelta.man	\
+	perldeprecation.man	\
 	perldiag.man	\
 	perldsc.man	\
 	perldtrace.man	\
@@ -261,6 +287,7 @@ MAN = perl.man	\
 	perltoot.man	\
 	perltrap.man	\
 	perlunicode.man	\
+	perlunicook.man	\
 	perlunifaq.man	\
 	perluniintro.man	\
 	perluniprops.man	\
@@ -268,7 +295,6 @@ MAN = perl.man	\
 	perlutil.man	\
 	perlvar.man	\
 	perlvms.man
-
 HTML = perl.html	\
 	perl5004delta.html	\
 	perl5005delta.html	\
@@ -292,6 +318,18 @@ HTML = perl.html	\
 	perl5180delta.html	\
 	perl5181delta.html	\
 	perl5182delta.html	\
+	perl5184delta.html	\
+	perl5200delta.html	\
+	perl5201delta.html	\
+	perl5202delta.html	\
+	perl5203delta.html	\
+	perl5220delta.html	\
+	perl5221delta.html	\
+	perl5222delta.html	\
+	perl5223delta.html	\
+	perl5240delta.html	\
+	perl5241delta.html	\
+	perl5260delta.html	\
 	perl561delta.html	\
 	perl56delta.html	\
 	perl581delta.html	\
@@ -320,6 +358,7 @@ HTML = perl.html	\
 	perldebtut.html	\
 	perldebug.html	\
 	perldelta.html	\
+	perldeprecation.html	\
 	perldiag.html	\
 	perldsc.html	\
 	perldtrace.html	\
@@ -388,6 +427,7 @@ HTML = perl.html	\
 	perltoot.html	\
 	perltrap.html	\
 	perlunicode.html	\
+	perlunicook.html	\
 	perlunifaq.html	\
 	perluniintro.html	\
 	perluniprops.html	\
@@ -420,6 +460,18 @@ TEX = perl.tex	\
 	perl5180delta.tex	\
 	perl5181delta.tex	\
 	perl5182delta.tex	\
+	perl5184delta.tex	\
+	perl5200delta.tex	\
+	perl5201delta.tex	\
+	perl5202delta.tex	\
+	perl5203delta.tex	\
+	perl5220delta.tex	\
+	perl5221delta.tex	\
+	perl5222delta.tex	\
+	perl5223delta.tex	\
+	perl5240delta.tex	\
+	perl5241delta.tex	\
+	perl5260delta.tex	\
 	perl561delta.tex	\
 	perl56delta.tex	\
 	perl581delta.tex	\
@@ -448,6 +500,7 @@ TEX = perl.tex	\
 	perldebtut.tex	\
 	perldebug.tex	\
 	perldelta.tex	\
+	perldeprecation.tex	\
 	perldiag.tex	\
 	perldsc.tex	\
 	perldtrace.tex	\
@@ -517,6 +570,7 @@ TEX = perl.tex	\
 	perltoot.tex	\
 	perltrap.tex	\
 	perlunicode.tex	\
+	perlunicook.tex	\
 	perlunifaq.tex	\
 	perluniintro.tex	\
 	perluniprops.tex	\
@@ -528,8 +582,6 @@ TEX = perl.tex	\
 man:	$(POD2MAN) $(MAN)
 
 html:	$(POD2HTML) $(HTML)
-
-tex:	$(POD2LATEX) $(TEX)
 
 toc:
 	$(PERL) -I../lib buildtoc >perltoc.pod
@@ -551,14 +603,6 @@ toc:
 
 .pod.html:
 	$(PERL) -I../lib $(POD2HTML) $(POD2HTML_ARGS) --infile=$*.pod --outfile=$*.html
-
-.SUFFIXES: .tex
-
-.pm.tex:
-	$(PERL) -I../lib $(POD2LATEX) $*.pm
-
-.pod.tex:
-	$(PERL) -I../lib $(POD2LATEX) $*.pod
 
 clean:
 	rm -f $(MAN)

@@ -2,13 +2,17 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = qw(. ../lib);
-    require 'test.pl';
+    require './test.pl';
+    set_up_inc( qw(. ../lib) );
 }
 
 use strict qw(refs subs);
 
-plan(230);
+plan(236);
+
+# Test this first before we extend the stack with other operations.
+# This caused an asan failure due to a bad write past the end of the stack.
+eval { die  1..127, $_=\() };
 
 # Test glob operations.
 
@@ -80,7 +84,7 @@ $refref = \\$x;
 $x = "Good";
 is ($$$refref, 'Good');
 
-# Test nested anonymous lists.
+# Test nested anonymous arrays.
 
 $ref = [[],2,[3,4,5,]];
 is (scalar @$ref, 3);
@@ -120,6 +124,10 @@ is (join(':',@{$spring2{"foo"}}), "1:2:3:4");
     is ($called, 1);
 }
 is ref eval {\&{""}}, "CODE", 'reference to &{""} [perl #94476]';
+delete $My::{"Foo::"}; 
+is ref \&My::Foo::foo, "CODE",
+  'creating stub with \&deleted_stash::foo [perl #128532]';
+
 
 # Test references to return values of operators (TARGs/PADTMPs)
 {
@@ -319,8 +327,10 @@ is (scalar grep(ref($_), @baa), 3);
 is (scalar (@bzz), 3);
 
 # also, it can't be an lvalue
+# (That’s what *you* think!  --sprout)
 eval '\\($x, $y) = (1, 2);';
-like ($@, qr/Can\'t modify.*ref.*in.*assignment/);
+like ($@, qr/Can\'t modify.*ref.*in.*assignment(?x:
+           )|Experimental aliasing via reference not enabled/);
 
 # test for proper destruction of lexical objects
 $test = curr_test();
@@ -617,7 +627,7 @@ is ( (sub {"bar"})[0]->(), "bar", 'code deref from list slice w/ ->' );
 {
     local $@;
     eval { ()[0]{foo} };
-    like ( "$@", "Can't use an undefined value as a HASH reference",
+    like ( "$@", qr/Can't use an undefined value as a HASH reference/,
            "deref of undef from list slice fails" );
 }
 
@@ -786,6 +796,29 @@ SKIP:{
 
 
 is ref( bless {}, "nul\0clean" ), "nul\0clean", "ref() is nul-clean";
+
+# Test constants and references thereto.
+for (3) {
+    eval { $_ = 4 };
+    like $@, qr/^Modification of a read-only/,
+       'assignment to value aliased to literal number';
+    eval { ${\$_} = 4 };
+    like $@, qr/^Modification of a read-only/,
+       'refgen does not allow assignment to value aliased to literal number';
+}
+for ("4eounthouonth") {
+    eval { $_ = 4 };
+    like $@, qr/^Modification of a read-only/,
+       'assignment to value aliased to literal string';
+    eval { ${\$_} = 4 };
+    like $@, qr/^Modification of a read-only/,
+       'refgen does not allow assignment to value aliased to literal string';
+}
+{
+    my $aref = \123;
+    is \$$aref, $aref,
+	'[perl #109746] referential identity of \literal under threads+mad'
+}
 
 # Bit of a hack to make test.pl happy. There are 3 more tests after it leaves.
 $test = curr_test();

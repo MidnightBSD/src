@@ -1,8 +1,11 @@
 
 BEGIN {
-    unless ("A" eq pack('U', 0x41)) {
-	print "1..0 # Unicode::Collate " .
-	    "cannot stringify a Unicode code point\n";
+    unless ('A' eq pack('U', 0x41)) {
+	print "1..0 # Unicode::Collate cannot pack a Unicode code point\n";
+	exit 0;
+    }
+    unless (0x41 == unpack('U', 'A')) {
+	print "1..0 # Unicode::Collate cannot get a Unicode code point\n";
 	exit 0;
     }
     if ($ENV{PERL_CORE}) {
@@ -13,7 +16,7 @@ BEGIN {
 
 use strict;
 use warnings;
-BEGIN { $| = 1; print "1..14\n"; }
+BEGIN { $| = 1; print "1..17\n"; }
 my $count = 0;
 sub ok ($;$) {
     my $p = my $r = shift;
@@ -61,3 +64,11 @@ ok($objFil->eq("n\x{303}", pack('U', 0xF1)));
 ok($objFil->eq("N\x{303}", pack('U', 0xD1)));
 
 # 14
+
+$objFil->change(upper_before_lower => 1);
+
+ok($objFil->gt("ng", "Ng"));
+ok($objFil->gt("Ng", "NG"));
+ok($objFil->gt("n\x{303}", "N\x{303}"));
+
+# 17

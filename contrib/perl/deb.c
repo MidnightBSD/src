@@ -59,7 +59,6 @@ void
 Perl_vdeb(pTHX_ const char *pat, va_list *args)
 {
 #ifdef DEBUGGING
-    dVAR;
     const char* const file = PL_curcop ? OutCopFILE(PL_curcop) : "<null>";
     const char* const display_file = file ? file : "<free>";
     const long line = PL_curcop ? (long)CopLINE(PL_curcop) : 0;
@@ -83,17 +82,18 @@ I32
 Perl_debstackptrs(pTHX)
 {
 #ifdef DEBUGGING
-    dVAR;
     PerlIO_printf(Perl_debug_log,
-		  "%8"UVxf" %8"UVxf" %8"IVdf" %8"IVdf" %8"IVdf"\n",
+		  "%8" UVxf " %8" UVxf " %8" IVdf " %8" IVdf " %8" IVdf "\n",
 		  PTR2UV(PL_curstack), PTR2UV(PL_stack_base),
 		  (IV)*PL_markstack_ptr, (IV)(PL_stack_sp-PL_stack_base),
 		  (IV)(PL_stack_max-PL_stack_base));
     PerlIO_printf(Perl_debug_log,
-		  "%8"UVxf" %8"UVxf" %8"UVuf" %8"UVuf" %8"UVuf"\n",
+		  "%8" UVxf " %8" UVxf " %8" UVuf " %8" UVuf " %8" UVuf "\n",
 		  PTR2UV(PL_mainstack), PTR2UV(AvARRAY(PL_curstack)),
 		  PTR2UV(PL_mainstack), PTR2UV(AvFILLp(PL_curstack)),
 		  PTR2UV(AvMAX(PL_curstack)));
+#else
+    PERL_UNUSED_CONTEXT;
 #endif /* DEBUGGING */
     return 0;
 }
@@ -113,7 +113,6 @@ S_deb_stack_n(pTHX_ SV** stack_base, I32 stack_min, I32 stack_max,
 	I32 mark_min, I32 mark_max)
 {
 #ifdef DEBUGGING
-    dVAR;
     I32 i = stack_max - 30;
     const I32 *markscan = PL_markstack + mark_min;
 
@@ -136,7 +135,7 @@ S_deb_stack_n(pTHX_ SV** stack_base, I32 stack_min, I32 stack_max,
 	if (markscan <= PL_markstack + mark_max && *markscan < i) {
 	    do {
 		++markscan;
-		PerlIO_putc(Perl_debug_log, '*');
+		(void)PerlIO_putc(Perl_debug_log, '*');
 	    }
 	    while (markscan <= PL_markstack + mark_max && *markscan < i);
 	    PerlIO_printf(Perl_debug_log, "  ");
@@ -164,7 +163,6 @@ I32
 Perl_debstack(pTHX)
 {
 #ifndef SKIP_DEBUGGING
-    dVAR;
     if (CopSTASH_eq(PL_curcop, PL_debstash) && !DEBUG_J_TEST_)
 	return 0;
 
@@ -193,7 +191,8 @@ static const char * const si_names[] = {
     "DESTROY",
     "WARNHOOK",
     "DIEHOOK",
-    "REQUIRE"
+    "REQUIRE",
+    "MULTICALL"
 };
 #endif
 
@@ -204,7 +203,6 @@ void
 Perl_deb_stack_all(pTHX)
 {
 #ifdef DEBUGGING
-    dVAR;
     I32 si_ix;
     const PERL_SI *si;
 
@@ -217,16 +215,18 @@ Perl_deb_stack_all(pTHX)
     for (;;)
     {
         const size_t si_name_ix = si->si_type+1; /* -1 is a valid index */
-        const char * const si_name = (si_name_ix >= sizeof(si_names)) ? "????" : si_names[si_name_ix];
+        const char * const si_name =
+            si_name_ix < C_ARRAY_LENGTH(si_names) ?
+            si_names[si_name_ix] : "????";
 	I32 ix;
-	PerlIO_printf(Perl_debug_log, "STACK %"IVdf": %s\n",
+	PerlIO_printf(Perl_debug_log, "STACK %" IVdf ": %s\n",
 						(IV)si_ix, si_name);
 
 	for (ix=0; ix<=si->si_cxix; ix++) {
 
 	    const PERL_CONTEXT * const cx = &(si->si_cxstack[ix]);
 	    PerlIO_printf(Perl_debug_log,
-		    "  CX %"IVdf": %-6s => ",
+		    "  CX %" IVdf ": %-6s => ",
 		    (IV)ix, PL_block_type[CxTYPE(cx)]
 	    );
 	    /* substitution contexts don't save stack pointers etc) */
@@ -234,7 +234,7 @@ Perl_deb_stack_all(pTHX)
 		PerlIO_printf(Perl_debug_log, "\n");
 	    else {
 
-		/* Find the the current context's stack range by searching
+		/* Find the current context's stack range by searching
 		 * forward for any higher contexts using this stack; failing
 		 * that, it will be equal to the size of the stack for old
 		 * stacks, or PL_stack_sp for the current stack
@@ -244,13 +244,14 @@ Perl_deb_stack_all(pTHX)
 		const PERL_CONTEXT *cx_n = NULL;
 		const PERL_SI *si_n;
 
-		/* there's a separate stack per SI, so only search
-		 * this one */
+                /* there's a separate argument stack per SI, so only
+                 * search this one */
 
 		for (i=ix+1; i<=si->si_cxix; i++) {
-		    if (CxTYPE(cx) == CXt_SUBST)
+                    const PERL_CONTEXT *this_cx = &(si->si_cxstack[i]);
+                    if (CxTYPE(this_cx) == CXt_SUBST)
 			continue;
-		    cx_n = &(si->si_cxstack[i]);
+		    cx_n = this_cx;
 		    break;
 		}
 
@@ -266,8 +267,8 @@ Perl_deb_stack_all(pTHX)
 		    stack_max = AvFILLp(si->si_stack);
 		}
 
-		/* for the other stack types, there's only one stack
-		 * shared between all SIs */
+                /* for the markstack, there's only one stack shared
+                 * between all SIs */
 
 		si_n = si;
 		i = ix;
@@ -327,11 +328,5 @@ Perl_deb_stack_all(pTHX)
 }
 
 /*
- * Local variables:
- * c-indentation-style: bsd
- * c-basic-offset: 4
- * indent-tabs-mode: nil
- * End:
- *
  * ex: set ts=8 sts=4 sw=4 et:
  */

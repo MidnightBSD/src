@@ -2,12 +2,16 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
-    require Config; import Config;
     require './test.pl';
+    set_up_inc('../lib');
+    require Config; import Config;
+    require constant;
+    constant->import(constcow => *Config::{NAME});
+    require './charset_tools.pl';
+    require './loc_tools.pl';
 }
 
-plan( tests => 206 );
+plan(tests => 275);
 
 $_ = 'david';
 $a = s/david/rules/r;
@@ -15,6 +19,11 @@ ok( $_ eq 'david' && $a eq 'rules', 'non-destructive substitute' );
 
 $a = "david" =~ s/david/rules/r;
 ok( $a eq 'rules', 's///r with constant' );
+
+#[perl #127635] failed with -DPERL_NO_COW perl build (George smoker uses flag)
+#Modification of a read-only value attempted at ../t/re/subst.t line 23.
+$a = constcow =~ s/Config/David/r;
+ok( $a eq 'David::', 's///r with COW constant' );
 
 $a = "david" =~ s/david/"is"."great"/er;
 ok( $a eq 'isgreat', 's///er' );
@@ -263,10 +272,10 @@ if (defined $Config{ebcdic} && $Config{ebcdic} eq 'define') {	# EBCDIC.
 ok( $_ eq 'abcdefghijklmnopqrstuvwxyz0123456789' );
 
 SKIP: {
-    skip("not ASCII",1) unless (ord("+") == ord(",") - 1
-			     && ord(",") == ord("-") - 1
-			     && ord("a") == ord("b") - 1
-			     && ord("b") == ord("c") - 1);
+    skip("ASCII-centric test",1) unless (ord("+") == ord(",") - 1
+			              && ord(",") == ord("-") - 1
+			              && ord("a") == ord("b") - 1
+			              && ord("b") == ord("c") - 1);
     $_ = '+,-';
     tr/+--/a-c/;
     ok( $_ eq 'abc' );
@@ -456,9 +465,7 @@ $pv1 =~ s/A/\x{100}/;
 substr($pv2,0,1) = "\x{100}";
 is($pv1, $pv2);
 
-SKIP: {
-    skip("EBCDIC", 3) if ord("A") == 193; 
-
+{
     {   
 	# Gregor Chrupala <gregor.chrupala@star-group.net>
 	use utf8;
@@ -668,8 +675,96 @@ is($name, "cis", q[#22351 bug with 'e' substitution modifier]);
     }
 }
 
-fresh_perl_is( '$_=q(foo);s/(.)\G//g;print' => 'foo', '[perl #69056] positive GPOS regex segfault' );
-fresh_perl_is( '$_="abcef"; s/bc|(.)\G(.)/$1 ? "[$1-$2]" : "XX"/ge; print' => 'aXX[c-e][e-f]f', 'positive GPOS regex substitution failure' );
+fresh_perl_is( '$_=q(foo);s/(.)\G//g;print' => 'foo', {},
+                '[perl #69056] positive GPOS regex segfault' );
+fresh_perl_is( '$_="abcdef"; s/bc|(.)\G(.)/$1 ? "[$1-$2]" : "XX"/ge; print' => 'aXXdef', {},
+                'positive GPOS regex substitution failure (#69056, #114884)' );
+fresh_perl_is( '$_="abcdefg123456"; s/(?<=...\G)?(\d)/($1)/; print' => 'abcdefg(1)23456', {},
+                'positive GPOS lookbehind regex substitution failure #114884' );
+
+# s/..\G//g should stop after the first iteration, rather than working its
+# way backwards, or looping infinitely, or SEGVing (for example)
+{
+    my ($s, $count);
+
+    # use a function to disable constant folding
+    my $f = sub { substr("789", 0, $_[0]) };
+
+    $s = '123456';
+    pos($s) = 4;
+    $count = $s =~ s/\d\d\G/7/g;
+    is($count, 1, "..\\G count (short)");
+    is($s, "12756", "..\\G s (short)");
+
+    $s = '123456';
+    pos($s) = 4;
+    $count = $s =~ s/\d\d\G/78/g;
+    is($count, 1, "..\\G count (equal)");
+    is($s, "127856", "..\\G s (equal)");
+
+    $s = '123456';
+    pos($s) = 4;
+    $count = $s =~ s/\d\d\G/789/g;
+    is($count, 1, "..\\G count (long)");
+    is($s, "1278956", "..\\G s (long)");
+
+
+    $s = '123456';
+    pos($s) = 4;
+    $count = $s =~ s/\d\d\G/$f->(1)/eg;
+    is($count, 1, "..\\G count (short code)");
+    is($s, "12756", "..\\G s (short code)");
+
+    $s = '123456';
+    pos($s) = 4;
+    $count = $s =~ s/\d\d\G/$f->(2)/eg;
+    is($count, 1, "..\\G count (equal code)");
+    is($s, "127856", "..\\G s (equal code)");
+
+    $s = '123456';
+    pos($s) = 4;
+    $count = $s =~ s/\d\d\G/$f->(3)/eg;
+    is($count, 1, "..\\G count (long code)");
+    is($s, "1278956", "..\\G s (long code)");
+
+    $s = '123456';
+    pos($s) = 4;
+    $count = $s =~ s/\d\d(?=\d\G)/7/g;
+    is($count, 1, "..\\G count (lookahead short)");
+    is($s, "17456", "..\\G s (lookahead short)");
+
+    $s = '123456';
+    pos($s) = 4;
+    $count = $s =~ s/\d\d(?=\d\G)/78/g;
+    is($count, 1, "..\\G count (lookahead equal)");
+    is($s, "178456", "..\\G s (lookahead equal)");
+
+    $s = '123456';
+    pos($s) = 4;
+    $count = $s =~ s/\d\d(?=\d\G)/789/g;
+    is($count, 1, "..\\G count (lookahead long)");
+    is($s, "1789456", "..\\G s (lookahead long)");
+
+
+    $s = '123456';
+    pos($s) = 4;
+    $count = $s =~ s/\d\d(?=\d\G)/$f->(1)/eg;
+    is($count, 1, "..\\G count (lookahead short code)");
+    is($s, "17456", "..\\G s (lookahead short code)");
+
+    $s = '123456';
+    pos($s) = 4;
+    $count = $s =~ s/\d\d(?=\d\G)/$f->(2)/eg;
+    is($count, 1, "..\\G count (lookahead equal code)");
+    is($s, "178456", "..\\G s (lookahead equal code)");
+
+    $s = '123456';
+    pos($s) = 4;
+    $count = $s =~ s/\d\d(?=\d\G)/$f->(3)/eg;
+    is($count, 1, "..\\G count (lookahead long code)");
+    is($s, "1789456", "..\\G s (lookahead long code)");
+}
+
 
 # [perl #71470] $var =~ s/$qr//e calling get-magic on $_ as well as $var
 {
@@ -863,7 +958,7 @@ $_ = "hello";
     local *a = *1;
     s/e(.)\1/a$a/g;
 }
-is $_, 'halo', 's/pat/$alias_to_match_var/';
+is $_, 'halo', 's/pat/foo$alias_to_match_var/';
 # Last-used pattern containing re-evals that modify "constant" rhs
 {
     local *a;
@@ -886,3 +981,188 @@ $@ = "\x{30cb}eval 18";
 $@ =~ s/eval \d+/eval 11/;
 is $@, "\x{30cb}eval 11",
   'loading utf8 tables does not interfere with matches against $@';
+
+$reftobe = 3;
+$reftobe =~ s/3/$reftobe=\ 3;4/e;
+is $reftobe, '4', 'clobbering target with ref in s//.../e';
+$locker{key} = 3;
+SKIP:{
+    skip "no Hash::Util under miniperl", 2 if is_miniperl;
+    require Hash::Util;
+    eval {
+	$locker{key} =~ s/3/
+	    $locker{key} = 3;
+	    &Hash::Util::lock_hash(\%locker);4
+	/e;
+    };
+    is $locker{key}, '3', 'locking target in $hash{key} =~ s//.../e';
+    like $@, qr/^Modification of a read-only value/, 'err msg' . ($@ ? ": $@" : "");
+}
+delete $::{does_not_exist}; # just in case
+eval { no warnings; $::{does_not_exist}=~s/(?:)/*{"does_not_exist"}; 4/e };
+like $@, qr/^Modification of a read-only value/,
+    'vivifying stash elem in $that::{elem} =~ s//.../e';
+
+# COWs should not be exempt from read-only checks.  s/// croaks on read-
+# only values even when the pattern does not match, but it was not doing so
+# for COWs.
+eval { for (__PACKAGE__) { s/b/c/; } };
+like $@, qr/^Modification of a read-only value/,
+    'read-only COW =~ s/does not match// should croak';
+
+SKIP: {
+    my $a_acute = chr utf8::unicode_to_native(0xE1); # LATIN SMALL LETTER A WITH ACUTE
+    my $egrave = chr utf8::unicode_to_native(0xE8);  # LATIN SMALL LETTER E WITH GRAVE
+    my $u_umlaut = chr utf8::unicode_to_native(0xFC);  # LATIN SMALL LETTER U WITH DIAERESIS
+    my $division = chr utf8::unicode_to_native(0xF7);  # DIVISION SIGN
+
+    is("ab.c" =~ s/\b/!/agr, "!ab!.!c!", '\\b matches ASCII before string, mid, and end, /a');
+    is("$a_acute$egrave.$u_umlaut" =~ s/\b/!/agr, "$a_acute$egrave.$u_umlaut", '\\b matches Latin1 before string, mid, and end, /a');
+    is("\x{100}\x{101}.\x{102}" =~ s/\b/!/agr, "\x{100}\x{101}.\x{102}", '\\b matches above-Latin1 before string, mid, and end, /a');
+
+    is("..." =~ s/\B/!/agr, "!.!.!.!", '\\B matches ASCII before string, mid, and end, /a');
+    is("$division$division$division" =~ s/\B/!/agr, "!$division!$division!$division!", '\\B matches Latin1 before string, mid, and end, /a');
+    is("\x{2028}\x{2028}\x{2028}" =~ s/\B/!/agr, "!\x{2028}!\x{2028}!\x{2028}!", '\\B matches above-Latin1 before string, mid, and end, /a');
+
+    is("ab.c" =~ s/\b/!/dgr, "!ab!.!c!", '\\b matches ASCII before string, mid, and end, /d');
+    { is("$a_acute$egrave.$u_umlaut" =~ s/\b/!/dgr, "$a_acute$egrave.$u_umlaut", '\\b matches Latin1 before string, mid, and end, /d'); }
+    is("\x{100}\x{101}.\x{102}" =~ s/\b/!/dgr, "!\x{100}\x{101}!.!\x{102}!", '\\b matches above-Latin1 before string, mid, and end, /d');
+
+    is("..." =~ s/\B/!/dgr, "!.!.!.!", '\\B matches ASCII before string, mid, and end, /d');
+    is("$division$division$division" =~ s/\B/!/dgr, "!$division!$division!$division!", '\\B matches Latin1 before string, mid, and end, /d');
+    is("\x{2028}\x{2028}\x{2028}" =~ s/\B/!/dgr, "!\x{2028}!\x{2028}!\x{2028}!", '\\B matches above-Latin1 before string, mid, and end, /d');
+
+    is("ab.c" =~ s/\b/!/ugr, "!ab!.!c!", '\\b matches ASCII before string, mid, and end, /u');
+    is("$a_acute$egrave.$u_umlaut" =~ s/\b/!/ugr, "!$a_acute$egrave!.!$u_umlaut!", '\\b matches Latin1 before string, mid, and end, /u');
+    is("\x{100}\x{101}.\x{102}" =~ s/\b/!/ugr, "!\x{100}\x{101}!.!\x{102}!", '\\b matches above-Latin1 before string, mid, and end, /u');
+
+    is("..." =~ s/\B/!/ugr, "!.!.!.!", '\\B matches ASCII before string, mid, and end, /u');
+    is("$division$division$division" =~ s/\B/!/ugr, "!$division!$division!$division!", '\\B matches Latin1 before string, mid, and end, /u');
+    is("\x{2028}\x{2028}\x{2028}" =~ s/\B/!/ugr, "!\x{2028}!\x{2028}!\x{2028}!", '\\B matches above-Latin1 before string, mid, and end, /u');
+
+    fresh_perl_like( '$_=""; /\b{gcb}/;  s///g', qr/^$/, {},
+        '[perl #126319: Segmentation fault in Perl_sv_catpvn_flags with \b{gcb}'
+    );
+    fresh_perl_like( '$_=""; /\B{gcb}/;  s///g', qr/^$/, {},
+        '[perl #126319: Segmentation fault in Perl_sv_catpvn_flags with \b{gcb}'
+    );
+    fresh_perl_like( '$_=""; /\b{wb}/;  s///g', qr/^$/, {},
+        '[perl #126319: Segmentation fault in Perl_sv_catpvn_flags with \b{wb}'
+    );
+    fresh_perl_like( '$_=""; /\B{wb}/;  s///g', qr/^$/, {},
+        '[perl #126319: Segmentation fault in Perl_sv_catpvn_flags with \b{wb}'
+    );
+    fresh_perl_like( '$_=""; /\b{sb}/;  s///g', qr/^$/, {},
+        '[perl #126319: Segmentation fault in Perl_sv_catpvn_flags with \b{sb}'
+    );
+    fresh_perl_like( '$_=""; /\B{sb}/;  s///g', qr/^$/, {},
+        '[perl #126319: Segmentation fault in Perl_sv_catpvn_flags with \b{sb}'
+    );
+
+SKIP: {
+    if (! locales_enabled('LC_ALL')) {
+        skip "Can't test locale (maybe you are missing POSIX)", 6;
+    }
+
+    setlocale(&POSIX::LC_ALL, "C");
+    use locale;
+    is("a.b" =~ s/\b/!/gr, "!a!.!b!", '\\b matches ASCII before string, mid, and end, /l');
+    is("$a_acute.$egrave" =~ s/\b/!/gr, "$a_acute.$egrave", '\\b matches Latin1 before string, mid, and end, /l');
+    is("\x{100}\x{101}.\x{102}" =~ s/\b/!/gr, "!\x{100}\x{101}!.!\x{102}!", '\\b matches above-Latin1 before string, mid, and end, /l');
+
+    is("..." =~ s/\B/!/gr, "!.!.!.!", '\\B matches ASCII before string, mid, and end, /l');
+    is("$division$division$division" =~ s/\B/!/gr, "!$division!$division!$division!", '\\B matches Latin1 before string, mid, and end, /l');
+    is("\x{2028}\x{2028}\x{2028}" =~ s/\B/!/gr, "!\x{2028}!\x{2028}!\x{2028}!", '\\B matches above-Latin1 before string, mid, and end, /l');
+}
+
+}
+
+{
+    # RT #123954 if the string getting matched against got converted during
+    # s///e so that it was no longer SvPOK, an assertion would fail when
+    # setting pos.
+    my $s1 = 0;
+    $s1 =~ s/.?/$s1++/ge;
+    is($s1, "01","RT #123954 s1");
+}
+{
+    # RT #126602 double free if the value being modified is freed in the replacement
+    fresh_perl_is('s//*_=0;s|0||;00.y0/e; print qq(ok\n)', "ok\n", { stderr => 1 },
+                  "[perl #126602] s//*_=0;s|0||/e crashes");
+}
+
+{
+    #RT 126260 gofs is in chars, not bytes
+
+    # in something like /..\G/, the engine should start matching two
+    # chars before pos(). At one point it was matching two bytes before.
+
+    my $s = "\x{121}\x{122}\x{123}";
+    pos($s) = 2;
+    $s =~ s/..\G//g;
+    is($s, "\x{123}", "#RT 126260 gofs");
+}
+
+SKIP: {
+    if (! locales_enabled('LC_CTYPE')) {
+        skip "Can't test locale", 1;
+    }
+
+    #  To cause breakeage, we need a locale in which \xff matches whatever
+    #  POSIX class is used in the pattern.  Easiest is C, with \W.
+    fresh_perl_is('    use POSIX qw(locale_h);
+                       setlocale(&POSIX::LC_CTYPE, "C");
+                       my $s = "\xff";
+                       $s =~ s/\W//l;
+                       print qq(ok$s\n)',
+                   "ok\n",
+                   {stderr => 1 },
+                   '[perl #129038 ] s/\xff//l no longer crashes');
+}
+
+ SKIP: {
+    skip("no Tie::Hash::NamedCapture under miniperl", 3) if is_miniperl;
+
+    # RT #23624 scoping of @+/@- when used with tie()
+    #! /usr/bin/perl -w
+
+    package Tie::Prematch;
+    sub TIEHASH { bless \my $dummy => __PACKAGE__ }
+    sub FETCH   { return substr $_[1], 0, $-[0] }
+
+    package main;
+
+    eval <<'__EOF__';
+    tie my %pre, 'Tie::Prematch';
+    my $foo = 'foobar';
+    $foo =~ s/.ob/$pre{ $foo }/;
+    is($foo, 'ffar', 'RT #23624');
+
+    $foo = 'foobar';
+    $foo =~ s/.ob/tied(%pre)->FETCH($foo)/e;
+    is($foo, 'ffar', 'RT #23624');
+
+    tie %-, 'Tie::Prematch';
+    $foo = 'foobar';
+    $foo =~ s/.ob/$-{$foo}/;
+    is($foo, 'ffar', 'RT #23624');
+
+    undef *Tie::Prematch::TIEHASH;
+    undef *Tie::Prematch::FETCH;
+__EOF__
+}
+
+# [perl #130188] crash on return from substitution in subroutine
+# make sure returning from s///e doesn't SEGV
+{
+    my $f = sub {
+        my $x = 'a';
+        $x =~ s/./return;/e;
+    };
+    my $x = $f->();
+    pass("RT #130188");
+}
+
+
+
+

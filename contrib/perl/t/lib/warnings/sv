@@ -200,7 +200,7 @@ $C .= $A ;
 EXPECT
 Use of uninitialized value $A in concatenation (.) or string at - line 10.
 ########
-# perlbug 20011116.125
+# perlbug 20011116.125 (#7917)
 use warnings 'uninitialized';
 $a = undef;
 $foo = join '', $a, "\n";
@@ -341,10 +341,13 @@ Invalid conversion in sprintf: "%+2L\003" at - line 19.
 # sv.c
 use warnings 'misc' ;
 *a = undef ;
+(*c) = ();
 no warnings 'misc' ;
 *b = undef ;
+(*d) = ();
 EXPECT
 Undefined value assigned to typeglob at - line 3.
+Undefined value assigned to typeglob at - line 4.
 ########
 # sv.c
 use warnings 'numeric' ;
@@ -361,6 +364,14 @@ no warnings 'numeric' ;
 $a = "\x{100}\x{200}"; $a = -$a;
 EXPECT
 Argument "\x{100}\x{200}" isn't numeric in negation (-) at - line 3.
+########
+# sv.c
+use warnings 'numeric' ;
+$a = "\x{100}\x{1000}" x 10; $b = $a < 1;
+no warnings 'numeric' ;
+$a = "\x{100}\x{1000}" x 10; $b = $a < 1;
+EXPECT
+Argument "\x{100}\x{1000}\x{100}\x{1000}\x{100}..." isn't numeric in numeric lt (<) at - line 3.
 ########
 # sv.c
 use warnings 'redefine' ;
@@ -389,11 +400,27 @@ EXPECT
 Subroutine main::ｆ렏 redefined at - line 7.
 ########
 # sv.c
-sprintf "%vd", new version v1.1_0;
-use warnings 'printf' ;
-sprintf "%vd", new version v1.1_0;
-no warnings 'printf' ;
-sprintf "%vd", new version v1.1_0;
+my $x = "a_c";
+++$x;
+use warnings "numeric";
+$x = "a_c"; ++$x;
+$x = ${ qr/abc/ }; ++$x;
+$x = "123x"; ++$x;
+$x = "123e"; ++$x;
+$x = 0; ++$x; # none of these should warn
+$x = "ABC"; ++$x;
+$x = "ABC123"; ++$x;
+$x = " +10"; ++$x;
 EXPECT
-vector argument not supported with alpha versions at - line 2.
-vector argument not supported with alpha versions at - line 4.
+Argument "a_c" isn't numeric in preincrement (++) at - line 5.
+Argument "(?^:abc)" isn't numeric in preincrement (++) at - line 6.
+Argument "123x" isn't numeric in preincrement (++) at - line 7.
+Argument "123e" isn't numeric in preincrement (++) at - line 8.
+########
+# RT #128257 This used to SEGV
+use warnings;
+sub Foo::f {}
+undef *Foo::;
+*Foo::f =sub {};
+EXPECT
+Subroutine f redefined at - line 5.

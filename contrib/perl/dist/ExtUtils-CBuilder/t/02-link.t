@@ -2,7 +2,7 @@
 
 use strict;
 use Test::More;
-BEGIN { 
+BEGIN {
   if ($^O eq 'VMS') {
     # So we can get the return value of system()
     require vmsish;
@@ -19,8 +19,8 @@ my ($source_file, $object_file, $exe_file);
 my $b = ExtUtils::CBuilder->new(quiet => $quiet);
 
 # test plan
-if ($^O eq 'MSWin32') {
-  plan skip_all => "link_executable() is not implemented yet on Win32";
+if ($^O =~ / ^ ( MSWin32 | os390 ) $ /xi) {
+  plan skip_all => "link_executable() is not implemented yet on $^O";
 }
 elsif ( ! $b->have_compiler ) {
   plan skip_all => "no compiler available for testing";
@@ -33,7 +33,7 @@ ok $b, "created EU::CB object";
 
 $source_file = File::Spec->catfile('t', 'linkt.c');
 {
-  open my $FH, "> $source_file" or die "Can't create $source_file: $!";
+  open my $FH, '>', $source_file or die "Can't create $source_file: $!";
   print $FH "int main(void) { return 11; }\n";
   close $FH;
 }

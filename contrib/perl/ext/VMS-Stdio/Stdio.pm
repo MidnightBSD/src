@@ -13,7 +13,7 @@ use Carp '&croak';
 use DynaLoader ();
 use Exporter ();
  
-$VERSION = '2.4';
+$VERSION = '2.41';
 @ISA = qw( Exporter DynaLoader IO::File );
 @EXPORT = qw( &O_APPEND &O_CREAT &O_EXCL  &O_NDELAY &O_NOWAIT
               &O_RDONLY &O_RDWR  &O_TRUNC &O_WRONLY );
@@ -82,8 +82,8 @@ VMS::Stdio - standard I/O functions via VMS extensions
 
 =head1 SYNOPSIS
 
-  use VMS::Stdio qw( &flush &getname &remove &rewind &setdef &sync &tmpnam
-                     &vmsopen &vmssysopen &waitfh &writeof );
+  use VMS::Stdio qw( &flush &getname &remove &rewind &setdef &sync
+                     &tmpnam &vmsopen &vmssysopen &waitfh &writeof );
   setdef("new:[default.dir]");
   $uniquename = tmpnam;
   $fh = vmsopen("my.file","rfm=var","alq=100",...) or die $!;

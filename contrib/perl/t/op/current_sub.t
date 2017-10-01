@@ -1,10 +1,10 @@
 #!./perl
 
 BEGIN {
-    chdir 't';
-    @INC = qw(../lib);
+    chdir 't' if -d 't';
     require './test.pl';
-    plan (tests => 17);
+    set_up_inc( qw(../lib) );
+    plan (tests => 22); # some tests are run in BEGIN block
 }
 
 is __SUB__, "__SUB__", '__SUB__ is a bareword outside of use feature';
@@ -75,3 +75,22 @@ sub squag {
     } 1;
 }
 squag();
+
+sub f () { __SUB__ }
+is f, \&f, 'sub named () { __SUB__ } returns self ref';
+my $f = sub () { __SUB__ };
+is &$f, $f, 'anonymous sub(){__SUB__} returns self ref';
+my $f2 = sub () { $f++ if 0; __SUB__ };
+is &$f2, $f2, 'sub(){__SUB__} anonymous closure returns self ref';
+$f = sub () { eval ""; __SUB__ };
+is &$f, $f, 'anonymous sub(){eval ""; __SUB__} returns self ref';
+{
+    local $ENV{PERL5DB} = 'sub DB::DB {}';
+    is runperl(
+        switches => [ '-d' ],
+        prog => '$f = sub(){CORE::__SUB__}; print qq-ok\n- if $f == &$f;',
+       ),
+      "ok\n",
+      'sub(){__SUB__} under -d';
+}
+

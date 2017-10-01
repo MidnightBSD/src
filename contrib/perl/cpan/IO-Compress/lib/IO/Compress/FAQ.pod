@@ -112,7 +112,7 @@ formats store extra information along with the compressed data payload. For
 example, gzip can optionally store the original filename and Zip stores a
 lot of information about the original file. If the original compressed file
 contains any of this extra information, it will not be transferred to the
-new compressed file usign the technique above.
+new compressed file using the technique above.
 
 =head1 ZIP
 
@@ -199,9 +199,9 @@ L<ftp://ftp.info-zip.org/pub/infozip/doc/>
 The primary reference for gzip files is RFC 1952
 L<http://www.faqs.org/rfcs/rfc1952.html>
 
-The primary site for gzip is F<http://www.gzip.org>.
+The primary site for gzip is L<http://www.gzip.org>.
 
-=head2 Dealing with Concatenated gzip files
+=head2 Dealing with concatenated gzip files
 
 If the gunzip program encounters a file containing multiple gzip files
 concatenated together it will automatically uncompress them all.
@@ -213,7 +213,7 @@ The example below illustrates this behaviour
     abc
     def
 
-By default C<IO::Uncompress::Gunzip> will I<not> bahave like the gunzip
+By default C<IO::Uncompress::Gunzip> will I<not> behave like the gunzip
 program. It will only uncompress the first gzip data stream in the file, as
 shown below
 
@@ -227,18 +227,29 @@ include the C<MultiStream> option, as shown below
     abc
     def
 
+=head2 Reading bgzip files with IO::Uncompress::Gunzip
+
+A C<bgzip> file consists of a series of valid gzip-compliant data streams
+concatenated together. To read a file created by C<bgzip> with
+C<IO::Uncompress::Gunzip> use the C<MultiStream> option as shown in the
+previous section.
+
+See the section titled "The BGZF compression format" in
+L<http://samtools.github.io/hts-specs/SAMv1.pdf> for a definition of
+C<bgzip>.
+
 =head1 ZLIB
 
 =head2 Zlib Resources
 
 The primary site for the I<zlib> compression library is
-F<http://www.zlib.org>.
+L<http://www.zlib.org>.
 
 =head1 Bzip2
 
 =head2 Bzip2 Resources
 
-The primary site for bzip2 is F<http://www.bzip.org>.
+The primary site for bzip2 is L<http://www.bzip.org>.
 
 =head2 Dealing with Concatenated bzip2 files
 
@@ -252,7 +263,7 @@ The example below illustrates this behaviour
     abc
     def
 
-By default C<IO::Uncompress::Bunzip2> will I<not> bahave like the bunzip2
+By default C<IO::Uncompress::Bunzip2> will I<not> behave like the bunzip2
 program. It will only uncompress the first bunzip2 data stream in the file, as
 shown below
 
@@ -285,7 +296,7 @@ must include the C<MultiStream> option, like this.
 
 Below is a mod_perl Apache compression module, called C<Apache::GZip>,
 taken from
-F<http://perl.apache.org/docs/tutorials/tips/mod_perl_tricks/mod_perl_tricks.html#On_the_Fly_Compression>
+L<http://perl.apache.org/docs/tutorials/tips/mod_perl_tricks/mod_perl_tricks.html#On_the_Fly_Compression>
 
   package Apache::GZip;
   #File: Apache::GZip.pm
@@ -657,7 +668,7 @@ L<IO::Zlib|IO::Zlib>
 
 =head1 AUTHOR
 
-This module was written by Paul Marquess, F<pmqs@cpan.org>. 
+This module was written by Paul Marquess, C<pmqs@cpan.org>. 
 
 =head1 MODIFICATION HISTORY
 
@@ -665,7 +676,7 @@ See the Changes file.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2005-2013 Paul Marquess. All rights reserved.
+Copyright (c) 2005-2017 Paul Marquess. All rights reserved.
 
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.

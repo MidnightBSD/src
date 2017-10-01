@@ -1,48 +1,41 @@
 =encoding utf8
 
+=head1 NAME
+
+release_schedule - Perl 5 release schedule
+
 =head1 STABLE RELEASE SCHEDULE
 
 This schedule lists the projected or historical development and
 release schedules for the next, current and previous stable versions
-of Perl.  Dates with all question marks will only be releases if
+of Perl.  Dates with two or more question marks will only be releases if
 deemed necessary by the Pumpking.
 
-=head2 Perl 5.18
+=head2 Perl 5.26
 
-Code freezes (which happen in the 5.17.X series)
+Code freezes (which happen in the 5.25.X series)
 
-  2013-01-20  5.17.8    Contentious changes freeze
-  2013-02-20  5.17.9    User-visible changes freeze
-  2013-03-20  5.17.10   Full code freeze
+  2016-12-20  5.25.8          Contentious changes freeze
+  2017-01-20  5.25.9          User-visible changes to correctly
+                              functioning programs freeze
+  2017-02-20  5.25.10         Full code freeze
+  2017-03-20  5.25.11         Full code freeze
+  2017-04-20  5.25.12         Full code freeze
+  2017-05-20  5.26.0          Stable release!
 
-Release schedule (with release manager):
+=head2 Perl 5.24
 
-  2013-04-??  5.18.0-RC0      Ricardo Signes
-  ...(interim RC releases)...
-  2013-05-18  5.18.0 (final)  Ricardo Signes
+  2016-05-09  5.24.0 ✓        Ricardo Signes
+  2017-01-14  5.24.1 ✓        Steve Hay
+  2017-02-??  5.24.2          Steve Hay
 
-(RC0 will be released once we think that all the blockers have been
-addressed.  This typically means some time in April or May.)
+=head2 Perl 5.22
 
-=head2 Perl 5.16
-
-Release schedule (with release managers):
-
-  2012-05-20  5.16.0 ✓        Ricardo Signes
-  2012-08-08  5.16.1 ✓        Ricardo Signes
-  2012-11-01  5.16.2 ✓        Ricardo Signes
-  2013-03-11  5.16.3 ✓        Ricardo Signes
-  ????-??-??  5.16.4          ??
-
-=head2 Perl 5.14
-
-Release schedule (with release managers):
-
-  2011-05-14  5.14.0 (final)  Jesse Vincent
-  2011-06-16  5.14.1 ✓        Jesse Vincent
-  2011-09-14  5.14.2 ✓        Florian Ragwitz
-  2012-10-12  5.14.3 ✓        Dominic Hargreaves
-  2013-03-10  5.14.4 ✓        David Mitchell
+  2015-06-01  5.22.0 ✓        Ricardo Signes
+  2015-12-13  5.22.1 ✓        Steve Hay
+  2016-04-29  5.22.2 ✓        Steve Hay
+  2017-01-14  5.22.3 ✓        Steve Hay
+  2017-02-??  5.22.4          Steve Hay
 
 =head1 DEVELOPMENT RELEASE SCHEDULE
 
@@ -58,31 +51,24 @@ When shipping a release, you should include the schedule for (at least)
 the next four releases. If a stable version of Perl is released,
 you should reset the version numbers to the next blead series.
 
-=head2 Perl 5.17
+=head2 Perl 5.25
 
-  2012-05-26  5.17.0  ✓       Zefram
-  2012-06-20  5.17.1  ✓       Jesse Luehrs
-  2012-07-20  5.17.2  ✓       Tony Cook
-  2012-08-20  5.17.3  ✓       Steve Hay
-  2012-09-20  5.17.4  ✓       Florian Ragwitz
-  2012-10-20  5.17.5  ✓       Florian Ragwitz
-  2012-11-20  5.17.6  ✓       Ricardo Signes
-  2012-12-18  5.17.7  ✓       Dave Rolsky
-  2013-01-20  5.17.8  ✓       Aaron Crane
-  2013-02-20  5.17.9  ✓       Chris Williams
-  2013-03-20  5.17.10         Max Maischein
-  2013-04-20  5.17.11
+  2016-04-08  5.25.0 ✓        Ricardo Signes
+  2016-05-20  5.25.1 ✓        Sawyer X
+  2016-06-20  5.25.2 ✓        Matthew Horsfall
+  2016-07-20  5.25.3 ✓        Steve Hay
+  2016-08-20  5.25.4 ✓        BinGOs
+  2016-09-20  5.25.5 ✓        Stevan Little
+  2016-10-20  5.25.6 ✓        Aaron Crane
+  2016-11-20  5.25.7 ✓        Chad Granum
+  2016-12-20  5.25.8 ✓        Sawyer X
+  2017-01-20  5.25.9 ✓        Abigail
+  2017-02-20  5.25.10 ✓       Renée Bäcker
+  2017-03-20  5.25.11 ✓       Sawyer X
+  2017-04-20  5.25.12 ✓       Sawyer X
 
-=head2 Perl 5.19
-
-  2013-05-20  5.19.0          Ricardo Signes
-  2013-06-20  5.19.1          David Golden
-  2013-07-20  5.19.2          Aristotle Pagaltzis
-  2013-08-20  5.19.3          Steve Hay
-  2013-09-20  5.19.4
-  2013-10-20  5.19.5
-  2013-11-20  5.19.6
-  2013-12-20  5.19.7
+(RC0 for 5.26.0 will be released once we think that all the blockers have been
+addressed.  This typically means some time in April or May.)
 
 =head1 VICTIMS
 
@@ -93,27 +79,30 @@ and can't find a substitute amongst this list, mail p5p.
 (Please do not add any names to this list without prior
 consent of the Pumpking.)
 
-Jesse Vincent <jesse@cpan.org>
-Leon Brocard <acme@astray.com>
-Yves Orton <demerphq@gmail.com>
-Ricardo Signes <rjbs@cpan.org>
-Steve Hay <steve.m.hay@googlemail.com>
-Ask Bjørn Hansen <ask@perl.org>
-David Golden <dagolden@cpan.org>
-Philippe Bruhat <book@cpan.org>
-Matt Trout <mst@shadowcat.co.uk>
-Florian Ragwitz <rafl@debian.org>
-Tatsuhiko Miyagawa <miyagawa@bulknews.net>
-Chris Williams <bingos@cpan.org>
-Zefram <zefram@fysh.org>
-Ævar Arnfjörð Bjarmason <avar@cpan.org>
-Stevan Little <stevan.little@iinteractive.com>
-Dave Rolsky <autarch@urth.org>
-Abigail <abigail@abigail.be>
-Max Maischein <corion@cpan.org>
-Dave Cross <dave@perlhacks.com>
-Jesse Luehrs <doy@cpan.org>
-Tony Cook <tony@develop-help.com>
+  Abigail <abigail@abigail.be>
+  Aristotle Pagaltzis <pagaltzis@gmx.de>
+  Ask Bjørn Hansen <ask@perl.org>
+  Chris Williams <bingos@cpan.org>
+  Dave Cross <dave@perlhacks.com>
+  Dave Rolsky <autarch@urth.org>
+  David Golden <dagolden@cpan.org>
+  Florian Ragwitz <rafl@debian.org>
+  Jesse Luehrs <doy@cpan.org>
+  Jesse Vincent <jesse@cpan.org>
+  Leon Brocard <acme@astray.com>
+  Matt Trout <mst@shadowcat.co.uk>
+  Matthew Horsfall <wolfsage@gmail.com>
+  Max Maischein <corion@cpan.org>
+  Peter Martini <petercmartini@gmail.com>
+  Philippe Bruhat <book@cpan.org>
+  Ricardo Signes <rjbs@cpan.org>
+  Stevan Little <stevan@cpan.org>
+  Steve Hay <steve.m.hay@googlemail.com>
+  Tatsuhiko Miyagawa <miyagawa@bulknews.net>
+  Tony Cook <tony@develop-help.com>
+  Yves Orton <demerphq@gmail.com>
+  Zefram <zefram@fysh.org>
+  Ævar Arnfjörð Bjarmason <avar@cpan.org>
 
 =head1 AUTHOR
 

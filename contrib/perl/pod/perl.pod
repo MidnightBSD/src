@@ -42,9 +42,9 @@ flag =   perlvms
 path perlfaq.*               cpan/perlfaq/lib/
 path perlglossary            cpan/perlfaq/lib/
 path perlxs(?:tut|typemap)?  dist/ExtUtils-ParseXS/lib/
-path perldoc                 cpan/Pod-Perldoc/lib/
+path perldoc                 cpan/Pod-Perldoc/
 
-aux a2p c2ph h2ph h2xs perlbug pl2pm pod2html pod2man s2p splain xsubpp
+aux h2ph h2xs perlbug pl2pm pod2html pod2man splain xsubpp
 
 =end buildtoc
 
@@ -98,6 +98,7 @@ aux a2p c2ph h2ph h2xs perlbug pl2pm pod2html pod2man s2p splain xsubpp
     perlpodspec 	Perl plain old documentation format specification
     perlpodstyle	Perl POD style guide
     perldiag		Perl diagnostic messages
+    perldeprecation     Perl deprecations
     perllexwarn 	Perl warnings and their control
     perldebug		Perl debugging
     perlvar		Perl predefined variables
@@ -121,6 +122,7 @@ aux a2p c2ph h2ph h2xs perlbug pl2pm pod2html pod2man s2p splain xsubpp
     perllocale		Perl locale support
     perluniintro	Perl Unicode introduction
     perlunicode 	Perl Unicode support
+    perlunicook 	Perl Unicode cookbook
     perlunifaq		Perl Unicode FAQ
     perluniprops	Index of Unicode properties in Perl
     perlunitut		Perl Unicode tutorial
@@ -179,11 +181,23 @@ aux a2p c2ph h2ph h2xs perlbug pl2pm pod2html pod2man s2p splain xsubpp
 
     perlhist		Perl history records
     perldelta		Perl changes since previous version
+    perl5241delta	Perl changes in version 5.24.1
+    perl5240delta	Perl changes in version 5.24.0
+    perl5223delta	Perl changes in version 5.22.3
+    perl5222delta	Perl changes in version 5.22.2
+    perl5221delta	Perl changes in version 5.22.1
+    perl5220delta	Perl changes in version 5.22.0
+    perl5203delta	Perl changes in version 5.20.3
+    perl5202delta	Perl changes in version 5.20.2
+    perl5201delta	Perl changes in version 5.20.1
+    perl5200delta	Perl changes in version 5.20.0
+    perl5184delta	Perl changes in version 5.18.4
+    perl5182delta	Perl changes in version 5.18.2
     perl5181delta	Perl changes in version 5.18.1
     perl5180delta	Perl changes in version 5.18.0
-    perl5161delta	Perl changes in version 5.16.1
-    perl5162delta	Perl changes in version 5.16.2
     perl5163delta	Perl changes in version 5.16.3
+    perl5162delta	Perl changes in version 5.16.2
+    perl5161delta	Perl changes in version 5.16.1
     perl5160delta	Perl changes in version 5.16.0
     perl5144delta	Perl changes in version 5.14.4
     perl5143delta	Perl changes in version 5.14.3
@@ -231,10 +245,10 @@ aux a2p c2ph h2ph h2xs perlbug pl2pm pod2html pod2man s2p splain xsubpp
 
     perlaix		Perl notes for AIX
     perlamiga		Perl notes for AmigaOS
+    perlandroid		Perl notes for Android
     perlbs2000		Perl notes for POSIX-BC BS2000
     perlce		Perl notes for WinCE
     perlcygwin		Perl notes for Cygwin
-    perldgux		Perl notes for DG/UX
     perldos		Perl notes for DOS
     perlfreebsd 	Perl notes for FreeBSD
     perlhaiku		Perl notes for Haiku
@@ -254,6 +268,7 @@ aux a2p c2ph h2ph h2xs perlbug pl2pm pod2html pod2man s2p splain xsubpp
     perlriscos		Perl notes for RISC OS
     perlsolaris 	Perl notes for Solaris
     perlsymbian 	Perl notes for Symbian
+    perlsynology 	Perl notes for Synology
     perltru64		Perl notes for Tru64
     perlvms		Perl notes for VMS
     perlvos		Perl notes for Stratus VOS
@@ -265,10 +280,10 @@ aux a2p c2ph h2ph h2xs perlbug pl2pm pod2html pod2man s2p splain xsubpp
 
     perlboot		
     perlbot		
+    perlrepository
     perltodo
     perltooc		
     perltoot		
-    perlrepository
 
 =for buildtoc __END__
 
@@ -338,6 +353,9 @@ Perl developers, please write to perl-thanks@perl.org .
 =head1 FILES
 
  "@INC"			locations of perl libraries
+
+"@INC" above is a reference to the built-in variable of the same name;
+see L<perlvar> for more information.
 
 =head1 SEE ALSO
 

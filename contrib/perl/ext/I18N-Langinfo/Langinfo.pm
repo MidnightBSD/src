@@ -72,7 +72,7 @@ our @EXPORT_OK = qw(
 	YESSTR
 );
 
-our $VERSION = '0.10';
+our $VERSION = '0.13';
 
 XSLoader::load();
 
@@ -103,7 +103,8 @@ answers for a yes/no question in the current locale.
 
     use I18N::Langinfo qw(langinfo ABDAY_1 YESSTR NOSTR);
 
-    my ($abday_1, $yesstr, $nostr) = map { langinfo($_) } (ABDAY_1, YESSTR, NOSTR);
+    my ($abday_1, $yesstr, $nostr) =
+        map { langinfo($_) } (ABDAY_1, YESSTR, NOSTR);
 
     print "$abday_1? [$yesstr/$nostr] ";
 
@@ -165,7 +166,7 @@ you can wrap the import in an eval like this:
         I18N::Langinfo->import(qw(langinfo CODESET));
         $codeset = langinfo(CODESET()); # note the ()
     };
-    if (!$@) { ... failed ... }
+    if ($@) { ... failed ... }
 
 =head2 EXPORT
 

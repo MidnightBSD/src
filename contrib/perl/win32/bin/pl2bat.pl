@@ -33,7 +33,7 @@ EOT
 
 my %OPT = ();
 warn($usage), exit(0) if !getopts('whun:o:a:s:',\%OPT) or $OPT{'h'};
-# NOTE: %0 is already enclosed in doublequotes by cmd.exe, as appropriate
+# NOTE: %0 is already enclosed in double quotes by cmd.exe, as appropriate
 $OPT{'n'} = '-x -S %0 %*' unless exists $OPT{'n'};
 $OPT{'o'} = '-x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9' unless exists $OPT{'o'};
 $OPT{'s'} = '/\\.plx?/' unless exists $OPT{'s'};
@@ -84,7 +84,7 @@ sub process {
     my $line;
     my $start= $Config{startperl};
     $start= "#!perl"   unless  $start =~ /^#!.*perl/;
-    open( FILE, $file ) or die "$0: Can't open $file: $!";
+    open( FILE, '<', $file ) or die "$0: Can't open $file: $!";
     @file = <FILE>;
     foreach $line ( @file ) {
 	$linenum++;
@@ -111,7 +111,7 @@ sub process {
     close( FILE );
     $file =~ s/$OPT{'s'}$//oi;
     $file .= '.bat' unless $file =~ /\.bat$/i or $file =~ /^-$/;
-    open( FILE, ">$file" ) or die "Can't open $file: $!";
+    open( FILE, '>', $file ) or die "Can't open $file: $!";
     print FILE $myhead;
     print FILE $start, ( $OPT{'w'} ? " -w" : "" ),
 	       "\n#line ", ($headlines+1), "\n" unless $linedone;

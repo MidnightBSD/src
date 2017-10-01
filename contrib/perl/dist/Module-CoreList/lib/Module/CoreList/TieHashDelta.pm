@@ -3,7 +3,7 @@ package Module::CoreList::TieHashDelta;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = "3.03";
+$VERSION = '5.20170530';
 
 sub TIEHASH {
     my ($class, $changed, $removed, $parent) = @_;
@@ -32,12 +32,14 @@ sub FETCH {
 sub EXISTS {
     my ($self, $key) = @_;
 
+    restart:
     if (exists $self->{changed}{$key}) {
         return 1;
     } elsif (exists $self->{removed}{$key}) {
         return '';
     } elsif (defined $self->{parent}) {
-        return exists $self->{parent}{$key};
+        $self = tied %{$self->{parent}}; #avoid extreme magic/tie recursion
+        goto restart;
     }
     return '';
 }
@@ -46,6 +48,9 @@ sub FIRSTKEY {
     my ($self) = @_;
 
     if (not $self->{keys_inflated}) {
+        # exceeds the warning limit of 100 calls since 5.23.2
+        no warnings 'recursion';
+
         # This inflates the whole set of hashes... Somewhat expensive, but saves
         # many tied hash calls later.
         my @parent_keys;

@@ -6,14 +6,14 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = qw(. ../lib lib);
-    require "test.pl";
+    require "./test.pl";
+    set_up_inc( qw(. ../lib lib ../dist/base/lib) );
 }
 
 use strict;
 no warnings 'once';
 
-plan(tests => 142);
+plan(tests => 151);
 
 @A::ISA = 'B';
 @B::ISA = 'C';
@@ -170,15 +170,6 @@ no warnings 'redefine';
 is(A->eee(), "new B: In A::eee, 4");	# We get a correct $autoload
 is(A->eee(), "new B: In A::eee, 4");	# Which sticks
 
-{
-    no strict 'refs';
-    no warnings 'deprecated';
-    # this test added due to bug discovery (in 5.004_04, fb73857aa0bfa8ed)
-    # Possibly kill this test now that defined @::array is finally properly
-    # deprecated?
-    is(defined(@{"unknown_package::ISA"}) ? "defined" : "undefined", "undefined");
-}
-
 # test that failed subroutine calls don't affect method calls
 {
     package A1;
@@ -320,7 +311,7 @@ is( Foo->boogie(), "yes, sir!");
 eval 'sub AUTOLOAD { "ok ", shift, "\n"; }';
 ok(1);
 
-# Bug ID 20010902.002
+# Bug ID 20010902.002 (#7609)
 is(
     eval q[
 	my $x = 'x'; # Lexical or package variable, 5.6.1 panics.
@@ -345,7 +336,7 @@ is(
     is($w, '');
 }
 
-# [ID 20020305.025] PACKAGE::SUPER doesn't work anymore
+# [ID 20020305.025 (#8788)] PACKAGE::SUPER doesn't work anymore
 
 package main;
 our @X;
@@ -370,6 +361,7 @@ for my $meth (['Bar', 'Foo::Bar'],
 {
     fresh_perl_is(<<EOT,
 package UNIVERSAL; sub AUTOLOAD { my \$c = shift; print "\$c \$AUTOLOAD\\n" }
+sub DESTROY {} # prevent AUTOLOAD being called on DESTROY
 package Xyz;
 package main; Foo->$meth->[0]();
 EOT
@@ -413,7 +405,7 @@ is $kalled, 1, 'calling a class method via a magic variable';
 
     *NulTest::AUTOLOAD = sub { our $AUTOLOAD; return $AUTOLOAD };
 
-    like(NulTest->${ \"nul\0test" }, "nul\0test", "AUTOLOAD is nul-clean");
+    like(NulTest->${ \"nul\0test" }, qr/nul\0test/, "AUTOLOAD is nul-clean");
 }
 
 
@@ -469,6 +461,35 @@ is $kalled, 1, 'calling a class method via a magic variable';
    { bless {}, "NoSub"; }
 }
 
+{
+    # [perl #124387]
+    my $autoloaded;
+    package AutoloadDestroy;
+    sub AUTOLOAD { $autoloaded = 1 }
+    package main;
+    bless {}, "AutoloadDestroy";
+    ok($autoloaded, "AUTOLOAD called for DESTROY");
+
+    # 127494 - AUTOLOAD for DESTROY was called without setting $AUTOLOAD
+    my %methods;
+    package AutoloadDestroy2;
+    sub AUTOLOAD {
+        our $AUTOLOAD;
+        (my $method = $AUTOLOAD) =~ s/.*:://;
+        ++$methods{$method};
+    }
+    package main;
+    # this cached AUTOLOAD as the DESTROY method
+    bless {}, "AutoloadDestroy2";
+    %methods = ();
+    my $o = bless {}, "AutoloadDestroy2";
+    # this sets $AUTOLOAD to "AutoloadDestroy2::foo"
+    $o->foo;
+    # this would call AUTOLOAD without setting $AUTOLOAD
+    undef $o;
+    ok($methods{DESTROY}, "\$AUTOLOAD set correctly for DESTROY");
+}
+
 eval { () = 3; new {} };
 like $@,
      qr/^Can't call method "new" without a package or object reference/,
@@ -511,10 +532,28 @@ is "3foo"->CORE::uc, '3FOO', '"3foo"->CORE::uc';
 { no strict; @{"3foo::ISA"} = "CORE"; }
 is "3foo"->uc, '3FOO', '"3foo"->uc (autobox style!)';
 
+# *foo vs (\*foo)
+sub myclass::squeak { 'eek' }
+eval { *myclass->squeak };
+like $@,
+     qr/^Can't call method "squeak" without a package or object reference/,
+    'method call on typeglob ignores package';
+eval { (\*myclass)->squeak };
+like $@,
+     qr/^Can't call method "squeak" on unblessed reference/,
+    'method call on \*typeglob';
+*stdout2 = *STDOUT;  # stdout2 now stringifies as *main::STDOUT
+ sub IO::Handle::self { $_[0] }
+# This used to stringify the glob:
+is *stdout2->self, (\*stdout2)->self,
+  '*glob->method is equiv to (\*glob)->method';
+sub { $_[0] = *STDOUT; is $_[0]->self, \$::h{k}, '$pvlv_glob->method' }
+ ->($::h{k});
+
 # Test that PL_stashcache doesn't change the resolution behaviour for file
 # handles and package names.
 SKIP: {
-    skip_if_miniperl('file handles as methods requires loading IO::File', 25);
+    skip_if_miniperl('file handles as methods requires loading IO::File', 26);
     require Fcntl;
 
     foreach (qw (Count::DATA Count Colour::H1 Color::H1 C3::H1)) {
@@ -603,7 +642,7 @@ SKIP: {
 
     is(Colour::H1->getline(), <DATA>, 'read from a file');
     is(Color::H1->getline(), <DATA>,
-       'file handles take priority after typeglob assignment');
+       'file handles take priority after io-to-typeglob assignment');
 
     *Color::H1 = *CLOSED{IO};
     {
@@ -616,11 +655,16 @@ SKIP: {
     is(Color::H1->getline(), 'method in Color::H1',
        'undefining the typeglob does change object resolution');
 
+    *Color::H1 = *Colour::H1;
+
+    is(Color::H1->getline(), <DATA>,
+       'file handles take priority after typeglob-to-typeglob assignment');
+
     seek Colour::H1, $fh_start, Fcntl::SEEK_SET() or die $!;
     seek DATA, $data_start, Fcntl::SEEK_SET() or die $!;
 
     is(Colour::H1->getline(), <DATA>, 'read from a file');
-    is(C3::H1->getline(), 'method in C3::H1', 'intial resolution is a method');
+    is(C3::H1->getline(), 'method in C3::H1', 'initial resolution is a method');
 
     *Copy:: = \*C3::;
     *C3:: = \*Colour::;
@@ -634,6 +678,38 @@ SKIP: {
     is(C3::H1->getline(), 'method in C3::H1',
        'restoring the stash returns to a method');
 }
+
+# RT #123619 constant class name should be read-only
+
+{
+    sub RT123619::f { chop $_[0] }
+    eval { 'RT123619'->f(); };
+    like ($@, qr/Modification of a read-only value attempted/, 'RT #123619');
+}
+
+{
+    # RT #126042 &{1==1} * &{1==1} would crash
+
+    # pp_entersub and pp_method_named cooperate to prevent calls to an
+    # undefined import() or unimport() method from croaking.
+    # If pp_method_named can't find the method it pushes &PL_sv_yes, and
+    # pp_entersub checks for that specific SV to avoid croaking.
+    # Ideally they wouldn't use that hack but...
+    # Unfortunately pp_entersub's handling of that case is broken in scalar context.
+
+    # Rather than using the test case from the ticket, since &{1==1}
+    # isn't documented (and may not be supported in future perls) test
+    # calls to undefined import method, which also crashes.
+    fresh_perl_is('Unknown->import() * Unknown->unimport(); print "ok\n"', "ok\n", {},
+                  "check unknown import() methods don't corrupt the stack");
+}
+
+# RT#130496: assertion failure when looking for a method of undefined name
+# on an unblessed reference
+fresh_perl_is('eval { {}->$x }; print $@;',
+              "Can't call method \"\" on unblessed reference at - line 1.",
+              {},
+              "no crash with undef method name on unblessed ref");
 
 __END__
 #FF9900

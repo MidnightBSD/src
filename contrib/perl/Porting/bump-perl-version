@@ -43,7 +43,7 @@
 #
 # Note there are various files and directories that it skips; these are
 # ones that are unlikely to contain anything needing bumping, but which
-# will generate lots fo false positives (eg pod/*). These are listed on
+# will generate lots of false positives (eg pod/*). These are listed on
 # STDERR as they are skipped.
 
 use strict;
@@ -197,6 +197,13 @@ my @maps =  (
         qr/uconfig/,
     ],
 
+    # win32/Makefile.ce
+    [
+        qr/(PV\s*=\s*)(\d\d{2})\b$/,
+        sub { $2, "$1$newx$newy" },
+        "$oldx$oldy",
+        qr/Makefile\.ce/,
+    ],
 );
 
 
@@ -204,6 +211,7 @@ my @maps =  (
 
 my %SKIP_FILES = map { ($_ => 1) } qw(
     Changes
+    intrpvar.h
     MANIFEST
     Porting/Maintainers.pl
     Porting/acknowledgements.pl
@@ -216,6 +224,7 @@ my %SKIP_FILES = map { ($_ => 1) } qw(
     pp_ctl.c
 );
 my @SKIP_DIRS = qw(
+    dist
     ext
     lib
     pod
@@ -243,7 +252,7 @@ exit 0;
 
 sub do_scan {
     for my $file (@mani_files) {
-	next if grep $file =~ m{$_/}, @SKIP_DIRS;
+	next if grep $file =~ m{^$_/}, @SKIP_DIRS;
 	if ($SKIP_FILES{$file}) {
 	    warn "(skipping $file)\n";
 	    next;
@@ -257,6 +266,7 @@ sub do_scan {
 
 	while (my $line = <$fh>) {
 	    my $oldline = $line;
+	    my $line_changed = 0;
 	    for my $map (@maps) {
 		my ($pat, $sub, $expected, $file_pat) = @$map;
 
@@ -270,9 +280,13 @@ sub do_scan {
 		}
 		$line =~ s/$pat/$replacement/
 		    or die "Internal error: substitution failed: [$pat]\n";
+		if ($line ne $oldline) {
+	            $line_changed = 1;
+		    last;
+		}
 	    }
 	    $new_contents .= $line if $opts{i};
-	    if ($line ne $oldline) {
+	    if ($line_changed) {
 		$file_changed = 1;
 		if ($opts{s}) {
 		    print "\n$file\n" unless $header;

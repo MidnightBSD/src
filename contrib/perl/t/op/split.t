@@ -2,11 +2,12 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
     require './test.pl';
+    require './charset_tools.pl';
+    set_up_inc('../lib');
 }
 
-plan tests => 118;
+plan tests => 163;
 
 $FS = ':';
 
@@ -180,7 +181,10 @@ is($cnt, scalar(@ary));
 
 # /^/ treated as /^/m
 $_ = join ':', split /^/, "ab\ncd\nef\n";
-is($_, "ab\n:cd\n:ef\n");
+is($_, "ab\n:cd\n:ef\n","check that split /^/ is treated as split /^/m");
+
+$_ = join ':', split /\A/, "ab\ncd\nef\n";
+is($_, "ab\ncd\nef\n","check that split /\A/ is NOT treated as split /^/m");
 
 # see if @a = @b = split(...) optimization works
 @list1 = @list2 = split ('p',"a p b c p");
@@ -203,8 +207,8 @@ $cnt =           split //, v1.20.300.4000.50000.4000.300.20.1;
 is("@ary", "1 20 300 4000 50000 4000 300 20 1");
 is($cnt, scalar(@ary));
 
-@ary = split(/\x{FE}/, "\x{FF}\x{FE}\x{FD}"); # bug id 20010105.016
-$cnt = split(/\x{FE}/, "\x{FF}\x{FE}\x{FD}"); # bug id 20010105.016
+@ary = split(/\x{FE}/, "\x{FF}\x{FE}\x{FD}"); # bug id 20010105.016 (#5088)
+$cnt = split(/\x{FE}/, "\x{FF}\x{FE}\x{FD}"); # bug id 20010105.016 (#5088)
 ok(@ary == 2 &&
    $ary[0] eq "\xFF"   && $ary[1] eq "\xFD" &&
    $ary[0] eq "\x{FF}" && $ary[1] eq "\x{FD}");
@@ -240,7 +244,7 @@ is($cnt, scalar(@ary));
 }
 
 {
-    # bug id 20000427.003 
+    # bug id 20000427.003 (#3173) 
 
     use warnings;
     use strict;
@@ -261,15 +265,11 @@ is($cnt, scalar(@ary));
 {
     my $s = "\x20\x40\x{80}\x{100}\x{80}\x40\x20";
 
-  SKIP: {
-    if (ord('A') == 193) {
-	skip("EBCDIC", 1);
-    } else {
-	# bug id 20000426.003
+  {
+	# bug id 20000426.003 (#3166)
 
 	my ($a, $b, $c) = split(/\x40/, $s);
 	ok($a eq "\x20" && $b eq "\x{80}\x{100}\x{80}" && $c eq $a);
-    }
   }
 
     my ($a, $b) = split(/\x{100}/, $s);
@@ -278,13 +278,9 @@ is($cnt, scalar(@ary));
     my ($a, $b) = split(/\x{80}\x{100}\x{80}/, $s);
     ok($a eq "\x20\x40" && $b eq "\x40\x20");
 
-  SKIP: {
-    if (ord('A') == 193) {
-	skip("EBCDIC", 1);
-    }  else {
+  {
 	my ($a, $b) = split(/\x40\x{80}/, $s);
 	ok($a eq "\x20" && $b eq "\x{100}\x{80}\x40\x20");
-    }
   }
 
     my ($a, $b, $c) = split(/[\x40\x{80}]+/, $s);
@@ -292,7 +288,7 @@ is($cnt, scalar(@ary));
 }
 
 {
-    # 20001205.014
+    # 20001205.014 (#4844)
 
     my $a = "ABC\x{263A}";
 
@@ -368,6 +364,21 @@ is($cnt, scalar(@ary));
     eval { $b=split(/[, ]+/,$p) };
     is($b, scalar(@a));
     is ("$@-@a-", '-a b-', '#20912 - split() to array with /[]+/ and utf8');
+}
+
+{
+    # LATIN SMALL LETTER A WITH DIAERESIS, CYRILLIC SMALL LETTER I
+    for my $pattern ("\N{U+E4}", "\x{0437}") {
+        utf8::upgrade $pattern;
+        my @res;
+        for my $str ("a${pattern}b", "axb", "a${pattern}b") {
+            @split = split /$pattern/, $str;
+            push @res, scalar(@split);
+        }
+        is($res[0], 2);
+        is($res[1], 1);
+        is($res[2], 2, '#123469 - split with utf8 pattern after handling non-utf8 EXPR');
+    }
 }
 
 {
@@ -474,17 +485,151 @@ is($cnt, scalar(@ary));
     my @results;
     my $expr;
     $expr = ' a b c ';
-    @results = split "\x20", $expr;
+    @results = split uni_to_native("\x20"), $expr;
     is @results, 3,
         "RT #116086: split on string of single hex-20: captured 3 elements";
     is $results[0], 'a',
         "RT #116086: split on string of single hex-20: first element is non-empty";
 
     $expr = " a \tb c ";
-    @results = split "\x20", $expr;
+    @results = split uni_to_native("\x20"), $expr;
     is @results, 3,
         "RT #116086: split on string of single hex-20: captured 3 elements";
     is $results[0], 'a',
         "RT #116086: split on string of single hex-20: first element is non-empty; multiple contiguous space characters";
 }
 
+# Nasty interaction between split and use constant
+use constant nought => 0;
+($a,$b,$c) = split //, $foo, nought;
+is nought, 0, 'split does not mangle 0 constants';
+
+*aaa = *bbb;
+$aaa[1] = "foobarbaz";
+$aaa[1] .= "";
+@aaa = split //, $bbb[1];
+is "@aaa", "f o o b a r b a z",
+   'split-to-array does not free its own argument';
+
+() = @a = split //, "abc";
+is "@a", "a b c", '() = split-to-array';
+
+(@a = split //, "abc") = 1..10;
+is "@a", '1 2 3', 'assignment to split-to-array (pmtarget/package array)';
+{
+  my @a;
+  (@a = split //, "abc") = 1..10;
+  is "@a", '1 2 3', 'assignment to split-to-array (targ/lexical)';
+}
+(@{\@a} = split //, "abc") = 1..10;
+is "@a", '1 2 3', 'assignment to split-to-array (stacked)';
+
+# check that re-evals work
+
+{
+    my $c = 0;
+    @a = split /-(?{ $c++ })/, "a-b-c";
+    is "@a", "a b c", "compile-time re-eval";
+    is $c, 2, "compile-time re-eval count";
+
+    my $sep = '-';
+    $c = 0;
+    @a = split /$sep(?{ $c++ })/, "a-b-c";
+    is "@a", "a b c", "run-time re-eval";
+    is $c, 2, "run-time re-eval count";
+}
+
+# check that that my/local @array = split works
+
+{
+    my $s = "a:b:c";
+
+    local @a = qw(x y z);
+    {
+        local @a = split /:/, $s;
+        is "@a", "a b c", "local split inside";
+    }
+    is "@a", "x y z", "local split outside";
+
+    my @b = qw(x y z);
+    {
+        my @b = split /:/, $s;
+        is "@b", "a b c", "my split inside";
+    }
+    is "@b", "x y z", "my split outside";
+}
+
+# check that the (@a = split) optimisation works in scalar/list context
+
+{
+    my $s = "a:b:c:d:e";
+    my @outer;
+    my $outer;
+    my @lex;
+    local our @pkg;
+
+    $outer = (@lex = split /:/, $s);
+    is "@lex",   "a b c d e", "array split: scalar cx lex: inner";
+    is $outer,   5,           "array split: scalar cx lex: outer";
+
+    @outer = (@lex = split /:/, $s);
+    is "@lex",   "a b c d e", "array split: list cx lex: inner";
+    is "@outer", "a b c d e", "array split: list cx lex: outer";
+
+    $outer = (@pkg = split /:/, $s);
+    is "@pkg",   "a b c d e", "array split: scalar cx pkg inner";
+    is $outer,   5,           "array split: scalar cx pkg outer";
+
+    @outer = (@pkg = split /:/, $s);
+    is "@pkg",   "a b c d e", "array split: list cx pkg inner";
+    is "@outer", "a b c d e", "array split: list cx pkg outer";
+
+    $outer = (my @a1 = split /:/, $s);
+    is "@a1",    "a b c d e", "array split: scalar cx my lex: inner";
+    is $outer,   5,           "array split: scalar cx my lex: outer";
+
+    @outer = (my @a2 = split /:/, $s);
+    is "@a2",    "a b c d e", "array split: list cx my lex: inner";
+    is "@outer", "a b c d e", "array split: list cx my lex: outer";
+
+    $outer = (local @pkg = split /:/, $s);
+    is "@pkg",   "a b c d e", "array split: scalar cx local pkg inner";
+    is $outer,   5,           "array split: scalar cx local pkg outer";
+
+    @outer = (local @pkg = split /:/, $s);
+    is "@pkg",   "a b c d e", "array split: list cx local pkg inner";
+    is "@outer", "a b c d e", "array split: list cx local pkg outer";
+
+    $outer = (@{\@lex} = split /:/, $s);
+    is "@lex",   "a b c d e", "array split: scalar cx lexref inner";
+    is $outer,   5,           "array split: scalar cx lexref outer";
+
+    @outer = (@{\@pkg} = split /:/, $s);
+    is "@pkg",   "a b c d e", "array split: list cx pkgref inner";
+    is "@outer", "a b c d e", "array split: list cx pkgref outer";
+
+
+}
+
+# splitting directly to an array wasn't filling unused AvARRAY slots with
+# NULL
+
+{
+    my @a;
+    @a = split(/-/,"-");
+    $a[1] = 'b';
+    ok eval { $a[0] = 'a'; 1; }, "array split filling AvARRAY: assign 0";
+    is "@a", "a b", "array split filling AvARRAY: result";
+}
+
+# splitting an empty utf8 string gave an assert failure
+{
+    my $s = "\x{100}";
+    chop $s;
+    my @a = split ' ', $s;
+    is (+@a, 0, "empty utf8 string");
+}
+
+fresh_perl_is(<<'CODE', '', {}, "scalar split stack overflow");
+map{int"";split//.0>60for"0000000000000000"}split// for"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+CODE

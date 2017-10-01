@@ -32,7 +32,7 @@ unless (GetOptions('diffs' => \$diffs,
 die "$0: This does not look like a Perl directory\n"
     unless -f "perl.h" && -d "Porting";
 die "$0: 'This is a Perl directory but does not look like Git working directory\n"
-    unless -d ".git";
+    unless (-d ".git" || (exists $ENV{GIT_DIR} && -d $ENV{GIT_DIR}));
 
 my $null = devnull();
 
@@ -42,7 +42,7 @@ unless (defined $tag_to_compare) {
         $check = `git describe --abbrev=0 $check 2>$null`;
         chomp $check;
         last unless $check =~ /-RC/;
-        $check .= '^';
+        $check .= '~1';
     }
     $tag_to_compare = $check;
     # Thanks to David Golden for this suggestion.
@@ -81,9 +81,22 @@ if ($exclude_upstream) {
 # usually because they pull in their version from some other file.
 my %skip;
 @skip{
+    'cpan/ExtUtils-MakeMaker/t/lib/MakeMaker/Test/Setup/BFD.pm', # just a test module
+    'cpan/ExtUtils-MakeMaker/t/lib/MakeMaker/Test/Setup/XS.pm',  # just a test module
+    'cpan/IO-Compress/lib/File/GlobMapper.pm', # upstream needs to supply $VERSION
+    'cpan/Math-BigInt/t/Math/BigFloat/Subclass.pm', # just a test module
+    'cpan/Math-BigInt/t/Math/BigInt/BareCalc.pm',   # just a test module
+    'cpan/Math-BigInt/t/Math/BigInt/Scalar.pm',     # just a test module
+    'cpan/Math-BigInt/t/Math/BigInt/Subclass.pm',   # just a test module
+    'cpan/Math-BigRat/t/Math/BigRat/Test.pm',       # just a test module
+    'cpan/podlators/t/lib/Test/Podlators.pm',       # just a test module
+    'cpan/podlators/t/lib/Test/RRA.pm',             # just a test module
+    'cpan/podlators/t/lib/Test/RRA/Config.pm',      # just a test module
+    'cpan/version/t/coretests.pm', # just a test module
+    'dist/Attribute-Handlers/demo/MyClass.pm', # it's just demonstration code
+    'dist/Exporter/lib/Exporter/Heavy.pm',
     'lib/Carp/Heavy.pm',
     'lib/Config.pm',		# no version number but contents will vary
-    'lib/Exporter/Heavy.pm',
     'win32/FindExt.pm',
 } = ();
 
@@ -92,7 +105,6 @@ my %skip;
 
 my %skip_versions = (
 	   # 'some/sample/file.pm' => [ '1.23', '1.24' ],
-	   'dist/threads/lib/threads.pm' => [ '1.83' ],
 	  );
 
 my $skip_dirs = qr|^t/lib|;
@@ -117,6 +129,7 @@ sub pm_file_from_xs {
 			 # look for a .pm in lib/ based on that:
 			 my ($path) = shift =~ m!^(.*)/!;
 			 my ($last) = $path =~ m!([^/]+)\z!;
+			 $last = 'List-Util' if $last eq 'Scalar-List-Utils';
 			 $last =~ tr !-!/!;
 			 return "$path/lib/$last";
 		     }) {
@@ -174,7 +187,9 @@ foreach my $pm_file (sort keys %module_diffs) {
         print "ok $count - SKIP Can't parse \$VERSION in $pm_file\n"
           if $tap;
     } elsif (!defined $pm_version || $pm_version eq 'undef') {
-        print "not ok $count - in $pm_file version was $orig_pm_version, now unparsable\n" if $tap;
+        my $nok = "not ok $count - in $pm_file version was $orig_pm_version, now unparsable\n";
+        print $nok if $tap;
+        print STDERR "# $nok\n";
     } elsif ($pm_version ne $orig_pm_version) { # good
         print "ok $count - $pm_file\n" if $tap;
     } else {
@@ -186,11 +201,13 @@ foreach my $pm_file (sort keys %module_diffs) {
 		and grep $pm_version eq $_, @{$skip_versions{$pm_file}}) {
 		print "ok $count - SKIP $pm_file version $pm_version\n";
 	    } else {
-		print "not ok $count - $pm_file\n";
+		my $nok = "not ok $count - $pm_file version $pm_version\n";
+		print $nok;
+		print STDERR "# $nok";
 	    }
 	} else {
 	    push @diff, @{$module_diffs{$pm_file}};
-	    print "$pm_file\n";
+	    print "$pm_file version $pm_version\n";
 	}
     }
 }
@@ -198,6 +215,8 @@ foreach my $pm_file (sort keys %module_diffs) {
 sub get_file_from_git {
     my ($file, $tag) = @_;
     local $/;
+
+    use open IN => ':raw';
     return scalar `git --no-pager show $tag:$file 2>$null`;
 }
 

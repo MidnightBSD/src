@@ -86,8 +86,11 @@ SKIP: {
 	  2 * @path_consts;
 
     for my $constant (@path_consts) {
-	_check_and_report(sub { fpathconf($fd, shift) }, $constant,
+        SKIP: {
+            skip "pathconf($constant) hangs on Android", 2 if $constant eq '_PC_LINK_MAX' && $^O =~ /android/;
+            _check_and_report(sub { fpathconf($fd, shift) }, $constant,
 			  "calling fpathconf($fd, $constant)");
+        }
     }
     
     POSIX::close($fd);
@@ -95,8 +98,11 @@ SKIP: {
 
 # testing pathconf() on a non-terminal file
 for my $constant (@path_consts) {
+   SKIP: {
+      skip "pathconf($constant) hangs on Android", 2 if $constant eq '_PC_LINK_MAX' && $^O =~ /android/;
     _check_and_report(sub { pathconf($testdir, shift) }, $constant,
 		      "calling pathconf('$testdir', $constant)");
+   }
 }
 
 SKIP: {
@@ -104,7 +110,7 @@ SKIP: {
 
     -c $TTY
 	or skip("$TTY not a character file", $n);
-    open(TTY, $TTY)
+    open(TTY, '<', $TTY)
 	or skip("failed to open $TTY: $!", $n);
     -t TTY
 	or skip("TTY ($TTY) not a terminal file", $n);

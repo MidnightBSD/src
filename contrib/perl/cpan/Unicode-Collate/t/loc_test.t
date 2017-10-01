@@ -1,8 +1,11 @@
 
 BEGIN {
-    unless ("A" eq pack('U', 0x41)) {
-	print "1..0 # Unicode::Collate " .
-	    "cannot stringify a Unicode code point\n";
+    unless ('A' eq pack('U', 0x41)) {
+	print "1..0 # Unicode::Collate cannot pack a Unicode code point\n";
+	exit 0;
+    }
+    unless (0x41 == unpack('U', 'A')) {
+	print "1..0 # Unicode::Collate cannot get a Unicode code point\n";
 	exit 0;
     }
     if ($ENV{PERL_CORE}) {
@@ -100,8 +103,8 @@ my $objEsT = Unicode::Collate::Locale->new
 ok($objEsT->getlocale, 'es__traditional');
 
 my $objFr  = Unicode::Collate::Locale->new
-    (normalization => undef, locale => 'FR');
-ok($objFr->getlocale, 'fr');
+    (normalization => undef, locale => 'FR_CA');
+ok($objFr->getlocale, 'fr_CA');
 
 # 16
 

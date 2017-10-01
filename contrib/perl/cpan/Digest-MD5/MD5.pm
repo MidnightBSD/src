@@ -3,7 +3,7 @@ package Digest::MD5;
 use strict;
 use vars qw($VERSION @ISA @EXPORT_OK);
 
-$VERSION = '2.52';
+$VERSION = '2.55';
 
 require Exporter;
 *import = \&Exporter::import;
@@ -227,6 +227,16 @@ The base64 encoded string returned is not padded to be a multiple of 4
 bytes long.  If you want interoperability with other base64 encoded
 md5 digests you might want to append the string "==" to the result.
 
+=item @ctx = $md5->context
+
+=item $md5->context(@ctx)
+
+Saves or restores the internal state.  When called with no arguments,
+returns a 3-element list: number of blocks processed, a 16-byte
+internal state buffer, then up to 63 bytes of unprocessed data.  When
+passed those same arguments, restores the state.  This is only useful
+for specialised operations.
+
 =back
 
 
@@ -283,11 +293,10 @@ the file:
 
     print Digest::MD5->new->addfile($fh)->hexdigest, " $filename\n";
 
-Perl 5.8 support Unicode characters in strings.  Since the MD5
-algorithm is only defined for strings of bytes, it can not be used on
-strings that contains chars with ordinal number above 255.  The MD5
-functions and methods will croak if you try to feed them such input
-data:
+Since the MD5 algorithm is only defined for strings of bytes, it can not be
+used on strings that contains chars with ordinal number above 255 (Unicode
+strings).  The MD5 functions and methods will croak if you try to feed them
+such input data:
 
     use Digest::MD5 qw(md5_hex);
 

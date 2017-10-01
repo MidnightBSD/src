@@ -5,6 +5,7 @@
 # --rafl
 
 BEGIN {
+    chdir 't' if -d 't';
     require './test.pl';
 }
 
@@ -80,6 +81,12 @@ CODE
 
 fresh_perl_is($preamble . <<'CODE', 'no match ::', {}, 'regex distillation 4');
 match("Jim Jones, 35 years old, secret wombat 007.");
+CODE
+
+# RT #129199: this is mainly for ASAN etc's benefit
+fresh_perl_is(<<'CODE', '', {}, "RT #129199:");
+/(?{<<""})/
+0
 CODE
 
 done_testing;

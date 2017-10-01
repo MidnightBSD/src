@@ -1,5 +1,7 @@
 # Testing service_check method using tcp and syn protocols.
 
+use Config;
+
 BEGIN {
   unless (eval "require IO::Socket") {
     print "1..0 \# Skip: no IO::Socket\n";
@@ -7,6 +9,10 @@ BEGIN {
   }
   unless (getservbyname('echo', 'tcp')) {
     print "1..0 \# Skip: no echo port\n";
+    exit;
+  }
+  unless ($Config{d_getpbyname}) {
+    print "1..0 \# Skip: no getprotobyname\n";
     exit;
   }
 }
@@ -73,7 +79,7 @@ $p->{port_num} = $port2;
 
 {
     local $TODO;
-    $TODO = "Believed not to work on $^O" if $^O eq 'hpux';
+    $TODO = "Believed not to work on $^O" if $^O eq 'hpux' || $^O eq 'os390';
     is($p->ping("127.0.0.1"), 1, 'second port is reachable');
 }
 
@@ -125,7 +131,7 @@ is($p->ping("127.0.0.1"), 1, "send SYN to second port") or diag ("ERRNO: $!");
 
 {
     local $TODO;
-    $TODO = "Believed not to work on $^O" if $^O eq 'hpux' || $^O eq 'MSWin32';
+    $TODO = "Believed not to work on $^O" if $^O eq 'hpux' || $^O eq 'MSWin32' || $^O eq 'os390';
     is($p->ack(), '127.0.0.1', 'IP should be reachable');
 }
 is($p->ack(), undef, 'No more sockets');

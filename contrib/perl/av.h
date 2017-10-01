@@ -74,11 +74,19 @@ Same as C<av_top_index()>.
 #define AvREIFY_off(av)	(SvFLAGS(av) &= ~SVpav_REIFY)
 #define AvREIFY_only(av)	(AvREAL_off(av), SvFLAGS(av) |= SVpav_REIFY)
 
+
 #define AvREALISH(av)	(SvFLAGS(av) & (SVpav_REAL|SVpav_REIFY))
                                           
 #define AvFILL(av)	((SvRMAGICAL((const SV *) (av))) \
 			 ? mg_size(MUTABLE_SV(av)) : AvFILLp(av))
 #define av_tindex(av)   av_top_index(av)
+
+/* Note that it doesn't make sense to do this:
+ *      SvGETMAGIC(av); IV x = av_tindex_nomg(av);
+ */
+#   define av_top_index_skip_len_mg(av)                                     \
+                            (__ASSERT_(SvTYPE(av) == SVt_PVAV) AvFILLp(av))
+#   define av_tindex_skip_len_mg(av)  av_top_index_skip_len_mg(av)
 
 #define NEGATIVE_INDICES_VAR "NEGATIVE_INDICES"
 
@@ -95,11 +103,5 @@ Perl equivalent: C<my @array;>.
 #define newAV()	MUTABLE_AV(newSV_type(SVt_PVAV))
 
 /*
- * Local variables:
- * c-indentation-style: bsd
- * c-basic-offset: 4
- * indent-tabs-mode: nil
- * End:
- *
  * ex: set ts=8 sts=4 sw=4 et:
  */

@@ -2,8 +2,8 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
     require './test.pl';
+    set_up_inc('../lib');
 }
 
 plan tests => 34;
@@ -76,7 +76,13 @@ $c = "\c^";
 is (ord($c), 30, '\c^');
 $c = "\c_";
 is (ord($c), 31, '\c_');
+
+# '\c?' is an outlier, and is treated differently on each platform.
+# It's DEL on ASCII, and APC on EBCDIC
 $c = "\c?";
-is (ord($c), 127, '\c?');
+is (ord($c), ($::IS_ASCII)
+             ? 127
+             : utf8::unicode_to_native(0x9F),
+              '\c?');
 $c = '';
 is (ord($c), 0, 'ord("") is 0');

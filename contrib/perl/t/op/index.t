@@ -2,12 +2,13 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
     require './test.pl';
+    set_up_inc('../lib');
+    require './charset_tools.pl';
 }
 
 use strict;
-plan( tests => 114 );
+plan( tests => 122 );
 
 run_tests() unless caller;
 
@@ -92,8 +93,8 @@ is(rindex($a, "foo",    ), 0);
 {
     my $search;
     my $text;
-    $search = latin1_to_native("foo \xc9 bar");
-    $text = latin1_to_native("a\xa3\xa3a $search    $search quux");
+    $search = "foo " . uni_to_native("\xc9") . " bar";
+    $text = "a" . uni_to_native("\xa3\xa3") . "a $search    $search quux";
 
     my $text_utf8 = $text;
     utf8::upgrade($text_utf8);
@@ -128,14 +129,13 @@ is(rindex($a, "foo",    ), 0);
     is (rindex($text, $search_octets), -1);
 }
 
-SKIP: {
-    skip "UTF-EBCDIC is limited to 0x7fffffff", 3 if ord("A") == 193;
-
-    my $a = "\x{80000000}";
+{
+    no warnings 'deprecated'; # These are above IV_MAX on 32 bit machines
+    my $a = eval q{"\x{80000000}"};
     my $s = $a.'defxyz';
     is(index($s, 'def'), 1, "0x80000000 is a single character");
 
-    my $b = "\x{fffffffd}";
+    my $b = eval q{"\x{fffffffd}"};
     my $t = $b.'pqrxyz';
     is(index($t, 'pqr'), 1, "0xfffffffd is a single character");
 
@@ -217,4 +217,42 @@ is(index('bang', PVBM2), 0, "index isn't confused by format compilation");
     is(index("rules 1 & 2", perl), 0, 'second index of the same constant works');
 }
 
+# PVBM compilation should not flatten ref constants
+use constant riffraff => \our $referent;
+index "foo", riffraff;
+is ref riffraff, 'SCALAR', 'index does not flatten ref constants';
+
+package o { use overload '""' => sub { "foo" } }
+bless \our $referent, o::;
+is index("foo", riffraff), 0,
+    'index respects changes in ref stringification';
+
+use constant quire => ${qr/(?{})/}; # A REGEXP, not a reference to one
+index "foo", quire;
+eval ' "" =~ quire ';
+is $@, "", 'regexp constants containing code blocks are not flattened';
+
+use constant bang => $! = 8;
+index "foo", bang;
+cmp_ok bang, '==', 8, 'dualvar constants are not flattened';
+
+use constant u => undef;
+{
+    my $w;
+    local $SIG{__WARN__} = sub { $w .= shift };
+    eval '
+        use warnings;
+        sub { () = index "foo", u; }
+    ';
+    is $w, undef, 'no warnings from compiling index($foo, undef_constant)';
 }
+is u, undef, 'undef constant is still undef';
+
+is index('the main road', __PACKAGE__), 4,
+    '[perl #119169] __PACKAGE__ as 2nd argument';
+
+} # end of sub run_tests
+
+utf8::upgrade my $substr = "\x{a3}a";
+
+is index($substr, 'a'), 1, 'index reply reflects characters not octets';

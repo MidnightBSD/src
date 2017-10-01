@@ -1,10 +1,11 @@
-# DerivedDecompositionType-6.2.0.txt
-# Date: 2012-05-23, 20:34:46 GMT [MD]
+# DerivedDecompositionType-9.0.0.txt
+# Date: 2016-03-02, 18:54:58 GMT
+# © 2016 Unicode®, Inc.
+# Unicode and the Unicode Logo are registered trademarks of Unicode, Inc. in the U.S. and other countries.
+# For terms of use, see http://www.unicode.org/terms_of_use.html
 #
 # Unicode Character Database
-# Copyright (c) 1991-2012 Unicode, Inc.
-# For terms of use, see http://www.unicode.org/terms_of_use.html
-# For documentation, see http://www.unicode.org/reports/tr44/
+#   For documentation, see http://www.unicode.org/reports/tr44/
 
 # ================================================
 
@@ -252,11 +253,15 @@ FB46..FB4E    ; Canonical # Lo   [9] HEBREW LETTER TSADI WITH DAGESH..HEBREW LET
 1109C         ; Canonical # Lo       KAITHI LETTER RHA
 110AB         ; Canonical # Lo       KAITHI LETTER VA
 1112E..1112F  ; Canonical # Mn   [2] CHAKMA VOWEL SIGN O..CHAKMA VOWEL SIGN AU
+1134B..1134C  ; Canonical # Mc   [2] GRANTHA VOWEL SIGN OO..GRANTHA VOWEL SIGN AU
+114BB..114BC  ; Canonical # Mc   [2] TIRHUTA VOWEL SIGN AI..TIRHUTA VOWEL SIGN O
+114BE         ; Canonical # Mc       TIRHUTA VOWEL SIGN AU
+115BA..115BB  ; Canonical # Mc   [2] SIDDHAM VOWEL SIGN O..SIDDHAM VOWEL SIGN AU
 1D15E..1D164  ; Canonical # So   [7] MUSICAL SYMBOL HALF NOTE..MUSICAL SYMBOL ONE HUNDRED TWENTY-EIGHTH NOTE
 1D1BB..1D1C0  ; Canonical # So   [6] MUSICAL SYMBOL MINIMA..MUSICAL SYMBOL FUSA BLACK
 2F800..2FA1D  ; Canonical # Lo [542] CJK COMPATIBILITY IDEOGRAPH-2F800..CJK COMPATIBILITY IDEOGRAPH-2FA1D
 
-# Total code points: 13225
+# Total code points: 13232
 
 # ================================================
 
@@ -852,11 +857,13 @@ FEFB          ; Isolated # Lo       ARABIC LIGATURE LAM WITH ALEF ISOLATED FORM
 2D6F          ; Super # Lm       TIFINAGH MODIFIER LETTER LABIALIZATION MARK
 3192..3195    ; Super # No   [4] IDEOGRAPHIC ANNOTATION ONE MARK..IDEOGRAPHIC ANNOTATION FOUR MARK
 3196..319F    ; Super # So  [10] IDEOGRAPHIC ANNOTATION TOP MARK..IDEOGRAPHIC ANNOTATION MAN MARK
+A69C..A69D    ; Super # Lm   [2] MODIFIER LETTER CYRILLIC HARD SIGN..MODIFIER LETTER CYRILLIC SOFT SIGN
 A770          ; Super # Lm       MODIFIER LETTER US
 A7F8..A7F9    ; Super # Lm   [2] MODIFIER LETTER CAPITAL H WITH STROKE..MODIFIER LETTER SMALL LIGATURE OE
+AB5C..AB5F    ; Super # Lm   [4] MODIFIER LETTER SMALL HENG..MODIFIER LETTER SMALL U WITH LEFT HOOK
 1F16A..1F16B  ; Super # So   [2] RAISED MC SIGN..RAISED MD SIGN
 
-# Total code points: 146
+# Total code points: 152
 
 # ================================================
 
@@ -993,9 +1000,9 @@ FE6A..FE6B    ; Small # Po   [2] SMALL PERCENT SIGN..SMALL COMMERCIAL AT
 1F130..1F14F  ; Square # So  [32] SQUARED LATIN CAPITAL LETTER A..SQUARED WC
 1F190         ; Square # So       SQUARE DJ
 1F200..1F202  ; Square # So   [3] SQUARE HIRAGANA HOKA..SQUARED KATAKANA SA
-1F210..1F23A  ; Square # So  [43] SQUARED CJK UNIFIED IDEOGRAPH-624B..SQUARED CJK UNIFIED IDEOGRAPH-55B6
+1F210..1F23B  ; Square # So  [44] SQUARED CJK UNIFIED IDEOGRAPH-624B..SQUARED CJK UNIFIED IDEOGRAPH-914D
 
-# Total code points: 284
+# Total code points: 285
 
 # ================================================
 

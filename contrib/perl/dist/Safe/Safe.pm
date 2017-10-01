@@ -3,7 +3,7 @@ package Safe;
 use 5.003_11;
 use Scalar::Util qw(reftype refaddr);
 
-$Safe::VERSION = "2.35";
+$Safe::VERSION = "2.40";
 
 # *** Don't declare any lexicals above this point ***
 #
@@ -362,9 +362,15 @@ sub reval {
     my $evalsub = lexless_anon_sub($root, $strict, $expr);
     # propagate context
     my $sg = sub_generation();
-    my @subret = (wantarray)
+    my @subret;
+    if (defined wantarray) {
+        @subret = (wantarray)
                ?        Opcode::_safe_call_sv($root, $obj->{Mask}, $evalsub)
                : scalar Opcode::_safe_call_sv($root, $obj->{Mask}, $evalsub);
+    }
+    else {
+        Opcode::_safe_call_sv($root, $obj->{Mask}, $evalsub);
+    }
     _clean_stash($root.'::') if $sg != sub_generation();
     $obj->wrap_code_refs_within(@subret);
     return (wantarray) ? @subret : $subret[0];
@@ -528,7 +534,7 @@ outside the compartment) placed into the compartment. For example,
 
     $cpt = new Safe;
     sub wrapper {
-        # vet arguments and perform potentially unsafe operations
+      # vet arguments and perform potentially unsafe operations
     }
     $cpt->share('&wrapper');
 
@@ -590,9 +596,7 @@ Deny I<only> the listed operators from being used when compiling code
 in the compartment (I<all> other operators will be permitted, so you probably
 don't want to use this method).
 
-=head2 trap (OP, ...)
-
-=head2 untrap (OP, ...)
+=head2 trap (OP, ...), untrap (OP, ...)
 
 The trap and untrap methods are synonyms for deny and permit
 respectfully.
@@ -713,6 +717,9 @@ called from a compartment but not compiled within it.
 =head2 rdo (FILENAME)
 
 This evaluates the contents of file FILENAME inside the compartment.
+It uses the same rules as perl's built-in C<do> to locate the file,
+poossibly using C<@INC>.
+
 See above documentation on the B<reval> method for further details.
 
 =head2 root (NAMESPACE)

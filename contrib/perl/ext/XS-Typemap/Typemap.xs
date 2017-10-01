@@ -157,7 +157,7 @@ XS_unpack_anotherstructPtrPtr(SV *in)
     else
         Perl_croak(aTHX_ "Argument is not an ARRAY reference");
 
-    nitems = av_len(inary) + 1;
+    nitems = av_tindex(inary) + 1;
 
     /* FIXME dunno if supposed to use perl mallocs here */
     /* N+1 elements so we know the last one is NULL */
@@ -176,7 +176,8 @@ XS_unpack_anotherstructPtrPtr(SV *in)
         if (SvROK(tmp) && SvTYPE(SvRV(tmp)) == SVt_PVHV)
             inhash = (HV*)SvRV(tmp);
         else
-            Perl_croak(aTHX_ "Array element %"UVuf" is not a HASH reference", i);
+            Perl_croak(aTHX_ "Array element %" UVuf
+                             " is not a HASH reference", i);
 
         elem = hv_fetchs(inhash, "a", 0);
         if (elem == NULL)
@@ -440,6 +441,7 @@ bool
 T_BOOL_2( in )
   bool in
  CODE:
+    PERL_UNUSED_VAR(RETVAL);
  OUTPUT:
    in
 
@@ -568,6 +570,13 @@ T_PV( in )
   char * in
  CODE:
   RETVAL = in;
+ OUTPUT:
+  RETVAL
+
+char *
+T_PV_null()
+ CODE:
+  RETVAL = NULL;
  OUTPUT:
   RETVAL
 
@@ -897,6 +906,15 @@ T_STDIO_open( file )
   RETVAL = xsfopen( file );
  OUTPUT:
   RETVAL
+
+void
+T_STDIO_open_ret_in_arg( file, io)
+  const char * file
+  FILE * io = NO_INIT
+ CODE:
+  io = xsfopen( file );
+ OUTPUT:
+  io
 
 SysRet
 T_STDIO_close( f )

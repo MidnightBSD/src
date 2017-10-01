@@ -13,8 +13,6 @@
 I32
 Perl_keyword (pTHX_ const char *name, I32 len, bool all_keywords)
 {
-  dVAR;
-
   PERL_ARGS_ASSERT_KEYWORD;
 
   switch (len)
@@ -490,19 +488,9 @@ Perl_keyword (pTHX_ const char *name, I32 len, bool all_keywords)
           goto unknown;
       }
 
-    case 4: /* 41 tokens of length 4 */
+    case 4: /* 40 tokens of length 4 */
       switch (name[0])
       {
-        case 'C':
-          if (name[1] == 'O' &&
-              name[2] == 'R' &&
-              name[3] == 'E')
-          {                                       /* CORE             */
-            return -KEY_CORE;
-          }
-
-          goto unknown;
-
         case 'I':
           if (name[1] == 'N' &&
               name[2] == 'I' &&
@@ -3449,5 +3437,5 @@ unknown:
 }
 
 /* Generated from:
- * e5a540774760ea54c761ef17ee4a153cc264e9a700b817d561e390730c457406 regen/keywords.pl
+ * db0472e0ad4f44bd0816cad799d63b60d1bbd7e11cef40ea15bf0d00f69669f6 regen/keywords.pl
  * ex: set ro: */

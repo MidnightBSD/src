@@ -1,8 +1,11 @@
 
 BEGIN {
-    unless ("A" eq pack('U', 0x41)) {
-	print "1..0 # Unicode::Collate " .
-	    "cannot stringify a Unicode code point\n";
+    unless ('A' eq pack('U', 0x41)) {
+	print "1..0 # Unicode::Collate cannot pack a Unicode code point\n";
+	exit 0;
+    }
+    unless (0x41 == unpack('U', 'A')) {
+	print "1..0 # Unicode::Collate cannot get a Unicode code point\n";
 	exit 0;
     }
     if ($ENV{PERL_CORE}) {
@@ -50,8 +53,7 @@ ok($objSiDict->lt("\x{DA5}", "\x{DA3}"));
 
 for my $h (0, 1) {
     no warnings 'utf8';
-    my $t = $h ? pack('U', 0xFFFF) : "";
-    $objSiDict->change(highestFFFF => 1) if $h;
+    my $t = $h ? pack('U', 0xFFFF) : 'z';
 
     ok($objSiDict->lt("\x{D95}$t", "\x{D96}"));
     ok($objSiDict->lt("\x{D96}$t", "\x{D82}"));

@@ -9,12 +9,35 @@ plan(skip_all => "POSIX is unavailable")
 
 require POSIX;
 require Symbol;
+require File::Temp;
+unshift @INC, "../../t";
+require 'loc_tools.pl';
 
 use constant NOT_HERE => 'this-file-should-not-exist';
+
+# Object destruction causes the file to be deleted.
+my $temp_fh = File::Temp->new();
+my $temp_file = $temp_fh->filename;
 
 # localtime and gmtime in time.t.
 # exit, fork, waitpid, sleep in waitpid.t
 # errno in posix.t
+
+if (locales_enabled('LC_MESSAGES')) {
+    my $non_english_locale;
+    local $! = 1;
+    my $english_message = "$!"; # Should be C locale since not in scope of
+                                # "use locale"
+    for $non_english_locale (find_locales(&POSIX::LC_MESSAGES)) {
+        use locale;
+        setlocale(&POSIX::LC_MESSAGES, $non_english_locale);
+        $! = 1;
+        last if "$!" ne $english_message;
+    }
+
+    # If we found a locale whose message wasn't in English, we have
+    # setlocale() to it.
+}
 
 is(POSIX::abs(-42), 42, 'abs');
 is(POSIX::abs(-3.14), 3.14, 'abs');
@@ -36,7 +59,7 @@ is(do {local $^W;
 
 SKIP: {
     # Win32 doesn't like me trying to fstat STDIN. Bothersome thing.
-    skip("Can't open $^X: $!", 1) unless open my $fh, '<', $^X;
+    skip("Can't open $temp_file: $!", 1) unless open my $fh, '<', $temp_file;
 
     is_deeply([POSIX::fstat(fileno $fh)], [stat $fh], 'fstat');
 }
@@ -108,10 +131,12 @@ is(POSIX::sin(0), 0, 'sin');
 is(POSIX::sleep(0), 0, 'sleep');
 is(POSIX::sprintf('%o', 42), '52', 'sprintf');
 is(POSIX::sqrt(256), 16, 'sqrt');
-is_deeply([POSIX::stat($^X)], [stat $^X], 'stat');
+is_deeply([POSIX::stat($temp_file)], [stat $temp_file], 'stat');
 {
+    use locale;
     local $! = 2;
     my $error = "$!";
+    no locale;
     is(POSIX::strerror(2), $error, 'strerror');
 }
 
@@ -136,9 +161,6 @@ SKIP: {
     cmp_ok($past, '<=', $present, 'time');
     cmp_ok($present, '<=', $future, 'time');
 }
-
-is(POSIX::tolower('Perl Rules'), 'perl rules', 'tolower');
-is(POSIX::toupper('oi!'), 'OI!', 'toupper');
 
 is(-e NOT_HERE, undef, NOT_HERE . ' does not exist');
 

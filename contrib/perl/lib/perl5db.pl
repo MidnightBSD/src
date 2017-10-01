@@ -189,7 +189,7 @@ Values are magical in numeric context: 1 if the line is breakable, 0 if not.
 The scalar C<${"_<$filename"}> simply contains the string C<$filename>.
 This is also the case for evaluated strings that contain subroutines, or
 which are currently being executed.  The $filename for C<eval>ed strings looks
-like C<(eval 34).
+like C<(eval 34)>.
 
 =head1 DEBUGGER STARTUP
 
@@ -318,7 +318,7 @@ is entered or exited.
 
 =item * 8 - Adds parameter information to messages, and overloaded stringify and tied FETCH is enabled on the printed arguments. Ignored if C<4> is not on.
 
-=item * 16 - Adds C<I<context> return from I<subname>: I<value>> messages on subroutine/eval exit. Ignored if C<4> is is not on.
+=item * 16 - Adds C<I<context> return from I<subname>: I<value>> messages on subroutine/eval exit. Ignored if C<4> is not on.
 
 =back
 
@@ -512,18 +512,24 @@ package DB;
 
 use strict;
 
+use Cwd ();
+
+my $_initial_cwd;
+
 BEGIN {eval 'use IO::Handle'}; # Needed for flush only? breaks under miniperl
 
 BEGIN {
     require feature;
     $^V =~ /^v(\d+\.\d+)/;
     feature->import(":$1");
+    $_initial_cwd = Cwd::getcwd();
 }
 
 # Debugger for Perl 5.00x; perl5db.pl patch level:
 use vars qw($VERSION $header);
 
-$VERSION = '1.39_10';
+# bump to X.XX in blead, only use X.XX_XX in maint
+$VERSION = '1.51';
 
 $header = "perl5db.pl version $VERSION";
 
@@ -866,6 +872,7 @@ BEGIN {
         lock($DBGR);
         print "Threads support enabled\n";
     } else {
+        *lock = sub(*) {};
         *share = sub(\[$@%]) {};
     }
 }
@@ -1331,6 +1338,9 @@ if (not defined &get_fork_TTY)       # only if no routine exists
     {
         *get_fork_TTY = \&xterm_get_fork_TTY;    # use the xterm version
     }
+    elsif ( $ENV{TMUX} ) {
+        *get_fork_TTY = \&tmux_get_fork_TTY;
+    }
     elsif ( $^O eq 'os2' ) {                     # If this is OS/2,
         *get_fork_TTY = \&os2_get_fork_TTY;      # use the OS/2 version
     }
@@ -1362,7 +1372,8 @@ the R command stuffed into the environment variables.
   PERLDB_RESTART   - flag only, contains no restart data itself.
   PERLDB_HIST      - command history, if it's available
   PERLDB_ON_LOAD   - breakpoints set by the rc file
-  PERLDB_POSTPONE  - subs that have been loaded/not executed, and have actions
+  PERLDB_POSTPONE  - subs that have been loaded/not executed,
+                     and have actions
   PERLDB_VISITED   - files that had breakpoints
   PERLDB_FILE_...  - breakpoints for a file
   PERLDB_OPT       - active options
@@ -1522,14 +1533,6 @@ We then determine what the console should be on various systems:
         undef $console;
     }
 
-=item * Unix - use F</dev/tty>.
-
-=cut
-
-    elsif ( -e "/dev/tty" ) {
-        $console = "/dev/tty";
-    }
-
 =item * Windows or MSDOS - use C<con>.
 
 =cut
@@ -1538,14 +1541,38 @@ We then determine what the console should be on various systems:
         $console = "con";
     }
 
+=item * AmigaOS - use C<CONSOLE:>.
+
+=cut
+
+    elsif ( $^O eq 'amigaos' ) {
+        $console = "CONSOLE:";
+    }
+
 =item * VMS - use C<sys$command>.
 
 =cut
 
-    else {
+    elsif ($^O eq 'VMS') {
+        $console = 'sys$command';
+    }
 
-        # everything else is ...
-        $console = "sys\$command";
+# Keep this penultimate, on the grounds that it satisfies a wide variety of
+# Unix-like systems that would otherwise need to be identified individually.
+
+=item * Unix - use F</dev/tty>.
+
+=cut
+
+    elsif ( -e "/dev/tty" ) {
+        $console = "/dev/tty";
+    }
+
+# Keep this last.
+
+    else {
+        _db_warn("Can't figure out your console, using stdin");
+        undef $console;
     }
 
 =pod
@@ -1632,14 +1659,14 @@ and if we can.
             $o = $i unless defined $o;
 
             # read/write on in, or just read, or read on STDIN.
-            open( IN,      "+<$i" )
-              || open( IN, "<$i" )
+                 open( IN, '+<', $i )
+              || open( IN, '<',  $i )
               || open( IN, "<&STDIN" );
 
             # read/write/create/clobber out, or write/create/clobber out,
             # or merge with STDERR, or merge with STDOUT.
-                 open( OUT, "+>$o" )
-              || open( OUT, ">$o" )
+                 open( OUT, '+>', $o )
+              || open( OUT, '>',  $o )
               || open( OUT, ">&STDERR" )
               || open( OUT, ">&STDOUT" );    # so we don't dongle stdout
 
@@ -1822,7 +1849,7 @@ sub _DB__read_next_cmd
         setterm();
     }
 
-    # ... and it belogs to this PID or we get one for this PID ...
+    # ... and it belongs to this PID or we get one for this PID ...
     if ($term_pid != $$) {
         resetterm(1);
     }
@@ -1928,7 +1955,10 @@ sub _DB__handle_y_command {
         = $obj->cmd_args =~ /\A(?:(\d*)\s*(.*))?\z/) {
 
         # See if we've got the necessary support.
-        if (!eval { require PadWalker; PadWalker->VERSION(0.08) }) {
+        if (!eval {
+            local @INC = @INC;
+            pop @INC if $INC[-1] eq '.';
+            require PadWalker; PadWalker->VERSION(0.08) }) {
             my $Err = $@;
             _db_warn(
                 $Err =~ /locate/
@@ -1948,7 +1978,7 @@ sub _DB__handle_y_command {
         my @vars = split( ' ', $match_vars || '' );
 
         # Find the pad.
-        my $h = eval { PadWalker::peek_my( ( $match_level || 0 ) + 1 ) };
+        my $h = eval { PadWalker::peek_my( ( $match_level || 0 ) + 2 ) };
 
         # Oops. Can't find it.
         if (my $Err = $@) {
@@ -2098,7 +2128,7 @@ sub _DB__handle_forward_slash_command {
         # If the pattern isn't null ...
         if ( $inpat ne "" ) {
 
-            # Turn of warn and die procesing for a bit.
+            # Turn off warn and die processing for a bit.
             local $SIG{__DIE__};
             local $SIG{__WARN__};
 
@@ -2256,6 +2286,13 @@ sub _DB__handle_restart_and_rerun_commands {
     # R - restart execution.
     # rerun - controlled restart execution.
     if ($cmd_cmd eq 'rerun' or $cmd_params eq '') {
+
+        # Change directory to the initial current working directory on
+        # the script startup, so if the debugged program changed the
+        # directory, then we will still be able to find the path to the
+        # the program. (perl 5 RT #121509 ).
+        chdir ($_initial_cwd);
+
         my @args = ($cmd_cmd eq 'R' ? restart() : rerun($cmd_params));
 
         # Close all non-system fds for a clean restart.  A more
@@ -2418,6 +2455,9 @@ sub _DB__at_end_of_every_command {
             open( OUT, ">&SAVEOUT" ) || _db_warn("Can't restore DB::OUT");
         }
 
+        # Let Readline know about the new filehandles.
+        reset_IN_OUT( \*IN, \*OUT );
+
         # Close filehandle pager was using, restore the normal one
         # if necessary,
         close(SAVEOUT);
@@ -2470,7 +2510,11 @@ EOP
 # 'm' is method.
 # 'v' is the value (i.e: method name or subroutine ref).
 # 's' is subroutine.
-my %cmd_lookup =
+my %cmd_lookup;
+
+BEGIN
+{
+    %cmd_lookup =
 (
     '-' => { t => 'm', v => '_handle_dash_command', },
     '.' => { t => 's', v => \&_DB__handle_dot_command, },
@@ -2501,8 +2545,9 @@ my %cmd_lookup =
         { t => 's', v => \&_DB__handle_restart_and_rerun_commands, },
         } qw(R rerun)),
     (map { $_ => {t => 'm', v => '_handle_cmd_wrapper_commands' }, }
-    qw(a A b B e E h i l L M o O P v w W)),
+        qw(a A b B e E h i l L M o O v w W)),
 );
+};
 
 sub DB {
 
@@ -2969,7 +3014,7 @@ Same as for C</>, except the loop runs backwards.
 =head4 C<$rc> - Recall command
 
 Manages the commands in C<@hist> (which is created if C<Term::ReadLine> reports
-that the terminal supports history). It find the the command required, puts it
+that the terminal supports history). It finds the command required, puts it
 into C<$cmd>, and redoes the loop to execute it.
 
 =cut
@@ -3147,7 +3192,7 @@ again.
 #
 #   my $obj = DB::Obj->new(
 #
-# The following package declaraton must come before that,
+# The following package declaration must come before that,
 # or else runtime errors will occur with
 #
 #   PERLDB_OPTS="autotrace nonstop"
@@ -3299,6 +3344,9 @@ B<h q>, B<h R> or B<h o> to get additional info.
 EOP
 
         # Set the DB::eval context appropriately.
+        # At program termination disable any user actions.
+        $DB::action = undef;
+
         $DB::package     = 'main';
         $DB::usercontext = DB::_calc_usercontext($DB::package);
     } ## end elsif ($package eq 'DB::fake')
@@ -4093,9 +4141,6 @@ sub _print_frame_message {
 }
 
 sub DB::sub {
-    # Do not use a regex in this subroutine -> results in corrupted memory
-    # See: [perl #66110]
-
     # lock ourselves under threads
     lock($DBGR);
 
@@ -4268,7 +4313,9 @@ sub lsub : lvalue {
     $stack[-1] = $single;
 
     # Turn off all flags except single-stepping.
-    $single &= 1;
+    # Use local so the single-step value is popped back off the
+    # stack for us.
+    local $single = $single & 1;
 
     # If we've gotten really deeply recursed, turn on the flag that will
     # make us stop with the 'deep recursion' message.
@@ -4276,9 +4323,6 @@ sub lsub : lvalue {
 
     # If frame messages are on ...
     _print_frame_message($al);
-
-    # Pop the single-step value back off the stack.
-    $single |= $stack[ $stack_depth-- ];
 
     # call the original lvalue sub.
     &$sub;
@@ -6091,7 +6135,7 @@ sub cmd_W {
         } ## end foreach (@to_watch)
 
         # We don't bother to turn watching off because
-        #  a) we don't want to stop calling watchfunction() it it exists
+        #  a) we don't want to stop calling watchfunction() if it exists
         #  b) foreach over a null list doesn't do anything anyway
 
     } ## end elsif ($expr =~ /^(\S.*)/)
@@ -6146,7 +6190,11 @@ sub print_lineinfo {
     resetterm(1) if $LINEINFO eq $OUT and $term_pid != $$;
     local $\ = '';
     local $, = '';
-    print $LINEINFO @_;
+    # $LINEINFO may be undef if $noTTY is set or some other issue.
+    if ($LINEINFO)
+    {
+        print {$LINEINFO} @_;
+    }
 } ## end sub print_lineinfo
 
 =head2 C<postponed_sub>
@@ -6426,7 +6474,7 @@ sub print_trace {
         # Drop out if the user has lost interest and hit control-C.
         last if $signal;
 
-        # Set the separator so arrys print nice.
+        # Set the separator so arrays print nice.
         local $" = ', ';
 
         # Grab and stringify the arguments if they are there.
@@ -6521,11 +6569,10 @@ sub _dump_trace_calc_saved_single_arg
         s/(.*)/'$1'/s
         unless /^(?: -?[\d.]+ | \*[\w:]* )$/x;
 
-        # Turn high-bit characters into meta-whatever.
-        s/([\200-\377])/sprintf("M-%c",ord($1)&0177)/eg;
-
-        # Turn control characters into ^-whatever.
-        s/([\0-\37\177])/sprintf("^%c",ord($1)^64)/eg;
+        # Turn high-bit characters into meta-whatever, and controls into like
+        # '^D'.
+        require 'meta_notation.pm';
+        $_ = _meta_notation($_) if /[[:^print:]]/a;
 
         return $_;
     }
@@ -6718,24 +6765,24 @@ sub _db_system {
 
     # We save, change, then restore STDIN and STDOUT to avoid fork() since
     # some non-Unix systems can do system() but have problems with fork().
-    open( SAVEIN,  "<&STDIN" )  || db_warn("Can't save STDIN");
-    open( SAVEOUT, ">&STDOUT" ) || db_warn("Can't save STDOUT");
-    open( STDIN,   "<&IN" )     || db_warn("Can't redirect STDIN");
-    open( STDOUT,  ">&OUT" )    || db_warn("Can't redirect STDOUT");
+    open( SAVEIN,  "<&STDIN" )  || _db_warn("Can't save STDIN");
+    open( SAVEOUT, ">&STDOUT" ) || _db_warn("Can't save STDOUT");
+    open( STDIN,   "<&IN" )     || _db_warn("Can't redirect STDIN");
+    open( STDOUT,  ">&OUT" )    || _db_warn("Can't redirect STDOUT");
 
     # XXX: using csh or tcsh destroys sigint retvals!
     system(@_);
-    open( STDIN,  "<&SAVEIN" )  || db_warn("Can't restore STDIN");
-    open( STDOUT, ">&SAVEOUT" ) || db_warn("Can't restore STDOUT");
+    open( STDIN,  "<&SAVEIN" )  || _db_warn("Can't restore STDIN");
+    open( STDOUT, ">&SAVEOUT" ) || _db_warn("Can't restore STDOUT");
     close(SAVEIN);
     close(SAVEOUT);
 
     # most of the $? crud was coping with broken cshisms
     if ( $? >> 8 ) {
-        db_warn( "(Command exited ", ( $? >> 8 ), ")\n" );
+        _db_warn( "(Command exited ", ( $? >> 8 ), ")\n" );
     }
     elsif ($?) {
-        db_warn(
+        _db_warn(
             "(Command died of SIG#",
             ( $? & 127 ),
             ( ( $? & 128 ) ? " -- core dumped" : "" ),
@@ -6784,8 +6831,8 @@ sub setterm {
         if ($tty) {
             my ( $i, $o ) = split $tty, /,/;
             $o = $i unless defined $o;
-            open( IN,  "<$i" ) or die "Cannot open TTY '$i' for read: $!";
-            open( OUT, ">$o" ) or die "Cannot open TTY '$o' for write: $!";
+            open( IN,  '<', $i ) or die "Cannot open TTY '$i' for read: $!";
+            open( OUT, '>', $o ) or die "Cannot open TTY '$o' for write: $!";
             $IN  = \*IN;
             $OUT = \*OUT;
             _autoflush($OUT);
@@ -7070,6 +7117,45 @@ sub macosx_get_fork_TTY
     close($pipe);
     return unless defined($tty) && $tty =~ m(^/dev/);
     chomp $tty;
+    return $tty;
+}
+
+=head3 C<tmux_get_fork_TTY>
+
+Creates a split window for subprocesses when a process running under the
+perl debugger in Tmux forks.
+
+=cut
+
+sub tmux_get_fork_TTY {
+    return unless $ENV{TMUX};
+
+    my $pipe;
+
+    my $status = open $pipe, '-|', 'tmux', 'split-window',
+        '-P', '-F', '#{pane_tty}', 'sleep 100000';
+
+    if ( !$status ) {
+        return;
+    }
+
+    my $tty = <$pipe>;
+    close $pipe;
+
+    if ( $tty ) {
+        chomp $tty;
+
+        if ( !defined $term ) {
+            require Term::ReadLine;
+            if ( !$rl ) {
+                $term = Term::ReadLine::Stub->new( 'perldb', $IN, $OUT );
+            }
+            else {
+                $term = Term::ReadLine->new( 'perldb', $IN, $OUT );
+            }
+        }
+    }
+
     return $tty;
 }
 
@@ -7515,7 +7601,7 @@ variables during a restart.
 Set_list packages up items to be stored in a set of environment variables
 (VAR_n, containing the number of items, and VAR_0, VAR_1, etc., containing
 the values). Values outside the standard ASCII charset are stored by encoding
-then as hexadecimal values.
+them as hexadecimal values.
 
 =cut
 
@@ -7531,7 +7617,9 @@ sub set_list {
     for my $i ( 0 .. $#list ) {
         $val = $list[$i];
         $val =~ s/\\/\\\\/g;
-        $val =~ s/([\0-\37\177\200-\377])/"\\0x" . unpack('H2',$1)/eg;
+        no warnings 'experimental::regex_sets';
+        $val =~ s/ ( (?[ [\000-\xFF] & [:^print:] ]) ) /
+                                                "\\0x" . unpack('H2',$1)/xaeg;
         $ENV{"${stem}_$i"} = $val;
     } ## end for $i (0 .. $#list)
 } ## end sub set_list
@@ -7667,8 +7755,8 @@ sub TTY {
         }
 
         # Open file onto the debugger's filehandles, if you can.
-        open IN,  $in     or die "cannot open '$in' for read: $!";
-        open OUT, ">$out" or die "cannot open '$out' for write: $!";
+        open IN,  '<', $in or die "cannot open '$in' for read: $!";
+        open OUT, '>', $out or die "cannot open '$out' for write: $!";
 
         # Swap to the new filehandles.
         reset_IN_OUT( \*IN, \*OUT );
@@ -8371,7 +8459,7 @@ sub print_help {
     # wide.  If it's wider than that, an extra space will be added.
     $help_str =~ s{
         ^                       # only matters at start of line
-          ( \040{4} | \t )*     # some subcommands are indented
+          ( \ {4} | \t )*       # some subcommands are indented
           ( < ?                 # so <CR> works
             [BI] < [^\t\n] + )  # find an eeevil ornament
           ( \t+ )               # original separation, discarded
@@ -8898,139 +8986,6 @@ program's STDIN and STDOUT.
 
 =cut
 
-my %_is_in_pods = (map { $_ => 1 }
-    qw(
-    5004delta
-    5005delta
-    561delta
-    56delta
-    570delta
-    571delta
-    572delta
-    573delta
-    58delta
-    581delta
-    582delta
-    583delta
-    584delta
-    590delta
-    591delta
-    592delta
-    aix
-    amiga
-    apio
-    api
-    artistic
-    book
-    boot
-    bot
-    bs2000
-    call
-    ce
-    cheat
-    clib
-    cn
-    compile
-    cygwin
-    data
-    dbmfilter
-    debguts
-    debtut
-    debug
-    delta
-    dgux
-    diag
-    doc
-    dos
-    dsc
-    ebcdic
-    embed
-    faq1
-    faq2
-    faq3
-    faq4
-    faq5
-    faq6
-    faq7
-    faq8
-    faq9
-    faq
-    filter
-    fork
-    form
-    freebsd
-    func
-    gpl
-    guts
-    hack
-    hist
-    hpux
-    hurd
-    intern
-    intro
-    iol
-    ipc
-    irix
-    jp
-    ko
-    lexwarn
-    locale
-    lol
-    macos
-    macosx
-    modinstall
-    modlib
-    mod
-    modstyle
-    netware
-    newmod
-    number
-    obj
-    opentut
-    op
-    os2
-    os390
-    os400
-    packtut
-    plan9
-    pod
-    podspec
-    port
-    qnx
-    ref
-    reftut
-    re
-    requick
-    reref
-    retut
-    run
-    sec
-    solaris
-    style
-    sub
-    syn
-    thrtut
-    tie
-    toc
-    todo
-    tooc
-    toot
-    trap
-    tru64
-    tw
-    unicode
-    uniintro
-    util
-    uts
-    var
-    vms
-    vos
-    win32
-    xs
-    xstut
-    )
-);
-
 sub runman {
     my $page = shift;
     unless ($page) {
@@ -9048,8 +9003,8 @@ sub runman {
     $page = 'perl' if lc($page) eq 'help';
 
     require Config;
-    my $man1dir = $Config::Config{'man1dir'};
-    my $man3dir = $Config::Config{'man3dir'};
+    my $man1dir = $Config::Config{man1direxp};
+    my $man3dir = $Config::Config{man3direxp};
     for ( $man1dir, $man3dir ) { s#/[^/]*\z## if /\S/ }
     my $manpath = '';
     $manpath .= "$man1dir:" if $man1dir =~ /\S/;
@@ -9057,8 +9012,7 @@ sub runman {
     chop $manpath if $manpath;
 
     # harmless if missing, I figure
-    my $oldpath = $ENV{MANPATH};
-    $ENV{MANPATH} = $manpath if $manpath;
+    local $ENV{MANPATH} = $manpath if $manpath;
     my $nopathopt = $^O =~ /dunno what goes here/;
     if (
         CORE::system(
@@ -9071,20 +9025,27 @@ sub runman {
       )
     {
         unless ( $page =~ /^perl\w/ ) {
-# do it this way because its easier to slurp in to keep up to date - clunky though.
-            if (exists($_is_in_pods{$page})) {
+            # Previously the debugger contained a list which it slurped in,
+            # listing the known "perl" manpages. However, it was out of date,
+            # with errors both of omission and inclusion. This approach is
+            # considerably less complex. The failure mode on a butchered
+            # install is simply that the user has to run man or perldoc
+            # "manually" with the full manpage name.
+
+            # There is a list of $^O values in installperl to determine whether
+            # the directory is 'pods' or 'pod'. However, we can avoid tight
+            # coupling to that by simply checking the "non-standard" 'pods'
+            # first.
+            my $pods = "$Config::Config{privlibexp}/pods";
+            $pods = "$Config::Config{privlibexp}/pod"
+                unless -d $pods;
+            if (-f "$pods/perl$page.pod") {
                 CORE::system( $doccmd,
                     ( ( $manpath && !$nopathopt ) ? ( "-M", $manpath ) : () ),
                     "perl$page" );
             }
         }
     } ## end if (CORE::system($doccmd...
-    if ( defined $oldpath ) {
-        $ENV{MANPATH} = $manpath;
-    }
-    else {
-        delete $ENV{MANPATH};
-    }
 } ## end sub runman
 
 #use Carp;                          # This did break, left for debugging
@@ -9165,7 +9126,7 @@ BEGIN {    # This does not compile, alas. (XXX eh?)
 
     # This defines the point at which you get the 'deep recursion'
     # warning. It MUST be defined or the debugger will not load.
-    $deep = 100;
+    $deep = 1000;
 
     # Number of lines around the current one that are shown in the
     # 'w' command.
@@ -9487,7 +9448,10 @@ if PadWalker could be loaded.
 
 =cut
 
-        if (not $text =~ /::/ and eval { require PadWalker } ) {
+        if (not $text =~ /::/ and eval {
+            local @INC = @INC;
+            pop @INC if $INC[-1] eq '.';
+            require PadWalker } ) {
             my $level = 1;
             while (1) {
                 my @info = caller($level);
@@ -9511,7 +9475,7 @@ If the package is C<::> (C<main>), create an empty list; if it's something else,
 =cut
 
         push @out, map "$prefix$_", grep /^\Q$text/,
-          ( grep /^_?[a-zA-Z]/, keys %$pack ),
+          ( grep /^_?[a-zA-Z]/, do { no strict 'refs'; keys %$pack } ),
           ( $pack eq '::' ? () : ( grep /::$/, keys %:: ) );
 
 =item *
@@ -10312,7 +10276,7 @@ sub cmd_prepost {
     my $which = '';
 
     # Make sure we have some array or another to address later.
-    # This means that if ssome reason the tests fail, we won't be
+    # This means that if for some reason the tests fail, we won't be
     # trying to stash actions or delete them from the wrong place.
     my $aref = [];
 

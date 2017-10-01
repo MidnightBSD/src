@@ -3,7 +3,12 @@
 # Checks if the parser behaves correctly in edge cases
 # (including weird syntax errors)
 
-print "1..155\n";
+BEGIN {
+    @INC = qw(. ../lib);
+    chdir 't' if -d 't';
+}
+
+print "1..188\n";
 
 sub failed {
     my ($got, $expected, $name) = @_;
@@ -53,11 +58,11 @@ sub is {
 eval '%@x=0;';
 like( $@, qr/^Can't modify hash dereference in repeat \(x\)/, '%@x=0' );
 
-# Bug 20010422.005
+# Bug 20010422.005 (#6874)
 eval q{{s//${}/; //}};
 like( $@, qr/syntax error/, 'syntax error, used to dump core' );
 
-# Bug 20010528.007
+# Bug 20010528.007 (#7052)
 eval q/"\x{"/;
 like( $@, qr/^Missing right brace on \\x/,
     'syntax error in string, used to dump core' );
@@ -80,7 +85,7 @@ eval "a.b.c.d.e.f;sub";
 like( $@, qr/^Illegal declaration of anonymous subroutine/,
     'found by Markov chain stress testing' );
 
-# Bug 20010831.001
+# Bug 20010831.001 (#7605)
 eval '($a, b) = (1, 2);';
 like( $@, qr/^Can't modify constant item in list assignment/,
     'bareword in list assignment' );
@@ -91,11 +96,11 @@ like( $@, qr/^Can't modify constant item in tie /,
 
 eval 'undef foo';
 like( $@, qr/^Can't modify constant item in undef operator /,
-    'undefing constant causes a segfault in 5.6.1 [ID 20010906.019]' );
+    'undefing constant causes a segfault in 5.6.1 [ID 20010906.019 (#7642)]' );
 
 eval 'read($bla, FILE, 1);';
 like( $@, qr/^Can't modify constant item in read /,
-    'read($var, FILE, 1) segfaults on 5.6.1 [ID 20011025.054]' );
+    'read($var, FILE, 1) segfaults on 5.6.1 [ID 20011025.054 (#7847)]' );
 
 # This used to dump core (bug #17920)
 eval q{ sub { sub { f1(f2();); my($a,$b,$c) } } };
@@ -328,10 +333,10 @@ like($@, qr/BEGIN failed--compilation aborted/, 'BEGIN 7' );
   eval qq[ *$xFD ];
   like($@, qr/Identifier too long/, "too long id in glob ctx");
 
-  eval qq[ for $xFD ];
+  eval qq[ for $xFC ];
   like($@, qr/Missing \$ on loop variable/,
-       "253 char id ok, but a different error");
-  eval qq[ for $xFE; ];
+       "252 char id ok, but a different error");
+  eval qq[ for $xFD; ];
   like($@, qr/Identifier too long/, "too long id in for ctx");
 
   # the specific case from the ticket
@@ -439,7 +444,7 @@ is prototype "Hello::_he_said", '_', 'initial tick in sub declaration';
 	'literal -> after an array subscript within ""');
     @x = ['string'];
     # this used to give "string"
-    like("$x[0]-> [0]", qr/^ARRAY\([^)]*\)-> \[0]\z/,
+    like("$x[0]-> [0]", qr/^ARRAY\([^)]*\)-> \[0\]\z/,
 	'literal -> [0] after an array subscript within ""');
 }
 
@@ -450,6 +455,38 @@ for my $pkg(()){}
 $pkg = 3;
 is $pkg, 3, '[perl #114942] for my $foo()){} $foo';
 
+# Check that format 'Foo still works after removing the hack from
+# force_word
+$test++;
+format 'one =
+ok @<< - format 'foo still works
+$test
+.
+{
+    local $~ = "one";
+    write();
+}
+
+$test++;
+format ::two =
+ok @<< - format ::foo still works
+$test
+.
+{
+    local $~ = "two";
+    write();
+}
+
+for(__PACKAGE__) {
+    eval '$_=42';
+    is $_, 'main', '__PACKAGE__ is read-only';
+}
+
+$file = __FILE__;
+BEGIN{ ${"_<".__FILE__} = \1 }
+is __FILE__, $file,
+    'no __FILE__ corruption when setting CopFILESV to a ref';
+
 eval 'Fooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo'
     .'oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo'
     .'oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo'
@@ -458,11 +495,121 @@ eval 'Fooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo'
     .'ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo';
 like $@, "^Identifier too long at ", 'ident buffer overflow';
 
+eval 'for my a1b $i (1) {}';
+# ng: 'Missing $ on loop variable'
+like $@, "^No such class a1b at ", 'TYPE of my of for statement';
+
+eval 'method {} {$_,undef}';
+like $@, qq/^Can't call method "method" on unblessed reference at /,
+     'method BLOCK {...} does not try to disambiguate';
+
+eval '#line 1 maggapom
+      if ($a>3) { $a ++; }
+      else {printf(1/0);}';
+is $@, "Illegal division by zero at maggapom line 2.\n",
+   'else {foo} line number (no space after {) [perl #122695]';
+
+# parentheses needed for this to fail an assertion in S_maybe_multideref
+is +(${[{a=>214}]}[0])->{a}, 214, '($array[...])->{...}';
+
+# This used to fail an assertion because of the OPf_SPECIAL flag on an
+# OP_GV that started out as an OP_CONST.  No test output is necessary, as
+# successful parsing is sufficient.
+sub FILE1 () { 1 }
+sub dummy { tell FILE1 }
+
+# More potential multideref assertion failures
+# OPf_PARENS on OP_RV2SV in subscript
+$x[($_)];
+# OPf_SPECIAL on OP_GV in subscript
+$x[FILE1->[0]];
+
+# Used to crash [perl #123542]
+eval 's /${<>{}) //';
+
+# Also used to crash [perl #123652]
+eval{$1=eval{a:}};
+
+# Used to fail assertions [perl #123753]
+eval "map+map";
+eval "grep+grep";
+
+# ALso failed an assertion [perl #123848]
+{
+ local $SIG{__WARN__} = sub{};
+ eval 'my $_; m// ~~ 0';
+}
+
+# Used to crash [perl #125679]
+eval 'BEGIN {$^H=-1} \eval=time';
+
+# Used to fail an assertion [perl #129073]
+{
+ local $SIG{__WARN__} = sub{};
+ eval '${p{};sub p}()';
+}
+
+# RT #124207 syntax error during stringify can leave stringify op
+# with multiple children and assertion failures
+
+eval 'qq{@{0]}${}},{})';
+is(1, 1, "RT #124207");
+
+# RT #127993 version control conflict markers
+" this should keep working
+<<<<<<<
+" =~ /
+>>>>>>>
+/;
+for my $marker (qw(
+<<<<<<<
+=======
+>>>>>>>
+)) {
+    eval "$marker";
+    like $@, qr/^Version control conflict marker at \(eval \d+\) line 1, near "$marker"/, "VCS marker '$marker' at beginning";
+    eval "\$_\n$marker";
+    like $@, qr/^Version control conflict marker at \(eval \d+\) line 2, near "$marker"/, "VCS marker '$marker' after value";
+    eval "\n\$_ =\n$marker";
+    like $@, qr/^Version control conflict marker at \(eval \d+\) line 3, near "$marker"/, "VCS marker '$marker' after operator";
+}
+
+# keys assignments in weird contexts (mentioned in perl #128260)
+eval 'keys(%h) .= "00"';
+is $@, "", 'keys .=';
+eval 'sub { read $fh, keys %h, 0 }';
+is $@, "", 'read into keys';
+eval 'substr keys(%h),0,=3';
+is $@, "", 'substr keys assignment';
+
+# very large utf8 char in error message was overflowing buffer
+{
+
+    no warnings;
+    eval "q" . chr(100000000064);
+    like $@, qr/Can't find string terminator "." anywhere before EOF/,
+        'RT 128952';
+}
+
+# RT #130311: many parser shifts before a reduce
+
+{
+    eval '[' . ('{' x 300);
+    like $@, qr/Missing right curly or square bracket/, 'RT #130311';
+}
+
+# RT #130815: crash in ck_return for malformed code
+{
+    eval 'm(@{if(0){sub d{]]])}return';
+    like $@, qr/^syntax error at \(eval \d+\) line 1, near "\{\]"/,
+        'RT #130815: null pointer deref';
+}
+
 # Add new tests HERE (above this line)
 
 # bug #74022: Loop on characters in \p{OtherIDContinue}
 # This test hangs if it fails.
-eval chr 0x387;
+eval chr 0x387;   # forces loading of utf8.pm
 is(1,1, '[perl #74022] Parser looping on OtherIDContinue chars');
 
 # More awkward tests for #line. Keep these at the end, as they will screw
@@ -476,6 +623,11 @@ sub check ($$$) {
 }
 
 my $this_file = qr/parser\.t(?:\.[bl]eb?)?$/;
+#line 3
+1 unless
+1;
+check($this_file, 5, "[perl #118931]");
+
 #line 3
 check($this_file, 3, "bare line");
 
@@ -542,16 +694,63 @@ eval <<'EOSTANZA'; die $@ if $@;
 check(qr/^Great hail!.*no more\.$/, 61, "Overflow both small buffer checks");
 EOSTANZA
 
+sub check_line ($$) {
+    my ($line, $name) =  @_;
+    my (undef, undef, $got_line) = caller;
+    is ($got_line, $line, $name);
+}
+
 #line 531 parser.t
-<<EOU; check('parser\.t', 531, 'on same line as heredoc');
+<<EOU; check_line(531, 'on same line as heredoc');
 EOU
 s//<<EOV/e if 0;
 EOV
-check('parser\.t', 535, 'after here-doc in quotes');
-<<EOW;
-${check('parser\.t', 537, 'first line of interp in here-doc');;
-  check('parser\.t', 538, 'second line of interp in here-doc');}
+check_line(535, 'after here-doc in quotes');
+<<EOW; <<EOX;
+${check_line(537, 'first line of interp in here-doc');;
+  check_line(538, 'second line of interp in here-doc');}
 EOW
+${check_line(540, 'first line of interp in second here-doc on same line');;
+  check_line(541, 'second line of interp in second heredoc on same line');}
+EOX
+eval <<'EVAL';
+#line 545
+"${<<EOY; <<EOZ}";
+${check_line(546, 'first line of interp in here-doc in quotes in eval');;
+  check_line(547, 'second line of interp in here-doc in quotes in eval');}
+EOY
+${check_line(549, '1st line of interp in 2nd hd, same line in q in eval');;
+  check_line(550, '2nd line of interp in 2nd hd, same line in q in eval');}
+EOZ
+EVAL
+
+time
+#line 42
+;check_line(42, 'line number after "nullary\n#line"');
+
+"${
+#line 53
+_}";
+check_line(54, 'line number after qq"${#line}"');
+
+#line 24
+"
+${check_line(25, 'line number inside qq/<newline>${...}/')}";
+
+<<"END";
+${;
+#line 625
+}
+END
+check_line(627, 'line number after heredoc containing #line');
+
+#line 638
+<<ENE . ${
+
+ENE
+"bar"};
+check_line(642, 'line number after ${expr} surrounding heredoc body');
+
 
 __END__
-# Don't add new tests HERE. See note above
+# Don't add new tests HERE. See "Add new tests HERE" above.

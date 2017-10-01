@@ -2,15 +2,15 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
     require './test.pl';
+    set_up_inc('../lib');
 }
 
 use strict;
 
 use vars qw(@ary %ary %hash);
 
-plan 85;
+plan 74;
 
 ok !defined($a);
 
@@ -44,35 +44,6 @@ ok !defined($ary{'bar'});
 undef $ary{'foo'};
 ok !defined($ary{'foo'});
 
-{
-    no warnings 'deprecated';
-    ok defined(@ary);
-    ok defined(%ary);
-}
-ok %ary;
-undef @ary;
-{
-    no warnings 'deprecated';
-    ok !defined(@ary);
-}
-undef %ary;
-{
-    no warnings 'deprecated';
-    ok !defined(%ary);
-}
-ok !%ary;
-@ary = (1);
-{
-    no warnings 'deprecated';
-    ok defined @ary;
-}
-%ary = (1,1);
-{
-    no warnings 'deprecated';
-    ok defined %ary;
-}
-ok %ary;
-
 sub foo { pass; 1 }
 
 &foo || fail;
@@ -86,24 +57,6 @@ like $@, qr/^Modification of a read/;
 
 eval { $1 = undef };
 like $@, qr/^Modification of a read/;
-
-{
-    require Tie::Hash;
-    tie my %foo, 'Tie::StdHash';
-    no warnings 'deprecated';
-    ok defined %foo;
-    %foo = ( a => 1 );
-    ok defined %foo;
-}
-
-{
-    require Tie::Array;
-    tie my @foo, 'Tie::StdArray';
-    no warnings 'deprecated';
-    ok defined @foo;
-    @foo = ( a => 1 );
-    ok defined @foo;
-}
 
 {
     # [perl #17753] segfault when undef'ing unquoted string constant
@@ -167,6 +120,30 @@ like $@, qr/^Modification of a read/;
     my ($k, $v) = each %hash;
     is $k, undef, 'each undef at end';
 }
+
+# part of #105906: inlined undef constant getting copied
+BEGIN { $::{z} = \undef }
+for (z,z) {
+    push @_, \$_;
+}
+is $_[0], $_[1], 'undef constants preserve identity';
+
+# [perl #122556]
+my $messages;
+package Thingie;
+DESTROY { $messages .= 'destroyed ' }
+package main;
+sub body {
+    sub {
+        my $t = bless [], 'Thingie';
+        undef $t;
+    }->(), $messages .= 'after ';
+
+    return;
+}
+body();
+is $messages, 'destroyed after ', 'undef $scalar frees refs immediately';
+
 
 # this will segfault if it fails
 

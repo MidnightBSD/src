@@ -2,11 +2,11 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
     require './test.pl';
+    set_up_inc('../lib');
 }
 
-plan tests => 19;
+plan tests => 20;
 
 eval {
     eval {
@@ -15,8 +15,8 @@ eval {
     die if $@;
 };
 
-like($@, '^Horribly', 'die with no args propagates $@');
-like($@, 'propagated', '... and appends a phrase');
+like($@, qr/^Horribly/, 'die with no args propagates $@');
+like($@, qr/\.{3}propagated at/, '... and appends a phrase');
 
 {
     local $SIG{__DIE__} = sub { is( $_[0], "[\000]\n", 'Embedded null passed to signal handler' )};
@@ -95,3 +95,10 @@ like($@, 'propagated', '... and appends a phrase');
     eval { undef $@; die };
     is( $ok, 1, 'no warnings if $@ is undef' );
 }
+
+TODO: {
+    local $TODO = 'RT #4821: die qr{x} does not check termination';
+    my $out = runperl(prog => 'die qr{x}', stderr => 1);
+    like($out, qr/at -e line 1./, 'RT #4821: output from die qr{x}');
+}
+

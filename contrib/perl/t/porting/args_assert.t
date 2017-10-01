@@ -2,8 +2,13 @@
 
 use strict;
 use warnings;
+use Config;
 
 require './test.pl';
+
+if ( $Config{usecrosscompile} ) {
+  skip_all( "Not all files are available during cross-compilation" );
+}
 
 plan('no_plan');
 
@@ -38,9 +43,9 @@ if (!@ARGV) {
     while (<$fh>) {
 	# *.c or */*.c
 	push @ARGV, $prefix . $1 if m!^((?:[^/]+/)?[^/]+\.c)\t!;
+        # Special case the *inline.h since they behave like *.c
+	push @ARGV, $prefix . $1 if m!^(([^/]+)?inline\.h)\t!;
     }
-    push @ARGV, $prefix . 'inline.h'; # Special case this '.h' which acts like
-                                      # a '.c'
 }
 
 while (<>) {

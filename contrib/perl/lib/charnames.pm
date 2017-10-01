@@ -1,7 +1,7 @@
 package charnames;
 use strict;
 use warnings;
-our $VERSION = '1.36';
+our $VERSION = '1.44';
 use unicore::Name;    # mktables-generated algorithmically-defined names
 use _charnames ();    # The submodule for this where most of the work gets done
 
@@ -49,7 +49,7 @@ sub vianame
     # can't change it because of backward compatibility.  New code can use
     # string_vianame() instead.
     my $ord = CORE::hex $1;
-    return chr $ord if $ord <= 255 || ! ((caller 0)[8] & $bytes::hint_bits);
+    return pack("U", $ord) if $ord <= 255 || ! ((caller 0)[8] & $bytes::hint_bits);
     _charnames::carp _charnames::not_legal_use_bytes_msg($arg, chr $ord);
     return;
   }
@@ -74,7 +74,7 @@ sub string_vianame {
   if ($arg =~ /^U\+([0-9a-fA-F]+)$/) {
 
     my $ord = CORE::hex $1;
-    return chr $ord if $ord <= 255 || ! ((caller 0)[8] & $bytes::hint_bits);
+    return pack("U", $ord) if $ord <= 255 || ! ((caller 0)[8] & $bytes::hint_bits);
 
     _charnames::carp _charnames::not_legal_use_bytes_msg($arg, chr $ord);
     return;
@@ -171,7 +171,7 @@ charnames ();">> did not enable C<\N{I<CHARNAME>}>.)
 
 Note that C<\N{U+I<...>}>, where the I<...> is a hexadecimal number,
 also inserts a character into a string.
-The character it inserts is the one whose code point
+The character it inserts is the one whose Unicode code point
 (ordinal value) is equal to the number.  For example, C<"\N{U+263a}"> is
 the Unicode (white background, black foreground) smiley face
 equivalent to C<"\N{WHITE SMILING FACE}">.
@@ -228,7 +228,7 @@ input name is that of a character that won't fit into a byte (i.e., whose
 ordinal is above 255).
 
 Otherwise, any string that includes a C<\N{I<charname>}> or
-C<S<\N{U+I<code point>}>> will automatically have Unicode semantics (see
+C<S<\N{U+I<code point>}>> will automatically have Unicode rules (see
 L<perlunicode/Byte and Character Semantics>).
 
 =head1 LOOSE MATCHES
@@ -280,7 +280,9 @@ Aliases must begin with a character that is alphabetic.  After that, each may
 contain any combination of word (C<\w>) characters, SPACE (U+0020),
 HYPHEN-MINUS (U+002D), LEFT PARENTHESIS (U+0028), RIGHT PARENTHESIS (U+0029),
 and NO-BREAK SPACE (U+00A0).  These last three should never have been allowed
-in names, and are retained for backwards compatibility only; they may be
+in names, and are retained for backwards compatibility only; NO-BREAK SPACE IS
+currently deprecated and scheduled for removal in Perl v5.26; the other two
+may also be
 deprecated and removed in future releases of Perl, so don't use them for new
 names.  (More precisely, the first character of a name you specify must be
 something that matches all of C<\p{ID_Start}>, C<\p{Alphabetic}>, and
@@ -295,11 +297,15 @@ matched name) or to a
 numeric code point (ordinal).  The latter is useful for assigning names
 to code points in Unicode private use areas such as U+E800 through
 U+F8FF.
-A numeric code point must be a non-negative integer or a string beginning
+A numeric code point must be a non-negative integer, or a string beginning
 with C<"U+"> or C<"0x"> with the remainder considered to be a
 hexadecimal integer.  A literal numeric constant must be unsigned; it
 will be interpreted as hex if it has a leading zero or contains
 non-decimal hex digits; otherwise it will be interpreted as decimal.
+If it begins with C<"U+">, it is interpreted as the Unicode code point;
+otherwise it is interpreted as native.  (Only code points below 256 can
+differ between Unicode and native.)  Thus C<U+41> is always the Latin letter
+"A"; but C<0x41> can be "NO-BREAK SPACE" on EBCDIC platforms.
 
 Aliases are added either by the use of anonymous hashes:
 
@@ -402,6 +408,10 @@ with C<"U+"> or C<"0x"> with the remainder considered to be a
 hexadecimal integer.  A literal numeric constant must be unsigned; it
 will be interpreted as hex if it has a leading zero or contains
 non-decimal hex digits; otherwise it will be interpreted as decimal.
+If it begins with C<"U+">, it is interpreted as the Unicode code point;
+otherwise it is interpreted as native.  (Only code points below 256 can
+differ between Unicode and native.)  Thus C<U+41> is always the Latin letter
+"A"; but C<0x41> can be "NO-BREAK SPACE" on EBCDIC platforms.
 
 As mentioned above under L</ALIASES>, Unicode 6.1 defines extra names
 (synonyms or aliases) for some code points, most of which were already

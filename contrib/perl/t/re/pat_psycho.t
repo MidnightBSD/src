@@ -19,12 +19,17 @@ $| = 1;
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = ('../lib','.');
     require './test.pl';
+    set_up_inc('../lib', '.');
+    if ($^O eq 'dec_osf') {
+        skip_all("$^O cannot handle this test");
+    }
+    watchdog(5 * 60);
 }
 
 
 skip_all('$PERL_SKIP_PSYCHO_TEST set') if $ENV{PERL_SKIP_PSYCHO_TEST};
+
 plan tests => 15;  # Update this when adding/deleting tests.
 
 run_tests() unless caller;
@@ -67,6 +72,7 @@ sub run_tests {
         # CURLYX and WHILEM blocks, except those related to LONGJMP, the
         # super-linear cache and warnings. It executes about 0.5M regexes
 
+        no warnings 'regexp';   # Silence "has useless greediness modifier"
         my $r = qr/^
                     (?:
                         ( (?:a|z+)+ )
@@ -99,6 +105,7 @@ sub run_tests {
                     )*
                     ( (?:l|z+)+ )
               $/x;
+        use warnings 'regexp';
           
         my $ok = 1;
         my $msg = "CURLYX stress test";
