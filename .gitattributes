@@ -37095,13 +37095,6 @@ contrib/perl/ext/FileCache/t/04twoarg.t -text
 contrib/perl/ext/FileCache/t/05override.t -text
 contrib/perl/ext/FileCache/t/06export.t -text
 contrib/perl/ext/FileCache/t/07noimport.t -text
-contrib/perl/ext/GDBM_File/GDBM_File.pm svneol=native#text/plain
-contrib/perl/ext/GDBM_File/GDBM_File.xs -text
-contrib/perl/ext/GDBM_File/Makefile.PL svneol=native#text/plain
-contrib/perl/ext/GDBM_File/hints/sco.pl svneol=native#text/plain
-contrib/perl/ext/GDBM_File/t/fatal.t -text
-contrib/perl/ext/GDBM_File/t/gdbm.t -text
-contrib/perl/ext/GDBM_File/typemap -text
 contrib/perl/ext/Hash-Util-FieldHash/Changes -text
 contrib/perl/ext/Hash-Util-FieldHash/FieldHash.xs -text
 contrib/perl/ext/Hash-Util-FieldHash/lib/Hash/Util/FieldHash.pm -text
