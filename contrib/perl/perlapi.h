@@ -99,6 +99,8 @@ END_EXTERN_C
 
 #else	/* !PERL_CORE */
 
+#undef  PL_C_locale_obj
+#define PL_C_locale_obj		(*Perl_GC_locale_obj_ptr(NULL))
 #undef  PL_appctx
 #define PL_appctx		(*Perl_Gappctx_ptr(NULL))
 #undef  PL_check
@@ -123,6 +125,8 @@ END_EXTERN_C
 #define PL_hints_mutex		(*Perl_Ghints_mutex_ptr(NULL))
 #undef  PL_keyword_plugin
 #define PL_keyword_plugin	(*Perl_Gkeyword_plugin_ptr(NULL))
+#undef  PL_locale_mutex
+#define PL_locale_mutex		(*Perl_Glocale_mutex_ptr(NULL))
 #undef  PL_malloc_mutex
 #define PL_malloc_mutex		(*Perl_Gmalloc_mutex_ptr(NULL))
 #undef  PL_mmap_page_size
@@ -145,6 +149,8 @@ END_EXTERN_C
 #define PL_perlio_fd_refcnt_size	(*Perl_Gperlio_fd_refcnt_size_ptr(NULL))
 #undef  PL_perlio_mutex
 #define PL_perlio_mutex		(*Perl_Gperlio_mutex_ptr(NULL))
+#undef  PL_perllib_sep
+#define PL_perllib_sep		(*Perl_Gperllib_sep_ptr(NULL))
 #undef  PL_ppaddr
 #define PL_ppaddr		(*Perl_Gppaddr_ptr(NULL))
 #undef  PL_sh_path

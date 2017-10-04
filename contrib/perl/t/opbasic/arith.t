@@ -2,14 +2,15 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
+    require './test.pl';
+    set_up_inc('../lib');
 }
 
 # This file has been placed in t/opbasic to indicate that it should not use
 # functions imported from t/test.pl or Test::More, as those programs/libraries
 # use operators which are what is being tested in this file.
 
-print "1..167\n";
+print "1..186\n";
 
 sub try ($$$) {
    print +($_[1] ? "ok" : "not ok"), " $_[0] - $_[2]\n";
@@ -430,8 +431,8 @@ if ($^O eq 'VMS') {
 if ($^O eq 'vos') {
   print "not ok ", $T++, " # TODO VOS raises SIGFPE instead of producing infinity.\n";
 }
-elsif ($vms_no_ieee) {
- print $T++, " # SKIP -- the IEEE infinity model is unavailable in this configuration.\n"
+elsif ($vms_no_ieee || !$Config{d_double_has_inf}) {
+ print "ok ", $T++, " # SKIP -- the IEEE infinity model is unavailable in this configuration.\n"
 }
 elsif ($^O eq 'ultrix') {
   print "not ok ", $T++, " # TODO Ultrix enters deep nirvana instead of producing infinity.\n";
@@ -456,3 +457,36 @@ else {
   print "ok ", $T++, " - infinity\n";
 }
 
+
+# [perl #120426]
+# small numbers shouldn't round to zero if they have extra floating digits
+
+unless ($Config{d_double_style_ieee}) {
+for (1..8) { print "ok ", $T++, " # SKIP -- not IEEE\n" }
+} else {
+try $T++,  0.153e-305 != 0.0,              '0.153e-305';
+try $T++,  0.1530e-305 != 0.0,             '0.1530e-305';
+try $T++,  0.15300e-305 != 0.0,            '0.15300e-305';
+try $T++,  0.153000e-305 != 0.0,           '0.153000e-305';
+try $T++,  0.1530000e-305 != 0.0,          '0.1530000e-305';
+try $T++,  0.1530001e-305 != 0.0,          '0.1530001e-305';
+try $T++,  1.17549435100e-38 != 0.0,       'min single';
+# For flush-to-zero systems this may flush-to-zero, see PERL_SYS_FPU_INIT
+try $T++,  2.2250738585072014e-308 != 0.0, 'min double';
+}
+
+# string-to-nv should equal float literals
+try $T++, "1.23"   + 0 ==  1.23,  '1.23';
+try $T++, " 1.23"  + 0 ==  1.23,  '1.23 with leading space';
+try $T++, "1.23 "  + 0 ==  1.23,  '1.23 with trailing space';
+try $T++, "+1.23"  + 0 ==  1.23,  '1.23 with unary plus';
+try $T++, "-1.23"  + 0 == -1.23,  '1.23 with unary minus';
+try $T++, "1.23e4" + 0 ==  12300, '1.23e4';
+
+# trigger various attempts to negate IV_MIN
+
+tryeq $T++,  0x80000000 / -0x80000000, -1, '(IV_MAX+1) / IV_MIN';
+tryeq $T++, -0x80000000 /  0x80000000, -1, 'IV_MIN / (IV_MAX+1)';
+tryeq $T++,  0x80000000 / -1, -0x80000000, '(IV_MAX+1) / -1';
+tryeq $T++,           0 % -0x80000000,  0, '0 % IV_MIN';
+tryeq $T++, -0x80000000 % -0x80000000,  0, 'IV_MIN % IV_MIN';

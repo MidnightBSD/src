@@ -10,6 +10,8 @@ use strict;
 use warnings;
 use Config;
 
+delete $ENV{PERLDB_OPTS};
+
 BEGIN {
     if (! -c "/dev/null") {
         print "1..0 # Skip: no /dev/null\n";
@@ -26,9 +28,10 @@ BEGIN {
         print "1..0 # Skip: \$ENV{PERL5DB} is already set to '$ENV{PERL5DB}'\n";
         exit 0;
     }
+    $ENV{PERL_RL} = 'Perl'; # Suppress system Term::ReadLine::Gnu
 }
 
-plan(116);
+plan(123);
 
 my $rc_filename = '.perldb';
 
@@ -71,7 +74,7 @@ sub _out_contents
     rc(
         <<'EOF',
 
-&parse_options("NonStop=0 ReadLine=0 TTY=db.out LineInfo=db.out");
+&parse_options("NonStop=0 ReadLine=0 TTY=db.out");
 
 sub afterinit {
     push(@DB::typeahead,
@@ -91,36 +94,29 @@ EOF
 {
     local $ENV{PERLDB_OPTS} = "ReadLine=0 NonStop=1";
     my $output = runperl(switches => [ '-d' ], stderr => 1, progfile => '../lib/perl5db/t/rt-66110');
-    like($output, "All tests successful.", "[perl #66110]");
+    like($output, qr/\bAll tests successful\.$/, "[perl #66110]");
 }
 # [ perl #116769] Frame=2
 {
     local $ENV{PERLDB_OPTS} = "frame=2 nonstop";
-    my $output = runperl( switches => [ '-d' ], prog => 'print q{success}' );
+    my $output = runperl( switches => [ '-d' ], prog => 'print qq{success\n}' );
     is( $?, 0, '[perl #116769] frame=2 does not crash debugger, exit == 0' );
-    like( $output, 'success' , '[perl #116769] code is run' );
+    is( $output, "success\n" , '[perl #116769] code is run' );
 }
 # [ perl #116771] autotrace
 {
     local $ENV{PERLDB_OPTS} = "autotrace nonstop";
-    my $output = runperl( switches => [ '-d' ], prog => 'print q{success}' );
+    my $output = runperl( switches => [ '-d' ], prog => 'print qq{success\n}' );
     is( $?, 0, '[perl #116771] autotrace does not crash debugger, exit == 0' );
-    like( $output, 'success' , '[perl #116771] code is run' );
+    is( $output, "success\n" , '[perl #116771] code is run' );
 }
-
+# [ perl #41461] Frame=2 noTTY
 {
-    rc(<<'EOF');
-&parse_options("NonStop=0 TTY=db.out LineInfo=db.out");
-
-sub afterinit {
-    push (@DB::typeahead,
-    't 2',
-    'c',
-    'q',
-    );
-
-}
-EOF
+    local $ENV{PERLDB_OPTS} = "frame=2 noTTY nonstop";
+    rc('');
+    my $output = runperl( switches => [ '-d' ], prog => 'print qq{success\n}' );
+    is( $?, 0, '[perl #41461] frame=2 noTTY does not crash debugger, exit == 0' );
+    is( $output, "success\n" , '[perl #41461] code is run' );
 }
 
 package DebugWrap;
@@ -273,7 +269,7 @@ sub _quote
 sub _run {
     my $self = shift;
 
-    my $rc = qq{&parse_options("NonStop=0 TTY=db.out LineInfo=db.out");\n};
+    my $rc = qq{&parse_options("NonStop=0 TTY=db.out");\n};
 
     $rc .= join('',
         map { "$_\n"}
@@ -1043,6 +1039,20 @@ sub _calc_trace_wrapper
     );
 }
 
+# Test for n with lvalue subs
+DebugWrap->new({
+    cmds =>
+    [
+        'n', 'print "<$x>\n"',
+        'n', 'print "<$x>\n"',
+        'q',
+    ],
+    prog => '../lib/perl5db/t/lsub-n',
+})->output_like(
+    qr/<1>\n<11>\n/,
+    'n steps over lvalue subs',
+);
+
 # Test for 'M' (module list).
 {
     my $wrapper = DebugWrap->new(
@@ -1227,6 +1237,7 @@ sub _calc_trace_wrapper
     $wrapper->contents_like(
         qr/
             $line_out
+            auto\(-\d+\)\s+DB<\d+>\s+\.\n
             $line_out
         /msx,
         'Test the "." command',
@@ -1496,10 +1507,11 @@ sub _calc_trace_wrapper
         }
     );
 
+    my $nl = $^O eq 'VMS' ? "" : "\\\n";
     $wrapper->output_like(qr#
-        \nVar<Q>=1\n
-        \nVar<Q>=2\n
-        \nVar<Q>=3\n
+        \nVar<Q>=1$nl
+        \nVar<Q>=2$nl
+        \nVar<Q>=3
         #msx,
         "a command is working",
     );
@@ -2269,7 +2281,7 @@ sub _calc_trace_wrapper
     );
 
     $wrapper->output_like(qr#
-        ^This\ program\ dies\.\ at\ \S+\ line\ 18\.\n
+        ^This\ program\ dies\.\ at\ \S+\ line\ 18\N*\.\n
         .*?
         ^\s+main::baz\(\)\ called\ at\ \S+\ line\ 13\n
         \s+main::bar\(\)\ called\ at\ \S+\ line\ 7\n
@@ -2294,7 +2306,7 @@ sub _calc_trace_wrapper
     );
 
     $wrapper->contents_like(qr#
-        ^This\ is\ not\ a\ warning\.\ at\ \S+\ line\ 18\.\n
+        ^This\ is\ not\ a\ warning\.\ at\ \S+\ line\ 18\N*\.\n
         .*?
         ^\s+main::baz\(\)\ called\ at\ \S+\ line\ 13\n
         \s+main::bar\(\)\ called\ at\ \S+\ line\ 25\n
@@ -2372,6 +2384,10 @@ sub _calc_trace_wrapper
     $wrapper->contents_like(qr/
         ^main::\([^:]+:28\):\n
         28:\s+myfunc\(\);\n
+        auto\(-\d+\)\s+DB<1>\s+t\n
+        Trace\ =\ on\n
+        auto\(-\d+\)\s+DB<1>\s+b\ 18\n
+        auto\(-\d+\)\s+DB<2>\s+c\n
         main::myfunc\([^:]+:25\):\n
         25:\s+bar\(\);\n
         /msx,
@@ -2399,10 +2415,14 @@ sub _calc_trace_wrapper
     $wrapper->contents_like(qr/
         ^main::\([^:]+:28\):\n
         28:\s+myfunc\(\);\n
+        auto\(-\d+\)\s+DB<1>\s+o\ AutoTrace\n
+        \s+AutoTrace\s+=\s+'1'\n
+        auto\(-\d+\)\s+DB<2>\s+b\ 18\n
+        auto\(-\d+\)\s+DB<3>\s+c\n
         main::myfunc\([^:]+:25\):\n
         25:\s+bar\(\);\n
         /msx,
-        'Test the t command with function calls.',
+        'Test the o AutoTrace command with function calls.',
     );
 }
 
@@ -2679,6 +2699,55 @@ sub _calc_trace_wrapper
     );
 }
 
+# perl 5 RT #121509 regression bug.
+# “perl debugger doesn't save starting dir to restart from”
+# Thanks to Linda Walsh for reporting it.
+{
+    use File::Temp qw/tempdir/;
+
+    my $temp_dir = tempdir( CLEANUP => 1 );
+
+    local $ENV{__PERLDB_TEMP_DIR} = $temp_dir;
+    my $wrapper = DebugWrap->new(
+        {
+            cmds =>
+            [
+                # This is to avoid getting the "Debugger program terminated"
+                # junk that interferes with the normal output.
+                'b _after_chdir',
+                'c',
+                'R',
+                'b _finale',
+                'c',
+                'n',
+                'n',
+                'n',
+                'n',
+                'n',
+                'n',
+                'n',
+                'n',
+                'n',
+                'n',
+                'n',
+                'n',
+                'q',
+            ],
+            prog => '../lib/perl5db/t/rt-121509-restart-after-chdir',
+        }
+    );
+
+    $wrapper->output_like(
+        qr/
+In\ _finale\ No\ 1
+    .*?
+In\ _finale\ No\ 2
+    .*?
+In\ _finale\ No\ 3
+        /msx,
+        "Test that the debugger chdirs to the initial directory after a restart.",
+    );
+}
 # Test the perldoc command
 # We don't actually run the program, but we need to provide one to the wrapper.
 SKIP:
@@ -2702,8 +2771,49 @@ SKIP:
     );
 
     $wrapper->output_like(
-        qr/No manual entry for perlrules/,
+        qr/No (?:manual )?entry for perlrules/,
         'perldoc command works fine',
+    );
+}
+
+# [perl #71678] debugger bug in evaluation of user actions ('a' command)
+# Still evaluated after the script finishes.
+{
+    my $wrapper = DebugWrap->new(
+        {
+            cmds =>
+            [
+                q#a 9 print " \$arg = $arg\n"#,
+                'c 9',
+                's',
+                'q',
+            ],
+            prog => '../lib/perl5db/t/test-a-statement-2',
+            switches => [ '-dw', ],
+            stderr => 1,
+        }
+    );
+
+    $wrapper->contents_unlike(qr/
+        Use\ of\ uninitialized\ value\ \$arg\ in\ concatenation\ [\S ]+\ or\ string\ at
+        /msx,
+        'Test that the a command does not emit warnings on program exit.',
+    );
+}
+
+{
+    # perl 5 RT #126735 regression bug.
+    local $ENV{PERLDB_OPTS} = "NonStop=0 RemotePort=non-existent-host.tld:9001";
+    my $output = runperl( stdin => "q\n", stderr => 1, switches => [ '-d' ], prog => '../lib/perl5db/t/fact' );
+    like(
+        $output,
+        qr/^Unable to connect to remote host:/ms,
+        'Tried to connect.',
+    );
+    unlike(
+        $output,
+        qr/syntax error/,
+        'Can quit from the debugger after a wrong RemotePort',
     );
 }
 

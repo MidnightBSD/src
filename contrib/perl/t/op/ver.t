@@ -2,16 +2,17 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = qw(. ../lib);
     $SIG{'__WARN__'} = sub { warn $_[0] if $DOWARN };
-    require "test.pl";
+    require "./test.pl";
+    set_up_inc( qw(. ../lib) );
+    require "./charset_tools.pl";
 }
 
 $DOWARN = 1; # enable run-time warnings now
 
 use Config;
 
-plan( tests => 57 );
+plan( tests => 58 );
 
 eval 'use v5.5.640';
 is( $@, '', "use v5.5.640; $@");
@@ -19,7 +20,7 @@ is( $@, '', "use v5.5.640; $@");
 require_ok('v5.5.640');
 
 # printing characters should work
-if (ord("\t") == 9) { # ASCII
+if ($::IS_ASCII) { # ASCII
     is('ok ',v111.107.32,'ASCII printing characters');
 
     # hash keys too
@@ -40,7 +41,7 @@ $x = v77;
 is('ok',$x,'poetry optimization');
 
 # but not when dots are involved
-if (ord("\t") == 9) { # ASCII
+if ($::IS_ASCII) { # ASCII
     $x = v77.78.79;
 }
 else {
@@ -58,7 +59,7 @@ is( $@, '', "use 5.5.640; $@");
 require_ok('5.5.640');
 
 # hash keys too
-if (ord("\t") == 9) { # ASCII
+if ($::IS_ASCII) { # ASCII
     $h{111.107.32} = "ok";
 }
 else {
@@ -66,7 +67,7 @@ else {
 }
 is('ok',$h{ok },'hash keys w/o v');
 
-if (ord("\t") == 9) { # ASCII
+if ($::IS_ASCII) { # ASCII
     $x = 77.78.79;
 }
 else {
@@ -77,7 +78,7 @@ is($x, 'MNO','poetry optimization with dots w/o v');
 is(1.20.300.4000, "\x{1}\x{14}\x{12c}\x{fa0}",'compare embedded \x{} string w/o v');
 
 # test sprintf("%vd"...) etc
-if (ord("\t") == 9) { # ASCII
+if ($::IS_ASCII) { # ASCII
     is(sprintf("%vd", "Perl"), '80.101.114.108', 'ASCII sprintf("%vd", "Perl")');
 }
 else {
@@ -86,7 +87,7 @@ else {
 
 is(sprintf("%vd", v1.22.333.4444), '1.22.333.4444', 'sprintf("%vd", v1.22.333.4444)');
 
-if (ord("\t") == 9) { # ASCII
+if ($::IS_ASCII) { # ASCII
     is(sprintf("%vx", "Perl"), '50.65.72.6c', 'ASCII sprintf("%vx", "Perl")');
 }
 else {
@@ -95,7 +96,7 @@ else {
 
 is(sprintf("%vX", 1.22.333.4444), '1.16.14D.115C','ASCII sprintf("%vX", 1.22.333.4444)');
 
-if (ord("\t") == 9) { # ASCII
+if ($::IS_ASCII) { # ASCII
     is(sprintf("%#*vo", ":", "Perl"), '0120:0145:0162:0154', 'ASCII sprintf("%vo", "Perl")');
 }
 else {
@@ -112,42 +113,42 @@ is(sprintf("%vd", join("", map { chr }
 {
     use bytes;
 
-    if (ord("\t") == 9) { # ASCII
+    if ($::IS_ASCII) { # ASCII
 	is(sprintf("%vd", "Perl"), '80.101.114.108', 'ASCII sprintf("%vd", "Perl") w/use bytes');
     }
     else {
 	is(sprintf("%vd", "Perl"), '215.133.153.147', 'EBCDIC sprintf("%vd", "Perl") w/use bytes');
     }
 
-    if (ord("\t") == 9) { # ASCII
+    if ($::IS_ASCII) { # ASCII
 	is(sprintf("%vd", 1.22.333.4444), '1.22.197.141.225.133.156', 'ASCII sprintf("%vd", v1.22.333.4444 w/use bytes');
     }
     else {
 	is(sprintf("%vd", 1.22.333.4444), '1.22.142.84.187.81.112', 'EBCDIC sprintf("%vd", v1.22.333.4444 w/use bytes');
     }
 
-    if (ord("\t") == 9) { # ASCII
+    if ($::IS_ASCII) { # ASCII
 	is(sprintf("%vx", "Perl"), '50.65.72.6c', 'ASCII sprintf("%vx", "Perl")');
     }
     else {
 	is(sprintf("%vx", "Perl"), 'd7.85.99.93', 'EBCDIC sprintf("%vx", "Perl")');
     }
 
-    if (ord("\t") == 9) { # ASCII
+    if ($::IS_ASCII) { # ASCII
 	is(sprintf("%vX", v1.22.333.4444), '1.16.C5.8D.E1.85.9C', 'ASCII sprintf("%vX", v1.22.333.4444)');
     }
     else {
 	is(sprintf("%vX", v1.22.333.4444), '1.16.8E.54.BB.51.70', 'EBCDIC sprintf("%vX", v1.22.333.4444)');
     }
 
-    if (ord("\t") == 9) { # ASCII
+    if ($::IS_ASCII) { # ASCII
 	is(sprintf("%#*vo", ":", "Perl"), '0120:0145:0162:0154', 'ASCII sprintf("%#*vo", ":", "Perl")');
     }
     else {
 	is(sprintf("%#*vo", ":", "Perl"), '0327:0205:0231:0223', 'EBCDIC sprintf("%#*vo", ":", "Perl")');
     }
 
-    if (ord("\t") == 9) { # ASCII
+    if ($::IS_ASCII) { # ASCII
 	is(sprintf("%*vb", "##", v1.22.333.4444),
 	     '1##10110##11000101##10001101##11100001##10000101##10011100',
 	     'ASCII sprintf("%*vb", "##", v1.22.333.4444)');
@@ -160,13 +161,13 @@ is(sprintf("%vd", join("", map { chr }
 }
 
 {
-    # bug id 20000323.056
+    # bug id 20000323.056 (#2641)
 
-    is( "\x{41}",      +v65, 'bug id 20000323.056');
-    is( "\x41",        +v65, 'bug id 20000323.056');
-    is( "\x{c8}",     +v200, 'bug id 20000323.056');
-    is( "\xc8",       +v200, 'bug id 20000323.056');
-    is( "\x{221b}",  +v8731, 'bug id 20000323.056');
+    is( "\x{41}",      +v65, 'bug id 20000323.056 (#2641)');
+    is( "\x41",        +v65, 'bug id 20000323.056 (#2641)');
+    is( "\x{c8}",     +v200, 'bug id 20000323.056 (#2641)');
+    is( "\xc8",       +v200, 'bug id 20000323.056 (#2641)');
+    is( "\x{221b}",  +v8731, 'bug id 20000323.056 (#2641)');
 }
 
 # See if the things Camel-III says are true: 29..33
@@ -175,7 +176,7 @@ is(sprintf("%vd", join("", map { chr }
 my $vs = v1.20.300.4000;
 is($vs,"\x{1}\x{14}\x{12c}\x{fa0}","v-string ne \\x{}");
 is($vs,chr(1).chr(20).chr(300).chr(4000),"v-string ne chr()");
-is('foo',((chr(193) eq 'A') ? v134.150.150 : v102.111.111),"v-string ne ''");
+is('foo',($::IS_EBCDIC ? v134.150.150 : v102.111.111),"v-string ne ''");
 
 # Chapter 15, pp403
 
@@ -196,7 +197,7 @@ SKIP: {
 # Chapter 28, pp671
 ok(v5.6.0 lt v5.7.0, "v5.6.0 lt v5.7.0");
 
-# part of 20000323.059
+# part of 20000323.059 (#2644)
 is(v200, chr(200),      "v200 eq chr(200)"      );
 is(v200, +v200,         "v200 eq +v200"         );
 is(v200, eval( "v200"), 'v200 eq "v200"'        );
@@ -223,11 +224,10 @@ $v = $revision + $version/1000 + $subversion/1000000;
 
 ok( abs($v - $]) < 10**-8 , "\$^V == \$] (numeric)" );
 
-SKIP: {
-  skip("In EBCDIC the v-string components cannot exceed 2147483647", 6)
-    if ord "A" == 193;
+{
 
-  # [ID 20010902.001] check if v-strings handle full UV range or not
+  no warnings 'deprecated'; # These are above IV_MAX on 32 bit machines
+  # [ID 20010902.001 (#7608)] check if v-strings handle full UV range or not
   if ( $Config{'uvsize'} >= 4 ) {
     is(  sprintf("%vd", eval 'v2147483647.2147483648'),   '2147483647.2147483648', 'v-string > IV_MAX[32-bit]' );
     is(  sprintf("%vd", eval 'v3141592653'),              '3141592653',            'IV_MAX < v-string < UV_MAX[32-bit]');
@@ -270,11 +270,15 @@ ok( exists $h{chr(65).chr(66).chr(67)}, "v-stringness is engaged for X.Y.Z" );
     is $|, 1, 'clobbering vstrings does not clobber all magic';
 }
 
-$a = v102; $a =~ s/f/f/;
+$a = $::IS_EBCDIC ? v134 : v102; $a =~ s/f/f/;
 is ref \$a, 'SCALAR',
   's/// flattens vstrings even when the subst results in the same value';
-$a = v102; $a =~ y/f/g/;
+$a = $::IS_EBCDIC ? v134 : v102; $a =~ y/f/g/;
 is ref \$a, 'SCALAR', 'y/// flattens vstrings';
+
+sub { $_[0] = v3;
+      is ref \$h{nonexistent}, 'VSTRING', 'defelems can pass vstrings' }
+->($h{nonexistent});
 
 # The following tests whether v-strings are correctly
 # interpreted by the tokeniser when it's in a XTERMORDORDOR

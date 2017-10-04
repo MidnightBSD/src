@@ -4,7 +4,6 @@ use strict;
 use 5.008;
 use warnings;
 use warnings FATAL => 'all';
-use Text::Wrap qw(wrap);
 use Data::Dumper;
 $Data::Dumper::Useqq= 1;
 our $hex_fmt= "0x%02X";
@@ -12,9 +11,9 @@ our $hex_fmt= "0x%02X";
 sub DEBUG () { 0 }
 $|=1 if DEBUG;
 
-sub ASCII_PLATFORM { (ord('A') == 65) }
-
-require 'regen/regen_lib.pl';
+require './regen/regen_lib.pl';
+require './regen/charset_translations.pl';
+require "./regen/regcharclass_multi_char_folds.pl";
 
 =head1 NAME
 
@@ -71,7 +70,7 @@ that C<s> contains at least one character.
 =item C<is_WHATEVER_cp(cp)>
 
 Check to see if the string matches a given codepoint (hypothetically a
-U32). The condition is constructed as as to "break out" as early as
+U32). The condition is constructed as to "break out" as early as
 possible if the codepoint is out of range of the condition.
 
 IOW:
@@ -109,6 +108,13 @@ cases: a) the set doesn't include the input code point; b) the set does
 include it, and it is a NULL.
 
 =back
+
+The above isn't quite complete, as for specialized purposes one can get a
+macro like C<is_WHATEVER_utf8_no_length_checks(s)>, which assumes that it is
+already known that there is enough space to hold the character starting at
+C<s>, but otherwise checks that it is well-formed.  In other words, this is
+intermediary in checking between C<is_WHATEVER_utf8(s)> and
+C<is_WHATEVER_utf8_safe(s,e)>.
 
 =head2 CODE FORMAT
 
@@ -161,38 +167,36 @@ License or the Artistic License, as specified in the README file.
 #
 
 sub __uni_latin1 {
+    my $charset= shift;
     my $str= shift;
     my $max= 0;
     my @cp;
     my @cp_high;
     my $only_has_invariants = 1;
+    my $a2n = get_a2n($charset);
     for my $ch ( split //, $str ) {
         my $cp= ord $ch;
-        push @cp, $cp;
-        push @cp_high, $cp if $cp > 255;
         $max= $cp if $max < $cp;
-        if (! ASCII_PLATFORM && $only_has_invariants) {
-            if ($cp > 255) {
-                $only_has_invariants = 0;
-            }
-            else {
-                my $temp = chr($cp);
-                utf8::upgrade($temp);
-                my @utf8 = unpack "U0C*", $temp;
-                $only_has_invariants = (@utf8 == 1 && $utf8[0] == $cp);
-            }
+        if ($cp > 255) {
+            push @cp, $cp;
+            push @cp_high, $cp;
+        }
+        else {
+            push @cp, $a2n->[$cp];
         }
     }
     my ( $n, $l, $u );
-    $only_has_invariants = $max < 128 if ASCII_PLATFORM;
+    $only_has_invariants = ($charset =~ /ascii/i) ? $max < 128 : $max < 160;
     if ($only_has_invariants) {
         $n= [@cp];
     } else {
         $l= [@cp] if $max && $max < 256;
 
-        $u= $str;
-        utf8::upgrade($u);
-        $u= [ unpack "U0C*", $u ] if defined $u;
+        my @u;
+        for my $ch ( split //, $str ) {
+            push @u, map { ord } split //, cp_2_utfbytes(ord $ch, $charset);
+        }
+        $u = \@u;
     }
     return ( \@cp, \@cp_high, $n, $l, $u );
 }
@@ -281,12 +285,22 @@ sub __incrdepth {
 # returns the new root opcode of the tree.
 sub __cond_join {
     my ( $cond, $yes, $no )= @_;
-    return {
-        test  => $cond,
-        yes   => __incrdepth( $yes ),
-        no    => $no,
-        depth => 0,
-    };
+    if (ref $yes) {
+        return {
+            test  => $cond,
+            yes   => __incrdepth( $yes ),
+            no    => $no,
+            depth => 0,
+        };
+    }
+    else {
+        return {
+            test  => $cond,
+            yes   => $yes,
+            no    => __incrdepth($no),
+            depth => 0,
+        };
+    }
 }
 
 # Methods
@@ -307,7 +321,7 @@ sub __cond_join {
 # Each string is then stored in the 'strs' subhash as a hash record
 # made up of the results of __uni_latin1, using the keynames
 # 'low','latin1','utf8', as well as the synthesized 'LATIN1', 'high', and
-# 'UTF8' which hold a merge of 'low' and their lowercase equivelents.
+# 'UTF8' which hold a merge of 'low' and their lowercase equivalents.
 #
 # Size data is tracked per type in the 'size' subhash.
 #
@@ -343,10 +357,6 @@ sub new {
             $str= chr eval $str;
         } elsif ( $str =~ /^0x/ ) {
             $str= eval $str;
-
-            # Convert from Unicode/ASCII to native, if necessary
-            $str = utf8::unicode_to_native($str) if ! ASCII_PLATFORM
-                                                    && $str <= 0xFF;
             $str = chr $str;
         } elsif ( $str =~ / \s* \\p \{ ( .*? ) \} /x) {
             my $property = $1;
@@ -382,7 +392,7 @@ sub new {
         } else {
             die "Unparsable line: $txt\n";
         }
-        my ( $cp, $cp_high, $low, $latin1, $utf8 )= __uni_latin1( $str );
+        my ( $cp, $cp_high, $low, $latin1, $utf8 )= __uni_latin1( $opt{charset}, $str );
         my $UTF8= $low   || $utf8;
         my $LATIN1= $low || $latin1;
         my $high = (scalar grep { $_ < 256 } @$cp) ? 0 : $utf8;
@@ -470,7 +480,7 @@ sub _optree {
     $else= 0  unless defined $else;
     $depth= 0 unless defined $depth;
 
-    # if we have an emptry string as a key it means we are in an
+    # if we have an empty string as a key it means we are in an
     # accepting state and unless we can match further on should
     # return the value of the '' key.
     if (exists $trie->{''} ) {
@@ -491,14 +501,14 @@ sub _optree {
     # it means we are an accepting state (end of sequence).
     my @conds= sort { $a <=> $b } grep { length $_ } keys %$trie;
 
-    # if we havent any keys there is no further we can match and we
+    # if we haven't any keys there is no further we can match and we
     # can return the "else" value.
     return $else if !@conds;
 
+    my $test = $test_type =~ /^cp/ ? "cp" : "((const U8*)s)[$depth]";
 
-    my $test= $test_type =~ /^cp/ ? "cp" : "((U8*)s)[$depth]";
-    # first we loop over the possible keys/conditions and find out what they look like
-    # we group conditions with the same optree together.
+    # First we loop over the possible keys/conditions and find out what they
+    # look like; we group conditions with the same optree together.
     my %dmp_res;
     my @res_order;
     local $Data::Dumper::Sortkeys=1;
@@ -598,27 +608,125 @@ sub length_optree {
     die "Can't do a length_optree on type 'cp', makes no sense."
       if $type =~ /^cp/;
 
-    my ( @size, $method );
+    my $else= ( $opt{else} ||= 0 );
 
-    if ( $type =~ /generic/ ) {
-        $method= 'generic_optree';
+    return $else if $self->{count} == 0;
+
+    my $method = $type =~ /generic/ ? 'generic_optree' : 'optree';
+    if ($method eq 'optree' && scalar keys %{$self->{size}{$type}} == 1) {
+
+        # Here is non-generic output (meaning that we are only generating one
+        # type), and all things that match have the same number ('size') of
+        # bytes.  The length guard is simply that we have that number of
+        # bytes.
+        my @size = keys %{$self->{size}{$type}};
+        my $cond= "((e) - (s)) >= $size[0]";
+        my $optree = $self->$method(%opt);
+        $else= __cond_join( $cond, $optree, $else );
+    }
+    elsif ($self->{has_multi}) {
+        my @size;
+
+        # Here, there can be a match of a multiple character string.  We use
+        # the traditional method which is to have a branch for each possible
+        # size (longest first) and test for the legal values for that size.
         my %sizes= (
             %{ $self->{size}{low}    || {} },
             %{ $self->{size}{latin1} || {} },
             %{ $self->{size}{utf8}   || {} }
         );
-        @size= sort { $a <=> $b } keys %sizes;
-    } else {
-        $method= 'optree';
-        @size= sort { $a <=> $b } keys %{ $self->{size}{$type} };
+        if ($method eq 'generic_optree') {
+            @size= sort { $a <=> $b } keys %sizes;
+        } else {
+            @size= sort { $a <=> $b } keys %{ $self->{size}{$type} };
+        }
+        for my $size ( @size ) {
+            my $optree= $self->$method( %opt, type => $type, max_depth => $size );
+            my $cond= "((e)-(s) > " . ( $size - 1 ).")";
+            $else= __cond_join( $cond, $optree, $else );
+        }
+    }
+    else {
+        my $utf8;
+
+        # Here, has more than one possible size, and only matches a single
+        # character.  For non-utf8, the needed length is 1; for utf8, it is
+        # found by array lookup 'UTF8SKIP'.
+
+        # If want just the code points above 255, set up to look for those;
+        # otherwise assume will be looking for all non-UTF-8-invariant code
+        # poiints.
+        my $trie_type = ($type eq 'high') ? 'high' : 'utf8';
+
+        # If we do want more than the 0-255 range, find those, and if they
+        # exist...
+        if ($opt{type} !~ /latin1/i && ($utf8 = $self->make_trie($trie_type, 0))) {
+
+            # ... get them into an optree, and set them up as the 'else' clause
+            $utf8 = $self->_optree( $utf8, 'depth', $opt{ret_type}, 0, 0 );
+
+            # We could make this
+            #   UTF8_IS_START(*s) && ((e) - (s)) >= UTF8SKIP(s))";
+            # to avoid doing the UTF8SKIP and subsequent branches for invariants
+            # that don't match.  But the current macros that get generated
+            # have only a few things that can match past this, so I (khw)
+            # don't think it is worth it.  (Even better would be to use
+            # calculate_mask(keys %$utf8) instead of UTF8_IS_START, and use it
+            # if it saves a bunch.  We assume that input text likely to be
+            # well-formed .
+            my $cond = "LIKELY(((e) - (s)) >= UTF8SKIP(s))";
+            $else = __cond_join($cond, $utf8, $else);
+
+            # For 'generic', we also will want the latin1 UTF-8 variants for
+            # the case where the input isn't UTF-8.
+            my $latin1;
+            if ($method eq 'generic_optree') {
+                $latin1 = $self->make_trie( 'latin1', 1);
+                $latin1= $self->_optree( $latin1, 'depth', $opt{ret_type}, 0, 0 );
+            }
+
+            # If we want the UTF-8 invariants, get those.
+            my $low;
+            if ($opt{type} !~ /non_low|high/
+                && ($low= $self->make_trie( 'low', 1)))
+            {
+                $low= $self->_optree( $low, 'depth', $opt{ret_type}, 0, 0 );
+
+                # Expand out the UTF-8 invariants as a string so that we
+                # can use them as the conditional
+                $low = $self->_cond_as_str( $low, 0, \%opt);
+
+                # If there are Latin1 variants, add a test for them.
+                if ($latin1) {
+                    $else = __cond_join("(! is_utf8 )", $latin1, $else);
+                }
+                elsif ($method eq 'generic_optree') {
+
+                    # Otherwise for 'generic' only we know that what
+                    # follows must be valid for just UTF-8 strings,
+                    $else->{test} = "( is_utf8 && $else->{test} )";
+                }
+
+                # If the invariants match, we are done; otherwise we have
+                # to go to the 'else' clause.
+                $else = __cond_join($low, 1, $else);
+            }
+            elsif ($latin1) {   # Here, didn't want or didn't have invariants,
+                                # but we do have latin variants
+                $else = __cond_join("(! is_utf8)", $latin1, $else);
+            }
+
+            # We need at least one byte available to start off the tests
+            $else = __cond_join("LIKELY((e) > (s))", $else, 0);
+        }
+        else {  # Here, we don't want or there aren't any variants.  A single
+                # byte available is enough.
+            my $cond= "((e) > (s))";
+            my $optree = $self->$method(%opt);
+            $else= __cond_join( $cond, $optree, $else );
+        }
     }
 
-    my $else= ( $opt{else} ||= 0 );
-    for my $size ( @size ) {
-        my $optree= $self->$method( %opt, type => $type, max_depth => $size );
-        my $cond= "((e)-(s) > " . ( $size - 1 ).")";
-        $else= __cond_join( $cond, $optree, $else );
-    }
     return $else;
 }
 
@@ -766,7 +874,7 @@ sub calculate_mask(@) {
     my @final_results;
     foreach my $count (reverse sort { $a <=> $b } keys %hash) {
         my $need = 2 ** $count;     # Need 8 values for 3 differing bits, etc
-        foreach my $bits (sort keys $hash{$count}) {
+        foreach my $bits (sort keys $hash{$count}->%*) {
 
             print STDERR __LINE__, ": For $count bit(s) difference ($bits), need $need; have ", scalar @{$hash{$count}{$bits}}, "\n" if DEBUG;
 
@@ -854,7 +962,7 @@ sub calculate_mask(@) {
     # individually.
     my @individuals;
     foreach my $count (reverse sort { $a <=> $b } keys %hash) {
-        foreach my $bits (sort keys $hash{$count}) {
+        foreach my $bits (sort keys $hash{$count}->%*) {
             foreach my $remaining (@{$hash{$count}{$bits}}) {
 
                 # If we already know about this value, just ignore it.
@@ -935,7 +1043,7 @@ sub _cond_as_str {
     my @masks;
     if (@ranges > 1) {
 
-        # See if the entire set shares optimizable characterstics, and if so,
+        # See if the entire set shares optimizable characteristics, and if so,
         # return the optimization.  We delay checking for this on sets with
         # just a single range, as there may be better optimizations available
         # in that case.
@@ -976,6 +1084,21 @@ sub _cond_as_str {
             $ranges[$i] =           # Trivial case: single element range
                     sprintf "$self->{val_fmt} == $test", $ranges[$i]->[0];
         }
+        elsif ($ranges[$i]->[0] == 0) {
+            # If the range matches all 256 possible bytes, it is trivially
+            # true.
+            return 1 if $ranges[0]->[1] == 0xFF;    # @ranges must be 1 in
+                                                    # this case
+            $ranges[$i] = sprintf "( $test <= $self->{val_fmt} )",
+                                                               $ranges[$i]->[1];
+        }
+        elsif ($ranges[$i]->[1] == 255) {
+
+            # Similarly the max possible is 255, so can omit an upper bound
+            # test if the calculated max is the max possible one.
+            $ranges[$i] = sprintf "( $test >= $self->{val_fmt} )",
+                                                                $ranges[0]->[0];
+        }
         else {
             my $output = "";
 
@@ -986,8 +1109,8 @@ sub _cond_as_str {
             # bounds.  (No legal UTF-8 character can begin with anything in
             # this range, so we don't have to worry about this being a
             # continuation byte or not.)
-            if (ASCII_PLATFORM
-                && ! $opts_ref->{safe}
+            if ($opts_ref->{charset} =~ /ascii/i
+                && (! $opts_ref->{safe} && ! $opts_ref->{no_length_checks})
                 && $opts_ref->{type} =~ / ^ (?: utf8 | high ) $ /xi)
             {
                 my $lower_limit_is_80 = ($ranges[$i]->[0] == 0x80);
@@ -1074,10 +1197,18 @@ sub _combine {
     return if !@cond;
     my $item= shift @cond;
     my ( $cstr, $gtv );
-    if ( ref $item ) {
-        $cstr=
+    if ( ref $item ) {  # @item should be a 2-element array giving range start
+                        # and end
+        if ($item->[0] == 0) {  # UV's are never negative, so skip "0 <= "
+                                # test which could generate a compiler warning
+                                # that test is always true
+            $cstr= sprintf( "$test <= $self->{val_fmt}", $item->[1] );
+        }
+        else {
+            $cstr=
           sprintf( "( $self->{val_fmt} <= $test && $test <= $self->{val_fmt} )",
-            @$item );
+                   @$item );
+        }
         $gtv= sprintf "$self->{val_fmt}", $item->[1];
     } else {
         $cstr= sprintf( "$self->{val_fmt} == $test", $item );
@@ -1153,16 +1284,23 @@ sub render {
 # make a macro of a given type.
 # calls into make_trie and (generic_|length_)optree as needed
 # Opts are:
-# type     : 'cp','cp_high', 'generic','high','low','latin1','utf8','LATIN1','UTF8'
-# ret_type : 'cp' or 'len'
-# safe     : add length guards to macro
+# type             : 'cp','cp_high', 'generic','high','low','latin1','utf8','LATIN1','UTF8'
+# ret_type         : 'cp' or 'len'
+# safe             : don't assume is well-formed UTF-8, so don't skip any range
+#                    checks, and add length guards to macro
+# no_length_checks : like safe, but don't add length guards.
 #
 # type defaults to 'generic', and ret_type to 'len' unless type is 'cp'
 # in which case it defaults to 'cp' as well.
 #
-# it is illegal to do a type 'cp' macro on a pattern with multi-codepoint
+# It is illegal to do a type 'cp' macro on a pattern with multi-codepoint
 # sequences in it, as the generated macro will accept only a single codepoint
 # as an argument.
+#
+# It is also illegal to do a non-safe macro on a pattern with multi-codepoint
+# sequences in it, as even if it is known to be well-formed, we need to not
+# run off the end of the buffer when, say, the buffer ends with the first two
+# characters, but three are looked at by the macro.
 #
 # returns the macro.
 
@@ -1171,9 +1309,14 @@ sub make_macro {
     my $self= shift;
     my %opts= @_;
     my $type= $opts{type} || 'generic';
-    die "Can't do a 'cp' on multi-codepoint character class '$self->{op}'"
-      if $type =~ /^cp/
-      and $self->{has_multi};
+    if ($self->{has_multi}) {
+        if ($type =~ /^cp/) {
+            die "Can't do a 'cp' on multi-codepoint character class '$self->{op}'"
+        }
+        elsif (! $opts{safe}) {
+            die "'safe' is required on multi-codepoint character class '$self->{op}'"
+        }
+    }
     my $ret_type= $opts{ret_type} || ( $opts{type} =~ /^cp/ ? 'cp' : 'len' );
     my $method;
     if ( $opts{safe} ) {
@@ -1192,13 +1335,14 @@ sub make_macro {
     my $ext= $type     =~ /generic/ ? ''          : '_' . lc( $type );
     $ext .= '_non_low' if $type eq 'generic_non_low';
     $ext .= "_safe" if $opts{safe};
+    $ext .= "_no_length_checks" if $opts{no_length_checks};
     my $argstr= join ",", @args;
     my $def_fmt="$pfx$self->{op}$ext%s($argstr)";
     my $optree= $self->$method( %opts, type => $type, ret_type => $ret_type );
     return $self->render( $optree, ($type =~ /^cp/) ? 1 : 0, \%opts, $def_fmt );
 }
 
-# if we arent being used as a module (highly likely) then process
+# if we aren't being used as a module (highly likely) then process
 # the __DATA__ below and produce macros in regcharclass.h
 # if an argument is provided to the script then it is assumed to
 # be the path of the file to output to, if the arg is '-' outputs
@@ -1214,25 +1358,33 @@ if ( !caller ) {
     }
     print $out_fh read_only_top( lang => 'C', by => $0,
 				 file => 'regcharclass.h', style => '*',
-				 copyright => [2007, 2011] );
-    print $out_fh "\n#ifndef H_REGCHARCLASS   /* Guard against nested #includes */\n#define H_REGCHARCLASS 1\n\n";
+				 copyright => [2007, 2011],
+                                 final => <<EOF,
+WARNING: These macros are for internal Perl core use only, and may be
+changed or removed without notice.
+EOF
+    );
+    print $out_fh "\n#ifndef H_REGCHARCLASS   /* Guard against nested #includes */\n#define H_REGCHARCLASS 1\n";
 
     my ( $op, $title, @txt, @types, %mods );
-    my $doit= sub {
+    my $doit= sub ($) {
         return unless $op;
 
+        my $charset = shift;
+
         # Skip if to compile on a different platform.
-        return if delete $mods{only_ascii_platform} && ! ASCII_PLATFORM;
-        return if delete $mods{only_ebcdic_platform} && ord 'A' != 193;
+        return if delete $mods{only_ascii_platform} && $charset !~ /ascii/i;
+        return if delete $mods{only_ebcdic_platform} && $charset !~ /ebcdic/i;
 
         print $out_fh "/*\n\t$op: $title\n\n";
         print $out_fh join "\n", ( map { "\t$_" } @txt ), "*/", "";
-        my $obj= __PACKAGE__->new( op => $op, title => $title, txt => \@txt );
+        my $obj= __PACKAGE__->new( op => $op, title => $title, txt => \@txt, charset => $charset);
 
         #die Dumper(\@types,\%mods);
 
         my @mods;
         push @mods, 'safe' if delete $mods{safe};
+        push @mods, 'no_length_checks' if delete $mods{no_length_checks};
         unshift @mods, 'fast' if delete $mods{fast} || ! @mods; # Default to 'fast'
                                                                 # do this one
                                                                 # first, as
@@ -1245,43 +1397,90 @@ if ( !caller ) {
             my ( $type, $ret )= split /-/, $type_spec;
             $ret ||= 'len';
             foreach my $mod ( @mods ) {
-                next if $mod eq 'safe' and $type =~ /^cp/;
+
+                # 'safe' is irrelevant with code point macros, so skip if
+                # there is also a 'fast', but don't skip if this is the only
+                # way a cp macro will get generated.  Below we convert 'safe'
+                # to 'fast' in this instance
+                next if $type =~ /^cp/
+                        && ($mod eq 'safe' || $mod eq 'no_length_checks')
+                        && grep { 'fast' =~ $_ } @mods;
                 delete $mods{$mod};
                 my $macro= $obj->make_macro(
                     type     => $type,
                     ret_type => $ret,
-                    safe     => $mod eq 'safe'
+                    safe     => $mod eq 'safe' && $type !~ /^cp/,
+                    charset  => $charset,
+                    no_length_checks => $mod eq 'no_length_checks' && $type !~ /^cp/,
                 );
                 print $out_fh $macro, "\n";
             }
         }
     };
 
-    while ( <DATA> ) {
-        s/^ \s* (?: \# .* ) ? $ //x;    # squeeze out comment and blanks
-        next unless /\S/;
-        chomp;
-        if ( /^[A-Z]/ ) {
-            $doit->();  # This starts a new definition; do the previous one
-            ( $op, $title )= split /\s*:\s*/, $_, 2;
-            @txt= ();
-        } elsif ( s/^=>// ) {
-            my ( $type, $modifier )= split /:/, $_;
-            @types= split ' ', $type;
-            undef %mods;
-            map { $mods{$_} = 1 } split ' ',  $modifier;
-        } else {
-            push @txt, "$_";
+    my @data = <DATA>;
+    foreach my $charset (get_supported_code_pages()) {
+        my $first_time = 1;
+        undef $op;
+        undef $title;
+        undef @txt;
+        undef @types;
+        undef %mods;
+        print $out_fh "\n", get_conditional_compile_line_start($charset);
+        my @data_copy = @data;
+        for (@data_copy) {
+            s/^ \s* (?: \# .* ) ? $ //x;    # squeeze out comment and blanks
+            next unless /\S/;
+            chomp;
+            if ( /^[A-Z]/ ) {
+                $doit->($charset) unless $first_time;  # This starts a new
+                                                       # definition; do the
+                                                       # previous one
+                $first_time = 0;
+                ( $op, $title )= split /\s*:\s*/, $_, 2;
+                @txt= ();
+            } elsif ( s/^=>// ) {
+                my ( $type, $modifier )= split /:/, $_;
+                @types= split ' ', $type;
+                undef %mods;
+                map { $mods{$_} = 1 } split ' ',  $modifier;
+            } else {
+                push @txt, "$_";
+            }
         }
+        $doit->($charset);
+        print $out_fh get_conditional_compile_line_end();
     }
-    $doit->();
 
     print $out_fh "\n#endif /* H_REGCHARCLASS */\n";
 
     if($path eq '-') {
 	print $out_fh "/* ex: set ro: */\n";
     } else {
-	read_only_bottom_close_and_rename($out_fh)
+        # Some of the sources for these macros come from Unicode tables
+        my $sources_list = "lib/unicore/mktables.lst";
+        my @sources = ($0, qw(lib/unicore/mktables
+                              lib/Unicode/UCD.pm
+                              regen/regcharclass_multi_char_folds.pl
+                              regen/charset_translations.pl
+                             ));
+        {
+            # Depend on mktables’ own sources.  It’s a shorter list of files than
+            # those that Unicode::UCD uses.
+            if (! open my $mktables_list, '<', $sources_list) {
+
+                # This should force a rebuild once $sources_list exists
+                push @sources, $sources_list;
+            }
+            else {
+                while(<$mktables_list>) {
+                    last if /===/;
+                    chomp;
+                    push @sources, "lib/unicore/$_" if /^[^#]/;
+                }
+            }
+        }
+        read_only_bottom_close_and_rename($out_fh, \@sources)
     }
 }
 
@@ -1372,12 +1571,15 @@ if ( !caller ) {
 #               string.  In the case of non-UTF8, it makes sure that the
 #               string has at least one byte in it.  The macro name has
 #               '_safe' appended to it.
+#   no_length_checks  The input string is not necessarily valid UTF-8, but it
+#               is to be assumed that the length has already been checked and
+#               found to be valid
 #   fast        The input string is valid UTF-8.  No bounds checking is done,
 #               and the macro can make assumptions that lead to faster
 #               execution.
-#   only_ascii_platform   Skip this definition if this program is being run on
+#   only_ascii_platform   Skip this definition if the character set is for
 #               a non-ASCII platform.
-#   only_ebcdic_platform  Skip this definition if this program is being run on
+#   only_ebcdic_platform  Skip this definition if the character set is for
 #               a non-EBCDIC platform.
 # No modifier need be specified; fast is assumed for this case.  If both
 # 'fast', and 'safe' are specified, two macros will be created for each
@@ -1403,24 +1605,24 @@ __DATA__
 # 0x1FE3  # GREEK SMALL LETTER UPSILON WITH DIALYTIKA AND OXIA; maps same as 03B0
 
 LNBREAK: Line Break: \R
-=> generic UTF8 LATIN1 :fast safe
+=> generic UTF8 LATIN1 : safe
 "\x0D\x0A"      # CRLF - Network (Windows) line ending
 \p{VertSpace}
 
 HORIZWS: Horizontal Whitespace: \h \H
-=> generic UTF8 LATIN1 high cp cp_high :fast safe
+=> high cp_high : fast
 \p{HorizSpace}
 
 VERTWS: Vertical Whitespace: \v \V
-=> generic UTF8 high LATIN1 cp cp_high :fast safe
+=> high cp_high : fast
 \p{VertSpace}
 
 XDIGIT: Hexadecimal digits
-=> UTF8 high cp_high :fast
+=> high cp_high : fast
 \p{XDigit}
 
 XPERLSPACE: \p{XPerlSpace}
-=> generic UTF8 high cp_high :fast
+=> high cp_high : fast
 \p{XPerlSpace}
 
 REPLACEMENT: Unicode REPLACEMENT CHARACTER
@@ -1428,56 +1630,89 @@ REPLACEMENT: Unicode REPLACEMENT CHARACTER
 0xFFFD
 
 NONCHAR: Non character code points
-=> UTF8 :fast
-\p{Nchar}
+=> UTF8 :safe
+\p{_Perl_Nchar}
 
-SURROGATE: Surrogate characters
-=> UTF8 :fast
-\p{Gc=Cs}
+SURROGATE: Surrogate code points
+=> UTF8 :safe
+\p{_Perl_Surrogate}
 
-GCB_L: Grapheme_Cluster_Break=L
-=> UTF8 :fast
-\p{_X_GCB_L}
+# This program was run with this enabled, and the results copied to utf8.h and
+# utfebcdic.h; then this was commented out because it takes so long to figure
+# out these 2 million code points.  The results would not change unless utf8.h
+# decides it wants a different maximum, or this program creates better
+# optimizations.  Trying with 5 bytes used too much memory to calculate.
+#
+# We don't generate code for invariants here because the EBCDIC form is too
+# complicated and would slow things down; instead the user should test for
+# invariants first.
+#
+# 0x1FFFFF was chosen because for both UTF-8 and UTF-EBCDIC, its start byte
+# is the same as 0x10FFFF, and it includes all the above-Unicode code points
+# that have that start byte.  In other words, it is the natural stopping place
+# that includes all Unicode code points.
+#
+#UTF8_CHAR: Matches legal UTF-8 variant code points up through the 0x1FFFFFF
+#=> UTF8 :no_length_checks only_ascii_platform
+#0x80 - 0x1FFFFF
 
-GCB_LV_LVT_V: Grapheme_Cluster_Break=(LV or LVT or V)
-=> UTF8 :fast
-\p{_X_LV_LVT_V}
+#UTF8_CHAR: Matches legal UTF-EBCDIC variant code points up through 0x1FFFFFF
+#=> UTF8 :no_length_checks only_ebcdic_platform
+#0xA0 - 0x1FFFFF
 
-GCB_Prepend: Grapheme_Cluster_Break=Prepend
-=> UTF8 :fast
-\p{_X_GCB_Prepend}
+#STRICT_UTF8_CHAR: Matches legal Unicode UTF-8 variant code points, no surrrogates nor non-character code points
+#=> UTF8 :no_length_checks only_ascii_platform
+#0x0080 - 0xD7FF
+#0xE000 - 0xFDCF
+#0xFDF0 - 0xFFFD
+#0x10000 - 0x1FFFD
+#0x20000 - 0x2FFFD
+#0x30000 - 0x3FFFD
+#0x40000 - 0x4FFFD
+#0x50000 - 0x5FFFD
+#0x60000 - 0x6FFFD
+#0x70000 - 0x7FFFD
+#0x80000 - 0x8FFFD
+#0x90000 - 0x9FFFD
+#0xA0000 - 0xAFFFD
+#0xB0000 - 0xBFFFD
+#0xC0000 - 0xCFFFD
+#0xD0000 - 0xDFFFD
+#0xE0000 - 0xEFFFD
+#0xF0000 - 0xFFFFD
+#0x100000 - 0x10FFFD
+#
+#STRICT_UTF8_CHAR: Matches legal Unicode UTF-8 variant code points, no surrrogates nor non-character code points
+#=> UTF8 :no_length_checks only_ebcdic_platform
+#0x00A0 - 0xD7FF
+#0xE000 - 0xFDCF
+#0xFDF0 - 0xFFFD
+#0x10000 - 0x1FFFD
+#0x20000 - 0x2FFFD
+#0x30000 - 0x3FFFD
+#0x40000 - 0x4FFFD
+#0x50000 - 0x5FFFD
+#0x60000 - 0x6FFFD
+#0x70000 - 0x7FFFD
+#0x80000 - 0x8FFFD
+#0x90000 - 0x9FFFD
+#0xA0000 - 0xAFFFD
+#0xB0000 - 0xBFFFD
+#0xC0000 - 0xCFFFD
+#0xD0000 - 0xDFFFD
+#0xE0000 - 0xEFFFD
+#0xF0000 - 0xFFFFD
+#0x100000 - 0x10FFFD
 
-GCB_RI: Grapheme_Cluster_Break=RI
-=> UTF8 :fast
-\p{_X_RI}
-
-GCB_SPECIAL_BEGIN_START: Grapheme_Cluster_Break=special_begin_starts
-=> UTF8 :fast
-\p{_X_Special_Begin_Start}
-
-GCB_T: Grapheme_Cluster_Break=T
-=> UTF8 :fast
-\p{_X_GCB_T}
-
-GCB_V: Grapheme_Cluster_Break=V
-=> UTF8 :fast
-\p{_X_GCB_V}
-
-# This program was run with this enabled, and the results copied to utf8.h;
-# then this was commented out because it takes so long to figure out these 2
-# million code points.  The results would not change unless utf8.h decides it
-# wants a maximum other than 4 bytes, or this program creates better
-# optimizations
-#UTF8_CHAR: Matches utf8 from 1 to 4 bytes
-#=> UTF8 :safe only_ascii_platform
-#0x0 - 0x1FFFFF
-
-# This hasn't been commented out, because we haven't an EBCDIC platform to run
-# it on, and the 3 types of EBCDIC allegedly supported by Perl would have
-# different results
-UTF8_CHAR: Matches utf8 from 1 to 5 bytes
-=> UTF8 :safe only_ebcdic_platform
-0x0 - 0x3FFFFF:
+#C9_STRICT_UTF8_CHAR: Matches legal Unicode UTF-8 variant code points, no surrogates
+#=> UTF8 :no_length_checks only_ascii_platform
+#0x0080 - 0xD7FF
+#0xE000 - 0x10FFFF
+#
+#C9_STRICT_UTF8_CHAR: Matches legal Unicode UTF-8 variant code points including non-character code points, no surrogates
+#=> UTF8 :no_length_checks only_ebcdic_platform
+#0x00A0 - 0xD7FF
+#0xE000 - 0x10FFFF
 
 QUOTEMETA: Meta-characters that \Q should quote
 => high :fast
@@ -1485,17 +1720,28 @@ QUOTEMETA: Meta-characters that \Q should quote
 
 MULTI_CHAR_FOLD: multi-char strings that are folded to by a single character
 => UTF8 :safe
-do regen/regcharclass_multi_char_folds.pl
 
 # 1 => All folds
 &regcharclass_multi_char_folds::multi_char_folds(1)
 
 MULTI_CHAR_FOLD: multi-char strings that are folded to by a single character
-=> LATIN1 :safe
+=> LATIN1 : safe
 
 &regcharclass_multi_char_folds::multi_char_folds(0)
 # 0 => Latin1-only
 
+FOLDS_TO_MULTI: characters that fold to multi-char strings
+=> UTF8 :fast
+\p{_Perl_Folds_To_Multi_Char}
+
+PROBLEMATIC_LOCALE_FOLD : characters whose fold is problematic under locale
+=> UTF8 cp :fast
+\p{_Perl_Problematic_Locale_Folds}
+
+PROBLEMATIC_LOCALE_FOLDEDS_START : The first folded character of folds which are problematic under locale
+=> UTF8 cp :fast
+\p{_Perl_Problematic_Locale_Foldeds_Start}
+
 PATWS: pattern white space
-=> generic generic_non_low cp : fast safe
-\p{PatWS}
+=> generic cp : safe
+\p{_Perl_PatWS}

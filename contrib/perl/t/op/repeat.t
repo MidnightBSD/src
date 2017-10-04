@@ -2,11 +2,11 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
+    require './test.pl';
+    set_up_inc( '../lib' );
 }
 
-require './test.pl';
-plan(tests => 42);
+plan(tests => 49);
 
 # compile time
 
@@ -63,6 +63,13 @@ is(join('', (split(//,"123")) x 2), '123123',       'split and x');
 
 is(join('', @x x -12),      '',                     '@x x -12');
 is(join('', (@x) x -14),    '',                     '(@x) x -14');
+
+($a, (undef)x5, $b) = 1..10;
+is ("$a $b", "1 7", '(undef)xCONST on lhs of list assignment');
+(($a)x3,$b) = 1..10;
+is ("$a, $b", "3, 4", '($x)xCONST on lhs of list assignment');
+($a, (undef)x${\6}, $b) = "a".."z";
+is ("$a$b", "ah", '(undef)x$foo on lhs of list assignment');
 
 
 # This test is actually testing for Digital C compiler optimizer bug,
@@ -130,27 +137,58 @@ my ($x, $y) = scalar ((1,2)x2);
 is($x, "22",    'list repeat in scalar context');
 is($y, undef,   '  no extra values on stack');
 
-# Make sure the stack doesn't get truncated too much - the left
-# operand of the eq binop needs to remain!
+# Make sure the stack doesn't get truncated too much - the first
+# argument to is() needs to remain!
 is(77, scalar ((1,7)x2),    'stack truncation');
 
+# ( )x in void context should not read preceding stack items
+package Tiecount {
+    sub TIESCALAR { bless[]} sub FETCH { our $Tiecount++; study; 3 }
+}
+sub nil {}
+tie my $t, "Tiecount";
+{ push my @temp, $t, scalar((nil) x 3, 1) }
+is($Tiecount::Tiecount, 1,
+   '(...)x... in void context in list (via scalar comma)');
 
-# perlbug 20011113.110 works in 5.6.1, broken in 5.7.2
+
+# perlbug 20011113.110 (#7902) works in 5.6.1, broken in 5.7.2
 {
     my $x= [("foo") x 2];
-    is( join('', @$x), 'foofoo', 'list repeat in anon array ref broken [ID 20011113.110]' );
-}
-
-# [ID 20010809.028] x operator not copying elements in 'for' list?
-{
-    local $TODO = "x operator not copying elements in 'for' list? [ID 20010809.028]";
-    my $x = 'abcd';
-    my $y = '';
-    for (($x =~ /./g) x 2) {
-	$y .= chop;
-    }
-    is($y, 'abcdabcd');
+    is( join('', @$x), 'foofoo', 'list repeat in anon array ref broken [ID 20011113.110 (#7902)]' );
 }
 
 # [perl #35885]
 is( (join ',', (qw(a b c) x 3)), 'a,b,c,a,b,c,a,b,c', 'x on qw produces list' );
+
+# [perl #78194] x aliasing op return values
+sub {
+    is(\$_[0], \$_[1],
+      '[perl #78194] \$_[0] == \$_[1] when @_ aliases elems repeated by x')
+}
+ ->(("${\''}")x2);
+
+$#that_array = 7;
+for(($#that_array)x2) {
+    $_ *= 2;
+}
+is($#that_array, 28, 'list repetition propagates lvalue cx to its lhs');
+
+# [perl #126309] huge list counts should give an error
+
+
+fresh_perl_like(
+ '@a = (1) x ~1',
+  qr/Out of memory/,
+  {  },
+ '(1) x ~1',
+);
+
+# [perl #130247] Perl_rpeep(OP *): Assertion `oldop' failed
+# 
+# the 'x 0' optimising code in rpeep didn't expect the repeat expression
+# to occur on the op_other side of an op_next chain.
+# This used to give an assertion failure
+
+eval q{() = (() or ((0) x 0)); 1};
+is($@, "", "RT #130247");

@@ -1,17 +1,15 @@
 # DB_File.pm -- Perl 5 interface to Berkeley DB 
 #
-# written by Paul Marquess (pmqs@cpan.org)
-# last modified 28th October 2007
-# version 1.818
+# Written by Paul Marquess (pmqs@cpan.org)
 #
-#     Copyright (c) 1995-2009 Paul Marquess. All rights reserved.
+#     Copyright (c) 1995-2016 Paul Marquess. All rights reserved.
 #     This program is free software; you can redistribute it and/or
 #     modify it under the same terms as Perl itself.
 
 
 package DB_File::HASHINFO ;
 
-require 5.00404;
+require 5.008003;
 
 use warnings;
 use strict;
@@ -165,7 +163,7 @@ our ($db_version, $use_XSLoader, $splice_end_array_no_length, $splice_end_array,
 use Carp;
 
 
-$VERSION = "1.827" ;
+$VERSION = "1.840" ;
 $VERSION = eval $VERSION; # needed for dev releases
 
 {
@@ -188,7 +186,6 @@ $DB_RECNO = new DB_File::RECNOINFO ;
 
 require Tie::Hash;
 require Exporter;
-use AutoLoader;
 BEGIN {
     $use_XSLoader = 1 ;
     { local $SIG{__DIE__} ; eval { require XSLoader } ; }
@@ -258,9 +255,6 @@ if ($use_XSLoader)
   { XSLoader::load("DB_File", $VERSION)}
 else
   { bootstrap DB_File $VERSION }
-
-# Preloaded methods go here.  Autoload methods go after __END__, and are
-# processed by the autosplit program.
 
 sub tie_hash_or_array
 {
@@ -1777,9 +1771,30 @@ R_RECNOSYNC is the only valid flag at present.
 
 =head1 DBM FILTERS
 
-A DBM Filter is a piece of code that is be used when you I<always>
-want to make the same transformation to all keys and/or values in a
-DBM database.
+A DBM Filter is a piece of code that is be used when you I<always> want to
+make the same transformation to all keys and/or values in a DBM database.
+An example is when you need to encode your data in UTF-8 before writing to
+the database and then decode the UTF-8 when reading from the database file.
+
+There are two ways to use a DBM Filter.
+
+=over 5
+
+=item 1.
+
+Using the low-level API defined below.
+
+=item 2.
+
+Using the L<DBM_Filter> module. 
+This module hides the complexity of the API defined below and comes
+with a number of "canned" filters that cover some of the common use-cases.
+
+=back
+
+Use of the L<DBM_Filter> module is recommended.
+
+=head2 DBM Filter Low-level API
 
 There are four methods associated with DBM Filters. All work identically,
 and each is used to install (or uninstall) a single DBM Filter. Each
@@ -2188,6 +2203,29 @@ can layer transparently over B<DB_File> to accomplish this feat.
 Check out the MLDBM module, available on CPAN in the directory
 F<modules/by-module/MLDBM>.
 
+=head2 What does "wide character in subroutine entry" mean?
+
+You will usually get this message if you are working with UTF-8 data and
+want to read/write it from/to a Berkeley DB database file.
+
+The easist way to deal with this issue is to use the pre-defined "utf8"
+B<DBM_Filter> (see L<DBM_Filter>) that was designed to deal with this
+situation.
+
+The example below shows what you need if I<both> the key and value are
+expected to be in UTF-8. 
+
+    use DB_File;
+    use DBM_Filter; 
+
+    my $db = tie %h, 'DB_File', '/tmp/try.db', O_CREAT|O_RDWR, 0666, $DB_BTREE; 
+    $db->Filter_Key_Push('utf8');
+    $db->Filter_Value_Push('utf8');
+
+    my $key = "\N{LATIN SMALL LETTER A WITH ACUTE}";
+    my $value = "\N{LATIN SMALL LETTER E WITH ACUTE}";
+    $h{ $key } = $value;
+
 =head2 What does "Invalid Argument" mean?
 
 You will get this error message when one of the parameters in the
@@ -2279,7 +2317,7 @@ archive in F<src/misc/db.1.85.tar.gz>.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1995-2012 Paul Marquess. All rights reserved. This program
+Copyright (c) 1995-2016 Paul Marquess. All rights reserved. This program
 is free software; you can redistribute it and/or modify it under the
 same terms as Perl itself.
 
@@ -2287,7 +2325,7 @@ Although B<DB_File> is covered by the Perl license, the library it
 makes use of, namely Berkeley DB, is not. Berkeley DB has its own
 copyright and its own license. Please take the time to read it.
 
-Here are are few words taken from the Berkeley DB FAQ (at
+Here are a few words taken from the Berkeley DB FAQ (at
 F<http://www.oracle.com/technology/products/berkeley-db/db/index.html>) regarding the license:
 
     Do I have to license DB to use it in Perl scripts? 
@@ -2306,7 +2344,7 @@ Berkeley DB authors or the author of DB_File. See L<"AUTHOR"> for details.
 =head1 SEE ALSO
 
 L<perl>, L<dbopen(3)>, L<hash(3)>, L<recno(3)>, L<btree(3)>,
-L<perldbmfilter>
+L<perldbmfilter>, L<DBM_Filter>
 
 =head1 AUTHOR
 

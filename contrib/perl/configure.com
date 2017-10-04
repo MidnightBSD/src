@@ -66,8 +66,6 @@ $ dynamic_ext = ""
 $ nonxs_ext = ""
 $ nonxs_ext2 = ""
 $ vms_default_directory_name = F$ENVIRONMENT("DEFAULT")
-$ max_allowed_dir_depth = 3  ! e.g. [A.B.PERLxxx] not [A.B.C.PERLxxx]
-$! max_allowed_dir_depth = 2 ! e.g. [A.PERLxxx] not [A.B.PERLxxx]
 $!
 $! Sebastian Bazley's request: close the CONFIG handle with /NOLOG
 $! qualifier "just in case" (configure.com is re @ed in a bad state).
@@ -118,11 +116,9 @@ $!: Private path used by Configure to find libraries.  Its value !sfn
 $!: is prepended to libpth. This variable takes care of special !sfn
 $!: machines, like the mips.  Usually, it should be empty. !sfn
 $!plibpth=''                                           !sfn
-$!: full support for void wanted by default            !sfn
-$!defvoidused=15                                       !sfn
 $!: List of libraries we want.                         !sfn
 $!libswanted='net socket inet nsl nm ndbm gdbm dbm db malloc dl' !sfn
-$!libswanted="$libswanted dld ld sun m c cposix posix ndir dir crypt" !sfn
+$!libswanted="$libswanted ld sun m c cposix posix ndir dir crypt" !sfn
 $!libswanted="$libswanted ucb bsd BSD PW x"            !sfn
 $!: We probably want to search /usr/shlib before most other libraries. !sfn
 $!: This is only used by the lib/ExtUtils/MakeMaker.pm routine extliblist. !sfn
@@ -146,7 +142,7 @@ $ silent=""
 $ extractsh=""
 $ override=""
 $ knowitall=""
-$ ccname="VAX"
+$ ccname="DECC"
 $ Dec_C_Version = ""
 $ cxxversion = ""
 $ use_threads = "F"
@@ -449,28 +445,27 @@ $     GOTO Beyond_manifest
 $   ENDIF
 $ ELSE
 $! MANIFEST. has been found and we have set def'ed there.
-$! Time to bail out before it's too late, i.e. too deep.
-$! Depth check is unnecessary on Alpha VMS V7.2++ (even for ODS-2).
-$   tmp = f$extract(1,3,f$edit(f$getsyi("VERSION"),"TRIM,COLLAPSE"))
-$   IF (tmp .GES. "7.2") .AND. (F$GETSYI("HW_MODEL") .GE. 1024) THEN GOTO Beyond_depth_check
-$! Depth check also unnecessary on ODS 5 (or later) file systems.
-$   tmp = F$INTEGER(F$GETDVI(F$ENVIRONMENT("DEFAULT"),"ACPTYPE") - "F11V")
-$   IF (tmp .GE. 5) THEN GOTO Beyond_depth_check
-$   IF (F$ELEMENT(max_allowed_dir_depth,".",F$ENVIRONMENT("DEFAULT")).nes.".")
-$   THEN
-$     TYPE SYS$INPUT:
-$     DECK
-%Config-E-VMS, ERROR:
- Sorry! It apears as though your perl build sub-directory is already too
- deep into the VMS file system. Please try moving stuff into a shallower 
- directory (or altering the "max_allowed_dir_depth" parameter).
-$     EOD
-$     echo4 "ABORTING..."
-$     SET DEFAULT 'vms_default_directory_name' !be kind rewind
-$     STOP
-$     EXIT !2 !$STATUS = "%X00000002" (error)
-$   ENDIF
-$Beyond_depth_check:
+$!
+$ escape_extended_chars: subroutine
+$   string = 'p1' ! It's the name of the symbol
+$   chars_to_escape = p2
+$   sindex = 0
+$   slength = f$length(string)
+$   loop_over_chars:
+$     if sindex .eq. slength then goto end_loop_over_chars
+$     char = f$extract(sindex, 1, string)
+$     if f$locate(char, chars_to_escape) .lt. f$length(chars_to_escape)
+$     then
+$       string = f$extract(0, sindex, string) + "^" + f$extract(sindex, slength, string)
+$       slength = slength + 1 ! we've increased overall length by 1
+$       sindex = sindex + 1   ! don't check the char we just escaped again
+$     endif
+$     sindex = sindex + 1
+$     goto loop_over_chars
+$ end_loop_over_chars:
+$ 'p1' == string
+$!
+$ endsubroutine
 $!
 $! after finding MANIFEST let's create (but not yet enter) the UU subdirectory
 $!
@@ -513,6 +508,9 @@ $       line = F$EDIT(line,"TRIM, COMPRESS")
 $       file_2_find = F$EXTRACT(0,F$LOCATE(" ",line),line) 
 $       IF F$LOCATE("/",file_2_find) .NE. F$LENGTH(file_2_find) 
 $       THEN 
+$         escaped_fname == file_2_find
+$         call escape_extended_chars escaped_fname "~!#&\'`()+@{},;[]%^=\"
+$         file_2_find = escaped_fname
 $Re_strip_line_manifest:
 $         loca = F$LOCATE("/",file_2_find)
 $         ante = F$EXTRACT(0,loca,file_2_find)
@@ -733,7 +731,7 @@ $   WRITE CONFIG -
 $   CLOSE CONFIG
 $ ENDIF
 $!
-$ IF F$TYPE(usedevel) .EQS. "" THEN usedevel := n
+$ IF F$TYPE(usedevel) .EQS. "" THEN usedevel = "undef"
 $ patchlevel_h = F$SEARCH("[-]patchlevel.h")
 $ IF (patchlevel_h.NES."")
 $ THEN
@@ -929,7 +927,7 @@ $   config_symbols1 ="|installprivlib|installscript|installsitearch|installsitel
 $   config_symbols2 ="|prefix|privlib|privlibexp|scriptdir|sitearch|sitearchexp|sitebin|sitelib|sitelib_stem|sitelibexp|usecxx|use64bitall|use64bitint|"
 $   config_symbols3 ="|usecasesensitive|usedefaulttypes|usedevel|useieee|useithreads|uselongdouble|usemultiplicity|usemymalloc|usedebugging_perl|"
 $   config_symbols4 ="|usesecurelog|usethreads|usevmsdebug|usefaststdio|usemallocwrap|unlink_all_versions|uselargefiles|usesitecustomize|"
-$   config_symbols5 ="|buildmake|builder|usethreadupcalls|usekernelthreads|useshortenedsymbols|useversionedarchname"
+$   config_symbols5 ="|buildmake|builder|usethreadupcalls|usekernelthreads|useshortenedsymbols|useversionedarchname|default_inc_excludes_dot"
 $!  
 $   open/read CONFIG 'config_sh'
 $   rd_conf_loop:
@@ -980,7 +978,6 @@ $!
 $!First time through, eh?  I have some defaults handy for the following systems:
 $!
 $!     EOD
-$!     echo "     ","VMS_VAX"
 $!     echo "     ","VMS_AXP"
 $!     echo "     ","VMS_IA64"
 $!        : Now look for a hint file osname_osvers, unless one has been
@@ -1163,25 +1160,24 @@ $! appendages later depending on configuration options.  But we need the
 $! base name early because not all questions are worth asking on all
 $! platforms.
 $!
-$! Please use F$ELEMENT(0,"-",archname) .EQS. "VMS_VAX" (or "VMS_AXP" or
+$! Please use F$ELEMENT(0,"-",archname) .EQS. "VMS_AXP" (or
 $! "VMS_IA64") from here on to allow cross-platform configuration (e.g.
-$! configure a VAX build on an Alpha).
+$! configure a IA64 build on an Alpha).
 $!
 $ IF (F$GETSYI("HW_MODEL") .LT. 1024 .AND. F$GETSYI("HW_MODEL") .GT. 0)
 $ THEN 
-$   archname = "VMS_VAX"
-$   otherarch = "an Alpha or IA64"
-$   alignbytes="8"
-$   arch_type = "ARCH-TYPE=__VAX__"
+$   echo "Sorry, VAX is  no longer supported by this Perl version."
+$   echo "Please try Perl 5.22 or earlier"
+$   exit 44
 $ ELSE
 $   IF (F$GETSYI("ARCH_TYPE") .EQ. 2)
 $   THEN
 $       archname = "VMS_AXP"
-$       otherarch = "a VAX or IA64"
+$       otherarch = "IA64"
 $       arch_type = "ARCH-TYPE=__AXP__"
 $   ELSE
 $       archname = "VMS_IA64"
-$       otherarch = "a VAX or Alpha"
+$       otherarch = "Alpha"
 $       arch_type = "ARCH-TYPE=__IA64__"
 $   ENDIF
 $   alignbytes="8"
@@ -1335,34 +1331,12 @@ $!
 $ GOSUB List_Parse
 $ IF .NOT.silent THEN echo ""
 $ echo "Default ""cc"" is ''line' ''archsufx' ''F$GETSYI("VERSION")'" 
-$ IF F$LOCATE("VAX",line).NE.F$LENGTH(line) 
+$ IF (F$LOCATE("VSI",line).NE.F$LENGTH(line)) -
+  .or.(F$LOCATE("HP",F$EDIT(line,"UPCASE")).NE.F$LENGTH(line)) -
+  .or.(F$LOCATE("Compaq",line).NE.F$LENGTH(line))
 $ THEN 
-$   IF .NOT.silent
-$   THEN 
-$     echo "Will try cc/decc..."
-$   ENDIF
-$   SET NOON
-$   DEFINE/USER_MODE SYS$ERROR NL:
-$   DEFINE/USER_MODE SYS$OUTPUT NL:
-$   cc/decc/NoObj/list=ccvms.lis ccvms.c
-$   tmp = $status
-$   SET ON
-$   IF (silent) THEN GOSUB Shut_up
-$   IF tmp.NE.%X10B90001
-$   THEN
-$     echo "Apparently you don't have that one."
-$   ELSE
-$     GOSUB List_parse
-$     echo "You also have: ''line' ''archsufx' ''F$GETSYI("VERSION")'"
-$     vms_cc_available = vms_cc_available + "cc/decc "
-$   ENDIF
-$ ELSE
-$   IF (F$LOCATE("DEC",line).NE.F$LENGTH(line)).or.(F$LOCATE("Compaq",line).NE.F$LENGTH(line)) -
-    .or.(F$LOCATE("HP",F$EDIT(line,"UPCASE")).NE.F$LENGTH(line))
-$   THEN 
-$     vms_cc_dflt = "/decc"
-$     vms_cc_available = vms_cc_available + "cc/decc "
-$   ENDIF
+$   vms_cc_dflt = "/decc"
+$   vms_cc_available = vms_cc_available + "cc/decc "
 $ ENDIF
 $!
 $Gcc_initial_check:
@@ -1495,7 +1469,8 @@ $ THEN
 $   ans = F$EDIT(ans,"TRIM, COMPRESS, LOWERCASE")
 $   Mcc = ans
 $   IF (F$LOCATE("dec",ans).NE.F$LENGTH(ans)).or.(F$LOCATE("compaq",ans).NE.F$LENGTH(ans)) -
-    .or.(F$LOCATE("hp",ans).NE.F$LENGTH(ans))
+    .or.(F$LOCATE("hp",ans).NE.F$LENGTH(ans)) -
+    .or.(F$LOCATE("vsi",ans).NE.F$LENGTH(ans))
 $   THEN
 $     Mcc = "cc/decc"
 $! CPQ ?
@@ -1512,7 +1487,8 @@ $   ELSE ! Not_cxx
 $     IF Mcc.NES.dflt
 $     THEN
 $       IF F$LOCATE("dec",dflt) .NE. F$LENGTH(dflt) .or. -
-           F$LOCATE("compaq",dflt) .NE. F$LENGTH(dflt)
+           F$LOCATE("compaq",dflt) .NE. F$LENGTH(dflt) -
+          .or.(F$LOCATE("vsi",dflt).NE.F$LENGTH(dflt))
 $       THEN 
 $         C_COMPILER_Replace = "CC=cc=''Mcc'"
 $       ELSE
@@ -1585,11 +1561,8 @@ $   CLOSE CONFIG
 $   echo "You are using Dec C ''line'"
 $   ccversion = line
 $   Dec_C_Version = F$INTEGER(line)
-$   IF Dec_C_Version .GE. 60200000 .AND. F$ELEMENT(0, "-", archname) .NES. "VMS_VAX"
-$   THEN
-$     echo4 "adding /NOANSI_ALIAS qualifier to ccflags."
-$     ccflags = ccflags + "/NOANSI_ALIAS"
-$   ENDIF
+$   echo4 "adding /NOANSI_ALIAS qualifier to ccflags."
+$   ccflags = ccflags + "/NOANSI_ALIAS"
 $   DELETE/NOLOG/NOCONFIRM deccvers.*;
 $ ENDIF
 $Gcc_check:
@@ -1782,17 +1755,11 @@ $!
 $List_Parse:
 $ OPEN/READ CONFIG ccvms.lis
 $ READ CONFIG line
-$ IF F$ELEMENT(0, "-", archname) .EQS. "VMS_VAX"
+$ IF F$ELEMENT(0, "-", archname) .EQS. "VMS_AXP"
 $ THEN
-$   read CONFIG line
-$   archsufx = "VAX"
+$     archsufx = "AXP"
 $ ELSE
-$   IF F$ELEMENT(0, "-", archname) .EQS. "VMS_AXP"
-$   THEN
-$       archsufx = "AXP"
-$   ELSE
-$       archsufx = "IA64"
-$   ENDIF
+$     archsufx = "IA64"
 $ ENDIF
 $ CLOSE CONFIG
 $ line = F$EDIT(line,"TRIM,COMPRESS")
@@ -1905,7 +1872,7 @@ $   DECK
 If you or somebody else will be maintaining perl at your site, please
 fill in the correct e-mail address here so that they may be contacted
 if necessary. Currently, the "perlbug" program included with perl
-will send mail to this address in addition to perlbug@perl.com. You may
+will send mail to this address in addition to perlbug@perl.org. You may
 enter "none" for no administrator.
 $   EOD
 $ ENDIF
@@ -1980,7 +1947,6 @@ $ use_vmsdebug_perl = ans
 $ IF use_vmsdebug_perl
 $ THEN
 $   usevmsdebug = "define"
-$   macros = macros + """__DEBUG__=1"","
 $ ELSE
 $   usevmsdebug = "undef"
 $ ENDIF
@@ -2006,28 +1972,22 @@ $! Ask about threads, if appropriate
 $ IF ccname .EQS. "DEC" .OR. ccname .EQS. "CXX"
 $ THEN
 $   echo ""
-$   echo "Perl can be built to take advantage of threads on some systems."
+$   echo "Perl can be built to offer a form of threading support on some systems."
 $   echo "To do so, configure.com can be run with -""Dusethreads""."
 $   echo ""
 $   echo "Note that Perl built with threading support runs slightly slower"
-$   echo "and uses more memory than plain Perl. The current implementation"
-$   echo "is believed to be stable, but it is fairly new, and so should be"
-$   echo "treated with caution."
+$   echo "and uses slightly more memory than plain Perl."
 $   echo ""
 $   bool_dflt = "n"
 $   if f$type(usethreads) .nes. "" 
 $   then 
 $       if usethreads .or. usethreads .eqs. "define" then bool_dflt="y"
 $   endif
-$!  Catch cases where user specified ithreads or 5005threads but
+$!  Catch cases where user specified ithreads but
 $!  forgot -Dusethreads 
 $   if f$type(useithreads) .nes. ""
 $   then
 $         if useithreads .or. useithreads .eqs. "define" then bool_dflt="y"
-$   endif
-$   if f$type(use5005threads) .nes. ""
-$   then
-$         if use5005threads .or. use5005threads .eqs. "define" then bool_dflt="y"
 $   endif
 $   echo "If this doesn't make any sense to you, just accept the default '" + bool_dflt + "'."
 $   rp = "Build a threading Perl? [''bool_dflt'] "
@@ -2036,15 +1996,6 @@ $   if ans
 $   THEN
 $     usethreads = "define"
 $     use_threads="T"
-$     ! Shall we do the 5.005-type threads, or IThreads?
-$     echo "Since release 5.6, Perl has had two different threading implementations,"
-$     echo "the newer interpreter-based version (ithreads) with one interpreter per"
-$     echo "thread, and the older 5.005 version (5005threads)."
-$     echo "The 5005threads version is effectively unmaintained and will probably be"
-$     echo "removed in Perl 5.10, so there should be no need to build a Perl using it"
-$     echo "unless needed for backwards compatibility with some existing 5.005threads"
-$     echo "code."
-$     echo ""
 $     bool_dflt = "y"
 $     if f$type(useithreads) .nes. ""
 $     then
@@ -2052,17 +2003,16 @@ $         if useithreads .eqs. "undef" then bool_dflt="n"
 $     endif
 $     if f$type(use5005threads) .nes. ""
 $     then
-$         if use5005threads .or. use5005threads .eqs. "define" then bool_dflt="n"
+$         if use5005threads .or. use5005threads .eqs. "define"
+$         then
+$             echo "5.005 threads are no longer supported"
+$             exit 44
+$         endif
 $     endif
 $     rp = "Use the newer interpreter-based ithreads? [''bool_dflt'] "
 $     GOSUB myread
 $     use_ithreads=ans
-$     if use_ithreads 
-$     THEN
-$       use_5005_threads="N"
-$     ELSE
-$       use_5005_threads="Y"
-$     ENDIF
+$     use_5005_threads="N"
 $     ! Are they on VMS 7.1 or greater?
 $     IF "''f$extract(1,3, f$getsyi(""version""))'" .GES. "7.1"
 $     THEN
@@ -2083,7 +2033,7 @@ $       THEN
 $           thread_upcalls = "MTU=MTU=1"
 $	    usethreadupcalls = "define"
 $     	    ! Are they on alpha or itanium?
-$	    IF (F$ELEMENT(0, "-", archname) .NES. "VMS_VAX") .AND. ("''f$extract(1,3, f$getsyi(""version""))'" .GES. "7.2")
+$	    IF ("''f$extract(1,3, f$getsyi(""version""))'" .GES. "7.2")
 $     	    THEN
 $       	echo ""
 $       	echo "Threaded Perl can be linked to use multiple kernel threads on your system."
@@ -2107,6 +2057,8 @@ $     ENDIF
 $   ELSE
 $     usethreads = "undef"
 $   ENDIF
+$ ELSE
+$   usethreads = "undef"
 $ ENDIF
 $ IF F$TYPE(usethreadupcalls) .EQS. "" THEN usethreadupcalls = "undef"
 $ IF F$TYPE(usekernelthreads) .EQS. "" THEN usekernelthreads = "undef"
@@ -2136,106 +2088,103 @@ $   ENDIF
 $ ENDIF
 $!
 $! Ask if they want to build with 64-bit support
-$ IF (F$ELEMENT(0, "-", archname).NES."VMS_VAX").and.("''f$extract(1,3, f$getsyi(""version""))'".ges."7.1")
+$ bool_dflt = "n"
+$ IF F$TYPE(use64bitint) .NES. ""
 $ THEN
-$   bool_dflt = "n"
-$   IF F$TYPE(use64bitint) .NES. "" 
-$   THEN
-$       IF use64bitint .OR. use64bitint .eqs. "define" THEN bool_dflt = "y"
-$   ENDIF
-$   echo ""
-$   echo "You have natively 64-bit long integers."
-$   echo ""
-$   echo "Perl can be built to take advantage of 64-bit integer types"
-$   echo "on some systems, To do so, Configure can be run with -Duse64bitint."
-$   echo "Choosing this option will most probably introduce binary incompatibilities."
-$   echo ""
-$   echo "If this does not make any sense to you, just accept the default '" + bool_dflt + "'."
-$   rp = "Try to use 64-bit integers, if available? [''bool_dflt'] "
-$   GOSUB myread
-$   use64bitint = ans
+$   IF use64bitint .OR. use64bitint .eqs. "define" THEN bool_dflt = "y"
+$ ENDIF
+$ echo ""
+$ echo "You have natively 64-bit long integers."
+$ echo ""
+$ echo "Perl can be built to take advantage of 64-bit integer types"
+$ echo "on some systems, To do so, Configure can be run with -Duse64bitint."
+$ echo "Choosing this option will most probably introduce binary incompatibilities."
+$ echo ""
+$ echo "If this does not make any sense to you, just accept the default '" + bool_dflt + "'."
+$ rp = "Try to use 64-bit integers, if available? [''bool_dflt'] "
+$ GOSUB myread
+$ use64bitint = ans
 $!
-$   bool_dflt = "n"
-$   IF F$TYPE(use64bitall) .NES. "" 
-$   THEN
-$       IF use64bitall .OR. use64bitall .eqs. "define" THEN bool_dflt = "y"
-$   ENDIF
+$ bool_dflt = "n"
+$ IF F$TYPE(use64bitall) .NES. ""
+$ THEN
+$   IF use64bitall .OR. use64bitall .eqs. "define" THEN bool_dflt = "y"
+$ ENDIF
+$ echo ""
+$ echo "You may also choose to try maximal 64-bitness.  It means using as much"
+$ echo "64-bitness as possible on the platform.  This in turn means even more"
+$ echo "binary incompatibilities.  On the other hand, your platform may not"
+$ echo "have any more 64-bitness available than what you already have chosen."
+$ echo ""
+$ echo "If this does not make any sense to you, just accept the default '" + bool_dflt + "'."
+$ rp = "Try to use maximal 64-bit support, if available? [''bool_dflt'] "
+$ GOSUB myread
+$ use64bitall=ans
+$ IF use64bitall .AND. .NOT. use64bitint
+$ THEN
 $   echo ""
-$   echo "You may also choose to try maximal 64-bitness.  It means using as much"
-$   echo "64-bitness as possible on the platform.  This in turn means even more"
-$   echo "binary incompatibilities.  On the other hand, your platform may not"
-$   echo "have any more 64-bitness available than what you already have chosen."
-$   echo ""
-$   echo "If this does not make any sense to you, just accept the default '" + bool_dflt + "'."
-$   rp = "Try to use maximal 64-bit support, if available? [''bool_dflt'] "
-$   GOSUB myread
-$   use64bitall=ans
-$   IF use64bitall .AND. .NOT. use64bitint
-$   THEN
-$     echo ""
-$     echo "Since you have chosen a maximally 64-bit build, I'm also turning on"
-$     echo "the use of 64-bit integers."
-$     use64bitint="Y"
-$   ENDIF
+$   echo "Since you have chosen a maximally 64-bit build, I'm also turning on"
+$   echo "the use of 64-bit integers."
+$   use64bitint="Y"
+$ ENDIF
 $!
-$   bool_dflt = use64bitall
-$   IF F$TYPE(uselargefiles) .NES. "" 
-$   THEN
-$       IF uselargefiles .OR. uselargefiles .eqs. "define" THEN bool_dflt = "y"
-$   ENDIF
-$   echo ""
-$   echo "Perl can be built to understand large files (files larger than 2 gigabytes)"
-$   echo "on some systems.  To do so, Configure can be run with -Duselargefiles."
-$   echo ""
-$   echo "If this does not make any sense to you, just accept the default '" + bool_dflt + "'."
-$   rp = "Try to understand large files, if available? [''bool_dflt'] "
-$   GOSUB myread
-$   uselargefiles=ans
+$ bool_dflt = use64bitall
+$ IF F$TYPE(uselargefiles) .NES. "" 
+$ THEN
+$   IF uselargefiles .OR. uselargefiles .eqs. "define" THEN bool_dflt = "y"
+$ ENDIF
+$ echo ""
+$ echo "Perl can be built to understand large files (files larger than 2 gigabytes)"
+$ echo "on some systems.  To do so, Configure can be run with -Duselargefiles."
+$ echo ""
+$ echo "If this does not make any sense to you, just accept the default '" + bool_dflt + "'."
+$ rp = "Try to understand large files, if available? [''bool_dflt'] "
+$ GOSUB myread
+$ uselargefiles=ans
 $!
-$   bool_dflt = "n"
-$   IF F$TYPE(uselongdouble) .NES. "" 
-$   THEN
-$       IF uselongdouble .OR. uselongdouble .eqs. "define" THEN bool_dflt = "y"
-$   ENDIF
-$   echo ""
-$   echo "Perl can be built to take advantage of long doubles which"
-$   echo "(if available) may give more accuracy and range for floating point numbers."
-$   echo ""
-$   echo "If this does not make any sense to you, just accept the default '" + bool_dflt + "'."
-$   rp = "Try to use long doubles, if available? [''bool_dflt'] "
-$   GOSUB myread
-$   uselongdouble = ans
+$ bool_dflt = "n"
+$ IF F$TYPE(uselongdouble) .NES. ""
+$ THEN
+$   IF uselongdouble .OR. uselongdouble .eqs. "define" THEN bool_dflt = "y"
+$ ENDIF
+$ echo ""
+$ echo "Perl can be built to take advantage of long doubles which"
+$ echo "(if available) may give more accuracy and range for floating point numbers."
+$ echo ""
+$ echo "If this does not make any sense to you, just accept the default '" + bool_dflt + "'."
+$ rp = "Try to use long doubles, if available? [''bool_dflt'] "
+$ GOSUB myread
+$ uselongdouble = ans
 $!
-$ ENDIF ! not VAX && >= 7.1
 $!
 $ IF usesitecustomize .OR. usesitecustomize .eqs. "define" 
 $ THEN 
-$       usesitecustomize = "define"
+$   usesitecustomize = "define"
 $ ELSE
-$       usesitecustomize = "undef"
+$   usesitecustomize = "undef"
 $ ENDIF
 $!
 $! Case sensitive?
-$   echo ""
-$   echo "By default, perl (and pretty much everything else on VMS) uses"
-$   echo "case-insensitive linker symbols. Which is to say, when the"
-$   echo "underlying C code makes a call to a routine called Perl_foo in"
-$   echo "the source, the name in the object modules or shareable images"
-$   echo "is really PERL_FOO. There are some packages that use an"
-$   echo "embedded perl interpreter that instead require case-sensitive"
-$   echo "linker symbols."
-$   echo ""
-$   echo "If you have no idea what this means, and do not have"
-$   echo "any program requiring anything, choose the default."
-$   bool_dflt = be_case_sensitive
-$   if f$type(usecasesensitive) .nes. ""
-$   then
-$       if usecasesensitive .or. usecasesensitive .eqs. "define" then bool_dflt = "y"
-$       if f$extract(0,1,f$edit(usecasesensitive,"collapse,upcase")).eqs."N" .or. usecasesensitive .eqs. "undef"  then bool_dflt = "n"
-$   endif
-$   rp = "Build with case-sensitive symbols? [''bool_dflt'] "
-$   GOSUB myread
-$   be_case_sensitive = ans
+$ echo ""
+$ echo "By default, perl (and pretty much everything else on VMS) uses"
+$ echo "case-insensitive linker symbols. Which is to say, when the"
+$ echo "underlying C code makes a call to a routine called Perl_foo in"
+$ echo "the source, the name in the object modules or shareable images"
+$ echo "is really PERL_FOO. There are some packages that use an"
+$ echo "embedded perl interpreter that instead require case-sensitive"
+$ echo "linker symbols."
+$ echo ""
+$ echo "If you have no idea what this means, and do not have"
+$ echo "any program requiring anything, choose the default."
+$ bool_dflt = be_case_sensitive
+$ if f$type(usecasesensitive) .nes. ""
+$ then
+$   if usecasesensitive .or. usecasesensitive .eqs. "define" then bool_dflt = "y"
+$   if f$extract(0,1,f$edit(usecasesensitive,"collapse,upcase")).eqs."N" .or. usecasesensitive .eqs. "undef"  then bool_dflt = "n"
+$ endif
+$ rp = "Build with case-sensitive symbols? [''bool_dflt'] "
+$ GOSUB myread
+$ be_case_sensitive = ans
 $!
 $! Shortened symbols?
 $   echo ""
@@ -2250,30 +2199,25 @@ $   endif
 $   rp = "Build with long symbols shortened? [''bool_dflt'] "
 $   GOSUB myread
 $   shorten_long_symbols = ans
-$ IF F$ELEMENT(0, "-", archname) .NES. "VMS_VAX"
-$ THEN
 $! IEEE math?
-$   echo ""
-$   echo "Perl normally uses IEEE format (T_FLOAT) floating point numbers on"
-$   echo "Alpha and Itanium, but if you need G_FLOAT for binary compatibility"
-$   echo "with an external library or existing data, you may wish to disable"
-$   echo "the IEEE math option."
-$   bool_dflt = use_ieee_math
-$   if f$type(useieee) .nes. "" 
+$ echo ""
+$ echo "Perl normally uses IEEE format (T_FLOAT) floating point numbers on"
+$ echo "Alpha and Itanium, but if you need G_FLOAT for binary compatibility"
+$ echo "with an external library or existing data, you may wish to disable"
+$ echo "the IEEE math option."
+$ bool_dflt = use_ieee_math
+$ if f$type(useieee) .nes. ""
+$ then
+$   if useieee .or. useieee .eqs. "define"
 $   then
-$       if useieee .or. useieee .eqs. "define" 
-$       then 
-$         bool_dflt="y"
-$       else
-$         bool_dflt="n"
-$       endif
+$     bool_dflt="y"
+$   else
+$     bool_dflt="n"
 $   endif
-$   rp = "Use IEEE math? [''bool_dflt'] "
-$   GOSUB myread
-$   use_ieee_math = ans
-$ ELSE
-$   use_ieee_math = "n"
-$ ENDIF
+$ endif
+$ rp = "Use IEEE math? [''bool_dflt'] "
+$ GOSUB myread
+$ use_ieee_math = ans
 $ useieee = "undef"
 $ usecasesensitive = "undef"
 $ useshortenedsymbols = "undef"
@@ -2473,7 +2417,7 @@ $ ENDIF
 $ ! more redundant scrubbing of values
 $ prefix = prefix - "000000."
 $ IF F$LOCATE(".]",prefix) .EQ. F$LENGTH(prefix) THEN prefix = prefix - "]" + ".]"
-$ src = prefix
+$ src = prefix - "_ROOT."
 $!: determine root of directory hierarchy where package will be installed.
 $ dflt = prefix
 $ IF .NOT.silent 
@@ -2536,7 +2480,7 @@ $     EOD
 $   ENDIF
 $   IF F$TYPE(privlib) .NES. ""
 $   THEN dflt = privlib
-$   ELSE dflt = "''vms_prefix':[lib]"
+$   ELSE dflt = "/''vms_prefix'/lib"
 $   ENDIF
 $   rp = "Pathname where the private library files will reside? " 
 $   rp = F$FAO("!AS!/!AS",rp,"[ ''dflt' ] ")
@@ -2605,7 +2549,7 @@ $     EOD
 $   ENDIF
 $   IF F$TYPE(archlib) .NES. ""
 $   THEN dflt = archlib
-$   ELSE dflt = privlib - "]" + "." + archname + "." + version + "]"
+$   ELSE dflt = privlib + "/" + archname + "/" + version
 $   ENDIF
 $   rp = "Where do you want to put the public architecture-dependent libraries? "
 $   rp = F$FAO("!AS!/!AS",rp,"[ ''dflt' ] ")
@@ -2634,7 +2578,7 @@ $     EOD
 $   ENDIF
 $   IF F$TYPE(sitelib) .NES. ""
 $   THEN dflt = sitelib
-$   ELSE dflt = privlib - "]" + ".SITE_PERL]"
+$   ELSE dflt = privlib + "/site_perl"
 $   ENDIF
 $   rp = "Pathname for the site-specific library files? "
 $   rp = F$FAO("!AS!/!AS",rp,"[ ''dflt' ] ")
@@ -2652,7 +2596,7 @@ $     EOD
 $   ENDIF
 $   IF F$TYPE(sitearch) .NES. ""
 $   THEN dflt = sitearch
-$   ELSE dflt = sitelib - "]" + "." + archname + "]"
+$   ELSE dflt = sitelib + "/" + archname
 $   ENDIF
 $   rp = "Pathname for the site-specific architecture-dependent library files? "
 $   rp = F$FAO("!AS!/!AS",rp,"[ ''dflt' ] ")
@@ -2664,7 +2608,6 @@ $!
 $!: determine where public executables go
 $   IF F$TYPE(bin) .NES. ""
 $   THEN dflt = bin
-$!   ELSE dflt = prefix - ".]" + ".BIN]"
 $   ELSE dflt = "/''vms_prefix'"
 $   ENDIF
 $   rp = "Pathname where the public executables will reside? "
@@ -2675,7 +2618,7 @@ $!
 $!: determine where add-on public executables go
 $   IF F$TYPE(sitebin) .NES. ""
 $   THEN dflt = sitebin
-$   ELSE dflt = "''vms_prefix':[bin.''archname']"
+$   ELSE dflt = "/''vms_prefix'/bin/''archname'"
 $   ENDIF
 $   rp = "Pathname where the add-on public executables should be installed? "
 $   rp = F$FAO("!AS!/!AS",rp,"[ ''dflt' ] ")
@@ -2691,58 +2634,58 @@ $!: see what memory models we can support
 $!
 $ ELSE ! skipping "where install" questions, we must set some symbols
 $   IF F$TYPE(archlib).EQS."" THEN -
-      archlib="''vms_prefix':[lib.''archname'.''version']"
+      archlib="/''vms_prefix'/lib/''archname'/''version'"
 $   IF F$TYPE(bin) .EQS. "" THEN -
       bin="/''vms_prefix'"
 $   IF F$TYPE(privlib) .EQS. "" THEN -
-      privlib ="''vms_prefix':[lib]"
+      privlib ="/''vms_prefix'/lib"
 $   IF F$TYPE(sitearch) .EQS. "" THEN -
-      sitearch="''vms_prefix':[lib.site_perl.''archname']"
+      sitearch="/''vms_prefix'/lib/site_perl/''archname'"
 $   IF F$TYPE(sitelib) .EQS. "" THEN -
-      sitelib ="''vms_prefix':[lib.site_perl]"
+      sitelib ="/''vms_prefix'/lib/site_perl"
 $   IF F$TYPE(sitebin) .EQS. "" THEN -
-      sitebin="''vms_prefix':[bin.''archname']"
+      sitebin="/''vms_prefix'/bin/''archname'"
 $ ENDIF !%Config-I-VMS, skip "where install" questions
 $!
 $! These derived locations can be set whether we've opted to
 $! skip the where install questions or not.
 $!
 $ IF F$TYPE(archlibexp) .EQS. "" THEN -
-    archlibexp="''vms_prefix':[lib.''archname'.''version']"
+    archlibexp="/''vms_prefix'/lib/''archname'/''version'"
 $ IF F$TYPE(binexp) .EQS. "" THEN -
-    binexp ="''vms_prefix':[000000]"
+    binexp ="/''vms_prefix'"
 $ IF F$TYPE(builddir) .EQS. "" THEN -
-    builddir ="''vms_prefix':[000000]"
+    builddir ="/''vms_prefix'"
 $ IF F$TYPE(installarchlib) .EQS. "" THEN -
-    installarchlib="''vms_prefix':[lib.''archname'.''version']"
+    installarchlib="/''vms_prefix'/lib/''archname'/''version'"
 $ IF F$TYPE(installbin) .EQS. "" THEN -
-    installbin ="''vms_prefix':[000000]"
+    installbin ="/''vms_prefix'"
 $ IF F$TYPE(installscript) .EQS. "" THEN -
-    installscript ="''vms_prefix':[utils]"
+    installscript ="/''vms_prefix'/utils"
 $ IF F$TYPE(installman1dir) .EQS. "" THEN -
-    installman1dir ="''vms_prefix':[man.man1]"
+    installman1dir ="/''vms_prefix'/man/man1"
 $ IF F$TYPE(installman3dir) .EQS. "" THEN -
-    installman3dir ="''vms_prefix':[man.man3]"
+    installman3dir ="/''vms_prefix'/man/man3"
 $ IF F$TYPE(installprivlib) .EQS. "" THEN -
-    installprivlib ="''vms_prefix':[lib]"
+    installprivlib ="/''vms_prefix'/lib"
 $ IF F$TYPE(installsitearch) .EQS. "" THEN -
-    installsitearch="''vms_prefix':[lib.site_perl.''archname']"
+    installsitearch="/''vms_prefix'/lib/site_perl/''archname'"
 $ IF F$TYPE(installsitelib) .EQS. "" THEN -
-    installsitelib ="''vms_prefix':[lib.site_perl]"
+    installsitelib ="/''vms_prefix'/lib/site_perl"
 $ IF F$TYPE(oldarchlib) .EQS. "" THEN -
-    oldarchlib="''vms_prefix':[lib.''archname']"
+    oldarchlib="/''vms_prefix'/lib/''archname'"
 $ IF F$TYPE(oldarchlibexp) .EQS. "" THEN -
-    oldarchlibexp="''vms_prefix':[lib.''archname']"
+    oldarchlibexp="/''vms_prefix'/lib/''archname'"
 $ IF F$TYPE(privlibexp) .EQS. "" THEN -
-    privlibexp ="''vms_prefix':[lib]"
+    privlibexp ="/''vms_prefix'/lib"
 $ IF F$TYPE(scriptdir) .EQS. "" THEN -
-    scriptdir ="''vms_prefix':[utils]"
+    scriptdir ="/''vms_prefix'/utils"
 $ IF F$TYPE(sitearchexp) .EQS. "" THEN -
-    sitearchexp ="''vms_prefix':[lib.site_perl.''archname']"
+    sitearchexp ="/''vms_prefix'/lib/site_perl/''archname'"
 $ IF F$TYPE(sitelib_stem) .EQS. "" THEN -
-    sitelib_stem ="''vms_prefix':[lib.site_perl]"
+    sitelib_stem ="/''vms_prefix'/lib/site_perl"
 $ IF F$TYPE(sitelibexp) .EQS. "" THEN -
-    sitelibexp ="''vms_prefix':[lib.site_perl]"
+    sitelibexp ="/''vms_prefix'/lib/site_perl"
 $!
 $! determine whether to use malloc wrapping
 $ echo ""
@@ -2801,7 +2744,7 @@ $   if ans.eqs."TWO_POT" then use_two_pot_malloc = "Y"
 $   if ans.eqs."PACK_MALLOC" then use_pack_malloc = "Y"
 $ ENDIF
 $!
-$ known_extensions = ""
+$ xs_extensions = ""
 $ xxx = ""
 $ OPEN/READ CONFIG 'manifestfound'
 $ext_loop:
@@ -2844,8 +2787,11 @@ $   idx = idx + 1
 $   goto replace_dash_with_slash
 $
 $ end_replace_dash_with_slash:
-$   
-$ xxx = known_extensions
+$!
+$ IF extspec .EQS. "Scalar/List/Utils" THEN extspec = "List/Util"
+$ IF extspec .EQS. "PathTools" THEN extspec = "Cwd"
+$!
+$ xxx = xs_extensions
 $ gosub may_already_have_extension
 $ IF $STATUS .EQ. 1
 $ THEN
@@ -2883,7 +2829,10 @@ $	xxx = F$EXTRACT(F$LENGTH(extspec) + 1, extlen, xxx)
 $   ENDIF
 $!
 $ found_new_extension:
-$   IF F$SEARCH("[-.ext.''extension_dir_name']*.xs") .EQS. "" .AND. F$SEARCH("[-.dist.''extension_dir_name']*.xs") .EQS. "" .AND. F$SEARCH("[-.cpan.''extension_dir_name']*.xs") .EQS. ""
+$   IF F$SEARCH("[-.ext.''extension_dir_name']*.xs") .EQS. "" -
+        .AND. F$SEARCH("[-.dist.''extension_dir_name']*.xs") .EQS. "" -
+        .AND. F$SEARCH("[-.cpan.''extension_dir_name']*.xs") .EQS. "" -
+        .AND. extension_dir_name .NES. "VMS-Filespec"
 $   THEN
 $!  Bit if a hack to get around the 1K buffer on older systems.
 $       IF F$LENGTH(nonxs_ext) .GT. 950
@@ -2893,7 +2842,7 @@ $       ELSE
 $           nonxs_ext = nonxs_ext + " ''extspec'"
 $       ENDIF
 $   ELSE
-$       known_extensions = known_extensions + " ''extspec'"
+$       xs_extensions = xs_extensions + " ''extspec'"
 $   ENDIF
 $   goto ext_loop
 $end_ext:
@@ -2903,12 +2852,8 @@ $ DELETE/SYMBOL idx
 $ DELETE/SYMBOL extspec
 $ DELETE/SYMBOL extlen
 $ DELETE/SYMBOL extension_dir_name
-$ known_extensions = F$EDIT(known_extensions,"TRIM,COMPRESS")
-$ dflt = known_extensions
-$ IF ccname .NES. "DEC" .AND. ccname .NES. "CXX"
-$ THEN
-$   dflt = dflt - "POSIX"             ! not with VAX C or GCC
-$ ENDIF
+$ xs_extensions = F$EDIT(xs_extensions,"TRIM,COMPRESS")
+$ dflt = xs_extensions
 $ dflt = dflt - "ByteLoader"          ! needs to be ported
 $ dflt = dflt - "DB_File"             ! needs to be ported
 $ dflt = dflt - "GDBM_File"           ! needs porting/special library
@@ -2921,6 +2866,7 @@ $ THEN
 $   dflt = dflt - "Socket"            ! optional on VMS
 $ ENDIF
 $ dflt = dflt - "Win32API/File" - "Win32"  ! need Dave Cutler's other project
+$ dflt = dflt - "Amiga/ARexx" - "Amiga/Exec" ! this is not AmigaOS
 $ nonxs_ext = nonxs_ext - "Win32CORE"
 $ nonxs_ext2 = nonxs_ext2 - "Win32CORE"
 $ dflt = F$EDIT(dflt,"TRIM,COMPRESS")
@@ -3072,6 +3018,27 @@ $ IF F$TYPE(pager) .EQS. "STRING" THEN dflt = pager
 $ rp="What pager is used on your system? [''dflt'] "
 $ GOSUB myread
 $ pager = ans
+$!
+$ bool_dflt = "y"
+$ IF F$TYPE(default_inc_excludes_dot) .NES. ""
+$ THEN
+$   IF .not. default_inc_excludes_dot .or. default_inc_excludes_dot .eqs. "undef" THEN bool_dflt = "n"
+$ ENDIF
+$ echo ""
+$ echo "Historically Perl has provided a final fallback of the current working"
+$ echo "directory '.' when searching for a library. This, however, can lead to"
+$ echo "problems when a Perl program which loads optional modules is called from"
+$ echo "a shared directory. This can lead to executing unexpected code."
+$ echo ""
+$ rp = "Exclude '.' from @INC by default? [''bool_dflt'] "
+$ GOSUB myread
+$ default_inc_excludes_dot = ans
+$ IF default_inc_excludes_dot
+$ THEN
+$   default_inc_excludes_dot = "define"
+$ ELSE
+$   default_inc_excludes_dot = "undef"
+$ ENDIF
 $!
 $! update makefile here
 $! echo4 "Updating makefile..."
@@ -3330,98 +3297,157 @@ $ THEN d_mymalloc="define"
 $ ELSE d_mymalloc="undef"
 $ ENDIF
 $!
-$ usedevel="undef"
 $ usedl="define"
 $ startperl="""$ perl 'f$env(\""procedure\"")' \""'"+"'p1'\"" \""'"+"'p2'\"" \""'"+"'p3'\"" \""'"+"'p4'\"" \""'"+"'p5'\"" \""'"+"'p6'\"" \""'"+"'p7'\"" \""'"+"'p8'\""!\n"
 $ startperl=startperl + "$ exit++ + ++$status!=0 and $exit=$status=undef; while($#ARGV != -1 and $ARGV[$#ARGV] eq '"+"'){pop @ARGV;}"""
 $!
 $ libs=" "
-$ IF ccname .EQS. "DEC" .OR. ccname .EQS. "CXX"
-$ THEN
-$   libc="(DECCRTL)"
-$ ELSE
-$   libc=" "
-$ ENDIF
+$ libc="(DECCRTL)"
 $!
 $! perllibs should be libs with all non-core libs (such as gdbm) removed.
 $!
 $ perllibs=libs
 $!
 $!
-$ IF F$ELEMENT(0, "-", archname) .NES. "VMS_VAX"
-$ THEN
-$   d_PRId64 = "define"
-$   d_PRIi64 = "define"
-$   d_PRIu64 = "define"
-$   d_PRIo64 = "define"
-$   d_PRIx64 = "define"
-$   d_PRIXU64 = "define"
-$   sPRId64 = """Ld"""
-$   sPRIXU64 = """LX"""
-$   sPRIi64 = """Li"""
-$   sPRIo64 = """Lo"""
-$   sPRIu64 = """Lu"""
-$   sPRIx64 = """Lx"""
-$   d_quad = "define"
-$   quadtype = "long long"
-$   uquadtype = "unsigned long long"
-$   quadkind  = "3"
+$ d_PRId64 = "define"
+$ d_PRIi64 = "define"
+$ d_PRIu64 = "define"
+$ d_PRIo64 = "define"
+$ d_PRIx64 = "define"
+$ d_PRIXU64 = "define"
+$ sPRId64 = """Ld"""
+$ sPRIXU64 = """LX"""
+$ sPRIi64 = """Li"""
+$ sPRIo64 = """Lo"""
+$ sPRIu64 = """Lu"""
+$ sPRIx64 = """Lx"""
+$ d_quad = "define"
+$ quadtype = "long long"
+$ uquadtype = "unsigned long long"
+$ quadkind  = "3"
 $!
-$   d_frexpl = "define"
-$   d_modfl = "define"
-$   d_modflproto = "define"
-$ ELSE
-$   d_PRId64 = "undef"
-$   d_PRIi64 = "undef"
-$   d_PRIXU64 = "undef"
-$   d_PRIu64 = "undef"
-$   d_PRIo64 = "undef"
-$   d_PRIx64 = "undef"
-$   sPRId64 = ""
-$   sPRIXU64 = """lX"""
-$   sPRIi64 = ""
-$   sPRIo64 = ""
-$   sPRIu64 = ""
-$   sPRIx64 = ""
-$   d_quad = "undef"
-$   quadtype = "undef"
-$   uquadtype = "undef"
-$   quadkind  = "undef"
+$ d_frexpl = "define"
+$ d_ldexpl = "define"
+$ d_modfl = "define"
+$ d_modflproto = "define"
 $!
-$   d_frexpl = "undef"
-$   d_modfl = "undef"
-$   d_modflproto = "undef"
-$ ENDIF
-$!
+$ d_double_has_inf = "undef"
+$ d_double_has_nan = "undef"
+$ d_double_has_negative_zero = "undef"
+$ d_double_has_subnormals = "undef"
+$ d_double_style_cray = "undef"
+$ d_double_style_ibm = "undef"
+$ d_double_style_ieee = "undef"
+$ d_double_style_vax = "undef"
+$ d_long_double_style_ieee = "undef"
+$ d_long_double_style_ieee_extended = "undef"
+$ d_long_double_style_ieee_std = "undef"
+$ d_long_double_style_vax = "undef"
 $ IF useieee .OR. useieee .EQS. "define"
 $ THEN
+$   d_double_has_inf = "define"
+$   d_double_has_nan = "define"
+$   d_double_has_negative_zero = "define"
+$   d_double_has_subnormals = "define"
+$   d_double_style_ieee = "define"
+$   IF uselongdouble .OR. uselongdouble .EQS. "define"
+$   THEN
+$       d_long_double_style_ieee = "define"
+$! TODO: will the Intel port have ieee_extended for long doubles?
+$       d_long_double_style_ieee_std = "define"
+$   ENDIF
+$   d_acosh = "define"
+$   d_asinh = "define"
+$   d_atanh = "define"
+$   d_cbrt = "define"
+$   d_copysign = "define"
+$   d_erf = "define"
+$   d_erfc = "define"
+$   d_exp2 = "define"
+$   d_expm1 = "define"
+$   d_fdim = "define"
+$   d_fma = "define"
+$   d_fmax = "define"
+$   d_fmin = "define"
+$   d_fp_classify = "define"
+$   d_hypot = "define"
+$   d_ilogb = "define"
 $   d_isnan = "define"
 $   d_isnanl = "define"
+$   d_isnormal = "define"
+$   d_j0 = "define"
+$   d_lgamma = "define"
+$   d_log1p = "define"
+$   d_log2 = "define"
+$   d_logb = "define"
+$   d_lrint = "define"
+$   d_lrintl = "define"
+$   d_lround = "define"
+$   d_lroundl = "define"
+$   d_nearbyint = "define"
+$   d_nextafter = "define"
+$   d_nexttoward = "define"
+$   d_remainder = "define"
+$   d_remquo = "define"
+$   d_rint = "define"
+$   d_tgamma = "define"
+$   d_trunc = "define"
+$   d_truncl = "define"
 $ ELSE
+$   d_double_style_vax = "define"
+$   IF uselongdouble .OR. uselongdouble .EQS. "define"
+$   THEN
+$	d_long_double_style_vax = "undef" ! VAX format H unlikely
+$   ENDIF
+$   d_acosh = "undef"
+$   d_acosh = "undef"
+$   d_asinh = "undef"
+$   d_atanh = "undef"
+$   d_cbrt = "undef"
+$   d_copysign = "undef"
+$   d_erf = "undef"
+$   d_erfc = "undef"
+$   d_exp2 = "undef"
+$   d_expm1 = "undef"
+$   d_fdim = "undef"
+$   d_fma = "undef"
+$   d_fmax = "undef"
+$   d_fmin = "undef"
+$   d_fp_classify = "undef"
+$   d_hypot = "undef"
+$   d_ilogb = "undef"
 $   d_isnan = "undef"
 $   d_isnanl = "undef"
+$   d_isnormal = "undef"
+$   d_j0 = "undef"
+$   d_lgamma = "undef"
+$   d_log1p = "undef"
+$   d_log2 = "undef"
+$   d_logb = "undef"
+$   d_lrint = "undef"
+$   d_lrintl = "undef"
+$   d_lround = "undef"
+$   d_lroundl = "undef"
+$   d_nearbyint = "undef"
+$   d_nextafter = "undef"
+$   d_nexttoward = "undef"
+$   d_remainder = "undef"
+$   d_remquo = "undef"
+$   d_rint = "undef"
+$   d_tgamma = "undef"
+$   d_trunc = "undef"
+$   d_truncl = "undef"
 $ ENDIF
 $!
 $! Now some that we build up
 $!
+$ use5005threads = "undef"
+$ d_old_pthread_create_joinable = "undef"
+$ old_pthread_create_joinable = " "
 $ IF use_threads
 $ THEN
-$   IF use_5005_threads
-$   THEN
-$     d_old_pthread_create_joinable = "undef"
-$     old_pthread_create_joinable = " "
-$     use5005threads = "define"
-$     useithreads = "undef"
-$   ELSE
-$     d_old_pthread_create_joinable = "undef"
-$     old_pthread_create_joinable = " "
-$     use5005threads = "undef"
-$     useithreads = "define"
-$   ENDIF
+$    useithreads = "define"
 $ ELSE
-$   d_old_pthread_create_joinable = "undef"
-$   old_pthread_create_joinable = " "
-$   use5005threads = "undef"
 $   useithreads = "undef"
 $ ENDIF
 $!
@@ -3622,6 +3648,10 @@ $ GOSUB link_ok
 $ IF link_status .NE. good_link
 $ THEN
 $   longdblsize="0"
+$   longdblkind="0"
+$   longdblinfbytes="undef"
+$   longdblnanbytes="undef"
+$   longdblmantbits="undef"
 $   d_longdbl="undef"
 $   echo "You do not have long double."
 $ ELSE
@@ -3629,6 +3659,10 @@ $   echo "You have long double."
 $   echo4 "Checking to see how big your long doubles are..."
 $   GOSUB just_mcr_it
 $   longdblsize = tmp
+$   longdblkind = "1"
+$   longdblinfbytes="0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0x7f"
+$   longdblnanbytes="0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff"
+$   longdblmantbits="112"
 $   d_longdbl = "define"
 $   echo "Your long doubles are ''longdblsize' bytes long."
 $ ENDIF
@@ -4481,36 +4515,43 @@ $ tmp = "setvbuf"
 $ GOSUB inlibc
 $ d_setvbuf = tmp
 $!
-$! see if sfio.h is available
-$! see if sfio library is available
-$! Ok, but do we want to use it.
-$! IF F$TYPE(usesfio) .EQS. "" THEN usesfio = "undef"
-$! IF val .EQS. "define"
-$! THEN
-$!   IF usesfio .EQS. "define"
-$!   THEN dflt = "y"
-$!   ELSE dflt = "n"
-$!   ENDIF
-$!   echo "''package' can use the sfio library, but it is experimental."
-$!   rp="You seem to have sfio available, do you want to try using it? [''dflt'] "
-$!   GOSUB myread
-$!   IF ans .EQS. "" THEN ans = dflt
-$!   IF ans
-$!   THEN
-$!     echo "Ok, turning on sfio then."
-$!     val="define"
-$!   ELSE
-$!     echo "Ok, avoiding sfio this time.  I'll use stdio instead."
-$!     val="undef"
-$!   ENDIF
-$! ELSE
-$!   IF usesfio .EQS. "define"
-$!   THEN
-$!     echo4 "Sorry, cannot find sfio on this machine."
-$!     echo4 "Ignoring your setting of usesfio=''usesfio'."
-$!     val="undef"
-$!   ENDIF
-$! ENDIF
+$! Check for the shm* routines.
+$!
+$ OS
+$ WS "#if defined(__DECC) || defined(__DECCXX)"
+$ WS "#include <stdlib.h>"
+$ WS "#endif"
+$ WS "#include <stdio.h>"
+$ WS "#include <sys/shm.h>"
+$ WS "#include <sys/stat.h>"
+$ WS "int shmget(key_t key, size_t size, int shmflg);"
+$ WS "void* shmat(int shmid,const void *shmaddr,int shmflg);"
+$ WS "int shmctl(int shmid,  int cmd, struct shmid_ds *buf);"
+$ WS "int shmdt(const void *shmaddr);"
+$ WS "int main() {"
+$ WS "int shm_id = shmget(IPC_PRIVATE, 8, S_IRWXU);"
+$ WS "if (shm_id == -1) printf(""0\n""); else printf (""1\n"");"
+$ WS "}"
+$ CS
+$ GOSUB compile
+$ IF tmp .EQS. "1"
+$ THEN
+$   d_shm = "define"
+$   d_shmat = "define"
+$   d_shmatprototype = "define"
+$   d_shmctl = "define"
+$   d_shmdt = "define"
+$   d_shmget = "define"
+$   shmattype = "void *"
+$ ELSE
+$   d_shm = "undef"
+$   d_shmat = "undef"
+$   d_shmatprototype = "undef"
+$   d_shmctl = "undef"
+$   d_shmdt = "undef"
+$   d_shmget = "undef"
+$   shmattype = "undef"
+$ ENDIF
 $!
 $! Check for setenv
 $!
@@ -4556,6 +4597,29 @@ $   i_niin = tmp
 $ ELSE
 $   i_niin="undef"
 $ ENDIF
+$!
+$! Check for <arpa/inet.h>
+$!
+$ IF Has_Dec_C_Sockets
+$ THEN
+$   tmp = "arpa/inet.h"
+$   GOSUB inhdr
+$   i_arpainet = tmp
+$ ELSE
+$   i_arpainet="undef"
+$ ENDIF
+$!
+$! Check for <sys/un.h>
+$!
+$ IF Has_Dec_C_Sockets
+$ THEN
+$   tmp = "sys/un.h"
+$   GOSUB inhdr
+$   i_sysun = tmp
+$ ELSE
+$   i_sysun="undef"
+$ ENDIF
+$!
 $!
 $! Check for <netinet/tcp.h>
 $!
@@ -5108,7 +5172,7 @@ $! easy to use DCL test to see if hardlinks are enabled on the build
 $! disk.  That would require more work to test, and I am only testing
 $! this on 8.2, so that is why the 8.2 test.
 $!
-$  IF (vms_ver .GES. "8.2") .AND. (F$ELEMENT(0, "-", archname) .NES. "VMS_VAX")
+$  IF (vms_ver .GES. "8.2")
 $  THEN
 $   IF f$getdvi("SYS$DISK","HARDLINKS_SUPPORTED")
 $   THEN
@@ -5126,7 +5190,7 @@ $  ENDIF
 $!
 $  IF uselargefiles .OR. uselargefiles .eqs. "define"
 $  THEN
-$    IF (vms_ver .GES. "8.2") .AND. (F$ELEMENT(0, "-", archname) .NES. "VMS_VAX")
+$    IF (vms_ver .GES. "8.2")
 $    THEN
 $      echo4 "Largefile support enabled, so enabling standard stat support too."
 $      usestdstat = "y"
@@ -5167,7 +5231,7 @@ $       echo4 "Your system does not support symbolic links."
 $       echo4 "I am disabling symbolic link support."
 $    ENDIF
 $  ELSE
-$    IF (vms_ver .GES. "8.2") .AND. (F$ELEMENT(0, "-", archname) .NES. "VMS_VAX")
+$    IF (vms_ver .GES. "8.2")
 $    THEN
 $       echo4 "-Duselargefiles is required for symbolic link support."
 $       echo4 "You did not specify that, so I am disabling symbolic link support."
@@ -5196,30 +5260,22 @@ $  d_getpwnam_r = "undef"
 $  getpwnam_r_proto = "0"
 $  d_getpwuid_r = "undef"
 $  getpwuid_r_proto = "0"
-$  d_setgrent = "undef"
-$  d_ttyname_r = "undef"
-$  ttyname_r_proto = "0"
-$  d_snprintf = "undef"
-$  d_vsnprintf = "undef"
-$  if (vms_ver .GES. "7.3-2") .AND. (F$ELEMENT(0, "-", archname) .NES. "VMS_VAX")
+$  echo "Asumming 64-bit OpenVMS ''vms_ver' -- will build with V7.3-2 routines"
+$  d_getgrgid_r = "define"
+$  getgrgid_r_proto = "1"
+$  d_getgrnam_r = "define"
+$  getgrnam_r_proto = "1"
+$  if d_symlink .or. d_symlink .EQS. "define"
 $  then
-$    echo "Found 64 bit OpenVMS ''vms_ver' -- will build with V7.3-2 routines"
-$    d_getgrgid_r = "define"
-$    getgrgid_r_proto = "1"
-$    d_getgrnam_r = "define"
-$    getgrnam_r_proto = "1"
-$    if d_symlink .or. d_symlink .EQS. "define"
-$    then
 $!	 FIXME: Need to find how to activate this.
 $!       d_getpgid = "define"
 $!       d_getpgrp = "define"
-$    endif
-$    d_setgrent = "define"
-$    d_ttyname_r = "define"
-$    ttyname_r_proto = "1"
-$    d_snprintf = "define"
-$    d_vsnprintf = "define"
 $  endif
+$  d_setgrent = "define"
+$  d_ttyname_r = "define"
+$  ttyname_r_proto = "1"
+$  d_snprintf = "define"
+$  d_vsnprintf = "define"
 $!
 $! VMS V7.3-2 powered options
 $! We know that it is only available for V7.3-2 and later on 64 bit platforms.
@@ -5235,7 +5291,7 @@ $  d_setregid = "undef"
 $  d_setreuid = "undef"
 $  d_setsid = "undef"
 $  ! Disable this section for now.
-$!$  if (vms_ver .GES. "8.2") .AND. (F$ELEMENT(0, "-", archname) .NES. "VMS_VAX")
+$!$  if (vms_ver .GES. "8.2")
 $  if .NOT. 1
 $  then
 $    echo "Found 64 bit OpenVMS ''vms_ver' -- will build with V7.3-2 UID setting routines"
@@ -5251,70 +5307,27 @@ $! VMS V8 powered options
 $! We know that it is only available for 8.2 and later on 64 bit platforms.
 $!
 $  d_fstatvfs = "undef"
-$!  d_statvfs = "undef"
+$  d_statvfs = "undef"
 $  i_sysstatvfs = "undef"
-$  if (vms_ver .GES. "8.2") .AND. (F$ELEMENT(0, "-", archname) .NES. "VMS_VAX")
+$  if (vms_ver .GES. "8.2")
 $  then
 $    echo "Found 64 bit OpenVMS ''vms_ver' -- will build with 8.2 routines"
 $    d_fstatvfs = "define"
-$!    d_statvfs = "define"
+$    d_statvfs = "define"
 $    i_sysstatvfs = "define"
 $  endif
 $!
 $! Check rand48 and its ilk
 $!
-$ echo4 "Looking for a random number function..."
-$ OS
-$ WS "#if defined(__DECC) || defined(__DECCXX)"
-$ WS "#include <stdlib.h>"
-$ WS "#endif"
-$ WS "#include <stdio.h>"
-$ WS "int main()"
-$ WS "{"
-$ WS "srand48(12L);"
-$ WS "exit(0);"
-$ WS "}"
-$ CS
-$ GOSUB link_ok
-$ IF compile_status .EQ. good_compile .AND. link_status .EQ. good_link
-$ THEN
-$   drand01 = "drand48()"
-$   randbits = "48"
-$   randfunc = "drand48"
-$   randseedtype = "long int"
-$   seedfunc = "srand48"
-$   echo4 "Good, found drand48()."
-$   d_drand48proto = "define"
-$ ELSE
-$   d_drand48proto = "undef"
-$   drand01="random()"
-$   randbits = "31"
-$   randfunc = "random"
-$   randseedtype = "unsigned"
-$   seedfunc = "srandom"
-$   OS
-$   WS "#if defined(__DECC) || defined(__DECCXX)"
-$   WS "#include <stdlib.h>"
-$   WS "#endif"
-$   WS "#include <stdio.h>"
-$   WS "int main()"
-$   WS "{"
-$   WS "srandom(12);"
-$   WS "exit(0);"
-$   WS "}"
-$   CS
-$   GOSUB link_ok
-$   IF compile_status .EQ. good_compile .AND. link_status .EQ. good_link
-$   THEN
-$     echo4 "OK, found random()."
-$   ELSE
-$     drand01="(((float)rand())*MY_INV_RAND_MAX)"
-$     randfunc = "rand"
-$     randseedtype = "unsigned"
-$     seedfunc = "srand"
-$     echo4 "Yick, looks like I have to use rand()."
-$   ENDIF
-$ ENDIF
+$ echo4 "Using our internal random number implementation..."
+$!
+$ randfunc = "Perl_drand48"
+$ drand01 = "Perl_drand48()"
+$ seedfunc = "Perl_drand48_init"
+$ randbits = "48"
+$ randseedtype = "U32"
+$ d_drand48proto = "define"
+$!
 $! Done with compiler checks. Clean up.
 $ IF F$SEARCH("try.c")  .NES."" THEN DELETE/NOLOG/NOCONFIRM try.c;*
 $ IF F$SEARCH("try.obj").NES."" THEN DELETE/NOLOG/NOCONFIRM try.obj;*
@@ -5358,6 +5371,13 @@ $ d_clearenv="undef"
 $ d_usleep="define"
 $ d_setitimer="define"
 $ d_sigaction="define"
+$ d_siginfo_si_addr="define"
+$ d_siginfo_si_band="define"
+$ d_siginfo_si_errno="define"
+$ d_siginfo_si_pid="define"
+$ d_siginfo_si_status="define"
+$ d_siginfo_si_uid="define"
+$ d_siginfo_si_value="define"
 $ d_sigprocmask="define"
 $ d_truncate="define"
 $ d_wait4="define"
@@ -5365,10 +5385,7 @@ $ d_index="define"
 $ pidtype="pid_t"
 $ sig_name1="ZERO HUP INT QUIT ILL TRAP ABRT EMT FPE KILL BUS SEGV SYS PIPE"
 $ sig_name2=" ALRM TERM USR1 USR2 NUM18 NUM19 CHLD CONT STOP TSTP TTIN TTOU DEBUG"
-$ IF (vms_ver .GES. "7.3")
-$ THEN
-$     sig_name2 = sig_name2 + " NUM27 WINCH"
-$ ENDIF
+$ sig_name2 = sig_name2 + " NUM27 WINCH"
 $!* signal.h defines SIGRTMIN as 33 and SIGRTMAX as 64, but there is no 
 $!* sigqueue function or other apparent means to do realtime signalling,
 $!* so let's not try to include the realtime range for now.
@@ -5431,45 +5448,24 @@ $!
 $! Dec C alone
 $ IF ccname .EQS. "DEC" .OR. ccname .EQS. "CXX"
 $ THEN
-$   d_mbstowcs="define"
-$   d_mbtowc="define"
-$   d_stdiobase="define"
-$   d_stdio_cnt_lval="define"
-$   d_stdio_ptr_lval="define"
-$   d_stdstdio="define"
-$   d_faststdio="define"
-$   d_wcstombs="define"
-$   d_mblen="define"
-$   d_mktime="define"
-$   d_strcoll="define"
-$   d_strxfrm="define"
-$   d_wctomb="define"
-$   i_locale="define"
-$   i_langinfo="define"
-$   d_locconv="define"
-$   d_nl_langinfo="define"
-$   d_setlocale="define"
 $   vms_cc_type="decc"
-$ ELSE
-$   d_mbstowcs="undef"
-$   d_mbtowc="undef"
-$   d_stdiobase="undef"
-$   d_stdio_cnt_lval="undef"
-$   d_stdio_ptr_lval="undef"
-$   d_stdstdio="undef"
-$   d_faststdio="undef"
-$   d_wcstombs="undef"
-$   d_mblen="undef"
-$   d_mktime="undef"
-$   d_strcoll="undef"
-$   d_strxfrm="undef"
-$   d_wctomb="undef"
-$   i_locale="undef"
-$   i_langinfo="undef"
-$   d_locconv="undef"
-$   d_nl_langinfo="undef"
-$   d_setlocale="undef"
 $ ENDIF
+$ d_faststdio="define"
+$ d_locconv="define"
+$ d_mblen="define"
+$ d_mbstowcs="define"
+$ d_mbtowc="define"
+$ d_mktime="define"
+$ d_nl_langinfo="define"
+$ d_setlocale="define"
+$ d_stdiobase="define"
+$ d_stdio_cnt_lval="define"
+$ d_stdio_ptr_lval="define"
+$ d_stdstdio="define"
+$ d_strcoll="define"
+$ d_strxfrm="define"
+$ i_langinfo="define"
+$ i_locale="define"
 $ d_stdio_ptr_lval_sets_cnt="undef"
 $ d_stdio_ptr_lval_nochange_cnt="define"
 $ usefaststdio="undef"
@@ -5481,7 +5477,7 @@ $   d_vms_do_sockets="define"
 $   d_htonl="define"
 $   d_socket="define"
 $   d_sockpair = "undef"
-$   if (vms_ver .GES. "8.2") .AND. (F$ELEMENT(0, "-", archname) .NES. "VMS_VAX")
+$   if (vms_ver .GES. "8.2")
 $   then
 $     echo "Found 64 bit OpenVMS 8.2, will build with socketpair support"
 $     d_sockpair = "define"
@@ -5503,12 +5499,7 @@ $   d_gethostprotos="define"
 $   d_getnetprotos="define"
 $   d_getprotoprotos="define"
 $   d_getservprotos="define"
-$   IF ccname .EQS. "DEC" .OR. ccname .EQS. "CXX"
-$   THEN
-$     socksizetype="unsigned int"
-$   ELSE
-$     socksizetype="int *"
-$   ENDIF
+$   socksizetype="size_t"
 $ ELSE
 $   d_vms_do_sockets="undef"
 $   d_htonl="undef"
@@ -5563,20 +5554,22 @@ $ IF use64bitint .OR. use64bitint .EQS. "define"
 $ THEN
 $   ivtype = "''i64type'"
 $   uvtype = "''u64type'"
-$ ELSE
-$   i64size="undef"
-$   u64size="undef"
 $ ENDIF
+$ i64size="8"
+$ u64size="8"
 $!
+$ doublemantbits = "52"
 $ IF uselongdouble .OR. uselongdouble .EQS. "define"
 $ THEN
 $   nvtype="long double"
+$   nvmantbits = longdblmantbits
+$ ELSE
+$   nvmantbits = doublemantbits
 $ ENDIF
 $!
 $ tmp = "''ivtype'"
 $ GOSUB type_size_check
 $ ivsize = tmp
-$ IF use64bitint .OR. use64bitint .EQS. "define" THEN i64size = tmp
 $ IF ivtype .eqs. "long"
 $ THEN longsize = tmp
 $ ELSE
@@ -5588,7 +5581,6 @@ $!
 $ tmp = "''uvtype'"
 $ GOSUB type_size_check
 $ uvsize = tmp
-$ IF use64bitint .OR. use64bitint .EQS. "define" THEN u64size = tmp
 $!
 $ tmp = "''i8type'"
 $ GOSUB type_size_check
@@ -5763,7 +5755,8 @@ $     d_signbit = "undef"
 $     echo4 "Nope."
 $ ENDIF
 $!
-$ echo4 "Checking if kill() uses SYS$FORCEX or can't be called from a signal handler..."
+$ echo4 "Checking if kill() uses SYS$FORCEX, can't be called from a signal handler,"
+$ echo4 "or fails to handle a signal value of zero..."
 $ kill_by_sigprc = "undef"
 $ OS
 $ WS "#include <stdio.h>"
@@ -5777,12 +5770,13 @@ $ WS "    signal(1,handler1);"
 $ WS "    signal(2,handler2);"
 $ WS "    kill(getpid(),1);"
 $ WS "    sleep(1);"
-$ WS "    printf(""\n"");"
+$ WS "    kill(getpid(),0);"
+$ WS "    printf(""3\n"");"
 $ WS "}"
 $ CS
 $ ON ERROR THEN CONTINUE
 $ GOSUB compile
-$ IF tmp .NES. "012"
+$ IF tmp .NES. "0123"
 $ THEN 
 $   echo4 "Yes, it has at least one of those limitations."
 $   echo4 "Checking whether we can use SYS$SIGPRC instead..."
@@ -5954,10 +5948,13 @@ $ WC "d_SCNfldbl='" + d_SCNfldbl + "'"
 $ WC "d__fwalk='undef'"
 $ WC "d_access='" + d_access + "'"
 $ WC "d_accessx='undef'"
+$ WC "d_acosh='" + d_acosh + "'"
 $ WC "d_aintl='undef'"
 $ WC "d_alarm='define'"
 $ WC "d_archlib='define'"
 $ WC "d_asctime64='undef'"
+$ WC "d_asinh='" + d_asinh + "'"
+$ WC "d_atanh='" + d_atanh + "'"
 $ WC "d_atolf='" + d_atolf + "'"
 $ WC "d_atoll='" + d_atoll + "'"
 $ WC "d_attribute_format='" + d_attribut + "'"
@@ -5974,7 +5971,7 @@ $ WC "d_printf_format_null='undef'"
 $ WC "d_bcmp='" + d_bcmp + "'"
 $ WC "d_bcopy='" + d_bcopy + "'"
 $ WC "d_bincompat3='undef'"
-$! WC "d_bsdpgrp='undef'"
+$ WC "d_bsd='undef'"
 $ WC "d_bsdgetpgrp='undef'"
 $ WC "d_bsdsetpgrp='undef'"
 $ WC "d_builtin_choose_expr='undef'" ! GCC only
@@ -5982,13 +5979,16 @@ $ WC "d_builtin_expect='undef'" ! GCC only
 $ WC "d_bzero='" + d_bzero + "'"
 $ WC "d_casti32='define'"
 $ WC "d_castneg='define'"
+$ WC "d_cbrt='" + d_cbrt + "'"
 $ WC "d_charvspr='undef'"
 $ WC "d_chown='define'"
 $ WC "d_chroot='undef'"
 $ WC "d_chsize='undef'"
 $ WC "d_class='undef'"
+$ WC "d_closedir='define'"
 $ WC "d_cmsghdr_s='undef'"
 $ WC "d_const='define'"
+$ WC "d_copysign='" + d_copysign + "'"
 $ WC "d_copysignl='define'"
 $ WC "d_cplusplus='" + d_cplusplus + "'"
 $ WC "d_crypt='define'"
@@ -6004,9 +6004,26 @@ $ WC "d_difftime64='undef'"
 $ WC "d_dir_dd_fd='undef'"
 $ WC "d_dirfd='undef'"
 $ WC "d_dirnamlen='define'"
-$ WC "d_dlerror='undef'"
+$ WC "d_dladdr='undef'"
+$ IF ("''F$EXTRACT(1,3, F$GETSYI(""VERSION""))'".GES."7.2")
+$ THEN
+$   WC "d_dlerror='define'"
+$   WC "d_dlopen='define'"
+$ ELSE
+$   WC "d_dlerror='undef'"
+$   WC "d_dlopen='undef'"
+$ ENDIF
 $ WC "d_dlsymun='undef'"
+$ WC "d_backtrace='undef'"
 $ WC "d_dosuid='undef'"
+$ WC "d_double_has_inf='" + d_double_has_inf + "'"
+$ WC "d_double_has_nan='" + d_double_has_nan + "'"
+$ WC "d_double_has_negative_zero='" + d_double_has_negative_zero + "'"
+$ WC "d_double_has_subnormals='" + d_double_has_subnormals + "'"
+$ WC "d_double_style_cray='undef'"
+$ WC "d_double_style_ibm='undef'"
+$ WC "d_double_style_ieee='" + d_double_style_ieee + "'"
+$ WC "d_double_style_vax='" + d_double_style_vax + "'"
 $ WC "d_drand48proto='" + d_drand48proto + "'"
 $ WC "d_dup2='define'"
 $ WC "d_eaccess='undef'"
@@ -6017,25 +6034,47 @@ $ WC "d_endpent='" + d_endpent + "'"
 $ WC "d_endpwent='define'"
 $ WC "d_endsent='" + d_endsent + "'"
 $ WC "d_eofnblk='undef'"
+$ WC "d_erf='" + d_erf + "'"
+$ WC "d_erfc='" + d_erfc + "'"
 $ WC "d_eunice='undef'"
+$ WC "d_exp2='" + d_exp2 + "'"
+$ WC "d_expm1='" + d_expm1 + "'"
 $ WC "d_fchmod='undef'"
 $ WC "d_fchdir='undef'"
 $ WC "d_fchown='undef'"
 $ WC "d_fcntl='" + d_fcntl + "'"
 $ WC "d_fcntl_can_lock='" + d_fcntl_can_lock + "'"
 $ WC "d_fd_set='" + d_fd_set + "'"
+$ WC "d_fd_macros='define'"
+$ WC "d_fdclose='undef'"
+$ WC "d_fdim='" + d_fdim + "'"
+$ WC "d_fds_bits='define'"
+$ WC "d_fegetround='undef'"
 $ WC "d_fgetpos='define'"
-$ WC "d_finite='undef'"
-$ WC "d_finitel='undef'"
+$ IF use_ieee_math
+$ THEN
+$   WC "d_finite='define'"
+$   WC "d_finitel='define'"
+$ ELSE
+$   WC "d_finite='undef'"
+$   WC "d_finitel='undef'"
+$ ENDIF
 $ WC "d_flexfnam='define'"
 $ WC "d_flock='undef'"
 $ WC "d_flockproto='undef'"
+$ WC "d_fma='" + d_fma + "'"
+$ WC "d_fmax='" + d_fmax + "'"
+$ WC "d_fmin='" + d_fmin + "'"
 $ WC "d_fork='undef'"
 $ WC "d_fp_class='undef'"
+$ WC "d_fp_classify='" + d_fp_classify + "'"
+$ WC "d_fp_classify='undef'"
+$ WC "d_fp_classl='undef'"
 $ WC "d_fpathconf='" + d_fpathconf + "'"
 $ WC "d_fpclass='undef'"
 $ WC "d_fpclassify='undef'"
 $ WC "d_fpclassl='undef'"
+$ WC "d_fpgetround='undef'"
 $ WC "d_fpos64_t='" + d_fpos64_t + "'"
 $ WC "d_frexpl='" + d_frexpl + "'"
 $ WC "d_fs_data_s='undef'"
@@ -6043,12 +6082,13 @@ $ WC "d_fseeko='" + d_fseeko + "'"
 $ WC "d_fsetpos='define'"
 $ WC "d_fstatfs='undef'"
 $ WC "d_fstatvfs='" + d_fstatvfs + "'"
-$ WC "d_fsync='undef'"
+$ WC "d_fsync='define'"
 $ WC "d_ftello='" + d_ftello + "'"
+$ WC "d_ftime='define'"
 $ WC "d_futimes='undef'"
 $ WC "d_gdbmndbm_h_uses_prototypes='undef'"
 $ WC "d_gdbm_ndbm_h_uses_prototypes='undef'"
-$ WC "d_getaddrinfo='undef'"
+$ WC "d_getaddrinfo='define'"
 $ WC "d_getcwd='define'"
 $ WC "d_getespwnam='undef'"
 $ WC "d_getfsstat='undef'"
@@ -6063,7 +6103,7 @@ $ WC "d_getitimer='" + d_getitimer + "'"
 $ WC "d_getlogin='define'"
 $ WC "d_getmnt='undef'"
 $ WC "d_getmntent='undef'"
-$ WC "d_getnameinfo='undef'"
+$ WC "d_getnameinfo='define'"
 $ WC "d_getnbyaddr='" + d_getnbyaddr + "'"
 $ WC "d_getnbyname='" + d_getnbyname + "'"
 $ WC "d_getnent='" + d_getnent + "'"
@@ -6091,12 +6131,14 @@ $ WC "d_gnulibc='undef'"
 $ WC "d_grpasswd='undef'"
 $ WC "d_hasmntopt='undef'"
 $ WC "d_htonl='" + d_htonl + "'"
+$ WC "d_hypot='" + d_hypot + "'"
+$ WC "d_ilogb='" + d_ilogb + "'"
 $ WC "d_ilogbl='undef'"
 $ WC "d_inc_version_list='undef'"
 $ WC "d_index='" + d_index + "'"
-$ WC "d_inetaton='undef'"
-$ WC "d_inetntop='undef'"
-$ WC "d_inetpton='undef'"
+$ WC "d_inetaton='define'"
+$ WC "d_inetntop='define'"
+$ WC "d_inetpton='define'"
 $ WC "d_int64_t='" + d_int64_t + "'"
 $ WC "d_ip_mreq='define'"
 $ WC "d_ip_mreq_source='undef'"
@@ -6105,20 +6147,45 @@ $ WC "d_ipv6_mreq_source='undef'"
 $ WC "d_isascii='define'"
 $ WC "d_isblank='undef'"
 $ WC "d_isfinite='undef'"
+$ WC "d_isfinitel='undef'"
 $ WC "d_isinf='undef'"
+$ WC "d_isinfl='undef'"
+$ WC "d_isless='undef'"
 $ WC "d_isnan='" + d_isnan + "'"
 $ WC "d_isnanl='" + d_isnanl + "'"
-$ WC "d_killpg='undef'"
+$ WC "d_isnormal='" + d_isnormal + "'"
+$ WC "d_j0='" + d_j0 + "'"
+$ WC "d_j0l='undef'"
+$ WC "d_killpg='define'"
 $ WC "d_lchown='" + d_lchown + "'"
 $ WC "d_ldbl_dig='define'"
+$ WC "d_ldexpl='" + d_ldexpl + "'"
+$ WC "d_lgamma='" + d_lgamma + "'"
 $ WC "d_libm_lib_version='undef'"
 $ WC "d_link='" + d_link + "'"
+$ WC "d_llrint='undef'"
+$ WC "d_llrintl='undef'"
+$ WC "d_llround='undef'"
+$ WC "d_llroundl='undef'"
 $ WC "d_llseek='undef'"
 $ WC "d_localtime64='undef'"
 $ WC "d_locconv='" + d_locconv + "'"
+$ WC "d_lc_monetary_2008='undef'"
 $ WC "d_lockf='undef'"
+$ WC "d_log1p='" + d_log1p + "'"
+$ WC "d_log2='" + d_log2 + "'"
+$ WC "d_logb='" + d_logb + "'"
+$ WC "d_long_double_style_ieee='" + d_long_double_style_ieee + "'"
+$ WC "d_long_double_style_ieee_doubledouble='undef'"
+$ WC "d_long_double_style_ieee_extended='" + d_long_double_style_ieee_extended + "'"
+$ WC "d_long_double_style_ieee_std='" + d_long_double_style_ieee_std + "'"
+$ WC "d_long_double_style_vax='" + d_long_double_style_vax + "'"
 $ WC "d_longdbl='" + d_longdbl + "'"
 $ WC "d_longlong='" + d_longlong + "'"
+$ WC "d_lrint='" + d_lrint + "'"
+$ WC "d_lrintl='" + d_lrintl + "'"
+$ WC "d_lround='" + d_lround + "'"
+$ WC "d_lroundl='" + d_lroundl + "'"
 $ WC "d_lseekproto='define'"
 $ WC "d_lstat='" + d_lstat + "'"
 $ WC "d_madvise='undef'"
@@ -6130,6 +6197,7 @@ $ WC "d_mbtowc='" + d_mbtowc + "'"
 $ WC "d_memchr='" + d_memchr + "'"
 $ WC "d_memcmp='define'"
 $ WC "d_memcpy='define'"
+$ WC "d_memmem='undef'"
 $ WC "d_memmove='define'"
 $ WC "d_memset='define'"
 $ WC "d_mkdir='define'"
@@ -6146,6 +6214,10 @@ $ WC "d_modflproto='" + d_modflproto + "'"
 $ WC "d_modfl_pow32_bug='undef'"
 $ WC "d_mprotect='" + d_mprotect + "'"
 $ WC "d_msg='undef'"
+$ WC "d_msgctl='undef'"
+$ WC "d_msgget='undef'"
+$ WC "d_msgrcv='undef'"
+$ WC "d_msgsnd='undef'"
 $ WC "d_msg_ctrunc='undef'"
 $ WC "d_msg_dontroute='undef'"
 $ WC "d_msg_oob='undef'"
@@ -6155,8 +6227,13 @@ $ WC "d_msghdr_s='undef'"
 $ WC "d_msync='" + d_msync + "'"
 $ WC "d_munmap='" + d_munmap + "'"
 $ WC "d_mymalloc='" + d_mymalloc + "'"
+$ WC "d_nan='undef'"
 $ WC "d_nanosleep='" + d_nanosleep + "'"
+$ WC "d_ndbm='undef'"
 $ WC "d_ndbm_h_uses_prototypes='undef'"
+$ WC "d_nearbyint='undef'"
+$ WC "d_nextafter='" + d_nextafter + "'"
+$ WC "d_nexttoward='" + d_nexttoward + "'"
 $ WC "d_nice='define'"
 $ WC "d_nl_langinfo='" + d_nl_langinfo + "'"
 $ WC "d_nv_preserves_uv='" + d_nv_preserves_uv + "'"
@@ -6167,6 +6244,7 @@ $ WC "d_off64_t='" + d_off64_t + "'"
 $ WC "d_old_pthread_create_joinable='" + d_old_pthread_create_joinable + "'"
 $ WC "d_oldarchlib='define'"
 $ WC "d_oldpthreads='" + d_oldpthreads + "'"
+$ WC "d_oldsock='undef'"
 $ WC "d_open3='define'"
 $ WC "d_pathconf='" + d_pathconf + "'"
 $ WC "d_pause='define'"
@@ -6174,12 +6252,14 @@ $ WC "d_perl_otherlibdirs='undef'"
 $ WC "d_phostname='" + d_phostname + "'"
 $ WC "d_pipe='define'"
 $ WC "d_poll='" + d_poll + "'"
+$ WC "d_portable='define'"
 $ WC "d_procselfexe='undef'"
 $ WC "d_pseudofork='undef'"
 $ WC "d_pthread_atfork='undef'"
 $ WC "d_pthread_attr_setscope='" + d_pthread_attr_setscope + "'"
 $ WC "d_pthread_yield='" + d_pthread_yield + "'"
 $ WC "d_pthreads_created_joinable='" + d_pthreads_created_joinable + "'"
+$ WC "d_ptrdiff_t='define'"
 $ WC "d_pwage='undef'"
 $ WC "d_pwchange='undef'"
 $ WC "d_pwclass='undef'"
@@ -6195,13 +6275,19 @@ $ WC "d_readlink='" + d_readlink + "'"
 $ WC "d_readv='undef'"
 $ WC "d_realpath='" + d_realpath + "'"
 $ WC "d_recvmsg='undef'"
+$ WC "d_regcomp='undef'"
+$ WC "d_remainder='" + d_remainder + "'"
+$ WC "d_remquo='" + d_remquo + "'"
 $ WC "d_rename='define'"
 $ WC "d_rewinddir='define'"
+$ WC "d_rint='" + d_rint + "'"
 $ WC "d_rmdir='define'"
+$ WC "d_round='undef'"
 $ WC "d_safebcpy='undef'"
 $ WC "d_safemcpy='define'"
 $ WC "d_sanemcmp='define'"
 $ WC "d_sbrkproto='define'"
+$ WC "d_scalbn='undef'"
 $ WC "d_scalbnl='undef'"
 $ WC "d_sched_yield='" + d_sched_yield + "'"
 $ WC "d_scm_rights='undef'"
@@ -6210,12 +6296,14 @@ $ WC "d_select='" + d_select + "'"
 $ IF ("''F$EXTRACT(1,3, F$GETSYI(""VERSION""))'".GES."8.4")
 $ THEN
 $   WC "d_sem='define'"
+$   WC "d_semctl='define'"
 $   WC "d_semctl_semid_ds='define'"
 $   WC "d_semctl_semun='define'"
 $   WC "d_semget='define'"
 $   WC "d_semop='define'"
 $ ELSE
 $   WC "d_sem='undef'"
+$   WC "d_semctl='undef'"
 $   WC "d_semctl_semid_ds='undef'"
 $   WC "d_semctl_semun='undef'"
 $   WC "d_semget='undef'"
@@ -6248,10 +6336,20 @@ $ WC "d_setruid='undef'"
 $ WC "d_setsent='" + d_setsent + "'"
 $ WC "d_setsid='" + d_setsid + "'"
 $ WC "d_setvbuf='" + d_setvbuf + "'"
-$ WC "d_sfio='undef'"
-$ WC "d_shm='undef'"
-$ WC "d_shmatprototype='undef'"
+$ WC "d_shm='" + d_shm + "'"
+$ WC "d_shmat='" + d_shmat + "'"
+$ WC "d_shmatprototype='" + d_shmatprototype + "'"
+$ WC "d_shmctl='" + d_shmctl + "'"
+$ WC "d_shmdt='" + d_shmdt + "'"
+$ WC "d_shmget='" + d_shmget + "'"
 $ WC "d_sigaction='" + d_sigaction + "'"
+$ WC "d_siginfo_si_addr='" + d_siginfo_si_addr + "'"
+$ WC "d_siginfo_si_band='" + d_siginfo_si_band + "'"
+$ WC "d_siginfo_si_errno='" + d_siginfo_si_errno + "'"
+$ WC "d_siginfo_si_pid='" + d_siginfo_si_pid + "'"
+$ WC "d_siginfo_si_status='" + d_siginfo_si_status + "'"
+$ WC "d_siginfo_si_uid='" + d_siginfo_si_uid + "'"
+$ WC "d_siginfo_si_value='" + d_siginfo_si_value + "'"
 $ WC "d_signbit='" + d_signbit + "'"
 $ WC "d_sigprocmask='" + d_sigprocmask + "'"
 $ WC "d_sigsetjmp='" + d_sigsetjmp + "'"
@@ -6271,6 +6369,7 @@ $ WC "d_sresgproto='undef'"
 $ WC "d_sresgproto='undef'"
 $ WC "d_sresproto='undef'"
 $ WC "d_sresuproto='undef'"
+$ WC "d_stat='define'"
 $ WC "d_statblks='undef'"
 $ WC "d_statfs_f_flags='undef'"
 $ WC "d_statfs_s='undef'"
@@ -6284,6 +6383,7 @@ $ WC "d_stdio_stream_array='undef'"
 $ WC "d_stdiobase='" + d_stdiobase + "'"
 $ WC "d_stdstdio='" + d_stdstdio + "'"
 $ WC "d_faststdio='" + d_faststdio + "'"
+$ WC "d_statvfs='" + d_statvfs + "'"
 $ WC "d_strchr='define'"
 $ WC "d_strcoll='" + d_strcoll + "'"
 $ WC "d_strctcpy='define'"
@@ -6306,12 +6406,14 @@ $ WC "d_symlink='" + d_symlink + "'"
 $ WC "d_syscall='undef'"
 $ WC "d_syscallproto='undef'"
 $ WC "d_sysconf='" + d_sysconf + "'"
+$ WC "d_sysernlst='undef'"
 $ WC "d_syserrlst='undef'"
 $ WC "d_system='define'"
 $ WC "d_tcgetpgrp='undef'"
 $ WC "d_tcsetpgrp='undef'"
 $ WC "d_telldir='define'"
 $ WC "d_telldirproto='define'"
+$ WC "d_tgamma='" + d_tgamma + "'"
 $ WC "d_time='define'"
 $ WC "d_timegm='undef'"
 $ WC "d_times='define'"
@@ -6324,6 +6426,8 @@ $   WC "d_tm_tm_gmtoff='undef'"
 $   WC "d_tm_tm_zone='undef'"
 $ ENDIF
 $ WC "d_truncate='" + d_truncate + "'"
+$ WC "d_trunc='" + d_trunc + "'"
+$ WC "d_truncl='" + d_truncl + "'"
 $ WC "d_tzname='" + d_tzname + "'"
 $ WC "d_u32align='define'"
 $ WC "d_ualarm='" + d_ualarm + "'"
@@ -6338,32 +6442,43 @@ $ WC "d_usleep='" + d_usleep + "'"
 $ WC "d_usleepproto='" + d_usleep + "'"
 $ WC "d_ustat='undef'"
 $ WC "d_vendorarch='undef'"
+$ WC "d_vendorbin='undef'"
 $ WC "d_vendorlib='undef'"
+$ WC "d_vendorscript='undef'"
 $ WC "d_vfork='define'"
 $ WC "d_vms_case_sensitive_symbols='" + d_vms_be_case_sensitive + "'" ! VMS
 $ WC "d_vms_do_sockets='" + d_vms_do_sockets + "'" ! VMS
 $ WC "d_vms_shorten_long_symbols='" + d_vms_shorten_long_symbols + "'" ! VMS
 $ WC "d_void_closedir='define'"
+$ WC "d_voidsig='undef'"
+$ WC "d_voidtty='" + "'"
 $ WC "d_volatile='define'"
 $ WC "d_vprintf='define'"
 $ WC "d_vsnprintf='" + d_vsnprintf + "'"
 $ WC "d_wait4='" + d_wait4 + "'"
 $ WC "d_waitpid='define'"
-$ WC "d_wcstombs='" + d_wcstombs + "'"
-$ WC "d_wctomb='" + d_wctomb + "'"
+$ WC "d_wcscmp='define'"
+$ WC "d_wcstombs='define'"
+$ WC "d_wcsxfrm='define'"
+$ WC "d_wctomb='define'"
 $ WC "d_writev='undef'"
+$ WC "d_xenix='undef'"
 $ WC "db_hashtype=' '"
 $ WC "db_prefixtype=' '"
 $ WC "db_version_major='" + "'"
 $ WC "db_version_minor='" + "'"
 $ WC "db_version_patch='" + "'"
 $ WC "dbgprefix='" + dbgprefix + "'"
-$ WC "defvoidused='15'"
 $ WC "devtype='" + devtype + "'"
+$ WC "default_inc_excludes_dot='" + default_inc_excludes_dot + "'"
 $ WC "direntrytype='struct dirent'"
 $ WC "dlext='" + dlext + "'"
 $ WC "dlobj='" + dlobj + "'"
 $ WC "dlsrc='dl_vms.xs'"
+$ WC "doublekind='3'"
+$ WC "doubleinfbytes='0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x7f'"
+$ WC "doublenanbytes='0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f'"
+$ WC "doublemantbits='" + doublemantbits + "'"
 $ WC "doublesize='" + doublesize + "'"
 $ WC "drand01='" + drand01 + "'"
 $ WC "dtrace='" + "'"
@@ -6395,6 +6510,8 @@ $ WC "gidsign='1'"
 $ WC "gidsize='4'"
 $ WC "gidtype='" + gidtype + "'"
 $ WC "groupstype='Gid_t'"
+$ WC "h_fcntl='false'"
+$ WC "h_sysfile='false'"
 $ WC "hint='none'"
 $ WC "hintfile='" + "'"
 $ WC "i16size='" + i16size + "'"
@@ -6405,14 +6522,18 @@ $ WC "i64size='" + i64size + "'"
 $ WC "i64type='" + i64type + "'"
 $ WC "i8size='" + i8size + "'"
 $ WC "i8type='" + i8type + "'"
-$ WC "i_arpainet='undef'"
+$ WC "i_arpainet='" + i_arpainet + "'"
 $ WC "i_assert='define'"
+$ WC "i_bfd='undef'"
+$ WC "i_bsdioctl='undef'"
 $ WC "i_crypt='undef'"
 $ WC "i_db='undef'"
 $ WC "i_dbm='undef'"
 $ WC "i_dirent='undef'"	! we roll our own
 $ WC "i_dlfcn='undef'"
+$ WC "i_execinfo='undef'"
 $ WC "i_fcntl='" + i_fcntl + "'"
+$ WC "i_fenv='undef'"
 $ WC "i_float='define'"
 $ WC "i_fp='undef'"
 $ WC "i_fp_class='undef'"
@@ -6428,6 +6549,7 @@ $ WC "i_limits='define'"
 $ WC "i_locale='" + i_locale + "'"
 $ WC "i_machcthr='undef'"
 $ WC "i_machcthreads='undef'"
+$ WC "i_malloc='undef'"
 $ WC "i_mallocmalloc='undef'"
 $ WC "i_math='define'"
 $ WC "i_memory='undef'"
@@ -6441,8 +6563,8 @@ $ WC "i_poll='" + i_poll + "'"
 $ WC "i_prot='undef'"
 $ WC "i_pthread='define'"
 $ WC "i_pwd='undef'"
+$ WC "i_quadmath='undef'"
 $ WC "i_rpcsvcdbm='undef'"
-$ WC "i_sfio='undef'"
 $ WC "i_sgtty='undef'"
 $ WC "i_shadow='" + i_shadow + "'"
 $ WC "i_socks='" + i_socks + "'"
@@ -6454,12 +6576,15 @@ $ ELSE
 $   WC "i_stdbool='undef'"
 $ ENDIF
 $ WC "i_stddef='define'"
+$ WC "i_stdint='undef'"
 $ WC "i_stdlib='define'"
 $ WC "i_string='define'"
 $ WC "i_sunmath='undef'"
 $ WC "i_sysaccess='" + i_sysaccess + "'"
 $ WC "i_sysdir='undef'"
 $ WC "i_sysfile='" + i_sysfile + "'"
+$ WC "i_sysfilio='undef'"
+$ WC "i_sysin='undef'"
 $ WC "i_sysioctl='" + i_sysioctl + "'"
 $ WC "i_syslog='" + i_syslog + "'"
 $ WC "i_sysmman='undef'"
@@ -6480,7 +6605,7 @@ $ WC "i_systimek='undef'"
 $ WC "i_systimes='undef'"
 $ WC "i_systypes='define'"
 $ WC "i_sysuio='" + i_sysuio + "'"
-$ WC "i_sysun='undef'"
+$ WC "i_sysun='" + i_sysun + "'"
 $ WC "i_sysutsname='" + i_sysutsname + "'"
 $ WC "i_sysvfs='undef'"
 $ WC "i_syswait='undef'"
@@ -6492,7 +6617,9 @@ $ WC "i_ustat='undef'"
 $ WC "i_utime='" + i_utime + "'"
 $ WC "i_values='undef'"
 $ WC "i_varargs='undef'"
+$ WC "i_varhdr='stdarg.h'"
 $ WC "i_vfork='undef'"
+$ WC "i_xlocale='undef'"
 $ WC "inc_version_list='0'"
 $ WC "inc_version_list_init='0'"
 $ WC "installarchlib='" + installarchlib + "'"
@@ -6500,7 +6627,7 @@ $ WC "installbin='" + installbin + "'"
 $ WC "installman1dir='" + installman1dir + "'"
 $ WC "installman3dir='" + installman3dir + "'"
 $ WC "installprefix='" + vms_prefix + "'"
-$ WC "installprefixexp='" + vms_prefix + ":'"
+$ WC "installprefixexp='/" + vms_prefix + "'"
 $ WC "installprivlib='" + installprivlib + "'"
 $ WC "installscript='" + installscript + "'"
 $ WC "installsitearch='" + installsitearch + "'"
@@ -6512,15 +6639,15 @@ $ WC "ivdformat='" + ivdformat + "'"
 $ WC "ivsize='" + ivsize + "'"
 $ WC "ivtype='" + ivtype + "'"
 $!
-$! The known_extensions symbol may be quite long
+$! The xs_extensions symbol may be quite long
 $!
-$ tmp = "known_extensions='" + known_extensions + "'"
-$ WC/symbol tmp
-$ DELETE/SYMBOL tmp
+$ WC/symbol "known_extensions='", xs_extensions, " ", nonxs_ext, " ", nonxs_ext2, "'"
 $ WC "ld='" + ld + "'"
+$ WC "ld_can_script='undef'"
 $ WC "lddlflags='/Share'"
 $ WC "ldflags='" + ldflags + "'"
 $ WC "ldflags_uselargefiles='" + "'"
+$ WC "ldlibpthname='" + "'"
 $ WC "lib_ext='" + lib_ext + "'"
 $ WC "libc='" + libc + "'"
 $ WC "libpth='/sys$share /sys$library'"
@@ -6528,6 +6655,10 @@ $ WC "libs='" + libs + "'"
 $ WC "libswanted='" + "'"
 $ WC "libswanted_uselargefiles='" + "'"
 $ WC "longdblsize='" + longdblsize + "'"
+$ WC "longdblkind='" + longdblkind + "'"
+$ WC "longdblinfbytes='" + longdblinfbytes + "'"
+$ WC "longdblnanbytes='" + longdblnanbytes + "'"
+$ WC "longdblmantbits='" + longdblmantbits + "'"
 $ WC "longlongsize='" + longlongsize + "'"
 $ WC "longsize='" + longsize + "'"
 $ IF uselargefiles .OR. uselargefiles .EQS. "define"
@@ -6563,6 +6694,7 @@ $ WC "nvfformat='" + nvfformat + "'"
 $ WC "nvFUformat='" + nvFUformat + "'"
 $ WC "nvgformat='" + nvgformat + "'"
 $ WC "nvGUformat='" + nvGUformat + "'"
+$ WC "nvmantbits='" + nvmantbits + "'"
 $ WC "nvsize='" + nvsize + "'"
 $ WC "nvtype='" + nvtype + "'"
 $ WC "o_nonblock=' '"
@@ -6588,7 +6720,7 @@ $ WC "perl_verb='" + perl_verb + "'"      ! VMS specific
 $ WC "pgflquota='" + pgflquota + "'"
 $ WC "pidtype='" + pidtype + "'"
 $ WC "prefix='" + vms_prefix + "'"
-$ WC "prefixexp='" + vms_prefix + ":'"
+$ WC "prefixexp='/" + vms_prefix + "'"
 $ WC "privlib='" + privlib + "'"
 $ WC "privlibexp='" + privlibexp + "'"
 $ WC "procselfexe=' '"
@@ -6627,7 +6759,7 @@ $ WC "selectminbits='32'"
 $ WC "selecttype='" + selecttype + "'"
 $ WC "sh='MCR'"
 $ WC "sharpbang='#!'"
-$ WC "shmattype='" + " '"
+$ WC "shmattype='" + shmattype + "'"
 $ WC "shortsize='" + shortsize + "'"
 $ IF (f$length(sig_name) .GE. 244)
 $ THEN
@@ -6658,7 +6790,7 @@ $ WC "sitelib='" + sitelib + "'"
 $ WC "sitelib_stem='" + sitelib_stem + "'"
 $ WC "sitelibexp='" + sitelibexp + "'"
 $ WC "siteprefix='" + vms_prefix + "'"
-$ WC "siteprefixexp='" + vms_prefix + ":'"
+$ WC "siteprefixexp='/" + vms_prefix + "'"
 $ WC "sizesize='" + sizesize + "'"
 $ WC "sizetype='size_t'"
 $ WC "so='" + so + "'"
@@ -6678,6 +6810,7 @@ $ WC "stdio_ptr='((*fp)->_ptr)'"
 $ WC "stdio_stream_array=' " + "'"
 $ WC "subversion='" + subversion + "'"
 $ WC "targetarch='" + "'"
+$ WC "targetsh='MCR'"
 $ WC "timetype='" + timetype + "'"
 $ WC "u16size='" + u16size + "'"
 $ WC "u16type='" + u16type + "'"
@@ -6698,6 +6831,7 @@ $ WC "use64bitint='" + use64bitint + "'"
 $ WC "usecasesensitive='" + be_case_sensitive + "'"    ! VMS-specific
 $ WC "usedebugging_perl='"+use_debugging_perl+"'"
 $ WC "usedefaulttypes='" + usedefaulttypes + "'"    ! VMS-specific
+$ WC "usecbacktrace='undef'"
 $ WC "usecrosscompile='undef'"
 $ WC "usedevel='" + usedevel + "'"
 $ WC "usedl='" + usedl + "'"
@@ -6715,6 +6849,7 @@ $ WC "usemultiplicity='" + usemultiplicity + "'"
 $ WC "usemymalloc='" + usemymalloc + "'"
 $ WC "useperlio='define'"
 $ WC "useposix='false'"
+$ WC "usequadmath='undef'"
 $ WC "usereentrant='undef'"
 $ WC "userelocatableinc='undef'"
 $ WC "usesecurelog='" + usesecurelog + "'"  ! VMS-specific
@@ -6749,13 +6884,12 @@ $ WC "version_patchlevel_string='" + version_patchlevel_string + "'"
 $ WC "vms_cc_type='" + vms_cc_type + "'" ! VMS specific
 $ WC "vms_prefix='" + vms_prefix + "'" ! VMS specific
 $ WC "vms_ver='" + vms_ver + "'" ! VMS specific
-$ WC "voidflags='15'"
 $!
 $! ## The UNIXy POSIXy reentrantey thingys ##
 $! See "Appendix B, Version-Dependency Tables" in the C RTL
 $! manual for when assorted _r functions became available.
 $!
-$ IF use_threads .AND. vms_ver .GES. "7.2"
+$ IF use_threads
 $ THEN
 $   WC "asctime_r_proto='REENTRANT_PROTO_B_SB'"
 $   WC "d_asctime_r='define'"
@@ -6776,13 +6910,15 @@ $ WC "d_endnetent_r='undef'"
 $ WC "d_endprotoent_r='undef'"
 $ WC "d_endpwent_r='undef'"
 $ WC "d_endservent_r='undef'"
+$ WC "d_freelocale='undef'"
+$ WC "d_gai_strerror='undef'"
 $ WC "d_getgrent_r='undef'"
 $ WC "d_getgrgid_r='" + d_getgrgid_r + "'"
 $ WC "d_getgrnam_r='" + d_getgrnam_r + "'"
 $ WC "d_gethostbyaddr_r='undef'"
 $ WC "d_gethostbyname_r='undef'"
 $ WC "d_gethostent_r='undef'"
-$ WC "d_getlogin_r='undef'"
+$ WC "d_getlogin_r='define'"
 $ WC "d_getnetbyaddr_r='undef'"
 $ WC "d_getnetbyname_r='undef'"
 $ WC "d_getnetent_r='undef'"
@@ -6797,8 +6933,11 @@ $ WC "d_getservbyport_r='undef'"
 $ WC "d_getservent_r='undef'"
 $ WC "d_getspnam_r='undef'"
 $ WC "d_gmtime_r='undef'"      ! leave undef'd; we use my_gmtime
+$ WC "d_lgamma_r='undef'"
 $ WC "d_localtime_r='undef'"   ! leave undef'd; we use my_localtime
 $ WC "d_localtime_r_needs_tzset='undef'"
+$ WC "d_newlocale='undef'"
+$ WC "d_querylocale='undef'"
 $ WC "d_random_r='undef'"
 $ WC "d_readdir_r='define'"	! always defined; we roll our own
 $ WC "d_readdir64_r='undef'"
@@ -6812,9 +6951,11 @@ $ WC "d_setservent_r='undef'"
 $ WC "d_snprintf='" + d_snprintf + "'"
 $ WC "d_srand48_r='undef'"
 $ WC "d_srandom_r='undef'"
+$ WC "d_strerror_l='undef'"
 $ WC "d_strerror_r='undef'"
 $ WC "d_tmpnam_r='undef'"
 $ WC "d_ttyname_r='" + d_ttyname_r + "'"
+$ WC "d_uselocale='undef'"
 $ WC "ctermid_r_proto='0'"
 $ WC "crypt_r_proto='0'"
 $ WC "drand48_r_proto='0'"
@@ -6830,7 +6971,12 @@ $ WC "getgrnam_r_proto='" + getgrnam_r_proto + "'"
 $ WC "gethostbyaddr_r_proto='0'"
 $ WC "gethostbyname_r_proto='0'"
 $ WC "gethostent_r_proto='0'"
-$ WC "getlogin_r_proto='0'"
+$ IF use_threads
+$ THEN
+$   WC "getlogin_r_proto='REENTRANT_PROTO_I_BW'"
+$ ELSE
+$   WC "getlogin_r_proto='0'"
+$ ENDIF
 $ WC "getnetbyaddr_r_proto='0'"
 $ WC "getnetbyname_r_proto='0'"
 $ WC "getnetent_r_proto='0'"
@@ -6879,12 +7025,12 @@ $     WRITE CONFIG "Gnu_CC:[000000]gcclib.olb/library"
 $   ENDIF
 $   WRITE CONFIG "Sys$Share:VAXCRTL/Share"
 $   CLOSE CONFIG
-$   'ld' munchconfig.obj,munchconfig.opt/opt
+$   'ld'/EXE='exe_ext' munchconfig'obj_ext',munchconfig.opt/opt
 $   DELETE/NOLOG/NOCONFIRM munchconfig.opt;
 $ ELSE
-$   'ld' munchconfig.obj
+$   'ld'/EXE='exe_ext' munchconfig'obj_ext'
 $ ENDIF
-$ IF F$SEARCH("munchconfig.obj") .NES. "" THEN DELETE/NOLOG/NOCONFIRM munchconfig.obj;
+$ IF F$SEARCH("munchconfig''obj_ext'") .NES. "" THEN DELETE/NOLOG/NOCONFIRM munchconfig'obj_ext';
 $ IF F$SEARCH("munchconfig.c") .NES. "" THEN DELETE/NOLOG/NOCONFIRM munchconfig.c;
 $ IF ccname .EQS. "CXX"
 $ THEN
@@ -6974,7 +7120,7 @@ $ echo4 "Extracting config.h (with variable substitutions)"
 $!
 $! Now build the normal config.h
 $ DEFINE/USER_MODE sys$output [-]config.main
-$ mcr []munchconfig 'config_sh' [-]config_h.sh
+$ mcr []munchconfig'exe_ext' 'config_sh' [-]config_h.sh
 $ ! Concatenate them together
 $ copy [-]config.local,[-]config.main [-]config.h
 $! Clean up
@@ -7029,6 +7175,13 @@ $   ENDIF
 $ ELSE
 $   LARGEFILE_REPLACE = "LARGEFILE="
 $ ENDIF
+$ IF use_vmsdebug_perl
+$ THEN
+$   DEBUG_REPLACE = "USEVMSDEBUG=__DEBUG__=1"
+$ ELSE
+$   DEBUG_REPLACE = "USEVMSDEBUG="
+$ ENDIF
+$ PREFIX_REPLACE = "PREFIX=PREFIX=''prefix'"
 $!
 $! In order not to stress the tiny command buffer on pre-7.3-2 systems,
 $! we put the following substitutions in a file and pass the file to
@@ -7050,13 +7203,15 @@ $ WC "PV=''version'"
 $ WC "FLAGS=FLAGS=''extra_flags'"
 $ WC "''LARGEFILE_REPLACE'"
 $ WC "ARCHNAME=ARCHNAME=''archname'"
+$ WC "''DEBUG_REPLACE'"
+$ WC "''PREFIX_REPLACE'"
 $ close CONFIG
 $!
 $ echo4 "Extracting ''defmakefile' (with variable substitutions)"
 $ DEFINE/USER_MODE sys$output 'UUmakefile'
-$ mcr []munchconfig 'config_sh' 'Makefile_SH' -f extra_subs.txt
+$ mcr []munchconfig'exe_ext' 'config_sh' 'Makefile_SH' -f extra_subs.txt
 $! Clean up after ourselves
-$ DELETE/NOLOG/NOCONFIRM []munchconfig.exe;
+$ DELETE/NOLOG/NOCONFIRM []munchconfig'exe_ext';
 $ DELETE/NOLOG/NOCONFIRM []extra_subs.txt;
 $!
 $! Note that the /key qualifier to search, as in:
@@ -7071,6 +7226,7 @@ $!   NOTE: This file is extracted as part of the VMS configuration process.
 $!   Any changes made to it directly will be lost.  If you need to make any
 $!   changes, please edit the template in Configure.Com instead.
 $!   Use FORCE if you've just podified a README.* file on VMS.
+$ miniperl = f$search("sys$disk:[]miniperl.%xe;") ! could have alternate extension
 $ if f$search("extra.pods") .eqs. "" .or. P1 .eqs. "FORCE" then -
     search README.* "=head"/window=0/output=extra.pods
 $ open/read/error=extra_close EXTRA extra.pods
@@ -7093,7 +7249,7 @@ $       pod_file_rdt = f$cvtime(f$file_attributes(pod_file,"RDT"))
 $       if file_rdt .GTS. pod_file_rdt then do_copy := true
 $     endif
 $     ! wacky method to preserve case on ODS-5 even when parse style is traditional
-$     if do_copy then mcr sys$disk:[]miniperl.exe -e "exit 0+$^E unless File::Copy::rmscopy(q{''file'}, q{''pod_file'});"
+$     if do_copy then mcr 'miniperl' -e "exit 0+$^E unless File::Copy::rmscopy(q{''file'}, q{''pod_file'});"
 $   endif
 $ endif
 $ goto extra_loop
@@ -7217,25 +7373,20 @@ $ ELSE
 $ WRITE CONFIG "$! This perl configured & administered by ''perladmin'"
 $ ENDIF
 $ WRITE CONFIG "$!"
-$! HP hack to make distributing binaries easier
-$!----------------------------------------------
-$ pcsi_producer = f$trnlnm("PCSI_PRODUCER")
-$ if pcsi_producer .eqs. ""
-$ then
-$   WRITE CONFIG "$ define/translation=concealed ''vms_prefix' ''prefix'"
-$ else
-$  WRITE CONFIG "$ myproc = f$environment(""PROCEDURE"")"
-$  WRITE CONFIG "$ myroot_dev = f$parse(myproc,,,""DEVICE"",""NO_CONCEAL"")"
-$  WRITE CONFIG "$ myroot_dir = f$parse(myproc,,,""DIRECTORY"",""NO_CONCEAL"")"
-$  WRITE CONFIG "$ myroot_dir = myroot_dir - ""][000000."" - ""><000000."""
-$  WRITE CONFIG "$ myroot_dir = myroot_dir - ""][000000]"" - ""><000000>"""
-$  WRITE CONFIG "$ myroot_dir = myroot_dir - ""]["" - ""><"""
-$  WRITE CONFIG "$ myroot_dir = myroot_dir - "".]"" - "".>"" - ""["" - ""]"" - ""<"" - "">"""
-$  WRITE CONFIG "$ if f$trnlnm(""HP_BUILD_PERL_BIN_KIT"",""LNM$PROCESS_TABLE"") .EQS. """""
-$  WRITE CONFIG "$ then"
-$  WRITE CONFIG "$  define/translation=concealed ''vms_prefix' 'myroot_dev'['myroot_dir'.]"
-$  WRITE CONFIG "$ endif"
-$ endif
+$ WRITE CONFIG "$ if P1 .EQS. """""
+$ WRITE CONFIG "$ then"
+$ WRITE CONFIG "$   myproc = f$environment(""PROCEDURE"")"
+$ WRITE CONFIG "$   myroot_dev = f$parse(myproc,,,""DEVICE"",""NO_CONCEAL"")"
+$ WRITE CONFIG "$   myroot_dir = f$parse(myproc,,,""DIRECTORY"",""NO_CONCEAL"")"
+$ WRITE CONFIG "$   myroot_dir = myroot_dir - ""][000000."" - ""><000000."""
+$ WRITE CONFIG "$   myroot_dir = myroot_dir - ""][000000]"" - ""><000000>"""
+$ WRITE CONFIG "$   myroot_dir = myroot_dir - ""]["" - ""><"""
+$ WRITE CONFIG "$   myroot_dir = myroot_dir - "".]"" - "".>"" - ""["" - ""]"" - ""<"" - "">"""
+$ WRITE CONFIG "$   root_spec = myroot_dev + ""["" + myroot_dir + "".]"""
+$ WRITE CONFIG "$ else"
+$ WRITE CONFIG "$   root_spec = P1"
+$ WRITE CONFIG "$ endif"
+$ WRITE CONFIG "$ define/translation=concealed ''vms_prefix' 'root_spec'"
 $ WRITE CONFIG "$ ext = "".exe"""
 $ IF sharedperl
 $ THEN
@@ -7277,36 +7428,28 @@ $ ENDIF
 $ WRITE CONFIG "$!"
 $ WRITE CONFIG "$! Symbols for Perl-based utility programs:"
 $ WRITE CONFIG "$!"
-$ WRITE CONFIG "$ c2ph       == """ + perl_setup_perl + " ''vms_prefix':[utils]c2ph.com"""
-$ WRITE CONFIG "$ config_data== """ + perl_setup_perl + " ''vms_prefix':[utils]config_data.com"""
 $ WRITE CONFIG "$ corelist   == """ + perl_setup_perl + " ''vms_prefix':[utils]corelist.com"""
 $ WRITE CONFIG "$ cpan       == """ + perl_setup_perl + " ''vms_prefix':[utils]cpan.com"""
-$ WRITE CONFIG "$ cpan2dist  == """ + perl_setup_perl + " ''vms_prefix':[utils]cpan2dist.com"""
-$! FIXME: "-" is an operator and illegal in a symbol name -- cpanp-run-perl can't work
-$!$ WRITE CONFIG "$ cpanp-run-perl == """ + perl_setup_perl + " ''vms_prefix':[utils]cpanp-run-perl.com"""
-$ WRITE CONFIG "$ cpanp      == """ + perl_setup_perl + " ''vms_prefix':[utils]cpanp.com"""
 $ WRITE CONFIG "$ enc2xs     == """ + perl_setup_perl + " ''vms_prefix':[utils]enc2xs.com"""
-$ WRITE CONFIG "$ find2perl  == """ + perl_setup_perl + " ''vms_prefix':[utils]find2perl.com"""
+$ WRITE CONFIG "$ encguess   == """ + perl_setup_perl + " ''vms_prefix':[utils]encguess.com"""
 $ WRITE CONFIG "$ h2ph       == """ + perl_setup_perl + " ''vms_prefix':[utils]h2ph.com"""
 $ WRITE CONFIG "$ h2xs       == """ + perl_setup_perl + " ''vms_prefix':[utils]h2xs.com"""
 $ WRITE CONFIG "$ instmodsh  == """ + perl_setup_perl + " ''vms_prefix':[utils]instmodsh.com"""
+$ WRITE CONFIG "$ json_pp    == """ + perl_setup_perl + " ''vms_prefix':[utils]json_pp.com"""
 $ WRITE CONFIG "$ libnetcfg  == """ + perl_setup_perl + " ''vms_prefix':[utils]libnetcfg.com"""
 $ WRITE CONFIG "$ perlbug    == """ + perl_setup_perl + " ''vms_prefix':[utils]perlbug.com"""
 $ WRITE CONFIG "$ perldoc    == """ + perl_setup_perl + " ''vms_prefix':[utils]perldoc.com """"-t"""""""
 $ WRITE CONFIG "$ perlivp    == """ + perl_setup_perl + " ''vms_prefix':[utils]perlivp.com"""
+$ WRITE CONFIG "$ perlthanks == """ + perl_setup_perl + " ''vms_prefix':[utils]perlthanks.com"""
 $ WRITE CONFIG "$ piconv     == """ + perl_setup_perl + " ''vms_prefix':[utils]piconv.com"""
 $ WRITE CONFIG "$ pl2pm      == """ + perl_setup_perl + " ''vms_prefix':[utils]pl2pm.com"""
 $ WRITE CONFIG "$ pod2html   == """ + perl_setup_perl + " ''vms_prefix':[utils]pod2html.com"""
-$ WRITE CONFIG "$ pod2latex  == """ + perl_setup_perl + " ''vms_prefix':[utils]pod2latex.com"""
 $ WRITE CONFIG "$ pod2text   == """ + perl_setup_perl + " ''vms_prefix':[utils]pod2text.com"""
 $ WRITE CONFIG "$!pod2man    == """ + perl_setup_perl + " ''vms_prefix':[utils]pod2man.com"""
 $ WRITE CONFIG "$ pod2usage  == """ + perl_setup_perl + " ''vms_prefix':[utils]pod2usage.com"""
 $ WRITE CONFIG "$ podchecker == """ + perl_setup_perl + " ''vms_prefix':[utils]podchecker.com"""
 $ WRITE CONFIG "$ podselect  == """ + perl_setup_perl + " ''vms_prefix':[utils]podselect.com"""
 $ WRITE CONFIG "$ prove      == """ + perl_setup_perl + " ''vms_prefix':[utils]prove.com"""
-$ WRITE CONFIG "$ psed       == """ + perl_setup_perl + " ''vms_prefix':[utils]psed.com"""
-$ WRITE CONFIG "$ pstruct    == """ + perl_setup_perl + " ''vms_prefix':[utils]pstruct.com"""
-$ WRITE CONFIG "$ s2p        == """ + perl_setup_perl + " ''vms_prefix':[utils]s2p.com"""
 $ WRITE CONFIG "$ ptar       == """ + perl_setup_perl + " ''vms_prefix':[utils]ptar.com"""
 $ WRITE CONFIG "$ ptardiff   == """ + perl_setup_perl + " ''vms_prefix':[utils]ptardiff.com"""
 $ WRITE CONFIG "$ ptargrep   == """ + perl_setup_perl + " ''vms_prefix':[utils]ptargrep.com"""

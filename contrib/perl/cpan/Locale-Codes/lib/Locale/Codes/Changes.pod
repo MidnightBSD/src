@@ -22,11 +22,206 @@ September, December). I will also check on request, so if a code
 changes that you use, feel free to contact me.  Any time there are new
 codes, I will add them to the module and release a new version.
 
-=head1 VERSION 3.28  (planned 2013-12-01; sbeck)
+=head1 VERSION 3.46  (planned 2017-12-01; sbeck)
 
-=head1 VERSION 3.27  (planned 2013-09-01; sbeck)
+=head1 VERSION 3.45  (planned 2017-09-01; sbeck)
 
-=head1 VERSION 3.26  (planned 2013-06-01; sbeck)
+=head1 VERSION 3.44  (planned 2017-06-01; sbeck)
+
+=head1 VERSION 3.43  (planned 2017-03-01; sbeck)
+
+=head1 VERSION 3.42  (2016-11-30; sbeck)
+
+=over 4
+
+=item B<Added Czech republic aliases back in>
+
+Common Czech republic aliases disappeared from the standards, so I added
+them back in.  Rob Emery
+
+=back
+
+=head1 VERSION 3.41  (2016-11-18; sbeck)
+
+NEW CODE(s) (Jiri Bohac noted that they were needed so this was release a
+couple weeks earlier than planned)
+
+=head1 VERSION 3.40  (2016-09-01; sbeck)
+
+NEW CODE(s)
+
+=head1 VERSION 3.39  (2016-05-31; sbeck)
+
+No new codes (for the existing codesets).
+
+=over 4
+
+=item B<Added UN codes back in>
+
+The UN codes have been added back in as their own list of codes.
+Jarkko Hietaniemi
+
+=item B<Added GENC codes>
+
+The GENC codes have been added.  These are the new US Government codes
+that replace the FIPS-10 codes.  They are based on, but not identical to
+the ISO 3166 codes.
+
+=back
+
+=head1 VERSION 3.38  (2016-03-02; sbeck)
+
+NEW CODE(s)
+
+=over 4
+
+=item B<Tests reworked>
+
+Improved test suite (and made some changes to Codes.pm) based on Devel::Cover.
+Test suite now has 100% coverage.
+
+=back
+
+=head1 VERSION 3.37  (2015-12-01; sbeck)
+
+NEW CODE(s)
+
+=head1 VERSION 3.36  (2015-09-01; sbeck)
+
+NEW CODE(s)
+
+=over 4
+
+=item B<(!) Removed alias_code function>
+
+The alias_code function was preserved for backward compatibility, but
+has been deprecated since 3.20.  It has been removed.
+
+=back
+
+=head1 VERSION 3.35  (2015-06-01; sbeck)
+
+NEW CODE(s)
+
+=over 4
+
+=item B<Documentation improvements>
+
+Many changes to the formatting in the documentation to improve it.  Suggested
+by Pete Houston.
+
+=back
+
+=head1 VERSION 3.34  (2015-03-01; sbeck)
+
+NEW CODE(s)
+
+=head1 VERSION 3.33  (2014-12-01; sbeck)
+
+NEW CODE(s)
+
+=over 4
+
+=item B<Filled out LOCALE_LANG_TERM codeset>
+
+The terminologic language codes only included codes from languages where
+the ISO specified both a bibliographic code and a terminologic code.  If
+both are not specified, the better solution was to use the code for both
+code sets.  Prompted by a suggestion by Jarkko Hietaniemi.
+
+=item B<Moved repository to GitHub>
+
+Suggested by Gabor Szabo.
+
+=back
+
+=head1 VERSION 3.32  (2014-09-01; sbeck)
+
+NEW CODE(s)
+
+=head1 VERSION 3.31  (2014-06-01; sbeck)
+
+NEW CODE(s)
+
+=over 4
+
+=item B<Bug fixes>
+
+Fixed a bug in the scripts used to extract data from spreadsheets
+that prevented the SHP currency code from being found.  RT 94229
+
+=back
+
+=head1 VERSION 3.30  (2014-03-04; sbeck)
+
+NEW CODE(s)
+
+=over 4
+
+=item B<alias_code remove date set>
+
+The alias_code function exists for backward compatibility.  It has been
+deprecated since version 3.20 when it was replaced by rename_country_code.
+The alias_code function will be removed in the December 2014 release.
+
+=item B<Bug fixes>
+
+Fixed a problem that was preventing rename_* functions to not work.
+RT 92680.
+
+=back
+
+=head1 VERSION 3.29  (2014-01-27; sbeck)
+
+NEW CODE(s)
+
+=over 4
+
+=item B<ISO 3166 country codes improved>
+
+ISO 3166 is now browsable online (previously, only the alpha-2 codes were)
+and it contains more accurate information than the previous sources, so
+I've switched to using the full standard.  In response to RT 92303 which
+reported some codes being 'retired' that should not have been.
+
+=item B<Bug fixes>
+
+Fixed the pod test files so that pod tests won't get run at install
+time.  In response to RT 91167.
+
+=back
+
+=head1 VERSION 3.28  (2013-12-02; sbeck)
+
+NEW CODE(s)
+
+=head1 VERSION 3.27  (2013-09-03; sbeck)
+
+NEW CODE(s)
+
+=over 4
+
+=item B<* FIPS-10 country codes removed>
+
+As of June, the FIPS codes are not being published in their
+entirety.  Only changes to the codes are published.  This adds
+a huge layer of complexity to maintaining the set, which is not
+worth doing considering that the set is deprecated.  As such, the
+code set is no longer supported.
+
+=back
+
+=head1 VERSION 3.26  (2013-06-03; sbeck)
+
+=over 4
+
+=item B<Documentation fixes>
+
+Some of the examples were not correct.  RT 84589
+
+Some typos corrected.  RT 85692
+
+=back
 
 =head1 VERSION 3.25  (2013-03-01; sbeck)
 
@@ -354,7 +549,7 @@ NEW CODE(s)
 
 =over 4
 
-=item B<New maintainer>
+=item B<(*) New maintainer>
 
 From 1997 to 2004, Locale::Codes was maintained by Neil
 Bowers. Unfortunately, no updates were made from June 2004 to January
@@ -629,7 +824,7 @@ Currently maintained by Sullivan Beck (sbeck@cpan.org).
 =head1 COPYRIGHT
 
    Copyright (c) 2001-2010 Neil Bowers
-   Copyright (c) 2010-2013 Sullivan Beck
+   Copyright (c) 2010-2016 Sullivan Beck
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.

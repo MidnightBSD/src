@@ -1,12 +1,12 @@
 BEGIN {
 	chdir 't' if -d 't';
-	@INC = '../lib';
 	require Config; import Config;
-	require './test.pl';
+    require './test.pl';
+    set_up_inc('../lib');
 	skip_all_without_perlio();
 }
 
-plan tests => 45;
+plan tests => 48;
 
 use_ok('PerlIO');
 
@@ -113,6 +113,27 @@ ok(close($utffh));
     }
 }
 
+# fileno() for directory handles, on supported platforms
+SKIP: {
+    opendir my $dh, "io"
+        or die "Huh? Can't open directory 'io' containing this file: $!\n";
+    local $! = 0;
+    my $fd = fileno $dh;
+    my $errno = 0 + $!;
+    closedir $dh
+        or die "Huh? Can't close freshly-opened directory handle: $!\n";
+    if ($Config{d_dirfd} || $Config{d_dir_dd_fd}) {
+        ok(defined $fd, "fileno(DIRHANDLE) is defined under dirfd()")
+            or skip("directory fd was undefined", 1);
+        like($fd, qr/\A\d+\z/a,
+             "fileno(DIRHANDLE) yields non-negative int under dirfd()");
+    }
+    else {
+        ok(!defined $fd, "fileno(DIRHANDLE) is undef when no dirfd()");
+        isnt($errno, 0, "fileno(DIRHANDLE) sets errno when no dirfd()");
+    }
+}
+
 sub find_filename {
     my ($fh, @globs) = @_;
     my ($dev, $inode) = stat $fh;
@@ -168,7 +189,7 @@ SKIP: {
     }
 
 
-    { local $TODO = 'fails well back into 5.8.x';
+    {
 
 	
       sub read_fh_and_return_final_rv {
@@ -214,6 +235,14 @@ EOP
 		    qr/\ARecursive call to Perl_load_module in PerlIO_find_layer at/s,
 		    {stderr => 1},
 		    'Mutal recursion between Perl_load_module and PerlIO_find_layer croaks');
+}
+
+{
+    # RT #119287
+    $main::PerlIO_code_injection = 0;
+    local $SIG{__WARN__} = sub {};
+    PerlIO->import('via; $main::PerlIO_code_injection = 1');
+    ok !$main::PerlIO_code_injection, "Can't inject code via PerlIO->import";
 }
 
 END {

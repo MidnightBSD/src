@@ -5,24 +5,22 @@
 #
 # Works by checking the debugging output of 'use re debug' and, if
 # available, -Dr. We use both to check that the different code paths
-# with Perl_foo() verses the my_foo() under ext/re/ don't cause any
+# with Perl_foo() versus the my_foo() under ext/re/ don't cause any
 # changes.
+
+$| = 1;
+
+BEGIN {
+    chdir 't' if -d 't';
+    require './test.pl';
+    set_up_inc( '../lib', '.' );
+    skip_all_if_miniperl("no dynamic loading on miniperl, no re");
+}
 
 use strict;
 use warnings;
 
-$| = 1;
-
-
-BEGIN {
-    chdir 't' if -d 't';
-    @INC = ('../lib','.');
-    require './test.pl';
-    skip_all_if_miniperl("no dynamic loading on miniperl, no re");
-}
-
-
-plan tests => 38;
+plan tests => 48;
 
 my $results = runperl(
 			switches => [ '-Dr' ],
@@ -192,4 +190,28 @@ comp_n(6, <<'CODE', 'embedded code qr');
 my $x = qr/a/i;
 my $y = qr/a/;
 "a" =~ qr/a$_/ for $x, $y, $x, $y;
+CODE
+
+comp_n(2, <<'CODE', '(??{"constant"})');
+"bb" =~ /(??{"abc"})/;
+CODE
+
+comp_n(2, <<'CODE', '(??{"folded"."constant"})');
+"bb" =~ /(??{"ab"."c"})/;
+CODE
+
+comp_n(2, <<'CODE', '(??{$preused_scalar})');
+$s = "abc";
+"bb" =~ /(??{$s})/;
+CODE
+
+comp_n(2, <<'CODE', '(??{number})');
+"bb" =~ /(??{123})/;
+CODE
+
+comp_n(2, <<'CODE', '(??{$pvlv_regexp})');
+sub {
+   $_[0] = ${qr/abc/};
+  "bb" =~ /(??{$_[0]})/;
+}->($_[0]);
 CODE

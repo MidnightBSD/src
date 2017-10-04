@@ -4,7 +4,7 @@ my $Perl;
 my $dtrace;
 
 BEGIN {
-    chdir 't';
+    chdir 't' if -d 't';
     @INC = '../lib';
     require './test.pl';
 
@@ -133,9 +133,10 @@ D_SCRIPT
 );
 
 dtrace_like(<< 'PERL_SCRIPT',
+    BEGIN {@INC = '../lib'}
     use strict;
     require HTTP::Tiny;
-    do "run/dtrace.pl";
+    do "./run/dtrace.pl";
 PERL_SCRIPT
     << 'D_SCRIPT',
     loading-file { printf("loading-file <%s>\n", copyinstr(arg0)) }

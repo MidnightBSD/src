@@ -3,13 +3,13 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
     require './test.pl';
+    set_up_inc('../lib');
 }
 
 use strict;
 
-plan tests => 132;
+plan tests => 124;
 
 # Before loading feature.pm, test it with CORE::
 ok eval 'CORE::state $x = 1;', 'CORE::state outside of feature.pm scope';
@@ -202,22 +202,6 @@ $y = 0;
     redo if $y < 3
 }
 
-
-#
-# Check state $_
-#
-my @stones = qw [fred wilma barny betty];
-my $first  = $stones [0];
-my $First  = ucfirst $first;
-$_ = "bambam";
-foreach my $flint (@stones) {
-    no warnings 'experimental::lexical_topic';
-    state $_ = $flint;
-    is $_, $first, 'state $_';
-    ok /$first/, '/.../ binds to $_';
-    is ucfirst, $First, '$_ default argument';
-}
-is $_, "bambam", '$_ is still there';
 
 #
 # Goto.
@@ -416,6 +400,44 @@ foreach my $forbidden (<DATA>) {
     ok(defined $f, 'state init not skipped');
 }
 
+# [perl #121134] Make sure padrange doesn't mess with these
+{
+    sub thing {
+	my $expect = shift;
+        my ($x, $y);
+        state $z;
+
+        is($z, $expect, "State variable is correct");
+
+        $z = 5;
+    }
+
+    thing(undef);
+    thing(5);
+
+    sub thing2 {
+        my $expect = shift;
+        my $x;
+        my $y;
+        state $z;
+
+        is($z, $expect, "State variable is correct");
+
+        $z = 6;
+    }
+
+    thing2(undef);
+    thing2(6);
+}
+
+# [perl #123029] regression in "state" under PERL_NO_COW
+sub rt_123029 {
+    state $s;
+    $s = 'foo'x500;
+    my $c = $s;
+    return defined $s;
+}
+ok(rt_123029(), "state variables don't surprisingly disappear when accessed");
 
 __DATA__
 state ($a) = 1;

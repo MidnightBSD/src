@@ -6,7 +6,6 @@
 BEGIN {
     unshift @INC, 't/lib/';
 }
-chdir 't';
 
 use File::Spec;
 
@@ -20,8 +19,12 @@ use MakeMaker::Test::Setup::BFD;
 use ExtUtils::MakeMaker;
 
 chdir 't';
+perl_lib; # sets $ENV{PERL5LIB} relative to t/
 
-perl_lib();
+use File::Temp qw[tempdir];
+my $tmpdir = tempdir( DIR => '../t', CLEANUP => 1 );
+use Cwd; my $cwd = getcwd; END { chdir $cwd } # so File::Temp can cleanup
+chdir $tmpdir;
 
 ok( setup_recurs(), 'setup' );
 END {
@@ -75,9 +78,9 @@ END
         my @lines = @_;
         unlike $lines[$shb_line_num], qr[/foo/bar/perl], "#! replaced";
         like   $lines[$shb_line_num], qr[ -w\b], "switch retained";
-        
+
         # In between might be that "not running under some shell" madness.
-               
+
         is $lines[-1], "blah blah blah\n", "Program text retained";
     }
 );

@@ -2,11 +2,12 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
     require './test.pl';
+    set_up_inc('../lib');
 }
 
-plan (109);
+plan (118);
+# Please do not eliminate the plan.  We have tests in DESTROY blocks.
 
 sub expected {
     my($object, $package, $type) = @_;
@@ -117,7 +118,7 @@ expected(bless([]), 'main', "ARRAY");
 # class is a ref
 $a1 = bless {}, "A4";
 $b1 = eval { bless {}, $a1 };
-isnt ($@, '', "class is a ref");
+like ($@, qr/^Attempt to bless into a reference at /, "class is a ref");
 
 # class is an overloaded ref
 {
@@ -142,3 +143,94 @@ expected($c4, 'C4', "SCALAR");
 
 bless [], "main::";
 ok(1, 'blessing into main:: does not crash'); # [perl #87388]
+
+sub _117941 { package _117941; bless [] }
+delete $::{"_117941::"};
+eval { _117941() };
+like $@, qr/^Attempt to bless into a freed package at /,
+        'bless with one arg when current stash is freed';
+
+for(__PACKAGE__) {
+    eval { bless \$_ };
+    like $@, qr/^Modification of a read-only value attempted/,
+         'read-only COWs cannot be blessed';
+}
+
+sub TIESCALAR { bless \(my $thing = pop), shift }
+sub FETCH { ${$_[0]} }
+tie $tied, main => $untied = [];
+eval { bless $tied };
+is ref $untied, "main", 'blessing through tied refs' or diag $@;
+
+bless \$victim, "Food";
+eval 'bless \$Food::bard, "Bard"';
+sub Bard::DESTROY {
+    isnt ref(\$victim), '__ANON__',
+        'reblessing does not leave an object in limbo temporarily';
+    bless \$victim
+}
+undef *Food::;
+{
+    my $w;
+    # This should catch ‘Attempt to free unreferenced scalar’.
+    local $SIG{__WARN__} = sub { $w .= shift };
+    bless \$victim;
+    is $w, undef,
+       'no warnings when reblessing inside DESTROY triggered by reblessing'
+}
+
+TODO: {
+    my $ref;
+    sub new {
+        my ($class, $code) = @_;
+        my $ret = ref($code);
+        bless $code => $class;
+        return $ret;
+    }
+    for my $i (1 .. 2) {
+        $ref = main -> new (sub {$i});
+    }
+    is $ref, 'CODE', 'RT #3305: Code ref should not be blessed yet';
+
+    local $TODO = 'RT #3305';
+
+    for my $i (1 .. 2) {
+        $ref = main -> new (sub {});
+    }
+    is $ref, 'CODE', 'RT #3305: Code ref should not be blessed yet';
+}
+
+my $t_3306_c = 0;
+my $t_3306_s = 0;
+
+{
+    sub FooClosure::new {
+        my ($class, $code) = @_;
+        bless $code => $class;
+    }
+    sub FooClosure::DESTROY {
+        $t_3306_c++;
+    }
+
+    sub FooSub::new {
+        my ($class, $code) = @_;
+        bless $code => $class;
+    }
+    sub FooSub::DESTROY {
+        $t_3306_s++;
+    }
+
+    my $i = '';
+    FooClosure -> new (sub {$i});
+    FooSub -> new (sub {});
+}
+
+is $t_3306_c, 1, 'RT #3306: DESTROY should be called on CODE ref (works on closures)';
+
+TODO: {
+    local $TODO = 'RT #3306';
+    is $t_3306_s, 1, 'RT #3306: DESTROY should be called on CODE ref';
+}
+
+undef *FooClosure::;
+undef *FooSub::;

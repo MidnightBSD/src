@@ -5,13 +5,14 @@ use warnings;
 
 use File::Basename;
 use Test::More 0.88;
-use t::Util qw[tmpfile rewind slurp monkey_patch dir_list parse_case
+use lib 't';
+use Util qw[tmpfile rewind slurp monkey_patch dir_list parse_case
   hashify connect_args set_socket_source sort_headers $CRLF $LF];
 
 use HTTP::Tiny;
 BEGIN { monkey_patch() }
 
-for my $file ( dir_list("t/cases", qr/^get/ ) ) {
+for my $file ( dir_list("corpus", qr/^get/ ) ) {
   my $label = basename($file);
   my $data = do { local (@ARGV,$/) = $file; <> };
   my ($params, $expect_req, $give_res) = split /--+\n/, $data;
@@ -40,7 +41,7 @@ for my $file ( dir_list("t/cases", qr/^get/ ) ) {
   my $res_fh = tmpfile($give_res);
   my $req_fh = tmpfile();
 
-  my $http = HTTP::Tiny->new(%new_args);
+  my $http = HTTP::Tiny->new(keep_alive => 0, %new_args);
   set_socket_source($req_fh, $res_fh);
 
   (my $url_basename = $url) =~ s{.*/}{};
@@ -104,6 +105,9 @@ for my $file ( dir_list("t/cases", qr/^get/ ) ) {
   else {
     $check_expected->( $response->{content}, "$label content" );
   }
+
+  ok ( ! exists $response->{redirects}, "$label redirects array doesn't exist")
+    or diag explain $response->{redirects};
 }
 
 done_testing;

@@ -1,7 +1,7 @@
 #! perl -w
 
 use strict;
-use Test::More tests => 64;
+use Test::More tests => 65;
 use Config;
 use Cwd;
 use File::Path qw( mkpath );
@@ -45,8 +45,8 @@ isa_ok( $base, 'ExtUtils::CBuilder::Base' );
 }
 
 {
-    my $path_to_perl = $^O eq 'VMS' 
-                       ? 'perl_root:[000000]perl.exe' 
+    my $path_to_perl = $^O eq 'VMS'
+                       ? 'perl_root:[000000]perl.exe'
                        : File::Spec->catfile( '', qw| usr bin perl | );
     local $^X = $path_to_perl;
     is(
@@ -152,7 +152,6 @@ my ($lib, @temps);
     ok( -d $include_dir, "perl_inc() returned directory" );
 }
 
-#
 $base = ExtUtils::CBuilder::Base->new( quiet => 1 );
 ok( $base, "ExtUtils::CBuilder::Base->new() returned true value" );
 isa_ok( $base, 'ExtUtils::CBuilder::Base' );
@@ -165,13 +164,27 @@ my %args = ();
 my @defines = $base->arg_defines( %args );
 ok( ! @defines, "Empty hash passed to arg_defines() returns empty list" );
 
-%args = ( alpha => 'beta', gamma => 'delta' );
-my $defines_seen_ref = { map { $_ => 1 } $base->arg_defines( %args ) };
+my @epsilon = ( epsilon => 'zeta' );
+my @eta     = ( eta => 'theta' );
+my @alpha   = ( alpha => 'beta' );
+my @gamma   = ( gamma => 'delta' );
+my @all = (\@epsilon, \@eta, \@alpha, \@gamma);
+
+%args = map { @{$_} } @all;
+@defines = $base->arg_defines( %args );
+my $defines_seen_ref = { map { $_ => 1 } @defines };
+my $defines_expected_ref;
+for my $r (@all) {
+    $defines_expected_ref->{"-D$r->[0]=$r->[1]"} = 1;
+}
 is_deeply(
     $defines_seen_ref,
-    { '-Dalpha=beta' => 1, '-Dgamma=delta' => 1 },
+    $defines_expected_ref,
     "arg_defines(): got expected defines",
 );
+my $ordered_defines_expected_ref = [ sort keys %{$defines_expected_ref} ];
+is_deeply(\@defines, $ordered_defines_expected_ref,
+    "Got expected order of defines: RT #124106");
 
 my $include_dirs_seen_ref =
     { map {$_ => 1} $base->arg_include_dirs( qw| alpha beta gamma | ) };
@@ -194,7 +207,7 @@ is_deeply(
 $seen_ref = { map {$_ => 1} $base->arg_share_object_file('alpha') };
 my %exp = map {$_ => 1} $base->split_like_shell($base->{config}{lddlflags});
 $exp{'-o'} = 1;
-$exp{'alpha'} = 1; 
+$exp{'alpha'} = 1;
 
 is_deeply(
     $seen_ref,
@@ -223,7 +236,7 @@ is_deeply( \%split_seen, \%exp,
     $cwd = cwd();
     my $tdir = tempdir(CLEANUP => 1);
     my $subdir = File::Spec->catdir(
-        $tdir, qw| alpha beta gamma delta epsilon 
+        $tdir, qw| alpha beta gamma delta epsilon
             zeta eta theta iota kappa lambda |
     );
     mkpath($subdir, { mode => 0711 } );
@@ -264,7 +277,21 @@ is_deeply( \%split_seen, \%exp,
     touch_file($exporter);
     $rv = $base->perl_src();
     ok( -d $rv, "perl_src(): returned a directory" );
-    is( uc($rv), uc(Cwd::realpath($subdir)), "perl_src(): identified directory" );
+    my $rp = Cwd::realpath($subdir);
+  SKIP: {
+      if ($^O eq 'dec_osf' && $rp =~ m[^/cluster/members/]) {
+          skip "Tru64 cluster filesystem", 1;
+      } # SKIP
+      elsif ($^O eq 'os390') {
+        # os390 also has cluster-like things called 'sysplexed'.  So far, the
+        # tail end of the path matches what we passed it (with some prepended
+        # directories).  So test for that.
+        like( uc($rp), qr/\U\Q$rp\E$/, "perl_src(): identified directory" );
+      }
+      else {
+        is( uc($rv), uc($rp), "perl_src(): identified directory" );
+      }
+    }
     is( $capture, q{}, "perl_src(): no warning, as expected" );
 
     chdir $cwd

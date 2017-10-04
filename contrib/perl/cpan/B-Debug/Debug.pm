@@ -1,6 +1,6 @@
 package B::Debug;
 
-our $VERSION = '1.18';
+our $VERSION = '1.24';
 
 use strict;
 require 5.006;
@@ -36,7 +36,11 @@ sub _printop {
   my $op = shift;
   my $addr = ${$op} ? $op->ppaddr : '';
   $addr =~ s/^PL_ppaddr// if $addr;
-  return sprintf "0x%08x %6s %s", ${$op}, ${$op} ? class($op) : '', $addr;
+  if (${$op}) {
+    return sprintf "0x%08x %6s %s", ${$op}, class($op), $addr;
+  } else {
+    return sprintf "0x%x %6s %s", ${$op}, '', $addr;
+  }
 }
 
 sub B::OP::debug {
@@ -151,6 +155,18 @@ sub B::SVOP::debug {
     $op->sv->debug;
 }
 
+sub B::METHOP::debug {
+    my ($op) = @_;
+    $op->B::OP::debug();
+    if (${$op->first})  {
+      printf "\top_first\t0x%x\n", ${$op->first};
+      $op->first->debug;
+    } else {
+      printf "\top_meth_sv\t0x%x\n", ${$op->meth_sv};
+      $op->meth_sv->debug;
+    }
+}
+
 sub B::PVOP::debug {
     my ($op) = @_;
     $op->B::OP::debug();
@@ -181,7 +197,6 @@ sub B::SV::debug {
     printf <<'EOT', class($sv), $$sv, $sv->REFCNT;
 %s (0x%x)
 	REFCNT		%d
-	FLAGS		0x%x
 EOT
     printf "\tFLAGS\t\t0x%x", $sv->FLAGS;
     if ($have_B_Flags) {
@@ -203,9 +218,10 @@ sub B::PV::debug {
     my ($sv) = @_;
     $sv->B::SV::debug();
     my $pv = $sv->PV();
-    printf <<'EOT', cstring($pv), length($pv);
+    printf <<'EOT', cstring($pv), $sv->CUR, $sv->LEN;
 	xpv_pv		%s
 	xpv_cur		%d
+	xpv_len		%d
 EOT
 }
 
@@ -258,17 +274,23 @@ sub B::CV::debug {
     my ($padlist) = $sv->PADLIST;
     my ($file) = $sv->FILE;
     my ($gv) = $sv->GV;
-    printf <<'EOT', $$stash, $$start, $$root, $$gv, $file, $sv->DEPTH, $padlist, ${$sv->OUTSIDE};
+    printf <<'EOT', $$stash, $$start, $$root;
 	STASH		0x%x
 	START		0x%x
 	ROOT		0x%x
-	GV		0x%x
+EOT
+    if ( $]>5.017 && ($sv->FLAGS & 0x40000)) { #lexsub
+      printf("\tNAME\t%%s\n", $sv->NAME);
+    } else {
+      printf("\tGV\t%0x%x\t%s\n", $$gv, $gv->SAFENAME);
+    }
+    printf <<'EOT', $file, $sv->DEPTH, $padlist, ${$sv->OUTSIDE};
 	FILE		%s
 	DEPTH		%d
 	PADLIST		0x%x
 	OUTSIDE		0x%x
 EOT
-    printf("\tOUTSIDE_SEQ\t%d\n", , $sv->OUTSIDE_SEQ) if $] > 5.007;
+    printf("\tOUTSIDE_SEQ\t%d\n", $sv->OUTSIDE_SEQ) if $] > 5.007;
     if ($have_B_Flags) {
       my $SVt_PVCV = $] < 5.010 ? 12 : 13;
       printf("\tCvFLAGS\t0x%x\t%s\n", $sv->CvFLAGS,
@@ -355,7 +377,7 @@ EOT
 sub B::SPECIAL::debug {
     my $sv = shift;
     my $i = ref $sv ? $$sv : 0;
-    print exists $specialsv_name[$i] ? $specialsv_name[$i] : "", "\n";
+    print defined $specialsv_name[$i] ? $specialsv_name[$i] : "", "\n";
 }
 
 sub B::PADLIST::debug {
@@ -370,6 +392,7 @@ EOT
 sub compile {
     my $order = shift;
     B::clearsym();
+    $DB::single = 1 if defined &DB::DB;
     if ($order && $order eq "exec") {
         return sub { walkoptree_exec(main_start, "debug") }
     } else {
@@ -407,7 +430,7 @@ Reini Urban C<rurban@cpan.org>
 =head1 LICENSE
 
 Copyright (c) 1996, 1997 Malcolm Beattie
-Copyright (c) 2008, 2010 Reini Urban
+Copyright (c) 2008, 2010, 2013, 2014 Reini Urban
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of either:

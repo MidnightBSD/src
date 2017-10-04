@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w                                         # -*- perl -*-
 
 BEGIN {
-    require "t/pod2html-lib.pl";
+    require "./t/pod2html-lib.pl";
 }
 
 END {
@@ -36,7 +36,7 @@ __DATA__
 <link rev="made" href="mailto:[PERLADMIN]" />
 </head>
 
-<body style="background-color: white">
+<body>
 
 
 
@@ -62,7 +62,7 @@ __DATA__
 
 <p><a href="#item1">&quot;item1&quot;</a></p>
 
-<p><a href="#non-existant-section">&quot;non existant section&quot;</a></p>
+<p><a href="#non-existent-section">&quot;non existent section&quot;</a></p>
 
 <p><a href="[ABSCURRENTWORKINGDIRECTORY]/testdir/test.lib/var-copy.html">var-copy</a></p>
 

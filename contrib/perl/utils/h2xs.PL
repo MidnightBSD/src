@@ -18,7 +18,7 @@ chdir dirname($0);
 my $file = basename($0, '.PL');
 $file .= '.com' if $^O eq 'VMS';
 
-open OUT,">$file" or die "Can't create $file: $!";
+open OUT, ">", $file or die "Can't create $file: $!";
 
 print "Extracting $file (with variable substitutions)\n";
 
@@ -34,6 +34,8 @@ $Config{startperl}
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
+
+BEGIN { pop @INC if $INC[-1] eq '.' }
 
 use warnings;
 
@@ -840,7 +842,7 @@ if( @path_h ){
       # Scan the header file (we should deal with nested header files)
       # Record the names of simple #define constants into const_names
             # Function prototypes are processed below.
-      open(CH, "<$rel_path_h") || die "Can't open $rel_path_h: $!\n";
+      open(CH, "<", "$rel_path_h") || die "Can't open $rel_path_h: $!\n";
     defines:
       while (<CH>) {
 	if ($pre_sub_tri_graphs) {
@@ -973,7 +975,7 @@ if( ! $opt_X ){  # use XS, unless it was disabled
     Devel::PPPort::WriteFile('ppport.h')
         || die "Can't create $ext$modpname/ppport.h: $!\n";
   }
-  open(XS, ">$modfname.xs") || die "Can't create $ext$modpname/$modfname.xs: $!\n";
+  open(XS, ">", "$modfname.xs") || die "Can't create $ext$modpname/$modfname.xs: $!\n";
   if ($opt_x) {
     warn "Scanning typemaps...\n";
     get_typemap();
@@ -991,8 +993,8 @@ if( ! $opt_X ){  # use XS, unless it was disabled
       }
       warn "Scanning $filename for functions...\n";
       my @styles = $Config{gccversion} ? qw(C++ C9X GNU) : qw(C++ C9X);
-      $c = new C::Scan 'filename' => $filename, 'filename_filter' => $filter,
-	'add_cppflags' => $addflags, 'c_styles' => \@styles;
+      $c = C::Scan->new('filename' => $filename, 'filename_filter' => $filter,
+        'add_cppflags' => $addflags, 'c_styles' => \@styles);
       $c->set('includeDirs' => ["$Config::Config{archlib}/CORE", $cwd]);
 
       $c->get('keywords')->{'__restrict'} = 1;
@@ -1032,7 +1034,7 @@ if( ! $opt_X ){  # use XS, unless it was disabled
       }
     }
     { local $" = '|';
-      $typedef_rex = qr(\b(?<!struct )(?:@good_td)\b) if @good_td;
+      $typedef_rex = qr(\b(?<!struct )(?<!enum )(?:@good_td)\b) if @good_td;
     }
     %known_fnames = map @$_[1,3], @$fdecls_parsed; # [1,3] is NAME, FULLTEXT
     if ($fmask) {
@@ -1091,7 +1093,7 @@ for (sort(keys(%const_names))) {
 }
 
 -d $modpmdir || mkpath([$modpmdir], 0, 0775);
-open(PM, ">$modpmname") || die "Can't create $ext$modpname/$modpmname: $!\n";
+open(PM, ">", "$modpmname") || die "Can't create $ext$modpname/$modpmname: $!\n";
 
 $" = "\n\t";
 warn "Writing $ext$modpname/$modpmname\n";
@@ -1777,7 +1779,7 @@ sub get_typemap {
     warn " Scanning $typemap\n";
     warn("Warning: ignoring non-text typemap file '$typemap'\n"), next
       unless -T $typemap ;
-    open(TYPEMAP, $typemap)
+    open(TYPEMAP, "<", $typemap)
       or warn ("Warning: could not open typemap file '$typemap': $!\n"), next;
     my $mode = 'Typemap';
     while (<TYPEMAP>) {
@@ -1870,7 +1872,7 @@ close XS;
 if (%types_seen) {
   my $type;
   warn "Writing $ext$modpname/typemap\n";
-  open TM, ">typemap" or die "Cannot open typemap file for write: $!";
+  open TM, ">", "typemap" or die "Cannot open typemap file for write: $!";
 
   for $type (sort keys %types_seen) {
     my $entry = assign_typemap_entry $type;
@@ -1904,7 +1906,7 @@ EOP
 } # if( ! $opt_X )
 
 warn "Writing $ext$modpname/Makefile.PL\n";
-open(PL, ">Makefile.PL") || die "Can't create $ext$modpname/Makefile.PL: $!\n";
+open(PL, ">", "Makefile.PL") || die "Can't create $ext$modpname/Makefile.PL: $!\n";
 
 my $prereq_pm = '';
 
@@ -1917,7 +1919,7 @@ elsif ( $compat_version < 5.006002 )
   $prereq_pm .= q%'Test'        =>  0, %;
 }
 
-if ( $compat_version < 5.006 and !$opt_X and $use_xsloader)
+if (!$opt_X and $use_xsloader)
 {
   $prereq_pm .= q%'XSLoader'    =>  0, %;
 }
@@ -1929,11 +1931,13 @@ use ExtUtils::MakeMaker;
 # the contents of the Makefile that is written.
 WriteMakefile(
     NAME              => '$module',
-    VERSION_FROM      => '$modpmname', # finds \$VERSION
+    VERSION_FROM      => '$modpmname', # finds \$VERSION, requires EU::MM from perl >= 5.5
     PREREQ_PM         => {$prereq_pm}, # e.g., Module::Name => 1.1
-    (\$] >= 5.005 ?     ## Add these new keywords supported since 5.005
-      (ABSTRACT_FROM  => '$modpmname', # retrieve abstract from module
-       AUTHOR         => '$author <$email>') : ()),
+    ABSTRACT_FROM     => '$modpmname', # retrieve abstract from module
+    AUTHOR            => '$author <$email>',
+    #LICENSE           => 'perl',
+    #Value must be from legacy list of licenses here
+    #http://search.cpan.org/perldoc?Module%3A%3ABuild%3A%3AAPI
 END
 if (!$opt_X) { # print C stuff, unless XS is disabled
   $opt_F = '' unless defined $opt_F;
@@ -2028,7 +2032,7 @@ close(PL) || die "Can't close $ext$modpname/Makefile.PL: $!\n";
 # Create a simple README since this is a CPAN requirement
 # and it doesn't hurt to have one
 warn "Writing $ext$modpname/README\n";
-open(RM, ">README") || die "Can't create $ext$modpname/README:$!\n";
+open(RM, ">", "README") || die "Can't create $ext$modpname/README:$!\n";
 my $thisyear = (gmtime)[5] + 1900;
 my $rmhead = "$modpname version $TEMPLATE_VERSION";
 my $rmheadeq = "=" x length($rmhead);
@@ -2095,7 +2099,7 @@ unless (-d "$testdir") {
 warn "Writing $ext$modpname/$testfile\n";
 my $tests = @const_names ? 2 : 1;
 
-open EX, ">$testfile" or die "Can't create $ext$modpname/$testfile: $!\n";
+open EX, ">", "$testfile" or die "Can't create $ext$modpname/$testfile: $!\n";
 
 print EX <<_END_;
 # Before 'make install' is performed this script should be runnable with
@@ -2201,7 +2205,7 @@ close(EX) || die "Can't close $ext$modpname/$testfile: $!\n";
 unless ($opt_C) {
   warn "Writing $ext$modpname/Changes\n";
   $" = ' ';
-  open(EX, ">Changes") || die "Can't create $ext$modpname/Changes: $!\n";
+  open(EX, ">", "Changes") || die "Can't create $ext$modpname/Changes: $!\n";
   @ARGS = map {/[\s\"\'\`\$*?^|&<>\[\]\{\}\(\)]/ ? "'$_'" : $_} @ARGS;
   print EX <<EOP;
 Revision history for Perl extension $module.
@@ -2215,7 +2219,7 @@ EOP
 }
 
 warn "Writing $ext$modpname/MANIFEST\n";
-open(MANI,'>MANIFEST') or die "Can't create MANIFEST: $!";
+open(MANI, '>', 'MANIFEST') or die "Can't create MANIFEST: $!";
 my @files = grep { -f } (<*>, <t/*>, <$fallbackdirname/*>, <$modpmdir/*>);
 if (!@files) {
   eval {opendir(D,'.');};

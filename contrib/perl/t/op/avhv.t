@@ -5,7 +5,8 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
+    require './test.pl';
+    set_up_inc('../lib');
 }
 
 require Tie::Array;
@@ -20,7 +21,6 @@ sub STORESIZE { $#{$_[0]} = $_[1]+1 }
 
 package main;
 
-require './test.pl';
 plan(tests => 40);
 
 # Helper function to check the typical error message.
@@ -276,7 +276,7 @@ eval {
 };
 not_hash($@);
 
-# Check hash slices (BUG ID 20010423.002)
+# Check hash slices (BUG ID 20010423.002 (#6879))
 $avhv = [{foo=>1, bar=>2}];
 eval {
     @$avhv{"foo", "bar"} = (42, 53);

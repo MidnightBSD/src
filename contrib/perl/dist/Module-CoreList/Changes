@@ -1,5 +1,173 @@
-3.02
+5.20170530
+  - Updated for v5.26.0
+
+5.20170420
+  - Updated for v5.25.12
+
+5.20170320
+  - Updated for v5.25.11
+
+5.20170220
+  - Updated for v5.25.10
+
+5.20170120
+  - Updated for v5.25.9
+
+5.20170114_24
+  - Updated for v5.24.1
+
+5.20170114_22
+  - Updated for v5.22.3
+
+5.20161220
+  - Updated for v5.25.8
+
+5.20161120
+  - Updated for v5.25.7
+
+5.20161020
+  - Updated for v5.25.6
+
+5.20160920
+  - Updated for v5.25.5
+
+5.20160820
+  - Updated for v5.25.4
+
+5.20160720
+  - Updated for v5.25.3
+
+5.20160620
+  - Updated for v5.25.2
+
+5.20160520
+ - fixed edge-case checking in is_core() (checking for a specific
+   version of a module returned false for the first perl release
+   that contained it)
+ - Updated for v5.25.1
+
+5.20160429
+ - Updated for v5.22.2
+
+5.20160320
+ - Updated for v5.23.9
+
+5.20160228
+  - [perl #127624] corelist: wrong Digest::SHA version in 5.18.4
+
+5.20160220
+  - Updated for v5.23.8
+
+5.20160120
+  - Updated for v5.23.7
+
+5.20151220
+  - Updated for v5.23.6
+
+5.20151213
+  - Updated for v5.22.1
+
+5.20151120
+  - Updated for v5.23.5
+
+5.20151020
+  - Updated for v5.23.4
+
+5.20150920
+  - Updated for v5.23.3
+
+5.20150912
+  - Updated for v5.20.3
+
+5.20150820
+  - Updated for v5.23.2
+
+5.20150720
+  - Updated for v5.23.1
+
+5.20150520
+  - Updated for v5.22.0
+
+5.20150420
+  - Updated for v5.21.11
+  - fixes a fencepost error in is_core()
+  - copes with versions that do not match x.yyyzzz
+
+5.20150320
+  - Updated for v5.21.10
+
+5.20150220
+  - Updated for v5.21.9
+
+5.20150214
+  - Updated for v5.20.2
+
+5.20150120
+  - Updated for v5.21.8
+
+5.20141220
+  - Updated for v5.21.7
+
+5.20141120
+  - Updated for v5.21.6
+
+5.20141020
+  - Updated for v5.21.5
+
+5.20141002
+  - Updated for v5.18.3 and v5.18.4
+
+5.20140920
+  - Updated for v5.21.4
+
+5.20140914
+  - Updated for v5.20.1
+
+5.021003
+  - Prepared for v5.21.3
+
+5.021002
+  - Prepared for v5.21.2
+
+5.021001_01
+  - Prepared for v5.21.1
+
+3.11
+  - Prepared for v5.20.0
+  - Fix regression in corelist with -v output listing the same perl
+    multiple times
+  - Fix regression in corelist with v5.x.10 appearing twice in -a output
+
+3.10
+  - Updated for v5.19.11
+
+3.09
+  - updated for v5.19.10
+
+3.08
+  - prepared for v5.19.10
+
+3.07 Fri Feb 21 2014
+ - fix for is_core tests and perls ending in 0
+
+3.06 Thu Feb 20 2014
+ - updated for 5.19.9
+ - fix Module::CoreList::is_core default perl version
+ - fix Module::CoreList::is_core version comparison
+
+3.05
+  - Prepared for v5.19.9
+
+3.04
+  - Prepared for v5.19.8
+
+3.03 Mon Jan  6 2014
+  - Updated for v5.18.2
+
+3.02 Fri Dec 20 2013
   - Prepared for v5.19.7
+  - Added CGI et al deprecation status
+  - Finalised for v5.19.7
 
 3.01 Wed Nov 20 2013
   - Finalised for v5.19.6

@@ -2,15 +2,15 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
+    require './test.pl';
+    set_up_inc(qw '../lib ../dist/base/lib');
 }
 
 my @expect;
 my $data = "";
 my @data = ();
 
-require './test.pl';
-plan(tests => 63);
+plan(tests => 67);
 
 sub compare {
     local $Level = $Level + 1;
@@ -199,6 +199,11 @@ is($r, 1);
     ::ok( say $fh @expect[2..4] );
     ::is( $ors, "\n",        'say sets $\ to \n in PRINT' );
     ::is( $\,   "something", "  and it's localized" );
+
+    local $\;
+    ::ok( say $fh @expect[2..4] );
+    ::is( $ors, "\n",        'say sets $\ to \n in PRINT' );
+    ::is( $\,   undef, "  and it's localized, even for undef \$\\" );
 }
 
 {
@@ -272,7 +277,7 @@ is($r, 1);
 }
 
 {
-    # [ID 20020713.001] chomp($data=<tied_fh>)
+    # [ID 20020713.001 (#10048)] chomp($data=<tied_fh>)
     local *TEST;
     tie *TEST, 'CHOMP';
     my $data;

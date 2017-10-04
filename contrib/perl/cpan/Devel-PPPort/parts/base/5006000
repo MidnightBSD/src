@@ -1,6 +1,8 @@
 5.006000
+DO_UTF8                        # U
 PERL_SYS_INIT3                 # U
 POPn                           # E
+POPul                          # E
 PUSHn                          # E
 SvIOK_UV                       # U
 SvIOK_notUV                    # U
@@ -23,6 +25,7 @@ SvPVutf8x_force                # U
 SvUTF8                         # U
 SvUTF8_off                     # U
 SvUTF8_on                      # U
+UTF8SKIP                       # U
 XPUSHn                         # E
 XSRETURN_NV                    # E
 XST_mNV                        # E
@@ -67,6 +70,9 @@ gv_dump                        # E
 init_i18nl10n                  # E (perl_init_i18nl10n)
 init_i18nl14n                  # E (perl_init_i18nl14n)
 isASCII                        # U
+isCNTRL                        # U
+isGRAPH                        # U
+isPUNCT                        # U
 isXDIGIT                       # U
 is_uni_alnum                   # E
 is_uni_alnum_lc                # E
@@ -115,7 +121,7 @@ mess                           # E (Perl_mess)
 my_atof                        # E
 my_fflush_all                  # E
 newANONATTRSUB                 # E
-newATTRSUB                     # E
+newATTRSUB                     # U
 newSVnv                        # E (Perl_newSVnv)
 newSVpvf                       # E (Perl_newSVpvf)
 newSVuv                        # E
@@ -182,12 +188,11 @@ sv_vcatpvf_mg                  # E
 sv_vsetpvf                     # E
 sv_vsetpvf_mg                  # E
 swash_init                     # E
-tmps_grow                      # E
 to_uni_lower_lc                # E
 to_uni_title_lc                # E
 to_uni_upper_lc                # E
 utf8_distance                  # E
-utf8_hop                       # E
+utf8_hop                       # U
 vcroak                         # E
 vform                          # E
 vload_module                   # E
@@ -284,8 +289,5 @@ dTHXa                          # added by devel/scanprov
 dTHXoa                         # added by devel/scanprov
 dXSTARG                        # added by devel/scanprov
 isALNUMC                       # added by devel/scanprov
-isCNTRL                        # added by devel/scanprov
-isGRAPH                        # added by devel/scanprov
-isPUNCT                        # added by devel/scanprov
 pTHX                           # added by devel/scanprov
 pTHX_                          # added by devel/scanprov

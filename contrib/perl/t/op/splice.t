@@ -2,8 +2,8 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
     require './test.pl';
+    set_up_inc('../lib');
 }
 
 $|  = 1;
@@ -39,12 +39,12 @@ is( j(@a), j(1,7,7,3), '... array 1,7,7,3');
 is( j(splice(@a,-3,-2,2)), j(7), 'replace first 7 with a 2, negative offset, negative length, return value is 7');
 is( j(@a), j(1,2,7,3), '... array has 1,2,7,3');
 
-# Bug 20000223.001 - no test for splice(@array).  Destructive test!
+# Bug 20000223.001 (#2196) - no test for splice(@array).  Destructive test!
 is( j(splice(@a)), j(1,2,7,3), 'bare splice empties the array, return value is the array');
 is( j(@a),  '', 'array is empty');
 
 # Tests 11 and 12:
-# [ID 20010711.005] in Tie::Array, SPLICE ignores context, breaking SHIFT
+# [ID 20010711.005 (#7265)] in Tie::Array, SPLICE ignores context, breaking SHIFT
 
 my $foo;
 
@@ -86,10 +86,16 @@ is( j(@a), j(1,2,2), 'duplicate middle element on the end');
 ok( ! Foo->isa('Bar'), 'Foo is not a Bar');
 
 splice @Foo::ISA, 0, 0, 'Bar';
-ok( !oo->isa('Bar'), 'splice @ISA and make Foo a Bar');
+ok( Foo->isa('Bar'), 'splice @ISA and make Foo a Bar');
 
-# Test undef first arg
-eval { splice( $new_arrayref, 0, 0, 1, 2, 3 ) };
-like($@, qr/Not an ARRAY/, 'undefined first argument to splice');
+# Test arrays with nonexistent elements (crashes when it fails)
+@a = ();
+$#a++;
+is sprintf("%s", splice @a, 0, 1), "",
+  'splice handles nonexistent elems when shrinking the array';
+@a = ();
+$#a++;
+is sprintf("%s", splice @a, 0, 1, undef), "",
+  'splice handles nonexistent elems when array len stays the same';
 
 done_testing;

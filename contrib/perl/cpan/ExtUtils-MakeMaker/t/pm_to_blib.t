@@ -5,24 +5,33 @@
 use strict;
 use lib 't/lib';
 
-use Test::More 'no_plan';
+use File::Temp qw[tempdir];
 
 use ExtUtils::MakeMaker;
 
 use MakeMaker::Test::Utils;
 use MakeMaker::Test::Setup::BFD;
-
+use Config;
+use ExtUtils::MM;
+use Test::More
+    !MM->can_run(make()) && $ENV{PERL_CORE} && $Config{'usecrosscompile'}
+    ? (skip_all => "cross-compiling and make not available")
+    : 'no_plan';
 
 my $perl     = which_perl();
 my $makefile = makefile_name();
 my $make     = make_run();
 
+local $ENV{PERL_INSTALL_QUIET};
 
 # Setup our test environment
 {
     chdir 't';
+    perl_lib; # sets $ENV{PERL5LIB} relative to t/
 
-    perl_lib;
+    my $tmpdir = tempdir( DIR => '../t', CLEANUP => 1 );
+    use Cwd; my $cwd = getcwd; END { chdir $cwd } # so File::Temp can cleanup
+    chdir $tmpdir;
 
     ok( setup_recurs(), 'setup' );
     END {
@@ -61,6 +70,9 @@ my $make     = make_run();
 
 # Rerun the Makefile.PL, pm_to_blib should rerun
 {
+    # Seems there are occasional race conditions with these tests
+    # waiting a couple of seconds appears to resolve these
+    sleep 2;
     run_ok(qq{$perl Makefile.PL});
 
     # XXX This is a fragile way to check that it reran.

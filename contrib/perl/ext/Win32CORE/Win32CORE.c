@@ -23,17 +23,20 @@
 
 
 XS(w32_CORE_all){
-    dXSARGS;
+    /* I'd use dSAVE_ERRNO() here, but it doesn't save the Win32 error code
+     * under cygwin, if that changes this code should change to use that.
+     */
+    int saved_errno = errno;
     DWORD err = GetLastError();
     /* capture the XSANY value before Perl_load_module, the CV's any member will
      * be overwritten by Perl_load_module and subsequent newXSes or pure perl
      * subs
      */
     const char *function  = (const char *) XSANY.any_ptr;
-    Perl_load_module(aTHX_ PERL_LOADMOD_NOIMPORT, newSVpvn("Win32",5), newSVnv(0.27));
+    Perl_load_module(aTHX_ PERL_LOADMOD_NOIMPORT, newSVpvs("Win32"), newSVnv(0.27));
     SetLastError(err);
-    SPAGAIN;
-    PUSHMARK(SP-items);
+    errno = saved_errno;
+    /* mark and SP from caller are passed through unchanged */
     call_pv(function, GIMME_V);
 }
 
@@ -43,8 +46,11 @@ XS_EXTERNAL(boot_Win32CORE)
      * and win32/buildext.pl will all generate references to it.  The function
      * should never be called though, as Win32CORE.pm doesn't use DynaLoader.
      */
+    PERL_UNUSED_ARG(cv);
 }
-#if defined(__CYGWIN__) && defined(USEIMPORTLIB)
+
+EXTERN_C
+#if !defined(__CYGWIN__) || defined(USEIMPORTLIB)
 __declspec(dllexport)
 #endif
 void

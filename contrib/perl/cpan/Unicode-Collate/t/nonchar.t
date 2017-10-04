@@ -1,8 +1,11 @@
 
 BEGIN {
-    unless ("A" eq pack('U', 0x41)) {
-	print "1..0 # Unicode::Collate " .
-	    "cannot stringify a Unicode code point\n";
+    unless ('A' eq pack('U', 0x41)) {
+	print "1..0 # Unicode::Collate cannot pack a Unicode code point\n";
+	exit 0;
+    }
+    unless (0x41 == unpack('U', 'A')) {
+	print "1..0 # Unicode::Collate cannot get a Unicode code point\n";
 	exit 0;
     }
     if ($ENV{PERL_CORE}) {
@@ -15,9 +18,11 @@ BEGIN {
 BEGIN {
     use Unicode::Collate;
 
-    unless (exists &Unicode::Collate::bootstrap or 5.008 <= $]) {
-	print "1..0 # skipped: XSUB, or Perl 5.8.0 or later".
-		" needed for this test\n";
+#    unless (exists &Unicode::Collate::bootstrap or 5.008 <= $]) {
+#	print "1..0 # skipped: XSUB, or Perl 5.8.0 or later".
+#		" needed for this test\n";
+    unless (5.008 <= $]) {
+	print "1..0 # skipped: Perl 5.8.0 or later needed for this test\n";
 	print $@;
 	exit;
     }

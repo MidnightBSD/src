@@ -1,6 +1,7 @@
 #
-#  Copyright (c) 1995-2000, Raphael Manfredi
-#  
+#  Copyright (c) 1995-2001, Raphael Manfredi
+#  Copyright (c) 2002-2014 by the Perl 5 Porters
+#
 #  You may redistribute only under the same terms as Perl 5, as specified
 #  in the README file that comes with the distribution.
 #
@@ -21,23 +22,29 @@ package Storable; @ISA = qw(Exporter);
 
 use vars qw($canonical $forgive_me $VERSION);
 
-$VERSION = '2.41';
+$VERSION = '2.62';
 
 BEGIN {
-    if (eval { local $SIG{__DIE__}; require Log::Agent; 1 }) {
+    if (eval {
+        local $SIG{__DIE__};
+        local @INC = @INC;
+        pop @INC if $INC[-1] eq '.';
+        require Log::Agent;
+        1;
+    }) {
         Log::Agent->import;
     }
     #
     # Use of Log::Agent is optional. If it hasn't imported these subs then
     # provide a fallback implementation.
     #
-    if (!exists &logcroak) {
+    unless ($Storable::{logcroak} && *{$Storable::{logcroak}}{CODE}) {
         require Carp;
         *logcroak = sub {
             Carp::croak(@_);
         };
     }
-    if (!exists &logcarp) {
+    unless ($Storable::{logcarp} && *{$Storable::{logcarp}}{CODE}) {
 	require Carp;
         *logcarp = sub {
           Carp::carp(@_);
@@ -112,7 +119,7 @@ sub file_magic {
 
     my $file = shift;
     my $fh = IO::File->new;
-    open($fh, "<". $file) || die "Can't open '$file': $!";
+    open($fh, "<", $file) || die "Can't open '$file': $!";
     binmode($fh);
     defined(sysread($fh, my $buf, 32)) || die "Can't read from '$file': $!";
     close($fh);
@@ -238,9 +245,10 @@ sub _store {
 	logcroak "wrong argument number" unless @_ == 2;	# No @foo in arglist
 	local *FILE;
 	if ($use_locking) {
-		open(FILE, ">>$file") || logcroak "can't write into $file: $!";
+		open(FILE, '>>', $file) || logcroak "can't write into $file: $!";
 		unless (&CAN_FLOCK) {
-			logcarp "Storable::lock_store: fcntl/flock emulation broken on $^O";
+			logcarp
+				"Storable::lock_store: fcntl/flock emulation broken on $^O";
 			return undef;
 		}
 		flock(FILE, LOCK_EX) ||
@@ -248,7 +256,7 @@ sub _store {
 		truncate FILE, 0;
 		# Unlocking will happen when FILE is closed
 	} else {
-		open(FILE, ">$file") || logcroak "can't create $file: $!";
+		open(FILE, '>', $file) || logcroak "can't create $file: $!";
 	}
 	binmode FILE;				# Archaic systems...
 	my $da = $@;				# Don't mess if called from exception handler
@@ -311,7 +319,7 @@ sub _store_fd {
 #
 # freeze
 #
-# Store oject and its hierarchy in memory and return a scalar
+# Store object and its hierarchy in memory and return a scalar
 # containing the result.
 #
 sub freeze {
@@ -365,13 +373,14 @@ sub lock_retrieve {
 sub _retrieve {
 	my ($file, $use_locking) = @_;
 	local *FILE;
-	open(FILE, $file) || logcroak "can't open $file: $!";
+	open(FILE, '<', $file) || logcroak "can't open $file: $!";
 	binmode FILE;							# Archaic systems...
 	my $self;
 	my $da = $@;							# Could be from exception handler
 	if ($use_locking) {
 		unless (&CAN_FLOCK) {
-			logcarp "Storable::lock_store: fcntl/flock emulation broken on $^O";
+			logcarp
+				"Storable::lock_store: fcntl/flock emulation broken on $^O";
 			return undef;
 		}
 		flock(FILE, LOCK_SH) || logcroak "can't get shared lock on $file: $!";
@@ -976,43 +985,43 @@ such.
 
 Here are some code samples showing a possible usage of Storable:
 
-	use Storable qw(store retrieve freeze thaw dclone);
+ use Storable qw(store retrieve freeze thaw dclone);
 
-	%color = ('Blue' => 0.1, 'Red' => 0.8, 'Black' => 0, 'White' => 1);
+ %color = ('Blue' => 0.1, 'Red' => 0.8, 'Black' => 0, 'White' => 1);
 
-	store(\%color, 'mycolors') or die "Can't store %a in mycolors!\n";
+ store(\%color, 'mycolors') or die "Can't store %a in mycolors!\n";
 
-	$colref = retrieve('mycolors');
-	die "Unable to retrieve from mycolors!\n" unless defined $colref;
-	printf "Blue is still %lf\n", $colref->{'Blue'};
+ $colref = retrieve('mycolors');
+ die "Unable to retrieve from mycolors!\n" unless defined $colref;
+ printf "Blue is still %lf\n", $colref->{'Blue'};
 
-	$colref2 = dclone(\%color);
+ $colref2 = dclone(\%color);
 
-	$str = freeze(\%color);
-	printf "Serialization of %%color is %d bytes long.\n", length($str);
-	$colref3 = thaw($str);
+ $str = freeze(\%color);
+ printf "Serialization of %%color is %d bytes long.\n", length($str);
+ $colref3 = thaw($str);
 
 which prints (on my machine):
 
-	Blue is still 0.100000
-	Serialization of %color is 102 bytes long.
+ Blue is still 0.100000
+ Serialization of %color is 102 bytes long.
 
 Serialization of CODE references and deserialization in a safe
 compartment:
 
 =for example begin
 
-	use Storable qw(freeze thaw);
-	use Safe;
-	use strict;
-	my $safe = new Safe;
+ use Storable qw(freeze thaw);
+ use Safe;
+ use strict;
+ my $safe = new Safe;
         # because of opcodes used in "use strict":
-	$safe->permit(qw(:default require));
-	local $Storable::Deparse = 1;
-	local $Storable::Eval = sub { $safe->reval($_[0]) };
-	my $serialized = freeze(sub { 42 });
-	my $code = thaw($serialized);
-	$code->() == 42;
+ $safe->permit(qw(:default require));
+ local $Storable::Deparse = 1;
+ local $Storable::Eval = sub { $safe->reval($_[0]) };
+ my $serialized = freeze(sub { 42 });
+ my $code = thaw($serialized);
+ $code->() == 42;
 
 =for example end
 
@@ -1048,7 +1057,7 @@ untrusted sources!>
 
 If your application requires accepting data from untrusted sources, you
 are best off with a less powerful and more-likely safe serialization format
-and implementation. If your data is sufficently simple, JSON is a good
+and implementation. If your data is sufficiently simple, JSON is a good
 choice and offers maximum interoperability.
 
 =head1 WARNING
@@ -1085,8 +1094,8 @@ deal with them.
 
 The store functions will C<croak> if they run into such references
 unless you set C<$Storable::forgive_me> to some C<TRUE> value. In that
-case, the fatal message is turned in a warning and some
-meaningless string is stored instead.
+case, the fatal message is converted to a warning and some meaningless
+string is stored instead.
 
 Setting C<$Storable::canonical> may not yield frozen strings that
 compare equal due to possible stringification of numbers. When the
@@ -1162,7 +1171,7 @@ correct behaviour.
 What this means is that if you have data written by Storable 1.x running
 on perl 5.6.0 or 5.6.1 configured with 64 bit integers on Unix or Linux
 then by default this Storable will refuse to read it, giving the error
-I<Byte order is not compatible>.  If you have such data then you you
+I<Byte order is not compatible>.  If you have such data then you
 should set C<$Storable::interwork_56_64bit> to a true value to make this
 Storable read and write files with the old header.  You should also
 migrate your data, or any older perl you are communicating with, to this
@@ -1192,7 +1201,8 @@ Thank you to (in chronological order):
 	Salvador Ortiz Garcia <sog@msg.com.mx>
 	Dominic Dunlop <domo@computer.org>
 	Erik Haugan <erik@solbors.no>
-    Benjamin A. Holzman <ben.holzman@grantstreet.com>
+	Benjamin A. Holzman <ben.holzman@grantstreet.com>
+	Reini Urban <rurban@cpanel.net>
 
 for their bug reports, suggestions and contributions.
 
@@ -1210,8 +1220,10 @@ the bill.
 
 =head1 AUTHOR
 
-Storable was written by Raphael Manfredi F<E<lt>Raphael_Manfredi@pobox.comE<gt>>
-Maintenance is now done by the perl5-porters F<E<lt>perl5-porters@perl.orgE<gt>>
+Storable was written by Raphael Manfredi
+F<E<lt>Raphael_Manfredi@pobox.comE<gt>>
+Maintenance is now done by the perl5-porters
+F<E<lt>perl5-porters@perl.orgE<gt>>
 
 Please e-mail us with problems, bug fixes, comments and complaints,
 although if you have compliments you should send them to Raphael.

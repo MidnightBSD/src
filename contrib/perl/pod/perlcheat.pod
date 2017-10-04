@@ -41,12 +41,12 @@ already be overwhelming.
   &&              /i case insensitive   ^      string begin
   || //           /m line based ^$      $      str end (bfr \n)
   .. ...          /s . includes \n      +      one or more
-  ?:              /x ignore wh.space    *      zero or more
+  ?:              /x /xx ign. wh.space  *      zero or more
   = += last goto  /p preserve           ?      zero or one
   , =>            /a ASCII    /aa safe  {3,7}  repeat in range
   list ops        /l locale   /d  dual  |      alternation
   not             /u Unicode            []     character class
-  and             /e evaluate /ee rpts  \b     word boundary
+  and             /e evaluate /ee rpts  \b     boundary
   or xor          /g global             \z     string end
                   /o compile pat once   ()     capture
   DEBUG                                 (?:p)  no capture

@@ -19,7 +19,7 @@ chdir dirname($0);
 $file = basename($0, '.PL');
 $file .= '.com' if $^O eq 'VMS';
 
-open OUT,">$file" or die "Can't create $file: $!";
+open OUT, '>', $file or die "Can't create $file: $!";
 
 print "Extracting $file (with variable substitutions)\n";
 
@@ -35,6 +35,8 @@ $Config{startperl}
 # In the following, perl variables are not expanded during extraction.
 
 print OUT <<'!NO!SUBS!';
+
+BEGIN { pop @INC if $INC[-1] eq '.' }
 
 use strict;
 
@@ -117,8 +119,8 @@ while (defined (my $file = next_file())) {
 	    }
 	}
 
-	open(IN,"$file") || (($Exit = 1),(warn "Can't open $file: $!\n"),next);
-	open(OUT,">$Dest_dir/$outfile") || die "Can't create $outfile: $!\n";
+	open(IN, "<", "$file") || (($Exit = 1),(warn "Can't open $file: $!\n"),next);
+	open(OUT, ">", "$Dest_dir/$outfile") || die "Can't create $outfile: $!\n";
     }
 
     print OUT
@@ -735,7 +737,7 @@ sub queue_includes_from
 
     return if ($file eq "-");
 
-    open HEADER, $file or return;
+    open HEADER, "<", $file or return;
         while (defined($line = <HEADER>)) {
             while (/\\$/) { # Handle continuation lines
                 chop $line;
@@ -769,13 +771,13 @@ sub inc_dirs
 sub build_preamble_if_necessary
 {
     # Increment $VERSION every time this function is modified:
-    my $VERSION     = 3;
+    my $VERSION     = 4;
     my $preamble    = "$Dest_dir/_h2ph_pre.ph";
 
     # Can we skip building the preamble file?
     if (-r $preamble) {
         # Extract version number from first line of preamble:
-        open  PREAMBLE, $preamble or die "Cannot open $preamble:  $!";
+        open  PREAMBLE, "<", $preamble or die "Cannot open $preamble:  $!";
             my $line = <PREAMBLE>;
             $line =~ /(\b\d+\b)/;
         close PREAMBLE            or die "Cannot close $preamble:  $!";
@@ -786,8 +788,13 @@ sub build_preamble_if_necessary
 
     my (%define) = _extract_cc_defines();
 
-    open  PREAMBLE, ">$preamble" or die "Cannot open $preamble:  $!";
+    open  PREAMBLE, ">", $preamble or die "Cannot open $preamble:  $!";
 	print PREAMBLE "# This file was created by h2ph version $VERSION\n";
+        # Prevent non-portable hex constants from warning.
+        #
+        # We still produce an overflow warning if we can't represent
+        # a hex constant as an integer.
+        print PREAMBLE "no warnings qw(portable);\n";
 
 	foreach (sort keys %define) {
 	    if ($opt_D) {
@@ -814,6 +821,18 @@ DEFINE
 		# integer:
 		print PREAMBLE
 		    "unless (defined &$_) { sub $_() { $1 } }\n\n";
+            } elsif ($define{$_} =~ /^([+-]?0x[\da-f]+)U?L{0,2}$/i) {
+                # hex integer
+                # Special cased, since perl warns on hex integers
+                # that can't be represented in a UV.
+                #
+                # This way we get the warning at time of use, so the user
+                # only gets the warning if they happen to use this
+                # platform-specific definition.
+                my $code = $1;
+                $code = "hex('$code')" if length $code > 10;
+                print PREAMBLE
+                    "unless (defined &$_) { sub $_() { $code } }\n\n";
 	    } elsif ($define{$_} =~ /^\w+$/) {
 		my $def = $define{$_};
 		if ($isatype{$def}) {
@@ -866,7 +885,8 @@ h2ph - convert .h C header files to .ph Perl header files
 
 =head1 SYNOPSIS
 
-B<h2ph [-d destination directory] [-r | -a] [-l] [headerfiles]>
+B<h2ph [-d destination directory] [-r | -a] [-l] [-h] [-e] [-D] [-Q]
+[headerfiles]>
 
 =head1 DESCRIPTION
 
@@ -931,6 +951,11 @@ you will see the slightly more helpful
 	[ some error condition ] at filename.ph line nnn
 
 However, the B<.ph> files almost double in size when built using B<-h>.
+
+=item -e
+
+If an error is encountered during conversion, output file will be removed and
+a warning emitted instead of terminating the conversion immediately.
 
 =item -D
 

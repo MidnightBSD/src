@@ -12,30 +12,30 @@ arbitrarily long (up to an internal limit of 251 characters) and
 may contain letters, digits, underscores, or the special sequence
 C<::> or C<'>.  In this case, the part before the last C<::> or
 C<'> is taken to be a I<package qualifier>; see L<perlmod>.
+A Unicode letter that is not ASCII is not considered to be a letter
+unless S<C<"use utf8">> is in effect, and somewhat more complicated
+rules apply; see L<perldata/Identifier parsing> for details.
 
-Perl variable names may also be a sequence of digits or a single
-punctuation or control character.  These names are all reserved for
+Perl variable names may also be a sequence of digits, a single
+punctuation character, or the two-character sequence: C<^> (caret or
+CIRCUMFLEX ACCENT) followed by any one of the characters C<[][A-Z^_?\]>.
+These names are all reserved for
 special uses by Perl; for example, the all-digits names are used
 to hold data captured by backreferences after a regular expression
-match.  Perl has a special syntax for the single-control-character
-names: It understands C<^X> (caret C<X>) to mean the control-C<X>
-character.  For example, the notation C<$^W> (dollar-sign caret
-C<W>) is the scalar variable whose name is the single character
-control-C<W>.  This is better than typing a literal control-C<W>
-into your program.
+match.
 
-Since Perl v5.6.0, Perl variable names may be alphanumeric
-strings that begin with control characters (or better yet, a caret).
-These variables must be written in the form C<${^Foo}>; the braces
-are not optional.  C<${^Foo}> denotes the scalar variable whose
-name is a control-C<F> followed by two C<o>'s.  These variables are
+Since Perl v5.6.0, Perl variable names may also be alphanumeric strings
+preceded by a caret.  These must all be written in the form C<${^Foo}>;
+the braces are not optional.  C<${^Foo}> denotes the scalar variable
+whose name is considered to be a control-C<F> followed by two C<o>'s.
+These variables are
 reserved for future special uses by Perl, except for the ones that
-begin with C<^_> (control-underscore or caret-underscore).  No
-control-character name that begins with C<^_> will acquire a special
+begin with C<^_> (caret-underscore).  No
+name that begins with C<^_> will acquire a special
 meaning in any future version of Perl; such names may therefore be
 used safely in programs.  C<$^_> itself, however, I<is> reserved.
 
-Perl identifiers that begin with digits, control characters, or
+Perl identifiers that begin with digits or
 punctuation characters are exempt from the effects of the C<package>
 declaration and are always forced to be in package C<main>; they are
 also exempt from C<strict 'vars'> errors.  A few other names are also
@@ -61,11 +61,7 @@ Nevertheless, if you wish to use long variable names, you need only say:
 
 at the top of your program.  This aliases all the short names to the long
 names in the current package.  Some even have medium names, generally
-borrowed from B<awk>.  To avoid a performance hit, if you don't need the
-C<$PREMATCH>, C<$MATCH>, or C<$POSTMATCH> it's best to use the C<English>
-module without them:
-
-    use English '-no_match_vars';
+borrowed from B<awk>.  For more info, please see L<English>.
 
 Before you continue, note the sort order for variables.  In general, we
 first list the variables in case-insensitive, almost-lexigraphical
@@ -169,7 +165,7 @@ X<@_> X<@ARG>
 
 Within a subroutine the array C<@_> contains the parameters passed to
 that subroutine.  Inside a subroutine, C<@_> is the default array for
-the array operators C<push>, C<pop>, C<shift>, and C<unshift>.
+the array operators C<pop> and C<shift>.
 
 See L<perlsub>.
 
@@ -218,7 +214,7 @@ semantics, which are POSIX-like.
 
 To see if your system is affected by this discrepancy check if
 C<getconf GNU_LIBPTHREAD_VERSION | grep -q NPTL> returns a false
-value. NTPL threads preserve the POSIX semantics.
+value.  NTPL threads preserve the POSIX semantics.
 
 Mnemonic: same as shells.
 
@@ -374,19 +370,19 @@ X<$;> X<$SUBSEP> X<SUBSCRIPT_SEPARATOR>
 The subscript separator for multidimensional array emulation.  If you
 refer to a hash element as
 
-    $foo{$a,$b,$c}
+    $foo{$x,$y,$z}
 
 it really means
 
-    $foo{join($;, $a, $b, $c)}
+    $foo{join($;, $x, $y, $z)}
 
 But don't put
 
-    @foo{$a,$b,$c}	# a slice--note the @
+    @foo{$x,$y,$z}	# a slice--note the @
 
 which means
 
-    ($foo{$a},$foo{$b},$foo{$c})
+    ($foo{$x},$foo{$y},$foo{$z})
 
 Default is "\034", the same as SUBSEP in B<awk>.  If your keys contain
 binary data there might not be any safe value for C<$;>.
@@ -413,6 +409,67 @@ X<%ENV>
 The hash C<%ENV> contains your current environment.  Setting a
 value in C<ENV> changes the environment for any child processes
 you subsequently C<fork()> off.
+
+As of v5.18.0, both keys and values stored in C<%ENV> are stringified.
+
+    my $foo = 1;
+    $ENV{'bar'} = \$foo;
+    if( ref $ENV{'bar'} ) {
+        say "Pre 5.18.0 Behaviour";
+    } else {
+        say "Post 5.18.0 Behaviour";
+    }
+
+Previously, only child processes received stringified values:
+
+    my $foo = 1;
+    $ENV{'bar'} = \$foo;
+
+    # Always printed 'non ref'
+    system($^X, '-e',
+           q/print ( ref $ENV{'bar'}  ? 'ref' : 'non ref' ) /);
+
+This happens because you can't really share arbitrary data structures with
+foreign processes.
+
+=item $OLD_PERL_VERSION
+
+=item $]
+X<$]> X<$OLD_PERL_VERSION>
+
+The revision, version, and subversion of the Perl interpreter, represented
+as a decimal of the form 5.XXXYYY, where XXX is the version / 1e3 and YYY
+is the subversion / 1e6.  For example, Perl v5.10.1 would be "5.010001".
+
+This variable can be used to determine whether the Perl interpreter
+executing a script is in the right range of versions:
+
+    warn "No PerlIO!\n" if $] lt '5.008';
+
+When comparing C<$]>, string comparison operators are B<highly
+recommended>.  The inherent limitations of binary floating point
+representation can sometimes lead to incorrect comparisons for some
+numbers on some architectures.
+
+See also the documentation of C<use VERSION> and C<require VERSION>
+for a convenient way to fail if the running Perl interpreter is too old.
+
+See L</$^V> for a representation of the Perl version as a L<version>
+object, which allows more flexible string comparisons.
+
+The main advantage of C<$]> over C<$^V> is that it works the same on any
+version of Perl.  The disadvantages are that it can't easily be compared
+to versions in other formats (e.g. literal v-strings, "v1.2.3" or
+version objects) and numeric comparisons can occasionally fail; it's good
+for string literal version checks and bad for comparing to a variable
+that hasn't been sanity-checked.
+
+The C<$OLD_PERL_VERSION> form was added in Perl v5.20.0 for historical
+reasons but its use is discouraged. (If your reason to use C<$]> is to
+run code on old perls then referring to it as C<$OLD_PERL_VERSION> would
+be self-defeating.)
+
+Mnemonic: Is this version of perl in the right bracket?
 
 =item $SYSTEM_FD_MAX
 
@@ -446,9 +503,10 @@ initially consists of the arguments to any B<-I> command-line
 switches, followed by the default Perl library, probably
 F</usr/local/lib/perl>, followed by ".", to represent the current
 directory.  ("." will not be appended if taint checks are enabled,
-either by C<-T> or by C<-t>.)  If you need to modify this at runtime,
-you should use the C<use lib> pragma to get the machine-dependent
-library properly loaded also:
+either by C<-T> or by C<-t>, or if configured not to do so by the
+C<-Ddefault_inc_excludes_dot> compile time option.)  If you need to
+modify this at runtime, you should use the C<use lib> pragma to get
+the machine-dependent library properly loaded also:
 
     use lib '/mypath/libdir/';
     use SomeMod;
@@ -482,6 +540,19 @@ The current value of the inplace-edit extension.  Use C<undef> to disable
 inplace editing.
 
 Mnemonic: value of B<-i> switch.
+
+=item @ISA
+X<@ISA>
+
+Each package contains a special array called C<@ISA> which contains a list
+of that class's parent classes, if any. This array is simply a list of
+scalars, each of which is a string that corresponds to a package name. The
+array is examined when Perl does method resolution, which is covered in
+L<perlobj>.
+
+To load packages while adding them to C<@ISA>, see the L<parent> pragma. The
+discouraged L<base> pragma does this as well, but should not be used except
+when compatibility with the discouraged L<fields> pragma is required.
 
 =item $^M
 X<$^M>
@@ -589,13 +660,12 @@ or a C<die()>.  The C<__DIE__> handler is explicitly disabled during
 the call, so that you can die from a C<__DIE__> handler.  Similarly
 for C<__WARN__>.
 
-Due to an implementation glitch, the C<$SIG{__DIE__}> hook is called
-even inside an C<eval()>.  Do not use this to rewrite a pending
-exception in C<$@>, or as a bizarre substitute for overriding
-C<CORE::GLOBAL::die()>.  This strange action at a distance may be fixed
-in a future release so that C<$SIG{__DIE__}> is only called if your
-program is about to exit, as was the original intent.  Any other use is
-deprecated.
+The C<$SIG{__DIE__}> hook is called even inside an C<eval()>. It was
+never intended to happen this way, but an implementation glitch made
+this possible. This used to be deprecated, as it allowed strange action
+at a distance like rewriting a pending exception in C<$@>. Plans to
+rectify this have been scrapped, as users found that rewriting a 
+pending exception is actually a useful feature, and not a bug.
 
 C<__DIE__>/C<__WARN__> handlers are very special in one respect: they
 may be called to report (probable) errors found by the parser.  In such
@@ -638,30 +708,36 @@ and B<-C> filetests are based on this value.
 X<$^V> X<$PERL_VERSION>
 
 The revision, version, and subversion of the Perl interpreter,
-represented as a C<version> object.
+represented as a L<version> object.
 
 This variable first appeared in perl v5.6.0; earlier versions of perl
 will see an undefined value.  Before perl v5.10.0 C<$^V> was represented
-as a v-string.
+as a v-string rather than a L<version> object.
 
 C<$^V> can be used to determine whether the Perl interpreter executing
 a script is in the right range of versions.  For example:
 
     warn "Hashes not randomized!\n" if !$^V or $^V lt v5.8.1
 
-To convert C<$^V> into its string representation use C<sprintf()>'s
-C<"%vd"> conversion:
+While version objects overload stringification, to portably convert
+C<$^V> into its string representation, use C<sprintf()>'s C<"%vd">
+conversion, which works for both v-strings or version objects:
 
     printf "version is v%vd\n", $^V;  # Perl's version
 
 See the documentation of C<use VERSION> and C<require VERSION>
 for a convenient way to fail if the running Perl interpreter is too old.
 
-See also C<$]> for an older representation of the Perl version.
+See also C<L</$]>> for a decimal representation of the Perl version.
 
-This variable was added in Perl v5.6.0.
+The main advantage of C<$^V> over C<$]> is that, for Perl v5.10.0 or
+later, it overloads operators, allowing easy comparison against other
+version representations (e.g. decimal, literal v-string, "v1.2.3", or
+objects).  The disadvantage is that prior to v5.10.0, it was only a
+literal v-string, which can't be easily printed or compared, whereas
+the behavior of C<$]> is unchanged on all versions of Perl.
 
-Mnemonic: use ^V for Version Control.
+Mnemonic: use ^V for a version object.
 
 =item ${^WIN32_SLOPPY_STAT}
 X<${^WIN32_SLOPPY_STAT}> X<sitecustomize> X<sitecustomize.pl>
@@ -783,35 +859,91 @@ we have not made another match:
     $1 is Mutt; $2 is Jeff
     $1 is Wallace; $2 is Grommit
 
-Due to an unfortunate accident of Perl's implementation, C<use
-English> imposes a considerable performance penalty on all regular
-expression matches in a program because it uses the C<$`>, C<$&>, and
-C<$'>, regardless of whether they occur in the scope of C<use
-English>.  For that reason, saying C<use English> in libraries is
-strongly discouraged unless you import it without the match variables:
+=head3 Performance issues
 
-    use English '-no_match_vars'
+Traditionally in Perl, any use of any of the three variables  C<$`>, C<$&>
+or C<$'> (or their C<use English> equivalents) anywhere in the code, caused
+all subsequent successful pattern matches to make a copy of the matched
+string, in case the code might subsequently access one of those variables.
+This imposed a considerable performance penalty across the whole program,
+so generally the use of these variables has been discouraged.
 
-The C<Devel::NYTProf> and C<Devel::FindAmpersand>
-modules can help you find uses of these
-problematic match variables in your code.
+In Perl 5.6.0 the C<@-> and C<@+> dynamic arrays were introduced that
+supply the indices of successful matches. So you could for example do
+this:
 
-Since Perl v5.10.0, you can use the C</p> match operator flag and the
-C<${^PREMATCH}>, C<${^MATCH}>, and C<${^POSTMATCH}> variables instead
-so you only suffer the performance penalties.
+    $str =~ /pattern/;
+
+    print $`, $&, $'; # bad: perfomance hit
+
+    print             # good: no perfomance hit
+	substr($str, 0,     $-[0]),
+	substr($str, $-[0], $+[0]-$-[0]),
+	substr($str, $+[0]);
+
+In Perl 5.10.0 the C</p> match operator flag and the C<${^PREMATCH}>,
+C<${^MATCH}>, and C<${^POSTMATCH}> variables were introduced, that allowed
+you to suffer the penalties only on patterns marked with C</p>.
+
+In Perl 5.18.0 onwards, perl started noting the presence of each of the
+three variables separately, and only copied that part of the string
+required; so in
+
+    $`; $&; "abcdefgh" =~ /d/
+
+perl would only copy the "abcd" part of the string. That could make a big
+difference in something like
+
+    $str = 'x' x 1_000_000;
+    $&; # whoops
+    $str =~ /x/g # one char copied a million times, not a million chars
+
+In Perl 5.20.0 a new copy-on-write system was enabled by default, which
+finally fixes all performance issues with these three variables, and makes
+them safe to use anywhere.
+
+The C<Devel::NYTProf> and C<Devel::FindAmpersand> modules can help you
+find uses of these problematic match variables in your code.
 
 =over 8
 
 =item $<I<digits>> ($1, $2, ...)
-X<$1> X<$2> X<$3>
+X<$1> X<$2> X<$3> X<$I<digits>>
 
 Contains the subpattern from the corresponding set of capturing
 parentheses from the last successful pattern match, not counting patterns
 matched in nested blocks that have been exited already.
 
+Note there is a distinction between a capture buffer which matches
+the empty string a capture buffer which is optional. Eg, C<(x?)> and
+C<(x)?> The latter may be undef, the former not.
+
 These variables are read-only and dynamically-scoped.
 
 Mnemonic: like \digits.
+
+=item @{^CAPTURE}
+X<@{^CAPTURE}> X<@^CAPTURE>
+
+An array which exposes the contents of the capture buffers, if any, of
+the last successful pattern match, not counting patterns matched
+in nested blocks that have been exited already.
+
+Note that the 0 index of @{^CAPTURE} is equivalent to $1, the 1 index
+is equivalent to $2, etc.
+
+    if ("foal"=~/(.)(.)(.)(.)/) {
+        print join "-", @{^CAPTURE};
+    }
+
+should output "f-o-a-l".
+
+See also L</$I<digits>>, L</%{^CAPTURE}> and L</%{^CAPTURE_ALL}>.
+
+Note that unlike most other regex magic variables there is no single
+letter equivalent to C<@{^CAPTURE}>.
+
+This variable was added in 5.25.7
 
 =item $MATCH
 
@@ -822,11 +954,8 @@ The string matched by the last successful pattern match (not counting
 any matches hidden within a BLOCK or C<eval()> enclosed by the current
 BLOCK).
 
-The use of this variable anywhere in a program imposes a considerable
-performance penalty on all regular expression matches.  To avoid this
-penalty, you can extract the same substring by using L</@->.  Starting
-with Perl v5.10.0, you can use the C</p> match flag and the C<${^MATCH}>
-variable to do the same thing for particular match operations.
+See L</Performance issues> above for the serious performance implications
+of using this variable (even once) in your code.
 
 This variable is read-only and dynamically-scoped.
 
@@ -836,9 +965,14 @@ Mnemonic: like C<&> in some editors.
 X<${^MATCH}>
 
 This is similar to C<$&> (C<$MATCH>) except that it does not incur the
-performance penalty associated with that variable, and is only guaranteed
+performance penalty associated with that variable.
+
+See L</Performance issues> above.
+
+In Perl v5.18 and earlier, it is only guaranteed
 to return a defined value when the pattern was compiled or executed with
-the C</p> modifier.
+the C</p> modifier.  In Perl v5.20, the C</p> modifier does nothing, so
+C<${^MATCH}> does the same thing as C<$MATCH>.
 
 This variable was added in Perl v5.10.0.
 
@@ -853,12 +987,8 @@ The string preceding whatever was matched by the last successful
 pattern match, not counting any matches hidden within a BLOCK or C<eval>
 enclosed by the current BLOCK.
 
-The use of this variable anywhere in a program imposes a considerable
-performance penalty on all regular expression matches.  To avoid this
-penalty, you can extract the same substring by using L</@->.  Starting
-with Perl v5.10.0, you can use the C</p> match flag and the
-C<${^PREMATCH}> variable to do the same thing for particular match
-operations.
+See L</Performance issues> above for the serious performance implications
+of using this variable (even once) in your code.
 
 This variable is read-only and dynamically-scoped.
 
@@ -868,11 +998,16 @@ Mnemonic: C<`> often precedes a quoted string.
 X<$`> X<${^PREMATCH}>
 
 This is similar to C<$`> ($PREMATCH) except that it does not incur the
-performance penalty associated with that variable, and is only guaranteed
-to return a defined value when the pattern was compiled or executed with
-the C</p> modifier.
+performance penalty associated with that variable.
 
-This variable was added in Perl v5.10.0
+See L</Performance issues> above.
+
+In Perl v5.18 and earlier, it is only guaranteed
+to return a defined value when the pattern was compiled or executed with
+the C</p> modifier.  In Perl v5.20, the C</p> modifier does nothing, so
+C<${^PREMATCH}> does the same thing as C<$PREMATCH>.
+
+This variable was added in Perl v5.10.0.
 
 This variable is read-only and dynamically-scoped.
 
@@ -889,12 +1024,8 @@ enclosed by the current BLOCK).  Example:
     /def/;
     print "$`:$&:$'\n";  	# prints abc:def:ghi
 
-The use of this variable anywhere in a program imposes a considerable
-performance penalty on all regular expression matches.
-To avoid this penalty, you can extract the same substring by
-using L</@->.  Starting with Perl v5.10.0, you can use the C</p> match flag
-and the C<${^POSTMATCH}> variable to do the same thing for particular
-match operations.
+See L</Performance issues> above for the serious performance implications
+of using this variable (even once) in your code.
 
 This variable is read-only and dynamically-scoped.
 
@@ -904,9 +1035,14 @@ Mnemonic: C<'> often follows a quoted string.
 X<${^POSTMATCH}> X<$'> X<$POSTMATCH>
 
 This is similar to C<$'> (C<$POSTMATCH>) except that it does not incur the
-performance penalty associated with that variable, and is only guaranteed
+performance penalty associated with that variable.
+
+See L</Performance issues> above.
+
+In Perl v5.18 and earlier, it is only guaranteed
 to return a defined value when the pattern was compiled or executed with
-the C</p> modifier.
+the C</p> modifier.  In Perl v5.20, the C</p> modifier does nothing, so
+C<${^POSTMATCH}> does the same thing as C<$POSTMATCH>.
 
 This variable was added in Perl v5.10.0.
 
@@ -967,10 +1103,12 @@ examples given for the C<@-> variable.
 
 This variable was added in Perl v5.6.0.
 
+=item %{^CAPTURE}
+
 =item %LAST_PAREN_MATCH
 
 =item %+
-X<%+> X<%LAST_PAREN_MATCH>
+X<%+> X<%LAST_PAREN_MATCH> X<%{^CAPTURE}>
 
 Similar to C<@+>, the C<%+> hash allows access to the named capture
 buffers, should they exist, in the last successful match in the
@@ -992,7 +1130,8 @@ iterative access to them via C<each> may have unpredictable results.
 Likewise, if the last successful match changes, then the results may be
 surprising.
 
-This variable was added in Perl v5.10.0.
+This variable was added in Perl v5.10.0. The C<%{^CAPTURE}> alias was
+added in 5.25.7.
 
 This variable is read-only and dynamically-scoped.
 
@@ -1040,10 +1179,11 @@ After a match against some variable C<$var>:
 
 This variable was added in Perl v5.6.0.
 
-=item %LAST_MATCH_START
+=item %{^CAPTURE_ALL}
+X<%{^CAPTURE_ALL}>
 
 =item %-
-X<%-> X<%LAST_MATCH_START>
+X<%->
 
 Similar to C<%+>, this variable allows access to the named capture groups
 in the last successful match in the currently active dynamic scope.  To
@@ -1086,7 +1226,8 @@ iterative access to them via C<each> may have unpredictable results.
 Likewise, if the last successful match changes, then the results may be
 surprising.
 
-This variable was added in Perl v5.10.0.
+This variable was added in Perl v5.10.0. The C<%{^CAPTURE_ALL}> alias was
+added in 5.25.7.
 
 This variable is read-only and dynamically-scoped.
 
@@ -1353,7 +1494,12 @@ not reading from a record-oriented file (or your OS doesn't have
 record-oriented files), then you'll likely get a full chunk of data
 with every read.  If a record is larger than the record size you've
 set, you'll get the record back in pieces.  Trying to set the record
-size to zero or less will cause reading in the (rest of the) whole file.
+size to zero or less is deprecated and will cause $/ to have the value
+of "undef", which will cause reading in the (rest of the) whole file.
+
+As of 5.19.9 setting C<$/> to any other form of reference will throw a
+fatal exception. This is in preparation for supporting new ways to set
+C<$/> in the future.
 
 On VMS only, record reads bypass PerlIO layers and any associated
 buffering, so you must not mix record and non-record reads on the
@@ -1569,12 +1715,12 @@ Under a few operating systems, C<$^E> may contain a more verbose error
 indicator, such as in this case, "CDROM tray not closed."  Systems that
 do not support extended error messages leave C<$^E> the same as C<$!>.
 
-Finally, C<$?> may be set to non-0 value if the external program
+Finally, C<$?> may be set to a non-0 value if the external program
 F</cdrom/install> fails.  The upper eight bits reflect specific error
 conditions encountered by the program (the program's C<exit()> value).
 The lower eight bits reflect mode of failure, like signal death and
 core dump information.  See L<wait(2)> for details.  In contrast to
-C<$!> and C<$^E>, which are set only if error condition is detected,
+C<$!> and C<$^E>, which are set only if an error condition is detected,
 the variable C<$?> is set on each C<wait> or pipe C<close>,
 overwriting the old value.  This is more like C<$@>, which on every
 C<eval()> is always set on failure and cleared on success.
@@ -1604,7 +1750,7 @@ This variable was added in Perl v5.10.0.
 X<$^E> X<$EXTENDED_OS_ERROR>
 
 Error information specific to the current operating system.  At the
-moment, this differs from C<$!> under only VMS, OS/2, and Win32 (and
+moment, this differs from C<L</$!>> under only VMS, OS/2, and Win32 (and
 for MacPerl).  On all other platforms, C<$^E> is always just the same
 as C<$!>.
 
@@ -1622,7 +1768,7 @@ from within the Win32 API.  Most Win32-specific code will report errors
 via C<$^E>.  ANSI C and Unix-like calls set C<errno> and so most
 portable Perl code will report errors via C<$!>.
 
-Caveats mentioned in the description of C<$!> generally apply to
+Caveats mentioned in the description of C<L</$!>> generally apply to
 C<$^E>, also.
 
 This variable was added in Perl 5.003.
@@ -1722,10 +1868,12 @@ Each element of C<%!> has a true value only if C<$!> is set to that
 value.  For example, C<$!{ENOENT}> is true if and only if the current
 value of C<$!> is C<ENOENT>; that is, if the most recent error was "No
 such file or directory" (or its moral equivalent: not all operating
-systems give that exact error, and certainly not all languages).  To
-check if a particular key is meaningful on your system, use C<exists
-$!{the_key}>; for a list of legal keys, use C<keys %!>.  See L<Errno>
-for more information, and also see L</$!>.
+systems give that exact error, and certainly not all languages).  The
+specific true value is not guaranteed, but in the past has generally
+been the numeric value of C<$!>.  To check if a particular key is
+meaningful on your system, use C<exists $!{the_key}>; for a list of legal
+keys, use C<keys %!>.  See L<Errno> for more information, and also see
+L</$!>.
 
 This variable was added in Perl 5.005.
 
@@ -1767,17 +1915,18 @@ Mnemonic: similar to B<sh> and B<ksh>.
 =item $@
 X<$@> X<$EVAL_ERROR>
 
-The Perl syntax error message from the
-last C<eval()> operator.  If C<$@> is
-the null string, the last C<eval()> parsed and executed correctly
-(although the operations you invoked may have failed in the normal
-fashion).
+The Perl error from the last C<eval> operator, i.e. the last exception that
+was caught.  For C<eval BLOCK>, this is either a runtime error message or the
+string or reference C<die> was called with.  The C<eval STRING> form also
+catches syntax errors and other compile time exceptions.
+
+If no error occurs, C<eval> sets C<$@> to the empty string.
 
 Warning messages are not collected in this variable.  You can, however,
 set up a routine to process warnings by setting C<$SIG{__WARN__}> as
 described in L</%SIG>.
 
-Mnemonic: Where was the syntax error "at"?
+Mnemonic: Where was the error "at"?
 
 =back
 
@@ -1806,20 +1955,41 @@ This variable was added in Perl v5.6.0.
 X<$^D> X<$DEBUGGING>
 
 The current value of the debugging flags.  May be read or set.  Like its
-command-line equivalent, you can use numeric or symbolic values, eg
-C<$^D = 10> or C<$^D = "st">.
+L<command-line equivalent|perlrun/B<-D>I<letters>>, you can use numeric
+or symbolic values, e.g. C<$^D = 10> or C<$^D = "st">.  See
+L<perlrun/B<-D>I<number>>.  The contents of this variable also affects the
+debugger operation.  See L<perldebguts/Debugger Internals>.
 
 Mnemonic: value of B<-D> switch.
 
 =item ${^ENCODING}
 X<${^ENCODING}>
 
-The I<object reference> to the C<Encode> object that is used to convert
-the source code to Unicode.  Thanks to this variable your Perl script
-does not have to be written in UTF-8.  Default is I<undef>.  The direct
-manipulation of this variable is highly discouraged.
+This variable is no longer supported.
 
-This variable was added in Perl 5.8.2.
+It used to hold the I<object reference> to the C<Encode> object that was
+used to convert the source code to Unicode.
+
+Its purpose was to allow your non-ASCII Perl
+scripts not to have to be written in UTF-8; this was
+useful before editors that worked on UTF-8 encoded text were common, but
+that was long ago.  It caused problems, such as affecting the operation
+of other modules that weren't expecting it, causing general mayhem.
+
+If you need something like this functionality, it is recommended that use
+you a simple source filter, such as L<Filter::Encoding>.
+
+If you are coming here because code of yours is being adversely affected
+by someone's use of this variable, you can usually work around it by
+doing this:
+
+ local ${^ENCODING};
+
+near the beginning of the functions that are getting broken.  This
+undefines the variable during the scope of execution of the including
+function.
+
+This variable was added in Perl 5.8.2 and removed in 5.26.0.
 
 =item ${^GLOBAL_PHASE}
 X<${^GLOBAL_PHASE}>
@@ -1982,7 +2152,9 @@ X<%^H>
 
 The C<%^H> hash provides the same scoping semantic as C<$^H>.  This makes
 it useful for implementation of lexically scoped pragmas.  See
-L<perlpragma>.
+L<perlpragma>.   All the entries are stringified when accessed at
+runtime, so only simple values can be accommodated.  This means no
+pointers to objects, for example.
 
 When putting items into C<%^H>, in order to avoid conflicting with other
 users of the hash there is a convention regarding which keys to use.
@@ -2058,6 +2230,14 @@ were compiled.
 
 Save source code lines into C<@{"_<$filename"}>.
 
+=item 0x800
+
+When saving source, include evals that generate no subroutines.
+
+=item 0x1000
+
+When saving source, include source that did not compile.
+
 =back
 
 Some bits may be relevant at compile-time only, some at
@@ -2123,10 +2303,8 @@ See L<perldiag> for details about error messages.
 
 =over 8
 
-=item $OFMT
-
 =item $#
-X<$#> X<$OFMT>
+X<$#>
 
 C<$#> was a variable that could be used to format printed numbers.
 After a deprecation cycle, its magic was removed in Perl v5.10.0 and
@@ -2152,10 +2330,8 @@ Deprecated in Perl 5.
 
 Removed in Perl v5.10.0.
 
-=item $ARRAY_BASE
-
 =item $[
-X<$[> X<$ARRAY_BASE>
+X<$[>
 
 This variable stores the index of the first element in an array, and
 of the first character in a substring.  The default is 0, but you could
@@ -2182,28 +2358,6 @@ other value will produce an error.
 Mnemonic: [ begins subscripts.
 
 Deprecated in Perl v5.12.0.
-
-=item $OLD_PERL_VERSION
-
-=item $]
-X<$]> X<$OLD_PERL_VERSION>
-
-See L</$^V> for a more modern representation of the Perl version that allows
-accurate string comparisons.
-
-The version + patchlevel / 1000 of the Perl interpreter.  This variable
-can be used to determine whether the Perl interpreter executing a
-script is in the right range of versions:
-
-    warn "No checksumming!\n" if $] < 3.019;
-
-The floating point representation can sometimes lead to inaccurate
-numeric comparisons.
-
-See also the documentation of C<use VERSION> and C<require VERSION>
-for a convenient way to fail if the running Perl interpreter is too old.
-
-Mnemonic: Is this version of perl in the right bracket?
 
 =back
 

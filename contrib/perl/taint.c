@@ -27,29 +27,22 @@ void
 Perl_taint_proper(pTHX_ const char *f, const char *const s)
 {
 #if defined(HAS_SETEUID) && defined(DEBUGGING)
-    dVAR;
-
     PERL_ARGS_ASSERT_TAINT_PROPER;
 
-#   if Uid_t_size == 1
     {
-	const UV  uid = PerlProc_getuid();
-	const UV euid = PerlProc_geteuid();
+	const Uid_t  uid = PerlProc_getuid();
+	const Uid_t euid = PerlProc_geteuid();
 
+#if Uid_t_sign == 1 /* uid_t is unsigned. */
 	DEBUG_u(PerlIO_printf(Perl_debug_log,
-			       "%s %d %"UVuf" %"UVuf"\n",
-			       s, TAINT_get, uid, euid));
-    }
-#   else
-    {
-	const IV  uid = PerlProc_getuid();
-	const IV euid = PerlProc_geteuid();
-
+                              "%s %d %" UVuf " %" UVuf "\n",
+                              s, TAINT_get, (UV)uid, (UV)euid));
+#else /* uid_t is signed (Uid_t_sign == -1), or don't know. */
 	DEBUG_u(PerlIO_printf(Perl_debug_log,
-			       "%s %d %"IVdf" %"IVdf"\n",
-			       s, TAINT_get, uid, euid));
+                              "%s %d %" IVdf " %" IVdf "\n",
+                              s, TAINT_get, (IV)uid, (IV)euid));
+#endif
     }
-#   endif
 #endif
 
     if (TAINT_get) {
@@ -65,21 +58,26 @@ Perl_taint_proper(pTHX_ const char *f, const char *const s)
             ug = " while running with -t switch";
         else
 	    ug = " while running with -T switch";
+
+        /* XXX because taint_proper adds extra format args, we can't
+         * get the caller to check properly; o we just silence the warning
+         * and hope the callers aren't naughty */
+        GCC_DIAG_IGNORE(-Wformat-nonliteral);
 	if (PL_unsafe || TAINT_WARN_get) {
 	    Perl_ck_warner_d(aTHX_ packWARN(WARN_TAINT), f, s, ug);
         }
         else {
             Perl_croak(aTHX_ f, s, ug);
         }
+        GCC_DIAG_RESTORE;
+
     }
 }
 
 void
 Perl_taint_env(pTHX)
 {
-    dVAR;
     SV** svp;
-    MAGIC* mg;
     const char* const *e;
     static const char* const misc_env[] = {
 	"IFS",		/* most shells' inter-field separators */
@@ -122,6 +120,7 @@ Perl_taint_env(pTHX)
     STRLEN len = 8; /* strlen(name)  */
 
     while (1) {
+        MAGIC* mg;
 	if (i)
 	    len = my_sprintf(name,"DCL$PATH;%d", i);
 	svp = hv_fetch(GvHVn(PL_envgv), name, len, FALSE);
@@ -142,6 +141,7 @@ Perl_taint_env(pTHX)
 
     svp = hv_fetchs(GvHVn(PL_envgv),"PATH",FALSE);
     if (svp && *svp) {
+        MAGIC* mg;
 	if (SvTAINTED(*svp)) {
 	    TAINT;
 	    taint_proper("Insecure %s%s", "$ENV{PATH}");
@@ -186,11 +186,5 @@ Perl_taint_env(pTHX)
 }
 
 /*
- * Local variables:
- * c-indentation-style: bsd
- * c-basic-offset: 4
- * indent-tabs-mode: nil
- * End:
- *
  * ex: set ts=8 sts=4 sw=4 et:
  */

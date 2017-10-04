@@ -27,7 +27,7 @@ BEGIN {
 
     mkpath [$Auto_Dir];
 
-    open(MOD, ">$Module") || DIE $!;
+    open(MOD, '>', $Module) || DIE $!;
     print MOD <<'MODULE';
 package Yup;
 $Plan = 9;
@@ -38,6 +38,9 @@ MODULE
 }
 
 END {
+    # rmtree() can indirectly load the XS object for Win32, ensure
+    # we have our original sane @INC
+    local @INC = @OrigINC;
     # cleanup the auto/ directory we created.
     rmtree([$lib_dir[0]]);
 }
@@ -62,7 +65,7 @@ BEGIN {
     is( eval { do 'Yup.pm'  }, 42,  'do() works' );
     ok( eval { require Yup; },      '   require()' );
     ok( eval "use Yup; 1;",         '   use()' );
-    is( $@, '' );
+    is( $@, '', 'last "eval()" parsed and executed correctly' );
 
     is_deeply(\@OrigINC, \@lib::ORIG_INC,    '@lib::ORIG_INC' );
 }

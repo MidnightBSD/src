@@ -4,30 +4,30 @@ use strict ;
 use warnings;
 use bytes;
 
-use IO::Compress::Base::Common  2.060 qw(:Status );
-use IO::Compress::RawDeflate 2.060 ();
-use IO::Compress::Adapter::Deflate 2.060 ;
-use IO::Compress::Adapter::Identity 2.060 ;
-use IO::Compress::Zlib::Extra 2.060 ;
-use IO::Compress::Zip::Constants 2.060 ;
+use IO::Compress::Base::Common  2.074 qw(:Status );
+use IO::Compress::RawDeflate 2.074 ();
+use IO::Compress::Adapter::Deflate 2.074 ;
+use IO::Compress::Adapter::Identity 2.074 ;
+use IO::Compress::Zlib::Extra 2.074 ;
+use IO::Compress::Zip::Constants 2.074 ;
 
 use File::Spec();
 use Config;
 
-use Compress::Raw::Zlib  2.060 (); 
+use Compress::Raw::Zlib  2.074 (); 
 
 BEGIN
 {
     eval { require IO::Compress::Adapter::Bzip2 ; 
-           import  IO::Compress::Adapter::Bzip2 2.060 ; 
+           import  IO::Compress::Adapter::Bzip2 2.074 ; 
            require IO::Compress::Bzip2 ; 
-           import  IO::Compress::Bzip2 2.060 ; 
+           import  IO::Compress::Bzip2 2.074 ; 
          } ;
          
     eval { require IO::Compress::Adapter::Lzma ; 
-           import  IO::Compress::Adapter::Lzma 2.060 ; 
+           import  IO::Compress::Adapter::Lzma 2.074 ; 
            require IO::Compress::Lzma ; 
-           import  IO::Compress::Lzma 2.060 ; 
+           import  IO::Compress::Lzma 2.074 ; 
          } ;
 }
 
@@ -36,10 +36,10 @@ require Exporter ;
 
 our ($VERSION, @ISA, @EXPORT_OK, %EXPORT_TAGS, %DEFLATE_CONSTANTS, $ZipError);
 
-$VERSION = '2.060';
+$VERSION = '2.074';
 $ZipError = '';
 
-@ISA = qw(Exporter IO::Compress::RawDeflate);
+@ISA = qw(IO::Compress::RawDeflate Exporter);
 @EXPORT_OK = qw( $ZipError zip ) ;
 %EXPORT_TAGS = %IO::Compress::RawDeflate::DEFLATE_CONSTANTS ;
 
@@ -275,6 +275,9 @@ sub mkHeader
         my $x = '';
         $x .= pack "V V", 0, 0 ; # uncompressedLength   
         $x .= pack "V V", 0, 0 ; # compressedLength   
+        
+        # Zip64 needs to be first in extra field to workaround a Windows Explorer Bug
+        # See http://www.info-zip.org/phpBB3/viewtopic.php?f=3&t=440 for details
         $extra .= IO::Compress::Zlib::Extra::mkSubField(ZIP_EXTRA_ID_ZIP64, $x);
     }
 
@@ -397,13 +400,10 @@ sub mkHeader
     }
     
     $ctl .= $filename ;
-    $ctl .= $ctlExtra ;
-    $ctl .= $comment ;
 
     *$self->{ZipData}{Offset}->add32(length $hdr) ;
 
-    *$self->{ZipData}{CentralHeader} = $ctl;
-
+    *$self->{ZipData}{CentralHeader} = [ $ctl, $ctlExtra, $comment];
 
     return $hdr;
 }
@@ -420,7 +420,7 @@ sub mkTrailer
         $crc32 = pack "V", *$self->{ZipData}{CRC32};
     }
 
-    my $ctl = *$self->{ZipData}{CentralHeader} ;
+    my ($ctl, $ctlExtra, $comment) = @{ *$self->{ZipData}{CentralHeader} };   
 
     my $sizes ;
     if (! *$self->{ZipData}{Zip64}) {
@@ -433,7 +433,6 @@ sub mkTrailer
     }
 
     my $data = $crc32 . $sizes ;
-
 
     my $xtrasize  = *$self->{UnCompSize}->getPacked_V64() ; # Uncompressed size
        $xtrasize .= *$self->{CompSize}->getPacked_V64() ;   # Compressed size
@@ -456,38 +455,44 @@ sub mkTrailer
 
     substr($ctl, 16, length $crc32) = $crc32 ;
 
-    my $x = '';
+    my $zip64Payload = '';
 
-    # uncompressed length
-    if (*$self->{UnCompSize}->isAlmost64bit() || *$self->{ZipData}{Zip64} > 1) {
-        $x .= *$self->{UnCompSize}->getPacked_V64() ; 
+    # uncompressed length - only set zip64 if needed
+    if (*$self->{UnCompSize}->isAlmost64bit()) { #  || *$self->{ZipData}{Zip64}) {
+        $zip64Payload .= *$self->{UnCompSize}->getPacked_V64() ; 
     } else {
         substr($ctl, 24, 4) = *$self->{UnCompSize}->getPacked_V32() ;
     }
 
-    # compressed length
-    if (*$self->{CompSize}->isAlmost64bit() || *$self->{ZipData}{Zip64} > 1) {
-        $x .= *$self->{CompSize}->getPacked_V64() ; 
+    # compressed length - only set zip64 if needed
+    if (*$self->{CompSize}->isAlmost64bit()) { # || *$self->{ZipData}{Zip64}) {
+        $zip64Payload .= *$self->{CompSize}->getPacked_V64() ; 
     } else {
         substr($ctl, 20, 4) = *$self->{CompSize}->getPacked_V32() ;
     }
 
     # Local Header offset
-    $x .= *$self->{ZipData}{LocalHdrOffset}->getPacked_V64()
+    $zip64Payload .= *$self->{ZipData}{LocalHdrOffset}->getPacked_V64()
         if *$self->{ZipData}{LocalHdrOffset}->is64bit() ; 
 
-    # disk no - always zero, so don't need it
-    #$x .= pack "V", 0    ; 
+    # disk no - always zero, so don't need to include it.
+    #$zip64Payload .= pack "V", 0    ; 
 
-    if (length $x) {
-        my $xtra = IO::Compress::Zlib::Extra::mkSubField(ZIP_EXTRA_ID_ZIP64, $x);
-        $ctl .= $xtra ;
+    my $zip64Xtra = '';
+    
+    if (length $zip64Payload) {
+        $zip64Xtra = IO::Compress::Zlib::Extra::mkSubField(ZIP_EXTRA_ID_ZIP64, $zip64Payload);
+        
         substr($ctl, *$self->{ZipData}{ExtraOffset}, 2) = 
-             pack 'v', *$self->{ZipData}{ExtraSize} + length $xtra;
+             pack 'v', *$self->{ZipData}{ExtraSize} + length $zip64Xtra;
 
         *$self->{ZipData}{AnyZip64} = 1;
     }
 
+    # Zip64 needs to be first in extra field to workaround a Windows Explorer Bug
+    # See http://www.info-zip.org/phpBB3/viewtopic.php?f=3&t=440 for details
+    $ctl .= $zip64Xtra . $ctlExtra . $comment;
+    
     *$self->{ZipData}{Offset}->add32(length($hdr));
     *$self->{ZipData}{Offset}->add( *$self->{CompSize} );
     push @{ *$self->{ZipData}{CentralDir} }, $ctl ;
@@ -939,7 +944,7 @@ section.
 
 The functional interface needs Perl5.005 or better.
 
-=head2 zip $input => $output [, OPTS]
+=head2 zip $input_filename_or_reference => $output_filename_or_reference [, OPTS]
 
 C<zip> expects at least two parameters,
 C<$input_filename_or_reference> and C<$output_filename_or_reference>.
@@ -1328,7 +1333,7 @@ normalized filename will be passed to the sub.
 If you use C<FilterName> to modify the filename, it is your responsibility
 to keep the filename in Unix format.
 
-Although this option can be used with the OO ointerface, it is of most use
+Although this option can be used with the OO interface, it is of most use
 with the one-shot interface. For example, the code below shows how
 C<FilterName> can be used to remove the path component from a series of
 filenames before they are stored in C<$zipfile>.
@@ -1410,7 +1415,7 @@ and C<$gid>. These values correspond to the numeric User ID (UID) and Group ID
 (GID) of the owner of the files respectively.
 
 When the C<exUnixN> option is present it will trigger the creation of a
-UnixN extra field (ID is "ux") in bothe the local and central zip headers. 
+UnixN extra field (ID is "ux") in both the local and central zip headers. 
 This will be populated with C<$uid> and C<$gid>. 
 The UID & GID are stored as 32-bit integers.
 
@@ -1586,7 +1591,7 @@ Valid values are 0-9 and C<LZMA_PRESET_DEFAULT>.
 0 is the fastest compression with the lowest memory usage and the lowest
 compression.
 
-9 is the slowest compession with the highest memory usage but with the best
+9 is the slowest compression with the highest memory usage but with the best
 compression.
 
 This option is only valid if the C<Method> is ZIP_CM_LZMA. It is ignored
@@ -1833,7 +1838,7 @@ Usage is
 
 Closes the current compressed data stream and starts a new one.
 
-OPTS consists of any of the the options that are available when creating
+OPTS consists of any of the options that are available when creating
 the C<$z> object.
 
 See the L</"Constructor Options"> section for more details.
@@ -1931,21 +1936,21 @@ L<Archive::Tar|Archive::Tar>,
 L<IO::Zlib|IO::Zlib>
 
 For RFC 1950, 1951 and 1952 see 
-F<http://www.faqs.org/rfcs/rfc1950.html>,
-F<http://www.faqs.org/rfcs/rfc1951.html> and
-F<http://www.faqs.org/rfcs/rfc1952.html>
+L<http://www.faqs.org/rfcs/rfc1950.html>,
+L<http://www.faqs.org/rfcs/rfc1951.html> and
+L<http://www.faqs.org/rfcs/rfc1952.html>
 
 The I<zlib> compression library was written by Jean-loup Gailly
-F<gzip@prep.ai.mit.edu> and Mark Adler F<madler@alumni.caltech.edu>.
+C<gzip@prep.ai.mit.edu> and Mark Adler C<madler@alumni.caltech.edu>.
 
 The primary site for the I<zlib> compression library is
-F<http://www.zlib.org>.
+L<http://www.zlib.org>.
 
-The primary site for gzip is F<http://www.gzip.org>.
+The primary site for gzip is L<http://www.gzip.org>.
 
 =head1 AUTHOR
 
-This module was written by Paul Marquess, F<pmqs@cpan.org>. 
+This module was written by Paul Marquess, C<pmqs@cpan.org>. 
 
 =head1 MODIFICATION HISTORY
 
@@ -1953,7 +1958,7 @@ See the Changes file.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2005-2013 Paul Marquess. All rights reserved.
+Copyright (c) 2005-2017 Paul Marquess. All rights reserved.
 
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.

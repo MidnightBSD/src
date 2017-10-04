@@ -5,12 +5,13 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
+    require './test.pl';
+    set_up_inc(qw '../lib ../dist/base/lib');
     $| = 1;
     require "./test.pl";
 }
 
-plan tests => 139;
+plan tests => 143;
 
 $a = {};
 bless $a, "Bob";
@@ -111,6 +112,10 @@ ok UNIVERSAL::can(23, "can");
 ++${"23::foo"};
 ok UNIVERSAL::can("23", "can"), '"23" can can when the pack exists';
 ok UNIVERSAL::can(23, "can"), '23 can can when the pack exists';
+sub IO::Handle::turn {}
+ok UNIVERSAL::can(*STDOUT, 'turn'), 'globs with IOs can';
+ok UNIVERSAL::can(\*STDOUT, 'turn'), 'globrefs with IOs can';
+ok UNIVERSAL::can("STDOUT", 'turn'), 'IO barewords can';
 
 ok $a->can("VERSION");
 
@@ -133,12 +138,10 @@ ok ! (eval { aversion->VERSION(2.719) });
 like $@, qr/^Invalid version format/;
 
 my $subs = join ' ', sort grep { defined &{"UNIVERSAL::$_"} } keys %UNIVERSAL::;
-## The test for import here is *not* because we want to ensure that UNIVERSAL
-## can always import; it is an historical accident that UNIVERSAL can import.
 if ('a' lt 'A') {
-    is $subs, "can import isa DOES VERSION";
+    is $subs, "can isa DOES VERSION";
 } else {
-    is $subs, "DOES VERSION can import isa";
+    is $subs, "DOES VERSION can isa";
 }
 
 ok $a->isa("UNIVERSAL");
@@ -172,16 +175,6 @@ ok UNIVERSAL::can($b, "can");
 ok ! $a->can("export_tags");	# a method in Exporter
 
 ok ! UNIVERSAL::isa("\xff\xff\xff\0", 'HASH');
-
-{
-    package Pickup;
-    no warnings "deprecated";
-    use UNIVERSAL qw( isa can VERSION );
-
-    ::ok isa "Pickup", UNIVERSAL;
-    ::cmp_ok can( "Pickup", "can" ), '==', \&UNIVERSAL::can;
-    ::ok VERSION "UNIVERSAL" ;
-}
 
 {
     # test isa() and can() on magic variables
@@ -270,11 +263,15 @@ use warnings "deprecated";
     my $m;
     local $SIG{__WARN__} = sub { $m = $_[0] };
     eval "use UNIVERSAL 'can'";
-    like($m, qr/^UNIVERSAL->import is deprecated/,
-	"deprecation warning for UNIVERSAL->import('can')");
+    like($@, qr/^UNIVERSAL does not export anything\b/,
+	"error for UNIVERSAL->import('can')");
+    is($m, undef,
+	"no deprecation warning for UNIVERSAL->import('can')");
 
 	  undef $m;
     eval "use UNIVERSAL";
+    is($@, "",
+	"no error for UNIVERSAL->import");
     is($m, undef,
 	"no deprecation warning for UNIVERSAL->import");
 }
@@ -339,3 +336,10 @@ ok(Undeclared->can("foo"));
 ok(!Undeclared->can("something_else"));
 
 ok(Undeclared->isa("UNIVERSAL"));
+
+# keep this at the end to avoid messing up earlier tests, since it modifies
+# @UNIVERSAL::ISA
+@UNIVERSAL::ISA = ('UniversalParent');
+{ package UniversalIsaTest1; }
+ok(UniversalIsaTest1->isa('UniversalParent'));
+ok(UniversalIsaTest2->isa('UniversalParent'));

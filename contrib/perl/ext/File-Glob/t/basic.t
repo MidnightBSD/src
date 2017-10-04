@@ -32,6 +32,11 @@ if ($^O eq 'VMS') {
 
 
 # look for the contents of the current directory
+# try it in a directory that doesn't get modified during testing,
+# so parallel testing won't give us race conditions. t/base/ seems
+# fairly static
+
+chdir 'base' or die "chdir base: $!";
 $ENV{PATH} = "/bin";
 delete @ENV{qw(BASH_ENV CDPATH ENV IFS)};
 my @correct = ();
@@ -39,13 +44,14 @@ if (opendir(D, ".")) {
    @correct = grep { !/^\./ } sort readdir(D);
    closedir D;
 }
-my @a = File::Glob::glob("*", 0);
+my @a = do {no warnings 'deprecated'; File::Glob::glob("*", 0);};
 @a = sort @a;
 if (GLOB_ERROR) {
     fail(GLOB_ERROR);
 } else {
     is_deeply(\@a, \@correct);
 }
+chdir '..' or die "chdir .. $!";
 
 # look up the user's home directory
 # should return a list with one item, and not set ERROR
@@ -186,7 +192,7 @@ if ($^O eq 'VMS') { # VMS is happily caseignorant
 }
 
 for (@f_names) {
-    open T, "> $_";
+    open T, '>', $_;
     close T;
 }
 

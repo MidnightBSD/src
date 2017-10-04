@@ -4,13 +4,13 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
+    require "./test.pl";
+    set_up_inc('../lib');
 }
 
 package main;
-require './test.pl';
 
-plan( tests => 31 );
+plan( tests => 34 );
 
 my($x);
 
@@ -58,7 +58,7 @@ for (qw(getc pos readline readlink undef umask <> <FOO> <$foo> -f)) {
 eval q# sub f ($) { } f $x / 2; #;
 is( $@, '', "'/' correctly parsed as arithmetic operator" );
 eval q# sub f ($):lvalue { $y } f $x /= 2; #;
-is( $@, '', "'/=' correctly parsed as assigment operator" );
+is( $@, '', "'/=' correctly parsed as assignment operator" );
 eval q# sub f ($) { } f $x /2; #;
 like( $@, qr/^Search pattern not terminated/,
     "Caught unterminated search pattern error message: empty subroutine" );
@@ -74,3 +74,27 @@ like( $@, qr/^Search pattern not terminated/,
 is(0 // 2, 0, 		'	// : left-hand operand not optimized away');
 is('' // 2, '',		'	// : left-hand operand not optimized away');
 is(undef // 2, 2, 	'	// : left-hand operand optimized away');
+
+# Test that OP_DORs other branch isn't run when arg is defined
+# // returns the value if its defined, and we must test its
+# truthness after
+my $x = 0;
+my $y = 0;
+
+$x // 1 and $y = 1;
+is($y, 0, 'y is still 0 after "$x // 1 and $y = 1"');
+
+$y = 0;
+# $x is defined, so its value 0 is returned to the if block
+# and the block is skipped
+if ($x // 1) {
+    $y = 1;
+}
+is($y, 0, 'if ($x // 1) exited out early since $x is defined and 0');
+
+# This is actually (($x // $z) || 'cat'), so 0 from first dor
+# evaluates false, we should see 'cat'.
+$y = undef;
+
+$y = $x // $z || 'cat';
+is($y, 'cat', 'chained or/dor behaves correctly');

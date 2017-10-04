@@ -7,8 +7,8 @@
 ##
 
 chdir 't' if -d 't';
-@INC = '../lib';
 require './test.pl';
+set_up_inc('../lib');
 
 $|=1;
 
@@ -169,7 +169,7 @@ foo:
   @a = sort { last foo; } @a;
 }
 EXPECT
-Label not found for "last foo" at - line 2.
+Label not found for "last foo" at - line 4.
 ########
 package TEST;
  

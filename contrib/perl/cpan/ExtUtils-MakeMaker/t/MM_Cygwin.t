@@ -42,7 +42,7 @@ delete $MM->{CFLAGS};
 
 # ExtUtils::MM_Cygwin::cflags() calls this, fake the output
 {
-    local $SIG{__WARN__} = sub { 
+    local $SIG{__WARN__} = sub {
         warn @_ unless $_[0] =~ /^Subroutine .* redefined/;
     };
     *ExtUtils::MM_Unix::cflags = sub { return $_[1] };
@@ -74,7 +74,7 @@ unlike( $MM->manifypods(), qr/foo/,
 
 $MM->{MAN3PODS} = { foo => 'foo.1' };
 my $res = $MM->manifypods();
-like( $res, qr/pure_all.*foo.*foo.1/s, '... should add MAN3PODS targets' );
+like( $res, qr/manifypods.*foo.*foo.1/s, '... should add MAN3PODS targets' );
 
 
 # init_linker

@@ -28,7 +28,7 @@ skip_all "requires compilation with PERL_IMPLICIT_SYS"
 
 plan tests => $::tests;
 
-my $PERL = $ENV{PERL} || '.\perl';
+my $PERL = '.\perl';
 my $NL = $/;
 
 delete $ENV{PERLLIB};
@@ -96,12 +96,12 @@ try({PERL5OPT => '-Mstrict'}, ['-I..\lib', '-e', '"print $::x"'],
 
 try({PERL5OPT => '-Mstrict'}, ['-I..\lib', '-e', '"print $x"'],
     "", 
-    qq(Global symbol "\$x" requires explicit package name at -e line 1.${NL}Execution of -e aborted due to compilation errors.${NL}));
+    qq(Global symbol "\$x" requires explicit package name (did you forget to declare "my \$x"?) at -e line 1.${NL}Execution of -e aborted due to compilation errors.${NL}));
 
 # Fails in 5.6.0
 try({PERL5OPT => '-Mstrict -w'}, ['-I..\lib', '-e', '"print $x"'],
     "", 
-    qq(Global symbol "\$x" requires explicit package name at -e line 1.${NL}Execution of -e aborted due to compilation errors.${NL}));
+    qq(Global symbol "\$x" requires explicit package name (did you forget to declare "my \$x"?) at -e line 1.${NL}Execution of -e aborted due to compilation errors.${NL}));
 
 # Fails in 5.6.0
 try({PERL5OPT => '-w -Mstrict'}, ['-I..\lib', '-e', '"print $::x"'],
@@ -206,7 +206,12 @@ is ($err, '', 'No errors when determining @INC');
 
 my @default_inc = split /\n/, $out;
 
-is ($default_inc[-1], '.', '. is last in @INC');
+if ($Config{default_inc_excludes_dot}) {
+    ok !(grep { $_ eq '.' } @default_inc), '. is not in @INC';
+}
+else {
+    is ($default_inc[-1], '.', '. is last in @INC');
+}
 
 my $sep = $Config{path_sep};
 my @test_cases = (

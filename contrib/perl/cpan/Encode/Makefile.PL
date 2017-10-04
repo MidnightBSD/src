@@ -1,21 +1,33 @@
 #
-# $Id: Makefile.PL,v 2.10 2013/02/18 02:23:56 dankogai Exp $
+# $Id: Makefile.PL,v 2.18 2016/11/29 23:29:23 dankogai Exp dankogai $
 #
 use 5.007003;
 use strict;
 use warnings;
 use ExtUtils::MakeMaker;
 use File::Spec;
+use Config;
 
 # Just for sure :)
 my %ARGV = map { my @r = split /=/,$_; defined $r[1] or $r[1]=1; @r } @ARGV;
-$ARGV{DEBUG} and warn "$_ => $ARGV{$_}\n" for keys  %ARGV;
+$ARGV{DEBUG} and warn "$_ => $ARGV{$_}\n" for sort keys  %ARGV;
 $ENV{PERL_CORE} ||= $ARGV{PERL_CORE} if $ARGV{PERL_CORE};
+# similar strictness as in core
+my $ccflags = $Config{ccflags};
+if (!$ENV{PERL_CORE}) {
+  if ($Config{gccversion}) {
+    $ccflags .= ' -Werror=declaration-after-statement';
+    $ccflags .= ' -Wpointer-sign' unless $Config{d_cplusplus};
+    $ccflags .= ' -fpermissive' if $Config{d_cplusplus};
+  }
+}
 
 my %tables = 
     (
-     def_t => ['ascii.ucm',
+     def_t => [
+           'ascii.ucm',
            '8859-1.ucm',
+           'cp1252.ucm',
            'null.ucm',
            'ctrl.ucm',
            ]
@@ -23,6 +35,7 @@ my %tables =
 
 my @exe_files = qw(bin/enc2xs
            bin/piconv
+           bin/encguess
            );
 my @more_exe_files = qw(
             unidump
@@ -42,10 +55,23 @@ WriteMakefile(
         SUFFIX       => 'gz',
         DIST_DEFAULT => 'all tardist',
     },
+    CCFLAGS     => $ccflags,
     INC         => '-I' . File::Spec->catfile( '.', 'Encode' ),
     LICENSE     => 'perl',
+    PREREQ_PM   => {
+        Exporter   => '5.57',   # use Exporter 'import';
+	parent     => '0.221',  # version bundled with 5.10.1
+    },
+    TEST_REQUIRES => {
+        'Test::More' => '0.81_01',
+    },
     PMLIBDIRS   => \@pmlibdirs,
     INSTALLDIRS => ($] < 5.011 ? 'perl' : 'site'),
+    META_MERGE        => {
+        resources => {
+            repository  =>  'https://github.com/dankogai/p5-encode',
+        },
+    },
 );
 
 package MY;
@@ -72,7 +98,7 @@ sub post_initialize
     # Reset the variable
     $self->{'O_FILES'} = [sort keys %o];
     my @files;
-    foreach my $table (keys %tables)
+    foreach my $table (sort keys %tables)
     {
     foreach my $ext (qw($(OBJ_EXT) .c .h .exh .fnm))
     {
@@ -93,12 +119,12 @@ sub postamble
     $str  .= "# (except Encode.c), but on .h and .exh files written by enc2xs\n";
     $str  .= $^O eq 'MacOS' ? 'Encode.c.{$(MACPERL_BUILD_EXT_STATIC)}.o :' : 'Encode$(OBJ_EXT) :';
     $str  .= ' Encode.c';
-    foreach my $table (keys %tables)
+    foreach my $table (sort keys %tables)
     {
     $str .= " $table.c";
     }
     $str .= "\n\n";
-    foreach my $table (keys %tables)
+    foreach my $table (sort keys %tables)
     {
     my $numlines = 1;
     my $lengthsofar = length($str);

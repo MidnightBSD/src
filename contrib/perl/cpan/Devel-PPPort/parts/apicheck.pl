@@ -5,13 +5,7 @@
 #
 ################################################################################
 #
-#  $Revision: 37 $
-#  $Author: mhx $
-#  $Date: 2010/03/07 13:15:43 +0100 $
-#
-################################################################################
-#
-#  Version 3.x, Copyright (C) 2004-2010, Marcus Holland-Moritz.
+#  Version 3.x, Copyright (C) 2004-2013, Marcus Holland-Moritz.
 #  Version 2.x, Copyright (C) 2001, Paul Marquess.
 #  Version 1.x, Copyright (C) 1999, Kenneth Albanowski.
 #
@@ -21,7 +15,7 @@
 ################################################################################
 
 use strict;
-require 'parts/ppptools.pl';
+require './parts/ppptools.pl';
 
 if (@ARGV) {
   my $file = pop @ARGV;
@@ -143,13 +137,16 @@ print OUT <<HEAD;
 
 #define NEED_PL_signals
 #define NEED_PL_parser
+#define NEED_caller_cx
 #define NEED_eval_pv
 #define NEED_grok_bin
 #define NEED_grok_hex
 #define NEED_grok_number
 #define NEED_grok_numeric_radix
 #define NEED_grok_oct
+#define NEED_gv_fetchpvn_flags
 #define NEED_load_module
+#define NEED_mg_findext
 #define NEED_my_snprintf
 #define NEED_my_sprintf
 #define NEED_my_strlcat
@@ -157,6 +154,7 @@ print OUT <<HEAD;
 #define NEED_newCONSTSUB
 #define NEED_newRV_noinc
 #define NEED_newSV_type
+#define NEED_newSVpvn_flags
 #define NEED_newSVpvn_share
 #define NEED_pv_display
 #define NEED_pv_escape
@@ -168,10 +166,11 @@ print OUT <<HEAD;
 #define NEED_sv_pvn_force_flags
 #define NEED_sv_setpvf_mg
 #define NEED_sv_setpvf_mg_nocontext
+#define NEED_sv_unmagicext
+#define NEED_SvRX
 #define NEED_vload_module
 #define NEED_vnewSVpvf
 #define NEED_warner
-#define NEED_newSVpvn_flags
 
 #include "ppport.h"
 
@@ -180,6 +179,11 @@ print OUT <<HEAD;
 static int    VARarg1;
 static char  *VARarg2;
 static double VARarg3;
+
+#if defined(PERL_BCDVERSION) && (PERL_BCDVERSION < 0x5009005)
+/* needed to make PL_parser apicheck work */
+typedef void yy_parser;
+#endif
 
 HEAD
 
@@ -320,4 +324,3 @@ END
 }
 
 @ARGV and close OUT;
-

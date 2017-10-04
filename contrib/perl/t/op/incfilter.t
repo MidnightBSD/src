@@ -4,16 +4,20 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = qw(. ../lib);
-    require 'test.pl';
-    skip_all_if_miniperl('no dynamic loading on miniperl, no Filter::Util::Call');
-    skip_all_without_perlio();
+    require './test.pl';
+    set_up_inc( qw(. ../lib) );
+    skip_all_if_miniperl(
+	'no dynamic loading on miniperl, no Filter::Util::Call'
+    );
 }
+
+skip_all_without_perlio();
+
 use strict;
 use Config;
 use Filter::Util::Call;
 
-plan(tests => 145);
+plan(tests => 153);
 
 unshift @INC, sub {
     no warnings 'uninitialized';
@@ -74,7 +78,12 @@ if ($^O eq 'VMS') {
     $fail_arg = '"fail"';
 }
 else {
-    $echo_command = 'echo';
+    if ($^O =~ /android/) {
+        $echo_command = q{sh -c 'echo $@' -- };
+    }
+    else {
+        $echo_command = 'echo';
+    }
     $pass_arg = 'pass';
     $fail_arg = 'fail';
 }
@@ -168,10 +177,7 @@ BEGIN {prepend_block_counting_filter};
 pas("SSS make s fast SSS");
 EOC
 
-TODO: {
-    todo_skip "disabled under -Dmad", 50 if $Config{mad};
-    do [$fh, sub {s/s/ss/gs; s/([\nS])/$1$1$1/gs; return;}] or die;
-}
+do [$fh, sub {s/s/ss/gs; s/([\nS])/$1$1$1/gs; return;}] or die;
 
 sub prepend_line_counting_filter {
     filter_add(sub {
@@ -194,6 +200,22 @@ do [$fh, sub {$_ .= $_ . $_; return;}] or die;
 
 do \"pass\n(\n'Scalar references are treated as initial file contents'\n)\n"
 or die;
+
+use constant scalarreffee =>
+  "pass\n(\n'Scalar references are treated as initial file contents'\n)\n";
+do \scalarreffee or die;
+is scalarreffee,
+  "pass\n(\n'Scalar references are treated as initial file contents'\n)\n",
+  'and are not gobbled up when read-only';
+
+{
+    local $SIG{__WARN__} = sub {}; # ignore deprecation warning from ?...?
+    do qr/a?, 1/;
+    pass "No crash (perhaps) when regexp ref is returned from inc filter";
+    # Even if that outputs "ok", it may not have passed, as the crash
+    # occurs during globular destruction.  But the crash will result in
+    # this script failing.
+}
 
 open $fh, "<", \"ss('The file is concatenated');";
 
@@ -220,6 +242,40 @@ do [\'pa', \&generator_with_state,
 @lines = @origlines;
 do \&generator or die;
 is $origlines[0], "1\n+\n2\n", 'ink filters do not mangle cow buffers';
+
+@lines = ('$::the_array = "', [], '"');
+do \&generator or die;
+like ${$::{the_array}}, qr/^ARRAY\(0x.*\)\z/,
+   'setting $_ to ref in inc filter';
+@lines = ('$::the_array = "', do { no warnings 'once'; *foo}, '"');
+do \&generator or die;
+is ${$::{the_array}}, "*main::foo", 'setting $_ to glob in inc filter';
+@lines = (
+    '$::the_array = "',
+     do { no strict; no warnings; *{"foo\nbar"}},
+    '"');
+do \&generator or die;
+is ${$::{the_array}}, "*main::foo\nbar",
+    'setting $_ to multiline glob in inc filter';
+
+sub TIESCALAR { bless \(my $thing = pop), shift }
+sub FETCH {${$_[0]}}
+my $done;
+do sub {
+    return 0 if $done;
+    tie $_, "main", '$::the_scalar = 98732';
+    return $done = 1;
+} or die;
+is ${$::{the_scalar}}, 98732, 'tying $_ in inc filter';
+@lines = ('$::the_scalar', '= "12345"');
+tie my $ret, "main", 1;
+do sub :lvalue {
+    return 0 unless @lines;
+    $_ = shift @lines;
+    return $ret;
+} or die;
+is ${$::{the_scalar}}, 12345, 'returning tied val from inc filter';
+
 
 # d8723a6a74b2c12e wasn't perfect, as the char * returned by SvPV*() can be
 # a temporary, freed at the next FREETMPS. And there is a FREETMPS in

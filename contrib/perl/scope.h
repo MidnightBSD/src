@@ -8,7 +8,7 @@
  *
  */
 
-/* *** these are ordered by number of of auto-popped args */
+/* *** Update arg_counts[] in scope.c if you modify these */
 
 /* zero args */
 
@@ -16,12 +16,10 @@
 #define SAVEt_CLEARPADRANGE	1
 #define SAVEt_CLEARSV		2
 #define SAVEt_REGCONTEXT	3
-#define SAVEt_RE_STATE		4
-
-#define SAVEt_ARG0_MAX		4
 
 /* one arg */
 
+#define SAVEt_TMPSFLOOR		4
 #define SAVEt_BOOL		5
 #define SAVEt_COMPILE_WARNINGS	6
 #define SAVEt_COMPPAD		7
@@ -38,13 +36,11 @@
 #define SAVEt_OP		18
 #define SAVEt_PARSER		19
 #define SAVEt_STACK_POS		20
-
-#define SAVEt_ARG1_MAX		20
+#define SAVEt_READONLY_OFF	21
+#define SAVEt_FREEPADNAME	22
 
 /* two args */
 
-#define SAVEt_ADELETE		21
-#define SAVEt_APTR		22
 #define SAVEt_AV		23
 #define SAVEt_DESTRUCTOR	24
 #define SAVEt_DESTRUCTOR_X	25
@@ -64,21 +60,22 @@
 #define SAVEt_SAVESWITCHSTACK	39
 #define SAVEt_SHARED_PVREF	40
 #define SAVEt_SPTR		41
-#define SAVEt_STACK_CXPOS	42
+#define SAVEt_STRLEN		42
 #define SAVEt_SV		43
 #define SAVEt_SVREF		44
 #define SAVEt_VPTR		45
-
-#define SAVEt_ARG2_MAX		45
+#define SAVEt_ADELETE		46
+#define SAVEt_APTR		47
 
 /* three args */
 
-#define SAVEt_AELEM		46
-#define SAVEt_DELETE		47
 #define SAVEt_HELEM		48
 #define SAVEt_PADSV_AND_MORTALIZE 49
 #define SAVEt_SET_SVFLAGS	50
 #define SAVEt_GVSLOT		51
+#define SAVEt_AELEM		52
+#define SAVEt_DELETE		53
+
 
 #define SAVEf_SETMAGIC		1
 #define SAVEf_KEEPOLDELEM	2
@@ -97,8 +94,8 @@
  * macros */
 #define SS_MAXPUSH 4
 
-#define SSCHECK(need) if (PL_savestack_ix + (I32)(need) + SS_MAXPUSH > PL_savestack_max) savestack_grow()
-#define SSGROW(need) if (PL_savestack_ix + (I32)(need) + SS_MAXPUSH > PL_savestack_max) savestack_grow_cnt(need + SS_MAXPUSH)
+#define SSCHECK(need) if (UNLIKELY(PL_savestack_ix + (I32)(need) > PL_savestack_max)) savestack_grow()
+#define SSGROW(need) if (UNLIKELY(PL_savestack_ix + (I32)(need) > PL_savestack_max)) savestack_grow_cnt(need)
 #define SSPUSHINT(i) (PL_savestack[PL_savestack_ix++].any_i32 = (I32)(i))
 #define SSPUSHLONG(i) (PL_savestack[PL_savestack_ix++].any_long = (long)(i))
 #define SSPUSHBOOL(p) (PL_savestack[PL_savestack_ix++].any_bool = (p))
@@ -116,21 +113,23 @@
  * of the grow() can be done. These changes reduce the code of something
  * like save_pushptrptr() to half its former size.
  * Of course, doing the size check *after* pushing means we must always
- * ensure there are SS_MAXPUSH free slots on the savestack
+ * ensure there are SS_MAXPUSH free slots on the savestack. This ensured
+ * bt savestack_grow() and savestack_grow_cnt always allocating SS_MAXPUSH
+ * slots more than asked for, or that it sets PL_savestack_max to
  *
  * These are for internal core use only and are subject to change */
 
 #define dSS_ADD \
     I32 ix = PL_savestack_ix;     \
-    ANY *ssp = &PL_savestack[ix];
+    ANY *ssp = &PL_savestack[ix]
 
 #define SS_ADD_END(need) \
     assert((need) <= SS_MAXPUSH);                               \
     ix += (need);                                               \
     PL_savestack_ix = ix;                                       \
-    assert(ix <= PL_savestack_max);                             \
-    if ((ix + SS_MAXPUSH) > PL_savestack_max) savestack_grow(); \
-    assert(PL_savestack_ix + SS_MAXPUSH <= PL_savestack_max);
+    assert(ix <= PL_savestack_max + SS_MAXPUSH);                \
+    if (UNLIKELY(ix > PL_savestack_max)) savestack_grow();      \
+    assert(PL_savestack_ix <= PL_savestack_max);
 
 #define SS_ADD_INT(i)   ((ssp++)->any_i32 = (I32)(i))
 #define SS_ADD_LONG(i)  ((ssp++)->any_long = (long)(i))
@@ -155,37 +154,34 @@
 =head1 Callback Functions
 
 =for apidoc Ams||SAVETMPS
-Opening bracket for temporaries on a callback.  See C<FREETMPS> and
+Opening bracket for temporaries on a callback.  See C<L</FREETMPS>> and
 L<perlcall>.
 
 =for apidoc Ams||FREETMPS
-Closing bracket for temporaries on a callback.  See C<SAVETMPS> and
+Closing bracket for temporaries on a callback.  See C<L</SAVETMPS>> and
 L<perlcall>.
 
 =for apidoc Ams||ENTER
-Opening bracket on a callback.  See C<LEAVE> and L<perlcall>.
+Opening bracket on a callback.  See C<L</LEAVE>> and L<perlcall>.
 
 =for apidoc Ams||LEAVE
-Closing bracket on a callback.  See C<ENTER> and L<perlcall>.
+Closing bracket on a callback.  See C<L</ENTER>> and L<perlcall>.
 
-=over
+=for apidoc Ams||ENTER_with_name(name)
 
-=item ENTER_with_name(name)
-
-Same as C<ENTER>, but when debugging is enabled it also associates the
+Same as C<L</ENTER>>, but when debugging is enabled it also associates the
 given literal string with the new scope.
 
-=item LEAVE_with_name(name)
+=for apidoc Ams||LEAVE_with_name(name)
 
-Same as C<LEAVE>, but when debugging is enabled it first checks that the
-scope has the given name. Name must be a literal string.
-
-=back
+Same as C<L</LEAVE>>, but when debugging is enabled it first checks that the
+scope has the given name. C<name> must be a C<NUL>-terminated literal string.
 
 =cut
 */
 
-#define SAVETMPS save_int((int*)&PL_tmps_floor), PL_tmps_floor = PL_tmps_ix
+#define SAVETMPS Perl_savetmps(aTHX)
+
 #define FREETMPS if (PL_tmps_ix > PL_tmps_floor) free_tmps()
 
 #ifdef DEBUGGING
@@ -238,6 +234,7 @@ scope has the given name. Name must be a literal string.
 #define SAVEVPTR(s)	save_vptr((void*)&(s))
 #define SAVEPADSVANDMORTALIZE(s)	save_padsv_and_mortalize(s)
 #define SAVEFREESV(s)	save_freesv(MUTABLE_SV(s))
+#define SAVEFREEPADNAME(s) save_pushptr((void *)(s), SAVEt_FREEPADNAME)
 #define SAVEMORTALIZESV(s)	save_mortalizesv(MUTABLE_SV(s))
 #define SAVEFREEOP(o)	save_freeop((OP*)(o))
 #define SAVEFREEPV(p)	save_freepv((char*)(p))
@@ -252,7 +249,7 @@ scope has the given name. Name must be a literal string.
 #define SAVEHDELETE(h,s) \
 	  save_hdelete(MUTABLE_HV(h), (s))
 #define SAVEADELETE(a,k) \
-	  save_adelete(MUTABLE_AV(a), (I32)(k))
+	  save_adelete(MUTABLE_AV(a), (SSize_t)(k))
 #define SAVEDESTRUCTOR(f,p) \
 	  save_destructor((DESTRUCTORFUNC_NOCONTEXT_t)(f), (void*)(p))
 
@@ -287,15 +284,6 @@ scope has the given name. Name must be a literal string.
    save stack.  */
 #define SAVECOMPILEWARNINGS() save_pushptr(PL_compiling.cop_warnings, SAVEt_COMPILE_WARNINGS)
 
-#define SAVESTACK_CXPOS() \
-    STMT_START {                                   \
-        dSS_ADD;                                   \
-        SS_ADD_INT(cxstack[cxstack_ix].blk_oldsp); \
-        SS_ADD_INT(cxstack_ix);                    \
-        SS_ADD_UV(SAVEt_STACK_CXPOS);              \
-        SS_ADD_END(3);                             \
-    } STMT_END
-
 #define SAVEPARSER(p) save_pushptr((p), SAVEt_PARSER)
 
 #ifdef USE_ITHREADS
@@ -312,7 +300,7 @@ scope has the given name. Name must be a literal string.
 #define SAVECOPLINE(c)		SAVEI32(CopLINE(c))
 
 /* SSNEW() temporarily allocates a specified number of bytes of data on the
- * savestack.  It returns an integer index into the savestack, because a
+ * savestack.  It returns an I32 index into the savestack, because a
  * pointer would get broken if the savestack is moved on reallocation.
  * SSNEWa() works like SSNEW(), but also aligns the data to the specified
  * number of bytes.  MEM_ALIGNBYTES is perhaps the most useful.  The
@@ -345,11 +333,5 @@ STMT_START {                                 \
 #define save_op()		save_pushptr((void *)(PL_op), SAVEt_OP)
 
 /*
- * Local variables:
- * c-indentation-style: bsd
- * c-basic-offset: 4
- * indent-tabs-mode: nil
- * End:
- *
  * ex: set ts=8 sts=4 sw=4 et:
  */

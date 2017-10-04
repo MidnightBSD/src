@@ -3,6 +3,10 @@ package MakeMaker::Test::Utils;
 use File::Spec;
 use strict;
 use Config;
+use Cwd qw(getcwd);
+use Carp qw(croak);
+use File::Path;
+use File::Basename;
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -13,10 +17,11 @@ our $Is_FreeBSD = $^O eq 'freebsd';
 
 our @EXPORT = qw(which_perl perl_lib makefile_name makefile_backup
                  make make_run run make_macro calibrate_mtime
-                 setup_mm_test_root
                  have_compiler slurp
                  $Is_VMS $Is_MacOS
                  run_ok
+                 hash2files
+                 in_dir
                 );
 
 
@@ -31,12 +36,16 @@ our @EXPORT = qw(which_perl perl_lib makefile_name makefile_backup
         HARNESS_VERBOSE
         PREFIX
         MAKEFLAGS
+        PERL_INSTALL_QUIET
     );
 
     my %default_env_keys;
 
     # Inform the BSDPAN hacks not to register modules installed for testing.
     $default_env_keys{PORTOBJFORMAT} = 1 if $Is_FreeBSD;
+
+    # https://github.com/Perl-Toolchain-Gang/ExtUtils-MakeMaker/issues/65
+    $default_env_keys{ACTIVEPERL_CONFIG_SILENT} = 1;
 
     # Remember the ENV values because on VMS %ENV is global
     # to the user, not the process.
@@ -95,7 +104,7 @@ MakeMaker::Test::Utils - Utility routines for testing MakeMaker
 
 =head1 DESCRIPTION
 
-A consolidation of little utility functions used through out the
+A consolidation of little utility functions used throughout the
 MakeMaker test suite.
 
 =head2 Functions
@@ -128,7 +137,7 @@ sub which_perl {
 
         # When building in the core, *don't* go off and find
         # another perl
-        die "Can't find a perl to use (\$^X=$^X), (\$perlpath=$perlpath)" 
+        die "Can't find a perl to use (\$^X=$^X), (\$perlpath=$perlpath)"
           if $ENV{PERL_CORE};
 
         foreach my $path (File::Spec->path) {
@@ -136,6 +145,7 @@ sub which_perl {
             last if -x $perlpath;
         }
     }
+    $perlpath = qq{"$perlpath"}; # "safe... in a command line" even with spaces
 
     return $perlpath;
 }
@@ -151,6 +161,9 @@ Sets up environment variables so perl can find its libraries.
 my $old5lib = $ENV{PERL5LIB};
 my $had5lib = exists $ENV{PERL5LIB};
 sub perl_lib {
+    my $basecwd = (File::Spec->splitdir(getcwd))[-1];
+    croak "Basename of cwd needs to be 't' but is '$basecwd'\n"
+        unless $basecwd eq 't';
                                # perl-src/t/
     my $lib =  $ENV{PERL_CORE} ? qq{../lib}
                                # ExtUtils-MakeMaker/t/
@@ -162,7 +175,7 @@ sub perl_lib {
     unshift @INC, $lib;
 }
 
-END { 
+END {
     if( $had5lib ) {
         $ENV{PERL5LIB} = $old5lib;
     }
@@ -183,7 +196,7 @@ should generate.
 
 sub makefile_name {
     return $Is_VMS ? 'Descrip.MMS' : 'Makefile';
-}   
+}
 
 =item B<makefile_backup>
 
@@ -211,7 +224,7 @@ sub make {
     my $make = $Config{make};
     $make = $ENV{MAKE} if exists $ENV{MAKE};
 
-    return $make;
+    return $Is_VMS ? $make : qq{"$make"};
 }
 
 =item B<make_run>
@@ -236,7 +249,7 @@ sub make_run {
 Returns the command necessary to run $make on the given $target using
 the given %macros.
 
-  my $make_test_verbose = make_macro(make_run(), 'test', 
+  my $make_test_verbose = make_macro(make_run(), 'test',
                                      TEST_VERBOSE => 1);
 
 This is important because VMS's make utilities have a completely
@@ -251,14 +264,18 @@ sub make_macro {
 
     my $is_mms = $make =~ /^MM(K|S)/i;
 
-    my $cmd = $make;
-    my $macros = '';
+    my @macros;
     while( my($key,$val) = splice(@_, 0, 2) ) {
-        if( $is_mms ) {
-            $macros .= qq{/macro="$key=$val"};
+        push @macros, qq{$key=$val};
+    }
+    my $macros = '';
+    if (scalar(@macros)) {
+        if ($is_mms) {
+            map { $_ = qq{"$_"} } @macros;
+            $macros = '/MACRO=(' . join(',', @macros) . ')';
         }
         else {
-            $macros .= qq{ $key=$val};
+            $macros = join(' ', @macros);
         }
     }
 
@@ -276,11 +293,12 @@ touched.
 =cut
 
 sub calibrate_mtime {
-    open(FILE, ">calibrate_mtime.tmp") || die $!;
+    my $file = "calibrate_mtime-$$.tmp";
+    open(FILE, ">$file") || die $!;
     print FILE "foo";
     close FILE;
-    my($mtime) = (stat('calibrate_mtime.tmp'))[9];
-    unlink 'calibrate_mtime.tmp';
+    my($mtime) = (stat($file))[9];
+    unlink $file;
     return $mtime;
 }
 
@@ -300,12 +318,9 @@ sub run {
 
     use ExtUtils::MM;
 
-    # Unix, modern Windows and OS/2 from 5.005_54 up can handle 2>&1 
+    # Unix, modern Windows and OS/2 from 5.005_54 up can handle 2>&1
     # This makes our failure diagnostics nicer to read.
-    if( MM->os_flavor_is('Unix')                                   or
-        (MM->os_flavor_is('Win32') and !MM->os_flavor_is('Win9x')) or
-        ($] > 5.00554 and MM->os_flavor_is('OS/2'))
-      ) {
+    if (MM->can_redirect_error) {
         return `$cmd 2>&1`;
     }
     else {
@@ -334,32 +349,6 @@ sub run_ok {
     return wantarray ? @out : join "", @out;
 }
 
-=item B<setup_mm_test_root>
-
-Creates a rooted logical to avoid the 8-level limit on older VMS systems.  
-No action taken on non-VMS systems.
-
-=cut
-
-sub setup_mm_test_root {
-    if( $Is_VMS ) {
-        # On older systems we might exceed the 8-level directory depth limit
-        # imposed by RMS.  We get around this with a rooted logical, but we
-        # can't create logical names with attributes in Perl, so we do it
-        # in a DCL subprocess and put it in the job table so the parent sees it.
-        open( MMTMP, '>mmtesttmp.com' ) || 
-          die "Error creating command file; $!";
-        print MMTMP <<'COMMAND';
-$ MM_TEST_ROOT = F$PARSE("SYS$DISK:[--]",,,,"NO_CONCEAL")-".][000000"-"]["-"].;"+".]"
-$ DEFINE/JOB/NOLOG/TRANSLATION=CONCEALED MM_TEST_ROOT 'MM_TEST_ROOT'
-COMMAND
-        close MMTMP;
-
-        system '@mmtesttmp.com';
-        1 while unlink 'mmtesttmp.com';
-    }
-}
-
 =item have_compiler
 
   $have_compiler = have_compiler;
@@ -370,23 +359,11 @@ Returns true if there is a compiler available for XS builds.
 
 sub have_compiler {
     my $have_compiler = 0;
-
-    # ExtUtils::CBuilder prints its compilation lines to the screen.
-    # Shut it up.
-    use TieOut;
-    local *STDOUT = *STDOUT;
-    local *STDERR = *STDERR;
-
-    tie *STDOUT, 'TieOut';
-    tie *STDERR, 'TieOut';
-
     eval {
-	require ExtUtils::CBuilder;
-	my $cb = ExtUtils::CBuilder->new;
-
-	$have_compiler = $cb->have_compiler;
+        require ExtUtils::CBuilder;
+        my $cb = ExtUtils::CBuilder->new(quiet=>1);
+        $have_compiler = $cb->have_compiler;
     };
-
     return $have_compiler;
 }
 
@@ -409,6 +386,72 @@ sub slurp {
     close $fh;
 
     return $text;
+}
+
+=item hash2files
+
+  hash2files('dirname', { 'filename' => 'some content' });
+
+Goes through given hash-ref, treating each key as a /-separated filename
+under the specified directory, and writing the value into it. Will create
+any necessary directories.
+
+Will die if errors occur.
+
+=cut
+
+sub hash2files {
+    my ($prefix, $hashref) = @_;
+    while(my ($file, $text) = each %$hashref) {
+        # Convert to a relative, native file path.
+        $file = File::Spec->catfile(File::Spec->curdir, $prefix, split m{\/}, $file);
+        my $dir = dirname($file);
+        mkpath $dir;
+        my $utf8 = ($] < 5.008 or !$Config{useperlio}) ? "" : ":utf8";
+        open(FILE, ">$utf8", $file) || die "Can't create $file: $!";
+        print FILE $text;
+        close FILE;
+        # ensure file at least 1 second old for makes that assume
+        # files with the same time are out of date.
+        my $time = calibrate_mtime();
+        utime $time, $time - 1, $file;
+    }
+}
+
+=item in_dir
+
+  $retval = in_dir(\&coderef);
+  $retval = in_dir(\&coderef, $specified_dir);
+  $retval = in_dir { somecode(); };
+  $retval = in_dir { somecode(); } $specified_dir;
+
+Does a C<chdir> to either a directory. If none is specified, one is
+created with L<File::Temp> and then automatically deleted after. It ends
+by C<chdir>ing back to where it started.
+
+If the given code throws an exception, it will be re-thrown after the
+re-C<chdir>.
+
+Returns the return value of the given code.
+
+=cut
+
+sub in_dir(&;$) {
+    my $code = shift;
+    require File::Temp;
+    my $dir = shift || File::Temp::tempdir(TMPDIR => 1, CLEANUP => 1);
+    # chdir to the new directory
+    my $orig_dir = getcwd();
+    chdir $dir or die "Can't chdir to $dir: $!";
+    # Run the code, but trap the error so we can chdir back
+    my $return;
+    my $ok = eval { $return = $code->(); 1; };
+    my $err = $@;
+    # chdir back
+    chdir $orig_dir or die "Can't chdir to $orig_dir: $!";
+    # rethrow if necessary
+    die $err unless $ok;
+    return $return;
 }
 
 =back

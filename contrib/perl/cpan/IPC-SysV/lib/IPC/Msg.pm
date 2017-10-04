@@ -1,12 +1,6 @@
 ################################################################################
 #
-#  $Revision: 19 $
-#  $Author: mhx $
-#  $Date: 2010/05/23 10:37:46 +0200 $
-#
-################################################################################
-#
-#  Version 2.x, Copyright (C) 2007-2010, Marcus Holland-Moritz <mhx@cpan.org>.
+#  Version 2.x, Copyright (C) 2007-2013, Marcus Holland-Moritz <mhx@cpan.org>.
 #  Version 1.x, Copyright (C) 1997, Graham Barr <gbarr@pobox.com>.
 #
 #  This program is free software; you can redistribute it and/or
@@ -21,8 +15,7 @@ use strict;
 use vars qw($VERSION);
 use Carp;
 
-$VERSION = do { my @r = '$Snapshot: /IPC-SysV/2.03 $' =~ /(\d+\.\d+(?:_\d+)?)/; @r ? $r[0] : '9.99' };
-$VERSION = eval $VERSION;
+$VERSION = '2.07';
 
 # Figure out if we have support for native sized types
 my $N = do { my $foo = eval { pack "L!", 0 }; $@ ? '' : '!' };
@@ -176,7 +169,7 @@ Returns the system message queue identifier.
 =item rcv ( BUF, LEN [, TYPE [, FLAGS ]] )
 
 Read a message from the queue. Returns the type of the message read.
-See L<msgrcv>.  The BUF becomes tainted.
+See L<msgrcv(2)>.  The BUF becomes tainted.
 
 =item remove
 
@@ -200,7 +193,7 @@ or a list of I<name>-I<value> pairs.
 =item snd ( TYPE, MSG [, FLAGS ] )
 
 Place a message on the queue with the data from C<MSG> and with type C<TYPE>.
-See L<msgsnd>.
+See L<msgsnd(2)>.
 
 =item stat
 
@@ -234,7 +227,7 @@ Marcus Holland-Moritz <mhx@cpan.org>
 
 =head1 COPYRIGHT
 
-Version 2.x, Copyright (C) 2007-2010, Marcus Holland-Moritz.
+Version 2.x, Copyright (C) 2007-2013, Marcus Holland-Moritz.
 
 Version 1.x, Copyright (c) 1997, Graham Barr.
 

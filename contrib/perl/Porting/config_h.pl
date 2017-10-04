@@ -15,7 +15,7 @@ use strict;
 use warnings;
 
 my ($cSH, $ch, @ch, %ch) = ("config_h.SH");
-open $ch, "<$cSH" or die "Cannot open $cSH: $!\n";
+open $ch, '<', $cSH or die "Cannot open $cSH: $!\n";
 {   local $/ = "\n\n";
     @ch = <$ch>;
     close  $ch;
@@ -36,7 +36,6 @@ my %dep = (
     BYTEORDER		=> [ qw( UVSIZE				) ],
     LONGSIZE		=> [ qw( BYTEORDER			) ],
     MULTIARCH		=> [ qw( BYTEORDER MEM_ALIGNBYTES	) ],
-    USE_CROSS_COMPILE	=> [ qw( BYTEORDER MEM_ALIGNBYTES	) ],
     HAS_QUAD		=> [ qw( I64TYPE			) ],
     HAS_GETGROUPS	=> [ qw( Groups_t			) ],
     HAS_SETGROUPS	=> [ qw( Groups_t			) ],
@@ -69,7 +68,7 @@ for (grep m{echo .Extracting \$CONFIG_H} => @ch) {
 push @ch, ";;\nesac\n";
 
 
-open  $ch, "> $cSH" or die "Cannot write $cSH: $!\n";
+open  $ch, '>', $cSH or die "Cannot write $cSH: $!\n";
 print $ch <<EOW;
 #!/bin/sh
 #

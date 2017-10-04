@@ -5,7 +5,8 @@ use Config qw(%Config);
 use ExtUtils::MakeMaker;
 
 my @extra;
-@extra = (DEFINE => "-DU32_ALIGNMENT_REQUIRED") unless free_u32_alignment();
+push(@extra, DEFINE => "-DU32_ALIGNMENT_REQUIRED") unless free_u32_alignment();
+push(@extra, INSTALLDIRS => 'perl') if $] >= 5.008 && $] < 5.012;
 
 if ($^O eq 'VMS') {
     if (defined($Config{ccname})) {
@@ -24,16 +25,15 @@ WriteMakefile(
     'AUTHOR'       => 'Gisle Aas <gisle@activestate.com>',
     'LICENSE'      => 'perl',
     'MIN_PERL_VERSION' => 5.006,
-    'PREREQ_PM'    => { 'File::Spec' => 0,
+    'PREREQ_PM'    => {
 			'Digest::base' => '1.00',
 			'XSLoader' => 0,
 		      },
     'META_MERGE'   => {
         resources  => {
-            repository => 'http://github.com/gisle/digest-md5',
+            repository => 'https://github.com/gisle/digest-md5',
         }
     },
-    'INSTALLDIRS'  => 'perl',
     @extra,
 );
 

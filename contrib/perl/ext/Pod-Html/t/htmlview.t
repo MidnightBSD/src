@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w                                         # -*- perl -*-
 
 BEGIN {
-    require "t/pod2html-lib.pl";
+    require "./t/pod2html-lib.pl";
 }
 
 use strict;
@@ -19,7 +19,7 @@ __DATA__
 <link rev="made" href="mailto:[PERLADMIN]" />
 </head>
 
-<body style="background-color: white">
+<body>
 
 
 
@@ -193,11 +193,11 @@ blah blah
 
 <p>intermediate text</p>
 
-
-
 <more>
 HTML
-</more>some text
+</more>
+
+some text
 
 <h1 id="TESTING-URLs-hyperlinking">TESTING URLs hyperlinking</h1>
 

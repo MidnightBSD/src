@@ -2,14 +2,14 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = ('../lib', '.');
+    require './test.pl';
+    set_up_inc('../lib', '.');
 }   
 # Avoid using eq_array below as it uses .. internally.
-require 'test.pl';
 
 use Config;
 
-plan (141);
+plan (146);
 
 is(join(':',1..5), '1:2:3:4:5');
 
@@ -41,6 +41,20 @@ is($x, 'abcdefghijklmnopqrstuvwxyz');
 
 @x = 'A'..'ZZ';
 is (scalar @x, 27 * 26);
+
+foreach (0, 1) {
+    use feature 'unicode_strings';
+    $s = "a";
+    $e = "\xFF";
+    utf8::upgrade($e) if $_;
+    @x = $s .. $e;
+    is (scalar @x, 26, "list-context range with rhs 0xFF, utf8=$_");
+    @y = ();
+    foreach ($s .. $e) {
+        push @y, $_;
+    }
+    is(join(",", @y), join(",", @x), "foreach range with rhs 0xFF, utf8=$_");
+}
 
 @x = '09' .. '08';  # should produce '09', '10',... '99' (strange but true)
 is(join(",", @x), join(",", map {sprintf "%02d",$_} 9..99));
@@ -390,17 +404,48 @@ is(stores($x), 0);
 
 is( ( join ' ', map { join '', map ++$_, ($x=1)..4 } 1..2 ), '2345 2345',
     'modifiable variable num range' );
-is( ( join ' ', map { join '', map ++$_, 1..4      } 1..2 ), '2345 3456',
-    'modifiable const num range' );  # Unresolved bug RT#3105
+is( ( join ' ', map { join '', map ++$_, 1..4      } 1..2 ), '2345 2345',
+    'modifiable const num range' );  # RT#3105
 $s = ''; for (1..2) { for (1..4) { $s .= ++$_ } $s.=' ' if $_==1; }
 is( $s, '2345 2345','modifiable num counting loop counter' );
 
 
 is( ( join ' ', map { join '', map ++$_, ($x='a')..'d' } 1..2 ), 'bcde bcde',
     'modifiable variable alpha range' );
-is( ( join ' ', map { join '', map ++$_, 'a'..'d'      } 1..2 ), 'bcde cdef',
-    'modifiable const alpha range' );  # Unresolved bug RT#3105
+is( ( join ' ', map { join '', map ++$_, 'a'..'d'      } 1..2 ), 'bcde bcde',
+    'modifiable const alpha range' );  # RT#3105
 $s = ''; for (1..2) { for ('a'..'d') { $s .= ++$_ } $s.=' ' if $_==1; }
 is( $s, 'bcde bcde','modifiable alpha counting loop counter' );
 
-# EOF
+# RT #130841
+# generating an extreme range triggered a croak, which if caught,
+# left the temps stack small but with a very large PL_tmps_max
+
+SKIP: {
+    skip 'mem wrap check disabled' unless $Config{usemallocwrap};
+    fresh_perl_like(<<'EOF', qr/\Aok 1 ok 2\Z/, {}, "RT #130841");
+my $max_iv = (~0 >> 1);
+eval {
+    my @range = 1..($max_iv - 1);
+};
+if ($@ =~ /panic: memory wrap|Out of memory/) {
+    print "ok 1";
+}
+else {
+    print "unexpected err status: [$@]";
+}
+
+# create and push lots of temps
+my $max = 10_000;
+my @ints = map $_+1, 0..($max-1);
+my $sum = 0;
+$sum += $_ for @ints;
+my $exp = $max*($max+1)/2;
+if ($sum == $exp) {
+    print " ok 2";
+}
+else {
+    print " unexpected sum: [$sum]; expected: [$exp]";
+}
+EOF
+}

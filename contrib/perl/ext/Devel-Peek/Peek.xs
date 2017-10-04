@@ -31,7 +31,7 @@ DeadCode(pTHX)
 	for (sv = sva + 1; sv < svend; ++sv) {
 	    if (SvTYPE(sv) == SVt_PVCV) {
 		CV *cv = (CV*)sv;
-		PADLIST* padlist = CvPADLIST(cv);
+		PADLIST* padlist;
                 AV *argav;
 		SV** svp;
 		SV** pad;
@@ -54,6 +54,7 @@ DeadCode(pTHX)
 		    PerlIO_printf(Perl_debug_log, "  busy\n");
 		    continue;
 		}
+		padlist = CvPADLIST(cv);
 		svp = (SV**) PadlistARRAY(padlist);
 		while (++i <= PadlistMAX(padlist)) { /* Depth. */
 		    SV **args;
@@ -81,6 +82,7 @@ DeadCode(pTHX)
 			}
 		    }
 		    for (j = 1; j < AvFILL((AV*)svp[1]); j++) {	/* Vars. */
+			if (!pad[j]) continue;
 			if (SvROK(pad[j])) {
 			    levelref++;
 			    do_sv_dump(0, Perl_debug_log, pad[j], 0, 4, 0, 0);
@@ -163,10 +165,9 @@ fill_mstats(SV *sv, int level)
 {
     dTHX;
 
-    if (SvIsCOW(sv)) sv_force_normal(sv);
     if (SvREADONLY(sv))
 	croak("Cannot modify a readonly value");
-    SvGROW(sv, sizeof(struct mstats_buffer)+1);
+    sv_grow(sv, sizeof(struct mstats_buffer)+1);
     _fill_mstats((struct mstats_buffer*)SvPVX(sv),level);
     SvCUR_set(sv, sizeof(struct mstats_buffer));
     *SvEND(sv) = '\0';
@@ -180,46 +181,46 @@ _mstats_to_hv(HV *hv, const struct mstats_buffer *b, int level)
     SV **svp;
     int type;
 
-    svp = hv_fetch(hv, "topbucket", 9, 1);
+    svp = hv_fetchs(hv, "topbucket", 1);
     sv_setiv(*svp, b->buffer.topbucket);
 
-    svp = hv_fetch(hv, "topbucket_ev", 12, 1);
+    svp = hv_fetchs(hv, "topbucket_ev", 1);
     sv_setiv(*svp, b->buffer.topbucket_ev);
 
-    svp = hv_fetch(hv, "topbucket_odd", 13, 1);
+    svp = hv_fetchs(hv, "topbucket_odd", 1);
     sv_setiv(*svp, b->buffer.topbucket_odd);
 
-    svp = hv_fetch(hv, "totfree", 7, 1);
+    svp = hv_fetchs(hv, "totfree", 1);
     sv_setiv(*svp, b->buffer.totfree);
 
-    svp = hv_fetch(hv, "total", 5, 1);
+    svp = hv_fetchs(hv, "total", 1);
     sv_setiv(*svp, b->buffer.total);
 
-    svp = hv_fetch(hv, "total_chain", 11, 1);
+    svp = hv_fetchs(hv, "total_chain", 1);
     sv_setiv(*svp, b->buffer.total_chain);
 
-    svp = hv_fetch(hv, "total_sbrk", 10, 1);
+    svp = hv_fetchs(hv, "total_sbrk", 1);
     sv_setiv(*svp, b->buffer.total_sbrk);
 
-    svp = hv_fetch(hv, "sbrks", 5, 1);
+    svp = hv_fetchs(hv, "sbrks", 1);
     sv_setiv(*svp, b->buffer.sbrks);
 
-    svp = hv_fetch(hv, "sbrk_good", 9, 1);
+    svp = hv_fetchs(hv, "sbrk_good", 1);
     sv_setiv(*svp, b->buffer.sbrk_good);
 
-    svp = hv_fetch(hv, "sbrk_slack", 10, 1);
+    svp = hv_fetchs(hv, "sbrk_slack", 1);
     sv_setiv(*svp, b->buffer.sbrk_slack);
 
-    svp = hv_fetch(hv, "start_slack", 11, 1);
+    svp = hv_fetchs(hv, "start_slack", 1);
     sv_setiv(*svp, b->buffer.start_slack);
 
-    svp = hv_fetch(hv, "sbrked_remains", 14, 1);
+    svp = hv_fetchs(hv, "sbrked_remains", 1);
     sv_setiv(*svp, b->buffer.sbrked_remains);
     
-    svp = hv_fetch(hv, "minbucket", 9, 1);
+    svp = hv_fetchs(hv, "minbucket", 1);
     sv_setiv(*svp, b->buffer.minbucket);
     
-    svp = hv_fetch(hv, "nbuckets", 8, 1);
+    svp = hv_fetchs(hv, "nbuckets", 1);
     sv_setiv(*svp, b->buffer.nbuckets);
 
     if (_NBUCKETS < b->buffer.nbuckets) 
@@ -324,6 +325,95 @@ mstats2hash(SV *sv, SV *rv, int level)
 	(SvROK(cv) && (SvTYPE(SvRV(cv))==SVt_PVCV)	\
 	 ? SvREFCNT_inc(CvGV((CV*)SvRV(cv))) : &PL_sv_undef)
 
+static void
+S_do_dump(pTHX_ SV *const sv, I32 lim)
+{
+    dVAR;
+    SV *pv_lim_sv = perl_get_sv("Devel::Peek::pv_limit", 0);
+    const STRLEN pv_lim = pv_lim_sv ? SvIV(pv_lim_sv) : 0;
+    SV *dumpop = perl_get_sv("Devel::Peek::dump_ops", 0);
+    const U16 save_dumpindent = PL_dumpindent;
+    PL_dumpindent = 2;
+    do_sv_dump(0, Perl_debug_log, sv, 0, lim,
+	       (bool)(dumpop && SvTRUE(dumpop)), pv_lim);
+    PL_dumpindent = save_dumpindent;
+}
+
+static OP *
+S_pp_dump(pTHX)
+{
+    dSP;
+    const I32 lim = PL_op->op_private == 2 ? (I32)POPi : 4;
+    dPOPss;
+    S_do_dump(aTHX_ sv, lim);
+    RETPUSHUNDEF;
+}
+
+static OP *
+S_ck_dump(pTHX_ OP *entersubop, GV *namegv, SV *cv)
+{
+    OP *parent, *pm, *first, *second;
+    BINOP *newop;
+
+    PERL_UNUSED_ARG(cv);
+
+    ck_entersub_args_proto(entersubop, namegv,
+			   newSVpvn_flags("$;$", 3, SVs_TEMP));
+
+    parent = entersubop;
+    pm = cUNOPx(entersubop)->op_first;
+    if (!OpHAS_SIBLING(pm)) {
+        parent = pm;
+	pm = cUNOPx(pm)->op_first;
+    }
+    first = OpSIBLING(pm);
+    second = OpSIBLING(first);
+    if (!second) {
+	/* It doesn’t really matter what we return here, as this only
+	   occurs after yyerror.  */
+	return entersubop;
+    }
+    /* we either have Dump($x):   [pushmark]->[first]->[ex-cvop]
+     * or             Dump($x,1); [pushmark]->[first]->[second]->[ex-cvop]
+     */
+    if (!OpHAS_SIBLING(second))
+        second = NULL;
+
+    if (first->op_type == OP_RV2AV ||
+	first->op_type == OP_PADAV ||
+	first->op_type == OP_RV2HV ||
+	first->op_type == OP_PADHV
+    )
+	first->op_flags |= OPf_REF;
+    else
+	first->op_flags &= ~OPf_MOD;
+
+    /* splice out first (and optionally second) ops, then discard the rest
+     * of the op tree */
+
+    op_sibling_splice(parent, pm, second ? 2 : 1, NULL);
+    op_free(entersubop);
+
+    /* then attach first (and second) to a new binop */
+
+    NewOp(1234, newop, 1, BINOP);
+    newop->op_type   = OP_CUSTOM;
+    newop->op_ppaddr = S_pp_dump;
+    newop->op_private= second ? 2 : 1;
+    newop->op_flags  = OPf_KIDS|OPf_WANT_SCALAR;
+    op_sibling_splice((OP*)newop, NULL, 0, first);
+
+    return (OP *)newop;
+}
+
+static const XOP my_xop = {
+    XOPf_xop_name|XOPf_xop_desc|XOPf_xop_class,		/* xop_flags */
+    "Devel_Peek_Dump",					/* xop_name */
+    "Dump",						/* xop_desc */
+    OA_BINOP,						/* xop_class */
+    NULL						/* xop_peep */
+};
+
 MODULE = Devel::Peek		PACKAGE = Devel::Peek
 
 void
@@ -347,14 +437,15 @@ SV *	sv
 I32	lim
 PPCODE:
 {
-    SV *pv_lim_sv = perl_get_sv("Devel::Peek::pv_limit", 0);
-    const STRLEN pv_lim = pv_lim_sv ? SvIV(pv_lim_sv) : 0;
-    SV *dumpop = perl_get_sv("Devel::Peek::dump_ops", 0);
-    const U16 save_dumpindent = PL_dumpindent;
-    PL_dumpindent = 2;
-    do_sv_dump(0, Perl_debug_log, sv, 0, lim,
-	       (bool)(dumpop && SvTRUE(dumpop)), pv_lim);
-    PL_dumpindent = save_dumpindent;
+    S_do_dump(aTHX_ sv, lim);
+}
+
+BOOT:
+{
+    CV * const cv = get_cvn_flags("Devel::Peek::Dump", 17, 0);
+    assert(cv);
+    cv_set_call_checker(cv, S_ck_dump, (SV *)cv);
+    Perl_custom_op_register(aTHX_ S_pp_dump, &my_xop);
 }
 
 void
@@ -370,7 +461,7 @@ PPCODE:
     PL_dumpindent = 2;
 
     for (i=1; i<items; i++) {
-	PerlIO_printf(Perl_debug_log, "Elt No. %ld  0x%"UVxf"\n", i - 1, PTR2UV(ST(i)));
+	PerlIO_printf(Perl_debug_log, "Elt No. %ld  0x%" UVxf "\n", i - 1, PTR2UV(ST(i)));
 	do_sv_dump(0, Perl_debug_log, ST(i), 0, lim,
 		   (bool)(dumpop && SvTRUE(dumpop)), pv_lim);
     }
@@ -386,31 +477,17 @@ PPCODE:
 	op_dump(PL_main_root);
 }
 
-I32
+U32
 SvREFCNT(sv)
 SV *	sv
-
-# PPCODE needed since otherwise sv_2mortal is inserted that will kill the value.
-
-SV *
-SvREFCNT_inc(sv)
-SV *	sv
-PPCODE:
-{
-    RETVAL = SvREFCNT_inc(sv);
-    PUSHs(RETVAL);
-}
-
-# PPCODE needed since by default it is void
-
-void
-SvREFCNT_dec(sv)
-SV *	sv
-PPCODE:
-{
-    SvREFCNT_dec(sv);
-    PUSHs(sv);
-}
+PROTOTYPE: \[$@%&*]
+CODE:
+    SvGETMAGIC(sv);
+    if (!SvROK(sv))
+        croak_xs_usage(cv, "SCALAR");
+    RETVAL = SvREFCNT(SvRV(sv)) - 1; /* -1 because our ref doesn't count */
+OUTPUT:
+    RETVAL
 
 SV *
 DeadCode()

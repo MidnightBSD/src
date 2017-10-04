@@ -19,7 +19,8 @@ sub check_for
     require ExtUtils::CBuilder;
     $cb ||= ExtUtils::CBuilder->new( quiet => 1 );
 
-    my $main = $args{main};
+    my $main   = $args{main}   || "";
+    my $header = $args{header} || "";
 
     print "Checking $args{define}...\n";
 
@@ -30,6 +31,7 @@ sub check_for
     {
 	open( my $file_source_fh, ">", $file_source ) or die "Cannot write $file_source - $!";
 	print $file_source_fh <<"EOF";
+#include <stddef.h>
 #include <sys/types.h>
 #ifdef WIN32
 # include <ws2tcpip.h>
@@ -40,11 +42,12 @@ sub check_for
 # include <netinet/in.h>
 # include <arpa/inet.h>
 #endif
+$header
 int main(int argc, char *argv[])
   {
     (void)argc;
     (void)argv;
-    $main
+    { $main }
     return 0;
   }
 EOF
@@ -70,7 +73,7 @@ sub check_for_func
 {
     my %args = @_;
     my $func = delete $args{func};
-    check_for( %args, main => "void *p = &$func; (void)p;" );
+    check_for( %args, main => "void *p = &$func; if(p == NULL) return 1;" );
 }
 
 my %defines = (
@@ -115,7 +118,6 @@ check_for(
     main    => "struct ip_mreq mreq; mreq.imr_multiaddr.s_addr = INADDR_ANY;"
 );
 
-# TODO: Needs adding to perl5 core before importing dual-life again
 check_for(
     confkey => "d_ip_mreq_source",
     define  => "HAS_IP_MREQ_SOURCE",
@@ -126,6 +128,13 @@ check_for(
     confkey => "d_ipv6_mreq",
     define  => "HAS_IPV6_MREQ",
     main    => "struct ipv6_mreq mreq; mreq.ipv6mr_interface = 0;"
+);
+
+# TODO: Needs adding to perl5 core before importing dual-life again
+check_for(
+    confkey => "i_netinet_ip",
+    define  => "I_NETINET_IP",
+    header  => "#include <netinet/ip.h>",
 );
 
 my %makefile_args;
@@ -170,8 +179,10 @@ my @names = (
 
 	IP_ADD_MEMBERSHIP IP_ADD_SOURCE_MEMBERSHIP IP_DROP_MEMBERSHIP
 	IP_DROP_SOURCE_MEMBERSHIP IP_HDRINCL IP_MULTICAST_IF IP_MULTICAST_LOOP
-	IP_MULTICAST_TTL IP_OPTIONS IP_RECVOPTS	IP_RECVRETOPTS IP_RETOPTS IP_TOS
-	IP_TTL 
+	IP_MULTICAST_TTL IP_OPTIONS IP_RECVOPTS IP_RECVRETOPTS IP_RETOPTS IP_TOS
+	IP_TTL
+
+	IPTOS_LOWDELAY IPTOS_THROUGHPUT IPTOS_RELIABILITY IPTOS_MINCOST
 
 	IPV6_ADD_MEMBERSHIP IPV6_DROP_MEMBERSHIP IPV6_JOIN_GROUP
 	IPV6_LEAVE_GROUP IPV6_MTU IPV6_MTU_DISCOVER IPV6_MULTICAST_HOPS
@@ -199,14 +210,15 @@ my @names = (
 
 	SOMAXCONN
 
-	SO_ACCEPTCONN SO_ATTACH_FILTER SO_BACKLOG SO_BROADCAST SO_CHAMELEON
-	SO_DEBUG SO_DETACH_FILTER SO_DGRAM_ERRIND SO_DOMAIN SO_DONTLINGER
-	SO_DONTROUTE SO_ERROR SO_FAMILY SO_KEEPALIVE SO_LINGER SO_OOBINLINE
-	SO_PASSCRED SO_PASSIFNAME SO_PEERCRED SO_PROTOCOL SO_PROTOTYPE
-	SO_RCVBUF SO_RCVLOWAT SO_RCVTIMEO SO_REUSEADDR SO_REUSEPORT
+	SO_ACCEPTCONN SO_ATTACH_FILTER SO_BACKLOG SO_BINDTODEVICE SO_BROADCAST
+	SO_BSDCOMPAT SO_BUSY_POLL SO_CHAMELEON SO_DEBUG SO_DETACH_FILTER
+	SO_DGRAM_ERRIND SO_DOMAIN SO_DONTLINGER SO_DONTROUTE SO_ERROR SO_FAMILY
+	SO_KEEPALIVE SO_LINGER SO_MARK SO_OOBINLINE SO_PASSCRED SO_PASSIFNAME
+	SO_PEEK_OFF SO_PEERCRED SO_PRIORITY SO_PROTOCOL SO_PROTOTYPE SO_RCVBUF
+	SO_RCVLOWAT SO_RCVTIMEO SO_REUSEADDR SO_REUSEPORT
 	SO_SECURITY_AUTHENTICATION SO_SECURITY_ENCRYPTION_NETWORK
 	SO_SECURITY_ENCRYPTION_TRANSPORT SO_SNDBUF SO_SNDLOWAT SO_SNDTIMEO
-	SO_STATE SO_TYPE SO_USELOOPBACK SO_XOPEN SO_XSE
+	SO_STATE SO_TIMESTAMP SO_TYPE SO_USELOOPBACK SO_XOPEN SO_XSE
 
 	TCP_CONGESTION TCP_CONNECTIONTIMEOUT TCP_CORK TCP_DEFER_ACCEPT TCP_INFO
 	TCP_INIT_CWND TCP_KEEPALIVE TCP_KEEPCNT TCP_KEEPIDLE TCP_KEEPINTVL
@@ -219,9 +231,14 @@ my @names = (
     {name=>"IPPROTO_IP",   type=>"IV", default=>["IV",   0]},
     {name=>"IPPROTO_IPV6", type=>"IV", default=>["IV",  41]},
     {name=>"IPPROTO_RAW",  type=>"IV", default=>["IV", 255]},
-    {name=>"IPPROTO_ICMP", type=>"IV", default=>["IV",  1]},
-    {name=>"IPPROTO_TCP",  type=>"IV", default=>["IV",  6]},
-    {name=>"IPPROTO_UDP",  type=>"IV", default=>["IV", 17]},
+    {name=>"IPPROTO_ICMP", type=>"IV", default=>["IV",   1]},
+    {name=>"IPPROTO_IGMP", type=>"IV", default=>["IV",   2]},
+    {name=>"IPPROTO_TCP",  type=>"IV", default=>["IV",   6]},
+    {name=>"IPPROTO_UDP",  type=>"IV", default=>["IV",  17]},
+    {name=>"IPPROTO_GRE",  type=>"IV", default=>["IV",  47]},
+    {name=>"IPPROTO_ESP",  type=>"IV", default=>["IV",  50]},
+    {name=>"IPPROTO_AH",   type=>"IV", default=>["IV",  51]},
+    {name=>"IPPROTO_SCTP", type=>"IV", default=>["IV", 132]},
     {name=>"SHUT_RD",   type=>"IV", default=>["IV", "0"]},
     {name=>"SHUT_WR",   type=>"IV", default=>["IV", "1"]},
     {name=>"SHUT_RDWR", type=>"IV", default=>["IV", "2"]},

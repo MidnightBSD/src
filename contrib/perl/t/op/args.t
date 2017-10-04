@@ -2,10 +2,10 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
+    require './test.pl';
+    set_up_inc('../lib');
 }
 
-require './test.pl';
 plan( tests => 23 );
 
 # test various operations on @_
@@ -42,7 +42,7 @@ sub new4 { goto &new2 }
     is("@$y","a b c y", 'goto: multiple elements');
 }
 
-# see if POPSUB gets to see the right pad across a dounwind() with
+# see if cx_popsub() gets to see the right pad across a dounwind() with
 # a reified @_
 
 sub methimpl {
@@ -63,7 +63,7 @@ sub try {
 
 for (1..5) { try() }
 is($failcount, 5,
-    'POPSUB sees right pad across a dounwind() with reified @_');
+    'cx_popsub sees right pad across a dounwind() with reified @_');
 
 # bug #21542 local $_[0] causes reify problems and coredumps
 

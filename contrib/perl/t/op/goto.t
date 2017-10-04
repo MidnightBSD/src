@@ -4,13 +4,13 @@
 
 BEGIN {
     chdir 't' if -d 't';
-    @INC = qw(. ../lib);
-    require "test.pl";
+    require "./test.pl"; require './charset_tools.pl';
+    set_up_inc( qw(. ../lib) );
 }
 
 use warnings;
 use strict;
-plan tests => 89;
+plan tests => 100;
 our $TODO;
 
 my $deprecated = 0;
@@ -97,7 +97,7 @@ for (1) {
 is($count, 2, 'end of loop');
 
 # Does goto work correctly within a for(;;) loop?
-#  (BUG ID 20010309.004)
+#  (BUG ID 20010309.004 (#5998))
 
 for(my $i=0;!$i++;) {
   my $x=1;
@@ -216,6 +216,46 @@ package _99850 {
 like $@, qr/^Goto undefined subroutine &_99850::reftype at /,
    'goto &foo undefining &foo on sub cleanup';
 
+# When croaking after discovering that the new CV you're about to goto is
+# undef, make sure that the old CV isn't doubly freed.
+
+package Do_undef {
+    my $count;
+
+    # creating a new closure here encourages any prematurely freed
+    # CV to be reallocated
+    sub DESTROY { undef &undef_sub; my $x = sub { $count } }
+
+    sub f {
+        $count++;
+        my $guard = bless []; # trigger DESTROY during goto
+        *undef_sub = sub {};
+        goto &undef_sub
+    }
+
+    for (1..10) {
+        eval { f() };
+    }
+    ::is($count, 10, "goto undef_sub safe");
+}
+
+# make sure that nothing nasty happens if the old CV is freed while
+# goto'ing
+
+package Free_cv {
+    my $results;
+    sub f {
+        no warnings 'redefine';
+        *f = sub {};
+        goto &g;
+    }
+    sub g { $results = "(@_)" }
+
+    f(1,2,3);
+    ::is($results, "(1 2 3)", "Free_cv");
+}
+
+
 # bug #22181 - this used to coredump or make $x undefined, due to
 # erroneous popping of the inner BLOCK context
 
@@ -240,7 +280,7 @@ YYY: print "OK\n";
 EOT
 close $f;
 
-$r = runperl(prog => 'use Op_goto01; print qq[DONE\n]');
+$r = runperl(prog => 'BEGIN { unshift @INC, q[.] } use Op_goto01; print qq[DONE\n]');
 is($r, "OK\nDONE\n", "goto within use-d file"); 
 unlink_all "Op_goto01.pm";
 
@@ -414,6 +454,38 @@ moretests:
     }
 }
 
+# This bug was introduced in Aug 2010 by commit ac56e7de46621c6f
+# Peephole optimise adjacent pairs of nextstate ops.
+# and fixed in Oct 2014 by commit f5b5c2a37af87535
+# Simplify double-nextstate optimisation
+
+# The bug manifests as a warning
+# Use of "goto" to jump into a construct is deprecated at t/op/goto.t line 442.
+# and $out is undefined. Devel::Peek reveals that the lexical in the pad has
+# been reset to undef. I infer that pp_goto thinks that it's leaving one scope
+# and entering another, but I don't know *why* it thinks that. Whilst this bug
+# has been fixed by Father C, because I don't understand why it happened, I am
+# not confident that other related bugs remain (or have always existed).
+
+sub DEBUG_TIME() {
+    0;
+}
+
+{
+    if (DEBUG_TIME) {
+    }
+
+    {
+        my $out = "";
+        $out .= 'perl rules';
+        goto no_list;
+    no_list:
+        is($out, 'perl rules', '$out has not been erroneously reset to undef');
+    };
+}
+
+is($deprecated, 0, 'no warning was emmitted');
+
 # deep recursion with gotos eventually caused a stack reallocation
 # which messed up buggy internals that didn't expect the stack to move
 
@@ -473,13 +545,46 @@ is sub {
     goto &returnarg;
 }->("quick and easy"), "ick and queasy",
   'goto &foo with *_{ARRAY} replaced';
-my @__ = "\xc4\x80";
+my @__ = byte_utf8a_to_utf8n("\xc4\x80");
 sub { local *_ = \@__; goto &utf8::decode }->("no thinking aloud");
 is "@__", chr 256, 'goto &xsub with replaced *_{ARRAY}';
 
 # And goto &foo should leave reified @_ alone
 sub { *__ = \@_;  goto &null } -> ("rough and tubbery");
 is ${*__}[0], 'rough and tubbery', 'goto &foo leaves reified @_ alone';
+
+# goto &xsub when @_ has nonexistent elements
+{
+    no warnings "uninitialized";
+    local @_ = ();
+    $#_++;
+    & {sub { goto &utf8::encode }};
+    is @_, 1, 'num of elems in @_ after goto &xsub with nonexistent $_[0]';
+    is $_[0], "", 'content of nonexistent $_[0] is modified by goto &xsub';
+}
+
+# goto &xsub when @_ itself does not exist
+undef *_;
+eval { & { sub { goto &utf8::encode } } };
+# The main thing we are testing is that it did not crash.  But make sure 
+# *_{ARRAY} was untouched, too.
+is *_{ARRAY}, undef, 'goto &xsub when @_ does not exist';
+
+# goto &perlsub when @_ itself does not exist [perl #119949]
+# This was only crashing when the replaced sub call had an argument list.
+# (I.e., &{ sub { goto ... } } did not crash.)
+sub {
+    undef *_;
+    goto sub {
+	is *_{ARRAY}, undef, 'goto &perlsub when @_ does not exist';
+    }
+}->();
+sub {
+    local *_;
+    goto sub {
+	is *_{ARRAY}, undef, 'goto &sub when @_ does not exist (local *_)';
+    }
+}->();
 
 
 # [perl #36521] goto &foo in warn handler could defeat recursion avoider
@@ -669,3 +774,39 @@ sub FETCH     { $_[0][0] }
 tie my $t, "", sub { "cluck up porridge" };
 is eval { sub { goto $t }->() }//$@, 'cluck up porridge',
   'tied arg returning sub ref';
+
+TODO: {
+  local $::TODO = 'RT #45091: goto in CORE::GLOBAL::exit unsupported';
+  fresh_perl_is(<<'EOC', "before\ndie handler\n", {stderr => 1}, 'RT #45091: goto in CORE::GLOBAL::EXIT');
+  BEGIN {
+    *CORE::GLOBAL::exit = sub {
+      goto FASTCGI_NEXT_REQUEST;
+    };
+  }
+  while (1) {
+    eval { that_cgi_script() };
+    FASTCGI_NEXT_REQUEST:
+    last;
+  }
+  
+  sub that_cgi_script {
+    local $SIG{__DIE__} = sub { print "die handler\n"; exit; print "exit failed?\n"; };
+    print "before\n";
+    eval { buggy_code() };
+    print "after\n";
+  }
+  sub buggy_code {
+    die "error!";
+    print "after die\n";
+  }
+EOC
+}
+
+sub revnumcmp ($$) {
+  goto FOO;
+  die;
+  FOO:
+  return $_[1] <=> $_[0];
+}
+is eval { join(":", sort revnumcmp (9,5,1,3,7)) }, "9:7:5:3:1",
+  "can goto at top level of multicalled sub";

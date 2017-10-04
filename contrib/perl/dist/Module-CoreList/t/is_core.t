@@ -1,9 +1,13 @@
 #!perl -w
 use strict;
 use Module::CoreList;
-use Test::More tests => 33;
+use Test::More tests => 43;
 
 BEGIN { require_ok('Module::CoreList'); }
+
+# Check default perl
+
+ok(Module::CoreList::is_core('IO::File', $Module::CoreList::version{$]}{'IO::File'}), "is_core is self-consistent");
 
 ok(!Module::CoreList::is_core('Module::Path'), 'Module::Path has never been in core');
 ok(!Module::CoreList::is_core('Module::Path', undef, '5.016003'), 'Module::Path has never been in core');
@@ -23,6 +27,13 @@ ok(Module::CoreList::is_core('attributes', undef, '5.00503') == 0, "attributes w
 ok(Module::CoreList::is_core('attributes', undef, '5.006001') == 1, "attributes were in 5.6.1");
 ok(Module::CoreList::is_core('Pod::Plainer', undef, '5.012001') == 1, "Pod::Plainer was core in 5.12.1");
 ok(Module::CoreList::is_core('Pod::Plainer', undef, '5.016003') == 0, "Pod::Plainer was removed in 5.13.1");
+
+ok(!Module::CoreList::is_core('File::Temp', 0, '5.006'), 'File::Temp is not in 5.006000');
+ok(Module::CoreList::is_core('File::Temp', 0, '5.006001'), 'File::Temp is in 5.006001');
+ok(!Module::CoreList::is_core('File::Temp', '0.12', '5.006'), 'File::Temp 0.12 is not in 5.006000');
+ok(Module::CoreList::is_core('File::Temp', '0.12', '5.006001'), 'File::Temp 0.12 is in 5.006001');
+ok(Module::CoreList::is_core('File::Temp', '0.12', '5.006002'), 'File::Temp 0.12 is in 5.006002');
+
 
 # history of module 'encoding' in core
 #   version 1.00 included in 5.007003
@@ -65,3 +76,9 @@ ok(Module::CoreList->is_core('Text::Soundex', '3.03', '5.01'), "5.01 had Text::S
 ok(Module::CoreList->is_core('DB_File', '1.01', '5.002'), "DB_File 1.01 was included in 5.002");
 ok(!Module::CoreList->is_core('DB_File', '1.03', '5.002'), "DB_File 1.03 wasn't included in 5.002");
 ok(Module::CoreList->is_core('DB_File', '1.03', '5.00307'), "DB_File 1.03 was included in 5.00307");
+
+ok(! Module::CoreList->is_core("CGI", undef, 5.021), "CGI not in 5.021");
+ok(! Module::CoreList->is_core("CGI", undef, 5.021001), "CGI not in 5.021001");
+
+ok(  Module::CoreList::is_core("Config", 0, "5.020"), "Config v0+ is in core in 5.020");
+ok(  Module::CoreList::is_core("Config", undef, "5.020"), "Config v(undef) is in core in 5.020");

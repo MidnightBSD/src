@@ -21,9 +21,16 @@
 # then hand-edit configure.com (as that's not automated).
 # If this changes uconfig.sh, you'll also need to run perl regen/uconfig_h.pl
 
+use Config;
 BEGIN {
+    require "./test.pl";
+    skip_all("Won't ship a release from EBCDIC") if $::IS_EBCDIC;
     @INC = '..' if -f '../TestInit.pm';
 }
 use TestInit qw(T A); # T is chdir to the top level, A makes paths absolute
 
-system "$^X Porting/checkcfgvar.pl --tap";
+if ( $Config{usecrosscompile} ) {
+  skip_all( "Not all files are available during cross-compilation" );
+}
+
+system "$^X -Ilib Porting/checkcfgvar.pl --tap";

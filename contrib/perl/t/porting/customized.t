@@ -12,6 +12,7 @@ BEGIN {
     chdir '..' unless -d 't';
     @INC = qw(lib Porting t);
     require 'test.pl';
+    skip_all("pre-computed SHA1 won't match under EBCDIC") if $::IS_EBCDIC;
 }
 
 use strict;
@@ -71,10 +72,10 @@ EOF
 my $data_fh;
 
 if ( $regen ) {
-  open $data_fh, '>:bytes', $customised or die "Can't open $customised";
+  open $data_fh, '>:raw', $customised or die "Can't open $customised";
 }
 else {
-  open $data_fh, '<:bytes', $customised or die "Can't open $customised";
+  open $data_fh, '<:raw', $customised or die "Can't open $customised";
   while (<$data_fh>) {
     chomp;
     my ($module,$file,$sha) = split ' ';
@@ -83,8 +84,9 @@ else {
   close $data_fh;
 }
 
-foreach my $module ( keys %Modules ) {
+foreach my $module ( sort keys %Modules ) {
   next unless my $files = $Modules{ $module }{CUSTOMIZED};
+  next unless @{ $files };
   my @perl_files = my_get_module_files( $module );
   foreach my $file ( @perl_files ) {
     my $digest = Digest->new( $digest_type );
@@ -125,7 +127,7 @@ customized.t - Test that CUSTOMIZED files in Maintainers.pl have not been overwr
 =head1 DESCRIPTION
 
 customized.t checks that files listed in C<Maintainers.pl> that have been C<CUSTOMIZED>
-are not accidently overwritten by CPAN module updates.
+are not accidentally overwritten by CPAN module updates.
 
 =head1 OPTIONS
 

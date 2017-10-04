@@ -4,13 +4,7 @@
 #
 ################################################################################
 #
-#  $Revision: 29 $
-#  $Author: mhx $
-#  $Date: 2010/03/07 13:15:43 +0100 $
-#
-################################################################################
-#
-#  Version 3.x, Copyright (C) 2004-2010, Marcus Holland-Moritz.
+#  Version 3.x, Copyright (C) 2004-2013, Marcus Holland-Moritz.
 #  Version 2.x, Copyright (C) 2001, Paul Marquess.
 #  Version 1.x, Copyright (C) 1999, Kenneth Albanowski.
 #
@@ -34,7 +28,7 @@ sub all_files_in_dir
   my @files = grep { !-d && !/^\./ } readdir DIR;  # no dirs or hidden files
   closedir DIR;
 
-  return map { cat_file($dir, $_) } @files;
+  return map { cat_file($dir, $_) } sort @files;
 }
 
 sub parse_todo
@@ -85,7 +79,7 @@ sub parse_partspec
   while (<F>) {
     /[ \t]+$/ and warn "$file:$.: warning: trailing whitespace\n";
     if ($section eq 'implementation') {
-      m!//! && !m!(?:=~|s/).*//! && !m!(?:ht|f)tp://!
+      m!//! && !m!(?:=~|s/).*//! && !m!(?:ht|f)tp(?:s)://!
           and warn "$file:$.: warning: potential C++ comment\n";
     }
     /^##/ and next;
@@ -324,6 +318,11 @@ sub parse_embed
               args  => \@args,
               cond  => ppcond(\@pps),
             };
+          }
+          elsif ($name =~ /^[^\W\d]\w*-E<gt>[^\W\d]\w*$/) {
+            # silenty ignore entries of the form
+            #    PL_parser-E<gt>linestr
+            # which documents a struct entry rather than a function
           }
           else {
             warn "mysterious name [$name] in $file, line $.\n";

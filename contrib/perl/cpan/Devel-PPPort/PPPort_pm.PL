@@ -4,13 +4,7 @@
 #
 ################################################################################
 #
-#  $Revision: 67 $
-#  $Author: mhx $
-#  $Date: 2010/03/07 13:15:41 +0100 $
-#
-################################################################################
-#
-#  Version 3.x, Copyright (C) 2004-2010, Marcus Holland-Moritz.
+#  Version 3.x, Copyright (C) 2004-2013, Marcus Holland-Moritz.
 #  Version 2.x, Copyright (C) 2001, Paul Marquess.
 #  Version 1.x, Copyright (C) 1999, Kenneth Albanowski.
 #
@@ -37,7 +31,7 @@ $data =~ s{^\%(include)\s+(\w+)((?:[^\S\r\n]+.*?)?)\s*$}
 
 $data = expand($data);
 
-my @api = sort { lc $a cmp lc $b } keys %provides;
+my @api = sort { lc $a cmp lc $b or $a cmp $b } keys %provides;
 
 $data =~ s{^(.*)__PROVIDED_API__(\s*?)^}
           {join '', map "$1$_\n", @api}gem;
@@ -126,7 +120,7 @@ $data =~ s{^__UNSUPPORTED_API__(\s*?)^}
           {join "\n", @todo}gem;
 
 $data =~ s{__MIN_PERL__}{5.003}g;
-$data =~ s{__MAX_PERL__}{5.11.5}g;
+$data =~ s{__MAX_PERL__}{5.20}g;
 
 open FH, ">PPPort.pm" or die "PPPort.pm: $!\n";
 print FH $data;
@@ -372,13 +366,7 @@ __DATA__
 #
 ################################################################################
 #
-#  $Revision: 67 $
-#  $Author: mhx $
-#  $Date: 2010/03/07 13:15:41 +0100 $
-#
-################################################################################
-#
-#  Version 3.x, Copyright (C) 2004-2010, Marcus Holland-Moritz.
+#  Version 3.x, Copyright (C) 2004-2013, Marcus Holland-Moritz.
 #  Version 2.x, Copyright (C) 2001, Paul Marquess.
 #  Version 1.x, Copyright (C) 1999, Kenneth Albanowski.
 #
@@ -396,6 +384,10 @@ Devel::PPPort - Perl/Pollution/Portability
     Devel::PPPort::WriteFile();   # defaults to ./ppport.h
     Devel::PPPort::WriteFile('someheader.h');
 
+    # Same as above but retrieve contents rather than write file
+    my $contents = Devel::PPPort::GetFileContents();
+    my $contents = Devel::PPPort::GetFileContents('someheader.h');
+
 =head1 DESCRIPTION
 
 Perl's API has changed over time, gaining new features, new functions,
@@ -405,11 +397,14 @@ typically F<ppport.h>, attempts to bring some of the newer Perl API
 features to older versions of Perl, so that you can worry less about
 keeping track of old releases, but users can still reap the benefit.
 
-C<Devel::PPPort> contains a single function, called C<WriteFile>. Its
-only purpose is to write the F<ppport.h> C header file. This file
-contains a series of macros and, if explicitly requested, functions that
-allow XS modules to be built using older versions of Perl. Currently,
+C<Devel::PPPort> contains two functions, C<WriteFile> and C<GetFileContents>.
+C<WriteFile>'s only purpose is to write the F<ppport.h> C header file.
+This file contains a series of macros and, if explicitly requested, functions
+that allow XS modules to be built using older versions of Perl. Currently,
 Perl versions from __MIN_PERL__ to __MAX_PERL__ are supported.
+
+C<GetFileContents> can be used to retrieve the file contents rather than
+writing it out.
 
 This module is used by C<h2xs> to write the file F<ppport.h>.
 
@@ -461,6 +456,11 @@ no arguments, it defaults to the filename F<ppport.h>.
 The function returns a true value if the file was written successfully.
 Otherwise it returns a false value.
 
+=head2 GetFileContents
+
+C<GetFileContents> behaves like C<WriteFile> above, but returns the contents
+of the would-be file rather than writing it out.
+
 =head1 COMPATIBILITY
 
 F<ppport.h> supports Perl versions from __MIN_PERL__ to __MAX_PERL__
@@ -492,8 +492,8 @@ __UNSUPPORTED_API__
 =head1 BUGS
 
 If you find any bugs, C<Devel::PPPort> doesn't seem to build on your
-system or any of its tests fail, please use the CPAN Request Tracker
-at L<http://rt.cpan.org/> to create a ticket for the module.
+system, or any of its tests fail, please file an issue here:
+L<https://github.com/mhx/Devel-PPPort/issues/>
 
 =head1 AUTHORS
 
@@ -511,11 +511,15 @@ Version 2.x was ported to the Perl core by Paul Marquess.
 
 Version 3.x was ported back to CPAN by Marcus Holland-Moritz.
 
+=item * 
+
+Versions >= 3.22 are maintained with support from Matthew Horsfall (alh).
+
 =back
 
 =head1 COPYRIGHT
 
-Version 3.x, Copyright (C) 2004-2010, Marcus Holland-Moritz.
+Version 3.x, Copyright (C) 2004-2013, Marcus Holland-Moritz.
 
 Version 2.x, Copyright (C) 2001, Paul Marquess.
 
@@ -535,7 +539,7 @@ package Devel::PPPort;
 use strict;
 use vars qw($VERSION $data);
 
-$VERSION = do { my @r = '$Snapshot: /Devel-PPPort/3.20 $' =~ /(\d+\.\d+(?:_\d+)?)/; @r ? $r[0] : '9.99' };
+$VERSION = '3.35';
 
 sub _init_data
 {
@@ -547,15 +551,21 @@ sub _init_data
   $data =~ s/^\|>//gm;
 }
 
-sub WriteFile
-{
+sub GetFileContents {
   my $file = shift || 'ppport.h';
   defined $data or _init_data();
   my $copy = $data;
   $copy =~ s/\bppport\.h\b/$file/g;
 
+  return $copy;
+}
+
+sub WriteFile
+{
+  my $file = shift || 'ppport.h';
+  my $data = GetFileContents($file);
   open F, ">$file" or return undef;
-  print F $copy;
+  print F $data;
   close F;
 
   return 1;

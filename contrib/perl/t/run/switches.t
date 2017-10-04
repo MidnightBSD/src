@@ -7,15 +7,14 @@
 BEGIN {
     chdir 't' if -d 't';
     @INC = '../lib';
+    require Config; import Config;
 }
 
-BEGIN { require "./test.pl"; }
+BEGIN { require "./test.pl";  require "./loc_tools.pl"; }
 
 plan(tests => 115);
 
 use Config;
-use Errno qw(EACCES EISDIR);
-use POSIX qw(setlocale LC_ALL);
 
 # due to a bug in VMS's piping which makes it impossible for runperl()
 # to emulate echo -n (ie. stdin always winds up with a newline), these 
@@ -109,7 +108,9 @@ SWTEST
     );
 }
 
-{
+SKIP: {
+    skip 'locales not available', 1 unless locales_enabled('LC_ALL');
+
     my $tempdir = tempfile;
     mkdir $tempdir, 0700 or die "Can't mkdir '$tempdir': $!";
 
@@ -119,7 +120,11 @@ SWTEST
 
     # Win32 won't let us open the directory, so we never get to die with
     # EISDIR, which happens after open.
-    my $error  = do { local $! = $^O eq 'MSWin32' ? EACCES : EISDIR; "$!" };
+    require Errno;
+    import Errno qw(EACCES EISDIR);
+    my $error  = do {
+        local $! = $^O eq 'MSWin32' ? &EACCES : &EISDIR; "$!"
+    };
     like(
         runperl( switches => [ '-c' ], args  => [ $tempdir ], stderr => 1),
         qr/Can't open perl script.*$tempdir.*\Q$error/s,
@@ -160,7 +165,7 @@ SWTEST
     is( $r, 'foo1', '-s on the shebang line' );
 }
 
-# Bug ID 20011106.084
+# Bug ID 20011106.084 (#7876)
 $filename = tempfile();
 SKIP: {
     open my $f, ">$filename" or skip( "Can't write temp file $filename: $!" );
@@ -189,12 +194,12 @@ sub import { print map "<\$_>", \@_ }
 SWTESTPM
     close $f or die "Could not close: $!";
     $r = runperl(
-	switches    => [ "-M$package" ],
+	switches    => [ "-I.", "-M$package" ],
 	prog	    => '1',
     );
     is( $r, "<$package>", '-M' );
     $r = runperl(
-	switches    => [ "-M$package=foo" ],
+	switches    => [ "-I.", "-M$package=foo" ],
 	prog	    => '1',
     );
     is( $r, "<$package><foo>", '-M with import parameter' );
@@ -208,7 +213,7 @@ SWTESTPM
         is( $r, '', '-m' );
     }
     $r = runperl(
-	switches    => [ "-m$package=foo,bar" ],
+	switches    => [ "-I.", "-m$package=foo,bar" ],
 	prog	    => '1',
     );
     is( $r, "<$package><foo><bar>", '-m with import parameters' );
@@ -291,13 +296,17 @@ is runperl(stderr => 1, prog => '#!perl -M'),
     local $TODO = '';   # these ones should work on VMS
     # there are definitely known build configs where this test will fail
     # DG/UX comes to mind. Maybe we should remove these special cases?
-    my $v = sprintf "%vd", $^V;
-    my $ver = $Config{PERL_VERSION};
-    my $rel = $Config{PERL_SUBVERSION};
-    like( runperl( switches => ['-v'] ),
-	  qr/This is perl 5, version \Q$ver\E, subversion \Q$rel\E \(v\Q$v\E(?:[-*\w]+| \([^)]+\))?\) built for \Q$Config{archname}\E.+Copyright.+Larry Wall.+Artistic License.+GNU General Public License/s,
-          '-v looks okay' );
-
+  SKIP:
+    {
+        skip "Win32 miniperl produces a default archname in -v", 1
+	  if $^O eq 'MSWin32' && is_miniperl;
+        my $v = sprintf "%vd", $^V;
+        my $ver = $Config{PERL_VERSION};
+        my $rel = $Config{PERL_SUBVERSION};
+        like( runperl( switches => ['-v'] ),
+	      qr/This is perl 5, version \Q$ver\E, subversion \Q$rel\E \(v\Q$v\E(?:[-*\w]+| \([^)]+\))?\) built for \Q$Config{archname}\E.+Copyright.+Larry Wall.+Artistic License.+GNU General Public License/s,
+              '-v looks okay' );
+    }
 }
 
 # Tests for -h

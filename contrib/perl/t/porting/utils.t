@@ -22,7 +22,7 @@ BEGIN {
 use TestInit qw(T); # T is chdir to the top level
 use strict;
 
-require 't/test.pl';
+require './t/test.pl';
 
 # It turns out that, since the default @INC will include your old 5.x libs, if
 # you have them, the Porting utils might load a library that no longer compiles
@@ -47,7 +47,12 @@ while (<$fh>) {
 }
 close $fh or die $!;
 
-my @victims = (qw(installman installperl regen_perly.pl));
+# regen/uconfig_h.pl is here because it's not possible to test it by running
+# it on non-*nix platforms, as it requires a Bourne shell. As it's the only file
+# in regen/ which we can syntax check but can't run, it's simpler to add it to
+# the list here, than copy-paste the entire syntax-checking logic to
+# t/porting/regen.t
+my @victims = (qw(installman installperl regen_perly.pl regen/uconfig_h.pl));
 my %excuses = (
                'Porting/git-deltatool' => 'Git::Wrapper',
                'Porting/podtidy' => 'Pod::Tidy',
@@ -57,11 +62,7 @@ my %excuses = (
 foreach (@maybe) {
     if (/\.p[lm]$/) {
         push @victims, $_;
-    } elsif ($_ !~ m{^x2p/a2p}) {
-        # test_prep doesn't (yet) have a dependency on a2p, so it seems a bit
-        # silly adding one (and forcing it to be built) just so that we can open
-        # it and determine that it's *not* a perl program, and hence of no
-        # further interest to us.
+    } else {
         open $fh, '<', $_ or die "Can't open '$_': $!";
         my $line = <$fh>;
         if ($line =~ m{^#!(?:\S*|/usr/bin/env\s+)perl}
@@ -77,22 +78,13 @@ printf "1..%d\n", scalar @victims;
 
 foreach my $victim (@victims) {
  SKIP: {
-        # Not clear to me *why* it needs the BEGIN block, given what it
-        # does, but not in an easy position to change it.
-        skip("$victim executes code in a BEGIN block which fails for empty \@ARGV")
-            if $victim =~ m{^utils/cpanp-run-perl};
-
         skip ("$victim uses $excuses{$victim}, so can't test with just core modules")
             if $excuses{$victim};
 
-        my $got = runperl(switches => ['-c'], progfile => $victim, stderr => 1);
-        is($got, "$victim syntax OK\n", "$victim compiles");
+        my $got = runperl(switches => ['-c'], progfile => $victim, stderr => 1, nolib => 1);
+        is($got, "$victim syntax OK\n", "$victim compiles")
+            or diag("when executing perl with '-c $victim'");
     }
 }
 
-# Local variables:
-# cperl-indent-level: 4
-# indent-tabs-mode: nil
-# End:
-#
 # ex: set ts=8 sts=4 sw=4 et:

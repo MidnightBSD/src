@@ -1,13 +1,15 @@
 #!perl -w
 
 BEGIN {
-    chdir 't';
-    @INC = '../lib';
+    chdir 't' if -d 't';
     require Config; import Config;
     require './test.pl';
+    require './charset_tools.pl';
+    require './loc_tools.pl';
+    set_up_inc( '../lib' );
 }
 
-plan(tests => 215);
+plan(tests => 217);
 
 package UTF8Toggle;
 use strict;
@@ -39,7 +41,7 @@ package main;
 # no feature "unicode_strings";
 
 # Bug 34297
-foreach my $t ("ASCII", "B\366se") {
+foreach my $t ("ASCII", "B" . uni_to_native("\366") . "se") {
     my $length = length $t;
 
     my $u = UTF8Toggle->new($t);
@@ -49,58 +51,53 @@ foreach my $t ("ASCII", "B\366se") {
     is (length $u, $length, "length of '$t'");
 }
 
-my $u = UTF8Toggle->new("\311");
+my $E_acute = uni_to_native("\311");
+my $e_acute = uni_to_native("\351");
+my $u = UTF8Toggle->new($E_acute);
 my $lc = lc $u;
 is (length $lc, 1);
-is ($lc, "\311", "E acute -> e acute");
+is ($lc, $E_acute, "E acute -> e acute");
 $lc = lc $u;
 is (length $lc, 1);
-is ($lc, "\351", "E acute -> e acute");
+is ($lc, $e_acute, "E acute -> e acute");
 $lc = lc $u;
 is (length $lc, 1);
-is ($lc, "\311", "E acute -> e acute");
+is ($lc, $E_acute, "E acute -> e acute");
 
-$u = UTF8Toggle->new("\351");
+$u = UTF8Toggle->new($e_acute);
 my $uc = uc $u;
 is (length $uc, 1);
-is ($uc, "\351", "e acute -> E acute");
+is ($uc, $e_acute, "e acute -> E acute");
 $uc = uc $u;
 is (length $uc, 1);
-is ($uc, "\311", "e acute -> E acute");
+is ($uc, $E_acute, "e acute -> E acute");
 $uc = uc $u;
 is (length $uc, 1);
-is ($uc, "\351", "e acute -> E acute");
+is ($uc, $e_acute, "e acute -> E acute");
 
-$u = UTF8Toggle->new("\311");
+$u = UTF8Toggle->new($E_acute);
 $lc = lcfirst $u;
 is (length $lc, 1);
-is ($lc, "\311", "E acute -> e acute");
+is ($lc, $E_acute, "E acute -> e acute");
 $lc = lcfirst $u;
 is (length $lc, 1);
-is ($lc, "\351", "E acute -> e acute");
+is ($lc, $e_acute, "E acute -> e acute");
 $lc = lcfirst $u;
 is (length $lc, 1);
-is ($lc, "\311", "E acute -> e acute");
+is ($lc, $E_acute, "E acute -> e acute");
 
-$u = UTF8Toggle->new("\351");
+$u = UTF8Toggle->new($e_acute);
 $uc = ucfirst $u;
 is (length $uc, 1);
-is ($uc, "\351", "e acute -> E acute");
+is ($uc, $e_acute, "e acute -> E acute");
 $uc = ucfirst $u;
 is (length $uc, 1);
-is ($uc, "\311", "e acute -> E acute");
+is ($uc, $E_acute, "e acute -> E acute");
 $uc = ucfirst $u;
 is (length $uc, 1);
-is ($uc, "\351", "e acute -> E acute");
+is ($uc, $e_acute, "e acute -> E acute");
 
-my $have_setlocale = 0;
-eval {
-    require POSIX;
-    if($Config{d_setlocale}) {
-        import POSIX ':locale_h';
-        $have_setlocale++;
-    }
-};
+my $have_setlocale = locales_enabled('LC_ALL');
 
 SKIP: {
     if (!$have_setlocale) {
@@ -110,54 +107,50 @@ SKIP: {
     } elsif ($^O eq 'dec_osf' || $^O eq 'VMS') {
 	skip "$^O has broken en_GB.ISO8859-1 locale", 24;
     } else {
-        BEGIN {
-            if($Config{d_setlocale}) {
-                require locale; import locale;
-            }
-        }
-	my $u = UTF8Toggle->new("\311");
+        use locale;
+	my $u = UTF8Toggle->new($E_acute);
 	my $lc = lc $u;
 	is (length $lc, 1);
-	is ($lc, "\351", "E acute -> e acute");
+	is ($lc, $e_acute, "E acute -> e acute");
 	$lc = lc $u;
 	is (length $lc, 1);
-	is ($lc, "\351", "E acute -> e acute");
+	is ($lc, $e_acute, "E acute -> e acute");
 	$lc = lc $u;
 	is (length $lc, 1);
-	is ($lc, "\351", "E acute -> e acute");
+	is ($lc, $e_acute, "E acute -> e acute");
 
-	$u = UTF8Toggle->new("\351");
+	$u = UTF8Toggle->new($e_acute);
 	my $uc = uc $u;
 	is (length $uc, 1);
-	is ($uc, "\311", "e acute -> E acute");
+	is ($uc, $E_acute, "e acute -> E acute");
 	$uc = uc $u;
 	is (length $uc, 1);
-	is ($uc, "\311", "e acute -> E acute");
+	is ($uc, $E_acute, "e acute -> E acute");
 	$uc = uc $u;
 	is (length $uc, 1);
-	is ($uc, "\311", "e acute -> E acute");
+	is ($uc, $E_acute, "e acute -> E acute");
 
-	$u = UTF8Toggle->new("\311");
+	$u = UTF8Toggle->new($E_acute);
 	$lc = lcfirst $u;
 	is (length $lc, 1);
-	is ($lc, "\351", "E acute -> e acute");
+	is ($lc, $e_acute, "E acute -> e acute");
 	$lc = lcfirst $u;
 	is (length $lc, 1);
-	is ($lc, "\351", "E acute -> e acute");
+	is ($lc, $e_acute, "E acute -> e acute");
 	$lc = lcfirst $u;
 	is (length $lc, 1);
-	is ($lc, "\351", "E acute -> e acute");
+	is ($lc, $e_acute, "E acute -> e acute");
 
-	$u = UTF8Toggle->new("\351");
+	$u = UTF8Toggle->new($e_acute);
 	$uc = ucfirst $u;
 	is (length $uc, 1);
-	is ($uc, "\311", "e acute -> E acute");
+	is ($uc, $E_acute, "e acute -> E acute");
 	$uc = ucfirst $u;
 	is (length $uc, 1);
-	is ($uc, "\311", "e acute -> E acute");
+	is ($uc, $E_acute, "e acute -> E acute");
 	$uc = ucfirst $u;
 	is (length $uc, 1);
-	is ($uc, "\311", "e acute -> E acute");
+	is ($uc, $E_acute, "e acute -> E acute");
     }
 }
 
@@ -169,8 +162,9 @@ foreach my $operator ('print', 'syswrite', 'syswrite len', 'syswrite off',
 	open my $fh, "+>$layer", $tmpfile or die $!;
 	my $pad = $operator =~ /\boff\b/ ? "\243" : "";
 	my $trail = $operator =~ /\blen\b/ ? "!" : "";
-	my $u = UTF8Toggle->new("$pad\311\n$trail");
-	my $l = UTF8Toggle->new("$pad\351\n$trail", 1);
+	my $u = UTF8Toggle->new("$pad$E_acute\n$trail");
+	my $l = UTF8Toggle->new("$pad$e_acute\n$trail", 1);
+        no warnings 'deprecated';
 	if ($operator eq 'print') {
 	    no warnings 'utf8';
 	    print $fh $u;
@@ -208,17 +202,17 @@ foreach my $operator ('print', 'syswrite', 'syswrite len', 'syswrite off',
 	seek $fh, 0, 0 or die $!;
 	my $line;
 	chomp ($line = <$fh>);
-	is ($line, "\311", "$operator $layer");
+	is ($line, $E_acute, "$operator $layer");
 	chomp ($line = <$fh>);
-	is ($line, "\311", "$operator $layer");
+	is ($line, $E_acute, "$operator $layer");
 	chomp ($line = <$fh>);
-	is ($line, "\311", "$operator $layer");
+	is ($line, $E_acute, "$operator $layer");
 	chomp ($line = <$fh>);
-	is ($line, "\351", "$operator $layer");
+	is ($line, $e_acute, "$operator $layer");
 	chomp ($line = <$fh>);
-	is ($line, "\351", "$operator $layer");
+	is ($line, $e_acute, "$operator $layer");
 	chomp ($line = <$fh>);
-	is ($line, "\351", "$operator $layer");
+	is ($line, $e_acute, "$operator $layer");
 
 	close $fh or die $!;
     }
@@ -255,7 +249,7 @@ foreach my $b ($big, UTF8Toggle->new($big)) {
     }
 }
 
-my $bits = "\311";
+my $bits = $E_acute;
 foreach my $pieces ($bits, UTF8Toggle->new($bits)) {
     like ($bits ^ $pieces, qr/\A\0+\z/, "something xor itself is zeros");
     like ($bits ^ $pieces, qr/\A\0+\z/, "something xor itself is zeros");
@@ -292,4 +286,27 @@ foreach my $value ("\243", UTF8Toggle->new("\243")) {
     my $text = bless { data => "\x{3075}" }, 'RT69422';
     my $p = substr $text, 0, 1;
     is ($p, "\x{3075}");
+}
+
+TODO: {
+    local $::TODO = 'RT #3054: Recursive operator overloading overflows the C stack';
+    # XXX this test is expected to SEGV, and can produce
+    #    sh: line 1:  5106 Segmentation fault
+    # on STDERR. So just completely disable for now
+    todo_skip($::TODO);
+    fresh_perl_is(<<'EOP', "ok\n", {}, 'RT #3054: Recursive operator overloading should not crash the interpreter');
+    use overload '""' => sub { "$_[0]" };
+    print bless {}, __PACKAGE__;
+    print "ok\n";
+EOP
+}
+
+TODO: {
+    local $::TODO = 'RT #3270: Overloaded operators can not be treated as lvalues';
+    fresh_perl_is(<<'EOP', '', {stderr => 1}, 'RT #3270: Overloaded operator that returns an lvalue can be used as an lvalue');
+    use overload '.' => \&dot;
+    sub dot : lvalue {my ($obj, $method) = @_; $obj -> {$method};}
+    my $o  = bless {} => "main";
+    $o.foo = "bar";
+EOP
 }

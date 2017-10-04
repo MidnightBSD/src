@@ -171,7 +171,7 @@ static int	 glob0(const Char *, glob_t *);
 static int	 glob1(Char *, Char *, glob_t *, size_t *);
 static int	 glob2(Char *, Char *, Char *, Char *, Char *, Char *,
 		       glob_t *, size_t *);
-static int	 glob3(Char *, Char *, Char *, Char *, Char *, Char *,
+static int	 glob3(Char *, Char *, Char *, Char *, Char *,
 		       Char *, Char *, glob_t *, size_t *);
 static int	 globextend(const Char *, glob_t *, size_t *);
 static const Char *
@@ -602,6 +602,7 @@ glob0(const Char *pattern, glob_t *pglob)
 		return(globextend(qpat, pglob, &limit));
         }
 	else if (!(pglob->gl_flags & GLOB_NOSORT))
+            if (pglob->gl_pathv)
 		qsort(pglob->gl_pathv + pglob->gl_offs + oldpathc,
 		    pglob->gl_pathc - oldpathc, sizeof(char *),
 		    (pglob->gl_flags & (GLOB_ALPHASORT|GLOB_NOCASE))
@@ -617,12 +618,12 @@ ci_compare(const void *p, const void *q)
 	const char *qq = *(const char **)q;
 	int ci;
 	while (*pp && *qq) {
-		if (toLOWER(*pp) != toLOWER(*qq))
+		if (toFOLD(*pp) != toFOLD(*qq))
 			break;
 		++pp;
 		++qq;
 	}
-	ci = toLOWER(*pp) - toLOWER(*qq);
+	ci = toFOLD(*pp) - toFOLD(*qq);
 	if (ci == 0)
 		return compare(p, q);
 	return ci;
@@ -638,6 +639,8 @@ static int
 glob1(Char *pattern, Char *pattern_last, glob_t *pglob, size_t *limitp)
 {
 	Char pathbuf[MAXPATHLEN];
+
+        assert(pattern < pattern_last);
 
 	/* A null pathname is invalid -- POSIX 1003.1 sect. 2.4. */
 	if (*pattern == BG_EOS)
@@ -659,6 +662,8 @@ glob2(Char *pathbuf, Char *pathbuf_last, Char *pathend, Char *pathend_last,
 	Stat_t sb;
 	Char *p, *q;
 	int anymeta;
+
+        assert(pattern < pattern_last);
 
 	/*
 	 * Loop over pattern segments until end of pattern or until
@@ -699,6 +704,7 @@ glob2(Char *pathbuf, Char *pathbuf_last, Char *pathend, Char *pathend_last,
 		       && *p != BG_SEP2
 #endif
 		       ) {
+                        assert(p < pattern_last);
 			if (ismeta(*p))
 				anymeta = 1;
 			if (q+1 > pathend_last)
@@ -714,6 +720,7 @@ glob2(Char *pathbuf, Char *pathbuf_last, Char *pathend, Char *pathend_last,
 			       || *pattern == BG_SEP2
 #endif
 			       ) {
+                                assert(p < pattern_last);
 				if (pathend+1 > pathend_last)
 					return (1);
 				*pathend++ = *pattern++;
@@ -721,7 +728,7 @@ glob2(Char *pathbuf, Char *pathbuf_last, Char *pathend, Char *pathend_last,
 		} else
 			/* Need expansion, recurse. */
 			return(glob3(pathbuf, pathbuf_last, pathend,
-				     pathend_last, pattern, pattern_last,
+				     pathend_last, pattern,
 				     p, pattern_last, pglob, limitp));
 	}
 	/* NOTREACHED */
@@ -729,7 +736,7 @@ glob2(Char *pathbuf, Char *pathbuf_last, Char *pathend, Char *pathend_last,
 
 static int
 glob3(Char *pathbuf, Char *pathbuf_last, Char *pathend, Char *pathend_last,
-      Char *pattern, Char *pattern_last,
+      Char *pattern,
       Char *restpattern, Char *restpattern_last, glob_t *pglob, size_t *limitp)
 {
 	Direntry_t *dp;
@@ -745,6 +752,9 @@ glob3(Char *pathbuf, Char *pathbuf_last, Char *pathend, Char *pathend_last,
 	 * structures.
 	 */
 	Direntry_t *(*readdirfunc)(DIR*);
+
+        assert(pattern < restpattern_last);
+        assert(restpattern < restpattern_last);
 
 	if (pathend > pathend_last)
 		return (1);
@@ -889,7 +899,7 @@ globextend(const Char *path, glob_t *pglob, size_t *limitp)
 	pathv[pglob->gl_offs + pglob->gl_pathc] = NULL;
 
 	if ((pglob->gl_flags & GLOB_LIMIT) &&
-	    newsize + *limitp >= ARG_MAX) {
+	    newsize + *limitp >= (unsigned long)ARG_MAX) {
 		errno = 0;
 		return(GLOB_NOSPACE);
 	}

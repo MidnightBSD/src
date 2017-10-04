@@ -1,12 +1,11 @@
 package TAP::Parser::YAMLish::Reader;
 
 use strict;
-use vars qw($VERSION @ISA);
+use warnings;
 
-use TAP::Object ();
+use base 'TAP::Object';
 
-@ISA     = 'TAP::Object';
-$VERSION = '3.26';
+our $VERSION = '3.38';
 
 # TODO:
 #   Handle blessed object syntax
@@ -82,7 +81,7 @@ sub _read {
     my $line = $self->_peek;
 
     # Do we have a document header?
-    if ( $line =~ /^ --- (?: \s* (.+?) \s* )? $/x ) {
+    if ( $line =~ /^ --- (?: \s* (.+?)? \s* )? $/x ) {
         $self->_next;
 
         return $self->_read_scalar($1) if defined $1;    # Inline?
@@ -270,7 +269,7 @@ TAP::Parser::YAMLish::Reader - Read YAMLish data from iterator
 
 =head1 VERSION
 
-Version 3.26
+Version 3.38
 
 =head1 SYNOPSIS
 

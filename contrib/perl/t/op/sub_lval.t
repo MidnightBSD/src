@@ -1,9 +1,11 @@
+#!./perl
+
 BEGIN {
     chdir 't' if -d 't';
-    @INC = '../lib';
     require './test.pl';
+    set_up_inc('../lib');
 }
-plan tests=>192;
+plan tests=>211;
 
 sub a : lvalue { my $a = 34; ${\(bless \$a)} }  # Return a temporary
 sub b : lvalue { ${\shift} }
@@ -169,7 +171,7 @@ eval <<'EOE' or $_ = $@;
   1;
 EOE
 
-like($_, qr/Can\'t modify non-lvalue subroutine call in scalar assignment/);
+like($_, qr/Can\'t modify non-lvalue subroutine call of &main::nolv in scalar assignment/);
 
 $_ = '';
 
@@ -178,7 +180,7 @@ eval <<'EOE' or $_ = $@;
   1;
 EOE
 
-like($_, qr/Can\'t modify non-lvalue subroutine call in scalar assignment/);
+like($_, qr/Can\'t modify non-lvalue subroutine call of &main::nolv in scalar assignment/);
 
 $_ = '';
 
@@ -187,7 +189,7 @@ eval <<'EOE' or $_ = $@;
   1;
 EOE
 
-like($_, qr/Can\'t modify non-lvalue subroutine call in scalar assignment/);
+like($_, qr/Can\'t modify non-lvalue subroutine call of &main::nolv in scalar assignment/);
 
 $x0 = $x1 = $_ = undef;
 $nolv = \&nolv;
@@ -318,6 +320,31 @@ EOE
 like($_, qr/Can\'t return a temporary from lvalue subroutine/,
     'returning a PADTMP explicitly (list context)');
 
+# These next two tests are not necessarily normative.  But this way we will
+# know if this discrepancy changes.
+
+$_ = undef;
+eval <<'EOE' or $_ = $@;
+  sub scalarray : lvalue { @a || $b }
+  @a = 1;
+  (scalarray) = (2,3);
+  1;
+EOE
+
+like($_, qr/Can\'t return a temporary from lvalue subroutine/,
+    'returning a scalar-context array via ||');
+
+$_ = undef;
+eval <<'EOE' or $_ = $@;
+  use warnings "FATAL" => "all";
+  sub myscalarray : lvalue { my @a = 1; @a || $b }
+  (myscalarray) = (2,3);
+  1;
+EOE
+
+like($_, qr/Useless assignment to a temporary/,
+    'returning a scalar-context lexical array via ||');
+
 $_ = undef;
 sub lv2t : lvalue { shift }
 (lv2t($_)) = (2,3);
@@ -333,7 +360,7 @@ eval <<'EOE' or $_ = $@;
   1;
 EOE
 
-like($_, qr/Can\'t modify non-lvalue subroutine call at /);
+like($_, qr/Can\'t modify non-lvalue subroutine call of &main::xxx at /);
 
 $_ = undef;
 eval <<'EOE' or $_ = $@;
@@ -341,7 +368,7 @@ eval <<'EOE' or $_ = $@;
   1;
 EOE
 
-like($_, qr/Can\'t modify non-lvalue subroutine call at /);
+like($_, qr/Can\'t modify non-lvalue subroutine call of &main::xxx at /);
 
 sub yyy () { 'yyy' } # Const, not lvalue
 
@@ -361,6 +388,19 @@ eval <<'EOE' or $_ = $@;
 EOE
 
 like($_, qr/Can\'t return a readonly value from lvalue subroutine/);
+
+eval <<'EOF';
+  sub lv2tmpr : lvalue { my $x = *foo; Internals::SvREADONLY $x, 1; $x }
+  lv2tmpr = (2,3);
+EOF
+
+like($@, qr/Can\'t return a readonly value from lvalue subroutine at/);
+
+eval <<'EOG';
+  (lv2tmpr) = (2,3);
+EOG
+
+like($@, qr/Can\'t return a readonly value from lvalue subroutine/);
 
 sub lva : lvalue {@a}
 
@@ -492,7 +532,7 @@ is($str, "Hi, world!");
 
 $str = "Made w/ JavaScript";
 sub veclv : lvalue { vec($str, 2, 32) }
-if (ord('A') != 193) {
+if ($::IS_ASCII) {
     veclv() = 0x5065726C;
 }
 else { # EBCDIC?
@@ -509,12 +549,25 @@ while (/f/g) {
 }
 is("@p", "1 8");
 
-sub keeze : lvalue { keys %__ }
-%__ = ("a","b");
-keeze = 64;
-is scalar %__, '1/64', 'keys assignment through lvalue sub';
+SKIP: {
+    skip "no Hash::Util on miniperl", 3, if is_miniperl;
+    require Hash::Util;
+    sub Hash::Util::bucket_ratio (\%);
 
-# Bug 20001223.002: split thought that the list had only one element
+    sub keeze : lvalue { keys %__ }
+    %__ = ("a","b");
+    keeze = 64;
+    is Hash::Util::bucket_ratio(%__), '1/64', 'keys assignment through lvalue sub';
+    eval { (keeze) = 64 };
+    like $@, qr/^Can't modify keys in list assignment at /,
+         'list assignment to keys through lv sub is forbidden';
+    sub akeeze : lvalue { keys @_ }
+    eval { (akeeze) = 64 };
+    like $@, qr/^Can't modify keys on array in list assignment at /,
+         'list assignment to keys @_ through lv sub is forbidden';
+}
+
+# Bug 20001223.002 (#5005): split thought that the list had only one element
 @ary = qw(4 5 6);
 sub lval1 : lvalue { $ary[0]; }
 sub lval2 : lvalue { $ary[1]; }
@@ -773,8 +826,9 @@ is $wheel, 8, 'tied pad var explicitly returned in list ref context';
     is ($result, 'bar', "RT #41550");
 }
 
-SKIP: { skip 'no attributes.pm', 1 unless eval 'require attributes';
-fresh_perl_is(<<'----', <<'====', "lvalue can not be set after definition. [perl #68758]");
+SKIP: {
+  skip 'no attributes.pm', 1 unless eval 'require attributes';
+fresh_perl_is(<<'----', <<'====', {}, "lvalue can not be set after definition. [perl #68758]");
 use warnings;
 our $x;
 sub foo { $x }
@@ -785,7 +839,7 @@ foo = 3;
 ----
 lvalue attribute ignored after the subroutine has been defined at - line 4.
 lvalue attribute ignored after the subroutine has been defined at - line 6.
-Can't modify non-lvalue subroutine call in scalar assignment at - line 7, near "3;"
+Can't modify non-lvalue subroutine call of &main::foo in scalar assignment at - line 7, near "3;"
 Execution of - aborted due to compilation errors.
 ====
 }
@@ -941,7 +995,7 @@ package _102486 {
       'sub:lvalue{&$x}->() does not die for non-lvalue inner sub call';
   ::is $called, 1, 'The &$x actually called the sub';
   eval { +sub :lvalue { &$x }->() = 3 };
-  ::like $@, qr/^Can't modify non-lvalue subroutine call at /,
+  ::like $@, qr/^Can't modify non-lvalue subroutine call of &_102486::nonlv at /,
         'sub:lvalue{&$x}->() dies in true lvalue context';
 }
 
@@ -963,7 +1017,82 @@ sub ucfr : lvalue {
 }
 ucfr();
 
+# Test TARG with potential lvalue context, too
+for (sub : lvalue { "$x" }->()) {
+    is \$_, \$_, '\$_ == \$_ in for(sub :lvalue{"$x"}->()){...}'
+}
+
 # [perl #117947] XSUBs should not be treated as lvalues at run time
 eval { &{\&utf8::is_utf8}("") = 3 };
-like $@, qr/^Can't modify non-lvalue subroutine call at /,
+like $@, qr/^Can't modify non-lvalue subroutine call of &utf8::is_utf8 at /,
         'XSUB not seen at compile time dies in lvalue context';
+
+# [perl #119797] else implicitly returning value
+# This used to cause Bizarre copy of ARRAY in pp_leave
+sub else119797 : lvalue {
+    if ($_[0]) {
+	1; # two statements force a leave op
+	@119797
+    }
+    else {
+	@119797
+    }
+}
+eval { (else119797(0)) = 1..3 };
+is $@, "", '$@ after writing to array returned by else';
+is "@119797", "1 2 3", 'writing to array returned by else';
+eval { (else119797(1)) = 4..6 };
+is $@, "", '$@ after writing to array returned by if (with else)';
+is "@119797", "4 5 6", 'writing to array returned by if (with else)';
+sub if119797 : lvalue {
+    if ($_[0]) {
+	@119797
+    }
+}
+@119797 = ();
+eval { (if119797(1)) = 4..6 };
+is $@, "", '$@ after writing to array returned by if';
+is "@119797", "4 5 6", 'writing to array returned by if';
+sub unless119797 : lvalue {
+    unless ($_[0]) {
+	@119797
+    }
+}
+@119797 = ();
+eval { (unless119797(0)) = 4..6 };
+is $@, "", '$@ after writing to array returned by unless';
+is "@119797", "4 5 6", 'writing to array returned by unless';
+sub bare119797 : lvalue {
+    {;
+	@119797
+    }
+}
+@119797 = ();
+eval { (bare119797(0)) = 4..6 };
+is $@, "", '$@ after writing to array returned by bare block';
+is "@119797", "4 5 6", 'writing to array returned by bare block';
+
+# a sub with nested scopes must pop rubbish on the stack
+{
+    my $x = "a";
+    sub loopreturn : lvalue {
+        for (1,2) {
+            return $x
+        }
+    }
+    loopreturn = "b";
+    is($x, "b", "loopreturn");
+}
+
+# a sub without nested scopes that still leaves rubbish on the stack
+# which needs popping
+{
+    my $x = "a";
+    sub junkreturn : lvalue {
+        my $false;
+        return $x unless $false and $false;
+        1;
+    }
+    junkreturn = "b";
+    is($x, "b", "junkreturn");
+}

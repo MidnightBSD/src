@@ -10,16 +10,15 @@
 package Data::Dumper;
 
 BEGIN {
-    $VERSION = '2.145'; # Don't forget to set version and release
+    $VERSION = '2.167'; # Don't forget to set version and release
 }               # date in POD below!
 
 #$| = 1;
 
 use 5.006_001;
 require Exporter;
-require overload;
 
-use Carp;
+use Carp ();
 
 BEGIN {
     @ISA = qw(Exporter);
@@ -37,8 +36,11 @@ BEGIN {
     or $Useperl = 1;
 }
 
+my $IS_ASCII  = ord 'A' ==  65;
+
 # module vars and their defaults
 $Indent     = 2         unless defined $Indent;
+$Trailingcomma = 0      unless defined $Trailingcomma;
 $Purity     = 0         unless defined $Purity;
 $Pad        = ""        unless defined $Pad;
 $Varname    = "VAR"     unless defined $Varname;
@@ -56,6 +58,7 @@ $Useperl    = 0         unless defined $Useperl;
 $Sortkeys   = 0         unless defined $Sortkeys;
 $Deparse    = 0         unless defined $Deparse;
 $Sparseseen = 0         unless defined $Sparseseen;
+$Maxrecurse = 1000      unless defined $Maxrecurse;
 
 #
 # expects an arrayref of values to be dumped.
@@ -66,13 +69,14 @@ $Sparseseen = 0         unless defined $Sparseseen;
 sub new {
   my($c, $v, $n) = @_;
 
-  croak "Usage:  PACKAGE->new(ARRAYREF, [ARRAYREF])"
+  Carp::croak("Usage:  PACKAGE->new(ARRAYREF, [ARRAYREF])")
     unless (defined($v) && (ref($v) eq 'ARRAY'));
   $n = [] unless (defined($n) && (ref($n) eq 'ARRAY'));
 
   my($s) = {
         level      => 0,           # current recursive depth
         indent     => $Indent,     # various styles of indenting
+        trailingcomma => $Trailingcomma, # whether to add comma after last elem
         pad        => $Pad,        # all lines prefixed by this string
         xpad       => "",          # padding-per-level
         apad       => "",          # added padding for hash keys n such
@@ -87,11 +91,12 @@ sub new {
         terse      => $Terse,      # avoid name output (where feasible)
         freezer    => $Freezer,    # name of Freezer method for objects
         toaster    => $Toaster,    # name of method to revive objects
-        deepcopy   => $Deepcopy,   # dont cross-ref, except to stop recursion
+        deepcopy   => $Deepcopy,   # do not cross-ref, except to stop recursion
         quotekeys  => $Quotekeys,  # quote hash keys
         'bless'    => $Bless,    # keyword to use for "bless"
 #        expdepth   => $Expdepth,   # cutoff depth for explicit dumping
         maxdepth   => $Maxdepth,   # depth beyond which we give up
+	maxrecurse => $Maxrecurse, # depth beyond which we abort
         useperl    => $Useperl,    # use the pure Perl implementation
         sortkeys   => $Sortkeys,   # flag or filter for sorting hash keys
         deparse    => $Deparse,    # use B::Deparse for coderefs
@@ -164,11 +169,11 @@ sub Seen {
           $s->{seen}{$id} = [$k, $v];
         }
         else {
-          carp "Only refs supported, ignoring non-ref item \$$k";
+          Carp::carp("Only refs supported, ignoring non-ref item \$$k");
         }
       }
       else {
-        carp "Value of ref must be defined; ignoring undefined item \$$k";
+        Carp::carp("Value of ref must be defined; ignoring undefined item \$$k");
       }
     }
     return $s;
@@ -189,7 +194,7 @@ sub Values {
       return $s;
     }
     else {
-      croak "Argument to Values, if provided, must be array ref";
+      Carp::croak("Argument to Values, if provided, must be array ref");
     }
   }
   else {
@@ -208,7 +213,7 @@ sub Names {
       return $s;
     }
     else {
-      croak "Argument to Names, if provided, must be array ref";
+      Carp::croak("Argument to Names, if provided, must be array ref");
     }
   }
   else {
@@ -220,9 +225,10 @@ sub DESTROY {}
 
 sub Dump {
     return &Dumpxs
-    unless $Data::Dumper::Useperl || (ref($_[0]) && $_[0]->{useperl}) ||
-           $Data::Dumper::Useqq   || (ref($_[0]) && $_[0]->{useqq}) ||
-           $Data::Dumper::Deparse || (ref($_[0]) && $_[0]->{deparse});
+    unless $Data::Dumper::Useperl || (ref($_[0]) && $_[0]->{useperl})
+
+            # Use pure perl version on earlier releases on EBCDIC platforms
+        || (! $IS_ASCII && $] lt 5.021_010);
     return &Dumpperl;
 }
 
@@ -300,7 +306,7 @@ sub _dump {
     $id = format_refaddr($val);
 
     # Note: By this point $name is always defined and of non-zero length.
-    # Keep a tab on it so that we dont fall into recursive pit.
+    # Keep a tab on it so that we do not fall into recursive pit.
     if (exists $s->{seen}{$id}) {
       if ($s->{purity} and $s->{level} > 0) {
         $out = ($realtype eq 'HASH')  ? '{}' :
@@ -351,6 +357,12 @@ sub _dump {
       return qq['$val'];
     }
 
+    # avoid recursing infinitely [perl #122111]
+    if ($s->{maxrecurse} > 0
+        and $s->{level} >= $s->{maxrecurse}) {
+        die "Recursion limit of $s->{maxrecurse} exceeded";
+    }
+
     # we have a blessed ref
     my ($blesspad);
     if ($realpack and !$no_bless) {
@@ -364,25 +376,15 @@ sub _dump {
 
     if ($is_regex) {
         my $pat;
-        # This really sucks, re:regexp_pattern is in ext/re/re.xs and not in
-        # universal.c, and even worse we cant just require that re to be loaded
-        # we *have* to use() it.
-        # We should probably move it to universal.c for 5.10.1 and fix this.
-        # Currently we only use re::regexp_pattern when the re is blessed into another
-        # package. This has the disadvantage of meaning that a DD dump won't round trip
-        # as the pattern will be repeatedly wrapped with the same modifiers.
-        # This is an aesthetic issue so we will leave it for now, but we could use
-        # regexp_pattern() in list context to get the modifiers separately.
-        # But since this means loading the full debugging engine in process we wont
-        # bother unless its necessary for accuracy.
-        if (($realpack ne 'Regexp') && defined(*re::regexp_pattern{CODE})) {
-          $pat = re::regexp_pattern($val);
+        my $flags = "";
+        if (defined(*re::regexp_pattern{CODE})) {
+          ($pat, $flags) = re::regexp_pattern($val);
         }
         else {
           $pat = "$val";
         }
         $pat =~ s <(\\.)|/> { $1 || '\\/' }ge;
-        $out .= "qr/$pat/";
+        $out .= "qr/$pat/$flags";
     }
     elsif ($realtype eq 'SCALAR' || $realtype eq 'REF'
     || $realtype eq 'VSTRING') {
@@ -411,7 +413,9 @@ sub _dump {
         $out .= $pad . $ipad . '#' . $i
           if $s->{indent} >= 3;
         $out .= $pad . $ipad . $s->_dump($v, $sname);
-        $out .= "," if $i++ < $#$val;
+        $out .= ","
+            if $i++ < $#$val
+            || ($s->{trailingcomma} && $s->{indent} >= 1);
       }
       $out .= $pad . ($s->{xpad} x ($s->{level} - 1)) if $i;
       $out .= ($name =~ /^\@/) ? ')' : ']';
@@ -433,7 +437,7 @@ sub _dump {
         if (ref($s->{sortkeys}) eq 'CODE') {
           $keys = $s->{sortkeys}($val);
           unless (ref($keys) eq 'ARRAY') {
-            carp "Sortkeys subroutine did not return ARRAYREF";
+            Carp::carp("Sortkeys subroutine did not return ARRAYREF");
             $keys = [];
           }
         }
@@ -451,8 +455,15 @@ sub _dump {
          () )
       {
         my $nk = $s->_dump($k, "");
-        $nk = $1
-          if !$s->{quotekeys} and $nk =~ /^[\"\']([A-Za-z_]\w*)[\"\']$/;
+
+        # _dump doesn't quote numbers of this form
+        if ($s->{quotekeys} && $nk =~ /^(?:0|-?[1-9][0-9]{0,8})\z/) {
+          $nk = $s->{useqq} ? qq("$nk") : qq('$nk');
+        }
+        elsif (!$s->{quotekeys} and $nk =~ /^[\"\']([A-Za-z_]\w*)[\"\']$/) {
+          $nk = $1
+        }
+
         $sname = $mname . '{' . $nk . '}';
         $out .= $pad . $ipad . $nk . $pair;
 
@@ -464,7 +475,7 @@ sub _dump {
           if $s->{indent} >= 2;
       }
       if (substr($out, -1) eq ',') {
-        chop $out;
+        chop $out if !$s->{trailingcomma} || !$s->{indent};
         $out .= $pad . ($s->{xpad} x ($s->{level} - 1));
       }
       $out .= ($name =~ /^\%/) ? ')' : '}';
@@ -474,16 +485,16 @@ sub _dump {
         require B::Deparse;
         my $sub =  'sub ' . (B::Deparse->new)->coderef2text($val);
         $pad    =  $s->{sep} . $s->{pad} . $s->{apad} . $s->{xpad} x ($s->{level} - 1);
-        $sub    =~ s/\n/$pad/gse;
+        $sub    =~ s/\n/$pad/gs;
         $out   .=  $sub;
       }
       else {
         $out .= 'sub { "DUMMY" }';
-        carp "Encountered CODE ref, using dummy placeholder" if $s->{purity};
+        Carp::carp("Encountered CODE ref, using dummy placeholder") if $s->{purity};
       }
     }
     else {
-      croak "Can't handle '$realtype' type";
+      Carp::croak("Can't handle '$realtype' type");
     }
 
     if ($realpack and !$no_bless) { # we have a blessed ref
@@ -557,7 +568,8 @@ sub _dump {
        and ref $ref eq 'VSTRING' || eval{Scalar::Util::isvstring($val)}) {
       $out .= sprintf "%vd", $val;
     }
-    elsif ($val =~ /^(?:0|-?[1-9]\d{0,8})\z/) { # safe decimal number
+    # \d here would treat "1\x{660}" as a safe decimal number
+    elsif ($val =~ /^(?:0|-?[1-9][0-9]{0,8})\z/) { # safe decimal number
       $out .= $val;
     }
     else {                 # string
@@ -623,6 +635,11 @@ sub Indent {
   }
 }
 
+sub Trailingcomma {
+  my($s, $v) = @_;
+  defined($v) ? (($s->{trailingcomma} = $v), return $s) : $s->{trailingcomma};
+}
+
 sub Pair {
     my($s, $v) = @_;
     defined($v) ? (($s->{pair} = $v), return $s) : $s->{pair};
@@ -683,6 +700,11 @@ sub Maxdepth {
   defined($v) ? (($s->{'maxdepth'} = $v), return $s) : $s->{'maxdepth'};
 }
 
+sub Maxrecurse {
+  my($s, $v) = @_;
+  defined($v) ? (($s->{'maxrecurse'} = $v), return $s) : $s->{'maxrecurse'};
+}
+
 sub Useperl {
   my($s, $v) = @_;
   defined($v) ? (($s->{'useperl'} = $v), return $s) : $s->{'useperl'};
@@ -714,41 +736,71 @@ my %esc = (
     "\e" => "\\e",
 );
 
+my $low_controls = ($IS_ASCII)
+
+                   # This includes \177, because traditionally it has been
+                   # output as octal, even though it isn't really a "low"
+                   # control
+                   ? qr/[\0-\x1f\177]/
+
+                     # EBCDIC low controls.
+                   : qr/[\0-\x3f]/;
+
 # put a string value in double quotes
 sub qquote {
   local($_) = shift;
   s/([\\\"\@\$])/\\$1/g;
-  my $bytes; { use bytes; $bytes = length }
-  s/([^\x00-\x7f])/'\x{'.sprintf("%x",ord($1)).'}'/ge if $bytes > length;
-  return qq("$_") unless
-    /[^ !"\#\$%&'()*+,\-.\/0-9:;<=>?\@A-Z[\\\]^_`a-z{|}~]/;  # fast exit
 
-  my $high = shift || "";
+  # This efficiently changes the high ordinal characters to \x{} if the utf8
+  # flag is on.  On ASCII platforms, the high ordinals are all the
+  # non-ASCII's.  On EBCDIC platforms, we don't include in these the non-ASCII
+  # controls whose ordinals are less than SPACE, excluded below by the range
+  # \0-\x3f.  On ASCII platforms this range just compiles as part of :ascii:.
+  # On EBCDIC platforms, there is just one outlier high ordinal control, and
+  # it gets output as \x{}.
+  my $bytes; { use bytes; $bytes = length }
+  s/([^[:ascii:]\0-\x3f])/sprintf("\\x{%x}",ord($1))/ge
+    if $bytes > length
+
+       # The above doesn't get the EBCDIC outlier high ordinal control when
+       # the string is UTF-8 but there are no UTF-8 variant characters in it.
+       # We want that to come out as \x{} anyway.  We need is_utf8() to do
+       # this.
+       || (! $IS_ASCII && $] ge 5.008_001 && utf8::is_utf8($_));
+
+  return qq("$_") unless /[[:^print:]]/;  # fast exit if only printables
+
+  # Here, there is at least one non-printable to output.  First, translate the
+  # escapes.
   s/([\a\b\t\n\f\r\e])/$esc{$1}/g;
 
-  if (ord('^')==94)  { # ascii
-    # no need for 3 digits in escape for these
-    s/([\0-\037])(?!\d)/'\\'.sprintf('%o',ord($1))/eg;
-    s/([\0-\037\177])/'\\'.sprintf('%03o',ord($1))/eg;
+  # no need for 3 digits in escape for octals not followed by a digit.
+  s/($low_controls)(?!\d)/'\\'.sprintf('%o',ord($1))/eg;
+
+  # But otherwise use 3 digits
+  s/($low_controls)/'\\'.sprintf('%03o',ord($1))/eg;
+
     # all but last branch below not supported --BEHAVIOR SUBJECT TO CHANGE--
-    if ($high eq "iso8859") {
-      s/([\200-\240])/'\\'.sprintf('%o',ord($1))/eg;
+  my $high = shift || "";
+    if ($high eq "iso8859") {   # Doesn't escape the Latin1 printables
+      if ($IS_ASCII) {
+        s/([\200-\240])/'\\'.sprintf('%o',ord($1))/eg;
+      }
+      elsif ($] ge 5.007_003) {
+        my $high_control = utf8::unicode_to_native(0x9F);
+        s/$high_control/sprintf('\\%o',ord($1))/eg;
+      }
     } elsif ($high eq "utf8") {
+#     Some discussion of what to do here is in
+#       https://rt.perl.org/Ticket/Display.html?id=113088
 #     use utf8;
 #     $str =~ s/([^\040-\176])/sprintf "\\x{%04x}", ord($1)/ge;
     } elsif ($high eq "8bit") {
         # leave it as it is
     } else {
-      s/([\200-\377])/'\\'.sprintf('%03o',ord($1))/eg;
-      s/([^\040-\176])/sprintf "\\x{%04x}", ord($1)/ge;
+      s/([[:^ascii:]])/'\\'.sprintf('%03o',ord($1))/eg;
+      #s/([^\040-\176])/sprintf "\\x{%04x}", ord($1)/ge;
     }
-  }
-  else { # ebcdic
-      s{([^ !"\#\$%&'()*+,\-.\/0-9:;<=>?\@A-Z[\\\]^_`a-z{|}~])(?!\d)}
-       {my $v = ord($1); '\\'.sprintf(($v <= 037 ? '%o' : '%03o'), $v)}eg;
-      s{([^ !"\#\$%&'()*+,\-.\/0-9:;<=>?\@A-Z[\\\]^_`a-z{|}~])}
-       {'\\'.sprintf('%03o',ord($1))}eg;
-  }
 
   return qq("$_");
 }
@@ -927,9 +979,9 @@ called with any other type of argument, dies.
 Queries or replaces the internal array of user supplied names for the values
 that will be dumped.  When called without arguments, returns the names.  When
 called with an array of replacement names, returns the object itself.  If the
-number of replacment names exceeds the number of values to be named, the
+number of replacement names exceeds the number of values to be named, the
 excess names will not be used.  If the number of replacement names falls short
-of the number of values to be named, the list of replacment names will be
+of the number of values to be named, the list of replacement names will be
 exhausted and remaining values will not be renamed.  When
 called with any other type of argument, dies.
 
@@ -987,6 +1039,15 @@ consumes twice the number of lines).  Style 2 is the default.
 
 =item *
 
+$Data::Dumper::Trailingcomma  I<or>  I<$OBJ>->Trailingcomma(I<[NEWVAL]>)
+
+Controls whether a comma is added after the last element of an array or
+hash. Even when true, no comma is added between the last element of an array
+or hash and a closing bracket when they appear on the same line. The default
+is false.
+
+=item *
+
 $Data::Dumper::Purity  I<or>  I<$OBJ>->Purity(I<[NEWVAL]>)
 
 Controls the degree to which the output can be C<eval>ed to recreate the
@@ -1015,9 +1076,7 @@ $Data::Dumper::Useqq  I<or>  I<$OBJ>->Useqq(I<[NEWVAL]>)
 When set, enables the use of double quotes for representing string values.
 Whitespace other than space will be represented as C<[\n\t\r]>, "unsafe"
 characters will be backslashed, and unprintable characters will be output as
-quoted octal integers.  Since setting this variable imposes a performance
-penalty, the default is 0.  C<Dump()> will run slower if this flag is set,
-since the fast XSUB implementation doesn't support it yet.
+quoted octal integers.  The default is 0.
 
 =item *
 
@@ -1108,6 +1167,16 @@ no maximum depth.
 
 =item *
 
+$Data::Dumper::Maxrecurse  I<or>  $I<OBJ>->Maxrecurse(I<[NEWVAL]>)
+
+Can be set to a positive integer that specifies the depth beyond which
+recursion into a structure will throw an exception.  This is intended
+as a security measure to prevent perl running out of stack space when
+dumping an excessively deep structure.  Can be set to 0 to remove the
+limit.  Default is 1000.
+
+=item *
+
 $Data::Dumper::Useperl  I<or>  $I<OBJ>->Useperl(I<[NEWVAL]>)
 
 Can be set to a boolean value which controls whether the pure Perl
@@ -1141,9 +1210,10 @@ $Data::Dumper::Deparse  I<or>  $I<OBJ>->Deparse(I<[NEWVAL]>)
 
 Can be set to a boolean value to control whether code references are
 turned into perl source code. If set to a true value, C<B::Deparse>
-will be used to get the source of the code reference. Using this option
-will force using the Perl implementation of the dumper, since the fast
-XSUB implementation doesn't support it.
+will be used to get the source of the code reference. In older versions,
+using this option imposed a significant performance penalty when dumping
+parts of a data structure other than code references, but that is no
+longer the case.
 
 Caution : use this option only if you know that your coderefs will be
 properly reconstructed by C<B::Deparse>.
@@ -1364,15 +1434,9 @@ the C<Deparse> flag), an anonymous subroutine that
 contains the string '"DUMMY"' will be inserted in its place, and a warning
 will be printed if C<Purity> is set.  You can C<eval> the result, but bear
 in mind that the anonymous sub that gets created is just a placeholder.
-Someday, perl will have a switch to cache-on-demand the string
-representation of a compiled piece of code, I hope.  If you have prior
-knowledge of all the code refs that your data structures are likely
-to have, you can use the C<Seen> method to pre-seed the internal reference
-table and make the dumped output point to them, instead.  See L</EXAMPLES>
-above.
-
-The C<Useqq> and C<Deparse> flags makes Dump() run slower, since the
-XSUB implementation does not support them.
+Even using the C<Deparse> flag will in some cases produce results that
+behave differently after being passed to C<eval>; see the documentation
+for L<B::Deparse>.
 
 SCALAR objects have the weirdest looking C<bless> workaround.
 
@@ -1395,13 +1459,13 @@ be to use the C<Sortkeys> filter of Data::Dumper.
 
 Gurusamy Sarathy        gsar@activestate.com
 
-Copyright (c) 1996-98 Gurusamy Sarathy. All rights reserved.
+Copyright (c) 1996-2017 Gurusamy Sarathy. All rights reserved.
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
 
 =head1 VERSION
 
-Version 2.145  (March 15 2013))
+Version 2.167  (January 4 2017)
 
 =head1 SEE ALSO
 

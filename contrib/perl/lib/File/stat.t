@@ -13,7 +13,7 @@ use File::Temp qw( tempfile tempdir );
 
 use File::stat;
 
-my (undef, $file) = tempfile();
+my (undef, $file) = tempfile(UNLINK => 1);
 
 {
     my @stat = CORE::stat $file;
@@ -112,6 +112,8 @@ foreach ([file => $file],
     my ($what, $pathname) = @$_;
     test_X_ops($pathname, "for $what $pathname");
 
+    my $orig_mode = (CORE::stat $pathname)[2];
+
     my $mode = 01000;
     while ($mode) {
         $mode >>= 1;
@@ -119,8 +121,8 @@ foreach ([file => $file],
         chmod $mode, $pathname or die "Can't chmod $mode_oct $pathname: $!";
         test_X_ops($pathname, "for $what with mode=$mode_oct");
     }
-    chmod 0600, $pathname
-        or die "Can't restore permissions on $pathname to 0600";
+    chmod $orig_mode, $pathname
+        or die "Can't restore permissions on $pathname to ", sprintf("%#o", $orig_mode);
 }
 
 SKIP: {
@@ -142,7 +144,7 @@ for (split //, "tTB") {
 
 SKIP: {
 	local *STAT;
-	skip("Could not open file: $!", 2) unless open(STAT, $file);
+	skip("Could not open file: $!", 2) unless open(STAT, '<', $file);
 	isa_ok(File::stat::stat('STAT'), 'File::stat',
 	       '... should be able to find filehandle');
 
@@ -184,9 +186,4 @@ SKIP:
 
 done_testing;
 
-# Local variables:
-# cperl-indent-level: 4
-# indent-tabs-mode: nil
-# End:
-#
 # ex: set ts=8 sts=4 sw=4 et:

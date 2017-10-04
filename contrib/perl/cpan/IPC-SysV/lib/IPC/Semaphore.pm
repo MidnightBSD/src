@@ -1,12 +1,6 @@
 ################################################################################
 #
-#  $Revision: 19 $
-#  $Author: mhx $
-#  $Date: 2010/03/07 16:01:43 +0100 $
-#
-################################################################################
-#
-#  Version 2.x, Copyright (C) 2007-2010, Marcus Holland-Moritz <mhx@cpan.org>.
+#  Version 2.x, Copyright (C) 2007-2013, Marcus Holland-Moritz <mhx@cpan.org>.
 #  Version 1.x, Copyright (C) 1997, Graham Barr <gbarr@pobox.com>.
 #
 #  This program is free software; you can redistribute it and/or
@@ -22,8 +16,7 @@ use strict;
 use vars qw($VERSION);
 use Carp;
 
-$VERSION = do { my @r = '$Snapshot: /IPC-SysV/2.03 $' =~ /(\d+\.\d+(?:_\d+)?)/; @r ? $r[0] : '9.99' };
-$VERSION = eval $VERSION;
+$VERSION = '2.07';
 
 # Figure out if we have support for native sized types
 my $N = do { my $foo = eval { pack "L!", 0 }; $@ ? '' : '!' };
@@ -63,7 +56,9 @@ sub id {
 
 sub remove {
     my $self = shift;
-    (semctl($$self,0,IPC_RMID,0), undef $$self)[0];
+    my $result = semctl($$self,0,IPC_RMID,0);
+    undef $$self;
+    $result;
 }
 
 sub getncnt {
@@ -247,7 +242,7 @@ Returns the system identifier for the semaphore set.
 C<OPLIST> is a list of operations to pass to C<semop>. C<OPLIST> is
 a concatenation of smaller lists, each which has three values. The
 first is the semaphore number, the second is the operation and the last
-is a flags value. See L<semop> for more details. For example
+is a flags value. See L<semop(2)> for more details. For example
 
     $sem->op(
 	0, -1, IPC_NOWAIT,
@@ -300,7 +295,7 @@ of these fields see your system documentation.
 
 =head1 SEE ALSO
 
-L<IPC::SysV>, L<Class::Struct>, L<semget>, L<semctl>, L<semop> 
+L<IPC::SysV>, L<Class::Struct>, L<semget(2)>, L<semctl(2)>, L<semop(2)>
 
 =head1 AUTHORS
 
@@ -309,7 +304,7 @@ Marcus Holland-Moritz <mhx@cpan.org>
 
 =head1 COPYRIGHT
 
-Version 2.x, Copyright (C) 2007-2010, Marcus Holland-Moritz.
+Version 2.x, Copyright (C) 2007-2013, Marcus Holland-Moritz.
 
 Version 1.x, Copyright (c) 1997, Graham Barr.
 

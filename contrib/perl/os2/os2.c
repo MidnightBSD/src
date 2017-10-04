@@ -1140,6 +1140,7 @@ do_spawn_ve(pTHX_ SV *really, U32 flag, U32 execf, char *inicmd, U32 addflag)
 		    if (!buf)
 			buf = "";	/* XXX Needed? */
 		    if (!buf[0]) {	/* Empty... */
+                        struct stat statbuf;
 			PerlIO_close(file);
 			/* Special case: maybe from -Zexe build, so
 			   there is an executable around (contrary to
@@ -1148,8 +1149,8 @@ do_spawn_ve(pTHX_ SV *really, U32 flag, U32 execf, char *inicmd, U32 addflag)
 			   reached this place). */
 			sv_catpv(scrsv, ".exe");
 	                PL_Argv[0] = scr = SvPV(scrsv, n_a);	/* Reload */
-			if (PerlLIO_stat(scr,&PL_statbuf) >= 0
-			    && !S_ISDIR(PL_statbuf.st_mode)) {	/* Found */
+                        if (PerlLIO_stat(scr,&statbuf) >= 0
+                            && !S_ISDIR(statbuf.st_mode)) {	/* Found */
 				real_name = scr;
 				pass++;
 				goto reread;
@@ -1170,11 +1171,11 @@ do_spawn_ve(pTHX_ SV *really, U32 flag, U32 execf, char *inicmd, U32 addflag)
 			if (buf[1] == '!')
 			    s = buf + 2;
 		    } else if (buf[0] == 'e') {
-			if (strnEQ(buf, "extproc", 7) 
+			if (strEQs(buf, "extproc")
 			    && isSPACE(buf[7]))
 			    s = buf + 8;
 		    } else if (buf[0] == 'E') {
-			if (strnEQ(buf, "EXTPROC", 7)
+			if (strEQs(buf, "EXTPROC")
 			    && isSPACE(buf[7]))
 			    s = buf + 8;
 		    }
@@ -1371,7 +1372,7 @@ do_spawn3(pTHX_ char *cmd, int execf, int flag)
     while (*cmd && isSPACE(*cmd))
 	cmd++;
 
-    if (strnEQ(cmd,"/bin/sh",7) && isSPACE(cmd[7])) {
+    if (strEQs(cmd,"/bin/sh") && isSPACE(cmd[7])) {
 	STRLEN l = strlen(PL_sh_path);
 	
 	Newx(news, strlen(cmd) - 7 + l + 1, char);
@@ -1386,7 +1387,7 @@ do_spawn3(pTHX_ char *cmd, int execf, int flag)
     if (*cmd == '.' && isSPACE(cmd[1]))
 	goto doshell;
 
-    if (strnEQ(cmd,"exec",4) && isSPACE(cmd[4]))
+    if (strEQs(cmd,"exec") && isSPACE(cmd[4]))
 	goto doshell;
 
     for (s = cmd; *s && isALPHA(*s); s++) ;	/* catch VAR=val gizmo */
@@ -2011,7 +2012,7 @@ mod2fname(pTHX_ SV *sv)
     if (SvTYPE(sv) != SVt_PVAV) 
       Perl_croak_nocontext("Not array reference given to mod2fname");
 
-    avlen = av_len((AV*)sv);
+    avlen = av_tindex((AV*)sv);
     if (avlen < 0) 
       Perl_croak_nocontext("Empty array reference given to mod2fname");
 
@@ -2631,7 +2632,7 @@ XS(XS_OS2_Errors2Drive)
 	if (DOS_suppression_state > 0)
 	    sv_setpvn(ST(0), &DOS_suppression_state, 1);
 	else if (DOS_suppression_state == 0)
-	    sv_setpvn(ST(0), "", 0);
+            SvPVCLEAR(ST(0));
 	DOS_suppression_state = drive;
     }
     XSRETURN(1);
@@ -3461,9 +3462,7 @@ XS(XS_Cwd_sys_cwd)
 	RETVAL = _getcwd2(p, MAXPATHLEN);
 	ST(0) = sv_newmortal();
 	sv_setpv(ST(0), RETVAL);
-#ifndef INCOMPLETE_TAINTS
 	SvTAINTED_on(ST(0));
-#endif
     }
     XSRETURN(1);
 }
@@ -3595,10 +3594,8 @@ XS(XS_Cwd_sys_abspath)
 	    *t = 0;
 	    SvCUR_set(sv, t - SvPVX(sv));
 	}
-#ifndef INCOMPLETE_TAINTS
 	if (!items)
 	    SvTAINTED_on(ST(0));
-#endif
     }
     XSRETURN(1);
 }
@@ -3859,7 +3856,7 @@ XS(XS_OS2__headerInfo)
 
 	if (size <= 0)
 	    Perl_croak(aTHX_ "OS2::_headerInfo(): unexpected size: %d", (int)size);
-	ST(0) = newSVpvn("",0);
+	ST(0) = newSVpvs("");
 	SvGROW(ST(0), size + 1);
 	sv_2mortal(ST(0));
 
@@ -3889,7 +3886,7 @@ XS(XS_OS2_libPath)
 	    Perl_croak(aTHX_ "OS2::_headerInfo(%ld,%ld,%ld,%ld) error: %s",
 		       DQHI_QUERYLIBPATHSIZE, sizeof(size), 0, 0,
 		       os2error(Perl_rc));
-	ST(0) = newSVpvn("",0);
+	ST(0) = newSVpvs("");
 	SvGROW(ST(0), size + 1);
 	sv_2mortal(ST(0));
 
@@ -4106,7 +4103,7 @@ XS(XS_OS2_pipe)
 	if (!pszName || !*pszName)
 	    Perl_croak(aTHX_ "OS2::pipe(): empty pipe name");
 	s = SvPV(OpenMode, len);
-	if (len == 4 && strEQ(s, "wait")) {	/* DosWaitNPipe() */
+	if (memEQs(s, len, "wait")) {	/* DosWaitNPipe() */
 	    ULONG ms = 0xFFFFFFFF, ret = ERROR_INTERRUPT; /* Indefinite */
 
 	    if (items == 3) {
@@ -4124,7 +4121,7 @@ XS(XS_OS2_pipe)
 	    os2cp_croak(ret, "DosWaitNPipe()");
 	    XSRETURN_YES;
 	}
-	if (len == 4 && strEQ(s, "call")) {	/* DosCallNPipe() */
+	if (memEQs(s, len, "call")) {	/* DosCallNPipe() */
 	    ULONG ms = 0xFFFFFFFF, got; /* Indefinite */
 	    STRLEN l;
 	    char *s;
@@ -4203,9 +4200,9 @@ XS(XS_OS2_pipe)
 	    connect = -1;			/* no wait */
 	else if (SvTRUE(ST(2))) {
 	    s = SvPV(ST(2), len);
-	    if (len == 6 && strEQ(s, "nowait"))
+	    if (memEQs(s, len, "nowait"))
 		connect = -1;			/* no wait */
-	    else if (len == 4 && strEQ(s, "wait"))
+	    else if (memEQs(s, len, "wait"))
 		connect = 1;			/* wait */
 	    else
 		Perl_croak(aTHX_ "OS2::pipe(): unknown connect argument: `%s'", s);
@@ -4261,7 +4258,7 @@ XS(XS_OS2_pipe)
 	ST(0) = sv_newmortal();
 	{
 	    GV *gv = newGVgen("OS2::pipe");
-	    if ( do_open(gv, perltype, strlen(perltype), FALSE, 0, 0, perlio) )
+	    if ( do_open6(gv, perltype, strlen(perltype), perlio, NULL, 0) )
 		sv_setsv(ST(0), sv_bless(newRV((SV*)gv), gv_stashpv("IO::Handle",1)));
 	    else
 		ST(0) = &PL_sv_undef;

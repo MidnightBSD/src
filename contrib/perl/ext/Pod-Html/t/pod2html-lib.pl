@@ -64,9 +64,13 @@ sub convert_n_test {
 	if (ord("A") == 193) { # EBCDIC.
 	    $expect =~ s/item_mat_3c_21_3e/item_mat_4c_5a_6e/;
 	}
+    if (Pod::Simple->VERSION > 3.28) {
+        $expect =~ s/\n\n(some html)/$1/m;
+        $expect =~ s{(TESTING FOR AND BEGIN</h1>)\n\n}{$1}m;
+    }
 
 	# result
-	open my $in, $outfile or die "cannot open $outfile: $!";
+	open my $in, '<', $outfile or die "cannot open $outfile: $!";
 	$result = <$in>;
 	close $in;
     }
@@ -84,7 +88,7 @@ sub convert_n_test {
 	  open my $tmpfile, ">", $expectfile or die $!;
 	  print $tmpfile $expect;
 	  close $tmpfile;
-	  open my $diff_fh, "$diff $diffopt $expectfile $outfile |" or die $!;
+	  open my $diff_fh, "-|", "$diff $diffopt $expectfile $outfile" or die $!;
 	  print STDERR "# $_" while <$diff_fh>;
 	  close $diff_fh;
 	  unlink $expectfile;

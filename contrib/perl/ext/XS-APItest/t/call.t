@@ -11,7 +11,7 @@ use strict;
 
 BEGIN {
     require '../../t/test.pl';
-    plan(436);
+    plan(527);
     use_ok('XS::APItest')
 };
 
@@ -27,6 +27,13 @@ sub f {
     pop @_;
     @_, defined wantarray ? wantarray ? 'x' :  'y' : 'z';
 }
+
+our $call_sv_count = 0;
+sub i {
+    $call_sv_count++;
+}
+call_sv_C();
+is($call_sv_count, 6, "call_sv_C passes");
 
 sub d {
     die "its_dead_jim\n";
@@ -49,8 +56,8 @@ sub Foo::d {
 
 for my $test (
     # flags      args           expected         description
-    [ G_VOID,    [ ],           [ qw(z 1) ],     '0 args, G_VOID' ],
-    [ G_VOID,    [ qw(a p q) ], [ qw(z 1) ],     '3 args, G_VOID' ],
+    [ G_VOID,    [ ],           [ 0 ],           '0 args, G_VOID' ],
+    [ G_VOID,    [ qw(a p q) ], [ 0 ],           '3 args, G_VOID' ],
     [ G_SCALAR,  [ ],           [ qw(y 1) ],     '0 args, G_SCALAR' ],
     [ G_SCALAR,  [ qw(a p q) ], [ qw(y 1) ],     '3 args, G_SCALAR' ],
     [ G_ARRAY,   [ ],           [ qw(x 1) ],     '0 args, G_ARRAY' ],
@@ -73,8 +80,11 @@ for my $test (
     ok(eq_array( [ call_pv('f', $flags, @$args) ], $expected),
 	"$description call_pv('f')");
 
+    ok(eq_array( [ call_argv('f', $flags, @$args) ], $expected),
+	"$description call_argv('f')") or warn "@{[call_argv('f', $flags, @$args)]}";
+
     ok(eq_array( [ eval_sv('f(' . join(',',map"'$_'",@$args) . ')', $flags) ],
-	$expected), "$description eval_sv('f(args)')");
+        $expected), "$description eval_sv('f(args)')");
 
     ok(eq_array( [ call_method('meth', $flags, $obj, @$args) ], $expected),
 	"$description call_method('meth')");
@@ -106,6 +116,14 @@ for my $test (
 
 	$@ = "before\n";
 	$warn = "";
+	ok(eq_array( [ call_argv('d', $flags|G_EVAL|$keep, @$args) ], 
+		    $returnval),
+		    "$desc G_EVAL call_argv('d')");
+	is($@, $exp_err, "$desc G_EVAL call_argv('d') - \$@");
+	is($warn, $exp_warn, "$desc G_EVAL call_argv('d') - warning");
+
+	$@ = "before\n";
+	$warn = "";
 	ok(eq_array( [ eval_sv('d()', $flags|$keep) ],
 		    $returnval),
 		    "$desc eval_sv('d()')");
@@ -127,8 +145,11 @@ for my $test (
     ok(eq_array( [ sub { call_pv('f', $flags|G_NOARGS, "bad") }->(@$args) ],
 	$expected), "$description G_NOARGS call_pv('f')");
 
+    ok(eq_array( [ sub { call_argv('f', $flags|G_NOARGS, "bad") }->(@$args) ],
+	$expected), "$description G_NOARGS call_argv('f')");
+
     ok(eq_array( [ sub { eval_sv('f(@_)', $flags|G_NOARGS) }->(@$args) ],
-	$expected), "$description G_NOARGS eval_sv('f(@_)')");
+        $expected), "$description G_NOARGS eval_sv('f(@_)')");
 
     # XXX call_method(G_NOARGS) isn't tested: I'm assuming
     # it's not a sensible combination. DAPM.
@@ -138,6 +159,9 @@ for my $test (
 
     ok(eq_array( [ eval { call_pv('d', $flags, @$args) }, $@ ],
 	[ "its_dead_jim\n" ]), "$description eval { call_pv('d') }");
+
+    ok(eq_array( [ eval { call_argv('d', $flags, @$args) }, $@ ],
+	[ "its_dead_jim\n" ]), "$description eval { call_argv('d') }");
 
     ok(eq_array( [ eval { eval_sv('d', $flags), $@ }, $@ ],
 	[ @$returnval,
@@ -206,35 +230,45 @@ is($@, "its_dead_jim\n", "eval { eval_pv('d()', 1) } - \$@");
 
 sub f99 { 99 };
 
+my @bodies = (
+    # [ code, is_fn_name, expect_success, has_inner_die, expected_err ]
 
-for my $fn_type (0..2) { #   0:eval_pv   1:eval_sv   2:call_sv
+    # ok
+    [ 'f99',                         1, 1, 0, qr/^$/,           ],
+    # compile-time err
+    [ '$x=',                         0, 0, 0, qr/syntax error/, ],
+    # compile-time exception
+    [ 'BEGIN { die "die in BEGIN"}', 0, 0, 1, qr/die in BEGIN/, ],
+    # run-time exception
+    [ 'd',                           1, 0, 0, qr/its_dead_jim/, ],
+    # success with caught exception
+    [ 'eval { die "blah" }; 99',     0, 1, 1, qr/^$/,           ],
+);
+
+
+for my $fn_type (qw(eval_pv eval_sv call_sv)) {
 
     my $warn_msg;
     local $SIG{__WARN__} = sub { $warn_msg .= $_[0] };
 
-    for my $code_type (0..3) {
+    for my $body (@bodies) {
+        my ($code, $is_fn_name, $expect_success,
+                $has_inner_die, $expected_err_qr)  = @$body;
 
 	# call_sv can only handle function names, not code snippets
-	next if $fn_type == 2 and ($code_type == 1 or $code_type == 2);
-
-	my $code = (
-	    'f99',			    # ok
-	    '$x=',			    # compile-time err
-	    'BEGIN { die "die in BEGIN"}',  # compile-time exception
-	    'd', 			    # run-time exception
-	)[$code_type];
+	next if $fn_type eq 'call_sv' and !$is_fn_name;
 
 	for my $keep (0, G_KEEPERR) {
 	    my $keep_desc = $keep ? 'G_KEEPERR' : '0';
 
 	    my $desc;
-	    my $expect = ($code_type == 0) ? 1 : 0;
+	    my $expect = $expect_success;
 
 	    undef $warn_msg;
 	    $@ = 'pre-err';
 
 	    my @ret;
-	    if ($fn_type == 0) { # eval_pv
+	    if ($fn_type eq 'eval_pv') {
 		# eval_pv returns its result rather than a 'succeed' boolean
 		$expect = $expect ? '99' : undef;
 
@@ -251,37 +285,30 @@ for my $fn_type (0..2) { #   0:eval_pv   1:eval_sv   2:call_sv
 		    @ret = eval_pv($code, 0);
 		}
 	    }
-	    elsif ($fn_type == 1) { # eval_sv
+	    elsif ($fn_type eq 'eval_sv') {
 		$desc = "eval_sv('$code', G_ARRAY|$keep_desc)";
 		@ret = eval_sv($code, G_ARRAY|$keep);
 	    }
-	    elsif ($fn_type == 2) { # call_sv
+	    elsif ($fn_type eq 'call_sv') {
 		$desc = "call_sv('$code', G_EVAL|G_ARRAY|$keep_desc)";
 		@ret = call_sv($code, G_EVAL|G_ARRAY|$keep);
 	    }
-	    is(scalar @ret, ($code_type == 0 && $fn_type != 0) ? 2 : 1,
+	    is(scalar @ret, ($expect_success && $fn_type ne 'eval_pv') ? 2 : 1,
 			    "$desc - number of returned args");
 	    is($ret[-1], $expect, "$desc - return value");
 
-	    if ($keep && $fn_type != 0) {
+	    if ($keep && $fn_type  ne 'eval_pv') {
 		# G_KEEPERR doesn't propagate into inner evals, requires etc
-		unless ($keep && $code_type == 2) {
+		unless ($keep && $has_inner_die) {
 		    is($@, 'pre-err', "$desc - \$@ unmodified");
 		}
 		$@ = $warn_msg;
 	    }
 	    else {
 		is($warn_msg, undef, "$desc - __WARN__ not called");
-		unlike($@, 'pre-err', "$desc - \$@ modified");
+		unlike($@, qr/pre-err/, "$desc - \$@ modified");
 	    }
-	    like($@,
-		(
-		    qr/^$/,
-		    qr/syntax error/,
-		    qr/die in BEGIN/,
-		    qr/its_dead_jim/,
-		)[$code_type],
-		"$desc - the correct error message");
+	    like($@, $expected_err_qr, "$desc - the correct error message");
 	}
     }
 }

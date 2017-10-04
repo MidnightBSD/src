@@ -6,11 +6,12 @@ BEGIN {
         	print "1..0 # Skip -- Perl configured without re module\n";
 		exit 0;
 	}
+        require 'loc_tools.pl';
 }
 
 use strict;
 
-use Test::More tests => 62;
+use Test::More tests => 74;
 
 my @flags = qw( a d l u );
 
@@ -23,10 +24,19 @@ ok "Foo" !~ /(??{'foo'})/, 'no re "/i" (??{})';
 use re '/x';
 ok "foo" =~ / foo /, 'use re "/x"';
 ok "foo" =~ / (??{' foo '}) /, 'use re "/x" (??{})';
+like " ", qr/[a b]/, 'use re "/x" [a b]';
 no re '/x';
 ok "foo" !~ / foo /, 'no re "/x"';
 ok "foo" !~ /(??{' foo '})/, 'no re "/x" (??{})';
 ok "foo" !~ / (??{'foo'}) /, 'no re "/x" (??{})';
+use re '/xx';
+ok "foo" =~ / foo /, 'use re "/xx"';
+ok "foo" =~ / (??{' foo '}) /, 'use re "/xx" (??{})';
+unlike " ", qr/[a b]/, 'use re "/xx" [a b] # Space in [] gobbled up';
+no re '/xx';
+ok "foo" !~ / foo /, 'no re "/xx"';
+ok "foo" !~ /(??{' foo '})/, 'no re "/xx" (??{})';
+ok "foo" !~ / (??{'foo'}) /, 'no re "/xx" (??{})';
 use re '/s';
 ok "\n" =~ /./, 'use re "/s"';
 ok "\n" =~ /(??{'.'})/, 'use re "/s" (??{})';
@@ -53,18 +63,21 @@ no re '/sm';
 ok 'f r e l p' =~ /f r e l p/,
  "use re '/x' turns off when it drops out of scope";
 
+{
+  use re '/i';
+  ok "Foo" =~ /foo/, 'use re "/i"';
+  no re;
+  ok "Foo" !~ /foo/, "bare 'no re' reverts to no /i";
+  use re '/u';
+  my $nbsp = chr utf8::unicode_to_native(0xa0);
+  ok $nbsp =~ /\s/, 'nbsp matches \\s under /u';
+  no re;
+  ok $nbsp !~ /\s/, "bare 'no re' reverts to /d";
+}
+
 SKIP: {
-  if (
-      !$Config::Config{d_setlocale}
-   || $Config::Config{ccflags} =~ /\bD?NO_LOCALE\b/
-  ) {
-    skip "no locale support", 7
-  }
-  BEGIN {
-      if($Config::Config{d_setlocale}) {
-          require locale; import locale;
-      }
-  }
+  skip "no locale support", 7 unless locales_enabled('CTYPE');
+  use locale;
   use re '/u';
   is qr//, '(?^u:)', 'use re "/u" with active locale';
   no re '/u';
@@ -169,9 +182,13 @@ is qr//, '(?^:)', 'no re "/aai"';
   }
 
   $w = "";
-  eval "use re '/axaa'";
+  eval "use re '/amaa'";
   like $w, qr/The "a" flag may only appear a maximum of twice/,
-    "warning with eval \"use re \"/axaa\"";
+    "warning with eval \"use re \"/amaa\"";
 
+  $w = "";
+  eval "use re '/xamaxx'";
+  like $w, qr/The "x" flag may only appear a maximum of twice/,
+    "warning with eval \"use re \"/xamaxx\"";
 
 }
