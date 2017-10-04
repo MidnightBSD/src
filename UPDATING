@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20171004:
+	Perl 5.26.0
+
+	SQLite 3.20.1
+
 20171001:
 	Sync changes from current.
 
