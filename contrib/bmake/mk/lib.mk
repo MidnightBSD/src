@@ -1,4 +1,4 @@
-# $Id: lib.mk,v 1.51 2014/05/23 01:30:36 sjg Exp $
+# $Id: lib.mk,v 1.52 2015/11/14 18:09:57 sjg Exp $
 
 .if !target(__${.PARSEFILE}__)
 __${.PARSEFILE}__:
@@ -129,7 +129,7 @@ LD_shared=${SHLIB_SHFLAGS}
 
 .endif # NetBSD
 
-.if ${TARGET_OSNAME} == "FreeBSD" || ${TARGET_OSNAME} == "MidnightBSD"
+.if ${TARGET_OSNAME} == "FreeBSD"
 .if ${OBJECT_FMT} == "ELF"
 SHLIB_SOVERSION=	${SHLIB_MAJOR}
 SHLIB_SHFLAGS=		-soname lib${LIB}.so.${SHLIB_SOVERSION}
@@ -172,7 +172,7 @@ DLLIB=
 LD_sobjs=`${LORDER} ${OBJS} | ${TSORT} | sed 's,\.o,.so,'`
 LD_pobjs=`${LORDER} ${OBJS} | ${TSORT} | sed 's,\.o,.po,'`
 AR_cq= -cqs
-.elif ${TARGET_OSNAME} == "FreeBSD" ||  ${TARGET_OSNAME} == "MidnightBSD"
+.elif ${TARGET_OSNAME} == "FreeBSD"
 LD_solib= lib${LIB}_pic.a
 .elif ${TARGET_OSNAME} == "Linux"
 SHLIB_LD = ${CC}
@@ -254,7 +254,7 @@ DLLIB ?= -ldl
 # is a waste of time, this tells meta.autodep.mk to just pick one 
 # (typically .So)
 # yes, 42 is a random number.
-.if ${MK_META_MODE} == "yes" && ${SRCS:Uno:[\#]} > 42
+.if ${MK_DIRDEPS_BUILD} == "yes" && ${SRCS:Uno:[\#]} > 42
 OPTIMIZE_OBJECT_META_FILES ?= yes
 .endif
 
@@ -456,7 +456,7 @@ lib${LIB}_pic.a:: ${SOBJS}
 lib${LIB}.${LD_so}: ${SOLIB} ${DPADD}
 	@echo building shared ${LIB} library \(version ${SHLIB_FULLVERSION}\)
 	@rm -f ${.TARGET}
-.if ${TARGET_OSNAME} == "NetBSD" || ${TARGET_OSNAME} == "FreeBSD" || ${TARGET_OSNAME} == "MidnightBSD"
+.if ${TARGET_OSNAME} == "NetBSD" || ${TARGET_OSNAME} == "FreeBSD"
 .if ${OBJECT_FMT} == "ELF"
 	${SHLIB_LD} -x -shared ${SHLIB_SHFLAGS} -o ${.TARGET} \
 	    ${SHLIB_LDSTARTFILE} \
