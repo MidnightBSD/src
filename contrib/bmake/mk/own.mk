@@ -199,6 +199,10 @@ OBJECT_FMT?=ELF
 CFLAGS+= ${CPPFLAGS}
 .endif
 
+.if (${_HOST_OSNAME} == "MidnightBSD")
+CFLAGS+= ${CPPFLAGS}
+.endif
+
 # allow for per target flags
 # apply the :T:R first, so the more specific :T can override if needed
 CPPFLAGS += ${CPPFLAGS_${.TARGET:T:R}} ${CPPFLAGS_${.TARGET:T}} 
