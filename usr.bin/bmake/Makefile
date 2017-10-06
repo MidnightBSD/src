@@ -11,7 +11,7 @@ SRCTOP?= ${.CURDIR:H:H}
 CFLAGS+= -I${.CURDIR}
 
 # for after-import
-CLEANDIRS+= FreeBSD
+CLEANDIRS+= FreeBSD MidnightBSD
 CLEANFILES+= bootstrap
 
 #	$Id: Makefile,v 1.49 2015/12/20 22:54:40 sjg Exp $
