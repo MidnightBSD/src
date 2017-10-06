@@ -55,7 +55,8 @@ static int get_file_count(mportInstance *, char *, int *);
 static int create_package_row(mportInstance *, mportPackageMeta *);
 static int create_categories(mportInstance *mport, mportPackageMeta *pkg);
 static int create_depends(mportInstance *mport, mportPackageMeta *pkg);
-static int create_sample_file(const char *file);
+static int create_sample_file(mportInstance *mport, char *cwd, const char *file);
+static char** parse_sample(char *input);
 static int mark_complete(mportInstance *, mportPackageMeta *);
 static int mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mportAssetList **alist_p, enum phase);
 
@@ -210,19 +211,58 @@ create_categories(mportInstance *mport, mportPackageMeta *pkg)
 	return MPORT_OK;
 }
 
-static int
-create_sample_file(const char *file)
+static char**
+parse_sample(char *input)
 {
-	char nonSample[FILENAME_MAX];
-	strlcpy(nonSample, file, FILENAME_MAX);
-	char *sptr = strcasestr(nonSample, ".sample");
-	if (sptr != NULL) {
-		sptr[0] = '\0'; /* hack off .sample */
-		if (!mport_file_exists(nonSample)) {
-			if (mport_copy_file(file, nonSample) != MPORT_OK)
-				RETURN_CURRENT_ERROR;
+	char **ap, **argv;
+	argv = calloc(3, sizeof(char *));
+
+	if (argv == NULL)
+		return NULL;
+
+	for (ap = argv; (*ap = strsep(&input, " \t")) != NULL;) {
+		if (**ap != '\0') {
+			if (++ap >= &argv[3])
+				break;
 		}
 	}
+
+	return argv;
+}
+
+static int
+create_sample_file(mportInstance *mport, char *cwd, const char *file)
+{
+	char nonSample[FILENAME_MAX * 2];
+	char secondFile[FILENAME_MAX];
+
+ 	strlcpy(nonSample, file, FILENAME_MAX * 2);
+	(void) snprintf(nonSample, FILENAME_MAX, "%s%s/%s", mport->root, cwd, file);
+	char** fileargv = parse_sample(nonSample);
+
+	if (fileargv[1] != '\0') {
+		if (fileargv[1][0] == '/')
+			strlcpy(secondFile, fileargv[1], FILENAME_MAX);
+		else
+			(void) snprintf(secondFile, FILENAME_MAX, "%s%s/%s", mport->root, cwd, fileargv[1]);
+
+		if (!mport_file_exists(secondFile)) {
+			if (mport_copy_file(fileargv[0], secondFile) != MPORT_OK)
+				RETURN_CURRENT_ERROR;
+		}
+	} else {
+		/* single file */
+		char *sptr = strcasestr(nonSample, ".sample");
+		if (sptr != NULL) {
+			sptr[0] = '\0'; /* hack off .sample */
+			if (!mport_file_exists(nonSample)) {
+				if (mport_copy_file(file, nonSample) != MPORT_OK)
+					RETURN_CURRENT_ERROR;
+			}
+		}
+	}
+
+	free(fileargv);
 
 	return MPORT_OK;
 }
@@ -458,6 +498,17 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 					goto ERROR;
 
 				(void) snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, e->data);
+
+				if (e->type == ASSET_SAMPLE)
+					for (int ch = 0; ch < FILENAME_MAX; ch++) {
+						if (file[ch] == '\0')
+							break;
+						if (file[ch] == ' ' || file[ch] == '\t') {
+							file[ch] = '\0';
+							break;
+						}
+					}
+						
 				if (entry == NULL) {
 					SET_ERROR(MPORT_ERR_FATAL, "Unexpected EOF with archive file");
 					goto ERROR;
@@ -549,7 +600,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 					}
 
 					/* for sample files, if we don't have an existing file, make a new one */
-					if (e->type == ASSET_SAMPLE && create_sample_file(file) != MPORT_OK) {
+					if (e->type == ASSET_SAMPLE && create_sample_file(mport, cwd, e->data) != MPORT_OK) {
 						SET_ERRORX(MPORT_ERR_FATAL, "Unable to create sample file from %s",
 						           file);
 						goto ERROR;

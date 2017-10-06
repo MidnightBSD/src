@@ -176,6 +176,15 @@ insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack,
         (void)snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data);
       }
 
+      if (e->type == ASSET_SAMPLE) {
+          for (int ch = 0; ch < FILENAME_MAX; ch++) {
+		if (file[ch] == '\0')
+			break;
+		if (file[ch] == ' ' || file[ch] == '\t')
+			file[ch] = '\0';
+	  } 
+      }
+
       if (lstat(file, &st) != 0) {
         sqlite3_finalize(stmnt);
         RETURN_ERRORX(MPORT_ERR_FATAL, "Could not stat %s: %s", file, strerror(errno));
@@ -556,6 +565,18 @@ archive_assetlistfiles(mportBundleWrite *bundle, mportPackageMeta *pack, mportCr
 			(void) snprintf(filename, FILENAME_MAX, "%s%s", extra->sourcedir, e->data);
 		} else {
 			(void) snprintf(filename, FILENAME_MAX, "%s/%s/%s", extra->sourcedir, cwd, e->data);
+		}
+
+		if (e->type == ASSET_SAMPLE) {
+			// eat the second filename if it exists.
+			for (int ch = 0; ch < FILENAME_MAX; ch++) {
+				if (filename[ch] == '\0')
+					break;
+				if (filename[ch] == ' ' || filename[ch] == '\t') {
+					filename[ch] = '\0';
+					break;
+				}
+			}
 		}
 
 		if (mport_bundle_write_add_file(bundle, filename, e->data) != MPORT_OK)
