@@ -43182,11 +43182,13 @@ contrib/wpa/src/crypto/tls_schannel.c -text
 contrib/wpa/src/drivers/Makefile -text
 contrib/wpa/src/drivers/android_drv.h -text
 contrib/wpa/src/drivers/driver.h -text
+contrib/wpa/src/drivers/driver_bsd.c svneol=native#text/plain
 contrib/wpa/src/drivers/driver_common.c -text
 contrib/wpa/src/drivers/driver_ndis.c -text
 contrib/wpa/src/drivers/driver_ndis.h -text
 contrib/wpa/src/drivers/driver_ndis_.c -text
 contrib/wpa/src/drivers/driver_ndiswrapper.c -text
+contrib/wpa/src/drivers/driver_privsep.c svneol=native#text/plain
 contrib/wpa/src/drivers/driver_wired.c -text
 contrib/wpa/src/drivers/drivers.c -text
 contrib/wpa/src/drivers/drivers.mak -text
@@ -43308,6 +43310,7 @@ contrib/wpa/src/l2_packet/l2_packet.h -text
 contrib/wpa/src/l2_packet/l2_packet_freebsd.c -text
 contrib/wpa/src/l2_packet/l2_packet_ndis.c -text
 contrib/wpa/src/l2_packet/l2_packet_none.c -text
+contrib/wpa/src/l2_packet/l2_packet_privsep.c svneol=native#text/plain
 contrib/wpa/src/lib.rules -text
 contrib/wpa/src/p2p/Makefile -text
 contrib/wpa/src/p2p/p2p.c -text
