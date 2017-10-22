@@ -1,0 +1,17 @@
+#!/bin/sh
+#
+# $FreeBSD: src/etc/rc.d/mroute6d,v 1.4 2004/10/07 13:55:26 mtm Exp $
+#
+
+# PROVIDE: mroute6d
+# REQUIRE: network_ipv6
+# KEYWORD: nojail
+
+. /etc/rc.subr
+
+name="mroute6d"
+rcvar=`set_rcvar`
+command="/usr/local/sbin/pim6dd"
+
+load_rc_config $name
+run_rc_command "$1"

@@ -1,0 +1,13 @@
+contrib/file/autom4te.cache
+sys/alpha/compile/[A-Za-z0-9]*
+sys/alpha/conf/[A-Za-z0-9]*
+sys/arm/compile/[A-Za-z0-9]*
+sys/arm/conf/[A-Za-z0-9]*
+sys/ia64/compile/[A-Za-z0-9]*
+sys/ia64/conf/[A-Za-z0-9]*
+sys/pc98/compile/[A-Za-z0-9]*
+sys/pc98/conf/[A-Za-z0-9]*
+sys/powerpc/compile/[A-Za-z0-9]*
+sys/powerpc/conf/[A-Za-z0-9]*
+tools/regression/geom_uzip/test-1.img
+tools/regression/geom_uzip/test-1.img.gz

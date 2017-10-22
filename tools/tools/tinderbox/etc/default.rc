@@ -1,0 +1,21 @@
+#
+# Tinderbox defaults
+#
+# $FreeBSD: src/tools/tools/tinderbox/etc/default.rc,v 1.9 2005/04/30 18:26:05 des Exp $
+#
+
+comment		= %%branch%% tinderbox
+
+# Paths
+sandbox		= %%HOME%%
+logdir		= %%HOME%%/logs
+
+# Tinderbox options
+options		= --verbose
+targets		= cleanobj, update, world, generic, lint
+#timeout 	= 7200
+
+# Reporting
+sender		= FreeBSD Tinderbox <tinderbox@freebsd.org>
+recipient	= %%SENDER%%
+subject		= [%%COMMENT%%] failure on %%arch%%/%%machine%%
