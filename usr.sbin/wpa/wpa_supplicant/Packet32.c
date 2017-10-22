@@ -104,7 +104,7 @@ struct adapter {
 PCHAR
 PacketGetVersion(void)
 {
-	return("FreeBSD WinPcap compatibility shim v1.0");
+	return("MidnightBSD WinPcap compatibility shim v1.0");
 }
 
 void *
@@ -363,13 +363,7 @@ PacketCloseAdapter(void *iface)
 	return;
 }
 
-#if __FreeBSD_version < 600000
-
-/*
- * The version of libpcap in FreeBSD 5.2.1 doesn't have these routines.
- * Call me insane if you will, but I still run 5.2.1 on my laptop, and
- * I'd like to use WPA there.
- */
+#if __MidnightBSD_version < 1000
 
 int
 pcap_get_selectable_fd(pcap_t *p)

@@ -72327,7 +72327,6 @@ usr.sbin/wpa/Makefile -text
 usr.sbin/wpa/Makefile.crypto -text
 usr.sbin/wpa/Makefile.inc -text
 usr.sbin/wpa/hostapd/Makefile -text
-usr.sbin/wpa/hostapd/driver_freebsd.c -text
 usr.sbin/wpa/hostapd/hostapd.8 -text
 usr.sbin/wpa/hostapd/hostapd.conf.5 -text
 usr.sbin/wpa/hostapd_cli/Makefile -text
@@ -72339,10 +72338,10 @@ usr.sbin/wpa/wpa_cli/Makefile -text
 usr.sbin/wpa/wpa_cli/wpa_cli.8 -text
 usr.sbin/wpa/wpa_passphrase/Makefile -text
 usr.sbin/wpa/wpa_passphrase/wpa_passphrase.8 -text
+usr.sbin/wpa/wpa_priv/Makefile svneol=native#text/plain
 usr.sbin/wpa/wpa_supplicant/Makefile -text
 usr.sbin/wpa/wpa_supplicant/Packet32.c -text
 usr.sbin/wpa/wpa_supplicant/Packet32.h -text
-usr.sbin/wpa/wpa_supplicant/driver_freebsd.c -text
 usr.sbin/wpa/wpa_supplicant/ntddndis.h -text
 usr.sbin/wpa/wpa_supplicant/wpa_supplicant.8 -text
 usr.sbin/wpa/wpa_supplicant/wpa_supplicant.conf.5 -text
