@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20171022:
+	wpa_supplicant & hostapd 2.0. This also includes patches for the 
+	recent KRACK vulnerability.
+
 20171003:
 	SQLite 3.20.1
 
